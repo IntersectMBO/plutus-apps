@@ -45,6 +45,9 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+source-repository head
+  type:     git
+  location: https://github.com/eskimor/purescript-bridge.git
 
 library
   -- Modules exported by the library.
