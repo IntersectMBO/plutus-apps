@@ -10,6 +10,10 @@ import Data.Proxy
 import Data.Typeable
 
 
+-- Translates a Haskell type info to a PureScript type info:
+type TypeBridge = TypeInfo -> Maybe TypeInfo
+
+
 -- Basic info about a data type:
 data TypeInfo = TypeInfo {
   -- | Hackage package
@@ -34,21 +38,7 @@ mkTypeInfo' rep = let
   }
 
 
--- Translates a Haskell type info to a PureScript type info:
-type TypeBridge = TypeInfo -> Maybe TypeInfo
 
-{--
- -- Optimistically and recursively translate types: If the passed TypeBridge returns Nothing,
- -- then the original TypeInfo is returned with the typePackage field cleared.
---}
-bridge :: TypeBridge -> TypeInfo -> TypeInfo
-bridge br info = let
-    translated = info { typePackage = "" }
-    res = fromMaybe translated (br info)
-  in
-    res {
-      typeParameters = map (bridge br) $ typeParameters res
-    }
-
+-- Little helper for type bridge implementers
 eqTypeName :: Text -> TypeInfo -> Bool
-eqTypeName name = (== name) . typeName 
+eqTypeName name = (== name) . typeName

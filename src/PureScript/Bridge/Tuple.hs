@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
 module PureScript.Bridge.Tuple where
 
-import Data.Maybe
+import Data.Monoid
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -12,14 +13,15 @@ data TupleParserState =
 
 
 tupleBridge :: TypeBridge
-tupleBridge t | isTuple (typeName t) = Just $ t {
+tupleBridge t
+  | isTuple (typeName t) = Just $ t {
       typePackage = "purescript-tuples"
     , typeModule = if size == 2 then "Data.Tuple" else "Data.Tuple.Nested"
     , typeName = "Tuple" <> if size == 2 then "" else T.pack (show size)
     }
+  | otherwise = Nothing
   where
     size = length $ typeParameters t
-tupleBridge _ = Nothing
 
 
 step :: TupleParserState -> Char -> TupleParserState
