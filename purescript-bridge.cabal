@@ -10,7 +10,7 @@ name:                purescript-bridge
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.1.0.0
+version:             0.2.0.0
 
 -- A short (one-line) description of the package.
 synopsis:            Generate PureScript data types from Haskell data types
@@ -51,12 +51,12 @@ source-repository head
 
 library
   -- Modules exported by the library.
-  exposed-modules: PureScript.Bridge.SumType
-                , PureScript.Bridge.TypeInfo
-                , PureScript.Bridge.Tuple
-                , PureScript.Bridge.Primitives
-                , PureScript.Bridge
-                , PureScript.Bridge.Printer
+  exposed-modules: Language.PureScript.Bridge.SumType
+                , Language.PureScript.Bridge.TypeInfo
+                , Language.PureScript.Bridge.Tuple
+                , Language.PureScript.Bridge.Primitives
+                , Language.PureScript.Bridge
+                , Language.PureScript.Bridge.Printer
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -82,7 +82,8 @@ library
 Test-Suite tests
     type:       detailed-0.9
     test-module: Tests
-    build-depends: base, Cabal >= 1.9.2
+    build-depends: base
+                , Cabal >= 1.9.2
                 , HUnit
                 , purescript-bridge
     hs-source-dirs: test

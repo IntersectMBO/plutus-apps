@@ -8,7 +8,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 
-module PureScript.Bridge.SumType where
+module Language.PureScript.Bridge.SumType where
 
 import Generics.Deriving
 import Data.Text (Text)
@@ -16,7 +16,7 @@ import qualified Data.Text as T
 import Data.Proxy
 import Data.Typeable
 
-import PureScript.Bridge.TypeInfo
+import Language.PureScript.Bridge.TypeInfo
 
 data SumType = SumType TypeInfo [DataConstructor] deriving Show
 

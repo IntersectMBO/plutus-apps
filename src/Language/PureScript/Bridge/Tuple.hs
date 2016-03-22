@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module PureScript.Bridge.Tuple where
+module Language.PureScript.Bridge.Tuple where
 
 import Data.Monoid
 import Data.Text (Text)
 import qualified Data.Text as T
 
 
-import PureScript.Bridge.TypeInfo
+import Language.PureScript.Bridge.TypeInfo
 
 data TupleParserState =
   Start | OpenFound | ColonFound | Tuple | NoTuple deriving (Eq, Show)

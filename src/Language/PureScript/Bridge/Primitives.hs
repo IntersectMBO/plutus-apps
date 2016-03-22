@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-module PureScript.Bridge.Primitives where
+module Language.PureScript.Bridge.Primitives where
 
 
-import PureScript.Bridge.TypeInfo
+import Language.PureScript.Bridge.TypeInfo
 
 
 intBridge :: TypeBridge

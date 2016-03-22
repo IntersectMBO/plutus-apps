@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module PureScript.Bridge.TypeInfo where
+module Language.PureScript.Bridge.TypeInfo where
 
 
 import Data.Text (Text)

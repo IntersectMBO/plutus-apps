@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module PureScript.Bridge.Printer where
+module Language.PureScript.Bridge.Printer where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -12,8 +12,8 @@ import qualified Data.Text.IO as T
 import System.FilePath
 
 
-import PureScript.Bridge.SumType
-import PureScript.Bridge.TypeInfo
+import Language.PureScript.Bridge.SumType
+import Language.PureScript.Bridge.TypeInfo
 
 
 data PSModule = PSModule {

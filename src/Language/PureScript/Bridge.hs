@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module PureScript.Bridge (
+module Language.PureScript.Bridge (
     bridgeSumType
   , defaultBridge
  ) where
@@ -9,10 +9,10 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Monoid
 
-import PureScript.Bridge.SumType
-import PureScript.Bridge.TypeInfo
-import PureScript.Bridge.Tuple
-import PureScript.Bridge.Primitives
+import Language.PureScript.Bridge.SumType
+import Language.PureScript.Bridge.TypeInfo
+import Language.PureScript.Bridge.Tuple
+import Language.PureScript.Bridge.Primitives
 
 
 import Control.Applicative
