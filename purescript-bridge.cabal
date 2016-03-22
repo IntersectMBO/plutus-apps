@@ -51,6 +51,9 @@ library
   exposed-modules: PureScript.Bridge.SumType
                 , PureScript.Bridge.TypeInfo
                 , PureScript.Bridge.Tuple
+                , PureScript.Bridge.Primitives
+                , PureScript.Bridge
+                , PureScript.Bridge.Printer
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -60,6 +63,8 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.8 && <4.9
+                     , containers
+                     , filepath
                      , text
                      , generic-deriving
 

@@ -73,3 +73,13 @@ instance (Selector a, Typeable t) => GRecordEntry (S1 a (K1 R t)) where
       , recValue = mkTypeInfo (Proxy :: Proxy t)
       }
     ]
+
+getUsedTypes :: SumType -> [TypeInfo]
+getUsedTypes (SumType _ cs) = foldr constructorToType [] cs
+
+constructorToType :: DataConstructor -> [TypeInfo] -> [TypeInfo]
+constructorToType (DataConstructor _ (Left myTs)) ts = concatMap flattenTypeInfo myTs ++ ts
+constructorToType (DataConstructor _ (Right rs))  ts = concatMap (flattenTypeInfo . recValue) rs ++ ts
+
+flattenTypeInfo :: TypeInfo -> [TypeInfo]
+flattenTypeInfo t = t : concatMap flattenTypeInfo (typeParameters t)
