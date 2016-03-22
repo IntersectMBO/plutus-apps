@@ -21,13 +21,13 @@ import Language.PureScript.Bridge.TypeInfo
 data SumType = SumType TypeInfo [DataConstructor] deriving Show
 
 data DataConstructor = DataConstructor {
-  sigConstructor :: Text
-, sigValues :: Either [TypeInfo] [RecordEntry]
+  sigConstructor :: !Text
+, sigValues :: !(Either [TypeInfo] [RecordEntry])
 } deriving Show
 
 data RecordEntry = RecordEntry {
-  recLabel :: Text
-, recValue :: TypeInfo
+  recLabel :: !Text
+, recValue :: !TypeInfo
 } deriving Show
 
 toSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t)) => Proxy t -> SumType
@@ -80,6 +80,3 @@ getUsedTypes (SumType _ cs) = foldr constructorToType [] cs
 constructorToType :: DataConstructor -> [TypeInfo] -> [TypeInfo]
 constructorToType (DataConstructor _ (Left myTs)) ts = concatMap flattenTypeInfo myTs ++ ts
 constructorToType (DataConstructor _ (Right rs))  ts = concatMap (flattenTypeInfo . recValue) rs ++ ts
-
-flattenTypeInfo :: TypeInfo -> [TypeInfo]
-flattenTypeInfo t = t : concatMap flattenTypeInfo (typeParameters t)

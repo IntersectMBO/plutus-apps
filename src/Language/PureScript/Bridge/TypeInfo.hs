@@ -5,7 +5,6 @@ module Language.PureScript.Bridge.TypeInfo where
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Maybe
 import Data.Proxy
 import Data.Typeable
 
@@ -17,11 +16,11 @@ type TypeBridge = TypeInfo -> Maybe TypeInfo
 -- Basic info about a data type:
 data TypeInfo = TypeInfo {
   -- | Hackage package
-  typePackage :: Text
+  typePackage :: !Text
   -- | Full Module path
-, typeModule :: Text
-, typeName :: Text
-, typeParameters :: [TypeInfo]
+, typeModule :: !Text
+, typeName :: !Text
+, typeParameters :: ![TypeInfo]
 } deriving (Eq, Show)
 
 mkTypeInfo :: Typeable t => Proxy t -> TypeInfo
@@ -37,7 +36,9 @@ mkTypeInfo' rep = let
   , typeParameters = map mkTypeInfo' (typeRepArgs rep)
   }
 
-
+-- | Put the TypeInfo in a list together with all its typeParameters (recursively)
+flattenTypeInfo :: TypeInfo -> [TypeInfo]
+flattenTypeInfo t = t : concatMap flattenTypeInfo (typeParameters t)
 
 -- Little helper for type bridge implementers
 eqTypeName :: Text -> TypeInfo -> Bool

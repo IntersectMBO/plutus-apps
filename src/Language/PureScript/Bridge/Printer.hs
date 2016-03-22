@@ -17,14 +17,14 @@ import Language.PureScript.Bridge.TypeInfo
 
 
 data PSModule = PSModule {
-  psModuleName :: Text
-, psImportLines :: Map Text ImportLine
-, psTypes :: [SumType]
+  psModuleName :: !Text
+, psImportLines :: !(Map Text ImportLine)
+, psTypes :: ![SumType]
 } deriving Show
 
 data ImportLine = ImportLine {
-  importModule :: Text
-, importTypes :: Set Text
+  importModule :: !Text
+, importTypes :: !(Set Text)
 } deriving Show
 
 type Modules = Map Text PSModule

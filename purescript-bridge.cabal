@@ -57,6 +57,7 @@ library
                 , Language.PureScript.Bridge.Primitives
                 , Language.PureScript.Bridge
                 , Language.PureScript.Bridge.Printer
+                , Language.PureScript.Bridge.TypeParameters
 
   -- Modules included in this library but not exported.
   -- other-modules:

@@ -5,9 +5,7 @@ module Language.PureScript.Bridge (
  ) where
 
 
-import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Monoid
 
 import Language.PureScript.Bridge.SumType
 import Language.PureScript.Bridge.TypeInfo
@@ -29,7 +27,7 @@ bridgeSumType br (SumType t cs) = SumType t . map (bridgeConstructor br) $ cs
 doBridge :: TypeBridge -> TypeInfo -> TypeInfo
 doBridge br info = let
     translated = info { typePackage = "" }
-    res = fromMaybe translated (br info)
+    res = fixTypeParameters $ fromMaybe translated (br info)
   in
     res {
       typeParameters = map (doBridge br) . typeParameters $ res
@@ -54,3 +52,13 @@ bridgeConstructor br (DataConstructor name (Right record)) =
 
 bridgeRecordEntry :: TypeBridge -> RecordEntry -> RecordEntry
 bridgeRecordEntry br (RecordEntry label value) = RecordEntry label $ doBridge br value
+
+-- | Translate types that come from any module named "Something.TypeParameters" to lower case:
+fixTypeParameters :: TypeInfo -> TypeInfo
+fixTypeParameters t
+  | Just _ <- T.stripSuffix "TypeParameters" (typeModule t) = t {
+      typePackage = "" -- Don't suggest any packages
+    , typeModule = "" -- Don't import any modules
+    , typeName = T.toLower (typeName t)
+    }
+  | otherwise = t
