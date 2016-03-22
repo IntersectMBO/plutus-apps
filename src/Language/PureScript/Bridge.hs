@@ -2,22 +2,24 @@
 module Language.PureScript.Bridge (
     bridgeSumType
   , defaultBridge
+  , module Bridge
  ) where
 
 
 import qualified Data.Text as T
 
-import Language.PureScript.Bridge.SumType
-import Language.PureScript.Bridge.TypeInfo
-import Language.PureScript.Bridge.Tuple
-import Language.PureScript.Bridge.Primitives
+import Language.PureScript.Bridge.SumType as Bridge
+import Language.PureScript.Bridge.TypeInfo as Bridge
+import Language.PureScript.Bridge.Tuple as Bridge
+import Language.PureScript.Bridge.Primitives as Bridge
+import Language.PureScript.Bridge.Printer as Bridge
 
 
 import Control.Applicative
 import Data.Maybe
 
 bridgeSumType :: TypeBridge -> SumType -> SumType
-bridgeSumType br (SumType t cs) = SumType t . map (bridgeConstructor br) $ cs
+bridgeSumType br (SumType t cs) = SumType t $ map (bridgeConstructor br) cs
 
 {--
  -- Optimistically and recursively translate types: If the passed TypeBridge returns Nothing,

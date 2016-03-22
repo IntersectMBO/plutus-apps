@@ -9,7 +9,9 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import System.Directory
 import System.FilePath
+import Control.Monad
 
 
 import Language.PureScript.Bridge.SumType
@@ -31,37 +33,40 @@ type Modules = Map Text PSModule
 type ImportLines = Map Text ImportLine
 
 printModule :: FilePath -> PSModule -> IO ()
-printModule root m = T.writeFile mPath . moduleToText $ m
+printModule root m = do
+  unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
+  T.writeFile mPath . moduleToText $ m
   where
-    mFile = joinPath . map T.unpack . T.splitOn "." $ psModuleName m
+    mFile = (joinPath . map T.unpack . T.splitOn "." $ psModuleName m) <> ".purs"
     mPath = root </> mFile
+    mDir = takeDirectory mPath
 
 moduleToText :: PSModule -> Text
 moduleToText m = T.unlines $
-  "module " <> psModuleName m <> "where\n"
+  "module " <> psModuleName m <> " where\n"
   : map importLineToText (M.elems (psImportLines m))
   ++ [ "\n\n" ]
   ++ map sumTypeToText (psTypes m)
 
 
 importLineToText :: ImportLine -> Text
-importLineToText l = "import " <> importModule l <> "(" <> typeList <> ")"
+importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
   where
     typeList = T.intercalate ", " (S.toList (importTypes l))
 
 sumTypeToText :: SumType -> Text
 sumTypeToText (SumType t cs) = T.unlines $
     "data " <> typeName t <> "="
-  : [ "    " <> T.intercalate "  | " (map (constructorToText 4) cs) ]
+  : [ "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) ]
 
 constructorToText :: Int -> DataConstructor -> Text
-constructorToText _ (DataConstructor n (Left ts))  = n <> T.intercalate " " (map typeInfoToText ts)
+constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map typeInfoToText ts)
 constructorToText indentation (DataConstructor n (Right rs)) = T.unlines $
       n <> " {"
     : [spaces (indentation + 2) <> T.intercalate intercalation (map recordEntryToText rs)]
     ++ [ spaces indentation <> "}" ]
   where
-    intercalation = "\n" <> spaces indentation <> "," <> spaces 2
+    intercalation = "\n" <> spaces indentation <> "," <> " "
     spaces c = T.replicate c " "
 
 recordEntryToText :: RecordEntry -> Text
@@ -82,13 +87,14 @@ sumTypeToModule st@(SumType t _) = M.alter (Just. updateModule) (typeModule t)
   where
     updateModule Nothing = PSModule {
           psModuleName = typeModule t
-        , psImportLines = typesToImportLines M.empty (getUsedTypes st)
+        , psImportLines = dropSelf $ typesToImportLines M.empty (getUsedTypes st)
         , psTypes = [st]
         }
     updateModule (Just m) = m {
-        psImportLines = typesToImportLines (psImportLines m) (getUsedTypes st)
+        psImportLines = dropSelf $ typesToImportLines (psImportLines m) (getUsedTypes st)
       , psTypes = st : psTypes m
       }
+    dropSelf = M.delete (typeModule t)
 
 typesToImportLines :: ImportLines -> [TypeInfo] -> ImportLines
 typesToImportLines = foldr typeToImportLines
@@ -98,3 +104,6 @@ typeToImportLines t = M.alter (Just . updateLine) (typeModule t)
   where
     updateLine Nothing = ImportLine (typeModule t) (S.singleton (typeName t))
     updateLine (Just (ImportLine m types)) = ImportLine m $ S.insert (typeName t) types
+
+unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM mbool action = mbool >>= flip unless action

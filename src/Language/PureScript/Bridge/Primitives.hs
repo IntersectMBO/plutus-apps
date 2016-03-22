@@ -25,7 +25,7 @@ stringBridge t
   | otherwise = Nothing
   where
     isStringLike = isText || isString
-    isText = typeName t == "Text" && typePackage t == "text"
+    isText = typeName t == "Text"
     isString = typeName t == "[]" && all ((==) "Char" . typeName) (typeParameters t)
 
 listBridge :: TypeBridge

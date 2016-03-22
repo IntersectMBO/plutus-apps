@@ -4,15 +4,15 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  f = { mkDerivation, base, Cabal, containers, filepath
+  f = { mkDerivation, base, Cabal, containers, directory, filepath
       , generic-deriving, HUnit, stdenv, text
       }:
       mkDerivation {
         pname = "purescript-bridge";
-        version = "0.1.0.0";
+        version = "0.2.0.0";
         src = ./.;
         libraryHaskellDepends = [
-          base containers filepath generic-deriving text
+          base containers directory filepath generic-deriving text
         ];
         testHaskellDepends = [ base Cabal HUnit ];
         description = "Generate PureScript data types from Haskell data types";
