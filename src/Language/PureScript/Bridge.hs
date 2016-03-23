@@ -47,6 +47,13 @@ import Data.Maybe
 --
 --   Find examples for implementing your own type bridges in: "Language.PureScript.Bridge.Primitives".
 --
+--  == Result:
+--   'writePSTypes' will write out PureScript modules to the given path, mirroring the hierarchy of the Haskell modules
+--   the types came from. In addition a list of needed PS packages is printed to the console.
+--
+--   The list of needed packages is retrieved from the bridged 'TypeInfo' data, so make sure you set 'typePackage' correctly
+--   in your own bridges, in order for this feature to be useful.
+--
 --  == Real world usage example:
 --   A real world use case of this library can be found <https://github.com/gonimo/gonimo-back/blob/master/src/MkFrontendTypes.hs here>.
 --
