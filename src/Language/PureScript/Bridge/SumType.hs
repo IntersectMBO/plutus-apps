@@ -5,9 +5,6 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 
-{-# LANGUAGE DeriveGeneric #-}
-
-
 module Language.PureScript.Bridge.SumType where
 
 import Generics.Deriving
@@ -18,7 +15,17 @@ import Data.Typeable
 
 import Language.PureScript.Bridge.TypeInfo
 
+-- | Generic representation of your Haskell types, the contained (leaf) types can be modified to match
+--   compatible PureScript types, by using 'TypeBridge' functions like 'defaultBridge' with 'writePSTypes'.
 data SumType = SumType TypeInfo [DataConstructor] deriving Show
+
+-- | Create a representation of your sum (and product) types,
+--   for doing type translations and writing it out to your PureScript modules.
+--   In order to get the type information we use a dummy variable of type Proxy (YourType).
+toSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t)) => Proxy t -> SumType
+toSumType p = SumType  (mkTypeInfo p) constructors
+  where
+    constructors = gToConstructors (from (undefined :: t))
 
 data DataConstructor = DataConstructor {
   sigConstructor :: !Text
@@ -29,11 +36,6 @@ data RecordEntry = RecordEntry {
   recLabel :: !Text
 , recValue :: !TypeInfo
 } deriving Show
-
-toSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t)) => Proxy t -> SumType
-toSumType p = SumType  (mkTypeInfo p) constructors
-  where
-    constructors = gToConstructors (from (undefined :: t))
 
 class GDataConstructor f where
   gToConstructors :: f a -> [DataConstructor]

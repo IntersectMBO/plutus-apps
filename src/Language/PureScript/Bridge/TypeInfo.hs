@@ -9,11 +9,11 @@ import Data.Proxy
 import Data.Typeable
 
 
--- Translates a Haskell type info to a PureScript type info:
+-- | Translates a Haskell type info to a PureScript type info:
 type TypeBridge = TypeInfo -> Maybe TypeInfo
 
 
--- Basic info about a data type:
+-- | Basic info about a data type:
 data TypeInfo = TypeInfo {
   -- | Hackage package
   typePackage :: !Text
@@ -40,6 +40,6 @@ mkTypeInfo' rep = let
 flattenTypeInfo :: TypeInfo -> [TypeInfo]
 flattenTypeInfo t = t : concatMap flattenTypeInfo (typeParameters t)
 
--- Little helper for type bridge implementers
+-- | Little helper for type bridge implementers
 eqTypeName :: Text -> TypeInfo -> Bool
 eqTypeName name = (== name) . typeName
