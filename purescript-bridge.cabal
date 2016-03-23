@@ -10,7 +10,7 @@ name:                purescript-bridge
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.3.0.0
+version:             0.3.0.1
 
 -- A short (one-line) description of the package.
 synopsis:            Generate PureScript data types from Haskell data types
@@ -44,6 +44,8 @@ build-type:          Simple
 
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
+
+extra-source-files: README.md
 
 source-repository head
   type:     git
