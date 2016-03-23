@@ -4,6 +4,15 @@ module Language.PureScript.Bridge.Primitives where
 
 import Language.PureScript.Bridge.TypeInfo
 
+unitBridge :: TypeBridge
+unitBridge t
+  | eqTypeName "()" t = Just $ t {
+      typePackage = "purescript-prelude"
+    , typeModule = "Prelude"
+    , typeName = "Unit"
+    }
+  | otherwise = Nothing
+
 boolBridge :: TypeBridge
 boolBridge t
   | eqTypeName "Bool" t = Just $ t {
