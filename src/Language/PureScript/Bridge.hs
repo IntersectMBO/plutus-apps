@@ -25,25 +25,31 @@ import Data.Maybe
 --   Make sure all your types derive Generic and Typeable.
 --   Typeable is not needed from ghc-7.10 on.
 --
---   Then call 'writePSTypes' like this:
---   @
---     let myTypes = [
---          'toSumType' ('Proxy' :: 'Proxy' MyType1)
---        , 'toSumType' ('Proxy' :: 'Proxy' MyType2)
---       ]
---     'writePSTypes' 'defaultBridge' "path\/to\/you\/purescript\/project" myTypes
---   @
+--   Then list all your types you want to use in PureScript and call 'writePSTypes':
 --
---   You can add new type mappings, like this:
---   @
---     myBridge = 'defaultBridge' <|> mySpecialTypeBridge
---   @
+--   >  let myTypes = [
+--   >      toSumType (Proxy :: Proxy MyType1)
+--   >    , toSumType (Proxy :: Proxy MyType2)
+--   >   ]
+--   >
+--   >  writePSTypes defaultBridge "path/to/your/purescript/project" myTypes
 --
---   Find examples for implementing your own type bridges in: 'Language.PureScript.Bridge.Primitives'
+--   You can define your own type bridges based on 'defaultBridge':
+--
+--
+--  >  myBridge = 'defaultBridge' <|> mySpecialTypeBridge
+--
+--  and use it with 'writePSTypes':
+--
+--  >  writePSTypes myBridge "path/to/your/purescript/project" myTypes
+--
+--   Find examples for implementing your own type bridges in: "Language.PureScript.Bridge.Primitives".
+--
+--  == Real world usage example:
 --   A real world use case of this library can be found <https://github.com/gonimo/gonimo-back/blob/master/src/MkFrontendTypes.hs here>.
---   Last but not least:
 --
---   /WARNING/: This function overwrites files - make backups or use version control!
+--  == /WARNING/:
+--   This function overwrites files - make backups or use version control!
 writePSTypes :: TypeBridge -> FilePath -> [SumType] -> IO ()
 writePSTypes br root sts = do
     let bridged = map (bridgeSumType br) sts
@@ -70,7 +76,8 @@ doBridge br info = let
 
 -- | Default bridge for mapping primitive/common types:
 --   You can append your own bridges like this:
---   defaultBridge <|> myBridge1 <|> myBridge2
+--
+-- >  defaultBridge <|> myBridge1 <|> myBridge2
 --
 --   Find examples for bridge definitions in "Language.PureScript.Bridge.Primitives" and
 --   "Language.PureScript.Bridge.Tuple".
