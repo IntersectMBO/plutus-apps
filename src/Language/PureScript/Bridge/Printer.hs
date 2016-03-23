@@ -41,6 +41,16 @@ printModule root m = do
     mPath = root </> mFile
     mDir = takeDirectory mPath
 
+sumTypesToNeededPackages :: [SumType] -> Set Text
+sumTypesToNeededPackages = S.unions . map sumTypeToNeededPackages
+
+sumTypeToNeededPackages :: SumType -> Set Text
+sumTypeToNeededPackages st = let
+    types = getUsedTypes st
+    packages = filter (not . T.null) . map typePackage $ types
+  in
+    S.fromList packages
+
 moduleToText :: PSModule -> Text
 moduleToText m = T.unlines $
   "module " <> psModuleName m <> " where\n"
@@ -85,7 +95,7 @@ sumTypesToModules :: Modules -> [SumType] -> Modules
 sumTypesToModules = foldr sumTypeToModule
 
 sumTypeToModule :: SumType -> Modules -> Modules
-sumTypeToModule st@(SumType t _) = M.alter (Just. updateModule) (typeModule t)
+sumTypeToModule st@(SumType t _) = M.alter (Just . updateModule) (typeModule t)
   where
     updateModule Nothing = PSModule {
           psModuleName = typeModule t

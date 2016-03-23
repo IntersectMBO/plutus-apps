@@ -8,6 +8,8 @@ module Language.PureScript.Bridge (
 
 
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
+
 
 import Language.PureScript.Bridge.SumType as Bridge
 import Language.PureScript.Bridge.TypeInfo as Bridge
@@ -55,6 +57,10 @@ writePSTypes br root sts = do
     let bridged = map (bridgeSumType br) sts
     let modules = M.elems $ sumTypesToModules M.empty bridged
     mapM_ (printModule root) modules
+    T.putStrLn "Successfully created your PureScript modules.\n"
+    T.putStrLn "Make sure you have the following PureScript packages installed:\n"
+    let packages = sumTypesToNeededPackages bridged
+    mapM_ (T.putStrLn . mappend "  - ") packages
 
 -- | Translate leaf types in a sum type to match PureScript types.
 bridgeSumType :: TypeBridge -> SumType -> SumType
