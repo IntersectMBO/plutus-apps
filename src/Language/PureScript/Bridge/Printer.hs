@@ -68,16 +68,16 @@ sumTypeToText :: SumType -> Text
 sumTypeToText (SumType t cs) = T.unlines $
     "data " <> typeName t <> " ="
   :  [ "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) ]
-  ++ [ "derive instance generic" <> typeName t <> " :: Generic " <> typeName t ]
+  ++ [ "\nderive instance generic" <> typeName t <> " :: Generic " <> typeName t ]
 
 
 constructorToText :: Int -> DataConstructor -> Text
-constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText needParens) ts) <> "\n"
+constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText needParens) ts)
   where needParens = length ts > 1
-constructorToText indentation (DataConstructor n (Right rs)) = T.unlines $
-      n <> " {"
-    :  [ spaces (indentation + 2) <> T.intercalate intercalation (map recordEntryToText rs) ]
-    ++ [ spaces indentation <> "}" ]
+constructorToText indentation (DataConstructor n (Right rs)) =
+       n <> " {\n"
+    <> spaces (indentation + 2) <> T.intercalate intercalation (map recordEntryToText rs) <> "\n"
+    <> spaces indentation <> "}"
   where
     intercalation = "\n" <> spaces indentation <> "," <> " "
     spaces c = T.replicate c " "
