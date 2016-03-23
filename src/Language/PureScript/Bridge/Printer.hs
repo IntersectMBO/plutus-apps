@@ -68,11 +68,12 @@ sumTypeToText :: SumType -> Text
 sumTypeToText (SumType t cs) = T.unlines $
     "data " <> typeName t <> " ="
   :  [ "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) ]
-  ++ [ "\nderive instance generic" <> typeName t <> " :: Generic " <> typeName t <> "\n" ]
+  ++ [ "derive instance generic" <> typeName t <> " :: Generic " <> typeName t ]
 
 
 constructorToText :: Int -> DataConstructor -> Text
-constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map typeInfoToText ts)
+constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText needParens) ts) <> "\n"
+  where needParens = length ts > 1
 constructorToText indentation (DataConstructor n (Right rs)) = T.unlines $
       n <> " {"
     :  [ spaces (indentation + 2) <> T.intercalate intercalation (map recordEntryToText rs) ]
@@ -82,14 +83,19 @@ constructorToText indentation (DataConstructor n (Right rs)) = T.unlines $
     spaces c = T.replicate c " "
 
 recordEntryToText :: RecordEntry -> Text
-recordEntryToText e = recLabel e <> " :: " <> typeInfoToText (recValue e)
+recordEntryToText e = recLabel e <> " :: " <> typeInfoToText False (recValue e)
 
 
-typeInfoToText :: TypeInfo -> Text
-typeInfoToText t = if length textParameters > 1 then "(" <> inner <> ")" else inner
+typeInfoToText :: Bool -> TypeInfo -> Text
+typeInfoToText needParens t = if needParens && pLength > 0 then "(" <> inner <> ")" else inner
   where
-    inner = typeName t <> T.intercalate " " textParameters
-    textParameters = map typeInfoToText (typeParameters t)
+    inner = typeName t <>
+      if pLength > 0
+        then " " <> T.intercalate " " textParameters
+        else ""
+    params = typeParameters t
+    pLength = length params
+    textParameters = map (typeInfoToText (pLength > 1)) params
 
 sumTypesToModules :: Modules -> [SumType] -> Modules
 sumTypesToModules = foldr sumTypeToModule
