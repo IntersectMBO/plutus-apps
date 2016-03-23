@@ -45,7 +45,7 @@ moduleToText :: PSModule -> Text
 moduleToText m = T.unlines $
   "module " <> psModuleName m <> " where\n"
   : map importLineToText (M.elems (psImportLines m))
-  ++ [ "\n\n" ]
+  ++ [ "\nimport Data.Generic (class Generic)\n\n" ]
   ++ map sumTypeToText (psTypes m)
 
 
@@ -56,14 +56,16 @@ importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
 
 sumTypeToText :: SumType -> Text
 sumTypeToText (SumType t cs) = T.unlines $
-    "data " <> typeName t <> "="
-  : [ "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) ]
+    "data " <> typeName t <> " ="
+  :  [ "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) ]
+  ++ [ "\nderive instance generic" <> typeName t <> " :: Generic " <> typeName t <> "\n" ]
+
 
 constructorToText :: Int -> DataConstructor -> Text
 constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map typeInfoToText ts)
 constructorToText indentation (DataConstructor n (Right rs)) = T.unlines $
       n <> " {"
-    : [spaces (indentation + 2) <> T.intercalate intercalation (map recordEntryToText rs)]
+    :  [ spaces (indentation + 2) <> T.intercalate intercalation (map recordEntryToText rs) ]
     ++ [ spaces indentation <> "}" ]
   where
     intercalation = "\n" <> spaces indentation <> "," <> " "

@@ -4,6 +4,15 @@ module Language.PureScript.Bridge.Primitives where
 
 import Language.PureScript.Bridge.TypeInfo
 
+boolBridge :: TypeBridge
+boolBridge t
+  | eqTypeName "Bool" t = Just $ t {
+      typePackage = "purescript-prim"
+    , typeModule = "Prim"
+    , typeName = "Boolean"
+    , typeParameters = []
+    }
+  | otherwise = Nothing
 
 intBridge :: TypeBridge
 intBridge t
