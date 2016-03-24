@@ -9,7 +9,7 @@ let
       }:
       mkDerivation {
         pname = "purescript-bridge";
-        version = "0.2.0.0";
+        version = "0.3.1.0";
         src = ./.;
         libraryHaskellDepends = [
           base containers directory filepath generic-deriving text

@@ -10,7 +10,7 @@ name:                purescript-bridge
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.3.1.0
+version:             0.3.1.1
 
 -- A short (one-line) description of the package.
 synopsis:            Generate PureScript data types from Haskell data types
@@ -84,11 +84,12 @@ library
   -- Base language which the package is written in.
   default-language:    Haskell2010
 
-Test-Suite tests
-    type:       detailed-0.9
-    test-module: Tests
-    build-depends: base
-                , Cabal >= 1.9.2
-                , HUnit
-                , purescript-bridge
-    hs-source-dirs: test
+
+-- Test-Suite tests
+--     type:       detailed-0.9
+--     test-module: Tests
+--     build-depends: base
+--                 , Cabal >= 1.9.2
+--                 , HUnit
+--                 , purescript-bridge
+--     hs-source-dirs: test
