@@ -1,6 +1,7 @@
 # purescript-bridge
 
-Translate your Haskell types to PureScript types.
+Translate your Haskell types to PureScript types. It should in theory work for almost all Haskell types, including type constructors!
+You just have to instantiate it with dummy parameters from e.g. "Language.PureScript.Bridge.TypeParameters". 
 
 For compatible JSON representations you should be using [aeson](http://hackage.haskell.org/package/aeson)'s generic encoding/decoding with default options
 and `gAesonEncodeJson` and `gAesonDecodeJson` from the [purescript-argonaut-codecs](https://github.com/purescript-contrib/purescript-argonaut-codecs)

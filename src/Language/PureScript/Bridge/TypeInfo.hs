@@ -43,3 +43,15 @@ flattenTypeInfo t = t : concatMap flattenTypeInfo (typeParameters t)
 -- | Little helper for type bridge implementers
 eqTypeName :: Text -> TypeInfo -> Bool
 eqTypeName name = (== name) . typeName
+
+-- | Helper for simple bridge creation for basic types
+mkBridgeTo :: (TypeInfo -> Bool) -> TypeInfo -> TypeBridge
+mkBridgeTo match r t
+  | match t = Just r
+  | otherwise = Nothing
+
+-- | Helper for simple bridge creation for type constructors
+mkBridgeTo1 :: (TypeInfo -> Bool) -> (TypeInfo -> TypeInfo) -> TypeBridge
+mkBridgeTo1 match r t
+  | match t = Just $ r t
+  | otherwise = Nothing

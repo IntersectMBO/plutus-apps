@@ -71,7 +71,9 @@ writePSTypes br root sts = do
 
 -- | Translate leaf types in a sum type to match PureScript types.
 bridgeSumType :: TypeBridge -> SumType -> SumType
-bridgeSumType br (SumType t cs) = SumType t $ map (bridgeConstructor br) cs
+bridgeSumType br (SumType t cs) = SumType fixedT $ map (bridgeConstructor br) cs
+  where
+    fixedT= t { typeParameters = map fixTypeParameters (typeParameters t)}
 
 {--|
  -- Optimistically and recursively translate types: If the passed TypeBridge returns Nothing,

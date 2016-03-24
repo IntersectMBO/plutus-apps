@@ -1,28 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.PureScript.Bridge.Tuple where
 
-import Data.Monoid
-import Data.Text (Text)
 import qualified Data.Text as T
 
-
 import Language.PureScript.Bridge.TypeInfo
-
-data TupleParserState =
-  Start | OpenFound | ColonFound | Tuple | NoTuple deriving (Eq, Show)
+import Language.PureScript.Bridge.PSTypes (psTuple)
 
 
 tupleBridge :: TypeBridge
-tupleBridge t
-  | isTuple (typeName t) = Just $ t {
-      typePackage = "purescript-tuples"
-    , typeModule = if size == 2 then "Data.Tuple" else "Data.Tuple.Nested"
-    , typeName = "Tuple" <> if size == 2 then "" else T.pack (show size)
-    }
-  | otherwise = Nothing
-  where
-    size = length $ typeParameters t
+tupleBridge = mkBridgeTo1 isTuple psTuple
 
+
+data TupleParserState =
+  Start | OpenFound | ColonFound | Tuple | NoTuple deriving (Eq, Show)
 
 step :: TupleParserState -> Char -> TupleParserState
 step Start '(' = OpenFound
@@ -35,5 +25,5 @@ step ColonFound _ = NoTuple
 step Tuple _ = NoTuple
 step NoTuple _ = NoTuple
 
-isTuple :: Text -> Bool
-isTuple = (== Tuple) . T.foldl' step Start
+isTuple :: TypeInfo -> Bool
+isTuple = (== Tuple) . T.foldl' step Start . typeName

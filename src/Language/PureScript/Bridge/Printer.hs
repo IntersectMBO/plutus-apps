@@ -66,14 +66,13 @@ importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
 
 sumTypeToText :: SumType -> Text
 sumTypeToText (SumType t cs) = T.unlines $
-    "data " <> typeName t <> " ="
+    "data " <> typeInfoToText True t <> " ="
   :  [ "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) ]
   ++ [ "\nderive instance generic" <> typeName t <> " :: Generic " <> typeName t ]
 
 
 constructorToText :: Int -> DataConstructor -> Text
-constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText topLevel) ts)
-  where topLevel = length ts == 1
+constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText False) ts)
 constructorToText indentation (DataConstructor n (Right rs)) =
        n <> " {\n"
     <> spaces (indentation + 2) <> T.intercalate intercalation (map recordEntryToText rs) <> "\n"
@@ -119,7 +118,9 @@ typesToImportLines :: ImportLines -> [TypeInfo] -> ImportLines
 typesToImportLines = foldr typeToImportLines
 
 typeToImportLines :: TypeInfo -> ImportLines -> ImportLines
-typeToImportLines t = M.alter (Just . updateLine) (typeModule t)
+typeToImportLines t = if not (T.null (typeModule t))
+    then M.alter (Just . updateLine) (typeModule t)
+    else id
   where
     updateLine Nothing = ImportLine (typeModule t) (S.singleton (typeName t))
     updateLine (Just (ImportLine m types)) = ImportLine m $ S.insert (typeName t) types
