@@ -72,8 +72,8 @@ sumTypeToText (SumType t cs) = T.unlines $
 
 
 constructorToText :: Int -> DataConstructor -> Text
-constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText needParens) ts)
-  where needParens = length ts > 1
+constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText topLevel) ts)
+  where topLevel = length ts == 1
 constructorToText indentation (DataConstructor n (Right rs)) =
        n <> " {\n"
     <> spaces (indentation + 2) <> T.intercalate intercalation (map recordEntryToText rs) <> "\n"
@@ -83,11 +83,11 @@ constructorToText indentation (DataConstructor n (Right rs)) =
     spaces c = T.replicate c " "
 
 recordEntryToText :: RecordEntry -> Text
-recordEntryToText e = recLabel e <> " :: " <> typeInfoToText False (recValue e)
+recordEntryToText e = recLabel e <> " :: " <> typeInfoToText True (recValue e)
 
 
 typeInfoToText :: Bool -> TypeInfo -> Text
-typeInfoToText needParens t = if needParens && pLength > 0 then "(" <> inner <> ")" else inner
+typeInfoToText topLevel t = if needParens then "(" <> inner <> ")" else inner
   where
     inner = typeName t <>
       if pLength > 0
@@ -95,7 +95,8 @@ typeInfoToText needParens t = if needParens && pLength > 0 then "(" <> inner <> 
         else ""
     params = typeParameters t
     pLength = length params
-    textParameters = map (typeInfoToText (pLength > 1)) params
+    needParens = not topLevel && pLength > 0
+    textParameters = map (typeInfoToText False) params
 
 sumTypesToModules :: Modules -> [SumType] -> Modules
 sumTypesToModules = foldr sumTypeToModule
