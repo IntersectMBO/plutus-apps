@@ -2,6 +2,7 @@
 module Language.PureScript.Bridge (
     bridgeSumType
   , defaultBridge
+  , doBridge
   , module Bridge
   , writePSTypes
  ) where
@@ -60,7 +61,7 @@ import Data.Maybe
 --   With custom bridges defined <https://github.com/gonimo/gonimo-back/blob/master/src/Gonimo/TypeBridges.hs here> and
 --   custom PS types defined <https://github.com/gonimo/gonimo-back/blob/master/src/Gonimo/PSTypes.hs here>.
 --
---   Parts of the generated output can be found <https://github.com/gonimo/gonimo-front/blob/master/src/Gonimo/Types.purs here>. 
+--   Parts of the generated output can be found <https://github.com/gonimo/gonimo-front/blob/master/src/Gonimo/Types.purs here>.
 --
 --   Note how 'Secret' and 'Key'
 --   get translated according to our custom rules, with correct imports and everything. Also the formatting is quite nice, I think - would you have guessed that this code was generated?
