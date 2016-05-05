@@ -8,21 +8,21 @@ module Language.PureScript.Bridge (
  ) where
 
 
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import qualified Data.Text                             as T
+import qualified Data.Text.IO                          as T
 
 
-import Language.PureScript.Bridge.SumType as Bridge
-import Language.PureScript.Bridge.TypeInfo as Bridge
-import Language.PureScript.Bridge.Tuple as Bridge
-import Language.PureScript.Bridge.Primitives as Bridge
-import Language.PureScript.Bridge.Printer as Bridge
+import           Language.PureScript.Bridge.Primitives as Bridge
+import           Language.PureScript.Bridge.Printer    as Bridge
+import           Language.PureScript.Bridge.SumType    as Bridge
+import           Language.PureScript.Bridge.Tuple      as Bridge
+import           Language.PureScript.Bridge.TypeInfo   as Bridge
 
 
 
-import Control.Applicative
-import qualified Data.Map as M
-import Data.Maybe
+import           Control.Applicative
+import qualified Data.Map                              as M
+import           Data.Maybe
 
 -- | Your entry point to this library and quite likely all you will need.
 --   Make sure all your types derive Generic and Typeable.
@@ -40,7 +40,7 @@ import Data.Maybe
 --   You can define your own type bridges based on 'defaultBridge':
 --
 --
---  >  myBridge = 'defaultBridge' <|> mySpecialTypeBridge
+--  >  myBridge = defaultBridge <|> mySpecialTypeBridge
 --
 --  and use it with 'writePSTypes':
 --
@@ -84,11 +84,12 @@ bridgeSumType br (SumType t cs) = SumType fixedT $ map (bridgeConstructor br) cs
   where
     fixedT= t { typeParameters = map fixTypeParameters (typeParameters t)}
 
-{--|
- -- Optimistically and recursively translate types: If the passed TypeBridge returns Nothing,
- -- then the original TypeInfo is returned with the typePackage field cleared.
- -- You don't need to call this function directly, just use bridgeSumType with your TypeBridge
---}
+-- | Translate types optimistically: If the passed 'TypeBridge' returns 'Nothing',
+--   then the original 'TypeInfo' is returned with the 'typePackage' field cleared.
+--
+--   This function also recurses into all 'typeParameters' of the passed 'TypeInfo'.
+--
+--   You typically don't need to call this function directly, just use 'bridgeSumType' with your 'TypeBridge'.
 doBridge :: TypeBridge -> TypeInfo -> TypeInfo
 doBridge br info = let
     translated = info { typePackage = "" }
