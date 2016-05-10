@@ -16,9 +16,14 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Servant.PureScript.Internal
+                     , Servant.PureScript.CodeGen
   build-depends:       base >= 4.7 && < 5
                      , aeson
+                     , containers
                      , ghc-mod
+                     , http-types
+                     , lens
+                     , mainland-pretty
                      , purescript-bridge
                      , servant
                      , servant-foreign
@@ -33,6 +38,8 @@ test-suite servant-purescript-test
   main-is:             Spec.hs
   build-depends:       base
                      , aeson
+                     , mainland-pretty
+                     , lens
                      , purescript-bridge
                      , servant
                      , servant-foreign
