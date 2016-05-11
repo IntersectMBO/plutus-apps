@@ -72,8 +72,13 @@ defaultSettings = Settings {
   , standardImports = importsFromList
         [ ImportLine "Prelude" (Set.fromList [ "Unit(..)" ])
         , ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadReader" ])
+        , ImportLine "Control.Monad.Error.Class" (Set.fromList [ "class MonadError" ])
         , ImportLine "Control.Monad.Aff.Class" (Set.fromList [ "class MonadAff" ])
+        , ImportLine "Network.HTTP.Affjax" (Set.fromList [ "AJAX" ])
         , ImportLine "Global" (Set.fromList [ "encodeURIComponent" ]) -- from package globals
+        , ImportLine "Data.Nullable" (Set.fromList [ "Nullable()", "toNullable" ])
+        , ImportLine "Servant.PureScript.Affjax" (Set.fromList [ "defaultRequest", "affjax" ])
+        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "Settings", "encodeListQuery", "encodeQueryItem" ])
         ]
   }
 

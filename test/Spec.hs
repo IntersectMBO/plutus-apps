@@ -31,7 +31,9 @@ data Hello = Hello {
 instance FromJSON Hello
 instance ToJSON Hello
 
-type MyAPI = QueryFlag "myFlag" :> QueryParam "myParam" Hello :> QueryParams "myParams" Hello :> "hello" :> Get '[JSON] Hello
+newtype TestHeader = TestHeader Text deriving (Generic, Show, Eq)
+
+type MyAPI = Header "testHeader" TestHeader :> QueryFlag "myFlag" :> QueryParam "myParam" Hello :> QueryParams "myParams" Hello :> "hello" :> ReqBody '[JSON] Hello :> Get '[JSON] Hello
 
 
 reqs = apiToList (Proxy :: Proxy MyAPI) (Proxy :: Proxy DefaultBridge)

@@ -49,18 +49,18 @@ genFunction opts req = let
 genGetReaderParams :: Settings -> Doc
 genGetReaderParams = stack . map (genGetReaderParam . strictText) . Set.toList . putInReader
   where
-    genGetReaderParam pName = "let" <+> pName <+> "= opts.params." <> pName
+    genGetReaderParam pName = "let" <+> pName <+> "= spOpts_.params." <> pName
 
 
 genSignature :: Text -> [TypeInfo] -> Maybe TypeInfo -> Doc
 genSignature fnName params mRet = fName <+> align (constraint <+/> parameterString <+/> retString)
   where
     fName = strictText fnName
-    constraint = ":: forall m. (MonadReader m, MonadAff m) =>"
+    constraint = ":: forall eff m." <+/> "(MonadReader m, MonadError AjaxError m, MonadAff (AJAX | eff) m)" <+/> "=>"
     typeNames = map (strictText . typeInfoToText True) params
     parameterString = docIntercalate (softline <> "-> ") typeNames
     retName = maybe "Unit" (strictText . typeInfoToText True) mRet
-    retString = "-> " <> retName
+    retString = "-> m" <+> retName
 
 genFnHead :: Text -> [Text] -> Doc
 genFnHead fnName params = fName <+> align (docIntercalate softline docParams <+> "=")
@@ -69,13 +69,26 @@ genFnHead fnName params = fName <+> align (docIntercalate softline docParams <+>
     fName = strictText fnName
 
 genFnBody :: Settings -> Req TypeInfo -> Doc
-genFnBody opts req = hang 2 $ "do"
-    </> "opts <- ask"
-    </> genGetReaderParams opts
-    </> hang 2 ("let reqUrl =" <+> genBuildURL opts (req ^. reqUrl))
+genFnBody opts req = "do"
+    </> indent 4 (
+         "spOpts_ <- ask"
+      </> genGetReaderParams opts
+      </> hang 2 ("let httpMethod =" <+> req ^. reqMethod ^. to T.decodeUtf8 ^. to strictText)
+      </> hang 2 ("let reqUrl ="     <+> genBuildURL opts (req ^. reqUrl))
+      </> "let reqHeaders =" </> indent 2 (req ^. reqHeaders ^. to genBuildHeaders)
+      </> "affResp <- affjax defaultRequest" </> indent 2 (
+            "{ method :"  <+> "httpMethod"
+        </> ", url :"     <+> "reqUrl"
+        </> ", headers :" <+> "reqHeaders"
+        </> case req ^. reqBody of
+              Nothing -> "}"
+              Just _  -> ", content :" <+> "spOpts_.encodeJson reqBody" </> "}"
+      )
+
+    )
 
 genBuildURL :: Settings -> Url TypeInfo -> Doc
-genBuildURL opts url = "opts." <> strictText baseURLId <+> "<>"
+genBuildURL opts url = "spOpts_." <> strictText baseURLId <+> "<>"
     <+> genBuildPath (url ^. path ) <+> genBuildQuery (url ^. queryStr)
 
 ----------
@@ -100,6 +113,22 @@ genBuildQueryArg arg = case arg ^. queryArgType of
     argText = arg ^. queryArgName ^. argName ^. to unPathSegment
     encodedArgName = strictText . textURLEncode True $ argText
     genQueryEncoding fn = fn <+> dquotes encodedArgName <+> strictText argText
+
+-----------
+
+genBuildHeaders :: [HeaderArg TypeInfo] -> Doc
+genBuildHeaders = list . map genBuildHeader
+
+genBuildHeader :: HeaderArg TypeInfo -> Doc
+genBuildHeader (HeaderArg arg) = let
+    argText = arg ^. argName ^. to unPathSegment
+    encodedArgName = strictText . textURLEncode True $ argText
+  in
+    align $ "{ field : " <> dquotes encodedArgName
+      <+/> comma <+> "value :"
+      <+> "(encodeURIComponent <<< spOpts_.toURLPiece)" <+> strictText argText
+      </> "}"
+genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implemented!"
 
 filterParamsInReader :: Settings -> [Param TypeInfo] -> [Param TypeInfo]
 filterParamsInReader opts = filter (not . flip Set.member (putInReader opts) . _pName)
