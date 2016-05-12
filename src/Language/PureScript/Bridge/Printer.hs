@@ -1,32 +1,32 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.PureScript.Bridge.Printer where
 
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.Monoid
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import System.Directory
-import System.FilePath
-import Control.Monad
+import           Control.Monad
+import           Data.Map.Strict                     (Map)
+import qualified Data.Map.Strict                     as Map
+import           Data.Monoid
+import           Data.Set                            (Set)
+import qualified Data.Set                            as Set
+import           Data.Text                           (Text)
+import qualified Data.Text                           as T
+import qualified Data.Text.IO                        as T
+import           System.Directory
+import           System.FilePath
 
 
-import Language.PureScript.Bridge.SumType
-import Language.PureScript.Bridge.TypeInfo
+import           Language.PureScript.Bridge.SumType
+import           Language.PureScript.Bridge.TypeInfo
 
 
 data PSModule = PSModule {
-  psModuleName :: !Text
+  psModuleName  :: !Text
 , psImportLines :: !(Map Text ImportLine)
-, psTypes :: ![SumType]
+, psTypes       :: ![SumType]
 } deriving Show
 
 data ImportLine = ImportLine {
   importModule :: !Text
-, importTypes :: !(Set Text)
+, importTypes  :: !(Set Text)
 } deriving Show
 
 type Modules = Map Text PSModule
@@ -42,19 +42,19 @@ printModule root m = do
     mDir = takeDirectory mPath
 
 sumTypesToNeededPackages :: [SumType] -> Set Text
-sumTypesToNeededPackages = S.unions . map sumTypeToNeededPackages
+sumTypesToNeededPackages = Set.unions . map sumTypeToNeededPackages
 
 sumTypeToNeededPackages :: SumType -> Set Text
 sumTypeToNeededPackages st = let
     types = getUsedTypes st
     packages = filter (not . T.null) . map typePackage $ types
   in
-    S.fromList packages
+    Set.fromList packages
 
 moduleToText :: PSModule -> Text
 moduleToText m = T.unlines $
   "module " <> psModuleName m <> " where\n"
-  : map importLineToText (M.elems (psImportLines m))
+  : map importLineToText (Map.elems (psImportLines m))
   ++ [ "\nimport Data.Generic (class Generic)\n\n" ]
   ++ map sumTypeToText (psTypes m)
 
@@ -62,13 +62,13 @@ moduleToText m = T.unlines $
 importLineToText :: ImportLine -> Text
 importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
   where
-    typeList = T.intercalate ", " (S.toList (importTypes l))
+    typeList = T.intercalate ", " (Set.toList (importTypes l))
 
 sumTypeToText :: SumType -> Text
 sumTypeToText (SumType t cs) = T.unlines $
     "data " <> typeInfoToText True t <> " ="
-  :  [ "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) ]
-  ++ [ "\nderive instance generic" <> typeName t <> " :: Generic " <> typeName t ]
+  : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs)
+  : [ "\nderive instance generic" <> typeName t <> " :: Generic " <> typeName t ]
 
 
 constructorToText :: Int -> DataConstructor -> Text
@@ -101,29 +101,36 @@ sumTypesToModules :: Modules -> [SumType] -> Modules
 sumTypesToModules = foldr sumTypeToModule
 
 sumTypeToModule :: SumType -> Modules -> Modules
-sumTypeToModule st@(SumType t _) = M.alter (Just . updateModule) (typeModule t)
+sumTypeToModule st@(SumType t _) = Map.alter (Just . updateModule) (typeModule t)
   where
     updateModule Nothing = PSModule {
           psModuleName = typeModule t
-        , psImportLines = dropSelf $ typesToImportLines M.empty (getUsedTypes st)
+        , psImportLines = dropSelf $ typesToImportLines Map.empty (getUsedTypes st)
         , psTypes = [st]
         }
     updateModule (Just m) = m {
         psImportLines = dropSelf $ typesToImportLines (psImportLines m) (getUsedTypes st)
       , psTypes = st : psTypes m
       }
-    dropSelf = M.delete (typeModule t)
+    dropSelf = Map.delete (typeModule t)
 
 typesToImportLines :: ImportLines -> [TypeInfo] -> ImportLines
 typesToImportLines = foldr typeToImportLines
 
 typeToImportLines :: TypeInfo -> ImportLines -> ImportLines
 typeToImportLines t = if not (T.null (typeModule t))
-    then M.alter (Just . updateLine) (typeModule t)
+    then Map.alter (Just . updateLine) (typeModule t)
     else id
   where
-    updateLine Nothing = ImportLine (typeModule t) (S.singleton (typeName t))
-    updateLine (Just (ImportLine m types)) = ImportLine m $ S.insert (typeName t) types
+    updateLine Nothing = ImportLine (typeModule t) (Set.singleton (typeName t))
+    updateLine (Just (ImportLine m types)) = ImportLine m $ Set.insert (typeName t) types
+
+importsFromList ::  [ImportLine] -> Map Text ImportLine
+importsFromList lines = let
+    pairs = zip (map importModule lines) lines
+    merge a b = ImportLine (importModule a) (importTypes a `Set.union` importTypes b)
+  in
+    Map.fromListWith merge pairs
 
 unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM mbool action = mbool >>= flip unless action

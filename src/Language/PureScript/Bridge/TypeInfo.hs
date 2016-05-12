@@ -21,7 +21,7 @@ data TypeInfo = TypeInfo {
 , typeModule :: !Text
 , typeName :: !Text
 , typeParameters :: ![TypeInfo]
-} deriving (Eq, Show)
+} deriving (Eq, Ord, Show)
 
 mkTypeInfo :: Typeable t => Proxy t -> TypeInfo
 mkTypeInfo = mkTypeInfo' . typeRep
