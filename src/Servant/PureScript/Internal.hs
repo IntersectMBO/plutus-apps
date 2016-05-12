@@ -27,6 +27,7 @@ import           Data.Typeable
 import           GHC.Generics                        hiding (to)
 import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.Printer
+import           Language.PureScript.Bridge.PSTypes
 import           Language.PureScript.Bridge.TypeInfo
 import           Servant.API
 import           Servant.Foreign
@@ -60,15 +61,17 @@ instance HasBridge DefaultBridge where
 
 
 data Settings = Settings {
+  apiModuleName   :: Text
   -- | This function parameters should instead be put in a reader monad.
   --   'baseUrl' will be put there by default, you can add additional parameters.
-  putInReader     :: Set ParamName
+, readerParams    :: Set (Param TypeInfo)
 , standardImports :: ImportLines
 }
 
 defaultSettings :: Settings
 defaultSettings = Settings {
-    putInReader     = Set.singleton baseURLId
+    apiModuleName    = "ServerAPI"
+  , readerParams    = Set.singleton $ Param baseURLId psString
   , standardImports = importsFromList
         [ ImportLine "Prelude" (Set.fromList [ "Unit(..)" ])
         , ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadReader" ])
@@ -78,26 +81,23 @@ defaultSettings = Settings {
         , ImportLine "Global" (Set.fromList [ "encodeURIComponent" ]) -- from package globals
         , ImportLine "Data.Nullable" (Set.fromList [ "Nullable()", "toNullable" ])
         , ImportLine "Servant.PureScript.Affjax" (Set.fromList [ "defaultRequest", "affjax" ])
-        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "Settings", "encodeListQuery", "encodeQueryItem" ])
+        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "Settings" ])
+        , ImportLine "Servant.PureScript.Util" (Set.fromList [ "encodeListQuery", "encodeQueryItem", "getResult" ])
         ]
   }
-
-importsFromList ::  [ImportLine] -> Map Text ImportLine
-importsFromList lines = let
-    pairs = zip (map importModule lines) lines
-    merge a b = ImportLine (importModule a) (importTypes a `Set.union` importTypes b)
-  in
-    Map.fromListWith merge pairs
 
 type ParamName = Text
 
 baseURLId :: ParamName
 baseURLId = "baseURL"
 
+baseURLParam :: Param TypeInfo
+baseURLParam = Param baseURLId psString
+
 data Param f = Param {
   _pName :: Text
 , _pType :: f
-}
+} deriving (Eq, Ord, Show)
 
 makeLenses ''Param
 

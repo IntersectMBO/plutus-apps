@@ -38,6 +38,7 @@ test-suite servant-purescript-test
   main-is:             Spec.hs
   build-depends:       base
                      , aeson
+                     , containers
                      , mainland-pretty
                      , lens
                      , purescript-bridge
