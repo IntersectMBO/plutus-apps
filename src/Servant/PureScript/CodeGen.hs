@@ -46,7 +46,7 @@ genModule opts reqs = let
 
 genParamSettings :: Settings -> Doc
 genParamSettings opts = let
-  genEntry arg = arg ^. pName ^. to strictText <+> "::" <+> arg ^. pType ^. to typeName ^. to strictText
+  genEntry arg = arg ^. pName ^. to strictText <+> "::" <+> arg ^. pType ^. typeName ^. to strictText
   in
     "type Params =" <+/> align (
               lbrace
