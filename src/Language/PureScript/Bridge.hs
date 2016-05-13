@@ -31,8 +31,8 @@ import           Data.Maybe
 --   Then list all your types you want to use in PureScript and call 'writePSTypes':
 --
 --   >  let myTypes = [
---   >      toSumType (Proxy :: Proxy MyType1)
---   >    , toSumType (Proxy :: Proxy MyType2)
+--   >      mkSumType (Proxy :: Proxy MyType1)
+--   >    , mkSumType (Proxy :: Proxy MyType2)
 --   >   ]
 --   >
 --   >  writePSTypes defaultBridge "path/to/your/purescript/project" myTypes
@@ -52,7 +52,7 @@ import           Data.Maybe
 --   'writePSTypes' will write out PureScript modules to the given path, mirroring the hierarchy of the Haskell modules
 --   the types came from. In addition a list of needed PS packages is printed to the console.
 --
---   The list of needed packages is retrieved from the bridged 'TypeInfo' data, so make sure you set 'typePackage' correctly
+--   The list of needed packages is retrieved from the bridged 'TypeInfo' data, so make sure you set '_typePackage' correctly
 --   in your own bridges, in order for this feature to be useful.
 --
 --  == Real world usage example:
@@ -82,21 +82,21 @@ writePSTypes br root sts = do
 bridgeSumType :: TypeBridge -> SumType -> SumType
 bridgeSumType br (SumType t cs) = SumType fixedT $ map (bridgeConstructor br) cs
   where
-    fixedT= t { typeParameters = map fixTypeParameters (typeParameters t)}
+    fixedT= t { _typeParameters = map fixTypeParameters (_typeParameters t)}
 
 -- | Translate types optimistically: If the passed 'TypeBridge' returns 'Nothing',
---   then the original 'TypeInfo' is returned with the 'typePackage' field cleared.
+--   then the original 'TypeInfo' is returned with the '_typePackage' field cleared.
 --
---   This function also recurses into all 'typeParameters' of the passed 'TypeInfo'.
+--   This function also recurses into all '_typeParameters' of the passed 'TypeInfo'.
 --
 --   You typically don't need to call this function directly, just use 'bridgeSumType' with your 'TypeBridge'.
 doBridge :: TypeBridge -> TypeInfo -> TypeInfo
 doBridge br info = let
-    translated = info { typePackage = "" }
+    translated = info { _typePackage = "" }
     res = fixTypeParameters $ fromMaybe translated (br info)
   in
     res {
-      typeParameters = map (doBridge br) . typeParameters $ res
+      _typeParameters = map (doBridge br) . _typeParameters $ res
     }
 
 -- | Default bridge for mapping primitive/common types:
@@ -130,10 +130,10 @@ bridgeRecordEntry br (RecordEntry label value) = RecordEntry label $ doBridge br
 --   Also drop the 1 at the end if present
 fixTypeParameters :: TypeInfo -> TypeInfo
 fixTypeParameters t
-  | T.isSuffixOf "TypeParameters" (typeModule t) = t {
-      typePackage = "" -- Don't suggest any packages
-    , typeModule = "" -- Don't import any modules
-    , typeName = stripNum . T.toLower $ typeName t
+  | T.isSuffixOf "TypeParameters" (_typeModule t) = t {
+      _typePackage = "" -- Don't suggest any packages
+    , _typeModule = "" -- Don't import any modules
+    , _typeName = stripNum . T.toLower $ _typeName t
     }
   | otherwise = t
   where

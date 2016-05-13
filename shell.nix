@@ -5,17 +5,17 @@ let
   inherit (nixpkgs) pkgs;
 
   f = { mkDerivation, base, containers, directory, filepath
-      , generic-deriving, stdenv, text
+      , generic-deriving, lens, stdenv, text
       }:
       mkDerivation {
         pname = "purescript-bridge";
         version = "0.3.2.0";
         src = ./.;
         libraryHaskellDepends = [
-          base containers directory filepath generic-deriving text
+          base containers directory filepath generic-deriving lens text
         ];
         description = "Generate PureScript data types from Haskell data types";
-        license = stdenv.lib.licenses.agpl3;
+        license = stdenv.lib.licenses.bsd3;
       };
 
   haskellPackages = if compiler == "default"

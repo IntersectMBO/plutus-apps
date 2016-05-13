@@ -9,7 +9,7 @@
 --   @
 --     import 'Language.PureScript.Bridge'
 --     import 'Language.PureScript.Bridge.TypeParameters'
---     toSumType (Proxy :: Proxy (Maybe A)) -- Note the capital A, which comes from the TypeParameters module.
+--     mkSumType (Proxy :: Proxy (Maybe A)) -- Note the capital A, which comes from the TypeParameters module.
 --   @
 
 module Language.PureScript.Bridge.TypeParameters where
@@ -44,7 +44,7 @@ data Z
 
 -- | You can use those if your type parameters are actually type constructors as well:
 --   @
---   toSumType (Proxy :: Proxy ('ReaderT' R M1 A))
+--   mkSumType (Proxy :: Proxy ('ReaderT' R M1 A))
 --   @
 data A1 a
 data B1 a

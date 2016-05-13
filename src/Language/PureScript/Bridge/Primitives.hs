@@ -2,8 +2,8 @@
 module Language.PureScript.Bridge.Primitives where
 
 
-import Language.PureScript.Bridge.TypeInfo
-import Language.PureScript.Bridge.PSTypes
+import           Language.PureScript.Bridge.PSTypes
+import           Language.PureScript.Bridge.TypeInfo
 
 
 boolBridge :: TypeBridge
@@ -25,8 +25,8 @@ stringBridge :: TypeBridge
 stringBridge = mkBridgeTo isStringLike psString
   where
     isStringLike t = isText t || isString t
-    isText t = typeName t == "Text"
-    isString t = typeName t == "[]" && all ((==) "Char" . typeName) (typeParameters t)
+    isText t = _typeName t == "Text"
+    isString t = _typeName t == "[]" && all ((==) "Char" . _typeName) (_typeParameters t)
 
 unitBridge :: TypeBridge
 unitBridge = mkBridgeTo (eqTypeName "()") psUnit

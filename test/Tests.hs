@@ -13,10 +13,10 @@ import Language.PureScript.Bridge.TypeInfo
 testTypeInfo :: IO Progress
 testTypeInfo = do
   let expected = TypeInfo {
-    typePackage = "ghc-prim"
-  , typeModule = "GHC.Types"
-  , typeName = "Int"
-  , typeParameters = []
+    _typePackage = "ghc-prim"
+  , _typeModule = "GHC.Types"
+  , _typeName = "Int"
+  , _typeParameters = []
   }
   let tests = test ["Int Test" ~: expected ~=? mkTypeInfo (Proxy :: Proxy Int)]
   r <- runTestTT tests

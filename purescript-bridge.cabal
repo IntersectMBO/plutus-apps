@@ -19,7 +19,7 @@ synopsis:            Generate PureScript data types from Haskell data types
 -- description:
 
 -- The license under which the package is released.
-license:             AGPL-3
+license:             BSD3
 
 -- The file containing the license text.
 license-file:        LICENSE
@@ -73,6 +73,7 @@ library
                      , containers
                      , directory
                      , filepath
+                     , lens
                      , text
                      , generic-deriving
 

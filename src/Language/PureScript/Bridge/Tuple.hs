@@ -26,4 +26,4 @@ step Tuple _ = NoTuple
 step NoTuple _ = NoTuple
 
 isTuple :: TypeInfo -> Bool
-isTuple = (== Tuple) . T.foldl' step Start . typeName
+isTuple = (== Tuple) . T.foldl' step Start . _typeName
