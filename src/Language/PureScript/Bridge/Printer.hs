@@ -1,4 +1,7 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE KindSignatures    #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 module Language.PureScript.Bridge.Printer where
 
 import           Control.Monad
@@ -18,10 +21,10 @@ import           Language.PureScript.Bridge.SumType
 import           Language.PureScript.Bridge.TypeInfo
 
 
-data PSModule = PSModule {
+data PSModule (lang :: Language) = PSModule {
   psModuleName  :: !Text
 , psImportLines :: !(Map Text ImportLine)
-, psTypes       :: ![SumType]
+, psTypes       :: ![SumType lang]
 } deriving Show
 
 data ImportLine = ImportLine {

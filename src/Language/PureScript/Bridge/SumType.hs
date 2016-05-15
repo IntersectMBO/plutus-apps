@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE KindSignatures       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeOperators        #-}
@@ -20,40 +22,40 @@ import           Language.PureScript.Bridge.TypeInfo
 
 -- | Generic representation of your Haskell types, the contained (leaf) types can be modified to match
 --   compatible PureScript types, by using 'TypeBridge' functions like 'defaultBridge' with 'writePSTypes'.
-data SumType = SumType TypeInfo [DataConstructor] deriving Show
+data SumType (lang :: Language) = SumType (TypeInfo lang) [DataConstructor lang] deriving Show
 
 -- | TypInfo lens for SumType:
-sumTypeInfo :: Functor f => (TypeInfo -> f TypeInfo ) -> SumType -> f SumType
+sumTypeInfo :: Functor f => (TypeInfo lang -> f (TypeInfo lang) ) -> SumType lang -> f (SumType lang)
 sumTypeInfo inj (SumType info constrs) = flip SumType constrs <$> inj info
 
 -- | DataConstructor lens for SumType:
-sumTypeConstructors :: Functor f => ([DataConstructor] -> f [DataConstructor]) -> SumType -> f SumType
+sumTypeConstructors :: Functor f => ([DataConstructor lang] -> f [DataConstructor lang]) -> SumType lang -> f (SumType lang)
 sumTypeConstructors inj (SumType info constrs) = SumType info <$> inj constrs
 
 -- | Create a representation of your sum (and product) types,
 --   for doing type translations and writing it out to your PureScript modules.
 --   In order to get the type information we use a dummy variable of type Proxy (YourType).
-mkSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t)) => Proxy t -> SumType
+mkSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t)) => Proxy t -> SumType 'Haskell
 mkSumType p = SumType  (mkTypeInfo p) constructors
   where
     constructors = gToConstructors (from (undefined :: t))
 
-data DataConstructor = DataConstructor {
+data DataConstructor (lang :: Language) = DataConstructor {
   _sigConstructor :: !Text
-, _sigValues      :: !(Either [TypeInfo] [RecordEntry])
+, _sigValues      :: !(Either [TypeInfo lang] [RecordEntry lang])
 } deriving Show
 
 
-data RecordEntry = RecordEntry {
+data RecordEntry (lang :: Language) = RecordEntry {
   _recLabel :: !Text
-, _recValue :: !TypeInfo
+, _recValue :: !(TypeInfo lang)
 } deriving Show
 
 class GDataConstructor f where
-  gToConstructors :: f a -> [DataConstructor]
+  gToConstructors :: f a -> [DataConstructor 'Haskell]
 
 class GRecordEntry f where
-  gToRecordEntries :: f a -> [RecordEntry]
+  gToRecordEntries :: f a -> [RecordEntry 'Haskell]
 
 instance (Datatype a, GDataConstructor c) =>  GDataConstructor (D1 a c) where
   gToConstructors (M1 c) = gToConstructors c
@@ -88,10 +90,10 @@ instance (Selector a, Typeable t) => GRecordEntry (S1 a (K1 R t)) where
       }
     ]
 
-getUsedTypes :: SumType -> [TypeInfo]
+getUsedTypes :: SumType lang -> [TypeInfo lang]
 getUsedTypes (SumType _ cs) = foldr constructorToType [] cs
 
-constructorToType :: DataConstructor -> [TypeInfo] -> [TypeInfo]
+constructorToType :: DataConstructor lang -> [TypeInfo lang] -> [TypeInfo lang]
 constructorToType (DataConstructor _ (Left myTs)) ts = concatMap flattenTypeInfo myTs ++ ts
 constructorToType (DataConstructor _ (Right rs))  ts = concatMap (flattenTypeInfo . _recValue) rs ++ ts
 

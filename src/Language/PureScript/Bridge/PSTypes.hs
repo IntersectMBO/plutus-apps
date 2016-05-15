@@ -8,14 +8,15 @@ import qualified Data.Text                           as T
 import           Language.PureScript.Bridge.TypeInfo
 
 -- | Uses  type parameters from existing TypeInfo:
-psArray :: TypeInfo -> TypeInfo
+psArray :: TypeInfo 'Haskell -> TypeInfo 'PureScript
 psArray t = t {
     _typePackage = "purescript-prim"
   , _typeModule = "Prim"
   , _typeName = "Array"
+  , _typeParameters
   }
 
-psBool :: TypeInfo
+psBool :: TypeInfo 'PureScript
 psBool = TypeInfo {
     _typePackage = "purescript-prim"
   , _typeModule = "Prim"
@@ -24,14 +25,14 @@ psBool = TypeInfo {
   }
 
 -- | Uses  type parameters from existing TypeInfo:
-psEither :: TypeInfo -> TypeInfo
-psEither t = t {
+psEither :: TypeInfo 'Haskell -> TypeInfo 'PureScript
+psEither t = toPureScript t {
     _typePackage = "purescript-either"
   , _typeModule = "Data.Either"
   , _typeName = "Either"
   }
 
-psInt :: TypeInfo
+psInt :: TypeInfo 'PureScript
 psInt = TypeInfo {
     _typePackage = "purescript-prim"
   , _typeModule = "Prim"
@@ -40,15 +41,15 @@ psInt = TypeInfo {
   }
 
 -- | Uses  type parameters from existing TypeInfo:
-psMaybe :: TypeInfo -> TypeInfo
-psMaybe t = t {
+psMaybe :: TypeInfo 'Haskell -> TypeInfo 'PureScript
+psMaybe t = toPureScript t {
     _typePackage = "purescript-maybe"
   , _typeModule = "Data.Maybe"
   , _typeName = "Maybe"
   }
 
 
-psString :: TypeInfo
+psString :: TypeInfo 'PureScript
 psString = TypeInfo {
     _typePackage = "purescript-prim"
   , _typeModule = "Prim"
@@ -57,8 +58,8 @@ psString = TypeInfo {
   }
 
 -- | Uses  type parameters from existing TypeInfo:
-psTuple :: TypeInfo -> TypeInfo
-psTuple t = t {
+psTuple :: TypeInfo 'Haskell -> TypeInfo 'PureScript
+psTuple t = toPureScript t {
       _typePackage = "purescript-tuples"
     , _typeModule = if size == 2 then "Data.Tuple" else "Data.Tuple.Nested"
     , _typeName = "Tuple" <> if size == 2 then "" else T.pack (show size)

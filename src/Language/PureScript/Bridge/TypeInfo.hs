@@ -1,35 +1,28 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE KindSignatures    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-
-module Language.PureScript.Bridge.TypeInfo where
+module Language.PureScript.Bridge.TypeInfo (
+ TypeInfo
+ , mkTypeInfo
+ , mkTypeInfo'
+) where
 
 
 import           Control.Lens
 import           Data.Proxy
-import           Data.Text     (Text)
-import qualified Data.Text     as T
+import           Data.Text                           (Text)
+import qualified Data.Text                           as T
 import           Data.Typeable
+import           Unsafe.Coerce                       (unsafeCoerce)
 
+import           Language.PureScript.Bridge.Internal
 
--- | Translates a Haskell type info to a PureScript type info:
-type TypeBridge = TypeInfo -> Maybe TypeInfo
-
-
--- | Basic info about a data type:
-data TypeInfo = TypeInfo {
-  -- | Hackage package
-  _typePackage    :: !Text
-  -- | Full Module path
-, _typeModule     :: !Text
-, _typeName       :: !Text
-, _typeParameters :: ![TypeInfo]
-} deriving (Eq, Ord, Show)
-
-mkTypeInfo :: Typeable t => Proxy t -> TypeInfo
+mkTypeInfo :: Typeable t => Proxy t -> TypeInfo 'Haskell
 mkTypeInfo = mkTypeInfo' . typeRep
 
-mkTypeInfo' :: TypeRep -> TypeInfo
+mkTypeInfo' :: TypeRep -> TypeInfo 'Haskell
 mkTypeInfo' rep = let
     con = typeRepTyCon rep
   in TypeInfo {
@@ -39,24 +32,24 @@ mkTypeInfo' rep = let
   , _typeParameters = map mkTypeInfo' (typeRepArgs rep)
   }
 
+
+
 -- | Put the TypeInfo in a list together with all its _typeParameters (recursively)
-flattenTypeInfo :: TypeInfo -> [TypeInfo]
+flattenTypeInfo :: TypeInfo lang -> [TypeInfo lang]
 flattenTypeInfo t = t : concatMap flattenTypeInfo (_typeParameters t)
 
 -- | Little helper for type bridge implementers
-eqTypeName :: Text -> TypeInfo -> Bool
+eqTypeName :: Text -> TypeInfo lang -> Bool
 eqTypeName name = (== name) . _typeName
 
 -- | Helper for simple bridge creation for basic types
-mkBridgeTo :: (TypeInfo -> Bool) -> TypeInfo -> TypeBridge
+mkBridgeTo :: (TypeInfo 'Haskell -> Bool) -> TypeInfo 'PureScript -> TypeBridge
 mkBridgeTo match r t
   | match t = Just r
   | otherwise = Nothing
 
 -- | Helper for simple bridge creation for type constructors
-mkBridgeTo1 :: (TypeInfo -> Bool) -> (TypeInfo -> TypeInfo) -> TypeBridge
-mkBridgeTo1 match r t
-  | match t = Just $ r t
+mkBridgeTo1 :: (TypeInfo 'Haskell -> Bool) -> (TypeInfo 'Haskell -> TypeInfo 'PureScript) -> TypeBridge
+mkBridgeTo1 match r tHask
+  | match tHask = Just $ r tHask
   | otherwise = Nothing
-
-makeLenses ''TypeInfo

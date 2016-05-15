@@ -1,4 +1,7 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE KindSignatures    #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 module Language.PureScript.Bridge (
     bridgeSumType
   , defaultBridge
@@ -50,7 +53,7 @@ import           Data.Maybe
 --
 --  == Result:
 --   'writePSTypes' will write out PureScript modules to the given path, mirroring the hierarchy of the Haskell modules
---   the types came from. In addition a list of needed PS packages is printed to the console.
+--   they types came from. In addition a list of needed PS packages is printed to the console.
 --
 --   The list of needed packages is retrieved from the bridged 'TypeInfo' data, so make sure you set '_typePackage' correctly
 --   in your own bridges, in order for this feature to be useful.
@@ -68,7 +71,7 @@ import           Data.Maybe
 --
 --  == /WARNING/:
 --   This function overwrites files - make backups or use version control!
-writePSTypes :: TypeBridge -> FilePath -> [SumType] -> IO ()
+writePSTypes :: TypeBridge -> FilePath -> [SumType 'Haskell] -> IO ()
 writePSTypes br root sts = do
     let bridged = map (bridgeSumType br) sts
     let modules = M.elems $ sumTypesToModules M.empty bridged
@@ -79,10 +82,14 @@ writePSTypes br root sts = do
     mapM_ (T.putStrLn . mappend "  - ") packages
 
 -- | Translate leaf types in a sum type to match PureScript types.
-bridgeSumType :: TypeBridge -> SumType -> SumType
+--   For your convenience, the bridge is also applied to the TypeInfo field of
+--   the 'SumType' itself, so you can do transformations (e.g. chainging
+--   '_typeModule') for the generated PureScript types by means of a custom bridge.
+
+bridgeSumType :: TypeBridge -> SumType 'Haskell -> SumType 'PureScript
 bridgeSumType br (SumType t cs) = SumType fixedT $ map (bridgeConstructor br) cs
   where
-    fixedT= t { _typeParameters = map fixTypeParameters (_typeParameters t)}
+    fixedT= doBridge br t { _typeParameters = map fixTypeParameters (_typeParameters t)}
 
 -- | Translate types optimistically: If the passed 'TypeBridge' returns 'Nothing',
 --   then the original 'TypeInfo' is returned with the '_typePackage' field cleared.
@@ -90,7 +97,7 @@ bridgeSumType br (SumType t cs) = SumType fixedT $ map (bridgeConstructor br) cs
 --   This function also recurses into all '_typeParameters' of the passed 'TypeInfo'.
 --
 --   You typically don't need to call this function directly, just use 'bridgeSumType' with your 'TypeBridge'.
-doBridge :: TypeBridge -> TypeInfo -> TypeInfo
+doBridge :: TypeBridge -> TypeInfo 'Haskell -> TypeInfo 'PureScript
 doBridge br info = let
     translated = info { _typePackage = "" }
     res = fixTypeParameters $ fromMaybe translated (br info)
@@ -116,19 +123,19 @@ defaultBridge t = stringBridge t
   <|> tupleBridge t
 
 -- | Translate types in a constructor.
-bridgeConstructor :: TypeBridge -> DataConstructor -> DataConstructor
+bridgeConstructor :: TypeBridge -> DataConstructor 'Haskell -> DataConstructor 'PureScript
 bridgeConstructor br (DataConstructor name (Left infos)) =
     DataConstructor name . Left $ map (doBridge br) infos
 bridgeConstructor br (DataConstructor name (Right record)) =
     DataConstructor name . Right $ map (bridgeRecordEntry br) record
 
 -- | Translate types in a record entry.
-bridgeRecordEntry :: TypeBridge -> RecordEntry -> RecordEntry
+bridgeRecordEntry :: TypeBridge -> RecordEntry 'Haskell -> RecordEntry 'PureScript
 bridgeRecordEntry br (RecordEntry label value) = RecordEntry label $ doBridge br value
 
 -- | Translate types that come from any module named "Something.TypeParameters" to lower case:
 --   Also drop the 1 at the end if present
-fixTypeParameters :: TypeInfo -> TypeInfo
+fixTypeParameters :: TypeInfo lang -> TypeInfo lang
 fixTypeParameters t
   | T.isSuffixOf "TypeParameters" (_typeModule t) = t {
       _typePackage = "" -- Don't suggest any packages

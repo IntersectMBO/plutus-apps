@@ -54,11 +54,14 @@ source-repository head
 library
   -- Modules exported by the library.
   exposed-modules: Language.PureScript.Bridge
+                , Language.PureScript.Bridge.Builder
+                , Language.PureScript.Bridge.Internal
                 , Language.PureScript.Bridge.Primitives
                 , Language.PureScript.Bridge.Printer
                 , Language.PureScript.Bridge.PSTypes
                 , Language.PureScript.Bridge.SumType
                 , Language.PureScript.Bridge.Tuple
+                , Language.PureScript.Bridge.TypeBridge
                 , Language.PureScript.Bridge.TypeInfo
                 , Language.PureScript.Bridge.TypeParameters
 
@@ -72,9 +75,12 @@ library
   build-depends:       base >=4.8 && <4.9
                      , containers
                      , directory
+                     , errors
                      , filepath
+                     , mtl
                      , lens
                      , text
+                     , transformers
                      , generic-deriving
 
   ghc-options:       -Wall
