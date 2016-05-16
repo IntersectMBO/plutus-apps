@@ -17,6 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Servant.PureScript.Internal
                      , Servant.PureScript.CodeGen
+  other-modules:       Main
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , containers

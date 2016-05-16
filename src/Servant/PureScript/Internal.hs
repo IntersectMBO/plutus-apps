@@ -13,6 +13,8 @@ module Servant.PureScript.Internal where
 
 import           Control.Lens
 import           Data.Aeson
+import           Data.Bifunctor
+import           Data.Char
 import           Data.Map                            (Map)
 import qualified Data.Map                            as Map
 import           Data.Maybe                          (mapMaybe, maybeToList)
@@ -47,32 +49,40 @@ import           Servant.Foreign
 data PureScript bridgeSelector
 
 instance (Generic a, Typeable a, HasBridge bridgeSelector) => HasForeignType (PureScript bridgeSelector) TypeInfo a where
-  typeFor _ _ _ = doBridge (languageBridge (Proxy :: Proxy bridgeSelector)) (mkTypeInfo (Proxy :: Proxy a))
+  typeFor _ _ _ = languageBridge (Proxy :: Proxy bridgeSelector) (mkTypeInfo (Proxy :: Proxy a))
 
 class HasBridge a where
-  languageBridge :: Proxy a -> TypeBridge
+  languageBridge :: Proxy a -> FullBridge
 
 -- | Use 'PureScript' 'DefaultBridge' if 'defaultBridge' suffices for your needs.
 data DefaultBridge
 
--- | 'languageBridge' for 'DefaultBridge' evaluates to 'defaultBridge' - no surprise there.
+-- | 'languageBridge' for 'DefaultBridge' evaluates to 'buildBridge' 'defaultBridge' - no surprise there.
 instance HasBridge DefaultBridge where
-  languageBridge _ = defaultBridge
+  languageBridge _ = buildBridge defaultBridge
 
+-- | A proxy for 'DefaultBridge'
+defaultBridgeProxy :: Proxy DefaultBridge
+defaultBridgeProxy = Proxy
 
 data Settings = Settings {
-  apiModuleName   :: Text
-  -- | This function parameters should instead be put in a reader monad.
+  _apiModuleName   :: Text
+  -- | This function parameters should instead be put in a Reader monad.
+  --
   --   'baseUrl' will be put there by default, you can add additional parameters.
-, readerParams    :: Set (Param TypeInfo)
-, standardImports :: ImportLines
+  --
+  --   If your API uses a given parameter name multiple times with different types,
+  --   only the ones matching the type of the first occurrence
+  --   will be put in the Reader monad, all others will still be passed as function parameter.
+, _readerParams    :: Set ParamName
+, _standardImports :: ImportLines
 }
 
 defaultSettings :: Settings
 defaultSettings = Settings {
-    apiModuleName    = "ServerAPI"
-  , readerParams    = Set.singleton $ Param baseURLId psString
-  , standardImports = importsFromList
+    _apiModuleName    = "ServerAPI"
+  , _readerParams    = Set.singleton $ Param baseURLId psString
+  , _standardImports = importsFromList
         [ ImportLine "Prelude" (Set.fromList [ "Unit(..)" ])
         , ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadReader" ])
         , ImportLine "Control.Monad.Error.Class" (Set.fromList [ "class MonadError" ])
@@ -86,6 +96,11 @@ defaultSettings = Settings {
         ]
   }
 
+-- | Add a parameter name to be us put in the Reader monad instead of being passed to the
+--   generated functions.
+addReaderParam :: ParamName -> Settings -> Settings
+addReaderParam n opts = opts & over readerParams (Set.insert n)
+
 type ParamName = Text
 
 baseURLId :: ParamName
@@ -98,6 +113,8 @@ data Param f = Param {
   _pName :: Text
 , _pType :: f
 } deriving (Eq, Ord, Show)
+
+type PSParam = Param (TypeInfo 'PureScript)
 
 makeLenses ''Param
 
@@ -121,5 +138,30 @@ apiToList :: forall bridgeSelector api.
   ( HasForeign (PureScript bridgeSelector) TypeInfo api
   , GenerateList TypeInfo (Foreign TypeInfo api)
   , HasBridge bridgeSelector
-  ) => Proxy api -> Proxy bridgeSelector -> [Req TypeInfo]
-apiToList _ _ = listFromAPI (Proxy :: Proxy (PureScript bridgeSelector)) (Proxy :: Proxy TypeInfo) (Proxy :: Proxy api)
+  ) => Proxy api -> Proxy bridgeSelector -> [Req (TypeInfo 'PureScript)]
+apiToList _ _ = listFromAPI (Proxy :: Proxy (PureScript bridgeSelector)) (Proxy :: Proxy (TypeInfo 'PureScript)) (Proxy :: Proxy api)
+
+
+apiToDoc :: forall bridgeSelector api.
+  ( HasForeign (PureScript bridgeSelector) TypeInfo api
+  , GenerateList TypeInfo (Foreign TypeInfo api)
+  , HasBridge bridgeSelector
+  ) => Proxy api -> Proxy bridgeSelector -> Settings UnBridged -> [Req TypeInfo]
+
+-- | Transform a given identifer to be a valid PureScript variable name (hopefully).
+toPSVarName :: Text -> Text
+toPSVarName = dropInvalid . unTitle . doPrefix . replaceInvalid
+  where
+    unTitle = uncurry mappend . first T.toLower . T.splitAt 1
+    doPrefix t = let
+        s = T.head t
+        cond = isAlpha s || s == '_'
+      in
+        if cond then t else "_" <> t
+    replaceInvalid  = T.replace "-" "_"
+    dropInvalid = let
+        isValid c = isAlphaNum c || c == '_'
+      in
+        T.filter isValid
+
+makeLenses ''Settings

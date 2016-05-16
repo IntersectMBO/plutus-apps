@@ -7,8 +7,6 @@
 {-# LANGUAGE TypeOperators         #-}
 
 
-
-
 module Main where
 
 import           Data.Aeson
@@ -37,18 +35,18 @@ newtype TestHeader = TestHeader Text deriving (Generic, Show, Eq)
 
 instance ToJSON TestHeader
 
-type MyAPI = Header "testHeader" TestHeader :> QueryFlag "myFlag" :> QueryParam "myParam" Hello :> QueryParams "myParams" Hello :> "hello" :> ReqBody '[JSON] Hello :> Get '[JSON] Hello
-  :<|> Header "testHeader" Hello :> "testHeader" :> Get '[JSON] TestHeader
-  :<|> Header "testHeader" TestHeader :> "by" :> Get '[JSON] Int
+type MyAPI = Header "TestHeader" TestHeader :> QueryFlag "myFlag" :> QueryParam "myParam" Hello :> QueryParams "myParams" Hello :> "hello" :> ReqBody '[JSON] Hello :> Get '[JSON] Hello
+  :<|> Header "TestHeader" Hello :> "testHeader" :> Get '[JSON] TestHeader
+  :<|> Header "TestHeader" TestHeader :> "by" :> Get '[JSON] Int
 
 
 reqs = apiToList (Proxy :: Proxy MyAPI) (Proxy :: Proxy DefaultBridge)
 req = head reqs
 
 mySettings = let
-    testHeader = Param "testHeader" (doBridge defaultBridge $ mkTypeInfo (Proxy :: Proxy TestHeader))
+    testHeader = Param "TestHeader" (doBridge defaultBridge $ mkTypeInfo (Proxy :: Proxy TestHeader))
   in
-    defaultSettings {readerParams = Set.insert testHeader (readerParams defaultSettings)}
+    defaultSettings {_readerParams = Set.insert testHeader (_readerParams defaultSettings)}
 
 fn = genFunction mySettings req
 
@@ -56,7 +54,6 @@ paramSettings = genParamSettings mySettings
 
 mymodule = genModule mySettings reqs
 
-{--
+
 main :: IO ()
-main = T.putStrLn $ apiToPureScript (Proxy :: Proxy MyAPI) (Proxy :: Proxy DefaultBridge)
---}
+main = putDocLn mymodule
