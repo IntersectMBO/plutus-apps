@@ -1,14 +1,17 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 module Language.PureScript.Bridge.Tuple where
 
-import qualified Data.Text as T
+import qualified Data.Text                           as T
 
-import Language.PureScript.Bridge.TypeInfo
-import Language.PureScript.Bridge.PSTypes (psTuple)
+import           Language.PureScript.Bridge.Builder
+import           Language.PureScript.Bridge.PSTypes  (psTuple)
+import           Language.PureScript.Bridge.TypeInfo
 
 
-tupleBridge :: TypeBridge
-tupleBridge = mkBridgeTo1 isTuple psTuple
+tupleBridge :: BridgePart
+tupleBridge = doCheck haskType isTuple >> psTuple
 
 
 data TupleParserState =
@@ -25,5 +28,5 @@ step ColonFound _ = NoTuple
 step Tuple _ = NoTuple
 step NoTuple _ = NoTuple
 
-isTuple :: TypeInfo -> Bool
+isTuple :: TypeInfo 'Haskell -> Bool
 isTuple = (== Tuple) . T.foldl' step Start . _typeName

@@ -1,20 +1,21 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
 -- | PureScript types to be used for bridges, e.g. in "Language.PureScript.Bridge.Primitives".
 module Language.PureScript.Bridge.PSTypes where
 
+import           Control.Lens                        (views)
 import           Data.Monoid
 import qualified Data.Text                           as T
 
+import           Language.PureScript.Bridge.Builder
 import           Language.PureScript.Bridge.TypeInfo
 
--- | Uses  type parameters from existing TypeInfo:
-psArray :: TypeInfo 'Haskell -> TypeInfo 'PureScript
-psArray t = t {
-    _typePackage = "purescript-prim"
-  , _typeModule = "Prim"
-  , _typeName = "Array"
-  , _typeParameters
-  }
+-- | Uses  type parameters from 'haskType' (bridged).
+psArray :: BridgePart
+psArray = TypeInfo "purescript-prim" "Prim" "Array" <$> psTypeParameters
 
 psBool :: TypeInfo 'PureScript
 psBool = TypeInfo {
@@ -24,13 +25,9 @@ psBool = TypeInfo {
   , _typeParameters = []
   }
 
--- | Uses  type parameters from existing TypeInfo:
-psEither :: TypeInfo 'Haskell -> TypeInfo 'PureScript
-psEither t = toPureScript t {
-    _typePackage = "purescript-either"
-  , _typeModule = "Data.Either"
-  , _typeName = "Either"
-  }
+-- | Uses  type parameters from 'haskType' (bridged).
+psEither :: BridgePart
+psEither = TypeInfo "purescript-either" "Data.Either" "Either" <$> psTypeParameters
 
 psInt :: TypeInfo 'PureScript
 psInt = TypeInfo {
@@ -40,14 +37,9 @@ psInt = TypeInfo {
   , _typeParameters = []
   }
 
--- | Uses  type parameters from existing TypeInfo:
-psMaybe :: TypeInfo 'Haskell -> TypeInfo 'PureScript
-psMaybe t = toPureScript t {
-    _typePackage = "purescript-maybe"
-  , _typeModule = "Data.Maybe"
-  , _typeName = "Maybe"
-  }
-
+-- | Uses  type parameters from 'haskType' (bridged).
+psMaybe :: BridgePart
+psMaybe = TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" <$> psTypeParameters
 
 psString :: TypeInfo 'PureScript
 psString = TypeInfo {
@@ -57,17 +49,16 @@ psString = TypeInfo {
   , _typeParameters = []
   }
 
--- | Uses  type parameters from existing TypeInfo:
-psTuple :: TypeInfo 'Haskell -> TypeInfo 'PureScript
-psTuple t = toPureScript t {
-      _typePackage = "purescript-tuples"
-    , _typeModule = if size == 2 then "Data.Tuple" else "Data.Tuple.Nested"
-    , _typeName = "Tuple" <> if size == 2 then "" else T.pack (show size)
-    }
-  where
-    size = length (_typeParameters t)
+-- | Uses  type parameters from 'haskType' (bridged).
+psTuple :: BridgePart
+psTuple = do
+  size <- views (haskType . typeParameters) length
+  let
+    tupleModule = if size == 2 then "Data.Tuple" else "Data.Tuple.Nested"
+    tupleName = "Tuple" <> if size == 2 then "" else T.pack (show size)
+  TypeInfo "purescript-tuples" tupleModule tupleName <$> psTypeParameters
 
-psUnit :: TypeInfo
+psUnit :: TypeInfo 'PureScript
 psUnit = TypeInfo  {
     _typePackage = "purescript-prelude"
   , _typeModule = "Prelude"

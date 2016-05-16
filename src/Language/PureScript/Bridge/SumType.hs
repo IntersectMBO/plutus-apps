@@ -9,7 +9,20 @@
 
 
 
-module Language.PureScript.Bridge.SumType where
+module Language.PureScript.Bridge.SumType (
+  SumType (..)
+, mkSumType
+, DataConstructor (..)
+, RecordEntry (..)
+, getUsedTypes
+, constructorToType
+, sigConstructor
+, sigValues
+, sumTypeInfo
+, sumTypeConstructors
+, recLabel
+, recValue
+) where
 
 import           Control.Lens                        hiding (from, to)
 import           Data.Proxy
@@ -20,21 +33,20 @@ import           Generics.Deriving
 
 import           Language.PureScript.Bridge.TypeInfo
 
--- | Generic representation of your Haskell types, the contained (leaf) types can be modified to match
---   compatible PureScript types, by using 'TypeBridge' functions like 'defaultBridge' with 'writePSTypes'.
+-- | Generic representation of your Haskell types.
 data SumType (lang :: Language) = SumType (TypeInfo lang) [DataConstructor lang] deriving Show
 
--- | TypInfo lens for SumType:
+-- | TypInfo lens for 'SumType'.
 sumTypeInfo :: Functor f => (TypeInfo lang -> f (TypeInfo lang) ) -> SumType lang -> f (SumType lang)
 sumTypeInfo inj (SumType info constrs) = flip SumType constrs <$> inj info
 
--- | DataConstructor lens for SumType:
+-- | DataConstructor lens for 'SumType'.
 sumTypeConstructors :: Functor f => ([DataConstructor lang] -> f [DataConstructor lang]) -> SumType lang -> f (SumType lang)
 sumTypeConstructors inj (SumType info constrs) = SumType info <$> inj constrs
 
 -- | Create a representation of your sum (and product) types,
 --   for doing type translations and writing it out to your PureScript modules.
---   In order to get the type information we use a dummy variable of type Proxy (YourType).
+--   In order to get the type information we use a dummy variable of type 'Proxy' (YourType).
 mkSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t)) => Proxy t -> SumType 'Haskell
 mkSumType p = SumType  (mkTypeInfo p) constructors
   where

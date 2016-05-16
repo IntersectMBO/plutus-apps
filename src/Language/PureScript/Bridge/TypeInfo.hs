@@ -1,23 +1,55 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE KindSignatures    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
+
 
 module Language.PureScript.Bridge.TypeInfo (
- TypeInfo
+ TypeInfo (..)
  , mkTypeInfo
  , mkTypeInfo'
+ , Language (..)
+ , typePackage
+ , typeModule
+ , typeName
+ , typeParameters
+ , HasHaskType
+ , haskType
+ , flattenTypeInfo
 ) where
 
 
 import           Control.Lens
 import           Data.Proxy
-import           Data.Text                           (Text)
-import qualified Data.Text                           as T
+import           Data.Text     (Text)
+import qualified Data.Text     as T
 import           Data.Typeable
-import           Unsafe.Coerce                       (unsafeCoerce)
 
-import           Language.PureScript.Bridge.Internal
+data Language = Haskell | PureScript
+
+-- | Basic info about a data type:
+data TypeInfo (lang :: Language) = TypeInfo {
+  -- | Hackage package
+  _typePackage    :: !Text
+  -- | Full Module path
+, _typeModule     :: !Text
+, _typeName       :: !Text
+, _typeParameters :: ![TypeInfo lang]
+} deriving (Eq, Ord, Show)
+
+makeLenses ''TypeInfo
+
+-- | Types that have a lens for accessing a 'TypeInfo Haskell'.
+class HasHaskType t where
+  haskType :: Lens' t (TypeInfo 'Haskell)
+
+-- | Simple 'id' instance: Get the 'TypeInfo' itself.
+instance HasHaskType (TypeInfo 'Haskell) where
+  haskType inj = inj
+
 
 mkTypeInfo :: Typeable t => Proxy t -> TypeInfo 'Haskell
 mkTypeInfo = mkTypeInfo' . typeRep
@@ -32,24 +64,6 @@ mkTypeInfo' rep = let
   , _typeParameters = map mkTypeInfo' (typeRepArgs rep)
   }
 
-
-
--- | Put the TypeInfo in a list together with all its _typeParameters (recursively)
+-- | Put the TypeInfo in a list together with all its '_typeParameters' (recursively)
 flattenTypeInfo :: TypeInfo lang -> [TypeInfo lang]
 flattenTypeInfo t = t : concatMap flattenTypeInfo (_typeParameters t)
-
--- | Little helper for type bridge implementers
-eqTypeName :: Text -> TypeInfo lang -> Bool
-eqTypeName name = (== name) . _typeName
-
--- | Helper for simple bridge creation for basic types
-mkBridgeTo :: (TypeInfo 'Haskell -> Bool) -> TypeInfo 'PureScript -> TypeBridge
-mkBridgeTo match r t
-  | match t = Just r
-  | otherwise = Nothing
-
--- | Helper for simple bridge creation for type constructors
-mkBridgeTo1 :: (TypeInfo 'Haskell -> Bool) -> (TypeInfo 'Haskell -> TypeInfo 'PureScript) -> TypeBridge
-mkBridgeTo1 match r tHask
-  | match tHask = Just $ r tHask
-  | otherwise = Nothing
