@@ -94,8 +94,8 @@ data BridgeData = BridgeData {
   }
 
 -- | By implementing the 'haskType' lens in the HasHaskType class, we are able
---   to use it for both 'BridgeData' and a plain 'TypeInfo Haskell', therefore
---   you can use it with 'doCheck' and '^==' for checks on the complete 'TypeInfo Haskell'
+--   to use it for both 'BridgeData' and a plain 'HaskellType', therefore
+--   you can use it with 'doCheck' and '^==' for checks on the complete 'HaskellType'
 --   value.
 --
 --   Example:
