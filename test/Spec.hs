@@ -9,6 +9,8 @@
 
 module Main where
 
+import           Control.Applicative
+import           Control.Lens
 import           Data.Aeson
 import           Data.Proxy
 import qualified Data.Set                           as Set
@@ -23,7 +25,8 @@ import           Servant.Foreign
 import           Servant.PureScript
 import           Servant.PureScript.CodeGen
 import           Servant.PureScript.Internal
-import           Text.PrettyPrint.Mainland
+import           Text.PrettyPrint.Mainland          (hPutDocLn)
+
 
 data Hello = Hello {
   message :: Text
@@ -52,8 +55,24 @@ myTypes = [
   , mkSumType (Proxy :: Proxy TestHeader)
   ]
 
+moduleTranslator :: BridgePart
+moduleTranslator = do
+  typeModule ^== "Main"
+  t <- view haskType
+  TypeInfo (_typePackage t) "ServerTypes" (_typeName t) <$> psTypeParameters
+
+myBridge :: BridgePart
+myBridge = defaultBridge <|> moduleTranslator
+
+data MyBridge
+
+instance HasBridge MyBridge where
+  languageBridge _ = buildBridge myBridge
+
+myBridgeProxy :: Proxy MyBridge
+myBridgeProxy = Proxy
 
 main :: IO ()
 main = do
-  writeAPIModuleWithSettings mySettings "test/output" defaultBridgeProxy (Proxy :: Proxy MyAPI)
-  writePSTypes "test/output" (buildBridge defaultBridge) myTypes
+  writeAPIModuleWithSettings mySettings "test/output" myBridgeProxy (Proxy :: Proxy MyAPI)
+  writePSTypes "test/output" (buildBridge myBridge) myTypes
