@@ -33,7 +33,7 @@ import           Language.PureScript.Bridge.TypeInfo   as Bridge
 --   >    , mkSumType (Proxy :: Proxy MyType2)
 --   >   ]
 --   >
---   >  writePSTypes (buildBridge defaultBridge) "path/to/your/purescript/project" myTypes
+--   >  writePSTypes "path/to/your/purescript/project" (buildBridge defaultBridge) myTypes
 --
 --   You can define your own type bridges based on 'defaultBridge':
 --
@@ -42,7 +42,7 @@ import           Language.PureScript.Bridge.TypeInfo   as Bridge
 --
 --  and use it with 'writePSTypes':
 --
---  >  writePSTypes (buildBridge myBridge) "path/to/your/purescript/project" myTypes
+--  >  writePSTypes "path/to/your/purescript/project" (buildBridge myBridge) myTypes
 --
 --   Find examples for implementing your own bridges in: "Language.PureScript.Bridge.Primitives".
 --
@@ -67,8 +67,8 @@ import           Language.PureScript.Bridge.TypeInfo   as Bridge
 --
 --  == /WARNING/:
 --   This function overwrites files - make backups or use version control!
-writePSTypes :: FullBridge -> FilePath -> [SumType 'Haskell] -> IO ()
-writePSTypes br root sts = do
+writePSTypes :: FilePath -> FullBridge -> [SumType 'Haskell] -> IO ()
+writePSTypes root br sts = do
     let bridged = map (bridgeSumType br) sts
     let modules = M.elems $ sumTypesToModules M.empty bridged
     mapM_ (printModule root) modules
