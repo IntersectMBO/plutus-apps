@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -9,12 +10,14 @@ module Language.PureScript.Bridge.PSTypes where
 import           Control.Lens                        (views)
 import           Data.Monoid
 import qualified Data.Text                           as T
+import           Control.Monad.Reader.Class
+
 
 import           Language.PureScript.Bridge.Builder
 import           Language.PureScript.Bridge.TypeInfo
 
 -- | Uses  type parameters from 'haskType' (bridged).
-psArray :: BridgePart
+psArray :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
 psArray = TypeInfo "purescript-prim" "Prim" "Array" <$> psTypeParameters
 
 psBool :: TypeInfo 'PureScript
@@ -26,7 +29,7 @@ psBool = TypeInfo {
   }
 
 -- | Uses  type parameters from 'haskType' (bridged).
-psEither :: BridgePart
+psEither :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
 psEither = TypeInfo "purescript-either" "Data.Either" "Either" <$> psTypeParameters
 
 psInt :: TypeInfo 'PureScript
@@ -38,7 +41,7 @@ psInt = TypeInfo {
   }
 
 -- | Uses  type parameters from 'haskType' (bridged).
-psMaybe :: BridgePart
+psMaybe :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
 psMaybe = TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" <$> psTypeParameters
 
 psString :: TypeInfo 'PureScript
@@ -50,7 +53,7 @@ psString = TypeInfo {
   }
 
 -- | Uses  type parameters from 'haskType' (bridged).
-psTuple :: BridgePart
+psTuple :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
 psTuple = do
   size <- views (haskType . typeParameters) length
   let

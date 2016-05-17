@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
@@ -8,8 +9,8 @@
 
 -- | A bridge builder DSL, powered by 'Monad', 'Alternative' and lens.
 --
---   Bridges can be built within the BridgeBuilder monad.
---   You can check properties of the to be bridged Haskell 'TypeInfo' with '^==' or 'doCheck',
+--   Bridges can be built within the 'BridgeBuilder' monad.
+--   You can check properties of the to-be-bridged Haskell 'TypeInfo' with '^==' or 'doCheck',
 --   you have choice ('<|>'), you can fail ('empty') and you can return a translated PureScript
 --   'TypeInfo' ('return'). The Haskell 'TypeInfo' can be accessed with:
 --
@@ -19,6 +20,7 @@
 module Language.PureScript.Bridge.Builder (
   FullBridge
 , FixUpBridge
+, FixUpBuilder
 , BridgeData
 , fullBridge
 , BridgeBuilder
@@ -39,7 +41,8 @@ import           Control.Lens
 import           Control.Monad                       (MonadPlus, guard, mplus,
                                                       mzero)
 import           Control.Monad.Reader.Class
-import           Control.Monad.Trans.Reader          (ReaderT (..))
+import           Control.Monad.Trans.Reader          (Reader, ReaderT (..),
+                                                      runReader)
 import           Data.Maybe                          (fromMaybe)
 import           Data.Monoid
 import qualified Data.Text                           as T
@@ -47,8 +50,28 @@ import           Language.PureScript.Bridge.TypeInfo
 
 type FullBridge = TypeInfo 'Haskell -> TypeInfo 'PureScript
 
--- | Bridges to use when a 'BridgePart' returns 'Nothing'.
-type FixUpBridge = FullBridge
+-- | Bridges to use when a 'BridgePart' returns 'Nothing' (See 'buildBridgeWithCustomFixUp').
+--
+--   It is similar to BridgeBuilder but does not offer choice or failure. It is used for constructing fallbacks
+--   if a 'BridgePart' evaluates to 'Nothing'.
+--
+--   If you have a type definition like for example 'psEither' which is usable in both 'FixUpBuilder'
+--   and 'BridgeBuilder' and you want to use it in 'FixUpBuilder' you should use the following type signature:
+--
+-- > {-# LANGUAGE FlexibleContexts #-}
+-- >
+-- > import           Control.Monad.Reader.Class
+-- >
+-- > psEither :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+-- > psEither = ....
+--
+--   instead of:
+--
+-- > psEither :: BridgePart
+-- > psEither = ....
+newtype FixUpBuilder a = FixUpBuilder (Reader BridgeData a) deriving (Functor, Applicative, Monad, MonadReader BridgeData)
+
+type FixUpBridge = FixUpBuilder (TypeInfo 'PureScript)
 
 data BridgeData = BridgeData {
   -- | The Haskell type to translate.
@@ -96,14 +119,10 @@ type BridgePart = BridgeBuilder (TypeInfo 'PureScript)
 --
 -- > buildBridgeWithCustomFixUp errorFixUp yourBridge
 --
---   Of course you can also write your own 'FixUpBridge'.
---   In this case it is highly recommended that you build your custom 'FixUpBridge'
---   from 'BridgePart' with 'buildBridgeWithCustomFixUp' too, with 'FixUpBridge' being finally 'errorFixUp'.
---   This way you get all the builder convenience and proper bridging of 'typeParameters'.
---   For an example have a look at the implementation
---   of 'clearPackageFixup'.
+--   Of course you can also write your own 'FixUpBridge'. It works the same
+--   as for 'BridgePart', but you can not have choice ('<|>') or failure ('empty').
 clearPackageFixUp :: FixUpBridge
-clearPackageFixUp = buildBridgeWithCustomFixUp errorFixUp $ do
+clearPackageFixUp = do
   input <- view haskType
   psArgs <- psTypeParameters
   return TypeInfo {
@@ -118,17 +137,17 @@ clearPackageFixUp = buildBridgeWithCustomFixUp errorFixUp $ do
 --
 -- > buildBridgeWithCustomFixUp errorFixUp yourBridge
 errorFixUp :: FixUpBridge
-errorFixUp inType = let
-    message = "No translation supplied for Haskell type: '"
-      <> inType ^. typeName <> "', from module: '"
-      <> inType ^. typeModule <> "', from package: '"
-      <> inType ^. typePackage <> "'!"
-  in
-    error $ T.unpack message
+errorFixUp = do
+    inType <- view haskType
+    let message = "No translation supplied for Haskell type: '"
+          <> inType ^. typeName <> "', from module: '"
+          <> inType ^. typeModule <> "', from package: '"
+          <> inType ^. typePackage <> "'!"
+    return $ error $ T.unpack message
 
 -- | Build a bridge.
 --
---   This is a convenience wrapper for 'buildBridgeWithCustomFixUp'.
+--   This is a convenience wrapper for 'buildBridgeWithCustomFixUp' and should normally be sufficient.
 --
 --   Definition:
 --
@@ -139,15 +158,12 @@ buildBridge = buildBridgeWithCustomFixUp clearPackageFixUp
 
 -- | Takes a constructed BridgePart and makes it a total function ('FullBridge')
 --   by using the supplied 'FixUpBridge' when 'BridgePart' returns 'Nothing'.
---
---   The supplied 'BridgePart' also gets passed through 'fixTypeParameters' in
---   order to support translation of type constructors.
 buildBridgeWithCustomFixUp :: FixUpBridge -> BridgePart -> FullBridge
-buildBridgeWithCustomFixUp fixUp rawPart = let
-    (BridgeBuilder bridgePart) = fixTypeParameters rawPart
+buildBridgeWithCustomFixUp (FixUpBuilder fixUp) (BridgeBuilder bridgePart) = let
     mayBridge :: TypeInfo 'Haskell -> Maybe (TypeInfo 'PureScript)
     mayBridge inType = runReaderT bridgePart $ BridgeData inType bridge
-    bridge inType = fromMaybe (fixUp inType) (mayBridge inType)
+    fixBridge inType = runReader fixUp $ BridgeData inType bridge
+    bridge inType = fixTypeParameters $ fromMaybe (fixBridge inType) (mayBridge inType)
   in
     bridge
 
@@ -158,17 +174,15 @@ buildBridgeWithCustomFixUp fixUp rawPart = let
 --   This method gets called by 'buildBridge' and buildBridgeWithCustomFixUp for you - you should not need to call it.
 --
 --   It enables you to even bridge type constructor definitions, see "Language.PureScript.Bridge.TypeParameters" for more details.
-fixTypeParameters :: BridgePart -> BridgePart
-fixTypeParameters br = (needsFix >> fixIt) <|> br
-  where
-    needsFix = doCheck typeModule ("TypeParameters" `T.isSuffixOf`)
-    fixIt = do
-      r <- br
-      return r {
+fixTypeParameters :: TypeInfo lang -> TypeInfo lang
+fixTypeParameters t = if "TypeParameters" `T.isSuffixOf` _typeModule t
+    then t {
           _typePackage = "" -- Don't suggest any packages
         , _typeModule = "" -- Don't import any modules
-        , _typeName = r ^. typeName . to (stripNum . T.toLower)
+        , _typeName = t ^. typeName . to (stripNum . T.toLower)
         }
+    else t
+  where
     stripNum v = fromMaybe v (T.stripSuffix "1" v)
 
 
@@ -207,5 +221,5 @@ infix 4 ^==
 -- | Bridge 'haskType' 'typeParameters' over to PureScript types.
 --
 --   To be used for bridging type constructors.
-psTypeParameters :: BridgeBuilder [TypeInfo 'PureScript]
+psTypeParameters :: MonadReader BridgeData m => m [TypeInfo 'PureScript]
 psTypeParameters = map <$> view fullBridge <*> view (haskType . typeParameters)
