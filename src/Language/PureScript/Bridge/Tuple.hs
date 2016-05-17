@@ -29,5 +29,5 @@ step ColonFound _ = NoTuple
 step Tuple _ = NoTuple
 step NoTuple _ = NoTuple
 
-isTuple :: TypeInfo 'Haskell -> Bool
+isTuple :: HaskellType -> Bool
 isTuple = (== Tuple) . T.foldl' step Start . _typeName

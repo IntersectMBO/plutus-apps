@@ -10,9 +10,9 @@
 -- | A bridge builder DSL, powered by 'Monad', 'Alternative' and lens.
 --
 --   Bridges can be built within the 'BridgeBuilder' monad.
---   You can check properties of the to-be-bridged Haskell 'TypeInfo' with '^==' or 'doCheck',
---   you have choice ('<|>'), you can fail ('empty') and you can return a translated PureScript
---   'TypeInfo' ('return'). The Haskell 'TypeInfo' can be accessed with:
+--   You can check properties of the to-be-bridged 'HaskellType' with '^==' or 'doCheck',
+--   you have choice ('<|>'), you can fail ('empty') and you can return a translated
+--   'PSType' ('return'). The 'HaskellType' can be accessed with:
 --
 -- > view haskType
 --
@@ -51,7 +51,7 @@ newtype BridgeBuilder a =
   BridgeBuilder (ReaderT BridgeData Maybe a)
     deriving (Functor, Applicative, Monad, MonadReader BridgeData)
 
-type BridgePart = BridgeBuilder (TypeInfo 'PureScript)
+type BridgePart = BridgeBuilder PSType
 
 -- | Bridges to use when a 'BridgePart' returns 'Nothing' (See 'buildBridgeWithCustomFixUp').
 --
@@ -67,7 +67,7 @@ type BridgePart = BridgeBuilder (TypeInfo 'PureScript)
 -- > import           Language.PureScript.Bridge.TypeInfo
 
 -- >
--- > psEither :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+-- > psEither :: MonadReader BridgeData m => m PSType
 -- > psEither = ....
 --
 --   instead of:
@@ -82,13 +82,13 @@ type BridgePart = BridgeBuilder (TypeInfo 'PureScript)
 --
 newtype FixUpBuilder a = FixUpBuilder (Reader BridgeData a) deriving (Functor, Applicative, Monad, MonadReader BridgeData)
 
-type FixUpBridge = FixUpBuilder (TypeInfo 'PureScript)
+type FixUpBridge = FixUpBuilder PSType
 
-type FullBridge = TypeInfo 'Haskell -> TypeInfo 'PureScript
+type FullBridge = HaskellType -> PSType
 
 data BridgeData = BridgeData {
   -- | The Haskell type to translate.
-    _haskType   :: TypeInfo 'Haskell
+    _haskType   :: HaskellType
   -- | Reference to the bride itself, needed for translation of type constructors.
   , _fullBridge :: FullBridge
   }
@@ -102,7 +102,7 @@ data BridgeData = BridgeData {
 --
 -- > stringBridge :: BridgePart
 -- > stringBridge = do
--- >   -- Note: we are using the TypeInfo 'Haskell instance here:
+-- >   -- Note: we are using the HaskellType instance here:
 -- >   haskType ^== mkTypeInfo (Proxy :: Proxy String)
 -- >   return psString
 instance HasHaskType BridgeData where
@@ -130,7 +130,7 @@ fullBridge inj (BridgeData iT fB) = BridgeData iT <$> inj fB
 --
 --   Of course you can also write your own 'FixUpBridge'. It works the same
 --   as for 'BridgePart', but you can not have choice ('<|>') or failure ('empty').
-clearPackageFixUp :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+clearPackageFixUp :: MonadReader BridgeData m => m PSType
 clearPackageFixUp = do
   input <- view haskType
   psArgs <- psTypeParameters
@@ -145,7 +145,7 @@ clearPackageFixUp = do
 --   Usage:
 --
 -- > buildBridgeWithCustomFixUp errorFixUp yourBridge
-errorFixUp :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+errorFixUp :: MonadReader BridgeData m => m PSType
 errorFixUp = do
     inType <- view haskType
     let message = "No translation supplied for Haskell type: '"
@@ -169,7 +169,7 @@ buildBridge = buildBridgeWithCustomFixUp clearPackageFixUp
 --   by using the supplied 'FixUpBridge' when 'BridgePart' returns 'Nothing'.
 buildBridgeWithCustomFixUp :: FixUpBridge -> BridgePart -> FullBridge
 buildBridgeWithCustomFixUp (FixUpBuilder fixUp) (BridgeBuilder bridgePart) = let
-    mayBridge :: TypeInfo 'Haskell -> Maybe (TypeInfo 'PureScript)
+    mayBridge :: HaskellType -> Maybe PSType
     mayBridge inType = runReaderT bridgePart $ BridgeData inType bridge
     fixBridge inType = runReader fixUp $ BridgeData inType bridge
     bridge inType = fixTypeParameters $ fromMaybe (fixBridge inType) (mayBridge inType)
@@ -212,7 +212,7 @@ instance MonadPlus BridgeBuilder where
   mplus = (<|>)
 
 -- | Do some check on properties of 'haskType'.
-doCheck :: Getter (TypeInfo 'Haskell) a -> (a -> Bool) -> BridgeBuilder ()
+doCheck :: Getter HaskellType a -> (a -> Bool) -> BridgeBuilder ()
 doCheck l check = guard =<< views (haskType . l) check
 
 -- | Check parts of 'haskType' for equality:
@@ -222,7 +222,7 @@ doCheck l check = guard =<< views (haskType . l) check
 -- >   typeName ^== "Text"
 -- >   typeModule ^== "Data.Text.Internal" <|> typeModule ^== "Data.Text.Internal.Lazy"
 -- >   return psString
-(^==) :: Eq a => Getter (TypeInfo 'Haskell) a -> a -> BridgeBuilder ()
+(^==) :: Eq a => Getter HaskellType a -> a -> BridgeBuilder ()
 l ^== a = doCheck l (== a)
 
 infix 4 ^==
@@ -230,5 +230,5 @@ infix 4 ^==
 -- | Bridge 'haskType' 'typeParameters' over to PureScript types.
 --
 --   To be used for bridging type constructors.
-psTypeParameters :: MonadReader BridgeData m => m [TypeInfo 'PureScript]
+psTypeParameters :: MonadReader BridgeData m => m [PSType]
 psTypeParameters = map <$> view fullBridge <*> view (haskType . typeParameters)

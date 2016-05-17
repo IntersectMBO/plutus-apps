@@ -9,6 +9,8 @@
 
 module Language.PureScript.Bridge.TypeInfo (
  TypeInfo (..)
+ , PSType
+ , HaskellType
  , mkTypeInfo
  , mkTypeInfo'
  , Language (..)
@@ -42,19 +44,26 @@ data TypeInfo (lang :: Language) = TypeInfo {
 
 makeLenses ''TypeInfo
 
+-- | For convenience:
+type PSType = TypeInfo 'PureScript
+
+-- | For convenience:
+type HaskellType = TypeInfo 'Haskell
+
+
 -- | Types that have a lens for accessing a 'TypeInfo Haskell'.
 class HasHaskType t where
-  haskType :: Lens' t (TypeInfo 'Haskell)
+  haskType :: Lens' t HaskellType
 
 -- | Simple 'id' instance: Get the 'TypeInfo' itself.
-instance HasHaskType (TypeInfo 'Haskell) where
+instance HasHaskType HaskellType where
   haskType inj = inj
 
 
-mkTypeInfo :: Typeable t => Proxy t -> TypeInfo 'Haskell
+mkTypeInfo :: Typeable t => Proxy t -> HaskellType
 mkTypeInfo = mkTypeInfo' . typeRep
 
-mkTypeInfo' :: TypeRep -> TypeInfo 'Haskell
+mkTypeInfo' :: TypeRep -> HaskellType
 mkTypeInfo' rep = let
     con = typeRepTyCon rep
   in TypeInfo {

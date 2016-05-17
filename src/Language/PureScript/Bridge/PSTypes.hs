@@ -17,10 +17,10 @@ import           Language.PureScript.Bridge.Builder
 import           Language.PureScript.Bridge.TypeInfo
 
 -- | Uses  type parameters from 'haskType' (bridged).
-psArray :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+psArray :: MonadReader BridgeData m => m PSType
 psArray = TypeInfo "purescript-prim" "Prim" "Array" <$> psTypeParameters
 
-psBool :: TypeInfo 'PureScript
+psBool :: PSType
 psBool = TypeInfo {
     _typePackage = "purescript-prim"
   , _typeModule = "Prim"
@@ -29,10 +29,10 @@ psBool = TypeInfo {
   }
 
 -- | Uses  type parameters from 'haskType' (bridged).
-psEither :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+psEither :: MonadReader BridgeData m => m PSType
 psEither = TypeInfo "purescript-either" "Data.Either" "Either" <$> psTypeParameters
 
-psInt :: TypeInfo 'PureScript
+psInt :: PSType
 psInt = TypeInfo {
     _typePackage = "purescript-prim"
   , _typeModule = "Prim"
@@ -41,10 +41,10 @@ psInt = TypeInfo {
   }
 
 -- | Uses  type parameters from 'haskType' (bridged).
-psMaybe :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+psMaybe :: MonadReader BridgeData m => m PSType
 psMaybe = TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" <$> psTypeParameters
 
-psString :: TypeInfo 'PureScript
+psString :: PSType
 psString = TypeInfo {
     _typePackage = "purescript-prim"
   , _typeModule = "Prim"
@@ -53,7 +53,7 @@ psString = TypeInfo {
   }
 
 -- | Uses  type parameters from 'haskType' (bridged).
-psTuple :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+psTuple :: MonadReader BridgeData m => m PSType
 psTuple = do
   size <- views (haskType . typeParameters) length
   let
@@ -61,7 +61,7 @@ psTuple = do
     tupleName = "Tuple" <> if size == 2 then "" else T.pack (show size)
   TypeInfo "purescript-tuples" tupleModule tupleName <$> psTypeParameters
 
-psUnit :: TypeInfo 'PureScript
+psUnit :: PSType
 psUnit = TypeInfo  {
     _typePackage = "purescript-prelude"
   , _typeModule = "Prelude"

@@ -91,7 +91,7 @@ recordEntryToText :: RecordEntry 'PureScript -> Text
 recordEntryToText e = _recLabel e <> " :: " <> typeInfoToText True (_recValue e)
 
 
-typeInfoToText :: Bool -> TypeInfo 'PureScript -> Text
+typeInfoToText :: Bool -> PSType -> Text
 typeInfoToText topLevel t = if needParens then "(" <> inner <> ")" else inner
   where
     inner = _typeName t <>
@@ -120,10 +120,10 @@ sumTypeToModule st@(SumType t _) = Map.alter (Just . updateModule) (_typeModule 
       }
     dropSelf = Map.delete (_typeModule t)
 
-typesToImportLines :: ImportLines -> [TypeInfo 'PureScript] -> ImportLines
+typesToImportLines :: ImportLines -> [PSType] -> ImportLines
 typesToImportLines = foldr typeToImportLines
 
-typeToImportLines :: TypeInfo 'PureScript -> ImportLines -> ImportLines
+typeToImportLines :: PSType -> ImportLines -> ImportLines
 typeToImportLines t = if not (T.null (_typeModule t))
     then Map.alter (Just . updateLine) (_typeModule t)
     else id

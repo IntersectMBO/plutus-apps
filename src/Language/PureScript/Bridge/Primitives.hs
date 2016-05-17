@@ -20,7 +20,7 @@ eitherBridge :: BridgePart
 eitherBridge = typeName ^== "Either" >> psEither
 
 -- | Dummy bridge, translates every type with 'clearPackageFixUp'
-dummyBridge :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+dummyBridge :: MonadReader BridgeData m => m PSType
 dummyBridge = clearPackageFixUp
 
 intBridge :: BridgePart
