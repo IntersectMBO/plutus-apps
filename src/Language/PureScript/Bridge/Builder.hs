@@ -18,22 +18,21 @@
 --
 --   Find usage examples in "Language.PureScript.Bridge.Primitives" and "Language.PureScript.Bridge.PSTypes"
 module Language.PureScript.Bridge.Builder (
-  FullBridge
-, FixUpBridge
+  BridgeBuilder
+, BridgePart
 , FixUpBuilder
+, FixUpBridge
 , BridgeData
 , fullBridge
-, BridgeBuilder
-, BridgePart
-, clearPackageFixUp
-, errorFixUp
-, buildBridge
-, buildBridgeWithCustomFixUp
-, doCheck
 , (^==)
+, doCheck
 , (<|>)
 , psTypeParameters
-, fixTypeParameters
+, FullBridge
+, buildBridge
+, clearPackageFixUp
+, errorFixUp
+, buildBridgeWithCustomFixUp
 ) where
 
 import           Control.Applicative
@@ -48,19 +47,25 @@ import           Data.Monoid
 import qualified Data.Text                           as T
 import           Language.PureScript.Bridge.TypeInfo
 
-type FullBridge = TypeInfo 'Haskell -> TypeInfo 'PureScript
+newtype BridgeBuilder a =
+  BridgeBuilder (ReaderT BridgeData Maybe a)
+    deriving (Functor, Applicative, Monad, MonadReader BridgeData)
+
+type BridgePart = BridgeBuilder (TypeInfo 'PureScript)
 
 -- | Bridges to use when a 'BridgePart' returns 'Nothing' (See 'buildBridgeWithCustomFixUp').
 --
 --   It is similar to BridgeBuilder but does not offer choice or failure. It is used for constructing fallbacks
 --   if a 'BridgePart' evaluates to 'Nothing'.
 --
---   If you have a type definition like for example 'psEither' which is usable in both 'FixUpBuilder'
---   and 'BridgeBuilder' and you want to use it in 'FixUpBuilder' you should use the following type signature:
+--   For type definitions you should use the more generic ('MonadReader' 'BridgeData' m) constraint. This way your code will work
+--   in both 'FixUpBuilder' and 'BridgeBuilder':
 --
 -- > {-# LANGUAGE FlexibleContexts #-}
 -- >
 -- > import           Control.Monad.Reader.Class
+-- > import           Language.PureScript.Bridge.TypeInfo
+
 -- >
 -- > psEither :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
 -- > psEither = ....
@@ -69,9 +74,17 @@ type FullBridge = TypeInfo 'Haskell -> TypeInfo 'PureScript
 --
 -- > psEither :: BridgePart
 -- > psEither = ....
+--
+--   or
+--
+-- > psEither :: FixUpBridge
+-- > psEither = ....
+--
 newtype FixUpBuilder a = FixUpBuilder (Reader BridgeData a) deriving (Functor, Applicative, Monad, MonadReader BridgeData)
 
 type FixUpBridge = FixUpBuilder (TypeInfo 'PureScript)
+
+type FullBridge = TypeInfo 'Haskell -> TypeInfo 'PureScript
 
 data BridgeData = BridgeData {
   -- | The Haskell type to translate.
@@ -95,15 +108,11 @@ data BridgeData = BridgeData {
 instance HasHaskType BridgeData where
   haskType inj (BridgeData iT fB) = flip BridgeData fB <$> inj iT
 
+-- | Lens for access to the complete bridge from within our Reader monad.
+--
+--   This is used for example for implementing 'psTypeParameters'.
 fullBridge :: Lens' BridgeData FullBridge
 fullBridge inj (BridgeData iT fB) = BridgeData iT <$> inj fB
-
-newtype BridgeBuilder a =
-  BridgeBuilder (ReaderT BridgeData Maybe a)
-    deriving (Functor, Applicative, Monad, MonadReader BridgeData)
-
-
-type BridgePart = BridgeBuilder (TypeInfo 'PureScript)
 
 -- | Bridge to PureScript by simply clearing out the '_typePackage' field.
 --   This bridge is used by default as 'FixUpBridge' by 'buildBridge':
@@ -121,7 +130,7 @@ type BridgePart = BridgeBuilder (TypeInfo 'PureScript)
 --
 --   Of course you can also write your own 'FixUpBridge'. It works the same
 --   as for 'BridgePart', but you can not have choice ('<|>') or failure ('empty').
-clearPackageFixUp :: FixUpBridge
+clearPackageFixUp :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
 clearPackageFixUp = do
   input <- view haskType
   psArgs <- psTypeParameters
@@ -136,7 +145,7 @@ clearPackageFixUp = do
 --   Usage:
 --
 -- > buildBridgeWithCustomFixUp errorFixUp yourBridge
-errorFixUp :: FixUpBridge
+errorFixUp :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
 errorFixUp = do
     inType <- view haskType
     let message = "No translation supplied for Haskell type: '"

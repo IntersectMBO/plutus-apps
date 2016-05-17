@@ -1,4 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds #-}
+
+
 module Language.PureScript.Bridge.Primitives where
 
 
@@ -6,12 +10,18 @@ import           Data.Proxy
 import           Language.PureScript.Bridge.Builder
 import           Language.PureScript.Bridge.PSTypes
 import           Language.PureScript.Bridge.TypeInfo
+import           Control.Monad.Reader.Class
+
 
 boolBridge :: BridgePart
 boolBridge = typeName ^== "Bool" >> return psBool
 
 eitherBridge :: BridgePart
 eitherBridge = typeName ^== "Either" >> psEither
+
+-- | Dummy bridge, translates every type with 'clearPackageFixUp'
+dummyBridge :: MonadReader BridgeData m => m (TypeInfo 'PureScript)
+dummyBridge = clearPackageFixUp
 
 intBridge :: BridgePart
 intBridge = typeName ^== "Int" >> return psInt
