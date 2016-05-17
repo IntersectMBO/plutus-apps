@@ -48,7 +48,7 @@ import           Servant.Foreign
 --
 data PureScript bridgeSelector
 
-instance (Generic a, Typeable a, HasBridge bridgeSelector) => HasForeignType (PureScript bridgeSelector) TypeInfo a where
+instance (Generic a, Typeable a, HasBridge bridgeSelector) => HasForeignType (PureScript bridgeSelector) PSType a where
   typeFor _ _ _ = languageBridge (Proxy :: Proxy bridgeSelector) (mkTypeInfo (Proxy :: Proxy a))
 
 class HasBridge a where
@@ -65,6 +65,18 @@ instance HasBridge DefaultBridge where
 defaultBridgeProxy :: Proxy DefaultBridge
 defaultBridgeProxy = Proxy
 
+type ParamName = Text
+
+data Param f = Param {
+  _pName :: ParamName
+, _pType :: f
+} deriving (Eq, Ord, Show)
+
+type PSParam = Param PSType
+
+makeLenses ''Param
+
+
 data Settings = Settings {
   _apiModuleName   :: Text
   -- | This function parameters should instead be put in a Reader monad.
@@ -77,11 +89,12 @@ data Settings = Settings {
 , _readerParams    :: Set ParamName
 , _standardImports :: ImportLines
 }
+makeLenses ''Settings
 
 defaultSettings :: Settings
 defaultSettings = Settings {
     _apiModuleName    = "ServerAPI"
-  , _readerParams    = Set.singleton $ Param baseURLId psString
+  , _readerParams     = Set.singleton baseURLId
   , _standardImports = importsFromList
         [ ImportLine "Prelude" (Set.fromList [ "Unit(..)" ])
         , ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadReader" ])
@@ -101,23 +114,11 @@ defaultSettings = Settings {
 addReaderParam :: ParamName -> Settings -> Settings
 addReaderParam n opts = opts & over readerParams (Set.insert n)
 
-type ParamName = Text
-
 baseURLId :: ParamName
 baseURLId = "baseURL"
 
-baseURLParam :: Param TypeInfo
+baseURLParam :: PSParam
 baseURLParam = Param baseURLId psString
-
-data Param f = Param {
-  _pName :: Text
-, _pType :: f
-} deriving (Eq, Ord, Show)
-
-type PSParam = Param (TypeInfo 'PureScript)
-
-makeLenses ''Param
-
 {--
 apiToPureScript :: forall bridgeSelector api.
   ( HasForeign (PureScript bridgeSelector) TypeInfo api
@@ -135,18 +136,13 @@ apiToPureScript pAPI pBridge = let
 --}
 
 apiToList :: forall bridgeSelector api.
-  ( HasForeign (PureScript bridgeSelector) TypeInfo api
-  , GenerateList TypeInfo (Foreign TypeInfo api)
+  ( HasForeign (PureScript bridgeSelector) PSType api
+  , GenerateList PSType (Foreign PSType api)
   , HasBridge bridgeSelector
-  ) => Proxy api -> Proxy bridgeSelector -> [Req (TypeInfo 'PureScript)]
-apiToList _ _ = listFromAPI (Proxy :: Proxy (PureScript bridgeSelector)) (Proxy :: Proxy (TypeInfo 'PureScript)) (Proxy :: Proxy api)
+  ) => Proxy api -> Proxy bridgeSelector -> [Req PSType]
+apiToList _ _ = listFromAPI (Proxy :: Proxy (PureScript bridgeSelector)) (Proxy :: Proxy PSType) (Proxy :: Proxy api)
 
 
-apiToDoc :: forall bridgeSelector api.
-  ( HasForeign (PureScript bridgeSelector) TypeInfo api
-  , GenerateList TypeInfo (Foreign TypeInfo api)
-  , HasBridge bridgeSelector
-  ) => Proxy api -> Proxy bridgeSelector -> Settings UnBridged -> [Req TypeInfo]
 
 -- | Transform a given identifer to be a valid PureScript variable name (hopefully).
 toPSVarName :: Text -> Text
@@ -163,5 +159,3 @@ toPSVarName = dropInvalid . unTitle . doPrefix . replaceInvalid
         isValid c = isAlphaNum c || c == '_'
       in
         T.filter isValid
-
-makeLenses ''Settings

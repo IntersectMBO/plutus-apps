@@ -20,6 +20,7 @@ import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.PSTypes
 import           Servant.API
 import           Servant.Foreign
+import           Servant.PureScript
 import           Servant.PureScript.CodeGen
 import           Servant.PureScript.Internal
 import           Text.PrettyPrint.Mainland
@@ -43,17 +44,16 @@ type MyAPI = Header "TestHeader" TestHeader :> QueryFlag "myFlag" :> QueryParam 
 reqs = apiToList (Proxy :: Proxy MyAPI) (Proxy :: Proxy DefaultBridge)
 req = head reqs
 
-mySettings = let
-    testHeader = Param "TestHeader" (doBridge defaultBridge $ mkTypeInfo (Proxy :: Proxy TestHeader))
-  in
-    defaultSettings {_readerParams = Set.insert testHeader (_readerParams defaultSettings)}
+mySettings = addReaderParam "TestHeader" defaultSettings
 
-fn = genFunction mySettings req
-
-paramSettings = genParamSettings mySettings
-
-mymodule = genModule mySettings reqs
+myTypes :: [SumType 'Haskell]
+myTypes = [
+    mkSumType (Proxy :: Proxy Hello)
+  , mkSumType (Proxy :: Proxy TestHeader)
+  ]
 
 
 main :: IO ()
-main = putDocLn mymodule
+main = do
+  writeAPIModuleWithSettings mySettings "test/output" defaultBridgeProxy (Proxy :: Proxy MyAPI)
+  writePSTypes "test/output" (buildBridge defaultBridge) myTypes
