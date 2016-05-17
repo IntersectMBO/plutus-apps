@@ -9,6 +9,7 @@
 
 module Main where
 
+import           Control.Applicative
 import           Control.Lens
 import           Data.Aeson
 import           Data.Proxy
@@ -20,10 +21,7 @@ import           GHC.Generics                       (Generic)
 import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.PSTypes
 import           Servant.API
-import           Servant.Foreign
-import           Servant.PureScript.CodeGen
-import           Servant.PureScript.Internal
-import           Text.PrettyPrint.Mainland
+import           Servant.PureScript
 
 -- | TODO: For servant-purescript: make variable names lower case. (Some general fixup function, also replacing spaces and stuff.)
 
@@ -45,15 +43,23 @@ type CounterAPI = Header "AuthToken" AuthToken :> "counter" :> Get '[JSON] Int
 
 
 -- | We have been lazy and defined our types in the Main module,
---   we use this opportunity to show how you can change the output of 'writePSTypes'.
-fixModule :: TypeInfo -> TypeInfo
-fixModule ti = case ti ^. typeName of
-   "Main" -> ti & typeModule .~ "ServerTypes"
-   _ -> ti
+--   we use this opportunity to show how to create a custom bridge.
+fixMainModule :: BridgePart
+fixMainModule = do
+  typeModule ^== "Main"
+  t <- view haskType
+  TypeInfo (_typePackage t) "ServerTypes" (_typeName t) <$> psTypeParameters
 
+myBridge :: BridgePart
+myBridge = defaultBridge <|> fixMainModule
 
-counterBridge :: TypeBridge
-counterBridge = defaultBridge . fixModule
+data MyBridge
+
+myBridgeProxy :: Proxy MyBridge
+myBridgeProxy = Proxy
+
+instance HasBridge MyBridge where
+  languageBridge _ = buildBridge myBridge
 
 
 myTypes :: [SumType]
@@ -63,19 +69,10 @@ myTypes =  [
           ]
 
 
-reqs = apiToList (Proxy :: Proxy CounterAPI) (Proxy :: Proxy DefaultBridge)
-
-mySettings = let
-    authTokenT = mkTypeInfo (Proxy :: Proxy AuthToken)
-    authParam = Param "AuthToken" authTokenT
-  in
-    defaultSettings {_readerParams = Set.insert authParam (_readerParams defaultSettings)}
-
-
-paramSettings = genParamSettings mySettings
-
-mymodule = genModule mySettings reqs
+mySettings = addReaderParam "AuthToken" defaultSettings
 
 
 main :: IO ()
-main = putDocLn mymodule
+main = do
+  writeAPIModuleWithSettings mySettings "frontend" myBridgeProxy (Proxy :: Proxy CounterAPI)
+  writePSTypes "frontend" (buildBridge myBridge) myTypes

@@ -19,7 +19,7 @@ library
                      , Servant.PureScript.CodeGen
                      , Servant.PureScript
 
-  other-modules:       Main
+--  other-modules:       Main
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , containers

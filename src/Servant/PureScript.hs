@@ -6,7 +6,18 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Servant.PureScript where
+module Servant.PureScript (
+  HasBridge
+, languageBridge
+, defaultBridge
+, defaultBridgeProxy
+, DefaultBridge
+, writeAPIModule
+, writeAPIModuleWithSettings
+, Settings
+, defaultSettings
+, addReaderParam
+) where
 
 import           Control.Lens
 import           Data.Aeson
