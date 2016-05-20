@@ -119,21 +119,6 @@ baseURLId = "baseURL"
 
 baseURLParam :: PSParam
 baseURLParam = Param baseURLId psString
-{--
-apiToPureScript :: forall bridgeSelector api.
-  ( HasForeign (PureScript bridgeSelector) TypeInfo api
-  , GenerateList TypeInfo (Foreign TypeInfo api)
-  , HasBridge bridgeSelector
-  ) => Proxy api -> Proxy bridgeSelector -> Text
-apiToPureScript pAPI pBridge = let
-    reqs =  apiToList pAPI pBridge
-    specificImports = T.unlines . map importLineToText . Map.elems . reqsToImportLines $ reqs
-    genericImports =  T.unlines ["import Network.HTTP.Affjax"]
-    reqFunctions = map reqToFunction reqs
-    psModule = genericImports <> "\n" <> specificImports <> "\n" <> T.intercalate "\n" reqFunctions
-  in
-    psModule
---}
 
 apiToList :: forall bridgeSelector api.
   ( HasForeign (PureScript bridgeSelector) PSType api
@@ -141,7 +126,6 @@ apiToList :: forall bridgeSelector api.
   , HasBridge bridgeSelector
   ) => Proxy api -> Proxy bridgeSelector -> [Req PSType]
 apiToList _ _ = listFromAPI (Proxy :: Proxy (PureScript bridgeSelector)) (Proxy :: Proxy PSType) (Proxy :: Proxy api)
-
 
 
 -- | Transform a given identifer to be a valid PureScript variable name (hopefully).

@@ -1,6 +1,6 @@
-{-# LANGUAGE AutoDeriveTypeable    #-}
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -11,7 +11,12 @@ module Main where
 
 import           Control.Applicative
 import           Control.Lens
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader.Class
+import           Control.Monad.Trans.Reader         hiding (ask)
+import           Counter.WebAPI
 import           Data.Aeson
+import           Data.IORef
 import           Data.Proxy
 import qualified Data.Set                           as Set
 import           Data.Text                          (Text)
@@ -20,59 +25,44 @@ import           Data.Typeable
 import           GHC.Generics                       (Generic)
 import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.PSTypes
+import           Network.Wai
+import           Network.Wai.Handler.Warp
+import           Servant
 import           Servant.API
-import           Servant.PureScript
 
--- | TODO: For servant-purescript: make variable names lower case. (Some general fixup function, also replacing spaces and stuff.)
-
-data Hello = Hello {
-  message :: Text
-} deriving Generic
-
-instance FromJSON Hello
-instance ToJSON Hello
-
-data AuthToken = VerySecret Text deriving (Generic, Show, Eq, Ord)
-
-data CounterAction = CounterAdd Int | CounterSet Int deriving (Generic, Show, Eq, Ord)
-
-instance FromJSON CounterAction
-
-type CounterAPI = Header "AuthToken" AuthToken :> "counter" :> Get '[JSON] Int
-             :<|> Header "AuthToken" AuthToken :> "counter" :> ReqBody '[JSON] CounterAction :> Put '[JSON] ()
+type CounterVar = IORef Int
 
 
--- | We have been lazy and defined our types in the Main module,
---   we use this opportunity to show how to create a custom bridge.
-fixMainModule :: BridgePart
-fixMainModule = do
-  typeModule ^== "Main"
-  t <- view haskType
-  TypeInfo (_typePackage t) "ServerTypes" (_typeName t) <$> psTypeParameters
+type HandlerConstraint m = (MonadIO m, MonadReader CounterVar m)
 
-myBridge :: BridgePart
-myBridge = defaultBridge <|> fixMainModule
-
-data MyBridge
-
-myBridgeProxy :: Proxy MyBridge
-myBridgeProxy = Proxy
-
-instance HasBridge MyBridge where
-  languageBridge _ = buildBridge myBridge
+getCounter ::  HandlerConstraint m => m Int
+getCounter = liftIO . readIORef =<< ask
 
 
-myTypes :: [SumType]
-myTypes =  [
-            mkSumType (Proxy :: Proxy AuthToken)
-          , mkSumType (Proxy :: Proxy CounterAction)
-          ]
+putCounter :: HandlerConstraint m => CounterAction -> m Int
+putCounter action = liftIO . flip atomicModifyIORef' (doAction action) =<< ask
+  where
+    doAction (CounterAdd val) c = (c+val, c+val)
+    doAction (CounterSet val) _ = (val, val)
 
+counterHandlers :: ServerT CounterAPI (ReaderT CounterVar Handler)
+counterHandlers = getCounter :<|> putCounter
 
-mySettings = addReaderParam "AuthToken" defaultSettings
+toServant' :: CounterVar -> Maybe AuthToken -> ReaderT CounterVar Handler a -> Handler a
+toServant' cVar (Just (VerySecret "topsecret")) m = runReaderT m cVar
+toServant' _ _ _ = throwError $ err401 { errBody = "Your have to provide a valid secret, which is topsecret!" }
 
+toServant :: CounterVar -> Maybe AuthToken -> ReaderT CounterVar Handler :~> Handler
+toServant cVar secret = Nat $ toServant' cVar secret
+
+counterServer :: CounterVar -> Maybe AuthToken -> Server CounterAPI
+counterServer cVar secret = enter (toServant cVar secret) counterHandlers
+
+fullHandlers :: CounterVar -> Server FullAPI
+fullHandlers cVar = counterServer cVar :<|> serveDirectory "frontend/dist/"
+
+counterApplication :: CounterVar -> Application
+counterApplication = serve fullAPI . fullHandlers
 
 main :: IO ()
-main = do
-  writeAPIModuleWithSettings mySettings "frontend" myBridgeProxy (Proxy :: Proxy CounterAPI)
-  writePSTypes "frontend" (buildBridge myBridge) myTypes
+main = newIORef 0 >>= run 8081 . counterApplication

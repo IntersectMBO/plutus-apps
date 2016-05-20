@@ -14,7 +14,10 @@ module Servant.PureScript (
 , DefaultBridge
 , writeAPIModule
 , writeAPIModuleWithSettings
-, Settings
+, Settings (..)
+, apiModuleName
+, readerParams
+, standardImports
 , defaultSettings
 , addReaderParam
 ) where
