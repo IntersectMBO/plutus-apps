@@ -46,6 +46,7 @@ import           Servant.API
 import           Servant.Foreign
 import           Servant.PureScript.CodeGen
 import           Servant.PureScript.Internal
+import           System.Directory
 import           System.FilePath
 import           System.IO                           (IOMode (..), withFile)
 import           Text.PrettyPrint.Mainland           (hPutDocLn)
@@ -65,7 +66,9 @@ writeAPIModuleWithSettings :: forall bridgeSelector api.
 writeAPIModuleWithSettings opts root pBr pAPI = do
     let apiList  = apiToList pAPI pBr
     let contents = genModule opts apiList
+    unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
     withFile mPath WriteMode $ flip hPutDocLn contents
   where
     mFile = (joinPath . map T.unpack . T.splitOn "." $ _apiModuleName opts) <> ".purs"
     mPath = root </> mFile
+    mDir = takeDirectory mPath

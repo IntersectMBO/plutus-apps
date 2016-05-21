@@ -96,16 +96,16 @@ defaultSettings = Settings {
     _apiModuleName    = "ServerAPI"
   , _readerParams     = Set.singleton baseURLId
   , _standardImports = importsFromList
-        [ ImportLine "Prelude" (Set.fromList [ "Unit(..)" ])
-        , ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadReader" ])
+        [ ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadReader", "ask" ])
         , ImportLine "Control.Monad.Error.Class" (Set.fromList [ "class MonadError" ])
-        , ImportLine "Control.Monad.Aff.Class" (Set.fromList [ "class MonadAff" ])
+        , ImportLine "Control.Monad.Aff.Class" (Set.fromList [ "class MonadAff", "liftAff" ])
         , ImportLine "Network.HTTP.Affjax" (Set.fromList [ "AJAX" ])
         , ImportLine "Global" (Set.fromList [ "encodeURIComponent" ]) -- from package globals
         , ImportLine "Data.Nullable" (Set.fromList [ "Nullable()", "toNullable" ])
-        , ImportLine "Servant.PureScript.Affjax" (Set.fromList [ "defaultRequest", "affjax" ])
-        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "Settings" ])
+        , ImportLine "Servant.PureScript.Affjax" (Set.fromList [ "defaultRequest", "affjax", "AjaxError(..)" ])
+        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "SPSettings_(..)" ])
         , ImportLine "Servant.PureScript.Util" (Set.fromList [ "encodeListQuery", "encodeQueryItem", "getResult" ])
+        , ImportLine "Prim" (Set.fromList [ "String" ]) -- For baseURL!
         ]
   }
 

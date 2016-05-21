@@ -52,9 +52,8 @@ myTypes =  [
           ]
 
 mySettings :: Settings
-mySettings = (addReaderParam "AuthToken" defaultSettings) {
-      _apiModuleName = "Counter.WebAPI"
-    }
+mySettings = addReaderParam "AuthToken" defaultSettings & apiModuleName .~ "Counter.WebAPI"
+
 
 main :: IO ()
 main = do
