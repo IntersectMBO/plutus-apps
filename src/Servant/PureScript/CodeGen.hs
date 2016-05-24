@@ -125,9 +125,9 @@ genFnBody rParams req = "do"
         </> ", headers =" <+> "reqHeaders"
         </> case req ^. reqBody of
               Nothing -> "}"
-              Just _  -> ", content =" <+> "spOpts_.encodeJson reqBody" </> "}"
+              Just _  -> ", content =" <+> "unsafeCoerce spOpts_.encodeJson reqBody" </> "}"
       )
-      </> "getResult spOpts_.decodeJson affResp" <> line
+      </> "getResult (unsafeCoerce spOpts_.decodeJson) affResp" <> line
     )
 
 genBuildURL :: Url PSType -> Doc
@@ -169,7 +169,7 @@ genBuildHeader (HeaderArg arg) = let
   in
     align $ "{ field : " <> dquotes encodedArgName
       <+/> comma <+> "value :"
-      <+> "(encodeURIComponent <<< spOpts_.toURLPiece)" <+> psVar argText
+      <+> "(encodeURIComponent <<< unsafeCoerce spOpts_.toURLPiece)" <+> psVar argText
       </> "}"
 genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implemented!"
 

@@ -106,6 +106,7 @@ defaultSettings = Settings {
         , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "SPSettings_(..)" ])
         , ImportLine "Servant.PureScript.Util" (Set.fromList [ "encodeListQuery", "encodeQueryItem", "getResult" ])
         , ImportLine "Prim" (Set.fromList [ "String" ]) -- For baseURL!
+        , ImportLine "Unsafe.Coerce" (Set.fromList [ "unsafeCoerce" ]) -- Should not be necessary - compiler bug?
         ]
   }
 
