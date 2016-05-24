@@ -1,0 +1,51 @@
+{
+  "name": "pux-starter-app",
+  "version": "6.0.0",
+  "description": "Starter Pux application using webpack with hot-reloading.",
+  "main": "support/index.js",
+  "keywords": [
+    "pux",
+    "purescript-pux",
+    "boilerplate",
+    "starter-app"
+  ],
+  "scripts": {
+    "postinstall": "./node_modules/.bin/bower cache clean && ./node_modules/.bin/bower install",
+    "clean": "rimraf dist && rimraf output",
+    "build": "npm run clean && set NODE_ENV=production && ./node_modules/.bin/webpack --config ./webpack.production.config.js --progress --profile --colors",
+    "serve:watch": "node ./webpack.config.js",
+    "serve:prod": "http-server dist --cors -p 3000",
+    "start": "npm run serve:watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/alexmingoia/pux-starter-app.git"
+  },
+  "author": "Alexander C. Mingoia",
+  "license": "BSD3",
+  "bugs": {
+    "url": "https://github.com/alexmingoia/pux-starter-app/issues"
+  },
+  "dependencies": {
+    "react": "^15.0.0",
+    "react-dom": "^15.0.0",
+    "purescript": "^0.8.4"
+  },
+  "devDependencies": {
+    "bower": "^1.7.9",
+    "copy-webpack-plugin": "^2.1.1",
+    "express": "^4.13.4",
+    "html-webpack-plugin": "^2.15.0",
+    "http-server": "^0.9.0",
+    "purescript-psa": "^0.3.5",
+    "purescript-webpack-plugin": "^0.3.0",
+    "purs-loader": "^0.6.0",
+    "rimraf": "^2.5.2",
+    "source-map-loader": "^0.1.5",
+    "webpack": "^1.12.14",
+    "webpack-dev-middleware": "^1.6.1",
+    "webpack-hot-middleware": "^2.10.0",
+    "webpack-strip": "^0.1.0"
+  }
+}
