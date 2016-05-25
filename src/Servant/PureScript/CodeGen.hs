@@ -125,7 +125,7 @@ genFnBody rParams req = "do"
         </> ", headers =" <+> "reqHeaders"
         </> case req ^. reqBody of
               Nothing -> "}"
-              Just _  -> ", content =" <+> "gAesonEncodeJson reqBody" </> "}"
+              Just _  -> ", content =" <+> "toNullable <<< Just <<< printJson <<< gAesonEncodeJson $ reqBody" </> "}"
       )
       </> "getResult gAesonDecodeJson affResp" <> line
     )
