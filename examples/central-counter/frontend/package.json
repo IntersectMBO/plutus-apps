@@ -29,8 +29,7 @@
   },
   "dependencies": {
     "react": "^15.0.0",
-    "react-dom": "^15.0.0",
-    "purescript": "^0.8.4"
+    "react-dom": "^15.0.0"
   },
   "devDependencies": {
     "bower": "^1.7.9",

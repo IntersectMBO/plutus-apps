@@ -9,22 +9,32 @@ import Servant.PureScript.Affjax
 import Servant.PureScript.Settings
 import Counter.WebAPI
 import Counter.ServerTypes
+import Data.Argonaut.Aeson
+import Data.Generic
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import DOM.Node.Node (baseURI)
+import Data.Bifunctor (lmap)
 import Network.HTTP.Affjax (AJAX, get)
 import Pux (renderToDOM, fromSimple, start, EffModel, noEffects)
 import Pux.Html (Html, text, button, span, div)
 import Pux.Html.Events (onClick)
 import Signal.Channel (CHANNEL)
-import Data.Argonaut.Aeson
-import Data.Generic
+import Data.Maybe
+import Data.Either
 
 
 
-data Action = Increment | Decrement | Update Int
+data Action = Increment
+            | Decrement
+            | Update Int
+            | ReportError AjaxError
 
-type State = Int
+type State = {
+    counter :: Int
+  , lastError :: Maybe AjaxError
+  , settings :: MySettings
+  }
 
 type MySettings = SPSettings_ SPParams_
 
@@ -32,39 +42,40 @@ type MySettings = SPSettings_ SPParams_
 
 type APIEffect eff = ReaderT MySettings (ExceptT AjaxError (Aff ( ajax :: AJAX, channel :: CHANNEL | eff)))
 
-type ServantModel eff =
+type ServantModel =
     { state :: State
-    , effects :: Array (APIEffect eff Action)
+    , effects :: Array (APIEffect () Action)
     }
 
-update :: forall eff. Action -> State -> ServantModel eff
-update Increment count = { state : count,  effects : [
-      Update <$> putCounter (CounterAdd 1)
-    ]
-  }
-update Decrement count = { state : count, effects : [
-      Update <$> putCounter (CounterAdd (-1))
-    ]
-  }
-update (Update val) _  = { state : val, effects : []}
+update :: Action -> State -> EffModel State Action (ajax :: AJAX)
+update Increment state = runEffectActions state [Update <$> putCounter (CounterAdd 1)]
+update Decrement state = runEffectActions state [Update <$> putCounter (CounterAdd (-1))]
+update (Update val) state  = { state : state { counter = val }, effects : []}
+update (ReportError err ) state = { state : state { lastError = Just err}, effects : []}
 
 view :: State -> Html Action
-view count =
-  div
-    []
-    [ button [ onClick (const Increment) ] [ text "+" ]
-    , span [] [ text (show count) ]
-    , button [ onClick (const Decrement) ] [ text "-" ]
+view state =
+  div []
+    [ div
+        []
+        [ button [ onClick (const Increment) ] [ text "+" ]
+        , span [] [ text (show state.counter) ]
+        , button [ onClick (const Decrement) ] [ text "-" ]
+        ]
+    , div []
+        [ span [] [ text $ "Error: " <> show state.lastError ]
+        ]
     ]
 
-runUpdate :: MySettings -> ServantModel () -> EffModel State Action (ajax :: AJAX)
-runUpdate settings m = {
-      state   : m.state
-    , effects : map runStack m.effects
-    }
-  where
-    runStack :: APIEffect () Action -> Aff (ajax :: AJAX, channel :: CHANNEL) Action
-    runStack = map fromRight <<< runExceptT <<< flip runReaderT settings
+runEffectActions :: State -> Array (APIEffect () Action) -> EffModel State Action (ajax :: AJAX)
+runEffectActions state effects = { state : state, effects : map (runEffect state.settings) effects }
+
+runEffect :: MySettings -> APIEffect () Action -> Aff (channel :: CHANNEL, ajax :: AJAX) Action
+runEffect settings m = do
+    er <- runExceptT $ runReaderT m settings
+    case er of
+      Left err -> return $ ReportError err
+      Right v -> return v
 
 -- main :: forall e. Eff (ajax :: AJAX, err :: EXCEPTION, channel :: CHANNEL | e) Unit
 main = do
@@ -77,9 +88,10 @@ main = do
                     , baseURL : "http://localhost:8081/"
                     }
                   }
+  let initState = { counter : 0, settings : settings, lastError : Nothing }
   app <- start
-    { initialState: 0
-    , update: \action state -> runUpdate settings (update action state)
+    { initialState: initState
+    , update: update
     , view: view
     , inputs: []
     }
