@@ -103,10 +103,10 @@ defaultSettings = Settings {
         , ImportLine "Global" (Set.fromList [ "encodeURIComponent" ]) -- from package globals
         , ImportLine "Data.Nullable" (Set.fromList [ "Nullable()", "toNullable" ])
         , ImportLine "Servant.PureScript.Affjax" (Set.fromList [ "defaultRequest", "affjax", "AjaxError(..)" ])
-        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "SPSettings_(..)" ])
+        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "SPSettings_(..)", "gDefaultToURLPiece" ])
         , ImportLine "Servant.PureScript.Util" (Set.fromList [ "encodeListQuery", "encodeQueryItem", "getResult" ])
         , ImportLine "Prim" (Set.fromList [ "String" ]) -- For baseURL!
-        , ImportLine "Unsafe.Coerce" (Set.fromList [ "unsafeCoerce" ]) -- Should not be necessary - compiler bug?
+        , ImportLine "Data.Argonaut.Aeson" (Set.fromList [ "gAesonEncodeJson", "gAesonDecodeJson" ]) -- Should not be necessary - compiler bug!
         ]
   }
 
