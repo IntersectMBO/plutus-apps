@@ -122,7 +122,7 @@ genFnBody rParams req = "do"
       </> "affResp <- liftAff $ affjax " <> hang 2 ( "defaultRequest" </>
             "{ method ="  <+> "httpMethod"
         </> ", url ="     <+> "reqUrl"
-        </> ", headers =" <+> "reqHeaders"
+        </> ", headers =" <+> "defaultRequest.headers <> reqHeaders"
         </> case req ^. reqBody of
               Nothing -> "}"
               Just _  -> ", content =" <+> "toNullable <<< Just <<< printJson <<< gAesonEncodeJson $ reqBody" </> "}"
