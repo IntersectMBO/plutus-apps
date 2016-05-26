@@ -7,14 +7,16 @@ import Control.Monad.Aff.Class (class MonadAff, liftAff)
 import Control.Monad.Error.Class (class MonadError)
 import Control.Monad.Reader.Class (ask, class MonadReader)
 import Counter.ServerTypes (AuthToken, CounterAction)
+import Data.Argonaut.Aeson (gAesonDecodeJson, gAesonEncodeJson)
+import Data.Argonaut.Printer (printJson)
+import Data.Maybe (Maybe(..))
 import Data.Nullable (Nullable(), toNullable)
 import Global (encodeURIComponent)
 import Network.HTTP.Affjax (AJAX)
 import Prim (Int, String)
 import Servant.PureScript.Affjax (AjaxError(..), affjax, defaultRequest)
-import Servant.PureScript.Settings (SPSettings_(..))
+import Servant.PureScript.Settings (SPSettings_(..), gDefaultToURLPiece)
 import Servant.PureScript.Util (encodeListQuery, encodeQueryItem, getResult)
-import Unsafe.Coerce (unsafeCoerce)
 
 newtype SPParams_ = SPParams_ { authToken :: AuthToken
                               , baseURL :: String
@@ -32,14 +34,14 @@ getCounter = do
   let reqUrl = baseURL <> "counter"
   let reqHeaders =
         [{ field : "AuthToken"
-         , value : (encodeURIComponent <<< unsafeCoerce spOpts_.toURLPiece) authToken
+         , value : (encodeURIComponent <<< gDefaultToURLPiece) authToken
          }]
   affResp <- liftAff $ affjax defaultRequest
                                 { method = httpMethod
                                 , url = reqUrl
-                                , headers = reqHeaders
+                                , headers = defaultRequest.headers <> reqHeaders
                                 }
-  getResult (unsafeCoerce spOpts_.decodeJson) affResp
+  getResult gAesonDecodeJson affResp
   
 putCounter :: forall eff m.
            (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
@@ -53,13 +55,13 @@ putCounter reqBody = do
   let reqUrl = baseURL <> "counter"
   let reqHeaders =
         [{ field : "AuthToken"
-         , value : (encodeURIComponent <<< unsafeCoerce spOpts_.toURLPiece) authToken
+         , value : (encodeURIComponent <<< gDefaultToURLPiece) authToken
          }]
   affResp <- liftAff $ affjax defaultRequest
                                 { method = httpMethod
                                 , url = reqUrl
-                                , headers = reqHeaders
-                                , content = unsafeCoerce spOpts_.encodeJson reqBody
+                                , headers = defaultRequest.headers <> reqHeaders
+                                , content = toNullable <<< Just <<< printJson <<< gAesonEncodeJson $ reqBody
                                 }
-  getResult (unsafeCoerce spOpts_.decodeJson) affResp
+  getResult gAesonDecodeJson affResp
   

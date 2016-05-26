@@ -62,6 +62,7 @@ executable central-counter
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.8 && <4.9
                      , aeson
+                     , bytestring
                      , containers
                      , ghc-mod
                      , http-api-data

@@ -16,10 +16,13 @@ import           Control.Monad.Reader.Class
 import           Control.Monad.Trans.Reader         hiding (ask)
 import           Counter.WebAPI
 import           Data.Aeson
+import qualified Data.ByteString.Lazy               as B
 import           Data.IORef
+import           Data.Monoid
 import           Data.Proxy
 import qualified Data.Set                           as Set
 import           Data.Text                          (Text)
+import qualified Data.Text.Encoding                 as T
 import qualified Data.Text.IO                       as T
 import           Data.Typeable
 import           GHC.Generics                       (Generic)
@@ -50,6 +53,7 @@ counterHandlers = getCounter :<|> putCounter
 
 toServant' :: CounterVar -> Maybe AuthToken -> ReaderT CounterVar Handler a -> Handler a
 toServant' cVar (Just (VerySecret "topsecret")) m = runReaderT m cVar
+toServant' _ (Just (VerySecret secret)) _ = throwError $ err401 { errBody = "Your have to provide a valid secret, not: '" <> (B.fromStrict . T.encodeUtf8) secret <> "'!"  }
 toServant' _ _ _ = throwError $ err401 { errBody = "Your have to provide a valid secret, which is topsecret!" }
 
 toServant :: CounterVar -> Maybe AuthToken -> ReaderT CounterVar Handler :~> Handler
