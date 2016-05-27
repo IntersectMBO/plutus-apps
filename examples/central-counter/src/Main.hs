@@ -5,11 +5,15 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeOperators         #-}
+
+
 
 module Main where
 
 import           Control.Applicative
+import           Control.Concurrent.STM
 import           Control.Lens
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
@@ -32,41 +36,54 @@ import           Network.Wai
 import           Network.Wai.Handler.Warp
 import           Servant
 import           Servant.API
+import           Servant.Subscriber
+import           Servant.Subscriber.Types
 
-type CounterVar = IORef Int
+
+data CounterData = CounterData {
+    _counter    :: IORef Int
+  , _subscriber :: Subscriber FullAPI
+  }
+
+makeLenses ''CounterData
 
 
-type HandlerConstraint m = (MonadIO m, MonadReader CounterVar m)
+type HandlerConstraint m = (MonadIO m, MonadReader CounterData m)
 
 getCounter ::  HandlerConstraint m => m Int
-getCounter = liftIO . readIORef =<< ask
+getCounter = liftIO . readIORef =<< view counter
 
 
 putCounter :: HandlerConstraint m => CounterAction -> m Int
-putCounter action = liftIO . flip atomicModifyIORef' (doAction action) =<< ask
+putCounter action = do
+  r <- liftIO . flip atomicModifyIORef' (doAction action) =<< view counter
+  subscriber <- view subscriber
+  let link :: Proxy ("counter" :> Get '[JSON] Int)
+      link = Proxy
+  liftIO . atomically $ notify subscriber ModifyEvent link id
+  return r
   where
     doAction (CounterAdd val) c = (c+val, c+val)
     doAction (CounterSet val) _ = (val, val)
 
-counterHandlers :: ServerT CounterAPI (ReaderT CounterVar Handler)
+counterHandlers :: ServerT CounterAPI (ReaderT CounterData Handler)
 counterHandlers = getCounter :<|> putCounter
 
-toServant' :: CounterVar -> Maybe AuthToken -> ReaderT CounterVar Handler a -> Handler a
+toServant' :: CounterData -> Maybe AuthToken -> ReaderT CounterData Handler a -> Handler a
 toServant' cVar (Just (VerySecret "topsecret")) m = runReaderT m cVar
 toServant' _ (Just (VerySecret secret)) _ = throwError $ err401 { errBody = "Your have to provide a valid secret, not: '" <> (B.fromStrict . T.encodeUtf8) secret <> "'!"  }
 toServant' _ _ _ = throwError $ err401 { errBody = "Your have to provide a valid secret, which is topsecret!" }
 
-toServant :: CounterVar -> Maybe AuthToken -> ReaderT CounterVar Handler :~> Handler
+toServant :: CounterData -> Maybe AuthToken -> ReaderT CounterData Handler :~> Handler
 toServant cVar secret = Nat $ toServant' cVar secret
 
-counterServer :: CounterVar -> Maybe AuthToken -> Server CounterAPI
+counterServer :: CounterData -> Maybe AuthToken -> Server CounterAPI
 counterServer cVar secret = enter (toServant cVar secret) counterHandlers
 
-fullHandlers :: CounterVar -> Server FullAPI
-fullHandlers cVar = counterServer cVar :<|> serveDirectory "frontend/dist/"
-
-counterApplication :: CounterVar -> Application
-counterApplication = serve fullAPI . fullHandlers
+fullServer :: CounterData -> Server FullAPI
+fullServer cVar = counterServer cVar :<|> serveDirectory "frontend/dist/"
 
 main :: IO ()
-main = newIORef 0 >>= run 8081 . counterApplication
+main = do
+    cd <- CounterData <$> newIORef 0 <*> (atomically . mkSubscriber) "subscriber"
+    run 8081 $ serveSubscriber (cd ^. subscriber) (fullServer cd)

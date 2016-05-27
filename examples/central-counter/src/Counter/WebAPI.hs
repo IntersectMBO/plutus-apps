@@ -24,10 +24,9 @@ import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.PSTypes
 import           Network.HTTP.Types.URI             (urlDecode)
 import           Servant.API
+import           Servant.Subscriber.Subscribable
 import           Web.HttpApiData
 
-
--- | TODO: For servant-purescript: make variable names lower case. (Some general fixup function, also replacing spaces and stuff.)
 
 data Hello = Hello {
   message :: Text
@@ -41,6 +40,7 @@ data AuthToken = VerySecret Text deriving (Generic, Show, Eq, Ord, Read)
 instance FromHttpApiData AuthToken where
   parseUrlPiece = readTextData . decodeUri
     where
+      {-# INLINE decodeUri #-}
       decodeUri = T.decodeUtf8 . urlDecode False . T.encodeUtf8
 
 
@@ -48,12 +48,14 @@ data CounterAction = CounterAdd Int | CounterSet Int deriving (Generic, Show, Eq
 
 instance FromJSON CounterAction
 
-type AppAPI = Header "AuthToken" AuthToken :> "counter" :> CounterAPI
-
 type FullAPI = AppAPI :<|> Raw
 
-type CounterAPI = Get '[JSON] Int
+type AppAPI = Header "AuthToken" AuthToken :> "counter" :> CounterAPI
+
+
+type CounterAPI = Subscribable :> Get '[JSON] Int
              :<|> ReqBody '[JSON] CounterAction :> Put '[JSON] Int
+
 
 fullAPI :: Proxy FullAPI
 fullAPI = Proxy

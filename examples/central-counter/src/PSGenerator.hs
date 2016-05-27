@@ -22,6 +22,7 @@ import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.PSTypes
 import           Servant.API
 import           Servant.PureScript
+import           Servant.Subscriber.Subscribable
 
 import           Counter.WebAPI
 
