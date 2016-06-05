@@ -21,11 +21,10 @@ library
 
 --  other-modules:       Main
   build-depends:       base >= 4.7 && < 5
-                     , aeson
+                     , aeson >= 0.11.2
                      , containers
                      , directory
                      , filepath
-                     , ghc-mod
                      , http-types
                      , lens
                      , mainland-pretty
@@ -42,7 +41,7 @@ test-suite servant-purescript-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
-                     , aeson
+                     , aeson >= 0.11.2 && < 0.12
                      , containers
                      , mainland-pretty
                      , lens
