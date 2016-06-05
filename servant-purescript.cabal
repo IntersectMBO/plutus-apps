@@ -28,7 +28,7 @@ library
                      , http-types
                      , lens
                      , mainland-pretty
-                     , purescript-bridge
+                     , purescript-bridge >= 0.5 && < 0.6
                      , servant
                      , servant-foreign
                      , servant-subscriber
@@ -45,7 +45,7 @@ test-suite servant-purescript-test
                      , containers
                      , mainland-pretty
                      , lens
-                     , purescript-bridge
+                     , purescript-bridge >= 0.5 && < 0.6
                      , servant
                      , servant-foreign
                      , servant-purescript
