@@ -1,5 +1,10 @@
 # purescript-bridge
 
+
+[![Build Status](https://travis-ci.org/eskimor/purescript-bridge.svg?branch=master)](https://travis-ci.org/eskimor/purescript-bridge)
+
+
+
 Translate your Haskell types to PureScript types. It should in theory work for almost all Haskell types, including type constructors!
 You just have to instantiate it with dummy parameters from e.g. "Language.PureScript.Bridge.TypeParameters".
 
