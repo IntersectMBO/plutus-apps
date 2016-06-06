@@ -1,0 +1,75 @@
+# vim: nospell
+language: minimal
+sudo: false
+
+cache:
+  directories:
+    - $HOME/.stack
+
+matrix:
+  include:
+    - env: GHC=7.10.3 CABAL=1.22
+      compiler: "GHC 7.10"
+      addons:
+        apt:
+          sources:
+            - hvr-ghc
+          packages:
+            - ghc-7.10.3
+            - cabal-install-1.22
+            - happy-1.19.5
+            - alex-3.1.4
+
+    - env: GHC=head CABAL=1.24
+      compiler: "GHC HEAD"
+      addons:
+        apt:
+          sources:
+            - hvr-ghc
+          packages:
+            - ghc-head
+            - cabal-install-1.24
+            - happy-1.19.5
+            - alex-3.1.4
+
+  allow_failures:
+    - env: GHC=head CABAL=1.24
+
+  fast_finish: true
+
+
+before_install:
+  - export PATH=/opt/ghc/$GHC/bin:/opt/cabal/$CABAL/bin:/opt/alex/3.1.4/bin:/opt/happy/1.19.5/bin:$PATH
+
+  # cabal
+  - travis_retry cabal update
+  - sed -i 's/^jobs:/-- jobs:/' ${HOME}/.cabal/config
+
+  # stack
+  - mkdir $HOME/bin
+  - export PATH=$HOME/bin:$PATH
+  - travis_retry curl -L "https://www.stackage.org/stack/linux-x86_64" | gunzip | tar -x
+  - mv stack-*/stack $HOME/bin
+  - if [ ${GHC} != head ]; then ln -s stack-${GHC%.*}.yaml stack.yaml; fi
+  - travis_retry stack setup
+  - travis_retry stack install hscolour
+
+install:
+  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
+  - stack --version
+  - cabal --version
+  - opt --version; true
+  - llc --version; true
+  - |
+      if [ ${GHC} != head ]; then
+        travis_retry stack build --only-dependencies --no-terminal --no-haddock-deps -j2
+      else
+        travis_retry cabal install --only-dependencies --allow-newer
+      fi
+script:
+  - |
+      if [ ${GHC} != head ]; then
+        stack build --no-terminal
+      else
+        cabal install --allow-newer
+      fi
