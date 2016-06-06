@@ -71,8 +71,8 @@ counterHandlers = getCounter :<|> putCounter
 
 toServant' :: CounterData -> Maybe AuthToken -> ReaderT CounterData Handler a -> Handler a
 toServant' cVar (Just (VerySecret "topsecret")) m = runReaderT m cVar
-toServant' _ (Just (VerySecret secret)) _ = throwError $ err401 { errBody = "Your have to provide a valid secret, not: '" <> (B.fromStrict . T.encodeUtf8) secret <> "'!"  }
-toServant' _ _ _ = throwError $ err401 { errBody = "Your have to provide a valid secret, which is topsecret!" }
+toServant' _ (Just (VerySecret secret)) _ = throwError $ err401 { errBody = "Your secret is valid not! - '" <> (B.fromStrict . T.encodeUtf8) secret <> "'!"  }
+toServant' _ _ _ = throwError $ err401 { errBody = "You have to provide a valid secret, which is topsecret!" }
 
 toServant :: CounterData -> Maybe AuthToken -> ReaderT CounterData Handler :~> Handler
 toServant cVar secret = Nat $ toServant' cVar secret
