@@ -85,5 +85,5 @@ fullServer cVar = counterServer cVar :<|> serveDirectory "frontend/dist/"
 
 main :: IO ()
 main = do
-    cd <- CounterData <$> newIORef 0 <*> (atomically . mkSubscriber) "subscriber"
+    cd <- CounterData <$> newIORef 0 <*> (atomically . makeSubscriber) "subscriber"
     run 8081 $ serveSubscriber (cd ^. subscriber) (fullServer cd)
