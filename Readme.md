@@ -13,7 +13,7 @@ the generated code in [examples/central-counter](https://github.com/eskimor/serv
    [pull request](https://github.com/purescript-contrib/purescript-argonaut-codecs/pull/12).
  - You can put common parameters like Auth tokens and the base URL in a reader monad so you don't
    have to pass them explicitly. This is configurable in the code generator with `readerParams` in `Settings`.
-   
+
 ## Status
 
 It works!
