@@ -129,8 +129,8 @@ toAction :: Maybe NotifyEvent -> Action
 toAction Nothing                 = SubscriberLog "Received Nothing"
 toAction (Just (NotifyEvent ev)) = responseToAction ev
 toAction (Just (Subscriber.ParseError str)) = SubscriberLog $ "ParseError: " <> str
-toAction (Just WebSocketError)   = SubscriberLog $ "WebSocket error"
-toAction (Just WebSocketClosed)  = SubscriberLog $ "WebSocket closed"
+toAction (Just (WebSocketError _))   = SubscriberLog $ "WebSocket error"
+toAction (Just (WebSocketClosed _))  = SubscriberLog $ "WebSocket closed"
 
 responseToAction :: Response -> Action
 responseToAction (Subscribed (Path p)) = SubscriberLog $ "Successfully subscribed: " <> show p

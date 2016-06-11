@@ -16,6 +16,7 @@ import           Control.Applicative
 import           Control.Concurrent.STM
 import           Control.Lens
 import           Control.Monad.IO.Class
+import           Control.Monad.Logger               (runStderrLoggingT)
 import           Control.Monad.Reader.Class
 import           Control.Monad.Trans.Reader         hiding (ask)
 import           Counter.WebAPI
@@ -85,5 +86,5 @@ fullServer cVar = counterServer cVar :<|> serveDirectory "frontend/dist/"
 
 main :: IO ()
 main = do
-    cd <- CounterData <$> newIORef 0 <*> (atomically . makeSubscriber) "subscriber"
+    cd <- CounterData <$> newIORef 0 <*> atomically (makeSubscriber "subscriber" runStderrLoggingT)
     run 8081 $ serveSubscriber (cd ^. subscriber) (fullServer cd)

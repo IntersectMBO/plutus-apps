@@ -69,6 +69,7 @@ executable central-counter
                      , http-types
                      , lens
                      , mainland-pretty
+                     , monad-logger
                      , mtl
                      , purescript-bridge
                      , servant
