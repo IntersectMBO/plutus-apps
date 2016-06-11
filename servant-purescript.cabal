@@ -1,6 +1,6 @@
 name:                servant-purescript
-version:             0.1.0.1
-synopsis:            Initial project template from stack
+version:             0.1.0.2
+synopsis:            Generate PureScript accessor functions for you servant API
 description:         Please see README.md
 homepage:            https://github.com/eskimor/servant-purescript#readme
 license:             BSD3
