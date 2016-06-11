@@ -1,17 +1,19 @@
 name:                servant-purescript
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Initial project template from stack
 description:         Please see README.md
 homepage:            https://github.com/eskimor/servant-purescript#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Robert Klotzner
-maintainer:          robert.klotzner@gmx.at
+maintainer:          robert Dot klotzner A T gmx Dot at
 copyright:           Copyright: (c) 2016 Robert Klotzner
 category:            Web
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
+
+extra-source-files: Readme.md
 
 library
   hs-source-dirs:      src
