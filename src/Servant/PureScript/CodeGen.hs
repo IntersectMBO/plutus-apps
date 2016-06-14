@@ -99,7 +99,7 @@ genSignature fnName params mRet = fName <+> align (constraint <+/> parameterStri
   where
     fName = strictText fnName
     constraint = ":: forall eff m." <+/> "(MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)" <+/> "=>"
-    retName = maybe "Unit" (strictText . typeInfoToText True) mRet
+    retName = maybe "Unit" (strictText . typeInfoToText False) mRet
     retString = "m" <+> retName
     typeNames = map (strictText . typeInfoToText True) params
     parameterString = docIntercalate (softline <> "-> ") (typeNames <> [retString])
