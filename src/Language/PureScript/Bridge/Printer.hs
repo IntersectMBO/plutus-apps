@@ -124,10 +124,12 @@ typesToImportLines :: ImportLines -> [PSType] -> ImportLines
 typesToImportLines = foldr typeToImportLines
 
 typeToImportLines :: PSType -> ImportLines -> ImportLines
-typeToImportLines t = if not (T.null (_typeModule t))
-    then Map.alter (Just . updateLine) (_typeModule t)
-    else id
+typeToImportLines t ls = typesToImportLines (update ls) (_typeParameters t)
   where
+    update = if not (T.null (_typeModule t))
+                then Map.alter (Just . updateLine) (_typeModule t)
+                else id
+
     updateLine Nothing = ImportLine (_typeModule t) (Set.singleton (_typeName t))
     updateLine (Just (ImportLine m types)) = ImportLine m $ Set.insert (_typeName t) types
 
