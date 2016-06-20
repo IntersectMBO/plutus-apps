@@ -13,7 +13,7 @@ Data type translation is fully and easily customizable by providing your own `Br
 ## JSON encoding / decoding
 
 For compatible JSON representations you should be using [aeson](http://hackage.haskell.org/package/aeson)'s generic encoding/decoding with default options
-and `encodeJson` and `decodeJson` from "Data.Argonaut.Generic.Aeson" in [purescript-argonaut-generic-codecs](https://github.com/purescript-contrib/purescript-argonaut-codecs).
+and `encodeJson` and `decodeJson` from "Data.Argonaut.Generic.Aeson" in [purescript-argonaut-generic-codecs](https://github.com/eskimor/purescript-argonaut-generic-codecs).
 
 
 ## Documentation
