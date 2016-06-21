@@ -125,9 +125,9 @@ genFnBody rParams req = "do"
         </> ", headers =" <+> "defaultRequest.headers <> reqHeaders"
         </> case req ^. reqBody of
               Nothing -> "}"
-              Just _  -> ", content =" <+> "toNullable <<< Just <<< printJson <<< gAesonEncodeJson $ reqBody" </> "}"
+              Just _  -> ", content =" <+> "toNullable <<< Just <<< printJson <<< encodeJson $ reqBody" </> "}"
       )
-      </> "getResult gAesonDecodeJson affResp" <> line
+      </> "getResult decodeJson affResp" <> line
     )
 
 genBuildURL :: Url PSType -> Doc

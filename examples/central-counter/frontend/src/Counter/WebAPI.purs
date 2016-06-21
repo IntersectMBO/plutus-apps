@@ -7,7 +7,7 @@ import Control.Monad.Aff.Class (class MonadAff, liftAff)
 import Control.Monad.Error.Class (class MonadError)
 import Control.Monad.Reader.Class (ask, class MonadReader)
 import Counter.ServerTypes (AuthToken, CounterAction)
-import Data.Argonaut.Aeson (gAesonDecodeJson, gAesonEncodeJson)
+import Data.Argonaut.Generic.Aeson (decodeJson, encodeJson)
 import Data.Argonaut.Printer (printJson)
 import Data.Maybe (Maybe(..))
 import Data.Nullable (Nullable(), toNullable)
@@ -41,7 +41,7 @@ getCounter = do
                                 , url = reqUrl
                                 , headers = defaultRequest.headers <> reqHeaders
                                 }
-  getResult gAesonDecodeJson affResp
+  getResult decodeJson affResp
   
 putCounter :: forall eff m.
            (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
@@ -61,7 +61,7 @@ putCounter reqBody = do
                                 { method = httpMethod
                                 , url = reqUrl
                                 , headers = defaultRequest.headers <> reqHeaders
-                                , content = toNullable <<< Just <<< printJson <<< gAesonEncodeJson $ reqBody
+                                , content = toNullable <<< Just <<< printJson <<< encodeJson $ reqBody
                                 }
-  getResult gAesonDecodeJson affResp
+  getResult decodeJson affResp
   

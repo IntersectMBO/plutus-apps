@@ -106,7 +106,7 @@ defaultSettings = Settings {
         , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "SPSettings_(..)", "gDefaultToURLPiece" ])
         , ImportLine "Servant.PureScript.Util" (Set.fromList [ "encodeListQuery", "encodeQueryItem", "getResult" ])
         , ImportLine "Prim" (Set.fromList [ "String" ]) -- For baseURL!
-        , ImportLine "Data.Argonaut.Aeson" (Set.fromList [ "gAesonEncodeJson", "gAesonDecodeJson" ]) -- Should not be necessary - compiler bug!
+        , ImportLine "Data.Argonaut.Generic.Aeson" (Set.fromList [ "encodeJson", "decodeJson" ]) -- Should not be necessary - compiler bug!
         , ImportLine "Data.Maybe" (Set.fromList [ "Maybe(..)"])
         , ImportLine "Data.Argonaut.Printer" (Set.fromList [ "printJson" ])
         ]
