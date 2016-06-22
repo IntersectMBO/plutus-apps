@@ -1,36 +1,34 @@
 module Main where
 
-import Prelude
-import Control.Monad.Reader.Trans
-import Control.Monad.Except.Trans
-import Control.Monad.Aff
-import Data.Either.Unsafe
-import Servant.PureScript.Affjax
-import Servant.PureScript.Settings
-import Counter.WebAPI
-import Counter.ServerTypes
-import Data.Argonaut.Aeson
-import Data.Generic
-import Data.Maybe
-import Data.Either
-import Data.Array as Array
-import Servant.Subscriber as Subscriber
-import CSS (purple)
 import Control.Bind ((<=<))
+import Control.Monad.Aff
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Eff.Ref (REF)
+import Control.Monad.Except.Trans
+import Control.Monad.Reader.Trans
+import Counter.ServerTypes
+import Counter.WebAPI
 import DOM.Node.Node (baseURI)
+import Data.Argonaut.Generic.Aeson
 import Data.Argonaut.Parser (jsonParser)
+import Data.Array as Array
 import Data.Bifunctor (lmap)
+import Data.Either
 import Data.Foldable (foldr, fold)
+import Data.Generic
 import Data.List (List(Nil, Cons))
+import Data.Maybe
 import Data.Tuple (Tuple(Tuple))
 import Network.HTTP.Affjax (AJAX, get)
+import Prelude
 import Pux (renderToDOM, fromSimple, start, EffModel, noEffects)
 import Pux.Html (Html, text, button, span, div, p)
 import Pux.Html.Events (onClick)
+import Servant.PureScript.Affjax
+import Servant.PureScript.Settings
 import Servant.Subscriber (SubscriberEff, NotifyEvent(WebSocketClosed, WebSocketError, NotifyEvent), makeSubscriber, Subscriber)
+import Servant.Subscriber as Subscriber
 import Servant.Subscriber.Request (HttpRequest(HttpRequest))
 import Servant.Subscriber.Response (Status(Status), Response(Unsubscribed, Deleted, Modified, Subscribed, RequestError), RequestError(AlreadySubscribed, NoSuchSubscription, HttpRequestFailed, ParseError), HttpResponse(HttpResponse))
 import Servant.Subscriber.Types (Path(Path))
@@ -107,8 +105,8 @@ runEffect :: MySettings -> APIEffect () Action -> Aff (channel :: CHANNEL, ajax 
 runEffect settings m = do
     er <- runExceptT $ runReaderT m settings
     case er of
-      Left err -> return $ ReportError err
-      Right v -> return v
+      Left err -> pure $ ReportError err
+      Right v -> pure v
 
 type SubscriberData = {
   subscriber :: Subscriber
@@ -122,7 +120,7 @@ initSubscriber = do
   sub <- makeSubscriber "ws://localhost:8081/subscriber" (send ch <<< Just)
   let sig = subscribe ch
   Subscriber.subscribe subscriberRequest sub
-  return $ { subscriber : sub, messages : sig }
+  pure $ { subscriber : sub, messages : sig }
 
 
 toAction :: Maybe NotifyEvent -> Action
@@ -149,7 +147,7 @@ responseToAction (RequestError (NoSuchSubscription (Path p))) = SubscriberLog $ 
 responseToAction (RequestError (AlreadySubscribed (Path p)))  = SubscriberLog $ "Already subscribed: " <> show p
 
 handleModify :: String -> Action
-handleModify msg = case gAesonDecodeJson <=< jsonParser $ msg of
+handleModify msg = case decodeJson <=< jsonParser $ msg of
                       Left err -> SubscriberLog $ "Could not parse response body: " <> err
                       Right v -> Update v
 
@@ -159,8 +157,8 @@ main :: forall eff. Eff (ajax :: AJAX, err :: EXCEPTION, channel :: CHANNEL, ref
 main = do
   sub <- initSubscriber
   let settings = SPSettings_ {
-                    encodeJson : gAesonEncodeJson
-                  , decodeJson : gAesonDecodeJson
+                    encodeJson : encodeJson
+                  , decodeJson : decodeJson
                   , toURLPiece : gShow
                   , params : SPParams_ {
                       authToken : VerySecret "topsecret"
