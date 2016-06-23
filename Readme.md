@@ -9,8 +9,8 @@ the generated code in [examples/central-counter](https://github.com/eskimor/serv
 ## Features
 
  - Typed serialization/deserialization taken care of by Haskell's aeson and PureScript's argonaut.
-   Generic encoding/decoding of both made compatible by not yet merged
-   [pull request](https://github.com/purescript-contrib/purescript-argonaut-codecs/pull/12).
+   Generic encoding/decoding of both made compatible by 
+   [purescript-argonaut-generic-codecs](https://github.com/eskimor/purescript-argonaut-generic-codecs/blob/purescript-argonaut-generic-codec/src/Data/Argonaut/Generic/Aeson.purs).
  - You can put common parameters like Auth tokens and the base URL in a reader monad so you don't
    have to pass them explicitly. This is configurable in the code generator with `readerParams` in `Settings`.
 
