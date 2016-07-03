@@ -113,7 +113,8 @@ genFnHead fnName params = fName <+> align (docIntercalate softline docParams <+>
 genFnBody :: [PSParam] -> Req PSType -> Doc
 genFnBody rParams req = "do"
     </> indent 2 (
-          "SPSettings_ spOpts_ <- ask"
+          "spOpts_' <- ask"
+      </> "let spOpts_ = case spOpts_' of SPSettings_ o -> o"
       </> "let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_"
       </> genGetReaderParams rParams
       </> hang 6 ("let httpMethod =" <+> dquotes (req ^. reqMethod ^. to T.decodeUtf8 ^. to strictText))
@@ -140,7 +141,7 @@ genBuildPath = docIntercalate (softline <> "<> \"/\" <> ") . map (genBuildSegmen
 
 genBuildSegment :: SegmentType PSType -> Doc
 genBuildSegment (Static (PathSegment seg)) = dquotes $ strictText (textURLEncode False seg)
-genBuildSegment (Cap arg) = "encodeURLPiece (SPSettings_ spOpts_)" <+> arg ^. argName ^. to unPathSegment ^. to psVar
+genBuildSegment (Cap arg) = "encodeURLPiece spOpts_'" <+> arg ^. argName ^. to unPathSegment ^. to psVar
 
 ----------
 genBuildQuery :: [QueryArg PSType] -> Doc
@@ -169,7 +170,7 @@ genBuildHeader (HeaderArg arg) = let
   in
     align $ "{ field : " <> dquotes encodedArgName
       <+/> comma <+> "value :"
-      <+> "encodeURLPiece (SPSettings_ spOpts_)" <+> psVar argText
+      <+> "encodeURLPiece spOpts_'" <+> psVar argText
       </> "}"
 genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implemented!"
 
