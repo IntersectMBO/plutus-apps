@@ -140,7 +140,7 @@ genBuildPath = docIntercalate (softline <> "<> \"/\" <> ") . map (genBuildSegmen
 
 genBuildSegment :: SegmentType PSType -> Doc
 genBuildSegment (Static (PathSegment seg)) = dquotes $ strictText (textURLEncode False seg)
-genBuildSegment (Cap arg) = parens $ "encodeURIComponent" <+> arg ^. argName ^. to unPathSegment ^. to psVar
+genBuildSegment (Cap arg) = parens $ "encodeURLPiece" <+> arg ^. argName ^. to unPathSegment ^. to psVar
 
 ----------
 genBuildQuery :: [QueryArg PSType] -> Doc
@@ -169,7 +169,7 @@ genBuildHeader (HeaderArg arg) = let
   in
     align $ "{ field : " <> dquotes encodedArgName
       <+/> comma <+> "value :"
-      <+> "(encodeURIComponent <<< gDefaultToURLPiece)" <+> psVar argText
+      <+> "encodeURLPiece" <+> psVar argText
       </> "}"
 genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implemented!"
 
