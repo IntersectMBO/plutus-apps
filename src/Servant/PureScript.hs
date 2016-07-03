@@ -20,6 +20,7 @@ module Servant.PureScript (
 , standardImports
 , defaultSettings
 , addReaderParam
+, jsonParseUrlPiece
 ) where
 
 import           Control.Lens
