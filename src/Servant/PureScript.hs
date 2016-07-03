@@ -23,28 +23,16 @@ module Servant.PureScript (
 , jsonParseUrlPiece
 ) where
 
-import           Control.Lens
+
 import           Data.Aeson
 import           Data.Bifunctor
-import           Data.Char
-import           Data.Map                            (Map)
-import qualified Data.Map                            as Map
-import           Data.Maybe                          (mapMaybe, maybeToList)
 import           Data.Monoid
 import           Data.Proxy
-import           Data.Set                            (Set)
-import qualified Data.Set                            as Set
 import           Data.Text                           (Text)
 import qualified Data.Text                           as T
 import qualified Data.Text.Encoding                  as T
-import           Data.Typeable
-import           GHC.Generics                        hiding (to)
 import           Language.PureScript.Bridge
-import           Language.PureScript.Bridge.Printer
-import           Language.PureScript.Bridge.PSTypes
-import           Language.PureScript.Bridge.TypeInfo
 import           Network.HTTP.Types                  (urlDecode)
-import           Servant.API
 import           Servant.Foreign
 import           Servant.PureScript.CodeGen
 import           Servant.PureScript.Internal

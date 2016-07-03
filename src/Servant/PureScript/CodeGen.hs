@@ -10,27 +10,15 @@ module Servant.PureScript.CodeGen where
 
 import           Servant.PureScript.Internal
 import           Text.PrettyPrint.Mainland
-
 import           Control.Lens                        hiding (List)
-import           Data.Aeson
-import           Data.Map                            (Map)
 import qualified Data.Map                            as Map
 import           Data.Maybe                          (mapMaybe, maybeToList)
-import           Data.Monoid
-import           Data.Proxy
-import           Data.Set                            (Set)
 import qualified Data.Set                            as Set
 import           Data.Text                           (Text)
-import qualified Data.Text                           as T
 import qualified Data.Text.Encoding                  as T
-import           Data.Typeable
-import           GHC.Generics                        hiding (to)
 import           Language.PureScript.Bridge
-import           Language.PureScript.Bridge.Printer
 import           Language.PureScript.Bridge.PSTypes  (psString)
-import           Language.PureScript.Bridge.TypeInfo
 import           Network.HTTP.Types.URI              (urlEncode)
-import           Servant.API
 import           Servant.Foreign
 
 genModule :: Settings -> [Req PSType] -> Doc
