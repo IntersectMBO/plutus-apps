@@ -42,6 +42,7 @@ import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.Printer
 import           Language.PureScript.Bridge.PSTypes
 import           Language.PureScript.Bridge.TypeInfo
+import           Network.HTTP.Types                  (urlDecode)
 import           Servant.API
 import           Servant.Foreign
 import           Servant.PureScript.CodeGen
@@ -72,3 +73,9 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
     mFile = (joinPath . map T.unpack . T.splitOn "." $ _apiModuleName opts) <> ".purs"
     mPath = root </> mFile
     mDir = takeDirectory mPath
+
+
+-- | Use this function for implementing 'parseURLPiece' in your FromHttpApiData instances
+--   in order to be compatible with the generated PS code.
+jsonParseUrlPiece :: FromJSON a => Text -> Either Text a
+jsonParseUrlPiece = first T.pack . eitherDecodeStrict . urlDecode True . T.encodeUtf8
