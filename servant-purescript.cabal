@@ -24,6 +24,7 @@ library
 --  other-modules:       Main
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.11.2
+                     , bytestring
                      , containers
                      , directory
                      , filepath
