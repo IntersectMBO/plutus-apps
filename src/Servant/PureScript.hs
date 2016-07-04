@@ -71,6 +71,17 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
 
 -- | Use this function for implementing 'parseUrlPiece' in your FromHttpApiData instances
 --   in order to be compatible with the generated PS code.
+--
+-- >  
+-- > instance ToHttpApiData MyDataType where
+-- >   toUrlPiece = jsonToUrlPiece
+-- >   toHeader   = jsonToHeader
+-- >
+-- > instance FromHttpApiData MyDataType where
+-- >   parseUrlPiece = jsonParseUrlPiece
+-- >   parseHeader   = jsonParseHeader
+-- >
+-- 
 jsonParseUrlPiece :: FromJSON a => Text -> Either Text a
 jsonParseUrlPiece = jsonParseHeader . T.encodeUtf8
 
