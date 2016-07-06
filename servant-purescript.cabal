@@ -20,6 +20,7 @@ library
   exposed-modules:     Servant.PureScript.Internal
                      , Servant.PureScript.CodeGen
                      , Servant.PureScript
+                     , Servant.BrowserHeader
 
 --  other-modules:       Main
   build-depends:       base >= 4.7 && < 5
@@ -34,6 +35,7 @@ library
                      , purescript-bridge >= 0.6 && < 0.7
                      , servant
                      , servant-foreign
+                     , servant-server
                      , servant-subscriber
                      , text
   default-language:    Haskell2010
