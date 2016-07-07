@@ -1,16 +1,12 @@
 resolver: lts-6.0
 packages:
   - '.'
-  - location:
-      git: https://github.com/eskimor/servant-subscriber.git
-      commit: HEAD
-  - location:
-      git: https://github.com/eskimor/purescript-bridge.git
-      commit: HEAD
+  - ../servant-subscriber 
+  - ../purescript-bridge
 extra-deps: []
 
 flags: {}
-
+ 
 extra-package-dbs: []
 
 nix:
