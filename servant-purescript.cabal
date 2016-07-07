@@ -20,7 +20,7 @@ library
   exposed-modules:     Servant.PureScript.Internal
                      , Servant.PureScript.CodeGen
                      , Servant.PureScript
-                     , Servant.BrowserHeader
+                     , Servant.API.BrowserHeader
 
 --  other-modules:       Main
   build-depends:       base >= 4.7 && < 5

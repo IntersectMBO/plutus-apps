@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances          #-}
 
-module Servant.BrowserHeader where
+module Servant.API.BrowserHeader where
 
 import Servant.Utils.Links
 import Servant
