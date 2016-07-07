@@ -52,7 +52,11 @@ before_install:
   - mv stack-*/stack $HOME/bin
   - if [ ${GHC} != head ]; then ln -s stack-${GHC%.*}.yaml stack.yaml; fi
   - travis_retry stack setup
-  - travis_retry stack install hscolour
+  - #travis_retry stack install hscolour
+  - pushd ..
+  - git clone https://github.com/eskimor/servant-subscriber.git
+  - git clone https://github.com/eskimor/purescript-bridge.git
+  - popd
 
 install:
   - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
