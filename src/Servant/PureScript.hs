@@ -93,7 +93,7 @@ jsonToUrlPiece = T.decodeUtf8 . jsonToHeader
 -- | Use this function for implementing 'parseHeader' in your FromHttpApiData instances
 --   in order to be compatible with the generated PS code.
 jsonParseHeader :: FromJSON a => ByteString -> Either Text a
-jsonParseHeader = first T.pack . eitherDecodeStrict . urlDecode True
+jsonParseHeader = first T.pack . eitherDecodeStrict 
 
 -- | Use this function for implementing 'toHeader' in your ToHttpApiData instances
 --   in order to be compatible with the generated PS code.
