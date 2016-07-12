@@ -83,7 +83,7 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
 -- >
 -- 
 jsonParseUrlPiece :: FromJSON a => Text -> Either Text a
-jsonParseUrlPiece = jsonParseHeader . T.encodeUtf8
+jsonParseUrlPiece = first T.pack . eitherDecodeStrict . T.encodeUtf8
 
 -- | Use this function for implementing 'toUrlPiece' in your ToHttpApiData instances
 --   in order to be compatible with the generated PS code.
@@ -93,7 +93,7 @@ jsonToUrlPiece = T.decodeUtf8 . jsonToHeader
 -- | Use this function for implementing 'parseHeader' in your FromHttpApiData instances
 --   in order to be compatible with the generated PS code.
 jsonParseHeader :: FromJSON a => ByteString -> Either Text a
-jsonParseHeader = first T.pack . eitherDecodeStrict 
+jsonParseHeader = first T.pack . eitherDecodeStrict . urlDecode True
 
 -- | Use this function for implementing 'toHeader' in your ToHttpApiData instances
 --   in order to be compatible with the generated PS code.
