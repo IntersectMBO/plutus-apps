@@ -8,18 +8,18 @@
 
 module Servant.PureScript.CodeGen where
 
+import           Control.Lens                       hiding (List)
+import qualified Data.Map                           as Map
+import           Data.Maybe                         (mapMaybe, maybeToList)
+import qualified Data.Set                           as Set
+import           Data.Text                          (Text)
+import qualified Data.Text.Encoding                 as T
+import           Language.PureScript.Bridge
+import           Language.PureScript.Bridge.PSTypes (psString)
+import           Network.HTTP.Types.URI             (urlEncode)
+import           Servant.Foreign
 import           Servant.PureScript.Internal
 import           Text.PrettyPrint.Mainland
-import           Control.Lens                        hiding (List)
-import qualified Data.Map                            as Map
-import           Data.Maybe                          (mapMaybe, maybeToList)
-import qualified Data.Set                            as Set
-import           Data.Text                           (Text)
-import qualified Data.Text.Encoding                  as T
-import           Language.PureScript.Bridge
-import           Language.PureScript.Bridge.PSTypes  (psString)
-import           Network.HTTP.Types.URI              (urlEncode)
-import           Servant.Foreign
 
 genModule :: Settings -> [Req PSType] -> Doc
 genModule opts reqs = let
@@ -79,7 +79,7 @@ genFunction allRParams req = let
 genGetReaderParams :: [PSParam] -> Doc
 genGetReaderParams = stack . map (genGetReaderParam . psVar . _pName)
   where
-    genGetReaderParam pName = "let" <+> pName <+> "= spParams_." <> pName
+    genGetReaderParam pName' = "let" <+> pName' <+> "= spParams_." <> pName'
 
 
 genSignature :: Text -> [PSType] -> Maybe PSType -> Doc
