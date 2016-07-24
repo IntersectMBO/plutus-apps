@@ -1,9 +1,9 @@
 resolver: lts-6.0
 packages:
   - '.'
-  - ../servant-subscriber 
-  - ../purescript-bridge
-extra-deps: []
+extra-deps:
+  - servant-subscriber-0.2.0.1
+  - purescript-bridge-0.6.0.2
 
 flags: {}
  
