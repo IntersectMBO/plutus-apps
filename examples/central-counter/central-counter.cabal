@@ -19,7 +19,7 @@ synopsis:            Example project, putting servant-purescript, servant-subscr
 -- description:
 
 -- URL for the project homepage or repository.
-homepage:            https://github.com/eskimor/servant-purescript/tree/master/examples/distributed-counter
+homepage:            https://github.com/eskimor/servant-purescript/tree/master/examples/central-counter
 
 -- The license under which the package is released.
 license:             BSD3
@@ -74,6 +74,7 @@ executable central-counter
                      , purescript-bridge
                      , servant
                      , servant-server
+                     , servant-purescript
                      , servant-subscriber
                      , stm
                      , text

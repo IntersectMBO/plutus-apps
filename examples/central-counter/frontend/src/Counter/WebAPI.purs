@@ -16,7 +16,7 @@ import Network.HTTP.Affjax (AJAX)
 import Prim (Int, String)
 import Servant.PureScript.Affjax (AjaxError(..), affjax, defaultRequest)
 import Servant.PureScript.Settings (SPSettings_(..), gDefaultToURLPiece)
-import Servant.PureScript.Util (encodeListQuery, encodeQueryItem, getResult)
+import Servant.PureScript.Util (encodeListQuery, encodeQueryItem, encodeURLPiece, getResult)
 
 newtype SPParams_ = SPParams_ { authToken :: AuthToken
                               , baseURL :: String
@@ -26,15 +26,15 @@ getCounter :: forall eff m.
            (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
            => m Int
 getCounter = do
-  SPSettings_ spOpts_ <- ask
+  spOpts_' <- ask
+  let spOpts_ = case spOpts_' of SPSettings_ o -> o
   let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
   let authToken = spParams_.authToken
   let baseURL = spParams_.baseURL
   let httpMethod = "GET"
   let reqUrl = baseURL <> "counter"
   let reqHeaders =
-        [{ field : "AuthToken"
-         , value : (encodeURIComponent <<< gDefaultToURLPiece) authToken
+        [{ field : "AuthToken" , value : encodeURLPiece spOpts_' authToken
          }]
   affResp <- liftAff $ affjax defaultRequest
                                 { method = httpMethod
@@ -47,15 +47,15 @@ putCounter :: forall eff m.
            (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
            => CounterAction -> m Int
 putCounter reqBody = do
-  SPSettings_ spOpts_ <- ask
+  spOpts_' <- ask
+  let spOpts_ = case spOpts_' of SPSettings_ o -> o
   let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
   let authToken = spParams_.authToken
   let baseURL = spParams_.baseURL
   let httpMethod = "PUT"
   let reqUrl = baseURL <> "counter"
   let reqHeaders =
-        [{ field : "AuthToken"
-         , value : (encodeURIComponent <<< gDefaultToURLPiece) authToken
+        [{ field : "AuthToken" , value : encodeURLPiece spOpts_' authToken
          }]
   affResp <- liftAff $ affjax defaultRequest
                                 { method = httpMethod

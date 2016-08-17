@@ -11,9 +11,9 @@
     "purescript-pux": "git@github.com:Thimoteus/purescript-pux.git#master",
     "purescript-affjax": "^1.0.0",
     "purescript-aff": "^1.0.0",
-    "purescript-argonaut-generic-codecs": "^1.0.0",
-    "purescript-servant-support": "^1.0.0",
-    "purescript-subscriber": "git@github.com:eskimor/purescript-subscriber.git",
+    "purescript-argonaut-generic-codecs": "^3.0.0",
+    "purescript-servant-support": "^1.0.2",
+    "purescript-subscriber": "git@github.com:eskimor/purescript-subscriber.git#master",
     "purescript-generics": "^1.0.0",
     "purescript-partial": "^1.1.2",
     "purescript-dom": "^1.1.0"

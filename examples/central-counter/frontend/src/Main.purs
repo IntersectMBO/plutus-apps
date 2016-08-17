@@ -27,10 +27,9 @@ import Pux.Html (Html, text, button, span, div, p)
 import Pux.Html.Events (onClick)
 import Servant.PureScript.Affjax
 import Servant.PureScript.Settings
-import Servant.Subscriber (SubscriberEff, NotifyEvent(WebSocketClosed, WebSocketError, NotifyEvent), makeSubscriber, Subscriber)
+import Servant.Subscriber (SubscriberEff, Notification(WebSocketClosed, WebSocketError, Modified), makeSubscriber, Subscriber, Config)
+import Servant.Subscriber.Request (HttpRequest(..))
 import Servant.Subscriber as Subscriber
-import Servant.Subscriber.Request (HttpRequest(HttpRequest))
-import Servant.Subscriber.Response (Status(Status), Response(Unsubscribed, Deleted, Modified, Subscribed, RequestError), RequestError(AlreadySubscribed, NoSuchSubscription, HttpRequestFailed, ParseError), HttpResponse(HttpResponse))
 import Servant.Subscriber.Types (Path(Path))
 import Signal (Signal)
 import Signal.Channel (Channel, subscribe, send, channel, CHANNEL)
@@ -67,7 +66,7 @@ subscriberRequest :: HttpRequest
 subscriberRequest = HttpRequest {
     httpMethod : "GET"
   , httpPath : Path ["counter"]
-  , httpHeaders : [ Tuple "authtoken" "VerySecret \"topsecret\""]
+  , httpHeaders : [ Tuple "authtoken" "\"topsecret\""]
   , httpQuery : []
   , httpBody : ""
   }
@@ -110,41 +109,30 @@ runEffect settings m = do
 
 type SubscriberData = {
   subscriber :: Subscriber
-, messages :: Signal (Maybe NotifyEvent)
+, messages :: Signal (Maybe Notification)
 }
 
 
 initSubscriber :: forall eff. SubscriberEff (channel :: CHANNEL | eff) SubscriberData
 initSubscriber = do
-  ch <- channel (Nothing :: Maybe NotifyEvent)
-  sub <- makeSubscriber "ws://localhost:8081/subscriber" (send ch <<< Just)
+  ch <- coerceEffects $ channel (Nothing :: Maybe Notification)
+  let
+    c :: Config
+    c = {
+        url : "ws://localhost:8081/subscriber"
+      , notify : coerceEffects <<< send ch <<< Just
+      }
+  sub <- makeSubscriber c
   let sig = subscribe ch
   Subscriber.subscribe subscriberRequest sub
   pure $ { subscriber : sub, messages : sig }
 
 
-toAction :: Maybe NotifyEvent -> Action
+toAction :: Maybe Notification -> Action
 toAction Nothing                 = SubscriberLog "Received Nothing"
-toAction (Just (NotifyEvent ev)) = responseToAction ev
-toAction (Just (Subscriber.ParseError str)) = SubscriberLog $ "ParseError: " <> str
-toAction (Just (WebSocketError _))   = SubscriberLog $ "WebSocket error"
-toAction (Just (WebSocketClosed _))  = SubscriberLog $ "WebSocket closed"
-
-responseToAction :: Response -> Action
-responseToAction (Subscribed (Path p)) = SubscriberLog $ "Successfully subscribed: " <> show p
-responseToAction (Modified (Path ["counter"]) (HttpResponse resp)) = let
-      status = case resp.httpStatus of (Status s) -> s
-    in
-      if status.statusCode /= 200
-        then SubscriberLog $ "Received error code: " <> show status.statusCode <> ", message: " <> resp.httpBody
-        else handleModify resp.httpBody
-responseToAction (Modified (Path p) (HttpResponse _)) = SubscriberLog $ "Unknown path modified: " <> show p
-responseToAction (Deleted (Path p)) = SubscriberLog $ "Path got deleted: " <> show p
-responseToAction (Unsubscribed (Path p)) = SubscriberLog $ "Path got unsubscribed: " <> show p
-responseToAction (RequestError ParseError) = SubscriberLog "Server could not parse our request"
-responseToAction (RequestError (HttpRequestFailed _ _)) = SubscriberLog "Subscription failed because the http request failed."
-responseToAction (RequestError (NoSuchSubscription (Path p))) = SubscriberLog $ "No such subscription: " <> show p
-responseToAction (RequestError (AlreadySubscribed (Path p)))  = SubscriberLog $ "Already subscribed: " <> show p
+toAction (Just notification)     = case notification of
+  Modified path val -> handleModify val
+  _ -> SubscriberLog $ gShow notification
 
 handleModify :: String -> Action
 handleModify msg = case decodeJson <=< jsonParser $ msg of

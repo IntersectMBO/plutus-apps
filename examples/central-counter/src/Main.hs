@@ -38,6 +38,7 @@ import           Network.Wai.Handler.Warp
 import           Servant
 import           Servant.API
 import           Servant.Subscriber
+import           Servant.Subscriber.Subscribable
 import           Servant.Subscriber.Types
 
 
@@ -58,10 +59,10 @@ getCounter = liftIO . readIORef =<< view counter
 putCounter :: HandlerConstraint m => CounterAction -> m Int
 putCounter action = do
   r <- liftIO . flip atomicModifyIORef' (doAction action) =<< view counter
-  subscriber <- view subscriber
-  let link :: Proxy ("counter" :> Get '[JSON] Int)
+  subscriber' <- view subscriber
+  let link :: Proxy ("counter" :>  Get '[JSON] Int)
       link = Proxy
-  liftIO . atomically $ notify subscriber ModifyEvent link id
+  liftIO . atomically $ notify subscriber' ModifyEvent link id
   return r
   where
     doAction (CounterAdd val) c = (c+val, c+val)
