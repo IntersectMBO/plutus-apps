@@ -96,13 +96,13 @@ bridgeSumType br (SumType t cs) = SumType (br t) $ map (bridgeConstructor br) cs
 --   "Language.PureScript.Bridge.Tuple".
 defaultBridge :: BridgePart
 defaultBridge = textBridge
+    <|> stringBridge
     <|> listBridge
     <|> maybeBridge
     <|> eitherBridge
     <|> boolBridge
     <|> intBridge
     <|> tupleBridge
-    <|> stringBridge
     <|> unitBridge
 
 -- | Translate types in a constructor.
