@@ -34,7 +34,7 @@ import           Generics.Deriving
 import           Language.PureScript.Bridge.TypeInfo
 
 -- | Generic representation of your Haskell types.
-data SumType (lang :: Language) = SumType (TypeInfo lang) [DataConstructor lang] deriving Show
+data SumType (lang :: Language) = SumType (TypeInfo lang) [DataConstructor lang] deriving (Show, Eq)
 
 -- | TypInfo lens for 'SumType'.
 sumTypeInfo :: Functor f => (TypeInfo lang -> f (TypeInfo lang) ) -> SumType lang -> f (SumType lang)
@@ -47,21 +47,22 @@ sumTypeConstructors inj (SumType info constrs) = SumType info <$> inj constrs
 -- | Create a representation of your sum (and product) types,
 --   for doing type translations and writing it out to your PureScript modules.
 --   In order to get the type information we use a dummy variable of type 'Proxy' (YourType).
-mkSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t)) => Proxy t -> SumType 'Haskell
+mkSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t))
+          => Proxy t -> SumType 'Haskell
 mkSumType p = SumType  (mkTypeInfo p) constructors
   where
     constructors = gToConstructors (from (undefined :: t))
 
-data DataConstructor (lang :: Language) = DataConstructor {
-  _sigConstructor :: !Text
-, _sigValues      :: !(Either [TypeInfo lang] [RecordEntry lang])
-} deriving Show
+data DataConstructor (lang :: Language) =
+  DataConstructor { _sigConstructor :: !Text -- ^ e.g. `Left`/`Right` for `Either`
+                  , _sigValues      :: !(Either [TypeInfo lang] [RecordEntry lang])
+                  } deriving (Show, Eq)
 
 
-data RecordEntry (lang :: Language) = RecordEntry {
-  _recLabel :: !Text
-, _recValue :: !(TypeInfo lang)
-} deriving Show
+data RecordEntry (lang :: Language) =
+  RecordEntry { _recLabel :: !Text -- ^ e.g. `runState` for `State`
+              , _recValue :: !(TypeInfo lang)
+              } deriving (Show, Eq)
 
 class GDataConstructor f where
   gToConstructors :: f a -> [DataConstructor 'Haskell]
@@ -73,23 +74,22 @@ instance (Datatype a, GDataConstructor c) =>  GDataConstructor (D1 a c) where
   gToConstructors (M1 c) = gToConstructors c
 
 instance (GDataConstructor a, GDataConstructor b) => GDataConstructor (a :+: b) where
-  gToConstructors (_ :: (a :+: b) f) = gToConstructors (undefined :: a f) ++ gToConstructors (undefined :: b f)
+  gToConstructors (_ :: (a :+: b) f) = gToConstructors (undefined :: a f)
+                                    ++ gToConstructors (undefined :: b f)
 
 instance (Constructor a, GRecordEntry b) => GDataConstructor (C1 a b) where
-  gToConstructors c@(M1 r) = [
-        DataConstructor {
-          _sigConstructor = constructor
-        , _sigValues = values
-        }
-      ]
+  gToConstructors c@(M1 r) = [ DataConstructor { _sigConstructor = constructor
+                                               , _sigValues = values }
+                             ]
     where
       constructor = T.pack $ conName c
       values = if conIsRecord c
-        then Right $ gToRecordEntries r
-        else Left $ map _recValue $ gToRecordEntries r
+                  then Right $ gToRecordEntries r
+                  else Left $ map _recValue $ gToRecordEntries r
 
 instance (GRecordEntry a, GRecordEntry b) => GRecordEntry (a :*: b) where
-  gToRecordEntries (_ :: (a :*: b) f) = gToRecordEntries (undefined :: a f) ++ gToRecordEntries (undefined :: b f)
+  gToRecordEntries (_ :: (a :*: b) f) = gToRecordEntries (undefined :: a f)
+                                     ++ gToRecordEntries (undefined :: b f)
 
 
 instance GRecordEntry U1 where
