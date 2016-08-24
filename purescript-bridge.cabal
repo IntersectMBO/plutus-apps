@@ -90,12 +90,15 @@ library
 
 
 Test-Suite tests
-    type:       exitcode-stdio-1.0
-    main-is:    Spec.hs
-    build-depends: base
-                , containers
-              --  , HUnit
-                , purescript-bridge
-                , text
-    hs-source-dirs: test
-    default-language:    Haskell2010
+  type:          exitcode-stdio-1.0
+  main-is:       Spec.hs
+  other-modules: TestData
+  build-depends: base
+               , containers
+               , purescript-bridge
+               , text
+               , hspec
+               , hspec-expectations-pretty-diff
+
+  hs-source-dirs:   test
+  default-language: Haskell2010
