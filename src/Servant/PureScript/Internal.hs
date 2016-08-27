@@ -83,6 +83,8 @@ data Settings = Settings {
   --   will be put in the Reader monad, all others will still be passed as function parameter.
 , _readerParams    :: Set ParamName
 , _standardImports :: ImportLines
+  -- If you want codegen for servant-subscriber, set the sumtype used for reporting changes with subscriber.
+, _subscriberResponseType :: Maybe PSType
 }
 makeLenses ''Settings
 
@@ -105,6 +107,7 @@ defaultSettings = Settings {
         , ImportLine "Data.Maybe" (Set.fromList [ "Maybe(..)"])
         , ImportLine "Data.Argonaut.Printer" (Set.fromList [ "printJson" ])
         ]
+  , _subscriberResponseType = Nothing
   }
 
 -- | Add a parameter name to be us put in the Reader monad instead of being passed to the
@@ -117,6 +120,12 @@ baseURLId = "baseURL"
 
 baseURLParam :: PSParam
 baseURLParam = Param baseURLId psString
+
+subscriberToUserId :: ParamName
+subscriberToUserId = "spToUser"
+
+subscriberToUserTypeParam :: PSType -> PSParam
+subscriberToUserTypeParam subscriberResponse = Param subscriberToUserId (psToUserType subscriberResponse)
 
 apiToList :: forall bridgeSelector api.
   ( HasForeign (PureScript bridgeSelector) PSType api
@@ -141,3 +150,11 @@ toPSVarName = dropInvalid . unTitle . doPrefix . replaceInvalid
         isValid c = isAlphaNum c || c == '_'
       in
         T.filter isValid
+
+psToUserType :: PSType -> PSType
+psToUserType a = TypeInfo {
+  _typePackage = "purescript-subscriber"
+  , _typeModule = "Servant.Subscriber"
+  , _typeName = "ToUserType"
+  , _typeParameters = [a]
+  }
