@@ -13,4 +13,3 @@ extra-package-dbs: []
 
 nix:
    shell-file: stack.nix
-   enable: true
