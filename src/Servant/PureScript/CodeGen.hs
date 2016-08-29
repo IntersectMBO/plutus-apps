@@ -90,7 +90,7 @@ genGetReaderParams = stack . map (genGetReaderParam . psVar . _pName)
 genSignature :: Text -> [PSType] -> Maybe PSType -> Doc
 genSignature = genSignatureBuilder $ "forall eff m." <+/> "(MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)" <+/> "=>"
 
-genSignatureBuilder :: Text constraint -> Text -> [PSType] -> Maybe PSType -> Doc
+genSignatureBuilder :: Doc -> Text -> [PSType] -> Maybe PSType -> Doc
 genSignatureBuilder constraint fnName params mRet = fName <+> "::" <+> align (constraint <+/> parameterString)
   where
     fName = strictText fnName

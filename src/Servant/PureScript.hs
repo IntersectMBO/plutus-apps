@@ -27,25 +27,30 @@ module Servant.PureScript (
 ) where
 
 
+import           Control.Lens
+import           Control.Monad                 (when)
 import           Data.Aeson
 import           Data.Bifunctor
-import           Data.ByteString             (ByteString)
-import qualified Data.ByteString.Lazy        as BS
+import           Data.ByteString               (ByteString)
+import qualified Data.ByteString.Lazy          as BS
 import           Data.Monoid
 import           Data.Proxy
-import           Data.Text                   (Text)
-import qualified Data.Text                   as T
-import qualified Data.Text.Encoding          as T
+import           Data.Text                     (Text)
+import qualified Data.Text                     as T
+import qualified Data.Text.Encoding            as T
 import           Language.PureScript.Bridge
-import           Network.HTTP.Types          (urlDecode, urlEncode)
+import           Network.HTTP.Types            (urlDecode, urlEncode)
 import           Servant.Foreign
 import           Servant.PureScript.CodeGen
 import           Servant.PureScript.Internal
+import qualified Servant.PureScript.Subscriber as SubGen
 import           System.Directory
 import           System.FilePath
-import           System.IO                   (IOMode (..), withFile)
-import           Text.PrettyPrint.Mainland   (hPutDocLn)
+import           System.IO                     (IOMode (..), withFile)
+import           Text.PrettyPrint.Mainland     (hPutDocLn)
 
+-- | Standard entry point - just create a purescript module with default settings
+--   for accessing the servant API.
 writeAPIModule :: forall bridgeSelector api.
   ( HasForeign (PureScript bridgeSelector) PSType api
   , GenerateList PSType (Foreign PSType api)
@@ -63,10 +68,18 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
     let contents = genModule opts apiList
     unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
     withFile mPath WriteMode $ flip hPutDocLn contents
+    when (opts ^. generateSubscriberAPI) $ do
+      let msContents = SubGen.genModule opts apiList
+      unlessM (doesDirectoryExist msDir) $ createDirectoryIfMissing True msDir
+      withFile msPath WriteMode $ flip hPutDocLn msContents
   where
-    mFile = (joinPath . map T.unpack . T.splitOn "." $ _apiModuleName opts) <> ".purs"
+    moduleToFile mName = (joinPath . map T.unpack . T.splitOn "." $ mName) <> ".purs"
+    mFile = moduleToFile $ _apiModuleName opts
+    msFile = moduleToFile $ _apiModuleName opts <> ".Subscriber"
     mPath = root </> mFile
+    msPath = root </> msFile
     mDir = takeDirectory mPath
+    msDir = takeDirectory msPath
 
 
 -- | Use this function for implementing 'parseUrlPiece' in your FromHttpApiData instances

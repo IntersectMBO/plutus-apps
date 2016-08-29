@@ -7,24 +7,49 @@
 {-# LANGUAGE TypeOperators         #-}
 
 -- TODO: This module duplicates quite a lot of code from CodeGen.hs.
-module Servant.Purescript.Subscriber where
+module Servant.PureScript.Subscriber where
 
 import           Control.Lens                       hiding (List)
-import qualified Data.Map                           as Map
+import           Data.Map                           (Map)
 import           Data.Maybe                         (mapMaybe, maybeToList)
 import qualified Data.Set                           as Set
 import           Data.Text                          (Text)
 import qualified Data.Text                          as T
 import qualified Data.Text.Encoding                 as T
 import           Language.PureScript.Bridge
-import           Language.PureScript.Bridge.PSTypes (psString)
+import           Language.PureScript.Bridge.PSTypes (psString, psUnit)
 import           Network.HTTP.Types.URI             (urlEncode)
 import           Servant.Foreign
+import           Servant.PureScript.CodeGen         hiding (genBuildHeader,
+                                                     genBuildHeaders,
+                                                     genBuildPath,
+                                                     genBuildQuery,
+                                                     genBuildQueryArg,
+                                                     genBuildSegment, genFnBody,
+                                                     genFunction, genModule,
+                                                     genSignature)
 import           Servant.PureScript.Internal
 import           Text.PrettyPrint.Mainland
-import Servant.Purescript.CodeGen
 
-genModule :: Settings -> [Req PSType] -> Maybe Doc
+subscriberImportLines :: Map Text ImportLine
+subscriberImportLines = importsFromList
+  [
+    ImportLine "Servant.Subscriber.Subscriptions" (Set.fromList [ "Subscriptions"
+                                                                , "makeSubscriptions"
+                                                                ])
+  , ImportLine "Servant.Subscriber.Util" (Set.fromList [ "toUserType"
+                                                       , "subGenNormalQuery"
+                                                       , "subGenListQuery"
+                                                       , "subGenFlagQuery"
+                                                       , "TypedToUser"
+                                                       ])
+  , ImportLine "Servant.Subscriber" (Set.fromList ["ToUserType"])
+  , ImportLine "Servant.Subscriber.Request" (Set.fromList ["HttpRequest(..)"])
+  , ImportLine "Servant.Subscriber.Types" (Set.fromList ["Path(..)"])
+  , ImportLine "Data.Tuple" (Set.fromList ["Tuple(..)"])
+  ]
+
+genModule :: Settings -> [Req PSType] -> Doc
 genModule opts allReqs = let
     isSubscribable :: Req PSType -> Bool
     isSubscribable req = T.empty `elem`  req ^.reqFuncName . to unFunctionName
@@ -32,42 +57,39 @@ genModule opts allReqs = let
     allParams  = concatMap reqToParams allReqs
     rParams    = getReaderParams opts allParams
     apiImports = reqsToImportLines reqs
-    imports    = mergeImportLines (_standardImports opts) apiImports
+    webAPIImports = importsFromList [
+        ImportLine (opts ^. apiModuleName) (Set.fromList ["SPParams_(..)"])
+      ]
+    imports    = _standardImports opts
+                  `mergeImportLines` apiImports
+                  `mergeImportLines` subscriberImportLines
+                  `mergeImportLines` webAPIImports
     moduleName = _apiModuleName opts <> ".Subscriber"
   in
-    genModuleHeader moduleName imports rParams
+    genModuleHeader moduleName imports
     </> (docIntercalate line . map (genFunction rParams)) reqs
 
-genFunction :: PSType -> [PSParam] -> Req PSType -> Doc
-genFunction responseType allRParams req = let
+genFunction :: [PSParam] -> Req PSType -> Doc
+genFunction allRParams req = let
     rParamsSet = Set.fromList allRParams
     fnName = req ^. reqFuncName ^. camelCaseL
-    allParamsList = subscriberToUserTypeParam responseType : baseURLParam : reqToParams req
+    responseType = case req ^. reqReturnType of
+                     Nothing -> psUnit
+                     Just t -> t
+    allParamsList = makeTypedToUserParam responseType : baseURLParam : reqToParams req
     allParams = Set.fromList allParamsList
     fnParams = filter (not . flip Set.member rParamsSet) allParamsList -- Use list not set, as we don't want to change order of parameters
     rParams = Set.toList $ rParamsSet `Set.intersection` allParams
 
     pTypes = map _pType fnParams
     pNames = map _pName fnParams
-    signature = genSignature fnName pTypes (req ^. reqReturnType)
+    signature = genSignature fnName pTypes (Just psSubscriptions)
     body = genFnHead fnName pNames <+> genFnBody rParams req
   in signature </> body
 
 
-genGetReaderParams :: [PSParam] -> Doc
-genGetReaderParams = stack . map (genGetReaderParam . psVar . _pName)
-  where
-    genGetReaderParam pName' = "let" <+> pName' <+> "= spParams_." <> pName'
-
-
 genSignature :: Text -> [PSType] -> Maybe PSType -> Doc
-genSignature = genSignatureBuilder "forall m." <+/> "MonadReader (SPSettings_ SPParams_) m" <+/> "=>"
-
-genFnHead :: Text -> [Text] -> Doc
-genFnHead fnName params = fName <+> align (docIntercalate softline docParams <+> "=")
-  where
-    docParams = map psVar params
-    fName = strictText fnName
+genSignature = genSignatureBuilder $ "forall m a." <+/> "MonadReader (SPSettings_ SPParams_) m" <+/> "=>"
 
 genFnBody :: [PSParam] -> Req PSType -> Doc
 genFnBody rParams req = "do"
@@ -79,21 +101,23 @@ genFnBody rParams req = "do"
       </> hang 6 ("let httpMethod =" <+> dquotes (req ^. reqMethod ^. to T.decodeUtf8 ^. to strictText))
       </> hang 6 ("let reqPath ="     <+> genBuildPath (req ^. reqUrl . path))
       </> "let reqHeaders =" </> indent 6 (req ^. reqHeaders ^. to genBuildHeaders)
-      </> "let reqQuery =" </> indent 6 (req ^. reqURL ^. queryStr . to genBuildQuery)
+      </> "let reqQuery =" </> indent 6 (req ^. reqUrl ^. queryStr . to genBuildQuery)
       </> "let spReq = " <> hang 2 ("HttpRequest" </>
                                    "{ httpMethod:" <+> "httpMethod"
                                </> ", httpPath:" <+> "reqPath"
                                </> ", httpHeaders:" <+> "reqHeaders"
                                </> ", httpQuery:" <+> "reqQuery"
-                               </> ", httpBody:" <+> "printJson <<< encodeJson $ reqBody"
+                               </> ", httpBody:" <+> case req ^. reqBody of
+                                       Nothing -> "\"\""
+                                       Just _ -> "printJson <<< encodeJson $ reqBody"
                                </> "}")
-      </> "pure $ makeSubscriptions spReq " <> subscriberToUserId
+      </> "pure $ makeSubscriptions spReq (toUserType " <> strictText subscriberToUserId <> ")"
     )
 
 ----------
 genBuildPath :: Path PSType -> Doc
-genBuildPath = "Path ["
-  <> docIntercalate (softline <> ", ") . map (genBuildSegment . unSegment)
+genBuildPath p = "Path ["
+  <> (docIntercalate (softline <> ", ") . map (genBuildSegment . unSegment)) p
   <> "]"
 
 genBuildSegment :: SegmentType PSType -> Doc
@@ -102,18 +126,18 @@ genBuildSegment (Cap arg) = "gDefaultToURLPiece" <+> arg ^. argName ^. to unPath
 
 ----------
 genBuildQuery :: [QueryArg PSType] -> Doc
-genBuildQuery [] = ""
-genBuildQuery args = softline <> "<> \"?\" <> " <> (docIntercalate (softline <> "<> \"&\" <> ") . map genBuildQueryArg $ args)
+genBuildQuery []   = "[]"
+genBuildQuery args = docIntercalate (softline <> "<> ") . map genBuildQueryArg $ args
 
 genBuildQueryArg :: QueryArg PSType -> Doc
 genBuildQueryArg arg = case arg ^. queryArgType of
-    Normal -> genQueryEncoding "encodeQuery"
-    Flag   -> genQueryEncoding "encodeQuery"
-    List   -> genQueryEncoding "encodeListQuery"
+    Normal -> genQueryEncoding "subGenNormalQuery"
+    Flag   -> genQueryEncoding "subGenFlagQuery"
+    List   -> genQueryEncoding "subGenListQuery"
   where
     argText = arg ^. queryArgName ^. argName ^. to unPathSegment
-    argName = strictText  argText
-    genQueryEncoding fn = fn <+> dquotes encodedArgName <+> psVar argText
+    argDoc = strictText argText
+    genQueryEncoding fn = fn <+> dquotes argDoc <+> psVar argText
 
 -----------
 
@@ -123,58 +147,9 @@ genBuildHeaders = list . map genBuildHeader
 genBuildHeader :: HeaderArg PSType -> Doc
 genBuildHeader (HeaderArg arg) = let
     argText = arg ^. argName ^. to unPathSegment
-    argName = strictText argText
+    argDoc = strictText argText
   in
-    align $ "Tuple" <+> argName <+> "(gDefaultToUrlPiece" <+> psVar argText <> ")"
+    align $ "Tuple" <+> dquotes argDoc <+> "(gDefaultToURLPiece" <+> psVar argText <> ")"
 genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implemented!"
 
-reqsToImportLines :: [Req PSType] -> ImportLines
-reqsToImportLines = typesToImportLines Map.empty . concatMap reqToPSTypes
-
-reqToPSTypes :: Req PSType -> [PSType]
-reqToPSTypes req = map _pType (reqToParams req) ++ maybeToList (req ^. reqReturnType)
-
--- | Extract all function parameters from a given Req.
-reqToParams :: Req PSType -> [Param PSType]
-reqToParams req = Param baseURLId psString
-               : fmap headerArgToParam (req ^. reqHeaders)
-               ++ maybeToList (reqBodyToParam (req ^. reqBody))
-               ++ urlToParams (req ^. reqUrl)
-
-urlToParams :: Url f -> [Param f]
-urlToParams url = mapMaybe (segmentToParam . unSegment) (url ^. path) ++ map queryArgToParam (url ^. queryStr)
-
-segmentToParam :: SegmentType f -> Maybe (Param f)
-segmentToParam (Static _) = Nothing
-segmentToParam (Cap arg) = Just Param {
-    _pType = arg ^. argType
-  , _pName = arg ^. argName ^. to unPathSegment
-  }
-
-queryArgToParam :: QueryArg f -> Param f
-queryArgToParam arg = Param {
-    _pType = arg ^. queryArgName ^. argType
-  , _pName = arg ^. queryArgName ^. argName ^. to unPathSegment
-  }
-
-headerArgToParam :: HeaderArg f -> Param f
-headerArgToParam (HeaderArg arg) = Param {
-    _pName = arg ^. argName ^. to unPathSegment
-  , _pType = arg ^. argType
-  }
-headerArgToParam _ = error "We do not support ReplaceHeaderArg - as I have no idea what this is all about."
-
-reqBodyToParam :: Maybe f -> Maybe (Param f)
-reqBodyToParam = fmap (Param "reqBody")
-
-docIntercalate :: Doc -> [Doc] -> Doc
-docIntercalate i = mconcat . punctuate i
-
-
-textURLEncode :: Bool -> Text -> Text
-textURLEncode spaceIsPlus = T.decodeUtf8 . urlEncode spaceIsPlus . T.encodeUtf8
-
--- | Little helper for generating valid variable names
-psVar :: Text -> Doc
-psVar = strictText . toPSVarName
 

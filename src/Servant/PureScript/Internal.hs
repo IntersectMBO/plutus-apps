@@ -83,8 +83,9 @@ data Settings = Settings {
   --   will be put in the Reader monad, all others will still be passed as function parameter.
 , _readerParams    :: Set ParamName
 , _standardImports :: ImportLines
-  -- If you want codegen for servant-subscriber, set the sumtype used for reporting changes with subscriber.
-, _subscriberResponseType :: Maybe PSType
+  -- | If you want codegen for servant-subscriber, set this to True. See the central-counter example
+  --   for a simple usage case.
+, _generateSubscriberAPI :: Bool
 }
 makeLenses ''Settings
 
@@ -107,7 +108,7 @@ defaultSettings = Settings {
         , ImportLine "Data.Maybe" (Set.fromList [ "Maybe(..)"])
         , ImportLine "Data.Argonaut.Printer" (Set.fromList [ "printJson" ])
         ]
-  , _subscriberResponseType = Nothing
+  , _generateSubscriberAPI = False
   }
 
 -- | Add a parameter name to be us put in the Reader monad instead of being passed to the
@@ -122,10 +123,10 @@ baseURLParam :: PSParam
 baseURLParam = Param baseURLId psString
 
 subscriberToUserId :: ParamName
-subscriberToUserId = "spToUser"
+subscriberToUserId = "spToUser_"
 
-subscriberToUserTypeParam :: PSType -> PSParam
-subscriberToUserTypeParam subscriberResponse = Param subscriberToUserId (psToUserType subscriberResponse)
+makeTypedToUserParam :: PSType -> PSParam
+makeTypedToUserParam response = Param subscriberToUserId (psTypedToUser response)
 
 apiToList :: forall bridgeSelector api.
   ( HasForeign (PureScript bridgeSelector) PSType api
@@ -151,10 +152,26 @@ toPSVarName = dropInvalid . unTitle . doPrefix . replaceInvalid
       in
         T.filter isValid
 
-psToUserType :: PSType -> PSType
-psToUserType a = TypeInfo {
+psTypedToUser :: PSType -> PSType
+psTypedToUser response = TypeInfo {
   _typePackage = "purescript-subscriber"
-  , _typeModule = "Servant.Subscriber"
-  , _typeName = "ToUserType"
-  , _typeParameters = [a]
+  , _typeModule = "Servant.Subscriber.Util"
+  , _typeName = "TypedToUser"
+  , _typeParameters = [response, psTypeParameterA]
+  }
+
+psSubscriptions :: PSType
+psSubscriptions = TypeInfo {
+    _typePackage = "purescript-subscriber"
+  , _typeModule = "Servant.Subscriber.Subscriptions"
+  , _typeName = "Subscriptions"
+  , _typeParameters = [psTypeParameterA]
+  }
+
+psTypeParameterA :: PSType
+psTypeParameterA = TypeInfo {
+    _typePackage = ""
+  , _typeModule = ""
+  , _typeName = "a"
+  , _typeParameters = []
   }
