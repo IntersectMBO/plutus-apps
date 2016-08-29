@@ -18,11 +18,10 @@ the generated code in [examples/central-counter](https://github.com/eskimor/serv
 
 It works!
 
-Documentation is yet to come, but there is a usage example in examples/central-counter
-which also employs a very early version of servant-subscriber
-used for counter live updates.
-The PureScript side of servant-subscriber is very low-level and will
-change significantly in the future.
+Documentation is yet to come, but there is a usage example in
+examples/central-counter which also uses servant-subscriber used for counter
+live updates. Generated code is only partly tested, especially Query parameters
+are completely untested.
 
 For type translations purescript-bridge is used.
 
