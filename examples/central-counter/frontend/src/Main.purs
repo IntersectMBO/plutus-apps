@@ -36,7 +36,7 @@ import Unsafe.Coerce (unsafeCoerce)
 import WebSocket (WEBSOCKET)
 import Servant.Subscriber (Subscriber, makeSubscriber, SubscriberEff, Config, makeSubscriptions)
 import Servant.Subscriber as Subscriber
-
+import Counter.WebAPI.Subscriber as Sub
 
 
 data Action = Increment
@@ -64,14 +64,6 @@ type ServantModel =
     , effects :: Array (APIEffect () Action)
     }
 
-subscriberRequest :: HttpRequest
-subscriberRequest = HttpRequest {
-    httpMethod : "GET"
-  , httpPath : Path ["counter"]
-  , httpHeaders : [ Tuple "authtoken" "\"topsecret\""]
-  , httpQuery : []
-  , httpBody : ""
-  }
 
 update :: Action -> State -> EffModel State Action (ajax :: AJAX)
 update Increment state = runEffectActions state [Update <$> putCounter (CounterAdd 1)]
@@ -116,8 +108,8 @@ type SubscriberData eff = {
 }
 
 
-initSubscriber :: forall eff. SubscriberEff (channel :: CHANNEL | eff) (SubscriberData (channel :: CHANNEL | eff))
-initSubscriber = do
+initSubscriber :: forall eff. MySettings -> SubscriberEff (channel :: CHANNEL | eff) (SubscriberData (channel :: CHANNEL | eff))
+initSubscriber settings = do
   ch <- channel Nop
   let
     c :: Config (channel :: CHANNEL | eff) Action
@@ -128,26 +120,14 @@ initSubscriber = do
       }
   sub <- makeSubscriber c
   let sig = subscribe ch
-  let subs = makeSubscriptions subscriberRequest handleResponse
+  subs <- flip runReaderT settings $ Sub.getCounter (maybe Nop Update)
   Subscriber.deploy subs sub
   pure $ { subscriber : sub, messages : sig }
-
-
--- toAction :: Maybe Notification -> Action
--- toAction Nothing                 = SubscriberLog "Received Nothing"
--- toAction (Just notification)     = case notification of
---   Modified path val -> handleModify val
---   _ -> SubscriberLog $ gShow notification
-
-handleResponse :: Maybe Json -> Either String Action
-handleResponse Nothing = pure Nop
-handleResponse (Just v) = map Update <<< decodeJson $ v
 
 
 -- main :: forall e. Eff (ajax :: AJAX, err :: EXCEPTION, channel :: CHANNEL | e) Unit
 main :: forall eff. Eff (ajax :: AJAX, err :: EXCEPTION, channel :: CHANNEL, ref :: REF, ws :: WEBSOCKET | eff) Unit
 main = do
-  sub <- initSubscriber
   let settings = SPSettings_ {
                     encodeJson : encodeJson
                   , decodeJson : decodeJson
@@ -158,6 +138,7 @@ main = do
                     }
                   }
   let initState = { counter : 0, settings : settings, lastError : Nothing, subscriberLog : Nil }
+  sub <- initSubscriber settings
   app <- coerceEffects <<< start $
     { initialState: initState
     , update: update
