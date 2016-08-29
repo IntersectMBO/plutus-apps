@@ -23,8 +23,8 @@ newtype SPParams_ = SPParams_ { authToken :: AuthToken
                               }
 
 getCounter :: forall eff m.
-           (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
-           => m Int
+              (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
+              => m Int
 getCounter = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o
@@ -44,8 +44,8 @@ getCounter = do
   getResult decodeJson affResp
   
 putCounter :: forall eff m.
-           (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
-           => CounterAction -> m Int
+              (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
+              => CounterAction -> m Int
 putCounter reqBody = do
   spOpts_' <- ask
   let spOpts_ = case spOpts_' of SPSettings_ o -> o

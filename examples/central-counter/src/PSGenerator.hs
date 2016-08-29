@@ -53,7 +53,9 @@ myTypes =  [
           ]
 
 mySettings :: Settings
-mySettings = addReaderParam "AuthToken" defaultSettings & apiModuleName .~ "Counter.WebAPI"
+mySettings = (addReaderParam "AuthToken" defaultSettings & apiModuleName .~ "Counter.WebAPI") {
+  _generateSubscriberAPI = True
+  }
 
 
 main :: IO ()
@@ -61,3 +63,4 @@ main = do
   let frontEndRoot = "frontend/src"
   writeAPIModuleWithSettings mySettings frontEndRoot myBridgeProxy appAPI
   writePSTypes frontEndRoot (buildBridge myBridge) myTypes
+
