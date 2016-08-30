@@ -44,10 +44,11 @@ import           Servant.Foreign
 import           Servant.PureScript.CodeGen
 import           Servant.PureScript.Internal
 import qualified Servant.PureScript.Subscriber as SubGen
+import qualified Servant.PureScript.MakeRequests as MakeRequests
 import           System.Directory
 import           System.FilePath
 import           System.IO                     (IOMode (..), withFile)
-import           Text.PrettyPrint.Mainland     (hPutDocLn)
+import           Text.PrettyPrint.Mainland     (hPutDocLn, Doc)
 
 -- | Standard entry point - just create a purescript module with default settings
 --   for accessing the servant API.
@@ -64,22 +65,22 @@ writeAPIModuleWithSettings :: forall bridgeSelector api.
   , HasBridge bridgeSelector
   ) => Settings -> FilePath -> Proxy bridgeSelector -> Proxy api -> IO ()
 writeAPIModuleWithSettings opts root pBr pAPI = do
-    let apiList  = apiToList pAPI pBr
-    let contents = genModule opts apiList
-    unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
-    withFile mPath WriteMode $ flip hPutDocLn contents
+    writeModule (opts ^. apiModuleName) genModule
     when (opts ^. generateSubscriberAPI) $ do
-      let msContents = SubGen.genModule opts apiList
-      unlessM (doesDirectoryExist msDir) $ createDirectoryIfMissing True msDir
-      withFile msPath WriteMode $ flip hPutDocLn msContents
+      writeModule (opts ^. apiModuleName <> ".Subscriber") SubGen.genModule
+      writeModule (opts ^. apiModuleName <> ".MakeRequests") MakeRequests.genModule
   where
-    moduleToFile mName = (joinPath . map T.unpack . T.splitOn "." $ mName) <> ".purs"
-    mFile = moduleToFile $ _apiModuleName opts
-    msFile = moduleToFile $ _apiModuleName opts <> ".Subscriber"
-    mPath = root </> mFile
-    msPath = root </> msFile
-    mDir = takeDirectory mPath
-    msDir = takeDirectory msPath
+    apiList  = apiToList pAPI pBr
+
+    writeModule :: Text -> (Settings -> [Req PSType] -> Doc) -> IO ()
+    writeModule mName genModule' = let
+        fileName = (joinPath . map T.unpack . T.splitOn "." $ mName) <> ".purs"
+        mPath = root </> fileName
+        mDir = takeDirectory mPath
+        contents = genModule' opts apiList
+      in do
+        unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
+        withFile mPath WriteMode $ flip hPutDocLn contents
 
 
 -- | Use this function for implementing 'parseUrlPiece' in your FromHttpApiData instances

@@ -20,6 +20,7 @@ library
   exposed-modules:     Servant.PureScript.Internal
                      , Servant.PureScript.CodeGen
                      , Servant.PureScript.Subscriber
+                     , Servant.PureScript.MakeRequests
                      , Servant.PureScript
                      , Servant.API.BrowserHeader
 
