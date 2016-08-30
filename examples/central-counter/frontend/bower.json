@@ -13,7 +13,7 @@
     "purescript-aff": "^1.0.0",
     "purescript-argonaut-generic-codecs": "^3.0.0",
     "purescript-servant-support": "^1.0.2",
-    "purescript-subscriber": "git@github.com:eskimor/purescript-subscriber.git#typed-interface",
+    "purescript-subscriber": "git@github.com:eskimor/purescript-subscriber.git#master",
     "purescript-generics": "^1.0.0",
     "purescript-partial": "^1.1.2",
     "purescript-dom": "^1.1.0"

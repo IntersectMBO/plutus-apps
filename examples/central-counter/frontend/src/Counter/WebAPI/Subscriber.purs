@@ -25,25 +25,11 @@ import Servant.Subscriber.Subscriptions (Subscriptions, makeSubscriptions)
 import Servant.Subscriber.Types (Path(..))
 import Servant.Subscriber.Util (TypedToUser, subGenFlagQuery, subGenListQuery, subGenNormalQuery, toUserType)
 
+import Counter.WebAPI.MakeRequests as MakeRequests
+
 getCounter :: forall m a. MonadReader (SPSettings_ SPParams_) m =>
               TypedToUser Int a -> m (Subscriptions a)
 getCounter spToUser_ = do
-  spOpts_' <- ask
-  let spOpts_ = case spOpts_' of SPSettings_ o -> o
-  let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_
-  let authToken = spParams_.authToken
-  let baseURL = spParams_.baseURL
-  let httpMethod = "GET"
-  let reqPath = Path ["counter"]
-  let reqHeaders =
-        [Tuple "AuthToken" (gDefaultToURLPiece authToken)]
-  let reqQuery =
-        []
-  let spReq = HttpRequest
-                { httpMethod: httpMethod
-                , httpPath: reqPath
-                , httpHeaders: reqHeaders
-                , httpQuery: reqQuery
-                , httpBody: ""
-                }
+  spReq <- MakeRequests.getCounter 
   pure $ makeSubscriptions spReq (toUserType spToUser_)
+

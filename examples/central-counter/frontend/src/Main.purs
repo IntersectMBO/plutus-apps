@@ -37,6 +37,8 @@ import WebSocket (WEBSOCKET)
 import Servant.Subscriber (Subscriber, makeSubscriber, SubscriberEff, Config, makeSubscriptions)
 import Servant.Subscriber as Subscriber
 import Counter.WebAPI.Subscriber as Sub
+import Counter.WebAPI.MakeRequests as MakeReq
+import Servant.Subscriber.Connection as C
 
 
 data Action = Increment
@@ -120,7 +122,12 @@ initSubscriber settings = do
       }
   sub <- makeSubscriber c
   let sig = subscribe ch
+  pongReq <- flip runReaderT settings $ MakeReq.putCounter (CounterAdd 1) -- | Let's play a bit! :-)
+  closeReq <- flip runReaderT settings $ MakeReq.putCounter (CounterSet 100)
   subs <- flip runReaderT settings $ Sub.getCounter (maybe Nop Update)
+  let c = Subscriber.getConnection sub
+  C.setPongRequest pongReq c -- |< Hihi :-)
+  C.setCloseRequest closeReq c
   Subscriber.deploy subs sub
   pure $ { subscriber : sub, messages : sig }
 

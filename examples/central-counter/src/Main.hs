@@ -59,6 +59,7 @@ getCounter = liftIO . readIORef =<< view counter
 putCounter :: HandlerConstraint m => CounterAction -> m Int
 putCounter action = do
   r <- liftIO . flip atomicModifyIORef' (doAction action) =<< view counter
+
   subscriber' <- view subscriber
   let link :: Proxy ("counter" :>  Get '[JSON] Int)
       link = Proxy
