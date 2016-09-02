@@ -5,7 +5,7 @@ packages:
 #  - '../servant-subscriber'
 extra-deps:
   - purescript-bridge-0.7.0.0
-  - servant-subscriber-0.4.0.0
+  - servant-subscriber-0.5.0.0
 
 flags: {}
  
