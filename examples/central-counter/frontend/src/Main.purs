@@ -1,3 +1,4 @@
+-- | TODO: This example could use a rewrite ;-)
 module Main where
 
 import Control.Bind ((<=<))
@@ -59,7 +60,7 @@ type MySettings = SPSettings_ SPParams_
 
 
 
-type APIEffect eff = ReaderT MySettings (ExceptT AjaxError (Aff ( ajax :: AJAX, channel :: CHANNEL | eff)))
+type APIEffect eff = ReaderT MySettings (ExceptT AjaxError (Aff ( ajax :: AJAX, channel :: CHANNEL, err :: EXCEPTION  | eff)))
 
 type ServantModel =
     { state :: State
@@ -97,7 +98,7 @@ view state =
 runEffectActions :: State -> Array (APIEffect () Action) -> EffModel State Action (ajax :: AJAX)
 runEffectActions state effects = { state : state, effects : map (runEffect state.settings) effects }
 
-runEffect :: MySettings -> APIEffect () Action -> Aff (channel :: CHANNEL, ajax :: AJAX) Action
+runEffect :: MySettings -> APIEffect () Action -> Aff (channel :: CHANNEL, ajax :: AJAX, err :: EXCEPTION) Action
 runEffect settings m = do
     er <- runExceptT $ runReaderT m settings
     case er of

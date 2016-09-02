@@ -8,12 +8,12 @@
   "main": "support/index.js",
   "license": "BSD3",
   "dependencies": {
-    "purescript-pux": "git@github.com:Thimoteus/purescript-pux.git#master",
+    "purescript-pux": "^5.0.3",
     "purescript-affjax": "^1.0.0",
     "purescript-aff": "^1.0.0",
     "purescript-argonaut-generic-codecs": "^3.0.0",
     "purescript-servant-support": "^1.0.2",
-    "purescript-subscriber": "git@github.com:eskimor/purescript-subscriber.git#master",
+    "purescript-subscriber": "^1.0.0",
     "purescript-generics": "^1.0.0",
     "purescript-partial": "^1.1.2",
     "purescript-dom": "^1.1.0"
