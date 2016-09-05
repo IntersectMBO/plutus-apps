@@ -21,7 +21,7 @@ matrix:
             - alex-3.1.4
 
     - env: GHC=8.0.1 CABAL=1.24
-      compiler: "GHC 8.0.1"
+      compiler: "GHC 8.0"
       addons:
         apt:
           sources:
