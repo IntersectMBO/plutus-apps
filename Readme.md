@@ -24,6 +24,3 @@ live updates. Generated code is only partly tested, especially Query parameters
 are completely untested.
 
 For type translations purescript-bridge is used.
-
-I now have to take care of my actual project, which makes use of servant-purescript,
-improvements and documentation will follow on the way!
