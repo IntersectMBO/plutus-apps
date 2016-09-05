@@ -62,6 +62,8 @@ before_install:
   - travis_retry curl -L "https://www.stackage.org/stack/linux-x86_64" | gunzip | tar -x
   - mv stack-*/stack $HOME/bin
   - if [ ${GHC} != head ]; then ln -s stack-${GHC%.*}.yaml stack.yaml; fi
+  - pwd
+  - ls -lh
   - travis_retry stack setup
   - travis_retry stack install hscolour
 
