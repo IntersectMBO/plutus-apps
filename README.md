@@ -24,6 +24,4 @@ All you should need to get started is: [`writePSTypes`](http://hackage.haskell.o
 
 ## Status
 
-This library is at a quite early stage. It works for my use case at the moment and I will fix bugs when they come along. Also PRs for more `PSType`s definitions and bridges are very welcome!
-
-Expect bugs - especially for more advanced use cases. Although I have tested the most advanced one already with no issues, bugs always creep in.
+It works for my use case and is used in production. PRs for more `PSType`s definitions and bridges are very welcome! 
