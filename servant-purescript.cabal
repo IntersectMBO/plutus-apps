@@ -25,7 +25,7 @@ library
                      , Servant.API.BrowserHeader
 
 --  other-modules:       Main
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       base >= 4.7 && < 6.0
                      , aeson >= 0.11.2
                      , bytestring
                      , containers

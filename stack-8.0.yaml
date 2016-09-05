@@ -1,4 +1,4 @@
-resolver: lts-6.15
+resolver: nightly-2016-09-04
 packages:
   - '.'
   - './examples/central-counter'
@@ -13,4 +13,4 @@ flags: {}
 extra-package-dbs: []
 
 nix:
-   shell-file: stack.nix
+   shell-file: stack-8.0.nix
