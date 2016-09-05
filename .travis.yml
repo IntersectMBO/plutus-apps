@@ -31,6 +31,7 @@ matrix:
             - cabal-install-1.24
             - happy-1.19.5
             - alex-3.1.4
+
     - env: GHC=head CABAL=1.24
       compiler: "GHC HEAD"
       addons:
