@@ -170,7 +170,7 @@ genBuildHeader (HeaderArg arg) = let
 genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implemented!"
 
 reqsToImportLines :: [Req PSType] -> ImportLines
-reqsToImportLines = typesToImportLines Map.empty . concatMap reqToPSTypes
+reqsToImportLines = typesToImportLines Map.empty . Set.fromList . concatMap reqToPSTypes
 
 reqToPSTypes :: Req PSType -> [PSType]
 reqToPSTypes req = map _pType (reqToParams req) ++ maybeToList (req ^. reqReturnType)

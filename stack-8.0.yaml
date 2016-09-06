@@ -3,9 +3,9 @@ packages:
   - '.'
   - './examples/central-counter'
 #  - '../servant-subscriber'
-#  - '../purescript-bridge'
+  - '../purescript-bridge'
 extra-deps:
-  - purescript-bridge-0.7.0.1
+#  - purescript-bridge-0.7.0.1
   - servant-subscriber-0.5.0.1
 
 flags: {}
