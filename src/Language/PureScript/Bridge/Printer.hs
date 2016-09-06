@@ -74,19 +74,16 @@ sumTypeToText :: SumType 'PureScript -> Text
 sumTypeToText st@(SumType t cs) = T.unlines $
     "data " <> typeInfoToText True t <> " ="
   : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs)
-  : [ "\nderive instance generic" <> _typeName t <> " :: " <> genericConstrains <> genericInstance True (typeInfoToText True t) ]
+  : [ "\nderive instance generic" <> _typeName t <> " :: " <> genericConstrains <> genericInstance False t ]
   where
-    genericInstance brackets = ("Generic " <>) .
-        if brackets && not (null $ _typeParameters t)
-            then bracketWrap
-            else id
+    genericInstance brackets = ("Generic " <>) . typeInfoToText brackets
     genericConstrains
         | stpLength == 0 = mempty
         | otherwise = (<> " => ") $
             if stpLength == 1
                 then genericConstrainsInner
                 else bracketWrap genericConstrainsInner
-    genericConstrainsInner = T.intercalate ", " $ map (genericInstance False . _typeName) sumTypeParameters
+    genericConstrainsInner = T.intercalate ", " $ map (genericInstance False) sumTypeParameters
     stpLength = length sumTypeParameters
     bracketWrap x = "(" <> x <> ")"
     sumTypeParameters = filter isTypeParameter . concatMap flattenTypeInfo $ getUsedTypes st
