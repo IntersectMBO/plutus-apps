@@ -10,9 +10,9 @@
 module TestData where
 
 import           Data.Proxy
-import           Data.Text                                 (Text)
+import           Data.Text                          (Text)
 import           Data.Typeable
-import           GHC.Generics                              (Generic)
+import           GHC.Generics                       (Generic)
 import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.PSTypes
 
@@ -40,9 +40,9 @@ data Test = TestIntInt Int Int
           | TestVoid
           deriving (Generic, Typeable, Show)
 
-data Bar a b m = Bar1 (Maybe a) | Bar2 (Either a b) | Bar3 a
-               | Bar4 { myMonadicResult :: m b }
-               deriving (Generic, Typeable, Show)
+data Bar a b m c = Bar1 (Maybe a) | Bar2 (Either a b) | Bar3 a
+                 | Bar4 { myMonadicResult :: m b }
+                 deriving (Generic, Typeable, Show)
 
 
 a :: HaskellType

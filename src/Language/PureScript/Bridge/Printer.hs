@@ -68,10 +68,23 @@ importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
     typeList = T.intercalate ", " (Set.toList (importTypes l))
 
 sumTypeToText :: SumType 'PureScript -> Text
-sumTypeToText (SumType t cs) = T.unlines $
+sumTypeToText st@(SumType t cs) = T.unlines $
     "data " <> typeInfoToText True t <> " ="
   : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs)
-  : [ "\nderive instance generic" <> _typeName t <> " :: Generic " <> _typeName t ]
+  : [ "\nderive instance generic" <> _typeName t <> " :: " <> genericConstrains <> genericInstance t ]
+  where
+    genericInstance = ("Generic " <>) . typeInfoToText False
+    genericConstrains
+        | stpLength == 0 = mempty
+        | otherwise = (<> " => ") $
+            if stpLength == 1
+                then genericConstrainsInner
+                else bracketWrap genericConstrainsInner
+    genericConstrainsInner = T.intercalate ", " $ map genericInstance sumTypeParameters
+    stpLength = length sumTypeParameters
+    bracketWrap x = "(" <> x <> ")"
+    sumTypeParameters = filter isTypeParam . Set.toList $ getUsedTypes st
+    isTypeParam typ = _typeName typ `elem` map _typeName (_typeParameters t)
 
 
 constructorToText :: Int -> DataConstructor 'PureScript -> Text
