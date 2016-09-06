@@ -84,8 +84,7 @@ sumTypeToText st@(SumType t cs) = T.unlines $
     stpLength = length sumTypeParameters
     bracketWrap x = "(" <> x <> ")"
     sumTypeParameters = filter isTypeParam . Set.toList $ getUsedTypes st
-    -- NOTE: only this captures monadic type parameters. See test/Spec.hs
-    isTypeParam typ = T.toLower (_typeName typ) == _typeName typ
+    isTypeParam typ = _typeName typ `elem` map _typeName (_typeParameters t)
 
 
 constructorToText :: Int -> DataConstructor 'PureScript -> Text
