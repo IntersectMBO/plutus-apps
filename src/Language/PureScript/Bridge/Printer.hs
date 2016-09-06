@@ -83,9 +83,9 @@ sumTypeToText st@(SumType t cs) = T.unlines $
     genericConstrainsInner = T.intercalate ", " $ map genericInstance sumTypeParameters
     stpLength = length sumTypeParameters
     bracketWrap x = "(" <> x <> ")"
-    sumTypeParameters = filter isTypeParameter $ getUsedTypes st
-    -- TODO: I find this stupid. Would much rather like some other way to make this check?
-    isTypeParameter tp = T.toLower (_typeName tp) == _typeName tp
+    sumTypeParameters = filter isTypeParam . Set.toList $ getUsedTypes st
+    -- NOTE: only this captures monadic type parameters. See test/Spec.hs
+    isTypeParam typ = T.toLower (_typeName typ) == _typeName typ
 
 
 constructorToText :: Int -> DataConstructor 'PureScript -> Text
