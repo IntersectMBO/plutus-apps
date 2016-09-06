@@ -50,11 +50,8 @@ sumTypesToNeededPackages :: [SumType lang] -> Set Text
 sumTypesToNeededPackages = Set.unions . map sumTypeToNeededPackages
 
 sumTypeToNeededPackages :: SumType lang -> Set Text
-sumTypeToNeededPackages st = let
-    types = getUsedTypes st
-    packages = filter (not . T.null) . map _typePackage $ types
-  in
-    Set.fromList packages
+sumTypeToNeededPackages st =
+  Set.filter (not . T.null) . Set.map _typePackage $ getUsedTypes st
 
 moduleToText :: Module 'PureScript -> Text
 moduleToText m = T.unlines $
@@ -134,11 +131,11 @@ sumTypeToModule st@(SumType t _) = Map.alter (Just . updateModule) (_typeModule 
       }
     dropSelf = Map.delete (_typeModule t)
 
-typesToImportLines :: ImportLines -> [PSType] -> ImportLines
+typesToImportLines :: ImportLines -> Set PSType -> ImportLines
 typesToImportLines = foldr typeToImportLines
 
 typeToImportLines :: PSType -> ImportLines -> ImportLines
-typeToImportLines t ls = typesToImportLines (update ls) (_typeParameters t)
+typeToImportLines t ls = typesToImportLines (update ls) (Set.fromList (_typeParameters t))
   where
     update = if not (T.null (_typeModule t))
                 then Map.alter (Just . updateLine) (_typeModule t)
