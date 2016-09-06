@@ -74,19 +74,19 @@ sumTypeToText :: SumType 'PureScript -> Text
 sumTypeToText st@(SumType t cs) = T.unlines $
     "data " <> typeInfoToText True t <> " ="
   : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs)
-  : [ "\nderive instance generic" <> _typeName t <> " :: " <> genericConstrains <> genericInstance False t ]
+  : [ "\nderive instance generic" <> _typeName t <> " :: " <> genericConstrains <> genericInstance t ]
   where
-    genericInstance brackets = ("Generic " <>) . typeInfoToText brackets
+    genericInstance = ("Generic " <>) . typeInfoToText False
     genericConstrains
         | stpLength == 0 = mempty
         | otherwise = (<> " => ") $
             if stpLength == 1
                 then genericConstrainsInner
                 else bracketWrap genericConstrainsInner
-    genericConstrainsInner = T.intercalate ", " $ map (genericInstance False) sumTypeParameters
+    genericConstrainsInner = T.intercalate ", " $ map genericInstance sumTypeParameters
     stpLength = length sumTypeParameters
     bracketWrap x = "(" <> x <> ")"
-    sumTypeParameters = filter isTypeParameter . concatMap flattenTypeInfo $ getUsedTypes st
+    sumTypeParameters = filter isTypeParameter $ getUsedTypes st
     -- TODO: I find this stupid. Would much rather like some other way to make this check?
     isTypeParameter tp = T.toLower (_typeName tp) == _typeName tp
 
