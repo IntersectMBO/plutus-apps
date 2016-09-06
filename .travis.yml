@@ -83,7 +83,7 @@ install:
 script:
   - |
       if [ ${GHC} != head ]; then
-        stack build --no-terminal
+        stack test --no-terminal
       else
         cabal install --allow-newer
       fi
