@@ -15,7 +15,7 @@ module Language.PureScript.Bridge.SumType (
 , DataConstructor (..)
 , RecordEntry (..)
 , getUsedTypes
-, constructorToType
+, constructorToTypes
 , sigConstructor
 , sigValues
 , sumTypeInfo
@@ -24,10 +24,12 @@ module Language.PureScript.Bridge.SumType (
 , recValue
 ) where
 
-import           Control.Lens                        hiding (from, to)
+import           Control.Lens      hiding (from, to)
 import           Data.Proxy
-import           Data.Text                           (Text)
-import qualified Data.Text                           as T
+import           Data.Set          (Set)
+import qualified Data.Set          as Set
+import           Data.Text         (Text)
+import qualified Data.Text         as T
 import           Data.Typeable
 import           Generics.Deriving
 
@@ -102,12 +104,18 @@ instance (Selector a, Typeable t) => GRecordEntry (S1 a (K1 R t)) where
       }
     ]
 
-getUsedTypes :: SumType lang -> [TypeInfo lang]
-getUsedTypes (SumType _ cs) = foldr constructorToType [] cs
+-- | Get all used types in a sum type.
+--
+--   This includes all types found at the right hand side of a sum type
+--   definition, not the type parameters of the sum type itself
+getUsedTypes :: SumType lang -> Set (TypeInfo lang)
+getUsedTypes (SumType _ cs) = foldr constructorToTypes Set.empty cs
 
-constructorToType :: DataConstructor lang -> [TypeInfo lang] -> [TypeInfo lang]
-constructorToType (DataConstructor _ (Left myTs)) ts = concatMap flattenTypeInfo myTs ++ ts
-constructorToType (DataConstructor _ (Right rs))  ts = concatMap (flattenTypeInfo . _recValue) rs ++ ts
+constructorToTypes :: DataConstructor lang -> Set (TypeInfo lang) -> Set (TypeInfo lang)
+constructorToTypes (DataConstructor _ (Left myTs)) ts =
+  Set.fromList (concatMap flattenTypeInfo myTs) `Set.union` ts
+constructorToTypes (DataConstructor _ (Right rs))  ts =
+  Set.fromList (concatMap (flattenTypeInfo . _recValue) rs) `Set.union` ts
 
 -- Lenses:
 makeLenses ''DataConstructor
