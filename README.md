@@ -18,9 +18,7 @@ and `encodeJson` and `decodeJson` from "Data.Argonaut.Generic.Aeson" in [purescr
 
 ## Documentation
 
-Usage of this library is documented in [`Language.Purescript.Bridge`](https://www.stackage.org/haddock/nightly/purescript-bridge/Language-PureScript-Bridge.html).
-
-All you should need to get started is: [`writePSTypes`](https://www.stackage.org/haddock/nightly/purescript-bridge/Language-PureScript-Bridge.html#writePSTypes).
+Usage of this library is documented in `Language.Purescript.Bridge`, with `writePSTypes` you should have everything to get started. Documentation can be found [here](https://www.stackage.org/haddock/nightly/purescript-bridge).
 
 ## Status
 
