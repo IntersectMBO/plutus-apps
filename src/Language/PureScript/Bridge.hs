@@ -54,10 +54,10 @@ import           Language.PureScript.Bridge.TypeInfo   as Bridge
 --   in your own bridges, in order for this feature to be useful.
 --
 --  == Real world usage example (at time of this writing outdated, at time of reading hopefully fixed):
---   A real world use case of this library can be found <https://github.com/gonimo/gonimo-back/blob/master/src/PSGenerator.hs here>.
+--   A real world use case of this library can be found <https://github.com/gonimo/gonimo-back/blob/master/app/PSGenerator.hs here>.
 --
---   With custom bridges defined <https://github.com/gonimo/gonimo-back/blob/master/src/Gonimo/TypeBridges.hs here> and
---   custom PS types defined <https://github.com/gonimo/gonimo-back/blob/master/src/Gonimo/PSTypes.hs here>.
+--   With custom bridges defined <https://github.com/gonimo/gonimo-back/blob/master/src/Gonimo/CodeGen/TypeBridges.hs here> and
+--   custom PS types defined <https://github.com/gonimo/gonimo-back/blob/master/src/Gonimo/CodeGen/PSTypes.hs here>.
 --
 --   Parts of the generated output can be found <https://github.com/gonimo/gonimo-front/blob/master/src/Gonimo/Types.purs here>.
 --
