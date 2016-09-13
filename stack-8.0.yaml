@@ -1,12 +1,9 @@
-resolver: nightly-2016-09-04
+resolver: nightly-2016-09-12
 packages:
   - '.'
   - './examples/central-counter'
 #  - '../servant-subscriber'
 #  - '../purescript-bridge'
-extra-deps:
-  - purescript-bridge-0.8.0.0
-  - servant-subscriber-0.5.0.1
 
 flags: {}
  
