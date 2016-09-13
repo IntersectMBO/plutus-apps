@@ -2,9 +2,9 @@
 
 * Install npm
 * Install bower and pulp via npm
-* Run `npm install react react-dom` in the project directory
+* Run `npm install react react-dom` in the frontend directory
 * Run `bower install` in the frontend directory
-* Run `pulp browserify --to dist/app.js`
+* Run `pulp browserify --to dist/app.js` in the frontend directory
 * `cd ..` (central-counter directory)
 * `stack build`
 * `stack exec central-counter`
