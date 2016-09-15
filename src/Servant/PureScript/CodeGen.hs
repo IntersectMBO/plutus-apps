@@ -115,7 +115,7 @@ genFnBody rParams req = "do"
       </> hang 6 ("let httpMethod =" <+> dquotes (req ^. reqMethod ^. to T.decodeUtf8 ^. to strictText))
       </> hang 6 ("let reqUrl ="     <+> genBuildURL (req ^. reqUrl))
       </> "let reqHeaders =" </> indent 6 (req ^. reqHeaders ^. to genBuildHeaders)
-      </> "affResp <- liftAff $ affjax " <> hang 2 ( "defaultRequest" </>
+      </> "let affReq =" <+> hang 2 ( "defaultRequest" </>
             "{ method ="  <+> "httpMethod"
         </> ", url ="     <+> "reqUrl"
         </> ", headers =" <+> "defaultRequest.headers <> reqHeaders"
@@ -123,7 +123,8 @@ genFnBody rParams req = "do"
               Nothing -> "}"
               Just _  -> ", content =" <+> "toNullable <<< Just <<< printJson <<< encodeJson $ reqBody" </> "}"
       )
-      </> "getResult decodeJson affResp" <> line
+      </> "affResp <- liftAff $ affjax affReq"
+      </> "getResult affReq decodeJson affResp" <> line
     )
 
 genBuildURL :: Url PSType -> Doc

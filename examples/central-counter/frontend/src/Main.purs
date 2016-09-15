@@ -1,45 +1,45 @@
 -- | TODO: This example could use a rewrite ;-)
 module Main where
 
-import Control.Bind ((<=<))
 import Control.Monad.Aff
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Exception (EXCEPTION)
-import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Except.Trans
 import Control.Monad.Reader.Trans
 import Counter.ServerTypes
 import Counter.WebAPI
+import Data.Argonaut.Generic.Aeson
+import Data.Either
+import Data.Generic
+import Data.Maybe
+import Prelude
+import Servant.PureScript.Affjax
+import Servant.PureScript.Settings
+import Counter.WebAPI.MakeRequests as MakeReq
+import Counter.WebAPI.Subscriber as Sub
+import Data.Array as Array
+import Servant.Subscriber as Subscriber
+import Servant.Subscriber.Connection as C
+import Control.Bind ((<=<))
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.Ref (REF)
 import DOM.Node.Node (baseURI)
 import Data.Argonaut.Core (Json)
-import Data.Argonaut.Generic.Aeson
 import Data.Argonaut.Parser (jsonParser)
-import Data.Array as Array
 import Data.Bifunctor (lmap)
-import Data.Either
 import Data.Foldable (foldr, fold)
-import Data.Generic
 import Data.List (List(Nil, Cons))
-import Data.Maybe
 import Data.Tuple (Tuple(Tuple))
 import Network.HTTP.Affjax (AJAX, get)
-import Prelude
 import Pux (renderToDOM, fromSimple, start, EffModel, noEffects)
 import Pux.Html (Html, text, button, span, div, p)
 import Pux.Html.Events (onClick)
-import Servant.PureScript.Affjax
-import Servant.PureScript.Settings
+import Servant.Subscriber (Subscriber, makeSubscriber, SubscriberEff, Config, makeSubscriptions)
 import Servant.Subscriber.Request (HttpRequest(..))
 import Servant.Subscriber.Types (Path(Path))
 import Signal (Signal)
 import Signal.Channel (Channel, subscribe, send, channel, CHANNEL)
 import Unsafe.Coerce (unsafeCoerce)
 import WebSocket (WEBSOCKET)
-import Servant.Subscriber (Subscriber, makeSubscriber, SubscriberEff, Config, makeSubscriptions)
-import Servant.Subscriber as Subscriber
-import Counter.WebAPI.Subscriber as Sub
-import Counter.WebAPI.MakeRequests as MakeReq
-import Servant.Subscriber.Connection as C
 
 
 data Action = Increment
@@ -86,7 +86,7 @@ view state =
         , button [ onClick (const Decrement) ] [ text "-" ]
         ]
     , div []
-        [ span [] [ text $ "Error: " <> show state.lastError ]
+        [ span [] [ text $ "Error: " <> maybe "Nothing" errorToString state.lastError ]
         , div  []
             [ text $ "Subscriber Log: "
             , div []

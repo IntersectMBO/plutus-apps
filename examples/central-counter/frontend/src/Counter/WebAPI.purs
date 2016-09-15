@@ -36,12 +36,13 @@ getCounter = do
   let reqHeaders =
         [{ field : "AuthToken" , value : encodeURLPiece spOpts_' authToken
          }]
-  affResp <- liftAff $ affjax defaultRequest
-                                { method = httpMethod
-                                , url = reqUrl
-                                , headers = defaultRequest.headers <> reqHeaders
-                                }
-  getResult decodeJson affResp
+  let affReq = defaultRequest
+                 { method = httpMethod
+                 , url = reqUrl
+                 , headers = defaultRequest.headers <> reqHeaders
+                 }
+  affResp <- liftAff $ affjax affReq
+  getResult affReq decodeJson affResp
   
 putCounter :: forall eff m.
               (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
@@ -57,11 +58,12 @@ putCounter reqBody = do
   let reqHeaders =
         [{ field : "AuthToken" , value : encodeURLPiece spOpts_' authToken
          }]
-  affResp <- liftAff $ affjax defaultRequest
-                                { method = httpMethod
-                                , url = reqUrl
-                                , headers = defaultRequest.headers <> reqHeaders
-                                , content = toNullable <<< Just <<< printJson <<< encodeJson $ reqBody
-                                }
-  getResult decodeJson affResp
+  let affReq = defaultRequest
+                 { method = httpMethod
+                 , url = reqUrl
+                 , headers = defaultRequest.headers <> reqHeaders
+                 , content = toNullable <<< Just <<< printJson <<< encodeJson $ reqBody
+                 }
+  affResp <- liftAff $ affjax affReq
+  getResult affReq decodeJson affResp
   

@@ -38,6 +38,7 @@ import           Data.Proxy
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import qualified Data.Text.Encoding            as T
+import qualified Data.Text.IO                          as T
 import           Language.PureScript.Bridge
 import           Network.HTTP.Types            (urlDecode, urlEncode)
 import           Servant.Foreign
@@ -69,6 +70,9 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
     when (opts ^. generateSubscriberAPI) $ do
       writeModule (opts ^. apiModuleName <> ".Subscriber") SubGen.genModule
       writeModule (opts ^. apiModuleName <> ".MakeRequests") MakeRequests.genModule
+    T.putStrLn "Successfully created your servant API purescript functions!"
+    T.putStrLn "Please make sure you have purescript-servant-support version 2.0.0 or above installed:\n"
+    T.putStrLn "  bower i --save purescript-servant-support\n"
   where
     apiList  = apiToList pAPI pBr
 
