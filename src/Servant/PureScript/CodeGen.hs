@@ -146,9 +146,9 @@ genBuildQuery args = softline <> "<> \"?\" <> " <> (docIntercalate (softline <> 
 
 genBuildQueryArg :: QueryArg PSType -> Doc
 genBuildQueryArg arg = case arg ^. queryArgType of
-    Normal -> genQueryEncoding "encodeQuery"
-    Flag   -> genQueryEncoding "encodeQuery"
-    List   -> genQueryEncoding "encodeListQuery"
+    Normal -> genQueryEncoding "encodeQueryItem spOpts_'"
+    Flag   -> genQueryEncoding "encodeQueryItem spOpts_'"
+    List   -> genQueryEncoding "encodeListQuery spOpts_'"
   where
     argText = arg ^. queryArgName ^. argName ^. to unPathSegment
     encodedArgName = strictText . textURLEncode True $ argText
