@@ -8,15 +8,15 @@ the generated code in [examples/central-counter](https://github.com/eskimor/serv
 
 ## Features
 
- - Typed serialization/deserialization taken care of by Haskell's aeson and PureScript's argonaut.
+ - Typed serialization/deserialization, taken care of by Haskell's aeson and PureScript's argonaut.
    Generic encoding/decoding of both made compatible by 
    [purescript-argonaut-generic-codecs](https://github.com/eskimor/purescript-argonaut-generic-codecs/blob/purescript-argonaut-generic-codec/src/Data/Argonaut/Generic/Aeson.purs).
- - You can put common parameters like Auth tokens and the base URL in a reader monad so you don't
+ - You can put common parameters like Auth tokens and the base URL in a reader monad, so you don't
    have to pass them explicitly. This is configurable in the code generator with `readerParams` in `Settings`.
    
 ## Usage
 
-Apart from the above basic usage example the documentation is still lacking. For
+Apart from the above basic usage example, the documentation is still lacking. For
 the purescript side make sure you have
 [purescript-servant-support](https://github.com/eskimor/purescript-servant-support)
 and
@@ -28,7 +28,7 @@ installed, otherwise the generated code will not compile.
 It works!
 
 Documentation is yet to come, but there is a usage example in
-examples/central-counter which also uses servant-subscriber used for counter
+examples/central-counter which also uses servant-subscriber for counter
 live updates. Generated code is only partly tested, especially Query parameters
 are still completely untested.
 
