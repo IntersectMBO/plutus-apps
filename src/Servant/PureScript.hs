@@ -106,7 +106,7 @@ jsonParseUrlPiece = first T.pack . eitherDecodeStrict . T.encodeUtf8
 -- | Use this function for implementing 'toUrlPiece' in your ToHttpApiData instances
 --   in order to be compatible with the generated PS code.
 jsonToUrlPiece :: ToJSON a => a -> Text
-jsonToUrlPiece = T.decodeUtf8 . jsonToHeader
+jsonToUrlPiece = T.decodeUtf8 . BS.toStrict . encode
 
 -- | Use this function for implementing 'parseHeader' in your FromHttpApiData instances
 --   in order to be compatible with the generated PS code.
