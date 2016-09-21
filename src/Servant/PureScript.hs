@@ -71,7 +71,7 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
       writeModule (opts ^. apiModuleName <> ".Subscriber") SubGen.genModule
       writeModule (opts ^. apiModuleName <> ".MakeRequests") MakeRequests.genModule
     T.putStrLn "Successfully created your servant API purescript functions!"
-    T.putStrLn "Please make sure you have purescript-servant-support version 2.0.0 or above installed:\n"
+    T.putStrLn "Please make sure you have purescript-servant-support version 4.0.0 or above installed:\n"
     T.putStrLn "  bower i --save purescript-servant-support\n"
   where
     apiList  = apiToList pAPI pBr
@@ -99,21 +99,21 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
 -- >   parseUrlPiece = jsonParseUrlPiece
 -- >   parseHeader   = jsonParseHeader
 -- >
--- 
+--
 jsonParseUrlPiece :: FromJSON a => Text -> Either Text a
-jsonParseUrlPiece = first T.pack . eitherDecodeStrict . T.encodeUtf8
+jsonParseUrlPiece = jsonParseHeader . T.encodeUtf8
 
 -- | Use this function for implementing 'toUrlPiece' in your ToHttpApiData instances
 --   in order to be compatible with the generated PS code.
 jsonToUrlPiece :: ToJSON a => a -> Text
-jsonToUrlPiece = T.decodeUtf8 . BS.toStrict . encode
+jsonToUrlPiece = T.decodeUtf8 . jsonToHeader
 
 -- | Use this function for implementing 'parseHeader' in your FromHttpApiData instances
 --   in order to be compatible with the generated PS code.
 jsonParseHeader :: FromJSON a => ByteString -> Either Text a
-jsonParseHeader = first T.pack . eitherDecodeStrict . urlDecode False
+jsonParseHeader = first T.pack . eitherDecodeStrict
 
 -- | Use this function for implementing 'toHeader' in your ToHttpApiData instances
 --   in order to be compatible with the generated PS code.
 jsonToHeader :: ToJSON a => a -> ByteString
-jsonToHeader = urlEncode False . BS.toStrict . encode
+jsonToHeader = BS.toStrict . encode

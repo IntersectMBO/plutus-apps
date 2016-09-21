@@ -16,7 +16,7 @@ import Network.HTTP.Affjax (AJAX)
 import Prim (Int, String)
 import Servant.PureScript.Affjax (AjaxError(..), affjax, defaultRequest)
 import Servant.PureScript.Settings (SPSettings_(..), gDefaultToURLPiece)
-import Servant.PureScript.Util (encodeListQuery, encodeQueryItem, encodeURLPiece, getResult)
+import Servant.PureScript.Util (encodeHeader, encodeListQuery, encodeQueryItem, encodeURLPiece, getResult)
 
 newtype SPParams_ = SPParams_ { authToken :: AuthToken
                               , baseURL :: String
@@ -34,7 +34,7 @@ getCounter = do
   let httpMethod = "GET"
   let reqUrl = baseURL <> "counter"
   let reqHeaders =
-        [{ field : "AuthToken" , value : encodeURLPiece spOpts_' authToken
+        [{ field : "AuthToken" , value : encodeHeader spOpts_' authToken
          }]
   let affReq = defaultRequest
                  { method = httpMethod
@@ -56,7 +56,7 @@ putCounter reqBody = do
   let httpMethod = "PUT"
   let reqUrl = baseURL <> "counter"
   let reqHeaders =
-        [{ field : "AuthToken" , value : encodeURLPiece spOpts_' authToken
+        [{ field : "AuthToken" , value : encodeHeader spOpts_' authToken
          }]
   let affReq = defaultRequest
                  { method = httpMethod

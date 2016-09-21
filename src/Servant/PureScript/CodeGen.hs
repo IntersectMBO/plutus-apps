@@ -28,7 +28,7 @@ genModule opts reqs = let
     apiImports = reqsToImportLines reqs
     imports    = mergeImportLines (_standardImports opts) apiImports
   in
-    genModuleHeader (_apiModuleName opts) imports 
+    genModuleHeader (_apiModuleName opts) imports
     </> genParamSettings rParams <> line
     </> (docIntercalate line . map (genFunction rParams)) reqs
 
@@ -166,7 +166,7 @@ genBuildHeader (HeaderArg arg) = let
   in
     align $ "{ field : " <> dquotes encodedArgName
       <+/> comma <+> "value :"
-      <+> "encodeURLPiece spOpts_'" <+> psVar argText
+      <+> "encodeHeader spOpts_'" <+> psVar argText
       </> "}"
 genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implemented!"
 
