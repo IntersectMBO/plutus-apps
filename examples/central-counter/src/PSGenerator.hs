@@ -26,8 +26,9 @@ import           Servant.Subscriber.Subscribable
 
 import           Counter.WebAPI
 
--- | We have been lazy and defined our types in the Main module,
---   we use this opportunity to show how to create a custom bridge.
+-- | We have been lazy and defined our types in the WebAPI module,
+--   we use this opportunity to show how to create a custom bridge moving those
+--   types to Counter.ServerTypes.
 fixTypesModule :: BridgePart
 fixTypesModule = do
   typeModule ^== "Counter.WebAPI"

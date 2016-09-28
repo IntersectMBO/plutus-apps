@@ -72,6 +72,9 @@ putCounter action = do
 counterHandlers :: ServerT CounterAPI (ReaderT CounterData Handler)
 counterHandlers = getCounter :<|> putCounter
 
+-- | We use servant's `enter` mechanism for handling Authentication ...
+--   We throw an error if no secret was provided or if it was invalid - so our
+--   handlers don't have to care about it.
 toServant' :: CounterData -> Maybe AuthToken -> ReaderT CounterData Handler a -> Handler a
 toServant' cVar (Just (VerySecret "topsecret")) m = runReaderT m cVar
 toServant' _ (Just (VerySecret secret)) _ = throwError $ err401 { errBody = "Your secret is valid not! - '" <> (B.fromStrict . T.encodeUtf8) secret <> "'!"  }
