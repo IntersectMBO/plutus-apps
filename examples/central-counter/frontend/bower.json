@@ -12,7 +12,7 @@
     "purescript-affjax": "^1.0.0",
     "purescript-aff": "^1.0.0",
     "purescript-argonaut-generic-codecs": "^3.0.0",
-    "purescript-servant-support": "^4.0.0",
+    "purescript-servant-support": "^5.0.0",
     "purescript-subscriber": "^1.0.0",
     "purescript-generics": "^1.0.0",
     "purescript-partial": "^1.1.2",

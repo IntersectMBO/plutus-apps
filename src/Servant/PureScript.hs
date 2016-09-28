@@ -71,7 +71,7 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
       writeModule (opts ^. apiModuleName <> ".Subscriber") SubGen.genModule
       writeModule (opts ^. apiModuleName <> ".MakeRequests") MakeRequests.genModule
     T.putStrLn "\nSuccessfully created your servant API purescript functions!"
-    T.putStrLn "Please make sure you have purescript-servant-support version 4.0.0 or above installed:\n"
+    T.putStrLn "Please make sure you have purescript-servant-support version 5.0.0 or above installed:\n"
     T.putStrLn "  bower i --save purescript-servant-support\n"
   where
     apiList  = apiToList pAPI pBr

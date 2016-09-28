@@ -123,7 +123,7 @@ genFnBody rParams req = "do"
               Nothing -> "}"
               Just _  -> ", content =" <+> "toNullable <<< Just <<< printJson <<< encodeJson $ reqBody" </> "}"
       )
-      </> "affResp <- liftAff $ affjax affReq"
+      </> "affResp <- affjax affReq"
       </> "getResult affReq decodeJson affResp" <> line
     )
 

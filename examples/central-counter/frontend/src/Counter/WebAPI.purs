@@ -41,7 +41,7 @@ getCounter = do
                  , url = reqUrl
                  , headers = defaultRequest.headers <> reqHeaders
                  }
-  affResp <- liftAff $ affjax affReq
+  affResp <- affjax affReq
   getResult affReq decodeJson affResp
   
 putCounter :: forall eff m.
@@ -64,6 +64,6 @@ putCounter reqBody = do
                  , headers = defaultRequest.headers <> reqHeaders
                  , content = toNullable <<< Just <<< printJson <<< encodeJson $ reqBody
                  }
-  affResp <- liftAff $ affjax affReq
+  affResp <- affjax affReq
   getResult affReq decodeJson affResp
   
