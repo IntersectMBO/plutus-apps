@@ -72,10 +72,10 @@ writePSTypes root br sts = do
     let bridged = map (bridgeSumType br) sts
     let modules = M.elems $ sumTypesToModules M.empty bridged
     mapM_ (printModule root) modules
-    T.putStrLn "Successfully created your PureScript modules.\n"
-    T.putStrLn "Make sure you have the following PureScript packages installed:\n"
+    T.putStrLn "The following purescript packages are needed by the generated code:\n"
     let packages = sumTypesToNeededPackages bridged
     mapM_ (T.putStrLn . mappend "  - ") packages
+    T.putStrLn "\nSuccessfully created your PureScript modules!"
 
 -- | Translate all 'TypeInfo' values in a 'SumType' to PureScript types.
 --
