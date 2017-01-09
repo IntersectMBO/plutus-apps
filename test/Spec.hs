@@ -10,6 +10,7 @@ module Main where
 
 import           Control.Monad                             (unless)
 import qualified Data.Map                                  as Map
+import           Data.Monoid                               ((<>))
 import           Data.Proxy
 import qualified Data.Text                                 as T
 import           Language.PureScript.Bridge
@@ -78,4 +79,43 @@ allTests =
                           , ""
                           ]
       in m `shouldBe` txt
+    it "test generation of Prisms" $
+      let bar = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
+          foo = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
+          barPrisms = sumTypeToPrismsAndLenses bar
+          fooPrisms = sumTypeToPrismsAndLenses foo
+          txt = T.unlines [
+                            "_Bar1 :: PrismP (Bar a b m c) (Maybe a)"
+                          , "_Bar1 = prism' Bar1 f"
+                          , "  where"
+                          , "    f a = Just $ Bar1 a"
+                          , "_Bar2 :: PrismP (Bar a b m c) (Either a b)"
+                          , "_Bar2 = prism' Bar2 f"
+                          , "  where"
+                          , "    f a = Just $ Bar2 a"
+                          , "_Bar3 :: PrismP (Bar a b m c) a"
+                          , "_Bar3 = prism' Bar3 f"
+                          , "  where"
+                          , "    f a = Just $ Bar3 a"
+                          , "_Bar4 :: PrismP (Bar a b m c) { myMonadicResult :: m b}"
+                          , "_Bar4 = prism' Bar4 f"
+                          , "  where"
+                          , "    f (Bar4 r) = Just r"
+                          , "    f _ = Nothing"
+                          , ""
+                          , "_Foo :: PrismP Foo {  }"
+                          , "_Foo = prism' Foo f"
+                          , "  where"
+                          , "    f _ = Just Foo"
+                          , "_Bar :: PrismP Foo Int"
+                          , "_Bar = prism' Bar f"
+                          , "  where"
+                          , "    f a = Just $ Bar a"
+                          , "_FooBar :: PrismP Foo { a :: Int, b :: String }"
+                          , "_FooBar = prism' FooBar f"
+                          , "  where"
+                          , "    f { a: a, b: b } = Just $ FooBar a b"
+                          ]
+      in (barPrisms <> fooPrisms) `shouldBe` txt
 
+st = SumType (TypeInfo {_typePackage = "", _typeModule = "TestData", _typeName = "Bar", _typeParameters = [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []},TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []},TypeInfo {_typePackage = "purescript-maybe", _typeModule = "Data.Maybe", _typeName = "Maybe", _typeParameters = []},TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "String", _typeParameters = []}]}) [DataConstructor {_sigConstructor = "Bar1", _sigValues = Left [TypeInfo {_typePackage = "purescript-maybe", _typeModule = "Data.Maybe", _typeName = "Maybe", _typeParameters = [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []}]}]},DataConstructor {_sigConstructor = "Bar2", _sigValues = Left [TypeInfo {_typePackage = "purescript-either", _typeModule = "Data.Either", _typeName = "Either", _typeParameters = [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []},TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []}]}]},DataConstructor {_sigConstructor = "Bar3", _sigValues = Left [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []}]},DataConstructor {_sigConstructor = "Bar4", _sigValues = Right [RecordEntry {_recLabel = "myMonadicResult", _recValue = TypeInfo {_typePackage = "purescript-maybe", _typeModule = "Data.Maybe", _typeName = "Maybe", _typeParameters = [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []}]}}]}]

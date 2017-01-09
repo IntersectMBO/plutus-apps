@@ -4,6 +4,7 @@
 
 module Language.PureScript.Bridge.Printer where
 
+import           Control.Lens
 import           Control.Monad
 import           Data.Map.Strict                     (Map)
 import qualified Data.Map.Strict                     as Map
@@ -87,6 +88,11 @@ sumTypeToText st@(SumType t cs) = T.unlines $
     isTypeParam typ = _typeName typ `elem` map _typeName (_typeParameters t)
 
 
+sumTypeToPrismsAndLenses :: SumType 'PureScript -> Text
+sumTypeToPrismsAndLenses (SumType tName cs) = T.unlines $ map (constructorToPrism moreThan1 (typeInfoToText False tName)) cs
+  where
+    moreThan1 = length cs > 1
+
 constructorToText :: Int -> DataConstructor 'PureScript -> Text
 constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText False) ts)
 constructorToText indentation (DataConstructor n (Right rs)) =
@@ -95,7 +101,63 @@ constructorToText indentation (DataConstructor n (Right rs)) =
     <> spaces indentation <> "}"
   where
     intercalation = "\n" <> spaces indentation <> "," <> " "
-    spaces c = T.replicate c " "
+
+spaces :: Int -> Text
+spaces c = T.replicate c " "
+
+
+fromEntries :: (RecordEntry a -> Text) -> [RecordEntry a] -> Text
+fromEntries mkElem rs = "{ " <> inners <> " }"
+  where
+    inners = T.intercalate ", " $ map mkElem rs
+
+mkFnArgs :: [RecordEntry 'PureScript] -> Text
+mkFnArgs [r] = r ^. recLabel
+mkFnArgs rs  = fromEntries (\re -> re ^. recLabel <> ": " <> re ^. recLabel) rs
+
+mkTypeSig :: [RecordEntry 'PureScript] -> Text
+mkTypeSig [r] = typeInfoToText False $ r ^. recValue
+mkTypeSig rs = fromEntries recordEntryToText rs
+
+constructorToPrism :: Bool -> Text -> DataConstructor 'PureScript -> Text
+constructorToPrism otherConstructors tName (DataConstructor n args) =
+  case args of
+    Left cs  -> pName <> " :: PrismP " <> tName <> " " <> mkTypeSig types <> "\n"
+             <> pName <> " = prism' " <> n <> " f\n"
+             <> spaces 2 <> "where\n"
+             <> spaces 4 <> "f " <> mkF cs
+      where
+        mkF [] = "_ = Just " <> n
+        mkF _  = mkFnArgs types <> " = Just $ " <> n <> " " <> T.unwords (types ^.. traversed.recLabel)
+        types = [RecordEntry (T.singleton label) t | (label, t) <- zip ['a'..] cs]
+    Right rs -> pName <> " :: PrismP " <> tName <> " { " <> recordSig <> "}\n"
+             <> pName <> " = prism' " <> n <> " f\n"
+             <> spaces 2 <> "where\n"
+             <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
+             <> otherConstructorFallThrough
+      where
+        recordSig = T.intercalate ", " (map recordEntryToText rs)
+  where
+    pName = "_" <> n
+    otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing\n"
+                                | otherwise = ""
+{-
+_Hello :: PrismP Hello { _message :: String }
+_Hello = prism' Hello f
+  where
+    f x@(Hello r) = Just r
+
+
+message :: LensP Hello String
+message = lens get set
+  where
+    get (Hello r) = r._message
+    set (Hello r) = Hello <<< { _message : _}
+
+-}
+
+recordEntryToLens :: DataConstructor 'PureScript -> RecordEntry 'PureScript -> Text
+recordEntryToLens (DataConstructor n _) e = undefined
 
 recordEntryToText :: RecordEntry 'PureScript -> Text
 recordEntryToText e = _recLabel e <> " :: " <> typeInfoToText True (_recValue e)
