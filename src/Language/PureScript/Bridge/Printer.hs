@@ -146,6 +146,7 @@ mkFnArgs [r] = r ^. recLabel
 mkFnArgs rs  = fromEntries (\recE -> recE ^. recLabel <> ": " <> recE ^. recLabel) rs
 
 mkTypeSig :: [RecordEntry 'PureScript] -> Text
+mkTypeSig [] = "Unit"
 mkTypeSig [r] = typeInfoToText False $ r ^. recValue
 mkTypeSig rs = fromEntries recordEntryToText rs
 
@@ -158,7 +159,7 @@ constructorToPrism otherConstructors tName (DataConstructor n args) =
              <> spaces 4 <> "f " <> mkF cs
              <> otherConstructorFallThrough
       where
-        mkF [] = "_ = Just " <> n <> "\n"
+        mkF [] = "_ = Just unit\n"
         mkF _  = "(" <> n <> " " <> T.unwords (map _recLabel types) <> ") = Just $ " <> mkFnArgs types <> "\n"
         getter [] = "(\\_ -> " <> n <> ")"
         getter _  = n
