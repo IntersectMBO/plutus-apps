@@ -75,7 +75,7 @@ _lensImports = [
   , ImportLine "Prelude" mempty
   , ImportLine "Data.Lens" mempty
   ]
-  
+
 importLineToText :: ImportLine -> Text
 importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
   where
@@ -174,20 +174,6 @@ constructorToPrism otherConstructors tName (DataConstructor n args) =
     pName = "_" <> n
     otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing\n"
                                 | otherwise = "\n"
-{-
-_Hello :: PrismP Hello { _message :: String }
-_Hello = prism' Hello f
-  where
-    f x@(Hello r) = Just r
-
-
-message :: LensP Hello String
-message = lens get set
-  where
-    get (Hello r) = r._message
-    set (Hello r) = Hello <<< { _message : _}
-
--}
 
 recordEntryToLens :: Text -> Text -> RecordEntry 'PureScript -> Text
 recordEntryToLens typName constructorName e =
