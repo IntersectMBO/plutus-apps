@@ -64,8 +64,10 @@ allTests =
                           , "import Data.Either (Either)"
                           , "import Data.Maybe (Maybe)"
                           , ""
+                          , "import Prelude"
                           , "import Data.Generic (class Generic)"
-                          , ""
+                          , "import Data.Maybe"
+                          , "import Data.Lens"
                           , ""
                           , "data Bar a b m c ="
                           , "    Bar1 (Maybe a)"
@@ -77,26 +79,58 @@ allTests =
                           , ""
                           , "derive instance genericBar :: (Generic a, Generic b, Generic (m b)) => Generic (Bar a b m c)"
                           , ""
+                          , "--------------------------------------------------------------------------------"
+                          , "_Bar1 :: PrismP (Bar a b m c) (Maybe a)"
+                          , "_Bar1 = prism' Bar1 f"
+                          , "  where"
+                          , "    f (Bar1 a) = Just $ a"
+                          , "    f _ = Nothing"
+                          , ""
+                          , "_Bar2 :: PrismP (Bar a b m c) (Either a b)"
+                          , "_Bar2 = prism' Bar2 f"
+                          , "  where"
+                          , "    f (Bar2 a) = Just $ a"
+                          , "    f _ = Nothing"
+                          , ""
+                          , "_Bar3 :: PrismP (Bar a b m c) a"
+                          , "_Bar3 = prism' Bar3 f"
+                          , "  where"
+                          , "    f (Bar3 a) = Just $ a"
+                          , "    f _ = Nothing"
+                          , ""
+                          , "_Bar4 :: PrismP (Bar a b m c) { myMonadicResult :: m b}"
+                          , "_Bar4 = prism' Bar4 f"
+                          , "  where"
+                          , "    f (Bar4 r) = Just r"
+                          , "    f _ = Nothing"
+                          , ""
+                          , "--------------------------------------------------------------------------------"
                           ]
       in m `shouldBe` txt
     it "test generation of Prisms" $
       let bar = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
           foo = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
-          barPrisms = sumTypeToPrismsAndLenses bar
-          fooPrisms = sumTypeToPrismsAndLenses foo
+          barPrisms = sumTypeToPrisms bar
+          fooPrisms = sumTypeToPrisms foo
           txt = T.unlines [
                             "_Bar1 :: PrismP (Bar a b m c) (Maybe a)"
                           , "_Bar1 = prism' Bar1 f"
                           , "  where"
-                          , "    f a = Just $ Bar1 a"
+                          , "    f (Bar1 a) = Just $ a"
+                          , "    f _ = Nothing"
+                          , ""
                           , "_Bar2 :: PrismP (Bar a b m c) (Either a b)"
                           , "_Bar2 = prism' Bar2 f"
                           , "  where"
-                          , "    f a = Just $ Bar2 a"
+                          , "    f (Bar2 a) = Just $ a"
+                          , "    f _ = Nothing"
+                          , ""
                           , "_Bar3 :: PrismP (Bar a b m c) a"
                           , "_Bar3 = prism' Bar3 f"
                           , "  where"
-                          , "    f a = Just $ Bar3 a"
+                          , "    f (Bar3 a) = Just $ a"
+                          , "    f _ = Nothing"
+                          , ""
                           , "_Bar4 :: PrismP (Bar a b m c) { myMonadicResult :: m b}"
                           , "_Bar4 = prism' Bar4 f"
                           , "  where"
@@ -104,18 +138,42 @@ allTests =
                           , "    f _ = Nothing"
                           , ""
                           , "_Foo :: PrismP Foo {  }"
-                          , "_Foo = prism' Foo f"
+                          , "_Foo = prism' (_ -> Foo) f"
                           , "  where"
-                          , "    f _ = Just Foo"
+                          , "    f _ = Just Foo    f _ = Nothing"
+                          , ""
                           , "_Bar :: PrismP Foo Int"
                           , "_Bar = prism' Bar f"
                           , "  where"
-                          , "    f a = Just $ Bar a"
+                          , "    f (Bar a) = Just $ a"
+                          , "    f _ = Nothing"
+                          , ""
                           , "_FooBar :: PrismP Foo { a :: Int, b :: String }"
                           , "_FooBar = prism' FooBar f"
                           , "  where"
-                          , "    f { a: a, b: b } = Just $ FooBar a b"
+                          , "    f (FooBar a b) = Just $ { a: a, b: b }"
+                          , "    f _ = Nothing"
+                          , ""
                           ]
       in (barPrisms <> fooPrisms) `shouldBe` txt
+    it "tests generation of lenses" $
+      let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (SingleRecord Int String)))
+          bar = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
+          barLenses = sumTypeToLenses bar
+          recTypeLenses = sumTypeToLenses recType
+          txt = T.unlines [
+                            "a :: LensP (SingleRecord Int String) Int"
+                          , "a = lens get set"
+                          , "  where"
+                          , "    get (SingleRecord r) = r._a"
+                          , "    set (SingleRecord r) = SingleRecord <<< { _a: _ }"
+                          , ""
+                          , "b :: LensP (SingleRecord Int String) String"
+                          , "b = lens get set"
+                          , "  where"
+                          , "    get (SingleRecord r) = r._b"
+                          , "    set (SingleRecord r) = SingleRecord <<< { _b: _ }"
+                          , ""
+                          ]
+      in (barLenses <> recTypeLenses) `shouldBe` txt
 
-st = SumType (TypeInfo {_typePackage = "", _typeModule = "TestData", _typeName = "Bar", _typeParameters = [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []},TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []},TypeInfo {_typePackage = "purescript-maybe", _typeModule = "Data.Maybe", _typeName = "Maybe", _typeParameters = []},TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "String", _typeParameters = []}]}) [DataConstructor {_sigConstructor = "Bar1", _sigValues = Left [TypeInfo {_typePackage = "purescript-maybe", _typeModule = "Data.Maybe", _typeName = "Maybe", _typeParameters = [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []}]}]},DataConstructor {_sigConstructor = "Bar2", _sigValues = Left [TypeInfo {_typePackage = "purescript-either", _typeModule = "Data.Either", _typeName = "Either", _typeParameters = [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []},TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []}]}]},DataConstructor {_sigConstructor = "Bar3", _sigValues = Left [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []}]},DataConstructor {_sigConstructor = "Bar4", _sigValues = Right [RecordEntry {_recLabel = "myMonadicResult", _recValue = TypeInfo {_typePackage = "purescript-maybe", _typeModule = "Data.Maybe", _typeName = "Maybe", _typeParameters = [TypeInfo {_typePackage = "purescript-prim", _typeModule = "Prim", _typeName = "Int", _typeParameters = []}]}}]}]

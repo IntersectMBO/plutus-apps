@@ -44,6 +44,11 @@ data Bar a b m c = Bar1 (Maybe a) | Bar2 (Either a b) | Bar3 a
                  | Bar4 { myMonadicResult :: m b }
                  deriving (Generic, Typeable, Show)
 
+data SingleRecord a b = SingleRecord {
+    _a :: a
+  , _b :: b
+  , c  :: String
+  } deriving(Generic, Typeable, Show)
 
 a :: HaskellType
 a = mkTypeInfo (Proxy :: Proxy (Either String Int))
