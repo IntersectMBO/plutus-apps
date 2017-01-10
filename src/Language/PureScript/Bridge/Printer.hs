@@ -160,7 +160,7 @@ constructorToPrism otherConstructors tName (DataConstructor n args) =
       where
         mkF [] = "_ = Just " <> n
         mkF _  = "(" <> n <> " " <> T.unwords (map _recLabel types) <> ") = Just $ " <> mkFnArgs types <> "\n"
-        getter [] = "(_ -> " <> n <> ")"
+        getter [] = "(\\_ -> " <> n <> ")"
         getter _  = n
         types = [RecordEntry (T.singleton label) t | (label, t) <- zip ['a'..] cs]
     Right rs -> pName <> " :: PrismP " <> tName <> " { " <> recordSig <> "}\n"

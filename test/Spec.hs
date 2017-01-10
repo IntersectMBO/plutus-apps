@@ -138,7 +138,7 @@ allTests =
                           , "    f _ = Nothing"
                           , ""
                           , "_Foo :: PrismP Foo {  }"
-                          , "_Foo = prism' (_ -> Foo) f"
+                          , "_Foo = prism' (\\_ -> Foo) f"
                           , "  where"
                           , "    f _ = Just Foo    f _ = Nothing"
                           , ""
