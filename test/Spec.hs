@@ -167,13 +167,13 @@ allTests =
                           , "a = lens get set"
                           , "  where"
                           , "    get (SingleRecord r) = r._a"
-                          , "    set (SingleRecord r) = SingleRecord <<< { _a: _ }"
+                          , "    set (SingleRecord r) = SingleRecord <<< r { _a = _ }"
                           , ""
                           , "b :: LensP (SingleRecord Int String) String"
                           , "b = lens get set"
                           , "  where"
                           , "    get (SingleRecord r) = r._b"
-                          , "    set (SingleRecord r) = SingleRecord <<< { _b: _ }"
+                          , "    set (SingleRecord r) = SingleRecord <<< r { _b = _ }"
                           , ""
                           ]
       in (barLenses <> recTypeLenses) `shouldBe` txt

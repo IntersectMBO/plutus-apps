@@ -185,7 +185,7 @@ recordEntryToLens typName constructorName e =
       <> spaces 4 <> "get (" <> constructorName <> " r) = r." <> recName <> "\n"
       <> spaces 4 <> "set (" <> constructorName <> " r) = " <> setter
   where
-    setter = constructorName <>  " <<< { " <> recName <> ": _ }\n"
+    setter = constructorName <>  " <<< r { " <> recName <> " = _ }\n"
     recName = e ^. recLabel
     lensName = T.drop 1 recName
     recType = typeInfoToText False (e ^. recValue)
