@@ -158,7 +158,7 @@ constructorToPrism otherConstructors tName (DataConstructor n args) =
              <> spaces 4 <> "f " <> mkF cs
              <> otherConstructorFallThrough
       where
-        mkF [] = "_ = Just " <> n
+        mkF [] = "_ = Just " <> n <> "\n"
         mkF _  = "(" <> n <> " " <> T.unwords (map _recLabel types) <> ") = Just $ " <> mkFnArgs types <> "\n"
         getter [] = "(\\_ -> " <> n <> ")"
         getter _  = n
