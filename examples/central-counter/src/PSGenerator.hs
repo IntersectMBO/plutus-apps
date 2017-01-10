@@ -51,6 +51,7 @@ myTypes :: [SumType 'Haskell]
 myTypes =  [
             mkSumType (Proxy :: Proxy AuthToken)
           , mkSumType (Proxy :: Proxy CounterAction)
+          , mkSumType (Proxy :: Proxy Hello)
           ]
 
 mySettings :: Settings
