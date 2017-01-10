@@ -140,7 +140,7 @@ allTests =
                           , "_Foo :: PrismP Foo Unit"
                           , "_Foo = prism' (\\_ -> Foo) f"
                           , "  where"
-                          , "    f _ = Just unit"
+                          , "    f Foo = Just unit"
                           , "    f _ = Nothing"
                           , ""
                           , "_Bar :: PrismP Foo Int"
