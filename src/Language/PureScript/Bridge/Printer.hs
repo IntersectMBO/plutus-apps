@@ -106,16 +106,16 @@ sumTypeToPrismsAndLenses :: SumType 'PureScript -> Text
 sumTypeToPrismsAndLenses st = sumTypeToPrisms st <> sumTypeToLenses st
 
 sumTypeToPrisms :: SumType 'PureScript -> Text
-sumTypeToPrisms (SumType tName cs) = T.unlines $ map (constructorToPrism moreThan1 typName) cs
+sumTypeToPrisms st = T.unlines $ map (constructorToPrism moreThan1 st) cs
   where
+    cs = st ^. sumTypeConstructors
     moreThan1 = length cs > 1
-    typName = typeInfoToText False tName
 
 
 sumTypeToLenses :: SumType 'PureScript -> Text
-sumTypeToLenses (SumType tName cs) = T.unlines $ recordEntryToLens typName <$> dcName <*> dcRecords
+sumTypeToLenses st = T.unlines $ recordEntryToLens st <$> dcName <*> dcRecords
   where
-    typName = typeInfoToText False tName
+    cs = st ^. sumTypeConstructors
     dcName = lensableConstructor ^.. traversed.sigConstructor
     dcRecords = lensableConstructor ^.. traversed.sigValues._Right.traverse.filtered hasUnderscore
     hasUnderscore e = e ^. recLabel.to (T.isPrefixOf "_")
@@ -136,6 +136,16 @@ spaces :: Int -> Text
 spaces c = T.replicate c " "
 
 
+typeNameAndForall :: SumType 'PureScript -> (Text, Text)
+typeNameAndForall st = (typName, forAll)
+  where
+    typName = typeInfoToText False (st ^. sumTypeInfo)
+    forAllParams = st ^.. sumTypeInfo.typeParameters.traversed.to (typeInfoToText False)
+    forAll = case forAllParams of
+      [] -> " :: "
+      cs -> " :: forall " <> T.intercalate " " cs <> ". "
+    -- textParameters = map (typeInfoToText False) params
+
 fromEntries :: (RecordEntry a -> Text) -> [RecordEntry a] -> Text
 fromEntries mkElem rs = "{ " <> inners <> " }"
   where
@@ -150,10 +160,10 @@ mkTypeSig [] = "Unit"
 mkTypeSig [r] = typeInfoToText False $ r ^. recValue
 mkTypeSig rs = fromEntries recordEntryToText rs
 
-constructorToPrism :: Bool -> Text -> DataConstructor 'PureScript -> Text
-constructorToPrism otherConstructors tName (DataConstructor n args) =
+constructorToPrism :: Bool -> SumType 'PureScript -> DataConstructor 'PureScript -> Text
+constructorToPrism otherConstructors st (DataConstructor n args) =
   case args of
-    Left cs  -> pName <> " :: PrismP " <> tName <> " " <> mkTypeSig types <> "\n"
+    Left cs  -> pName <> forAll <>  "PrismP " <> typName <> " " <> mkTypeSig types <> "\n"
              <> pName <> " = prism' " <> getter cs <> " f\n"
              <> spaces 2 <> "where\n"
              <> spaces 4 <> "f " <> mkF cs
@@ -164,7 +174,7 @@ constructorToPrism otherConstructors tName (DataConstructor n args) =
         getter [] = "(\\_ -> " <> n <> ")"
         getter _  = n
         types = [RecordEntry (T.singleton label) t | (label, t) <- zip ['a'..] cs]
-    Right rs -> pName <> " :: PrismP " <> tName <> " { " <> recordSig <> "}\n"
+    Right rs -> pName <> forAll <> "PrismP " <> typName <> " { " <> recordSig <> "}\n"
              <> pName <> " = prism' " <> n <> " f\n"
              <> spaces 2 <> "where\n"
              <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
@@ -172,20 +182,22 @@ constructorToPrism otherConstructors tName (DataConstructor n args) =
       where
         recordSig = T.intercalate ", " (map recordEntryToText rs)
   where
+    (typName, forAll) = typeNameAndForall st
     pName = "_" <> n
     otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing\n"
                                 | otherwise = "\n"
 
-recordEntryToLens :: Text -> Text -> RecordEntry 'PureScript -> Text
-recordEntryToLens typName constructorName e =
+recordEntryToLens :: SumType 'PureScript -> Text -> RecordEntry 'PureScript -> Text
+recordEntryToLens st constructorName e =
   case hasUnderscore of
     False -> ""
     True ->
-         lensName <> " :: LensP " <> typName <> " " <> recType <> "\n"
+         lensName <> forAll <>  "LensP " <> typName <> " " <> recType <> "\n"
       <> lensName <> " = lens get set\n  where\n"
       <> spaces 4 <> "get (" <> constructorName <> " r) = r." <> recName <> "\n"
       <> spaces 4 <> "set (" <> constructorName <> " r) = " <> setter
   where
+    (typName, forAll) = typeNameAndForall st
     setter = constructorName <>  " <<< r { " <> recName <> " = _ }\n"
     recName = e ^. recLabel
     lensName = T.drop 1 recName
