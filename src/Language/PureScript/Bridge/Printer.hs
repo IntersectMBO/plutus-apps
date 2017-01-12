@@ -164,15 +164,18 @@ constructorToPrism :: Bool -> SumType 'PureScript -> DataConstructor 'PureScript
 constructorToPrism otherConstructors st (DataConstructor n args) =
   case args of
     Left cs  -> pName <> forAll <>  "PrismP " <> typName <> " " <> mkTypeSig types <> "\n"
-             <> pName <> " = prism' " <> getter cs <> " f\n"
+             <> pName <> " = prism' " <> getter <> " f\n"
              <> spaces 2 <> "where\n"
              <> spaces 4 <> "f " <> mkF cs
              <> otherConstructorFallThrough
       where
         mkF [] = n <> " = Just unit\n"
         mkF _  = "(" <> n <> " " <> T.unwords (map _recLabel types) <> ") = Just $ " <> mkFnArgs types <> "\n"
-        getter [] = "(\\_ -> " <> n <> ")"
-        getter _  = n
+        getter | cs == [] = "(\\_ -> " <> n <> ")"
+               | length cs == 1   = n
+               | otherwise = "(\\{ " <> T.intercalate ", " cArgs <> " } -> " <> n <> " " <> T.intercalate " " cArgs <> ")"
+          where
+            cArgs = map (T.singleton . fst) $ zip ['a'..] cs
         types = [RecordEntry (T.singleton label) t | (label, t) <- zip ['a'..] cs]
     Right rs -> pName <> forAll <> "PrismP " <> typName <> " { " <> recordSig <> "}\n"
              <> pName <> " = prism' " <> n <> " f\n"

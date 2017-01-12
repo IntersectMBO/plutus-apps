@@ -150,7 +150,7 @@ allTests =
                           , "    f _ = Nothing"
                           , ""
                           , "_FooBar :: PrismP Foo { a :: Int, b :: String }"
-                          , "_FooBar = prism' FooBar f"
+                          , "_FooBar = prism' (\\{ a, b } -> FooBar a b) f"
                           , "  where"
                           , "    f (FooBar a b) = Just $ { a: a, b: b }"
                           , "    f _ = Nothing"
