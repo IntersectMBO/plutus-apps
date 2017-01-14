@@ -11,6 +11,7 @@ module Language.PureScript.Bridge (
 
 import           Control.Applicative
 import qualified Data.Map                              as M
+import qualified Data.Set                              as Set
 import qualified Data.Text.IO                          as T
 
 
@@ -73,7 +74,7 @@ writePSTypes root br sts = do
     let modules = M.elems $ sumTypesToModules M.empty bridged
     mapM_ (printModule root) modules
     T.putStrLn "The following purescript packages are needed by the generated code:\n"
-    let packages = sumTypesToNeededPackages bridged
+    let packages = Set.insert "purescript-profunctor-lenses" $ sumTypesToNeededPackages bridged
     mapM_ (T.putStrLn . mappend "  - ") packages
     T.putStrLn "\nSuccessfully created your PureScript modules!"
 
