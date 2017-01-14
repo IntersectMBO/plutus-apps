@@ -71,7 +71,7 @@ moduleToText m = T.unlines $
 
 _lensImports :: [ImportLine]
 _lensImports = [
-    ImportLine "Data.Maybe" $ Set.fromList ["Maybe", "Just", "Nothing"]
+    ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
   -- , ImportLine "Prelude" mempty
   , ImportLine "Data.Lens" $ Set.fromList ["PrismP", "LensP", "prism'", "lens"]
   ]

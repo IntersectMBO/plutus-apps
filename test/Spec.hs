@@ -63,7 +63,7 @@ allTests =
                           , ""
                           , "import Data.Either (Either)"
                           , "import Data.Lens (LensP, PrismP, lens, prism')"
-                          , "import Data.Maybe (Just, Maybe, Nothing)"
+                          , "import Data.Maybe (Maybe, Maybe(..))"
                           , ""
                           , "import Prelude"
                           , "import Data.Generic (class Generic)"
