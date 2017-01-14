@@ -1,0 +1,32 @@
+module Main where
+
+_Bar1 :: PrismP (Bar a b m c) (Maybe a)
+_Bar1 = prism' Bar1 f
+  where
+    f a = Just $ Bar1 a
+_Bar2 :: PrismP (Bar a b m c) (Either a b)
+_Bar2 = prism' Bar2 f
+  where
+    f a = Just $ Bar2 a
+_Bar3 :: PrismP (Bar a b m c) a
+_Bar3 = prism' Bar3 f
+  where
+    f a = Just $ Bar3 a
+_Bar4 :: PrismP (Bar a b m c) { myMonadicResult :: m b}
+_Bar4 = prism' Bar4 f
+  where
+    f (Bar4 r) = Just r
+    f _ = Nothing
+
+_Foo :: PrismP Foo {  }
+_Foo = prism' Foo f
+  where
+    f _ = Just Foo
+_Bar :: PrismP Foo Int
+_Bar = prism' Bar f
+  where
+    f a = Just $ Bar a
+_FooBar :: PrismP Foo { a :: Int, b :: String }
+_FooBar = prism' FooBar f
+  where
+    f { a: a, b: b } = Just $ FooBar a b
