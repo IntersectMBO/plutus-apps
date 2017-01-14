@@ -20,3 +20,4 @@ cabal.sandbox.config
 dist
 dist-*
 shell.nix
+stack.yaml
