@@ -40,6 +40,14 @@ psInt = TypeInfo {
   , _typeParameters = []
   }
 
+psNumber :: PSType
+psNumber = TypeInfo {
+    _typePackage = "purescript-prim"
+  , _typeModule = "Prim"
+  , _typeName = "Number"
+  , _typeParameters = []
+  }
+
 -- | Uses  type parameters from 'haskType' (bridged).
 psMaybe :: MonadReader BridgeData m => m PSType
 psMaybe = TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" <$> psTypeParameters

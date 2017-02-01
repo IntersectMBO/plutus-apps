@@ -26,6 +26,9 @@ dummyBridge = clearPackageFixUp
 intBridge :: BridgePart
 intBridge = typeName ^== "Int" >> return psInt
 
+doubleBridge :: BridgePart
+doubleBridge = typeName ^== "Double" >> return psNumber
+
 listBridge :: BridgePart
 listBridge = typeName ^== "[]" >> psArray
 

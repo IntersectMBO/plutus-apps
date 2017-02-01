@@ -103,6 +103,7 @@ defaultBridge = textBridge
     <|> eitherBridge
     <|> boolBridge
     <|> intBridge
+    <|> doubleBridge
     <|> tupleBridge
     <|> unitBridge
 
