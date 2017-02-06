@@ -176,4 +176,34 @@ allTests =
                           , ""
                           ]
       in (barLenses <> recTypeLenses) `shouldBe` txt
-
+    it "tests generation of newtypes for record data type" $
+      let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (SingleRecord A B)))
+          recTypeText = sumTypeToTypeDecls recType
+          txt = T.unlines [ "newtype SingleRecord a b ="
+                          , "    SingleRecord {"
+                          , "      _a :: a"
+                          , "    , _b :: b"
+                          , "    , c :: String"
+                          , "    }"
+                          , ""
+                          , "derive instance genericSingleRecord :: (Generic a, Generic b) => Generic (SingleRecord a b)"
+                          ]
+      in recTypeText `shouldBe` txt
+    it "tests generation of newtypes for haskell newtype" $
+      let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy SomeNewtype))
+          recTypeText = sumTypeToTypeDecls recType
+          txt = T.unlines [ "newtype SomeNewtype ="
+                          , "    SomeNewtype Int"
+                          , ""
+                          , "derive instance genericSomeNewtype :: Generic SomeNewtype"
+                          ]
+      in recTypeText `shouldBe` txt
+    it "tests generation of newtypes for haskell data type with one argument" $
+      let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy SingleValueConstr))
+          recTypeText = sumTypeToTypeDecls recType
+          txt = T.unlines [ "newtype SingleValueConstr ="
+                          , "    SingleValueConstr Int"
+                          , ""
+                          , "derive instance genericSingleValueConstr :: Generic SingleValueConstr"
+                          ]
+      in recTypeText `shouldBe` txt

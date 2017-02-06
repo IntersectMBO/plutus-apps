@@ -50,6 +50,12 @@ data SingleRecord a b = SingleRecord {
   , c  :: String
   } deriving(Generic, Typeable, Show)
 
+newtype SomeNewtype = SomeNewtype Int
+  deriving (Generic, Typeable, Show)
+
+data SingleValueConstr = SingleValueConstr Int
+  deriving (Generic, Typeable, Show)
+
 a :: HaskellType
 a = mkTypeInfo (Proxy :: Proxy (Either String Int))
 
