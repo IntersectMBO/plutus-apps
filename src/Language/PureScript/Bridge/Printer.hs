@@ -73,7 +73,7 @@ _lensImports :: [ImportLine]
 _lensImports = [
     ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
   -- , ImportLine "Prelude" mempty
-  , ImportLine "Data.Lens" $ Set.fromList ["PrismP", "LensP", "prism'", "lens"]
+  , ImportLine "Data.Lens" $ Set.fromList ["Prism'", "Lens'", "prism'", "lens"]
   ]
 
 importLineToText :: ImportLine -> Text
@@ -163,7 +163,7 @@ mkTypeSig rs = fromEntries recordEntryToText rs
 constructorToPrism :: Bool -> SumType 'PureScript -> DataConstructor 'PureScript -> Text
 constructorToPrism otherConstructors st (DataConstructor n args) =
   case args of
-    Left cs  -> pName <> forAll <>  "PrismP " <> typName <> " " <> mkTypeSig types <> "\n"
+    Left cs  -> pName <> forAll <>  "Prism' " <> typName <> " " <> mkTypeSig types <> "\n"
              <> pName <> " = prism' " <> getter <> " f\n"
              <> spaces 2 <> "where\n"
              <> spaces 4 <> "f " <> mkF cs
@@ -177,7 +177,7 @@ constructorToPrism otherConstructors st (DataConstructor n args) =
           where
             cArgs = map (T.singleton . fst) $ zip ['a'..] cs
         types = [RecordEntry (T.singleton label) t | (label, t) <- zip ['a'..] cs]
-    Right rs -> pName <> forAll <> "PrismP " <> typName <> " { " <> recordSig <> "}\n"
+    Right rs -> pName <> forAll <> "Prism' " <> typName <> " { " <> recordSig <> "}\n"
              <> pName <> " = prism' " <> n <> " f\n"
              <> spaces 2 <> "where\n"
              <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
@@ -195,7 +195,7 @@ recordEntryToLens st constructorName e =
   case hasUnderscore of
     False -> ""
     True ->
-         lensName <> forAll <>  "LensP " <> typName <> " " <> recType <> "\n"
+         lensName <> forAll <>  "Lens' " <> typName <> " " <> recType <> "\n"
       <> lensName <> " = lens get set\n  where\n"
       <> spaces 4 <> "get (" <> constructorName <> " r) = r." <> recName <> "\n"
       <> spaces 4 <> "set (" <> constructorName <> " r) = " <> setter
