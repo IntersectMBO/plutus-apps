@@ -5,7 +5,7 @@ import Prelude
 
 import Control.Monad.Aff.Class (class MonadAff, liftAff)
 import Control.Monad.Error.Class (class MonadError)
-import Control.Monad.Reader.Class (ask, class MonadReader)
+import Control.Monad.Reader.Class (ask, class MonadAsk)
 import Counter.ServerTypes (AuthToken, CounterAction)
 import Data.Argonaut.Generic.Aeson (decodeJson, encodeJson)
 import Data.Argonaut.Printer (printJson)
@@ -23,7 +23,7 @@ newtype SPParams_ = SPParams_ { authToken :: AuthToken
                               }
 
 getCounter :: forall eff m.
-              (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
+              (MonadAsk (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
               => m Int
 getCounter = do
   spOpts_' <- ask
@@ -45,7 +45,7 @@ getCounter = do
   getResult affReq decodeJson affResp
   
 putCounter :: forall eff m.
-              (MonadReader (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
+              (MonadAsk (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)
               => CounterAction -> m Int
 putCounter reqBody = do
   spOpts_' <- ask
