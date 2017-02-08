@@ -30,7 +30,7 @@ import           Web.HttpApiData
 
 
 data Hello = Hello {
-  message :: Text
+  _message :: Text
 } deriving Generic
 
 instance FromJSON Hello

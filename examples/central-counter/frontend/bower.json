@@ -16,7 +16,8 @@
     "purescript-subscriber": "^1.0.0",
     "purescript-generics": "^1.0.0",
     "purescript-partial": "^1.1.2",
-    "purescript-dom": "^1.1.0"
+    "purescript-dom": "^1.1.0",
+    "purescript-profunctor-lenses": "^1.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^1.0.0"
