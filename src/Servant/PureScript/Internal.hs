@@ -17,10 +17,10 @@ import           Data.Bifunctor
 import           Data.Char
 import           Data.Monoid
 import           Data.Proxy
-import           Data.Set                            (Set)
-import qualified Data.Set                            as Set
-import           Data.Text                           (Text)
-import qualified Data.Text                           as T
+import           Data.Set                           (Set)
+import qualified Data.Set                           as Set
+import           Data.Text                          (Text)
+import qualified Data.Text                          as T
 import           Data.Typeable
 
 import           Language.PureScript.Bridge
@@ -73,7 +73,7 @@ makeLenses ''Param
 
 
 data Settings = Settings {
-  _apiModuleName   :: Text
+  _apiModuleName         :: Text
   -- | This function parameters should instead be put in a Reader monad.
   --
   --   'baseUrl' will be put there by default, you can add additional parameters.
@@ -81,8 +81,8 @@ data Settings = Settings {
   --   If your API uses a given parameter name multiple times with different types,
   --   only the ones matching the type of the first occurrence
   --   will be put in the Reader monad, all others will still be passed as function parameter.
-, _readerParams    :: Set ParamName
-, _standardImports :: ImportLines
+, _readerParams          :: Set ParamName
+, _standardImports       :: ImportLines
   -- | If you want codegen for servant-subscriber, set this to True. See the central-counter example
   --   for a simple usage case.
 , _generateSubscriberAPI :: Bool
@@ -94,7 +94,7 @@ defaultSettings = Settings {
     _apiModuleName    = "ServerAPI"
   , _readerParams     = Set.singleton baseURLId
   , _standardImports = importsFromList
-        [ ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadReader", "ask" ])
+        [ ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadAsk", "ask" ])
         , ImportLine "Control.Monad.Error.Class" (Set.fromList [ "class MonadError" ])
         , ImportLine "Control.Monad.Aff.Class" (Set.fromList [ "class MonadAff", "liftAff" ])
         , ImportLine "Network.HTTP.Affjax" (Set.fromList [ "AJAX" ])

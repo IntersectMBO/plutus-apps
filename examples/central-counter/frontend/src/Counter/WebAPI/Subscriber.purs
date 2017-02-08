@@ -5,7 +5,7 @@ import Prelude
 
 import Control.Monad.Aff.Class (class MonadAff, liftAff)
 import Control.Monad.Error.Class (class MonadError)
-import Control.Monad.Reader.Class (ask, class MonadReader)
+import Control.Monad.Reader.Class (ask, class MonadAsk)
 import Counter.ServerTypes (AuthToken)
 import Counter.WebAPI (SPParams_(..))
 import Data.Argonaut.Generic.Aeson (decodeJson, encodeJson)
@@ -27,7 +27,7 @@ import Servant.Subscriber.Util (TypedToUser, subGenFlagQuery, subGenListQuery, s
 
 import Counter.WebAPI.MakeRequests as MakeRequests
 
-getCounter :: forall m a. MonadReader (SPSettings_ SPParams_) m =>
+getCounter :: forall m a. MonadAsk (SPSettings_ SPParams_) m =>
               TypedToUser Int a -> m (Subscriptions a)
 getCounter spToUser_ = do
   spReq <- MakeRequests.getCounter 

@@ -22,10 +22,10 @@ import           Network.HTTP.Types.URI             (urlEncode)
 import           Servant.Foreign
 import           Servant.PureScript.CodeGen         (docIntercalate, genFnHead,
                                                      genModuleHeader,
+                                                     genSignatureBuilder,
                                                      getReaderParams, psVar,
                                                      reqToParams,
-                                                     reqsToImportLines,
-                                                     genSignatureBuilder)
+                                                     reqsToImportLines)
 import           Servant.PureScript.Internal
 import           Servant.PureScript.MakeRequests    hiding (genFnBody,
                                                      genFunction, genModule,
@@ -60,7 +60,7 @@ genFunction allRParams req = let
     fnName = req ^. reqFuncName ^. camelCaseL
     responseType = case req ^. reqReturnType of
                      Nothing -> psUnit
-                     Just t -> t
+                     Just t  -> t
     allParamsList = makeTypedToUserParam responseType : baseURLParam : reqToParams req
     fnParams = filter (not . flip Set.member rParamsSet) allParamsList -- Use list not set, as we don't want to change order of parameters
 
@@ -73,7 +73,7 @@ genFunction allRParams req = let
 
 
 genSignature :: Text -> [PSType] -> Maybe PSType -> Doc
-genSignature = genSignatureBuilder $ "forall m a." <+/> "MonadReader (SPSettings_ SPParams_) m" <+/> "=>"
+genSignature = genSignatureBuilder $ "forall m a." <+/> "MonadAsk (SPSettings_ SPParams_) m" <+/> "=>"
 
 genFnBody :: Text -> [Text] -> Doc
 genFnBody fName params = "do"
