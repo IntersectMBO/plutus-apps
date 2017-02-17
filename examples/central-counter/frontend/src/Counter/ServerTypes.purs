@@ -14,7 +14,7 @@ data AuthToken =
 derive instance genericAuthToken :: Generic AuthToken
 
 --------------------------------------------------------------------------------
-_VerySecret :: PrismP AuthToken String
+_VerySecret :: Prism' AuthToken String
 _VerySecret = prism' VerySecret f
   where
     f (VerySecret a) = Just $ a
@@ -28,13 +28,13 @@ data CounterAction =
 derive instance genericCounterAction :: Generic CounterAction
 
 --------------------------------------------------------------------------------
-_CounterAdd :: PrismP CounterAction Int
+_CounterAdd :: Prism' CounterAction Int
 _CounterAdd = prism' CounterAdd f
   where
     f (CounterAdd a) = Just $ a
     f _ = Nothing
 
-_CounterSet :: PrismP CounterAction Int
+_CounterSet :: Prism' CounterAction Int
 _CounterSet = prism' CounterSet f
   where
     f (CounterSet a) = Just $ a
@@ -49,13 +49,13 @@ data Hello =
 derive instance genericHello :: Generic Hello
 
 --------------------------------------------------------------------------------
-_Hello :: PrismP Hello { _message :: String}
+_Hello :: Prism' Hello { _message :: String}
 _Hello = prism' Hello f
   where
     f (Hello r) = Just r
 
 
-message :: LensP Hello String
+message :: Lens' Hello String
 message = lens get set
   where
     get (Hello r) = r._message
