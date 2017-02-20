@@ -1,5 +1,5 @@
 name:                servant-purescript
-version:             0.6.0.0
+version:             0.7.0.0
 synopsis:            Generate PureScript accessor functions for you servant API
 description:         Please see README.md
 homepage:            https://github.com/eskimor/servant-purescript#readme
