@@ -1,4 +1,4 @@
-resolver: nightly-2016-09-12
+resolver: lts-8.5
 packages:
   - '.'
   - './examples/central-counter'
