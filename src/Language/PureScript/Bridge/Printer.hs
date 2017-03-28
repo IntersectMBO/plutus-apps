@@ -127,7 +127,8 @@ sumTypeToPrisms st = T.unlines $ map (constructorToPrism moreThan1 st) cs
 
 
 sumTypeToLenses :: SumType 'PureScript -> Text
-sumTypeToLenses st = T.unlines $ recordEntryToLens st <$> dcName <*> dcRecords
+-- Match on SumTypes with a single DataConstructor (that's a list of a single element)
+sumTypeToLenses st@(SumType _ [_]) = T.unlines $ recordEntryToLens st <$> dcName <*> dcRecords
   where
     cs = st ^. sumTypeConstructors
     dcName = lensableConstructor ^.. traversed.sigConstructor
@@ -136,6 +137,7 @@ sumTypeToLenses st = T.unlines $ recordEntryToLens st <$> dcName <*> dcRecords
     lensableConstructor = filter singleRecordCons cs ^? _head
     singleRecordCons (DataConstructor _ (Right _)) = True
     singleRecordCons _                             = False
+sumTypeToLenses _ = ""
 
 constructorToText :: Int -> DataConstructor 'PureScript -> Text
 constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText False) ts)

@@ -207,3 +207,7 @@ allTests =
                           , "derive instance genericSingleValueConstr :: Generic SingleValueConstr"
                           ]
       in recTypeText `shouldBe` txt
+    it "tests that sum types with multiple constructors don't generate lenses" $
+      let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy TwoRecords))
+          recTypeLenses = sumTypeToLenses recType
+      in recTypeLenses `shouldBe` "" -- No lenses for multi-constructors
