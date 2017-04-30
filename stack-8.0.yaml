@@ -1,4 +1,4 @@
-resolver: lts-8.5
+resolver: lts-8.12
 packages:
   - '.'
   - './examples/central-counter'
