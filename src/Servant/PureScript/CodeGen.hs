@@ -121,7 +121,7 @@ genFnBody rParams req = "do"
         </> ", headers =" <+> "defaultRequest.headers <> reqHeaders"
         </> case req ^. reqBody of
               Nothing -> "}"
-              Just _  -> ", content =" <+> "toNullable <<< Just <<< printJson <<< encodeJson $ reqBody" </> "}"
+              Just _  -> ", content =" <+> "toNullable <<< Just <<< stringify <<< encodeJson $ reqBody" </> "}"
       )
       </> "affResp <- affjax affReq"
       </> "getResult affReq decodeJson affResp" <> line

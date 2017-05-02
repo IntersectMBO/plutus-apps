@@ -106,7 +106,7 @@ defaultSettings = Settings {
         , ImportLine "Prim" (Set.fromList [ "String" ]) -- For baseURL!
         , ImportLine "Data.Argonaut.Generic.Aeson" (Set.fromList [ "encodeJson", "decodeJson" ]) -- Should not be necessary - compiler bug!
         , ImportLine "Data.Maybe" (Set.fromList [ "Maybe(..)"])
-        , ImportLine "Data.Argonaut.Printer" (Set.fromList [ "printJson" ])
+        , ImportLine "Data.Argonaut.Core" (Set.fromList [ "stringify" ])
         ]
   , _generateSubscriberAPI = False
   }
