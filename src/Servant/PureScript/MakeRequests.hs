@@ -108,7 +108,7 @@ genFnBody rParams req = "do"
                                </> ", httpQuery:" <+> "reqQuery"
                                </> ", httpBody:" <+> case req ^. reqBody of
                                        Nothing -> "\"\""
-                                       Just _ -> "printJson <<< encodeJson $ reqBody"
+                                       Just _ -> "stringify <<< encodeJson $ reqBody"
                                </> "}")
       </> "pure spReq"
     ) <> "\n"

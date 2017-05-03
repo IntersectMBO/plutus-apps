@@ -96,17 +96,16 @@ defaultSettings = Settings {
   , _standardImports = importsFromList
         [ ImportLine "Control.Monad.Reader.Class" (Set.fromList [ "class MonadAsk", "ask" ])
         , ImportLine "Control.Monad.Error.Class" (Set.fromList [ "class MonadError" ])
-        , ImportLine "Control.Monad.Aff.Class" (Set.fromList [ "class MonadAff", "liftAff" ])
+        , ImportLine "Control.Monad.Aff.Class" (Set.fromList [ "class MonadAff" ])
         , ImportLine "Network.HTTP.Affjax" (Set.fromList [ "AJAX" ])
-        , ImportLine "Global" (Set.fromList [ "encodeURIComponent" ]) -- from package globals
-        , ImportLine "Data.Nullable" (Set.fromList [ "Nullable()", "toNullable" ])
-        , ImportLine "Servant.PureScript.Affjax" (Set.fromList [ "defaultRequest", "affjax", "AjaxError(..)" ])
+        , ImportLine "Data.Nullable" (Set.fromList [ "toNullable" ])
+        , ImportLine "Servant.PureScript.Affjax" (Set.fromList [ "AjaxError", "defaultRequest", "affjax" ])
         , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "SPSettings_(..)", "gDefaultToURLPiece" ])
         , ImportLine "Servant.PureScript.Util" (Set.fromList [ "encodeListQuery", "encodeURLPiece", "encodeQueryItem", "getResult", "encodeHeader" ])
         , ImportLine "Prim" (Set.fromList [ "String" ]) -- For baseURL!
         , ImportLine "Data.Argonaut.Generic.Aeson" (Set.fromList [ "encodeJson", "decodeJson" ]) -- Should not be necessary - compiler bug!
         , ImportLine "Data.Maybe" (Set.fromList [ "Maybe(..)"])
-        , ImportLine "Data.Argonaut.Printer" (Set.fromList [ "printJson" ])
+        , ImportLine "Data.Argonaut.Core" (Set.fromList [ "stringify" ])
         ]
   , _generateSubscriberAPI = False
   }

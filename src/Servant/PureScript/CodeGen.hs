@@ -88,7 +88,7 @@ genGetReaderParams = stack . map (genGetReaderParam . psVar . _pName)
 
 
 genSignature :: Text -> [PSType] -> Maybe PSType -> Doc
-genSignature = genSignatureBuilder $ "forall eff m." <+/> "(MonadAsk (SPSettings_ SPParams_) m, MonadError AjaxError m, MonadAff ( ajax :: AJAX | eff) m)" <+/> "=>"
+genSignature = genSignatureBuilder $ "forall eff m." <+/> "MonadAsk (SPSettings_ SPParams_) m => MonadError AjaxError m => MonadAff ( ajax :: AJAX | eff) m" <+/> "=>"
 
 genSignatureBuilder :: Doc -> Text -> [PSType] -> Maybe PSType -> Doc
 genSignatureBuilder constraint fnName params mRet = fName <+> "::" <+> align (constraint <+/> parameterString)
@@ -121,7 +121,7 @@ genFnBody rParams req = "do"
         </> ", headers =" <+> "defaultRequest.headers <> reqHeaders"
         </> case req ^. reqBody of
               Nothing -> "}"
-              Just _  -> ", content =" <+> "toNullable <<< Just <<< printJson <<< encodeJson $ reqBody" </> "}"
+              Just _  -> ", content =" <+> "toNullable <<< Just <<< stringify <<< encodeJson $ reqBody" </> "}"
       )
       </> "affResp <- affjax affReq"
       </> "getResult affReq decodeJson affResp" <> line
