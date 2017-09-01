@@ -124,8 +124,8 @@ genFnBody rParams req = "do"
               Just _  -> ", content =" <+> "toNullable <<< Just <<< stringify <<< encodeJson $ reqBody" </> "}"
       )
       </> "affResp <- affjax affReq"
-      </> "getResult affReq decodeJson affResp" <> line
-    )
+      </> "getResult affReq decodeJson affResp"
+    ) <> line
 
 genBuildURL :: Url PSType -> Doc
 genBuildURL url = psVar baseURLId <+> "<>"
