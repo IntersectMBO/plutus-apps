@@ -57,7 +57,7 @@ genModule opts allReqs = let
 genFunction :: [PSParam] -> Req PSType -> Doc
 genFunction allRParams req = let
     rParamsSet = Set.fromList allRParams
-    fnName = req ^. reqFuncName ^. camelCaseL
+    fnName = req ^. reqFuncName ^. jsCamelCaseL
     responseType = case req ^. reqReturnType of
                      Nothing -> psUnit
                      Just t  -> t

@@ -28,6 +28,7 @@ import           Language.PureScript.Bridge.PSTypes
 
 
 import           Servant.Foreign
+import           Servant.Foreign.Internal
 
 
 -- | Our language type is Paramized, so you can choose a custom 'TypeBridge' for your translation, by
@@ -174,3 +175,12 @@ psTypeParameterA = TypeInfo {
   , _typeName = "a"
   , _typeParameters = []
   }
+
+-- use servant-foreign's camelCaseL legacy version
+jsCamelCaseL :: Getter FunctionName Text
+jsCamelCaseL = _FunctionName . to (convert . map (T.replace "-" ""))
+  where
+    convert []     = ""
+    convert (p:ps) = mconcat $ p : map capitalize ps
+    capitalize ""   = ""
+    capitalize name = toUpper (T.head name) `T.cons` T.tail name
