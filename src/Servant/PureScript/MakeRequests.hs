@@ -74,7 +74,7 @@ genModule opts reqs = let
 genFunction :: [PSParam] -> Req PSType -> Doc
 genFunction allRParams req = let
     rParamsSet = Set.fromList allRParams
-    fnName = req ^. reqFuncName ^. camelCaseL
+    fnName = req ^. reqFuncName ^. jsCamelCaseL
     allParamsList = baseURLParam : reqToParams req
     allParams = Set.fromList allParamsList
     fnParams = filter (not . flip Set.member rParamsSet) allParamsList -- Use list not set, as we don't want to change order of parameters
