@@ -113,6 +113,7 @@ genFnBody rParams req = "do"
       </> "let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_"
       </> genGetReaderParams rParams
       </> hang 6 ("let httpMethod =" <+> dquotes (req ^. reqMethod ^. to T.decodeUtf8 ^. to strictText))
+      </> genBuildQueryArgs (req ^. reqUrl ^. queryStr)
       </> hang 6 ("let reqUrl ="     <+> genBuildURL (req ^. reqUrl))
       </> "let reqHeaders =" </> indent 6 (req ^. reqHeaders ^. to genBuildHeaders)
       </> "let affReq =" <+> hang 2 ( "defaultRequest" </>
@@ -129,7 +130,7 @@ genFnBody rParams req = "do"
 
 genBuildURL :: Url PSType -> Doc
 genBuildURL url = psVar baseURLId <+> "<>"
-    <+> genBuildPath (url ^. path ) <+> genBuildQuery (url ^. queryStr)
+    <+> genBuildPath (url ^. path ) <+> "<>" <+> "queryString"
 
 ----------
 genBuildPath :: Path PSType -> Doc
@@ -139,20 +140,21 @@ genBuildSegment :: SegmentType PSType -> Doc
 genBuildSegment (Static (PathSegment seg)) = dquotes $ strictText (textURLEncode False seg)
 genBuildSegment (Cap arg) = "encodeURLPiece spOpts_'" <+> arg ^. argName ^. to unPathSegment ^. to psVar
 
-----------
-genBuildQuery :: [QueryArg PSType] -> Doc
-genBuildQuery [] = ""
-genBuildQuery args = softline <> "<> \"?\" <> " <> (docIntercalate (softline <> "<> \"&\" <> ") . map genBuildQueryArg $ args)
+genBuildQueryArgs :: [QueryArg PSType] -> Doc
+genBuildQueryArgs [] = "let queryString = \"\""
+genBuildQueryArgs args = "let queryArgs = catMaybes [" </> (indent 2 (docIntercalate ("," <> softline) . map genBuildQueryArg $ args)) </> "]"
+                  </> "let queryString = if null queryArgs then \"\" else \"?\" <> (joinWith \"&\" queryArgs)"
 
+----------
 genBuildQueryArg :: QueryArg PSType -> Doc
 genBuildQueryArg arg = case arg ^. queryArgType of
-    Normal -> genQueryEncoding "encodeQueryItem spOpts_'"
-    Flag   -> genQueryEncoding "encodeQueryItem spOpts_'"
-    List   -> genQueryEncoding "encodeListQuery spOpts_'"
+    Normal -> genQueryEncoding "encodeQueryItem spOpts_'" "<$>"
+    Flag   -> genQueryEncoding "encodeQueryItem spOpts_'" "<$> Just"
+    List   -> genQueryEncoding "encodeListQuery spOpts_'" "<$> Just"
   where
     argText = arg ^. queryArgName ^. argName ^. to unPathSegment
     encodedArgName = strictText . textURLEncode True $ argText
-    genQueryEncoding fn = fn <+> dquotes encodedArgName <+> psVar argText
+    genQueryEncoding fn op = fn <+> dquotes encodedArgName <+> op <+> psVar argText
 
 -----------
 
@@ -183,7 +185,7 @@ reqToParams req = Param baseURLId psString
                ++ maybeToList (reqBodyToParam (req ^. reqBody))
                ++ urlToParams (req ^. reqUrl)
 
-urlToParams :: Url f -> [Param f]
+urlToParams :: Url PSType -> [Param PSType]
 urlToParams url = mapMaybe (segmentToParam . unSegment) (url ^. path) ++ map queryArgToParam (url ^. queryStr)
 
 segmentToParam :: SegmentType f -> Maybe (Param f)
@@ -193,11 +195,18 @@ segmentToParam (Cap arg) = Just Param {
   , _pName = arg ^. argName ^. to unPathSegment
   }
 
-queryArgToParam :: QueryArg f -> Param f
+mkPsMaybe :: PSType -> PSType
+mkPsMaybe t = TypeInfo "" "" "Maybe" [t]
+
+queryArgToParam :: QueryArg PSType -> Param PSType
 queryArgToParam arg = Param {
-    _pType = arg ^. queryArgName ^. argType
+    _pType = pType
   , _pName = arg ^. queryArgName ^. argName ^. to unPathSegment
   }
+  where
+    pType = case arg ^. queryArgType of
+      Normal -> mkPsMaybe (arg ^. queryArgName ^. argType)
+      _ -> arg ^. queryArgName ^. argType
 
 headerArgToParam :: HeaderArg f -> Param f
 headerArgToParam (HeaderArg arg) = Param {

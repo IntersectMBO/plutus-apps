@@ -19,3 +19,5 @@ dist
 dist-*
 shell.nix
 default.nix
+.idea/
+stack.yaml
