@@ -116,6 +116,9 @@ genFnBody rParams req = "do"
       </> genBuildQueryArgs (req ^. reqUrl ^. queryStr)
       </> hang 6 ("let reqUrl ="     <+> genBuildURL (req ^. reqUrl))
       </> "let reqHeaders =" </> indent 6 (req ^. reqHeaders ^. to genBuildHeaders)
+      </> case req ^. reqBody of
+             Nothing -> ""
+             Just _ -> "let encodeJson = case spOpts_.encodeJson of SPSettingsEncodeJson_ e -> e"
       </> "let affReq =" <+> hang 2 ( "defaultRequest" </>
             "{ method ="  <+> "httpMethod"
         </> ", url ="     <+> "reqUrl"
@@ -125,6 +128,7 @@ genFnBody rParams req = "do"
               Just _  -> ", content =" <+> "toNullable <<< Just <<< stringify <<< encodeJson $ reqBody" </> "}"
       )
       </> "affResp <- affjax affReq"
+      </> "let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d"
       </> "getResult affReq decodeJson affResp"
     ) <> line
 
