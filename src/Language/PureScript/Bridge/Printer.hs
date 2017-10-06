@@ -87,7 +87,7 @@ sumTypeToText st =
     <> "\n"
     <> sep
     <> "\n"
-    <> sumTypeToPrismsAndLenses st
+    <> sumTypeToOptics st
     <> sep
   where
     sep = T.replicate 80 "-"
@@ -116,20 +116,23 @@ sumTypeToTypeDecls st@(SumType t cs) = T.unlines $
     isSingletonList [_] = True
     isSingletonList _   = False
 
-sumTypeToPrismsAndLenses :: SumType 'PureScript -> Text
-sumTypeToPrismsAndLenses st = sumTypeToPrisms st <> sumTypeToLenses st
+sumTypeToOptics :: SumType 'PureScript -> Text
+sumTypeToOptics st = constructorOptics st <> recordOptics st
 
-sumTypeToPrisms :: SumType 'PureScript -> Text
-sumTypeToPrisms st = T.unlines $ map (constructorToPrism moreThan1 typeInfo) cs
+constructorOptics :: SumType 'PureScript -> Text
+constructorOptics st =
+  case st ^. sumTypeConstructors of
+    []  -> ""
+    [DataConstructor constructorName (Left [wrapped])] -> constructorToLens constructorName typeInfo wrapped
+    [c] -> constructorToPrism False typeInfo c
+    cs  -> T.unlines $ map (constructorToPrism True typeInfo) cs
   where
-    cs = st ^. sumTypeConstructors
     typeInfo = st ^. sumTypeInfo
-    moreThan1 = length cs > 1
 
 
-sumTypeToLenses :: SumType 'PureScript -> Text
+recordOptics :: SumType 'PureScript -> Text
 -- Match on SumTypes with a single DataConstructor (that's a list of a single element)
-sumTypeToLenses st@(SumType _ [_]) = T.unlines $ recordEntryToLens st <$> dcName <*> dcRecords
+recordOptics st@(SumType _ [_]) = T.unlines $ recordEntryToLens st <$> dcName <*> dcRecords
   where
     cs = st ^. sumTypeConstructors
     dcName = lensableConstructor ^.. traversed.sigConstructor
@@ -138,7 +141,7 @@ sumTypeToLenses st@(SumType _ [_]) = T.unlines $ recordEntryToLens st <$> dcName
     lensableConstructor = filter singleRecordCons cs ^? _head
     singleRecordCons (DataConstructor _ (Right _)) = True
     singleRecordCons _                             = False
-sumTypeToLenses _ = ""
+recordOptics _ = ""
 
 constructorToText :: Int -> DataConstructor 'PureScript -> Text
 constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText False) ts)
@@ -205,6 +208,18 @@ constructorToPrism otherConstructors typeInfo (DataConstructor n args) =
     pName = "_" <> n
     otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing\n"
                                 | otherwise = "\n"
+
+constructorToLens :: Text -> TypeInfo 'PureScript -> TypeInfo 'PureScript ->  Text
+constructorToLens constructorName typeInfo childInfo =
+  lensName <> forAll <>  "Lens' " <> typName <> " " <> childName <> "\n"
+      <> lensName <> " = lens get set\n  where\n"
+      <> spaces 4 <> "get (" <> constructorName <> " a) = a\n"
+      <> spaces 4 <> "set _ = " <> constructorName <>  "\n\n"
+  where
+    (typName, forAll) = typeNameAndForall typeInfo
+    (childName, _) = typeNameAndForall childInfo
+    lensName = "_" <> constructorName
+
 
 recordEntryToLens :: SumType 'PureScript -> Text -> RecordEntry 'PureScript -> Text
 recordEntryToLens st constructorName e =
