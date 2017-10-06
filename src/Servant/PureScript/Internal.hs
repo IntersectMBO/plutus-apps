@@ -101,10 +101,9 @@ defaultSettings = Settings {
         , ImportLine "Network.HTTP.Affjax" (Set.fromList [ "AJAX" ])
         , ImportLine "Data.Nullable" (Set.fromList [ "toNullable" ])
         , ImportLine "Servant.PureScript.Affjax" (Set.fromList [ "AjaxError", "defaultRequest", "affjax" ])
-        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "SPSettings_(..)", "gDefaultToURLPiece" ])
+        , ImportLine "Servant.PureScript.Settings" (Set.fromList [ "SPSettings_(..)", "SPSettingsDecodeJson_(..)", "SPSettingsEncodeJson_(..)", "gDefaultToURLPiece" ])
         , ImportLine "Servant.PureScript.Util" (Set.fromList [ "encodeListQuery", "encodeURLPiece", "encodeQueryItem", "getResult", "encodeHeader" ])
         , ImportLine "Prim" (Set.fromList [ "String" ]) -- For baseURL!
-        , ImportLine "Data.Argonaut.Generic.Aeson" (Set.fromList [ "encodeJson", "decodeJson" ]) -- Should not be necessary - compiler bug!
         , ImportLine "Data.Maybe" (Set.fromList [ "Maybe(..)"])
         , ImportLine "Data.String" (Set.fromList ["joinWith"])
         , ImportLine "Data.Array" (Set.fromList ["catMaybes", "null"])
