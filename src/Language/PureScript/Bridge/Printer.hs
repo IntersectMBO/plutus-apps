@@ -187,7 +187,7 @@ constructorToPrism otherConstructors typeInfo (DataConstructor n args) =
       where
         mkF [] = n <> " = Just unit\n"
         mkF _  = "(" <> n <> " " <> T.unwords (map _recLabel types) <> ") = Just $ " <> mkFnArgs types <> "\n"
-        getter | cs == [] = "(\\_ -> " <> n <> ")"
+        getter | null cs = "(\\_ -> " <> n <> ")"
                | length cs == 1   = n
                | otherwise = "(\\{ " <> T.intercalate ", " cArgs <> " } -> " <> n <> " " <> T.intercalate " " cArgs <> ")"
           where
@@ -208,13 +208,12 @@ constructorToPrism otherConstructors typeInfo (DataConstructor n args) =
 
 recordEntryToLens :: SumType 'PureScript -> Text -> RecordEntry 'PureScript -> Text
 recordEntryToLens st constructorName e =
-  case hasUnderscore of
-    False -> ""
-    True ->
-         lensName <> forAll <>  "Lens' " <> typName <> " " <> recType <> "\n"
+  if hasUnderscore
+  then lensName <> forAll <>  "Lens' " <> typName <> " " <> recType <> "\n"
       <> lensName <> " = lens get set\n  where\n"
       <> spaces 4 <> "get (" <> constructorName <> " r) = r." <> recName <> "\n"
       <> spaces 4 <> "set (" <> constructorName <> " r) = " <> setter
+  else ""
   where
     (typName, forAll) = typeNameAndForall (st ^. sumTypeInfo)
     setter = constructorName <>  " <<< r { " <> recName <> " = _ }\n"
