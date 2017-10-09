@@ -114,7 +114,7 @@ sumTypeToTypeDecls st@(SumType t cs) = T.unlines $
       | either isSingletonList (const True) (_sigValues constr) = "newtype"
     dataOrNewtype _   = "data"
     isSingletonList [_] = True
-    isSingletonList _  = False
+    isSingletonList _   = False
 
 sumTypeToPrismsAndLenses :: SumType 'PureScript -> Text
 sumTypeToPrismsAndLenses st = sumTypeToPrisms st <> sumTypeToLenses st
@@ -172,9 +172,9 @@ mkFnArgs [r] = r ^. recLabel
 mkFnArgs rs  = fromEntries (\recE -> recE ^. recLabel <> ": " <> recE ^. recLabel) rs
 
 mkTypeSig :: [RecordEntry 'PureScript] -> Text
-mkTypeSig [] = "Unit"
+mkTypeSig []  = "Unit"
 mkTypeSig [r] = typeInfoToText False $ r ^. recValue
-mkTypeSig rs = fromEntries recordEntryToText rs
+mkTypeSig rs  = fromEntries recordEntryToText rs
 
 constructorToPrism :: Bool -> TypeInfo 'PureScript -> DataConstructor 'PureScript -> Text
 constructorToPrism otherConstructors typeInfo (DataConstructor n args) =
