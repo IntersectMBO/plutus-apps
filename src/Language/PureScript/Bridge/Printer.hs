@@ -120,9 +120,10 @@ sumTypeToPrismsAndLenses :: SumType 'PureScript -> Text
 sumTypeToPrismsAndLenses st = sumTypeToPrisms st <> sumTypeToLenses st
 
 sumTypeToPrisms :: SumType 'PureScript -> Text
-sumTypeToPrisms st = T.unlines $ map (constructorToPrism moreThan1 st) cs
+sumTypeToPrisms st = T.unlines $ map (constructorToPrism moreThan1 typeInfo) cs
   where
     cs = st ^. sumTypeConstructors
+    typeInfo = st ^. sumTypeInfo
     moreThan1 = length cs > 1
 
 
@@ -152,15 +153,14 @@ spaces :: Int -> Text
 spaces c = T.replicate c " "
 
 
-typeNameAndForall :: SumType 'PureScript -> (Text, Text)
-typeNameAndForall st = (typName, forAll)
+typeNameAndForall :: TypeInfo 'PureScript -> (Text, Text)
+typeNameAndForall typeInfo = (typName, forAll)
   where
-    typName = typeInfoToText False (st ^. sumTypeInfo)
-    forAllParams = st ^.. sumTypeInfo.typeParameters.traversed.to (typeInfoToText False)
+    typName = typeInfoToText False typeInfo
+    forAllParams = typeInfo ^.. typeParameters.traversed.to (typeInfoToText False)
     forAll = case forAllParams of
       [] -> " :: "
       cs -> " :: forall " <> T.intercalate " " cs <> ". "
-    -- textParameters = map (typeInfoToText False) params
 
 fromEntries :: (RecordEntry a -> Text) -> [RecordEntry a] -> Text
 fromEntries mkElem rs = "{ " <> inners <> " }"
@@ -176,8 +176,8 @@ mkTypeSig [] = "Unit"
 mkTypeSig [r] = typeInfoToText False $ r ^. recValue
 mkTypeSig rs = fromEntries recordEntryToText rs
 
-constructorToPrism :: Bool -> SumType 'PureScript -> DataConstructor 'PureScript -> Text
-constructorToPrism otherConstructors st (DataConstructor n args) =
+constructorToPrism :: Bool -> TypeInfo 'PureScript -> DataConstructor 'PureScript -> Text
+constructorToPrism otherConstructors typeInfo (DataConstructor n args) =
   case args of
     Left cs  -> pName <> forAll <>  "Prism' " <> typName <> " " <> mkTypeSig types <> "\n"
              <> pName <> " = prism' " <> getter <> " f\n"
@@ -201,7 +201,7 @@ constructorToPrism otherConstructors st (DataConstructor n args) =
       where
         recordSig = T.intercalate ", " (map recordEntryToText rs)
   where
-    (typName, forAll) = typeNameAndForall st
+    (typName, forAll) = typeNameAndForall typeInfo
     pName = "_" <> n
     otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing\n"
                                 | otherwise = "\n"
@@ -216,7 +216,7 @@ recordEntryToLens st constructorName e =
       <> spaces 4 <> "get (" <> constructorName <> " r) = r." <> recName <> "\n"
       <> spaces 4 <> "set (" <> constructorName <> " r) = " <> setter
   where
-    (typName, forAll) = typeNameAndForall st
+    (typName, forAll) = typeNameAndForall (st ^. sumTypeInfo)
     setter = constructorName <>  " <<< r { " <> recName <> " = _ }\n"
     recName = e ^. recLabel
     lensName = T.drop 1 recName
