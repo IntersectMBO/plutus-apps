@@ -106,11 +106,11 @@ allTests =
                           , "--------------------------------------------------------------------------------"
                           ]
       in m `shouldBe` txt
-    it "test generation of Prisms" $
+    it "test generation of constructor optics" $
       let bar = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
           foo = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
-          barPrisms = sumTypeToPrisms bar
-          fooPrisms = sumTypeToPrisms foo
+          barOptics = constructorOptics bar
+          fooOptics = constructorOptics foo
           txt = T.unlines [
                             "_Bar1 :: forall a b m c. Prism' (Bar a b m c) (Maybe a)"
                           , "_Bar1 = prism' Bar1 f"
@@ -155,12 +155,12 @@ allTests =
                           , "    f _ = Nothing"
                           , ""
                           ]
-      in (barPrisms <> fooPrisms) `shouldBe` txt
-    it "tests generation of lenses" $
+      in (barOptics <> fooOptics) `shouldBe` txt
+    it "tests generation of record optics" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (SingleRecord A B)))
           bar = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
-          barLenses = sumTypeToLenses bar
-          recTypeLenses = sumTypeToLenses recType
+          barOptics = recordOptics bar
+          recTypeOptics = recordOptics recType
           txt = T.unlines [
                             "a :: forall a b. Lens' (SingleRecord a b) a"
                           , "a = lens get set"
@@ -175,7 +175,7 @@ allTests =
                           , "    set (SingleRecord r) = SingleRecord <<< r { _b = _ }"
                           , ""
                           ]
-      in (barLenses <> recTypeLenses) `shouldBe` txt
+      in (barOptics <> recTypeOptics) `shouldBe` txt
     it "tests generation of newtypes for record data type" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (SingleRecord A B)))
           recTypeText = sumTypeToText recType
@@ -238,7 +238,7 @@ allTests =
                           , "derive instance genericSingleValueConstr :: Generic SingleValueConstr"
                           ]
       in recTypeText `shouldBe` txt
-    it "tests that sum types with multiple constructors don't generate lenses" $
+    it "tests that sum types with multiple constructors don't generate record optics" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy TwoRecords))
-          recTypeLenses = sumTypeToLenses recType
-      in recTypeLenses `shouldBe` "" -- No lenses for multi-constructors
+          recTypeOptics = recordOptics recType
+      in recTypeOptics `shouldBe` "" -- No record optics for multi-constructors
