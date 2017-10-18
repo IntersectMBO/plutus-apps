@@ -73,7 +73,7 @@ _lensImports :: [ImportLine]
 _lensImports = [
     ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
   -- , ImportLine "Prelude" mempty
-  , ImportLine "Data.Lens" $ Set.fromList ["Prism'", "Lens'", "prism'", "lens"]
+  , ImportLine "Data.Lens" $ Set.fromList ["Iso'", "Prism'", "Lens'", "iso", "prism'", "lens"]
   ]
 
 importLineToText :: ImportLine -> Text
@@ -123,7 +123,7 @@ constructorOptics :: SumType 'PureScript -> Text
 constructorOptics st =
   case st ^. sumTypeConstructors of
     []  -> ""
-    [DataConstructor constructorName (Left [wrapped])] -> constructorToLens constructorName typeInfo wrapped
+    [DataConstructor constructorName (Left [wrapped])] -> constructorToIso constructorName typeInfo wrapped
     [c] -> constructorToPrism False typeInfo c
     cs  -> T.unlines $ map (constructorToPrism True typeInfo) cs
   where
@@ -196,25 +196,35 @@ constructorToPrism otherConstructors typeInfo (DataConstructor n args) =
           where
             cArgs = map (T.singleton . fst) $ zip ['a'..] cs
         types = [RecordEntry (T.singleton label) t | (label, t) <- zip ['a'..] cs]
-    Right rs -> pName <> forAll <> "Prism' " <> typName <> " { " <> recordSig <> "}\n"
+    Right rs ->
+      if otherConstructors
+      then
+        pName <> forAll <> "Prism' " <> typName <> " { " <> recordSig <> "}\n"
              <> pName <> " = prism' " <> n <> " f\n"
              <> spaces 2 <> "where\n"
              <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
              <> otherConstructorFallThrough
-      where
+             <> "\n"
+      else
+        pName <> forAll <> "Iso' " <> typName <> " { " <> recordSig <> "}\n"
+             <> pName <> " = iso " <> n <> " f\n"
+             <> spaces 2 <> "where\n"
+             <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
+             <> "\n"
+     where
         recordSig = T.intercalate ", " (map recordEntryToText rs)
   where
     (typName, forAll) = typeNameAndForall typeInfo
     pName = "_" <> n
-    otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing\n"
-                                | otherwise = "\n"
+    otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing"
+                                | otherwise = ""
 
-constructorToLens :: Text -> TypeInfo 'PureScript -> TypeInfo 'PureScript ->  Text
-constructorToLens constructorName typeInfo childInfo =
-  lensName <> forAll <>  "Lens' " <> typName <> " " <> childName <> "\n"
-      <> lensName <> " = lens get set\n  where\n"
-      <> spaces 4 <> "get (" <> constructorName <> " a) = a\n"
-      <> spaces 4 <> "set _ = " <> constructorName <>  "\n\n"
+constructorToIso :: Text -> TypeInfo 'PureScript -> TypeInfo 'PureScript ->  Text
+constructorToIso constructorName typeInfo childInfo =
+  lensName <> forAll <>  "Iso' " <> typName <> " " <> childName <> "\n"
+      <> lensName <> " = iso unwrap wrap\n  where\n"
+      <> spaces 4 <> "unwrap (" <> constructorName <> " a) = a\n"
+      <> spaces 4 <> "wrap = " <> constructorName <>  "\n\n"
   where
     (typName, forAll) = typeNameAndForall typeInfo
     (childName, _) = typeNameAndForall childInfo

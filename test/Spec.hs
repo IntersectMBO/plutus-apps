@@ -8,7 +8,6 @@
 
 module Main where
 
-import           Control.Monad                             (unless)
 import qualified Data.Map                                  as Map
 import           Data.Monoid                               ((<>))
 import           Data.Proxy
@@ -62,7 +61,7 @@ allTests =
                           , "module TestData where"
                           , ""
                           , "import Data.Either (Either)"
-                          , "import Data.Lens (Lens', Prism', lens, prism')"
+                          , "import Data.Lens (Iso', Lens', Prism', iso, lens, prism')"
                           , "import Data.Maybe (Maybe, Maybe(..))"
                           , ""
                           , "import Prelude"
@@ -190,8 +189,8 @@ allTests =
                           , "derive instance genericSingleRecord :: (Generic a, Generic b) => Generic (SingleRecord a b)"
                           , ""
                           , "--------------------------------------------------------------------------------"
-                          , "_SingleRecord :: forall a b. Prism' (SingleRecord a b) { _a :: a, _b :: b, c :: String}"
-                          , "_SingleRecord = prism' SingleRecord f"
+                          , "_SingleRecord :: forall a b. Iso' (SingleRecord a b) { _a :: a, _b :: b, c :: String}"
+                          , "_SingleRecord = iso SingleRecord f"
                           , "  where"
                           , "    f (SingleRecord r) = Just r"
                           , ""
@@ -220,22 +219,32 @@ allTests =
                           , "derive instance genericSomeNewtype :: Generic SomeNewtype"
                           , ""
                           , "--------------------------------------------------------------------------------"
-                          , "_SomeNewtype :: Lens' SomeNewtype Int"
-                          , "_SomeNewtype = lens get set"
+                          , "_SomeNewtype :: Iso' SomeNewtype Int"
+                          , "_SomeNewtype = iso unwrap wrap"
                           , "  where"
-                          , "    get (SomeNewtype a) = a"
-                          , "    set _ = SomeNewtype"
+                          , "    unwrap (SomeNewtype a) = a"
+                          , "    wrap = SomeNewtype"
                           , ""
                           , "--------------------------------------------------------------------------------"
                           ]
       in recTypeText `shouldBe` txt
     it "tests generation of newtypes for haskell data type with one argument" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy SingleValueConstr))
-          recTypeText = sumTypeToTypeDecls recType
-          txt = T.unlines [ "newtype SingleValueConstr ="
+          recTypeText = sumTypeToText recType
+          txt = T.stripEnd $
+                T.unlines [ "newtype SingleValueConstr ="
                           , "    SingleValueConstr Int"
                           , ""
                           , "derive instance genericSingleValueConstr :: Generic SingleValueConstr"
+                          , ""
+                          , "--------------------------------------------------------------------------------"
+                          , "_SingleValueConstr :: Iso' SingleValueConstr Int"
+                          , "_SingleValueConstr = iso unwrap wrap"
+                          , "  where"
+                          , "    unwrap (SingleValueConstr a) = a"
+                          , "    wrap = SingleValueConstr"
+                          , ""
+                          , "--------------------------------------------------------------------------------"
                           ]
       in recTypeText `shouldBe` txt
     it "tests that sum types with multiple constructors don't generate record optics" $
