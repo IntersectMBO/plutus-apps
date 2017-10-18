@@ -207,9 +207,10 @@ constructorToPrism otherConstructors typeInfo (DataConstructor n args) =
              <> "\n"
       else
         pName <> forAll <> "Iso' " <> typName <> " { " <> recordSig <> "}\n"
-             <> pName <> " = iso " <> n <> " f\n"
+             <> pName <> " = iso unwrap wrap\n"
              <> spaces 2 <> "where\n"
-             <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
+             <> spaces 4 <> "unwrap (" <> n <> " a) = a\n"
+             <> spaces 4 <> "wrap = " <> n <> "\n"
              <> "\n"
      where
         recordSig = T.intercalate ", " (map recordEntryToText rs)
