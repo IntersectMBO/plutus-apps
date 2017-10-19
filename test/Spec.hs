@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 module Main where
-
 import qualified Data.Map                                  as Map
 import           Data.Monoid                               ((<>))
 import           Data.Proxy
@@ -17,13 +16,10 @@ import           Language.PureScript.Bridge.TypeParameters
 import           Test.Hspec                                (Spec, describe,
                                                             hspec, it)
 import           Test.Hspec.Expectations.Pretty
-
 import           TestData
 
-
-
 main :: IO ()
-main = hspec $ do allTests
+main = hspec $ allTests
 
 
 allTests :: Spec
@@ -53,6 +49,40 @@ allTests =
                   }
                 ]
        in bst `shouldBe` st
+    it "tests generation of for custom type Foo" $
+     let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
+         recTypeText = sumTypeToText recType
+         txt = T.stripEnd $
+               T.unlines [ "data Foo ="
+                         , "    Foo"
+                         , "  | Bar Int"
+                         , "  | FooBar Int String"
+                         , ""
+                         , "derive instance genericFoo :: Generic Foo"
+                         , ""
+                         , ""
+                         , "--------------------------------------------------------------------------------"
+                         , "_Foo :: Prism' Foo Unit"
+                         , "_Foo = prism' (\\_ -> Foo) f"
+                         , "  where"
+                         , "    f Foo = Just unit"
+                         , "    f _ = Nothing"
+                         , ""
+                         , "_Bar :: Prism' Foo Int"
+                         , "_Bar = prism' Bar f"
+                         , "  where"
+                         , "    f (Bar a) = Just $ a"
+                         , "    f _ = Nothing"
+                         , ""
+                         , "_FooBar :: Prism' Foo { a :: Int, b :: String }"
+                         , "_FooBar = prism' (\\{ a, b } -> FooBar a b) f"
+                         , "  where"
+                         , "    f (FooBar a b) = Just $ { a: a, b: b }"
+                         , "    f _ = Nothing"
+                         , ""
+                         , "--------------------------------------------------------------------------------"
+                         ]
+     in recTypeText `shouldBe` txt
     it "tests the generation of a whole (dummy) module" $
       let advanced = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
           modules = sumTypeToModule advanced Map.empty
@@ -61,8 +91,10 @@ allTests =
                           , "module TestData where"
                           , ""
                           , "import Data.Either (Either)"
-                          , "import Data.Lens (Iso', Lens', Prism', iso, lens, prism')"
+                          , "import Data.Lens (Lens', Prism', lens, prism')"
+                          , "import Data.Lens.Record (prop)"
                           , "import Data.Maybe (Maybe, Maybe(..))"
+                          , "import Data.Newtype (class Newtype)"
                           , ""
                           , "import Prelude"
                           , "import Data.Generic (class Generic)"
@@ -76,6 +108,7 @@ allTests =
                           , "    }"
                           , ""
                           , "derive instance genericBar :: (Generic a, Generic b, Generic (m b)) => Generic (Bar a b m c)"
+                          , ""
                           , ""
                           , "--------------------------------------------------------------------------------"
                           , "_Bar1 :: forall a b m c. Prism' (Bar a b m c) (Maybe a)"
@@ -188,12 +221,10 @@ allTests =
                           , ""
                           , "derive instance genericSingleRecord :: (Generic a, Generic b) => Generic (SingleRecord a b)"
                           , ""
-                          , "--------------------------------------------------------------------------------"
-                          , "_SingleRecord :: forall a b. Iso' (SingleRecord a b) { _a :: a, _b :: b, c :: String}"
-                          , "_SingleRecord = iso f SingleRecord"
-                          , "  where"
-                          , "    f (SingleRecord r) = r"
+                          , "derive instance newtypeSingleRecord :: Newtype (SingleRecord a b) _"
                           , ""
+                          , ""
+                          , "--------------------------------------------------------------------------------"
                           , "a :: forall a b. Lens' (SingleRecord a b) a"
                           , "a = lens get set"
                           , "  where"
@@ -218,13 +249,10 @@ allTests =
                           , ""
                           , "derive instance genericSomeNewtype :: Generic SomeNewtype"
                           , ""
-                          , "--------------------------------------------------------------------------------"
-                          , "_SomeNewtype :: Iso' SomeNewtype Int"
-                          , "_SomeNewtype = iso unwrap wrap"
-                          , "  where"
-                          , "    unwrap (SomeNewtype a) = a"
-                          , "    wrap = SomeNewtype"
+                          , "derive instance newtypeSomeNewtype :: Newtype SomeNewtype _"
                           , ""
+                          , ""
+                          , "--------------------------------------------------------------------------------"
                           , "--------------------------------------------------------------------------------"
                           ]
       in recTypeText `shouldBe` txt
@@ -237,13 +265,10 @@ allTests =
                           , ""
                           , "derive instance genericSingleValueConstr :: Generic SingleValueConstr"
                           , ""
-                          , "--------------------------------------------------------------------------------"
-                          , "_SingleValueConstr :: Iso' SingleValueConstr Int"
-                          , "_SingleValueConstr = iso unwrap wrap"
-                          , "  where"
-                          , "    unwrap (SingleValueConstr a) = a"
-                          , "    wrap = SingleValueConstr"
+                          , "derive instance newtypeSingleValueConstr :: Newtype SingleValueConstr _"
                           , ""
+                          , ""
+                          , "--------------------------------------------------------------------------------"
                           , "--------------------------------------------------------------------------------"
                           ]
       in recTypeText `shouldBe` txt
