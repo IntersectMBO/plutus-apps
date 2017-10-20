@@ -72,8 +72,11 @@ moduleToText m = T.unlines $
 _lensImports :: [ImportLine]
 _lensImports = [
     ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
-  -- , ImportLine "Prelude" mempty
-  , ImportLine "Data.Lens" $ Set.fromList ["Prism'", "Lens'", "prism'", "lens"]
+  , ImportLine "Data.Lens" $ Set.fromList ["Iso'", "Prism'", "Lens'", "prism'", "lens"]
+  , ImportLine "Data.Lens.Record" $ Set.fromList ["prop"]
+  , ImportLine "Data.Lens.Iso.Newtype" $ Set.fromList ["_Newtype"]
+  , ImportLine "Data.Symbol" $ Set.fromList ["SProxy(SProxy)"]
+  , ImportLine "Data.Newtype" $ Set.fromList ["class Newtype"]
   ]
 
 importLineToText :: ImportLine -> Text
@@ -87,59 +90,65 @@ sumTypeToText st =
     <> "\n"
     <> sep
     <> "\n"
-    <> sumTypeToPrismsAndLenses st
+    <> sumTypeToOptics st
     <> sep
   where
     sep = T.replicate 80 "-"
 
 sumTypeToTypeDecls :: SumType 'PureScript -> Text
 sumTypeToTypeDecls st@(SumType t cs) = T.unlines $
-    dataOrNewtype cs <> " " <> typeInfoToText True t <> " ="
-  : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs)
-  : [ "\nderive instance generic" <> _typeName t <> " :: " <> genericConstrains <> genericInstance t ]
+    dataOrNewtype <> " " <> typeInfoToText True t <> " ="
+  : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) <> "\n"
+  : "derive instance generic" <> _typeName t <> " :: " <> genericConstraints <> genericInstance t <> "\n"
+  : [ "derive instance newtype" <> _typeName t <> " :: " <> newtypeInstance t <> " _\n" | isNewtype cs]
   where
     genericInstance = ("Generic " <>) . typeInfoToText False
-    genericConstrains
+    newtypeInstance = ("Newtype " <>) . typeInfoToText False
+    genericConstraints
         | stpLength == 0 = mempty
         | otherwise = (<> " => ") $
             if stpLength == 1
-                then genericConstrainsInner
-                else bracketWrap genericConstrainsInner
-    genericConstrainsInner = T.intercalate ", " $ map genericInstance sumTypeParameters
+                then genericConstraintsInner
+                else bracketWrap genericConstraintsInner
+    genericConstraintsInner = T.intercalate ", " $ map genericInstance sumTypeParameters
     stpLength = length sumTypeParameters
     bracketWrap x = "(" <> x <> ")"
     sumTypeParameters = filter isTypeParam . Set.toList $ getUsedTypes st
     isTypeParam typ = _typeName typ `elem` map _typeName (_typeParameters t)
-    dataOrNewtype [constr]
-      | either isSingletonList (const True) (_sigValues constr) = "newtype"
-    dataOrNewtype _   = "data"
+    isNewtype [constr]
+      | either isSingletonList (const True) (_sigValues constr) = True
+    isNewtype _   = False
+    dataOrNewtype = if isNewtype cs then "newtype" else "data"
     isSingletonList [_] = True
-    isSingletonList _  = False
+    isSingletonList _   = False
 
-sumTypeToPrismsAndLenses :: SumType 'PureScript -> Text
-sumTypeToPrismsAndLenses st = sumTypeToPrisms st <> sumTypeToLenses st
+sumTypeToOptics :: SumType 'PureScript -> Text
+sumTypeToOptics st = constructorOptics st <> recordOptics st
 
-sumTypeToPrisms :: SumType 'PureScript -> Text
-sumTypeToPrisms st = T.unlines $ map (constructorToPrism moreThan1 st) cs
+constructorOptics :: SumType 'PureScript -> Text
+constructorOptics st =
+  case st ^. sumTypeConstructors of
+    []  -> mempty -- No work required.
+    [c] -> constructorToOptic False typeInfo c
+    cs  -> T.unlines $ map (constructorToOptic True typeInfo) cs
   where
-    cs = st ^. sumTypeConstructors
-    moreThan1 = length cs > 1
+    typeInfo = st ^. sumTypeInfo
 
 
-sumTypeToLenses :: SumType 'PureScript -> Text
+recordOptics :: SumType 'PureScript -> Text
 -- Match on SumTypes with a single DataConstructor (that's a list of a single element)
-sumTypeToLenses st@(SumType _ [_]) = T.unlines $ recordEntryToLens st <$> dcName <*> dcRecords
+recordOptics st@(SumType _ [_]) = T.unlines $ recordEntryToLens st <$> dcRecords
   where
     cs = st ^. sumTypeConstructors
-    dcName = lensableConstructor ^.. traversed.sigConstructor
     dcRecords = lensableConstructor ^.. traversed.sigValues._Right.traverse.filtered hasUnderscore
     hasUnderscore e = e ^. recLabel.to (T.isPrefixOf "_")
     lensableConstructor = filter singleRecordCons cs ^? _head
     singleRecordCons (DataConstructor _ (Right _)) = True
     singleRecordCons _                             = False
-sumTypeToLenses _ = ""
+recordOptics _ = ""
 
 constructorToText :: Int -> DataConstructor 'PureScript -> Text
+constructorToText _ (DataConstructor n (Left []))  = n
 constructorToText _ (DataConstructor n (Left ts))  = n <> " " <> T.intercalate " " (map (typeInfoToText False) ts)
 constructorToText indentation (DataConstructor n (Right rs)) =
        n <> " {\n"
@@ -152,15 +161,14 @@ spaces :: Int -> Text
 spaces c = T.replicate c " "
 
 
-typeNameAndForall :: SumType 'PureScript -> (Text, Text)
-typeNameAndForall st = (typName, forAll)
+typeNameAndForall :: TypeInfo 'PureScript -> (Text, Text)
+typeNameAndForall typeInfo = (typName, forAll)
   where
-    typName = typeInfoToText False (st ^. sumTypeInfo)
-    forAllParams = st ^.. sumTypeInfo.typeParameters.traversed.to (typeInfoToText False)
+    typName = typeInfoToText False typeInfo
+    forAllParams = typeInfo ^.. typeParameters.traversed.to (typeInfoToText False)
     forAll = case forAllParams of
       [] -> " :: "
       cs -> " :: forall " <> T.intercalate " " cs <> ". "
-    -- textParameters = map (typeInfoToText False) params
 
 fromEntries :: (RecordEntry a -> Text) -> [RecordEntry a] -> Text
 fromEntries mkElem rs = "{ " <> inners <> " }"
@@ -172,52 +180,63 @@ mkFnArgs [r] = r ^. recLabel
 mkFnArgs rs  = fromEntries (\recE -> recE ^. recLabel <> ": " <> recE ^. recLabel) rs
 
 mkTypeSig :: [RecordEntry 'PureScript] -> Text
-mkTypeSig [] = "Unit"
+mkTypeSig []  = "Unit"
 mkTypeSig [r] = typeInfoToText False $ r ^. recValue
-mkTypeSig rs = fromEntries recordEntryToText rs
+mkTypeSig rs  = fromEntries recordEntryToText rs
 
-constructorToPrism :: Bool -> SumType 'PureScript -> DataConstructor 'PureScript -> Text
-constructorToPrism otherConstructors st (DataConstructor n args) =
+constructorToOptic :: Bool -> TypeInfo 'PureScript -> DataConstructor 'PureScript -> Text
+constructorToOptic otherConstructors typeInfo (DataConstructor n args) =
   case args of
-    Left cs  -> pName <> forAll <>  "Prism' " <> typName <> " " <> mkTypeSig types <> "\n"
+    Left cs  ->
+      if otherConstructors
+      then
+        pName <> forAll <>  "Prism' " <> typName <> " " <> mkTypeSig types <> "\n"
              <> pName <> " = prism' " <> getter <> " f\n"
              <> spaces 2 <> "where\n"
              <> spaces 4 <> "f " <> mkF cs
              <> otherConstructorFallThrough
+             <> "\n"
+      else pName <> forAll <>  "Iso' " <> typName <> " " <> mkTypeSig (constructorTypes cs) <> "\n"
+             <> pName <> " = _Newtype"
+             <> "\n"
       where
         mkF [] = n <> " = Just unit\n"
         mkF _  = "(" <> n <> " " <> T.unwords (map _recLabel types) <> ") = Just $ " <> mkFnArgs types <> "\n"
-        getter | cs == [] = "(\\_ -> " <> n <> ")"
+        getter | null cs = "(\\_ -> " <> n <> ")"
                | length cs == 1   = n
                | otherwise = "(\\{ " <> T.intercalate ", " cArgs <> " } -> " <> n <> " " <> T.intercalate " " cArgs <> ")"
           where
             cArgs = map (T.singleton . fst) $ zip ['a'..] cs
-        types = [RecordEntry (T.singleton label) t | (label, t) <- zip ['a'..] cs]
-    Right rs -> pName <> forAll <> "Prism' " <> typName <> " { " <> recordSig <> "}\n"
+        types = constructorTypes cs
+    Right rs ->
+      if otherConstructors
+      then
+        pName <> forAll <> "Prism' " <> typName <> " { " <> recordSig rs <> " }\n"
              <> pName <> " = prism' " <> n <> " f\n"
              <> spaces 2 <> "where\n"
              <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
              <> otherConstructorFallThrough
-      where
-        recordSig = T.intercalate ", " (map recordEntryToText rs)
+             <> "\n"
+      else
+        pName <> forAll <> "Iso' " <> typName <> " { " <> recordSig rs <> "}\n"
+              <> pName <> " = _Newtype\n"
+              <> "\n"
   where
-    (typName, forAll) = typeNameAndForall st
+    recordSig rs = T.intercalate ", " (map recordEntryToText rs)
+    constructorTypes cs = [RecordEntry (T.singleton label) t | (label, t) <- zip ['a'..] cs]
+    (typName, forAll) = typeNameAndForall typeInfo
     pName = "_" <> n
-    otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing\n"
-                                | otherwise = "\n"
+    otherConstructorFallThrough | otherConstructors = spaces 4 <> "f _ = Nothing"
+                                | otherwise = ""
 
-recordEntryToLens :: SumType 'PureScript -> Text -> RecordEntry 'PureScript -> Text
-recordEntryToLens st constructorName e =
-  case hasUnderscore of
-    False -> ""
-    True ->
-         lensName <> forAll <>  "Lens' " <> typName <> " " <> recType <> "\n"
-      <> lensName <> " = lens get set\n  where\n"
-      <> spaces 4 <> "get (" <> constructorName <> " r) = r." <> recName <> "\n"
-      <> spaces 4 <> "set (" <> constructorName <> " r) = " <> setter
+recordEntryToLens :: SumType 'PureScript -> RecordEntry 'PureScript -> Text
+recordEntryToLens st e =
+  if hasUnderscore
+  then lensName <> forAll <>  "Lens' " <> typName <> " " <> recType <> "\n"
+      <> lensName <> " = _Newtype <<< prop (SProxy :: SProxy \"" <> recName <> "\")\n"
+  else ""
   where
-    (typName, forAll) = typeNameAndForall st
-    setter = constructorName <>  " <<< r { " <> recName <> " = _ }\n"
+    (typName, forAll) = typeNameAndForall (st ^. sumTypeInfo)
     recName = e ^. recLabel
     lensName = T.drop 1 recName
     recType = typeInfoToText False (e ^. recValue)
