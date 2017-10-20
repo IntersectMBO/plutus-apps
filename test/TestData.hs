@@ -50,6 +50,16 @@ data SingleRecord a b = SingleRecord {
   , c  :: String
   } deriving(Generic, Typeable, Show)
 
+data TwoRecords
+  = FirstRecord {
+    _fra :: String
+  , _frb :: Int
+  }
+  | SecondRecord {
+    _src :: Int
+  , _srd :: [Int]
+  } deriving(Generic, Typeable, Show)
+
 newtype SomeNewtype = SomeNewtype Int
   deriving (Generic, Typeable, Show)
 

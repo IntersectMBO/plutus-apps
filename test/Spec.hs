@@ -7,8 +7,6 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 module Main where
-
-import           Control.Monad                             (unless)
 import qualified Data.Map                                  as Map
 import           Data.Monoid                               ((<>))
 import           Data.Proxy
@@ -18,13 +16,10 @@ import           Language.PureScript.Bridge.TypeParameters
 import           Test.Hspec                                (Spec, describe,
                                                             hspec, it)
 import           Test.Hspec.Expectations.Pretty
-
 import           TestData
 
-
-
 main :: IO ()
-main = hspec $ do allTests
+main = hspec $ allTests
 
 
 allTests :: Spec
@@ -54,6 +49,40 @@ allTests =
                   }
                 ]
        in bst `shouldBe` st
+    it "tests generation of for custom type Foo" $
+     let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
+         recTypeText = sumTypeToText recType
+         txt = T.stripEnd $
+               T.unlines [ "data Foo ="
+                         , "    Foo"
+                         , "  | Bar Int"
+                         , "  | FooBar Int String"
+                         , ""
+                         , "derive instance genericFoo :: Generic Foo"
+                         , ""
+                         , ""
+                         , "--------------------------------------------------------------------------------"
+                         , "_Foo :: Prism' Foo Unit"
+                         , "_Foo = prism' (\\_ -> Foo) f"
+                         , "  where"
+                         , "    f Foo = Just unit"
+                         , "    f _ = Nothing"
+                         , ""
+                         , "_Bar :: Prism' Foo Int"
+                         , "_Bar = prism' Bar f"
+                         , "  where"
+                         , "    f (Bar a) = Just $ a"
+                         , "    f _ = Nothing"
+                         , ""
+                         , "_FooBar :: Prism' Foo { a :: Int, b :: String }"
+                         , "_FooBar = prism' (\\{ a, b } -> FooBar a b) f"
+                         , "  where"
+                         , "    f (FooBar a b) = Just $ { a: a, b: b }"
+                         , "    f _ = Nothing"
+                         , ""
+                         , "--------------------------------------------------------------------------------"
+                         ]
+     in recTypeText `shouldBe` txt
     it "tests the generation of a whole (dummy) module" $
       let advanced = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
           modules = sumTypeToModule advanced Map.empty
@@ -62,8 +91,12 @@ allTests =
                           , "module TestData where"
                           , ""
                           , "import Data.Either (Either)"
-                          , "import Data.Lens (Lens', Prism', lens, prism')"
+                          , "import Data.Lens (Iso', Lens', Prism', lens, prism')"
+                          , "import Data.Lens.Record (prop)"
+                          , "import Data.Lens.Iso.Newtype (_Newtype)"
                           , "import Data.Maybe (Maybe, Maybe(..))"
+                          , "import Data.Newtype (class Newtype)"
+                          , "import Data.Symbol (SProxy(SProxy))"
                           , ""
                           , "import Prelude"
                           , "import Data.Generic (class Generic)"
@@ -77,6 +110,7 @@ allTests =
                           , "    }"
                           , ""
                           , "derive instance genericBar :: (Generic a, Generic b, Generic (m b)) => Generic (Bar a b m c)"
+                          , ""
                           , ""
                           , "--------------------------------------------------------------------------------"
                           , "_Bar1 :: forall a b m c. Prism' (Bar a b m c) (Maybe a)"
@@ -97,7 +131,7 @@ allTests =
                           , "    f (Bar3 a) = Just $ a"
                           , "    f _ = Nothing"
                           , ""
-                          , "_Bar4 :: forall a b m c. Prism' (Bar a b m c) { myMonadicResult :: m b}"
+                          , "_Bar4 :: forall a b m c. Prism' (Bar a b m c) { myMonadicResult :: m b }"
                           , "_Bar4 = prism' Bar4 f"
                           , "  where"
                           , "    f (Bar4 r) = Just r"
@@ -106,11 +140,11 @@ allTests =
                           , "--------------------------------------------------------------------------------"
                           ]
       in m `shouldBe` txt
-    it "test generation of Prisms" $
+    it "test generation of constructor optics" $
       let bar = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
           foo = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
-          barPrisms = sumTypeToPrisms bar
-          fooPrisms = sumTypeToPrisms foo
+          barOptics = constructorOptics bar
+          fooOptics = constructorOptics foo
           txt = T.unlines [
                             "_Bar1 :: forall a b m c. Prism' (Bar a b m c) (Maybe a)"
                           , "_Bar1 = prism' Bar1 f"
@@ -130,7 +164,7 @@ allTests =
                           , "    f (Bar3 a) = Just $ a"
                           , "    f _ = Nothing"
                           , ""
-                          , "_Bar4 :: forall a b m c. Prism' (Bar a b m c) { myMonadicResult :: m b}"
+                          , "_Bar4 :: forall a b m c. Prism' (Bar a b m c) { myMonadicResult :: m b }"
                           , "_Bar4 = prism' Bar4 f"
                           , "  where"
                           , "    f (Bar4 r) = Just r"
@@ -155,31 +189,26 @@ allTests =
                           , "    f _ = Nothing"
                           , ""
                           ]
-      in (barPrisms <> fooPrisms) `shouldBe` txt
-    it "tests generation of lenses" $
+      in (barOptics <> fooOptics) `shouldBe` txt
+    it "tests generation of record optics" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (SingleRecord A B)))
           bar = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
-          barLenses = sumTypeToLenses bar
-          recTypeLenses = sumTypeToLenses recType
+          barOptics = recordOptics bar
+          recTypeOptics = recordOptics recType
           txt = T.unlines [
                             "a :: forall a b. Lens' (SingleRecord a b) a"
-                          , "a = lens get set"
-                          , "  where"
-                          , "    get (SingleRecord r) = r._a"
-                          , "    set (SingleRecord r) = SingleRecord <<< r { _a = _ }"
+                          , "a = _Newtype <<< prop (SProxy :: SProxy \"_a\")"
                           , ""
                           , "b :: forall a b. Lens' (SingleRecord a b) b"
-                          , "b = lens get set"
-                          , "  where"
-                          , "    get (SingleRecord r) = r._b"
-                          , "    set (SingleRecord r) = SingleRecord <<< r { _b = _ }"
+                          , "b = _Newtype <<< prop (SProxy :: SProxy \"_b\")"
                           , ""
                           ]
-      in (barLenses <> recTypeLenses) `shouldBe` txt
+      in (barOptics <> recTypeOptics) `shouldBe` txt
     it "tests generation of newtypes for record data type" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy (SingleRecord A B)))
-          recTypeText = sumTypeToTypeDecls recType
-          txt = T.unlines [ "newtype SingleRecord a b ="
+          recTypeText = sumTypeToText recType
+          txt = T.stripEnd $
+                T.unlines [ "newtype SingleRecord a b ="
                           , "    SingleRecord {"
                           , "      _a :: a"
                           , "    , _b :: b"
@@ -187,23 +216,60 @@ allTests =
                           , "    }"
                           , ""
                           , "derive instance genericSingleRecord :: (Generic a, Generic b) => Generic (SingleRecord a b)"
+                          , ""
+                          , "derive instance newtypeSingleRecord :: Newtype (SingleRecord a b) _"
+                          , ""
+                          , ""
+                          , "--------------------------------------------------------------------------------"
+                          , "_SingleRecord :: forall a b. Iso' (SingleRecord a b) { _a :: a, _b :: b, c :: String}"
+                          , "_SingleRecord = _Newtype"
+                          ,""
+                          , "a :: forall a b. Lens' (SingleRecord a b) a"
+                          , "a = _Newtype <<< prop (SProxy :: SProxy \"_a\")"
+                          , ""
+                          , "b :: forall a b. Lens' (SingleRecord a b) b"
+                          , "b = _Newtype <<< prop (SProxy :: SProxy \"_b\")"
+                          , ""
+                          , "--------------------------------------------------------------------------------"
                           ]
       in recTypeText `shouldBe` txt
     it "tests generation of newtypes for haskell newtype" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy SomeNewtype))
-          recTypeText = sumTypeToTypeDecls recType
-          txt = T.unlines [ "newtype SomeNewtype ="
+          recTypeText = sumTypeToText recType
+          txt = T.stripEnd $
+                T.unlines [ "newtype SomeNewtype ="
                           , "    SomeNewtype Int"
                           , ""
                           , "derive instance genericSomeNewtype :: Generic SomeNewtype"
+                          , ""
+                          , "derive instance newtypeSomeNewtype :: Newtype SomeNewtype _"
+                          , ""
+                          , ""
+                          , "--------------------------------------------------------------------------------"
+                          , "_SomeNewtype :: Iso' SomeNewtype Int"
+                          , "_SomeNewtype = _Newtype"
+                          , "--------------------------------------------------------------------------------"
                           ]
       in recTypeText `shouldBe` txt
     it "tests generation of newtypes for haskell data type with one argument" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy SingleValueConstr))
-          recTypeText = sumTypeToTypeDecls recType
-          txt = T.unlines [ "newtype SingleValueConstr ="
+          recTypeText = sumTypeToText recType
+          txt = T.stripEnd $
+                T.unlines [ "newtype SingleValueConstr ="
                           , "    SingleValueConstr Int"
                           , ""
                           , "derive instance genericSingleValueConstr :: Generic SingleValueConstr"
+                          , ""
+                          , "derive instance newtypeSingleValueConstr :: Newtype SingleValueConstr _"
+                          , ""
+                          , ""
+                          , "--------------------------------------------------------------------------------"
+                          , "_SingleValueConstr :: Iso' SingleValueConstr Int"
+                          , "_SingleValueConstr = _Newtype"
+                          , "--------------------------------------------------------------------------------"
                           ]
       in recTypeText `shouldBe` txt
+    it "tests that sum types with multiple constructors don't generate record optics" $
+      let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy TwoRecords))
+          recTypeOptics = recordOptics recType
+      in recTypeOptics `shouldBe` "" -- No record optics for multi-constructors
