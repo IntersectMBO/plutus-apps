@@ -66,6 +66,9 @@ newtype SomeNewtype = SomeNewtype Int
 data SingleValueConstr = SingleValueConstr Int
   deriving (Generic, Typeable, Show)
 
+data SingleProduct = SingleProduct Text Int
+  deriving (Generic, Typeable, Show)
+
 a :: HaskellType
 a = mkTypeInfo (Proxy :: Proxy (Either String Int))
 
