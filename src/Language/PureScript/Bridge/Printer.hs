@@ -186,19 +186,18 @@ mkTypeSig rs  = fromEntries recordEntryToText rs
 
 constructorToOptic :: Bool -> TypeInfo 'PureScript -> DataConstructor 'PureScript -> Text
 constructorToOptic otherConstructors typeInfo (DataConstructor n args) =
-  case args of
-    Left cs  ->
-      if otherConstructors
-      then
+  case (args,otherConstructors) of
+    (Left [c], False) ->
+        pName <> forAll <>  "Iso' " <> typName <> " " <> mkTypeSig (constructorTypes [c]) <> "\n"
+              <> pName <> " = _Newtype"
+              <> "\n"
+    (Left cs, _) ->
         pName <> forAll <>  "Prism' " <> typName <> " " <> mkTypeSig types <> "\n"
-             <> pName <> " = prism' " <> getter <> " f\n"
-             <> spaces 2 <> "where\n"
-             <> spaces 4 <> "f " <> mkF cs
-             <> otherConstructorFallThrough
-             <> "\n"
-      else pName <> forAll <>  "Iso' " <> typName <> " " <> mkTypeSig (constructorTypes cs) <> "\n"
-             <> pName <> " = _Newtype"
-             <> "\n"
+              <> pName <> " = prism' " <> getter <> " f\n"
+              <> spaces 2 <> "where\n"
+              <> spaces 4 <> "f " <> mkF cs
+              <> otherConstructorFallThrough
+              <> "\n"
       where
         mkF [] = n <> " = Just unit\n"
         mkF _  = "(" <> n <> " " <> T.unwords (map _recLabel types) <> ") = Just $ " <> mkFnArgs types <> "\n"
@@ -208,18 +207,16 @@ constructorToOptic otherConstructors typeInfo (DataConstructor n args) =
           where
             cArgs = map (T.singleton . fst) $ zip ['a'..] cs
         types = constructorTypes cs
-    Right rs ->
-      if otherConstructors
-      then
-        pName <> forAll <> "Prism' " <> typName <> " { " <> recordSig rs <> " }\n"
-             <> pName <> " = prism' " <> n <> " f\n"
-             <> spaces 2 <> "where\n"
-             <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
-             <> otherConstructorFallThrough
-             <> "\n"
-      else
+    (Right rs, False) ->
         pName <> forAll <> "Iso' " <> typName <> " { " <> recordSig rs <> "}\n"
               <> pName <> " = _Newtype\n"
+              <> "\n"
+    (Right rs, True) ->
+        pName <> forAll <> "Prism' " <> typName <> " { " <> recordSig rs <> " }\n"
+              <> pName <> " = prism' " <> n <> " f\n"
+              <> spaces 2 <> "where\n"
+              <> spaces 4 <> "f (" <> n <> " r) = Just r\n"
+              <> otherConstructorFallThrough
               <> "\n"
   where
     recordSig rs = T.intercalate ", " (map recordEntryToText rs)

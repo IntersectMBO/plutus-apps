@@ -269,6 +269,25 @@ allTests =
                           , "--------------------------------------------------------------------------------"
                           ]
       in recTypeText `shouldBe` txt
+    it "tests generation for haskell data type with one constructor, two arguments" $
+      let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy SingleProduct))
+          recTypeText = sumTypeToText recType
+          txt = T.stripEnd $
+                T.unlines [ "data SingleProduct ="
+                          , "    SingleProduct String Int"
+                          , ""
+                          , "derive instance genericSingleProduct :: Generic SingleProduct"
+                          , ""
+                          , ""
+                          , "--------------------------------------------------------------------------------"
+                          , "_SingleProduct :: Prism' SingleProduct { a :: String, b :: Int }"
+                          , "_SingleProduct = prism' (\\{ a, b } -> SingleProduct a b) f"
+                          , "  where"
+                          , "    f (SingleProduct a b) = Just $ { a: a, b: b }"
+                          , ""
+                          , "--------------------------------------------------------------------------------"
+                          ]
+      in recTypeText `shouldBe` txt
     it "tests that sum types with multiple constructors don't generate record optics" $
       let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy TwoRecords))
           recTypeOptics = recordOptics recType
