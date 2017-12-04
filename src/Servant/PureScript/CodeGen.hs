@@ -127,10 +127,16 @@ genFnBody rParams req = "do"
               Nothing -> "}"
               Just _  -> ", content =" <+> "toNullable <<< Just <<< stringify <<< encodeJson $ reqBody" </> "}"
       )
-      </> "affResp <- affjax affReq"
-      </> "let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d"
-      </> "getResult affReq decodeJson affResp"
+      </> if shallParseBody (req^.reqReturnType)
+          then "affResp <- affjax affReq"
+           </> "let decodeJson = case spOpts_.decodeJson of SPSettingsDecodeJson_ d -> d"
+           </> "getResult affReq decodeJson affResp"
+          else "_ <- affjax affReq"
+           </> "pure unit"
     ) <> line
+  where
+    shallParseBody Nothing = False
+    shallParseBody (Just t) = t^.typeName /= "Unit"
 
 genBuildURL :: Url PSType -> Doc
 genBuildURL url = psVar baseURLId <+> "<>"
