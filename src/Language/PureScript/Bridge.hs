@@ -106,6 +106,7 @@ defaultBridge = textBridge
     <|> doubleBridge
     <|> tupleBridge
     <|> unitBridge
+    <|> noContentBridge
 
 -- | Translate types in a constructor.
 bridgeConstructor :: FullBridge -> DataConstructor 'Haskell -> DataConstructor 'PureScript

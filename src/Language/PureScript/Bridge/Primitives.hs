@@ -46,3 +46,6 @@ textBridge = do
 
 unitBridge :: BridgePart
 unitBridge = typeName ^== "()" >> return psUnit
+
+noContentBridge :: BridgePart
+noContentBridge = typeName ^== "NoContent" >> return psUnit
