@@ -33,7 +33,7 @@ stringBridge = do
 data Foo = Foo
          | Bar Int
          | FooBar Int Text
-         deriving (Generic, Typeable, Show)
+         deriving (Eq, Ord, Generic, Typeable, Show)
 
 data Test = TestIntInt Int Int
           | TestBool {bool :: Bool}

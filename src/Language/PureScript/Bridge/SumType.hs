@@ -16,6 +16,7 @@ module Language.PureScript.Bridge.SumType (
 , RecordEntry (..)
 , Instance(..)
 , classOf
+, nootype
 , getUsedTypes
 , constructorToTypes
 , sigConstructor

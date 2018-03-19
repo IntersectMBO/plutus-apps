@@ -33,7 +33,8 @@ allTests =
                        , _typeParameters = []}
        in bst `shouldBe` ti
     it "tests with custom type Foo" $
-      let bst = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
+      let prox = Proxy :: Proxy Foo
+          bst = bridgeSumType (buildBridge defaultBridge) (order prox $ mkSumType prox)
           st = SumType
                 TypeInfo { _typePackage = "" , _typeModule = "TestData" , _typeName = "Foo" , _typeParameters = [] }
                 [ DataConstructor { _sigConstructor = "Foo" , _sigValues = Left [] }
@@ -48,10 +49,11 @@ allTests =
                                       ]
                   }
                 ]
-                [Generic]
+                [Equal, Order, Generic]
        in bst `shouldBe` st
     it "tests generation of for custom type Foo" $
-     let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
+     let prox = Proxy :: Proxy Foo
+         recType = bridgeSumType (buildBridge defaultBridge) (order prox $ mkSumType prox)
          recTypeText = sumTypeToText recType
          txt = T.stripEnd $
                T.unlines [ "data Foo ="
@@ -59,6 +61,8 @@ allTests =
                          , "  | Bar Int"
                          , "  | FooBar Int String"
                          , ""
+                         , "derive instance eqFoo :: Eq Foo"
+                         , "derive instance ordFoo :: Ord Foo"
                          , "derive instance genericFoo :: Generic Foo"
                          , ""
                          , "--------------------------------------------------------------------------------"

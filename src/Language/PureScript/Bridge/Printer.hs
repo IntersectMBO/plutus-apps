@@ -6,14 +6,15 @@ module Language.PureScript.Bridge.Printer where
 
 import           Control.Lens
 import           Control.Monad
-import           Data.Map.Strict                     (Map)
-import qualified Data.Map.Strict                     as Map
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Monoid
-import           Data.Set                            (Set)
-import qualified Data.Set                            as Set
-import           Data.Text                           (Text)
-import qualified Data.Text                           as T
-import qualified Data.Text.IO                        as T
+import           Data.Set (Set)
+import           Data.Maybe (isJust)
+import qualified Data.Set as Set
+import           Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import           System.Directory
 import           System.FilePath
 
@@ -101,12 +102,7 @@ sumTypeToTypeDecls st@(SumType t cs _) = T.unlines $
   : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) <> "\n"
   : instances st
   where
-    dataOrNewtype = if isNewtype cs then "newtype" else "data"
-    isNewtype [constr]
-      | either isSingletonList (const True) (_sigValues constr) = True
-    isNewtype _   = False
-    isSingletonList [_] = True
-    isSingletonList _   = False
+    dataOrNewtype = if isJust (nootype cs) then "newtype" else "data"
 
 -- | Given a Purescript type, generate `derive instance` lines for typeclass
 -- instances it claims to have.
