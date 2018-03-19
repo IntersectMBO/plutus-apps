@@ -27,6 +27,7 @@ module Language.PureScript.Bridge.SumType (
 ) where
 
 import           Control.Lens hiding (from, to)
+import           Data.List (nub)
 import           Data.Maybe (maybeToList)
 import           Data.Proxy
 import           Data.Set (Set)
@@ -71,12 +72,13 @@ nootype cs = case cs of
   where isSingletonList [_] = True
         isSingletonList _   = False
 
-equal :: Eq a => Proxy a -> Instance
-equal _ = Equal
+-- | Ensure that an `Eq` instance is generated for your type.
+equal :: Eq a => Proxy a -> SumType t -> SumType t
+equal _ (SumType ti dc is) = SumType ti dc . nub $ Equal : is
 
--- | Implies `Eq` as well.
-order :: Ord a => Proxy a -> Instance
-order _ = Order
+-- | Ensure that both `Eq` and `Ord` instances are generated for your type.
+order :: Ord a => Proxy a -> SumType t -> SumType t
+order _ (SumType ti dc is) = SumType ti dc . nub $ Equal : Order : is
 
 classOf :: Instance -> Text
 classOf Generic = "Generic"
