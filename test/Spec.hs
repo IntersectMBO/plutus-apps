@@ -48,6 +48,7 @@ allTests =
                                       ]
                   }
                 ]
+                [Generic]
        in bst `shouldBe` st
     it "tests generation of for custom type Foo" $
      let recType = bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
@@ -59,7 +60,6 @@ allTests =
                          , "  | FooBar Int String"
                          , ""
                          , "derive instance genericFoo :: Generic Foo"
-                         , ""
                          , ""
                          , "--------------------------------------------------------------------------------"
                          , "_Foo :: Prism' Foo Unit"
@@ -110,7 +110,6 @@ allTests =
                           , "    }"
                           , ""
                           , "derive instance genericBar :: (Generic a, Generic b, Generic (m b)) => Generic (Bar a b m c)"
-                          , ""
                           , ""
                           , "--------------------------------------------------------------------------------"
                           , "_Bar1 :: forall a b m c. Prism' (Bar a b m c) (Maybe a)"
@@ -216,9 +215,7 @@ allTests =
                           , "    }"
                           , ""
                           , "derive instance genericSingleRecord :: (Generic a, Generic b) => Generic (SingleRecord a b)"
-                          , ""
                           , "derive instance newtypeSingleRecord :: Newtype (SingleRecord a b) _"
-                          , ""
                           , ""
                           , "--------------------------------------------------------------------------------"
                           , "_SingleRecord :: forall a b. Iso' (SingleRecord a b) { _a :: a, _b :: b, c :: String}"
@@ -241,9 +238,7 @@ allTests =
                           , "    SomeNewtype Int"
                           , ""
                           , "derive instance genericSomeNewtype :: Generic SomeNewtype"
-                          , ""
                           , "derive instance newtypeSomeNewtype :: Newtype SomeNewtype _"
-                          , ""
                           , ""
                           , "--------------------------------------------------------------------------------"
                           , "_SomeNewtype :: Iso' SomeNewtype Int"
@@ -259,9 +254,7 @@ allTests =
                           , "    SingleValueConstr Int"
                           , ""
                           , "derive instance genericSingleValueConstr :: Generic SingleValueConstr"
-                          , ""
                           , "derive instance newtypeSingleValueConstr :: Newtype SingleValueConstr _"
-                          , ""
                           , ""
                           , "--------------------------------------------------------------------------------"
                           , "_SingleValueConstr :: Iso' SingleValueConstr Int"
@@ -277,7 +270,6 @@ allTests =
                           , "    SingleProduct String Int"
                           , ""
                           , "derive instance genericSingleProduct :: Generic SingleProduct"
-                          , ""
                           , ""
                           , "--------------------------------------------------------------------------------"
                           , "_SingleProduct :: Prism' SingleProduct { a :: String, b :: Int }"

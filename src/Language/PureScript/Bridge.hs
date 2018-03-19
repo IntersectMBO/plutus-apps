@@ -86,7 +86,7 @@ writePSTypes root br sts = do
 --
 -- > bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
 bridgeSumType :: FullBridge -> SumType 'Haskell -> SumType 'PureScript
-bridgeSumType br (SumType t cs) = SumType (br t) $ map (bridgeConstructor br) cs
+bridgeSumType br (SumType t cs is) = SumType (br t) (map (bridgeConstructor br) cs) is
 
 -- | Default bridge for mapping primitive/common types:
 --   You can append your own bridges like this:

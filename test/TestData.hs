@@ -84,5 +84,4 @@ b = mkSumType (Proxy :: Proxy (Either String Int))
 t :: TypeInfo 'PureScript
 cs :: [DataConstructor 'PureScript]
 psB :: SumType 'PureScript
-psB@(SumType t cs) = bridgeSumType (buildBridge defaultBridge) b
-
+psB@(SumType t cs _) = bridgeSumType (buildBridge defaultBridge) b

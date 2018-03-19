@@ -96,31 +96,38 @@ sumTypeToText st =
     sep = T.replicate 80 "-"
 
 sumTypeToTypeDecls :: SumType 'PureScript -> Text
-sumTypeToTypeDecls st@(SumType t cs) = T.unlines $
+sumTypeToTypeDecls st@(SumType t cs _) = T.unlines $
     dataOrNewtype <> " " <> typeInfoToText True t <> " ="
   : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) <> "\n"
-  : "derive instance generic" <> _typeName t <> " :: " <> genericConstraints <> genericInstance t <> "\n"
-  : [ "derive instance newtype" <> _typeName t <> " :: " <> newtypeInstance t <> " _\n" | isNewtype cs]
+  : instances st
   where
-    genericInstance = ("Generic " <>) . typeInfoToText False
-    newtypeInstance = ("Newtype " <>) . typeInfoToText False
-    genericConstraints
-        | stpLength == 0 = mempty
-        | otherwise = (<> " => ") $
-            if stpLength == 1
-                then genericConstraintsInner
-                else bracketWrap genericConstraintsInner
-    genericConstraintsInner = T.intercalate ", " $ map genericInstance sumTypeParameters
-    stpLength = length sumTypeParameters
-    bracketWrap x = "(" <> x <> ")"
-    sumTypeParameters = filter isTypeParam . Set.toList $ getUsedTypes st
-    isTypeParam typ = _typeName typ `elem` map _typeName (_typeParameters t)
+    dataOrNewtype = if isNewtype cs then "newtype" else "data"
     isNewtype [constr]
       | either isSingletonList (const True) (_sigValues constr) = True
     isNewtype _   = False
-    dataOrNewtype = if isNewtype cs then "newtype" else "data"
     isSingletonList [_] = True
     isSingletonList _   = False
+
+-- | Given a Purescript type, generate `derive instance` lines for typeclass
+-- instances it claims to have.
+instances :: SumType 'PureScript -> [Text]
+instances st@(SumType t _ is) = map go is
+  where
+    go :: Instance -> Text
+    go i = "derive instance " <> T.toLower c <> _typeName t <> " :: " <> extras i <> c <> " " <> typeInfoToText False t <> postfix i
+      where c = classOf i
+            extras Generic | stpLength == 0 = mempty
+                           | stpLength == 1 = genericConstraintsInner <> " => "
+                           | otherwise      = bracketWrap genericConstraintsInner <> " => "
+            extras _ = ""
+            postfix Newtype = " _"
+            postfix _ = ""
+            stpLength = length sumTypeParameters
+            sumTypeParameters = filter isTypeParam . Set.toList $ getUsedTypes st
+            isTypeParam typ = _typeName typ `elem` map _typeName (_typeParameters t)
+            genericConstraintsInner = T.intercalate ", " $ map genericInstance sumTypeParameters
+            genericInstance = ("Generic " <>) . typeInfoToText False
+            bracketWrap x = "(" <> x <> ")"
 
 sumTypeToOptics :: SumType 'PureScript -> Text
 sumTypeToOptics st = constructorOptics st <> recordOptics st
@@ -134,10 +141,9 @@ constructorOptics st =
   where
     typeInfo = st ^. sumTypeInfo
 
-
 recordOptics :: SumType 'PureScript -> Text
 -- Match on SumTypes with a single DataConstructor (that's a list of a single element)
-recordOptics st@(SumType _ [_]) = T.unlines $ recordEntryToLens st <$> dcRecords
+recordOptics st@(SumType _ [_] _) = T.unlines $ recordEntryToLens st <$> dcRecords
   where
     cs = st ^. sumTypeConstructors
     dcRecords = lensableConstructor ^.. traversed.sigValues._Right.traverse.filtered hasUnderscore
@@ -259,7 +265,7 @@ sumTypesToModules :: Modules -> [SumType 'PureScript] -> Modules
 sumTypesToModules = foldr sumTypeToModule
 
 sumTypeToModule :: SumType 'PureScript -> Modules -> Modules
-sumTypeToModule st@(SumType t _) = Map.alter (Just . updateModule) (_typeModule t)
+sumTypeToModule st@(SumType t _ _) = Map.alter (Just . updateModule) (_typeModule t)
   where
     updateModule Nothing = PSModule {
           psModuleName = _typeModule t
