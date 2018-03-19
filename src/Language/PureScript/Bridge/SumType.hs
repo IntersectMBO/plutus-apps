@@ -15,7 +15,6 @@ module Language.PureScript.Bridge.SumType (
 , DataConstructor (..)
 , RecordEntry (..)
 , Instance(..)
-, classOf
 , nootype
 , getUsedTypes
 , constructorToTypes
@@ -61,7 +60,7 @@ mkSumType p = SumType (mkTypeInfo p) constructors (Generic : maybeToList (nootyp
     constructors = gToConstructors (from (undefined :: t))
 
 -- | Purescript typeclass instances that can be generated for your Haskell types.
-data Instance = Generic | Newtype | Equal | Order deriving (Eq, Show)
+data Instance = Generic | Newtype | Eq | Ord deriving (Eq, Show)
 
 -- | The Purescript typeclass `Newtype` might be derivable if the original
 -- Haskell type was a simple type wrapper.
@@ -75,17 +74,11 @@ nootype cs = case cs of
 
 -- | Ensure that an `Eq` instance is generated for your type.
 equal :: Eq a => Proxy a -> SumType t -> SumType t
-equal _ (SumType ti dc is) = SumType ti dc . nub $ Equal : is
+equal _ (SumType ti dc is) = SumType ti dc . nub $ Eq : is
 
 -- | Ensure that both `Eq` and `Ord` instances are generated for your type.
 order :: Ord a => Proxy a -> SumType t -> SumType t
-order _ (SumType ti dc is) = SumType ti dc . nub $ Equal : Order : is
-
-classOf :: Instance -> Text
-classOf Generic = "Generic"
-classOf Newtype = "Newtype"
-classOf Equal   = "Eq"
-classOf Order   = "Ord"
+order _ (SumType ti dc is) = SumType ti dc . nub $ Eq : Ord : is
 
 data DataConstructor (lang :: Language) =
   DataConstructor { _sigConstructor :: !Text -- ^ e.g. `Left`/`Right` for `Either`

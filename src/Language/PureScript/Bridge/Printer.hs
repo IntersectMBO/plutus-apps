@@ -111,7 +111,7 @@ instances st@(SumType t _ is) = map go is
   where
     go :: Instance -> Text
     go i = "derive instance " <> T.toLower c <> _typeName t <> " :: " <> extras i <> c <> " " <> typeInfoToText False t <> postfix i
-      where c = classOf i
+      where c = T.pack $ show i
             extras Generic | stpLength == 0 = mempty
                            | stpLength == 1 = genericConstraintsInner <> " => "
                            | otherwise      = bracketWrap genericConstraintsInner <> " => "

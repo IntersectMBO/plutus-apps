@@ -49,7 +49,7 @@ allTests =
                                       ]
                   }
                 ]
-                [Equal, Order, Generic]
+                [Eq, Ord, Generic]
        in bst `shouldBe` st
     it "tests generation of for custom type Foo" $
      let prox = Proxy :: Proxy Foo
