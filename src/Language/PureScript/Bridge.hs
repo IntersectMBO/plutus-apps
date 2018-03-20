@@ -22,16 +22,22 @@ import           Language.PureScript.Bridge.SumType    as Bridge
 import           Language.PureScript.Bridge.Tuple      as Bridge
 import           Language.PureScript.Bridge.TypeInfo   as Bridge
 
-
 -- | Your entry point to this library and quite likely all you will need.
---   Make sure all your types derive Generic and Typeable.
+--   Make sure all your types derive `Generic` and `Typeable`.
 --   Typeable is not needed from ghc-7.10 on.
 --
 --   Then list all your types you want to use in PureScript and call 'writePSTypes':
 --
---   >  let myTypes = [
---   >      mkSumType (Proxy :: Proxy MyType1)
---   >    , mkSumType (Proxy :: Proxy MyType2)
+--   > data Foo = Foo { ... } deriving (Eq, Generic)
+--   > data Bar = A | B | C deriving (Eq, Ord, Generic)
+--   > data Baz = ... deriving (Generic)
+--   >
+--   > -- | All types will have a `Generic` instance produced in Purescript.
+--   > myTypes :: [SumType 'Haskell]
+--   > myTypes =
+--   >   [ let p = (Proxy :: Proxy Foo) in equal p (mkSumType p)  -- Also produce a `Eq` instance.
+--   >   , let p = (Proxy :: Proxy Bar) in order p (mkSumType p)  -- Produce both `Eq` and `Ord`.
+--   >   , mkSumType (Proxy :: Proxy Baz)  -- Just produce a `Generic` instance.
 --   >   ]
 --   >
 --   >  writePSTypes "path/to/your/purescript/project" (buildBridge defaultBridge) myTypes
@@ -86,7 +92,7 @@ writePSTypes root br sts = do
 --
 -- > bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
 bridgeSumType :: FullBridge -> SumType 'Haskell -> SumType 'PureScript
-bridgeSumType br (SumType t cs) = SumType (br t) $ map (bridgeConstructor br) cs
+bridgeSumType br (SumType t cs is) = SumType (br t) (map (bridgeConstructor br) cs) is
 
 -- | Default bridge for mapping primitive/common types:
 --   You can append your own bridges like this:

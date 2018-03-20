@@ -33,7 +33,7 @@ stringBridge = do
 data Foo = Foo
          | Bar Int
          | FooBar Int Text
-         deriving (Generic, Typeable, Show)
+         deriving (Eq, Ord, Generic, Typeable, Show)
 
 data Test = TestIntInt Int Int
           | TestBool {bool :: Bool}
@@ -84,5 +84,4 @@ b = mkSumType (Proxy :: Proxy (Either String Int))
 t :: TypeInfo 'PureScript
 cs :: [DataConstructor 'PureScript]
 psB :: SumType 'PureScript
-psB@(SumType t cs) = bridgeSumType (buildBridge defaultBridge) b
-
+psB@(SumType t cs _) = bridgeSumType (buildBridge defaultBridge) b

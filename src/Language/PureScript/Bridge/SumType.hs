@@ -6,14 +6,16 @@
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-
-
+{-# LANGUAGE OverloadedStrings    #-}
 
 module Language.PureScript.Bridge.SumType (
   SumType (..)
 , mkSumType
+, equal, order
 , DataConstructor (..)
 , RecordEntry (..)
+, Instance(..)
+, nootype
 , getUsedTypes
 , constructorToTypes
 , sigConstructor
@@ -24,36 +26,59 @@ module Language.PureScript.Bridge.SumType (
 , recValue
 ) where
 
-import           Control.Lens      hiding (from, to)
+import           Control.Lens hiding (from, to)
+import           Data.List (nub)
+import           Data.Maybe (maybeToList)
 import           Data.Proxy
-import           Data.Set          (Set)
-import qualified Data.Set          as Set
-import           Data.Text         (Text)
-import qualified Data.Text         as T
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Typeable
 import           Generics.Deriving
 
 import           Language.PureScript.Bridge.TypeInfo
 
 -- | Generic representation of your Haskell types.
-data SumType (lang :: Language) = SumType (TypeInfo lang) [DataConstructor lang] deriving (Show, Eq)
+data SumType (lang :: Language) = SumType (TypeInfo lang) [DataConstructor lang] [Instance] deriving (Show, Eq)
 
 -- | TypInfo lens for 'SumType'.
 sumTypeInfo :: Functor f => (TypeInfo lang -> f (TypeInfo lang) ) -> SumType lang -> f (SumType lang)
-sumTypeInfo inj (SumType info constrs) = flip SumType constrs <$> inj info
+sumTypeInfo inj (SumType info constrs is) = (\ti -> SumType ti constrs is) <$> inj info
 
 -- | DataConstructor lens for 'SumType'.
 sumTypeConstructors :: Functor f => ([DataConstructor lang] -> f [DataConstructor lang]) -> SumType lang -> f (SumType lang)
-sumTypeConstructors inj (SumType info constrs) = SumType info <$> inj constrs
+sumTypeConstructors inj (SumType info constrs is) = (\cs -> SumType info cs is) <$> inj constrs
 
 -- | Create a representation of your sum (and product) types,
 --   for doing type translations and writing it out to your PureScript modules.
 --   In order to get the type information we use a dummy variable of type 'Proxy' (YourType).
 mkSumType :: forall t. (Generic t, Typeable t, GDataConstructor (Rep t))
           => Proxy t -> SumType 'Haskell
-mkSumType p = SumType  (mkTypeInfo p) constructors
+mkSumType p = SumType (mkTypeInfo p) constructors (Generic : maybeToList (nootype constructors))
   where
     constructors = gToConstructors (from (undefined :: t))
+
+-- | Purescript typeclass instances that can be generated for your Haskell types.
+data Instance = Generic | Newtype | Eq | Ord deriving (Eq, Show)
+
+-- | The Purescript typeclass `Newtype` might be derivable if the original
+-- Haskell type was a simple type wrapper.
+nootype :: [DataConstructor lang] -> Maybe Instance
+nootype cs = case cs of
+  [constr] | either isSingletonList (const True) (_sigValues constr) -> Just Newtype
+           | otherwise -> Nothing
+  _ -> Nothing
+  where isSingletonList [_] = True
+        isSingletonList _   = False
+
+-- | Ensure that an `Eq` instance is generated for your type.
+equal :: Eq a => Proxy a -> SumType t -> SumType t
+equal _ (SumType ti dc is) = SumType ti dc . nub $ Eq : is
+
+-- | Ensure that both `Eq` and `Ord` instances are generated for your type.
+order :: Ord a => Proxy a -> SumType t -> SumType t
+order _ (SumType ti dc is) = SumType ti dc . nub $ Eq : Ord : is
 
 data DataConstructor (lang :: Language) =
   DataConstructor { _sigConstructor :: !Text -- ^ e.g. `Left`/`Right` for `Either`
@@ -109,7 +134,7 @@ instance (Selector a, Typeable t) => GRecordEntry (S1 a (K1 R t)) where
 --   This includes all types found at the right hand side of a sum type
 --   definition, not the type parameters of the sum type itself
 getUsedTypes :: SumType lang -> Set (TypeInfo lang)
-getUsedTypes (SumType _ cs) = foldr constructorToTypes Set.empty cs
+getUsedTypes (SumType _ cs _) = foldr constructorToTypes Set.empty cs
 
 constructorToTypes :: DataConstructor lang -> Set (TypeInfo lang) -> Set (TypeInfo lang)
 constructorToTypes (DataConstructor _ (Left myTs)) ts =
