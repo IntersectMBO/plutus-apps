@@ -317,7 +317,6 @@ allTests = do
                           , "import Data.Either (Either)"
                           , "import Data.Maybe (Maybe, Maybe(..))"
                           , "import Data.Newtype (class Newtype)"
-                          , "import Data.Symbol (SProxy(SProxy))"
                           , ""
                           , "import Prelude"
                           , "import Data.Generic (class Generic)"

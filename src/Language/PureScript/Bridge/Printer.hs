@@ -88,7 +88,6 @@ _lensImports = [
 _noLensImports :: [ImportLine]
 _noLensImports = [
     ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
-  , ImportLine "Data.Symbol" $ Set.fromList ["SProxy(SProxy)"]
   , ImportLine "Data.Newtype" $ Set.fromList ["class Newtype"]
   ]
   
