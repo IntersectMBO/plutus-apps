@@ -89,13 +89,21 @@ writePSTypes = writePSTypesWith Switches.defaultSwitch
 --   This function overwrites files - make backups or use version control!
 writePSTypesWith :: Switches.Switch -> FilePath -> FullBridge -> [SumType 'Haskell] -> IO ()
 writePSTypesWith switch root bridge sts = do
-    let bridged = map (bridgeSumType bridge) sts
-    let modules = M.elems $ sumTypesToModules M.empty bridged
-    mapM_ (printModule (Switches.getSettings switch) root) modules
+    mapM_ (printModule settings root) modules
     T.putStrLn "The following purescript packages are needed by the generated code:\n"
-    let packages = Set.insert "purescript-profunctor-lenses" $ sumTypesToNeededPackages bridged
     mapM_ (T.putStrLn . mappend "  - ") packages
     T.putStrLn "\nSuccessfully created your PureScript modules!"
+
+    where
+        settings = Switches.getSettings switch
+        bridged = map (bridgeSumType bridge) sts        
+        modules = M.elems $ sumTypesToModules M.empty bridged
+        packages =
+            if Switches.generateLenses settings then
+                Set.insert "purescript-profunctor-lenses" $ sumTypesToNeededPackages bridged
+            else
+                sumTypesToNeededPackages bridged
+                
         
 
 -- | Translate all 'TypeInfo' values in a 'SumType' to PureScript types.
