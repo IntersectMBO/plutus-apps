@@ -6,6 +6,8 @@ module Language.PureScript.Bridge (
   , defaultBridge
   , module Bridge
   , writePSTypes
+  , writePSTypesWith
+  , defaultSwitch, noLenses, genLenses
  ) where
 
 
