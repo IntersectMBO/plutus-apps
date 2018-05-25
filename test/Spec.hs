@@ -19,7 +19,7 @@ import           Test.Hspec.Expectations.Pretty
 import           TestData
 
 main :: IO ()
-main = hspec $ allTests
+main = hspec allTests
 
 
 allTests :: Spec

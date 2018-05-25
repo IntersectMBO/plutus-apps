@@ -54,6 +54,7 @@ source-repository head
 library
   -- Modules exported by the library.
   exposed-modules: Language.PureScript.Bridge
+                , Language.PureScript.Bridge.CodeGenSwitches
                 , Language.PureScript.Bridge.Builder
                 , Language.PureScript.Bridge.Primitives
                 , Language.PureScript.Bridge.Printer

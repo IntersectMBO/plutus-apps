@@ -21,6 +21,7 @@ import           System.FilePath
 
 import           Language.PureScript.Bridge.SumType
 import           Language.PureScript.Bridge.TypeInfo
+import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
 
 
 data Module (lang :: Language) = PSModule {
@@ -39,8 +40,8 @@ data ImportLine = ImportLine {
 type Modules = Map Text PSModule
 type ImportLines = Map Text ImportLine
 
-printModule :: FilePath -> PSModule -> IO ()
-printModule root m = do
+printModule :: Switches.Settings -> FilePath -> PSModule -> IO ()
+printModule settings root m = do
   unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
   T.writeFile mPath . moduleToText $ m
   where

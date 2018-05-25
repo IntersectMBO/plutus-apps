@@ -15,12 +15,13 @@ import qualified Data.Set                              as Set
 import qualified Data.Text.IO                          as T
 
 
-import           Language.PureScript.Bridge.Builder    as Bridge
-import           Language.PureScript.Bridge.Primitives as Bridge
-import           Language.PureScript.Bridge.Printer    as Bridge
-import           Language.PureScript.Bridge.SumType    as Bridge
-import           Language.PureScript.Bridge.Tuple      as Bridge
-import           Language.PureScript.Bridge.TypeInfo   as Bridge
+import           Language.PureScript.Bridge.Builder         as Bridge
+import           Language.PureScript.Bridge.Primitives      as Bridge
+import           Language.PureScript.Bridge.Printer         as Bridge
+import           Language.PureScript.Bridge.SumType         as Bridge
+import           Language.PureScript.Bridge.Tuple           as Bridge
+import           Language.PureScript.Bridge.TypeInfo        as Bridge
+import           Language.PureScript.Bridge.CodeGenSwitches as Switches
 
 -- | Your entry point to this library and quite likely all you will need.
 --   Make sure all your types derive `Generic` and `Typeable`.
@@ -75,14 +76,27 @@ import           Language.PureScript.Bridge.TypeInfo   as Bridge
 --  == /WARNING/:
 --   This function overwrites files - make backups or use version control!
 writePSTypes :: FilePath -> FullBridge -> [SumType 'Haskell] -> IO ()
-writePSTypes root br sts = do
-    let bridged = map (bridgeSumType br) sts
+writePSTypes = writePSTypesWith Switches.defaultSwitch
+
+
+-- | works like `writePSTypes` but you can add additional switches to control the generation of your PureScript code
+--
+--  == Switches/Settings:
+--
+--   - `noLenses` and `genLenses` to control if the `purescript-profunctor-lenses` are generated for your types
+--
+--  == /WARNING/:
+--   This function overwrites files - make backups or use version control!
+writePSTypesWith :: Switches.Switch -> FilePath -> FullBridge -> [SumType 'Haskell] -> IO ()
+writePSTypesWith switch root bridge sts = do
+    let bridged = map (bridgeSumType bridge) sts
     let modules = M.elems $ sumTypesToModules M.empty bridged
-    mapM_ (printModule root) modules
+    mapM_ (printModule (Switches.getSettings switch) root) modules
     T.putStrLn "The following purescript packages are needed by the generated code:\n"
     let packages = Set.insert "purescript-profunctor-lenses" $ sumTypesToNeededPackages bridged
     mapM_ (T.putStrLn . mappend "  - ") packages
     T.putStrLn "\nSuccessfully created your PureScript modules!"
+        
 
 -- | Translate all 'TypeInfo' values in a 'SumType' to PureScript types.
 --
