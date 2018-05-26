@@ -89,7 +89,7 @@ type FullBridge = HaskellType -> PSType
 data BridgeData = BridgeData {
   -- | The Haskell type to translate.
     _haskType   :: HaskellType
-  -- | Reference to the bride itself, needed for translation of type constructors.
+  -- | Reference to the bridge itself, needed for translation of type constructors.
   , _fullBridge :: FullBridge
   }
 
