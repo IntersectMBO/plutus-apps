@@ -29,7 +29,7 @@ allTests = do
     let settings = defaultSettings
     it "tests with Int" $
       let bst = buildBridge defaultBridge (mkTypeInfo (Proxy :: Proxy Int))
-          ti  = TypeInfo { _typePackage    = "purescript-prim"
+          ti  = TypeInfo { _typePackage    = ""
                        , _typeModule     = "Prim"
                        , _typeName       = "Int"
                        , _typeParameters = []}
@@ -42,12 +42,12 @@ allTests = do
                 [ DataConstructor { _sigConstructor = "Foo" , _sigValues = Left [] }
                 , DataConstructor
                   { _sigConstructor = "Bar"
-                  , _sigValues = Left [ TypeInfo { _typePackage = "purescript-prim" , _typeModule = "Prim" , _typeName = "Int" , _typeParameters = [] } ]
+                  , _sigValues = Left [ TypeInfo { _typePackage = "" , _typeModule = "Prim" , _typeName = "Int" , _typeParameters = [] } ]
                   }
                 , DataConstructor
                   { _sigConstructor = "FooBar"
-                  , _sigValues = Left [ TypeInfo { _typePackage = "purescript-prim" , _typeModule = "Prim" , _typeName = "Int" , _typeParameters = [] }
-                                      , TypeInfo { _typePackage = "purescript-prim" , _typeModule = "Prim" , _typeName = "String" , _typeParameters = [] }
+                  , _sigValues = Left [ TypeInfo { _typePackage = "" , _typeModule = "Prim" , _typeName = "Int" , _typeParameters = [] }
+                                      , TypeInfo { _typePackage = "" , _typeModule = "Prim" , _typeName = "String" , _typeParameters = [] }
                                       ]
                   }
                 ]

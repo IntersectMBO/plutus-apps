@@ -18,11 +18,11 @@ import           Language.PureScript.Bridge.TypeInfo
 
 -- | Uses  type parameters from 'haskType' (bridged).
 psArray :: MonadReader BridgeData m => m PSType
-psArray = TypeInfo "purescript-prim" "Prim" "Array" <$> psTypeParameters
+psArray = TypeInfo "" "Prim" "Array" <$> psTypeParameters
 
 psBool :: PSType
 psBool = TypeInfo {
-    _typePackage = "purescript-prim"
+    _typePackage = ""
   , _typeModule = "Prim"
   , _typeName = "Boolean"
   , _typeParameters = []
@@ -34,7 +34,7 @@ psEither = TypeInfo "purescript-either" "Data.Either" "Either" <$> psTypeParamet
 
 psInt :: PSType
 psInt = TypeInfo {
-    _typePackage = "purescript-prim"
+    _typePackage = ""
   , _typeModule = "Prim"
   , _typeName = "Int"
   , _typeParameters = []
@@ -42,7 +42,7 @@ psInt = TypeInfo {
 
 psNumber :: PSType
 psNumber = TypeInfo {
-    _typePackage = "purescript-prim"
+    _typePackage = ""
   , _typeModule = "Prim"
   , _typeName = "Number"
   , _typeParameters = []
@@ -54,7 +54,7 @@ psMaybe = TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" <$> psTypeParameters
 
 psString :: PSType
 psString = TypeInfo {
-    _typePackage = "purescript-prim"
+    _typePackage = ""
   , _typeModule = "Prim"
   , _typeName = "String"
   , _typeParameters = []
