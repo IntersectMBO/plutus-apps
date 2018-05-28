@@ -81,7 +81,7 @@ writePSTypes :: FilePath -> FullBridge -> [SumType 'Haskell] -> IO ()
 writePSTypes = writePSTypesWith Switches.defaultSwitch
 
 
--- | works like `writePSTypes` but you can add additional switches to control the generation of your PureScript code
+-- | Works like `writePSTypes` but you can add additional switches to control the generation of your PureScript code
 --
 --  == Switches/Settings:
 --
@@ -98,15 +98,14 @@ writePSTypesWith switch root bridge sts = do
 
     where
         settings = Switches.getSettings switch
-        bridged = map (bridgeSumType bridge) sts        
+        bridged = map (bridgeSumType bridge) sts
         modules = M.elems $ sumTypesToModules M.empty bridged
         packages =
             if Switches.generateLenses settings then
                 Set.insert "purescript-profunctor-lenses" $ sumTypesToNeededPackages bridged
             else
                 sumTypesToNeededPackages bridged
-                
-        
+
 
 -- | Translate all 'TypeInfo' values in a 'SumType' to PureScript types.
 --
