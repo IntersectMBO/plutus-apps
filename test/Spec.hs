@@ -25,8 +25,8 @@ main = hspec allTests
 
 allTests :: Spec
 allTests = do
-  describe "buildBridge" $ do
-    let settings = defaultSettings
+  describe "buildBridge for purescript 0.11" $ do
+    let settings = purs_0_11_settings
     it "tests with Int" $
       let bst = buildBridge defaultBridge (mkTypeInfo (Proxy :: Proxy Int))
           ti  = TypeInfo { _typePackage    = ""
@@ -291,8 +291,8 @@ allTests = do
           recTypeOptics = recordOptics recType
       in recTypeOptics `shouldBe` "" -- No record optics for multi-constructors
 
-  describe "buildBridge without lens-code-gen" $ do
-    let settings = getSettings noLenses
+  describe "buildBridge without lens-code-gen for purescript 0.11" $ do
+    let settings = getSettings (noLenses <> useGen)
     it "tests generation of for custom type Foo" $
       let proxy = Proxy :: Proxy Foo
           recType = bridgeSumType (buildBridge defaultBridge) (order proxy $ mkSumType proxy)
