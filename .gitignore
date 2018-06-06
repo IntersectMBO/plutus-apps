@@ -21,3 +21,4 @@ dist
 dist-*
 shell.nix
 stack.yaml
+.dir-locals.el
