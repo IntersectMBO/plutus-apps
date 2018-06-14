@@ -63,34 +63,37 @@ moduleToText settings m = T.unlines $
   : map importLineToText allImports
   ++ [ ""
      , "import Prelude"
-     , "import Data.Generic (class Generic)"
      , ""
      ]
   ++ map (sumTypeToText settings) (psTypes m)
   where
-    otherImports = 
-      if Switches.generateLenses settings then
-        importsFromList _lensImports
-      else
-        importsFromList _noLensImports
+    otherImports = importsFromList (_lensImports settings ++ _genericsImports settings)
     allImports = Map.elems $ mergeImportLines otherImports (psImportLines m)
 
-_lensImports :: [ImportLine]
-_lensImports = [
-    ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
-  , ImportLine "Data.Lens" $ Set.fromList ["Iso'", "Prism'", "Lens'", "prism'", "lens"]
-  , ImportLine "Data.Lens.Record" $ Set.fromList ["prop"]
-  , ImportLine "Data.Lens.Iso.Newtype" $ Set.fromList ["_Newtype"]
-  , ImportLine "Data.Symbol" $ Set.fromList ["SProxy(SProxy)"]
-  , ImportLine "Data.Newtype" $ Set.fromList ["class Newtype"]
-  ]
 
-_noLensImports :: [ImportLine]
-_noLensImports = [
-    ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
-  , ImportLine "Data.Newtype" $ Set.fromList ["class Newtype"]
-  ]
-  
+_genericsImports :: Switches.Settings -> [ImportLine]
+_genericsImports settings
+  | Switches.genericsGenRep settings =
+     [ ImportLine "Data.Generic.Rep" $ Set.fromList ["class Generic"] ]
+  | otherwise =
+    [ ImportLine "Data.Generic" $ Set.fromList ["class Generic"] ]
+
+
+_lensImports :: Switches.Settings -> [ImportLine]
+_lensImports settings
+  | Switches.generateLenses settings =
+    [ ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
+    , ImportLine "Data.Lens" $ Set.fromList ["Iso'", "Prism'", "Lens'", "prism'", "lens"]
+    , ImportLine "Data.Lens.Record" $ Set.fromList ["prop"]
+    , ImportLine "Data.Lens.Iso.Newtype" $ Set.fromList ["_Newtype"]
+    , ImportLine "Data.Symbol" $ Set.fromList ["SProxy(SProxy)"]
+    , ImportLine "Data.Newtype" $ Set.fromList ["class Newtype"]
+    ]
+  | otherwise =
+    [ ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
+    , ImportLine "Data.Newtype" $ Set.fromList ["class Newtype"]
+    ]
+
 
 importLineToText :: ImportLine -> Text
 importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
@@ -99,25 +102,25 @@ importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
 
 sumTypeToText :: Switches.Settings -> SumType 'PureScript -> Text
 sumTypeToText settings st =
-  sumTypeToTypeDecls st <> additionalCode
+  sumTypeToTypeDecls settings st <> additionalCode
   where
     additionalCode =
       if Switches.generateLenses settings then lenses else mempty
     lenses = "\n" <> sep <> "\n" <> sumTypeToOptics st <> sep
     sep = T.replicate 80 "-"
 
-sumTypeToTypeDecls :: SumType 'PureScript -> Text
-sumTypeToTypeDecls st@(SumType t cs _) = T.unlines $
+sumTypeToTypeDecls :: Switches.Settings -> SumType 'PureScript -> Text
+sumTypeToTypeDecls settings st@(SumType t cs _) = T.unlines $
     dataOrNewtype <> " " <> typeInfoToText True t <> " ="
   : "    " <> T.intercalate "\n  | " (map (constructorToText 4) cs) <> "\n"
-  : instances st
+  : instances settings st
   where
     dataOrNewtype = if isJust (nootype cs) then "newtype" else "data"
 
 -- | Given a Purescript type, generate `derive instance` lines for typeclass
 -- instances it claims to have.
-instances :: SumType 'PureScript -> [Text]
-instances st@(SumType t _ is) = map go is
+instances :: Switches.Settings -> SumType 'PureScript -> [Text]
+instances settings st@(SumType t _ is) = map go is
   where
     go :: Instance -> Text
     go i = "derive instance " <> T.toLower c <> _typeName t <> " :: " <> extras i <> c <> " " <> typeInfoToText False t <> postfix i
@@ -127,12 +130,19 @@ instances st@(SumType t _ is) = map go is
                            | otherwise      = bracketWrap genericConstraintsInner <> " => "
             extras _ = ""
             postfix Newtype = " _"
+            postfix Generic
+              | Switches.genericsGenRep settings = " _"
+              | otherwise                        = ""
             postfix _ = ""
             stpLength = length sumTypeParameters
             sumTypeParameters = filter isTypeParam . Set.toList $ getUsedTypes st
             isTypeParam typ = _typeName typ `elem` map _typeName (_typeParameters t)
             genericConstraintsInner = T.intercalate ", " $ map genericInstance sumTypeParameters
-            genericInstance = ("Generic " <>) . typeInfoToText False
+            genericInstance params =
+              if not (Switches.genericsGenRep settings) then
+                "Generic " <> typeInfoToText False params
+              else
+                "Generic " <> typeInfoToText False params <> " r" <> mergedTypeInfoToText params
             bracketWrap x = "(" <> x <> ")"
 
 sumTypeToOptics :: SumType 'PureScript -> Text
@@ -266,6 +276,13 @@ typeInfoToText topLevel t = if needParens then "(" <> inner <> ")" else inner
     pLength = length params
     needParens = not topLevel && pLength > 0
     textParameters = map (typeInfoToText False) params
+
+mergedTypeInfoToText :: PSType -> Text
+mergedTypeInfoToText t =
+  _typeName t <> T.concat textParameters
+  where
+    params = _typeParameters t
+    textParameters = map mergedTypeInfoToText params
 
 sumTypesToModules :: Modules -> [SumType 'PureScript] -> Modules
 sumTypesToModules = foldr sumTypeToModule
