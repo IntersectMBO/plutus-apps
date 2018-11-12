@@ -25,8 +25,8 @@ data BrowserHeader (sym :: Symbol) a
 type instance IsElem' e (BrowserHeader :> s) = IsElem e s
 
 instance HasLink sub => HasLink (BrowserHeader sym a :> sub) where
-    type MkLink (BrowserHeader sym a :> sub) = MkLink (Header sym a :> sub)
-    toLink _ = toLink (Proxy :: Proxy (Header sym a :> sub))
+    type MkLink (BrowserHeader sym a :> sub) a = MkLink (Header sym a :> sub) a
+    toLink toA _ = toLink toA (Proxy :: Proxy (BrowserHeader sym a :> sub))
 
 instance (KnownSymbol sym, FromHttpApiData a, HasServer sublayout context)
       => HasServer (BrowserHeader sym a :> sublayout) context where
