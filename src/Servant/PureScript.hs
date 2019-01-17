@@ -33,14 +33,12 @@ import           Data.Aeson
 import           Data.Bifunctor
 import           Data.ByteString               (ByteString)
 import qualified Data.ByteString.Lazy          as BS
-import           Data.Monoid
 import           Data.Proxy
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import qualified Data.Text.Encoding            as T
 import qualified Data.Text.IO                          as T
 import           Language.PureScript.Bridge
-import           Network.HTTP.Types            (urlDecode, urlEncode)
 import           Servant.Foreign
 import           Servant.PureScript.CodeGen
 import           Servant.PureScript.Internal

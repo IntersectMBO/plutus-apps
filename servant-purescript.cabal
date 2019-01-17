@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 extra-source-files: Readme.md
 
 library
+  ghc-options:        -Wall
   hs-source-dirs:      src
   exposed-modules:     Servant.PureScript.Internal
                      , Servant.PureScript.CodeGen

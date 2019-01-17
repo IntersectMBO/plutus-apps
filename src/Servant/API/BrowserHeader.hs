@@ -1,10 +1,8 @@
 -- | A header which gets sent by the browser and is thus of no concern for the client consumer of the API.
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
@@ -12,7 +10,7 @@
 
 module Servant.API.BrowserHeader where
 
-import Servant.Utils.Links
+import Servant.Links
 import Servant
 import Servant.Foreign
 import Servant.Subscriber.Subscribable

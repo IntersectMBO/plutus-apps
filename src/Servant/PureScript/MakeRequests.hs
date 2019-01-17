@@ -14,7 +14,6 @@ import           Data.Map                           (Map)
 import           Data.Proxy                         (Proxy (Proxy))
 import qualified Data.Set                           as Set
 import           Data.Text                          (Text)
-import qualified Data.Text                          as T
 import qualified Data.Text.Encoding                 as T
 import           Language.PureScript.Bridge         (ImportLine (..),
                                                      PSType,
@@ -27,7 +26,6 @@ import           Servant.Foreign
 import           Servant.PureScript.CodeGen         hiding (genBuildHeader,
                                                      genBuildHeaders,
                                                      genBuildPath,
-                                                     genBuildQuery,
                                                      genBuildQueryArg,
                                                      genBuildSegment, genFnBody,
                                                      genFunction, genModule,
