@@ -34,6 +34,7 @@ instance (KnownSymbol sym, FromHttpApiData a, HasServer sublayout context)
   type ServerT (BrowserHeader sym a :> sublayout) m = ServerT (Header sym a :> sublayout) m
 
   route Proxy = route (Proxy :: Proxy (Header sym a :> sublayout))
+  hoistServerWithContext _ pc nt s = hoistServerWithContext (Proxy :: Proxy sublayout) pc nt . s
 
 
 -- Ignore BrowserHeader in HasForeign:
