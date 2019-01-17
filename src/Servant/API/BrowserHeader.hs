@@ -10,7 +10,7 @@
 
 module Servant.API.BrowserHeader where
 
-import Servant.Utils.Links
+import Servant.Links
 import Servant
 import Servant.Foreign
 import Servant.Subscriber.Subscribable
