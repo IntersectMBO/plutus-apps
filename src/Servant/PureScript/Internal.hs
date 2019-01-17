@@ -15,7 +15,6 @@ import           Control.Lens
 
 import           Data.Bifunctor
 import           Data.Char
-import           Data.Monoid
 import           Data.Proxy
 import           Data.Set                           (Set)
 import qualified Data.Set                           as Set

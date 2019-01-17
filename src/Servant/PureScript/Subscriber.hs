@@ -10,15 +10,11 @@
 module Servant.PureScript.Subscriber where
 
 import           Control.Lens                       hiding (List)
-import           Data.Map                           (Map)
-import           Data.Maybe                         (mapMaybe, maybeToList)
 import qualified Data.Set                           as Set
 import           Data.Text                          (Text)
 import qualified Data.Text                          as T
-import qualified Data.Text.Encoding                 as T
 import           Language.PureScript.Bridge
-import           Language.PureScript.Bridge.PSTypes (psString, psUnit)
-import           Network.HTTP.Types.URI             (urlEncode)
+import           Language.PureScript.Bridge.PSTypes (psUnit)
 import           Servant.Foreign
 import           Servant.PureScript.CodeGen         (docIntercalate, genFnHead,
                                                      genModuleHeader,
