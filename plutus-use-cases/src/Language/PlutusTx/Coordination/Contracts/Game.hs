@@ -22,11 +22,11 @@ import           Wallet
 
 import qualified Data.ByteString.Lazy.Char8   as C
 
-data HashedString = HashedString P.ByteString
+data HashedString = HashedString (P.SizedByteString 32)
 
 PlutusTx.makeLift ''HashedString
 
-data ClearString = ClearString P.ByteString
+data ClearString = ClearString (P.SizedByteString 32)
 
 PlutusTx.makeLift ''ClearString
 
@@ -41,12 +41,12 @@ gameValidator = ValidatorScript ($$(Ledger.compileScript [||
     ||]))
 
 gameDataScript :: String -> DataScript
-gameDataScript =
-    DataScript . Ledger.lifted . HashedString . plcSHA2_256 . C.pack
+gameDataScript = 
+    DataScript . Ledger.lifted . HashedString . plcSHA2_256 . P.SizedByteString . C.pack
 
 gameRedeemerScript :: String -> RedeemerScript
-gameRedeemerScript =
-    RedeemerScript . Ledger.lifted . ClearString . C.pack
+gameRedeemerScript = 
+    RedeemerScript . Ledger.lifted . ClearString . P.SizedByteString . C.pack
 
 gameAddress :: Address
 gameAddress = Ledger.scriptAddress gameValidator

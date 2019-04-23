@@ -6,7 +6,7 @@ module Language.PlutusCore.StdLib.Data.Integer
     ( succInteger
     ) where
 
-import           Language.PlutusCore.Constant.Make (makeDynBuiltinInt)
+import           Language.PlutusCore.Constant.Make (makeDynBuiltinIntSizedAs)
 import           Language.PlutusCore.MkPlc
 import           Language.PlutusCore.Name
 import           Language.PlutusCore.Quote
@@ -14,13 +14,16 @@ import           Language.PlutusCore.Type
 
 -- |  @succ :: Integer -> Integer@ as a PLC term.
 --
--- > \(i : integer) -> addInteger i 1
+-- > /\(s :: size) -> \(i : integer s) ->
+-- >     addInteger {s} i (resizeInteger {1} {s} (sizeOfInteger {s} i) 1!1)
 succInteger :: TermLike term TyName Name => term ()
 succInteger = runQuote $ do
+    s <- freshTyName () "s"
     i  <- freshName () "i"
     return
-        . lamAbs () i (TyBuiltin () TyInteger)
-        . mkIterApp () (builtin () $ BuiltinName () AddInteger)
+        . tyAbs () s (Size ())
+        . lamAbs () i (TyApp () (TyBuiltin () TyInteger) $ TyVar () s)
+        . mkIterApp () (tyInst () (builtin () $ BuiltinName () AddInteger) $ TyVar () s)
         $ [ var () i
-          , makeDynBuiltinInt 1
+          , makeDynBuiltinIntSizedAs (TyVar () s) (var () i) 1
           ]

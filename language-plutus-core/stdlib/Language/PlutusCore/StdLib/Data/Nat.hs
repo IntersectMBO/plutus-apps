@@ -127,12 +127,23 @@ foldNat = runQuote $ do
 
 -- | Convert a @nat@ to an @integer@.
 --
--- > foldNat {integer} (addInteger 1) 1
+-- > /\(s :: size) -> \(ss : size s) ->
+-- >     foldNat {integer s}
+-- >         (addInteger {s} (resizeInteger {1} {s} ss 1!1))
+-- >         (resizeInteger {1} {s} ss 1!0)
 natToInteger :: TermLike term TyName Name => term ()
 natToInteger = runQuote $ do
+    s  <- freshTyName () "s"
+    ss <- freshName () "ss"
     let addInteger = builtin () $ BuiltinName () AddInteger
-    return $
-        mkIterApp () (tyInst () foldNat $ TyBuiltin () TyInteger)
-          [ apply () addInteger (makeDynBuiltinInt 1)
-          , makeDynBuiltinInt 0
+        sv  = TyVar () s
+        ssv = var () ss
+    return
+        . tyAbs ()  s  (Size ())
+        . lamAbs () ss (TyApp () (TyBuiltin () TySize) sv)
+        $ mkIterApp () (tyInst () foldNat $ TyApp () (TyBuiltin () TyInteger) sv)
+          [ apply ()
+              (tyInst () addInteger (TyVar () s))
+              (makeDynBuiltinInt sv ssv 1)
+          , makeDynBuiltinInt sv ssv 0
           ]

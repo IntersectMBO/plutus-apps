@@ -166,10 +166,10 @@ nonEmptyBridge = do
     typeModule ^== "GHC.Base"
     psNonEmpty
 
-byteStringBridge :: BridgePart
-byteStringBridge = do
-    typeName ^== "ByteString"
-    typeModule ^== "Data.ByteString.Lazy.Internal"
+sizedByteStringBridge :: BridgePart
+sizedByteStringBridge = do
+    typeName ^== "SizedByteString"
+    typeModule ^== "Language.PlutusTx.Builtins"
     pure psString
 
 mapBridge :: BridgePart
@@ -192,7 +192,7 @@ myBridge =
     headerBridge <|>
     nonEmptyBridge <|>
     validatorHashBridge <|>
-    byteStringBridge <|>
+    sizedByteStringBridge <|>
     mapBridge <|>
     ledgerBytesBridge
 

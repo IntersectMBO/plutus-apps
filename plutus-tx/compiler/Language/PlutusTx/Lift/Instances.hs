@@ -12,10 +12,13 @@ import qualified Language.PlutusCore          as PLC
 
 import           Language.PlutusTx.Builtins
 import           Language.PlutusTx.Lift.Class
+import           Language.PlutusTx.Utils
 
 import           Language.PlutusIR
 
 import           Data.Proxy
+
+import           GHC.TypeLits
 
 -- Derived instances
 
@@ -30,16 +33,16 @@ instance (Typeable (a :: *), Typeable (b :: *)) => Typeable (a -> b) where
 -- Primitives
 
 instance Typeable Int where
-    typeRep _ = pure $ TyBuiltin () PLC.TyInteger
+    typeRep _ = pure $ appSize haskellIntSize (TyBuiltin () PLC.TyInteger)
 
 instance Lift Int where
-    lift i = pure $ Constant () $ PLC.BuiltinInt () $ fromIntegral i
+    lift i = pure $ Constant () $ PLC.BuiltinInt () haskellIntSize $ fromIntegral i
 
-instance Typeable ByteString where
+instance Typeable SizedByteString where
     typeRep _ = pure $ TyBuiltin () PLC.TyByteString
 
-instance Lift ByteString where
-    lift bs = pure $ Constant () $ PLC.BuiltinBS () bs
+instance (KnownNat n) => Lift (SizedByteString n) where
+    lift (SizedByteString bs) = pure $ Constant () $ PLC.BuiltinBS () (fromIntegral $ natVal (Proxy @n)) bs
 
 -- Standard types
 -- These need to be in a separate file for TH staging reasons

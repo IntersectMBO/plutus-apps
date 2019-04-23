@@ -51,7 +51,7 @@ withEmitHandler :: Evaluator Term m -> (EmitHandler (m EvaluationResultDef) -> I
 withEmitHandler eval k = k . EmitHandler $ \env -> evaluate . eval env
 
 withEmitTerm
-    :: TypedBuiltin a
+    :: (forall size. TypedBuiltin size a)
     -> (Term TyName Name () -> EmitHandler r1 -> IO r2)
     -> EmitHandler r1
     -> IO ([a], r2)
@@ -65,7 +65,7 @@ withEmitTerm tb cont (EmitHandler handler) =
 
 withEmitEvaluateBy
     :: Evaluator Term m
-    -> TypedBuiltin a
+    -> (forall size. TypedBuiltin size a)
     -> (Term TyName Name () -> Term TyName Name ())
     -> IO ([a], m EvaluationResultDef)
 withEmitEvaluateBy eval tb toTerm =

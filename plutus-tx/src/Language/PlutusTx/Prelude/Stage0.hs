@@ -262,33 +262,33 @@ foldl = [||
         in foldl
     ||]
 
--- | The double SHA256 hash of a 'ByteString'
-sha2_256 :: Q (TExp (Builtins.ByteString -> Builtins.ByteString))
+-- | The double SHA256 hash of a 'SizedByteString'
+sha2_256 :: Q (TExp (Builtins.SizedByteString s -> Builtins.SizedByteString 32))
 sha2_256 = [|| Builtins.sha2_256 ||]
 
--- | The triple SHA256 hash of a 'ByteString'
-sha3_256 :: Q (TExp (Builtins.ByteString -> Builtins.ByteString))
+-- | The triple SHA256 hash of a 'SizedByteString'
+sha3_256 :: Q (TExp (Builtins.SizedByteString s -> Builtins.SizedByteString 32))
 sha3_256 = [|| Builtins.sha3_256 ||]
 
-verifySignature :: Q (TExp (Builtins.ByteString -> Builtins.ByteString -> Builtins.ByteString -> Bool))
+verifySignature :: Q (TExp (Builtins.SizedByteString 32 -> Builtins.SizedByteString 32 -> Builtins.SizedByteString 64 -> Bool))
 verifySignature = [|| Builtins.verifySignature ||]
 
--- | Check if two 'ByteString's are equal
-equalsByteString :: Q (TExp (Builtins.ByteString -> Builtins.ByteString -> Bool))
+-- | Check if two 'SizedByteString's are equal
+equalsByteString :: Q (TExp (Builtins.SizedByteString s -> Builtins.SizedByteString s -> Bool))
 equalsByteString = [|| Builtins.equalsByteString ||]
 
--- | Returns the n length prefix of a 'ByteString'
-takeByteString :: Q (TExp (Int -> Builtins.ByteString -> Builtins.ByteString))
+-- | Returns the n length prefix of a 'SizedByteString'
+takeByteString :: Q (TExp (Int -> Builtins.SizedByteString s -> Builtins.SizedByteString s))
 takeByteString = [|| Builtins.takeByteString ||]
 
--- | Returns the suffix of a 'ByteString' after n elements
-dropByteString :: Q (TExp (Int -> Builtins.ByteString -> Builtins.ByteString))
+-- | Returns the suffix of a 'SizedByteString' after n elements
+dropByteString :: Q (TExp (Int -> Builtins.SizedByteString s -> Builtins.SizedByteString s))
 dropByteString = [|| Builtins.dropByteString ||]
 
--- | Concatenates two 'ByteString's together.
-concatenate :: Q (TExp (Builtins.ByteString -> Builtins.ByteString -> Builtins.ByteString))
+-- | Concatenates two 'SizedByteString's together.
+concatenate :: Q (TExp (Builtins.SizedByteString s -> Builtins.SizedByteString s -> Builtins.SizedByteString s))
 concatenate = [|| Builtins.concatenate ||]
 
--- | An empty 'ByteString'.
-emptyByteString :: Q (TExp (Builtins.ByteString))
+-- | An empty 'SizedByteString'.
+emptyByteString :: Q (TExp (Builtins.SizedByteString 32))
 emptyByteString = [|| Builtins.emptyByteString ||]

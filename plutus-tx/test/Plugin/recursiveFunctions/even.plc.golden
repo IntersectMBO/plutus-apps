@@ -1,16 +1,19 @@
 (program
   (let
-    (nonrec)
+    (nonrec
+    )
     (datatypebind
       (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
     )
     (let
-      (nonrec)
+      (nonrec
+      )
       (termbind
         (vardecl
-          subtractInteger (fun (con integer) (fun (con integer) (con integer)))
+          subtractInteger
+          (fun [(con integer) (con 8)] (fun [(con integer) (con 8)] [(con integer) (con 8)]))
         )
-        (builtin subtractInteger)
+        { (builtin subtractInteger) (con 8) }
       )
       (let
         (nonrec)
@@ -25,20 +28,23 @@
         (let
           (nonrec)
           (termbind
-            (vardecl equalsInteger (fun (con integer) (fun (con integer) Bool)))
+            (vardecl
+              equalsInteger
+              (fun [(con integer) (con 8)] (fun [(con integer) (con 8)] Bool))
+            )
             (lam
               arg
-              (con integer)
+              [(con integer) (con 8)]
               (lam
                 arg
-                (con integer)
+                [(con integer) (con 8)]
                 [
                   (lam
                     b
                     (all a (type) (fun a (fun a a)))
                     [ [ { b Bool } True ] False ]
                   )
-                  [ [ (builtin equalsInteger) arg ] arg ]
+                  [ [ { (builtin equalsInteger) (con 8) } arg ] arg ]
                 ]
               )
             )
@@ -46,40 +52,44 @@
           (let
             (rec)
             (termbind
-              (vardecl odd (fun (con integer) Bool))
+              (vardecl odd (fun [(con integer) (con 8)] Bool))
               (lam
                 n
-                (con integer)
+                [(con integer) (con 8)]
                 [
                   [
                     [
                       {
-                        [ Bool_match [ [ equalsInteger n ] (con 0) ] ]
+                        [ Bool_match [ [ equalsInteger n ] (con 8 ! 0) ] ]
                         (fun Unit Bool)
                       }
                       (lam thunk Unit False)
                     ]
-                    (lam thunk Unit [ even [ [ subtractInteger n ] (con 1) ] ])
+                    (lam
+                      thunk Unit [ even [ [ subtractInteger n ] (con 8 ! 1) ] ]
+                    )
                   ]
                   Unit
                 ]
               )
             )
             (termbind
-              (vardecl even (fun (con integer) Bool))
+              (vardecl even (fun [(con integer) (con 8)] Bool))
               (lam
                 n
-                (con integer)
+                [(con integer) (con 8)]
                 [
                   [
                     [
                       {
-                        [ Bool_match [ [ equalsInteger n ] (con 0) ] ]
+                        [ Bool_match [ [ equalsInteger n ] (con 8 ! 0) ] ]
                         (fun Unit Bool)
                       }
                       (lam thunk Unit True)
                     ]
-                    (lam thunk Unit [ odd [ [ subtractInteger n ] (con 1) ] ])
+                    (lam
+                      thunk Unit [ odd [ [ subtractInteger n ] (con 8 ! 1) ] ]
+                    )
                   ]
                   Unit
                 ]

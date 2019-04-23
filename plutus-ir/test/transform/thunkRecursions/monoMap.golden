@@ -1,6 +1,5 @@
 (let
-  (rec
-  )
+  (rec)
   (datatypebind
     (datatype
       (tyvardecl List (fun (type) (type)))
@@ -10,26 +9,23 @@
     )
   )
   (let
-    (rec
-    )
+    (rec)
     (termbind
       (vardecl
-        map
-        (fun (fun (con integer) (con integer)) (fun [List (con integer)] [List (con integer)]))
+        map (fun (fun (con 1) (con 1)) (fun [List (con 1)] [List (con 1)]))
       )
       (lam
         f
-        (fun (con integer) (con integer))
+        (fun (con 1) (con 1))
         (lam
           lst
-          [List (con integer)]
+          [List (con 1)]
           [
-            [ [ { match_List (con integer) } lst ] Nil ]
+            [ [ { match_List (con 1) } lst ] Nil ]
             (lam
               x
-              (con integer)
-              (lam xs [List (con integer)] [ [ Cons [ f x ] ] [ [ map f ] xs ] ]
-              )
+              (con 1)
+              (lam xs [List (con 1)] [ [ Cons [ f x ] ] [ [ map f ] xs ] ])
             )
           ]
         )

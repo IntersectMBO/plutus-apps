@@ -17,6 +17,7 @@ module Language.PlutusCore.Type ( Term (..)
                                 , DynamicBuiltinName (..)
                                 , StagedBuiltinName (..)
                                 , TypeBuiltin (..)
+                                , Size
                                 , Gas (..)
                                 -- * Base functors
                                 , TermF (..)
@@ -38,6 +39,8 @@ import           Language.Haskell.TH.Syntax     (Lift)
 import           Language.PlutusCore.Lexer.Type
 import           PlutusPrelude
 
+type Size = Natural
+
 newtype Gas = Gas
     { unGas :: Natural
     }
@@ -49,6 +52,7 @@ data Type tyname a = TyVar a (tyname a)
                      -- ^ Fix-point type, for constructing self-recursive types
                    | TyForall a (tyname a) (Kind a) (Type tyname a)
                    | TyBuiltin a TypeBuiltin -- ^ Builtin type
+                   | TyInt a Natural -- ^ Type-level size
                    | TyLam a (tyname a) (Kind a) (Type tyname a)
                    | TyApp a (Type tyname a) (Type tyname a)
                    deriving (Functor, Show, Generic, NFData, Lift)
@@ -58,6 +62,7 @@ data TypeF tyname a x = TyVarF a (tyname a)
                       | TyIFixF a x x
                       | TyForallF a (tyname a) (Kind a) x
                       | TyBuiltinF a TypeBuiltin
+                      | TyIntF a Natural
                       | TyLamF a (tyname a) (Kind a) x
                       | TyAppF a x x
                       deriving (Functor, Traversable, Foldable)
@@ -70,6 +75,7 @@ instance Recursive (Type tyname a) where
     project (TyIFix l pat arg)   = TyIFixF l pat arg
     project (TyForall l tn k ty) = TyForallF l tn k ty
     project (TyBuiltin l b)      = TyBuiltinF l b
+    project (TyInt l n)          = TyIntF l n
     project (TyLam l tn k ty)    = TyLamF l tn k ty
     project (TyApp l ty ty')     = TyAppF l ty ty'
 
@@ -79,6 +85,7 @@ instance Corecursive (Type tyname a) where
     embed (TyIFixF l pat arg)   = TyIFix l pat arg
     embed (TyForallF l tn k ty) = TyForall l tn k ty
     embed (TyBuiltinF l b)      = TyBuiltin l b
+    embed (TyIntF l n)          = TyInt l n
     embed (TyLamF l tn k ty)    = TyLam l tn k ty
     embed (TyAppF l ty ty')     = TyApp l ty ty'
 
@@ -107,6 +114,7 @@ eqTypeSt :: (Ord (tyname a), Eq a)
 eqTypeSt eqSt (TyFun _ domLeft codLeft) (TyFun _ domRight codRight) = eqTypeSt eqSt domLeft domRight && eqTypeSt eqSt codLeft codRight
 eqTypeSt eqSt (TyApp _ fLeft aLeft) (TyApp _ fRight aRight) = eqTypeSt eqSt fLeft fRight && eqTypeSt eqSt aLeft aRight
 
+eqTypeSt _ (TyInt _ nLeft) (TyInt _ nRight)              = nLeft == nRight
 eqTypeSt _ (TyBuiltin _ bLeft) (TyBuiltin _ bRight)      = bLeft == bRight
 
 eqTypeSt eqSt (TyIFix _ patLeft argLeft) (TyIFix _ patRight argRight) =
@@ -204,6 +212,7 @@ tyLoc (TyFun l _ _)      = l
 tyLoc (TyIFix l _ _)     = l
 tyLoc (TyForall l _ _ _) = l
 tyLoc (TyBuiltin l _)    = l
+tyLoc (TyInt l _)        = l
 tyLoc (TyLam l _ _ _)    = l
 tyLoc (TyApp l _ _)      = l
 
@@ -224,8 +233,9 @@ data Builtin a = BuiltinName a BuiltinName
                deriving (Functor, Show, Eq, Generic, NFData, Lift)
 
 -- | A constant value.
-data Constant a = BuiltinInt a Integer
-                | BuiltinBS a BSL.ByteString
+data Constant a = BuiltinInt a Natural Integer
+                | BuiltinBS a Natural BSL.ByteString
+                | BuiltinSize a Natural
                 | BuiltinStr a String
                 deriving (Functor, Show, Eq, Generic, NFData, Lift)
 
@@ -286,10 +296,12 @@ instance Corecursive (Term tyname name a) where
 -- | Kinds. Each type has an associated kind.
 data Kind a = Type a
             | KindArrow a (Kind a) (Kind a)
+            | Size a
             deriving (Functor, Eq, Show, Generic, NFData, Lift)
 
 data KindF a x = TypeF a
                | KindArrowF a x x
+               | SizeF a
                deriving (Functor)
 
 type instance Base (Kind a) = KindF a
@@ -297,6 +309,7 @@ type instance Base (Kind a) = KindF a
 instance Recursive (Kind a) where
     project (Type l)           = TypeF l
     project (KindArrow l k k') = KindArrowF l k k'
+    project (Size l)           = SizeF l
 
 -- | A 'Program' is simply a 'Term' coupled with a 'Version' of the core
 -- language.

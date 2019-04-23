@@ -30,18 +30,18 @@ import           Hedgehog                                                hiding 
 import           System.FilePath                                         ((</>))
 
 -- | Generate a term using a given generator and check that it's well-typed and evaluates correctly.
-getSampleTermValue :: TermGen a -> IO (TermOf (Value TyName Name ()))
+getSampleTermValue :: TermGen Size a -> IO (TermOf (Value TyName Name ()))
 getSampleTermValue genTerm = runSampleSucceed $ unsafeTypeEvalCheck <$> genTerm
 
 -- | Generate a program using a given generator and check that it's well-typed and evaluates correctly.
-getSampleProgramAndValue :: TermGen a -> IO (Program TyName Name (), Value TyName Name ())
+getSampleProgramAndValue :: TermGen Size a -> IO (Program TyName Name (), Value TyName Name ())
 getSampleProgramAndValue genTerm =
     getSampleTermValue genTerm <&> \(TermOf term value) ->
         (Program () (defaultVersion ()) term, value)
 
 -- | Generate a program using a given generator, check that it's well-typed and evaluates correctly
 -- and pretty-print it to stdout using the default pretty-printing mode.
-printSampleProgramAndValue :: TermGen a -> IO ()
+printSampleProgramAndValue :: TermGen Size a -> IO ()
 printSampleProgramAndValue =
     getSampleProgramAndValue >=> \(program, value) -> do
         putStrLn $ prettyPlcDefString program
@@ -54,7 +54,7 @@ printSampleProgramAndValue =
 sampleProgramValueGolden
     :: String          -- ^ @folder@
     -> String          -- ^ @name@
-    -> TermGen a       -- ^ A term generator.
+    -> TermGen Size a  -- ^ A term generator.
     -> IO ()
 sampleProgramValueGolden folder name genTerm = do
     let filePlc       = folder </> (name ++ ".plc")
@@ -68,7 +68,7 @@ sampleProgramValueGolden folder name genTerm = do
 -- indeed computes to that value according to the provided evaluate.
 propEvaluate
     :: (Term TyName Name () -> EvaluationResultDef)  -- ^ An evaluator.
-    -> TermGen a                                     -- ^ A term/value generator.
+    -> TermGen Size a                                -- ^ A term/value generator.
     -> Property
 propEvaluate eval genTermOfTbv = withTests 200 . property $ do
     termOfTbv <- forAllNoShow genTermOfTbv

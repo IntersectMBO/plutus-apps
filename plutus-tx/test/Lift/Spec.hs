@@ -22,7 +22,7 @@ Lift.makeLift ''MyPolyData
 newtype NestedRecord = NestedRecord { unNested :: Maybe (Int, Int) }
 Lift.makeLift ''NestedRecord
 
-newtype WrappedBS = WrappedBS { unWrap :: Builtins.ByteString }
+newtype WrappedBS = WrappedBS { unWrap :: Builtins.SizedByteString 64 }
 Lift.makeLift ''WrappedBS
 
 tests :: TestNested

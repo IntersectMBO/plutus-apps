@@ -24,10 +24,20 @@ test_typedMultiplyIntegerSuccessFailure
     = testProperty "typedMultiplyInteger"
     $ prop_applyBuiltinNameSuccessFailure typedMultiplyInteger (*)
 
+test_typedResizeIntegerSuccessFailure :: TestTree
+test_typedResizeIntegerSuccessFailure
+    = testProperty "typedResizeInteger"
+    $ prop_applyBuiltinNameSuccessFailure typedResizeInteger (const id)
+
 test_typedConcatenateSuccessFailure :: TestTree
 test_typedConcatenateSuccessFailure
     = testProperty "typedConcatenate"
     $ prop_applyBuiltinNameSuccessFailure typedConcatenate (<>)
+
+test_typedResizeByteStringSuccessFailure :: TestTree
+test_typedResizeByteStringSuccessFailure
+    = testProperty "typedResizeByteString"
+    $ prop_applyBuiltinNameSuccessFailure typedResizeByteString (const id)
 
 test_applyBuiltinNameSuccessFailure :: TestTree
 test_applyBuiltinNameSuccessFailure =
@@ -35,5 +45,7 @@ test_applyBuiltinNameSuccessFailure =
         [ test_typedAddIntegerSuccessFailure
         , test_typedSubtractIntegerSuccessFailure
         , test_typedMultiplyIntegerSuccessFailure
+        , test_typedResizeIntegerSuccessFailure
         , test_typedConcatenateSuccessFailure
+        , test_typedResizeByteStringSuccessFailure
         ]

@@ -238,12 +238,20 @@ normalizeTypeOptM ty = do
 -- | Get the 'Kind' of a 'TypeBuiltin'.
 kindOfTypeBuiltin :: TypeBuiltin -> Kind ()
 kindOfTypeBuiltin = \case
-    TyInteger    -> Type ()
-    TyByteString -> Type ()
+    TyInteger    -> sizeToType
+    TyByteString -> sizeToType
+    TySize       -> sizeToType
     TyString     -> Type ()
+  where
+    sizeToType = KindArrow () (Size ()) (Type ())
 
 -- | Infer the kind of a type.
 inferKindM :: Type TyName ann -> TypeCheckM ann (Kind ())
+
+-- ---------------------------
+-- [infer| G !- con i :: size]
+inferKindM TyInt{}                 =
+    pure $ Size ()
 
 -- b :: k
 -- ------------------------
@@ -324,9 +332,14 @@ checkKindOfPatternFunctorM ann pat k =
 -- | Get the 'Type' of a 'Constant' wrapped in 'NormalizedType'.
 typeOfConstant :: Constant ann -> Normalized (Type TyName ())
 typeOfConstant = \case
-    BuiltinInt  _ _ -> Normalized $ TyBuiltin () TyInteger
-    BuiltinBS   _ _ -> Normalized $ TyBuiltin () TyByteString
-    BuiltinStr _ _  -> Normalized $ TyBuiltin () TyString
+    BuiltinInt  _ size _ -> applySizedNormalized TyInteger    size
+    BuiltinBS   _ size _ -> applySizedNormalized TyByteString size
+    BuiltinSize _ size   -> applySizedNormalized TySize       size
+    BuiltinStr _ _       -> Normalized $ TyBuiltin () TyString
+  where
+    -- | Apply a 'TypeBuiltin' to a 'Size' and wrap in 'NormalizedType'.
+    applySizedNormalized :: TypeBuiltin -> Size -> Normalized (Type tyname ())
+    applySizedNormalized tb = Normalized . TyApp () (TyBuiltin () tb) . TyInt ()
 
 -- | Return the 'Type' of a 'BuiltinName'.
 typeOfBuiltinName :: BuiltinName -> Type TyName ()

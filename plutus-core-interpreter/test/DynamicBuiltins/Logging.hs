@@ -28,8 +28,9 @@ dynamicIntToStringName = DynamicBuiltinName "intToString"
 dynamicIntToStringMeaning :: DynamicBuiltinNameMeaning
 dynamicIntToStringMeaning = DynamicBuiltinNameMeaning sch show where
     sch =
-        TypeSchemeBuiltin (TypedBuiltinSized TypedBuiltinSizedInt) `TypeSchemeArrow`
-        TypeSchemeBuiltin (TypedBuiltinDyn @String)
+        TypeSchemeAllSize $ \s ->
+            TypeSchemeBuiltin (TypedBuiltinSized (SizeBound s) TypedBuiltinSizedInt) `TypeSchemeArrow`
+            TypeSchemeBuiltin (TypedBuiltinDyn @String)
 
 dynamicIntToString :: Term tyname name ()
 dynamicIntToString = dynamicBuiltinNameAsTerm dynamicIntToStringName
@@ -46,10 +47,11 @@ evaluateHandlersCek = evaluateHandlersBy typecheckEvaluateCek
 
 test_logInt :: TestTree
 test_logInt = testCase "logInt" $ do
-    let term
+    let size = 4
+        term
             = Apply () dynamicLog
-            . Apply () dynamicIntToString
-            $ Constant () (BuiltinInt () 1)
+            . Apply () (TyInst () dynamicIntToString (TyInt () size))
+            $ Constant () (BuiltinInt () size 1)
 
     let eval1 = evaluateHandlersCek (handleDynamicIntToString . handleDynamicLog)
     let eval2 = evaluateHandlersCek (handleDynamicLog . handleDynamicIntToString)
@@ -63,7 +65,8 @@ test_logInt = testCase "logInt" $ do
 test_logInts :: TestTree
 test_logInts = testCase "logInts" $ do
     let term = runQuote $ do
-            let int4 = TyBuiltin () TyInteger
+            let size = 4
+                int4 = TyApp () (TyBuiltin () TyInteger) (TyInt () size)
             u <- freshName () "u"
             x <- freshName () "x"
 
@@ -72,12 +75,12 @@ test_logInts = testCase "logInts" $ do
                     [   LamAbs () u unit
                       . LamAbs () x int4
                       . Apply () dynamicLog
-                      . Apply () dynamicIntToString
+                      . Apply () (TyInst () dynamicIntToString (TyInt () size))
                       $ Var () x
                     , unitval
-                    , mkIterApp () Plc.enumFromTo
-                        [ Constant () $ BuiltinInt () 1
-                        , Constant () $ BuiltinInt () 10
+                    , mkIterApp () (TyInst () Plc.enumFromTo (TyInt () size))
+                        [ Constant () $ BuiltinInt () size 1
+                        , Constant () $ BuiltinInt () size 10
                         ]
                     ]
 

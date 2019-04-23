@@ -15,6 +15,7 @@ kindSize :: Kind a -> Integer
 kindSize = cata a where
     a TypeF{}             = 1
     a (KindArrowF _ k k') = 1 + k + k'
+    a SizeF{}             = 1
 
 -- | Count the number of AST nodes in a type.
 typeSize :: Type tyname a -> Integer
@@ -24,6 +25,7 @@ typeSize = cata a where
     a (TyIFixF _ ty ty')   = 1 + ty + ty'
     a (TyForallF _ _ k ty) = 1 + kindSize k + ty
     a TyBuiltinF{}         = 1
+    a TyIntF{}             = 1
     a (TyLamF _ _ k ty)    = 1 + kindSize k + ty
     a (TyAppF _ ty ty')    = 1 + ty + ty'
 

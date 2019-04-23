@@ -43,6 +43,7 @@ module Language.PlutusTx.Prelude (
     append,
     filter,
     -- * ByteStrings
+    SizedByteString(..),
     ByteString,
     equalsByteString,
     takeByteString,
@@ -55,7 +56,7 @@ module Language.PlutusTx.Prelude (
     verifySignature
     ) where
 
-import           Language.PlutusTx.Builtins       (ByteString)
+import           Language.PlutusTx.Builtins       (ByteString, SizedByteString (..))
 
 import           Language.PlutusTx.Prelude.Stage0
 import           Language.PlutusTx.Prelude.Stage1

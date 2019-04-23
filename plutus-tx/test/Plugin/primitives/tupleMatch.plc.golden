@@ -11,12 +11,16 @@
     )
     (lam
       ds
-      [[Tuple2 (con integer)] (con integer)]
+      [[Tuple2 [(con integer) (con 8)]] [(con integer) (con 8)]]
       [
         {
-          [ { { Tuple2_match (con integer) } (con integer) } ds ] (con integer)
+          [
+            { { Tuple2_match [(con integer) (con 8)] } [(con integer) (con 8)] }
+            ds
+          ]
+          [(con integer) (con 8)]
         }
-        (lam a (con integer) (lam b (con integer) a))
+        (lam a [(con integer) (con 8)] (lam b [(con integer) (con 8)] a))
       ]
     )
   )
