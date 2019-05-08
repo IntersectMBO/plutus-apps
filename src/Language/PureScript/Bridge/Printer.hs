@@ -61,7 +61,7 @@ moduleToText settings m = T.unlines $
   : "module " <> psModuleName m <> " where\n"
   : map importLineToText allImports
   <> [ ""
-     , "import Prelude" -- TODO: need a switch for Foreign.Generic to see if we should import or not and then implementation of the instances
+     , "import Prelude"
      , ""
      ]
   <> map (sumTypeToText settings) (psTypes m)
