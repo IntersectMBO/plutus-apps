@@ -43,7 +43,6 @@ import           Control.Monad.Reader.Class
 import           Control.Monad.Trans.Reader          (Reader, ReaderT (..),
                                                       runReader)
 import           Data.Maybe                          (fromMaybe)
-import           Data.Monoid
 import qualified Data.Text                           as T
 import           Language.PureScript.Bridge.TypeInfo
 

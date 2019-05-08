@@ -8,7 +8,6 @@
 module Language.PureScript.Bridge.PSTypes where
 
 import           Control.Lens                        (views)
-import           Data.Monoid
 import qualified Data.Text                           as T
 import           Control.Monad.Reader.Class
 
