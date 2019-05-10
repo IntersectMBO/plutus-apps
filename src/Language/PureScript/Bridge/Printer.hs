@@ -96,7 +96,7 @@ _lensImports settings
 _foreignImports :: Switches.Settings -> [ImportLine]
 _foreignImports settings
   | (isJust . Switches.generateForeign) settings = 
-      [ ImportLine "Foreign.Generic" $ Set.fromList ["defaultOptions", "genericDecode", "genericEncode"]
+      [ ImportLine "Foreign.Generic" $ Set.fromList ["defaultOptions", "genericDecode", "genericEncode", "aesonSumEncoding"]
       , ImportLine "Foreign.Class" $ Set.fromList ["class Decode", "class Encode"]
       ]
   | otherwise = []
@@ -131,13 +131,18 @@ sumTypeToTypeDecls settings (SumType t cs is) = T.unlines $
 instances :: Switches.Settings -> SumType 'PureScript -> [Text]
 instances settings st@(SumType t _ is) = map go is
   where
+    recordUpdateString :: [(Text, Text)] -> Text
+    recordUpdateString args = "{ " <> T.intercalate ", " (map (\(k, v) -> k <> " = " <> v) args) <> " }"
+
     go :: Instance -> Text
     go Encode = "instance encode" <> _typeName t <> " :: " <> extras <> "Encode " <> typeInfoToText False t <> " where\n" <>
                 "  encode = genericEncode $ defaultOptions" <> encodeOpts
       where
         encodeOpts = case Switches.generateForeign settings of
                       Nothing -> ""
-                      Just fopts -> " { unwrapSingleConstructors = " <> (T.toLower . T.pack . show . Switches.unwrapSingleConstructors) fopts <> " }"
+                      Just fopts -> recordUpdateString [ ("unwrapSingleConstructors", (T.toLower . T.pack . show . Switches.unwrapSingleConstructors) fopts)
+                                                       , ("sumEncoding", "aesonSumEncoding")
+                                                       ]
         stpLength = length sumTypeParameters
         extras | stpLength == 0 = mempty
                | otherwise = bracketWrap constraintsInner <> " => "
@@ -150,7 +155,9 @@ instances settings st@(SumType t _ is) = map go is
       where
         decodeOpts = case Switches.generateForeign settings of
                       Nothing -> ""
-                      Just fopts -> " { unwrapSingleConstructors = " <> (T.toLower . T.pack . show . Switches.unwrapSingleConstructors) fopts <> " }"
+                      Just fopts -> recordUpdateString [ ("unwrapSingleConstructors", (T.toLower . T.pack . show . Switches.unwrapSingleConstructors) fopts)
+                                                       , ("sumEncoding", "aesonSumEncoding")
+                                                       ]
         stpLength = length sumTypeParameters
         extras | stpLength == 0 = mempty
                | otherwise = bracketWrap constraintsInner <> " => "
