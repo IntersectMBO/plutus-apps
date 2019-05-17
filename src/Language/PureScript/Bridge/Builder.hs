@@ -1,11 +1,11 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 -- | A bridge builder DSL, powered by 'Monad', 'Alternative' and lens.
 --
@@ -17,38 +17,36 @@
 -- > view haskType
 --
 --   Find usage examples in "Language.PureScript.Bridge.Primitives" and "Language.PureScript.Bridge.PSTypes"
-module Language.PureScript.Bridge.Builder (
-  BridgeBuilder
-, BridgePart
-, FixUpBuilder
-, FixUpBridge
-, BridgeData
-, fullBridge
-, (^==)
-, doCheck
-, (<|>)
-, psTypeParameters
-, FullBridge
-, buildBridge
-, clearPackageFixUp
-, errorFixUp
-, buildBridgeWithCustomFixUp
-) where
+module Language.PureScript.Bridge.Builder
+  ( BridgeBuilder
+  , BridgePart
+  , FixUpBuilder
+  , FixUpBridge
+  , BridgeData
+  , fullBridge
+  , (^==)
+  , doCheck
+  , (<|>)
+  , psTypeParameters
+  , FullBridge
+  , buildBridge
+  , clearPackageFixUp
+  , errorFixUp
+  , buildBridgeWithCustomFixUp
+  ) where
 
-import           Control.Applicative
-import           Control.Lens
-import           Control.Monad                       (MonadPlus, guard, mplus,
-                                                      mzero)
-import           Control.Monad.Reader.Class
-import           Control.Monad.Trans.Reader          (Reader, ReaderT (..),
-                                                      runReader)
-import           Data.Maybe                          (fromMaybe)
-import qualified Data.Text                           as T
-import           Language.PureScript.Bridge.TypeInfo
+import Control.Applicative
+import Control.Lens
+import Control.Monad (MonadPlus, guard, mplus, mzero)
+import Control.Monad.Reader.Class
+import Control.Monad.Trans.Reader (Reader, ReaderT(..), runReader)
+import Data.Maybe (fromMaybe)
+import qualified Data.Text as T
+import Language.PureScript.Bridge.TypeInfo
 
 newtype BridgeBuilder a =
   BridgeBuilder (ReaderT BridgeData Maybe a)
-    deriving (Functor, Applicative, Monad, MonadReader BridgeData)
+  deriving (Functor, Applicative, Monad, MonadReader BridgeData)
 
 type BridgePart = BridgeBuilder PSType
 
@@ -64,7 +62,6 @@ type BridgePart = BridgeBuilder PSType
 -- >
 -- > import           Control.Monad.Reader.Class
 -- > import           Language.PureScript.Bridge.TypeInfo
-
 -- >
 -- > psEither :: MonadReader BridgeData m => m PSType
 -- > psEither = ....
@@ -79,18 +76,21 @@ type BridgePart = BridgeBuilder PSType
 -- > psEither :: FixUpBridge
 -- > psEither = ....
 --
-newtype FixUpBuilder a = FixUpBuilder (Reader BridgeData a) deriving (Functor, Applicative, Monad, MonadReader BridgeData)
+newtype FixUpBuilder a =
+  FixUpBuilder (Reader BridgeData a)
+  deriving (Functor, Applicative, Monad, MonadReader BridgeData)
 
 type FixUpBridge = FixUpBuilder PSType
 
 type FullBridge = HaskellType -> PSType
 
-data BridgeData = BridgeData {
+data BridgeData =
+  BridgeData
   -- | The Haskell type to translate.
-    _haskType   :: HaskellType
+    { _haskType :: HaskellType
   -- | Reference to the bridge itself, needed for translation of type constructors.
-  , _fullBridge :: FullBridge
-  }
+    , _fullBridge :: FullBridge
+    }
 
 -- | By implementing the 'haskType' lens in the HasHaskType class, we are able
 --   to use it for both 'BridgeData' and a plain 'HaskellType', therefore
@@ -133,12 +133,13 @@ clearPackageFixUp :: MonadReader BridgeData m => m PSType
 clearPackageFixUp = do
   input <- view haskType
   psArgs <- psTypeParameters
-  return TypeInfo {
-      _typePackage = ""
-    , _typeModule  = input ^. typeModule
-    , _typeName    = input ^. typeName
-    , _typeParameters = psArgs
-    }
+  return
+    TypeInfo
+      { _typePackage = ""
+      , _typeModule = input ^. typeModule
+      , _typeName = input ^. typeName
+      , _typeParameters = psArgs
+      }
 
 -- | A 'FixUpBridge' which calles 'error' when used.
 --   Usage:
@@ -146,12 +147,17 @@ clearPackageFixUp = do
 -- > buildBridgeWithCustomFixUp errorFixUp yourBridge
 errorFixUp :: MonadReader BridgeData m => m PSType
 errorFixUp = do
-    inType <- view haskType
-    let message = "No translation supplied for Haskell type: '"
-          <> inType ^. typeName <> "', from module: '"
-          <> inType ^. typeModule <> "', from package: '"
-          <> inType ^. typePackage <> "'!"
-    return $ error $ T.unpack message
+  inType <- view haskType
+  let message =
+        "No translation supplied for Haskell type: '" <> inType ^. typeName <>
+        "', from module: '" <>
+        inType ^.
+        typeModule <>
+        "', from package: '" <>
+        inType ^.
+        typePackage <>
+        "'!"
+  return $ error $ T.unpack message
 
 -- | Build a bridge.
 --
@@ -163,18 +169,16 @@ errorFixUp = do
 buildBridge :: BridgePart -> FullBridge
 buildBridge = buildBridgeWithCustomFixUp clearPackageFixUp
 
-
 -- | Takes a constructed BridgePart and makes it a total function ('FullBridge')
 --   by using the supplied 'FixUpBridge' when 'BridgePart' returns 'Nothing'.
 buildBridgeWithCustomFixUp :: FixUpBridge -> BridgePart -> FullBridge
-buildBridgeWithCustomFixUp (FixUpBuilder fixUp) (BridgeBuilder bridgePart) = let
-    mayBridge :: HaskellType -> Maybe PSType
-    mayBridge inType = runReaderT bridgePart $ BridgeData inType bridge
-    fixBridge inType = runReader fixUp $ BridgeData inType bridge
-    bridge inType = fixTypeParameters $ fromMaybe (fixBridge inType) (mayBridge inType)
-  in
-    bridge
-
+buildBridgeWithCustomFixUp (FixUpBuilder fixUp) (BridgeBuilder bridgePart) =
+  let mayBridge :: HaskellType -> Maybe PSType
+      mayBridge inType = runReaderT bridgePart $ BridgeData inType bridge
+      fixBridge inType = runReader fixUp $ BridgeData inType bridge
+      bridge inType =
+        fixTypeParameters $ fromMaybe (fixBridge inType) (mayBridge inType)
+   in bridge
 
 -- | Translate types that come from any module named "Something.TypeParameters" to lower case:
 --
@@ -183,16 +187,16 @@ buildBridgeWithCustomFixUp (FixUpBuilder fixUp) (BridgeBuilder bridgePart) = let
 --
 --   It enables you to even bridge type constructor definitions, see "Language.PureScript.Bridge.TypeParameters" for more details.
 fixTypeParameters :: TypeInfo lang -> TypeInfo lang
-fixTypeParameters t = if "TypeParameters" `T.isSuffixOf` _typeModule t
-    then t {
-          _typePackage = "" -- Don't suggest any packages
-        , _typeModule = "" -- Don't import any modules
-        , _typeName = t ^. typeName . to (stripNum . T.toLower)
-        }
+fixTypeParameters t =
+  if "TypeParameters" `T.isSuffixOf` _typeModule t
+    then t
+           { _typePackage = "" -- Don't suggest any packages
+           , _typeModule = "" -- Don't import any modules
+           , _typeName = t ^. typeName . to (stripNum . T.toLower)
+           }
     else t
   where
     stripNum v = fromMaybe v (T.stripSuffix "1" v)
-
 
 -- | Alternative instance for BridgeBuilder so you can construct bridges with '<|>',
 --   which behaves like a logical 'or' ('||'). If the left-hand side results in Nothing
@@ -200,11 +204,11 @@ fixTypeParameters t = if "TypeParameters" `T.isSuffixOf` _typeModule t
 --   For usage examples see "Language.PureScript.Bridge.Primitives".
 instance Alternative BridgeBuilder where
   empty = BridgeBuilder . ReaderT $ const Nothing
-  BridgeBuilder a <|> BridgeBuilder b = BridgeBuilder . ReaderT $ \bridgeData -> let
-          ia = runReaderT a bridgeData
+  BridgeBuilder a <|> BridgeBuilder b =
+    BridgeBuilder . ReaderT $ \bridgeData ->
+      let ia = runReaderT a bridgeData
           ib = runReaderT b bridgeData
-        in
-          ia <|> ib
+       in ia <|> ib
 
 instance MonadPlus BridgeBuilder where
   mzero = empty
