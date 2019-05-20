@@ -79,6 +79,7 @@ library
                      , lens
                      , text
                      , transformers
+                     , wl-pprint-text
                      , generic-deriving
 
   ghc-options:       -Wall
@@ -98,6 +99,7 @@ Test-Suite tests
                , containers
                , purescript-bridge
                , text
+               , wl-pprint-text
                , hspec
                , hspec-expectations-pretty-diff
 
