@@ -204,11 +204,10 @@ instances settings st@(SumType t _ is) = go <$> is
         extras
           | stpLength == 0 = mempty
           | otherwise =
-            constraintsInner (instanceBody <$> sumTypeParameters) <+> "=> "
+            constraintsInner (instanceConstraints <$> sumTypeParameters) <+> "=> "
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceBody params =
-          genericInstance settings params <> comma <+> encodeInstance params
+        instanceConstraints params = encodeInstance params
     go Decode =
       "instance decode" <> textStrict (_typeName t) <+> "::" <+> extras <+>
       "Decode" <+>
@@ -223,37 +222,24 @@ instances settings st@(SumType t _ is) = go <$> is
         extras
           | stpLength == 0 = mempty
           | otherwise =
-            constraintsInner (instanceBody <$> sumTypeParameters) <+> "=> "
+            constraintsInner (instanceConstraints <$> sumTypeParameters) <+> "=> "
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceBody params =
-          genericInstance settings params <> ", " <> decodeInstance params
+        instanceConstraints params = decodeInstance params
     go i =
       "derive instance " <> textStrict (T.toLower c) <>
       textStrict (_typeName t) <+>
       "::" <+>
-      extras i <>
       textStrict c <+>
       typeInfoToDoc False t <>
       postfix i
       where
         c = T.pack $ show i
-        extras Generic
-          | stpLength == 0 = mempty
-          | stpLength == 1 = genericConstraintsInner <+> text "=> "
-          | otherwise = parens genericConstraintsInner <+> text "=> "
-        extras _ = ""
         postfix Newtype = " _"
         postfix Generic
           | Switches.genericsGenRep settings = " _"
           | otherwise = ""
         postfix _ = ""
-        stpLength = length sumTypeParameters
-        sumTypeParameters =
-          filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        genericConstraintsInner =
-          hsep $
-          punctuate (text ",") (genericInstance settings <$> sumTypeParameters)
 
 recordUpdateDoc :: [(Doc, Doc)] -> Doc
 recordUpdateDoc = recordFields . fmap recordUpdateItem
