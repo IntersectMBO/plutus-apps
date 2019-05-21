@@ -160,7 +160,7 @@ allTests = do
               , "      }"
               , ""
               , ""
-              , "derive instance genericBar :: (Generic a, Generic b, Generic (m b)) => Generic (Bar a b m c)"
+              , "derive instance genericBar :: Generic (Bar a b m c)"
               , "--------------------------------------------------------------------------------"
               , "_Bar1 :: forall a b m c. Prism' (Bar a b m c) (Maybe a)"
               , "_Bar1 = prism' Bar1 f"
@@ -282,7 +282,7 @@ allTests = do
               , "      }"
               , ""
               , ""
-              , "derive instance genericSingleRecord :: (Generic a, Generic b) => Generic (SingleRecord a b)"
+              , "derive instance genericSingleRecord :: Generic (SingleRecord a b)"
               , "derive instance newtypeSingleRecord :: Newtype (SingleRecord a b) _"
               , "--------------------------------------------------------------------------------"
               , "_SingleRecord :: forall a b. Iso' (SingleRecord a b) { _a :: a"
@@ -418,7 +418,7 @@ allTests = do
               , "      }"
               , ""
               , ""
-              , "derive instance genericBar :: (Generic a, Generic b, Generic (m b)) => Generic (Bar a b m c)"
+              , "derive instance genericBar :: Generic (Bar a b m c)"
               ]
        in m `shouldBe` txt
     it "tests generation of newtypes for record data type" $
@@ -437,7 +437,7 @@ allTests = do
               , "      }"
               , ""
               , ""
-              , "derive instance genericSingleRecord :: (Generic a, Generic b) => Generic (SingleRecord a b)"
+              , "derive instance genericSingleRecord :: Generic (SingleRecord a b)"
               , "derive instance newtypeSingleRecord :: Newtype (SingleRecord a b) _"
               ]
        in recTypeText `shouldRender` txt
@@ -539,7 +539,7 @@ allTests = do
               , "      }"
               , ""
               , ""
-              , "derive instance genericBar :: (Generic a ra, Generic b rb, Generic (m b) rmb) => Generic (Bar a b m c) _"
+              , "derive instance genericBar :: Generic (Bar a b m c) _"
               ]
        in m `shouldBe` txt
     it "tests generation of newtypes for record data type" $
@@ -558,7 +558,7 @@ allTests = do
               , "      }"
               , ""
               , ""
-              , "derive instance genericSingleRecord :: (Generic a ra, Generic b rb) => Generic (SingleRecord a b) _"
+              , "derive instance genericSingleRecord :: Generic (SingleRecord a b) _"
               , "derive instance newtypeSingleRecord :: Newtype (SingleRecord a b) _"
               ]
        in recTypeText `shouldRender` txt
