@@ -198,7 +198,7 @@ instances settings st@(SumType t _ is) = go <$> is
       linebreak <>
       indent
         2
-        ("encode = genericEncode" <+> parens ("defaultOptions" <+> align (jsonOpts settings)))
+        ("encode value = genericEncode" <+> parens ("defaultOptions" <+> align (jsonOpts settings)) <+> "value")
       where
         stpLength = length sumTypeParameters
         extras
@@ -216,7 +216,7 @@ instances settings st@(SumType t _ is) = go <$> is
       linebreak <>
       indent
         2
-        ("decode = genericDecode" <+> parens ("defaultOptions" <+> align (jsonOpts settings)))
+        ("decode value = genericDecode" <+> parens ("defaultOptions" <+> align (jsonOpts settings)) <+> "value")
       where
         stpLength = length sumTypeParameters
         extras
