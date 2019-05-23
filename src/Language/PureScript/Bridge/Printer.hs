@@ -19,7 +19,7 @@ import qualified Data.Text                                  as T
 import qualified Data.Text.IO                               as T
 import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
 import           Language.PureScript.Bridge.SumType         (DataConstructor (DataConstructor),
-                                                             Instance (Decode, Encode, Generic, Newtype),
+                                                             Instance (Decode, Encode, Eq, Generic, Newtype),
                                                              RecordEntry (RecordEntry),
                                                              SumType (SumType),
                                                              getUsedTypes,
@@ -226,6 +226,20 @@ instances settings st@(SumType t _ is) = go <$> is
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints params = decodeInstance params
+    go Eq =
+      "derive instance eq" <> textStrict (_typeName t) <+> "::" <+> extras <+>
+      "Eq" <+>
+      typeInfoToDoc False t
+      where
+        stpLength = length sumTypeParameters
+        extras
+          | stpLength == 0 = mempty
+          | otherwise =
+            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
+            "=> "
+        sumTypeParameters =
+          filter (isTypeParam t) . Set.toList $ getUsedTypes st
+        instanceConstraints params = eqInstance params
     go i =
       "derive instance " <> textStrict (T.toLower c) <>
       textStrict (_typeName t) <+>
@@ -270,6 +284,9 @@ encodeInstance params = "Encode" <+> typeInfoToDoc False params
 
 decodeInstance :: PSType -> Doc
 decodeInstance params = "Decode" <+> typeInfoToDoc False params
+
+eqInstance :: PSType -> Doc
+eqInstance params = "Eq" <+> typeInfoToDoc False params
 
 genericInstance :: Switches.Settings -> PSType -> Doc
 genericInstance settings params =

@@ -22,6 +22,9 @@ module Language.PureScript.Bridge.TypeParameters where
 
 data A
 
+instance Eq A where
+    _ == _ = True
+
 data B
 
 data C
