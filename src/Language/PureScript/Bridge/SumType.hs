@@ -11,6 +11,7 @@
 module Language.PureScript.Bridge.SumType
   ( SumType(..)
   , mkSumType
+  , genericShow
   , equal
   , order
   , DataConstructor(..)
@@ -83,6 +84,7 @@ data Instance
   = Encode
   | Decode
   | Generic
+  | GenericShow
   | Newtype
   | Eq
   | Ord
@@ -100,6 +102,10 @@ nootype cs =
   where
     isSingletonList [_] = True
     isSingletonList _   = False
+
+-- | Ensure that a generic `Show` instance is generated for your type.
+genericShow :: Proxy a -> SumType t -> SumType t
+genericShow _ (SumType ti dc is) = SumType ti dc . nub $ GenericShow : is
 
 -- | Ensure that an `Eq` instance is generated for your type.
 equal :: Eq a => Proxy a -> SumType t -> SumType t

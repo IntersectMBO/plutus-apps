@@ -19,7 +19,7 @@ import qualified Data.Text                                  as T
 import qualified Data.Text.IO                               as T
 import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
 import           Language.PureScript.Bridge.SumType         (DataConstructor (DataConstructor),
-                                                             Instance (Decode, Encode, Eq, Generic, Newtype),
+                                                             Instance (Decode, Encode, Eq, Generic, GenericShow, Newtype),
                                                              RecordEntry (RecordEntry),
                                                              SumType (SumType),
                                                              getUsedTypes,
@@ -115,7 +115,9 @@ moduleToText settings m =
 _genericsImports :: Switches.Settings -> [ImportLine]
 _genericsImports settings
   | Switches.genericsGenRep settings =
-    [ImportLine "Data.Generic.Rep" $ Set.fromList ["class Generic"]]
+    [ ImportLine "Data.Generic.Rep" $ Set.fromList ["class Generic"]
+    , ImportLine "Data.Generic.Rep.Show" $ Set.fromList ["genericShow"]
+    ]
   | otherwise = [ImportLine "Data.Generic" $ Set.fromList ["class Generic"]]
 
 _lensImports :: Switches.Settings -> [ImportLine]
@@ -232,6 +234,12 @@ instances settings st@(SumType t _ is) = go <$> is
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints params = decodeInstance params
+    go GenericShow =
+      "instance show" <> textStrict (_typeName t) <+> "::" <+> "Show" <+>
+      typeInfoToDoc False t <+>
+      "where" <>
+      linebreak <>
+      indent 2 ("show = genericShow")
     go Eq =
       "derive instance eq" <> textStrict (_typeName t) <+> "::" <+> extras <+>
       "Eq" <+>
