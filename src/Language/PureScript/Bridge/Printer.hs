@@ -198,13 +198,16 @@ instances settings st@(SumType t _ is) = go <$> is
       linebreak <>
       indent
         2
-        ("encode value = genericEncode" <+> parens ("defaultOptions" <+> align (jsonOpts settings)) <+> "value")
+        ("encode value = genericEncode" <+>
+         parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
+         "value")
       where
         stpLength = length sumTypeParameters
         extras
           | stpLength == 0 = mempty
           | otherwise =
-            constraintsInner (instanceConstraints <$> sumTypeParameters) <+> "=> "
+            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
+            "=> "
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints params = encodeInstance params
@@ -216,13 +219,16 @@ instances settings st@(SumType t _ is) = go <$> is
       linebreak <>
       indent
         2
-        ("decode value = genericDecode" <+> parens ("defaultOptions" <+> align (jsonOpts settings)) <+> "value")
+        ("decode value = genericDecode" <+>
+         parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
+         "value")
       where
         stpLength = length sumTypeParameters
         extras
           | stpLength == 0 = mempty
           | otherwise =
-            constraintsInner (instanceConstraints <$> sumTypeParameters) <+> "=> "
+            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
+            "=> "
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints params = decodeInstance params
@@ -241,8 +247,7 @@ instances settings st@(SumType t _ is) = go <$> is
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints params = eqInstance params
     go i =
-      "derive instance " <> textStrict (T.toLower c) <>
-      textStrict (_typeName t) <+>
+      "derive instance " <> textStrict (T.toLower c) <> textStrict (_typeName t) <+>
       "::" <+>
       textStrict c <+>
       typeInfoToDoc False t <>
