@@ -525,6 +525,7 @@ allTests = do
               , ""
               , "import Data.Either (Either)"
               , "import Data.Generic.Rep (class Generic)"
+              , "import Data.Generic.Rep.Show (genericShow)"
               , "import Data.Maybe (Maybe, Maybe(..))"
               , "import Data.Newtype (class Newtype)"
               , ""
