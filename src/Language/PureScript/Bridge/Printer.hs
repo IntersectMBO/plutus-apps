@@ -142,6 +142,9 @@ _foreignImports settings
     [ ImportLine "Foreign.Generic" $
       Set.fromList
         ["defaultOptions", "genericDecode", "genericEncode", "aesonSumEncoding"]
+    , ImportLine "Foreign.Generic.EnumEncoding" $
+      Set.fromList
+        ["defaultGenericEnumOptions", "genericDecodeEnum", "genericEncodeEnum"]
     , ImportLine "Foreign.Class" $ Set.fromList ["class Decode", "class Encode"]
     ]
   | otherwise = []
@@ -189,7 +192,7 @@ sumTypeToTypeDecls settings (SumType t cs is) =
 -- | Given a Purescript type, generate instances for typeclass
 -- instances it claims to have.
 instances :: Switches.Settings -> SumType 'PureScript -> [Doc]
-instances settings st@(SumType t _ is) = go <$> is
+instances settings st@(SumType t cs is) = go <$> is
   where
     go :: Instance -> Doc
     go Encode =
@@ -198,12 +201,15 @@ instances settings st@(SumType t _ is) = go <$> is
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
-      indent
-        2
-        ("encode value = genericEncode" <+>
-         parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
-         "value")
+      indent 2 encodeInstanceBody
       where
+        encodeInstanceBody =
+          "encode value =" <+>
+          (if isEnum
+             then "genericEncodeEnum defaultGenericEnumOptions value"
+             else "genericEncode" <+>
+                  parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
+                  "value")
         stpLength = length sumTypeParameters
         extras
           | stpLength == 0 = mempty
@@ -219,12 +225,15 @@ instances settings st@(SumType t _ is) = go <$> is
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
-      indent
-        2
-        ("decode value = genericDecode" <+>
-         parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
-         "value")
+      indent 2 decodeInstanceBody
       where
+        decodeInstanceBody =
+          "decode value =" <+>
+          (if isEnum
+             then "genericDecodeEnum defaultGenericEnumOptions value"
+             else ("genericDecode" <+>
+                   parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
+                   "value"))
         stpLength = length sumTypeParameters
         extras
           | stpLength == 0 = mempty
@@ -267,6 +276,8 @@ instances settings st@(SumType t _ is) = go <$> is
           | Switches.genericsGenRep settings = " _"
           | otherwise = ""
         postfix _ = ""
+    isEnum = all isNoArgConstructor cs
+    isNoArgConstructor c = (c ^. sigValues) == Left []
 
 recordUpdateDoc :: [(Doc, Doc)] -> Doc
 recordUpdateDoc = recordFields . fmap recordUpdateItem
