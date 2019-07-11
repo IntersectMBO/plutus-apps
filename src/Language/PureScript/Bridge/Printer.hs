@@ -248,7 +248,7 @@ instances settings st@(SumType t cs is) = go <$> is
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
-      indent 2 "show = genericShow"
+      indent 2 "show x = genericShow x"
     go Eq =
       "derive instance eq" <> textStrict (_typeName t) <+> "::" <+> extras <+>
       "Eq" <+>
