@@ -244,11 +244,21 @@ instances settings st@(SumType t cs is) = go <$> is
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints = decodeInstance
     go GenericShow =
-      "instance show" <> textStrict (_typeName t) <+> "::" <+> "Show" <+>
+      "instance show" <> textStrict (_typeName t) <+> "::" <+> extras <+> "Show" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
       indent 2 "show x = genericShow x"
+      where
+        stpLength = length sumTypeParameters
+        extras
+          | stpLength == 0 = mempty
+          | otherwise =
+            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
+            "=> "
+        sumTypeParameters =
+          filter (isTypeParam t) . Set.toList $ getUsedTypes st
+        instanceConstraints params = showInstance params
     go Eq =
       "derive instance eq" <> textStrict (_typeName t) <+> "::" <+> extras <+>
       "Eq" <+>
@@ -328,6 +338,9 @@ eqInstance params = "Eq" <+> typeInfoToDoc False params
 
 ordInstance :: PSType -> Doc
 ordInstance params = "Ord" <+> typeInfoToDoc False params
+
+showInstance :: PSType -> Doc
+showInstance params = "Show" <+> typeInfoToDoc False params
 
 genericInstance :: Switches.Settings -> PSType -> Doc
 genericInstance settings params =
