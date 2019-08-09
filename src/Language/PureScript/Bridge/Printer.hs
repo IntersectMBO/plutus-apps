@@ -19,7 +19,7 @@ import qualified Data.Text                                  as T
 import qualified Data.Text.IO                               as T
 import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
 import           Language.PureScript.Bridge.SumType         (DataConstructor (DataConstructor),
-                                                             Instance (Decode, Encode, Eq,Ord, Generic, GenericShow, Newtype),
+                                                             Instance (Decode, Encode, Eq, Ord, Functor, Generic, GenericShow, Newtype),
                                                              RecordEntry (RecordEntry),
                                                              SumType (SumType),
                                                              getUsedTypes,
@@ -255,10 +255,14 @@ instances settings st@(SumType t cs is) = go <$> is
           | stpLength == 0 = mempty
           | otherwise =
             constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=> "
+            "=>"
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints params = showInstance params
+    go Functor =
+      "derive instance functor" <> name  <+> "::" <+> "Functor" <+> name
+      where
+        name = textStrict (_typeName t)
     go Eq =
       "derive instance eq" <> textStrict (_typeName t) <+> "::" <+> extras <+>
       "Eq" <+>

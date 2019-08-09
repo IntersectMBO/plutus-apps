@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -34,6 +35,9 @@ data Foo = Foo
          | Bar Int
          | FooBar Int Text
          deriving (Eq, Ord, Generic, Typeable, Show)
+
+data Func a = Func Int a
+         deriving (Eq, Ord, Functor, Generic, Typeable, Show)
 
 data Test = TestIntInt Int Int
           | TestBool {bool :: Bool}

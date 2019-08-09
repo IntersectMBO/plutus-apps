@@ -490,12 +490,12 @@ allTests = do
        in recTypeText `shouldRender` txt
   describe "buildBridge without lens-code-gen and generics-rep" $ do
     let settings = getSettings (noLenses <> useGenRep)
-    it "tests generation of for custom type Foo" $
+    it "tests generation of typeclasses for custom type Foo" $
       let proxy = Proxy :: Proxy Foo
           recType =
             bridgeSumType
               (buildBridge defaultBridge)
-              (order proxy $ mkSumType proxy)
+              (genericShow proxy $ order proxy $ mkSumType proxy)
           recTypeText = sumTypeToDoc settings recType
           txt =
             T.unlines
@@ -505,9 +505,30 @@ allTests = do
               , "  | FooBar Int String"
               , ""
               , ""
+              , "instance showFoo :: Show Foo where"
+              , "  show x = genericShow x"
               , "derive instance eqFoo :: Eq Foo"
               , "derive instance ordFoo :: Ord Foo"
               , "derive instance genericFoo :: Generic Foo _"
+              ]
+       in recTypeText `shouldRender` txt
+    it "tests generation of typeclasses for custom type Func" $
+      let proxy = Proxy :: Proxy (Func A)
+          recType =
+            bridgeSumType
+              (buildBridge defaultBridge)
+              (functor proxy $ genericShow proxy $ mkSumType proxy)
+          recTypeText = sumTypeToDoc settings recType
+          txt =
+            T.unlines
+              [ "data Func a"
+              , "  = Func Int a"
+              , ""
+              , ""
+              , "derive instance functorFunc :: Functor Func"
+              , "instance showFunc :: (Show a) => Show (Func a) where"
+              , "  show x = genericShow x"
+              , "derive instance genericFunc :: Generic (Func a) _"
               ]
        in recTypeText `shouldRender` txt
     it "tests the generation of a whole (dummy) module" $
