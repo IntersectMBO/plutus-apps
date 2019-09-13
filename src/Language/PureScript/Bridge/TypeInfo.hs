@@ -35,10 +35,8 @@ data Language
 -- | Basic info about a data type:
 data TypeInfo (lang :: Language) =
   TypeInfo
-  -- | Hackage package
-    { _typePackage :: !Text
-  -- | Full Module path
-    , _typeModule :: !Text
+    { _typePackage :: !Text  -- ^ Hackage package
+    , _typeModule :: !Text  -- ^ Full Module path
     , _typeName :: !Text
     , _typeParameters :: ![TypeInfo lang]
     }

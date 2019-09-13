@@ -86,10 +86,8 @@ type FullBridge = HaskellType -> PSType
 
 data BridgeData =
   BridgeData
-  -- | The Haskell type to translate.
-    { _haskType :: HaskellType
-  -- | Reference to the bridge itself, needed for translation of type constructors.
-    , _fullBridge :: FullBridge
+    { _haskType :: HaskellType -- ^ The Haskell type to translate.
+    , _fullBridge :: FullBridge -- ^ Reference to the bridge itself, needed for translation of type constructors.
     }
 
 -- | By implementing the 'haskType' lens in the HasHaskType class, we are able
