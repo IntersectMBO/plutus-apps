@@ -610,6 +610,49 @@ allTests = do
               , "derive instance genericSingleProduct :: Generic SingleProduct _"
               ]
        in recTypeText `shouldRender` txt
+    it "tests generation Eq instances for polymorphic types" $
+      let recType' =
+            bridgeSumType
+              (buildBridge defaultBridge)
+              ((equal <*> mkSumType) (Proxy :: Proxy (SingleRecord A B)))
+          recTypeText = sumTypeToDoc settings recType'
+          txt =
+            T.unlines
+              [ "newtype SingleRecord a b"
+              , "  = SingleRecord"
+              , "      { _a :: a"
+              , "      , _b :: b"
+              , "      , c :: String"
+              , "      }"
+              , ""
+              , ""
+              , "derive instance eqSingleRecord :: (Eq a, Eq b) => Eq (SingleRecord a b)"
+              , "derive instance genericSingleRecord :: Generic (SingleRecord a b) _"
+              , "derive instance newtypeSingleRecord :: Newtype (SingleRecord a b) _"
+              ]
+       in recTypeText `shouldRender` txt
+    it "tests generation Ord instances for polymorphic types" $
+      let recType' =
+            bridgeSumType
+              (buildBridge defaultBridge)
+              ((order <*> mkSumType) (Proxy :: Proxy (SingleRecord A B)))
+          recTypeText = sumTypeToDoc settings recType'
+          txt =
+            T.unlines
+              [ "newtype SingleRecord a b"
+              , "  = SingleRecord"
+              , "      { _a :: a"
+              , "      , _b :: b"
+              , "      , c :: String"
+              , "      }"
+              , ""
+              , ""
+              , "derive instance eqSingleRecord :: (Eq a, Eq b) => Eq (SingleRecord a b)"
+              , "derive instance ordSingleRecord :: (Ord a, Ord b) => Ord (SingleRecord a b)"
+              , "derive instance genericSingleRecord :: Generic (SingleRecord a b) _"
+              , "derive instance newtypeSingleRecord :: Newtype (SingleRecord a b) _"
+              ]
+       in recTypeText `shouldRender` txt
 
 shouldRender :: Doc -> Text -> Expectation
 shouldRender actual expected = renderText actual `shouldBe` T.stripEnd expected

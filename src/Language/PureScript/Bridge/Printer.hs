@@ -19,7 +19,7 @@ import qualified Data.Text                                  as T
 import qualified Data.Text.IO                               as T
 import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
 import           Language.PureScript.Bridge.SumType         (DataConstructor (DataConstructor),
-                                                             Instance (Decode, Encode, Eq, Generic, GenericShow, Newtype),
+                                                             Instance (Decode, Encode, Eq,Ord, Generic, GenericShow, Newtype),
                                                              RecordEntry (RecordEntry),
                                                              SumType (SumType),
                                                              getUsedTypes,
@@ -215,7 +215,7 @@ instances settings st@(SumType t cs is) = go <$> is
           | stpLength == 0 = mempty
           | otherwise =
             constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=> "
+            "=>"
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints = encodeInstance
@@ -239,7 +239,7 @@ instances settings st@(SumType t cs is) = go <$> is
           | stpLength == 0 = mempty
           | otherwise =
             constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=> "
+            "=>"
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints = decodeInstance
@@ -259,10 +259,24 @@ instances settings st@(SumType t cs is) = go <$> is
           | stpLength == 0 = mempty
           | otherwise =
             constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=> "
+            "=>"
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints = eqInstance
+    go Ord =
+      "derive instance ord" <> textStrict (_typeName t) <+> "::" <+> extras <+>
+      "Ord" <+>
+      typeInfoToDoc False t
+      where
+        stpLength = length sumTypeParameters
+        extras
+          | stpLength == 0 = mempty
+          | otherwise =
+            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
+            "=>"
+        sumTypeParameters =
+          filter (isTypeParam t) . Set.toList $ getUsedTypes st
+        instanceConstraints = ordInstance
     go i =
       "derive instance " <> textStrict (T.toLower c) <> textStrict (_typeName t) <+>
       "::" <+>
@@ -311,6 +325,9 @@ decodeInstance params = "Decode" <+> typeInfoToDoc False params
 
 eqInstance :: PSType -> Doc
 eqInstance params = "Eq" <+> typeInfoToDoc False params
+
+ordInstance :: PSType -> Doc
+ordInstance params = "Ord" <+> typeInfoToDoc False params
 
 genericInstance :: Switches.Settings -> PSType -> Doc
 genericInstance settings params =

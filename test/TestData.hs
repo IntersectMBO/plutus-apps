@@ -48,7 +48,7 @@ data SingleRecord a b = SingleRecord {
     _a :: a
   , _b :: b
   , c  :: String
-  } deriving(Generic, Typeable, Show)
+  } deriving(Generic, Eq, Ord, Typeable, Show)
 
 data TwoRecords
   = FirstRecord {

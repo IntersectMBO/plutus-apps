@@ -1,3 +1,4 @@
+{-# LANGUAGE EmptyDataDeriving #-}
 -- | As we translate types and not type constructors, we have to pass dummy types
 --   to any type constructor.
 --
@@ -20,60 +21,57 @@
 --   @
 module Language.PureScript.Bridge.TypeParameters where
 
-data A
+data A deriving (Eq, Ord)
 
-instance Eq A where
-    _ == _ = True
+data B deriving (Eq, Ord)
 
-data B
+data C deriving (Eq, Ord)
 
-data C
+data D deriving (Eq, Ord)
 
-data D
+data E deriving (Eq, Ord)
 
-data E
+data F deriving (Eq, Ord)
 
-data F
+data G deriving (Eq, Ord)
 
-data G
+data H deriving (Eq, Ord)
 
-data H
+data I deriving (Eq, Ord)
 
-data I
+data J deriving (Eq, Ord)
 
-data J
+data K deriving (Eq, Ord)
 
-data K
+data L deriving (Eq, Ord)
 
-data L
+data M deriving (Eq, Ord)
 
-data M
+data N deriving (Eq, Ord)
 
-data N
+data O deriving (Eq, Ord)
 
-data O
+data P deriving (Eq, Ord)
 
-data P
+data Q deriving (Eq, Ord)
 
-data Q
+data R deriving (Eq, Ord)
 
-data R
+data S deriving (Eq, Ord)
 
-data S
+data T deriving (Eq, Ord)
 
-data T
+data U deriving (Eq, Ord)
 
-data U
+data V deriving (Eq, Ord)
 
-data V
+data W deriving (Eq, Ord)
 
-data W
+data X deriving (Eq, Ord)
 
-data X
+data Y deriving (Eq, Ord)
 
-data Y
-
-data Z
+data Z deriving (Eq, Ord)
 
 -- | You can use those if your type parameters are actually type constructors as well:
 --   @
