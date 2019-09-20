@@ -9,7 +9,7 @@ let
       }:
       mkDerivation {
         pname = "purescript-bridge";
-        version = "0.3.2.0";
+        version = "0.13.1.0";
         src = ./.;
         libraryHaskellDepends = [
           base containers directory errors filepath generic-deriving lens mtl
