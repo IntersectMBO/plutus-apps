@@ -218,7 +218,7 @@ instances settings st@(SumType t cs is) = go <$> is
             "=> "
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceConstraints params = encodeInstance params
+        instanceConstraints = encodeInstance
     go Decode =
       "instance decode" <> textStrict (_typeName t) <+> "::" <+> extras <+>
       "Decode" <+>
@@ -242,13 +242,13 @@ instances settings st@(SumType t cs is) = go <$> is
             "=> "
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceConstraints params = decodeInstance params
+        instanceConstraints = decodeInstance
     go GenericShow =
       "instance show" <> textStrict (_typeName t) <+> "::" <+> "Show" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
-      indent 2 ("show = genericShow")
+      indent 2 "show = genericShow"
     go Eq =
       "derive instance eq" <> textStrict (_typeName t) <+> "::" <+> extras <+>
       "Eq" <+>
@@ -262,7 +262,7 @@ instances settings st@(SumType t cs is) = go <$> is
             "=> "
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceConstraints params = eqInstance params
+        instanceConstraints = eqInstance
     go i =
       "derive instance " <> textStrict (T.toLower c) <> textStrict (_typeName t) <+>
       "::" <+>
@@ -361,7 +361,7 @@ encloseVsep left right sp ds =
   case ds of
     []  -> left <> right
     [d] -> left <> d <> right
-    _   -> (vsep (zipWith (<>) (left : repeat sp) ds) <> right)
+    _   -> vsep (zipWith (<>) (left : repeat sp) ds) <> right
 
 typeNameAndForall :: TypeInfo 'PureScript -> (Doc, Doc)
 typeNameAndForall typeInfo = (typName, forAll)
@@ -424,9 +424,9 @@ constructorToOptic hasOtherConstructors typeInfo (DataConstructor n args) =
               | length cs == 1 = textStrict n
               | otherwise =
                 parens
-                  ("\\{" <+> (cat $ punctuate (", ") cArgs) <+> "} ->" <+>
+                  ("\\{" <+> cat (punctuate ", " cArgs) <+> "} ->" <+>
                    textStrict n <+>
-                   (cat $ punctuate space cArgs))
+                   cat (punctuate space cArgs))
               where
                 cArgs = textStrict . T.singleton . fst <$> zip ['a' ..] cs
             types = constructorTypes cs

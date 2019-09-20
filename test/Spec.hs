@@ -4,7 +4,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Main where
 
@@ -243,7 +242,7 @@ allTests = do
               , "    f (FooBar a b) = Just $ { a: a, b: b }"
               , "    f _ = Nothing"
               ]
-       in (vsep $ punctuate linebreak $ barOptics <> fooOptics) `shouldRender`
+       in vsep (punctuate linebreak $ barOptics <> fooOptics) `shouldRender`
           txt
     it "tests generation of record optics" $
       let recType =
@@ -264,7 +263,7 @@ allTests = do
               , "b :: forall a b. Lens' (SingleRecord a b) b"
               , "b = _Newtype <<< prop (SProxy :: SProxy \"_b\")"
               ]
-       in (cat $ punctuate linebreak $ barOptics <> recTypeOptics) `shouldRender`
+       in cat (punctuate linebreak $ barOptics <> recTypeOptics) `shouldRender`
           txt
     it "tests generation of newtypes for record data type" $
       let recType =
