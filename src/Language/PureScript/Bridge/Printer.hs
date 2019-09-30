@@ -141,7 +141,10 @@ _foreignImports settings
   | (isJust . Switches.generateForeign) settings =
     [ ImportLine "Foreign.Generic" $
       Set.fromList
-        ["defaultOptions", "genericDecode", "genericEncode", "aesonSumEncoding"]
+        ["defaultOptions", "genericDecode", "genericEncode"]
+    , ImportLine "Foreign.Generic.Class" $
+      Set.fromList
+        ["aesonSumEncoding"]
     , ImportLine "Foreign.Generic.EnumEncoding" $
       Set.fromList
         ["defaultGenericEnumOptions", "genericDecodeEnum", "genericEncodeEnum"]
