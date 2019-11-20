@@ -140,6 +140,7 @@ allTests = do
               , "module TestData where"
               , ""
               , "import Data.Either (Either)"
+              , "import Data.Eq (class Eq1)"
               , "import Data.Generic (class Generic)"
               , "import Data.Lens (Iso', Lens', Prism', lens, prism')"
               , "import Data.Lens.Iso.Newtype (_Newtype)"
@@ -402,6 +403,7 @@ allTests = do
               , "module TestData where"
               , ""
               , "import Data.Either (Either)"
+              , "import Data.Eq (class Eq1)"
               , "import Data.Generic (class Generic)"
               , "import Data.Maybe (Maybe, Maybe(..))"
               , "import Data.Newtype (class Newtype)"
@@ -517,7 +519,7 @@ allTests = do
           recType =
             bridgeSumType
               (buildBridge defaultBridge)
-              (functor proxy $ genericShow proxy $ mkSumType proxy)
+              (equal1 proxy $ functor proxy $ genericShow proxy $ mkSumType proxy)
           recTypeText = sumTypeToDoc settings recType
           txt =
             T.unlines
@@ -525,6 +527,7 @@ allTests = do
               , "  = Func Int a"
               , ""
               , ""
+              , "derive instance eq1Func :: Eq1 Func"
               , "derive instance functorFunc :: Functor Func"
               , "instance showFunc :: (Show a) => Show (Func a) where"
               , "  show x = genericShow x"
@@ -544,6 +547,7 @@ allTests = do
               , "module TestData where"
               , ""
               , "import Data.Either (Either)"
+              , "import Data.Eq (class Eq1)"
               , "import Data.Generic.Rep (class Generic)"
               , "import Data.Generic.Rep.Show (genericShow)"
               , "import Data.Maybe (Maybe, Maybe(..))"

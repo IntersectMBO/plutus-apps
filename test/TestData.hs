@@ -5,11 +5,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 
 
 module TestData where
 
+import           Data.Functor.Classes               (Eq1(liftEq))
 import           Data.Proxy
 import           Data.Text                          (Text)
 import           Data.Typeable
@@ -38,6 +38,9 @@ data Foo = Foo
 
 data Func a = Func Int a
          deriving (Eq, Ord, Functor, Generic, Typeable, Show)
+
+instance Eq1 Func where
+  liftEq eq (Func n x) (Func m y) = n == m && x `eq` y
 
 data Test = TestIntInt Int Int
           | TestBool {bool :: Bool}

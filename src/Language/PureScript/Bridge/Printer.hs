@@ -19,7 +19,7 @@ import qualified Data.Text                                  as T
 import qualified Data.Text.IO                               as T
 import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
 import           Language.PureScript.Bridge.SumType         (DataConstructor (DataConstructor),
-                                                             Instance (Decode, Encode, Eq, Ord, Functor, Generic, GenericShow, Newtype),
+                                                             Instance (Decode, Encode, Eq, Eq1, Functor, Generic, GenericShow, Newtype, Ord),
                                                              RecordEntry (RecordEntry),
                                                              SumType (SumType),
                                                              getUsedTypes,
@@ -109,6 +109,7 @@ moduleToText settings m =
     otherImports =
       importsFromList
         (_lensImports settings <> _genericsImports settings <>
+         _equalityImports settings <>
          _foreignImports settings)
     allImports = Map.elems $ mergeImportLines otherImports (psImportLines m)
 
@@ -119,6 +120,9 @@ _genericsImports settings
     , ImportLine "Data.Generic.Rep.Show" $ Set.fromList ["genericShow"]
     ]
   | otherwise = [ImportLine "Data.Generic" $ Set.fromList ["class Generic"]]
+
+_equalityImports :: Switches.Settings -> [ImportLine]
+_equalityImports _ = [ImportLine "Data.Eq" $ Set.fromList ["class Eq1"]]
 
 _lensImports :: Switches.Settings -> [ImportLine]
 _lensImports settings
@@ -280,6 +284,9 @@ instances settings st@(SumType t cs is) = go <$> is
         sumTypeParameters =
           filter (isTypeParam t) . Set.toList $ getUsedTypes st
         instanceConstraints = eqInstance
+    go Eq1 =
+      "derive instance eq1" <> textStrict (_typeName t) <+> "::" <+> "Eq1" <+>
+      textStrict (_typeName t)
     go Ord =
       "derive instance ord" <> textStrict (_typeName t) <+> "::" <+> extras <+>
       "Ord" <+>
