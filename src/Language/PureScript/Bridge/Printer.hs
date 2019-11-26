@@ -144,11 +144,8 @@ _foreignImports :: Switches.Settings -> [ImportLine]
 _foreignImports settings
   | (isJust . Switches.generateForeign) settings =
     [ ImportLine "Foreign.Generic" $
-      Set.fromList
-        ["defaultOptions", "genericDecode", "genericEncode"]
-    , ImportLine "Foreign.Generic.Class" $
-      Set.fromList
-        ["aesonSumEncoding"]
+      Set.fromList ["defaultOptions", "genericDecode", "genericEncode"]
+    , ImportLine "Foreign.Generic.Class" $ Set.fromList ["aesonSumEncoding"]
     , ImportLine "Foreign.Generic.EnumEncoding" $
       Set.fromList
         ["defaultGenericEnumOptions", "genericDecodeEnum", "genericEncodeEnum"]
@@ -201,10 +198,18 @@ sumTypeToTypeDecls settings (SumType t cs is) =
 instances :: Switches.Settings -> SumType 'PureScript -> [Doc]
 instances settings st@(SumType t cs is) = go <$> is
   where
+    stpLength = length sumTypeParameters
+    sumTypeParameters = filter (isTypeParam t) . Set.toList $ getUsedTypes st
+    extras instanceConstraints
+      | stpLength == 0 = mempty
+      | otherwise =
+        constraintsInner (instanceConstraints <$> sumTypeParameters) <+> "=>"
+    name = textStrict (_typeName t)
+    isEnum = all isNoArgConstructor cs
+    isNoArgConstructor c = (c ^. sigValues) == Left []
     go :: Instance -> Doc
     go Encode =
-      "instance encode" <> textStrict (_typeName t) <+> "::" <+> extras <+>
-      "Encode" <+>
+      "instance encode" <> name <+> "::" <+> extras encodeInstance <+> "Encode" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
@@ -217,18 +222,8 @@ instances settings st@(SumType t cs is) = go <$> is
              else "genericEncode" <+>
                   parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
                   "value")
-        stpLength = length sumTypeParameters
-        extras
-          | stpLength == 0 = mempty
-          | otherwise =
-            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=>"
-        sumTypeParameters =
-          filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceConstraints = encodeInstance
     go Decode =
-      "instance decode" <> textStrict (_typeName t) <+> "::" <+> extras <+>
-      "Decode" <+>
+      "instance decode" <> name <+> "::" <+> extras decodeInstance <+> "Decode" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
@@ -236,74 +231,28 @@ instances settings st@(SumType t cs is) = go <$> is
       where
         decodeInstanceBody =
           "decode value =" <+>
-          (if isEnum
-             then "genericDecodeEnum defaultGenericEnumOptions value"
-             else ("genericDecode" <+>
-                   parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
-                   "value"))
-        stpLength = length sumTypeParameters
-        extras
-          | stpLength == 0 = mempty
-          | otherwise =
-            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=>"
-        sumTypeParameters =
-          filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceConstraints = decodeInstance
+          if isEnum
+            then "genericDecodeEnum defaultGenericEnumOptions value"
+            else "genericDecode" <+>
+                 parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
+                 "value"
     go GenericShow =
-      "instance show" <> textStrict (_typeName t) <+> "::" <+> extras <+> "Show" <+>
+      "instance show" <> name <+> "::" <+> extras showInstance <+> "Show" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
       indent 2 "show x = genericShow x"
-      where
-        stpLength = length sumTypeParameters
-        extras
-          | stpLength == 0 = mempty
-          | otherwise =
-            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=>"
-        sumTypeParameters =
-          filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceConstraints params = showInstance params
     go Functor =
-      "derive instance functor" <> name  <+> "::" <+> "Functor" <+> name
-      where
-        name = textStrict (_typeName t)
+      "derive instance functor" <> name <+> "::" <+> "Functor" <+> name
     go Eq =
-      "derive instance eq" <> textStrict (_typeName t) <+> "::" <+> extras <+>
-      "Eq" <+>
+      "derive instance eq" <> name <+> "::" <+> extras eqInstance <+> "Eq" <+>
       typeInfoToDoc False t
-      where
-        stpLength = length sumTypeParameters
-        extras
-          | stpLength == 0 = mempty
-          | otherwise =
-            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=>"
-        sumTypeParameters =
-          filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceConstraints = eqInstance
-    go Eq1 =
-      "derive instance eq1" <> textStrict (_typeName t) <+> "::" <+> "Eq1" <+>
-      textStrict (_typeName t)
+    go Eq1 = "derive instance eq1" <> name <+> "::" <+> "Eq1" <+> name
     go Ord =
-      "derive instance ord" <> textStrict (_typeName t) <+> "::" <+> extras <+>
-      "Ord" <+>
+      "derive instance ord" <> name <+> "::" <+> extras ordInstance <+> "Ord" <+>
       typeInfoToDoc False t
-      where
-        stpLength = length sumTypeParameters
-        extras
-          | stpLength == 0 = mempty
-          | otherwise =
-            constraintsInner (instanceConstraints <$> sumTypeParameters) <+>
-            "=>"
-        sumTypeParameters =
-          filter (isTypeParam t) . Set.toList $ getUsedTypes st
-        instanceConstraints = ordInstance
     go i =
-      "derive instance " <> textStrict (T.toLower c) <> textStrict (_typeName t) <+>
-      "::" <+>
+      "derive instance " <> textStrict (T.toLower c) <> name <+> "::" <+>
       textStrict c <+>
       typeInfoToDoc False t <>
       postfix i
@@ -314,8 +263,6 @@ instances settings st@(SumType t cs is) = go <$> is
           | Switches.genericsGenRep settings = " _"
           | otherwise = ""
         postfix _ = ""
-    isEnum = all isNoArgConstructor cs
-    isNoArgConstructor c = (c ^. sigValues) == Left []
 
 recordUpdateDoc :: [(Doc, Doc)] -> Doc
 recordUpdateDoc = recordFields . fmap recordUpdateItem
