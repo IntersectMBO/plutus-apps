@@ -269,6 +269,18 @@ tests =
                     ContractInstanceState{instContractState=ResumableResult{_finalState}} <- Trace.getContractState hdl
                     Log.logInfo @String "Received contract state"
                     Log.logInfo @String $ "Final state: " <> show _finalState
+
+        , let theContract :: Contract () Schema ContractError () = void $ awaitSlot 10
+              emTrace = do
+                void $ Trace.assert "Always succeeds" $ const True
+                void $ Trace.waitNSlots 10
+          in run "assert succeeds" (waitingForSlot theContract tag 10) emTrace
+
+        , let theContract :: Contract () Schema ContractError () = void $ awaitSlot 10
+              emTrace = do
+                void $ Trace.assert "Always fails" $ const False
+                void $ Trace.waitNSlots 10
+          in checkEmulatorFails "assert throws error" (defaultCheckOptions & minLogLevel .~ Debug) (waitingForSlot theContract tag 10) emTrace
         ]
 
 checkpointContract :: Contract () Schema ContractError ()

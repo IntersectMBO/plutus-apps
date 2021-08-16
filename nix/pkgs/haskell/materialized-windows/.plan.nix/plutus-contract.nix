@@ -128,6 +128,7 @@
           "Wallet/Graph"
           "Wallet/Types"
           "Plutus/Trace"
+          "Plutus/Trace/Effects/Assert"
           "Plutus/Trace/Effects/ContractInstanceId"
           "Plutus/Trace/Effects/RunContract"
           "Plutus/Trace/Effects/RunContractPlayground"
