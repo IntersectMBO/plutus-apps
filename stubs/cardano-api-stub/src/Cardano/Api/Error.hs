@@ -1,5 +1,5 @@
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE GADTSyntax #-}
+{-# LANGUAGE GADTSyntax                #-}
 
 -- | Class of errors used in the Api.
 --
@@ -12,8 +12,8 @@ module Cardano.Api.Error
 
 import           Prelude
 
-import           Control.Exception (Exception(..), IOException, throwIO)
-import           System.IO (Handle)
+import           Control.Exception (Exception (..), IOException, throwIO)
+import           System.IO         (Handle)
 
 
 class Show e => Error e where

@@ -706,6 +706,7 @@
         plutus-benchmark = ./.plan.nix/plutus-benchmark.nix;
         cardano-slotting = ./.plan.nix/cardano-slotting.nix;
         playground-common = ./.plan.nix/playground-common.nix;
+        iohk-monitoring-stub = ./.plan.nix/iohk-monitoring-stub.nix;
         cardano-node = ./.plan.nix/cardano-node.nix;
         cardano-crypto-class = ./.plan.nix/cardano-crypto-class.nix;
         network = ./.plan.nix/network.nix;
@@ -744,6 +745,7 @@
         base-deriving-via = ./.plan.nix/base-deriving-via.nix;
         plutus-contract = ./.plan.nix/plutus-contract.nix;
         iohk-monitoring = ./.plan.nix/iohk-monitoring.nix;
+        cardano-api-stub = ./.plan.nix/cardano-api-stub.nix;
         io-sim = ./.plan.nix/io-sim.nix;
         cardano-crypto-test = ./.plan.nix/cardano-crypto-test.nix;
         web-ghc = ./.plan.nix/web-ghc.nix;
@@ -826,6 +828,7 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "playground-common" = { flags = {}; };
+          "iohk-monitoring-stub" = { flags = {}; };
           "cardano-node" = {
             flags = {
               "unexpected_thunks" = lib.mkOverride 900 false;
@@ -927,6 +930,7 @@
               "disable-observables" = lib.mkOverride 900 false;
               };
             };
+          "cardano-api-stub" = { flags = {}; };
           "io-sim" = { flags = { "asserts" = lib.mkOverride 900 false; }; };
           "cardano-crypto-test" = {
             flags = { "development" = lib.mkOverride 900 false; };
@@ -1037,6 +1041,7 @@
           "optional-args".components.library.planned = lib.mkOverride 900 true;
           "ekg-json".components.library.planned = lib.mkOverride 900 true;
           "singletons".components.setup.planned = lib.mkOverride 900 true;
+          "cardano-api-stub".components.library.planned = lib.mkOverride 900 true;
           "tracer-transformers".components.exes."tracer-transfomers-example1".planned = lib.mkOverride 900 true;
           "singletons".components.library.planned = lib.mkOverride 900 true;
           "semigroupoids".components.setup.planned = lib.mkOverride 900 true;
@@ -1622,6 +1627,7 @@
           "memory".components.library.planned = lib.mkOverride 900 true;
           "plutus-benchmark".components.library.planned = lib.mkOverride 900 true;
           "cardano-node".components.library.planned = lib.mkOverride 900 true;
+          "iohk-monitoring-stub".components.library.planned = lib.mkOverride 900 true;
           "random-shuffle".components.library.planned = lib.mkOverride 900 true;
           "pretty-show".components.exes."ppsh".planned = lib.mkOverride 900 true;
           "typerep-map".components.sublibs."typerep-extra-impls".planned = lib.mkOverride 900 true;

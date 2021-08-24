@@ -27,6 +27,8 @@ packages: doc
           quickcheck-dynamic
           web-ghc
           word-array
+          stubs/cardano-api-stub
+          stubs/iohk-monitoring-stub
           stubs/plutus-ghc-stub
           contrib/*
 

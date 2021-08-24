@@ -1,6 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE GADTs           #-}
+{-# LANGUAGE TypeFamilies    #-}
 
 module Cardano.Api.HasTypeProxy
   ( HasTypeProxy(AsType, proxyToAsType)
@@ -8,8 +8,8 @@ module Cardano.Api.HasTypeProxy
   , FromSomeType(..)
   ) where
 
+import           Data.Kind  (Constraint, Type)
 import           Data.Proxy (Proxy (..))
-import           Data.Kind (Type, Constraint)
 
 
 class HasTypeProxy t where
