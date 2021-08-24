@@ -45,7 +45,6 @@
           (hsPkgs."async" or (errorHandler.buildDepError "async"))
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-          (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
           (hsPkgs."cardano-crypto" or (errorHandler.buildDepError "cardano-crypto"))
           (hsPkgs."cardano-ledger-byron" or (errorHandler.buildDepError "cardano-ledger-byron"))
           (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
@@ -107,17 +106,24 @@
           (hsPkgs."mwc-random" or (errorHandler.buildDepError "mwc-random"))
           (hsPkgs."primitive" or (errorHandler.buildDepError "primitive"))
           (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
-          (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
-          (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
           (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
           (hsPkgs."beam-core" or (errorHandler.buildDepError "beam-core"))
-          (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
           (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
+          (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
           (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
-          ];
+          ] ++ (if !system.isGhcjs
+          then [
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
+            (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
+            ]
+          else [
+            (hsPkgs."cardano-api-stub" or (errorHandler.buildDepError "cardano-api-stub"))
+            (hsPkgs."iohk-monitoring-stub" or (errorHandler.buildDepError "iohk-monitoring-stub"))
+            ]);
         build-tools = [
           (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
           (hsPkgs.buildPackages.cardano-cli.components.exes.cardano-cli or (pkgs.buildPackages.cardano-cli or (errorHandler.buildToolDepError "cardano-cli:cardano-cli")))
@@ -202,7 +208,6 @@
             (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
-            (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
             (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
             (hsPkgs."monad-logger" or (errorHandler.buildDepError "monad-logger"))
@@ -224,11 +229,11 @@
             (hsPkgs."unliftio-core" or (errorHandler.buildDepError "unliftio-core"))
             (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
             (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
-            ];
+            ] ++ (pkgs.lib).optional (!system.isGhcjs) (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"));
           buildable = true;
           modules = [ "CommandParser" ];
           hsSourceDirs = [ "app" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (!system.isGhcjs) "";
           };
         "plutus-pab-examples" = {
           depends = [

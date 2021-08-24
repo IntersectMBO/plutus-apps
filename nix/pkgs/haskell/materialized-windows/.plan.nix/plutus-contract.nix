@@ -32,7 +32,7 @@
       };
     components = {
       "library" = {
-        depends = ([
+        depends = [
           (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
           (hsPkgs."plutus-core" or (errorHandler.buildDepError "plutus-core"))
           (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
@@ -60,6 +60,7 @@
           (hsPkgs."monad-control" or (errorHandler.buildDepError "monad-control"))
           (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
           (hsPkgs."newtype-generics" or (errorHandler.buildDepError "newtype-generics"))
+          (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
           (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
           (hsPkgs."profunctors" or (errorHandler.buildDepError "profunctors"))
           (hsPkgs."quickcheck-dynamic" or (errorHandler.buildDepError "quickcheck-dynamic"))
@@ -77,7 +78,7 @@
           (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
           (hsPkgs."IntervalMap" or (errorHandler.buildDepError "IntervalMap"))
           (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
-          ] ++ (pkgs.lib).optional (!(compiler.isGhcjs && true || system.isGhcjs)) (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))) ++ (pkgs.lib).optionals (!(compiler.isGhcjs && true || system.isGhcjs || system.isWindows)) [
+          ] ++ (pkgs.lib).optionals (!(compiler.isGhcjs && true || system.isGhcjs || system.isWindows)) [
           (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
           (hsPkgs."tasty-hunit" or (errorHandler.buildDepError "tasty-hunit"))
           (hsPkgs."tasty-golden" or (errorHandler.buildDepError "tasty-golden"))
@@ -169,10 +170,11 @@
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
+            (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
             (hsPkgs."semigroupoids" or (errorHandler.buildDepError "semigroupoids"))
-            ] ++ (pkgs.lib).optional (!(compiler.isGhcjs && true || system.isGhcjs)) (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"));
+            ];
           buildable = true;
           modules = [
             "Spec/Contract"

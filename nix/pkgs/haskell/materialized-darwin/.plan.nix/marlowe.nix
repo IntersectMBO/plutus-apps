@@ -55,7 +55,8 @@
           (hsPkgs."wl-pprint" or (errorHandler.buildDepError "wl-pprint"))
           (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
           (hsPkgs."semigroups" or (errorHandler.buildDepError "semigroups"))
-          ] ++ (pkgs.lib).optional (!(compiler.isGhcjs && true || system.isGhcjs)) (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"));
+          (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
+          ];
         buildable = true;
         modules = [
           "Language/Marlowe"
@@ -84,13 +85,14 @@
             (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
             (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
             (hsPkgs."marlowe" or (errorHandler.buildDepError "marlowe"))
-            ] ++ (pkgs.lib).optional (!(compiler.isGhcjs && true || system.isGhcjs)) (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"));
+            (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
+            ];
           buildable = true;
           modules = [ "MarloweContract" ];
           hsSourceDirs = [ "pab" ];
-          mainPath = ([
+          mainPath = [
             "Main.hs"
-            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "") ++ (pkgs.lib).optional (!(compiler.isGhcjs && true || system.isGhcjs)) "";
+            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
           };
         };
       tests = {
