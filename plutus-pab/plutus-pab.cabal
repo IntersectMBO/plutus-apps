@@ -136,7 +136,6 @@ library
         async -any,
         base >=4.7 && <5,
         bytestring -any,
-        cardano-api -any,
         cardano-crypto -any,
         cardano-ledger-byron -any,
         cardano-prelude -any,
@@ -199,16 +198,22 @@ library
         mwc-random -any,
         primitive -any,
         hedgehog -any,
-        iohk-monitoring -any,
-        lobemo-backend-ekg -any,
         exceptions -any,
         data-default -any,
         time -any,
         time-units -any,
         beam-core -any,
-        beam-sqlite -any,
         beam-migrate -any,
+        beam-sqlite -any,
         sqlite-simple -any
+    if !os(ghcjs)
+        build-depends: cardano-api -any,
+                       iohk-monitoring -any,
+                       lobemo-backend-ekg -any
+
+    else
+        build-depends: cardano-api-stub,
+                       iohk-monitoring-stub
 
 executable plutus-pab-setup
     main-is:          Main.hs
@@ -233,7 +238,6 @@ executable plutus-pab-setup
         filepath -any,
         freer-extras -any,
         freer-simple -any,
-        iohk-monitoring -any,
         lens -any,
         lobemo-backend-ekg -any,
         monad-logger -any,
@@ -255,6 +259,8 @@ executable plutus-pab-setup
         unliftio-core -any,
         uuid -any,
         yaml -any,
+    if !os(ghcjs)
+        build-depends: iohk-monitoring -any
 
 executable plutus-pab-examples
     main-is:          Main.hs

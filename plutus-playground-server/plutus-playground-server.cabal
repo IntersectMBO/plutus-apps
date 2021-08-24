@@ -80,6 +80,7 @@ library
         plutus-contract -any,
         plutus-ledger -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         regex-compat -any,
         recursion-schemes -any,
         plutus-contract -any,
@@ -97,9 +98,6 @@ library
         transformers -any,
         wai-cors -any,
         web-ghc -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
 
 library plutus-playground-usecases
     hs-source-dirs: usecases
@@ -136,14 +134,12 @@ library plutus-playground-usecases
         playground-common -any,
         plutus-contract -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         plutus-ledger -any,
         recursion-schemes -any,
         row-types -any,
         text -any,
         transformers -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -194,6 +190,7 @@ executable plutus-playground-server
         mtl -any,
         optparse-applicative -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         plutus-playground-server -any,
         plutus-playground-usecases -any,
         purescript-bridge -any,
@@ -211,9 +208,6 @@ executable plutus-playground-server
         row-types -any,
         warp -any,
         web-ghc -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
 
 test-suite plutus-playground-server-test
     type: exitcode-stdio-1.0
@@ -242,6 +236,7 @@ test-suite plutus-playground-server-test
         mtl -any,
         plutus-playground-server -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         plutus-ledger -any,
         plutus-playground-usecases -any,
         plutus-contract -any,
@@ -252,6 +247,3 @@ test-suite plutus-playground-server-test
         transformers -any,
         plutus-ledger -any,
         web-ghc -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any

@@ -86,10 +86,8 @@ library
         hashable -any,
         freer-simple -any,
         streaming -any,
-        semigroups -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        semigroups -any,
+        plutus-tx-plugin -any
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -147,10 +145,8 @@ test-suite plutus-use-cases-test
         QuickCheck -any,
         freer-simple -any,
         foldl -any,
-        streaming -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        streaming -any,
+        plutus-tx-plugin -any
 
 -- runs emulator traces from plutus-use-cases-tests and
 -- writes all applied validator scripts to a folder
@@ -212,6 +208,7 @@ executable plutus-use-cases-scripts
         plutus-core -any,
         plutus-ledger-api -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         plutus-contract -any,
         plutus-ledger -any,
         plutus-use-cases -any,
@@ -221,6 +218,3 @@ executable plutus-use-cases-scripts
         cardano-binary -any,
         cborg -any,
         memory -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any

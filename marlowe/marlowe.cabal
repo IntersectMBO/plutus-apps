@@ -69,9 +69,8 @@ library
     scientific -any,
     wl-pprint -any,
     freer-simple -any,
-    semigroups -any
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin -any
+    semigroups -any,
+    plutus-tx-plugin -any
   exposed-modules:
     Language.Marlowe
     Language.Marlowe.Extended
@@ -149,5 +148,4 @@ executable marlowe-pab
     plutus-tx -any,
     purescript-bridge -any,
     marlowe -any,
-  if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin -any
+    plutus-tx-plugin -any

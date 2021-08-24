@@ -13,7 +13,7 @@ let
   systems = filterSystems supportedSystems;
   crossSystems =
     let pkgs = (import ./default.nix { }).pkgs;
-    in { inherit (pkgs.lib.systems.examples) mingwW64; };
+    in { inherit (pkgs.lib.systems.examples) ghcjs mingwW64; };
 
   # Collects haskell derivations and builds an attrset:
   #

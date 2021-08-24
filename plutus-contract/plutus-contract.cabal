@@ -126,6 +126,7 @@ library
         monad-control -any,
         mtl -any,
         newtype-generics -any,
+        plutus-tx-plugin -any,
         prettyprinter >=1.1.0.1,
         profunctors -any,
         quickcheck-dynamic -any,
@@ -143,9 +144,6 @@ library
         uuid -any,
         IntervalMap -any,
         QuickCheck -any,
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -192,9 +190,7 @@ test-suite plutus-contract-test
         plutus-contract -any,
         plutus-ledger -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         freer-simple -any,
         aeson -any,
         semigroupoids -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
