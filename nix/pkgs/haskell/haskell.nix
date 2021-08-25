@@ -76,6 +76,33 @@ let
         tests: False
       package prettyprinter-configurable
         tests: False
+    '' + lib.optionalString pkgs.stdenv.hostPlatform.isGhcjs ''
+      packages:
+        stubs/cardano-api-stub
+        stubs/iohk-monitoring-stub
+        stubs/plutus-ghc-stub
+        contrib/*
+
+      allow-newer:
+             stm:base
+
+           -- ghc-boot 8.10.4 is not in hackage, so haskell.nix needs consider 8.8.3
+           -- when cross compiling for windows or it will fail to find a solution including
+           -- a new Win32 version (ghc-boot depends on Win32 via directory)
+           , ghc-boot:base
+           , ghc-boot:ghc-boot-th
+           , snap-server:attoparsec
+           , io-streams-haproxy:attoparsec
+           , snap-core:attoparsec
+           , websockets:attoparsec
+           , jsaddle:base64-bytestring
+
+      source-repository-package
+        type: git
+        location: https://github.com/hamishmack/foundation
+        tag: 421e8056fabf30ef2f5b01bb61c6880d0dfaa1c8
+        --sha256: 0cbsj3dyycykh0lcnsglrzzh898n2iydyw8f2nwyfvfnyx6ac2im
+        subdir: foundation
     '';
     modules = [
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
