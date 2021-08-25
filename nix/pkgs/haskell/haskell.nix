@@ -67,6 +67,8 @@ let
     cabalProjectLocal = lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
       -- When cross compiling for windows we don't have a `ghc` package, so use
       -- the `plutus-ghc-stub` package instead.
+      packages:
+        stubs/plutus-ghc-stub
       package plutus-tx-plugin
         flags: +use-ghc-stub
 
