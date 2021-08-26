@@ -391,10 +391,21 @@ let
           # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
           # This will go away when we upgrade nixpkgs and things use ieee754 anyway.
           ieee.components.library.libs = lib.mkForce [ ];
-
+        };
+      })
+      ({ pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isGhcjs) {
+        packages = {
           # See https://github.com/input-output-hk/iohk-nix/pull/488
           cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
           cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
+        };
+      })
+      # For 
+      ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform.isGhcjs) {
+        packages = {
+          cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
+          cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
+          plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
         };
       })
     ] ++ lib.optional enableHaskellProfiling {
