@@ -82,6 +82,7 @@ let
     yq
     z3
     zlib
+    nodePackages.purescript-language-server
   ] ++ (lib.optionals (!stdenv.isDarwin) [ rPackages.plotly R ]));
 
   # local build inputs ( -> ./nix/pkgs/default.nix )
@@ -89,6 +90,7 @@ let
     aws-mfa-login
     cabal-install
     cardano-repo-tool
+    fixPngOptimization
     fixPurty
     fixStylishHaskell
     haskell-language-server
