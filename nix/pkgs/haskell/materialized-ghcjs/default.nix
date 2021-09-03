@@ -848,8 +848,8 @@
           "tracer-transformers" = { flags = {}; };
           "plutus-tx-plugin" = {
             flags = {
-              "use-ghc-stub" = lib.mkOverride 900 false;
-              "ghcjs-plugin" = lib.mkOverride 900 false;
+              "use-ghc-stub" = lib.mkOverride 900 true;
+              "ghcjs-plugin" = lib.mkOverride 900 true;
               };
             };
           "marlowe-symbolic" = { flags = {}; };
@@ -1229,7 +1229,6 @@
           "safe-exceptions".components.library.planned = lib.mkOverride 900 true;
           "blaze-html".components.library.planned = lib.mkOverride 900 true;
           "syb".components.library.planned = lib.mkOverride 900 true;
-          "plutus-tx-plugin".components.tests."plutus-tx-tests".planned = lib.mkOverride 900 true;
           "transformers".components.library.planned = lib.mkOverride 900 true;
           "monad-logger".components.library.planned = lib.mkOverride 900 true;
           "partial-order".components.library.planned = lib.mkOverride 900 true;

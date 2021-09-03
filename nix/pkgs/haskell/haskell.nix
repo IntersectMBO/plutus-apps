@@ -79,11 +79,15 @@ let
       package prettyprinter-configurable
         tests: False
     '' + lib.optionalString pkgs.stdenv.hostPlatform.isGhcjs ''
+      package plutus-tx-plugin
+        flags: -use-ghc-stub
       packages:
         stubs/cardano-api-stub
         stubs/iohk-monitoring-stub
         stubs/plutus-ghc-stub
         contrib/*
+      package plutus-tx-plugin
+        flags: +use-ghc-stub
 
       allow-newer:
              stm:base
