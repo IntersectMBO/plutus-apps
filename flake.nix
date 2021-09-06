@@ -28,7 +28,7 @@
     };
     haskell-nix = {
       # We pin this revision to avoid mass-rebuilds from the auto-update process.
-      url = "github:input-output-hk/haskell.nix?rev=7215f083b37741446aa325b20c8ba9f9f76015eb";
+      url = "github:input-output-hk/haskell.nix?rev=ebadbf04a966820cd27a504a439370276539572e";
 
       flake = false;
     };
@@ -60,7 +60,7 @@
       flake = false;
     };
     haskell-language-server = {
-      url = "github:haskell/haskell-language-server?ref=1.1.0";
+      url = "github:haskell/haskell-language-server?ref=1.3.0";
 
       flake = false;
     };
