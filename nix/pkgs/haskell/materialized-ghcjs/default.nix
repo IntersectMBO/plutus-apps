@@ -159,7 +159,6 @@
         "ghcjs-dom".revision = (((hackage."ghcjs-dom")."0.9.4.0").revisions).default;
         "ghcjs-dom".flags.jsffi = true;
         "ghcjs-dom".flags.debug = false;
-        "doctest".revision = (((hackage."doctest")."0.18.1").revisions).default;
         "dlist".revision = (((hackage."dlist")."0.8.0.8").revisions).default;
         "lifted-base".revision = (((hackage."lifted-base")."0.2.3.12").revisions).default;
         "pretty".revision = (((hackage."pretty")."1.1.3.6").revisions).default;
@@ -182,7 +181,6 @@
         "code-page".revision = (((hackage."code-page")."0.2.1").revisions).default;
         "validation".revision = (((hackage."validation")."1.1.1").revisions).default;
         "string-conversions".revision = (((hackage."string-conversions")."0.4.0.1").revisions).default;
-        "quickcheck-text".revision = (((hackage."quickcheck-text")."0.1.2.1").revisions).default;
         "unix-compat".revision = (((hackage."unix-compat")."0.5.3").revisions).default;
         "unix-compat".flags.old-time = false;
         "optparse-applicative".revision = (((hackage."optparse-applicative")."0.16.1.0").revisions).default;
@@ -1070,7 +1068,6 @@
           "bifunctors".components.library.planned = lib.mkOverride 900 true;
           "ral".components.library.planned = lib.mkOverride 900 true;
           "katip".components.library.planned = lib.mkOverride 900 true;
-          "prettyprinter-configurable".components.tests."prettyprinter-configurable-test".planned = lib.mkOverride 900 true;
           "playground-common".components.tests."playground-common-test".planned = lib.mkOverride 900 true;
           "marlowe-dashboard-server".components.tests."marlowe-dashboard-server-test".planned = lib.mkOverride 900 true;
           "plutus-playground-server".components.tests."plutus-playground-server-test".planned = lib.mkOverride 900 true;
@@ -1136,7 +1133,6 @@
           "marlowe-actus".components.library.planned = lib.mkOverride 900 true;
           "extra".components.library.planned = lib.mkOverride 900 true;
           "base-compat-batteries".components.library.planned = lib.mkOverride 900 true;
-          "doctest".components.exes."doctest".planned = lib.mkOverride 900 true;
           "sort".components.library.planned = lib.mkOverride 900 true;
           "lobemo-backend-trace-forwarder".components.library.planned = lib.mkOverride 900 true;
           "hsc2hs".components.exes."hsc2hs".planned = lib.mkOverride 900 true;
@@ -1252,7 +1248,6 @@
           "orphans-deriving-via".components.library.planned = lib.mkOverride 900 true;
           "optparse-applicative".components.library.planned = lib.mkOverride 900 true;
           "string-conversions".components.library.planned = lib.mkOverride 900 true;
-          "quickcheck-text".components.library.planned = lib.mkOverride 900 true;
           "plutus-ledger".components.library.planned = lib.mkOverride 900 true;
           "unix-compat".components.library.planned = lib.mkOverride 900 true;
           "monad-control".components.library.planned = lib.mkOverride 900 true;
@@ -1292,7 +1287,6 @@
           "lobemo-backend-monitoring".components.library.planned = lib.mkOverride 900 true;
           "Glob".components.library.planned = lib.mkOverride 900 true;
           "http-types".components.library.planned = lib.mkOverride 900 true;
-          "doctest".components.library.planned = lib.mkOverride 900 true;
           "conduit".components.library.planned = lib.mkOverride 900 true;
           "data-default-instances-old-locale".components.library.planned = lib.mkOverride 900 true;
           "algebraic-graphs".components.library.planned = lib.mkOverride 900 true;
@@ -1404,7 +1398,6 @@
           "plutus-metatheory".components.tests."test3".planned = lib.mkOverride 900 true;
           "integer-logarithms".components.library.planned = lib.mkOverride 900 true;
           "utf8-string".components.library.planned = lib.mkOverride 900 true;
-          "prettyprinter-configurable".components.tests."prettyprinter-configurable-doctest".planned = lib.mkOverride 900 true;
           "ansi-wl-pprint".components.library.planned = lib.mkOverride 900 true;
           "th-utilities".components.library.planned = lib.mkOverride 900 true;
           "reflection".components.library.planned = lib.mkOverride 900 true;
