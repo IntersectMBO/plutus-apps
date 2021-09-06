@@ -1099,7 +1099,6 @@
           "marlowe".components.tests."marlowe-test".planned = lib.mkOverride 900 true;
           "quickcheck-dynamic".components.tests."quickcheck-dynamic-test".planned = lib.mkOverride 900 true;
           "plutus-use-cases".components.tests."plutus-use-cases-test".planned = lib.mkOverride 900 true;
-          "network".components.tests."spec".planned = lib.mkOverride 900 true;
           "marlowe-actus".components.exes."marlowe-shiny".planned = lib.mkOverride 900 true;
           "socks".components.library.planned = lib.mkOverride 900 true;
           "cryptohash-sha1".components.library.planned = lib.mkOverride 900 true;

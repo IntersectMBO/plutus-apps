@@ -88,6 +88,8 @@ let
         flags: +use-ghc-stub
       package prettyprinter-configurable
         tests: False
+      package network
+        tests: False
 
       allow-newer:
              stm:base
