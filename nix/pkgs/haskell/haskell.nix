@@ -61,7 +61,7 @@ let
       "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" = "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx";
       "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" = "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
       "https://github.com/input-output-hk/cardano-wallet"."ae7569293e94241ef6829139ec02bd91abd069df" = "1mv1dhpkdj9ridm1fvq6jc85qs6zvbp172228rq72gyawjwrgvi6";
-      "https://github.com/input-output-hk/cardano-addresses"."0805ce7bea6ddebd015bc739f7924edf58182412" = "18vrsml17wajrg0nbwj44ys3bm7bvfh4ivhg7xp48qk71kac3snf";
+      "https://github.com/input-output-hk/cardano-addresses"."35f9c49dcd953b45da6dfbcb84b39c3f448ced58" = "1cv2frbxc6ic9n5xi5bxvxdgbh1nkl0ymqidq90qis0x3ln6b53n";
     };
     # Configuration settings needed for cabal configure to work when cross compiling
     # for windows. We can't use `modules` for these as `modules` are only applied
@@ -432,6 +432,10 @@ let
           cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
           plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
         };
+      })
+      ({ pkgs, config, ... }@args: {
+        packages.cardano-addresses-jsbits.components.library.preConfigure =
+          (import (args.config.packages.cardano-addresses.src + "/jsbits/emscripten") args).packages.cardano-addresses-jsbits.components.library.preConfigure;
       })
     ] ++ lib.optional enableHaskellProfiling {
       enableLibraryProfiling = true;
