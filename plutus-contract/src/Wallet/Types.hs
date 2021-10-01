@@ -10,6 +10,8 @@ module Wallet.Types(
     ContractInstanceId(..)
     , contractInstanceIDs
     , randomID
+    , ContractActivityStatus(..)
+    , parseContractActivityStatus
     , Notification(..)
     , EndpointDescription(..)
     , EndpointValue(..)
@@ -45,6 +47,7 @@ import           Ledger.Constraints.OffChain      (MkTxError)
 import           Plutus.Contract.Checkpoint       (AsCheckpointError (..), CheckpointError)
 import           Wallet.Emulator.Error            (WalletAPIError)
 
+import qualified Data.OpenApi.Schema              as OpenApi
 
 -- | An error
 newtype MatchingError = WrongVariantError { unWrongVariantError :: Text }
@@ -106,7 +109,7 @@ instance AsCheckpointError ContractError where
 newtype ContractInstanceId = ContractInstanceId { unContractInstanceId :: UUID }
     deriving (Eq, Ord, Show, Generic)
     deriving newtype (FromJSONKey, ToJSONKey)
-    deriving anyclass (FromJSON, ToJSON)
+    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
     deriving Pretty via (PrettyShow UUID)
 
 -- | A pure list of all 'ContractInstanceId' values. To be used in testing.
@@ -116,10 +119,19 @@ contractInstanceIDs = ContractInstanceId <$> UUID.mockUUIDs
 randomID :: IO ContractInstanceId
 randomID = ContractInstanceId <$> UUID.nextRandom
 
+data ContractActivityStatus = Active | Stopped | Done deriving (Eq, Show, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
+
+parseContractActivityStatus :: Text -> Maybe ContractActivityStatus
+parseContractActivityStatus t = case T.toLower t of
+    "active"  -> Just Active
+    "stopped" -> Just Stopped
+    "done"    -> Just Done
+    _         -> Nothing
+
 newtype EndpointDescription = EndpointDescription { getEndpointDescription :: String }
     deriving stock (Eq, Ord, Generic, Show, TH.Lift)
     deriving newtype (IsString, Pretty)
-    deriving anyclass (ToJSON, FromJSON)
+    deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
 newtype EndpointValue a = EndpointValue { unEndpointValue :: a }
     deriving stock (Eq, Ord, Generic, Show)

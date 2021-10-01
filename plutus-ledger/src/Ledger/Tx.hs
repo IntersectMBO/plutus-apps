@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -19,6 +21,7 @@ module Ledger.Tx
     , ciTxOutValidator
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
+    , SomeCardanoApiTx(..)
     -- * Transactions
     , addSignature
     , pubKeyTxOut
@@ -31,11 +34,17 @@ module Ledger.Tx
     , txId
     ) where
 
+import qualified Cardano.Api               as C
 import           Cardano.Crypto.Hash       (SHA256, digest)
 import qualified Codec.CBOR.Write          as Write
-import           Codec.Serialise.Class     (Serialise, encode)
-import           Control.Lens
-import           Data.Aeson                (FromJSON, ToJSON)
+import           Codec.Serialise           (Serialise (..))
+import           Codec.Serialise.Decoding  (Decoder, decodeBytes, decodeSimple)
+import           Codec.Serialise.Encoding  (Encoding (..), Tokens (..))
+import           Control.Applicative       ((<|>))
+import           Control.Lens              hiding ((.=))
+import           Data.Aeson                (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
+import qualified Data.Aeson                as Aeson
+import           Data.Aeson.Types          (Parser, parseFail, prependFailure, typeMismatch)
 import           Data.Map                  (Map)
 import qualified Data.Map                  as Map
 import           Data.Proxy
@@ -97,6 +106,109 @@ instance Pretty ChainIndexTxOut where
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
     pretty ScriptChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
+
+data SomeCardanoApiTx where
+  SomeTx :: C.IsCardanoEra era => C.Tx era -> C.EraInMode era C.CardanoMode -> SomeCardanoApiTx
+
+instance Eq SomeCardanoApiTx where
+  (SomeTx tx1 C.ByronEraInCardanoMode) == (SomeTx tx2 C.ByronEraInCardanoMode)     = tx1 == tx2
+  (SomeTx tx1 C.ShelleyEraInCardanoMode) == (SomeTx tx2 C.ShelleyEraInCardanoMode) = tx1 == tx2
+  (SomeTx tx1 C.AllegraEraInCardanoMode) == (SomeTx tx2 C.AllegraEraInCardanoMode) = tx1 == tx2
+  (SomeTx tx1 C.MaryEraInCardanoMode) == (SomeTx tx2 C.MaryEraInCardanoMode)       = tx1 == tx2
+  (SomeTx tx1 C.AlonzoEraInCardanoMode) == (SomeTx tx2 C.AlonzoEraInCardanoMode)   = tx1 == tx2
+  _ == _                                                                           = False
+
+deriving instance Show SomeCardanoApiTx
+
+instance Serialise SomeCardanoApiTx where
+  encode (SomeTx tx eraInMode) = encodedMode eraInMode <> Encoding (TkBytes (C.serialiseToCBOR tx))
+    where
+      encodedMode :: C.EraInMode era C.CardanoMode -> Encoding
+      -- 0 and 1 are for ByronEraInByronMode and ShelleyEraInShelleyMode
+      encodedMode C.ByronEraInCardanoMode   = Encoding (TkSimple 2)
+      encodedMode C.ShelleyEraInCardanoMode = Encoding (TkSimple 3)
+      encodedMode C.AllegraEraInCardanoMode = Encoding (TkSimple 4)
+      encodedMode C.MaryEraInCardanoMode    = Encoding (TkSimple 5)
+      encodedMode C.AlonzoEraInCardanoMode  = Encoding (TkSimple 6)
+  decode = do
+    w <- decodeSimple
+    case w of
+      2 -> decodeTx C.AsByronEra C.ByronEraInCardanoMode
+      3 -> decodeTx C.AsShelleyEra C.ShelleyEraInCardanoMode
+      4 -> decodeTx C.AsAllegraEra C.AllegraEraInCardanoMode
+      5 -> decodeTx C.AsMaryEra C.MaryEraInCardanoMode
+      6 -> decodeTx C.AsAlonzoEra C.AlonzoEraInCardanoMode
+      _ -> fail "Unexpected value while decoding Cardano.Api.EraInMode"
+    where
+      decodeTx :: C.IsCardanoEra era => C.AsType era -> C.EraInMode era C.CardanoMode -> Decoder s SomeCardanoApiTx
+      decodeTx asType eraInMode = do
+        bytes <- decodeBytes
+        tx <- either (const $ fail "Failed to decode Cardano.Api.Tx") pure $ C.deserialiseFromCBOR (C.AsTx asType) bytes
+        pure $ SomeTx tx eraInMode
+
+instance ToJSON SomeCardanoApiTx where
+  toJSON (SomeTx tx eraInMode) =
+    object [ "tx" .= C.serialiseToTextEnvelope Nothing tx
+           , "eraInMode" .= eraInMode
+           ]
+
+-- | Converting 'SomeCardanoApiTx' to JSON.
+--
+-- If the "tx" field is from an unknown era, the JSON parser will print an
+-- error at runtime while parsing.
+instance FromJSON SomeCardanoApiTx where
+  parseJSON v = parseByronInCardanoModeTx v
+            <|> parseShelleyEraInCardanoModeTx v
+            <|> parseAllegraEraInCardanoModeTx v
+            <|> parseMaryEraInCardanoModeTx v
+            <|> parseAlonzoEraInCardanoModeTx v
+            <|> parseEraInCardanoModeFail v
+
+parseByronInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseByronInCardanoModeTx =
+  parseSomeCardanoTx "Failed to parse ByronEra 'tx' field from SomeCardanoApiTx"
+                     (C.AsTx C.AsByronEra)
+
+parseShelleyEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseShelleyEraInCardanoModeTx =
+  parseSomeCardanoTx "Failed to parse ShelleyEra 'tx' field from SomeCardanoApiTx"
+                     (C.AsTx C.AsShelleyEra)
+
+parseMaryEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseMaryEraInCardanoModeTx =
+  parseSomeCardanoTx "Failed to parse MaryEra 'tx' field from SomeCardanoApiTx"
+                     (C.AsTx C.AsMaryEra)
+
+parseAllegraEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseAllegraEraInCardanoModeTx =
+  parseSomeCardanoTx "Failed to parse AllegraEra 'tx' field from SomeCardanoApiTx"
+                     (C.AsTx C.AsAllegraEra)
+
+parseAlonzoEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseAlonzoEraInCardanoModeTx =
+  parseSomeCardanoTx "Failed to parse AlonzoEra 'tx' field from SomeCardanoApiTx"
+                     (C.AsTx C.AsAlonzoEra)
+
+parseEraInCardanoModeFail :: Aeson.Value -> Parser SomeCardanoApiTx
+parseEraInCardanoModeFail _ = fail "Unable to parse 'eraInMode'"
+
+parseSomeCardanoTx
+  :: ( FromJSON (C.EraInMode era C.CardanoMode)
+     , C.IsCardanoEra era
+     )
+  => String
+  -> C.AsType (C.Tx era)
+  -> Aeson.Value
+  -> Parser SomeCardanoApiTx
+parseSomeCardanoTx errorMsg txAsType (Aeson.Object v) =
+  SomeTx
+    <$> (v .: "tx" >>= \envelope -> either (const $ parseFail errorMsg)
+                                           pure
+                                           $ C.deserialiseFromTextEnvelope txAsType envelope)
+    <*> v .: "eraInMode"
+parseSomeCardanoTx _ _ invalid =
+    prependFailure "parsing SomeCardanoApiTx failed, "
+      (typeMismatch "Object" invalid)
 
 instance Pretty Tx where
     pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =

@@ -4,3 +4,7 @@ nix/pkgs/haskell/materialized*/**/*.nix linguist-generated=true
 *.pir linguist-detectable=false
 contrib/** linguist-vendored=true
 stubs/plutus-ghc-stub/** linguist-vendored=true
+# Large HTML files inside 'notes' are dominating our repoistory language
+# estimate.
+notes/**/*.html linguist-documentation
+doc/* linguist-documentation

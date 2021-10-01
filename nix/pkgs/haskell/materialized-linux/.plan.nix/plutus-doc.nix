@@ -53,6 +53,7 @@
             (hsPkgs."random" or (errorHandler.buildDepError "random"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
             (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
             ];
           build-tools = [
@@ -67,9 +68,11 @@
             "BasicPolicies"
             "BasicApps"
             "GameModel"
+            "HandlingBlockchainEvents"
             "HelloWorldApp"
+            "WriteScriptsTo"
             ];
-          hsSourceDirs = [ "plutus/tutorials" ];
+          hsSourceDirs = [ "plutus/tutorials" "plutus/howtos" ];
           mainPath = ([
             "Main.hs"
             ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "") ++ (pkgs.lib).optional (compiler.isGhcjs && true || system.isWindows) "";

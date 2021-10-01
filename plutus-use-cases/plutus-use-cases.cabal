@@ -27,6 +27,7 @@ library
     exposed-modules:
         Plutus.Contracts
         Plutus.Contracts.Auction
+        Plutus.Contracts.SealedBidAuction
         Plutus.Contracts.TokenAccount
         Plutus.Contracts.Crowdfunding
         Plutus.Contracts.Currency
@@ -87,6 +88,7 @@ library
         freer-simple -any,
         streaming -any,
         semigroups -any,
+        openapi3 -any,
         plutus-tx-plugin -any
 
     if flag(defer-plugin-errors)
@@ -98,6 +100,7 @@ test-suite plutus-use-cases-test
     hs-source-dirs: test
     other-modules:
         Spec.Auction
+        Spec.SealedBidAuction
         Spec.Crowdfunding
         Spec.Currency
         Spec.ErrorHandling
@@ -130,6 +133,7 @@ test-suite plutus-use-cases-test
     build-depends:
         base >=4.9 && <5,
         bytestring -any,
+        cardano-crypto-class -any,
         containers -any,
         data-default -any,
         freer-extras -any,
@@ -184,6 +188,7 @@ executable plutus-use-cases-scripts
         base >= 4.9 && <5,
         aeson -any,
         bytestring -any,
+        cardano-crypto-class -any,
         containers -any,
         data-default -any,
         flat -any,

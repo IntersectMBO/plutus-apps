@@ -71,7 +71,7 @@ module Plutus.PAB.Core
     , askUserEnv
     , askBlockchainEnv
     , askInstancesState
-    , runningInstances
+    , instancesWithStatuses
     -- * Run PAB effects in separate threads
     , PABRunner(..)
     , pabRunner
@@ -96,6 +96,7 @@ import           Control.Monad.Freer.Reader              (Reader (..), ask, asks
 import           Control.Monad.IO.Class                  (MonadIO (..))
 import qualified Data.Aeson                              as JSON
 import           Data.Foldable                           (traverse_)
+import           Data.Map                                (Map)
 import qualified Data.Map                                as Map
 import           Data.Proxy                              (Proxy (..))
 import           Data.Set                                (Set)
@@ -103,8 +104,8 @@ import           Data.Text                               (Text)
 import           Ledger.Tx                               (Address, Tx)
 import           Ledger.TxId                             (TxId)
 import           Ledger.Value                            (Value)
-import           Plutus.ChainIndex                       (ChainIndexQueryEffect)
-import           Plutus.Contract.Effects                 (ActiveEndpoint (..), PABReq, TxStatus (Unknown))
+import           Plutus.ChainIndex                       (ChainIndexQueryEffect, TxStatus (Unknown))
+import           Plutus.Contract.Effects                 (ActiveEndpoint (..), PABReq)
 import           Plutus.PAB.Core.ContractInstance        (ContractInstanceMsg, ContractInstanceState)
 import qualified Plutus.PAB.Core.ContractInstance        as ContractInstance
 import           Plutus.PAB.Core.ContractInstance.STM    (Activity (Active), BlockchainEnv, InstancesState,
@@ -127,8 +128,8 @@ import           Wallet.Effects                          (NodeClientEffect, Wall
 import           Wallet.Emulator.LogMessages             (RequestHandlerLogMsg, TxBalanceMsg)
 import           Wallet.Emulator.MultiAgent              (EmulatorEvent' (..), EmulatorTimeEvent (..))
 import           Wallet.Emulator.Wallet                  (Wallet, WalletEvent (..))
-import           Wallet.Types                            (ContractInstanceId, EndpointDescription (..),
-                                                          NotificationError)
+import           Wallet.Types                            (ContractActivityStatus, ContractInstanceId,
+                                                          EndpointDescription (..), NotificationError)
 
 -- | Effects that are available in 'PABAction's.
 type PABEffects t env =
@@ -251,7 +252,7 @@ activateContract' state cid w def = do
     let handler :: forall a. Eff (ContractInstanceEffects t env '[IO]) a -> IO a
         handler x = fmap (either (error . show) id) (runPABAction $ handleAgentThread w x)
         args :: ContractActivationArgs (ContractDef t)
-        args = ContractActivationArgs{caWallet = w, caID = def}
+        args = ContractActivationArgs{caWallet = Just w, caID = def}
     handleAgentThread w
         $ ContractInstance.startContractInstanceThread' @t @IO @(ContractInstanceEffects t env '[IO]) state cid handler args
 
@@ -263,7 +264,7 @@ activateContract w def = do
     let handler :: forall a. Eff (ContractInstanceEffects t env '[IO]) a -> IO a
         handler x = fmap (either (error . show) id) (runPABAction $ handleAgentThread w x)
         args :: ContractActivationArgs (ContractDef t)
-        args = ContractActivationArgs{caWallet = w, caID = def}
+        args = ContractActivationArgs{caWallet = Just w, caID = def}
     handleAgentThread w
         $ ContractInstance.activateContractSTM @t @IO @(ContractInstanceEffects t env '[IO]) handler args
 
@@ -567,8 +568,8 @@ valueAt address = valueAtSTM address >>= liftIO . STM.atomically
 waitUntilFinished :: forall t env. ContractInstanceId -> PABAction t env (Maybe JSON.Value)
 waitUntilFinished i = finalResult i >>= liftIO . STM.atomically
 
-runningInstances :: forall t env. PABAction t env (Set ContractInstanceId)
-runningInstances = askInstancesState @t @env >>= liftIO . STM.atomically . Instances.runningInstances
+instancesWithStatuses :: forall t env. PABAction t env (Map ContractInstanceId ContractActivityStatus)
+instancesWithStatuses = askInstancesState @t @env >>= liftIO . STM.atomically . Instances.instancesWithStatuses
 
 -- | Read the 'env' from the environment
 askUserEnv :: forall t env effs. Member (Reader (PABEnvironment t env)) effs => Eff effs env

@@ -1,10 +1,12 @@
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DeriveTraversable     #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module TransformSpec (transform) where
 
 import           Common
+import           PlcTestUtils
 import           TestLib
 
 import           PlutusCore.Quote
@@ -26,7 +28,10 @@ import qualified PlutusIR.Transform.ThunkRecursions as ThunkRec
 import qualified PlutusIR.Transform.Unwrap          as Unwrap
 
 import           Control.Monad
+import           PlutusIR.Error                     as PIR
+import           PlutusIR.TypeCheck                 as TC
 import           Text.Megaparsec.Pos
+
 
 transform :: TestNested
 transform = testNested "transform" [
@@ -58,7 +63,7 @@ nonStrict = testNested "nonStrict"
 letFloat :: TestNested
 letFloat =
     testNested "letFloat"
-    $ map (goldenPir (LetMerge.letMerge . LetFloat.floatTerm . runQuote . PLC.rename) $ term @PLC.DefaultUni @PLC.DefaultFun)
+    $ map (goldenPirM goldenFloatTC term)
   [ "letInLet"
   ,"listMatch"
   ,"maybe"
@@ -72,6 +77,7 @@ letFloat =
   ,"nonrec6"
   ,"nonrec7"
   ,"nonrec8"
+  ,"nonrec9"
   ,"rec1"
   ,"rec2"
   ,"rec3"
@@ -87,8 +93,19 @@ letFloat =
   ,"strictValueValue"
   ,"even3Eval"
   ,"strictNonValueDeep"
-  ,"regression1"
+  ,"oldFloatBug"
+  ,"outRhs"
+  ,"outLam"
+  ,"inLam"
+  ,"rhsSqueezeVsNest"
   ]
+ where
+   goldenFloatTC pir = rethrow . asIfThrown @(PIR.Error PLC.DefaultUni PLC.DefaultFun ()) $ do
+       let pirFloated = RecSplit.recSplit . LetFloat.floatTerm . runQuote $ PLC.rename pir
+       -- make sure the floated result typechecks
+       _ <- runQuoteT . flip inferType (() <$ pirFloated) =<< TC.getDefTypeCheckConfig ()
+       -- letmerge is not necessary for floating, but is a nice visual transformation
+       pure $ LetMerge.letMerge pirFloated
 
 recSplit :: TestNested
 recSplit =
@@ -119,6 +136,7 @@ inline =
     , "constant"
     , "transitive"
     , "tyvar"
+    , "single"
     ]
 
 

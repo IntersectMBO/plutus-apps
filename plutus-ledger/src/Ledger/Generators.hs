@@ -1,6 +1,11 @@
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 -- | Generators for constructing blockchains and transactions for use in property-based testing.
 module Ledger.Generators(
     -- * Mockchain
@@ -16,6 +21,8 @@ module Ledger.Generators(
     genValidTransactionSpending,
     genValidTransactionSpending',
     genInitialTransaction,
+    genValidatorContext,
+    genMintingPolicyContext,
     -- * Assertions
     assertValid,
     -- * Time
@@ -26,6 +33,7 @@ module Ledger.Generators(
     genPOSIXTime,
     genSlotConfig,
     -- * Etc.
+    genSomeCardanoApiTx,
     genAda,
     genValue,
     genValueNonNegative,
@@ -37,29 +45,38 @@ module Ledger.Generators(
     signAll
     ) where
 
-import           Control.Monad             (replicateM)
-import           Data.Bifunctor            (Bifunctor (..))
-import qualified Data.ByteString           as BS
-import           Data.Default              (Default (def))
-import           Data.Foldable             (fold, foldl')
-import           Data.List                 (sort)
-import           Data.Map                  (Map)
-import qualified Data.Map                  as Map
-import           Data.Maybe                (isNothing)
-import           Data.Set                  (Set)
-import qualified Data.Set                  as Set
-import           GHC.Stack                 (HasCallStack)
+import qualified Cardano.Api                as C
+import           Control.Monad              (replicateM)
+import           Control.Monad.Except       (runExceptT)
+import           Control.Monad.Reader       (runReaderT)
+import           Control.Monad.Trans.Writer (runWriter)
+import           Data.Bifunctor             (Bifunctor (..))
+import qualified Data.ByteString            as BS
+import           Data.Default               (Default (def))
+import           Data.Foldable              (fold, foldl')
+import           Data.Functor.Identity      (Identity)
+import           Data.List                  (sort)
+import           Data.Map                   (Map)
+import qualified Data.Map                   as Map
+import           Data.Maybe                 (isNothing)
+import           Data.Set                   (Set)
+import qualified Data.Set                   as Set
+import           GHC.Stack                  (HasCallStack)
+import qualified Gen.Cardano.Api.Typed      as Gen
 import           Hedgehog
-import qualified Hedgehog.Gen              as Gen
-import qualified Hedgehog.Range            as Range
+import qualified Hedgehog.Gen               as Gen
+import qualified Hedgehog.Range             as Range
 import           Ledger
-import           Ledger.Fee                (FeeConfig (fcScriptsFeeFactor), calcFees)
-import qualified Ledger.Index              as Index
-import           Ledger.TimeSlot           (SlotConfig (..))
-import qualified Ledger.TimeSlot           as TimeSlot
-import qualified Plutus.V1.Ledger.Ada      as Ada
-import qualified Plutus.V1.Ledger.Interval as Interval
-import qualified Plutus.V1.Ledger.Value    as Value
+import           Ledger.Fee                 (FeeConfig (fcScriptsFeeFactor), calcFees)
+import qualified Ledger.Index               as Index
+import           Ledger.TimeSlot            (SlotConfig (..))
+import qualified Ledger.TimeSlot            as TimeSlot
+import qualified Plutus.V1.Ledger.Ada       as Ada
+import qualified Plutus.V1.Ledger.Contexts  as Contexts
+import qualified Plutus.V1.Ledger.Interval  as Interval
+import qualified Plutus.V1.Ledger.Scripts   as Script
+import qualified Plutus.V1.Ledger.Value     as Value
+import qualified PlutusTx
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx
@@ -176,22 +193,30 @@ genValidTransactionSpending' :: MonadGen m
     -> Ada
     -> m Tx
 genValidTransactionSpending' g feeCfg ins totalVal = do
-    let fee' = calcFees feeCfg 0
-        numOut = Set.size $ gmPubKeys g
+    mintAmount <- toInteger <$> Gen.int (Range.linear 0 maxBound)
+    mintTokenName <- genTokenName
+    let mintValue = Value.singleton (scriptCurrencySymbol alwaysSucceedPolicy) mintTokenName mintAmount
+        fee' = calcFees feeCfg 0
+        numOut = Set.size (gmPubKeys g) - 1
     if fee' < totalVal
         then do
-            let sz = totalVal - fee'
-            outVals <- fmap Ada.toValue <$> splitVal numOut sz
+            outVals <- fmap Ada.toValue <$> splitVal numOut (totalVal - fee')
             let tx = mempty
                         { txInputs = ins
-                        , txOutputs = uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
+                        , txOutputs = uncurry pubKeyTxOut <$> zip (mintValue:outVals) (Set.toList $ gmPubKeys g)
+                        , txMint = mintValue
+                        , txMintScripts = Set.singleton alwaysSucceedPolicy
+                        , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
                         , txFee = Ada.toValue fee'
                         }
 
-                -- sign the transaction with all three known wallets
+                -- sign the transaction with all known wallets
                 -- this is somewhat crude (but technically valid)
             pure (signAll tx)
         else Gen.discard
+
+alwaysSucceedPolicy :: MintingPolicy
+alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.
@@ -230,6 +255,41 @@ genSlotConfig = do
     sl <- Gen.integral (Range.linear 1 1000000)
     return $ def { TimeSlot.scSlotLength = sl }
 
+-- TODO Unfortunately, there's no way to get a warning if another era has been
+-- added to EraInMode. Alternative way?
+genSomeCardanoApiTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
+genSomeCardanoApiTx = Gen.choice [ genByronEraInCardanoModeTx
+                                 , genShelleyEraInCardanoModeTx
+                                 , genAllegraEraInCardanoModeTx
+                                 , genMaryEraInCardanoModeTx
+                                 , genAlonzoEraInCardanoModeTx
+                                 ]
+
+genByronEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
+genByronEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.ByronEra
+  pure $ SomeTx tx C.ByronEraInCardanoMode
+
+genShelleyEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
+genShelleyEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.ShelleyEra
+  pure $ SomeTx tx C.ShelleyEraInCardanoMode
+
+genAllegraEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
+genAllegraEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.AllegraEra
+  pure $ SomeTx tx C.AllegraEraInCardanoMode
+
+genMaryEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
+genMaryEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.MaryEra
+  pure $ SomeTx tx C.MaryEraInCardanoMode
+
+genAlonzoEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
+genAlonzoEraInCardanoModeTx = do
+  tx <- fromGenT $ Gen.genTx C.AlonzoEra
+  pure $ SomeTx tx C.AlonzoEraInCardanoMode
+
 genAda :: MonadGen m => m Ada
 genAda = Ada.lovelaceOf <$> Gen.integral (Range.linear 0 (100000 :: Integer))
 
@@ -245,25 +305,25 @@ genSizedByteStringExact s =
     let range = Range.singleton s
     in Gen.bytes range
 
+-- | A TokenName is either an arbitrary bytestring or the ada token name
 genTokenName :: MonadGen m => m TokenName
-genTokenName = Value.tokenName <$> genSizedByteString 32
+genTokenName = Gen.choice
+    [ Value.tokenName <$> genSizedByteString 32
+    , pure Ada.adaToken
+    ]
+
+-- | A currency symbol is either a validator hash (bytestring of length 32)
+-- or the ada symbol (empty bytestring).
+genCurrencySymbol :: MonadGen m => m CurrencySymbol
+genCurrencySymbol = Gen.choice
+    [ Value.currencySymbol <$> genSizedByteStringExact 32
+    , pure Ada.adaSymbol
+    ]
 
 genValue' :: MonadGen m => Range Integer -> m Value
 genValue' valueRange = do
     let
-        -- currency symbol is either a validator hash (bytestring of length 32)
-        -- or the ada symbol (empty bytestring).
-        currency = Gen.choice
-                    [ Value.currencySymbol <$> genSizedByteStringExact 32
-                    , pure Ada.adaSymbol
-                    ]
-
-        -- token is either an arbitrary bytestring or the ada token name
-        token   = Gen.choice
-                    [ genTokenName
-                    , pure Ada.adaToken
-                    ]
-        sngl      = Value.singleton <$> currency <*> token <*> Gen.integral valueRange
+        sngl = Value.singleton <$> genCurrencySymbol <*> genTokenName <*> Gen.integral valueRange
 
         -- generate values with no more than 5 elements to avoid the tests
         -- taking too long (due to the map-as-list-of-kv-pairs implementation)
@@ -313,3 +373,30 @@ splitVal mx init' = go 0 0 [] where
             if v + c == init'
             then pure $ v : l
             else go (succ i) (v + c) (v : l)
+
+genTxInfo :: MonadGen m => Mockchain -> m TxInfo
+genTxInfo chain = do
+    tx <- genValidTransaction chain
+    let idx = UtxoIndex $ mockchainUtxo chain
+    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) idx
+    either (const Gen.discard) pure res
+
+genScriptPurposeSpending :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose
+genScriptPurposeSpending TxInfo{txInfoInputs} = Gen.element $ Contexts.Spending . txInInfoOutRef <$> txInfoInputs
+
+genScriptPurposeMinting :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose
+genScriptPurposeMinting TxInfo{txInfoMint} = Gen.element $ Contexts.Minting <$> Value.symbols txInfoMint
+
+-- TODO: add Rewarding and Certifying purposes
+
+genValidatorContext :: MonadGen m => Mockchain -> m ScriptContext
+genValidatorContext chain = do
+    txInfo <- genTxInfo chain
+    purpose <- genScriptPurposeSpending txInfo
+    pure $ ScriptContext txInfo purpose
+
+genMintingPolicyContext :: MonadGen m => Mockchain -> m ScriptContext
+genMintingPolicyContext chain = do
+    txInfo <- genTxInfo chain
+    purpose <- genScriptPurposeMinting txInfo
+    pure $ ScriptContext txInfo purpose
