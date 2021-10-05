@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
+
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE KindSignatures       #-}
 {-# LANGUAGE OverloadedStrings    #-}
@@ -14,6 +15,7 @@ module Language.PureScript.Bridge.SumType
   , genericShow
   , functor
   , equal
+  , equal1
   , order
   , DataConstructor(..)
   , RecordEntry(..)
@@ -30,6 +32,7 @@ module Language.PureScript.Bridge.SumType
   ) where
 
 import           Control.Lens                        hiding (from, to)
+import           Data.Functor.Classes                (Eq1)
 import           Data.List                           (nub)
 import           Data.Maybe                          (maybeToList)
 import           Data.Proxy
@@ -89,6 +92,7 @@ data Instance
   | Newtype
   | Functor
   | Eq
+  | Eq1
   | Ord
   deriving (Eq, Show)
 
@@ -117,6 +121,10 @@ functor _ (SumType ti dc is) = SumType ti dc . nub $ Functor : is
 -- | Ensure that an `Eq` instance is generated for your type.
 equal :: Eq a => Proxy a -> SumType t -> SumType t
 equal _ (SumType ti dc is) = SumType ti dc . nub $ Eq : is
+
+-- | Ensure that an `Eq1` instance is generated for your type.
+equal1 :: Eq1 f => Proxy (f a) -> SumType t -> SumType t
+equal1 _ (SumType ti dc is) = SumType ti dc . nub $ Eq1 : is
 
 -- | Ensure that both `Eq` and `Ord` instances are generated for your type.
 order :: Ord a => Proxy a -> SumType t -> SumType t
