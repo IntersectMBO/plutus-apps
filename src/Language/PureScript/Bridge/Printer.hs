@@ -117,7 +117,7 @@ _genericsImports :: Switches.Settings -> [ImportLine]
 _genericsImports settings
   | Switches.genericsGenRep settings =
     [ ImportLine "Data.Generic.Rep" $ Set.fromList ["class Generic"]
-    , ImportLine "Data.Generic.Rep.Show" $ Set.fromList ["genericShow"]
+    , ImportLine "Data.Show.Generic" $ Set.fromList ["genericShow"]
     ]
   | otherwise = [ImportLine "Data.Generic" $ Set.fromList ["class Generic"]]
 
