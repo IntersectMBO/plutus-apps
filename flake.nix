@@ -3,7 +3,11 @@
   inputs.haskellNix.url = "github:input-output-hk/haskell.nix";
   inputs.nixpkgs.follows = "haskellNix/nixpkgs-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
-  outputs = { self, nixpkgs, flake-utils, haskellNix }:
+  inputs.easy-ps = {
+    url = "github:justinwoo/easy-purescript-nix";
+    flake = false;
+  };
+  outputs = { self, nixpkgs, flake-utils, haskellNix, easy-ps }:
     flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
     let
       overlays = [ haskellNix.overlay
@@ -29,9 +33,11 @@
           haskell-language-server = "latest";
         };
         exactDeps = true;
-        buildInputs = with pkgs; [
-          nixpkgs-fmt
+        buildInputs = with pkgs; with import easy-ps { inherit pkgs; }; [
           ghcid
+          nixpkgs-fmt
+          purs
+          spago
         ];
       };
     });

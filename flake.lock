@@ -66,6 +66,22 @@
         "type": "github"
       }
     },
+    "easy-ps": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1631961521,
+        "narHash": "sha256-1yPjUdOYzw1+UGFzBXbyZqEbsM6XZu/6+v8W35qFdLo=",
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "rev": "d9a37c75ed361372e1545f6efbc08d819b3c28c8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "locked": {
         "lastModified": 1631561581,
@@ -280,6 +296,7 @@
     },
     "root": {
       "inputs": {
+        "easy-ps": "easy-ps",
         "flake-utils": "flake-utils",
         "haskellNix": "haskellNix",
         "nixpkgs": [
