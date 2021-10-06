@@ -10,6 +10,7 @@
 module Main where
 
 import Control.Applicative
+import Control.Exception (bracket, bracket_)
 import Control.Lens
 import Data.Aeson
 import Data.Proxy
@@ -25,7 +26,11 @@ import Servant.Foreign
 import Servant.PureScript
 import Servant.PureScript.CodeGen
 import Servant.PureScript.Internal
-import Test.Hspec (hspec, describe, it)
+import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory)
+import System.Exit (ExitCode (ExitSuccess))
+import System.Process (readProcessWithExitCode)
+import Test.HUnit (assertEqual)
+import Test.Hspec (aroundAll_, describe, hspec, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
 import Text.PrettyPrint.Mainland (hPutDocLn)
 
@@ -77,19 +82,29 @@ myBridgeProxy :: Proxy MyBridge
 myBridgeProxy = Proxy
 
 main :: IO ()
-main = do
-  writeAPIModuleWithSettings mySettings "test/output" myBridgeProxy (Proxy :: Proxy MyAPI)
-  writePSTypes "test/output" (buildBridge myBridge) myTypes
-  hspec $ do
-
-    describe "writePSTypes" $ do
-      it "should match the golden test" $ do
-        expected <- T.readFile "test/output/ServerTypes.purs"
-        actual <- T.readFile "test/golden/ServerTypes.purs"
+main = hspec $
+  aroundAll_ withOutput $
+    describe "output" $ do
+      it "should match the golden tests for types" $ do
+        expected <- T.readFile "ServerTypes.purs"
+        actual <- T.readFile "ServerTypes.purs"
         actual `shouldBe` expected
-
-    describe "writeAPIModule" $ do
-      it "should match the golden test" $ do
-        expected <- T.readFile "test/output/ServerAPI.purs"
-        actual <- T.readFile "test/golden/ServerAPI.purs"
+      it "should match the golden tests for API" $ do
+        expected <- T.readFile "ServerAPI.purs"
+        actual <- T.readFile "ServerAPI.purs"
         actual `shouldBe` expected
+      it "should be buildable" $ do
+        (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
+        assertEqual stdout exitCode ExitSuccess
+  where
+    withOutput runSpec =
+      withCurrentDirectory "test/output" $ bracket_ generate cleanup runSpec
+
+    generate = do
+      writeAPIModuleWithSettings mySettings "." myBridgeProxy (Proxy :: Proxy MyAPI)
+      writePSTypes "." (buildBridge myBridge) myTypes
+
+    cleanup = do
+      removeFile "ServerTypes.purs"
+      removeFile "ServerAPI.purs"
+      removeDirectoryRecursive ".spago"
