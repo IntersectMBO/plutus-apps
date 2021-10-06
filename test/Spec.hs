@@ -79,3 +79,15 @@ main = do
   writeAPIModuleWithSettings mySettings "test/output" myBridgeProxy (Proxy :: Proxy MyAPI)
   writePSTypes "test/output" (buildBridge myBridge) myTypes
   hspec $ do
+
+    describe "writePSTypes" $ do
+      it "should match the golden test" $ do
+        expected <- T.readFile "test/output/ServerTypes.purs"
+        actual <- T.readFile "test/golden/ServerTypes.purs"
+        actual `shouldBe` expected
+
+    describe "writeAPIModule" $ do
+      it "should match the golden test" $ do
+        expected <- T.readFile "test/output/ServerAPI.purs"
+        actual <- T.readFile "test/golden/ServerAPI.purs"
+        actual `shouldBe` expected
