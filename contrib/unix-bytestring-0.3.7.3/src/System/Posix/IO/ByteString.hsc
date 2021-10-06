@@ -773,8 +773,8 @@ mode2Int SeekFromEnd  = (#const SEEK_END)
 -- /Since: 0.3.5/
 fdSeek :: Fd -> SeekMode -> FileOffset -> IO FileOffset
 fdSeek fd mode off =
-    C.throwErrnoIfMinus1 "fdSeek"
-        $ Base.c_lseek (fromIntegral fd) off (mode2Int mode)
+    fmap fromIntegral $ C.throwErrnoIfMinus1 "fdSeek"
+        $ Base.c_lseek (fromIntegral fd) (fromIntegral off) (mode2Int mode)
 
 
 -- | Repositions the offset of the file descriptor according to the
@@ -785,8 +785,8 @@ fdSeek fd mode off =
 -- /Since: 0.3.5/
 tryFdSeek :: Fd -> SeekMode -> FileOffset -> IO (Either C.Errno FileOffset)
 tryFdSeek fd mode off =
-    eitherErrnoIfMinus1
-        $ Base.c_lseek (fromIntegral fd) off (mode2Int mode)
+    fmap (fmap fromIntegral) $ eitherErrnoIfMinus1
+        $ Base.c_lseek (fromIntegral fd) (fromIntegral off) (mode2Int mode)
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.
