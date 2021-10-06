@@ -13,7 +13,6 @@ module Servant.API.BrowserHeader where
 import GHC.TypeLits
 import Servant
 import Servant.Foreign
-import Servant.Subscriber.Subscribable
 
 data BrowserHeader (sym :: Symbol) a
 
@@ -44,5 +43,3 @@ instance
   type Foreign ftype (BrowserHeader sym a :> sublayout) = Foreign ftype sublayout
 
   foreignFor lang p Proxy = foreignFor lang p (Proxy :: Proxy sublayout)
-
-type instance IsSubscribable' endpoint (BrowserHeader sym a :> sub) = IsSubscribable endpoint sub

@@ -32,11 +32,10 @@ library
                      , http-types
                      , lens
                      , mainland-pretty
-                     , purescript-bridge >= 0.6
+                     , purescript-bridge
                      , servant
                      , servant-foreign
                      , servant-server
-                     , servant-subscriber
                      , text
   default-language:    Haskell2010
 
@@ -50,11 +49,10 @@ test-suite servant-purescript-test
                      , containers
                      , mainland-pretty
                      , lens
-                     , purescript-bridge >= 0.6
+                     , purescript-bridge
                      , servant
                      , servant-foreign
                      , servant-purescript
-                     , servant-subscriber
                      , text
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
@@ -62,3 +60,9 @@ test-suite servant-purescript-test
 source-repository head
   type:     git
   location: https://github.com/input-output-hk/servant-purescript
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/purescript-bridge.git
+  tag: 0cd3f0c7b560869de5d5d458591db7332e1f4996
+
