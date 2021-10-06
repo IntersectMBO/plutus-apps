@@ -24,6 +24,7 @@ import Servant.Foreign
 import Servant.PureScript
 import Servant.PureScript.CodeGen
 import Servant.PureScript.Internal
+import Test.Hspec
 import Text.PrettyPrint.Mainland (hPutDocLn)
 
 newtype Hello = Hello
@@ -77,3 +78,4 @@ main :: IO ()
 main = do
   writeAPIModuleWithSettings mySettings "test/output" myBridgeProxy (Proxy :: Proxy MyAPI)
   writePSTypes "test/output" (buildBridge myBridge) myTypes
+  hspec $ do

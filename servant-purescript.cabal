@@ -47,8 +47,9 @@ test-suite servant-purescript-test
   build-depends:       base
                      , aeson >= 0.11.2
                      , containers
-                     , mainland-pretty
+                     , hspec
                      , lens
+                     , mainland-pretty
                      , purescript-bridge
                      , servant
                      , servant-foreign
