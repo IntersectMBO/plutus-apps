@@ -1,7 +1,0 @@
-node_modules
-bower_components
-**DS_Store
-output
-.psci_modules
-npm-debug.log
-src/Counter/*
