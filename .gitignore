@@ -19,3 +19,4 @@ dist
 dist-*
 .idea/
 stack.yaml
+.spago/
