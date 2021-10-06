@@ -1,17 +1,16 @@
+cabal-version:       3.0
 name:                servant-purescript
 version:             0.9.0.2
-synopsis:            Generate PureScript accessor functions for you servant API
+synopsis:            Generate a PureScript API client for you servant API
 description:         Please see README.md
-homepage:            https://github.com/eskimor/servant-purescript#readme
-license:             BSD3
+homepage:            https://github.com/input-output-hk/servant-purescript
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Robert Klotzner
 maintainer:          robert Dot klotzner A T gmx Dot at
 copyright:           Copyright: (c) 2016 Robert Klotzner
 category:            Web
 build-type:          Simple
--- extra-source-files:
-cabal-version:       >=1.10
 
 extra-source-files: Readme.md
 
@@ -64,4 +63,4 @@ test-suite servant-purescript-test
 
 source-repository head
   type:     git
-  location: https://github.com/eskimor/servant-purescript
+  location: https://github.com/input-output-hk/servant-purescript
