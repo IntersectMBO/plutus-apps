@@ -28,7 +28,6 @@ module Servant.PureScript (
 
 
 import           Control.Lens
-import           Control.Monad                 (when)
 import           Data.Aeson
 import           Data.Bifunctor
 import           Data.ByteString               (ByteString)
@@ -42,8 +41,6 @@ import           Language.PureScript.Bridge
 import           Servant.Foreign
 import           Servant.PureScript.CodeGen
 import           Servant.PureScript.Internal
-import qualified Servant.PureScript.Subscriber as SubGen
-import qualified Servant.PureScript.MakeRequests as MakeRequests
 import           System.Directory
 import           System.FilePath
 import           System.IO                     (IOMode (..), withFile)
@@ -65,9 +62,6 @@ writeAPIModuleWithSettings :: forall bridgeSelector api.
   ) => Settings -> FilePath -> Proxy bridgeSelector -> Proxy api -> IO ()
 writeAPIModuleWithSettings opts root pBr pAPI = do
     writeModule (opts ^. apiModuleName) genModule
-    when (opts ^. generateSubscriberAPI) $ do
-      writeModule (opts ^. apiModuleName <> ".Subscriber") SubGen.genModule
-      writeModule (opts ^. apiModuleName <> ".MakeRequests") MakeRequests.genModule
     T.putStrLn "\nSuccessfully created your servant API purescript functions!"
     T.putStrLn "Please make sure you have purescript-servant-support version 5.0.0 or above installed:\n"
     T.putStrLn "  bower i --save purescript-servant-support\n"

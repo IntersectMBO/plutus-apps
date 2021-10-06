@@ -83,9 +83,6 @@ data Settings = Settings {
   --   will be put in the Reader monad, all others will still be passed as function parameter.
 , _readerParams          :: Set ParamName
 , _standardImports       :: ImportLines
-  -- | If you want codegen for servant-subscriber, set this to True. See the central-counter example
-  --   for a simple usage case.
-, _generateSubscriberAPI :: Bool
 }
 makeLenses ''Settings
 
@@ -108,7 +105,6 @@ defaultSettings = Settings {
         , ImportLine "Data.Array" (Set.fromList ["catMaybes", "null"])
         , ImportLine "Data.Argonaut.Core" (Set.fromList [ "stringify" ])
         ]
-  , _generateSubscriberAPI = False
   }
 
 -- | Add a parameter name to be us put in the Reader monad instead of being passed to the
