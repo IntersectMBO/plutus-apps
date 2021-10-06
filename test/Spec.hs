@@ -24,7 +24,8 @@ import Servant.Foreign
 import Servant.PureScript
 import Servant.PureScript.CodeGen
 import Servant.PureScript.Internal
-import Test.Hspec
+import Test.Hspec (hspec, describe, it)
+import Test.Hspec.Expectations.Pretty (shouldBe)
 import Text.PrettyPrint.Mainland (hPutDocLn)
 
 newtype Hello = Hello
