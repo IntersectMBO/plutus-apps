@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Main where
@@ -31,7 +32,7 @@ import Text.PrettyPrint.Mainland (hPutDocLn)
 newtype Hello = Hello
   { message :: Text
   }
-  deriving (Generic)
+  deriving (Generic, Eq, Ord)
 
 instance FromJSON Hello
 
@@ -54,7 +55,7 @@ mySettings = addReaderParam "TestHeader" defaultSettings
 
 myTypes :: [SumType 'Haskell]
 myTypes =
-  [ mkSumType (Proxy :: Proxy Hello),
+  [ equal <*> (order <*> (genericShow <*> mkSumType)) $ Proxy @Hello,
     mkSumType (Proxy :: Proxy TestHeader)
   ]
 
