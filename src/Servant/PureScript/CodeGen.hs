@@ -8,7 +8,7 @@
 
 module Servant.PureScript.CodeGen where
 
-import           Control.Lens                       hiding (List)
+import           Control.Lens                       hiding (List, op)
 import qualified Data.Map                           as Map
 import           Data.Maybe                         (mapMaybe, maybeToList)
 import qualified Data.Set                           as Set
@@ -50,13 +50,13 @@ getReaderParams opts allParams = let
     -- Helpers
     toPair (Param n t) = (n, t)
     fromPair (n, t) = Param n t
-    useOld            = flip const
+    useOld            = const id
   in
     rParams
 
 genParamSettings :: [PSParam]-> Doc
 genParamSettings rParams = let
-    genEntry arg = arg ^. pName ^. to psVar <+> "::" <+> arg ^. pType ^. typeName ^. to strictText
+    genEntry arg = arg ^. (pName . to psVar) <+> "::" <+> arg ^. pType . typeName . to strictText
     genEntries   = docIntercalate (line <> ", ") . map genEntry
   in
     "newtype SPParams_ = SPParams_" <+/> align (
@@ -68,7 +68,7 @@ genParamSettings rParams = let
 genFunction :: [PSParam] -> Req PSType -> Doc
 genFunction allRParams req = let
     rParamsSet = Set.fromList allRParams
-    fnName = req ^. reqFuncName ^. jsCamelCaseL
+    fnName = req ^. reqFuncName . jsCamelCaseL
     allParamsList = baseURLParam : reqToParams req
     allParams = Set.fromList allParamsList
     fnParams = filter (not . flip Set.member rParamsSet) allParamsList -- Use list not set, as we don't want to change order of parameters
@@ -112,10 +112,10 @@ genFnBody rParams req = "do"
       </> "let spOpts_ = case spOpts_' of SPSettings_ o -> o"
       </> "let spParams_ = case spOpts_.params of SPParams_ ps_ -> ps_"
       </> genGetReaderParams rParams
-      </> hang 6 ("let httpMethod =" <+> dquotes (req ^. reqMethod ^. to T.decodeUtf8 ^. to strictText))
-      </> genBuildQueryArgs (req ^. reqUrl ^. queryStr)
+      </> hang 6 ("let httpMethod =" <+> dquotes (req ^. reqMethod . to T.decodeUtf8 . to strictText))
+      </> genBuildQueryArgs (req ^. reqUrl . queryStr)
       </> hang 6 ("let reqUrl ="     <+> genBuildURL (req ^. reqUrl))
-      </> "let reqHeaders =" </> indent 6 (req ^. reqHeaders ^. to genBuildHeaders)
+      </> "let reqHeaders =" </> indent 6 (req ^. reqHeaders . to genBuildHeaders)
       </> case req ^. reqBody of
              Nothing -> ""
              Just _ -> "let encodeJson = case spOpts_.encodeJson of SPSettingsEncodeJson_ e -> e"
@@ -148,11 +148,11 @@ genBuildPath = docIntercalate (softline <> "<> \"/\" <> ") . map (genBuildSegmen
 
 genBuildSegment :: SegmentType PSType -> Doc
 genBuildSegment (Static (PathSegment seg)) = dquotes $ strictText (textURLEncode False seg)
-genBuildSegment (Cap arg) = "encodeURLPiece spOpts_'" <+> arg ^. argName ^. to unPathSegment ^. to psVar
+genBuildSegment (Cap arg) = "encodeURLPiece spOpts_'" <+> arg ^. argName . to unPathSegment . to psVar
 
 genBuildQueryArgs :: [QueryArg PSType] -> Doc
 genBuildQueryArgs [] = "let queryString = \"\""
-genBuildQueryArgs args = "let queryArgs = catMaybes [" </> (indent 2 (docIntercalate ("," <> softline) . map genBuildQueryArg $ args)) </> "]"
+genBuildQueryArgs args = "let queryArgs = catMaybes [" </> indent 2 (docIntercalate ("," <> softline) . map genBuildQueryArg $ args) </> "]"
                   </> "let queryString = if null queryArgs then \"\" else \"?\" <> (joinWith \"&\" queryArgs)"
 
 ----------
@@ -162,7 +162,7 @@ genBuildQueryArg arg = case arg ^. queryArgType of
     Flag   -> genQueryEncoding "encodeQueryItem spOpts_'" "<$> Just"
     List   -> genQueryEncoding "encodeListQuery spOpts_'" "<$> Just"
   where
-    argText = arg ^. queryArgName ^. argName ^. to unPathSegment
+    argText = arg ^. queryArgName . argName . to unPathSegment
     encodedArgName = strictText . textURLEncode True $ argText
     genQueryEncoding fn op = fn <+> dquotes encodedArgName <+> op <+> psVar argText
 
@@ -173,7 +173,7 @@ genBuildHeaders = list . map genBuildHeader
 
 genBuildHeader :: HeaderArg PSType -> Doc
 genBuildHeader (HeaderArg arg) = let
-    argText = arg ^. argName ^. to unPathSegment
+    argText = arg ^. argName . to unPathSegment
     encodedArgName = strictText . textURLEncode True $ argText
   in
     align $ "{ field : " <> dquotes encodedArgName
@@ -202,7 +202,7 @@ segmentToParam :: SegmentType f -> Maybe (Param f)
 segmentToParam (Static _) = Nothing
 segmentToParam (Cap arg) = Just Param {
     _pType = arg ^. argType
-  , _pName = arg ^. argName ^. to unPathSegment
+  , _pName = arg ^. argName . to unPathSegment
   }
 
 mkPsMaybe :: PSType -> PSType
@@ -210,17 +210,15 @@ mkPsMaybe t = TypeInfo "" "" "Maybe" [t]
 
 queryArgToParam :: QueryArg PSType -> Param PSType
 queryArgToParam arg = Param {
-    _pType = pType
-  , _pName = arg ^. queryArgName ^. argName ^. to unPathSegment
-  }
-  where
-    pType = case arg ^. queryArgType of
-      Normal -> mkPsMaybe (arg ^. queryArgName ^. argType)
-      _ -> arg ^. queryArgName ^. argType
+    _pType = case arg ^. queryArgType of
+      Normal -> mkPsMaybe $ arg ^. queryArgName . argType
+      _ -> arg ^. queryArgName . argType
 
+  , _pName = arg ^. queryArgName . argName . to unPathSegment
+  }
 headerArgToParam :: HeaderArg f -> Param f
 headerArgToParam (HeaderArg arg) = Param {
-    _pName = arg ^. argName ^. to unPathSegment
+    _pName = arg ^. argName . to unPathSegment
   , _pType = arg ^. argType
   }
 headerArgToParam _ = error "We do not support ReplaceHeaderArg - as I have no idea what this is all about."
