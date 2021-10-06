@@ -419,7 +419,8 @@ test-suite untyped-plutus-core-test
         tasty-golden -any,
         tasty-hedgehog -any,
         tasty-hunit -any,
-        text -any
+        text -any,
+        cardano-addresses-jsbits -any
 
 executable plc
     import: lang
