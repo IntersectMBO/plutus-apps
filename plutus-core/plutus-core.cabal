@@ -419,8 +419,10 @@ test-suite untyped-plutus-core-test
         tasty-golden -any,
         tasty-hedgehog -any,
         tasty-hunit -any,
-        text -any,
-        cardano-addresses-jsbits -any
+        text -any
+    if os(ghcjs)
+        build-depends:
+            cardano-addresses-jsbits -any
 
 executable plc
     import: lang

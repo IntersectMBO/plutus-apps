@@ -474,8 +474,7 @@
             (hsPkgs."tasty-hedgehog" or (errorHandler.buildDepError "tasty-hedgehog"))
             (hsPkgs."tasty-hunit" or (errorHandler.buildDepError "tasty-hunit"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
-            (hsPkgs."cardano-addresses-jsbits" or (errorHandler.buildDepError "cardano-addresses-jsbits"))
-            ];
+            ] ++ (pkgs.lib).optional (system.isGhcjs) (hsPkgs."cardano-addresses-jsbits" or (errorHandler.buildDepError "cardano-addresses-jsbits"));
           buildable = true;
           modules = [
             "Evaluation/Builtins"
