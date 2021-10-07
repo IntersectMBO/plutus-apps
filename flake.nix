@@ -37,6 +37,7 @@
           ghcid
           nixpkgs-fmt
           purs
+          purescript-language-server
           spago
         ];
       };

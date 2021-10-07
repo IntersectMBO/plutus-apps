@@ -44,7 +44,7 @@ import Servant.PureScript.Internal
 import System.Directory
 import System.FilePath
 import System.IO (IOMode (..), withFile)
-import Text.PrettyPrint.Mainland (Doc, hPutDocLn)
+import Text.PrettyPrint.Mainland (hPutDocLn)
 
 -- | Standard entry point - just create a purescript module with default settings
 --   for accessing the servant API.
@@ -72,19 +72,19 @@ writeAPIModuleWithSettings ::
   Proxy api ->
   IO ()
 writeAPIModuleWithSettings opts root pBr pAPI = do
-  writeModule (opts ^. apiModuleName) genModule
+  writeModule (opts ^. apiModuleName)
   T.putStrLn "\nSuccessfully created your servant API purescript functions!"
   T.putStrLn "Please make sure you have purescript-servant-support version 5.0.0 or above installed:\n"
   T.putStrLn "  bower i --save purescript-servant-support\n"
   where
     apiList = apiToList pAPI pBr
 
-    writeModule :: Text -> (Settings -> [Req PSType] -> Doc) -> IO ()
-    writeModule mName genModule' =
+    writeModule :: Text -> IO ()
+    writeModule mName =
       let fileName = (joinPath . map T.unpack . T.splitOn "." $ mName) <> ".purs"
           mPath = root </> fileName
           mDir = takeDirectory mPath
-          contents = genModule' opts apiList
+          contents = genModule opts apiList
        in do
             unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
             withFile mPath WriteMode $ flip hPutDocLn contents

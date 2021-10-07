@@ -87,19 +87,23 @@ defaultSettings =
       _readerParams = Set.singleton baseURLId,
       _standardImports =
         importsFromList
-          [ ImportLine "Control.Monad.Reader.Class" (Set.fromList ["class MonadAsk", "ask"]),
-            ImportLine "Control.Monad.Error.Class" (Set.fromList ["class MonadError"]),
-            ImportLine "Control.Monad.Aff.Class" (Set.fromList ["class MonadAff"]),
-            ImportLine "Network.HTTP.Affjax" (Set.fromList ["AJAX"]),
-            ImportLine "Data.Nullable" (Set.fromList ["toNullable"]),
-            ImportLine "Servant.PureScript.Affjax" (Set.fromList ["AjaxError", "defaultRequest", "affjax"]),
-            ImportLine "Servant.PureScript.Settings" (Set.fromList ["SPSettings_(..)", "SPSettingsDecodeJson_(..)", "SPSettingsEncodeJson_(..)", "gDefaultToURLPiece"]),
-            ImportLine "Servant.PureScript.Util" (Set.fromList ["encodeListQuery", "encodeURLPiece", "encodeQueryItem", "getResult", "encodeHeader"]),
-            ImportLine "Prim" (Set.fromList ["String"]), -- For baseURL!
-            ImportLine "Data.Maybe" (Set.fromList ["Maybe(..)"]),
+          [ ImportLine "Affjax" (Set.fromList ["Error", "Request", "Response", "defaultRequest", "request"]),
+            ImportLine "Affjax.RequestHeader" (Set.fromList ["RequestHeader(..)"]),
+            ImportLine "Control.Monad.Error.Class" (Set.fromList ["class MonadError", "throwError"]),
+            ImportLine "Control.Monad.Reader.Class" (Set.fromList ["ask", "class MonadAsk"]),
+            ImportLine "Data.Argonaut.Core" (Set.fromList ["Json", "stringify"]),
+            ImportLine "Data.Argonaut.Decode" (Set.fromList ["JsonDecodeError", "decodeJson"]),
+            ImportLine "Data.Argonaut.Decode.Generic" (Set.fromList ["genericDecodeJson"]),
+            ImportLine "Data.Argonaut.Encode" (Set.fromList ["encodeJson"]),
+            ImportLine "Data.Argonaut.Encode.Generic" (Set.fromList ["class EncodeRep", "genericEncodeJson"]),
+            ImportLine "Data.Array" (Set.fromList ["fromFoldable", "null"]),
+            ImportLine "Data.Either" (Set.fromList ["Either(..)"]),
+            ImportLine "Data.Generic.Rep" (Set.fromList ["class Generic"]),
+            ImportLine "Data.HTTP.Method" (Set.fromList ["Method(..)"]),
+            ImportLine "Data.Maybe" (Set.fromList ["Maybe", "Maybe(..)"]),
+            ImportLine "Data.Newtype" (Set.fromList ["unwrap"]),
             ImportLine "Data.String" (Set.fromList ["joinWith"]),
-            ImportLine "Data.Array" (Set.fromList ["catMaybes", "null"]),
-            ImportLine "Data.Argonaut.Core" (Set.fromList ["stringify"])
+            ImportLine "Effect.Aff.Class" (Set.fromList ["class MonadAff", "liftAff"])
           ]
     }
 

@@ -48,9 +48,17 @@ newtype TestHeader = TestHeader Text deriving (Generic, Show, Eq)
 instance ToJSON TestHeader
 
 type MyAPI =
-  Header "TestHeader" TestHeader :> QueryFlag "myFlag" :> QueryParam "myParam" Hello :> QueryParams "myParams" Hello :> "hello" :> ReqBody '[JSON] Hello :> Get '[JSON] Hello
-    :<|> Header "TestHeader" Hello :> "testHeader" :> Get '[JSON] TestHeader
-    :<|> Header "TestHeader" TestHeader :> "by" :> Get '[JSON] Int
+  Header "TestHeader" TestHeader
+    :> ( ( "hello"
+             :> QueryFlag "myFlag"
+             :> QueryParam "myParam" Hello
+             :> QueryParams "myParams" Hello
+             :> ReqBody '[JSON] Hello
+             :> Get '[JSON] Hello
+         )
+           :<|> "testHeader" :> Get '[JSON] TestHeader
+           :<|> "by" :> Get '[JSON] Int
+       )
 
 reqs = apiToList (Proxy :: Proxy MyAPI) (Proxy :: Proxy DefaultBridge)
 
@@ -86,11 +94,11 @@ main = hspec $
   aroundAll_ withOutput $
     describe "output" $ do
       it "should match the golden tests for types" $ do
-        expected <- T.readFile "ServerTypes.purs"
+        expected <- T.readFile "../golden/ServerTypes.purs"
         actual <- T.readFile "ServerTypes.purs"
         actual `shouldBe` expected
       it "should match the golden tests for API" $ do
-        expected <- T.readFile "ServerAPI.purs"
+        expected <- T.readFile "../golden/ServerAPI.purs"
         actual <- T.readFile "ServerAPI.purs"
         actual `shouldBe` expected
       it "should be buildable" $ do
@@ -98,13 +106,8 @@ main = hspec $
         assertEqual stdout exitCode ExitSuccess
   where
     withOutput runSpec =
-      withCurrentDirectory "test/output" $ bracket_ generate cleanup runSpec
+      withCurrentDirectory "test/output" $ generate *> runSpec
 
     generate = do
       writeAPIModuleWithSettings mySettings "." myBridgeProxy (Proxy :: Proxy MyAPI)
       writePSTypes "." (buildBridge myBridge) myTypes
-
-    cleanup = do
-      removeFile "ServerTypes.purs"
-      removeFile "ServerAPI.purs"
-      removeDirectoryRecursive ".spago"
