@@ -13,6 +13,7 @@
 , z3
 , enableHaskellProfiling
 , actus-tests
+, topLevelPkgs
 , ghcjsPluginPkgs ? null
 , cabalProjectLocal ? null
 }:
@@ -45,7 +46,7 @@ let
       inherit enableHaskellProfiling;
       inherit deferPluginErrors;
       inherit actus-tests;
-      inherit ghcjsPluginPkgs cabalProjectLocal;
+      inherit topLevelPkgs ghcjsPluginPkgs cabalProjectLocal;
     };
   project = baseProject { deferPluginErrors = false; };
   # The same as above, but this time with we defer plugin errors so that we

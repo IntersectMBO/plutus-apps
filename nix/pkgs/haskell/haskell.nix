@@ -16,13 +16,15 @@
   # it. If set to true, we will also build the haddocks for those packages.
 , deferPluginErrors
 , actus-tests
+, topLevelPkgs
 , ghcjsPluginPkgs ? null
 , cabalProjectLocal ? null
-}:
+}@args:
 let
+  compiler-nix-name = if topLevelPkgs.stdenv.hostPlatform.isGhcjs then "ghc8105" else args.compiler-nix-name;
   r-packages = with rPackages; [ R tidyverse dplyr stringr MASS plotly shiny shinyjs purrr ];
   project = haskell-nix.cabalProject' ({ pkgs, ... }: {
-    compiler-nix-name = if pkgs.stdenv.hostPlatform.isGhcjs then "ghc8105" else compiler-nix-name;
+    inherit compiler-nix-name;
     # This is incredibly difficult to get right, almost everything goes wrong, see https://github.com/input-output-hk/haskell.nix/issues/496
     src = let root = ../../../.; in
       haskell-nix.haskellLib.cleanSourceWith {
@@ -38,10 +40,10 @@ let
     # At the moment, we only need one but conceivably we might need one for darwin in future.
     # See https://github.com/input-output-hk/nix-tools/issues/97
     materialized =
-      if pkgs.stdenv.hostPlatform.isLinux then ./materialized-linux
-      else if pkgs.stdenv.hostPlatform.isGhcjs then ./materialized-ghcjs
-      else if pkgs.stdenv.hostPlatform.isDarwin then ./materialized-darwin
-      else if pkgs.stdenv.hostPlatform.isWindows then ./materialized-windows
+      if topLevelPkgs.stdenv.hostPlatform.isLinux then ./materialized-linux
+      else if topLevelPkgs.stdenv.hostPlatform.isGhcjs then (if pkgs.stdenv.hostPlatform.isGhcjs then ./materialized-ghcjs else ./materialized-ghcjs-build)
+      else if topLevelPkgs.stdenv.hostPlatform.isDarwin then ./materialized-darwin
+      else if topLevelPkgs.stdenv.hostPlatform.isWindows then ./materialized-windows
       else builtins.error "Don't have materialized files for this platform";
     # If true, we check that the generated files are correct. Set in the CI so we don't make mistakes.
     inherit checkMaterialization;

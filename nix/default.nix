@@ -50,6 +50,7 @@ let
     else
       import ./pkgs {
         pkgs = nativePkgs;
+        topLevelPkgs = pkgs;
         inherit checkMaterialization enableHaskellProfiling sources;
         #      -- packages: ${pkgs.pkgsCross.ghcjs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.configured-src}
         cabalProjectLocal = ''
@@ -104,7 +105,7 @@ let
 
     '';
       };
-  plutus = import ./pkgs { inherit pkgs checkMaterialization enableHaskellProfiling sources ghcjsPluginPkgs; };
+  plutus = import ./pkgs { inherit pkgs checkMaterialization enableHaskellProfiling sources ghcjsPluginPkgs; topLevelPkgs = pkgs; };
 
 in
 {

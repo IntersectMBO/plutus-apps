@@ -4,6 +4,7 @@
 , config ? { allowUnfreePredicate = (import ../lib/unfree.nix).unfreePredicate; }
 , sources
 , enableHaskellProfiling
+, topLevelPkgs
 , ghcjsPluginPkgs ? null
 , cabalProjectLocal ? null
 }:
@@ -22,7 +23,7 @@ let
     # the build system, so we can run e.g. the darwin ones on linux
     inherit (pkgs.evalPackages) writeShellScript;
 
-    inherit ghcjsPluginPkgs cabalProjectLocal;
+    inherit topLevelPkgs ghcjsPluginPkgs cabalProjectLocal;
   };
 
   #
