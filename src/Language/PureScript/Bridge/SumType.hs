@@ -79,7 +79,7 @@ mkSumType p =
   SumType
     (mkTypeInfo p)
     constructors
-    (Json : Generic : maybeToList (nootype constructors))
+    (Generic : maybeToList (nootype constructors))
   where
     constructors = gToConstructors (from (undefined :: t))
 
@@ -187,14 +187,35 @@ instance (Selector a, Typeable t) => GRecordEntry (S1 a (K1 R t)) where
 --   This includes all types found at the right hand side of a sum type
 --   definition, not the type parameters of the sum type itself
 getUsedTypes :: SumType lang -> Set (TypeInfo lang)
-getUsedTypes (SumType _ cs _) = foldr constructorToTypes Set.empty cs
+getUsedTypes (SumType _ cs is) = foldMap constructorToTypes cs <> foldMap instanceToTypes is
 
 constructorToTypes ::
-     DataConstructor lang -> Set (TypeInfo lang) -> Set (TypeInfo lang)
-constructorToTypes (DataConstructor _ (Left myTs)) ts =
-  Set.fromList (concatMap flattenTypeInfo myTs) `Set.union` ts
-constructorToTypes (DataConstructor _ (Right rs)) ts =
-  Set.fromList (concatMap (flattenTypeInfo . _recValue) rs) `Set.union` ts
+     DataConstructor lang -> Set (TypeInfo lang)
+constructorToTypes (DataConstructor _ (Left myTs)) =
+  Set.fromList (concatMap flattenTypeInfo myTs)
+constructorToTypes (DataConstructor _ (Right rs)) =
+  Set.fromList (concatMap (flattenTypeInfo . _recValue) rs)
+
+instanceToTypes :: Instance -> Set (TypeInfo lang)
+instanceToTypes Generic =
+  Set.singleton $ TypeInfo "purescript-prelude" "Data.Generic.Rep" "class Generic" []
+instanceToTypes GenericShow =
+  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Show" []
+instanceToTypes Json =
+  Set.fromList
+    [ TypeInfo "purescript-argonaut-codecs" "Data.Argonaut.Decode" "class DecodeJson" []
+    , TypeInfo "purescript-argonaut-codecs" "Data.Argonaut.Encode" "class EncodeJson" []
+    ]
+instanceToTypes Newtype =
+  Set.singleton $ TypeInfo "purescript-newtype" "Data.Newtype" "class Newtype" []
+instanceToTypes Functor =
+  Set.singleton $ TypeInfo "purescript-functor" "Data.Functor" "class Functor" []
+instanceToTypes Eq =
+  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Eq" []
+instanceToTypes Eq1 =
+  Set.singleton $ TypeInfo "purescript-prelude" "Data.Eq" "class Eq1" []
+instanceToTypes Ord =
+  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Ord" []
 
 -- Lenses:
 makeLenses ''DataConstructor

@@ -16,6 +16,7 @@ import           Data.Typeable
 import           GHC.Generics                       (Generic)
 import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.PSTypes
+import Language.PureScript.Bridge.CodeGenSwitches (defaultSettings)
 
 
 
@@ -91,4 +92,4 @@ b = mkSumType (Proxy :: Proxy (Either String Int))
 t :: TypeInfo 'PureScript
 cs :: [DataConstructor 'PureScript]
 psB :: SumType 'PureScript
-psB@(SumType t cs _) = bridgeSumType (buildBridge defaultBridge) b
+psB@(SumType t cs _) = bridgeSumType (buildBridge defaultBridge) defaultSettings b
