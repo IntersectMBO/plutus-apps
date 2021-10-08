@@ -14,6 +14,7 @@ module Language.PureScript.Bridge
 
 import           Control.Applicative
 import qualified Data.Map                                   as M
+import           Data.Maybe                                 (isJust)
 import qualified Data.Set                                   as Set
 import qualified Data.Text.IO                               as T
 
@@ -101,10 +102,13 @@ writePSTypesWith switch root bridge sts = do
     bridged = map (bridgeSumType bridge) sts
     modules = M.elems $ sumTypesToModules M.empty bridged
     packages =
-      if Switches.generateLenses settings
-        then Set.insert "purescript-profunctor-lenses" $
-             sumTypesToNeededPackages bridged
-        else sumTypesToNeededPackages bridged
+      sumTypesToNeededPackages bridged
+        <> Set.filter
+            (const $ Switches.generateLenses settings)
+            (Set.singleton "purescript-profunctor-lenses")
+        <> Set.filter
+            (const $ isJust $ Switches.generateArgonaut settings)
+            (Set.fromList ["purescript-argonaut-core", "purescript-argonaut-generic"])
 
 -- | Translate all 'TypeInfo' values in a 'SumType' to PureScript types.
 --

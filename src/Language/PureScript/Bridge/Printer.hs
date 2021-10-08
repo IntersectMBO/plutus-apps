@@ -19,7 +19,7 @@ import qualified Data.Text                                  as T
 import qualified Data.Text.IO                               as T
 import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
 import           Language.PureScript.Bridge.SumType         (DataConstructor (DataConstructor),
-                                                             Instance (Decode, Encode, Eq, Eq1, Functor, Generic, GenericShow, Newtype, Ord),
+                                                             Instance (Eq, Eq1, Functor, Generic, GenericShow, Newtype, Ord, Json),
                                                              RecordEntry (RecordEntry),
                                                              SumType (SumType),
                                                              getUsedTypes,
@@ -42,7 +42,7 @@ import           System.Directory                           (createDirectoryIfMi
 import           System.FilePath                            (joinPath,
                                                              takeDirectory,
                                                              (</>))
-import           Text.PrettyPrint.Leijen.Text               (Doc, align, cat,
+import           Text.PrettyPrint.Leijen.Text               (Doc, cat,
                                                              comma,
                                                              displayTStrict,
                                                              encloseSep, hcat,
@@ -110,7 +110,7 @@ moduleToText settings m =
       importsFromList
         (_lensImports settings <> _genericsImports settings <>
          _equalityImports settings <>
-         _foreignImports settings)
+         _argonautImports settings)
     allImports = Map.elems $ mergeImportLines otherImports (psImportLines m)
 
 _genericsImports :: Switches.Settings -> [ImportLine]
@@ -140,16 +140,17 @@ _lensImports settings
     , ImportLine "Data.Newtype" $ Set.fromList ["class Newtype"]
     ]
 
-_foreignImports :: Switches.Settings -> [ImportLine]
-_foreignImports settings
-  | (isJust . Switches.generateForeign) settings =
-    [ ImportLine "Foreign.Generic" $
-      Set.fromList ["defaultOptions", "genericDecode", "genericEncode"]
-    , ImportLine "Foreign.Generic.Class" $ Set.fromList ["aesonSumEncoding"]
-    , ImportLine "Foreign.Generic.EnumEncoding" $
-      Set.fromList
-        ["defaultGenericEnumOptions", "genericDecodeEnum", "genericEncodeEnum"]
-    , ImportLine "Foreign.Class" $ Set.fromList ["class Decode", "class Encode"]
+_argonautImports :: Switches.Settings -> [ImportLine]
+_argonautImports settings
+  | (isJust . Switches.generateArgonaut) settings =
+    [ ImportLine "Data.Argonaut.Decode" $
+      Set.fromList ["class DecodeJson", "decodeJson"]
+    , ImportLine "Data.Argonaut.Decode.Generic" $
+      Set.fromList ["genericDecodeJsonWith"]
+    , ImportLine "Data.Argonaut.Encode" $
+      Set.fromList ["class EncodeJson", "encodeJson"]
+    , ImportLine "Data.Argonaut.Decode.Generic" $
+      Set.fromList ["genericEncodeJsonWith"]
     ]
   | otherwise = []
 
@@ -182,21 +183,20 @@ sumTypeToTypeDecls settings (SumType t cs is) =
              (constructorToDoc <$> cs))
       ]
     , [line]
-    , instances settings (SumType t cs (filter genForeign is))
+    , instances settings (SumType t cs (filter genArgonaut is))
     ]
   where
     dataOrNewtype =
       if isJust (nootype cs)
         then "newtype"
         else "data"
-    genForeign Encode = (isJust . Switches.generateForeign) settings
-    genForeign Decode = (isJust . Switches.generateForeign) settings
-    genForeign _      = True
+    genArgonaut Json = (isJust . Switches.generateArgonaut) settings
+    genArgonaut _      = True
 
 -- | Given a Purescript type, generate instances for typeclass
 -- instances it claims to have.
 instances :: Switches.Settings -> SumType 'PureScript -> [Doc]
-instances settings st@(SumType t cs is) = go <$> is
+instances settings st@(SumType t _ is) = go <$> is
   where
     stpLength = length sumTypeParameters
     sumTypeParameters = filter (isTypeParam t) . Set.toList $ getUsedTypes st
@@ -205,37 +205,21 @@ instances settings st@(SumType t cs is) = go <$> is
       | otherwise =
         constraintsInner (instanceConstraints <$> sumTypeParameters) <+> "=>"
     name = textStrict (_typeName t)
-    isEnum = all isNoArgConstructor cs
-    isNoArgConstructor c = (c ^. sigValues) == Left []
+    -- isEnum = all isNoArgConstructor cs
+    -- isNoArgConstructor c = (c ^. sigValues) == Left []
     go :: Instance -> Doc
-    go Encode =
-      "instance encode" <> name <+> "::" <+> extras encodeInstance <+> "Encode" <+>
+    go Json =
+      "instance encodeJson" <> name <+> "::" <+> extras encodeJsonInstance <+> "EncodeJson" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
-      indent 2 encodeInstanceBody
-      where
-        encodeInstanceBody =
-          "encode value =" <+>
-          (if isEnum
-             then "genericEncodeEnum defaultGenericEnumOptions value"
-             else "genericEncode" <+>
-                  parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
-                  "value")
-    go Decode =
-      "instance decode" <> name <+> "::" <+> extras decodeInstance <+> "Decode" <+>
+      indent 2 "encodeJson = genericEncodeJsonWith defaultEncoding { valuesKey = \"contents\", unwrapSingleArguments = true }" <>
+      linebreak <>
+      "instance decodeJson" <> name <+> "::" <+> extras decodeJsonInstance <+> "DecodeJson" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
-      indent 2 decodeInstanceBody
-      where
-        decodeInstanceBody =
-          "decode value =" <+>
-          if isEnum
-            then "genericDecodeEnum defaultGenericEnumOptions value"
-            else "genericDecode" <+>
-                 parens ("defaultOptions" <+> align (jsonOpts settings)) <+>
-                 "value"
+      indent 2 "decodeJson = genericDecodeJsonWith defaultEncoding { valuesKey = \"contents\", unwrapSingleArguments = true }"
     go GenericShow =
       "instance show" <> name <+> "::" <+> extras showInstance <+> "Show" <+>
       typeInfoToDoc False t <+>
@@ -264,35 +248,11 @@ instances settings st@(SumType t cs is) = go <$> is
           | otherwise = ""
         postfix _ = ""
 
-recordUpdateDoc :: [(Doc, Doc)] -> Doc
-recordUpdateDoc = recordFields . fmap recordUpdateItem
-  where
-    recordUpdateItem (k, v) = k <+> "=" <+> v
-
-jsonOpts :: Switches.Settings -> Doc
-jsonOpts settings =
-  case Switches.generateForeign settings of
-    Nothing -> mempty
-    Just fopts ->
-      recordUpdateDoc
-        [ ( "unwrapSingleConstructors"
-          , textStrict . T.toLower . T.pack . show .
-            Switches.unwrapSingleConstructors $
-            fopts)
-        , ("sumEncoding", "aesonSumEncoding")
-        ]
-
 constraintsInner :: [Doc] -> Doc
 constraintsInner = encloseSep lparen rparen ("," <> space)
 
 isTypeParam :: PSType -> PSType -> Bool
 isTypeParam t typ = _typeName typ `elem` map _typeName (_typeParameters t)
-
-encodeInstance :: PSType -> Doc
-encodeInstance params = "Encode" <+> typeInfoToDoc False params
-
-decodeInstance :: PSType -> Doc
-decodeInstance params = "Decode" <+> typeInfoToDoc False params
 
 eqInstance :: PSType -> Doc
 eqInstance params = "Eq" <+> typeInfoToDoc False params
@@ -302,6 +262,12 @@ ordInstance params = "Ord" <+> typeInfoToDoc False params
 
 showInstance :: PSType -> Doc
 showInstance params = "Show" <+> typeInfoToDoc False params
+
+decodeJsonInstance :: PSType -> Doc
+decodeJsonInstance params = "DecodeJson" <+> typeInfoToDoc False params
+
+encodeJsonInstance :: PSType -> Doc
+encodeJsonInstance params = "EncodeJson" <+> typeInfoToDoc False params
 
 genericInstance :: Switches.Settings -> PSType -> Doc
 genericInstance settings params =

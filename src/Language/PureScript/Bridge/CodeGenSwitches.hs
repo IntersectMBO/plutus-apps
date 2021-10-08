@@ -1,7 +1,7 @@
 -- | General switches for the code generation, such as generating profunctor-lenses or not
 module Language.PureScript.Bridge.CodeGenSwitches
   ( Settings(..)
-  , ForeignOptions(..)
+  , ArgonautOptions(..)
   , defaultSettings
   , purs_0_11_settings
   , Switch
@@ -11,8 +11,8 @@ module Language.PureScript.Bridge.CodeGenSwitches
   , genLenses
   , useGen
   , useGenRep
-  , genForeign
-  , noForeign
+  , genArgonaut
+  , noArgonaut
   ) where
 
 import Data.Monoid (Endo(..))
@@ -22,14 +22,14 @@ data Settings =
   Settings
     { generateLenses :: Bool -- ^use purescript-profunctor-lens for generated PS-types?
     , genericsGenRep :: Bool -- ^generate generics using purescript-generics-rep instead of purescript-generics
-    , generateForeign :: Maybe ForeignOptions -- ^generate Foreign.Generic Encode and Decode instances
+    , generateArgonaut :: Maybe ArgonautOptions -- ^generate Argonaut EncodeJson and DecodeJson instances
     }
   deriving (Eq, Show)
 
-data ForeignOptions =
-  ForeignOptions
-    { unwrapSingleConstructors :: Bool
-    }
+data ArgonautOptions =
+  ArgonautOptions
+    -- { unwrapSingleConstructors :: Bool
+    -- }
   deriving (Eq, Show)
 
 -- | Settings to generate Lenses
@@ -67,8 +67,8 @@ useGenRep = Endo $ \settings -> settings {genericsGenRep = True}
 useGen :: Switch
 useGen = Endo $ \settings -> settings {genericsGenRep = False}
 
-genForeign :: ForeignOptions -> Switch
-genForeign opts = Endo $ \settings -> settings {generateForeign = Just opts}
+genArgonaut :: ArgonautOptions -> Switch
+genArgonaut opts = Endo $ \settings -> settings {generateArgonaut = Just opts}
 
-noForeign :: Switch
-noForeign = Endo $ \settings -> settings {generateForeign = Nothing}
+noArgonaut :: Switch
+noArgonaut = Endo $ \settings -> settings {generateArgonaut = Nothing}

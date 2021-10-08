@@ -86,7 +86,7 @@ allTests = do
                         ]
                   }
               ]
-              [Eq, Ord, Encode, Decode, Generic]
+              [Eq, Ord, Json, Generic]
        in bst `shouldBe` st
     it "tests generation of for custom type Foo" $
       let prox = Proxy :: Proxy Foo

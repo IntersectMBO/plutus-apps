@@ -79,16 +79,15 @@ mkSumType p =
   SumType
     (mkTypeInfo p)
     constructors
-    (Encode : Decode : Generic : maybeToList (nootype constructors))
+    (Json : Generic : maybeToList (nootype constructors))
   where
     constructors = gToConstructors (from (undefined :: t))
 
 -- | Purescript typeclass instances that can be generated for your Haskell types.
 data Instance
-  = Encode
-  | Decode
-  | Generic
+  = Generic
   | GenericShow
+  | Json
   | Newtype
   | Functor
   | Eq
