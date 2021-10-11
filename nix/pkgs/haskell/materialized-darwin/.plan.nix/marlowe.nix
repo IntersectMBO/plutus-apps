@@ -50,12 +50,11 @@
           (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
           (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
-          (hsPkgs."vector" or (errorHandler.buildDepError "vector"))
           (hsPkgs."sbv" or (errorHandler.buildDepError "sbv"))
           (hsPkgs."scientific" or (errorHandler.buildDepError "scientific"))
           (hsPkgs."wl-pprint" or (errorHandler.buildDepError "wl-pprint"))
-          (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
           (hsPkgs."semigroups" or (errorHandler.buildDepError "semigroups"))
+          (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
           (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
           ];
         buildable = true;
@@ -65,6 +64,7 @@
           "Language/Marlowe/Semantics"
           "Language/Marlowe/Client"
           "Language/Marlowe/Util"
+          "Language/Marlowe/Scripts"
           "Language/Marlowe/Pretty"
           "Language/Marlowe/Analysis/FSSemantics"
           ];
@@ -87,6 +87,7 @@
             (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
             (hsPkgs."marlowe" or (errorHandler.buildDepError "marlowe"))
             (hsPkgs."openapi3" or (errorHandler.buildDepError "openapi3"))
+            (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
             (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
             ];
           buildable = true;
@@ -170,6 +171,7 @@
             (hsPkgs."websockets" or (errorHandler.buildDepError "websockets"))
             (hsPkgs."network" or (errorHandler.buildDepError "network"))
             (hsPkgs."openapi3" or (errorHandler.buildDepError "openapi3"))
+            (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
             ];
           buildable = true;
           modules = [

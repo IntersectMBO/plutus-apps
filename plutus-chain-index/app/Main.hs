@@ -14,9 +14,10 @@ import qualified Control.Concurrent.STM            as STM
 import           Control.Exception                 (throwIO)
 import           Control.Lens                      (unto)
 import           Control.Monad.Freer               (Eff, interpret, reinterpret, runM, send)
-import           Control.Monad.Freer.Error         (Error, runError)
+import           Control.Monad.Freer.Error         (Error, handleError, runError, throwError)
 import           Control.Monad.Freer.Extras        (LogMsg (..))
 import           Control.Monad.Freer.Extras.Log    (LogLevel (..), LogMessage (..), handleLogWriter)
+import           Control.Monad.Freer.Reader        (Reader, runReader)
 import           Control.Monad.Freer.State         (State, runState)
 import           Control.Monad.Freer.Writer        (runWriter)
 import           Control.Tracer                    (nullTracer)
@@ -42,23 +43,27 @@ import           Cardano.Api                       (ChainPoint)
 import           Cardano.Protocol.Socket.Client    (ChainSyncEvent (..), runChainSync)
 import           CommandLine                       (AppConfig (..), Command (..), applyOverrides, cmdWithHelpParser)
 import qualified Config
+import           Control.Monad.Freer.Extras.Beam   (BeamEffect, BeamError (..), BeamLog (..), handleBeam)
 import           Ledger                            (Slot (..))
 import qualified Logging
 import           Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import           Plutus.ChainIndex.ChainIndexLog   (ChainIndexLog (..))
 import           Plutus.ChainIndex.Compatibility   (fromCardanoBlock, fromCardanoPoint, tipFromCardanoBlock)
-import           Plutus.ChainIndex.DbStore         (DbStoreEffect, checkedSqliteDb, handleDbStore)
+import           Plutus.ChainIndex.DbSchema        (checkedSqliteDb)
 import           Plutus.ChainIndex.Effects         (ChainIndexControlEffect (..), ChainIndexQueryEffect (..),
                                                     appendBlock, rollback)
 import           Plutus.ChainIndex.Handlers        (ChainIndexState, getResumePoints, handleControl, handleQuery,
                                                     restoreStateFromDb)
 import           Plutus.ChainIndex.Types           (pointSlot)
-import           Plutus.Monitoring.Util            (runLogEffects)
+import           Plutus.Monitoring.Util            (convertLog, runLogEffects)
+
 
 type ChainIndexEffects
   = '[ ChainIndexControlEffect
      , ChainIndexQueryEffect
-     , DbStoreEffect
+     , BeamEffect
+     , Reader Sqlite.Connection
+     , Error BeamError
      , State ChainIndexState
      , Error ChainIndexError
      , LogMsg ChainIndexLog
@@ -79,7 +84,9 @@ runChainIndex trace mState conn effect = do
     effect
     & interpret handleControl
     & interpret handleQuery
-    & interpret (handleDbStore trace conn)
+    & interpret (handleBeam (convertLog BeamLogItem trace))
+    & runReader conn
+    & flip handleError (throwError . BeamEffectError)
     & runState oldEmulatorState
     & runError
     & reinterpret
@@ -173,9 +180,18 @@ main = do
         -- Optimize Sqlite for write performance, halves the sync time.
         -- https://sqlite.org/wal.html
         Sqlite.execute_ conn "PRAGMA journal_mode=WAL"
-
-        Sqlite.runBeamSqliteDebug (logDebug trace . SqlLog) conn $ do
+        Sqlite.runBeamSqliteDebug (logDebug trace . (BeamLogItem . SqlLog)) conn $ do
           autoMigrate Sqlite.migrationBackend checkedSqliteDb
+
+        -- Automatically delete the input when an output from a matching input/output pair is deleted.
+        -- See reduceOldUtxoDb in Plutus.ChainIndex.Handlers
+        Sqlite.execute_ conn "DROP TRIGGER IF EXISTS delete_matching_input"
+        Sqlite.execute_ conn $
+          "CREATE TRIGGER delete_matching_input AFTER DELETE ON unspent_outputs \
+          \BEGIN \
+          \  DELETE FROM unmatched_inputs WHERE input_row_tip__row_slot = old.output_row_tip__row_slot \
+          \                                 AND input_row_out_ref = old.output_row_out_ref; \
+          \END"
 
         appState <- STM.newTVarIO mempty
         Just resumePoints <- runChainIndex trace appState conn getResumePoints
