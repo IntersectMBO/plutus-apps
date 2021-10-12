@@ -434,6 +434,7 @@ let
           cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
           cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
           plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
+          iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
         };
       })
       ({ pkgs, config, ... }@args: {
