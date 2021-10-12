@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Data.Digest.CRC32 (
     CRC32, crc32, crc32Update
 ) where
@@ -24,5 +25,5 @@ instance CRC32 S.ByteString where
 instance CRC32 L.ByteString where
     crc32Update = error "no ghcjs impl"
 
--- instance CRC32 [Word8] where
---     crc32Update n = error "no ghcjs impl"
+instance CRC32 [Word8] where
+    crc32Update = error "no ghcjs impl"
