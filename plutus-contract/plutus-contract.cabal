@@ -140,7 +140,8 @@ library
         uuid -any,
         IntervalMap -any,
         QuickCheck -any,
-        openapi3 -any
+        openapi3 -any,
+        plutus-tx-plugin -any
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
