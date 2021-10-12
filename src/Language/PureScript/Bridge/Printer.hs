@@ -7,7 +7,7 @@ module Language.PureScript.Bridge.Printer where
 import           Control.Lens                               (filtered, to,
                                                              traversed, (^.),
                                                              (^..), (^?),
-                                                             _Right, _head)
+                                                             _Right, _head, view)
 import           Control.Monad                              (unless)
 import           Data.Map.Strict                            (Map)
 import qualified Data.Map.Strict                            as Map
@@ -30,7 +30,7 @@ import           Language.PureScript.Bridge.SumType         (DataConstructor (Da
                                                              sumTypeInfo,
                                                              _recLabel)
 import           Language.PureScript.Bridge.TypeInfo        (Language (PureScript),
-                                                             PSType, TypeInfo,
+                                                             PSType, TypeInfo (TypeInfo),
                                                              typeParameters,
                                                              _typeModule,
                                                              _typeName,
@@ -54,7 +54,7 @@ import           Text.PrettyPrint.Leijen.Text               (Doc, cat,
                                                              renderPretty,
                                                              rparen, space,
                                                              textStrict, vsep,
-                                                             (<+>))
+                                                             (<+>), hang, dquotes, braces, int, lbracket, rbracket, list)
 
 renderText :: Doc -> Text
 renderText = displayTStrict . renderPretty 0.4 200
@@ -109,7 +109,7 @@ moduleToText settings m =
   where
     otherImports =
       importsFromList
-        (_lensImports settings <> _genericsImports <> _argonautImports settings)
+        (_lensImports settings <> _genericsImports)
     allImports = Map.elems $ mergeImportLines otherImports (psImportLines m)
 
 _genericsImports :: [ImportLine]
@@ -128,15 +128,6 @@ _lensImports settings
     ]
   | otherwise =
     [ ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"] ]
-
-_argonautImports :: Switches.Settings -> [ImportLine]
-_argonautImports settings
-  | (isJust . Switches.generateArgonaut) settings =
-    [ ImportLine "Data.Argonaut.Decode.Generic" $ Set.singleton "genericDecodeJsonWith"
-    , ImportLine "Data.Argonaut.Encode.Generic" $ Set.singleton "genericEncodeJsonWith"
-    , ImportLine "Data.Argonaut.Types.Generic" $ Set.singleton "defaultEncoding"
-    ]
-  | otherwise = []
 
 importLineToText :: ImportLine -> Text
 importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
@@ -186,29 +177,19 @@ instances st@(SumType t _ is) = go <$> is
       | otherwise =
         constraintsInner (instanceConstraints <$> sumTypeParameters) <+> "=>"
     name = textStrict (_typeName t)
-    -- isEnum = all isNoArgConstructor cs
-    -- isNoArgConstructor c = (c ^. sigValues) == Left []
     go :: Instance -> Doc
     go Json =
       "instance encodeJson" <> name <+> "::" <+> extras encodeJsonInstance <+> "EncodeJson" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
-      vsep
-        [ indent 2 "encodeJson ="
-        , indent 4 "genericEncodeJsonWith"
-        , indent 6 "defaultEncoding { valuesKey = \"contents\", unwrapSingleArguments = true }"
-        ] <>
+      indent 2 (vsep ["encodeJson =", indent 2 (sumTypeToEncode st)]) <>
       linebreak <>
       "instance decodeJson" <> name <+> "::" <+> extras decodeJsonInstance <+> "DecodeJson" <+>
       typeInfoToDoc False t <+>
       "where" <>
       linebreak <>
-      vsep
-        [ indent 2 "decodeJson ="
-        , indent 4 "genericDecodeJsonWith"
-        , indent 6 "defaultEncoding { valuesKey = \"contents\", unwrapSingleArguments = true }"
-        ]
+      indent 2 (vsep ["decodeJson json =", indent 2 (sumTypeToDecode st)])
     go GenericShow =
       "instance show" <> name <+> "::" <+> extras showInstance <+> "Show" <+>
       typeInfoToDoc False t <+>
@@ -234,6 +215,205 @@ instances st@(SumType t _ is) = go <$> is
         postfix Newtype = " _"
         postfix Generic = " _"
         postfix _ = ""
+
+sumTypeToEncode :: SumType 'PureScript -> Doc
+sumTypeToEncode (SumType _ cs _)
+  | isEnum = "fromString <<< show"
+  | otherwise =
+    hang 2 $ vsep
+      [ "case _ of"
+      , case cs of
+          [dc@(DataConstructor name args)] ->
+            hang 2 $ vsep [textStrict name <+> bindings args <+> "->", constructorToEncode dc]
+          _ -> vsep $ constructorToCase <$> cs
+      ]
+  where
+    isEnum = all isNoArgConstructor cs
+    isNoArgConstructor c = (c ^. sigValues) == Left []
+    bindings args = case args of
+      Left values -> hsep $ ("v" <>) . int <$> [0..(length values - 1)] 
+      Right entries -> braces $ hsep $ punctuate ", " $ textStrict . view recLabel <$> entries
+    constructorToCase dc@(DataConstructor name args)=
+      hang 2 $ vsep $
+        [ textStrict name <+> bindings args <+> "->"
+        , "\"tag\" :=" <+> dquotes (textStrict name) <+> "~>"
+        ] <>
+          ( if args == Left []
+            then []
+            else [ "\"contents\" :="
+               , indent 2 $ lparen <+> hang 2 (constructorToEncode dc)
+               , indent 2 $ rparen <+> "~>"
+               ]
+          )
+          <> ["jsonEmptyObject"]
+    constructorToEncode (DataConstructor _ args) =
+      either typesToEncode recordEntriesToEncode args
+
+typesToEncode :: [PSType] -> Doc
+typesToEncode [] = "jsonEmptyArray"
+typesToEncode [a] = parens ("let a = v0 in" <+> typeToEncode a)
+typesToEncode ts =
+  encodeArray (\(i, t) -> parens ("let a = v" <> int i <+> "in" <+> typeToEncode t)) (zip [0..] ts)
+
+
+encodeArray :: (a -> Doc) -> [a] -> Doc
+encodeArray adoc as =
+  hang 2 $ vsep
+    [ "fromArray"
+    , lbracket <+> mconcat (punctuate (line <> ", ") $ adoc <$> as)
+    , rbracket
+    ]
+
+typeToEncode :: PSType -> Doc
+typeToEncode (TypeInfo "purescript-prelude" "Prelude" "Unit" []) =
+  "jsonEmptyArray"
+typeToEncode (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [t]) =
+  vsep
+    [ "case a of"
+    , indent 2 "Nothing -> jsonNull"
+    , indent 2 $ "Just a ->" <+> typeToEncode t
+    ]
+typeToEncode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) =
+  vsep
+    [ "case a of"
+    , indent 2 $ "Left a -> \"Left\" :=" <+> parens (typeToEncode l) <+> "~> jsonEmptyObject"
+    , indent 2 $ "Right a -> \"Right\" :=" <+> parens (typeToEncode r) <+> "~> jsonEmptyObject"
+    ]
+typeToEncode (TypeInfo "purescript-tuples" "Data.Tuple.Nested" _ ts) =
+  vsep
+    [ "case a of" <+> hsep (punctuate " /\\" $ (("v" <>) . int . fst <$> zip [0..] ts) <> ["unit"]) <+> "->"
+    , indent 4 $ lbracket <+> mconcat (punctuate (line <> ", ") $ (tupleElementToEncode <$> zip [0..] ts))
+    , indent 4 rbracket
+    ]
+  where
+    tupleElementToEncode (i, t) = parens $ "let a = v" <> int i <+> "in" <+> typeToEncode t
+typeToEncode _ = "encodeJson a"
+
+
+recordEntriesToEncode :: [RecordEntry 'PureScript] -> Doc
+recordEntriesToEncode rs =
+  vsep $ punctuate " ~>" $ (recordEntryToEncode <$> rs) <> ["jsonEmptyObject"]
+
+recordEntryToEncode :: RecordEntry 'PureScript -> Doc
+recordEntryToEncode (RecordEntry name t) =
+  dquotes (textStrict name)
+    <+> ":="
+    <+> parens ("let a =" <+> textStrict name <+> "in" <+> typeToEncode t)
+
+sumTypeToDecode :: SumType 'PureScript -> Doc
+sumTypeToDecode (SumType _ cs _)
+  | isEnum =
+      vsep
+        [ "decodeJson json >>= case _ of"
+        , indent 2 $ vsep $ constructorToCase <$> cs
+        , indent 2 "_ -> Left (UnexpectedValue json)"
+        ]
+  where
+    isEnum = all isNoArgConstructor cs
+    isNoArgConstructor c = (c ^. sigValues) == Left []
+    constructorToCase (DataConstructor name _) = dquotes (textStrict name) <+> "->" <+> "pure" <+> textStrict name
+sumTypeToDecode (SumType _ [c] _) = constructorToDecode c
+sumTypeToDecode (SumType _ cs _) =
+  vsep
+    [ "do"
+    , indent 2 $ vsep
+        [ "obj <- decodeJObject json"
+        , "tag <- obj .: \"tag\""
+        , "json <- obj .:? \"contents\" .!= jsonNull"
+        , "case tag of"
+        , indent 2 $ vsep $
+            ( ( \dc@(DataConstructor name _) ->
+                  hang 2 $ dquotes (textStrict name) <+> "->" <+> constructorToDecode dc
+              )
+              <$> cs
+            )
+            <> ["_ -> Left $ AtKey \"tag\" (UnexpectedValue json)"]
+        ]
+    ]
+
+constructorToDecode :: DataConstructor 'PureScript -> Doc
+constructorToDecode (DataConstructor name (Left args)) =
+  case args of
+    [] -> "pure" <+> textStrict name
+    [a] -> vsep
+      [ "lmap (AtKey \"contents\") $" <+> textStrict name <+> "<$>"
+      , wrapConstructorArg $ typeToDecode a
+      ]
+    _ -> vsep
+      [ "do"
+      , "arr <- decodeJArray json"
+      , "lmap (AtKey \"contents\") $" <+> textStrict name <+> "<$>"
+      , indent 2 $ vsep . punctuate " <*>" $ wrapConstructorArg . argToDecode <$> zip [0..] args
+      ]
+  where
+    wrapConstructorArg doc = vsep [hang 2 $ "(" <+> doc, ")"]
+    argToDecode (i, arg) =
+      hang 2 $ vsep
+        [ "do"
+        , "json <- maybe (Left $ AtIndex" <+> int i <+> "$ MissingValue) Right $ index arr" <+> int i
+        , typeToDecode arg
+        ]
+constructorToDecode (DataConstructor name (Right args)) =
+  case args of
+    [] -> "pure $" <+> textStrict name <+> "{}"
+    _ ->
+      vsep
+        [ "do"
+        , indent 2 $ vsep $
+            [ "x <- decodeJson json" ]
+            <> fieldDecodes
+            <> [ "pure $"
+                  <+> textStrict name
+                  <+> braces (hsep (punctuate ", " $ textStrict . view recLabel <$> args))
+               ]
+        ]
+  where
+    fieldDecodes = fieldDecode <$> args
+    fieldDecode (RecordEntry label value) =
+      textStrict label
+        <+> "<-"
+        <+> "x .:"
+        <+> dquotes (textStrict label)
+        <+> ">>= \\json ->"
+        <+> typeToDecode value
+
+typeToDecode :: PSType -> Doc
+typeToDecode (TypeInfo "purescript-prelude" "Prelude" "Unit" []) =
+  "unit <$ decodeArray (Left <<< UnexpectedValue) json"
+typeToDecode (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [t]) =
+  vsep $ punctuate " <|>"
+    [ "Nothing <$ decodeNull json"
+    , "Just <$>" <+> typeToDecode t
+    ]
+typeToDecode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) =
+  hang 2 $ vsep
+    [ "decodeJson json >>= \\obj ->"
+    , "Left <$>" <+> parens ("obj .: \"Left\" >>= \\json ->" <+> typeToDecode l) <+> "<|>"
+    , "Right <$>" <+> parens ("obj .: \"Right\" >>= \\json ->" <+> typeToDecode r)
+    ]
+typeToDecode (TypeInfo "purescript-tuples" "Data.Tuple.Nested" _ ts) =
+  hang 2 $ vsep
+    [ "do"
+    , "arr <- decodeJArray json"
+    , vsep $ tupleElementToDecode <$> zip [0..] ts
+    , "pure $" <+> hsep (punctuate " /\\" $ (("v" <>) . int . fst <$> zip [0..] ts) <> ["unit"])
+    ]
+  where
+    tupleElementToDecode (i, t) =
+      hang 2 $ vsep
+        [ "v" <> int i <+> "<-"
+        , hang 2 $ vsep
+            [ "maybe"
+            , "(Left $ AtIndex" <+> int i <+> "$ MissingValue)"
+            , vsep
+                [ "(\\json ->"
+                , indent 2 $ typeToDecode t
+                , ")" 
+                ]
+            , "$ index arr" <+> int i
+            ]
+        ]
+typeToDecode _ = "decodeJson json"
 
 constraintsInner :: [Doc] -> Doc
 constraintsInner = encloseSep lparen rparen ("," <> space)
@@ -500,9 +680,16 @@ instanceToImportLines GenericShow =
   importsFromList [ ImportLine "Data.Show.Generic" $ Set.singleton "genericShow" ]
 instanceToImportLines Json =
   importsFromList
-    [ ImportLine "Data.Argonaut.Decode.Generic" $ Set.singleton "genericDecodeJsonWith"
-    , ImportLine "Data.Argonaut.Encode.Generic" $ Set.singleton "genericEncodeJsonWith"
-    , ImportLine "Data.Argonaut.Types.Generic" $ Set.singleton "defaultEncoding"
+    [ ImportLine "Control.Alt" $ Set.singleton "(<|>)"
+    , ImportLine "Data.Array" $ Set.singleton "index"
+    , ImportLine "Data.Bifunctor" $ Set.singleton "lmap"
+    , ImportLine "Data.Argonaut.Core" $ Set.fromList ["jsonEmptyArray", "jsonEmptyObject", "jsonNull", "fromArray", "fromString"]
+    , ImportLine "Data.Argonaut.Decode" $ Set.fromList ["JsonDecodeError(..)", "(.:)", "(.:?)", "(.!=)", "decodeJson"]
+    , ImportLine "Data.Argonaut.Decode.Decoders" $ Set.fromList ["decodeJArray", "decodeJObject", "decodeArray", "decodeNull"]
+    , ImportLine "Data.Argonaut.Encode" $ Set.fromList ["(:=)", "(~>)", "encodeJson"]
+    , ImportLine "Data.Either" $ Set.singleton "Either(..)"
+    , ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)", "maybe"]
+    , ImportLine "Data.Tuple.Nested" $ Set.singleton "(/\\)"
     ]
 instanceToImportLines _ = Map.empty
 

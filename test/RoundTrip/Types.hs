@@ -5,6 +5,7 @@
 
 module RoundTrip.Types where
 
+import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
@@ -17,6 +18,7 @@ import System.Process (readProcessWithExitCode)
 import Test.HUnit (assertEqual)
 import Test.Hspec (Spec, aroundAll_, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
+import Test.QuickCheck (Arbitrary(..), chooseEnum, oneof)
 
 data TestData
   = Maybe (Maybe TestSum)
@@ -26,6 +28,12 @@ data TestData
 instance FromJSON TestData
 
 instance ToJSON TestData
+
+instance Arbitrary TestData where
+  arbitrary = oneof
+    [ Maybe <$> arbitrary
+    , Either <$> arbitrary
+    ]
 
 data TestSum
   = Nullary
@@ -42,6 +50,7 @@ data TestSum
   | Pair (Int, String)
   | Triple (Int, String, Bool)
   | Quad (Int, String, Bool, Double)
+  | QuadSimple Int String Bool Double
   | NestedSum TestNestedSum
   | Enum TestEnum
   deriving (Show, Eq, Ord, Generic)
@@ -49,6 +58,27 @@ data TestSum
 instance FromJSON TestSum
 
 instance ToJSON TestSum
+
+instance Arbitrary TestSum where
+  arbitrary = oneof
+    [ pure Nullary
+    , Bool <$> arbitrary
+    , Int <$> arbitrary
+    , Number <$> arbitrary
+    , String <$> arbitrary
+    , Array <$> arbitrary
+    , Record <$> arbitrary
+    , NestedRecord <$> arbitrary
+    , NT <$> arbitrary
+    , NTRecord <$> arbitrary
+    , pure $ Unit ()
+    , Pair <$> arbitrary
+    , Triple <$> arbitrary
+    , Quad <$> arbitrary
+    , QuadSimple <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+    , NestedSum <$> arbitrary
+    , Enum <$> arbitrary
+    ]
 
 data TestRecord a = TestRecord
   { field1 :: String,
@@ -60,6 +90,9 @@ instance (FromJSON a) => FromJSON (TestRecord a)
 
 instance (ToJSON a) => ToJSON (TestRecord a)
 
+instance (Arbitrary a) => Arbitrary (TestRecord a) where
+  arbitrary = TestRecord <$> arbitrary <*> arbitrary
+
 newtype TestNewtype = TestNewtype (TestRecord String)
   deriving (Show, Eq, Ord, Generic)
 
@@ -67,12 +100,18 @@ instance FromJSON TestNewtype
 
 instance ToJSON TestNewtype
 
+instance Arbitrary TestNewtype where
+  arbitrary = TestNewtype <$> arbitrary
+
 newtype TestNewtypeRecord = TestNewtypeRecord {unTestNewtypeRecord :: TestNewtype}
   deriving (Show, Eq, Ord, Generic)
 
 instance FromJSON TestNewtypeRecord
 
 instance ToJSON TestNewtypeRecord
+
+instance Arbitrary TestNewtypeRecord where
+  arbitrary = TestNewtypeRecord <$> arbitrary
 
 data TestNestedSum
   = Case1 String
@@ -83,6 +122,13 @@ data TestNestedSum
 instance FromJSON TestNestedSum
 
 instance ToJSON TestNestedSum
+
+instance Arbitrary TestNestedSum where
+  arbitrary = oneof
+    [ Case1 <$> arbitrary
+    , Case2 <$> arbitrary
+    , Case3 <$> arbitrary
+    ]
 
 data TestEnum
   = Mon
@@ -97,3 +143,7 @@ data TestEnum
 instance FromJSON TestEnum
 
 instance ToJSON TestEnum
+
+instance Arbitrary TestEnum where
+  arbitrary = chooseEnum (minBound, maxBound)
+

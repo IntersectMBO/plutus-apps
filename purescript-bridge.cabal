@@ -98,6 +98,7 @@ Test-Suite tests
                , RoundTrip.Spec
                , RoundTrip.Types
   build-depends: aeson
+               , bytestring
                , HUnit
                , base
                , containers
@@ -106,7 +107,9 @@ Test-Suite tests
                , hspec-expectations-pretty-diff
                , process
                , purescript-bridge
+               , QuickCheck
                , text
+               , utf8-string
                , wl-pprint-text
 
   hs-source-dirs:   test

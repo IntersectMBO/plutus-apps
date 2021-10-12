@@ -5,7 +5,8 @@
 
 module RoundTrip.Spec where
 
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON (toJSON), fromJSON, eitherDecode, encode)
+import Data.ByteString.Lazy.UTF8 (fromString, toString)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, mkSumType, writePSTypes, writePSTypesWith, equal, order, genericShow, functor)
@@ -18,6 +19,7 @@ import System.Process (readProcessWithExitCode)
 import Test.HUnit (assertEqual)
 import Test.Hspec (Spec, aroundAll_, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
+import Test.Hspec.QuickCheck (prop)
 
 myBridge :: BridgePart
 myBridge = defaultBridge
@@ -36,10 +38,15 @@ myTypes =
 roundtripSpec :: Spec
 roundtripSpec = do
   aroundAll_ withProject $
-    describe "writePSTypesWith" $
+    describe "writePSTypesWith" do
       it "should be buildable" do
         (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
         assertEqual (stdout <> stderr) exitCode ExitSuccess
+      prop "should produce aeson-compatible argonaut instances" $
+        \testData -> do
+          (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["run"] $ toString $ encode @TestData testData
+          assertEqual stdout exitCode ExitSuccess
+          assertEqual stdout (eitherDecode (fromString stdout)) $ Right testData
   where
     withProject runSpec =
       withCurrentDirectory "test/RoundTrip/app" $ generate *> runSpec
