@@ -21,7 +21,7 @@
 , cabalProjectLocal ? null
 }@args:
 let
-  compiler-nix-name = if topLevelPkgs.stdenv.hostPlatform.isGhcjs then "ghc8105" else args.compiler-nix-name;
+  compiler-nix-name = if topLevelPkgs.stdenv.hostPlatform.isGhcjs then "ghc8107" else args.compiler-nix-name;
   r-packages = with rPackages; [ R tidyverse dplyr stringr MASS plotly shiny shinyjs purrr ];
   project = haskell-nix.cabalProject' ({ pkgs, ... }: {
     inherit compiler-nix-name;
@@ -427,9 +427,10 @@ let
           cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
         };
       })
-      # For 
+      # For GHCJS
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform.isGhcjs) {
         packages = {
+          lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
           cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
           cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
           plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
