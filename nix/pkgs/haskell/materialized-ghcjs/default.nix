@@ -329,8 +329,6 @@
         "sop-core".revision = (((hackage."sop-core")."0.5.0.1").revisions).default;
         "data-fix".revision = (((hackage."data-fix")."0.3.2").revisions).default;
         "typed-process".revision = (((hackage."typed-process")."0.2.6.1").revisions).default;
-        "mersenne-random-pure64".revision = (((hackage."mersenne-random-pure64")."0.2.2.0").revisions).default;
-        "mersenne-random-pure64".flags.small_base = false;
         "dense-linear-algebra".revision = (((hackage."dense-linear-algebra")."0.1.0.0").revisions).default;
         "logict".revision = (((hackage."logict")."0.7.0.3").revisions).default;
         "contravariant".revision = (((hackage."contravariant")."1.5.5").revisions).default;
@@ -806,6 +804,7 @@
         freer-extras = ./.plan.nix/freer-extras.nix;
         cardano-ledger-byron-test = ./.plan.nix/cardano-ledger-byron-test.nix;
         plutus-tx = ./.plan.nix/plutus-tx.nix;
+        mersenne-random-pure64 = ./.plan.nix/mersenne-random-pure64.nix;
         hedgehog-extras = ./.plan.nix/hedgehog-extras.nix;
         cardano-wallet-test-utils = ./.plan.nix/cardano-wallet-test-utils.nix;
         fake-pab = ./.plan.nix/fake-pab.nix;
@@ -995,6 +994,9 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "plutus-tx" = { flags = {}; };
+          "mersenne-random-pure64" = {
+            flags = { "small_base" = lib.mkOverride 900 false; };
+            };
           "hedgehog-extras" = { flags = {}; };
           "cardano-wallet-test-utils" = {
             flags = { "release" = lib.mkOverride 900 false; };
