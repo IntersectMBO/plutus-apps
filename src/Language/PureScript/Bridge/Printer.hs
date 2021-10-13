@@ -4,10 +4,7 @@
 
 module Language.PureScript.Bridge.Printer where
 
-import           Control.Lens                               (filtered, to,
-                                                             traversed, (^.),
-                                                             (^..), (^?),
-                                                             _Right, _head, view)
+import           Control.Lens                               (to, traversed,(^.), (^..), view)
 import           Control.Monad                              (unless)
 import           Data.Map.Strict                            (Map)
 import qualified Data.Map.Strict                            as Map
@@ -448,18 +445,12 @@ constructorOptics st =
     typeInfo = st ^. sumTypeInfo
 
 recordOptics :: SumType 'PureScript -> [Doc]
--- Match on SumTypes with a single DataConstructor (that's a list of a single element)
-recordOptics st@(SumType _ [_] _) = recordEntryToLens st <$> dcRecords
-  where
-    cs = st ^. sumTypeConstructors
-    dcRecords =
-      lensableConstructor ^.. traversed . sigValues . _Right . traverse .
-      filtered hasUnderscore
-    hasUnderscore e = e ^. recLabel . to (T.isPrefixOf "_")
-    lensableConstructor = filter singleRecordCons cs ^? _head
-    singleRecordCons (DataConstructor _ (Right _)) = True
-    singleRecordCons _                             = False
+recordOptics st@(SumType _ [DataConstructor _ (Right fields)] _) =
+  recordEntryToLens st <$> filter hasUnderscore fields
 recordOptics _ = mempty
+
+hasUnderscore :: RecordEntry lang -> Bool
+hasUnderscore (RecordEntry name _) = "_" `T.isPrefixOf` name
 
 constructorToDoc :: DataConstructor 'PureScript -> Doc
 constructorToDoc (DataConstructor n (Left [])) = textStrict n
@@ -575,7 +566,7 @@ constructorToOptic hasOtherConstructors typeInfo (DataConstructor n args) =
 
 recordEntryToLens :: SumType 'PureScript -> RecordEntry 'PureScript -> Doc
 recordEntryToLens st e =
-  if hasUnderscore
+  if hasUnderscore e
     then vsep
            [ textStrict lensName <> forAll <> "Lens'" <+> typName <+> recType
            , textStrict lensName <+> "= _Newtype <<< prop" <+>
@@ -587,7 +578,6 @@ recordEntryToLens st e =
     recName = e ^. recLabel
     lensName = T.drop 1 recName
     recType = typeInfoToDoc False (e ^. recValue)
-    hasUnderscore = e ^. recLabel . to (T.isPrefixOf "_")
 
 recordEntryToDoc :: RecordEntry 'PureScript -> Doc
 recordEntryToDoc e =

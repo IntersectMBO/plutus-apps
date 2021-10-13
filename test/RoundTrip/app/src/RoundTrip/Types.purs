@@ -488,8 +488,8 @@ _Enum = prism' Enum f
 --------------------------------------------------------------------------------
 newtype TestRecord a
   = TestRecord
-      { field1 :: String
-      , field2 :: a
+      { _field1 :: String
+      , _field2 :: a
       }
 
 derive instance functorTestRecord :: Functor TestRecord
@@ -504,9 +504,9 @@ derive instance ordTestRecord :: (Ord a) => Ord (TestRecord a)
 instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
   encodeJson =
     case _ of
-      TestRecord {field1,  field2} ->
-        "field1" := (let a = field1 in encodeJson a) ~>
-        "field2" := (let a = field2 in encodeJson a) ~>
+      TestRecord {_field1,  _field2} ->
+        "_field1" := (let a = _field1 in encodeJson a) ~>
+        "_field2" := (let a = _field2 in encodeJson a) ~>
         jsonEmptyObject
 
 
@@ -514,9 +514,9 @@ instance decodeJsonTestRecord :: (DecodeJson a) => DecodeJson (TestRecord a) whe
   decodeJson json =
     do
       x <- decodeJson json
-      field1 <- x .: "field1" >>= \json -> decodeJson json
-      field2 <- x .: "field2" >>= \json -> decodeJson json
-      pure $ TestRecord {field1,  field2}
+      _field1 <- x .: "_field1" >>= \json -> decodeJson json
+      _field2 <- x .: "_field2" >>= \json -> decodeJson json
+      pure $ TestRecord {_field1,  _field2}
 
 derive instance genericTestRecord :: Generic (TestRecord a) _
 
@@ -524,8 +524,14 @@ derive instance newtypeTestRecord :: Newtype (TestRecord a) _
 
 --------------------------------------------------------------------------------
 
-_TestRecord :: forall a. Iso' (TestRecord a) { field1 :: String, field2 :: a }
+_TestRecord :: forall a. Iso' (TestRecord a) { _field1 :: String, _field2 :: a }
 _TestRecord = _Newtype
+
+field1 :: forall a. Lens' (TestRecord a) String
+field1 = _Newtype <<< prop (Proxy :: _ "_field1")
+
+field2 :: forall a. Lens' (TestRecord a) a
+field2 = _Newtype <<< prop (Proxy :: _ "_field2")
 
 --------------------------------------------------------------------------------
 newtype TestNewtype
