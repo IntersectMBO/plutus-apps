@@ -342,7 +342,8 @@ constructorToDecode (DataConstructor name (Left args)) =
       hang 2 $ vsep
         [ "do"
         , "json <- maybe (Left $ AtIndex" <+> int i <+> "$ MissingValue) Right $ index arr" <+> int i
-        , typeToDecode arg
+        , hang 2 $ lparen <+> typeToDecode arg
+        , rparen
         ]
 constructorToDecode (DataConstructor name (Right args)) =
   case args of
@@ -374,7 +375,7 @@ typeToDecode (TypeInfo "purescript-prelude" "Prelude" "Unit" []) =
 typeToDecode (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [t]) =
   vsep $ punctuate " <|>"
     [ "Nothing <$ decodeNull json"
-    , "Just <$>" <+> typeToDecode t
+    , "Just <$>" <+> parens (typeToDecode t)
     ]
 typeToDecode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) =
   hang 2 $ vsep

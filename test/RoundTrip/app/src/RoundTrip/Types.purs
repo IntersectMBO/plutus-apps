@@ -63,7 +63,7 @@ instance decodeJsonTestData :: DecodeJson TestData where
       case tag of
         "Maybe" -> lmap (AtKey "contents") $ Maybe <$>
           ( Nothing <$ decodeNull json <|>
-            Just <$> decodeJson json
+            Just <$> (decodeJson json)
           )
         "Either" -> lmap (AtKey "contents") $ Either <$>
           ( decodeJson json >>= \obj ->
@@ -348,19 +348,23 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
           lmap (AtKey "contents") $ QuadSimple <$>
             ( do
                 json <- maybe (Left $ AtIndex 0 $ MissingValue) Right $ index arr 0
-                decodeJson json
+                ( decodeJson json
+                )
             ) <*>
             ( do
                 json <- maybe (Left $ AtIndex 1 $ MissingValue) Right $ index arr 1
-                decodeJson json
+                ( decodeJson json
+                )
             ) <*>
             ( do
                 json <- maybe (Left $ AtIndex 2 $ MissingValue) Right $ index arr 2
-                decodeJson json
+                ( decodeJson json
+                )
             ) <*>
             ( do
                 json <- maybe (Left $ AtIndex 3 $ MissingValue) Right $ index arr 3
-                decodeJson json
+                ( decodeJson json
+                )
             )
         "NestedSum" -> lmap (AtKey "contents") $ NestedSum <$>
           ( decodeJson json
