@@ -75,7 +75,7 @@ data Z deriving (Eq, Ord)
 
 -- | You can use those if your type parameters are actually type constructors as well:
 --   @
---   st = mkSumType (Proxy :: Proxy ('ReaderT' R M1 A))
+--   st = mkSumType @('ReaderT' R M1 A)
 --   @
 data A1 a
 

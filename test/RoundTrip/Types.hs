@@ -9,8 +9,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
-import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, mkSumType, writePSTypes, writePSTypesWith, defaultSwitch)
-import Language.PureScript.Bridge.CodeGenSwitches (genArgonaut, ArgonautOptions (ArgonautOptions))
+import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, mkSumType, writePSTypes, writePSTypesWith)
 import Language.PureScript.Bridge.TypeParameters (A)
 import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.Exit (ExitCode (ExitSuccess))
@@ -18,7 +17,7 @@ import System.Process (readProcessWithExitCode)
 import Test.HUnit (assertEqual)
 import Test.Hspec (Spec, aroundAll_, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Test.QuickCheck (Arbitrary(..), chooseEnum, oneof)
+import Test.QuickCheck (Arbitrary (..), chooseEnum, oneof)
 
 data TestData
   = Maybe (Maybe TestSum)
@@ -30,10 +29,11 @@ instance FromJSON TestData
 instance ToJSON TestData
 
 instance Arbitrary TestData where
-  arbitrary = oneof
-    [ Maybe <$> arbitrary
-    , Either <$> arbitrary
-    ]
+  arbitrary =
+    oneof
+      [ Maybe <$> arbitrary,
+        Either <$> arbitrary
+      ]
 
 data TestSum
   = Nullary
@@ -61,25 +61,26 @@ instance FromJSON TestSum
 instance ToJSON TestSum
 
 instance Arbitrary TestSum where
-  arbitrary = oneof
-    [ pure Nullary
-    , Bool <$> arbitrary
-    , Int <$> arbitrary
-    , Number <$> arbitrary
-    , String <$> arbitrary
-    , Array <$> arbitrary
-    , Record <$> arbitrary
-    , NestedRecord <$> arbitrary
-    , NT <$> arbitrary
-    , NTRecord <$> arbitrary
-    , pure $ Unit ()
-    , Pair <$> arbitrary
-    , Triple <$> arbitrary
-    , Quad <$> arbitrary
-    , QuadSimple <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-    , NestedSum <$> arbitrary
-    , Enum <$> arbitrary
-    ]
+  arbitrary =
+    oneof
+      [ pure Nullary,
+        Bool <$> arbitrary,
+        Int <$> arbitrary,
+        Number <$> arbitrary,
+        String <$> arbitrary,
+        Array <$> arbitrary,
+        Record <$> arbitrary,
+        NestedRecord <$> arbitrary,
+        NT <$> arbitrary,
+        NTRecord <$> arbitrary,
+        pure $ Unit (),
+        Pair <$> arbitrary,
+        Triple <$> arbitrary,
+        Quad <$> arbitrary,
+        QuadSimple <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary,
+        NestedSum <$> arbitrary,
+        Enum <$> arbitrary
+      ]
 
 data TestRecord a = TestRecord
   { field1 :: String,
@@ -125,11 +126,12 @@ instance FromJSON TestNestedSum
 instance ToJSON TestNestedSum
 
 instance Arbitrary TestNestedSum where
-  arbitrary = oneof
-    [ Case1 <$> arbitrary
-    , Case2 <$> arbitrary
-    , Case3 <$> arbitrary
-    ]
+  arbitrary =
+    oneof
+      [ Case1 <$> arbitrary,
+        Case2 <$> arbitrary,
+        Case3 <$> arbitrary
+      ]
 
 data TestEnum
   = Mon
@@ -156,4 +158,3 @@ instance ToJSON MyUnit
 
 instance Arbitrary MyUnit where
   arbitrary = pure U
-

@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes  #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 
@@ -8,9 +9,11 @@
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Language.PureScript.Bridge.SumType
   ( SumType(..)
+  , argonaut
   , mkSumType
   , genericShow
   , functor
@@ -32,10 +35,8 @@ module Language.PureScript.Bridge.SumType
   ) where
 
 import           Control.Lens                        hiding (from, to)
-import           Data.Functor.Classes                (Eq1)
 import           Data.List                           (nub)
 import           Data.Maybe                          (maybeToList)
-import           Data.Proxy
 import           Data.Set                            (Set)
 import qualified Data.Set                            as Set
 import           Data.Text                           (Text)
@@ -70,14 +71,12 @@ sumTypeConstructors inj (SumType info constrs is) =
 
 -- | Create a representation of your sum (and product) types,
 --   for doing type translations and writing it out to your PureScript modules.
---   In order to get the type information we use a dummy variable of type 'Proxy' (YourType).
 mkSumType ::
      forall t. (Generic t, Typeable t, GDataConstructor (Rep t))
-  => Proxy t
-  -> SumType 'Haskell
-mkSumType p =
+  => SumType 'Haskell
+mkSumType =
   SumType
-    (mkTypeInfo p)
+    (mkTypeInfo @t)
     constructors
     (Generic : maybeToList (nootype constructors))
   where
@@ -108,26 +107,30 @@ nootype cs =
     isSingletonList [_] = True
     isSingletonList _   = False
 
+-- | Ensure that aeson-compatible `EncodeJson` and `DecodeJson` instances are generated for your type.
+argonaut :: SumType t -> SumType t
+argonaut (SumType ti dc is) = SumType ti dc . nub $ Json : is
+
 -- | Ensure that a generic `Show` instance is generated for your type.
-genericShow :: Proxy a -> SumType t -> SumType t
-genericShow _ (SumType ti dc is) = SumType ti dc . nub $ GenericShow : is
+genericShow :: SumType t -> SumType t
+genericShow (SumType ti dc is) = SumType ti dc . nub $ GenericShow : is
 
 -- | Ensure that a functor instance is generated for your type. It it
 -- your responsibility to ensure your type is a functor.
-functor :: Proxy a -> SumType t -> SumType t
-functor _ (SumType ti dc is) = SumType ti dc . nub $ Functor : is
+functor :: SumType t -> SumType t
+functor (SumType ti dc is) = SumType ti dc . nub $ Functor : is
 
 -- | Ensure that an `Eq` instance is generated for your type.
-equal :: Eq a => Proxy a -> SumType t -> SumType t
-equal _ (SumType ti dc is) = SumType ti dc . nub $ Eq : is
+equal :: SumType t -> SumType t
+equal (SumType ti dc is) = SumType ti dc . nub $ Eq : is
 
 -- | Ensure that an `Eq1` instance is generated for your type.
-equal1 :: Eq1 f => Proxy (f a) -> SumType t -> SumType t
-equal1 _ (SumType ti dc is) = SumType ti dc . nub $ Eq1 : is
+equal1 :: SumType t -> SumType t
+equal1 (SumType ti dc is) = SumType ti dc . nub $ Eq1 : is
 
 -- | Ensure that both `Eq` and `Ord` instances are generated for your type.
-order :: Ord a => Proxy a -> SumType t -> SumType t
-order _ (SumType ti dc is) = SumType ti dc . nub $ Eq : Ord : is
+order :: SumType t -> SumType t
+order (SumType ti dc is) = SumType ti dc . nub $ Eq : Ord : is
 
 data DataConstructor (lang :: Language) =
   DataConstructor
@@ -178,7 +181,7 @@ instance (Selector a, Typeable t) => GRecordEntry (S1 a (K1 R t)) where
   gToRecordEntries e =
     [ RecordEntry
         { _recLabel = T.pack (selName e)
-        , _recValue = mkTypeInfo (Proxy :: Proxy t)
+        , _recValue = mkTypeInfo @t
         }
     ]
 

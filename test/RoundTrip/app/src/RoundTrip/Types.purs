@@ -18,13 +18,20 @@ import Data.Lens.Record (prop)
 import Data.Maybe (Maybe, Maybe(..), maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Data.Symbol (SProxy(SProxy))
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\), Tuple3, Tuple4)
+import Type.Proxy (Proxy(Proxy))
 
 data TestData
   = Maybe (Maybe TestSum)
   | Either (Either String TestSum)
+
+derive instance eqTestData :: Eq TestData
+
+instance showTestData :: Show TestData where
+  show x = genericShow x
+
+derive instance ordTestData :: Ord TestData
 
 instance encodeJsonTestData :: EncodeJson TestData where
   encodeJson =
@@ -45,6 +52,8 @@ instance encodeJsonTestData :: EncodeJson TestData where
                 Right a -> "Right" := (encodeJson a) ~> jsonEmptyObject)
           ) ~>
         jsonEmptyObject
+
+
 instance decodeJsonTestData :: DecodeJson TestData where
   decodeJson json =
     do
@@ -62,13 +71,6 @@ instance decodeJsonTestData :: DecodeJson TestData where
               Right <$> (obj .: "Right" >>= \json -> decodeJson json)
           )
         _ -> Left $ AtKey "tag" (UnexpectedValue json)
-
-derive instance eqTestData :: Eq TestData
-
-instance showTestData :: Show TestData where
-  show x = genericShow x
-
-derive instance ordTestData :: Ord TestData
 
 derive instance genericTestData :: Generic TestData _
 
@@ -106,6 +108,13 @@ data TestSum
   | QuadSimple Int String Boolean Number
   | NestedSum TestNestedSum
   | Enum TestEnum
+
+derive instance eqTestSum :: Eq TestSum
+
+instance showTestSum :: Show TestSum where
+  show x = genericShow x
+
+derive instance ordTestSum :: Ord TestSum
 
 instance encodeJsonTestSum :: EncodeJson TestSum where
   encodeJson =
@@ -229,6 +238,8 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
           ( (let a = v0 in encodeJson a)
           ) ~>
         jsonEmptyObject
+
+
 instance decodeJsonTestSum :: DecodeJson TestSum where
   decodeJson json =
     do
@@ -359,13 +370,6 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
           )
         _ -> Left $ AtKey "tag" (UnexpectedValue json)
 
-derive instance eqTestSum :: Eq TestSum
-
-instance showTestSum :: Show TestSum where
-  show x = genericShow x
-
-derive instance ordTestSum :: Ord TestSum
-
 derive instance genericTestSum :: Generic TestSum _
 
 --------------------------------------------------------------------------------
@@ -488,21 +492,6 @@ newtype TestRecord a
       , field2 :: a
       }
 
-instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
-  encodeJson =
-    case _ of
-      TestRecord {field1,  field2} ->
-        "field1" := (let a = field1 in encodeJson a) ~>
-        "field2" := (let a = field2 in encodeJson a) ~>
-        jsonEmptyObject
-instance decodeJsonTestRecord :: (DecodeJson a) => DecodeJson (TestRecord a) where
-  decodeJson json =
-    do
-      x <- decodeJson json
-      field1 <- x .: "field1" >>= \json -> decodeJson json
-      field2 <- x .: "field2" >>= \json -> decodeJson json
-      pure $ TestRecord {field1,  field2}
-
 derive instance functorTestRecord :: Functor TestRecord
 
 derive instance eqTestRecord :: (Eq a) => Eq (TestRecord a)
@@ -511,6 +500,23 @@ instance showTestRecord :: (Show a) => Show (TestRecord a) where
   show x = genericShow x
 
 derive instance ordTestRecord :: (Ord a) => Ord (TestRecord a)
+
+instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
+  encodeJson =
+    case _ of
+      TestRecord {field1,  field2} ->
+        "field1" := (let a = field1 in encodeJson a) ~>
+        "field2" := (let a = field2 in encodeJson a) ~>
+        jsonEmptyObject
+
+
+instance decodeJsonTestRecord :: (DecodeJson a) => DecodeJson (TestRecord a) where
+  decodeJson json =
+    do
+      x <- decodeJson json
+      field1 <- x .: "field1" >>= \json -> decodeJson json
+      field2 <- x .: "field2" >>= \json -> decodeJson json
+      pure $ TestRecord {field1,  field2}
 
 derive instance genericTestRecord :: Generic (TestRecord a) _
 
@@ -525,23 +531,25 @@ _TestRecord = _Newtype
 newtype TestNewtype
   = TestNewtype (TestRecord String)
 
-instance encodeJsonTestNewtype :: EncodeJson TestNewtype where
-  encodeJson =
-    case _ of
-      TestNewtype v0 ->
-        (let a = v0 in encodeJson a)
-instance decodeJsonTestNewtype :: DecodeJson TestNewtype where
-  decodeJson json =
-    lmap (AtKey "contents") $ TestNewtype <$>
-    ( decodeJson json
-    )
-
 derive instance eqTestNewtype :: Eq TestNewtype
 
 instance showTestNewtype :: Show TestNewtype where
   show x = genericShow x
 
 derive instance ordTestNewtype :: Ord TestNewtype
+
+instance encodeJsonTestNewtype :: EncodeJson TestNewtype where
+  encodeJson =
+    case _ of
+      TestNewtype v0 ->
+        (let a = v0 in encodeJson a)
+
+
+instance decodeJsonTestNewtype :: DecodeJson TestNewtype where
+  decodeJson json =
+    lmap (AtKey "contents") $ TestNewtype <$>
+    ( decodeJson json
+    )
 
 derive instance genericTestNewtype :: Generic TestNewtype _
 
@@ -558,25 +566,27 @@ newtype TestNewtypeRecord
       { unTestNewtypeRecord :: TestNewtype
       }
 
-instance encodeJsonTestNewtypeRecord :: EncodeJson TestNewtypeRecord where
-  encodeJson =
-    case _ of
-      TestNewtypeRecord {unTestNewtypeRecord} ->
-        "unTestNewtypeRecord" := (let a = unTestNewtypeRecord in encodeJson a) ~>
-        jsonEmptyObject
-instance decodeJsonTestNewtypeRecord :: DecodeJson TestNewtypeRecord where
-  decodeJson json =
-    do
-      x <- decodeJson json
-      unTestNewtypeRecord <- x .: "unTestNewtypeRecord" >>= \json -> decodeJson json
-      pure $ TestNewtypeRecord {unTestNewtypeRecord}
-
 derive instance eqTestNewtypeRecord :: Eq TestNewtypeRecord
 
 instance showTestNewtypeRecord :: Show TestNewtypeRecord where
   show x = genericShow x
 
 derive instance ordTestNewtypeRecord :: Ord TestNewtypeRecord
+
+instance encodeJsonTestNewtypeRecord :: EncodeJson TestNewtypeRecord where
+  encodeJson =
+    case _ of
+      TestNewtypeRecord {unTestNewtypeRecord} ->
+        "unTestNewtypeRecord" := (let a = unTestNewtypeRecord in encodeJson a) ~>
+        jsonEmptyObject
+
+
+instance decodeJsonTestNewtypeRecord :: DecodeJson TestNewtypeRecord where
+  decodeJson json =
+    do
+      x <- decodeJson json
+      unTestNewtypeRecord <- x .: "unTestNewtypeRecord" >>= \json -> decodeJson json
+      pure $ TestNewtypeRecord {unTestNewtypeRecord}
 
 derive instance genericTestNewtypeRecord :: Generic TestNewtypeRecord _
 
@@ -592,6 +602,13 @@ data TestNestedSum
   = Case1 String
   | Case2 Int
   | Case3 (TestRecord Int)
+
+derive instance eqTestNestedSum :: Eq TestNestedSum
+
+instance showTestNestedSum :: Show TestNestedSum where
+  show x = genericShow x
+
+derive instance ordTestNestedSum :: Ord TestNestedSum
 
 instance encodeJsonTestNestedSum :: EncodeJson TestNestedSum where
   encodeJson =
@@ -614,6 +631,8 @@ instance encodeJsonTestNestedSum :: EncodeJson TestNestedSum where
           ( (let a = v0 in encodeJson a)
           ) ~>
         jsonEmptyObject
+
+
 instance decodeJsonTestNestedSum :: DecodeJson TestNestedSum where
   decodeJson json =
     do
@@ -631,13 +650,6 @@ instance decodeJsonTestNestedSum :: DecodeJson TestNestedSum where
           ( decodeJson json
           )
         _ -> Left $ AtKey "tag" (UnexpectedValue json)
-
-derive instance eqTestNestedSum :: Eq TestNestedSum
-
-instance showTestNestedSum :: Show TestNestedSum where
-  show x = genericShow x
-
-derive instance ordTestNestedSum :: Ord TestNestedSum
 
 derive instance genericTestNestedSum :: Generic TestNestedSum _
 
@@ -671,9 +683,18 @@ data TestEnum
   | Sat
   | Sun
 
+derive instance eqTestEnum :: Eq TestEnum
+
+instance showTestEnum :: Show TestEnum where
+  show x = genericShow x
+
+derive instance ordTestEnum :: Ord TestEnum
+
 instance encodeJsonTestEnum :: EncodeJson TestEnum where
   encodeJson =
     fromString <<< show
+
+
 instance decodeJsonTestEnum :: DecodeJson TestEnum where
   decodeJson json =
     decodeJson json >>= case _ of
@@ -685,13 +706,6 @@ instance decodeJsonTestEnum :: DecodeJson TestEnum where
       "Sat" -> pure Sat
       "Sun" -> pure Sun
       _ -> Left (UnexpectedValue json)
-
-derive instance eqTestEnum :: Eq TestEnum
-
-instance showTestEnum :: Show TestEnum where
-  show x = genericShow x
-
-derive instance ordTestEnum :: Ord TestEnum
 
 derive instance genericTestEnum :: Generic TestEnum _
 
@@ -743,21 +757,23 @@ _Sun = prism' (\_ -> Sun) f
 data MyUnit
   = U
 
-instance encodeJsonMyUnit :: EncodeJson MyUnit where
-  encodeJson =
-    fromString <<< show
-instance decodeJsonMyUnit :: DecodeJson MyUnit where
-  decodeJson json =
-    decodeJson json >>= case _ of
-      "U" -> pure U
-      _ -> Left (UnexpectedValue json)
-
 derive instance eqMyUnit :: Eq MyUnit
 
 instance showMyUnit :: Show MyUnit where
   show x = genericShow x
 
 derive instance ordMyUnit :: Ord MyUnit
+
+instance encodeJsonMyUnit :: EncodeJson MyUnit where
+  encodeJson =
+    fromString <<< show
+
+
+instance decodeJsonMyUnit :: DecodeJson MyUnit where
+  decodeJson json =
+    decodeJson json >>= case _ of
+      "U" -> pure U
+      _ -> Left (UnexpectedValue json)
 
 derive instance genericMyUnit :: Generic MyUnit _
 

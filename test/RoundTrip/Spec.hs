@@ -11,8 +11,7 @@ import Data.ByteString.Lazy.UTF8 (fromString, toString)
 import Data.List (isInfixOf)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
-import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, equal, functor, genericShow, mkSumType, order, writePSTypes, writePSTypesWith)
-import Language.PureScript.Bridge.CodeGenSwitches (ArgonautOptions (ArgonautOptions), genArgonaut)
+import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, equal, functor, genericShow, mkSumType, order, writePSTypes, writePSTypesWith, argonaut)
 import Language.PureScript.Bridge.TypeParameters (A)
 import RoundTrip.Types
 import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory)
@@ -30,14 +29,14 @@ myBridge = defaultBridge
 
 myTypes :: [SumType 'Haskell]
 myTypes =
-  [ equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestData,
-    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestSum,
-    functor <*> (equal <*> (genericShow <*> (order <*> mkSumType))) $ Proxy @(TestRecord A),
-    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestNewtype,
-    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestNewtypeRecord,
-    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestNestedSum,
-    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestEnum,
-    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @MyUnit
+  [ equal . genericShow . order . argonaut $ mkSumType @TestData,
+    equal . genericShow . order . argonaut $ mkSumType @TestSum,
+    functor . equal . genericShow . order . argonaut $ mkSumType @(TestRecord A),
+    equal . genericShow . order . argonaut $ mkSumType @TestNewtype,
+    equal . genericShow . order . argonaut $ mkSumType @TestNewtypeRecord,
+    equal . genericShow . order . argonaut $ mkSumType @TestNestedSum,
+    equal . genericShow . order . argonaut $ mkSumType @TestEnum,
+    equal . genericShow . order . argonaut $ mkSumType @MyUnit
   ]
 
 roundtripSpec :: Spec
@@ -77,7 +76,7 @@ roundtripSpec = do
 
     generate = do
       writePSTypesWith
-        (defaultSwitch <> genArgonaut ArgonautOptions)
+        defaultSwitch
         "src"
         (buildBridge myBridge)
         myTypes

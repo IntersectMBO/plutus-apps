@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -5,6 +6,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Language.PureScript.Bridge.TypeInfo
   ( TypeInfo(..)
@@ -58,8 +61,8 @@ class HasHaskType t where
 instance HasHaskType HaskellType where
   haskType inj = inj
 
-mkTypeInfo :: Typeable t => Proxy t -> HaskellType
-mkTypeInfo = mkTypeInfo' . typeRep
+mkTypeInfo :: forall t. Typeable t => HaskellType
+mkTypeInfo = mkTypeInfo' . typeRep $ Proxy @t
 
 mkTypeInfo' :: TypeRep -> HaskellType
 mkTypeInfo' rep =

@@ -100,7 +100,7 @@ data BridgeData =
 -- > stringBridge :: BridgePart
 -- > stringBridge = do
 -- >   -- Note: we are using the HaskellType instance here:
--- >   haskType ^== mkTypeInfo (Proxy :: Proxy String)
+-- >   haskType ^== mkTypeInfo @String
 -- >   return psString
 instance HasHaskType BridgeData where
   haskType inj (BridgeData iT fB) = flip BridgeData fB <$> inj iT

@@ -54,7 +54,7 @@ import           Text.PrettyPrint.Leijen.Text               (Doc, cat,
                                                              renderPretty,
                                                              rparen, space,
                                                              textStrict, vsep,
-                                                             (<+>), hang, dquotes, braces, int, lbracket, rbracket, list)
+                                                             (<+>), hang, dquotes, braces, int, lbracket, rbracket)
 
 renderText :: Doc -> Text
 renderText = displayTStrict . renderPretty 0.4 200
@@ -124,7 +124,7 @@ _lensImports settings
       Set.fromList ["Iso'", "Prism'", "Lens'", "prism'", "lens"]
     , ImportLine "Data.Lens.Record" $ Set.fromList ["prop"]
     , ImportLine "Data.Lens.Iso.Newtype" $ Set.fromList ["_Newtype"]
-    , ImportLine "Data.Symbol" $ Set.fromList ["SProxy(SProxy)"]
+    , ImportLine "Type.Proxy" $ Set.fromList ["Proxy(Proxy)"]
     ]
   | otherwise =
     [ ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"] ]
@@ -135,7 +135,7 @@ importLineToText l = "import " <> importModule l <> " (" <> typeList <> ")"
     typeList = T.intercalate ", " (Set.toList (importTypes l))
 
 sumTypeToDoc :: Switches.Settings -> SumType 'PureScript -> Doc
-sumTypeToDoc settings st = vsep $ punctuate line [sumTypeToTypeDecls settings st, additionalCode]
+sumTypeToDoc settings st = vsep $ punctuate line [sumTypeToTypeDecls st, additionalCode]
   where
     additionalCode =
       if Switches.generateLenses settings
@@ -144,8 +144,8 @@ sumTypeToDoc settings st = vsep $ punctuate line [sumTypeToTypeDecls settings st
     lenses = vsep $ punctuate line [dashes, sumTypeToOptics st, dashes]
     dashes = textStrict (T.replicate 80 "-")
 
-sumTypeToTypeDecls :: Switches.Settings -> SumType 'PureScript -> Doc
-sumTypeToTypeDecls settings (SumType t cs is) =
+sumTypeToTypeDecls :: SumType 'PureScript -> Doc
+sumTypeToTypeDecls (SumType t cs is) =
   vsep $ punctuate line $
     (dataOrNewtype <+> typeInfoToDoc True t
     <> line
@@ -156,14 +156,12 @@ sumTypeToTypeDecls settings (SumType t cs is) =
             mempty
             ("|" <> space)
             (constructorToDoc <$> cs))
-    ) : instances (SumType t cs (filter genArgonaut is))
+    ) : instances (SumType t cs is)
   where
     dataOrNewtype =
       if isJust (nootype cs)
         then "newtype"
         else "data"
-    genArgonaut Json = (isJust . Switches.generateArgonaut) settings
-    genArgonaut _      = True
 
 -- | Given a Purescript type, generate instances for typeclass
 -- instances it claims to have.
@@ -179,17 +177,13 @@ instances st@(SumType t _ is) = go <$> is
     name = textStrict (_typeName t)
     go :: Instance -> Doc
     go Json =
-      "instance encodeJson" <> name <+> "::" <+> extras encodeJsonInstance <+> "EncodeJson" <+>
-      typeInfoToDoc False t <+>
-      "where" <>
-      linebreak <>
-      indent 2 (vsep ["encodeJson =", indent 2 (sumTypeToEncode st)]) <>
-      linebreak <>
-      "instance decodeJson" <> name <+> "::" <+> extras decodeJsonInstance <+> "DecodeJson" <+>
-      typeInfoToDoc False t <+>
-      "where" <>
-      linebreak <>
-      indent 2 (vsep ["decodeJson json =", indent 2 (sumTypeToDecode st)])
+      vsep
+        [ "instance encodeJson" <> name <+> "::" <+> extras encodeJsonInstance <+> "EncodeJson" <+> typeInfoToDoc False t <+> "where"
+        , indent 2 (vsep ["encodeJson =", indent 2 (sumTypeToEncode st)])
+        , linebreak
+        , "instance decodeJson" <> name <+> "::" <+> extras decodeJsonInstance <+> "DecodeJson" <+> typeInfoToDoc False t <+> "where"
+        , indent 2 (vsep ["decodeJson json =", indent 2 (sumTypeToDecode st)])
+        ]
     go GenericShow =
       "instance show" <> name <+> "::" <+> extras showInstance <+> "Show" <+>
       typeInfoToDoc False t <+>
@@ -282,7 +276,7 @@ typeToEncode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) =
 typeToEncode (TypeInfo "purescript-tuples" "Data.Tuple.Nested" _ ts) =
   vsep
     [ "case a of" <+> hsep (punctuate " /\\" $ (("v" <>) . int . fst <$> zip [0..] ts) <> ["unit"]) <+> "->"
-    , indent 4 $ lbracket <+> mconcat (punctuate (line <> ", ") $ (tupleElementToEncode <$> zip [0..] ts))
+    , indent 4 $ lbracket <+> mconcat (punctuate (line <> ", ") $ tupleElementToEncode <$> zip [0..] ts)
     , indent 4 rbracket
     ]
   where
@@ -585,7 +579,7 @@ recordEntryToLens st e =
     then vsep
            [ textStrict lensName <> forAll <> "Lens'" <+> typName <+> recType
            , textStrict lensName <+> "= _Newtype <<< prop" <+>
-             parens ("SProxy :: SProxy \"" <> textStrict recName <> "\"")
+             parens ("Proxy :: _ \"" <> textStrict recName <> "\"")
            ]
     else mempty
   where

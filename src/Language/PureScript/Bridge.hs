@@ -14,7 +14,6 @@ module Language.PureScript.Bridge
 
 import           Control.Applicative
 import qualified Data.Map                                   as M
-import           Data.Maybe                                 (isJust)
 import qualified Data.Set                                   as Set
 import qualified Data.Text.IO                               as T
 
@@ -39,9 +38,9 @@ import           Language.PureScript.Bridge.TypeInfo        as Bridge
 --   > -- | All types will have a `Generic` instance produced in Purescript.
 --   > myTypes :: [SumType 'Haskell]
 --   > myTypes =
---   >   [ let p = (Proxy :: Proxy Foo) in equal p (mkSumType p)  -- Also produce a `Eq` instance.
---   >   , let p = (Proxy :: Proxy Bar) in order p (mkSumType p)  -- Produce both `Eq` and `Ord`.
---   >   , mkSumType (Proxy :: Proxy Baz)  -- Just produce a `Generic` instance.
+--   >   [ equal (mkSumType @Foo)  -- Also produce a `Eq` instance.
+--   >   , order (mkSumType @Bar)  -- Produce both `Eq` and `Ord`.
+--   >   , mkSumType @Baz  -- Just produce a `Generic` instance.
 --   >   ]
 --   >
 --   >  writePSTypes "path/to/your/purescript/project" (buildBridge defaultBridge) myTypes
@@ -99,16 +98,13 @@ writePSTypesWith switch root bridge sts = do
   T.putStrLn "\nSuccessfully created your PureScript modules!"
   where
     settings = Switches.getSettings switch
-    bridged = map (bridgeSumType bridge settings) sts
+    bridged = map (bridgeSumType bridge) sts
     modules = M.elems $ sumTypesToModules bridged
     packages =
       sumTypesToNeededPackages bridged
         <> Set.filter
             (const $ Switches.generateLenses settings)
             (Set.singleton "purescript-profunctor-lenses")
-        <> Set.filter
-            (const $ isJust $ Switches.generateArgonaut settings)
-            (Set.fromList ["purescript-argonaut-codecs", "purescript-argonaut-core", "purescript-argonaut-generic"])
 
 -- | Translate all 'TypeInfo' values in a 'SumType' to PureScript types.
 --
@@ -116,14 +112,10 @@ writePSTypesWith switch root bridge sts = do
 --
 -- > data Foo = Foo | Bar Int | FooBar Int Text deriving (Generic, Typeable, Show)
 --
--- > bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
-bridgeSumType :: FullBridge -> Settings -> SumType 'Haskell -> SumType 'PureScript
-bridgeSumType br settings (SumType t cs is) =
-  SumType
-    (br t)
-    (map (bridgeConstructor br) cs)
-    $ maybe is (const $ Json : is)
-    $ Switches.generateArgonaut settings
+-- > bridgeSumType (buildBridge defaultBridge) (mkSumType @Foo)
+bridgeSumType :: FullBridge -> SumType 'Haskell -> SumType 'PureScript
+bridgeSumType br (SumType t cs is) =
+  SumType (br t) (map (bridgeConstructor br) cs) is 
 
 -- | Default bridge for mapping primitive/common types:
 --   You can append your own bridges like this:

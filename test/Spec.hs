@@ -4,12 +4,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
 import qualified Data.Map                                   as Map
 import           Data.Monoid                                ((<>))
-import           Data.Proxy
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.PureScript.Bridge
@@ -32,12 +32,10 @@ allTests = do
   describe "buildBridge without lens-code-gen" $ do
     let settings = getSettings noLenses
     it "tests generation of typeclasses for custom type Foo" $
-      let proxy = Proxy :: Proxy Foo
-          recType =
+      let recType =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              (genericShow proxy $ order proxy $ mkSumType proxy)
+              (genericShow . order $ mkSumType @Foo)
           recTypeText = sumTypeToDoc settings recType
           txt =
             T.unlines
@@ -59,12 +57,10 @@ allTests = do
               ]
        in recTypeText `shouldRender` txt
     it "tests generation of typeclasses for custom type Func" $
-      let proxy = Proxy :: Proxy (Func A)
-          recType =
+      let recType =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              (equal1 proxy $ functor proxy $ genericShow proxy $ mkSumType proxy)
+              (equal1 . functor . genericShow $ mkSumType @(Func A))
           recTypeText = sumTypeToDoc settings recType
           txt =
             T.unlines
@@ -87,8 +83,7 @@ allTests = do
       let advanced' =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              (mkSumType (Proxy :: Proxy (Bar A B M1 C)))
+              (mkSumType @(Bar A B M1 C))
           modules = sumTypeToModule advanced'
           m = head . map (moduleToText settings) . Map.elems $ modules
           txt =
@@ -118,8 +113,7 @@ allTests = do
       let recType' =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              (mkSumType (Proxy :: Proxy (SingleRecord A B)))
+              (mkSumType @(SingleRecord A B))
           recTypeText = sumTypeToDoc settings recType'
           txt =
             T.unlines
@@ -141,8 +135,7 @@ allTests = do
       let recType' =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              (mkSumType (Proxy :: Proxy SomeNewtype))
+              (mkSumType @SomeNewtype)
           recTypeText = sumTypeToDoc settings recType'
           txt =
             T.unlines
@@ -160,8 +153,7 @@ allTests = do
       let recType' =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              (mkSumType (Proxy :: Proxy SingleValueConstr))
+              (mkSumType @SingleValueConstr)
           recTypeText = sumTypeToDoc settings recType'
           txt =
             T.unlines
@@ -180,8 +172,7 @@ allTests = do
       let recType' =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              (mkSumType (Proxy :: Proxy SingleProduct))
+              (mkSumType @SingleProduct)
           recTypeText = sumTypeToDoc settings recType'
           txt =
             T.unlines
@@ -197,8 +188,7 @@ allTests = do
       let recType' =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              ((equal <*> mkSumType) (Proxy :: Proxy (SingleRecord A B)))
+              (equal $ mkSumType @(SingleRecord A B))
           recTypeText = sumTypeToDoc settings recType'
           txt =
             T.unlines
@@ -222,8 +212,7 @@ allTests = do
       let recType' =
             bridgeSumType
               (buildBridge defaultBridge)
-              settings
-              ((order <*> mkSumType) (Proxy :: Proxy (SingleRecord A B)))
+              (order $ mkSumType @(SingleRecord A B))
           recTypeText = sumTypeToDoc settings recType'
           txt =
             T.unlines

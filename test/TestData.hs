@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TypeApplications #-}
 
 
 module TestData where
@@ -29,7 +30,7 @@ textBridge = do
 
 stringBridge :: BridgePart
 stringBridge = do
-   haskType ^== mkTypeInfo (Proxy :: Proxy String)
+   haskType ^== mkTypeInfo @String
    return psString
 
 data Foo = Foo
@@ -78,7 +79,7 @@ data SingleProduct = SingleProduct Text Int
   deriving (Generic, Typeable, Show)
 
 a :: HaskellType
-a = mkTypeInfo (Proxy :: Proxy (Either String Int))
+a = mkTypeInfo @(Either String Int)
 
 applyBridge :: FullBridge
 applyBridge = buildBridge defaultBridge
@@ -87,9 +88,9 @@ psA :: PSType
 psA = applyBridge a
 
 b :: SumType 'Haskell
-b = mkSumType (Proxy :: Proxy (Either String Int))
+b = mkSumType @(Either String Int)
 
 t :: TypeInfo 'PureScript
 cs :: [DataConstructor 'PureScript]
 psB :: SumType 'PureScript
-psB@(SumType t cs _) = bridgeSumType (buildBridge defaultBridge) defaultSettings b
+psB@(SumType t cs _) = bridgeSumType (buildBridge defaultBridge) b
