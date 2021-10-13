@@ -21,7 +21,7 @@ import Test.QuickCheck (Arbitrary (..), chooseEnum, oneof)
 
 data TestData
   = Maybe (Maybe TestSum)
-  | Either (Either String TestSum)
+  | Either (Either (Maybe Int) (Maybe Bool))
   deriving (Show, Eq, Ord, Generic)
 
 instance FromJSON TestData
@@ -41,18 +41,17 @@ data TestSum
   | Int Int
   | Number Double
   | String String
-  | Array [String]
+  | Array [Int]
   | Record (TestRecord Int)
   | NestedRecord (TestRecord (TestRecord Int))
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
   | Unit ()
   | MyUnit MyUnit
-  | Pair (Int, String)
-  | Triple (Int, String, Bool)
-  | Quad (Int, String, Bool, Double)
-  | QuadSimple Int String Bool Double
-  | NestedSum TestNestedSum
+  | Pair (Int, Double)
+  | Triple (Int, (), Bool)
+  | Quad (Int, Double, Bool, Double)
+  | QuadSimple Int Double Bool Double
   | Enum TestEnum
   deriving (Show, Eq, Ord, Generic)
 
@@ -78,12 +77,11 @@ instance Arbitrary TestSum where
         Triple <$> arbitrary,
         Quad <$> arbitrary,
         QuadSimple <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary,
-        NestedSum <$> arbitrary,
         Enum <$> arbitrary
       ]
 
 data TestRecord a = TestRecord
-  { _field1 :: String,
+  { _field1 :: Int,
     _field2 :: a
   }
   deriving (Show, Eq, Ord, Generic)
@@ -95,7 +93,7 @@ instance (ToJSON a) => ToJSON (TestRecord a)
 instance (Arbitrary a) => Arbitrary (TestRecord a) where
   arbitrary = TestRecord <$> arbitrary <*> arbitrary
 
-newtype TestNewtype = TestNewtype (TestRecord String)
+newtype TestNewtype = TestNewtype (TestRecord Bool)
   deriving (Show, Eq, Ord, Generic)
 
 instance FromJSON TestNewtype
@@ -114,24 +112,6 @@ instance ToJSON TestNewtypeRecord
 
 instance Arbitrary TestNewtypeRecord where
   arbitrary = TestNewtypeRecord <$> arbitrary
-
-data TestNestedSum
-  = Case1 String
-  | Case2 Int
-  | Case3 (TestRecord Int)
-  deriving (Show, Eq, Ord, Generic)
-
-instance FromJSON TestNestedSum
-
-instance ToJSON TestNestedSum
-
-instance Arbitrary TestNestedSum where
-  arbitrary =
-    oneof
-      [ Case1 <$> arbitrary,
-        Case2 <$> arbitrary,
-        Case3 <$> arbitrary
-      ]
 
 data TestEnum
   = Mon

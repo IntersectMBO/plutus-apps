@@ -24,7 +24,7 @@ import Type.Proxy (Proxy(Proxy))
 
 data TestData
   = Maybe (Maybe TestSum)
-  | Either (Either String TestSum)
+  | Either (Either (Maybe Int) (Maybe Boolean))
 
 derive instance eqTestData :: Eq TestData
 
@@ -48,8 +48,12 @@ instance encodeJsonTestData :: EncodeJson TestData where
         "tag" := "Either" ~>
         "contents" :=
           ( (let a = v0 in case a of
-                Left a -> "Left" := (encodeJson a) ~> jsonEmptyObject
-                Right a -> "Right" := (encodeJson a) ~> jsonEmptyObject)
+                Left a -> "Left" := (case a of
+                  Nothing -> jsonNull
+                  Just a -> encodeJson a) ~> jsonEmptyObject
+                Right a -> "Right" := (case a of
+                  Nothing -> jsonNull
+                  Just a -> encodeJson a) ~> jsonEmptyObject)
           ) ~>
         jsonEmptyObject
 
@@ -67,8 +71,10 @@ instance decodeJsonTestData :: DecodeJson TestData where
           )
         "Either" -> lmap (AtKey "contents") $ Either <$>
           ( decodeJson json >>= \obj ->
-              Left <$> (obj .: "Left" >>= \json -> decodeJson json) <|>
-              Right <$> (obj .: "Right" >>= \json -> decodeJson json)
+              Left <$> (obj .: "Left" >>= \json -> Nothing <$ decodeNull json <|>
+              Just <$> (decodeJson json)) <|>
+              Right <$> (obj .: "Right" >>= \json -> Nothing <$ decodeNull json <|>
+              Just <$> (decodeJson json))
           )
         _ -> Left $ AtKey "tag" (UnexpectedValue json)
 
@@ -82,7 +88,7 @@ _Maybe = prism' Maybe f
     f (Maybe a) = Just $ a
     f _ = Nothing
 
-_Either :: Prism' TestData (Either String TestSum)
+_Either :: Prism' TestData (Either (Maybe Int) (Maybe Boolean))
 _Either = prism' Either f
   where
     f (Either a) = Just $ a
@@ -95,18 +101,17 @@ data TestSum
   | Int Int
   | Number Number
   | String String
-  | Array (Array String)
+  | Array (Array Int)
   | Record (TestRecord Int)
   | NestedRecord (TestRecord (TestRecord Int))
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
   | Unit Unit
   | MyUnit MyUnit
-  | Pair (Tuple Int String)
-  | Triple (Tuple3 Int String Boolean)
-  | Quad (Tuple4 Int String Boolean Number)
-  | QuadSimple Int String Boolean Number
-  | NestedSum TestNestedSum
+  | Pair (Tuple Int Number)
+  | Triple (Tuple3 Int Unit Boolean)
+  | Quad (Tuple4 Int Number Boolean Number)
+  | QuadSimple Int Number Boolean Number
   | Enum TestEnum
 
 derive instance eqTestSum :: Eq TestSum
@@ -199,7 +204,7 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
         "contents" :=
           ( (let a = v0 in case a of v0 /\ v1 /\ v2 /\ unit ->
                   [ (let a = v0 in encodeJson a)
-                  , (let a = v1 in encodeJson a)
+                  , (let a = v1 in jsonEmptyArray)
                   , (let a = v2 in encodeJson a)
                   ])
           ) ~>
@@ -224,12 +229,6 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
               , (let a = v2 in encodeJson a)
               , (let a = v3 in encodeJson a)
               ]
-          ) ~>
-        jsonEmptyObject
-      NestedSum v0 ->
-        "tag" := "NestedSum" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
           ) ~>
         jsonEmptyObject
       Enum v0 ->
@@ -298,7 +297,7 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
                 maybe
                   (Left $ AtIndex 1 $ MissingValue)
                   (\json ->
-                    decodeJson json
+                    unit <$ decodeArray (Left <<< UnexpectedValue) json
                   )
                   $ index arr 1
               v2 <-
@@ -366,9 +365,6 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
                 ( decodeJson json
                 )
             )
-        "NestedSum" -> lmap (AtKey "contents") $ NestedSum <$>
-          ( decodeJson json
-          )
         "Enum" -> lmap (AtKey "contents") $ Enum <$>
           ( decodeJson json
           )
@@ -408,7 +404,7 @@ _String = prism' String f
     f (String a) = Just $ a
     f _ = Nothing
 
-_Array :: Prism' TestSum (Array String)
+_Array :: Prism' TestSum (Array Int)
 _Array = prism' Array f
   where
     f (Array a) = Just $ a
@@ -450,37 +446,31 @@ _MyUnit = prism' MyUnit f
     f (MyUnit a) = Just $ a
     f _ = Nothing
 
-_Pair :: Prism' TestSum (Tuple Int String)
+_Pair :: Prism' TestSum (Tuple Int Number)
 _Pair = prism' Pair f
   where
     f (Pair a) = Just $ a
     f _ = Nothing
 
-_Triple :: Prism' TestSum (Tuple3 Int String Boolean)
+_Triple :: Prism' TestSum (Tuple3 Int Unit Boolean)
 _Triple = prism' Triple f
   where
     f (Triple a) = Just $ a
     f _ = Nothing
 
-_Quad :: Prism' TestSum (Tuple4 Int String Boolean Number)
+_Quad :: Prism' TestSum (Tuple4 Int Number Boolean Number)
 _Quad = prism' Quad f
   where
     f (Quad a) = Just $ a
     f _ = Nothing
 
 _QuadSimple :: Prism' TestSum { a :: Int
-                              , b :: String
+                              , b :: Number
                               , c :: Boolean
                               , d :: Number }
 _QuadSimple = prism' (\{ a, b, c, d } -> QuadSimple a b c d) f
   where
     f (QuadSimple a b c d) = Just $ { a: a, b: b, c: c, d: d }
-    f _ = Nothing
-
-_NestedSum :: Prism' TestSum TestNestedSum
-_NestedSum = prism' NestedSum f
-  where
-    f (NestedSum a) = Just $ a
     f _ = Nothing
 
 _Enum :: Prism' TestSum TestEnum
@@ -492,7 +482,7 @@ _Enum = prism' Enum f
 --------------------------------------------------------------------------------
 newtype TestRecord a
   = TestRecord
-      { _field1 :: String
+      { _field1 :: Int
       , _field2 :: a
       }
 
@@ -528,10 +518,10 @@ derive instance newtypeTestRecord :: Newtype (TestRecord a) _
 
 --------------------------------------------------------------------------------
 
-_TestRecord :: forall a. Iso' (TestRecord a) { _field1 :: String, _field2 :: a }
+_TestRecord :: forall a. Iso' (TestRecord a) { _field1 :: Int, _field2 :: a }
 _TestRecord = _Newtype
 
-field1 :: forall a. Lens' (TestRecord a) String
+field1 :: forall a. Lens' (TestRecord a) Int
 field1 = _Newtype <<< prop (Proxy :: _ "_field1")
 
 field2 :: forall a. Lens' (TestRecord a) a
@@ -539,7 +529,7 @@ field2 = _Newtype <<< prop (Proxy :: _ "_field2")
 
 --------------------------------------------------------------------------------
 newtype TestNewtype
-  = TestNewtype (TestRecord String)
+  = TestNewtype (TestRecord Boolean)
 
 derive instance eqTestNewtype :: Eq TestNewtype
 
@@ -567,7 +557,7 @@ derive instance newtypeTestNewtype :: Newtype TestNewtype _
 
 --------------------------------------------------------------------------------
 
-_TestNewtype :: Iso' TestNewtype (TestRecord String)
+_TestNewtype :: Iso' TestNewtype (TestRecord Boolean)
 _TestNewtype = _Newtype
 
 --------------------------------------------------------------------------------
@@ -606,82 +596,6 @@ derive instance newtypeTestNewtypeRecord :: Newtype TestNewtypeRecord _
 
 _TestNewtypeRecord :: Iso' TestNewtypeRecord { unTestNewtypeRecord :: TestNewtype }
 _TestNewtypeRecord = _Newtype
-
---------------------------------------------------------------------------------
-data TestNestedSum
-  = Case1 String
-  | Case2 Int
-  | Case3 (TestRecord Int)
-
-derive instance eqTestNestedSum :: Eq TestNestedSum
-
-instance showTestNestedSum :: Show TestNestedSum where
-  show x = genericShow x
-
-derive instance ordTestNestedSum :: Ord TestNestedSum
-
-instance encodeJsonTestNestedSum :: EncodeJson TestNestedSum where
-  encodeJson =
-    case _ of
-      Case1 v0 ->
-        "tag" := "Case1" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Case2 v0 ->
-        "tag" := "Case2" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Case3 v0 ->
-        "tag" := "Case3" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-
-
-instance decodeJsonTestNestedSum :: DecodeJson TestNestedSum where
-  decodeJson json =
-    do
-      obj <- decodeJObject json
-      tag <- obj .: "tag"
-      json <- obj .:? "contents" .!= jsonNull
-      case tag of
-        "Case1" -> lmap (AtKey "contents") $ Case1 <$>
-          ( decodeJson json
-          )
-        "Case2" -> lmap (AtKey "contents") $ Case2 <$>
-          ( decodeJson json
-          )
-        "Case3" -> lmap (AtKey "contents") $ Case3 <$>
-          ( decodeJson json
-          )
-        _ -> Left $ AtKey "tag" (UnexpectedValue json)
-
-derive instance genericTestNestedSum :: Generic TestNestedSum _
-
---------------------------------------------------------------------------------
-
-_Case1 :: Prism' TestNestedSum String
-_Case1 = prism' Case1 f
-  where
-    f (Case1 a) = Just $ a
-    f _ = Nothing
-
-_Case2 :: Prism' TestNestedSum Int
-_Case2 = prism' Case2 f
-  where
-    f (Case2 a) = Just $ a
-    f _ = Nothing
-
-_Case3 :: Prism' TestNestedSum (TestRecord Int)
-_Case3 = prism' Case3 f
-  where
-    f (Case3 a) = Just $ a
-    f _ = Nothing
 
 --------------------------------------------------------------------------------
 data TestEnum
