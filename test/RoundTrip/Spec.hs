@@ -5,21 +5,25 @@
 
 module RoundTrip.Spec where
 
-import Data.Aeson (FromJSON, ToJSON (toJSON), fromJSON, eitherDecode, encode)
+import Control.Exception (bracket)
+import Data.Aeson (FromJSON, ToJSON (toJSON), eitherDecode, encode, fromJSON)
 import Data.ByteString.Lazy.UTF8 (fromString, toString)
+import Data.List (isInfixOf)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
-import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, mkSumType, writePSTypes, writePSTypesWith, equal, order, genericShow, functor)
+import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, equal, functor, genericShow, mkSumType, order, writePSTypes, writePSTypesWith)
 import Language.PureScript.Bridge.CodeGenSwitches (ArgonautOptions (ArgonautOptions), genArgonaut)
 import Language.PureScript.Bridge.TypeParameters (A)
 import RoundTrip.Types
 import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.Exit (ExitCode (ExitSuccess))
-import System.Process (readProcessWithExitCode)
-import Test.HUnit (assertEqual)
-import Test.Hspec (Spec, aroundAll_, describe, it)
+import System.IO (BufferMode (LineBuffering), hGetLine, hPutStrLn, hSetBuffering)
+import System.Process (CreateProcess (std_in, std_out), StdStream (CreatePipe), createProcess, getProcessExitCode, proc, readProcessWithExitCode, terminateProcess)
+import Test.HUnit (assertBool, assertEqual)
+import Test.Hspec (Spec, around, aroundAll_, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
 import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck.Property (Testable (property))
 
 myBridge :: BridgePart
 myBridge = defaultBridge
@@ -32,7 +36,8 @@ myTypes =
     equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestNewtype,
     equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestNewtypeRecord,
     equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestNestedSum,
-    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestEnum
+    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @TestEnum,
+    equal <*> (genericShow <*> (order <*> mkSumType)) $ Proxy @MyUnit
   ]
 
 roundtripSpec :: Spec
@@ -41,13 +46,32 @@ roundtripSpec = do
     describe "writePSTypesWith" do
       it "should be buildable" do
         (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
-        assertEqual (stdout <> stderr) exitCode ExitSuccess
-      prop "should produce aeson-compatible argonaut instances" $
-        \testData -> do
-          (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["run"] $ toString $ encode @TestData testData
-          assertEqual stdout exitCode ExitSuccess
-          assertEqual stdout (eitherDecode (fromString stdout)) $ Right testData
+        assertEqual (stdout <> stderr) ExitSuccess exitCode
+      it "should not warn of unused packages buildable" do
+        (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
+        assertBool stderr $ not $ "[warn]" `isInfixOf` stderr
+      around withTestApp $
+        it "should produce aeson-compatible argonaut instances" $ \(hin, hout, hproc) ->
+          property $
+            \testData ->
+              do
+                hPutStrLn hin $ toString $ encode @TestData testData
+                output <- hGetLine hout
+                assertEqual output Nothing =<< getProcessExitCode hproc
+                assertEqual output (eitherDecode (fromString output)) $ Right testData
   where
+    withTestApp runSpec =
+      bracket runApp killApp runSpec
+
+    runApp = do
+      (Just hin, Just hout, _, hproc) <-
+        createProcess (proc "spago" ["run"]) {std_in = CreatePipe, std_out = CreatePipe}
+      hSetBuffering hin LineBuffering
+      hSetBuffering hout LineBuffering
+      pure (hin, hout, hproc)
+
+    killApp (_, _, hproc) = terminateProcess hproc
+
     withProject runSpec =
       withCurrentDirectory "test/RoundTrip/app" $ generate *> runSpec
 

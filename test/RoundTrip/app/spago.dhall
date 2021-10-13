@@ -2,7 +2,6 @@
 , dependencies =
   [ "argonaut-codecs"
   , "argonaut-core"
-  , "argonaut-generic"
   , "arrays"
   , "bifunctors"
   , "control"
@@ -16,7 +15,6 @@
   , "prelude"
   , "profunctor-lenses"
   , "psci-support"
-  , "strings"
   , "tuples"
   ]
 , packages = ./packages.dhall

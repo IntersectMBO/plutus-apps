@@ -99,6 +99,7 @@ data TestSum
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
   | Unit Unit
+  | MyUnit MyUnit
   | Pair (Tuple Int String)
   | Triple (Tuple3 Int String Boolean)
   | Quad (Tuple4 Int String Boolean Number)
@@ -170,6 +171,12 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
         "tag" := "Unit" ~>
         "contents" :=
           ( (let a = v0 in jsonEmptyArray)
+          ) ~>
+        jsonEmptyObject
+      MyUnit v0 ->
+        "tag" := "MyUnit" ~>
+        "contents" :=
+          ( (let a = v0 in encodeJson a)
           ) ~>
         jsonEmptyObject
       Pair v0 ->
@@ -259,6 +266,9 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
           )
         "Unit" -> lmap (AtKey "contents") $ Unit <$>
           ( unit <$ decodeArray (Left <<< UnexpectedValue) json
+          )
+        "MyUnit" -> lmap (AtKey "contents") $ MyUnit <$>
+          ( decodeJson json
           )
         "Pair" -> lmap (AtKey "contents") $ Pair <$>
           ( decodeJson json
@@ -424,6 +434,12 @@ _Unit :: Prism' TestSum Unit
 _Unit = prism' Unit f
   where
     f (Unit a) = Just $ a
+    f _ = Nothing
+
+_MyUnit :: Prism' TestSum MyUnit
+_MyUnit = prism' MyUnit f
+  where
+    f (MyUnit a) = Just $ a
     f _ = Nothing
 
 _Pair :: Prism' TestSum (Tuple Int String)
@@ -722,5 +738,34 @@ _Sun = prism' (\_ -> Sun) f
   where
     f Sun = Just unit
     f _ = Nothing
+
+--------------------------------------------------------------------------------
+data MyUnit
+  = U
+
+instance encodeJsonMyUnit :: EncodeJson MyUnit where
+  encodeJson =
+    fromString <<< show
+instance decodeJsonMyUnit :: DecodeJson MyUnit where
+  decodeJson json =
+    decodeJson json >>= case _ of
+      "U" -> pure U
+      _ -> Left (UnexpectedValue json)
+
+derive instance eqMyUnit :: Eq MyUnit
+
+instance showMyUnit :: Show MyUnit where
+  show x = genericShow x
+
+derive instance ordMyUnit :: Ord MyUnit
+
+derive instance genericMyUnit :: Generic MyUnit _
+
+--------------------------------------------------------------------------------
+
+_U :: Prism' MyUnit Unit
+_U = prism' (\_ -> U) f
+  where
+    f U = Just unit
 
 --------------------------------------------------------------------------------

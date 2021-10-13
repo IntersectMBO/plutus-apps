@@ -47,6 +47,7 @@ data TestSum
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
   | Unit ()
+  | MyUnit MyUnit
   | Pair (Int, String)
   | Triple (Int, String, Bool)
   | Quad (Int, String, Bool, Double)
@@ -146,4 +147,13 @@ instance ToJSON TestEnum
 
 instance Arbitrary TestEnum where
   arbitrary = chooseEnum (minBound, maxBound)
+
+data MyUnit = U deriving (Show, Eq, Ord, Bounded, Enum, Generic)
+
+instance FromJSON MyUnit
+
+instance ToJSON MyUnit
+
+instance Arbitrary MyUnit where
+  arbitrary = pure U
 
