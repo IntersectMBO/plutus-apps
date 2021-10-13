@@ -13,7 +13,6 @@ let additions =
             , "affjax"
             , "exceptions"
             , "web-xhr"
-            , "foreign-generic"
             ]
           , repo = "https://github.com/input-output-hk/purescript-servant-support"
           , version = "1805f896560751c48a04d3e29f9c109df850d8d3"

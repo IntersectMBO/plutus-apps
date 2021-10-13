@@ -32,7 +32,6 @@ import System.Process (readProcessWithExitCode)
 import Test.HUnit (assertEqual)
 import Test.Hspec (aroundAll_, describe, hspec, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Text.PrettyPrint.Mainland (hPutDocLn)
 
 newtype Hello = Hello
   { message :: Text
@@ -68,8 +67,8 @@ mySettings = addReaderParam "TestHeader" defaultSettings
 
 myTypes :: [SumType 'Haskell]
 myTypes =
-  [ equal <*> (order <*> (genericShow <*> mkSumType)) $ Proxy @Hello,
-    mkSumType (Proxy :: Proxy TestHeader)
+  [ equal . order . genericShow . argonaut $ mkSumType @Hello,
+    argonaut $ mkSumType @TestHeader
   ]
 
 moduleTranslator :: BridgePart
@@ -103,7 +102,7 @@ main = hspec $
         actual `shouldBe` expected
       it "should be buildable" $ do
         (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
-        assertEqual stdout exitCode ExitSuccess
+        assertEqual (stdout <> stderr) exitCode ExitSuccess
   where
     withOutput runSpec =
       withCurrentDirectory "test/output" $ generate *> runSpec

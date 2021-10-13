@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Servant.PureScript.Internal where
 
@@ -36,8 +37,8 @@ import Servant.Foreign.Internal
 -- >   languageBridge _ = myBridge
 data PureScript bridgeSelector
 
-instance (Typeable a, HasBridge bridgeSelector) => HasForeignType (PureScript bridgeSelector) PSType a where
-  typeFor _ _ _ = languageBridge (Proxy :: Proxy bridgeSelector) (mkTypeInfo (Proxy :: Proxy a))
+instance forall a bridgeSelector. (Typeable a, HasBridge bridgeSelector) => HasForeignType (PureScript bridgeSelector) PSType a where
+  typeFor _ _ _ = languageBridge (Proxy :: Proxy bridgeSelector) (mkTypeInfo @a)
 
 class HasBridge a where
   languageBridge :: Proxy a -> FullBridge
@@ -93,9 +94,7 @@ defaultSettings =
             ImportLine "Control.Monad.Reader.Class" (Set.fromList ["ask", "class MonadAsk"]),
             ImportLine "Data.Argonaut.Core" (Set.fromList ["Json", "stringify"]),
             ImportLine "Data.Argonaut.Decode" (Set.fromList ["JsonDecodeError", "decodeJson"]),
-            ImportLine "Data.Argonaut.Decode.Generic" (Set.fromList ["genericDecodeJson"]),
-            ImportLine "Data.Argonaut.Encode" (Set.fromList ["encodeJson"]),
-            ImportLine "Data.Argonaut.Encode.Generic" (Set.fromList ["class EncodeRep", "genericEncodeJson"]),
+            ImportLine "Data.Argonaut.Encode" (Set.fromList ["class EncodeJson", "encodeJson"]),
             ImportLine "Data.Array" (Set.fromList ["fromFoldable", "null"]),
             ImportLine "Data.Either" (Set.fromList ["Either(..)"]),
             ImportLine "Data.Generic.Rep" (Set.fromList ["class Generic"]),

@@ -4,8 +4,9 @@
   , "affjax"
   , "argonaut-codecs"
   , "argonaut-core"
-  , "argonaut-generic"
   , "arrays"
+  , "bifunctors"
+  , "control"
   , "either"
   , "http-methods"
   , "maybe"
@@ -15,6 +16,7 @@
   , "psci-support"
   , "strings"
   , "transformers"
+  , "tuples"
   ]
 , packages = ./packages.dhall
 , sources = [ "./ServerAPI.purs", "./ServerTypes.purs" ]

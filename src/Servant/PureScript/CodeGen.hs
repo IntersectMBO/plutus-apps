@@ -16,7 +16,7 @@ import qualified Data.Set as Set
 import Data.Text (Text, toUpper)
 import qualified Data.Text.Encoding as T
 import Language.PureScript.Bridge
-import Language.PureScript.Bridge.PSTypes (psBool, psInt, psNumber, psString, psUnit)
+import Language.PureScript.Bridge.PSTypes (psString, psUnit)
 import Network.HTTP.Types.URI (urlEncode)
 import Servant.Foreign
 import Servant.PureScript.Internal
@@ -68,28 +68,16 @@ genLib =
         ],
       docIntercalate
         (line <> "else ")
-        [ genToURLPiece psString [] "identity",
-          genToURLPiece psBool [] "show",
-          genToURLPiece psInt [] "show",
-          genToURLPiece psNumber [] "show",
-          genToURLPiece (TypeInfo "" "Prim" "Char" []) [] "show",
-          genToURLPiece
-            (mkPsType "Array" [mkPsType "a" []])
-            [ mkPsType "ToURLPiece" [mkPsType "a" []]
-            ]
-            "stringify <<< encodeJson <<< map toURLPiece",
-          genToURLPiece
-            (mkPsType "Maybe" [mkPsType "a" []])
-            [ mkPsType "ToURLPiece" [mkPsType "a" []]
-            ]
-            "stringify <<< encodeJson <<< map toURLPiece",
+        [ genInstance
+            "toURLPieceString"
+            []
+            (mkPsType "ToURLPiece" [psString])
+            [Param "toURLPiece" ([], "identity")],
           genInstance
             "toURLPieceAny"
-            [ mkPsType "Generic" [mkPsType "a" [], mkPsType "rep" []],
-              mkPsType "EncodeRep" [mkPsType "rep" []]
-            ]
+            [mkPsType "EncodeJson" [mkPsType "a" []]]
             (mkPsType "ToURLPiece" [mkPsType "a" []])
-            [Param "toURLPiece" ([], "stringify <<< genericEncodeJson")]
+            [Param "toURLPiece" ([], "stringify <<< encodeJson")]
         ],
       genType "AjaxError" $
         genRecord
@@ -103,13 +91,6 @@ genLib =
           mkPsType "ConnectingError" [mkPsType "Error" []]
         ]
     ]
-  where
-    genToURLPiece ty constraints impl =
-      genInstance
-        ("toURLPiece" <> ty ^. typeName)
-        constraints
-        (mkPsType "ToURLPiece" [ty])
-        [Param "toURLPiece" ([], impl)]
 
 genType :: Text -> Doc -> Doc
 genType name def =
@@ -280,11 +261,7 @@ genFnBody rParams req =
                             </> ", responseFormat =" <+> "Response.json"
                             <> ( case req ^. reqBody of
                                    Nothing -> mempty
-                                   Just ty
-                                     | ty ^. typeModule == "Prim" ->
-                                       line <> ", content = Just $ Request.json $ encodeJson reqBody"
-                                     | otherwise ->
-                                       line <> ", content = Just $ Request.json $ genericEncodeJson reqBody"
+                                   Just _ -> line <> ", content = Just $ Request.json $ encodeJson reqBody"
                                )
                             </> "}"
                         )
@@ -304,12 +281,10 @@ genFnBody rParams req =
             )
           </> case req ^. reqReturnType of
             Nothing -> "pure unit"
-            Just ty ->
+            Just _ ->
               hang
                 2
-                ( "case"
-                    <+> (if ty ^. typeModule == "Prim" then "decodeJson" else "genericDecodeJson")
-                    <+> "response.body of"
+                ( "case decodeJson response.body of"
                     </> "Left err -> throwError $ { request: affReq, description: DecodingError err }"
                     </> "Right body -> pure body"
                 )
@@ -356,7 +331,7 @@ genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implem
 
 reqsToImportLines :: [Req PSType] -> ImportLines
 reqsToImportLines =
-  typesToImportLines Map.empty
+  typesToImportLines
     . Set.fromList
     . filter (("Prim" /=) . view typeModule)
     . concatMap reqToPSTypes

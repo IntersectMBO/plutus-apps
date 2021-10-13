@@ -9,9 +9,7 @@ import Control.Monad.Error.Class (class MonadError, throwError)
 import Control.Monad.Reader.Class (ask, class MonadAsk)
 import Data.Argonaut.Core (Json, stringify)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
-import Data.Argonaut.Decode.Generic (genericDecodeJson)
-import Data.Argonaut.Encode (encodeJson)
-import Data.Argonaut.Encode.Generic (class EncodeRep, genericEncodeJson)
+import Data.Argonaut.Encode (class EncodeJson, encodeJson)
 import Data.Array (fromFoldable, null)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
@@ -29,20 +27,8 @@ class ToURLPiece a where
 
 instance toURLPieceString :: ToURLPiece String where
   toURLPiece = identity
-else instance toURLPieceBoolean :: ToURLPiece Boolean where
-  toURLPiece = show
-else instance toURLPieceInt :: ToURLPiece Int where
-  toURLPiece = show
-else instance toURLPieceNumber :: ToURLPiece Number where
-  toURLPiece = show
-else instance toURLPieceChar :: ToURLPiece Char where
-  toURLPiece = show
-else instance toURLPieceArray :: (ToURLPiece a) => ToURLPiece (Array a) where
-  toURLPiece = stringify <<< encodeJson <<< map toURLPiece
-else instance toURLPieceMaybe :: (ToURLPiece a) => ToURLPiece (Maybe a) where
-  toURLPiece = stringify <<< encodeJson <<< map toURLPiece
-else instance toURLPieceAny :: (Generic a rep, EncodeRep rep) => ToURLPiece a where
-  toURLPiece = stringify <<< genericEncodeJson
+else instance toURLPieceAny :: (EncodeJson a) => ToURLPiece a where
+  toURLPiece = stringify <<< encodeJson
 
 type AjaxError
   = { request :: Request Json
@@ -101,7 +87,7 @@ getHello reqBody myFlag myParam myParams = do
           , url = reqURL
           , headers = defaultRequest.headers <> reqHeaders
           , responseFormat = Response.json
-          , content = Just $ Request.json $ genericEncodeJson reqBody
+          , content = Just $ Request.json $ encodeJson reqBody
           }
   result <- liftAff $ request affReq
   response <- case result of
@@ -109,7 +95,7 @@ getHello reqBody myFlag myParam myParams = do
     Right r -> pure r
   when (unwrap response.status < 200 || unwrap response.status >= 299) $
     throwError $ { request: affReq, description: UnexpectedHTTPStatus response }
-  case genericDecodeJson response.body of
+  case decodeJson response.body of
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
@@ -155,7 +141,7 @@ getTestHeader = do
     Right r -> pure r
   when (unwrap response.status < 200 || unwrap response.status >= 299) $
     throwError $ { request: affReq, description: UnexpectedHTTPStatus response }
-  case genericDecodeJson response.body of
+  case decodeJson response.body of
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 

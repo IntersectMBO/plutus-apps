@@ -24,7 +24,7 @@
       flake = pkgs.servant-purescript.flake {};
     in flake // {
       # Built by `nix build .`
-      defaultPackage = flake.packages."servant-purescript:test:servant-purescript";
+      defaultPackage = flake.packages."servant-purescript:lib:servant-purescript";
       devShell = pkgs.servant-purescript.shellFor {
         withHoogle = true;
         tools = {
