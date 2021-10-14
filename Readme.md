@@ -16,6 +16,8 @@ Apart from the above basic usage example, the documentation is still lacking.
 
 ## Status
 
-It works!
+This is a highly specialized and transitionary fork of the original
+(unmaintained) servant-purescript for IOHK. It is tailored to our needs
+speciically. Use at your own risk.
 
 For type translations purescript-bridge is used.
