@@ -1,7 +1,6 @@
 name: "Build and Test"
 on:
   pull_request:
-  push:
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -10,7 +9,7 @@ jobs:
     - uses: cachix/install-nix-action@v13
       with:
         nix_path: nixpkgs=channel:nixos-unstable
-    - run: nix-build --restrict-eval -I . --allowed-uris 'https://github.com/NixOS/nixpkgs https://github.com/input-output-hk https://github.com/NixOS/nixpkgs-channels' --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://hydra.iohk.io https://iohk.cachix.org https://cache.nixos.org/" --show-trace
+    - run: nix-build --restrict-eval -I . --allowed-uris 'https://api.github.com/repos https://github.com' --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://hydra.iohk.io https://iohk.cachix.org https://cache.nixos.org/" --show-trace
   test:
     runs-on: ubuntu-latest
     steps:
@@ -18,4 +17,4 @@ jobs:
     - uses: cachix/install-nix-action@v13
       with:
         nix_path: nixpkgs=channel:nixos-unstable
-    - run: nix-shell --run "cabal test" --restrict-eval -I . --allowed-uris 'https://github.com/NixOS/nixpkgs https://github.com/input-output-hk https://github.com/NixOS/nixpkgs-channels' --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://hydra.iohk.io https://iohk.cachix.org https://cache.nixos.org/" --show-trace
+    - run: nix-shell --run "cabal test" --restrict-eval -I . --allowed-uris 'https://api.github.com/repos https://github.com' --option trusted-public-keys "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" --option substituters "https://hydra.iohk.io https://iohk.cachix.org https://cache.nixos.org/" --show-trace
