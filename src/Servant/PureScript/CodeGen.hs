@@ -33,6 +33,10 @@ genModule opts reqs =
         [ genModuleHeader (_apiModuleName opts) imports,
           genLib,
           genType "SPSettings_" $ genRecord rParams,
+          genClass
+            (mkPsType "HasSPSettings" [mkPsType "a" []])
+            [ Param "spSettings" $ mkPsType "a -> SPSettings_" []
+            ],
           docIntercalate (line <> line) (map (genFunction rParams) reqs)
         ]
 
@@ -158,11 +162,12 @@ genFunction allRParams req =
       pTypes = map _pType fnParams
       pNames = map _pName fnParams
       constraints =
-        [ mkPsType "MonadAsk" [mkPsType "SPSettings_" [], mkPsType "m" []],
+        [ mkPsType "HasSPSettings" [mkPsType "env" []],
+          mkPsType "MonadAsk" [mkPsType "env" [], mkPsType "m" []],
           mkPsType "MonadError" [mkPsType "AjaxError" [], mkPsType "m" []],
           mkPsType "MonadAff" [mkPsType "m" []]
         ]
-      signature = genSignature fnName ["m"] constraints pTypes (req ^. reqReturnType)
+      signature = genSignature fnName ["env", "m"] constraints pTypes (req ^. reqReturnType)
       body = genFnHead fnName pNames <+> genFnBody rParams req
    in signature </> body
 
@@ -203,7 +208,7 @@ genFnBody rParams req =
   "do"
     </> indent
       2
-      ( "spSettings <- ask"
+      ( "spSettings <- asks spSettings"
           </> genGetReaderParams rParams
           </> "let httpMethod = Left"
           <+> (req ^. reqMethod . to T.decodeUtf8 . to toUpper . to strictText)

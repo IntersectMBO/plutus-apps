@@ -91,7 +91,7 @@ defaultSettings =
           [ ImportLine "Affjax" (Set.fromList ["Error", "Request", "Response", "defaultRequest", "request"]),
             ImportLine "Affjax.RequestHeader" (Set.fromList ["RequestHeader(..)"]),
             ImportLine "Control.Monad.Error.Class" (Set.fromList ["class MonadError", "throwError"]),
-            ImportLine "Control.Monad.Reader.Class" (Set.fromList ["ask", "class MonadAsk"]),
+            ImportLine "Control.Monad.Reader.Class" (Set.fromList ["asks", "class MonadAsk"]),
             ImportLine "Data.Argonaut.Core" (Set.fromList ["Json", "stringify"]),
             ImportLine "Data.Argonaut.Decode" (Set.fromList ["JsonDecodeError", "decodeJson"]),
             ImportLine "Data.Argonaut.Encode" (Set.fromList ["class EncodeJson", "encodeJson"]),

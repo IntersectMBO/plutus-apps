@@ -6,7 +6,7 @@ import Prelude
 import Affjax (Error, Request, Response, defaultRequest, request)
 import Affjax.RequestHeader (RequestHeader(..))
 import Control.Monad.Error.Class (class MonadError, throwError)
-import Control.Monad.Reader.Class (ask, class MonadAsk)
+import Control.Monad.Reader.Class (asks, class MonadAsk)
 import Data.Argonaut.Core (Json, stringify)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
 import Data.Argonaut.Encode (class EncodeJson, encodeJson)
@@ -45,9 +45,13 @@ type SPSettings_
     , baseURL :: String
     }
 
+class HasSPSettings a where
+  spSettings :: a -> SPSettings_
+
 getHello ::
-  forall m.
-  MonadAsk SPSettings_ m =>
+  forall env m.
+  HasSPSettings env =>
+  MonadAsk env m =>
   MonadError AjaxError m =>
   MonadAff m =>
   Hello ->
@@ -56,7 +60,7 @@ getHello ::
   Array Hello ->
   m Hello
 getHello reqBody myFlag myParam myParams = do
-  spSettings <- ask
+  spSettings <- asks spSettings
   let testHeader = spSettings.testHeader
   let baseURL = spSettings.baseURL
   let httpMethod = Left GET
@@ -100,13 +104,14 @@ getHello reqBody myFlag myParam myParams = do
     Right body -> pure body
 
 getTestHeader ::
-  forall m.
-  MonadAsk SPSettings_ m =>
+  forall env m.
+  HasSPSettings env =>
+  MonadAsk env m =>
   MonadError AjaxError m =>
   MonadAff m =>
   m TestHeader
 getTestHeader = do
-  spSettings <- ask
+  spSettings <- asks spSettings
   let testHeader = spSettings.testHeader
   let baseURL = spSettings.baseURL
   let httpMethod = Left GET
@@ -146,13 +151,14 @@ getTestHeader = do
     Right body -> pure body
 
 getBy ::
-  forall m.
-  MonadAsk SPSettings_ m =>
+  forall env m.
+  HasSPSettings env =>
+  MonadAsk env m =>
   MonadError AjaxError m =>
   MonadAff m =>
   m Int
 getBy = do
-  spSettings <- ask
+  spSettings <- asks spSettings
   let testHeader = spSettings.testHeader
   let baseURL = spSettings.baseURL
   let httpMethod = Left GET
