@@ -839,6 +839,7 @@
         small-steps-test = ./.plan.nix/small-steps-test.nix;
         unix-bytestring = ./.plan.nix/unix-bytestring.nix;
         digest = ./.plan.nix/digest.nix;
+        double-conversion = ./.plan.nix/double-conversion.nix;
         strict-non-empty-containers = ./.plan.nix/strict-non-empty-containers.nix;
         plutus-chain-index = ./.plan.nix/plutus-chain-index.nix;
         Win32-network = ./.plan.nix/Win32-network.nix;
@@ -1079,6 +1080,9 @@
           "unix-bytestring" = { flags = {}; };
           "digest" = {
             flags = { "bytestring-in-base" = lib.mkOverride 900 false; };
+            };
+          "double-conversion" = {
+            flags = { "developer" = lib.mkOverride 900 false; };
             };
           "strict-non-empty-containers" = {
             flags = { "release" = lib.mkOverride 900 false; };
@@ -1329,6 +1333,7 @@
           "persistent-template".components.library.planned = lib.mkOverride 900 true;
           "unix-bytestring".components.library.planned = lib.mkOverride 900 true;
           "generic-lens".components.library.planned = lib.mkOverride 900 true;
+          "double-conversion".components.library.planned = lib.mkOverride 900 true;
           "file-embed".components.library.planned = lib.mkOverride 900 true;
           "colour".components.library.planned = lib.mkOverride 900 true;
           "network-mux".components.exes."cardano-ping".planned = lib.mkOverride 900 true;
@@ -1427,6 +1432,7 @@
           "concurrent-output".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-network-framework".components.exes."demo-ping-pong".planned = lib.mkOverride 900 true;
           "plutus-pab".components.tests."plutus-pab-test-full".planned = lib.mkOverride 900 true;
+          "double-conversion".components.tests."tests".planned = lib.mkOverride 900 true;
           "path-pieces".components.library.planned = lib.mkOverride 900 true;
           "mono-traversable".components.library.planned = lib.mkOverride 900 true;
           "plutus-benchmark".components.sublibs."plutus-benchmark-common".planned = lib.mkOverride 900 true;

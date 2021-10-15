@@ -115,6 +115,52 @@ let
         tag: 421e8056fabf30ef2f5b01bb61c6880d0dfaa1c8
         --sha256: 0cbsj3dyycykh0lcnsglrzzh898n2iydyw8f2nwyfvfnyx6ac2im
         subdir: foundation
+    '' + lib.optionalString (topLevelPkgs.stdenv.hostPlatform.isGhcjs && !pkgs.stdenv.hostPlatform.isGhcjs) ''
+      packages:
+        ${topLevelPkgs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.project.configured-src}
+        contrib/double-conversion-2.0.2.0
+
+      allow-newer: ghcjs:base16-bytestring
+                 , ghcjs:aeson
+                 , stm:base
+                 , cardano-binary:recursion-schemes
+                 , jsaddle:ghcjs-base
+                 , ghcjs-base:primitive
+                 , ghcjs-base:time
+                 , ghcjs-base:hashable
+                 , ghcjs-base:aeson
+                 , servant-foreign:lens
+                 , servant-client:http-client
+      constraints: plutus-tx-plugin +ghcjs-plugin,
+                   ghci +ghci
+
+      package ghci
+        flags: +ghci
+
+      package plutus-tx-plugin
+        flags: +ghcjs-plugin
+
+      -- The following is needed because Nix is doing something crazy.
+      package byron-spec-ledger
+        tests: False
+
+      package marlowe
+        tests: False
+
+      package plutus-doc
+        tests: False
+
+      package prettyprinter-configurable
+        tests: False
+
+      package small-steps
+        tests: False
+
+      package small-steps-test
+        tests: False
+
+      package byron-spec-chain
+        tests: False
     '';
     modules = [
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
@@ -125,16 +171,6 @@ let
           marlowe-dashboard-server.package.buildable = false;
           marlowe-playground-server.package.buildable = false; # Would also require libpq
           marlowe-symbolic.package.buildable = false;
-          playground-common.package.buildable = false;
-          plutus-benchmark.package.buildable = false;
-          plutus-chain-index.package.buildable = false;
-          plutus-contract.package.buildable = false;
-          plutus-errors.package.buildable = false;
-          plutus-ledger.package.buildable = false;
-          plutus-pab.package.buildable = false;
-          plutus-playground-server.package.buildable = false; # Would also require libpq
-          plutus-tx-plugin.package.buildable = false;
-          plutus-use-cases.package.buildable = false;
           web-ghc.package.buildable = false;
           # Needs agda
           plutus-metatheory.package.buildable = false;
@@ -428,6 +464,10 @@ let
         };
       })
       # For GHCJS
+      ({ packages.ghcjs.src = topLevelPkgs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.project.configured-src; })
+      (lib.mkIf (topLevelPkgs.stdenv.hostPlatform.isGhcjs) {
+        packages.double-conversion.components.library.libs = lib.mkForce [ ];
+      })
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform.isGhcjs) {
         packages = {
           lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
