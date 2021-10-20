@@ -4,15 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE BlockArguments #-}
 
-module Language.PureScript.Bridge.Printer
-  ( printModule
-  , sumTypesToNeededPackages
-  , sumTypesToModules
-  , sumTypeToModule
-  , sumTypeToDocs
-  , renderText
-  , moduleToText
-  ) where
+module Language.PureScript.Bridge.Printer where
 
 import           Control.Lens                               (to,(^.), (%~), (<>~))
 import           Control.Monad                              (unless)
