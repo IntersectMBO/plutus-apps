@@ -14,6 +14,7 @@
   , "prelude"
   , "profunctor-lenses"
   , "psci-support"
+  , "servant-support"
   , "strings"
   , "transformers"
   , "tuples"
