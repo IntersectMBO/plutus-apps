@@ -12,6 +12,31 @@ let additions =
         , repo = "https://github.com/input-output-hk/purescript-servant-support"
         , version = "93ea0fa97d0ba04e8d408bbba51749a92d6477f5"
         }
+    , json-helpers =
+        { dependencies =
+            [ "argonaut-codecs"
+            , "argonaut-core"
+            , "arrays"
+            , "bifunctors"
+            , "contravariant"
+            , "control"
+            , "either"
+            , "enums"
+            , "foreign-object"
+            , "maybe"
+            , "newtype"
+            , "ordered-collections"
+            , "prelude"
+            , "profunctor"
+            , "psci-support"
+            , "record"
+            , "transformers"
+            , "tuples"
+            , "typelevel-prelude"
+            ]
+        , repo = "https://github.com/input-output-hk/purescript-bridge-json-helpers.git"
+        , version = "68265aaacc1a56c00a7625d424ff13d619681e5e"
+        }
     }
 
 in  upstream // additions

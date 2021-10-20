@@ -9,6 +9,7 @@
   , "control"
   , "either"
   , "http-methods"
+  , "json-helpers"
   , "maybe"
   , "newtype"
   , "prelude"

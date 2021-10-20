@@ -92,10 +92,6 @@ main :: IO ()
 main = hspec $
   aroundAll_ withOutput $
     describe "output" $ do
-      it "should match the golden tests for types" $ do
-        expected <- T.readFile "../golden/ServerTypes.purs"
-        actual <- T.readFile "ServerTypes.purs"
-        actual `shouldBe` expected
       it "should match the golden tests for API" $ do
         expected <- T.readFile "../golden/ServerAPI.purs"
         actual <- T.readFile "ServerAPI.purs"

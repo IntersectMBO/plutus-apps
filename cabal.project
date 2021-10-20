@@ -4,7 +4,7 @@ index-state: 2021-10-06T00:00:00Z
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/purescript-bridge.git
-  tag: 69f69a5fd8ca39562724103241a65b0d0636d937
-  --sha256: 0pmrd8ql5k9crc5wm6x20ikbfmjjsxsypxbfzv185vg2lylhl0bp
+  tag: e6d4f98037b88e6719fc30ab8f0034900ed8bdfd
+  --sha256: 0rh2svnyqf2vq7aik9zjj0nbm61dmrhp8naczja4q3r46ynabb9w
 
 packages: .

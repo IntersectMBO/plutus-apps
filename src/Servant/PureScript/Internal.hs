@@ -6,8 +6,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Servant.PureScript.Internal where
 
@@ -88,21 +88,22 @@ defaultSettings =
       _readerParams = Set.singleton baseURLId,
       _standardImports =
         importsFromList
-          [ ImportLine "Affjax" (Set.fromList ["Error", "Request", "Response", "defaultRequest", "request"]),
+          [ ImportLine "Affjax" (Set.fromList ["defaultRequest", "request"]),
             ImportLine "Affjax.RequestHeader" (Set.fromList ["RequestHeader(..)"]),
             ImportLine "Control.Monad.Error.Class" (Set.fromList ["class MonadError", "throwError"]),
             ImportLine "Control.Monad.Reader.Class" (Set.fromList ["asks", "class MonadAsk"]),
-            ImportLine "Data.Argonaut.Core" (Set.fromList ["Json", "stringify"]),
-            ImportLine "Data.Argonaut.Decode" (Set.fromList ["JsonDecodeError", "decodeJson"]),
-            ImportLine "Data.Argonaut.Encode" (Set.fromList ["class EncodeJson", "encodeJson"]),
+            ImportLine "Data.Argonaut.Decode" (Set.fromList ["decodeJson"]),
+            ImportLine "Data.Argonaut.Encode" (Set.fromList ["encodeJson"]),
             ImportLine "Data.Array" (Set.fromList ["fromFoldable", "null"]),
             ImportLine "Data.Either" (Set.fromList ["Either(..)"]),
-            ImportLine "Data.Generic.Rep" (Set.fromList ["class Generic"]),
             ImportLine "Data.HTTP.Method" (Set.fromList ["Method(..)"]),
             ImportLine "Data.Maybe" (Set.fromList ["Maybe", "Maybe(..)"]),
             ImportLine "Data.Newtype" (Set.fromList ["unwrap"]),
             ImportLine "Data.String" (Set.fromList ["joinWith"]),
-            ImportLine "Effect.Aff.Class" (Set.fromList ["class MonadAff", "liftAff"])
+            ImportLine "Effect.Aff.Class" (Set.fromList ["class MonadAff", "liftAff"]),
+            ImportLine
+              "Servant.PureScript"
+              (Set.fromList ["class ToURLPiece", "AjaxError", "ErrorDescription(..)", "toURLPiece"])
           ]
     }
 

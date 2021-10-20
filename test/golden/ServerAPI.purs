@@ -3,42 +3,23 @@ module ServerAPI where
 
 import Prelude
 
-import Affjax (Error, Request, Response, defaultRequest, request)
+import Affjax (defaultRequest, request)
 import Affjax.RequestHeader (RequestHeader(..))
 import Control.Monad.Error.Class (class MonadError, throwError)
 import Control.Monad.Reader.Class (asks, class MonadAsk)
-import Data.Argonaut.Core (Json, stringify)
-import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Decode (decodeJson)
+import Data.Argonaut.Encode (encodeJson)
 import Data.Array (fromFoldable, null)
 import Data.Either (Either(..))
-import Data.Generic.Rep (class Generic)
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe, Maybe(..))
 import Data.Newtype (unwrap)
 import Data.String (joinWith)
 import Effect.Aff.Class (class MonadAff, liftAff)
+import Servant.PureScript (AjaxError, ErrorDescription(..), class ToURLPiece, toURLPiece)
 import ServerTypes (Hello, TestHeader)
 import Affjax.RequestBody (json) as Request
 import Affjax.ResponseFormat (json) as Response
-
-class ToURLPiece a where
-  toURLPiece :: a -> String
-
-instance toURLPieceString :: ToURLPiece String where
-  toURLPiece = identity
-else instance toURLPieceAny :: (EncodeJson a) => ToURLPiece a where
-  toURLPiece = stringify <<< encodeJson
-
-type AjaxError
-  = { request :: Request Json
-    , description :: ErrorDescription
-    }
-
-data ErrorDescription
-  = UnexpectedHTTPStatus (Response Json)
-  | DecodingError JsonDecodeError
-  | ConnectingError Error
 
 type SPSettings_
   = { testHeader :: Maybe TestHeader
