@@ -38,9 +38,9 @@ import           Language.PureScript.Bridge.TypeInfo        as Bridge
 --   > -- | All types will have a `Generic` instance produced in Purescript.
 --   > myTypes :: [SumType 'Haskell]
 --   > myTypes =
---   >   [ let p = (Proxy :: Proxy Foo) in equal p (mkSumType p)  -- Also produce a `Eq` instance.
---   >   , let p = (Proxy :: Proxy Bar) in order p (mkSumType p)  -- Produce both `Eq` and `Ord`.
---   >   , mkSumType (Proxy :: Proxy Baz)  -- Just produce a `Generic` instance.
+--   >   [ equal (mkSumType @Foo)  -- Also produce a `Eq` instance.
+--   >   , order (mkSumType @Bar)  -- Produce both `Eq` and `Ord`.
+--   >   , mkSumType @Baz  -- Just produce a `Generic` instance.
 --   >   ]
 --   >
 --   >  writePSTypes "path/to/your/purescript/project" (buildBridge defaultBridge) myTypes
@@ -99,12 +99,12 @@ writePSTypesWith switch root bridge sts = do
   where
     settings = Switches.getSettings switch
     bridged = map (bridgeSumType bridge) sts
-    modules = M.elems $ sumTypesToModules M.empty bridged
+    modules = M.elems $ sumTypesToModules bridged
     packages =
-      if Switches.generateLenses settings
-        then Set.insert "purescript-profunctor-lenses" $
-             sumTypesToNeededPackages bridged
-        else sumTypesToNeededPackages bridged
+      sumTypesToNeededPackages bridged
+        <> Set.filter
+            (const $ Switches.generateLenses settings)
+            (Set.singleton "purescript-profunctor-lenses")
 
 -- | Translate all 'TypeInfo' values in a 'SumType' to PureScript types.
 --
@@ -112,10 +112,17 @@ writePSTypesWith switch root bridge sts = do
 --
 -- > data Foo = Foo | Bar Int | FooBar Int Text deriving (Generic, Typeable, Show)
 --
--- > bridgeSumType (buildBridge defaultBridge) (mkSumType (Proxy :: Proxy Foo))
+-- > bridgeSumType (buildBridge defaultBridge) (mkSumType @Foo)
 bridgeSumType :: FullBridge -> SumType 'Haskell -> SumType 'PureScript
 bridgeSumType br (SumType t cs is) =
-  SumType (br t) (map (bridgeConstructor br) cs) is
+  SumType (br t) (map (bridgeConstructor br) cs) $ is <> extraInstances
+    where
+      extraInstances
+        | not (null cs) && all isNullary cs = [Enum, Bounded]
+        | otherwise = []
+      isNullary (DataConstructor _ args) = args == Nullary
+
+
 
 -- | Default bridge for mapping primitive/common types:
 --   You can append your own bridges like this:
@@ -137,10 +144,12 @@ defaultBridge =
 -- | Translate types in a constructor.
 bridgeConstructor ::
      FullBridge -> DataConstructor 'Haskell -> DataConstructor 'PureScript
-bridgeConstructor br (DataConstructor name (Left infos)) =
-  DataConstructor name . Left $ map br infos
-bridgeConstructor br (DataConstructor name (Right record)) =
-  DataConstructor name . Right $ map (bridgeRecordEntry br) record
+bridgeConstructor _ (DataConstructor name Nullary) =
+  DataConstructor name Nullary
+bridgeConstructor br (DataConstructor name (Normal infos)) =
+  DataConstructor name . Normal $ fmap br infos
+bridgeConstructor br (DataConstructor name (Record record)) =
+  DataConstructor name . Record $ fmap (bridgeRecordEntry br) record
 
 -- | Translate types in a record entry.
 bridgeRecordEntry ::

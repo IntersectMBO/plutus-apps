@@ -22,3 +22,4 @@ dist-*
 shell.nix
 stack.yaml
 .dir-locals.el
+.psc-ide-port

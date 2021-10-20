@@ -95,13 +95,22 @@ Test-Suite tests
   type:          exitcode-stdio-1.0
   main-is:       Spec.hs
   other-modules: TestData
-  build-depends: base
+               , RoundTrip.Spec
+               , RoundTrip.Types
+  build-depends: aeson
+               , bytestring
+               , HUnit
+               , base
                , containers
-               , purescript-bridge
-               , text
-               , wl-pprint-text
+               , directory
                , hspec
                , hspec-expectations-pretty-diff
+               , process
+               , purescript-bridge
+               , QuickCheck
+               , text
+               , utf8-string
+               , wl-pprint-text
 
   hs-source-dirs:   test
   default-language: Haskell2010

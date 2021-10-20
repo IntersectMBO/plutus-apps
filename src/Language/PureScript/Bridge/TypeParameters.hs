@@ -17,7 +17,7 @@
 --     import "Language.PureScript.Bridge"
 --     import "Language.PureScript.Bridge.TypeParameters"
 --
---     st = mkSumType ('Proxy' :: 'Proxy' (Maybe' A)) -- Note that we use "Maybe' A" instead of just Maybe - which would not work.
+--     st = mkSumType @(Maybe' A) -- Note that we use "Maybe' A" instead of just Maybe - which would not work.
 --   @
 module Language.PureScript.Bridge.TypeParameters where
 
@@ -75,7 +75,7 @@ data Z deriving (Eq, Ord)
 
 -- | You can use those if your type parameters are actually type constructors as well:
 --   @
---   st = mkSumType (Proxy :: Proxy ('ReaderT' R M1 A))
+--   st = mkSumType @('ReaderT' R M1 A)
 --   @
 data A1 a
 

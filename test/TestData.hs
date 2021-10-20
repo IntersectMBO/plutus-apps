@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TypeApplications #-}
 
 
 module TestData where
@@ -16,6 +17,7 @@ import           Data.Typeable
 import           GHC.Generics                       (Generic)
 import           Language.PureScript.Bridge
 import           Language.PureScript.Bridge.PSTypes
+import Language.PureScript.Bridge.CodeGenSwitches (defaultSettings)
 
 
 
@@ -28,7 +30,7 @@ textBridge = do
 
 stringBridge :: BridgePart
 stringBridge = do
-   haskType ^== mkTypeInfo (Proxy :: Proxy String)
+   haskType ^== mkTypeInfo @String
    return psString
 
 data Foo = Foo
@@ -77,7 +79,7 @@ data SingleProduct = SingleProduct Text Int
   deriving (Generic, Typeable, Show)
 
 a :: HaskellType
-a = mkTypeInfo (Proxy :: Proxy (Either String Int))
+a = mkTypeInfo @(Either String Int)
 
 applyBridge :: FullBridge
 applyBridge = buildBridge defaultBridge
@@ -86,7 +88,7 @@ psA :: PSType
 psA = applyBridge a
 
 b :: SumType 'Haskell
-b = mkSumType (Proxy :: Proxy (Either String Int))
+b = mkSumType @(Either String Int)
 
 t :: TypeInfo 'PureScript
 cs :: [DataConstructor 'PureScript]
