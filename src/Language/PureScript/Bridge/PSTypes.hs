@@ -7,7 +7,7 @@
 -- | PureScript types to be used for bridges, e.g. in "Language.PureScript.Bridge.Primitives".
 module Language.PureScript.Bridge.PSTypes where
 
-import           Control.Lens                        (views)
+import           Control.Lens                        (views, view)
 import           Control.Monad.Reader.Class
 import qualified Data.Text                           as T
 
@@ -66,17 +66,15 @@ psString =
 -- | Uses  type parameters from 'haskType' (bridged).
 psTuple :: MonadReader BridgeData m => m PSType
 psTuple = do
-  size <- views (haskType . typeParameters) length
-  let tupleModule =
-        if size == 2
-          then "Data.Tuple"
-          else "Data.Tuple.Nested"
-      tupleName =
-        "Tuple" <>
-        if size == 2
-          then ""
-          else T.pack (show size)
-  TypeInfo "purescript-tuples" tupleModule tupleName <$> psTypeParameters
+  params <- view (haskType . typeParameters)
+  bridge <- view fullBridge
+  let
+    computeTuple [] = psUnit
+    computeTuple [a] = bridge a
+    computeTuple [a, b] = TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" [bridge a, bridge b] 
+    computeTuple (h : t) = TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" [bridge h, computeTuple t]
+  pure $ computeTuple params
+  
 
 psUnit :: PSType
 psUnit =

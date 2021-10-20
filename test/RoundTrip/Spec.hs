@@ -8,7 +8,7 @@ module RoundTrip.Spec where
 
 import Control.Exception (bracket)
 import Data.Aeson (FromJSON, ToJSON (toJSON), eitherDecode, encode, fromJSON)
-import Data.ByteString.Lazy (stripSuffix)
+import Data.ByteString.Lazy (stripSuffix, hGetContents)
 import Data.ByteString.Lazy.UTF8 (toString, fromString)
 import Data.List (isInfixOf)
 import Data.Proxy (Proxy (..))
@@ -18,15 +18,15 @@ import Language.PureScript.Bridge.TypeParameters (A)
 import RoundTrip.Types
 import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.Exit (ExitCode (ExitSuccess))
-import System.IO (BufferMode (..), hSetBuffering, hGetLine, hPutStrLn)
-import System.Process (CreateProcess (std_in, std_out), StdStream (CreatePipe), createProcess, getProcessExitCode, proc, readProcessWithExitCode, terminateProcess)
+import System.IO (BufferMode (..), hSetBuffering, hPutStrLn, stdout, stderr, hFlush)
+import System.Process (CreateProcess (std_in, std_out), StdStream (CreatePipe), createProcess, getProcessExitCode, proc, readProcessWithExitCode, terminateProcess, waitForProcess)
 import Test.HUnit (assertBool, assertEqual)
 import Test.Hspec (Spec, around, aroundAll_, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck.Property (Testable (property))
 import Data.Maybe (fromMaybe)
-import Test.QuickCheck (verbose, once)
+import Test.QuickCheck (verbose, once, noShrinking, withMaxSuccess)
 
 myBridge :: BridgePart
 myBridge = defaultBridge
@@ -52,20 +52,15 @@ roundtripSpec = do
       it "should not warn of unused packages buildable" do
         (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
         assertBool stderr $ not $ "[warn]" `isInfixOf` stderr
-      around withTestApp $
-        it "should produce aeson-compatible argonaut instances" $ \(hin, hout, hproc) ->
-          property $
-            \testData ->
-              do
-                hPutStrLn hin $ toString $ encode @TestData testData
-                output <- fromString <$> hGetLine hout
-                let output = fromMaybe output $ stripSuffix "\n" output
-                flip (assertEqual (toString output)) Nothing =<< getProcessExitCode hproc
-                assertEqual (toString output) (Right testData) $ eitherDecode output
+      it "should produce aeson-compatible argonaut instances" $ 
+        property $
+          \testData -> bracket runApp killApp $
+            \(hin, hout, hproc) -> do
+              hPutStrLn hin $ toString $ encode @TestData testData
+              output <- hGetContents hout
+              assertEqual (toString output) ExitSuccess =<< waitForProcess hproc
+              assertEqual (toString output) (Right testData) $ eitherDecode @TestData output
   where
-    withTestApp runSpec =
-      bracket runApp killApp runSpec
-
     runApp = do
       (Just hin, Just hout, _, hproc) <-
         createProcess (proc "spago" ["run"]) {std_in = CreatePipe, std_out = CreatePipe}

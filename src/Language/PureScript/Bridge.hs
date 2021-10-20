@@ -115,7 +115,14 @@ writePSTypesWith switch root bridge sts = do
 -- > bridgeSumType (buildBridge defaultBridge) (mkSumType @Foo)
 bridgeSumType :: FullBridge -> SumType 'Haskell -> SumType 'PureScript
 bridgeSumType br (SumType t cs is) =
-  SumType (br t) (map (bridgeConstructor br) cs) is 
+  SumType (br t) (map (bridgeConstructor br) cs) $ is <> extraInstances
+    where
+      extraInstances
+        | not (null cs) && all isNullary cs = [Enum, Bounded]
+        | otherwise = []
+      isNullary (DataConstructor _ args) = args == Nullary
+
+
 
 -- | Default bridge for mapping primitive/common types:
 --   You can append your own bridges like this:
@@ -137,10 +144,12 @@ defaultBridge =
 -- | Translate types in a constructor.
 bridgeConstructor ::
      FullBridge -> DataConstructor 'Haskell -> DataConstructor 'PureScript
-bridgeConstructor br (DataConstructor name (Left infos)) =
-  DataConstructor name . Left $ map br infos
-bridgeConstructor br (DataConstructor name (Right record)) =
-  DataConstructor name . Right $ map (bridgeRecordEntry br) record
+bridgeConstructor _ (DataConstructor name Nullary) =
+  DataConstructor name Nullary
+bridgeConstructor br (DataConstructor name (Normal infos)) =
+  DataConstructor name . Normal $ fmap br infos
+bridgeConstructor br (DataConstructor name (Record record)) =
+  DataConstructor name . Record $ fmap (bridgeRecordEntry br) record
 
 -- | Translate types in a record entry.
 bridgeRecordEntry ::

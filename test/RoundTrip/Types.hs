@@ -81,7 +81,7 @@ instance Arbitrary TestSum where
       ]
 
 data TestRecord a = TestRecord
-  { _field1 :: Int,
+  { _field1 :: Maybe Int,
     _field2 :: a
   }
   deriving (Show, Eq, Ord, Generic)

@@ -7,26 +7,24 @@ import Data.Argonaut.Decode (JsonDecodeError, decodeJson, parseJson, printJsonDe
 import Data.Argonaut.Encode (encodeJson)
 import Data.Either (Either(..))
 import Effect (Effect)
-import Node.Encoding (Encoding(..))
-import Node.Process (exit, stdin, stdout)
-import Node.Stream (onDataString, onEnd, uncork, writeString)
+import Effect.Class.Console (log)
+import Node.Process (exit)
+import Node.ReadLine (createConsoleInterface, noCompletion, question)
 import RoundTrip.Types (TestData)
 
 main :: Effect Unit
 main = do
-  onDataString stdin UTF8 \input ->
+  interface <- createConsoleInterface noCompletion
+  interface # question "" \input ->
     let
       parsed :: Either JsonDecodeError TestData
       parsed = decodeJson =<< parseJson input
     in
       case parsed of
         Left err -> do
-          void
-            $ writeString stdout UTF8 (show input <> "\n" <> printJsonDecodeError err <> "\n")
-            $ uncork stdout
+          log $ "got" <> input
+          log $ printJsonDecodeError err
           exit 1
         Right testData -> do
-          void
-            $ writeString stdout UTF8 (stringify (encodeJson testData) <> "\n")
-            $ uncork stdout
-  onEnd stdin $ exit 0
+          log $ stringify $ encodeJson testData
+          exit 0

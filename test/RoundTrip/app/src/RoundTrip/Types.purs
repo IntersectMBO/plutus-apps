@@ -5,22 +5,29 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut.Core (fromArray, fromString, jsonEmptyArray, jsonEmptyObject, jsonNull)
 import Data.Argonaut.Decode ((.!=), (.:), (.:?), JsonDecodeError(..), class DecodeJson, decodeJson)
+import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>), Decoder)
 import Data.Argonaut.Decode.Decoders (decodeArray, decodeJArray, decodeJObject, decodeNull)
 import Data.Argonaut.Encode ((:=), (~>), class EncodeJson, encodeJson)
+import Data.Argonaut.Encode.Aeson ((>$<), (>*<), (>/\<), (>|<), Encoder)
 import Data.Array (index)
 import Data.Bifunctor (lmap)
+import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Either (Either, Either(..))
+import Data.Enum (class Enum)
+import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Functor (class Functor)
 import Data.Generic.Rep (class Generic)
-import Data.Lens (Iso', Lens', Prism', lens, prism')
+import Data.Lens (Iso', Lens', Prism', iso, lens, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Maybe (Maybe, Maybe(..), maybe)
-import Data.Newtype (class Newtype)
+import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple)
-import Data.Tuple.Nested ((/\), Tuple3, Tuple4)
+import Data.Tuple.Nested ((/\))
 import Type.Proxy (Proxy(Proxy))
+import Data.Argonaut.Decode.Aeson as D
+import Data.Argonaut.Encode.Aeson as E
 
 data TestData
   = Maybe (Maybe TestSum)
@@ -34,65 +41,36 @@ instance showTestData :: Show TestData where
 derive instance ordTestData :: Ord TestData
 
 instance encodeJsonTestData :: EncodeJson TestData where
-  encodeJson =
-    case _ of
-      Maybe v0 ->
-        "tag" := "Maybe" ~>
-        "contents" :=
-          ( (let a = v0 in case a of
-                Nothing -> jsonNull
-                Just a -> encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Either v0 ->
-        "tag" := "Either" ~>
-        "contents" :=
-          ( (let a = v0 in case a of
-                Left a -> "Left" := (case a of
-                  Nothing -> jsonNull
-                  Just a -> encodeJson a) ~> jsonEmptyObject
-                Right a -> "Right" := (case a of
-                  Nothing -> jsonNull
-                  Just a -> encodeJson a) ~> jsonEmptyObject)
-          ) ~>
-        jsonEmptyObject
+  encodeJson = E.encode 
+    $ E.sumType
+    $ toEither
+        >$< E.tagged "Maybe" (E.maybe E.value)
+        >|< E.tagged "Either" (E.either (E.maybe E.value) (E.maybe E.value))
+    where
+    toEither = case _ of
+      (Maybe a) -> Left $ (a)
+      (Either a) -> Right $ (a)
 
 
 instance decodeJsonTestData :: DecodeJson TestData where
-  decodeJson json =
-    do
-      obj <- decodeJObject json
-      tag <- obj .: "tag"
-      json <- obj .:? "contents" .!= jsonNull
-      case tag of
-        "Maybe" -> lmap (AtKey "contents") $ Maybe <$>
-          ( Nothing <$ decodeNull json <|>
-            Just <$> (decodeJson json)
-          )
-        "Either" -> lmap (AtKey "contents") $ Either <$>
-          ( decodeJson json >>= \obj ->
-              Left <$> (obj .: "Left" >>= \json -> Nothing <$ decodeNull json <|>
-              Just <$> (decodeJson json)) <|>
-              Right <$> (obj .: "Right" >>= \json -> Nothing <$ decodeNull json <|>
-              Just <$> (decodeJson json))
-          )
-        _ -> Left $ AtKey "tag" (UnexpectedValue json)
+  decodeJson = D.decode 
+    $ D.sumType "TestData"
+    $ D.tagged "Maybe" (Maybe <$> (D.maybe D.value))
+        <|> D.tagged "Either" (Either <$> (D.either (D.maybe D.value) (D.maybe D.value)))
 
 derive instance genericTestData :: Generic TestData _
 
 --------------------------------------------------------------------------------
 
-_Maybe :: Prism' TestData (Maybe TestSum)
-_Maybe = prism' Maybe f
-  where
-    f (Maybe a) = Just $ a
-    f _ = Nothing
+_Maybe :: (Prism' TestData (Maybe TestSum))
+_Maybe = prism' Maybe case _ of
+  (Maybe a) -> Just a
+  _ -> Nothing
 
-_Either :: Prism' TestData (Either (Maybe Int) (Maybe Boolean))
-_Either = prism' Either f
-  where
-    f (Either a) = Just $ a
-    f _ = Nothing
+_Either :: (Prism' TestData (Either (Maybe Int) (Maybe Boolean)))
+_Either = prism' Either case _ of
+  (Either a) -> Just a
+  _ -> Nothing
 
 --------------------------------------------------------------------------------
 data TestSum
@@ -109,8 +87,8 @@ data TestSum
   | Unit Unit
   | MyUnit MyUnit
   | Pair (Tuple Int Number)
-  | Triple (Tuple3 Int Unit Boolean)
-  | Quad (Tuple4 Int Number Boolean Number)
+  | Triple (Tuple Int (Tuple Unit Boolean))
+  | Quad (Tuple Int (Tuple Number (Tuple Boolean Number)))
   | QuadSimple Int Number Boolean Number
   | Enum TestEnum
 
@@ -122,367 +100,161 @@ instance showTestSum :: Show TestSum where
 derive instance ordTestSum :: Ord TestSum
 
 instance encodeJsonTestSum :: EncodeJson TestSum where
-  encodeJson =
-    case _ of
-      Nullary ->
-        "tag" := "Nullary" ~>
-        jsonEmptyObject
-      Bool v0 ->
-        "tag" := "Bool" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Int v0 ->
-        "tag" := "Int" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Number v0 ->
-        "tag" := "Number" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      String v0 ->
-        "tag" := "String" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Array v0 ->
-        "tag" := "Array" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Record v0 ->
-        "tag" := "Record" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      NestedRecord v0 ->
-        "tag" := "NestedRecord" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      NT v0 ->
-        "tag" := "NT" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      NTRecord v0 ->
-        "tag" := "NTRecord" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Unit v0 ->
-        "tag" := "Unit" ~>
-        "contents" :=
-          ( (let a = v0 in jsonEmptyArray)
-          ) ~>
-        jsonEmptyObject
-      MyUnit v0 ->
-        "tag" := "MyUnit" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Pair v0 ->
-        "tag" := "Pair" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
-      Triple v0 ->
-        "tag" := "Triple" ~>
-        "contents" :=
-          ( (let a = v0 in case a of v0 /\ v1 /\ v2 /\ unit ->
-                  [ (let a = v0 in encodeJson a)
-                  , (let a = v1 in jsonEmptyArray)
-                  , (let a = v2 in encodeJson a)
-                  ])
-          ) ~>
-        jsonEmptyObject
-      Quad v0 ->
-        "tag" := "Quad" ~>
-        "contents" :=
-          ( (let a = v0 in case a of v0 /\ v1 /\ v2 /\ v3 /\ unit ->
-                  [ (let a = v0 in encodeJson a)
-                  , (let a = v1 in encodeJson a)
-                  , (let a = v2 in encodeJson a)
-                  , (let a = v3 in encodeJson a)
-                  ])
-          ) ~>
-        jsonEmptyObject
-      QuadSimple v0 v1 v2 v3 ->
-        "tag" := "QuadSimple" ~>
-        "contents" :=
-          ( fromArray
-              [ (let a = v0 in encodeJson a)
-              , (let a = v1 in encodeJson a)
-              , (let a = v2 in encodeJson a)
-              , (let a = v3 in encodeJson a)
-              ]
-          ) ~>
-        jsonEmptyObject
-      Enum v0 ->
-        "tag" := "Enum" ~>
-        "contents" :=
-          ( (let a = v0 in encodeJson a)
-          ) ~>
-        jsonEmptyObject
+  encodeJson = E.encode 
+    $ E.sumType
+    $ toEither
+        >$< E.tagged "Nullary" E.null
+        >|< E.tagged "Bool" E.value
+        >|< E.tagged "Int" E.value
+        >|< E.tagged "Number" E.value
+        >|< E.tagged "String" E.value
+        >|< E.tagged "Array" E.value
+        >|< E.tagged "Record" E.value
+        >|< E.tagged "NestedRecord" E.value
+        >|< E.tagged "NT" E.value
+        >|< E.tagged "NTRecord" E.value
+        >|< E.tagged "Unit" E.unit
+        >|< E.tagged "MyUnit" E.value
+        >|< E.tagged "Pair" (E.tuple (E.value >/\< E.value))
+        >|< E.tagged "Triple" (E.tuple (E.value >/\< E.unit >/\< E.value))
+        >|< E.tagged "Quad" (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
+        >|< E.tagged "QuadSimple" (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
+        >|< E.tagged "Enum" E.value
+    where
+    toEither = case _ of
+      Nullary -> Left $ unit
+      (Bool a) -> Right $ Left $ (a)
+      (Int a) -> Right $ Right $ Left $ (a)
+      (Number a) -> Right $ Right $ Right $ Left $ (a)
+      (String a) -> Right $ Right $ Right $ Right $ Left $ (a)
+      (Array a) -> Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Record a) -> Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (NestedRecord a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (NT a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (NTRecord a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Unit a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (MyUnit a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Pair a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Triple a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Quad a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (QuadSimple a b c d) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a /\ b /\ c /\ d)
+      (Enum a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ (a)
 
 
 instance decodeJsonTestSum :: DecodeJson TestSum where
-  decodeJson json =
-    do
-      obj <- decodeJObject json
-      tag <- obj .: "tag"
-      json <- obj .:? "contents" .!= jsonNull
-      case tag of
-        "Nullary" -> pure Nullary
-        "Bool" -> lmap (AtKey "contents") $ Bool <$>
-          ( decodeJson json
-          )
-        "Int" -> lmap (AtKey "contents") $ Int <$>
-          ( decodeJson json
-          )
-        "Number" -> lmap (AtKey "contents") $ Number <$>
-          ( decodeJson json
-          )
-        "String" -> lmap (AtKey "contents") $ String <$>
-          ( decodeJson json
-          )
-        "Array" -> lmap (AtKey "contents") $ Array <$>
-          ( decodeJson json
-          )
-        "Record" -> lmap (AtKey "contents") $ Record <$>
-          ( decodeJson json
-          )
-        "NestedRecord" -> lmap (AtKey "contents") $ NestedRecord <$>
-          ( decodeJson json
-          )
-        "NT" -> lmap (AtKey "contents") $ NT <$>
-          ( decodeJson json
-          )
-        "NTRecord" -> lmap (AtKey "contents") $ NTRecord <$>
-          ( decodeJson json
-          )
-        "Unit" -> lmap (AtKey "contents") $ Unit <$>
-          ( unit <$ decodeArray (Left <<< UnexpectedValue) json
-          )
-        "MyUnit" -> lmap (AtKey "contents") $ MyUnit <$>
-          ( decodeJson json
-          )
-        "Pair" -> lmap (AtKey "contents") $ Pair <$>
-          ( decodeJson json
-          )
-        "Triple" -> lmap (AtKey "contents") $ Triple <$>
-          ( do
-              arr <- decodeJArray json
-              v0 <-
-                maybe
-                  (Left $ AtIndex 0 $ MissingValue)
-                  (\json ->
-                    decodeJson json
-                  )
-                  $ index arr 0
-              v1 <-
-                maybe
-                  (Left $ AtIndex 1 $ MissingValue)
-                  (\json ->
-                    unit <$ decodeArray (Left <<< UnexpectedValue) json
-                  )
-                  $ index arr 1
-              v2 <-
-                maybe
-                  (Left $ AtIndex 2 $ MissingValue)
-                  (\json ->
-                    decodeJson json
-                  )
-                  $ index arr 2
-              pure $ v0 /\ v1 /\ v2 /\ unit
-          )
-        "Quad" -> lmap (AtKey "contents") $ Quad <$>
-          ( do
-              arr <- decodeJArray json
-              v0 <-
-                maybe
-                  (Left $ AtIndex 0 $ MissingValue)
-                  (\json ->
-                    decodeJson json
-                  )
-                  $ index arr 0
-              v1 <-
-                maybe
-                  (Left $ AtIndex 1 $ MissingValue)
-                  (\json ->
-                    decodeJson json
-                  )
-                  $ index arr 1
-              v2 <-
-                maybe
-                  (Left $ AtIndex 2 $ MissingValue)
-                  (\json ->
-                    decodeJson json
-                  )
-                  $ index arr 2
-              v3 <-
-                maybe
-                  (Left $ AtIndex 3 $ MissingValue)
-                  (\json ->
-                    decodeJson json
-                  )
-                  $ index arr 3
-              pure $ v0 /\ v1 /\ v2 /\ v3 /\ unit
-          )
-        "QuadSimple" -> do
-          arr <- decodeJArray json
-          lmap (AtKey "contents") $ QuadSimple <$>
-            ( do
-                json <- maybe (Left $ AtIndex 0 $ MissingValue) Right $ index arr 0
-                ( decodeJson json
-                )
-            ) <*>
-            ( do
-                json <- maybe (Left $ AtIndex 1 $ MissingValue) Right $ index arr 1
-                ( decodeJson json
-                )
-            ) <*>
-            ( do
-                json <- maybe (Left $ AtIndex 2 $ MissingValue) Right $ index arr 2
-                ( decodeJson json
-                )
-            ) <*>
-            ( do
-                json <- maybe (Left $ AtIndex 3 $ MissingValue) Right $ index arr 3
-                ( decodeJson json
-                )
-            )
-        "Enum" -> lmap (AtKey "contents") $ Enum <$>
-          ( decodeJson json
-          )
-        _ -> Left $ AtKey "tag" (UnexpectedValue json)
+  decodeJson = D.decode 
+    $ D.sumType "TestSum"
+    $ D.tagged "Nullary" (Nullary <$ D.null)
+        <|> D.tagged "Bool" (Bool <$> D.value)
+        <|> D.tagged "Int" (Int <$> D.value)
+        <|> D.tagged "Number" (Number <$> D.value)
+        <|> D.tagged "String" (String <$> D.value)
+        <|> D.tagged "Array" (Array <$> D.value)
+        <|> D.tagged "Record" (Record <$> D.value)
+        <|> D.tagged "NestedRecord" (NestedRecord <$> D.value)
+        <|> D.tagged "NT" (NT <$> D.value)
+        <|> D.tagged "NTRecord" (NTRecord <$> D.value)
+        <|> D.tagged "Unit" (Unit <$> D.unit)
+        <|> D.tagged "MyUnit" (MyUnit <$> D.value)
+        <|> D.tagged "Pair" (Pair <$> (D.tuple (D.value </\> D.value)))
+        <|> D.tagged "Triple" (Triple <$> (D.tuple (D.value </\> D.unit </\> D.value)))
+        <|> D.tagged "Quad" (Quad <$> (D.tuple (D.value </\> D.value </\> D.value </\> D.value)))
+        <|> D.tagged "QuadSimple" (D.tuple $ QuadSimple </$\> D.value </*\> D.value </*\> D.value </*\> D.value)
+        <|> D.tagged "Enum" (Enum <$> D.value)
 
 derive instance genericTestSum :: Generic TestSum _
 
 --------------------------------------------------------------------------------
 
-_Nullary :: Prism' TestSum Unit
-_Nullary = prism' (\_ -> Nullary) f
-  where
-    f Nullary = Just unit
-    f _ = Nothing
+_Nullary :: (Prism' TestSum Unit)
+_Nullary = prism' (const Nullary) case _ of
+  Nullary -> Just unit
+  _ -> Nothing
 
-_Bool :: Prism' TestSum Boolean
-_Bool = prism' Bool f
-  where
-    f (Bool a) = Just $ a
-    f _ = Nothing
+_Bool :: (Prism' TestSum Boolean)
+_Bool = prism' Bool case _ of
+  (Bool a) -> Just a
+  _ -> Nothing
 
-_Int :: Prism' TestSum Int
-_Int = prism' Int f
-  where
-    f (Int a) = Just $ a
-    f _ = Nothing
+_Int :: (Prism' TestSum Int)
+_Int = prism' Int case _ of
+  (Int a) -> Just a
+  _ -> Nothing
 
-_Number :: Prism' TestSum Number
-_Number = prism' Number f
-  where
-    f (Number a) = Just $ a
-    f _ = Nothing
+_Number :: (Prism' TestSum Number)
+_Number = prism' Number case _ of
+  (Number a) -> Just a
+  _ -> Nothing
 
-_String :: Prism' TestSum String
-_String = prism' String f
-  where
-    f (String a) = Just $ a
-    f _ = Nothing
+_String :: (Prism' TestSum String)
+_String = prism' String case _ of
+  (String a) -> Just a
+  _ -> Nothing
 
-_Array :: Prism' TestSum (Array Int)
-_Array = prism' Array f
-  where
-    f (Array a) = Just $ a
-    f _ = Nothing
+_Array :: (Prism' TestSum (Array Int))
+_Array = prism' Array case _ of
+  (Array a) -> Just a
+  _ -> Nothing
 
-_Record :: Prism' TestSum (TestRecord Int)
-_Record = prism' Record f
-  where
-    f (Record a) = Just $ a
-    f _ = Nothing
+_Record :: (Prism' TestSum (TestRecord Int))
+_Record = prism' Record case _ of
+  (Record a) -> Just a
+  _ -> Nothing
 
-_NestedRecord :: Prism' TestSum (TestRecord (TestRecord Int))
-_NestedRecord = prism' NestedRecord f
-  where
-    f (NestedRecord a) = Just $ a
-    f _ = Nothing
+_NestedRecord :: (Prism' TestSum (TestRecord (TestRecord Int)))
+_NestedRecord = prism' NestedRecord case _ of
+  (NestedRecord a) -> Just a
+  _ -> Nothing
 
-_NT :: Prism' TestSum TestNewtype
-_NT = prism' NT f
-  where
-    f (NT a) = Just $ a
-    f _ = Nothing
+_NT :: (Prism' TestSum TestNewtype)
+_NT = prism' NT case _ of
+  (NT a) -> Just a
+  _ -> Nothing
 
-_NTRecord :: Prism' TestSum TestNewtypeRecord
-_NTRecord = prism' NTRecord f
-  where
-    f (NTRecord a) = Just $ a
-    f _ = Nothing
+_NTRecord :: (Prism' TestSum TestNewtypeRecord)
+_NTRecord = prism' NTRecord case _ of
+  (NTRecord a) -> Just a
+  _ -> Nothing
 
-_Unit :: Prism' TestSum Unit
-_Unit = prism' Unit f
-  where
-    f (Unit a) = Just $ a
-    f _ = Nothing
+_Unit :: (Prism' TestSum Unit)
+_Unit = prism' Unit case _ of
+  (Unit a) -> Just a
+  _ -> Nothing
 
-_MyUnit :: Prism' TestSum MyUnit
-_MyUnit = prism' MyUnit f
-  where
-    f (MyUnit a) = Just $ a
-    f _ = Nothing
+_MyUnit :: (Prism' TestSum MyUnit)
+_MyUnit = prism' MyUnit case _ of
+  (MyUnit a) -> Just a
+  _ -> Nothing
 
-_Pair :: Prism' TestSum (Tuple Int Number)
-_Pair = prism' Pair f
-  where
-    f (Pair a) = Just $ a
-    f _ = Nothing
+_Pair :: (Prism' TestSum (Tuple Int Number))
+_Pair = prism' Pair case _ of
+  (Pair a) -> Just a
+  _ -> Nothing
 
-_Triple :: Prism' TestSum (Tuple3 Int Unit Boolean)
-_Triple = prism' Triple f
-  where
-    f (Triple a) = Just $ a
-    f _ = Nothing
+_Triple :: (Prism' TestSum (Tuple Int (Tuple Unit Boolean)))
+_Triple = prism' Triple case _ of
+  (Triple a) -> Just a
+  _ -> Nothing
 
-_Quad :: Prism' TestSum (Tuple4 Int Number Boolean Number)
-_Quad = prism' Quad f
-  where
-    f (Quad a) = Just $ a
-    f _ = Nothing
+_Quad :: (Prism' TestSum (Tuple Int (Tuple Number (Tuple Boolean Number))))
+_Quad = prism' Quad case _ of
+  (Quad a) -> Just a
+  _ -> Nothing
 
-_QuadSimple :: Prism' TestSum { a :: Int
-                              , b :: Number
-                              , c :: Boolean
-                              , d :: Number }
-_QuadSimple = prism' (\{ a, b, c, d } -> QuadSimple a b c d) f
-  where
-    f (QuadSimple a b c d) = Just $ { a: a, b: b, c: c, d: d }
-    f _ = Nothing
+_QuadSimple :: (Prism' TestSum {a :: Int,  b :: Number,  c :: Boolean,  d :: Number})
+_QuadSimple = prism' (\{a,  b,  c,  d} -> (QuadSimple a b c d)) case _ of
+  (QuadSimple a b c d) -> Just {a,  b,  c,  d}
+  _ -> Nothing
 
-_Enum :: Prism' TestSum TestEnum
-_Enum = prism' Enum f
-  where
-    f (Enum a) = Just $ a
-    f _ = Nothing
+_Enum :: (Prism' TestSum TestEnum)
+_Enum = prism' Enum case _ of
+  (Enum a) -> Just a
+  _ -> Nothing
 
 --------------------------------------------------------------------------------
 newtype TestRecord a
   = TestRecord
-      { _field1 :: Int
+      { _field1 :: (Maybe Int)
       , _field2 :: a
       }
 
@@ -496,21 +268,17 @@ instance showTestRecord :: (Show a) => Show (TestRecord a) where
 derive instance ordTestRecord :: (Ord a) => Ord (TestRecord a)
 
 instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
-  encodeJson =
-    case _ of
-      TestRecord {_field1,  _field2} ->
-        "_field1" := (let a = _field1 in encodeJson a) ~>
-        "_field2" := (let a = _field2 in encodeJson a) ~>
-        jsonEmptyObject
+  encodeJson = E.encode 
+    $ unwrap
+    >$< (E.record
+          {_field1: (E.maybe E.value) :: Encoder (Maybe Int),
+          _field2: E.value :: Encoder a})
 
 
 instance decodeJsonTestRecord :: (DecodeJson a) => DecodeJson (TestRecord a) where
-  decodeJson json =
-    do
-      x <- decodeJson json
-      _field1 <- x .: "_field1" >>= \json -> decodeJson json
-      _field2 <- x .: "_field2" >>= \json -> decodeJson json
-      pure $ TestRecord {_field1,  _field2}
+  decodeJson = D.decode $ TestRecord <$> D.record "TestRecord"
+    {_field1: (D.maybe D.value) :: Decoder (Maybe Int),
+    _field2: D.value :: Decoder a}
 
 derive instance genericTestRecord :: Generic (TestRecord a) _
 
@@ -518,10 +286,10 @@ derive instance newtypeTestRecord :: Newtype (TestRecord a) _
 
 --------------------------------------------------------------------------------
 
-_TestRecord :: forall a. Iso' (TestRecord a) { _field1 :: Int, _field2 :: a }
+_TestRecord :: forall a. (Iso' (TestRecord a) {_field1 :: (Maybe Int),  _field2 :: a})
 _TestRecord = _Newtype
 
-field1 :: forall a. Lens' (TestRecord a) Int
+field1 :: forall a. Lens' (TestRecord a) (Maybe Int)
 field1 = _Newtype <<< prop (Proxy :: _ "_field1")
 
 field2 :: forall a. Lens' (TestRecord a) a
@@ -539,17 +307,13 @@ instance showTestNewtype :: Show TestNewtype where
 derive instance ordTestNewtype :: Ord TestNewtype
 
 instance encodeJsonTestNewtype :: EncodeJson TestNewtype where
-  encodeJson =
-    case _ of
-      TestNewtype v0 ->
-        (let a = v0 in encodeJson a)
+  encodeJson = E.encode 
+    $ unwrap
+    >$< E.value
 
 
 instance decodeJsonTestNewtype :: DecodeJson TestNewtype where
-  decodeJson json =
-    lmap (AtKey "contents") $ TestNewtype <$>
-    ( decodeJson json
-    )
+  decodeJson = D.decode $ TestNewtype <$> D.value
 
 derive instance genericTestNewtype :: Generic TestNewtype _
 
@@ -557,7 +321,7 @@ derive instance newtypeTestNewtype :: Newtype TestNewtype _
 
 --------------------------------------------------------------------------------
 
-_TestNewtype :: Iso' TestNewtype (TestRecord Boolean)
+_TestNewtype :: (Iso' TestNewtype (TestRecord Boolean))
 _TestNewtype = _Newtype
 
 --------------------------------------------------------------------------------
@@ -574,19 +338,15 @@ instance showTestNewtypeRecord :: Show TestNewtypeRecord where
 derive instance ordTestNewtypeRecord :: Ord TestNewtypeRecord
 
 instance encodeJsonTestNewtypeRecord :: EncodeJson TestNewtypeRecord where
-  encodeJson =
-    case _ of
-      TestNewtypeRecord {unTestNewtypeRecord} ->
-        "unTestNewtypeRecord" := (let a = unTestNewtypeRecord in encodeJson a) ~>
-        jsonEmptyObject
+  encodeJson = E.encode 
+    $ unwrap
+    >$< (E.record
+          {unTestNewtypeRecord: E.value :: Encoder TestNewtype})
 
 
 instance decodeJsonTestNewtypeRecord :: DecodeJson TestNewtypeRecord where
-  decodeJson json =
-    do
-      x <- decodeJson json
-      unTestNewtypeRecord <- x .: "unTestNewtypeRecord" >>= \json -> decodeJson json
-      pure $ TestNewtypeRecord {unTestNewtypeRecord}
+  decodeJson = D.decode $ TestNewtypeRecord <$> D.record "TestNewtypeRecord"
+    {unTestNewtypeRecord: D.value :: Decoder TestNewtype}
 
 derive instance genericTestNewtypeRecord :: Generic TestNewtypeRecord _
 
@@ -594,7 +354,7 @@ derive instance newtypeTestNewtypeRecord :: Newtype TestNewtypeRecord _
 
 --------------------------------------------------------------------------------
 
-_TestNewtypeRecord :: Iso' TestNewtypeRecord { unTestNewtypeRecord :: TestNewtype }
+_TestNewtypeRecord :: (Iso' TestNewtypeRecord {unTestNewtypeRecord :: TestNewtype})
 _TestNewtypeRecord = _Newtype
 
 --------------------------------------------------------------------------------
@@ -615,67 +375,58 @@ instance showTestEnum :: Show TestEnum where
 derive instance ordTestEnum :: Ord TestEnum
 
 instance encodeJsonTestEnum :: EncodeJson TestEnum where
-  encodeJson =
-    fromString <<< show
+  encodeJson = E.encode E.enum
 
 
 instance decodeJsonTestEnum :: DecodeJson TestEnum where
-  decodeJson json =
-    decodeJson json >>= case _ of
-      "Mon" -> pure Mon
-      "Tue" -> pure Tue
-      "Wed" -> pure Wed
-      "Thu" -> pure Thu
-      "Fri" -> pure Fri
-      "Sat" -> pure Sat
-      "Sun" -> pure Sun
-      _ -> Left (UnexpectedValue json)
+  decodeJson = D.decode D.enum
 
 derive instance genericTestEnum :: Generic TestEnum _
 
+instance enumTestEnum :: Enum TestEnum where
+  succ = genericSucc
+  pred = genericPred
+
+instance boundedTestEnum :: Bounded TestEnum where
+  bottom = genericBottom
+  top = genericTop
+
 --------------------------------------------------------------------------------
 
-_Mon :: Prism' TestEnum Unit
-_Mon = prism' (\_ -> Mon) f
-  where
-    f Mon = Just unit
-    f _ = Nothing
+_Mon :: (Prism' TestEnum Unit)
+_Mon = prism' (const Mon) case _ of
+  Mon -> Just unit
+  _ -> Nothing
 
-_Tue :: Prism' TestEnum Unit
-_Tue = prism' (\_ -> Tue) f
-  where
-    f Tue = Just unit
-    f _ = Nothing
+_Tue :: (Prism' TestEnum Unit)
+_Tue = prism' (const Tue) case _ of
+  Tue -> Just unit
+  _ -> Nothing
 
-_Wed :: Prism' TestEnum Unit
-_Wed = prism' (\_ -> Wed) f
-  where
-    f Wed = Just unit
-    f _ = Nothing
+_Wed :: (Prism' TestEnum Unit)
+_Wed = prism' (const Wed) case _ of
+  Wed -> Just unit
+  _ -> Nothing
 
-_Thu :: Prism' TestEnum Unit
-_Thu = prism' (\_ -> Thu) f
-  where
-    f Thu = Just unit
-    f _ = Nothing
+_Thu :: (Prism' TestEnum Unit)
+_Thu = prism' (const Thu) case _ of
+  Thu -> Just unit
+  _ -> Nothing
 
-_Fri :: Prism' TestEnum Unit
-_Fri = prism' (\_ -> Fri) f
-  where
-    f Fri = Just unit
-    f _ = Nothing
+_Fri :: (Prism' TestEnum Unit)
+_Fri = prism' (const Fri) case _ of
+  Fri -> Just unit
+  _ -> Nothing
 
-_Sat :: Prism' TestEnum Unit
-_Sat = prism' (\_ -> Sat) f
-  where
-    f Sat = Just unit
-    f _ = Nothing
+_Sat :: (Prism' TestEnum Unit)
+_Sat = prism' (const Sat) case _ of
+  Sat -> Just unit
+  _ -> Nothing
 
-_Sun :: Prism' TestEnum Unit
-_Sun = prism' (\_ -> Sun) f
-  where
-    f Sun = Just unit
-    f _ = Nothing
+_Sun :: (Prism' TestEnum Unit)
+_Sun = prism' (const Sun) case _ of
+  Sun -> Just unit
+  _ -> Nothing
 
 --------------------------------------------------------------------------------
 data MyUnit
@@ -689,23 +440,25 @@ instance showMyUnit :: Show MyUnit where
 derive instance ordMyUnit :: Ord MyUnit
 
 instance encodeJsonMyUnit :: EncodeJson MyUnit where
-  encodeJson =
-    fromString <<< show
+  encodeJson = E.encode E.enum
 
 
 instance decodeJsonMyUnit :: DecodeJson MyUnit where
-  decodeJson json =
-    decodeJson json >>= case _ of
-      "U" -> pure U
-      _ -> Left (UnexpectedValue json)
+  decodeJson = D.decode D.enum
 
 derive instance genericMyUnit :: Generic MyUnit _
 
+instance enumMyUnit :: Enum MyUnit where
+  succ = genericSucc
+  pred = genericPred
+
+instance boundedMyUnit :: Bounded MyUnit where
+  bottom = genericBottom
+  top = genericTop
+
 --------------------------------------------------------------------------------
 
-_U :: Prism' MyUnit Unit
-_U = prism' (\_ -> U) f
-  where
-    f U = Just unit
+_U :: (Iso' MyUnit Unit)
+_U = iso (const unit) (const U)
 
 --------------------------------------------------------------------------------

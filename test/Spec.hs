@@ -101,7 +101,7 @@ allTests = do
               , "  | Bar2 (Either a b)"
               , "  | Bar3 a"
               , "  | Bar4"
-              , "      { myMonadicResult :: m b"
+              , "      { myMonadicResult :: (m b)"
               , "      }"
               , ""
               , "derive instance genericBar :: Generic (Bar a b m c) _"
