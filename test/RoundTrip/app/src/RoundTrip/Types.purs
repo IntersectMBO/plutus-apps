@@ -2,6 +2,7 @@
 module RoundTrip.Types where
 
 import Prelude
+
 import Control.Alt ((<|>))
 import Data.Argonaut.Core (fromArray, fromString, jsonEmptyArray, jsonEmptyObject, jsonNull)
 import Data.Argonaut.Decode ((.!=), (.:), (.:?), JsonDecodeError(..), class DecodeJson, decodeJson)
@@ -36,43 +37,44 @@ data TestData
 derive instance eqTestData :: Eq TestData
 
 instance showTestData :: Show TestData where
-  show x = genericShow x
+  show = genericShow
 
 derive instance ordTestData :: Ord TestData
 
 instance encodeJsonTestData :: EncodeJson TestData where
-  encodeJson = E.encode 
+  encodeJson = E.encode
     $ E.sumType
     $ toEither
-        >$< E.tagged "Maybe" (E.maybe E.value)
-        >|< E.tagged "Either" (E.either (E.maybe E.value) (E.maybe E.value))
+      >$< E.tagged "Maybe" (E.maybe E.value)
+      >|< E.tagged "Either" (E.either (E.maybe E.value) (E.maybe E.value))
     where
     toEither = case _ of
       (Maybe a) -> Left $ (a)
       (Either a) -> Right $ (a)
 
-
 instance decodeJsonTestData :: DecodeJson TestData where
-  decodeJson = D.decode 
+  decodeJson = D.decode
     $ D.sumType "TestData"
-    $ D.tagged "Maybe" (Maybe <$> (D.maybe D.value))
-        <|> D.tagged "Either" (Either <$> (D.either (D.maybe D.value) (D.maybe D.value)))
+    $
+      D.tagged "Maybe" (Maybe <$> (D.maybe D.value))
+      <|> D.tagged "Either" (Either <$> (D.either (D.maybe D.value) (D.maybe D.value)))
 
 derive instance genericTestData :: Generic TestData _
 
 --------------------------------------------------------------------------------
 
-_Maybe :: (Prism' TestData (Maybe TestSum))
+_Maybe :: Prism' TestData (Maybe TestSum)
 _Maybe = prism' Maybe case _ of
   (Maybe a) -> Just a
   _ -> Nothing
 
-_Either :: (Prism' TestData (Either (Maybe Int) (Maybe Boolean)))
+_Either :: Prism' TestData (Either (Maybe Int) (Maybe Boolean))
 _Either = prism' Either case _ of
   (Either a) -> Just a
   _ -> Nothing
 
 --------------------------------------------------------------------------------
+
 data TestSum
   = Nullary
   | Bool Boolean
@@ -95,31 +97,31 @@ data TestSum
 derive instance eqTestSum :: Eq TestSum
 
 instance showTestSum :: Show TestSum where
-  show x = genericShow x
+  show = genericShow
 
 derive instance ordTestSum :: Ord TestSum
 
 instance encodeJsonTestSum :: EncodeJson TestSum where
-  encodeJson = E.encode 
+  encodeJson = E.encode
     $ E.sumType
     $ toEither
-        >$< E.tagged "Nullary" E.null
-        >|< E.tagged "Bool" E.value
-        >|< E.tagged "Int" E.value
-        >|< E.tagged "Number" E.value
-        >|< E.tagged "String" E.value
-        >|< E.tagged "Array" E.value
-        >|< E.tagged "Record" E.value
-        >|< E.tagged "NestedRecord" E.value
-        >|< E.tagged "NT" E.value
-        >|< E.tagged "NTRecord" E.value
-        >|< E.tagged "Unit" E.unit
-        >|< E.tagged "MyUnit" E.value
-        >|< E.tagged "Pair" (E.tuple (E.value >/\< E.value))
-        >|< E.tagged "Triple" (E.tuple (E.value >/\< E.unit >/\< E.value))
-        >|< E.tagged "Quad" (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
-        >|< E.tagged "QuadSimple" (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
-        >|< E.tagged "Enum" E.value
+      >$< E.tagged "Nullary" E.null
+      >|< E.tagged "Bool" E.value
+      >|< E.tagged "Int" E.value
+      >|< E.tagged "Number" E.value
+      >|< E.tagged "String" E.value
+      >|< E.tagged "Array" E.value
+      >|< E.tagged "Record" E.value
+      >|< E.tagged "NestedRecord" E.value
+      >|< E.tagged "NT" E.value
+      >|< E.tagged "NTRecord" E.value
+      >|< E.tagged "Unit" E.unit
+      >|< E.tagged "MyUnit" E.value
+      >|< E.tagged "Pair" (E.tuple (E.value >/\< E.value))
+      >|< E.tagged "Triple" (E.tuple (E.value >/\< E.unit >/\< E.value))
+      >|< E.tagged "Quad" (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
+      >|< E.tagged "QuadSimple" (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
+      >|< E.tagged "Enum" E.value
     where
     toEither = case _ of
       Nullary -> Left $ unit
@@ -140,145 +142,146 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
       (QuadSimple a b c d) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a /\ b /\ c /\ d)
       (Enum a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ (a)
 
-
 instance decodeJsonTestSum :: DecodeJson TestSum where
-  decodeJson = D.decode 
+  decodeJson = D.decode
     $ D.sumType "TestSum"
-    $ D.tagged "Nullary" (Nullary <$ D.null)
-        <|> D.tagged "Bool" (Bool <$> D.value)
-        <|> D.tagged "Int" (Int <$> D.value)
-        <|> D.tagged "Number" (Number <$> D.value)
-        <|> D.tagged "String" (String <$> D.value)
-        <|> D.tagged "Array" (Array <$> D.value)
-        <|> D.tagged "Record" (Record <$> D.value)
-        <|> D.tagged "NestedRecord" (NestedRecord <$> D.value)
-        <|> D.tagged "NT" (NT <$> D.value)
-        <|> D.tagged "NTRecord" (NTRecord <$> D.value)
-        <|> D.tagged "Unit" (Unit <$> D.unit)
-        <|> D.tagged "MyUnit" (MyUnit <$> D.value)
-        <|> D.tagged "Pair" (Pair <$> (D.tuple (D.value </\> D.value)))
-        <|> D.tagged "Triple" (Triple <$> (D.tuple (D.value </\> D.unit </\> D.value)))
-        <|> D.tagged "Quad" (Quad <$> (D.tuple (D.value </\> D.value </\> D.value </\> D.value)))
-        <|> D.tagged "QuadSimple" (D.tuple $ QuadSimple </$\> D.value </*\> D.value </*\> D.value </*\> D.value)
-        <|> D.tagged "Enum" (Enum <$> D.value)
+    $
+      D.tagged "Nullary" (Nullary <$ D.null)
+      <|> D.tagged "Bool" (Bool <$> D.value)
+      <|> D.tagged "Int" (Int <$> D.value)
+      <|> D.tagged "Number" (Number <$> D.value)
+      <|> D.tagged "String" (String <$> D.value)
+      <|> D.tagged "Array" (Array <$> D.value)
+      <|> D.tagged "Record" (Record <$> D.value)
+      <|> D.tagged "NestedRecord" (NestedRecord <$> D.value)
+      <|> D.tagged "NT" (NT <$> D.value)
+      <|> D.tagged "NTRecord" (NTRecord <$> D.value)
+      <|> D.tagged "Unit" (Unit <$> D.unit)
+      <|> D.tagged "MyUnit" (MyUnit <$> D.value)
+      <|> D.tagged "Pair" (Pair <$> (D.tuple (D.value </\> D.value)))
+      <|> D.tagged "Triple" (Triple <$> (D.tuple (D.value </\> D.unit </\> D.value)))
+      <|> D.tagged "Quad" (Quad <$> (D.tuple (D.value </\> D.value </\> D.value </\> D.value)))
+      <|> D.tagged "QuadSimple" (D.tuple $ QuadSimple </$\>D.value </*\> D.value </*\> D.value </*\> D.value)
+      <|> D.tagged "Enum" (Enum <$> D.value)
 
 derive instance genericTestSum :: Generic TestSum _
 
 --------------------------------------------------------------------------------
 
-_Nullary :: (Prism' TestSum Unit)
+_Nullary :: Prism' TestSum Unit
 _Nullary = prism' (const Nullary) case _ of
   Nullary -> Just unit
   _ -> Nothing
 
-_Bool :: (Prism' TestSum Boolean)
+_Bool :: Prism' TestSum Boolean
 _Bool = prism' Bool case _ of
   (Bool a) -> Just a
   _ -> Nothing
 
-_Int :: (Prism' TestSum Int)
+_Int :: Prism' TestSum Int
 _Int = prism' Int case _ of
   (Int a) -> Just a
   _ -> Nothing
 
-_Number :: (Prism' TestSum Number)
+_Number :: Prism' TestSum Number
 _Number = prism' Number case _ of
   (Number a) -> Just a
   _ -> Nothing
 
-_String :: (Prism' TestSum String)
+_String :: Prism' TestSum String
 _String = prism' String case _ of
   (String a) -> Just a
   _ -> Nothing
 
-_Array :: (Prism' TestSum (Array Int))
+_Array :: Prism' TestSum (Array Int)
 _Array = prism' Array case _ of
   (Array a) -> Just a
   _ -> Nothing
 
-_Record :: (Prism' TestSum (TestRecord Int))
+_Record :: Prism' TestSum (TestRecord Int)
 _Record = prism' Record case _ of
   (Record a) -> Just a
   _ -> Nothing
 
-_NestedRecord :: (Prism' TestSum (TestRecord (TestRecord Int)))
+_NestedRecord :: Prism' TestSum (TestRecord (TestRecord Int))
 _NestedRecord = prism' NestedRecord case _ of
   (NestedRecord a) -> Just a
   _ -> Nothing
 
-_NT :: (Prism' TestSum TestNewtype)
+_NT :: Prism' TestSum TestNewtype
 _NT = prism' NT case _ of
   (NT a) -> Just a
   _ -> Nothing
 
-_NTRecord :: (Prism' TestSum TestNewtypeRecord)
+_NTRecord :: Prism' TestSum TestNewtypeRecord
 _NTRecord = prism' NTRecord case _ of
   (NTRecord a) -> Just a
   _ -> Nothing
 
-_Unit :: (Prism' TestSum Unit)
+_Unit :: Prism' TestSum Unit
 _Unit = prism' Unit case _ of
   (Unit a) -> Just a
   _ -> Nothing
 
-_MyUnit :: (Prism' TestSum MyUnit)
+_MyUnit :: Prism' TestSum MyUnit
 _MyUnit = prism' MyUnit case _ of
   (MyUnit a) -> Just a
   _ -> Nothing
 
-_Pair :: (Prism' TestSum (Tuple Int Number))
+_Pair :: Prism' TestSum (Tuple Int Number)
 _Pair = prism' Pair case _ of
   (Pair a) -> Just a
   _ -> Nothing
 
-_Triple :: (Prism' TestSum (Tuple Int (Tuple Unit Boolean)))
+_Triple :: Prism' TestSum (Tuple Int (Tuple Unit Boolean))
 _Triple = prism' Triple case _ of
   (Triple a) -> Just a
   _ -> Nothing
 
-_Quad :: (Prism' TestSum (Tuple Int (Tuple Number (Tuple Boolean Number))))
+_Quad :: Prism' TestSum (Tuple Int (Tuple Number (Tuple Boolean Number)))
 _Quad = prism' Quad case _ of
   (Quad a) -> Just a
   _ -> Nothing
 
-_QuadSimple :: (Prism' TestSum {a :: Int,  b :: Number,  c :: Boolean,  d :: Number})
-_QuadSimple = prism' (\{a,  b,  c,  d} -> (QuadSimple a b c d)) case _ of
-  (QuadSimple a b c d) -> Just {a,  b,  c,  d}
+_QuadSimple :: Prism' TestSum {a :: Int, b :: Number, c :: Boolean, d :: Number}
+_QuadSimple = prism' (\{a, b, c, d} -> (QuadSimple a b c d)) case _ of
+  (QuadSimple a b c d) -> Just {a, b, c, d}
   _ -> Nothing
 
-_Enum :: (Prism' TestSum TestEnum)
+_Enum :: Prism' TestSum TestEnum
 _Enum = prism' Enum case _ of
   (Enum a) -> Just a
   _ -> Nothing
 
 --------------------------------------------------------------------------------
-newtype TestRecord a
-  = TestRecord
-      { _field1 :: (Maybe Int)
-      , _field2 :: a
-      }
+
+newtype TestRecord a = TestRecord
+  { _field1 :: Maybe Int
+  , _field2 :: a
+  }
 
 derive instance functorTestRecord :: Functor TestRecord
 
 derive instance eqTestRecord :: (Eq a) => Eq (TestRecord a)
 
 instance showTestRecord :: (Show a) => Show (TestRecord a) where
-  show x = genericShow x
+  show = genericShow
 
 derive instance ordTestRecord :: (Ord a) => Ord (TestRecord a)
 
 instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
-  encodeJson = E.encode 
+  encodeJson = E.encode
     $ unwrap
-    >$< (E.record
-          {_field1: (E.maybe E.value) :: Encoder (Maybe Int),
-          _field2: E.value :: Encoder a})
-
+    >$< E.record
+        { _field1: (E.maybe E.value) :: Encoder (Maybe Int)
+        , _field2: E.value :: Encoder a
+        }
 
 instance decodeJsonTestRecord :: (DecodeJson a) => DecodeJson (TestRecord a) where
   decodeJson = D.decode $ TestRecord <$> D.record "TestRecord"
-    {_field1: (D.maybe D.value) :: Decoder (Maybe Int),
-    _field2: D.value :: Decoder a}
+      { _field1: (D.maybe D.value) :: Decoder (Maybe Int)
+      , _field2: D.value :: Decoder a
+      }
 
 derive instance genericTestRecord :: Generic (TestRecord a) _
 
@@ -286,31 +289,30 @@ derive instance newtypeTestRecord :: Newtype (TestRecord a) _
 
 --------------------------------------------------------------------------------
 
-_TestRecord :: forall a. (Iso' (TestRecord a) {_field1 :: (Maybe Int),  _field2 :: a})
+_TestRecord :: forall a. Iso' (TestRecord a) {_field1 :: Maybe Int, _field2 :: a}
 _TestRecord = _Newtype
 
 field1 :: forall a. Lens' (TestRecord a) (Maybe Int)
-field1 = _Newtype <<< prop (Proxy :: _ "_field1")
+field1 = _Newtype <<< prop (Proxy :: _"_field1")
 
-field2 :: forall a. Lens' (TestRecord a) a
-field2 = _Newtype <<< prop (Proxy :: _ "_field2")
+field2 :: forall a a. Lens' (TestRecord a) a
+field2 = _Newtype <<< prop (Proxy :: _"_field2")
 
 --------------------------------------------------------------------------------
-newtype TestNewtype
-  = TestNewtype (TestRecord Boolean)
+
+newtype TestNewtype = TestNewtype (TestRecord Boolean)
 
 derive instance eqTestNewtype :: Eq TestNewtype
 
 instance showTestNewtype :: Show TestNewtype where
-  show x = genericShow x
+  show = genericShow
 
 derive instance ordTestNewtype :: Ord TestNewtype
 
 instance encodeJsonTestNewtype :: EncodeJson TestNewtype where
-  encodeJson = E.encode 
+  encodeJson = E.encode
     $ unwrap
     >$< E.value
-
 
 instance decodeJsonTestNewtype :: DecodeJson TestNewtype where
   decodeJson = D.decode $ TestNewtype <$> D.value
@@ -321,32 +323,27 @@ derive instance newtypeTestNewtype :: Newtype TestNewtype _
 
 --------------------------------------------------------------------------------
 
-_TestNewtype :: (Iso' TestNewtype (TestRecord Boolean))
+_TestNewtype :: Iso' TestNewtype (TestRecord Boolean)
 _TestNewtype = _Newtype
 
 --------------------------------------------------------------------------------
-newtype TestNewtypeRecord
-  = TestNewtypeRecord
-      { unTestNewtypeRecord :: TestNewtype
-      }
+
+newtype TestNewtypeRecord = TestNewtypeRecord { unTestNewtypeRecord :: TestNewtype }
 
 derive instance eqTestNewtypeRecord :: Eq TestNewtypeRecord
 
 instance showTestNewtypeRecord :: Show TestNewtypeRecord where
-  show x = genericShow x
+  show = genericShow
 
 derive instance ordTestNewtypeRecord :: Ord TestNewtypeRecord
 
 instance encodeJsonTestNewtypeRecord :: EncodeJson TestNewtypeRecord where
-  encodeJson = E.encode 
+  encodeJson = E.encode
     $ unwrap
-    >$< (E.record
-          {unTestNewtypeRecord: E.value :: Encoder TestNewtype})
-
+    >$< E.record { unTestNewtypeRecord: E.value :: Encoder TestNewtype }
 
 instance decodeJsonTestNewtypeRecord :: DecodeJson TestNewtypeRecord where
-  decodeJson = D.decode $ TestNewtypeRecord <$> D.record "TestNewtypeRecord"
-    {unTestNewtypeRecord: D.value :: Decoder TestNewtype}
+  decodeJson = D.decode $ TestNewtypeRecord <$> D.record "TestNewtypeRecord" { unTestNewtypeRecord: D.value :: Decoder TestNewtype }
 
 derive instance genericTestNewtypeRecord :: Generic TestNewtypeRecord _
 
@@ -354,10 +351,11 @@ derive instance newtypeTestNewtypeRecord :: Newtype TestNewtypeRecord _
 
 --------------------------------------------------------------------------------
 
-_TestNewtypeRecord :: (Iso' TestNewtypeRecord {unTestNewtypeRecord :: TestNewtype})
+_TestNewtypeRecord :: Iso' TestNewtypeRecord {unTestNewtypeRecord :: TestNewtype}
 _TestNewtypeRecord = _Newtype
 
 --------------------------------------------------------------------------------
+
 data TestEnum
   = Mon
   | Tue
@@ -370,13 +368,12 @@ data TestEnum
 derive instance eqTestEnum :: Eq TestEnum
 
 instance showTestEnum :: Show TestEnum where
-  show x = genericShow x
+  show = genericShow
 
 derive instance ordTestEnum :: Ord TestEnum
 
 instance encodeJsonTestEnum :: EncodeJson TestEnum where
   encodeJson = E.encode E.enum
-
 
 instance decodeJsonTestEnum :: DecodeJson TestEnum where
   decodeJson = D.decode D.enum
@@ -393,55 +390,54 @@ instance boundedTestEnum :: Bounded TestEnum where
 
 --------------------------------------------------------------------------------
 
-_Mon :: (Prism' TestEnum Unit)
+_Mon :: Prism' TestEnum Unit
 _Mon = prism' (const Mon) case _ of
   Mon -> Just unit
   _ -> Nothing
 
-_Tue :: (Prism' TestEnum Unit)
+_Tue :: Prism' TestEnum Unit
 _Tue = prism' (const Tue) case _ of
   Tue -> Just unit
   _ -> Nothing
 
-_Wed :: (Prism' TestEnum Unit)
+_Wed :: Prism' TestEnum Unit
 _Wed = prism' (const Wed) case _ of
   Wed -> Just unit
   _ -> Nothing
 
-_Thu :: (Prism' TestEnum Unit)
+_Thu :: Prism' TestEnum Unit
 _Thu = prism' (const Thu) case _ of
   Thu -> Just unit
   _ -> Nothing
 
-_Fri :: (Prism' TestEnum Unit)
+_Fri :: Prism' TestEnum Unit
 _Fri = prism' (const Fri) case _ of
   Fri -> Just unit
   _ -> Nothing
 
-_Sat :: (Prism' TestEnum Unit)
+_Sat :: Prism' TestEnum Unit
 _Sat = prism' (const Sat) case _ of
   Sat -> Just unit
   _ -> Nothing
 
-_Sun :: (Prism' TestEnum Unit)
+_Sun :: Prism' TestEnum Unit
 _Sun = prism' (const Sun) case _ of
   Sun -> Just unit
   _ -> Nothing
 
 --------------------------------------------------------------------------------
-data MyUnit
-  = U
+
+data MyUnit = U
 
 derive instance eqMyUnit :: Eq MyUnit
 
 instance showMyUnit :: Show MyUnit where
-  show x = genericShow x
+  show = genericShow
 
 derive instance ordMyUnit :: Ord MyUnit
 
 instance encodeJsonMyUnit :: EncodeJson MyUnit where
   encodeJson = E.encode E.enum
-
 
 instance decodeJsonMyUnit :: DecodeJson MyUnit where
   decodeJson = D.decode D.enum
@@ -458,7 +454,5 @@ instance boundedMyUnit :: Bounded MyUnit where
 
 --------------------------------------------------------------------------------
 
-_U :: (Iso' MyUnit Unit)
+_U :: Iso' MyUnit Unit
 _U = iso (const unit) (const U)
-
---------------------------------------------------------------------------------

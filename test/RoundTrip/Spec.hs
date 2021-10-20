@@ -53,7 +53,7 @@ roundtripSpec = do
         (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
         assertBool stderr $ not $ "[warn]" `isInfixOf` stderr
       it "should produce aeson-compatible argonaut instances" $ 
-        property $
+        once $ property $
           \testData -> bracket runApp killApp $
             \(hin, hout, hproc) -> do
               hPutStrLn hin $ toString $ encode @TestData testData
