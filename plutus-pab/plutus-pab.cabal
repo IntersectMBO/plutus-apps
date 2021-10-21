@@ -171,6 +171,7 @@ library
         servant-websockets -any,
         stm -any,
         text -any,
+        text-class -any,
         transformers -any,
         unordered-containers -any,
         uuid -any,

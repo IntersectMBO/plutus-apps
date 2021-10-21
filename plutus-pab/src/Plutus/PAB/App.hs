@@ -14,6 +14,7 @@
 {-# LANGUAGE StrictData            #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
@@ -29,6 +30,7 @@ module Plutus.PAB.App(
     ) where
 
 import           Cardano.Api.NetworkId.Extra                    (NetworkIdWrapper (..))
+import           Cardano.Api.Shelley                            (ProtocolParameters)
 import           Cardano.BM.Trace                               (Trace, logDebug)
 import qualified Cardano.ChainIndex.Types                       as ChainIndex
 import           Cardano.Node.Client                            (handleNodeClientClient)
@@ -45,7 +47,8 @@ import           Control.Monad.Freer.Extras.Beam                (handleBeam)
 import           Control.Monad.Freer.Extras.Log                 (mapLog)
 import           Control.Monad.Freer.Reader                     (Reader)
 import           Control.Monad.IO.Class                         (MonadIO (..))
-import           Data.Aeson                                     (FromJSON, ToJSON)
+import           Data.Aeson                                     (FromJSON, ToJSON, eitherDecode)
+import qualified Data.ByteString.Lazy                           as BSL
 import           Data.Coerce                                    (coerce)
 import           Data.Text                                      (Text, pack, unpack)
 import           Data.Typeable                                  (Typeable)
@@ -95,6 +98,7 @@ data AppEnv a =
         , appConfig             :: Config
         , appTrace              :: Trace IO (PABLogMsg (Builtin a))
         , appInMemContractStore :: InMemInstances (Builtin a)
+        , protocolParameters    :: ProtocolParameters
         }
 
 appEffectHandlers
@@ -173,7 +177,9 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . flip handleError (throwError . WalletError)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv walletClientEnv)
-            . reinterpretN @'[_, _, _] (handleWalletEffect (mscNodeMode $ nodeServerConfig config) wallet)
+            . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
+            . reinterpret (Core.handleMappedReader @(AppEnv a) @ProtocolParameters protocolParameters)
+            . reinterpretN @'[_, _, _, _] (handleWalletEffect (nodeServerConfig config) wallet)
 
         , onStartup = pure ()
 
@@ -186,13 +192,14 @@ handleWalletEffect
   , Member (Error ClientError) effs
   , Member (Error WalletAPIError) effs
   , Member (Reader ClientEnv) effs
+  , Member (Reader ProtocolParameters) effs
   )
-  => NodeMode
+  => MockServerConfig
   -> Wallet
   -> WalletEffect
   ~> Eff effs
-handleWalletEffect MockNode   = WalletMockClient.handleWalletClient @IO
-handleWalletEffect AlonzoNode = WalletClient.handleWalletClient
+handleWalletEffect (mscNodeMode -> MockNode) = WalletMockClient.handleWalletClient @IO
+handleWalletEffect config                    = WalletClient.handleWalletClient config
 
 runApp ::
     forall a b.
@@ -216,7 +223,7 @@ data StorageBackend = BeamSqliteBackend | InMemoryBackend
 
 mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
 mkEnv appTrace appConfig@Config { dbConfig
-             , nodeServerConfig =  MockServerConfig{mscBaseUrl, mscSocketPath, mscSlotConfig}
+             , nodeServerConfig =  MockServerConfig{mscBaseUrl, mscSocketPath, mscSlotConfig, mscProtocolParametersJsonPath}
              , walletServerConfig
              , chainIndexConfig
              } = do
@@ -228,6 +235,7 @@ mkEnv appTrace appConfig@Config { dbConfig
     -- This is for access to the slot number in the interpreter
     chainSyncHandle <- Left <$> (liftIO $ MockClient.runChainSync' mscSocketPath mscSlotConfig)
     appInMemContractStore <- liftIO initialInMemInstances
+    protocolParameters <- readPP mscProtocolParametersJsonPath
     pure AppEnv {..}
   where
     clientEnv baseUrl = mkClientEnv <$> liftIO mkManager <*> pure (coerce baseUrl)
@@ -235,6 +243,13 @@ mkEnv appTrace appConfig@Config { dbConfig
     mkManager =
         newManager $
         tlsManagerSettings {managerModifyRequest = pure . setRequestIgnoreStatus}
+
+    readPP path = do
+      bs <- BSL.readFile path
+      case eitherDecode bs of
+        Left err -> error $ "Error reading protocol parameters JSON file: " ++ show mscProtocolParametersJsonPath ++ " (" ++ err ++ ")"
+        Right params -> pure params
+
 
 logDebugString :: Trace IO (PABLogMsg t) -> Text -> IO ()
 logDebugString trace = logDebug trace . SMultiAgent . UserLog

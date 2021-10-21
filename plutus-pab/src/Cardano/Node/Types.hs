@@ -54,6 +54,7 @@ import           Control.Monad.IO.Class              (MonadIO (..))
 import           Data.Aeson                          (FromJSON, ToJSON)
 import           Data.Default                        (Default, def)
 import qualified Data.Map                            as Map
+import           Data.Text                           (Text)
 import           Data.Text.Prettyprint.Doc           (Pretty (..), pretty, viaShow, (<+>))
 import           Data.Time.Clock                     (UTCTime)
 import qualified Data.Time.Format.ISO8601            as F
@@ -107,22 +108,26 @@ data NodeMode =
 -- | Mock Node server configuration
 data MockServerConfig =
     MockServerConfig
-        { mscBaseUrl          :: BaseUrl
+        { mscBaseUrl                    :: BaseUrl
         -- ^ base url of the service
-        , mscInitialTxWallets :: [WalletNumber]
+        , mscInitialTxWallets           :: [WalletNumber]
         -- ^ The wallets that receive money from the initial transaction.
-        , mscSocketPath       :: FilePath
+        , mscSocketPath                 :: FilePath
         -- ^ Path to the socket used to communicate with the server.
-        , mscKeptBlocks       :: Integer
+        , mscKeptBlocks                 :: Integer
         -- ^ The number of blocks to keep for replaying to a newly connected clients
-        , mscSlotConfig       :: SlotConfig
+        , mscSlotConfig                 :: SlotConfig
         -- ^ Beginning of slot 0.
-        , mscFeeConfig        :: FeeConfig
+        , mscFeeConfig                  :: FeeConfig
         -- ^ Configure constant fee per transaction and ratio by which to
         -- multiply size-dependent scripts fee.
-        , mscNetworkId        :: NetworkIdWrapper
+        , mscNetworkId                  :: NetworkIdWrapper
         -- ^ NetworkId that's used with the CardanoAPI.
-        , mscNodeMode         :: NodeMode
+        , mscProtocolParametersJsonPath :: FilePath
+        -- ^ Path to the JSON file containing the protocol parameters
+        , mscPassphrase                 :: Maybe Text
+        -- ^ Wallet passphrase
+        , mscNodeMode                   :: NodeMode
         -- ^ Whether to connect to an Alonzo node or a mock node
         }
     deriving stock (Show, Eq, Generic)
@@ -144,6 +149,8 @@ defaultMockServerConfig =
       , mscSlotConfig = def
       , mscFeeConfig  = def
       , mscNetworkId = testnetNetworkId
+      , mscProtocolParametersJsonPath = "./plutus-use-cases/scripts/protocol-parameters.json"
+      , mscPassphrase = Nothing
       , mscNodeMode  = MockNode
       }
 

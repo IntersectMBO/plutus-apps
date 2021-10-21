@@ -19,6 +19,8 @@ import qualified Cardano.BM.Configuration.Model      as CM
 import           Cardano.BM.Data.Trace               (Trace)
 import           Cardano.BM.Plugin                   (loadPlugin)
 import           Cardano.BM.Setup                    (setupTrace_)
+import           Cardano.Node.Types                  (mscPassphrase)
+import           Control.Applicative                 (Alternative ((<|>)))
 import           Control.Concurrent.Availability     (newToken)
 import           Control.Monad                       (when)
 import           Control.Monad.IO.Class              (liftIO)
@@ -74,7 +76,7 @@ runWithOpts :: forall a.
     -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
     -> AppOpts
     -> IO ()
-runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, runEkgServer, cmd, configPath, storageBackend } = do
+runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
 
     -- Parse config files and initialize logging
     logConfig <- maybe defaultConfig loadConfig logConfigPath
@@ -94,10 +96,10 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, runEkgS
             Nothing -> pure $ Left MissingConfigFileOption
             Just p  -> do Right <$> (liftIO $ decodeFileThrow p)
 
-    let mkArgs config = ConfigCommandArgs
+    let mkArgs config@Config{nodeServerConfig} = ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
-                , ccaPABConfig = config
+                , ccaPABConfig = config { nodeServerConfig = nodeServerConfig { mscPassphrase = passphrase <|> mscPassphrase nodeServerConfig }}
                 , ccaAvailability = serviceAvailability
                 , ccaStorageBackend = storageBackend
                 }

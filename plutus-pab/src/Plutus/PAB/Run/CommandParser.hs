@@ -11,6 +11,7 @@
 module Plutus.PAB.Run.CommandParser (parseOptions, AppOpts(..)) where
 
 import           Cardano.BM.Data.Severity (Severity (..))
+import           Data.Text                (Text)
 import           Options.Applicative      (CommandFields, Mod, Parser, argument, auto, command, customExecParser,
                                            disambiguate, flag, fullDesc, help, helper, idm, info, long, metavar, option,
                                            prefs, progDesc, short, showHelpOnEmpty, showHelpOnError, str, subparser,
@@ -23,6 +24,7 @@ import           Plutus.PAB.Run.Command
 data AppOpts = AppOpts { minLogLevel    :: Maybe Severity
                        , logConfigPath  :: Maybe FilePath
                        , configPath     :: Maybe FilePath
+                       , passphrase     :: Maybe Text
                        , runEkgServer   :: Bool
                        , storageBackend :: StorageBackend
                        , cmd            :: ConfigCommand
@@ -59,6 +61,7 @@ commandLineParser =
         AppOpts <$> logLevelFlag
                 <*> logConfigFileParser
                 <*> configFileParser
+                <*> passphraseParser
                 <*> ekgFlag
                 <*> inMemoryFlag
                 <*> commandParser
@@ -78,6 +81,14 @@ logConfigFileParser =
         (long "log-config" <>
          metavar "LOG_CONFIG_FILE" <>
          help "Logging config file location." <> value Nothing)
+
+passphraseParser :: Parser (Maybe Text)
+passphraseParser =
+    option
+        (Just <$> str)
+        (long "passphrase" <>
+         metavar "WALLET_PASSPHRASE" <>
+         help "Wallet passphrase." <> value Nothing)
 
 commandParser :: Parser ConfigCommand
 commandParser =
