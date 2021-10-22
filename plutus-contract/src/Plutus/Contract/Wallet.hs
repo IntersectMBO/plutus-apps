@@ -117,7 +117,6 @@ instance ToJSON ExportTxRedeemerPurpose where
 data ExportTxRedeemer =
     SpendingRedeemer{ redeemer:: Plutus.Redeemer, redeemerOutRef :: TxOutRef }
     | MintingRedeemer { redeemer:: Plutus.Redeemer, redeemerPolicyId :: MintingPolicyHash }
-    -- | RewardingRedeemer{} -- TODO: Rewarding redeemers not supported yet
     deriving stock (Generic, Typeable)
 
 instance ToJSON ExportTxRedeemer where
