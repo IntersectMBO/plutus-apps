@@ -80,6 +80,7 @@ library
         lens -any,
         memory -any,
         nothunks -any,
+        openapi3 -any,
         ouroboros-network -any,
         ouroboros-network-framework -any,
         ouroboros-consensus -any,

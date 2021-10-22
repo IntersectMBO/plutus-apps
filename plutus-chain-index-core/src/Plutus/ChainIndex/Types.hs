@@ -1,5 +1,7 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -20,6 +22,7 @@ module Plutus.ChainIndex.Types(
     , TxOutState(..)
     , liftTxOutStatus
     , txOutStatusTxOutState
+    , blockNumber
     , BlockNumber(..)
     , Depth(..)
     , Diagnostics(..)
@@ -44,9 +47,10 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
 import Data.ByteString.Lazy qualified as BSL
 import Data.Default (Default (..))
-import Data.Map (Map)
-import Data.Map qualified as Map
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Monoid (Last (..), Sum (..))
+import Data.OpenApi.Schema (ToSchema)
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -104,6 +108,10 @@ instance Pretty Point where
         <+> pretty pointBlockId
         <>  ")"
 
+blockNumber :: Tip -> Integer
+blockNumber TipAtGenesis = 0
+blockNumber (Tip _ _ bn) = toInteger bn
+
 tipAsPoint :: Tip -> Point
 tipAsPoint TipAtGenesis = PointAtGenesis
 tipAsPoint (Tip tSlot tBlockId _) =
@@ -145,7 +153,7 @@ instance Pretty Tip where
 -- | Validity of a transaction that has been added to the ledger
 data TxValidity = TxValid | TxInvalid | UnknownValidity
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
   deriving Pretty via (PrettyShow TxValidity)
 
 instance MeetSemiLattice TxValidity where
@@ -239,7 +247,7 @@ liftTxOutStatus = void
 
 newtype BlockNumber = BlockNumber { unBlockNumber :: Word64 }
     deriving stock (Eq, Ord, Show, Generic)
-    deriving newtype (Num, Real, Enum, Integral, Pretty, ToJSON, FromJSON)
+    deriving newtype (Num, Real, Enum, Integral, Pretty, ToJSON, FromJSON, ToSchema)
 
 data Diagnostics =
     Diagnostics
@@ -267,10 +275,10 @@ data TxStatusFailure
       deriving (Show, Eq)
 
 data TxIdState = TxIdState
-  { txnsConfirmed :: Map TxId TxConfirmedState
+  { txnsConfirmed :: !(Map TxId TxConfirmedState)
   -- ^ Number of times this transaction has been added as well as other
   -- necessary metadata.
-  , txnsDeleted   :: Map TxId (Sum Int)
+  , txnsDeleted   :: !(Map TxId (Sum Int))
   -- ^ Number of times this transaction has been deleted.
   }
   deriving stock (Eq, Generic, Show)
@@ -280,21 +288,36 @@ data TxIdState = TxIdState
 instance Semigroup TxIdState where
   TxIdState{txnsConfirmed=c, txnsDeleted=d} <> TxIdState{txnsConfirmed=c', txnsDeleted=d'}
     = TxIdState { txnsConfirmed = Map.unionWith (<>) c c'
-                , txnsDeleted   = Map.unionWith (<>) d d'
+                , txnsDeleted   = Map.empty -- Map.unionWith (<>) d d'
                 }
 
 instance Monoid TxIdState where
     mappend = (<>)
     mempty  = TxIdState { txnsConfirmed=mempty, txnsDeleted=mempty }
 
+deriving newtype instance ToJSON (Sum Int)
+deriving newtype instance FromJSON (Sum Int)
+
 data TxConfirmedState =
   TxConfirmedState
-    { timesConfirmed :: Sum Int
-    , blockAdded     :: Last BlockNumber
-    , validity       :: Last TxValidity
+    { timesConfirmed :: !(Sum Int)
+    , blockAdded     :: !(Last BlockNumber)
+    , validity       :: !(Last TxValidity)
     }
     deriving stock (Eq, Generic, Show)
-    deriving (Semigroup, Monoid) via (GenericSemigroupMonoid TxConfirmedState)
+    deriving anyclass (FromJSON, ToJSON, ToSchema)
+    -- deriving (Semigroup, Monoid) via (GenericSemigroupMonoid TxConfirmedState)
+
+instance Semigroup TxConfirmedState where
+  (TxConfirmedState tc ba vl) <> (TxConfirmedState tc' ba' vl') =
+      let !tc'' = tc <> tc'
+          !ba'' = ba <> ba'
+          !vl'' = vl <> vl'
+          !tt   = TxConfirmedState mempty mempty mempty
+      in  tt
+
+instance Monoid TxConfirmedState where
+    mempty = TxConfirmedState mempty mempty mempty
 
 -- | The effect of a transaction (or a number of them) on the tx output set.
 data TxOutBalance =

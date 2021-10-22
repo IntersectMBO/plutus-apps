@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DerivingVia           #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -46,8 +47,10 @@ import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
 import Plutus.ChainIndex.ChainIndexError (InsertUtxoFailed (..), RollbackFailed (..))
 import Plutus.ChainIndex.ChainIndexLog (InsertUtxoPosition (..))
-import Plutus.ChainIndex.Types (Depth (..), Point (..), Tip (..), pointsToTip)
+import Plutus.ChainIndex.Types (Depth (..), Point (..), Tip (..), blockNumber, pointsToTip)
 import Prettyprinter (Pretty (..))
+
+import Debug.Trace qualified as Debug
 
 -- | UTXO / ledger state, kept in memory. We are only interested in the UTXO set, everything else is stored
 --   on disk. This is OK because we don't need to validate transactions when they come in.
@@ -57,13 +60,23 @@ data UtxoState a =
         , _usTip        :: Tip -- ^ Tip of our chain sync client
         }
         deriving stock (Eq, Show, Generic)
-        deriving (Semigroup, Monoid) via (GenericSemigroupMonoid (UtxoState a))
+        -- deriving (Semigroup, Monoid) via (GenericSemigroupMonoid (UtxoState a))
         deriving anyclass (FromJSON, ToJSON)
+
+instance Semigroup a => Semigroup (UtxoState a) where
+    (UtxoState dt tp) <> (UtxoState dt' tp') =
+        let !dt'' = dt <> dt'
+            !tp'' = tp <> tp'
+        in  UtxoState dt'' tp''
+
+instance Monoid a => Monoid (UtxoState a) where
+    mempty = UtxoState mempty mempty
 
 makeLenses ''UtxoState
 
 newtype BlockCount = BlockCount { getBlockCount :: Int }
   deriving (Semigroup, Monoid) via (Sum Int)
+  deriving (Show)
 type UtxoIndex a = FingerTree (BlockCount, UtxoState a) (UtxoState a)
 instance Monoid a => Measured (BlockCount, UtxoState a) (UtxoState a) where
     measure u = (BlockCount 1, u)
@@ -93,18 +106,42 @@ instance Pretty (InsertUtxoSuccess a) where
   pretty = \case
     InsertUtxoSuccess _ insertPosition -> pretty insertPosition
 
+gcIndex ::
+   ( Monoid a
+   , Show a
+   )
+  => Integer
+  -> UtxoIndex a
+  -> UtxoIndex a
+gcIndex kParameter ix =
+      let (lb, rb) = bounds ix
+      in  if (rb - lb) > kParameter * 2
+             then FT.dropUntil (\(_, utxoState) -> rb - blockNumber (view usTip utxoState) <= kParameter) ix
+             else {-Debug.trace ("Left: " <> show lb <> ", Right: " <> show rb)-} ix
+      where
+          bounds :: Monoid a => UtxoIndex a -> (Integer, Integer)
+          bounds ix' =
+              case (FT.viewl ix', FT.viewr ix') of
+                  (FT.EmptyL, _) -> (0, 0)
+                  (_, FT.EmptyR) -> (0, 0)
+                  (l FT.:< _ , _ FT.:> r) -> ( blockNumber $ view usTip l
+                                             , blockNumber $ view usTip r )
+
 -- | Insert a 'UtxoState' into the index
 insert ::
        ( Monoid a
        , Eq a
+       , Show a
        )
        => UtxoState a
        -> UtxoIndex a
        -> Either InsertUtxoFailed (InsertUtxoSuccess a)
 insert   UtxoState{_usTip=TipAtGenesis} _ = Left InsertUtxoNoTip
 insert s@UtxoState{_usTip=thisTip} ix =
-    let (before, after) = FT.split ((s <=) . snd) ix
-    in case tip (utxoState after) of
+    let ix'             = gcIndex 1 ix
+    -- let ix'             = ix
+        (before, after) = FT.split ((s <=) . snd) ix'
+    in case Debug.trace ("Processing " <> show thisTip) $ tip (utxoState after) of
         TipAtGenesis -> Right $ InsertUtxoSuccess{newIndex = before FT.|> s, insertPosition = InsertAtEnd}
         t | t > thisTip -> Right $ InsertUtxoSuccess{newIndex = (before FT.|> s) <> after, insertPosition = InsertBeforeEnd}
           | otherwise   -> Left  $ DuplicateBlock t

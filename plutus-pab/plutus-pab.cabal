@@ -45,6 +45,7 @@ common lang
         -Wincomplete-record-updates -Wredundant-constraints -Widentities
         -fobject-code -fno-ignore-interface-pragmas
         -fno-omit-interface-pragmas
+        -eventlog
 
     -- See Plutus Tx readme
     if flag(defer-plugin-errors)
@@ -56,6 +57,7 @@ library
         cardano-node:cardano-node -any, cardano-cli:cardano-cli -any
     ghc-options:
         -Wunused-packages
+        -eventlog
 
     exposed-modules:
         Cardano.Api.NetworkId.Extra
@@ -207,6 +209,7 @@ executable plutus-pab-setup
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
         -Wno-missing-import-lists -Wredundant-constraints -O0
+        -eventlog
 
     build-depends:
         aeson -any,
@@ -257,6 +260,7 @@ executable plutus-pab-examples
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
         -Wno-missing-import-lists -Wredundant-constraints -O0
+        -eventlog
 
     build-depends:
         , aeson
@@ -288,6 +292,7 @@ executable plutus-uniswap
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
         -Wno-missing-import-lists -Wredundant-constraints -O0
+        -eventlog
 
     build-depends:
         , aeson

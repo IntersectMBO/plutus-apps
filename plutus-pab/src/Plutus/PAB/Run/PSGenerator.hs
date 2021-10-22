@@ -30,6 +30,7 @@ import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, argo
                                    mkSumType, order, writePSTypes)
 import Language.PureScript.Bridge.TypeParameters (A, B)
 import PSGenerator.Common qualified
+import Plutus.ChainIndex (TxConfirmedState)
 import Plutus.Contract.Checkpoint (CheckpointKey, CheckpointStore, CheckpointStoreItem)
 import Plutus.Contract.Resumable (Responses)
 import Plutus.Contract.StateMachine (InvalidTransition, SMContractError)
@@ -107,6 +108,7 @@ pabTypes =
     , genericShow . argonaut $ mkSumType @CombinedWSStreamToClient
     , genericShow . argonaut $ mkSumType @CombinedWSStreamToServer
     , genericShow . argonaut $ mkSumType @WalletInfo
+    , genericShow . argonaut $ mkSumType @TxConfirmedState
     ]
 
 mySettings :: Settings

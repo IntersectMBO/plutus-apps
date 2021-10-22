@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NamedFieldPuns     #-}
@@ -35,9 +36,10 @@ import Data.Foldable (foldl', traverse_)
 import Data.Maybe (catMaybes)
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
-                          InsertUtxoFailed (..), InsertUtxoSuccess (..), RollbackFailed (..), RollbackResult (..),
-                          Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance, TxValidity (..),
-                          UtxoState (..), blockId, citxTxId, dropOlder, fromOnChainTx, insert, utxoState)
+                          InsertUtxoFailed (..), InsertUtxoPosition (..), InsertUtxoSuccess (..), RollbackFailed (..),
+                          RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance,
+                          TxValidity (..), UtxoState (..), blockId, citxTxId, dropOlder, fromOnChainTx, insert,
+                          utxoState)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint)
 import Plutus.ChainIndex.TxIdState (chainConstant)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
@@ -191,14 +193,14 @@ updateTransactionState
   -> STM (Either SyncActionFailure (Slot, BlockNumber))
 updateTransactionState tip env@BlockchainEnv{beTxChanges, beTxOutChanges, beCurrentBlock} xs = do
     txIdStateIndex <- STM.readTVar beTxChanges
-    let txIdState = _usTxUtxoData $ utxoState txIdStateIndex
+    let !txIdState = _usTxUtxoData $ utxoState txIdStateIndex
     txUtxoBalanceIndex <- STM.readTVar beTxOutChanges
-    let txUtxoBalance = _usTxUtxoData $ utxoState txUtxoBalanceIndex
+    -- let txUtxoBalance = _usTxUtxoData $ utxoState txUtxoBalanceIndex
     blockNumber <- STM.readTVar beCurrentBlock
-    let txIdState' = foldl' (insertNewTx blockNumber) txIdState xs
-        txIdStateInsert  = insert (UtxoState txIdState' tip) txIdStateIndex
-        txUtxoBalance' = txUtxoBalance <> foldMap (\(_, b, _) -> b) xs
-        txUtxoBalanceInsert = insert (UtxoState txUtxoBalance' tip) txUtxoBalanceIndex
+    let !txIdState' = foldl' (insertNewTx blockNumber) txIdState xs
+        !txIdStateInsert  = insert (UtxoState txIdState' tip) txIdStateIndex
+        -- txUtxoBalance' = txUtxoBalance <> foldMap (\(_, b, _) -> b) xs
+        txUtxoBalanceInsert = Right $ InsertUtxoSuccess{newIndex=txUtxoBalanceIndex, insertPosition=InsertAtEnd}
 
     case (txIdStateInsert, txUtxoBalanceInsert) of
       (Right InsertUtxoSuccess{newIndex=newTxIdState}, Right InsertUtxoSuccess{newIndex=newTxOutBalance}) -> do -- TODO: Get tx out status another way

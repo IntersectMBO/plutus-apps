@@ -26,7 +26,9 @@ module Plutus.PAB.Webserver.Handler
 
 import Cardano.Wallet.Mock.Client qualified as Wallet.Client
 import Cardano.Wallet.Mock.Types (WalletInfo (..))
-import Control.Lens (preview)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar (readTVar)
+import Control.Lens (at, preview, view)
 import Control.Monad (join)
 import Control.Monad.Freer (sendM)
 import Control.Monad.Freer.Error (throwError)
@@ -42,9 +44,12 @@ import Data.Text (Text)
 import Ledger (Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Tx (Tx)
+import Ledger.TxId (TxId)
+import Plutus.ChainIndex (TxConfirmedState, txnsConfirmed, usTxUtxoData, utxoState)
 import Plutus.Contract.Effects (PABReq, _ExposeEndpointReq)
 import Plutus.PAB.Core (PABAction)
 import Plutus.PAB.Core qualified as Core
+import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..))
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (..), fromResp)
 import Plutus.PAB.Types
@@ -59,6 +64,7 @@ import Wallet.Effects qualified
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Wallet (Wallet (..), WalletId, knownWallet)
 import Wallet.Types (ContractActivityStatus, ContractInstanceId (..), parseContractActivityStatus)
+
 
 healthcheck :: forall t env. PABAction t env ()
 healthcheck = pure ()
@@ -91,6 +97,7 @@ apiHandler ::
        forall t env.
        Contract.PABContract t =>
        PABAction t env ()
+       :<|> (TxId -> PABAction t env (Maybe TxConfirmedState))
        :<|> PABAction t env (FullReport (Contract.ContractDef t))
        :<|> (ContractActivationArgs (Contract.ContractDef t) -> PABAction t env ContractInstanceId)
               :<|> (ContractInstanceId -> PABAction t env (ContractInstanceClientState (Contract.ContractDef t))
@@ -104,6 +111,7 @@ apiHandler ::
 
 apiHandler =
         healthcheck
+        :<|> getTxConfirmedState
         :<|> getFullReport
         :<|> activateContract
               :<|> (\cid -> contractInstanceState cid :<|> contractSchema cid :<|> (\y z -> callEndpoint cid y z) :<|> shutdown cid)
@@ -171,6 +179,16 @@ availableContracts = do
 
 shutdown :: forall t env. ContractInstanceId -> PABAction t env ()
 shutdown = Core.stopInstance
+
+getTxConfirmedState :: forall t env. TxId -> PABAction t env (Maybe TxConfirmedState)
+getTxConfirmedState txId = do
+    txs <- beTxChanges <$> Core.askBlockchainEnv @t @env
+    liftIO $ atomically $ do
+             view (at txId)
+             . txnsConfirmed
+             . view usTxUtxoData
+             . utxoState
+           <$> readTVar txs
 
 -- | Proxy for the wallet API
 walletProxyClientEnv ::

@@ -33,6 +33,8 @@ import Ledger (Slot (..))
 import Plutus.ChainIndex.Compatibility (fromCardanoPoint, fromCardanoTip)
 import Plutus.ChainIndex.Types (Point, Tip)
 
+import Debug.Trace qualified as Debug
+
 data ChainSyncHandle event = ChainSyncHandle
     { cshCurrentSlot :: IO Slot
     , cshHandler     :: event -> Slot -> IO ()
@@ -89,7 +91,7 @@ runChainSync socketPath trace slotConfig networkId resumePoints chainSyncEventHa
           cshCurrentSlot = currentSlot slotConfig,
           cshHandler = chainSyncEventHandler }
 
-    _ <- forkIO $ withIOManager $ \_ ->
+    _ <- forkIO $ Debug.trace "runChainSync called" $ withIOManager $ \_ ->
            recovering
              (fibonacciBackoff 500)
              (skipAsyncExceptions ++
