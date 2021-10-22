@@ -48,6 +48,8 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoScriptInEra
   , toCardanoPaymentKeyHash
   , toCardanoScriptHash
+  , toCardanoScriptDataHash
+  , toCardanoTxId
   , ToCardanoError(..)
   , FromCardanoError(..)
 ) where
@@ -499,7 +501,10 @@ fromCardanoTxOutDatumHash (C.TxOutDatumHash _ h) = Just $ P.DatumHash $ PlutusTx
 
 toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatumHash C.AlonzoEra)
 toCardanoTxOutDatumHash Nothing = pure C.TxOutDatumHashNone
-toCardanoTxOutDatumHash (Just (P.DatumHash bs)) = C.TxOutDatumHash C.ScriptDataInAlonzoEra <$> tag "toCardanoTxOutDatumHash" (deserialiseFromRawBytes (C.AsHash C.AsScriptData) (PlutusTx.fromBuiltin bs))
+toCardanoTxOutDatumHash (Just datumHash) = C.TxOutDatumHash C.ScriptDataInAlonzoEra <$> toCardanoScriptDataHash datumHash
+
+toCardanoScriptDataHash :: P.DatumHash -> Either ToCardanoError (C.Hash C.ScriptData)
+toCardanoScriptDataHash (P.DatumHash bs) = tag "toCardanoTxOutDatumHash" (deserialiseFromRawBytes (C.AsHash C.AsScriptData) (PlutusTx.fromBuiltin bs))
 
 fromCardanoMintValue :: C.TxMintValue build era -> P.Value
 fromCardanoMintValue C.TxMintNone              = mempty
@@ -641,6 +646,9 @@ data ToCardanoError
     | SimpleScriptsNotSupportedToCardano
     | MissingTxInType
     | MissingMintingPolicyRedeemer
+    | MissingMintingPolicy
+    | ScriptPurposeNotSupported P.ScriptTag
+    | PublicKeyInputsNotSupported
     | Tag String ToCardanoError
 
 instance Pretty ToCardanoError where
@@ -654,6 +662,9 @@ instance Pretty ToCardanoError where
     pretty SimpleScriptsNotSupportedToCardano = "Simple scripts are not supported"
     pretty MissingTxInType                    = "Missing TxInType"
     pretty MissingMintingPolicyRedeemer       = "Missing minting policy redeemer"
+    pretty MissingMintingPolicy               = "Missing minting policy"
+    pretty (ScriptPurposeNotSupported p)      = "Script purpose not supported:" <+> viaShow p
+    pretty PublicKeyInputsNotSupported        = "Public key inputs not supported"
     pretty (Tag t err)                        = pretty t <> colon <+> pretty err
 
 zeroExecutionUnits :: C.ExecutionUnits

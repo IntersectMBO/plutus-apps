@@ -20,6 +20,7 @@ module Ledger.Scripts (
     , toCardanoApiScript
     , scriptHash
     , dataHash
+    , toCardanoAPIData
     ) where
 
 import qualified Cardano.Api              as Script
@@ -51,8 +52,12 @@ dataHash =
     toBuiltin
     . Script.serialiseToRawBytes
     . Script.hashScriptData
-    . Script.fromPlutusData
-    . builtinDataToData
+    . toCardanoAPIData
+
+-- | Convert a 'Builtins.BuiltinsData' value to a 'cardano-api' script
+--   data value.
+toCardanoAPIData :: Builtins.BuiltinData -> Script.ScriptData
+toCardanoAPIData = Script.fromPlutusData . builtinDataToData
 
 -- | Hash a 'Script'
 scriptHash :: Script -> ScriptHash
