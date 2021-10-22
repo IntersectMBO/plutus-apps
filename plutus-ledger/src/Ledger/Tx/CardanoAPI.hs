@@ -312,7 +312,7 @@ toCardanoTxBody protocolParams networkId P.Tx{..} = do
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
-    first TxBodyError $ makeTransactionBody' C.TxBodyContent
+    first (TxBodyError . C.displayError) $ makeTransactionBody' C.TxBodyContent
         { txIns = txIns
         , txInsCollateral = txInsCollateral
         , txOuts = txOuts
@@ -622,11 +622,9 @@ data FromCardanoError
 
 instance Pretty FromCardanoError where
     pretty SimpleScriptsNotSupported        = "Simple scripts are not supported"
-    -- pretty StakeAddressPointersNotSupported = "Stake address pointers are not supported"
 
 data ToCardanoError
-    = EvaluationError Api.EvaluationError
-    | TxBodyError C.TxBodyError
+    = TxBodyError String -- ^ A C.TxBodyError converted to String
     | DeserialisationError
     | InvalidValidityRange
     | ValueNotPureAda
@@ -636,10 +634,11 @@ data ToCardanoError
     | MissingTxInType
     | MissingMintingPolicyRedeemer
     | Tag String ToCardanoError
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass (FromJSON, ToJSON)
 
 instance Pretty ToCardanoError where
-    pretty (EvaluationError err)              = "EvaluationError" <> colon <+> pretty err
-    pretty (TxBodyError err)                  = "TxBodyError" <> colon <+> pretty (C.displayError err)
+    pretty (TxBodyError err)                  = "TxBodyError" <> colon <+> pretty err
     pretty DeserialisationError               = "ByteString deserialisation failed"
     pretty InvalidValidityRange               = "Invalid validity range"
     pretty ValueNotPureAda                    = "Fee values should only contain Ada"

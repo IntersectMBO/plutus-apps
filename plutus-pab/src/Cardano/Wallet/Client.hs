@@ -86,7 +86,7 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
         runClient' a = sendM $ liftIO $ runClientM a clientEnv
     case event of
         SubmitTxn tx -> do
-            sealedTx <- either (throwOtherError . pretty) pure $ toSealedTx protocolParams networkId tx
+            sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
             void . runClient $ C.postExternalTransaction C.transactionClient (C.ApiBytesT (C.SerialisedTx $ C.serialisedTx sealedTx))
 
         OwnPubKeyHash ->
@@ -109,7 +109,7 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
                         Right _ -> throwError $ OtherError "Received unexpected JSON data from transactions-balance endpoint"
 
         WalletAddSignature tx -> do
-            sealedTx <- either (throwOtherError . pretty) pure $ toSealedTx protocolParams networkId tx
+            sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
             passphrase <- maybe (throwError $ OtherError "Wallet passphrase required") pure mpassphrase
             lenientPP <- either throwOtherError pure $ fromText passphrase
             let postData = C.ApiSignTransactionPostData (C.ApiT sealedTx) (C.ApiT lenientPP) Nothing
