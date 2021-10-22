@@ -144,7 +144,7 @@ library
         openapi3 -any,
         cardano-wallet-core -any,
         text-class -any,
-        cardano-crypto-class -any,
+        cardano-crypto-class -any
 
     if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any
