@@ -143,6 +143,7 @@ These can be managed normally, but ensure that:
 * You update the xref:update-generated[package set].
 * If it is an `source-repository-package`/`extra-dep` from Git, you update the `sha256` mapping in `nix/haskell.nix`.
 For the moment you have to do this by hand, using the following command to get the sha: `nix-prefetch-git --quiet <repo-url> <rev> | jq .sha256`, or by just getting it wrong and trying to build it, in which case Nix will give you the right value.
+* For certain dependencies like `plutus`, please run `nix flake lock --update-input <input-name>` to update `flake.lock`. A wrong-hash error on a `nix build` is a common hint.
 
 [[update-nix-pins]]
 === How to update our pinned Nix dependencies
@@ -154,7 +155,7 @@ actually use flakes for normal Nix builds. To manage the dependencies,
 see https://nixos.org/manual/nix/unstable/command-ref/new-cli/nix3-flake.html#flake-inputs[the Nix flake inputs documentation]
 and https://nixos.org/manual/nix/unstable/command-ref/new-cli/nix3-flake-lock.html[the Nix flake lock command].
 
-Specifically, you will probabl want to say `nix flake lock --update-input <input-name>`. 
+Specifically, you will probabl want to say `nix flake lock --update-input <input-name>`.
 Do *not* use `nix flake update`, as that will update all the inputs, which we typically don't want to do.
 
 Inside of the project nix-shell, a version of Nix with flakes is available under the alias `nix-flakes`.
