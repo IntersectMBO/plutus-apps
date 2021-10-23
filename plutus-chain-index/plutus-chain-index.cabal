@@ -56,7 +56,6 @@ library
         Plutus.Contract.CardanoAPI
     hs-source-dirs: src
     build-depends:
-        plutus-core -any,
         plutus-ledger -any,
         plutus-ledger-api -any,
         plutus-tx -any,
@@ -68,7 +67,6 @@ library
         beam-sqlite -any,
         beam-migrate -any,
         cardano-api -any,
-        cardano-ledger-alonzo -any,
         cardano-ledger-byron -any,
         containers -any,
         contra-tracer -any,
@@ -82,7 +80,6 @@ library
         lens -any,
         memory -any,
         nothunks -any,
-        openapi3 -any,
         ouroboros-network -any,
         ouroboros-network-framework -any,
         ouroboros-consensus -any,
@@ -95,7 +92,6 @@ library
         serialise -any,
         sqlite-simple -any,
         typed-protocols -any,
-        typed-protocols-examples -any,
         unordered-containers -any,
         bytestring -any,
         data-default -any,

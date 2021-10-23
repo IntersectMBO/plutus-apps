@@ -40,7 +40,6 @@ library
     build-depends:
         QuickCheck -any,
         base >=4.7 && <5,
-        containers -any,
         random -any,
 
 test-suite quickcheck-dynamic-test
@@ -59,9 +58,6 @@ test-suite quickcheck-dynamic-test
     build-depends:
         QuickCheck -any,
         base >=4.7 && <5,
-        containers -any,
-        random -any,
         quickcheck-dynamic -any,
         tasty -any,
-        tasty-hunit -any,
         tasty-quickcheck -any,
