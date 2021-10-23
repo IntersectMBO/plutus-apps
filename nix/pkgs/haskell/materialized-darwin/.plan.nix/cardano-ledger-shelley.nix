@@ -8,10 +8,10 @@
   , config
   , ... }:
   {
-    flags = { development = false; };
+    flags = {};
     package = {
       specVersion = "2.2";
-      identifier = { name = "shelley-spec-ledger"; version = "0.1.0.0"; };
+      identifier = { name = "cardano-ledger-shelley"; version = "0.1.0.0"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "formal.methods@iohk.io";
@@ -36,7 +36,6 @@
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
-          (hsPkgs."bech32" or (errorHandler.buildDepError "bech32"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           (hsPkgs."cardano-binary" or (errorHandler.buildDepError "cardano-binary"))
           (hsPkgs."cardano-crypto" or (errorHandler.buildDepError "cardano-crypto"))
@@ -56,7 +55,6 @@
           (hsPkgs."iproute" or (errorHandler.buildDepError "iproute"))
           (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
           (hsPkgs."nothunks" or (errorHandler.buildDepError "nothunks"))
-          (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
           (hsPkgs."primitive" or (errorHandler.buildDepError "primitive"))
           (hsPkgs."quiet" or (errorHandler.buildDepError "quiet"))
           (hsPkgs."small-steps" or (errorHandler.buildDepError "small-steps"))
@@ -67,71 +65,71 @@
           ];
         buildable = true;
         modules = [
-          "Shelley/Spec/Ledger/API/Types"
-          "Cardano/Ledger/Pretty"
+          "Cardano/Ledger/Shelley/API/Types"
+          "Cardano/Ledger/Chain"
           "Cardano/Ledger/Shelley"
           "Cardano/Ledger/Shelley/Constraints"
-          "Shelley/Spec/Ledger/Address"
-          "Shelley/Spec/Ledger/Address/Bootstrap"
-          "Shelley/Spec/Ledger/API"
-          "Shelley/Spec/Ledger/API/ByronTranslation"
-          "Shelley/Spec/Ledger/API/Genesis"
-          "Shelley/Spec/Ledger/API/Protocol"
-          "Shelley/Spec/Ledger/API/Validation"
-          "Shelley/Spec/Ledger/API/Wallet"
-          "Shelley/Spec/Ledger/API/Mempool"
-          "Shelley/Spec/Ledger/BaseTypes"
-          "Shelley/Spec/Ledger/BlockChain"
-          "Shelley/Spec/Ledger/CompactAddr"
-          "Shelley/Spec/Ledger/Credential"
-          "Shelley/Spec/Ledger/Delegation/Certificates"
-          "Shelley/Spec/Ledger/Delegation/PoolParams"
-          "Shelley/Spec/Ledger/EpochBoundary"
-          "Shelley/Spec/Ledger/Genesis"
-          "Shelley/Spec/Ledger/HardForks"
-          "Shelley/Spec/Ledger/Keys"
-          "Shelley/Spec/Ledger/LedgerState"
-          "Shelley/Spec/Ledger/Metadata"
-          "Shelley/Spec/Ledger/OCert"
-          "Shelley/Spec/Ledger/Orphans"
-          "Shelley/Spec/Ledger/OverlaySchedule"
-          "Shelley/Spec/Ledger/PParams"
-          "Shelley/Spec/Ledger/Rewards"
-          "Shelley/Spec/Ledger/RewardProvenance"
-          "Shelley/Spec/Ledger/RewardUpdate"
-          "Shelley/Spec/Ledger/Scripts"
-          "Shelley/Spec/Ledger/Slot"
-          "Shelley/Spec/Ledger/SoftForks"
-          "Shelley/Spec/Ledger/StabilityWindow"
-          "Shelley/Spec/Ledger/STS/Bbody"
-          "Shelley/Spec/Ledger/STS/Chain"
-          "Shelley/Spec/Ledger/STS/Deleg"
-          "Shelley/Spec/Ledger/STS/Delegs"
-          "Shelley/Spec/Ledger/STS/Delpl"
-          "Shelley/Spec/Ledger/STS/Epoch"
-          "Shelley/Spec/Ledger/STS/EraMapping"
-          "Shelley/Spec/Ledger/STS/Ledger"
-          "Shelley/Spec/Ledger/STS/Ledgers"
-          "Shelley/Spec/Ledger/STS/Mir"
-          "Shelley/Spec/Ledger/STS/NewEpoch"
-          "Shelley/Spec/Ledger/STS/Newpp"
-          "Shelley/Spec/Ledger/STS/Ocert"
-          "Shelley/Spec/Ledger/STS/Overlay"
-          "Shelley/Spec/Ledger/STS/Pool"
-          "Shelley/Spec/Ledger/STS/PoolReap"
-          "Shelley/Spec/Ledger/STS/Ppup"
-          "Shelley/Spec/Ledger/STS/Prtcl"
-          "Shelley/Spec/Ledger/STS/Rupd"
-          "Shelley/Spec/Ledger/STS/Snap"
-          "Shelley/Spec/Ledger/STS/Tick"
-          "Shelley/Spec/Ledger/STS/Tickn"
-          "Shelley/Spec/Ledger/STS/Updn"
-          "Shelley/Spec/Ledger/STS/Upec"
-          "Shelley/Spec/Ledger/STS/Utxo"
-          "Shelley/Spec/Ledger/STS/Utxow"
-          "Shelley/Spec/Ledger/Tx"
-          "Shelley/Spec/Ledger/TxBody"
-          "Shelley/Spec/Ledger/UTxO"
+          "Cardano/Ledger/Shelley/Address"
+          "Cardano/Ledger/Shelley/Address/Bootstrap"
+          "Cardano/Ledger/Shelley/API"
+          "Cardano/Ledger/Shelley/API/ByronTranslation"
+          "Cardano/Ledger/Shelley/API/Genesis"
+          "Cardano/Ledger/Shelley/API/Protocol"
+          "Cardano/Ledger/Shelley/API/Validation"
+          "Cardano/Ledger/Shelley/API/Wallet"
+          "Cardano/Ledger/Shelley/API/Mempool"
+          "Cardano/Ledger/Shelley/BaseTypes"
+          "Cardano/Ledger/Shelley/BlockChain"
+          "Cardano/Ledger/Shelley/CompactAddr"
+          "Cardano/Ledger/Shelley/Credential"
+          "Cardano/Ledger/Shelley/Delegation/Certificates"
+          "Cardano/Ledger/Shelley/Delegation/PoolParams"
+          "Cardano/Ledger/Shelley/EpochBoundary"
+          "Cardano/Ledger/Shelley/Genesis"
+          "Cardano/Ledger/Shelley/HardForks"
+          "Cardano/Ledger/Shelley/Keys"
+          "Cardano/Ledger/Shelley/LedgerState"
+          "Cardano/Ledger/Shelley/Metadata"
+          "Cardano/Ledger/Shelley/OCert"
+          "Cardano/Ledger/Shelley/Orphans"
+          "Cardano/Ledger/Shelley/OverlaySchedule"
+          "Cardano/Ledger/Shelley/PParams"
+          "Cardano/Ledger/Shelley/Rewards"
+          "Cardano/Ledger/Shelley/RewardProvenance"
+          "Cardano/Ledger/Shelley/RewardUpdate"
+          "Cardano/Ledger/Shelley/Scripts"
+          "Cardano/Ledger/Shelley/Slot"
+          "Cardano/Ledger/Shelley/SoftForks"
+          "Cardano/Ledger/Shelley/StabilityWindow"
+          "Cardano/Ledger/Shelley/Rules/Bbody"
+          "Cardano/Ledger/Shelley/Rules/Chain"
+          "Cardano/Ledger/Shelley/Rules/Deleg"
+          "Cardano/Ledger/Shelley/Rules/Delegs"
+          "Cardano/Ledger/Shelley/Rules/Delpl"
+          "Cardano/Ledger/Shelley/Rules/Epoch"
+          "Cardano/Ledger/Shelley/Rules/EraMapping"
+          "Cardano/Ledger/Shelley/Rules/Ledger"
+          "Cardano/Ledger/Shelley/Rules/Ledgers"
+          "Cardano/Ledger/Shelley/Rules/Mir"
+          "Cardano/Ledger/Shelley/Rules/NewEpoch"
+          "Cardano/Ledger/Shelley/Rules/Newpp"
+          "Cardano/Ledger/Shelley/Rules/Ocert"
+          "Cardano/Ledger/Shelley/Rules/Overlay"
+          "Cardano/Ledger/Shelley/Rules/Pool"
+          "Cardano/Ledger/Shelley/Rules/PoolReap"
+          "Cardano/Ledger/Shelley/Rules/Ppup"
+          "Cardano/Ledger/Shelley/Rules/Prtcl"
+          "Cardano/Ledger/Shelley/Rules/Rupd"
+          "Cardano/Ledger/Shelley/Rules/Snap"
+          "Cardano/Ledger/Shelley/Rules/Tick"
+          "Cardano/Ledger/Shelley/Rules/Tickn"
+          "Cardano/Ledger/Shelley/Rules/Updn"
+          "Cardano/Ledger/Shelley/Rules/Upec"
+          "Cardano/Ledger/Shelley/Rules/Utxo"
+          "Cardano/Ledger/Shelley/Rules/Utxow"
+          "Cardano/Ledger/Shelley/Tx"
+          "Cardano/Ledger/Shelley/TxBody"
+          "Cardano/Ledger/Shelley/UTxO"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -146,5 +144,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/shelley/chain-and-ledger/executable-spec; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/eras/shelley/impl; echo source root reset to \$sourceRoot";
     }
