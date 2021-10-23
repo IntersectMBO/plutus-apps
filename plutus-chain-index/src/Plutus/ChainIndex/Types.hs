@@ -34,29 +34,29 @@ module Plutus.ChainIndex.Types(
     , tobSpentOutputs
     ) where
 
-import           Codec.Serialise                  (Serialise)
-import qualified Codec.Serialise                  as CBOR
-import           Control.Lens                     (makeLenses)
-import           Control.Monad                    (void)
-import           Crypto.Hash                      (SHA256, hash)
-import           Data.Aeson                       (FromJSON, ToJSON)
-import qualified Data.ByteArray                   as BA
-import qualified Data.ByteString.Lazy             as BSL
-import           Data.Map                         (Map)
-import qualified Data.Map                         as Map
-import           Data.Monoid                      (Last (..), Sum (..))
-import           Data.Semigroup.Generic           (GenericSemigroupMonoid (..))
-import           Data.Set                         (Set)
-import qualified Data.Set                         as Set
-import           Data.Text.Prettyprint.Doc.Extras (PrettyShow (..))
-import           Data.Word                        (Word64)
-import           GHC.Generics                     (Generic)
-import           Ledger                           (TxOutRef (..))
-import           Ledger.Blockchain                (Block, BlockId (..))
-import           Ledger.Slot                      (Slot)
-import           Ledger.TxId                      (TxId)
-import           PlutusTx.Lattice                 (MeetSemiLattice (..))
-import           Prettyprinter                    (Pretty (..), (<+>))
+import           Codec.Serialise        (Serialise)
+import qualified Codec.Serialise        as CBOR
+import           Control.Lens           (makeLenses)
+import           Control.Monad          (void)
+import           Crypto.Hash            (SHA256, hash)
+import           Data.Aeson             (FromJSON, ToJSON)
+import qualified Data.ByteArray         as BA
+import qualified Data.ByteString.Lazy   as BSL
+import           Data.Map               (Map)
+import qualified Data.Map               as Map
+import           Data.Monoid            (Last (..), Sum (..))
+import           Data.Semigroup.Generic (GenericSemigroupMonoid (..))
+import           Data.Set               (Set)
+import qualified Data.Set               as Set
+import           Data.Word              (Word64)
+import           GHC.Generics           (Generic)
+import           Ledger                 (TxOutRef (..))
+import           Ledger.Blockchain      (Block, BlockId (..))
+import           Ledger.Slot            (Slot)
+import           Ledger.TxId            (TxId)
+import           PlutusTx.Lattice       (MeetSemiLattice (..))
+import           Prettyprinter          (Pretty (..), (<+>))
+import           Prettyprinter.Extras   (PrettyShow (..))
 
 -- | Compute a hash of the block's contents.
 blockId :: Block -> BlockId

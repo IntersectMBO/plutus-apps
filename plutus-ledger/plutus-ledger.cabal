@@ -72,7 +72,6 @@ library
     reexported-modules:
         Data.Aeson.Extras,
         Data.Either.Extras,
-        Data.Text.Prettyprint.Doc.Extras,
         Plutus.V1.Ledger.Ada as Ledger.Ada,
         Plutus.V1.Ledger.Bytes as Ledger.Bytes,
         Plutus.V1.Ledger.Credential as Ledger.Credential,
@@ -102,6 +101,7 @@ library
         cardano-ledger-alonzo -any,
         cardano-ledger-byron -any,
         cardano-ledger-core -any,
+        cardano-ledger-shelley,
         cardano-ledger-shelley-ma -any,
         cardano-wallet-core -any,
         deepseq -any,

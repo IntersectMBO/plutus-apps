@@ -80,6 +80,7 @@ library
         plutus-contract -any,
         playground-common -any,
         plutus-ledger -any,
+        plutus-ledger-api -any,
         template-haskell -any,
         lens -any,
         text -any,

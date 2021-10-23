@@ -38,31 +38,32 @@ module Plutus.Contracts.TokenAccount(
   ) where
 
 import           Control.Lens
-import           Control.Monad                    (void)
+import           Control.Monad               (void)
 import           Control.Monad.Error.Lens
-import           Data.Aeson                       (FromJSON, ToJSON)
-import qualified Data.Map                         as Map
+import           Data.Aeson                  (FromJSON, ToJSON)
+import qualified Data.Map                    as Map
 import           Data.Text.Prettyprint.Doc
-import           Data.Text.Prettyprint.Doc.Extras (PrettyShow (..))
-import           GHC.Generics                     (Generic)
+import           GHC.Generics                (Generic)
 
 import           Plutus.Contract
 import           Plutus.Contract.Constraints
 import qualified PlutusTx
 
-import           Ledger                           (Address, PubKeyHash, ValidatorHash)
+import           Ledger                      (Address, PubKeyHash, ValidatorHash)
 import qualified Ledger
-import qualified Ledger.Constraints               as Constraints
-import qualified Ledger.Contexts                  as V
+import qualified Ledger.Constraints          as Constraints
+import qualified Ledger.Contexts             as V
 import qualified Ledger.Scripts
-import           Ledger.Tx                        (CardanoTx)
-import           Ledger.Typed.Scripts             (ValidatorTypes (..))
-import qualified Ledger.Typed.Scripts             as Scripts
-import           Ledger.Value                     (TokenName, Value)
-import qualified Ledger.Value                     as Value
-import qualified Plutus.Contract.Typed.Tx         as TypedTx
+import           Ledger.Tx                   (CardanoTx)
+import           Ledger.Typed.Scripts        (ValidatorTypes (..))
+import qualified Ledger.Typed.Scripts        as Scripts
+import           Ledger.Value                (TokenName, Value)
+import qualified Ledger.Value                as Value
+import qualified Plutus.Contract.Typed.Tx    as TypedTx
 
-import qualified Plutus.Contracts.Currency        as Currency
+import qualified Plutus.Contracts.Currency   as Currency
+
+import           Prettyprinter.Extras        (PrettyShow (..))
 
 newtype Account = Account { accountOwner :: Value.AssetClass }
     deriving stock    (Eq, Show, Generic)
