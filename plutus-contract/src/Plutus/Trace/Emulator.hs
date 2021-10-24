@@ -81,14 +81,14 @@ import           Control.Foldl                           (generalize, list)
 import           Control.Lens                            hiding ((:>))
 import           Control.Monad                           (forM_, void)
 import           Control.Monad.Freer
-import           Control.Monad.Freer.Coroutine           (Yield, yield)
+import           Control.Monad.Freer.Coroutine           (Yield)
 import           Control.Monad.Freer.Error               (Error, handleError, runError, throwError)
 import           Control.Monad.Freer.Extras              (wrapError)
-import           Control.Monad.Freer.Extras.Log          (LogMessage (..), LogMsg (..), mapLog, mapMLog)
+import           Control.Monad.Freer.Extras.Log          (LogMessage (..), LogMsg (..), mapLog)
 import           Control.Monad.Freer.Extras.Modify       (raiseEnd)
 import           Control.Monad.Freer.Extras.Stream       (runStream)
 import           Control.Monad.Freer.Reader              (Reader, runReader)
-import           Control.Monad.Freer.State               (State, evalState, gets, runState)
+import           Control.Monad.Freer.State               (State, evalState, runState)
 import           Control.Monad.Freer.TH                  (makeEffect)
 import           Data.Bifunctor                          (first)
 import           Data.Default                            (Default (..))
@@ -107,12 +107,11 @@ import qualified Wallet.Emulator                         as EM
 import           Wallet.Emulator.Chain                   (ChainControlEffect)
 import qualified Wallet.Emulator.Chain                   as ChainState
 import           Wallet.Emulator.MultiAgent              (EmulatorEvent, EmulatorEvent' (..), EmulatorState (..),
-                                                          EmulatorTimeEvent (EmulatorTimeEvent),
                                                           MultiAgentControlEffect, MultiAgentEffect, _eteEmulatorTime,
                                                           _eteEvent, fundsDistribution, schedulerEvent)
 import           Wallet.Emulator.Stream                  (EmulatorConfig (..), EmulatorErr (..), feeConfig,
-                                                          foldEmulatorStreamM, initialChainState, initialDist,
-                                                          runTraceStream, slotConfig)
+                                                          foldEmulatorStreamM, handleLogCoroutine, initialChainState,
+                                                          initialDist, mkTimedLogs, runTraceStream, slotConfig)
 import           Wallet.Emulator.Wallet                  (Entity, Wallet, balances)
 import qualified Wallet.Emulator.Wallet                  as Wallet
 
@@ -449,22 +448,3 @@ runTraceStream' s slotConf feeConf =
     . subsume
     . subsume @(State EmulatorState)
     . raiseEnd
-
-handleLogCoroutine :: forall (e :: Type) (effs :: [Type -> Type]).
-    Member (Yield (LogMessage e) ()) effs
-    => LogMsg e
-    ~> Eff effs
-handleLogCoroutine = \case LMessage m -> yield m id
-
-mkTimedLogs :: forall (a :: Type) (effs :: [Type -> Type]) .
-    ( Member (LogMsg (EmulatorTimeEvent a)) effs
-    , Member (State EmulatorState) effs
-    )
-    => LogMsg a
-    ~> Eff effs
-mkTimedLogs = mapMLog f where
-    f :: a -> Eff effs (EmulatorTimeEvent a)
-    f a =
-        EmulatorTimeEvent
-            <$> gets (view $ EM.chainState . EM.currentSlot)
-            <*> pure a

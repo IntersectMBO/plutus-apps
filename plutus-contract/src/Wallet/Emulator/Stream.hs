@@ -25,6 +25,9 @@ module Wallet.Emulator.Stream(
     -- * Consuming streams
     , foldStreamM
     , foldEmulatorStreamM
+    -- * Logging
+    , handleLogCoroutine
+    , mkTimedLogs
     ) where
 
 import qualified Control.Foldl                          as L
@@ -176,6 +179,7 @@ data EmulatorErr =
     | InstanceErr EmulatorRuntimeError
     deriving (Show)
 
+-- | Log a message.
 handleLogCoroutine :: forall e effs.
     Member (Yield (LogMessage e) ()) effs
     => LogMsg e
