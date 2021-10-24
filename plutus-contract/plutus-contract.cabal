@@ -80,6 +80,7 @@ library
         Wallet.Graph
         Wallet.Types
         Plutus.Trace
+        Plutus.Trace.Effects.Assert
         Plutus.Trace.Effects.ContractInstanceId
         Plutus.Trace.Effects.RunContract
         Plutus.Trace.Effects.RunContractPlayground
@@ -143,7 +144,7 @@ library
         openapi3 -any,
         cardano-wallet-core -any,
         text-class -any,
-        cardano-crypto-class -any,
+        cardano-crypto-class -any
 
     if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any
