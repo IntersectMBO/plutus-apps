@@ -158,6 +158,7 @@ library
         exposed-modules:
             Plutus.Contract.Test
             Plutus.Contract.Test.ContractModel
+            Plutus.Contract.Test.Coverage
         build-depends:
             tasty -any,
             tasty-hunit -any,

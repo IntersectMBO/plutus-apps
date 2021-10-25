@@ -17641,32 +17641,12 @@
                                                                                                           ]
                                                                                                         )
                                                                                                         [
-                                                                                                          (let
-                                                                                                            (nonrec)
-                                                                                                            (termbind
-                                                                                                              (strict)
-                                                                                                              (vardecl
-                                                                                                                ds
-                                                                                                                [
-                                                                                                                  (lam
-                                                                                                                    a
-                                                                                                                    (type)
-                                                                                                                    (fun
-                                                                                                                      a
-                                                                                                                      a
-                                                                                                                    )
-                                                                                                                  )
-                                                                                                                  (con
-                                                                                                                    integer
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                              )
-                                                                                                              (let
-                                                                                                                (nonrec)
-                                                                                                                (termbind
-                                                                                                                  (strict)
-                                                                                                                  (vardecl
-                                                                                                                    x
+                                                                                                          [
+                                                                                                            [
+                                                                                                              [
+                                                                                                                {
+                                                                                                                  {
+                                                                                                                    fFoldableNil_cfoldMap
                                                                                                                     [
                                                                                                                       (lam
                                                                                                                         a
@@ -17687,229 +17667,196 @@
                                                                                                                         )
                                                                                                                       ]
                                                                                                                     ]
+                                                                                                                  }
+                                                                                                                  (con
+                                                                                                                    bytestring
                                                                                                                   )
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      [
-                                                                                                                        {
-                                                                                                                          {
-                                                                                                                            fFoldableNil_cfoldMap
-                                                                                                                            [
-                                                                                                                              (lam
-                                                                                                                                a
-                                                                                                                                (type)
-                                                                                                                                a
-                                                                                                                              )
+                                                                                                                }
+                                                                                                                [
+                                                                                                                  {
+                                                                                                                    (abs
+                                                                                                                      a
+                                                                                                                      (type)
+                                                                                                                      (lam
+                                                                                                                        v
+                                                                                                                        [
+                                                                                                                          Monoid
+                                                                                                                          a
+                                                                                                                        ]
+                                                                                                                        [
+                                                                                                                          [
+                                                                                                                            {
+                                                                                                                              CConsMonoid
                                                                                                                               [
                                                                                                                                 (lam
                                                                                                                                   a
                                                                                                                                   (type)
-                                                                                                                                  (fun
-                                                                                                                                    a
-                                                                                                                                    a
-                                                                                                                                  )
-                                                                                                                                )
-                                                                                                                                (con
-                                                                                                                                  integer
-                                                                                                                                )
-                                                                                                                              ]
-                                                                                                                            ]
-                                                                                                                          }
-                                                                                                                          (con
-                                                                                                                            bytestring
-                                                                                                                          )
-                                                                                                                        }
-                                                                                                                        [
-                                                                                                                          {
-                                                                                                                            (abs
-                                                                                                                              a
-                                                                                                                              (type)
-                                                                                                                              (lam
-                                                                                                                                v
-                                                                                                                                [
-                                                                                                                                  Monoid
                                                                                                                                   a
-                                                                                                                                ]
-                                                                                                                                [
-                                                                                                                                  [
-                                                                                                                                    {
-                                                                                                                                      CConsMonoid
-                                                                                                                                      [
-                                                                                                                                        (lam
-                                                                                                                                          a
-                                                                                                                                          (type)
-                                                                                                                                          a
-                                                                                                                                        )
-                                                                                                                                        a
-                                                                                                                                      ]
-                                                                                                                                    }
-                                                                                                                                    (lam
-                                                                                                                                      eta
-                                                                                                                                      [
-                                                                                                                                        (lam
-                                                                                                                                          a
-                                                                                                                                          (type)
-                                                                                                                                          a
-                                                                                                                                        )
-                                                                                                                                        a
-                                                                                                                                      ]
-                                                                                                                                      (lam
-                                                                                                                                        eta
-                                                                                                                                        [
-                                                                                                                                          (lam
-                                                                                                                                            a
-                                                                                                                                            (type)
-                                                                                                                                            a
-                                                                                                                                          )
-                                                                                                                                          a
-                                                                                                                                        ]
-                                                                                                                                        [
-                                                                                                                                          [
-                                                                                                                                            [
-                                                                                                                                              {
-                                                                                                                                                p1Monoid
-                                                                                                                                                a
-                                                                                                                                              }
-                                                                                                                                              v
-                                                                                                                                            ]
-                                                                                                                                            eta
-                                                                                                                                          ]
-                                                                                                                                          eta
-                                                                                                                                        ]
-                                                                                                                                      )
-                                                                                                                                    )
-                                                                                                                                  ]
-                                                                                                                                  [
-                                                                                                                                    {
-                                                                                                                                      mempty
-                                                                                                                                      a
-                                                                                                                                    }
-                                                                                                                                    v
-                                                                                                                                  ]
-                                                                                                                                ]
-                                                                                                                              )
-                                                                                                                            )
-                                                                                                                            [
-                                                                                                                              (lam
+                                                                                                                                )
                                                                                                                                 a
-                                                                                                                                (type)
-                                                                                                                                (fun
-                                                                                                                                  a
-                                                                                                                                  a
-                                                                                                                                )
-                                                                                                                              )
-                                                                                                                              (con
-                                                                                                                                integer
-                                                                                                                              )
-                                                                                                                            ]
-                                                                                                                          }
-                                                                                                                          [
-                                                                                                                            [
-                                                                                                                              {
-                                                                                                                                CConsMonoid
-                                                                                                                                [
-                                                                                                                                  (lam
-                                                                                                                                    a
-                                                                                                                                    (type)
-                                                                                                                                    (fun
-                                                                                                                                      a
-                                                                                                                                      a
-                                                                                                                                    )
-                                                                                                                                  )
-                                                                                                                                  (con
-                                                                                                                                    integer
-                                                                                                                                  )
-                                                                                                                                ]
-                                                                                                                              }
-                                                                                                                              (lam
-                                                                                                                                ds
-                                                                                                                                [
-                                                                                                                                  (lam
-                                                                                                                                    a
-                                                                                                                                    (type)
-                                                                                                                                    (fun
-                                                                                                                                      a
-                                                                                                                                      a
-                                                                                                                                    )
-                                                                                                                                  )
-                                                                                                                                  (con
-                                                                                                                                    integer
-                                                                                                                                  )
-                                                                                                                                ]
-                                                                                                                                (lam
-                                                                                                                                  ds
-                                                                                                                                  [
-                                                                                                                                    (lam
-                                                                                                                                      a
-                                                                                                                                      (type)
-                                                                                                                                      (fun
-                                                                                                                                        a
-                                                                                                                                        a
-                                                                                                                                      )
-                                                                                                                                    )
-                                                                                                                                    (con
-                                                                                                                                      integer
-                                                                                                                                    )
-                                                                                                                                  ]
-                                                                                                                                  (lam
-                                                                                                                                    x
-                                                                                                                                    (con
-                                                                                                                                      integer
-                                                                                                                                    )
-                                                                                                                                    [
-                                                                                                                                      ds
-                                                                                                                                      [
-                                                                                                                                        ds
-                                                                                                                                        x
-                                                                                                                                      ]
-                                                                                                                                    ]
-                                                                                                                                  )
-                                                                                                                                )
-                                                                                                                              )
-                                                                                                                            ]
+                                                                                                                              ]
+                                                                                                                            }
                                                                                                                             (lam
-                                                                                                                              x
-                                                                                                                              (con
-                                                                                                                                integer
+                                                                                                                              eta
+                                                                                                                              [
+                                                                                                                                (lam
+                                                                                                                                  a
+                                                                                                                                  (type)
+                                                                                                                                  a
+                                                                                                                                )
+                                                                                                                                a
+                                                                                                                              ]
+                                                                                                                              (lam
+                                                                                                                                eta
+                                                                                                                                [
+                                                                                                                                  (lam
+                                                                                                                                    a
+                                                                                                                                    (type)
+                                                                                                                                    a
+                                                                                                                                  )
+                                                                                                                                  a
+                                                                                                                                ]
+                                                                                                                                [
+                                                                                                                                  [
+                                                                                                                                    [
+                                                                                                                                      {
+                                                                                                                                        p1Monoid
+                                                                                                                                        a
+                                                                                                                                      }
+                                                                                                                                      v
+                                                                                                                                    ]
+                                                                                                                                    eta
+                                                                                                                                  ]
+                                                                                                                                  eta
+                                                                                                                                ]
                                                                                                                               )
-                                                                                                                              x
                                                                                                                             )
                                                                                                                           ]
+                                                                                                                          [
+                                                                                                                            {
+                                                                                                                              mempty
+                                                                                                                              a
+                                                                                                                            }
+                                                                                                                            v
+                                                                                                                          ]
                                                                                                                         ]
-                                                                                                                      ]
+                                                                                                                      )
+                                                                                                                    )
+                                                                                                                    [
                                                                                                                       (lam
-                                                                                                                        x
-                                                                                                                        (con
-                                                                                                                          bytestring
+                                                                                                                        a
+                                                                                                                        (type)
+                                                                                                                        (fun
+                                                                                                                          a
+                                                                                                                          a
                                                                                                                         )
-                                                                                                                        (lam
-                                                                                                                          y
+                                                                                                                      )
+                                                                                                                      (con
+                                                                                                                        integer
+                                                                                                                      )
+                                                                                                                    ]
+                                                                                                                  }
+                                                                                                                  [
+                                                                                                                    [
+                                                                                                                      {
+                                                                                                                        CConsMonoid
+                                                                                                                        [
+                                                                                                                          (lam
+                                                                                                                            a
+                                                                                                                            (type)
+                                                                                                                            (fun
+                                                                                                                              a
+                                                                                                                              a
+                                                                                                                            )
+                                                                                                                          )
                                                                                                                           (con
                                                                                                                             integer
                                                                                                                           )
+                                                                                                                        ]
+                                                                                                                      }
+                                                                                                                      (lam
+                                                                                                                        ds
+                                                                                                                        [
+                                                                                                                          (lam
+                                                                                                                            a
+                                                                                                                            (type)
+                                                                                                                            (fun
+                                                                                                                              a
+                                                                                                                              a
+                                                                                                                            )
+                                                                                                                          )
+                                                                                                                          (con
+                                                                                                                            integer
+                                                                                                                          )
+                                                                                                                        ]
+                                                                                                                        (lam
+                                                                                                                          ds
                                                                                                                           [
-                                                                                                                            [
-                                                                                                                              (builtin
-                                                                                                                                addInteger
+                                                                                                                            (lam
+                                                                                                                              a
+                                                                                                                              (type)
+                                                                                                                              (fun
+                                                                                                                                a
+                                                                                                                                a
                                                                                                                               )
-                                                                                                                              y
-                                                                                                                            ]
+                                                                                                                            )
                                                                                                                             (con
                                                                                                                               integer
-                                                                                                                              1
                                                                                                                             )
                                                                                                                           ]
+                                                                                                                          (lam
+                                                                                                                            x
+                                                                                                                            (con
+                                                                                                                              integer
+                                                                                                                            )
+                                                                                                                            [
+                                                                                                                              ds
+                                                                                                                              [
+                                                                                                                                ds
+                                                                                                                                x
+                                                                                                                              ]
+                                                                                                                            ]
+                                                                                                                          )
                                                                                                                         )
                                                                                                                       )
                                                                                                                     ]
-                                                                                                                    t
+                                                                                                                    (lam
+                                                                                                                      x
+                                                                                                                      (con
+                                                                                                                        integer
+                                                                                                                      )
+                                                                                                                      x
+                                                                                                                    )
+                                                                                                                  ]
+                                                                                                                ]
+                                                                                                              ]
+                                                                                                              (lam
+                                                                                                                x
+                                                                                                                (con
+                                                                                                                  bytestring
+                                                                                                                )
+                                                                                                                (lam
+                                                                                                                  y
+                                                                                                                  (con
+                                                                                                                    integer
+                                                                                                                  )
+                                                                                                                  [
+                                                                                                                    [
+                                                                                                                      (builtin
+                                                                                                                        addInteger
+                                                                                                                      )
+                                                                                                                      y
+                                                                                                                    ]
+                                                                                                                    (con
+                                                                                                                      integer
+                                                                                                                      1
+                                                                                                                    )
                                                                                                                   ]
                                                                                                                 )
-                                                                                                                x
                                                                                                               )
-                                                                                                            )
-                                                                                                            ds
-                                                                                                          )
+                                                                                                            ]
+                                                                                                            t
+                                                                                                          ]
                                                                                                           (con
                                                                                                             integer
                                                                                                             0
@@ -20199,12 +20146,12 @@
                                                                                                                 Void
                                                                                                               }
                                                                                                               (lam
-                                                                                                                v
+                                                                                                                a
                                                                                                                 Void
                                                                                                                 {
                                                                                                                   [
                                                                                                                     Void_match
-                                                                                                                    v
+                                                                                                                    a
                                                                                                                   ]
                                                                                                                   (con
                                                                                                                     data

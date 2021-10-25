@@ -242,14 +242,14 @@ source-repository-package
 -- plutus. If you update plutus, please make sure that all dependencies of plutus
 -- are also updated
 source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/plutus
-  tag: 3f089ccf0ca746b399c99afe51e063b0640af547
-  subdir:
-    plutus-core
-    plutus-ledger-api
-    plutus-tx
-    plutus-tx-plugin
-    word-array
-    prettyprinter-configurable
-    stubs/plutus-ghc-stub
+ type: git
+ location: https://github.com/input-output-hk/plutus
+ tag: 2721c59fd2302b75c4138456c29fd5b509e8340a
+ subdir:
+   plutus-ledger-api
+   word-array
+   prettyprinter-configurable
+   stubs/plutus-ghc-stub
+   plutus-core
+   plutus-tx
+   plutus-tx-plugin

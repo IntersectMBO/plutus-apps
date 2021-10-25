@@ -1,10 +1,10 @@
-Slot 1: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
           Contract instance started
-Slot 1: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
           Receive endpoint call on 'schedule collection' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "schedule collection")]),Object (fromList [("unEndpointValue",Array [])])]),("tag",String "ExposeEndpointResp")])
-Slot 1: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
           Contract log: String "Campaign started. Waiting for campaign deadline to collect funds."
-Slot 20: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
            Contract log: String "Collecting funds"
-Slot 20: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
            Contract instance stopped (no errors)
