@@ -1,17 +1,16 @@
+cabal-version:       3.0
 name:                servant-purescript
 version:             0.9.0.2
-synopsis:            Generate PureScript accessor functions for you servant API
+synopsis:            Generate a PureScript API client for you servant API
 description:         Please see README.md
-homepage:            https://github.com/eskimor/servant-purescript#readme
-license:             BSD3
+homepage:            https://github.com/input-output-hk/servant-purescript
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Robert Klotzner
 maintainer:          robert Dot klotzner A T gmx Dot at
 copyright:           Copyright: (c) 2016 Robert Klotzner
 category:            Web
 build-type:          Simple
--- extra-source-files:
-cabal-version:       >=1.10
 
 extra-source-files: Readme.md
 
@@ -20,8 +19,6 @@ library
   hs-source-dirs:      src
   exposed-modules:     Servant.PureScript.Internal
                      , Servant.PureScript.CodeGen
-                     , Servant.PureScript.Subscriber
-                     , Servant.PureScript.MakeRequests
                      , Servant.PureScript
                      , Servant.API.BrowserHeader
 
@@ -35,12 +32,12 @@ library
                      , http-types
                      , lens
                      , mainland-pretty
-                     , purescript-bridge >= 0.6
+                     , purescript-bridge
                      , servant
                      , servant-foreign
                      , servant-server
-                     , servant-subscriber
                      , text
+                     , wl-pprint-text
   default-language:    Haskell2010
 
 
@@ -51,17 +48,23 @@ test-suite servant-purescript-test
   build-depends:       base
                      , aeson >= 0.11.2
                      , containers
-                     , mainland-pretty
+                     , directory
+                     , hspec
+                     , HUnit
+                     , hspec-expectations-pretty-diff
                      , lens
-                     , purescript-bridge >= 0.6
+                     , mainland-pretty
+                     , process
+                     , purescript-bridge
                      , servant
                      , servant-foreign
                      , servant-purescript
-                     , servant-subscriber
                      , text
+                     , wl-pprint-text
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
 source-repository head
   type:     git
-  location: https://github.com/eskimor/servant-purescript
+  location: https://github.com/input-output-hk/servant-purescript
+

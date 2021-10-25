@@ -17,7 +17,8 @@ cabal.project.local
 cabal.sandbox.config
 dist
 dist-*
-shell.nix
-default.nix
 .idea/
 stack.yaml
+.spago/
+/test/output/output
+.psc-ide-port
