@@ -12,7 +12,7 @@ import Data.Argonaut.Encode (encodeJson)
 import Data.Array (fromFoldable, null)
 import Data.Either (Either(..))
 import Data.HTTP.Method (Method(..))
-import Data.Maybe (Maybe, Maybe(..))
+import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.String (joinWith)
 import Effect.Aff.Class (class MonadAff, liftAff)
@@ -20,6 +20,8 @@ import Servant.PureScript (AjaxError, ErrorDescription(..), class ToURLPiece, to
 import ServerTypes (Hello, TestHeader)
 import Affjax.RequestBody (json) as Request
 import Affjax.ResponseFormat (json) as Response
+
+foreign import encodeURIComponent :: String -> String
 
 type SPSettings_
   = { testHeader :: Maybe TestHeader
@@ -73,6 +75,56 @@ getHello reqBody myFlag myParam myParams = do
           , headers = defaultRequest.headers <> reqHeaders
           , responseFormat = Response.json
           , content = Just $ Request.json $ encodeJson reqBody
+          }
+  result <- liftAff $ request affReq
+  response <- case result of
+    Left err -> throwError $ { request: affReq, description: ConnectingError err }
+    Right r -> pure r
+  when (unwrap response.status < 200 || unwrap response.status >= 299) $
+    throwError $ { request: affReq, description: UnexpectedHTTPStatus response }
+  case decodeJson response.body of
+    Left err -> throwError $ { request: affReq, description: DecodingError err }
+    Right body -> pure body
+
+getHelloByName ::
+  forall env m.
+  HasSPSettings env =>
+  MonadAsk env m =>
+  MonadError AjaxError m =>
+  MonadAff m =>
+  String ->
+  m Hello
+getHelloByName name = do
+  spSettings <- asks spSettings
+  let testHeader = spSettings.testHeader
+  let baseURL = spSettings.baseURL
+  let httpMethod = Left GET
+  let
+      encodeQueryItem :: forall a. ToURLPiece a => String -> a -> String
+      encodeQueryItem name val = name <> "=" <> toURLPiece val
+  let
+      queryArgs :: Array String
+      queryArgs =
+        []
+  let queryString = if null queryArgs then "" else "?" <> (joinWith "&" queryArgs)
+  let
+      reqURL =
+        baseURL
+          <> "hello"
+          <> "/"
+          <> encodeURIComponent (toURLPiece  name )
+          <> queryString
+  let
+      reqHeaders =
+        [ RequestHeader "TestHeader" $ toURLPiece testHeader
+        ]
+  let
+      affReq =
+        defaultRequest
+          { method = httpMethod
+          , url = reqURL
+          , headers = defaultRequest.headers <> reqHeaders
+          , responseFormat = Response.json
           }
   result <- liftAff $ request affReq
   response <- case result of

@@ -74,20 +74,27 @@ writeAPIModuleWithSettings ::
 writeAPIModuleWithSettings opts root pBr pAPI = do
   writeModule (opts ^. apiModuleName)
   T.putStrLn "\nSuccessfully created your servant API purescript functions!"
-  T.putStrLn "Please make sure you have purescript-servant-support version 5.0.0 or above installed:\n"
-  T.putStrLn "  bower i --save purescript-servant-support\n"
+  T.putStrLn "Please make sure you have purescript-servant-support and purescript-bridge-json-helpers installed\n"
   where
     apiList = apiToList pAPI pBr
 
     writeModule :: Text -> IO ()
     writeModule mName =
-      let fileName = (joinPath . map T.unpack . T.splitOn "." $ mName) <> ".purs"
-          mPath = root </> fileName
-          mDir = takeDirectory mPath
+      let baseFileName = joinPath . map T.unpack . T.splitOn "." $ mName
+          pursModuleFile = baseFileName <> ".purs"
+          jsModuleFile = baseFileName <> ".js"
+          pursModulePath = root </> pursModuleFile
+          jsModulePath = root </> jsModuleFile
+          mDir = takeDirectory baseFileName
           contents = genModule opts apiList
        in do
             unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
-            withFile mPath WriteMode $ flip hPutDocLn contents
+            withFile pursModulePath WriteMode $ flip hPutDocLn contents
+            withFile jsModulePath WriteMode $ \h -> do
+              hPutDocLn h "'use strict';"
+              hPutDocLn h ""
+              hPutDocLn h "exports.encodeURIComponent = encodeURIComponent"
+              hPutDocLn h ""
 
 -- | Use this function for implementing 'parseUrlPiece' in your FromHttpApiData instances
 --   in order to be compatible with the generated PS code.
