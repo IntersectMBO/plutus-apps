@@ -1,6 +1,6 @@
 module Schema.Types where
 
-import Prelude
+import Prologue
 import Chain.Types (_value)
 import Data.Array as Array
 import Data.BigInt.Argonaut (BigInteger)
@@ -8,7 +8,6 @@ import Data.Foldable (fold, foldMap)
 import Data.Functor.Foldable (Fix(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Json.JsonTuple (JsonTuple)
 import Data.Lens (_2, _Just, over, set)
 import Data.Lens.Index (ix)
 import Data.Lens.Iso.Newtype (_Newtype)
@@ -162,13 +161,13 @@ formArgumentToJson = cata algebra
 
   algebra (FormObjectF fields) = encodeFields fields
     where
-    encodeFields :: Array (JsonTuple String (Maybe Foreign)) -> Maybe Foreign
+    encodeFields :: Array (Tuple String (Maybe Foreign)) -> Maybe Foreign
     encodeFields xs = map (encode <<< FO.fromFoldable) $ prepareObject xs
 
-    prepareObject :: Array (JsonTuple String (Maybe Foreign)) -> Maybe (Array (Tuple String Foreign))
+    prepareObject :: Array (Tuple String (Maybe Foreign)) -> Maybe (Array (Tuple String Foreign))
     prepareObject = traverse processTuples
 
-    processTuples :: JsonTuple String (Maybe Foreign) -> Maybe (Tuple String Foreign)
+    processTuples :: Tuple String (Maybe Foreign) -> Maybe (Tuple String Foreign)
     processTuples = unwrap >>> sequence
 
   algebra (FormValueF x) = Just $ encode x

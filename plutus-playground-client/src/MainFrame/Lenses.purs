@@ -37,7 +37,6 @@ import Chain.Types as Chain
 import Control.Monad.State.Class (class MonadState)
 import Cursor (Cursor)
 import Data.Either (Either)
-import Data.Json.JsonTuple (JsonTuple)
 import Data.Lens (Lens', Traversal', _Right, lens, preview)
 import Data.Lens.Extra (peruse)
 import Data.Lens.Iso.Newtype (_Newtype)
@@ -143,7 +142,7 @@ _resultRollup = _Newtype <<< prop (SProxy :: SProxy "resultRollup")
 _functionSchema :: Lens' CompilationResult (Array (FunctionSchema FormSchema))
 _functionSchema = _Newtype <<< prop (SProxy :: SProxy "functionSchema")
 
-_walletKeys :: Lens' EvaluationResult (Array (JsonTuple PubKeyHash WalletNumber))
+_walletKeys :: Lens' EvaluationResult (Array (Tuple PubKeyHash WalletNumber))
 _walletKeys = _Newtype <<< prop (SProxy :: SProxy "walletKeys")
 
 _knownCurrencies :: Lens' CompilationResult (Array KnownCurrency)

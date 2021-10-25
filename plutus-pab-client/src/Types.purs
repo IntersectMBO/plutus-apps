@@ -1,6 +1,6 @@
 module Types where
 
-import Prelude
+import Prologue
 import Chain.Types as Chain
 import Clipboard as Clipboard
 import Control.Monad.Gen as Gen
@@ -8,7 +8,6 @@ import Data.Bifunctor (lmap)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Json.JsonUUID (JsonUUID, _JsonUUID)
-import Data.Json.JsonTuple (JsonTuple)
 import Data.Lens (Getter', Iso', Traversal', Lens', to, traversed)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
@@ -156,7 +155,7 @@ _utxoIndex = _ChainReport <<< prop (SProxy :: SProxy "utxoIndex")
 _crAvailableContracts :: forall t. Lens' (ContractReport t) (Array (ContractSignatureResponse t))
 _crAvailableContracts = _ContractReport <<< prop (SProxy :: SProxy "crAvailableContracts")
 
-_crActiveContractStates :: forall t. Lens' (ContractReport t) (Array (JsonTuple ContractInstanceId (PartiallyDecodedResponse PABReq)))
+_crActiveContractStates :: forall t. Lens' (ContractReport t) (Array (Tuple ContractInstanceId (PartiallyDecodedResponse PABReq)))
 _crActiveContractStates = _ContractReport <<< prop (SProxy :: SProxy "crActiveContractStates")
 
 _csrDefinition :: forall t. Lens' (ContractSignatureResponse t) t

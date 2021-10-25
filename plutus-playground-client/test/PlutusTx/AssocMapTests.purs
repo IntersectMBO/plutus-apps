@@ -5,7 +5,6 @@ module PlutusTx.AssocMapTests
 import Prelude
 import Data.BigInt.Argonaut (BigInt)
 import Data.BigInt.Argonaut as BigInt
-import Data.Json.JsonTuple (JsonTuple)
 import Data.Lens (preview, set)
 import Data.Lens.At (at)
 import Data.Lens.Index (ix)
@@ -190,5 +189,5 @@ mkMap symbol pairs =
   Map
     [ wrap $ Tuple symbol (Map (mkTokenAmount <$> pairs)) ]
   where
-  mkTokenAmount :: Tuple TokenName Int -> JsonTuple TokenName BigInt
+  mkTokenAmount :: Tuple TokenName Int -> Tuple TokenName BigInt
   mkTokenAmount (Tuple token amount) = wrap $ Tuple token (BigInt.fromInt amount)

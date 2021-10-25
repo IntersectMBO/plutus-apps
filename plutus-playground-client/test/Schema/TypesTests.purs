@@ -2,11 +2,10 @@ module Schema.TypesTests
   ( all
   ) where
 
-import Prelude
+import Prologue
 import Data.BigInt.Argonaut as BigInt
 import Data.Functor.Foldable (Fix(..))
 import Data.Json.JsonNonEmptyList (JsonNonEmptyList(..))
-import Data.Json.JsonTuple (JsonTuple(..))
 import Data.List (List(..))
 import Data.List.NonEmpty (NonEmptyList(..))
 import Data.Maybe (Maybe(..))
@@ -78,8 +77,8 @@ validateTests = do
           ( makeTestAction
               $ Fix
               $ FormObjectF
-                  [ JsonTuple $ Tuple "name" (Fix $ FormStringF Nothing)
-                  , JsonTuple $ Tuple "test" (Fix $ FormIntF (Just 5))
+                  [ Tuple $ Tuple "name" (Fix $ FormStringF Nothing)
+                  , Tuple $ Tuple "test" (Fix $ FormIntF (Just 5))
                   ]
           )
       )
@@ -207,8 +206,8 @@ formArgumentToJsonTests = do
         ( formArgumentToJson
             ( Fix
                 $ FormObjectF
-                    [ JsonTuple $ "name" /\ (Fix $ FormStringF (Just "Tester"))
-                    , JsonTuple $ "arg" /\ (Fix $ FormIntF (Just 20))
+                    [ Tuple $ "name" /\ (Fix $ FormStringF (Just "Tester"))
+                    , Tuple $ "arg" /\ (Fix $ FormIntF (Just 20))
                     ]
             )
         )

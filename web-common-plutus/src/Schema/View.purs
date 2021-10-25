@@ -1,6 +1,6 @@
 module Schema.View (actionArgumentForm) where
 
-import Prelude hiding (div)
+import Prologue hiding (div)
 import Bootstrap (btn, btnInfo, btnLink, btnPrimary, btnSmall, col, col10_, col2_, colFormLabel, formCheckInput, formCheckLabel, formCheck_, formControl, formGroup, formGroup_, formRow_, formText, inputGroupAppend_, inputGroupPrepend_, inputGroup_, invalidFeedback_, row_, textMuted, validFeedback_, wasValidated)
 import Bootstrap as Bootstrap
 import Data.Array as Array
@@ -8,7 +8,6 @@ import Data.BigInt.Argonaut as BigInteger
 import Data.Functor.Foldable (Fix(..))
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Int as Int
-import Data.Json.JsonTuple (JsonTuple(..))
 import Data.Lens (Lens', over, set, view)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.String as String
@@ -190,7 +189,7 @@ actionArgumentField ancestors isNested (Fix (FormArrayF schema subFields)) =
 
 actionArgumentField ancestors isNested (Fix (FormObjectF subFields)) =
   div [ nesting isNested ]
-    (mapWithIndex (\i (JsonTuple field) -> map (SetSubField i) (subForm field)) subFields)
+    (mapWithIndex (\i (Tuple field) -> map (SetSubField i) (subForm field)) subFields)
   where
   subForm (name /\ arg) =
     ( formGroup_

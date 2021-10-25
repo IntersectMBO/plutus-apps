@@ -2,7 +2,6 @@ module Ledger.Extra where
 
 import Data.Lens (Lens', lens, view)
 import Data.Lens.Record (prop)
-import Data.Json.JsonTuple (JsonTuple(..))
 import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
 import PlutusTx.AssocMap (unionWith)
@@ -116,10 +115,10 @@ adaToValue (Lovelace ada) =
   Value
     { getValue:
         AssocMap.Map
-          [ JsonTuple
+          [ Tuple
               ( Tuple
                   (CurrencySymbol { unCurrencySymbol: "" })
-                  (AssocMap.Map [ JsonTuple (Tuple (TokenName { unTokenName: "" }) ada.getLovelace) ])
+                  (AssocMap.Map [ Tuple (Tuple (TokenName { unTokenName: "" }) ada.getLovelace) ])
               )
           ]
     }

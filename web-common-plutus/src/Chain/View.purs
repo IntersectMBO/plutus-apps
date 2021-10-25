@@ -17,7 +17,6 @@ import Data.Foldable (foldMap, foldr)
 import Data.Foldable.Extra (interleave)
 import Data.FoldableWithIndex (foldMapWithIndex, foldrWithIndex)
 import Data.FunctorWithIndex (mapWithIndex)
-import Data.Json.JsonTuple (JsonTuple(..))
 import Data.Lens (Traversal', _Just, filtered, has, preview, to, view)
 import Data.Lens.Index (ix)
 import Data.Map (Map)
@@ -429,16 +428,16 @@ valueView (Value { getValue: (AssocMap.Map []) }) = empty
 
 valueView (Value { getValue: (AssocMap.Map currencies) }) = div_ (interleave hr_ (currencyView <$> currencies))
   where
-  currencyView :: JsonTuple CurrencySymbol (AssocMap.Map TokenName BigInteger) -> HTML p i
-  currencyView (JsonTuple (currency /\ (AssocMap.Map tokens))) =
+  currencyView :: Tuple CurrencySymbol (AssocMap.Map TokenName BigInteger) -> HTML p i
+  currencyView (Tuple (currency /\ (AssocMap.Map tokens))) =
     div_
       [ div [ class_ Bootstrap.textTruncate ]
           [ strong_ [ text $ showCurrency currency ] ]
       , div_ (tokenView <$> tokens)
       ]
 
-  tokenView :: JsonTuple TokenName BigInteger -> HTML p i
-  tokenView (JsonTuple (token /\ amount)) =
+  tokenView :: Tuple TokenName BigInteger -> HTML p i
+  tokenView (Tuple (token /\ amount)) =
     row_
       [ col_ [ showToken token ]
       , div [ classes [ col, amountClass ] ]

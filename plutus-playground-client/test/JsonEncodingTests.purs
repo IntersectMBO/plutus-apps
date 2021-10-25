@@ -2,7 +2,7 @@ module JsonEncodingTests
   ( all
   ) where
 
-import Prelude
+import Prologue
 import Auth (AuthStatus)
 import Control.Monad.Except (runExcept)
 import Cursor (Cursor)
@@ -12,7 +12,6 @@ import Data.BigInt.Argonaut as BigInt
 import Data.Either (Either(..))
 import Data.Foldable (product)
 import Data.Json.JsonNonEmptyList (JsonNonEmptyList(..))
-import Data.Json.JsonTuple (JsonTuple(..))
 import Data.Tuple (Tuple(..))
 import Foreign (MultipleErrors)
 import Foreign.Class (class Decode, class Encode, decode, encode)
@@ -123,7 +122,7 @@ jsonHandlingTests = do
       testRoundTrip "Value" arbitraryValue
       testRoundTrip "KnownCurrency" arbitraryKnownCurrency
       testRoundTrip "Either" (arbitraryEither arbitrary arbitrary :: Gen (Either String Int))
-      testRoundTrip "JsonTuple" ((JsonTuple <$> (Tuple <$> arbitrary <*> arbitrary)) :: Gen (JsonTuple String Int))
+      testRoundTrip "Tuple" ((Tuple <$> (Tuple <$> arbitrary <*> arbitrary)) :: Gen (Tuple String Int))
       testRoundTrip "JsonNonEmptyList" ((JsonNonEmptyList <$> arbitrary) :: Gen (JsonNonEmptyList String))
       testRoundTrip "Cursor" ((Cursor.fromArray <$> arbitrary) :: Gen (Cursor String))
 
@@ -159,7 +158,7 @@ arbitraryTokenName = do
 arbitraryAssocMap :: forall k v. Gen k -> Gen v -> Gen (AssocMap.Map k v)
 arbitraryAssocMap genK genV = do
   n <- chooseInt 0 5
-  xs <- vectorOf n (JsonTuple <$> (Tuple <$> genK <*> genV))
+  xs <- vectorOf n (Tuple <$> (Tuple <$> genK <*> genV))
   pure $ AssocMap.Map xs
 
 arbitraryValue :: Gen Value
