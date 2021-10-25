@@ -6,86 +6,84 @@
 
 module PSGenerator.Common where
 
-import Auth (AuthRole, AuthStatus)
-import Control.Applicative (empty, (<|>))
-import Control.Monad.Freer.Extras.Beam (BeamError, BeamLog)
-import Control.Monad.Freer.Extras.Pagination (Page, PageQuery, PageSize)
-import Control.Monad.Reader (MonadReader)
-import Data.Proxy (Proxy (Proxy))
-import Gist (Gist, GistFile, GistId, NewGist, NewGistFile, Owner)
-import Language.PureScript.Bridge (BridgePart, Language (Haskell), PSType, SumType, TypeInfo (TypeInfo), doCheck, equal,
-                                   equal1, functor, genericShow, haskType, isTuple, mkSumType, order, psTypeParameters,
-                                   typeModule, typeName, (^==))
-import Language.PureScript.Bridge.Builder (BridgeData)
-import Language.PureScript.Bridge.PSTypes (psArray, psInt, psNumber, psString)
-import Language.PureScript.Bridge.TypeParameters (A)
-import Ledger (Address, BlockId, ChainIndexTxOut, DatumHash, MintingPolicy, OnChainTx, PubKey, PubKeyHash, RedeemerPtr,
-               ScriptTag, Signature, StakeValidator, Tx, TxId, TxIn, TxInType, TxOut, TxOutRef, TxOutTx, UtxoIndex,
-               ValidationPhase, Validator)
-import Ledger.Ada (Ada)
-import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
-import Ledger.Credential (Credential, StakingCredential)
-import Ledger.DCert (DCert)
-import Ledger.Index (ExCPU, ExMemory, ScriptType, ScriptValidationEvent, ValidationError)
-import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
-import Ledger.Scripts (ScriptError)
-import Ledger.Slot (Slot)
-import Ledger.TimeSlot (SlotConfig, SlotConversionError)
-import Ledger.Tx.CardanoAPI (FromCardanoError, ToCardanoError)
-import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
-import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)
-import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
-import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
-import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog)
-import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOutputs)
-import Plutus.ChainIndex.Types (BlockNumber, Depth, Point, RollbackState, Tip, TxOutState, TxValidity)
-import Plutus.ChainIndex.UtxoState (InsertUtxoFailed, InsertUtxoPosition, RollbackFailed)
-import Plutus.Contract.Checkpoint (CheckpointError)
-import Plutus.Contract.Effects (ActiveEndpoint, BalanceTxResponse, ChainIndexQuery, ChainIndexResponse, PABReq, PABResp,
-                                WriteBalancedTxResponse)
-import Plutus.Contract.Resumable (IterationID, Request, RequestID, Response)
-import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg, ContractInstanceTag, EmulatorRuntimeError,
-                                    UserThreadMsg)
-import Plutus.Trace.Scheduler (Priority, SchedulerLog, StopReason, ThreadEvent, ThreadId)
-import Plutus.Trace.Tag (Tag)
-import Schema (FormArgumentF, FormSchema)
-import Wallet.API (WalletAPIError)
-import Wallet.Emulator.Types qualified as EM
-import Wallet.Rollup.Types (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId, TxKey)
-import Wallet.Types (AssertionError, ContractActivityStatus, ContractError, ContractInstanceId, EndpointDescription,
-                     EndpointValue, MatchingError, Notification, NotificationError)
+import           Auth                                      (AuthRole, AuthStatus)
+import           Control.Applicative                       (empty, (<|>))
+import           Control.Monad.Freer.Extras.Beam           (BeamError, BeamLog)
+import           Control.Monad.Freer.Extras.Pagination     (Page, PageQuery, PageSize)
+import           Control.Monad.Reader                      (MonadReader)
+import           Gist                                      (Gist, GistFile, GistId, NewGist, NewGistFile, Owner)
+import           Language.PureScript.Bridge                (BridgePart, Language (Haskell), PSType, SumType,
+                                                            TypeInfo (TypeInfo), argonaut, equal, equal1, functor,
+                                                            genericShow, mkSumType, order, psTypeParameters, typeModule,
+                                                            typeName, (^==))
+import           Language.PureScript.Bridge.Builder        (BridgeData)
+import           Language.PureScript.Bridge.PSTypes        (psArray, psInt, psNumber, psString)
+import           Language.PureScript.Bridge.TypeParameters (A)
+import           Ledger                                    (Address, BlockId, ChainIndexTxOut, DatumHash, MintingPolicy,
+                                                            OnChainTx, PubKey, PubKeyHash, RedeemerPtr, ScriptTag,
+                                                            Signature, StakeValidator, Tx, TxId, TxIn, TxInType, TxOut,
+                                                            TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Validator)
+import           Ledger.Ada                                (Ada)
+import           Ledger.Constraints.OffChain               (MkTxError, UnbalancedTx)
+import           Ledger.Credential                         (Credential, StakingCredential)
+import           Ledger.DCert                              (DCert)
+import           Ledger.Index                              (ExCPU, ExMemory, ScriptType, ScriptValidationEvent,
+                                                            ValidationError)
+import           Ledger.Interval                           (Extended, Interval, LowerBound, UpperBound)
+import           Ledger.Scripts                            (ScriptError)
+import           Ledger.Slot                               (Slot)
+import           Ledger.TimeSlot                           (SlotConfig, SlotConversionError)
+import           Ledger.Tx.CardanoAPI                      (FromCardanoError, ToCardanoError)
+import           Ledger.Typed.Tx                           (ConnectionError, WrongOutTypeError)
+import           Ledger.Value                              (AssetClass, CurrencySymbol, TokenName, Value)
+import           Playground.Types                          (ContractCall, FunctionSchema, KnownCurrency)
+import           Plutus.ChainIndex.ChainIndexError         (ChainIndexError)
+import           Plutus.ChainIndex.ChainIndexLog           (ChainIndexLog)
+import           Plutus.ChainIndex.Tx                      (ChainIndexTx, ChainIndexTxOutputs)
+import           Plutus.ChainIndex.Types                   (BlockNumber, Depth, Point, RollbackState, Tip, TxOutState,
+                                                            TxValidity)
+import           Plutus.ChainIndex.UtxoState               (InsertUtxoFailed, InsertUtxoPosition, RollbackFailed)
+import           Plutus.Contract.Checkpoint                (CheckpointError)
+import           Plutus.Contract.Effects                   (ActiveEndpoint, BalanceTxResponse, ChainIndexQuery,
+                                                            ChainIndexResponse, PABReq, PABResp,
+                                                            WriteBalancedTxResponse)
+import           Plutus.Contract.Resumable                 (IterationID, Request, RequestID, Response)
+import           Plutus.Trace.Emulator.Types               (ContractInstanceLog, ContractInstanceMsg,
+                                                            ContractInstanceTag, EmulatorRuntimeError, UserThreadMsg)
+import           Plutus.Trace.Scheduler                    (Priority, SchedulerLog, StopReason, ThreadEvent, ThreadId)
+import           Plutus.Trace.Tag                          (Tag)
+import           Schema                                    (FormArgumentF, FormSchema)
+import           Wallet.API                                (WalletAPIError)
+import qualified Wallet.Emulator.Types                     as EM
+import           Wallet.Rollup.Types                       (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId,
+                                                            TxKey)
+import           Wallet.Types                              (AssertionError, ContractActivityStatus, ContractError,
+                                                            ContractInstanceId, EndpointDescription, EndpointValue,
+                                                            MatchingError, Notification, NotificationError)
+
 
 psJson :: PSType
 psJson = TypeInfo "web-common" "Data.RawJson" "RawJson" []
 
 psNonEmpty :: MonadReader BridgeData m => m PSType
 psNonEmpty =
-    TypeInfo "web-common" "Data.Json.JsonNonEmptyList" "JsonNonEmptyList" <$>
+    TypeInfo "purescript-lists" "Data.List.Types" "NonEmptyList" <$>
     psTypeParameters
 
 psMap :: MonadReader BridgeData m => m PSType
 psMap = TypeInfo "purescript-ordered-collections" "Data.Map" "Map" <$> psTypeParameters
 
-psUnit :: PSType
-psUnit = TypeInfo "web-common" "Data.Unit" "Unit" []
+psSet :: MonadReader BridgeData m => m PSType
+psSet = TypeInfo "purescript-ordered-collections" "Data.Set" "Set" <$> psTypeParameters
 
--- Note: Haskell has multi-section Tuples, whereas PureScript just uses nested pairs.
-psJsonTuple :: MonadReader BridgeData m => m PSType
-psJsonTuple = expand <$> psTypeParameters
-  where
-    expand []       = psUnit
-    expand [x]      = x
-    expand p@[_, _] = TypeInfo "web-common" "Data.Json.JsonTuple" "JsonTuple" p
-    expand (x:ys)   = TypeInfo "web-common" "Data.Json.JsonTuple" "JsonTuple" [x, expand ys]
-
-psJsonUUID :: PSType
-psJsonUUID = TypeInfo "web-common" "Data.Json.JsonUUID" "JsonUUID" []
+psUUID :: PSType
+psUUID = TypeInfo "web-common" "Data.UUID.Argonaut" "UUID" []
 
 uuidBridge :: BridgePart
 uuidBridge = do
     typeName ^== "UUID"
     typeModule ^== "Data.UUID" <|> typeModule ^== "Data.UUID.Types.Internal"
-    pure psJsonUUID
+    pure psUUID
 
 mapBridge :: BridgePart
 mapBridge = do
@@ -99,14 +97,9 @@ aesonValueBridge = do
     typeModule ^== "Data.Aeson.Types.Internal"
     pure psJson
 
-tupleBridge :: BridgePart
-tupleBridge = do
-    doCheck haskType isTuple
-    psJsonTuple
-
 aesonBridge :: BridgePart
 aesonBridge =
-    mapBridge <|> tupleBridge <|> aesonValueBridge <|> uuidBridge
+    mapBridge <|> aesonValueBridge <|> uuidBridge
 
 ------------------------------------------------------------
 setBridge :: BridgePart
@@ -122,9 +115,12 @@ nonEmptyBridge = do
     psNonEmpty
 
 containersBridge :: BridgePart
-containersBridge = nonEmptyBridge <|> setBridge
+containersBridge = nonEmptyBridge <|> setBridge <|> mapBridge
 
 ------------------------------------------------------------
+psBigInteger :: PSType
+psBigInteger = TypeInfo "web-common" "Data.BigInt.Argonaut" "BigInt" []
+
 integerBridge :: BridgePart
 integerBridge = do
     typeName ^== "Integer"
@@ -198,9 +194,6 @@ miscBridge =
     <|> someCardanoApiTxBridge
 
 ------------------------------------------------------------
-
-psBigInteger :: PSType
-psBigInteger = TypeInfo "purescript-foreign-generic" "Data.BigInteger" "BigInteger" []
 
 psAssocMap :: MonadReader BridgeData m => m PSType
 psAssocMap =
@@ -318,141 +311,135 @@ servantBridge = headersBridge <|> headerBridge
 ------------------------------------------------------------
 ledgerTypes :: [SumType 'Haskell]
 ledgerTypes =
-    [ (equal <*> (genericShow <*> mkSumType)) (Proxy @Slot)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Ada)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @SlotConfig)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @SlotConversionError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Tx)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @TxId)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @TxIn)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @TxOut)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @TxOutTx)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @TxOutRef)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @OnChainTx)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @UtxoIndex)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Value)
-    , (functor <*> (equal <*> (genericShow <*> mkSumType)))
-          (Proxy @(Extended A))
-    , (functor <*> (equal <*> (genericShow <*> mkSumType)))
-          (Proxy @(Interval A))
-    , (functor <*> (equal <*> (genericShow <*> mkSumType)))
-          (Proxy @(LowerBound A))
-    , (functor <*> (equal <*> (genericShow <*> mkSumType)))
-          (Proxy @(UpperBound A))
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @CurrencySymbol)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @AssetClass)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @MintingPolicy)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @StakeValidator)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @RedeemerPtr)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @ScriptTag)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @Signature)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @TokenName)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @TxInType)
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @Validator)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ScriptError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ValidationError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ValidationPhase)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @Address)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @BlockId)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @DatumHash)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @PubKey)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @PubKeyHash)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @Credential)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @StakingCredential)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @DCert)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @MkTxError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ContractError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ConnectionError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @WrongOutTypeError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Notification)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @NotificationError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @MatchingError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @AssertionError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @CheckpointError)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @ContractInstanceId)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ContractActivityStatus)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ContractInstanceLog)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @UserThreadMsg)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @SchedulerLog)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Tag)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ContractInstanceMsg)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ContractInstanceTag)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @EmulatorRuntimeError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ThreadEvent)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ThreadId)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(Request A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(Response A))
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @RequestID)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Priority)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @StopReason)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @IterationID)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ScriptValidationEvent)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ExCPU)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ExMemory)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ScriptType)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @PABReq)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @PABResp)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ChainIndexQuery)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ChainIndexResponse)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ChainIndexTx)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ChainIndexTxOutputs)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ChainIndexTxOut)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ChainIndexLog)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ChainIndexError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @BeamError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @BeamLog)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @InsertUtxoPosition)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @InsertUtxoFailed)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @RollbackFailed)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @FromCardanoError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(Page A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(PageQuery A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @PageSize)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Tip)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Point)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(EndpointValue A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @BalanceTxResponse)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @WriteBalancedTxResponse)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ActiveEndpoint)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @UnbalancedTx)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @TxValidity)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @TxOutState)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(RollbackState A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @BlockNumber)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @Depth)
+    [ equal . genericShow . argonaut $ mkSumType @Slot
+    , equal . genericShow . argonaut $ mkSumType @Ada
+    , equal . genericShow . argonaut $ mkSumType @SlotConfig
+    , equal . genericShow . argonaut $ mkSumType @SlotConversionError
+    , equal . genericShow . argonaut $ mkSumType @Tx
+    , order . genericShow . argonaut $ mkSumType @TxId
+    , equal . genericShow . argonaut $ mkSumType @TxIn
+    , equal . genericShow . argonaut $ mkSumType @TxOut
+    , equal . genericShow . argonaut $ mkSumType @TxOutTx
+    , order . genericShow . argonaut $ mkSumType @TxOutRef
+    , equal . genericShow . argonaut $ mkSumType @OnChainTx
+    , equal . genericShow . argonaut $ mkSumType @UtxoIndex
+    , equal . genericShow . argonaut $ mkSumType @Value
+    , functor . equal . genericShow . argonaut $ mkSumType @(Extended A)
+    , functor . equal . genericShow . argonaut $ mkSumType @(Interval A)
+    , functor . equal . genericShow . argonaut $ mkSumType @(LowerBound A)
+    , functor . equal . genericShow . argonaut $ mkSumType @(UpperBound A)
+    , genericShow . order . argonaut $ mkSumType @CurrencySymbol
+    , genericShow . order . argonaut $ mkSumType @AssetClass
+    , genericShow . order . argonaut $ mkSumType @MintingPolicy
+    , genericShow . order . argonaut $ mkSumType @StakeValidator
+    , genericShow . order . argonaut $ mkSumType @RedeemerPtr
+    , genericShow . order . argonaut $ mkSumType @ScriptTag
+    , genericShow . order . argonaut $ mkSumType @Signature
+    , genericShow . order . argonaut $ mkSumType @TokenName
+    , genericShow . order . argonaut $ mkSumType @TxInType
+    , genericShow . order . argonaut $ mkSumType @Validator
+    , equal . genericShow . argonaut $ mkSumType @ScriptError
+    , equal . genericShow . argonaut $ mkSumType @ValidationError
+    , order . equal . genericShow . argonaut $ mkSumType @ValidationPhase
+    , order . genericShow . argonaut $ mkSumType @Address
+    , order . genericShow . argonaut $ mkSumType @BlockId
+    , order . genericShow . argonaut $ mkSumType @DatumHash
+    , order . genericShow . argonaut $ mkSumType @PubKey
+    , order . genericShow . argonaut $ mkSumType @PubKeyHash
+    , order . genericShow . argonaut $ mkSumType @Credential
+    , order . genericShow . argonaut $ mkSumType @StakingCredential
+    , order . genericShow . argonaut $ mkSumType @DCert
+    , equal . genericShow . argonaut $ mkSumType @MkTxError
+    , equal . genericShow . argonaut $ mkSumType @ContractError
+    , equal . genericShow . argonaut $ mkSumType @ConnectionError
+    , order . equal . genericShow . argonaut $ mkSumType @WrongOutTypeError
+    , equal . genericShow . argonaut $ mkSumType @Notification
+    , equal . genericShow . argonaut $ mkSumType @NotificationError
+    , equal . genericShow . argonaut $ mkSumType @MatchingError
+    , equal . genericShow . argonaut $ mkSumType @AssertionError
+    , equal . genericShow . argonaut $ mkSumType @CheckpointError
+    , order . genericShow . argonaut $ mkSumType @ContractInstanceId
+    , order . equal . genericShow . argonaut $ mkSumType @ContractActivityStatus
+    , equal . genericShow . argonaut $ mkSumType @ContractInstanceLog
+    , equal . genericShow . argonaut $ mkSumType @UserThreadMsg
+    , equal . genericShow . argonaut $ mkSumType @SchedulerLog
+    , equal . genericShow . argonaut $ mkSumType @Tag
+    , equal . genericShow . argonaut $ mkSumType @ContractInstanceMsg
+    , equal . genericShow . argonaut $ mkSumType @ContractInstanceTag
+    , equal . genericShow . argonaut $ mkSumType @EmulatorRuntimeError
+    , equal . genericShow . argonaut $ mkSumType @ThreadEvent
+    , equal . genericShow . argonaut $ mkSumType @ThreadId
+    , equal . genericShow . argonaut $ mkSumType @(Request A)
+    , equal . genericShow . argonaut $ mkSumType @(Response A)
+    , order . genericShow . argonaut $ mkSumType @RequestID
+    , order . equal . genericShow . argonaut $ mkSumType @Priority
+    , order . equal . genericShow . argonaut $ mkSumType @StopReason
+    , order . genericShow . argonaut $ mkSumType @IterationID
+    , equal . genericShow . argonaut $ mkSumType @ScriptValidationEvent
+    , equal . genericShow . argonaut $ mkSumType @ExCPU
+    , equal . genericShow . argonaut $ mkSumType @ExMemory
+    , equal . genericShow . argonaut $ mkSumType @ScriptType
+    , equal . genericShow . argonaut $ mkSumType @PABReq
+    , equal . genericShow . argonaut $ mkSumType @PABResp
+    , equal . genericShow . argonaut $ mkSumType @ChainIndexQuery
+    , equal . genericShow . argonaut $ mkSumType @ChainIndexResponse
+    , equal . genericShow . argonaut $ mkSumType @ChainIndexTx
+    , equal . genericShow . argonaut $ mkSumType @ChainIndexTxOutputs
+    , equal . genericShow . argonaut $ mkSumType @ChainIndexTxOut
+    , equal . genericShow . argonaut $ mkSumType @ChainIndexLog
+    , equal . genericShow . argonaut $ mkSumType @ChainIndexError
+    , equal . genericShow . argonaut $ mkSumType @BeamError
+    , equal . genericShow . argonaut $ mkSumType @BeamLog
+    , order . equal . genericShow . argonaut $ mkSumType @InsertUtxoPosition
+    , equal . genericShow . argonaut $ mkSumType @InsertUtxoFailed
+    , equal . genericShow . argonaut $ mkSumType @RollbackFailed
+    , order . equal . genericShow . argonaut $ mkSumType @FromCardanoError
+    , equal . genericShow . argonaut $ mkSumType @(Page A)
+    , equal . genericShow . argonaut $ mkSumType @(PageQuery A)
+    , equal . genericShow . argonaut $ mkSumType @PageSize
+    , equal . genericShow . argonaut $ mkSumType @Tip
+    , equal . genericShow . argonaut $ mkSumType @Point
+    , equal . genericShow . argonaut $ mkSumType @(EndpointValue A)
+    , equal . genericShow . argonaut $ mkSumType @BalanceTxResponse
+    , equal . genericShow . argonaut $ mkSumType @WriteBalancedTxResponse
+    , equal . genericShow . argonaut $ mkSumType @ActiveEndpoint
+    , equal . genericShow . argonaut $ mkSumType @UnbalancedTx
+    , order . equal . genericShow . argonaut $ mkSumType @TxValidity
+    , equal . genericShow . argonaut $ mkSumType @TxOutState
+    , equal . genericShow . argonaut $ mkSumType @(RollbackState A)
+    , equal . genericShow . argonaut $ mkSumType @BlockNumber
+    , equal . genericShow . argonaut $ mkSumType @Depth
     ]
 
 walletTypes :: [SumType 'Haskell]
 walletTypes =
-    [ (equal <*> (genericShow <*> mkSumType)) (Proxy @AnnotatedTx)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @DereferencedInput)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @EM.Wallet)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @EM.WalletNumber)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @WalletAPIError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ToCardanoError)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @BeneficialOwner)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @SequenceId)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @TxKey)
+    [ equal . genericShow . argonaut $ mkSumType @AnnotatedTx
+    , equal . genericShow . argonaut $ mkSumType @DereferencedInput
+    , equal . genericShow . argonaut $ mkSumType @EM.Wallet
+    , equal . genericShow . argonaut $ mkSumType @EM.WalletNumber
+    , equal . genericShow . argonaut $ mkSumType @WalletAPIError
+    , equal . genericShow . argonaut $ mkSumType @ToCardanoError
+    , order . genericShow . argonaut $ mkSumType @BeneficialOwner
+    , order . genericShow . argonaut $ mkSumType @SequenceId
+    , order . genericShow . argonaut $ mkSumType @TxKey
     ]
 
 ------------------------------------------------------------
 playgroundTypes :: [SumType 'Haskell]
 playgroundTypes =
-    [ (genericShow <*> (equal <*> mkSumType)) (Proxy @FormSchema)
-    , (functor <*> (genericShow <*> (equal <*> mkSumType)))
-          (Proxy @(FunctionSchema A))
-    , (functor <*> (equal <*> (equal1 <*> (genericShow <*> mkSumType))))
-          (Proxy @(FormArgumentF A))
-    , (genericShow <*> (order <*> mkSumType)) (Proxy @EndpointDescription)
-    , (genericShow <*> (equal <*> mkSumType)) (Proxy @KnownCurrency)
-    , (genericShow <*> (equal <*> mkSumType)) (Proxy @(ContractCall A))
+    [ genericShow . equal . argonaut $ mkSumType @FormSchema
+    , functor . genericShow . equal . argonaut $ mkSumType @(FunctionSchema A)
+    , functor . equal . equal1 . genericShow . argonaut $ mkSumType @(FormArgumentF A)
+    , genericShow . order . argonaut $ mkSumType @EndpointDescription
+    , genericShow . equal . argonaut $ mkSumType @KnownCurrency
+    , genericShow . equal . argonaut $ mkSumType @(ContractCall A)
     ] <>
-    [ (order <*> mkSumType) (Proxy @GistId)
-    , mkSumType (Proxy @Gist)
-    , mkSumType (Proxy @GistFile)
-    , mkSumType (Proxy @NewGist)
-    , mkSumType (Proxy @NewGistFile)
-    , mkSumType (Proxy @Owner)
-    , mkSumType (Proxy @AuthStatus)
-    , mkSumType (Proxy @AuthRole)
+    [ order . argonaut $ mkSumType @GistId
+    , argonaut $ mkSumType @Gist
+    , argonaut $ mkSumType @GistFile
+    , argonaut $ mkSumType @NewGist
+    , argonaut $ mkSumType @NewGistFile
+    , argonaut $ mkSumType @Owner
+    , argonaut $ mkSumType @AuthStatus
+    , order . equal . genericShow . argonaut $ mkSumType @AuthRole
     ]

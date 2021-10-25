@@ -109,6 +109,12 @@ let additions =
     , repo = "https://github.com/slamdata/purescript-matryoshka.git"
     , version = "v0.4.0"
     }
+  , markdown =
+    { dependencies =
+        [ "const", "datetime", "functors", "lists", "ordered-collections", "parsing", "partial", "precise", "prelude", "strings", "unicode", "validation" ]
+    , repo = "https://github.com/jhbertra/purescript-markdown"
+    , version = "a9fbc4c42acf7b4be908832698b69ed558912496"
+    }
   , numerics =
     { dependencies =
         [ "prelude", "integers", "rationals", "uint", "bigints" ]

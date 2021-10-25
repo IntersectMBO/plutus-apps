@@ -37,7 +37,6 @@ rec {
     plutus-pab-examples
     plutus-uniswap;
 
-  webCommon = pkgs.callPackage ./web-common { inherit (plutus-apps.lib) gitignore-nix; };
   webCommonPlutus = pkgs.callPackage ./web-common-plutus { inherit (plutus-apps.lib) gitignore-nix; };
   webCommonPlayground = pkgs.callPackage ./web-common-playground { inherit (plutus-apps.lib) gitignore-nix; };
 
@@ -46,13 +45,13 @@ rec {
 
     inherit (pkgs.callPackage ./plutus-playground-client {
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
-      inherit haskell webCommon webCommonPlutus webCommonPlayground;
+      inherit haskell webCommonPlutus webCommonPlayground;
     }) client server generate-purescript start-backend;
   };
 
   plutus-pab = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-pab-client {
     inherit (plutus-apps.lib) buildPursPackage buildNodeModules gitignore-nix filterNpm;
-    inherit haskell webCommon webCommonPlutus;
+    inherit haskell webCommonPlutus;
   });
 
   plutus-use-cases = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-use-cases {

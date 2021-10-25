@@ -1,4 +1,4 @@
-{ pkgs, gitignore-nix, haskell, webCommon, webCommonPlutus, buildPursPackage, buildNodeModules, filterNpm }:
+{ pkgs, gitignore-nix, haskell, webCommonPlutus, buildPursPackage, buildNodeModules, filterNpm }:
 let
   server-setup-invoker = haskell.packages.plutus-pab.components.exes.plutus-pab-setup;
   server-examples-invoker = haskell.packages.plutus-pab.components.exes.plutus-pab-examples;
@@ -77,7 +77,6 @@ let
       src = cleanSrc;
       name = "plutus-pab-client";
       extraSrcs = {
-        web-common = webCommon.cleanSrc;
         web-common-plutus = webCommonPlutus;
         generated = generated-purescript;
       };

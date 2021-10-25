@@ -1,4 +1,4 @@
-{ pkgs, lib, gitignore-nix, haskell, webCommon, webCommonPlutus, webCommonPlayground, buildPursPackage, buildNodeModules, filterNpm }:
+{ pkgs, lib, gitignore-nix, haskell, webCommonPlutus, webCommonPlayground, buildPursPackage, buildNodeModules, filterNpm }:
 let
   playground-exe = haskell.packages.plutus-playground-server.components.exes.plutus-playground-server;
 
@@ -71,7 +71,6 @@ let
       node -e 'require("./output/Test.Main").main()'
     '';
     extraSrcs = {
-      web-common = webCommon.cleanSrc;
       web-common-plutus = webCommonPlutus;
       web-common-playground = webCommonPlayground;
       generated = generated-purescript;
