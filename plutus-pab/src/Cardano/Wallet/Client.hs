@@ -138,7 +138,7 @@ toSealedTx _ _ (Left (SomeTx tx Cardano.Api.ShelleyEraInCardanoMode)) = Right $ 
 toSealedTx _ _ (Left (SomeTx tx Cardano.Api.AllegraEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.AllegraEra tx
 toSealedTx _ _ (Left (SomeTx tx Cardano.Api.MaryEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.MaryEra tx
 toSealedTx _ _ (Left (SomeTx tx Cardano.Api.AlonzoEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.AlonzoEra tx
-toSealedTx pp nid (Right tx) = C.sealedTxFromCardanoBody <$> toCardanoTxBody (Just pp) nid tx
+toSealedTx pp nid (Right tx) = C.sealedTxFromCardanoBody <$> toCardanoTxBody [] (Just pp) nid tx
 
 throwOtherError :: (Member (Error WalletAPIError) effs, Show err) => err -> Eff effs a
 throwOtherError = throwError . OtherError . pack . show
