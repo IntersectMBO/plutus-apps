@@ -35,9 +35,12 @@ myTypes :: [SumType 'Haskell]
 myTypes =
   [ equal . genericShow . order . argonaut $ mkSumType @TestData,
     equal . genericShow . order . argonaut $ mkSumType @TestSum,
+    equal . genericShow . order . argonaut $ mkSumType @TestRecursiveA,
+    equal . genericShow . order . argonaut $ mkSumType @TestRecursiveB,
     functor . equal . genericShow . order . argonaut $ mkSumType @(TestRecord A),
     equal . genericShow . order . argonaut $ mkSumType @TestNewtype,
     equal . genericShow . order . argonaut $ mkSumType @TestNewtypeRecord,
+    equal . genericShow . order . argonaut $ mkSumType @TestTwoFields,
     equal . genericShow . order . argonaut $ mkSumType @TestEnum,
     equal . genericShow . order . argonaut $ mkSumType @MyUnit
   ]

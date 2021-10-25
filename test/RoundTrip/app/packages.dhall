@@ -4,12 +4,14 @@ let upstream =
 in  upstream // {
   json-helpers =
     { dependencies =
-      [ "argonaut-codecs"
+      [ "aff"
+      , "argonaut-codecs"
       , "argonaut-core"
       , "arrays"
       , "bifunctors"
       , "contravariant"
       , "control"
+      , "effect"
       , "either"
       , "enums"
       , "foreign-object"
@@ -19,12 +21,15 @@ in  upstream // {
       , "prelude"
       , "profunctor"
       , "psci-support"
+      , "quickcheck"
       , "record"
+      , "spec"
+      , "spec-quickcheck"
       , "transformers"
       , "tuples"
       , "typelevel-prelude"
       ]
     , repo = "https://github.com/input-output-hk/purescript-bridge-json-helpers.git"
-    , version = "68265aaacc1a56c00a7625d424ff13d619681e5e"
+    , version = "16de087fde6e2d07e6bdae51383131ab81efa82d"
     }
 }

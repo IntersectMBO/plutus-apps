@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module RoundTrip.Types where
 
@@ -17,7 +18,7 @@ import System.Process (readProcessWithExitCode)
 import Test.HUnit (assertEqual)
 import Test.Hspec (Spec, aroundAll_, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Test.QuickCheck (Arbitrary (..), chooseEnum, oneof)
+import Test.QuickCheck (Arbitrary (..), chooseEnum, oneof, resize, sized)
 
 data TestData
   = Maybe (Maybe TestSum)
@@ -42,16 +43,19 @@ data TestSum
   | Number Double
   | String String
   | Array [Int]
+  | InlineRecord { why :: String, wouldYouDoThis :: Int }
   | Record (TestRecord Int)
   | NestedRecord (TestRecord (TestRecord Int))
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
+  | TwoFields TestTwoFields
   | Unit ()
   | MyUnit MyUnit
   | Pair (Int, Double)
   | Triple (Int, (), Bool)
   | Quad (Int, Double, Bool, Double)
   | QuadSimple Int Double Bool Double
+  | Recursive TestRecursiveA
   | Enum TestEnum
   deriving (Show, Eq, Ord, Generic)
 
@@ -68,10 +72,12 @@ instance Arbitrary TestSum where
         Number <$> arbitrary,
         String <$> arbitrary,
         Array <$> arbitrary,
+        InlineRecord <$> arbitrary <*> arbitrary,
         Record <$> arbitrary,
         NestedRecord <$> arbitrary,
         NT <$> arbitrary,
         NTRecord <$> arbitrary,
+        TwoFields <$> arbitrary,
         pure $ Unit (),
         Pair <$> arbitrary,
         Triple <$> arbitrary,
@@ -79,6 +85,27 @@ instance Arbitrary TestSum where
         QuadSimple <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary,
         Enum <$> arbitrary
       ]
+
+data TestRecursiveA = Nil | Recurse TestRecursiveB
+  deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON TestRecursiveA
+
+instance ToJSON TestRecursiveA
+
+instance Arbitrary TestRecursiveA where
+  arbitrary = sized go
+    where
+      go size
+        | size > 0 = oneof [pure Nil, resize (size - 1) $ Recurse <$> arbitrary]
+        | otherwise = pure Nil
+
+newtype TestRecursiveB = RecurseB TestRecursiveB
+  deriving (Show, Eq, Ord, Generic, Arbitrary)
+
+instance FromJSON TestRecursiveB
+
+instance ToJSON TestRecursiveB
 
 data TestRecord a = TestRecord
   { _field1 :: Maybe Int,
@@ -92,6 +119,16 @@ instance (ToJSON a) => ToJSON (TestRecord a)
 
 instance (Arbitrary a) => Arbitrary (TestRecord a) where
   arbitrary = TestRecord <$> arbitrary <*> arbitrary
+
+data TestTwoFields = TestTwoFields Bool Int
+  deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON TestTwoFields
+
+instance ToJSON TestTwoFields
+
+instance Arbitrary TestTwoFields where
+  arbitrary = TestTwoFields <$> arbitrary <*> arbitrary
 
 newtype TestNewtype = TestNewtype (TestRecord Bool)
   deriving (Show, Eq, Ord, Generic)

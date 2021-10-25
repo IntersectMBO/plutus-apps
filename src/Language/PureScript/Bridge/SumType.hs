@@ -229,7 +229,7 @@ instanceToTypes Json =
 instanceToTypes Newtype =
   Set.singleton $ TypeInfo "purescript-newtype" "Data.Newtype" "class Newtype" []
 instanceToTypes Functor =
-  Set.singleton $ TypeInfo "purescript-functor" "Data.Functor" "class Functor" []
+  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Functor" []
 instanceToTypes Eq =
   Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Eq" []
 instanceToTypes Eq1 =

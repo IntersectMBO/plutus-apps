@@ -2,8 +2,6 @@
 , dependencies =
   [ "argonaut-codecs"
   , "argonaut-core"
-  , "arrays"
-  , "bifunctors"
   , "console"
   , "control"
   , "effect"
@@ -14,6 +12,7 @@
   , "newtype"
   , "node-process"
   , "node-readline"
+  , "ordered-collections"
   , "prelude"
   , "profunctor-lenses"
   , "psci-support"
