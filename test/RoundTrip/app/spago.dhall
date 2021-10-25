@@ -14,6 +14,7 @@
   , "newtype"
   , "node-process"
   , "node-readline"
+  , "ordered-collections"
   , "prelude"
   , "profunctor-lenses"
   , "psci-support"

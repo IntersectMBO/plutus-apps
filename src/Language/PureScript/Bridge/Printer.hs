@@ -47,7 +47,7 @@ import           Text.PrettyPrint.Leijen.Text               (Doc,
                                                              renderPretty,
                                                              rparen,
                                                              textStrict, vsep,
-                                                             (<+>), hang, dquotes, char, backslash, nest, linebreak, lbrace, rbrace, softline)
+                                                             (<+>), hang, dquotes, char, backslash, nest, linebreak, lbrace, rbrace, softline, lbracket, rbracket)
 import qualified Data.List.NonEmpty as NE
 import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.Char (isLower, toLower)
@@ -154,7 +154,7 @@ instanceToImportLines Json =
     , ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["Decoder", "(</$\\>)", "(</*\\>)", "(</\\>)"]
     , ImportLine "Data.Argonaut.Decode.Decoders" $ Set.fromList ["decodeJArray", "decodeJObject", "decodeArray", "decodeNull"]
     , ImportLine "Data.Argonaut.Encode" $ Set.fromList ["(:=)", "(~>)", "encodeJson"]
-    , ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["Encoder", "(>$<)", "(>*<)", "(>/\\<)", "(>|<)"]
+    , ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["Encoder", "(>$<)", "(>*<)", "(>/\\<)"]
     , ImportLine "Data.Either" $ Set.singleton "Either(..)"
     , ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)", "maybe"]
     , ImportLine "Data.Newtype" $ Set.singleton "unwrap"
@@ -175,6 +175,7 @@ instanceToQualifiedImports Json =
   Map.fromList
     [ ("Data.Argonaut.Decode.Aeson", "D")
     , ("Data.Argonaut.Encode.Aeson", "E")
+    , ("Data.Map", "Map")
     ]
 instanceToQualifiedImports _ = Map.empty
 
@@ -371,15 +372,11 @@ sumTypeToEncode (SumType _ cs _)
                 else parens $ case_of [(constructorPattern dc, constructor args)]
             , ">$<" <+> nest 2 (argsToEncode args)
             ]
-      _ ->
-        "encodeJson <<< " <+> case_of (constructorToEncode <$> cs)
+      _ -> case_of (constructorToEncode <$> cs)
   where
     constructorToEncode c@(DataConstructor name args) =
       ( constructorPattern c
-      , vrecord
-          [ "tag:" <+> dquotes (textStrict name)
-          , "contents:" <+> "flip E.encode" <+> constructor args <+> argsToEncode args
-          ]
+      , "E.encodeTagged" <+> dquotes (textStrict name) <+> constructor args <+> argsToEncode args
       )
     argsToEncode Nullary = "E.null"
     argsToEncode (Normal (t :| [])) = typeToEncode t
@@ -417,27 +414,30 @@ sumTypeToDecode (SumType _ [c] _) = "$" <+> constructorToDecode c
 sumTypeToDecode (SumType t cs _) = line <>
   vsep
     [ "$ D.sumType" <+> t ^. typeName . to textStrict . to dquotes
-    , "$" <+> encloseVsep mempty mempty "<|>" (constructorToTagged <$> cs)
+    , hang 2
+        $ "$ Map.fromFoldable"
+        <+> encloseVsep lbracket rbracket comma (constructorToTagged <$> cs)
     ]
   where
-    constructorToTagged dc =
-      "D.tagged"
-        <+> dc ^. sigConstructor . to textStrict . to dquotes
-        <+> dc ^. to constructorToDecode . to parens
+    constructorToTagged dc = hsep
+      [ dc ^. sigConstructor . to textStrict . to dquotes
+      , "/\\"
+      , constructorToDecode dc
+      ]
 
 
 constructorToDecode :: DataConstructor 'PureScript -> Doc
 constructorToDecode (DataConstructor name Nullary) =
-  textStrict name <+> "<$" <+> "D.null"
+  parens $ textStrict name <+> "<$" <+> "D.null"
 constructorToDecode (DataConstructor name (Normal (a :| []))) =
-  textStrict name <+> "<$>" <+> typeToDecode a
+  parens $ textStrict name <+> "<$>" <+> typeToDecode a
 constructorToDecode (DataConstructor name (Normal as)) =
-  "D.tuple"
+  parens $ "D.tuple"
     <+> "$"
     <+> textStrict name
     <+> encloseHsep "</$\\>" mempty " </*\\>" (typeToDecode <$> NE.toList as)
 constructorToDecode (DataConstructor name (Record rs)) =
-  textStrict name
+  parens $ textStrict name
     <+> "<$> D.record"
     <+> dquotes (textStrict name)
     <+> vrecord (fieldSignatures $ fieldDecoder <$> rs)
