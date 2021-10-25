@@ -10,7 +10,7 @@ import           Control.Lens                               (to,(^.), (%~), (<>~
 import           Control.Monad                              (unless)
 import           Data.Map.Strict                            (Map)
 import qualified Data.Map.Strict                            as Map
-import           Data.Maybe                                 (isJust, catMaybes)
+import           Data.Maybe                                 (isJust, catMaybes, fromMaybe)
 import           Data.Set                                   (Set)
 import qualified Data.Set                                   as Set
 import           Data.Text                                  (Text)
@@ -54,7 +54,7 @@ import Data.Char (isLower, toLower)
 import Language.PureScript.Bridge.PSTypes (psUnit)
 import Control.Arrow ((&&&))
 import Data.Function ((&), on)
-import Data.List (nubBy)
+import Data.List (nubBy, sortBy, groupBy)
 
 renderText :: Doc -> Text
 renderText = T.replace " \n" "\n" . displayTStrict . renderPretty 0.4 200
@@ -146,17 +146,9 @@ instanceToImportLines GenericShow =
   importsFromList [ ImportLine "Data.Show.Generic" $ Set.singleton "genericShow" ]
 instanceToImportLines Json =
   importsFromList
-    [ ImportLine "Control.Alt" $ Set.singleton "(<|>)"
-    , ImportLine "Data.Array" $ Set.singleton "index"
-    , ImportLine "Data.Bifunctor" $ Set.singleton "lmap"
-    , ImportLine "Data.Argonaut.Core" $ Set.fromList ["jsonEmptyArray", "jsonEmptyObject", "jsonNull", "fromArray", "fromString"]
-    , ImportLine "Data.Argonaut.Decode" $ Set.fromList ["JsonDecodeError(..)", "(.:)", "(.:?)", "(.!=)", "decodeJson"]
-    , ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["Decoder", "(</$\\>)", "(</*\\>)", "(</\\>)"]
-    , ImportLine "Data.Argonaut.Decode.Decoders" $ Set.fromList ["decodeJArray", "decodeJObject", "decodeArray", "decodeNull"]
-    , ImportLine "Data.Argonaut.Encode" $ Set.fromList ["(:=)", "(~>)", "encodeJson"]
-    , ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["Encoder", "(>$<)", "(>*<)", "(>/\\<)"]
-    , ImportLine "Data.Either" $ Set.singleton "Either(..)"
-    , ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)", "maybe"]
+    [ ImportLine "Control.Lazy" $ Set.singleton "defer"
+    , ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"]
+    , ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"]
     , ImportLine "Data.Newtype" $ Set.singleton "unwrap"
     , ImportLine "Data.Tuple.Nested" $ Set.singleton "(/\\)"
     ]
@@ -238,7 +230,7 @@ lensImports settings
   | Switches.generateLenses settings =
     [ ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
     , ImportLine "Data.Lens" $
-      Set.fromList ["Iso'", "Prism'", "Lens'", "prism'", "lens", "iso"]
+      Set.fromList ["Iso'", "Prism'", "Lens'", "iso", "prism'"]
     , ImportLine "Data.Lens.Record" $ Set.fromList ["prop"]
     , ImportLine "Data.Lens.Iso.Newtype" $ Set.fromList ["_Newtype"]
     , ImportLine "Type.Proxy" $ Set.fromList ["Proxy(Proxy)"]
@@ -253,7 +245,16 @@ importLineToText :: ImportLine -> Doc
 importLineToText l =
   hsep ["import", textStrict $ importModule l, encloseHsep lparen rparen comma typeList]
     where
-      typeList = textStrict <$> Set.toList (importTypes l)
+      typeList =
+        map (textStrict . last)
+        . groupBy ((==) `on` importedType)
+        . sortBy importOrder
+        . Set.toList
+        $ importTypes l
+      importOrder imp1 imp2
+        | T.isPrefixOf "class" imp1 = if T.isPrefixOf "class" imp2 then compare imp1 imp2 else LT
+        | otherwise = compare imp1 imp2
+      importedType imp = fromMaybe imp $ T.stripSuffix "(..)" imp
 
 sumTypeToDocs :: Switches.Settings -> SumType 'PureScript -> [Doc]
 sumTypeToDocs settings st
@@ -326,11 +327,11 @@ instances st@(SumType t _ is) = go <$> is
       ]
     go Json = vsep $ punctuate line
       [ mkInstance "EncodeJson" encodeJsonConstraints t
-        [ "encodeJson =" <+> nest 2 (sumTypeToEncode st) ]
+        [ "encodeJson = defer \\_ ->" <+> sumTypeToEncode st ]
       , mkInstance "DecodeJson" decodeJsonConstraints t
-        [ "decodeJson = D.decode" <+> nest 2 (sumTypeToDecode st) ]
+        [ hang 2 $ "decodeJson = defer \\_ -> D.decode" <+> sumTypeToDecode st ]
       ]
-    go GenericShow = mkInstance "Show" showConstraints t [ "show = genericShow" ]
+    go GenericShow = mkInstance "Show" showConstraints t [ "show a = genericShow a" ]
     go Functor = mkDerivedInstance "Functor" (const []) [] $ toKind1 t
     go Eq = mkDerivedInstance "Eq" eqConstraints [] t
     go Eq1 = mkDerivedInstance "Eq1" (const []) [] $ toKind1 t
@@ -363,15 +364,15 @@ sumTypeToEncode :: SumType 'PureScript -> Doc
 sumTypeToEncode (SumType _ cs _)
   | isEnum cs = "E.encode E.enum"
   | otherwise =
-    linebreak <> case cs of
+    case cs of
       [dc@(DataConstructor _ args)] ->
-        "E.encode $"
-          <+> vsep
-            [ if isJust (nootype [dc])
-                then "unwrap"
-                else parens $ case_of [(constructorPattern dc, constructor args)]
-            , ">$<" <+> nest 2 (argsToEncode args)
-            ]
+        hsep
+        ["E.encode $"
+        , if isJust (nootype [dc])
+            then "unwrap"
+            else parens $ case_of [(constructorPattern dc, constructor args)]
+        , hang 2 $ ">$<" <+> nest 2 (argsToEncode args)
+        ]
       _ -> case_of (constructorToEncode <$> cs)
   where
     constructorToEncode c@(DataConstructor name args) =
@@ -412,11 +413,11 @@ sumTypeToDecode (SumType _ cs _)
   | isEnum cs = "D.enum"
 sumTypeToDecode (SumType _ [c] _) = "$" <+> constructorToDecode c
 sumTypeToDecode (SumType t cs _) = line <>
-  vsep
-    [ "$ D.sumType" <+> t ^. typeName . to textStrict . to dquotes
-    , hang 2
-        $ "$ Map.fromFoldable"
-        <+> encloseVsep lbracket rbracket comma (constructorToTagged <$> cs)
+  hsep
+    [ "$ D.sumType"
+    , t ^. typeName . to textStrict . to dquotes
+    , "$ Map.fromFoldable"
+    , encloseVsep lbracket rbracket comma (constructorToTagged <$> cs)
     ]
   where
     constructorToTagged dc = hsep

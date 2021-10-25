@@ -4,12 +4,14 @@ let upstream =
 in  upstream // {
   json-helpers =
     { dependencies =
-      [ "argonaut-codecs"
+      [ "aff"
+      , "argonaut-codecs"
       , "argonaut-core"
       , "arrays"
       , "bifunctors"
       , "contravariant"
       , "control"
+      , "effect"
       , "either"
       , "enums"
       , "foreign-object"
@@ -19,7 +21,10 @@ in  upstream // {
       , "prelude"
       , "profunctor"
       , "psci-support"
+      , "quickcheck"
       , "record"
+      , "spec"
+      , "spec-quickcheck"
       , "transformers"
       , "tuples"
       , "typelevel-prelude"

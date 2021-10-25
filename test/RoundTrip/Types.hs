@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module RoundTrip.Types where
 
@@ -17,7 +18,7 @@ import System.Process (readProcessWithExitCode)
 import Test.HUnit (assertEqual)
 import Test.Hspec (Spec, aroundAll_, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Test.QuickCheck (Arbitrary (..), chooseEnum, oneof)
+import Test.QuickCheck (Arbitrary (..), chooseEnum, oneof, resize, sized)
 
 data TestData
   = Maybe (Maybe TestSum)
@@ -54,6 +55,7 @@ data TestSum
   | Triple (Int, (), Bool)
   | Quad (Int, Double, Bool, Double)
   | QuadSimple Int Double Bool Double
+  | Recursive TestRecursiveA
   | Enum TestEnum
   deriving (Show, Eq, Ord, Generic)
 
@@ -83,6 +85,27 @@ instance Arbitrary TestSum where
         QuadSimple <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary,
         Enum <$> arbitrary
       ]
+
+data TestRecursiveA = Nil | Recurse TestRecursiveB
+  deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON TestRecursiveA
+
+instance ToJSON TestRecursiveA
+
+instance Arbitrary TestRecursiveA where
+  arbitrary = sized go
+    where
+      go size
+        | size > 0 = oneof [pure Nil, resize (size - 1) $ Recurse <$> arbitrary]
+        | otherwise = pure Nil
+
+newtype TestRecursiveB = RecurseB TestRecursiveB
+  deriving (Show, Eq, Ord, Generic, Arbitrary)
+
+instance FromJSON TestRecursiveB
+
+instance ToJSON TestRecursiveB
 
 data TestRecord a = TestRecord
   { _field1 :: Maybe Int,

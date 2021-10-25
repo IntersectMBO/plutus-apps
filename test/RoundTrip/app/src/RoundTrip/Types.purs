@@ -3,25 +3,20 @@ module RoundTrip.Types where
 
 import Prelude
 
-import Control.Alt ((<|>))
-import Data.Argonaut.Core (fromArray, fromString, jsonEmptyArray, jsonEmptyObject, jsonNull)
-import Data.Argonaut.Decode ((.!=), (.:), (.:?), JsonDecodeError(..), class DecodeJson, decodeJson)
-import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>), Decoder)
-import Data.Argonaut.Decode.Decoders (decodeArray, decodeJArray, decodeJObject, decodeNull)
-import Data.Argonaut.Encode ((:=), (~>), class EncodeJson, encodeJson)
-import Data.Argonaut.Encode.Aeson ((>$<), (>*<), (>/\<), Encoder)
-import Data.Array (index)
-import Data.Bifunctor (lmap)
+import Control.Lazy (defer)
+import Data.Argonaut.Decode (class DecodeJson)
+import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
+import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Bounded.Generic (genericBottom, genericTop)
-import Data.Either (Either, Either(..))
+import Data.Either (Either)
 import Data.Enum (class Enum)
 import Data.Enum.Generic (genericPred, genericSucc)
-import Data.Functor (class Functor)
 import Data.Generic.Rep (class Generic)
-import Data.Lens (Iso', Lens', Prism', iso, lens, prism')
+import Data.Lens (Iso', Lens', Prism', iso, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
-import Data.Maybe (Maybe, Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple)
@@ -38,23 +33,21 @@ data TestData
 derive instance eqTestData :: Eq TestData
 
 instance showTestData :: Show TestData where
-  show = genericShow
+  show a = genericShow a
 
 derive instance ordTestData :: Ord TestData
 
 instance encodeJsonTestData :: EncodeJson TestData where
-  encodeJson =
-    case _ of
-      Maybe a -> E.encodeTagged "Maybe" a (E.maybe E.value)
-      Either a -> E.encodeTagged "Either" a (E.either (E.maybe E.value) (E.maybe E.value))
+  encodeJson = defer \_ -> case _ of
+    Maybe a -> E.encodeTagged "Maybe" a (E.maybe E.value)
+    Either a -> E.encodeTagged "Either" a (E.either (E.maybe E.value) (E.maybe E.value))
 
 instance decodeJsonTestData :: DecodeJson TestData where
-  decodeJson = D.decode
-    $ D.sumType "TestData"
-    $ Map.fromFoldable
-        [ "Maybe" /\ (Maybe <$> (D.maybe D.value))
-        , "Either" /\ (Either <$> (D.either (D.maybe D.value) (D.maybe D.value)))
-        ]
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "TestData" $ Map.fromFoldable
+      [ "Maybe" /\ (Maybe <$> (D.maybe D.value))
+      , "Either" /\ (Either <$> (D.either (D.maybe D.value) (D.maybe D.value)))
+      ]
 
 derive instance genericTestData :: Generic TestData _
 
@@ -94,69 +87,70 @@ data TestSum
   | Triple (Tuple Int (Tuple Unit Boolean))
   | Quad (Tuple Int (Tuple Number (Tuple Boolean Number)))
   | QuadSimple Int Number Boolean Number
+  | Recursive TestRecursiveA
   | Enum TestEnum
 
 derive instance eqTestSum :: Eq TestSum
 
 instance showTestSum :: Show TestSum where
-  show = genericShow
+  show a = genericShow a
 
 derive instance ordTestSum :: Ord TestSum
 
 instance encodeJsonTestSum :: EncodeJson TestSum where
-  encodeJson =
-    case _ of
-      Nullary -> E.encodeTagged "Nullary" unit E.null
-      Bool a -> E.encodeTagged "Bool" a E.value
-      Int a -> E.encodeTagged "Int" a E.value
-      Number a -> E.encodeTagged "Number" a E.value
-      String a -> E.encodeTagged "String" a E.value
-      Array a -> E.encodeTagged "Array" a E.value
-      InlineRecord {why, wouldYouDoThis} -> E.encodeTagged "InlineRecord" {why, wouldYouDoThis} (E.record
-     
-        { why: E.value :: _ String
-        , wouldYouDoThis: E.value :: _ Int
-        })
-      Record a -> E.encodeTagged "Record" a E.value
-      NestedRecord a -> E.encodeTagged "NestedRecord" a E.value
-      NT a -> E.encodeTagged "NT" a E.value
-      NTRecord a -> E.encodeTagged "NTRecord" a E.value
-      TwoFields a -> E.encodeTagged "TwoFields" a E.value
-      Unit a -> E.encodeTagged "Unit" a E.unit
-      MyUnit a -> E.encodeTagged "MyUnit" a E.value
-      Pair a -> E.encodeTagged "Pair" a (E.tuple (E.value >/\< E.value))
-      Triple a -> E.encodeTagged "Triple" a (E.tuple (E.value >/\< E.unit >/\< E.value))
-      Quad a -> E.encodeTagged "Quad" a (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
-      QuadSimple a b c d -> E.encodeTagged "QuadSimple" (a /\ b /\ c /\ d) (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
-      Enum a -> E.encodeTagged "Enum" a E.value
+  encodeJson = defer \_ -> case _ of
+    Nullary -> E.encodeTagged "Nullary" unit E.null
+    Bool a -> E.encodeTagged "Bool" a E.value
+    Int a -> E.encodeTagged "Int" a E.value
+    Number a -> E.encodeTagged "Number" a E.value
+    String a -> E.encodeTagged "String" a E.value
+    Array a -> E.encodeTagged "Array" a E.value
+    InlineRecord {why, wouldYouDoThis} -> E.encodeTagged "InlineRecord" {why, wouldYouDoThis} (E.record
+   
+      { why: E.value :: _ String
+      , wouldYouDoThis: E.value :: _ Int
+      })
+    Record a -> E.encodeTagged "Record" a E.value
+    NestedRecord a -> E.encodeTagged "NestedRecord" a E.value
+    NT a -> E.encodeTagged "NT" a E.value
+    NTRecord a -> E.encodeTagged "NTRecord" a E.value
+    TwoFields a -> E.encodeTagged "TwoFields" a E.value
+    Unit a -> E.encodeTagged "Unit" a E.unit
+    MyUnit a -> E.encodeTagged "MyUnit" a E.value
+    Pair a -> E.encodeTagged "Pair" a (E.tuple (E.value >/\< E.value))
+    Triple a -> E.encodeTagged "Triple" a (E.tuple (E.value >/\< E.unit >/\< E.value))
+    Quad a -> E.encodeTagged "Quad" a (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
+    QuadSimple a b c d -> E.encodeTagged "QuadSimple" (a /\ b /\ c /\ d) (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
+    Recursive a -> E.encodeTagged "Recursive" a E.value
+    Enum a -> E.encodeTagged "Enum" a E.value
 
 instance decodeJsonTestSum :: DecodeJson TestSum where
-  decodeJson = D.decode
-    $ D.sumType "TestSum"
-    $ Map.fromFoldable
-        [ "Nullary" /\ (Nullary <$ D.null)
-        , "Bool" /\ (Bool <$> D.value)
-        , "Int" /\ (Int <$> D.value)
-        , "Number" /\ (Number <$> D.value)
-        , "String" /\ (String <$> D.value)
-        , "Array" /\ (Array <$> D.value)
-        , "InlineRecord" /\ (InlineRecord <$> D.record "InlineRecord"
-          { why: D.value :: _ String
-          , wouldYouDoThis: D.value :: _ Int
-          })
-        , "Record" /\ (Record <$> D.value)
-        , "NestedRecord" /\ (NestedRecord <$> D.value)
-        , "NT" /\ (NT <$> D.value)
-        , "NTRecord" /\ (NTRecord <$> D.value)
-        , "TwoFields" /\ (TwoFields <$> D.value)
-        , "Unit" /\ (Unit <$> D.unit)
-        , "MyUnit" /\ (MyUnit <$> D.value)
-        , "Pair" /\ (Pair <$> (D.tuple (D.value </\> D.value)))
-        , "Triple" /\ (Triple <$> (D.tuple (D.value </\> D.unit </\> D.value)))
-        , "Quad" /\ (Quad <$> (D.tuple (D.value </\> D.value </\> D.value </\> D.value)))
-        , "QuadSimple" /\ (D.tuple $ QuadSimple </$\>D.value </*\> D.value </*\> D.value </*\> D.value)
-        , "Enum" /\ (Enum <$> D.value)
-        ]
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "TestSum" $ Map.fromFoldable
+      [ "Nullary" /\ (Nullary <$ D.null)
+      , "Bool" /\ (Bool <$> D.value)
+      , "Int" /\ (Int <$> D.value)
+      , "Number" /\ (Number <$> D.value)
+      , "String" /\ (String <$> D.value)
+      , "Array" /\ (Array <$> D.value)
+      , "InlineRecord" /\ (InlineRecord <$> D.record "InlineRecord"
+        { why: D.value :: _ String
+        , wouldYouDoThis: D.value :: _ Int
+        })
+      , "Record" /\ (Record <$> D.value)
+      , "NestedRecord" /\ (NestedRecord <$> D.value)
+      , "NT" /\ (NT <$> D.value)
+      , "NTRecord" /\ (NTRecord <$> D.value)
+      , "TwoFields" /\ (TwoFields <$> D.value)
+      , "Unit" /\ (Unit <$> D.unit)
+      , "MyUnit" /\ (MyUnit <$> D.value)
+      , "Pair" /\ (Pair <$> (D.tuple (D.value </\> D.value)))
+      , "Triple" /\ (Triple <$> (D.tuple (D.value </\> D.unit </\> D.value)))
+      , "Quad" /\ (Quad <$> (D.tuple (D.value </\> D.value </\> D.value </\> D.value)))
+      , "QuadSimple" /\ (D.tuple $ QuadSimple </$\>D.value </*\> D.value </*\> D.value </*\> D.value)
+      , "Recursive" /\ (Recursive <$> D.value)
+      , "Enum" /\ (Enum <$> D.value)
+      ]
 
 derive instance genericTestSum :: Generic TestSum _
 
@@ -252,10 +246,80 @@ _QuadSimple = prism' (\{a, b, c, d} -> (QuadSimple a b c d)) case _ of
   (QuadSimple a b c d) -> Just {a, b, c, d}
   _ -> Nothing
 
+_Recursive :: Prism' TestSum TestRecursiveA
+_Recursive = prism' Recursive case _ of
+  (Recursive a) -> Just a
+  _ -> Nothing
+
 _Enum :: Prism' TestSum TestEnum
 _Enum = prism' Enum case _ of
   (Enum a) -> Just a
   _ -> Nothing
+
+--------------------------------------------------------------------------------
+
+data TestRecursiveA
+  = Nil
+  | Recurse TestRecursiveB
+
+derive instance eqTestRecursiveA :: Eq TestRecursiveA
+
+instance showTestRecursiveA :: Show TestRecursiveA where
+  show a = genericShow a
+
+derive instance ordTestRecursiveA :: Ord TestRecursiveA
+
+instance encodeJsonTestRecursiveA :: EncodeJson TestRecursiveA where
+  encodeJson = defer \_ -> case _ of
+    Nil -> E.encodeTagged "Nil" unit E.null
+    Recurse a -> E.encodeTagged "Recurse" a E.value
+
+instance decodeJsonTestRecursiveA :: DecodeJson TestRecursiveA where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "TestRecursiveA" $ Map.fromFoldable
+      [ "Nil" /\ (Nil <$ D.null)
+      , "Recurse" /\ (Recurse <$> D.value)
+      ]
+
+derive instance genericTestRecursiveA :: Generic TestRecursiveA _
+
+--------------------------------------------------------------------------------
+
+_Nil :: Prism' TestRecursiveA Unit
+_Nil = prism' (const Nil) case _ of
+  Nil -> Just unit
+  _ -> Nothing
+
+_Recurse :: Prism' TestRecursiveA TestRecursiveB
+_Recurse = prism' Recurse case _ of
+  (Recurse a) -> Just a
+  _ -> Nothing
+
+--------------------------------------------------------------------------------
+
+newtype TestRecursiveB = RecurseB TestRecursiveB
+
+derive instance eqTestRecursiveB :: Eq TestRecursiveB
+
+instance showTestRecursiveB :: Show TestRecursiveB where
+  show a = genericShow a
+
+derive instance ordTestRecursiveB :: Ord TestRecursiveB
+
+instance encodeJsonTestRecursiveB :: EncodeJson TestRecursiveB where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
+
+instance decodeJsonTestRecursiveB :: DecodeJson TestRecursiveB where
+  decodeJson = defer \_ -> D.decode $ (RecurseB <$> D.value)
+
+derive instance genericTestRecursiveB :: Generic TestRecursiveB _
+
+derive instance newtypeTestRecursiveB :: Newtype TestRecursiveB _
+
+--------------------------------------------------------------------------------
+
+_RecurseB :: Iso' TestRecursiveB TestRecursiveB
+_RecurseB = _Newtype
 
 --------------------------------------------------------------------------------
 
@@ -269,20 +333,18 @@ derive instance functorTestRecord :: Functor TestRecord
 derive instance eqTestRecord :: (Eq a) => Eq (TestRecord a)
 
 instance showTestRecord :: (Show a) => Show (TestRecord a) where
-  show = genericShow
+  show a = genericShow a
 
 derive instance ordTestRecord :: (Ord a) => Ord (TestRecord a)
 
 instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
-  encodeJson =
-    E.encode $ unwrap
-    >$< (E.record
-        { _field1: (E.maybe E.value) :: _ (Maybe Int)
-        , _field2: E.value :: _ a
-        })
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { _field1: (E.maybe E.value) :: _ (Maybe Int)
+                                                   , _field2: E.value :: _ a
+                                                   })
 
 instance decodeJsonTestRecord :: (DecodeJson a) => DecodeJson (TestRecord a) where
-  decodeJson = D.decode $ (TestRecord <$> D.record "TestRecord"
+  decodeJson = defer \_ -> D.decode $ (TestRecord <$> D.record "TestRecord"
       { _field1: (D.maybe D.value) :: _ (Maybe Int)
       , _field2: D.value :: _ a
       })
@@ -309,17 +371,15 @@ newtype TestNewtype = TestNewtype (TestRecord Boolean)
 derive instance eqTestNewtype :: Eq TestNewtype
 
 instance showTestNewtype :: Show TestNewtype where
-  show = genericShow
+  show a = genericShow a
 
 derive instance ordTestNewtype :: Ord TestNewtype
 
 instance encodeJsonTestNewtype :: EncodeJson TestNewtype where
-  encodeJson =
-    E.encode $ unwrap
-    >$< E.value
+  encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
 
 instance decodeJsonTestNewtype :: DecodeJson TestNewtype where
-  decodeJson = D.decode $ (TestNewtype <$> D.value)
+  decodeJson = defer \_ -> D.decode $ (TestNewtype <$> D.value)
 
 derive instance genericTestNewtype :: Generic TestNewtype _
 
@@ -337,17 +397,16 @@ newtype TestNewtypeRecord = TestNewtypeRecord { unTestNewtypeRecord :: TestNewty
 derive instance eqTestNewtypeRecord :: Eq TestNewtypeRecord
 
 instance showTestNewtypeRecord :: Show TestNewtypeRecord where
-  show = genericShow
+  show a = genericShow a
 
 derive instance ordTestNewtypeRecord :: Ord TestNewtypeRecord
 
 instance encodeJsonTestNewtypeRecord :: EncodeJson TestNewtypeRecord where
-  encodeJson =
-    E.encode $ unwrap
-    >$< (E.record { unTestNewtypeRecord: E.value :: _ TestNewtype })
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { unTestNewtypeRecord: E.value :: _ TestNewtype })
 
 instance decodeJsonTestNewtypeRecord :: DecodeJson TestNewtypeRecord where
-  decodeJson = D.decode $ (TestNewtypeRecord <$> D.record "TestNewtypeRecord" { unTestNewtypeRecord: D.value :: _ TestNewtype })
+  decodeJson = defer \_ -> D.decode $ (TestNewtypeRecord <$> D.record "TestNewtypeRecord" { unTestNewtypeRecord: D.value :: _ TestNewtype })
 
 derive instance genericTestNewtypeRecord :: Generic TestNewtypeRecord _
 
@@ -365,17 +424,15 @@ data TestTwoFields = TestTwoFields Boolean Int
 derive instance eqTestTwoFields :: Eq TestTwoFields
 
 instance showTestTwoFields :: Show TestTwoFields where
-  show = genericShow
+  show a = genericShow a
 
 derive instance ordTestTwoFields :: Ord TestTwoFields
 
 instance encodeJsonTestTwoFields :: EncodeJson TestTwoFields where
-  encodeJson =
-    E.encode $ (case _ of TestTwoFields a b -> (a /\ b))
-    >$< (E.tuple (E.value >/\< E.value))
+  encodeJson = defer \_ -> E.encode $ (case _ of TestTwoFields a b -> (a /\ b)) >$< (E.tuple (E.value >/\< E.value))
 
 instance decodeJsonTestTwoFields :: DecodeJson TestTwoFields where
-  decodeJson = D.decode $ (D.tuple $ TestTwoFields </$\>D.value </*\> D.value)
+  decodeJson = defer \_ -> D.decode $ (D.tuple $ TestTwoFields </$\>D.value </*\> D.value)
 
 derive instance genericTestTwoFields :: Generic TestTwoFields _
 
@@ -398,15 +455,15 @@ data TestEnum
 derive instance eqTestEnum :: Eq TestEnum
 
 instance showTestEnum :: Show TestEnum where
-  show = genericShow
+  show a = genericShow a
 
 derive instance ordTestEnum :: Ord TestEnum
 
 instance encodeJsonTestEnum :: EncodeJson TestEnum where
-  encodeJson = E.encode E.enum
+  encodeJson = defer \_ -> E.encode E.enum
 
 instance decodeJsonTestEnum :: DecodeJson TestEnum where
-  decodeJson = D.decode D.enum
+  decodeJson = defer \_ -> D.decode D.enum
 
 derive instance genericTestEnum :: Generic TestEnum _
 
@@ -462,15 +519,15 @@ data MyUnit = U
 derive instance eqMyUnit :: Eq MyUnit
 
 instance showMyUnit :: Show MyUnit where
-  show = genericShow
+  show a = genericShow a
 
 derive instance ordMyUnit :: Ord MyUnit
 
 instance encodeJsonMyUnit :: EncodeJson MyUnit where
-  encodeJson = E.encode E.enum
+  encodeJson = defer \_ -> E.encode E.enum
 
 instance decodeJsonMyUnit :: DecodeJson MyUnit where
-  decodeJson = D.decode D.enum
+  decodeJson = defer \_ -> D.decode D.enum
 
 derive instance genericMyUnit :: Generic MyUnit _
 

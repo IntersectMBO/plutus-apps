@@ -2,8 +2,6 @@
 , dependencies =
   [ "argonaut-codecs"
   , "argonaut-core"
-  , "arrays"
-  , "bifunctors"
   , "console"
   , "control"
   , "effect"
