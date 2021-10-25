@@ -25,7 +25,6 @@ import Test.QuickCheck.Gen (Gen, chooseInt, vectorOf)
 import Test.Unit (TestSuite, failure, success, suite, test)
 import Test.Unit.Assert (equal)
 import Test.Unit.QuickCheck (quickCheck)
-import TestUtils (arbitraryEither, arbitraryNonEmptyList, assertDecodesTo, assertEncodesTo)
 import Type.Proxy (Proxy(..))
 import PlutusTx.Ratio
 

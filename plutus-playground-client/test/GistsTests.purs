@@ -8,7 +8,6 @@ import Data.Show.Generic (genericShow)
 import Gist (GistId(..))
 import Gists.Types (parseGistUrl)
 import Test.Unit (TestSuite, Test, suite, test)
-import TestUtils (equalWithBiformatter)
 
 all :: TestSuite
 all =

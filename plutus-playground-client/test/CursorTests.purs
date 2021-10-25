@@ -19,7 +19,6 @@ import Test.QuickCheck.Gen (Gen, arrayOf, elements)
 import Test.Unit (TestSuite, suite, test)
 import Test.Unit.Assert (equal)
 import Test.Unit.QuickCheck (quickCheck)
-import TestUtils (genIndex, genLooseIndex)
 
 data Operation
   = Set Int

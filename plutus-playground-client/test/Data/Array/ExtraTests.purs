@@ -13,7 +13,6 @@ import Test.QuickCheck.Gen (Gen)
 import Test.Unit (TestSuite, suite, test)
 import Test.Unit.Assert (equal)
 import Test.Unit.QuickCheck (quickCheck)
-import TestUtils (genIndex, genLooseIndex)
 
 all :: TestSuite
 all =

@@ -6,7 +6,6 @@ import Prologue
 import Plutus.PAB.Effects.Contract.ContractTest (TestContracts)
 import Plutus.PAB.Webserver.Types (FullReport, ContractSignatureResponse)
 import Test.Unit (TestSuite, suite, test)
-import TestUtils (assertDecodesTo)
 import Type.Proxy (Proxy(..))
 
 all :: TestSuite
