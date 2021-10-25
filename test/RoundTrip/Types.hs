@@ -42,6 +42,7 @@ data TestSum
   | Number Double
   | String String
   | Array [Int]
+  | InlineRecord { why :: String, wouldYouDoThis :: Int }
   | Record (TestRecord Int)
   | NestedRecord (TestRecord (TestRecord Int))
   | NT TestNewtype
@@ -68,6 +69,7 @@ instance Arbitrary TestSum where
         Number <$> arbitrary,
         String <$> arbitrary,
         Array <$> arbitrary,
+        InlineRecord <$> arbitrary <*> arbitrary,
         Record <$> arbitrary,
         NestedRecord <$> arbitrary,
         NT <$> arbitrary,

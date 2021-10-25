@@ -82,6 +82,10 @@ data TestSum
   | Number Number
   | String String
   | Array (Array Int)
+  | InlineRecord
+    { why :: String
+    , wouldYouDoThis :: Int
+    }
   | Record (TestRecord Int)
   | NestedRecord (TestRecord (TestRecord Int))
   | NT TestNewtype
@@ -111,6 +115,10 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
       >|< E.tagged "Number" E.value
       >|< E.tagged "String" E.value
       >|< E.tagged "Array" E.value
+      >|< E.tagged "InlineRecord" (E.record
+        { why: E.value :: _ String
+        , wouldYouDoThis: E.value :: _ Int
+        })
       >|< E.tagged "Record" E.value
       >|< E.tagged "NestedRecord" E.value
       >|< E.tagged "NT" E.value
@@ -130,17 +138,24 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
       (Number a) -> Right $ Right $ Right $ Left $ (a)
       (String a) -> Right $ Right $ Right $ Right $ Left $ (a)
       (Array a) -> Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Record a) -> Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (NestedRecord a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (NT a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (NTRecord a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Unit a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (MyUnit a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Pair a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Triple a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Quad a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (QuadSimple a b c d) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a /\ b /\ c /\ d)
-      (Enum a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ (a)
+      (InlineRecord
+        { why
+        , wouldYouDoThis
+        }) -> Right $ Right $ Right $ Right $ Right $ Right $ Left $
+        { why
+        , wouldYouDoThis
+        }
+      (Record a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (NestedRecord a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (NT a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (NTRecord a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Unit a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (MyUnit a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Pair a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Triple a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (Quad a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
+      (QuadSimple a b c d) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a /\ b /\ c /\ d)
+      (Enum a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ (a)
 
 instance decodeJsonTestSum :: DecodeJson TestSum where
   decodeJson = D.decode
@@ -152,6 +167,10 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
       <|> D.tagged "Number" (Number <$> D.value)
       <|> D.tagged "String" (String <$> D.value)
       <|> D.tagged "Array" (Array <$> D.value)
+      <|> D.tagged "InlineRecord" (InlineRecord <$> D.record "InlineRecord"
+        { why: D.value :: _ String
+        , wouldYouDoThis: D.value :: _ Int
+        })
       <|> D.tagged "Record" (Record <$> D.value)
       <|> D.tagged "NestedRecord" (NestedRecord <$> D.value)
       <|> D.tagged "NT" (NT <$> D.value)
@@ -196,6 +215,11 @@ _String = prism' String case _ of
 _Array :: Prism' TestSum (Array Int)
 _Array = prism' Array case _ of
   (Array a) -> Just a
+  _ -> Nothing
+
+_InlineRecord :: Prism' TestSum {why :: String, wouldYouDoThis :: Int}
+_InlineRecord = prism' InlineRecord case _ of
+  (InlineRecord a) -> Just a
   _ -> Nothing
 
 _Record :: Prism' TestSum (TestRecord Int)
@@ -272,15 +296,15 @@ derive instance ordTestRecord :: (Ord a) => Ord (TestRecord a)
 instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
   encodeJson = E.encode
     $ unwrap
-    >$< E.record
-        { _field1: (E.maybe E.value) :: Encoder (Maybe Int)
-        , _field2: E.value :: Encoder a
-        }
+    >$< (E.record
+        { _field1: (E.maybe E.value) :: _ (Maybe Int)
+        , _field2: E.value :: _ a
+        })
 
 instance decodeJsonTestRecord :: (DecodeJson a) => DecodeJson (TestRecord a) where
   decodeJson = D.decode $ TestRecord <$> D.record "TestRecord"
-      { _field1: (D.maybe D.value) :: Decoder (Maybe Int)
-      , _field2: D.value :: Decoder a
+      { _field1: (D.maybe D.value) :: _ (Maybe Int)
+      , _field2: D.value :: _ a
       }
 
 derive instance genericTestRecord :: Generic (TestRecord a) _
@@ -340,10 +364,10 @@ derive instance ordTestNewtypeRecord :: Ord TestNewtypeRecord
 instance encodeJsonTestNewtypeRecord :: EncodeJson TestNewtypeRecord where
   encodeJson = E.encode
     $ unwrap
-    >$< E.record { unTestNewtypeRecord: E.value :: Encoder TestNewtype }
+    >$< (E.record { unTestNewtypeRecord: E.value :: _ TestNewtype })
 
 instance decodeJsonTestNewtypeRecord :: DecodeJson TestNewtypeRecord where
-  decodeJson = D.decode $ TestNewtypeRecord <$> D.record "TestNewtypeRecord" { unTestNewtypeRecord: D.value :: Decoder TestNewtype }
+  decodeJson = D.decode $ TestNewtypeRecord <$> D.record "TestNewtypeRecord" { unTestNewtypeRecord: D.value :: _ TestNewtype }
 
 derive instance genericTestNewtypeRecord :: Generic TestNewtypeRecord _
 

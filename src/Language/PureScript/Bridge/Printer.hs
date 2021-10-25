@@ -396,11 +396,11 @@ sumTypeToEncode (SumType _ cs _)
     argsToEncode (Normal ts) =
       parens $ "E.tuple" <+> encloseHsep lparen rparen " >/\\<" (typeToEncode <$> NE.toList ts)
     argsToEncode (Record rs) =
-      "E.record" <> softline <> vrecord (fieldSignatures $ fieldEncoder <$> rs)
+      parens $ "E.record" <> softline <> vrecord (fieldSignatures $ fieldEncoder <$> rs)
         where
           fieldEncoder r =
             r
-              & recValue %~ mkType "Encoder" . pure
+              & recValue %~ mkType "_" . pure
               & recLabel <>~ renderText (":" <+> typeToEncode (_recValue r))
 
 flattenTuple :: [PSType] -> [PSType]
@@ -454,7 +454,7 @@ constructorToDecode (DataConstructor name (Record rs)) =
     where
       fieldDecoder r =
         r
-          & recValue %~ mkType "Decoder" . pure
+          & recValue %~ mkType "_" . pure
           & recLabel <>~ renderText (":" <+> typeToDecode (_recValue r))
 
 typeToDecode :: PSType -> Doc
@@ -503,12 +503,10 @@ constructorToOptic hasOtherConstructors typeInfo (DataConstructor n args) =
         toMorph = parens $ lambda toExpr fromExpr
     (Record rs, False) -> newtypeIso pName typeInfo $ recordType rs
     (Record rs, True) ->
-      prism pName typeInfo (recordType rs) fromExpr toExpr
-        $ parens
-        $ lambda toExpr fromExpr
+      prism pName typeInfo (recordType rs) fromExpr toExpr cName
         where
-          fromExpr = pattern n "a"
-          toExpr = pattern n "a"
+          fromExpr = pattern n toExpr
+          toExpr = "a"
   where
     cName = textStrict n
     pName = "_" <> textStrict n
