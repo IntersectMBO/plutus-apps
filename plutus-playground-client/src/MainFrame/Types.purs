@@ -37,7 +37,7 @@ import Playground.Types (CompilationResult, ContractCall, ContractDemo, Evaluati
 import Plutus.V1.Ledger.Tx (Tx)
 import Prelude (class Eq, class Show, Unit, show, ($))
 import Schema.Types (ActionEvent(..), FormArgument, SimulationAction(..))
-import Servant.PureScript.Ajax (AjaxError)
+import Servant.PureScript (AjaxError)
 import Test.QuickCheck.Arbitrary (class Arbitrary)
 import Test.QuickCheck.Gen as Gen
 import ValueEditor (ValueEvent(..))

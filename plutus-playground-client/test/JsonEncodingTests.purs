@@ -11,7 +11,6 @@ import Data.BigInt.Argonaut (BigInt)
 import Data.BigInt.Argonaut as BigInt
 import Data.Either (Either(..))
 import Data.Foldable (product)
-import Data.Json.JsonNonEmptyList (JsonNonEmptyList(..))
 import Data.Tuple (Tuple(..))
 import Foreign (MultipleErrors)
 import Foreign.Class (class Decode, class Encode, decode, encode)
