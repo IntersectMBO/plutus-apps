@@ -2,9 +2,9 @@
 let
   playground-exe = haskell.packages.plutus-playground-server.components.exes.plutus-playground-server;
 
-  build-playground-exe = "$(nix-build --quiet --no-build-output ../default.nix -A plutus.haskell.packages.plutus-playground-server.components.exes.plutus-playground-server)";
+  build-playground-exe = "$(nix-build --quiet --no-build-output ../default.nix -A plutus-apps.haskell.packages.plutus-playground-server.components.exes.plutus-playground-server)";
 
-  build-ghc-with-plutus = "$(nix-build --quiet --no-build-output -E '(import ./.. {}).plutus.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
+  build-ghc-with-plutus = "$(nix-build --quiet --no-build-output -E '(import ./.. {}).plutus-apps.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
 
   # Output containing the purescript bridge code
   # We need to add ghc with dependecies because `psgenerator` needs to invoke ghc to
