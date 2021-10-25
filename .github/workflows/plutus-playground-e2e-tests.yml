@@ -1,0 +1,62 @@
+name: Plutus Playground E2E Tests
+
+on:
+#  schedule:
+#  - cron: '0 4 * * *'
+  push:
+    branches: [ plutus-playground-e2e-tests ]
+  workflow_dispatch:
+
+jobs:
+  plutus-playground-e2e-tests:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout Plutus
+      uses: actions/checkout@v2
+
+    - name: Setup Firefox
+      uses: browser-actions/setup-firefox@latest
+
+    - name: Setup Java
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'zulu' # See 'Supported distributions' for available options
+        java-version: '11'
+ 
+    - name: Setup Haskell
+      uses: haskell/actions/setup@v1
+      with:
+        ghc-version: '8.10.4'
+        cabal-version: '3.2.0.0'
+
+    - name: Setup Nix
+      uses: cachix/install-nix-action@v13
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+        extra_nix_config: |
+          substituters        = https://hydra.iohk.io https://iohk.cachix.org https://cache.nixos.org/
+          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+    - name: Build Plutus Playground
+      run: nix-build -A plutus-playground.client -A plutus-playground.server
+        #  nix build -f default.nix plutus.haskell.packages.plutus-core.components.library
+
+    - name: Run Plutus Playground
+      working-directory: ./plutus-playground-client
+      env:
+        CLIENT_PORT: 8009
+      run: |
+        nix-shell --run 'plutus-playground-server' ../shell.nix &
+        nix-shell --run 'npm start' ../shell.nix &
+        while ! echo exit | nc localhost $CLIENT_PORT; do echo "Waiting for playground client on $CLIENT_PORT" && sleep 10; done
+
+    - name: Run Selenium Server
+      working-directory: ./e2e-tests
+      run: xvfb-run java -jar selenium-server-4.0.0.jar standalone &
+
+    - name: Run Tests
+      working-directory: ./e2e-tests/
+      run: |
+        echo "Running tests"
+        cabal build plutus-playground-e2e-tests
+        cabal run plutus-playground-e2e-tests True
