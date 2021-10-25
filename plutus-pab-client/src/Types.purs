@@ -7,7 +7,7 @@ import Control.Monad.Gen as Gen
 import Data.Bifunctor (lmap)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Json.JsonUUID (JsonUUID, _JsonUUID)
+import Data.UUID.Argonaut (JsonUUID(..))
 import Data.Lens (Getter', Iso', Traversal', Lens', to, traversed)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)

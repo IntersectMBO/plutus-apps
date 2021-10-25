@@ -17,7 +17,6 @@ import Ledger.Extra (sum)
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
 import Test.Unit (TestSuite, suite, test)
 import Test.Unit.Assert (equal)
-import TestUtils (equalGenericShow)
 
 all :: TestSuite
 all =

@@ -5,9 +5,7 @@ module Schema.TypesTests
 import Prologue
 import Data.BigInt.Argonaut as BigInt
 import Data.Functor.Foldable (Fix(..))
-import Data.Json.JsonNonEmptyList (JsonNonEmptyList(..))
 import Data.List (List(..))
-import Data.List.NonEmpty (NonEmptyList(..))
 import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
 import Data.Tuple (Tuple(..))
