@@ -27,8 +27,7 @@ import Network.RemoteData as RemoteData
 import Playground.Lenses (_getEndpointDescription)
 import Plutus.PAB.Webserver (SPParams_, getApiFullreport, getApiContractInstances, getApiContractDefinitions, postApiContractActivate)
 import Plutus.PAB.Webserver.Types (ContractInstanceClientState, ContractSignatureResponse, FullReport, CombinedWSStreamToServer, ContractActivationArgs)
-import Servant.PureScript.Ajax (AjaxError, ajax)
-import Servant.PureScript.Settings (SPSettings_)
+import Servant.PureScript (AjaxError)
 import Wallet.Types (EndpointDescription, ContractInstanceId)
 import ContractExample (ExampleContracts)
 

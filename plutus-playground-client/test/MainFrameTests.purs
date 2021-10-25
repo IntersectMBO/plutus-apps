@@ -45,7 +45,6 @@ import Node.FS.Sync as FS
 import Playground.Gists (playgroundGistFile)
 import Playground.Server (SPParams_(..))
 import Playground.Types (CompilationResult, ContractDemo, EvaluationResult)
-import Servant.PureScript.Settings (SPSettings_, defaultSettings)
 import StaticData (bufferLocalStorageKey, lookupContractDemo, mkContractDemos)
 import Test.QuickCheck ((<?>))
 import Test.Unit (TestSuite, failure, suite, test)

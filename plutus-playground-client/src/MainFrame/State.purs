@@ -67,8 +67,6 @@ import Playground.Types (ContractCall(..), ContractDemo(..), Evaluation(..), Kno
 import Plutus.V1.Ledger.Value (Value)
 import Prelude (class Applicative, Unit, Void, add, const, bind, discard, flip, identity, join, not, mempty, one, pure, show, unit, unless, void, when, zero, (+), ($), (&&), (==), (<>), (<$>), (<*>), (>>=), (<<<))
 import Schema.Types (Expression, FormArgument, SimulationAction(..), formArgumentToJson, handleActionEvent, handleFormEvent, handleValueEvent, mkInitialValue, traverseFunctionSchema)
-import Servant.PureScript.Ajax (errorToString)
-import Servant.PureScript.Settings (SPSettings_, defaultSettings)
 import Simulator.View (simulatorTitleRefLabel, simulationsErrorRefLabel)
 import StaticData (mkContractDemos, lookupContractDemo)
 import Validation (_argumentValues, _argument)

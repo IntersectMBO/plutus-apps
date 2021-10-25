@@ -52,7 +52,6 @@ import Prim.TypeError (class Warn, Text)
 import Schema (FormSchema)
 import Schema.Types (formArgumentToJson, toArgument)
 import Schema.Types as Schema
-import Servant.PureScript.Settings (SPSettings_, defaultSettings)
 import Types (HAction(..), Output, Query(..), State(..), StreamError(..), View(..), WebSocketStatus(..), ContractSignatures(..), EndpointForm, WebStreamData, _webSocketMessage, _webSocketStatus, _annotatedBlockchain, _chainReport, _chainState, _contractActiveEndpoints, _contractSignatures, _contractStates, _currentView, _csContract, _csCurrentState, fromWebData)
 import Validation (_argument)
 import View as View

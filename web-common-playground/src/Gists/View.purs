@@ -19,7 +19,7 @@ import Halogen.HTML.Properties (class_, classes, disabled, for, href, id_, targe
 import Icons (Icon(..), icon)
 import Network.RemoteData (RemoteData(NotAsked, Loading, Failure, Success))
 import Prelude (const, ($), (<$>), (<<<), (<>), (=<<))
-import Servant.PureScript.Ajax (AjaxError)
+import Servant.PureScript (AjaxError)
 
 idPublishGist :: forall r i. IProp ( id :: String | r ) i
 idPublishGist = id_ "publish-gist"
