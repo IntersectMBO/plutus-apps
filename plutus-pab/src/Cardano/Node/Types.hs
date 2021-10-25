@@ -179,13 +179,13 @@ instance Pretty MockServerLogMsg where
         StartingRandomTx          -> "Starting random transaction generation thread"
         KeepingOldBlocks          -> "Not starting block reaper thread (old blocks will be retained in-memory forever"
         RemovingOldBlocks         -> "Starting block reaper thread (old blocks will be removed)"
-        StartingMockServer p      -> "Starting Mock Node Server on port " <+> pretty p
+        StartingMockServer p      -> "Starting Mock Node Server on port" <+> pretty p
         StartingSlotCoordination initialSlotTime slotLength  ->
             "Starting slot coordination thread."
             <+> "Initial slot time:" <+> pretty (F.iso8601Show initialSlotTime)
             <+> "Slot length:" <+> viaShow slotLength
-        ProcessingChainEvent e    -> "Processing chain event " <+> pretty e
-        BlockOperation e          -> "Block operation " <+> pretty e
+        ProcessingChainEvent e    -> "Processing chain event" <+> pretty e
+        BlockOperation e          -> "Block operation" <+> pretty e
         CreatingRandomTransaction -> "Generating a random transaction"
 
 instance ToObject MockServerLogMsg where

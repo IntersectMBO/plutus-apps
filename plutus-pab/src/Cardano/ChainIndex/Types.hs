@@ -78,8 +78,8 @@ instance Pretty ChainIndexServerMsg where
     pretty = \case
         ReceivedBlocksTxns blocks txns -> "Received" <+> pretty blocks <+> "blocks" <+> parens (pretty txns <+> "transactions")
         StartingNodeClientThread -> "Starting node client thread"
-        StartingChainIndex port -> "Starting chain index on port: " <> pretty port
-        ChainEvent e -> "Processing chain index event: " <> pretty e
+        StartingChainIndex port -> "Starting chain index on port" <+> pretty port
+        ChainEvent e -> "Processing chain index event:" <+> pretty e
 
 instance ToObject ChainIndexServerMsg where
     toObject _ = \case
