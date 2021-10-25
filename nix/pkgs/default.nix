@@ -94,27 +94,7 @@ let
   # We pull out some packages from easyPS that are a pain to get otherwise.
   # In particular, we used to build purty ourselves, but now its build is a nightmare.
   # This does mean we can't as easily control the version we get, though.
-  inherit (easyPS) purty purs psc-package spago;
-
-  # There is a spago2nix in easyPS, but it doesn't (currently) work. It doesn't
-  # matter because it's actually just a thin call to spago2nix's nix build
-  # script. So we can just go directly to the source and get the latest
-  # version.
-  #
-  # It's worth periodically checking to see if the easyPS version is working
-  # again. To check:
-  #
-  # * Replace this call with `inherit (easyPS) spago2nix;`.
-  # * Run `nix-shell --run 'cd plutus-playground-client ; update-client-deps'
-  #
-  # If that fails, it's not ready. Rollback.
-  # If it succeeds:
-  #
-  # * Merge your new `inherit (easyPS) spago2nix` with the one above.
-  # * Remove spago2nix from flake.nix
-  # * Run `nix --experimental-features 'nix-command flakes' flake lock`
-  #
-  spago2nix = pkgs.callPackage (sources.spago2nix) { };
+  inherit (easyPS) purty purs psc-package spago purescript-language-server psa spago2nix;
 
   # sphinx haddock support
   sphinxcontrib-haddock = pkgs.callPackage (sources.sphinxcontrib-haddock) { pythonPackages = pkgs.python3Packages; };
@@ -155,7 +135,7 @@ in
   inherit sphinx-markdown-tables sphinxemoji sphinxcontrib-haddock;
   inherit nix-pre-commit-hooks;
   inherit haskell cabal-install cardano-repo-tool stylish-haskell hlint haskell-language-server haskell-language-server-wrapper hie-bios cardano-cli cardano-node;
-  inherit purty purty-pre-commit purs spago spago2nix;
+  inherit purty purty-pre-commit purs spago spago2nix purescript-language-server psa;
   inherit fixPurty fixStylishHaskell fixPngOptimization updateMaterialized updateClientDeps;
   inherit web-ghc;
   inherit easyPS plutus-haddock-combined;

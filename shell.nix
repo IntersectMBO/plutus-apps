@@ -6,7 +6,6 @@ let
   inherit (packages) pkgs plutus-apps plutus-playground plutus-pab docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cardano-cli cardano-node;
-  inherit (plutus-apps) purty purty-pre-commit purs spargo;
 
   # For Sphinx, and ad-hoc usage
   sphinxTools = python3.withPackages (ps: [
@@ -27,7 +26,7 @@ let
       stylish-haskell = stylish-haskell;
       nixpkgs-fmt = nixpkgs-fmt;
       shellcheck = pkgs.shellcheck;
-      purty = purty-pre-commit;
+      purty = plutus-apps.purty-pre-commit;
     };
     hooks = {
       purty.enable = true;
@@ -70,7 +69,6 @@ let
     yq
     z3
     zlib
-    nodePackages.purescript-language-server
   ];
 
   # local build inputs ( -> ./nix/pkgs/default.nix )
@@ -91,6 +89,8 @@ let
     plutus-pab.start-backend
     plutus-pab.start-all-servers
     plutus-pab.start-all-servers-m
+    psa
+    purescript-language-server
     purs
     purty
     spago
