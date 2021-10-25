@@ -22,7 +22,6 @@ import qualified Data.ByteString                                    as BS
 import qualified Data.ByteString.Lazy                               as BSL
 import           Data.Map                                           ((!))
 import qualified Data.Text                                          as Text
-import           Data.Text.Prettyprint.Doc.Extras
 import           Data.Time.Units.Extra                              ()
 import           Data.Void                                          (Void)
 
@@ -51,6 +50,8 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Type          as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Codec as TxSubmission
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type  as TxSubmission
 import           Ouroboros.Network.Util.ShowProxy
+
+import           Prettyprinter.Extras
 
 import           Ledger                                             (Block, OnChainTx (..), Tx (..), TxId (..))
 

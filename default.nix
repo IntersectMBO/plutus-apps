@@ -75,5 +75,5 @@ rec {
   build-and-push-devcontainer-script = import ./nix/devcontainer/deploy/default.nix { inherit pkgs plutus-apps; };
 
   # Packages needed for the bitte deployment
-  bitte-packages = import ./bitte { inherit plutus-playground docs pkgs; };
+  bitte-packages = import ./bitte { inherit plutus-playground docs pkgs web-ghc; };
 }

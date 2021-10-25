@@ -21,17 +21,17 @@ module Plutus.Contract.State(
     , mkResponse
     ) where
 
-import           Control.Monad.Freer.Extras.Log   (LogMessage)
-import           Data.Aeson                       (FromJSON, ToJSON, Value)
-import           Data.Bifunctor                   (Bifunctor (..))
-import           Data.Foldable                    (toList)
-import           GHC.Generics                     (Generic)
+import           Control.Monad.Freer.Extras.Log (LogMessage)
+import           Data.Aeson                     (FromJSON, ToJSON, Value)
+import           Data.Bifunctor                 (Bifunctor (..))
+import           Data.Foldable                  (toList)
+import           GHC.Generics                   (Generic)
 
-import           Data.Text.Prettyprint.Doc.Extras (Pretty, PrettyShow (..))
-import           Plutus.Contract.Checkpoint       (CheckpointKey, CheckpointStore)
-import           Plutus.Contract.Effects          (PABReq, PABResp)
+import           Plutus.Contract.Checkpoint     (CheckpointKey, CheckpointStore)
+import           Plutus.Contract.Effects        (PABReq, PABResp)
 import           Plutus.Contract.Resumable
-import           Plutus.Contract.Types            hiding (lastLogs, lastState, logs, observableState)
+import           Plutus.Contract.Types          hiding (lastLogs, lastState, logs, observableState)
+import           Prettyprinter.Extras           (Pretty, PrettyShow (..))
 
 -- $contractstate
 -- Types for initialising and running instances of 'Contract's. The types and

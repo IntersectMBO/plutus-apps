@@ -1,4 +1,9 @@
-resolver: lts-17.14
+# FIXME: stack cannot build `plutus-ledger` with the dependency on `cardano-api:gen`.
+# As it doesn't support public sublibraries yet.
+# https://github.com/commercialhaskell/stack/issues/5318.
+# Making it only being able to build ~98% of this repository.
+
+resolver: lts-18.13
 
 packages:
 - doc
@@ -14,68 +19,84 @@ packages:
 - web-ghc
 
 extra-deps:
-# Flat compression
-- pure-zlib-0.6.7@sha256:5a1cdf87bf3079b7d3abace1f94eeb3c597c687a38a08ee2908783e609271467,3487
-# FEAT/NEAT and deps
-- lazy-search-0.1.2.0
-- size-based-0.1.2.0
-- testing-feat-1.1.0.0
-- Stream-0.4.7.2@sha256:ed78165aa34c4e23dc53c9072f8715d414a585037f2145ea0eb2b38300354c53,1009
-- lazysmallcheck-0.6@sha256:dac7a1e4877681f1260309e863e896674dd6efc1159897b7945893e693f2a6bc,1696
-# Other missing packages
-- composition-prelude-3.0.0.2
-- constraints-extras-0.3.0.2
-- dependent-map-0.4.0.0
-- dependent-sum-0.7.1.0
-- dependent-sum-template-0.1.0.3
-- barbies-2.0.2.0
-- nothunks-0.1.2
-- indexed-traversable-instances-0.1
-- base16-bytestring-1.0.1.0
-# A revision was added to keep the bounds down, we don't actually want this!
-# we work around the newer persistent-template by adding flags below
-- monoidal-containers-0.6.0.1
-- recursion-schemes-5.1.3
-- row-types-0.4.0.0
-- time-out-0.2@sha256:b9a6b4dee64f030ecb2a25dca0faff39b3cb3b5fefbb8af3cdec4142bfd291f2
-- time-interval-0.1.1@sha256:7bfd3601853d1af7caa18248ec10b01701d035ac274a93bb4670fea52a14d4e8
-- time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1
-- servant-websockets-2.0.0
-- servant-subscriber-0.7.0.0
-- safe-exceptions-checked-0.1.0
-- async-timer-0.1.4.1
-- sbv-8.9
-- wl-pprint-1.2.1@sha256:aea676cff4a062d7d912149d270e33f5bb0c01b68a9db46ff13b438141ff4b7c
-- witherable-0.4.1
+- OddWord-1.0.2.0@sha256:5d848ff5db2c0457ce37ccc8898ce2b6b880a1c6a78e5b16841328a7404ff5ee,1888
+- Unique-0.4.7.9@sha256:a7e154cf6d05169777a1e54aadab24fb3a6eae3ee167e5e77d7ba96d182436c7,2064
+- async-timer-0.2.0.0@sha256:e1504aa0fb5932cb07498ec548180aba9e03a3e7f5d2c810bf3dce75fbdd34d6,2048
+- beam-core-0.9.1.0@sha256:70659e3046bfecda49b1b921bf088899bad859ea649552c78d464e634740b107,5282
+- beam-migrate-0.5.1.0@sha256:55d5fae17584c14b654d19d9de01f0a65e6c229561ce4fd12de92eba98b39105,4923
+- beam-sqlite-0.5.1.0@sha256:ec2a5cf9cc427a57c1c6872194450cd2e5d287e7a50b1ab554badb5138e78e7d,3634
 - canonical-json-0.6.0.0@sha256:9021f435ccb884a3b4c55bcc6b50eb19d5fc3cc3f29d5fcbdef016f5bbae23a2,3488
-- statistics-linreg-0.3@sha256:95c6efe6c7f6b26bc6e9ada90ab2d18216371cf59a6ef2b517b4a6fd35d9a76f,2544
-- partial-order-0.2.0.0@sha256:a0d6ddc9ebcfa965a5cbcff1d06d46a79d44ea5a0335c583c2a51bcb41334487,2275
-- streaming-binary-0.2.2.0@sha256:09b9a9b0291199c5808e88dcf9c93e7b336e740c71efeafd7c835b59794a8c90,1034
-- transformers-except-0.1.1@sha256:6c12ef8e632a10440968cd541e75074bd6ef4b5ff4012677f8f8189d7b2d0df6,1387
-- beam-core-0.9.0.0@sha256:e5b1cb4d5b8a8a166f3373e8718672a3884feb9a5a133404b047b0af76538023,5282
-- beam-migrate-0.5.0.0@sha256:d3f7e333ec9e96122ccec6be0d38a88f766dfc248323be73fd0b3cee245ea421,4923
-- beam-sqlite-0.5.0.0@sha256:d785bf40101235a72b80652ce27be9c8048de5f7c171ccb23e1e62b8f1ce6e7c,3496
-- Unique-0.4.7.8
-- moo-1.2
-- gray-code-0.3.1
+- composition-prelude-3.0.0.2@sha256:1ffed216bd28d810fce0b5be83a661e2a892696d73b3f8de5c0f5edb9b5f0090,1216
 - dom-lt-0.2.2.1@sha256:6b005b64f10a0f73f716898e0f4b4d93a02c31dc8abb155c14afd870e3abf9ac,1778
+- gray-code-0.3.1@sha256:2c8a4ed9c9ee37320305610604d6d93504e0813d7c9768949af418b53043185a,2388
+- lazy-search-0.1.2.1@sha256:c942a01e4a64881f89c72eaef5e3a78eba8750759cd66996c6746a2a7cabe703,1199
 - libsystemd-journal-1.4.5@sha256:dc68296f5d874b48ba187dbd0af4de8182ba57cb6ebaa46c05ac61c1b3c6c396,1238
+- monoidal-containers-0.6.0.1@sha256:f56ea8fe91ff93da140e38b8dab4b94437b901818c13ba72fc7fc802290323ee,2583
+- moo-1.2@sha256:0c4be1a01548db785dcbbe6b8c98579dbf03c5b3b536e0420dce3ba6a61337cb,5951
+- nothunks-0.1.3@sha256:33bb3af223163535fa59d1fa83ba95a355106ba3fcffe5452d4abbf13ab4608d,2521
+- partial-order-0.2.0.0@sha256:a0d6ddc9ebcfa965a5cbcff1d06d46a79d44ea5a0335c583c2a51bcb41334487,2275
+- row-types-1.0.1.2@sha256:5c56e91d30b61f275eaee0d97b015d5332d95d7599e57582d6e62a43aa388087,2948
+- servant-options-0.1.0.0@sha256:39f50166a68006250e79370372f553ca476f14d06d93fa0c401050253aeba803,914
+- servant-subscriber-0.7.0.0@sha256:e54a3ca6d52227025081bbc470a3af35efecbe0f82050d06aa5c9bbdf05795a6,2635
+- servant-websockets-2.0.0@sha256:6e9e3600bced90fd52ed3d1bf632205cb21479075b20d6637153cc4567000234,2253
+- size-based-0.1.2.0@sha256:1b33da89d270189661dbbda49a88b0c21d2fc2f7a407e7a2b1933e2faf0f5d4d,1258
+- statistics-linreg-0.3@sha256:95c6efe6c7f6b26bc6e9ada90ab2d18216371cf59a6ef2b517b4a6fd35d9a76f,2544
+- streaming-binary-0.2.2.0@sha256:09b9a9b0291199c5808e88dcf9c93e7b336e740c71efeafd7c835b59794a8c90,1034
+- time-interval-0.1.1@sha256:7bfd3601853d1af7caa18248ec10b01701d035ac274a93bb4670fea52a14d4e8,2567
+- time-out-0.2@sha256:b9a6b4dee64f030ecb2a25dca0faff39b3cb3b5fefbb8af3cdec4142bfd291f2,3010
+- transformers-except-0.1.2@sha256:2ff895fd65ec9e45cbe839ef5b66e26b7d9f3fe561148993293a41e14491e625,1548
+
+# Outside of Stackage LTS
+- hspec-2.8.3      # For `cardano-wallet`
+- hspec-core-2.8.3 # For `cardano-wallet`
+- network-3.1.2.5  # For `network-mux`
 
 # cabal.project is the source of truth for these pins, they are explained there
 # and need to be kept in sync.
-- git: https://github.com/michaelpj/flat.git
+- git: https://github.com/Quid2/flat.git
   commit: ee59880f47ab835dbd73bea0847dab7869fc20d8
-- git: https://github.com/shmish111/purescript-bridge.git
+- git: https://github.com/input-output-hk/purescript-bridge.git
   commit: 6a92d7853ea514be8b70bab5e72077bf5a510596
-- git: https://github.com/shmish111/servant-purescript.git
-  commit: a76104490499aa72d40c2790d10e9383e0dbde63
+- git: https://github.com/input-output-hk/servant-purescript.git
+  commit: a0c7c7e37c95564061247461aef4be505a853538
 - git: https://github.com/input-output-hk/cardano-crypto.git
   commit: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
+- git: https://github.com/input-output-hk/cardano-base
+  commit: 4ea7e2d927c9a7f78ddc69738409a5827ab66b98
+  subdirs:
+    - base-deriving-via
+    - binary
+    - binary/test
+    - cardano-crypto-class
+    - cardano-crypto-praos
+    - cardano-crypto-tests
+    - measures
+    - orphans-deriving-via
+    - slotting
+    - strict-containers
+- git: https://github.com/input-output-hk/cardano-prelude
+  commit: fd773f7a58412131512b9f694ab95653ac430852
+  subdirs:
+    - cardano-prelude
+    - cardano-prelude-test
+- git: https://github.com/input-output-hk/cardano-addresses
+  commit: d2f86caa085402a953920c6714a0de6a50b655ec
+  subdirs:
+    - core
+- git: https://github.com/input-output-hk/cardano-wallet
+  commit: ae7569293e94241ef6829139ec02bd91abd069df
+  subdirs:
+    - lib/text-class
+    - lib/strict-non-empty-containers
+    - lib/core
+    - lib/test-utils
+    - lib/numeric
 - git: https://github.com/input-output-hk/ouroboros-network
-  commit: 6d00ff77f9bcd769fb6d7fd02216cec4e837bfcf
+  commit: 1f4973f36f689d6da75b5d351fb124d66ef1057d
   subdirs:
     - monoidal-synchronisation
     - typed-protocols
+    - typed-protocols-cborg
     - typed-protocols-examples
     - ouroboros-network
     - ouroboros-network-testing
@@ -87,41 +108,7 @@ extra-deps:
     - io-sim
     - io-classes
     - network-mux
-- git: https://github.com/input-output-hk/cardano-prelude
-  commit: fd773f7a58412131512b9f694ab95653ac430852
-  subdirs:
-    - cardano-prelude
-    - cardano-prelude-test
-- git: https://github.com/input-output-hk/cardano-base
-  commit: 46502694f6a9f0498f822068008b232b3837a9e9
-  subdirs:
-    - base-deriving-via
-    - binary
-    - binary/test
-    - measures
-    - orphans-deriving-via
-    - slotting
-    - cardano-crypto-class
-    - cardano-crypto-praos
-    - cardano-crypto-tests
-    - strict-containers
-- git: https://github.com/input-output-hk/cardano-ledger-specs
-  commit: d5b184a820853c7ba202efd615b8fadca1acb52c
-  subdirs:
-    - byron/chain/executable-spec
-    - byron/crypto
-    - byron/crypto/test
-    - byron/ledger/executable-spec
-    - byron/ledger/impl
-    - byron/ledger/impl/test
-    - semantics/executable-spec
-    - semantics/small-steps-test
-    - shelley/chain-and-ledger/dependencies/non-integer
-    - shelley/chain-and-ledger/executable-spec
-    - shelley/chain-and-ledger/shelley-spec-ledger-test
-    - shelley-ma/impl
-    - cardano-ledger-core
-    - alonzo/impl
+    - ntp-client
 - git: https://github.com/input-output-hk/iohk-monitoring-framework
   commit: 46f994e216a1f8b36fe4669b47b2a7011b0e153c
   subdirs:
@@ -133,8 +120,25 @@ extra-deps:
     - plugins/backend-monitoring
     - plugins/backend-trace-forwarder
     - plugins/scribe-systemd
+- git: https://github.com/input-output-hk/cardano-ledger-specs
+  commit: bf008ce028751cae9fb0b53c3bef20f07c06e333
+  subdirs:
+    - byron/ledger/impl
+    - cardano-ledger-core
+    - cardano-protocol-tpraos
+    - eras/alonzo/impl
+    - eras/byron/chain/executable-spec
+    - eras/byron/crypto
+    - eras/byron/crypto/test
+    - eras/byron/ledger/executable-spec
+    - eras/byron/ledger/impl/test
+    - eras/shelley/impl
+    - eras/shelley-ma/impl
+    - libs/non-integral
+    - libs/small-steps
+    - semantics/small-steps-test
 - git: https://github.com/input-output-hk/cardano-node.git
-  commit: 8cf2b208c7708bd890c7e74d5b1d7c4167a3b40b
+  commit: b6ca519f97a0e795611a63174687e6bb70c9f752
   subdirs:
     - cardano-api
     - cardano-node
@@ -144,12 +148,10 @@ extra-deps:
   commit: 7497a29cb998721a9068d5725d49461f2bba0e7a
 - git: https://github.com/input-output-hk/Win32-network
   commit: 3825d3abf75f83f406c1f7161883c438dac7277d
-- git: https://github.com/input-output-hk/hedgehog-extras
-  commit: edf6945007177a638fbeb8802397f3a6f4e47c14
 - git: https://github.com/input-output-hk/goblins
   commit: cde90a2b27f79187ca8310b6549331e59595e7ba
 - git: https://github.com/input-output-hk/plutus
-  commit: 0cb5c00add3809d9f247e9ec3f069d9ac3becd95
+  commit: 3f089ccf0ca746b399c99afe51e063b0640af547
   subdirs:
     - plutus-core
     - plutus-ledger-api
@@ -160,8 +162,3 @@ extra-deps:
     - stubs/plutus-ghc-stub
 
 allow-newer: true
-
-extra-package-dbs: []
-
-nix:
-  shell-file: shell.nix
