@@ -35,7 +35,7 @@ If you find yourself building GHC, STOP and fix the cache.
 
 === User documentation
 
-The main documentation is located https://plutus.readthedocs.io/en/latest/[here].
+The main documentation is located https://plutus-apps.readthedocs.io/en/latest/[here].
 
 === Talks
 
@@ -93,6 +93,7 @@ See <<nix-advice>> for further advice on using Nix.
 ===== Non-Nix
 
 You can build some of the Haskell packages without Nix, but this is not recommended and we don't guarantee that these prerequisites are sufficient.
+For instance, you would have to build and install this fork of https://github.com/input-output-hk/libsodium/commit/66f017f16633f2060db25e17c170c2afa0f2a8a1[`libsodium`] from source.
 If you use Nix, these tools are provided for you via `shell.nix`, and you do *not* need to install them yourself.
 
 * If you want to build our Haskell packages with https://www.haskell.org/cabal/[`cabal`], then install it.

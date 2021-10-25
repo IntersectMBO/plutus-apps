@@ -58,6 +58,7 @@ module Plutus.Contract.Test(
     , checkPredicateGen
     , checkPredicateGenOptions
     , checkPredicateInner
+    , checkEmulatorFails
     , CheckOptions
     , defaultCheckOptions
     , minLogLevel
@@ -132,6 +133,7 @@ import qualified Wallet.Emulator.Folds                 as Folds
 import           Wallet.Emulator.Stream                (filterLogLevel, foldEmulatorStreamM, initialChainState,
                                                         initialDist)
 
+
 type TracePredicate = FoldM (Eff '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void)]) EmulatorEvent Bool
 
 infixl 3 .&&.
@@ -171,6 +173,17 @@ checkPredicate ::
     -> EmulatorTrace ()
     -> TestTree
 checkPredicate = checkPredicateOptions defaultCheckOptions
+
+-- | Check if the emulator trace fails with the condition
+checkEmulatorFails ::
+    String -- ^ Descriptive name of the test
+    -> CheckOptions
+    -> TracePredicate
+    -> EmulatorTrace () -- ^ The trace that should fail
+    -> TestTree
+checkEmulatorFails nm options predicate action = do
+    HUnit.testCaseSteps nm $ \step -> do
+        checkPredicateInner options predicate action step (HUnit.assertBool nm . Prelude.not)
 
 -- | Check if the emulator trace meets the condition, using the
 --   'GeneratorModel' to generate initial transactions for the blockchain
@@ -218,7 +231,7 @@ checkPredicateInner CheckOptions{_minLogLevel, _emulatorConfig} predicate action
                 annot (describeError err)
                 annot (show err)
                 assert False
-            Right _ -> assert False
+            Right r -> assert $ S.fst' r
 
 -- | A version of 'checkPredicateGen' with configurable 'CheckOptions'
 checkPredicateGenOptions ::

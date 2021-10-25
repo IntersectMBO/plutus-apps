@@ -35,18 +35,16 @@
         depends = [
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
-          (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
+          (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
+          (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
+          (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+          (hsPkgs."newtype-generics" or (errorHandler.buildDepError "newtype-generics"))
+          (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
           (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
           (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
-          (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
-          (hsPkgs."newtype-generics" or (errorHandler.buildDepError "newtype-generics"))
-          (hsPkgs."regex-compat" or (errorHandler.buildDepError "regex-compat"))
-          (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
-          (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
           (hsPkgs."temporary" or (errorHandler.buildDepError "temporary"))
-          (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
-          (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
+          (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
           ];
         buildable = true;
         modules = [ "Interpreter" "Webghc/Server" "Webghc/Client" ];
@@ -57,22 +55,17 @@
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."data-default-class" or (errorHandler.buildDepError "data-default-class"))
-            (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
-            (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
             (hsPkgs."monad-logger" or (errorHandler.buildDepError "monad-logger"))
-            (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
             (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
             (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
             (hsPkgs."prometheus" or (errorHandler.buildDepError "prometheus"))
             (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
-            (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
             (hsPkgs."wai-cors" or (errorHandler.buildDepError "wai-cors"))
             (hsPkgs."wai-extra" or (errorHandler.buildDepError "wai-extra"))
             (hsPkgs."wai" or (errorHandler.buildDepError "wai"))
             (hsPkgs."warp" or (errorHandler.buildDepError "warp"))
-            (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
             (hsPkgs."web-ghc" or (errorHandler.buildDepError "web-ghc"))
             ];
           buildable = true;
@@ -86,7 +79,6 @@
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
-            (hsPkgs."web-ghc" or (errorHandler.buildDepError "web-ghc"))
             ];
           buildable = true;
           hsSourceDirs = [ "test" ];

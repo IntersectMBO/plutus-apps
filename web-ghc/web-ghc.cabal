@@ -37,18 +37,16 @@ library
     build-depends:
         base >=4.7 && <5,
         aeson -any,
-        servant,
+        exceptions,
+        filepath,
+        mtl,
+        newtype-generics,
+        playground-common,
         servant-server,
         servant-client,
-        exceptions,
-        newtype-generics,
-        regex-compat,
-        time-units,
-        filepath,
         temporary,
-        mtl,
-        playground-common,
-        text
+        text,
+        time-units
 
 executable web-ghc-server
     main-is: Main.hs
@@ -63,22 +61,17 @@ executable web-ghc-server
     build-depends:
         base >=4.7 && <5,
         data-default-class,
-        exceptions,
-        http-types,
         monad-logger,
-        mtl,
         optparse-applicative,
         playground-common,
         prometheus,
         servant-server,
-        servant,
         text,
         time-units,
         wai-cors,
         wai-extra,
         wai,
         warp,
-        yaml,
         web-ghc
 
 test-suite web-ghc-test
@@ -93,5 +86,4 @@ test-suite web-ghc-test
                  -fprint-potential-instances -Wunused-packages
     build-depends:
         base >=4.7 && <5,
-        tasty,
-        web-ghc
+        tasty

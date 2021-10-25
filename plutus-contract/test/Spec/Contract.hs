@@ -220,7 +220,7 @@ tests =
 
               expectedAccumState =
                 [ Committed TxValid Unspent
-                , Committed TxValid (Spent "1c439c63459861e6698707f26a752b7222b3bc8af94c77146a07b571e49e141b")
+                , Committed TxValid (Spent "2e02b91e17093a89ffbaa2b8b769e28cae83d567f4c183462bec16ea0fc7f8cd")
                 ]
           in run "await change in tx out status"
             ( assertAccumState c tag ((==) expectedAccumState) "should be done"
@@ -269,6 +269,18 @@ tests =
                     ContractInstanceState{instContractState=ResumableResult{_finalState}} <- Trace.getContractState hdl
                     Log.logInfo @String "Received contract state"
                     Log.logInfo @String $ "Final state: " <> show _finalState
+
+        , let theContract :: Contract () Schema ContractError () = void $ awaitSlot 10
+              emTrace = do
+                void $ Trace.assert "Always succeeds" $ const True
+                void $ Trace.waitNSlots 10
+          in run "assert succeeds" (waitingForSlot theContract tag 10) emTrace
+
+        , let theContract :: Contract () Schema ContractError () = void $ awaitSlot 10
+              emTrace = do
+                void $ Trace.assert "Always fails" $ const False
+                void $ Trace.waitNSlots 10
+          in checkEmulatorFails "assert throws error" (defaultCheckOptions & minLogLevel .~ Debug) (waitingForSlot theContract tag 10) emTrace
         ]
 
 checkpointContract :: Contract () Schema ContractError ()
