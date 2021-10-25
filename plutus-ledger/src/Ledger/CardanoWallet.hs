@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
 
 {- Cardano wallet implementation for the emulator.
@@ -76,7 +75,7 @@ fromSeed bs = MockWallet{mwWalletId, mwKey} where
     missing = max 0 (32 - BS.length bs)
     bs' = bs <> BS.replicate missing 0
     mwWalletId = CW.WalletId
-        $ fromMaybe (error "CardanoWallet: fromSeed: digestFromByteString")
+        $ fromMaybe (error "Ledger.CardanoWallet.fromSeed: digestFromByteString")
         $ Crypto.digestFromByteString
         $ Crypto.hashWith Crypto.Blake2b_160
         $ getLedgerBytes
@@ -86,7 +85,10 @@ fromSeed bs = MockWallet{mwWalletId, mwKey} where
     mwKey = MockPrivateKey k
 
 toWalletNumber :: MockWallet -> WalletNumber
-toWalletNumber MockWallet{mwWalletId=w} = maybe (error "toWalletNumber: not a known wallet") (WalletNumber . toInteger . succ) $ findIndex ((==) w . mwWalletId) knownWallets
+toWalletNumber MockWallet{mwWalletId=w} =
+    maybe (error "Ledger.CardanoWallet.toWalletNumber: not a known wallet")
+          (WalletNumber . toInteger . succ)
+          $ findIndex ((==) w . mwWalletId) knownWallets
 
 -- | The wallets used in mockchain simulations by default. There are
 --   ten wallets by default.

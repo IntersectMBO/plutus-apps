@@ -18,9 +18,7 @@ import qualified Cardano.Protocol.Socket.Client         as Client
 import qualified Cardano.Protocol.Socket.Mock.Client    as MockClient
 import qualified Data.Map                               as Map
 import           Data.Monoid                            (Last (..), Sum (..))
-import           Ledger                                 (Block, OnChainTx, Slot, TxId (..))
-import           Ledger.AddressMap                      (AddressMap)
-import qualified Ledger.AddressMap                      as AddressMap
+import           Ledger                                 (Block, Slot, TxId (..))
 import           Plutus.PAB.Core.ContractInstance.STM   (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                                          OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                                          emptyBlockchainEnv)
@@ -170,7 +168,7 @@ updateTransactionState
   -> STM (Either SyncActionFailure ())
 updateTransactionState tip BlockchainEnv{beTxChanges, beTxOutChanges, beCurrentBlock} xs = do
     txIdStateIndex <- STM.readTVar beTxChanges
-    let txIdState = _usTxUtxoData $ utxoState $ txIdStateIndex
+    let txIdState = _usTxUtxoData $ utxoState txIdStateIndex
     txUtxoBalanceIndex <- STM.readTVar beTxOutChanges
     let txUtxoBalance = _usTxUtxoData $ utxoState txUtxoBalanceIndex
     blockNumber <- STM.readTVar beCurrentBlock
@@ -204,7 +202,7 @@ insertNewTx blockNumber TxIdState{txnsConfirmed, txnsDeleted} (txi, _, txValidit
 -- | Go through the transactions in a block, updating the 'BlockchainEnv'
 --   when any interesting addresses or transactions have changed.
 processMockBlock :: InstancesState -> BlockchainEnv -> Block -> Slot -> STM (Either SyncActionFailure ())
-processMockBlock instancesState env@BlockchainEnv{beAddressMap, beCurrentSlot, beCurrentBlock} transactions slot = do
+processMockBlock instancesState env@BlockchainEnv{beCurrentSlot, beCurrentBlock} transactions slot = do
   lastSlot <- STM.readTVar beCurrentSlot
   when (slot > lastSlot) $ do
     STM.writeTVar beCurrentSlot slot
@@ -212,9 +210,6 @@ processMockBlock instancesState env@BlockchainEnv{beAddressMap, beCurrentSlot, b
   if null transactions
      then pure $ Right ()
      else do
-      addressMap <- STM.readTVar beAddressMap
-      let addressMap' = foldl' (processTx slot) addressMap transactions
-      STM.writeTVar beAddressMap addressMap'
       blockNumber <- STM.readTVar beCurrentBlock
 
       instEnv <- S.instancesClientEnv instancesState
@@ -226,10 +221,3 @@ processMockBlock instancesState env@BlockchainEnv{beAddressMap, beCurrentSlot, b
                     }
 
       updateTransactionState tip env (txEvent <$> fmap fromOnChainTx transactions)
-
-processTx :: Slot -> AddressMap -> OnChainTx -> AddressMap
-processTx _ addressMap tx = addressMap' where
-  -- TODO: Will be removed in a future issue
-  addressMap' = AddressMap.updateAllAddresses tx addressMap
-  -- TODO: updateInstances
-  -- We need to switch to using 'ChainIndexTx' everyhwere first, though.

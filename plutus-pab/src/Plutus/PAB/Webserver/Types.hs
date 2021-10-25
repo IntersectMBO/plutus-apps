@@ -19,7 +19,6 @@ import           GHC.Generics                            (Generic)
 import           Ledger                                  (PubKeyHash, Tx, TxId)
 import           Ledger.Index                            (UtxoIndex)
 import           Ledger.Slot                             (Slot)
-import           Ledger.Value                            (Value)
 import           Playground.Types                        (FunctionSchema)
 import           Plutus.Contract.Effects                 (ActiveEndpoint, PABReq)
 import           Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
@@ -108,7 +107,6 @@ data InstanceStatusToClient
 data CombinedWSStreamToClient
     = InstanceUpdate ContractInstanceId InstanceStatusToClient
     | SlotChange Slot -- ^ New slot number
-    | PubKeyHashFundsChange PubKeyHash Value -- ^ The funds at the pubkeyhash address have changed
     deriving stock (Generic, Eq, Show)
     deriving anyclass (ToJSON, FromJSON)
 

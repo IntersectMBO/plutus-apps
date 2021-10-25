@@ -12,7 +12,7 @@
 module Plutus.PAB.CoreSpec
     ( tests
     , stopContractInstanceTest
-    , pubKeyHashFundsChangeTest
+    , valueAtTest
     , observableStateChangeTest
     , runScenario
     , assertEqual
@@ -79,7 +79,7 @@ import           Test.Tasty.HUnit                         (testCase)
 import           Wallet.API                               (WalletAPIError, ownPubKeyHash)
 import qualified Wallet.API                               as WAPI
 import qualified Wallet.Emulator.Chain                    as Chain
-import           Wallet.Emulator.Wallet                   (Wallet, knownWallet)
+import           Wallet.Emulator.Wallet                   (Wallet, knownWallet, knownWallets)
 import           Wallet.Rollup                            (doAnnotateBlockchain)
 import           Wallet.Rollup.Types                      (DereferencedInput, dereferencedInputs, isFound)
 import           Wallet.Types                             (ContractInstanceId)
@@ -132,7 +132,7 @@ executionTests =
         , testCase "can wait for tx status change" waitForTxStatusChangeTest
         , testCase "can wait for tx output status change" waitForTxOutStatusChangeTest
         , testCase "can subscribe to slot updates" slotChangeTest
-        , testCase "can subscribe to wallet funds changes" pubKeyHashFundsChangeTest
+        , testCase "can query wallet funds" valueAtTest
         , testCase "can subscribe to observable state changes" observableStateChangeTest
         ]
 
@@ -261,25 +261,26 @@ waitForTxOutStatusChangeTest = runScenario $ do
               (Committed TxValid Unspent)
               txOutStatus2''
 
-pubKeyHashFundsChangeTest :: IO ()
-pubKeyHashFundsChangeTest = runScenario $ do
-    let initialBalance = lovelaceValueOf 10_000_000_000
+valueAtTest :: IO ()
+valueAtTest = runScenario $ do
+    let initialBalance = lovelaceValueOf 100_000_000_000
         payment = lovelaceValueOf 50
         fee     = lovelaceValueOf 10 -- TODO: Calculate the fee from the tx
 
-    env <- Core.askBlockchainEnv @(Builtin TestContracts) @(Simulator.SimulatorState (Builtin TestContracts))
-    let stream = WS.pubKeyHashFundsChange defaultWalletPubKeyHash env
-    (initialValue, next) <- liftIO (readOne stream)
-    (_, pkh) <- Simulator.addWallet
-    _ <- Simulator.payToPublicKeyHash defaultWallet pkh payment
-    nextStream <- case next of { Nothing -> throwError (OtherError "no next value"); Just a -> pure a; }
-    (finalValue, _) <- liftIO (readOne nextStream)
+    initialValue <- Core.valueAt defaultWallet
+
+    let mockWallet = knownWallet 2
+        mockWalletPubKeyHash = CW.pubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 2)
+
+    tx <- Simulator.payToPublicKeyHash defaultWallet mockWalletPubKeyHash payment
+    -- Waiting for the tx to be confirmed
+    void $ Core.waitForTxStatusChange $ getCardanoTxId tx
+    finalValue <- Core.valueAt defaultWallet
     let difference = initialValue <> inv finalValue
     assertEqual "defaultWallet should make a payment" difference (payment <> fee)
 
     -- Check that the funds are correctly registered in the newly created wallet
-    let stream2 = WS.pubKeyHashFundsChange pkh env
-    vl2 <- liftIO (readN 1 stream2) >>= \case { [newVal] -> pure newVal; _ -> throwError (OtherError "newVal not found")}
+    vl2 <- Core.valueAt mockWallet
     assertEqual "generated wallet should receive a payment" (initialBalance <> payment) vl2
 
 observableStateChangeTest :: IO ()
