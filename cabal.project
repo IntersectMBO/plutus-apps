@@ -68,12 +68,12 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/purescript-bridge.git
-  tag: 6a92d7853ea514be8b70bab5e72077bf5a510596
+  tag: 35d863ba86c97d044025ce64b7cea0e1b0418bf0
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/servant-purescript.git
-  tag: a0c7c7e37c95564061247461aef4be505a853538
+  tag: 746a9a27654621ca6a24a31d083aba54dc58555a
 
 -- Copied from plutus-core
 source-repository-package
