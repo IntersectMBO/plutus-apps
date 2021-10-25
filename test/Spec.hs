@@ -49,11 +49,14 @@ instance ToJSON TestHeader
 type MyAPI =
   Header "TestHeader" TestHeader
     :> ( ( "hello"
-             :> QueryFlag "myFlag"
-             :> QueryParam "myParam" Hello
-             :> QueryParams "myParams" Hello
-             :> ReqBody '[JSON] Hello
-             :> Get '[JSON] Hello
+             :> ( ( QueryFlag "myFlag"
+                      :> QueryParam "myParam" Hello
+                      :> QueryParams "myParams" Hello
+                      :> ReqBody '[JSON] Hello
+                      :> Get '[JSON] Hello
+                  )
+                    :<|> Capture "name" Text :> Get '[JSON] Hello
+                )
          )
            :<|> "testHeader" :> Get '[JSON] TestHeader
            :<|> "by" :> Get '[JSON] Int

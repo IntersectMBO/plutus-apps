@@ -34,6 +34,7 @@ genModule opts reqs =
    in docIntercalate
         (line <> line)
         [ genModuleHeader (_apiModuleName opts) imports,
+          "foreign import encodeURIComponent :: String -> String",
           genType "SPSettings_" $ genRecord rParams,
           genClass
             (mkPsType "HasSPSettings" [mkPsType "a" []])
