@@ -5,8 +5,8 @@ import Action.Lenses (_InSlot)
 import Bootstrap (btn, card, cardBody_, col, colFormLabel, col_, formCheck, formCheckInline, formCheckInput, formCheckLabel, formControl, formGroup_, formRow_, floatRight)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
-import Data.BigInteger (BigInteger)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut (BigInt)
+import Data.BigInt.Argonaut as BigInt
 import Data.Either (Either(..))
 import Data.Lens (review, view)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -108,7 +108,7 @@ actionPaneBody index (PayToWallet { sender, recipient, amount }) =
             , required true
             , min 1.0
             , placeholder "Wallet ID"
-            , onBigIntegerInput $ ModifyActions <<< SetPayToWalletRecipient index <<< review _walletId
+            , onBigIntInput $ ModifyActions <<< SetPayToWalletRecipient index <<< review _walletId
             ]
         ]
     , formGroup_
@@ -133,7 +133,7 @@ actionPaneBody index (AddBlocks { blocks }) =
                     , required true
                     , min 1.0
                     , placeholder "Block Number"
-                    , onBigIntegerInput $ ModifyActions <<< SetWaitTime index
+                    , onBigIntInput $ ModifyActions <<< SetWaitTime index
                     ]
                 ]
             ]
@@ -156,14 +156,14 @@ actionPaneBody index (AddBlocksUntil { slot }) =
                     , required true
                     , min 1.0
                     , placeholder "Slot Number"
-                    , onBigIntegerInput $ ModifyActions <<< SetWaitUntilTime index <<< review _InSlot
+                    , onBigIntInput $ ModifyActions <<< SetWaitUntilTime index <<< review _InSlot
                     ]
                 ]
             ]
         ]
     ]
 
-waitTypeRadioInputs :: forall p. Int -> Either Slot BigInteger -> HTML p SimulationAction
+waitTypeRadioInputs :: forall p. Int -> Either Slot BigInt -> HTML p SimulationAction
 waitTypeRadioInputs index wait =
   div
     [ class_ $ ClassName "wait-type-options" ]
@@ -208,7 +208,7 @@ addWaitActionPane index =
         [ classes [ actionClass, ClassName "add-wait-action" ] ]
         [ div
             ( [ class_ card
-              , onClick $ const $ Just $ ChangeSimulation $ ModifyActions $ AddWaitAction $ BigInteger.fromInt 10
+              , onClick $ const $ Just $ ChangeSimulation $ ModifyActions $ AddWaitAction $ BigInt.fromInt 10
               ]
                 <> dragTargetProperties index
             )
@@ -261,9 +261,9 @@ dragTargetProperties index =
 dragAndDropAction :: Int -> DragAndDropEventType -> DragEvent -> Maybe HAction
 dragAndDropAction index eventType = Just <<< ActionDragAndDrop index eventType
 
--- defaults to 1 because all the BigInteger fields here have a minimum value of 1
-onBigIntegerInput :: forall i r. (BigInteger -> i) -> IProp ( onInput :: Event, value :: String | r ) i
-onBigIntegerInput f = onValueInput $ Just <<< f <<< fromMaybe one <<< BigInteger.fromString
+-- defaults to 1 because all the BigInt fields here have a minimum value of 1
+onBigIntInput :: forall i r. (BigInt -> i) -> IProp ( onInput :: Event, value :: String | r ) i
+onBigIntInput f = onValueInput $ Just <<< f <<< fromMaybe one <<< BigInt.fromString
 
 actionClass :: ClassName
 actionClass = ClassName "action"

@@ -3,7 +3,7 @@
 -- the PSGenerator Generic instances won't match.
 module Plutus.V1.Ledger.Time where
 
-import Data.BigInteger (BigInteger, readBigInteger)
+import Data.BigInt.Argonaut (BigInteger, readBigInteger)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Lens (Iso')

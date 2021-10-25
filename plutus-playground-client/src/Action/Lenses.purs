@@ -5,7 +5,7 @@ module Action.Lenses
   , _slot
   ) where
 
-import Data.BigInteger (BigInteger)
+import Data.BigInt.Argonaut (BigInt)
 import Data.Lens (Iso', Lens', iso)
 import Data.Lens.Record (prop)
 import Data.Newtype (unwrap, wrap)
@@ -19,7 +19,7 @@ _caller = prop (SProxy :: SProxy "caller")
 _blocks :: forall r a. Lens' { blocks :: a | r } a
 _blocks = prop (SProxy :: SProxy "blocks")
 
-_InSlot :: Iso' Slot BigInteger
+_InSlot :: Iso' Slot BigInt
 _InSlot = iso (_.getSlot <<< unwrap) (wrap <<< { getSlot: _ })
 
 _slot :: forall r a. Lens' { slot :: a | r } a

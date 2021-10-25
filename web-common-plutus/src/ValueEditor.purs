@@ -4,8 +4,8 @@ import Prelude hiding (div, min)
 import Bootstrap (col, colFormLabel, col_, formControl, formGroup, formRow_)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
-import Data.BigInteger (BigInteger)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut (BigInteger)
+import Data.BigInt.Argonaut as BigInteger
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Lens (view)

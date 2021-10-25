@@ -5,7 +5,7 @@ module Wallet.Lenses
   , _pubKey
   ) where
 
-import Data.BigInteger (BigInteger)
+import Data.BigInt.Argonaut (BigInt)
 import Data.Lens (Iso', Lens', iso)
 import Data.Lens.Record (prop)
 import Data.Symbol (SProxy(..))
@@ -21,7 +21,7 @@ _simulatorWalletWallet = _SimulatorWallet <<< prop (SProxy :: SProxy "simulatorW
 _simulatorWalletBalance :: Lens' SimulatorWallet Value
 _simulatorWalletBalance = _SimulatorWallet <<< prop (SProxy :: SProxy "simulatorWalletBalance")
 
-_walletId :: Iso' WalletNumber BigInteger
+_walletId :: Iso' WalletNumber BigInt
 _walletId = _WalletNumber <<< iso _.getWallet { getWallet: _ }
 
 _pubKey :: Lens' PubKey String

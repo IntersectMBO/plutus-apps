@@ -16,7 +16,7 @@ import Control.Monad.Reader (runReaderT)
 import Control.Monad.State (class MonadState)
 import Control.Monad.State.Extra (zoomStateT)
 import Data.Array (filter, find)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut as BigInteger
 import Data.Either (Either(..))
 import Data.Lens (Lens', _1, _2, assign, modifying, to, use, view, preview)
 import Data.Lens.At (at)

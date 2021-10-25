@@ -3,7 +3,7 @@ module Schema.TypesTests
   ) where
 
 import Prelude
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut as BigInt
 import Data.Functor.Foldable (Fix(..))
 import Data.Json.JsonNonEmptyList (JsonNonEmptyList(..))
 import Data.Json.JsonTuple (JsonTuple(..))
@@ -43,7 +43,7 @@ validateTests = do
   test "No validation errors" do
     isValid $ AddBlocks { blocks: one }
     isValid $ makeTestAction $ Fix $ FormIntF (Just 5)
-    isValid $ makeTestAction $ Fix $ FormIntegerF (Just (BigInteger.fromInt 5))
+    isValid $ makeTestAction $ Fix $ FormIntegerF (Just (BigInt.fromInt 5))
     isValid $ makeTestAction $ Fix $ FormStringF (Just "TEST")
     isValid $ makeTestAction $ Fix $ FormTupleF (Fix $ FormIntF (Just 5)) (Fix $ FormIntF (Just 6))
     isValid $ makeTestAction $ Fix $ FormArrayF FormSchemaInt []
@@ -94,7 +94,7 @@ toArgumentTests = do
           { getValue:
               AssocMap.fromTuples
                 [ ( Tuple (CurrencySymbol { unCurrencySymbol: "12345" })
-                      (AssocMap.fromTuples [ Tuple (TokenName { unTokenName: "ADA" }) (BigInteger.fromInt 100) ])
+                      (AssocMap.fromTuples [ Tuple (TokenName { unTokenName: "ADA" }) (BigInt.fromInt 100) ])
                   )
                 ]
           }
@@ -132,13 +132,13 @@ formArgumentToJsonTests = do
       equalJson
         (Just (encodeJSON 5))
         (formArgumentToJson (Fix $ FormIntF (Just 5)))
-    test "BigIntegers" do
+    test "BigInts" do
       equalJson
         Nothing
         (formArgumentToJson (Fix $ FormIntegerF Nothing))
       equalJson
-        (Just (encodeJSON (BigInteger.fromInt 5)))
-        (formArgumentToJson (Fix $ FormIntegerF (Just (BigInteger.fromInt 5))))
+        (Just (encodeJSON (BigInt.fromInt 5)))
+        (formArgumentToJson (Fix $ FormIntegerF (Just (BigInt.fromInt 5))))
     test "Strings" do
       equalJson
         Nothing
@@ -179,7 +179,7 @@ formArgumentToJsonTests = do
                     [ [ encode $ FO.singleton "unCurrencySymbol" ""
                       , encode
                           [ [ encode $ FO.singleton "unTokenName" ""
-                            , encode (BigInteger.fromInt 4)
+                            , encode (BigInt.fromInt 4)
                             ]
                           ]
                       ]
@@ -190,7 +190,7 @@ formArgumentToJsonTests = do
         ( formArgumentToJson
             ( Fix
                 $ FormValueF
-                    (Value { getValue: AssocMap.fromTuples [ CurrencySymbol { unCurrencySymbol: "" } /\ AssocMap.fromTuples [ TokenName { unTokenName: "" } /\ BigInteger.fromInt 4 ] ] })
+                    (Value { getValue: AssocMap.fromTuples [ CurrencySymbol { unCurrencySymbol: "" } /\ AssocMap.fromTuples [ TokenName { unTokenName: "" } /\ BigInt.fromInt 4 ] ] })
             )
         )
     test "Objects" do
@@ -221,11 +221,11 @@ mkInitialValueTests =
         ( Value
             { getValue:
                 AssocMap.fromTuples
-                  [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInteger.fromInt 10 ]
+                  [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInt.fromInt 10 ]
                   , currencies
                       /\ AssocMap.fromTuples
-                          [ usdToken /\ BigInteger.fromInt 10
-                          , eurToken /\ BigInteger.fromInt 10
+                          [ usdToken /\ BigInt.fromInt 10
+                          , eurToken /\ BigInt.fromInt 10
                           ]
                   ]
             }
@@ -234,7 +234,7 @@ mkInitialValueTests =
             [ KnownCurrency { hash: "", friendlyName: "Ada", knownTokens: (JsonNonEmptyList (pure (TokenName { unTokenName: "" }))) }
             , KnownCurrency { hash: "Currency", friendlyName: "Currencies", knownTokens: JsonNonEmptyList (NonEmptyList ((TokenName { unTokenName: "USDToken" }) :| (Cons (TokenName { unTokenName: "EURToken" }) Nil))) }
             ]
-            (BigInteger.fromInt 10)
+            (BigInt.fromInt 10)
         )
 
 ada :: CurrencySymbol

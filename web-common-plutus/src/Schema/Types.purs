@@ -3,7 +3,7 @@ module Schema.Types where
 import Prelude
 import Chain.Types (_value)
 import Data.Array as Array
-import Data.BigInteger (BigInteger)
+import Data.BigInt.Argonaut (BigInteger)
 import Data.Foldable (fold, foldMap)
 import Data.Functor.Foldable (Fix(..))
 import Data.Generic.Rep (class Generic)

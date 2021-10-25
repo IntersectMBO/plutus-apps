@@ -4,7 +4,7 @@ import Prelude hiding (div)
 import Bootstrap (btn, btnInfo, btnLink, btnPrimary, btnSmall, col, col10_, col2_, colFormLabel, formCheckInput, formCheckLabel, formCheck_, formControl, formGroup, formGroup_, formRow_, formText, inputGroupAppend_, inputGroupPrepend_, inputGroup_, invalidFeedback_, row_, textMuted, validFeedback_, wasValidated)
 import Bootstrap as Bootstrap
 import Data.Array as Array
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut as BigInteger
 import Data.Functor.Foldable (Fix(..))
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Int as Int

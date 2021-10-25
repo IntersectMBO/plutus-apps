@@ -11,8 +11,8 @@ import Bootstrap.Extra (clickable)
 import Clipboard (showShortCopyLong)
 import Data.Array ((:))
 import Data.Array as Array
-import Data.BigInteger (BigInteger)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut (BigInteger)
+import Data.BigInt.Argonaut as BigInteger
 import Data.Foldable (foldMap, foldr)
 import Data.Foldable.Extra (interleave)
 import Data.FoldableWithIndex (foldMapWithIndex, foldrWithIndex)

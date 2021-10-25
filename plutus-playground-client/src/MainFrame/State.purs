@@ -27,8 +27,8 @@ import Data.Array (catMaybes, (..))
 import Data.Array (deleteAt, snoc) as Array
 import Data.Array.Extra (move) as Array
 import Data.Bifunctor (lmap)
-import Data.BigInteger (BigInteger)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut (BigInt)
+import Data.BigInt.Argonaut as BigInt
 import Data.Either (Either(..), note)
 import Data.Lens (assign, modifying, over, to, traversed, use, view)
 import Data.Lens.Extra (peruse)
@@ -76,11 +76,11 @@ import Ledger.CardanoWallet (WalletNumber(WalletNumber))
 import Wallet.Lenses (_simulatorWalletBalance, _simulatorWalletWallet, _walletId)
 import Web.HTML.Event.DataTransfer as DataTransfer
 
-mkSimulatorWallet :: Array KnownCurrency -> BigInteger -> SimulatorWallet
+mkSimulatorWallet :: Array KnownCurrency -> BigInt -> SimulatorWallet
 mkSimulatorWallet currencies walletId =
   SimulatorWallet
     { simulatorWalletWallet: WalletNumber { getWallet: walletId }
-    , simulatorWalletBalance: mkInitialValue currencies (BigInteger.fromInt 100_000_000)
+    , simulatorWalletBalance: mkInitialValue currencies (BigInt.fromInt 100_000_000)
     }
 
 mkSimulation :: Array KnownCurrency -> Int -> Simulation
@@ -89,7 +89,7 @@ mkSimulation simulationCurrencies simulationId =
     { simulationName: "Simulation " <> show simulationId
     , simulationId
     , simulationActions: []
-    , simulationWallets: mkSimulatorWallet simulationCurrencies <<< BigInteger.fromInt <$> 1 .. 2
+    , simulationWallets: mkSimulatorWallet simulationCurrencies <<< BigInt.fromInt <$> 1 .. 2
     }
 
 mkInitialState :: forall m. MonadThrow Error m => Editor.State -> m State
@@ -454,7 +454,7 @@ handleGistAction LoadGist =
 
 handleGistAction (AjaxErrorPaneAction CloseErrorPane) = assign _gistErrorPaneVisible false
 
-handleActionWalletEvent :: (BigInteger -> SimulatorWallet) -> WalletEvent -> Array SimulatorWallet -> Array SimulatorWallet
+handleActionWalletEvent :: (BigInt -> SimulatorWallet) -> WalletEvent -> Array SimulatorWallet -> Array SimulatorWallet
 handleActionWalletEvent mkWallet AddWallet wallets =
   let
     maxWalletId = fromMaybe zero $ maximumOf (traversed <<< _simulatorWalletWallet <<< _walletId) wallets

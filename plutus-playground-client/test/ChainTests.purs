@@ -4,7 +4,7 @@ module ChainTests
 
 import Prelude
 import Data.Array (mapWithIndex)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut as BigInt
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested ((/\))
 import PlutusTx.AssocMap as AssocMap
@@ -25,9 +25,9 @@ extractAmountsTests =
   suite "extractAmount" do
     test "All present"
       $ equal
-          [ Just (BigInteger.fromInt 10)
-          , Just (BigInteger.fromInt 40)
-          , Just (BigInteger.fromInt 70)
+          [ Just (BigInt.fromInt 10)
+          , Just (BigInt.fromInt 40)
+          , Just (BigInt.fromInt 70)
           ]
           (map (extractAmount (currencies /\ usdToken)) wallets)
     test "All missing"
@@ -39,15 +39,15 @@ extractAmountsTests =
           (map (extractAmount (currencies /\ adaToken)) wallets)
     test "Mixed" do
       equal
-        [ Just (BigInteger.fromInt 20)
-        , Just (BigInteger.fromInt 50)
+        [ Just (BigInt.fromInt 20)
+        , Just (BigInt.fromInt 50)
         , Nothing
         ]
         (map (extractAmount (currencies /\ eurToken)) wallets)
       equal
         [ Nothing
-        , Just (BigInteger.fromInt 30)
-        , Just (BigInteger.fromInt 60)
+        , Just (BigInt.fromInt 30)
+        , Just (BigInt.fromInt 60)
         ]
         (map (extractAmount (ada /\ adaToken)) wallets)
 
@@ -56,7 +56,7 @@ wallets =
   mapWithIndex
     ( \id value ->
         SimulatorWallet
-          { simulatorWalletWallet: WalletNumber { getWallet: BigInteger.fromInt id }
+          { simulatorWalletWallet: WalletNumber { getWallet: BigInt.fromInt id }
           , simulatorWalletBalance: value
           }
     )
@@ -69,29 +69,29 @@ values =
           AssocMap.fromTuples
             [ currencies
                 /\ AssocMap.fromTuples
-                    [ usdToken /\ BigInteger.fromInt 10
-                    , eurToken /\ BigInteger.fromInt 20
+                    [ usdToken /\ BigInt.fromInt 10
+                    , eurToken /\ BigInt.fromInt 20
                     ]
             ]
       }
   , Value
       { getValue:
           AssocMap.fromTuples
-            [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInteger.fromInt 30 ]
+            [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInt.fromInt 30 ]
             , currencies
                 /\ AssocMap.fromTuples
-                    [ usdToken /\ BigInteger.fromInt 40
-                    , eurToken /\ BigInteger.fromInt 50
+                    [ usdToken /\ BigInt.fromInt 40
+                    , eurToken /\ BigInt.fromInt 50
                     ]
             ]
       }
   , Value
       { getValue:
           AssocMap.fromTuples
-            [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInteger.fromInt 60 ]
+            [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInt.fromInt 60 ]
             , currencies
                 /\ AssocMap.fromTuples
-                    [ usdToken /\ BigInteger.fromInt 70
+                    [ usdToken /\ BigInt.fromInt 70
                     ]
             ]
       }

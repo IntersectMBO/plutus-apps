@@ -3,8 +3,8 @@ module PlutusTx.AssocMapTests
   ) where
 
 import Prelude
-import Data.BigInteger (BigInteger)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut (BigInt)
+import Data.BigInt.Argonaut as BigInt
 import Data.Json.JsonTuple (JsonTuple)
 import Data.Lens (preview, set)
 import Data.Lens.At (at)
@@ -41,19 +41,19 @@ eur = TokenName { unTokenName: "EUR" }
 gbp :: TokenName
 gbp = TokenName { unTokenName: "GBP" }
 
-baseValue :: Map CurrencySymbol (Map TokenName BigInteger)
-baseValue = Map [ wrap $ Tuple currencies (Map [ wrap $ Tuple usd $ BigInteger.fromInt 10 ]) ]
+baseValue :: Map CurrencySymbol (Map TokenName BigInt)
+baseValue = Map [ wrap $ Tuple currencies (Map [ wrap $ Tuple usd $ BigInt.fromInt 10 ]) ]
 
 indexTests :: TestSuite
 indexTests =
   suite "Index" do
     test "simple gets" do
-      equal (Just (BigInteger.fromInt 10)) (preview (ix currencies <<< ix usd) baseValue)
+      equal (Just (BigInt.fromInt 10)) (preview (ix currencies <<< ix usd) baseValue)
       equal Nothing (preview (ix currencies <<< ix eur) baseValue)
     test "simple sets" do
-      equal (Just (BigInteger.fromInt 20))
+      equal (Just (BigInt.fromInt 20))
         ( baseValue
-            # set (ix currencies <<< ix usd) (BigInteger.fromInt 20)
+            # set (ix currencies <<< ix usd) (BigInt.fromInt 20)
             # preview (ix currencies <<< ix usd)
         )
 
@@ -65,12 +65,12 @@ atTests =
         baseValue
         ( Map []
             # set (at currencies) (Just (Map []))
-            # set (ix currencies <<< at usd) (Just (BigInteger.fromInt 10))
+            # set (ix currencies <<< at usd) (Just (BigInt.fromInt 10))
         )
     test "modify" do
-      equal (Just (BigInteger.fromInt 20))
+      equal (Just (BigInt.fromInt 20))
         ( baseValue
-            # set (ix currencies <<< at usd) (Just (BigInteger.fromInt 20))
+            # set (ix currencies <<< at usd) (Just (BigInt.fromInt 20))
             # preview (ix currencies <<< ix usd)
         )
     test "delete" do
@@ -185,10 +185,10 @@ mkValue symbol pairs =
   Value
     { getValue: mkMap symbol pairs }
 
-mkMap :: CurrencySymbol -> Array (Tuple TokenName Int) -> Map CurrencySymbol (Map TokenName BigInteger)
+mkMap :: CurrencySymbol -> Array (Tuple TokenName Int) -> Map CurrencySymbol (Map TokenName BigInt)
 mkMap symbol pairs =
   Map
     [ wrap $ Tuple symbol (Map (mkTokenAmount <$> pairs)) ]
   where
-  mkTokenAmount :: Tuple TokenName Int -> JsonTuple TokenName BigInteger
-  mkTokenAmount (Tuple token amount) = wrap $ Tuple token (BigInteger.fromInt amount)
+  mkTokenAmount :: Tuple TokenName Int -> JsonTuple TokenName BigInt
+  mkTokenAmount (Tuple token amount) = wrap $ Tuple token (BigInt.fromInt amount)

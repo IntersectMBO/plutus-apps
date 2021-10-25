@@ -10,8 +10,8 @@ import Chartist (ChartistData, ChartistItem, ChartistOptions, ChartistPoint, toC
 import Chartist as Chartist
 import Data.Array as Array
 import Data.Array.Extra (collapse)
-import Data.BigInteger (BigInteger)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut (BigInt)
+import Data.BigInt.Argonaut as BigInt
 import Data.Lens (_2, preview, to, toListOf, traversed, view)
 import Data.Lens.Index (ix)
 import Data.List (List)
@@ -177,7 +177,7 @@ emulatorEventPane _ = div [] []
 formatWalletId :: SimulatorWallet -> String
 formatWalletId wallet = "Wallet " <> show (view (_simulatorWalletWallet <<< _walletId) wallet)
 
-extractAmount :: Tuple CurrencySymbol TokenName -> SimulatorWallet -> Maybe BigInteger
+extractAmount :: Tuple CurrencySymbol TokenName -> SimulatorWallet -> Maybe BigInt
 extractAmount (Tuple currencySymbol tokenName) =
   preview
     ( _simulatorWalletBalance
@@ -198,10 +198,10 @@ balancesToChartistData wallets = toChartistData $ toChartistItem <$> wallets
   toChartistPoint :: SimulatorWallet -> Tuple CurrencySymbol TokenName -> ChartistPoint
   toChartistPoint wallet key =
     { meta: view (_2 <<< _tokenName) key
-    , value: BigInteger.toNumber $ fromMaybe zero $ extractAmount key wallet
+    , value: BigInt.toNumber $ fromMaybe zero $ extractAmount key wallet
     }
 
-  allValues :: List (AssocMap.Map CurrencySymbol (AssocMap.Map TokenName BigInteger))
+  allValues :: List (AssocMap.Map CurrencySymbol (AssocMap.Map TokenName BigInt))
   allValues =
     toListOf
       ( traversed

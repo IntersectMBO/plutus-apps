@@ -2,7 +2,7 @@ module Chain.Types where
 
 import Prelude
 import Clipboard (Action) as Clipboard
-import Data.BigInteger (BigInteger)
+import Data.BigInt.Argonaut (BigInteger)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Lens (Fold', Iso', Lens', Prism', Traversal', anyOf, filtered, preview, prism', traversed)
