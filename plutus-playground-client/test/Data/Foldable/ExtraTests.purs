@@ -7,7 +7,7 @@ import Data.Array (replicate, length)
 import Data.Foldable (foldMap, null)
 import Data.Foldable.Extra (interleave, countConsecutive)
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Show.Generic (genericShow)
 import Data.List as List
 import Data.NonEmpty ((:|))
 import Data.Tuple (uncurry)

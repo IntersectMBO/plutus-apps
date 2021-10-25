@@ -4,7 +4,7 @@ module Data.Json.JsonTuple where
 import Prelude
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Show.Generic (genericShow)
 import Data.Lens (Iso')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.List (List(..))

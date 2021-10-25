@@ -7,7 +7,7 @@ import Data.Bifoldable (class Bifoldable, bifoldMap)
 import Data.Either (Either(..))
 import Data.Foldable (class Foldable, intercalate, length)
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (class GenericShow, genericShow)
+import Data.Show.Generic (class GenericShow, genericShow)
 import Data.List as List
 import Data.List.NonEmpty (NonEmptyList(..))
 import Data.NonEmpty (NonEmpty(..), (:|))

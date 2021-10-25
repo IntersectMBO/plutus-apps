@@ -4,7 +4,7 @@ module GistsTests
 
 import Prelude
 import Data.Either (Either(..))
-import Data.Generic.Rep.Show (genericShow)
+import Data.Show.Generic (genericShow)
 import Gist (GistId(..))
 import Gists.Types (parseGistUrl)
 import Test.Unit (TestSuite, Test, suite, test)

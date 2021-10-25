@@ -7,7 +7,7 @@ import Data.Array as Array
 import Data.BigInteger (BigInteger)
 import Data.BigInteger as BigInteger
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Show.Generic (genericShow)
 import Data.Lens (view)
 import Data.Maybe (Maybe(Just), fromMaybe)
 import Data.Tuple (Tuple(..), fst)

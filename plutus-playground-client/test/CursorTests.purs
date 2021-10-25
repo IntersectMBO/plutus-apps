@@ -7,7 +7,7 @@ import Cursor (Cursor)
 import Cursor as Cursor
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Show.Generic (genericShow)
 import Data.Lens (over, preview)
 import Data.Lens.Index (ix)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -142,29 +142,28 @@ deleteAtTests =
               Cursor.current deleted == Nothing
                 <?> "A cursor will be empty if we delete its only element: "
                 <> show (Tuple index cursor)
-            else
-              if Cursor.getIndex cursor == index then
-                if Cursor.getIndex cursor == Cursor.length cursor - 1 then
-                  Cursor.current (Cursor.left cursor) == Cursor.current deleted
-                    <?> unlines
-                        [ "Deleting an element at the cursor's position should shift left:"
-                        , "Index: " <> show index
-                        , "Cursor: " <> show cursor
-                        , "Deleted: " <> show deleted
-                        , "Cursor current: " <> show (Cursor.current (Cursor.left cursor))
-                        , "Deleted current: " <> show (Cursor.current deleted)
-                        ]
-                else
-                  Cursor.current (Cursor.right cursor) == Cursor.current deleted
-                    <?> unlines
-                        [ "Deleting an element at the cursor's position should shift right:"
-                        , "Index: " <> show index
-                        , "Cursor: " <> show cursor
-                        , "Deleted: " <> show deleted
-                        , "Cursor current: " <> show (Cursor.current (Cursor.right cursor))
-                        , "Deleted current: " <> show (Cursor.current deleted)
-                        ]
+            else if Cursor.getIndex cursor == index then
+              if Cursor.getIndex cursor == Cursor.length cursor - 1 then
+                Cursor.current (Cursor.left cursor) == Cursor.current deleted
+                  <?> unlines
+                      [ "Deleting an element at the cursor's position should shift left:"
+                      , "Index: " <> show index
+                      , "Cursor: " <> show cursor
+                      , "Deleted: " <> show deleted
+                      , "Cursor current: " <> show (Cursor.current (Cursor.left cursor))
+                      , "Deleted current: " <> show (Cursor.current deleted)
+                      ]
               else
-                Cursor.current cursor == Cursor.current deleted
-                  <?> "Deleting an element that isn't at the cursor's position should not affect the current target: "
-                  <> show (Tuple index cursor)
+                Cursor.current (Cursor.right cursor) == Cursor.current deleted
+                  <?> unlines
+                      [ "Deleting an element at the cursor's position should shift right:"
+                      , "Index: " <> show index
+                      , "Cursor: " <> show cursor
+                      , "Deleted: " <> show deleted
+                      , "Cursor current: " <> show (Cursor.current (Cursor.right cursor))
+                      , "Deleted current: " <> show (Cursor.current deleted)
+                      ]
+            else
+              Cursor.current cursor == Cursor.current deleted
+                <?> "Deleting an element that isn't at the cursor's position should not affect the current target: "
+                <> show (Tuple index cursor)

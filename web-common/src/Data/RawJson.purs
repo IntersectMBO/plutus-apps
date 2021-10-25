@@ -3,7 +3,7 @@ module Data.RawJson where
 import Prelude
 import Control.Alternative ((<|>))
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Show.Generic (genericShow)
 import Data.Lens (Iso')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Newtype (class Newtype)

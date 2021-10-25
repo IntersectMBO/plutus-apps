@@ -5,7 +5,7 @@ module Plutus.V1.Ledger.Time where
 
 import Data.BigInteger (BigInteger, readBigInteger)
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Show.Generic (genericShow)
 import Data.Lens (Iso')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Newtype (class Newtype)
