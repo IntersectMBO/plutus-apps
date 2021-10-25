@@ -42,15 +42,16 @@ instance showTestData :: Show TestData where
 derive instance ordTestData :: Ord TestData
 
 instance encodeJsonTestData :: EncodeJson TestData where
-  encodeJson = E.encode
-    $ E.sumType
-    $ toEither
-      >$< E.tagged "Maybe" (E.maybe E.value)
-      >|< E.tagged "Either" (E.either (E.maybe E.value) (E.maybe E.value))
-    where
-    toEither = case _ of
-      (Maybe a) -> Left $ (a)
-      (Either a) -> Right $ (a)
+  encodeJson =
+    encodeJson <<<  case _ of
+      Maybe a ->
+        { tag: "Maybe"
+        , contents: flip E.encode a (E.maybe E.value)
+        }
+      Either a ->
+        { tag: "Either"
+        , contents: flip E.encode a (E.either (E.maybe E.value) (E.maybe E.value))
+        }
 
 instance decodeJsonTestData :: DecodeJson TestData where
   decodeJson = D.decode
@@ -90,6 +91,7 @@ data TestSum
   | NestedRecord (TestRecord (TestRecord Int))
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
+  | TwoFields TestTwoFields
   | Unit Unit
   | MyUnit MyUnit
   | Pair (Tuple Int Number)
@@ -106,56 +108,87 @@ instance showTestSum :: Show TestSum where
 derive instance ordTestSum :: Ord TestSum
 
 instance encodeJsonTestSum :: EncodeJson TestSum where
-  encodeJson = E.encode
-    $ E.sumType
-    $ toEither
-      >$< E.tagged "Nullary" E.null
-      >|< E.tagged "Bool" E.value
-      >|< E.tagged "Int" E.value
-      >|< E.tagged "Number" E.value
-      >|< E.tagged "String" E.value
-      >|< E.tagged "Array" E.value
-      >|< E.tagged "InlineRecord" (E.record
-        { why: E.value :: _ String
-        , wouldYouDoThis: E.value :: _ Int
-        })
-      >|< E.tagged "Record" E.value
-      >|< E.tagged "NestedRecord" E.value
-      >|< E.tagged "NT" E.value
-      >|< E.tagged "NTRecord" E.value
-      >|< E.tagged "Unit" E.unit
-      >|< E.tagged "MyUnit" E.value
-      >|< E.tagged "Pair" (E.tuple (E.value >/\< E.value))
-      >|< E.tagged "Triple" (E.tuple (E.value >/\< E.unit >/\< E.value))
-      >|< E.tagged "Quad" (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
-      >|< E.tagged "QuadSimple" (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
-      >|< E.tagged "Enum" E.value
-    where
-    toEither = case _ of
-      Nullary -> Left $ unit
-      (Bool a) -> Right $ Left $ (a)
-      (Int a) -> Right $ Right $ Left $ (a)
-      (Number a) -> Right $ Right $ Right $ Left $ (a)
-      (String a) -> Right $ Right $ Right $ Right $ Left $ (a)
-      (Array a) -> Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (InlineRecord
-        { why
-        , wouldYouDoThis
-        }) -> Right $ Right $ Right $ Right $ Right $ Right $ Left $
-        { why
-        , wouldYouDoThis
+  encodeJson =
+    encodeJson <<<  case _ of
+      Nullary ->
+        { tag: "Nullary"
+        , contents: flip E.encode unit E.null
         }
-      (Record a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (NestedRecord a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (NT a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (NTRecord a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Unit a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (MyUnit a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Pair a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Triple a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (Quad a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a)
-      (QuadSimple a b c d) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Left $ (a /\ b /\ c /\ d)
-      (Enum a) -> Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ Right $ (a)
+      Bool a ->
+        { tag: "Bool"
+        , contents: flip E.encode a E.value
+        }
+      Int a ->
+        { tag: "Int"
+        , contents: flip E.encode a E.value
+        }
+      Number a ->
+        { tag: "Number"
+        , contents: flip E.encode a E.value
+        }
+      String a ->
+        { tag: "String"
+        , contents: flip E.encode a E.value
+        }
+      Array a ->
+        { tag: "Array"
+        , contents: flip E.encode a E.value
+        }
+      InlineRecord {why, wouldYouDoThis} ->
+        { tag: "InlineRecord"
+        , contents: flip E.encode {why, wouldYouDoThis} (E.record
+          { why: E.value :: _ String
+          , wouldYouDoThis: E.value :: _ Int
+          })
+        }
+      Record a ->
+        { tag: "Record"
+        , contents: flip E.encode a E.value
+        }
+      NestedRecord a ->
+        { tag: "NestedRecord"
+        , contents: flip E.encode a E.value
+        }
+      NT a ->
+        { tag: "NT"
+        , contents: flip E.encode a E.value
+        }
+      NTRecord a ->
+        { tag: "NTRecord"
+        , contents: flip E.encode a E.value
+        }
+      TwoFields a ->
+        { tag: "TwoFields"
+        , contents: flip E.encode a E.value
+        }
+      Unit a ->
+        { tag: "Unit"
+        , contents: flip E.encode a E.unit
+        }
+      MyUnit a ->
+        { tag: "MyUnit"
+        , contents: flip E.encode a E.value
+        }
+      Pair a ->
+        { tag: "Pair"
+        , contents: flip E.encode a (E.tuple (E.value >/\< E.value))
+        }
+      Triple a ->
+        { tag: "Triple"
+        , contents: flip E.encode a (E.tuple (E.value >/\< E.unit >/\< E.value))
+        }
+      Quad a ->
+        { tag: "Quad"
+        , contents: flip E.encode a (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
+        }
+      QuadSimple a b c d ->
+        { tag: "QuadSimple"
+        , contents: flip E.encode (a /\ b /\ c /\ d) (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value))
+        }
+      Enum a ->
+        { tag: "Enum"
+        , contents: flip E.encode a E.value
+        }
 
 instance decodeJsonTestSum :: DecodeJson TestSum where
   decodeJson = D.decode
@@ -175,6 +208,7 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
       <|> D.tagged "NestedRecord" (NestedRecord <$> D.value)
       <|> D.tagged "NT" (NT <$> D.value)
       <|> D.tagged "NTRecord" (NTRecord <$> D.value)
+      <|> D.tagged "TwoFields" (TwoFields <$> D.value)
       <|> D.tagged "Unit" (Unit <$> D.unit)
       <|> D.tagged "MyUnit" (MyUnit <$> D.value)
       <|> D.tagged "Pair" (Pair <$> (D.tuple (D.value </\> D.value)))
@@ -242,6 +276,11 @@ _NTRecord = prism' NTRecord case _ of
   (NTRecord a) -> Just a
   _ -> Nothing
 
+_TwoFields :: Prism' TestSum TestTwoFields
+_TwoFields = prism' TwoFields case _ of
+  (TwoFields a) -> Just a
+  _ -> Nothing
+
 _Unit :: Prism' TestSum Unit
 _Unit = prism' Unit case _ of
   (Unit a) -> Just a
@@ -294,8 +333,8 @@ instance showTestRecord :: (Show a) => Show (TestRecord a) where
 derive instance ordTestRecord :: (Ord a) => Ord (TestRecord a)
 
 instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
-  encodeJson = E.encode
-    $ unwrap
+  encodeJson =
+    E.encode $ unwrap
     >$< (E.record
         { _field1: (E.maybe E.value) :: _ (Maybe Int)
         , _field2: E.value :: _ a
@@ -319,7 +358,7 @@ _TestRecord = _Newtype
 field1 :: forall a. Lens' (TestRecord a) (Maybe Int)
 field1 = _Newtype <<< prop (Proxy :: _"_field1")
 
-field2 :: forall a a. Lens' (TestRecord a) a
+field2 :: forall a. Lens' (TestRecord a) a
 field2 = _Newtype <<< prop (Proxy :: _"_field2")
 
 --------------------------------------------------------------------------------
@@ -334,8 +373,8 @@ instance showTestNewtype :: Show TestNewtype where
 derive instance ordTestNewtype :: Ord TestNewtype
 
 instance encodeJsonTestNewtype :: EncodeJson TestNewtype where
-  encodeJson = E.encode
-    $ unwrap
+  encodeJson =
+    E.encode $ unwrap
     >$< E.value
 
 instance decodeJsonTestNewtype :: DecodeJson TestNewtype where
@@ -362,8 +401,8 @@ instance showTestNewtypeRecord :: Show TestNewtypeRecord where
 derive instance ordTestNewtypeRecord :: Ord TestNewtypeRecord
 
 instance encodeJsonTestNewtypeRecord :: EncodeJson TestNewtypeRecord where
-  encodeJson = E.encode
-    $ unwrap
+  encodeJson =
+    E.encode $ unwrap
     >$< (E.record { unTestNewtypeRecord: E.value :: _ TestNewtype })
 
 instance decodeJsonTestNewtypeRecord :: DecodeJson TestNewtypeRecord where
@@ -377,6 +416,32 @@ derive instance newtypeTestNewtypeRecord :: Newtype TestNewtypeRecord _
 
 _TestNewtypeRecord :: Iso' TestNewtypeRecord {unTestNewtypeRecord :: TestNewtype}
 _TestNewtypeRecord = _Newtype
+
+--------------------------------------------------------------------------------
+
+data TestTwoFields = TestTwoFields Boolean Int
+
+derive instance eqTestTwoFields :: Eq TestTwoFields
+
+instance showTestTwoFields :: Show TestTwoFields where
+  show = genericShow
+
+derive instance ordTestTwoFields :: Ord TestTwoFields
+
+instance encodeJsonTestTwoFields :: EncodeJson TestTwoFields where
+  encodeJson =
+    E.encode $ (case _ of TestTwoFields a b -> (a /\ b))
+    >$< (E.tuple (E.value >/\< E.value))
+
+instance decodeJsonTestTwoFields :: DecodeJson TestTwoFields where
+  decodeJson = D.decode $ D.tuple $ TestTwoFields </$\>D.value </*\> D.value
+
+derive instance genericTestTwoFields :: Generic TestTwoFields _
+
+--------------------------------------------------------------------------------
+
+_TestTwoFields :: Iso' TestTwoFields {a :: Boolean, b :: Int}
+_TestTwoFields = iso (\(TestTwoFields a b) -> {a, b}) (\{a, b} -> (TestTwoFields a b))
 
 --------------------------------------------------------------------------------
 

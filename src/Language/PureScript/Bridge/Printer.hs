@@ -48,13 +48,13 @@ import           Text.PrettyPrint.Leijen.Text               (Doc,
                                                              rparen,
                                                              textStrict, vsep,
                                                              (<+>), hang, dquotes, char, backslash, nest, linebreak, lbrace, rbrace, softline)
-import Data.List (unfoldr)
 import qualified Data.List.NonEmpty as NE
 import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.Char (isLower, toLower)
 import Language.PureScript.Bridge.PSTypes (psUnit)
 import Control.Arrow ((&&&))
-import Data.Function ((&))
+import Data.Function ((&), on)
+import Data.List (nubBy)
 
 renderText :: Doc -> Text
 renderText = T.replace " \n" "\n" . displayTStrict . renderPretty 0.4 200
@@ -325,7 +325,7 @@ instances st@(SumType t _ is) = go <$> is
       ]
     go Json = vsep $ punctuate line
       [ mkInstance "EncodeJson" encodeJsonConstraints t
-        [ "encodeJson = E.encode" <+> nest 2 (sumTypeToEncode st) ]
+        [ "encodeJson =" <+> nest 2 (sumTypeToEncode st) ]
       , mkInstance "DecodeJson" decodeJsonConstraints t
         [ "decodeJson = D.decode" <+> nest 2 (sumTypeToDecode st) ]
       ]
@@ -360,37 +360,27 @@ isEnum = all $ (== Nullary) . _sigValues
 
 sumTypeToEncode :: SumType 'PureScript -> Doc
 sumTypeToEncode (SumType _ cs _)
-  | isEnum cs = "E.enum"
+  | isEnum cs = "E.encode E.enum"
   | otherwise =
-    linebreak <> "$" <+> vsep case cs of
+    linebreak <> case cs of
       [dc@(DataConstructor _ args)] ->
-        [ if isJust (nootype [dc])
-            then "unwrap"
-            else parens $ case_of [(constructorPattern dc, constructor args)]
-        , ">$<" <+> nest 2 (argsToEncode args)
-        ]
+        "E.encode $"
+          <+> vsep
+            [ if isJust (nootype [dc])
+                then "unwrap"
+                else parens $ case_of [(constructorPattern dc, constructor args)]
+            , ">$<" <+> nest 2 (argsToEncode args)
+            ]
       _ ->
-        [ "E.sumType"
-        , "$ toEither" <+> encloseVsep ">$<" mempty ">|<" (constructorToTagged <$> cs)
-        , "where"
-        , "toEither =" <+> case_of (unfoldr toEither ("", cs))
-        ]
+        "encodeJson <<< " <+> case_of (constructorToEncode <$> cs)
   where
-    toEither (_, []) = Nothing
-    toEither (prefix, dc@(DataConstructor _ args) : rest) =
-      Just
-        ( ( constructorPattern dc
-          , prefix <+> eitherCase rest <+> "$" <+> constructor args
-          )
-        , (nextPrefix rest, rest)
-        )
-      where
-        eitherCase [] = "Right"
-        eitherCase _ = "Left"
-        nextPrefix [_] = prefix
-        nextPrefix _ = prefix <+> "Right $"
-    constructorToTagged (DataConstructor name args) =
-      "E.tagged" <+> dquotes (textStrict name) <+> argsToEncode args
+    constructorToEncode c@(DataConstructor name args) =
+      ( constructorPattern c
+      , vrecord
+          [ "tag:" <+> dquotes (textStrict name)
+          , "contents:" <+> "flip E.encode" <+> constructor args <+> argsToEncode args
+          ]
+      )
     argsToEncode Nullary = "E.null"
     argsToEncode (Normal (t :| [])) = typeToEncode t
     argsToEncode (Normal ts) =
@@ -490,14 +480,14 @@ constructorToOptic hasOtherConstructors typeInfo (DataConstructor n args) =
     (Nullary, False) -> iso pName typeInfo psUnit "(const unit)" $ parens ("const" <+> cName)
     (Nullary, True) -> prism pName typeInfo psUnit cName "unit" $ parens ("const" <+> cName)
     (Normal (t :| []), False) -> newtypeIso pName typeInfo t
-    (Normal (t :| []), True) -> prism pName typeInfo t (normalPattern n [t]) "a" cName
+    (Normal (t :| []), True) -> prism pName typeInfo t (parens $ normalPattern n [t]) "a" cName
     (Normal ts, _)
       | hasOtherConstructors -> prism pName typeInfo toType fromExpr toExpr toMorph
       | otherwise -> iso pName typeInfo toType fromMorph toMorph
       where
         fields' = fields $ typesToRecord ts
         toType = recordType $ typesToRecord ts
-        fromExpr = normalPattern n ts
+        fromExpr = parens $ normalPattern n ts
         toExpr = hrecord fields'
         fromMorph = parens $ lambda fromExpr toExpr
         toMorph = parens $ lambda toExpr fromExpr
@@ -505,7 +495,7 @@ constructorToOptic hasOtherConstructors typeInfo (DataConstructor n args) =
     (Record rs, True) ->
       prism pName typeInfo (recordType rs) fromExpr toExpr cName
         where
-          fromExpr = pattern n toExpr
+          fromExpr = parens $ pattern n toExpr
           toExpr = "a"
   where
     cName = textStrict n
@@ -569,7 +559,7 @@ constructorPattern (DataConstructor name (Record rs)) = recordPattern name rs
 constructor :: DataConstructorArgs 'PureScript -> Doc
 constructor Nullary = nullaryExpr
 constructor (Normal ts) = normalExpr ts
-constructor (Record rs) = vrecord $ fields rs
+constructor (Record rs) = hrecord $ fields rs
 
 nullaryPattern :: Text -> Doc
 nullaryPattern = textStrict
@@ -581,13 +571,14 @@ normalPattern :: Text -> NonEmpty PSType -> Doc
 normalPattern name = pattern name . hsep . normalLabels
 
 normalExpr :: NonEmpty PSType -> Doc
-normalExpr = parens . hsep . punctuate " /\\" . normalLabels
+normalExpr (_ :| []) = "a"
+normalExpr ts = parens . hsep . punctuate " /\\" $ normalLabels ts
 
 normalLabels :: NonEmpty PSType -> [Doc]
 normalLabels = fmap char . zipWith const ['a'..] . NE.toList
 
 recordPattern :: Text -> NonEmpty (RecordEntry 'PureScript) -> Doc
-recordPattern name = pattern name . vrecord . fields
+recordPattern name = pattern name . hrecord . fields
 
 vrecord :: [Doc] -> Doc
 vrecord = encloseVsep lbrace rbrace comma
@@ -608,7 +599,7 @@ fieldSignature :: RecordEntry 'PureScript -> Doc
 fieldSignature = uncurry signature' . (field &&& _recValue)
 
 pattern :: Text -> Doc -> Doc
-pattern name = parens . (textStrict name <+>)
+pattern name = (textStrict name <+>)
 
 case_of :: [(Doc, Doc)] -> Doc
 case_of = caseOf "_"
@@ -635,7 +626,7 @@ signature topLevel name constraints params ret =
       forAll = case (topLevel, allTypes >>= typeParams) of
         (False, _) -> Nothing
         (_, []) -> Nothing
-        (_, ps) -> Just $ "forall" <+> hsep (typeInfoToDoc <$> ps) <> "."
+        (_, ps) -> Just $ "forall" <+> hsep (typeInfoToDoc <$> nubBy (on (==) _typeName) ps) <> "."
       allTypes = ret : constraints <> params
       constraintsDoc = case constraints of
         [] -> Nothing

@@ -47,6 +47,7 @@ data TestSum
   | NestedRecord (TestRecord (TestRecord Int))
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
+  | TwoFields TestTwoFields
   | Unit ()
   | MyUnit MyUnit
   | Pair (Int, Double)
@@ -74,6 +75,7 @@ instance Arbitrary TestSum where
         NestedRecord <$> arbitrary,
         NT <$> arbitrary,
         NTRecord <$> arbitrary,
+        TwoFields <$> arbitrary,
         pure $ Unit (),
         Pair <$> arbitrary,
         Triple <$> arbitrary,
@@ -94,6 +96,16 @@ instance (ToJSON a) => ToJSON (TestRecord a)
 
 instance (Arbitrary a) => Arbitrary (TestRecord a) where
   arbitrary = TestRecord <$> arbitrary <*> arbitrary
+
+data TestTwoFields = TestTwoFields Bool Int
+  deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON TestTwoFields
+
+instance ToJSON TestTwoFields
+
+instance Arbitrary TestTwoFields where
+  arbitrary = TestTwoFields <$> arbitrary <*> arbitrary
 
 newtype TestNewtype = TestNewtype (TestRecord Bool)
   deriving (Show, Eq, Ord, Generic)

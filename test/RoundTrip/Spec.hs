@@ -38,6 +38,7 @@ myTypes =
     functor . equal . genericShow . order . argonaut $ mkSumType @(TestRecord A),
     equal . genericShow . order . argonaut $ mkSumType @TestNewtype,
     equal . genericShow . order . argonaut $ mkSumType @TestNewtypeRecord,
+    equal . genericShow . order . argonaut $ mkSumType @TestTwoFields,
     equal . genericShow . order . argonaut $ mkSumType @TestEnum,
     equal . genericShow . order . argonaut $ mkSumType @MyUnit
   ]
