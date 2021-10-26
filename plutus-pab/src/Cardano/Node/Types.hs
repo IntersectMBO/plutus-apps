@@ -123,8 +123,8 @@ data MockServerConfig =
         -- multiply size-dependent scripts fee.
         , mscNetworkId                  :: NetworkIdWrapper
         -- ^ NetworkId that's used with the CardanoAPI.
-        , mscProtocolParametersJsonPath :: FilePath
-        -- ^ Path to the JSON file containing the protocol parameters
+        , mscProtocolParametersJsonPath :: Maybe FilePath
+        -- ^ Path to a JSON file containing the protocol parameters
         , mscPassphrase                 :: Maybe Text
         -- ^ Wallet passphrase
         , mscNodeMode                   :: NodeMode
@@ -149,7 +149,7 @@ defaultMockServerConfig =
       , mscSlotConfig = def
       , mscFeeConfig  = def
       , mscNetworkId = testnetNetworkId
-      , mscProtocolParametersJsonPath = "./plutus-use-cases/scripts/protocol-parameters.json"
+      , mscProtocolParametersJsonPath = Nothing
       , mscPassphrase = Nothing
       , mscNodeMode  = MockNode
       }

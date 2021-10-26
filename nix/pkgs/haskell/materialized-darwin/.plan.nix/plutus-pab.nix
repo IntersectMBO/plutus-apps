@@ -110,6 +110,7 @@
         modules = [
           "Servant/Extra"
           "Cardano/Api/NetworkId/Extra"
+          "Cardano/Api/ProtocolParameters"
           "Cardano/BM/Data/Tracer/Extras"
           "Cardano/Chain"
           "Cardano/ChainIndex/ChainIndex"

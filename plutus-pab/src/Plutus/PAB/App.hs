@@ -30,6 +30,7 @@ module Plutus.PAB.App(
     ) where
 
 import           Cardano.Api.NetworkId.Extra                    (NetworkIdWrapper (..))
+import           Cardano.Api.ProtocolParameters                 ()
 import           Cardano.Api.Shelley                            (ProtocolParameters)
 import           Cardano.BM.Trace                               (Trace, logDebug)
 import qualified Cardano.ChainIndex.Types                       as ChainIndex
@@ -50,6 +51,7 @@ import           Control.Monad.IO.Class                         (MonadIO (..))
 import           Data.Aeson                                     (FromJSON, ToJSON, eitherDecode)
 import qualified Data.ByteString.Lazy                           as BSL
 import           Data.Coerce                                    (coerce)
+import           Data.Default                                   (def)
 import           Data.Text                                      (Text, pack, unpack)
 import           Data.Typeable                                  (Typeable)
 import           Database.Beam.Migrate.Simple
@@ -235,7 +237,7 @@ mkEnv appTrace appConfig@Config { dbConfig
     -- This is for access to the slot number in the interpreter
     chainSyncHandle <- Left <$> (liftIO $ MockClient.runChainSync' mscSocketPath mscSlotConfig)
     appInMemContractStore <- liftIO initialInMemInstances
-    protocolParameters <- readPP mscProtocolParametersJsonPath
+    protocolParameters <- maybe (pure def) readPP mscProtocolParametersJsonPath
     pure AppEnv {..}
   where
     clientEnv baseUrl = mkClientEnv <$> liftIO mkManager <*> pure (coerce baseUrl)
