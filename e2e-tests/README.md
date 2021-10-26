@@ -3,7 +3,7 @@ This is an end-to-end test suite using [hs-webdriver](https://hackage.haskell.or
 
 **RISK:** If this haskell webdriver library is not up to the task then we may want to either resurrect it, or use a python/java/javascript approach instead.
 
-To run these tests locally you'll need Firefox and Java installed to start the Selenium webserver. See workflow for example commands. `xvfb` is used in CI to virtualise display, which is not necessary to run the Selenium webserver locally with this. That is, just run `java -jar selenium-server-4.0.0.jar standalone`.
+To run these tests locally you'll need Firefox and Java installed to start the Selenium webserver. See workflow for example commands. `xvfb` is used in CI to virtualise display and is not necessary when running the Selenium webserver locally (just run `java -jar selenium-server-4.0.0.jar standalone`).
 
 All tests are defined with a behavioural-driven design pattern for readability.
 

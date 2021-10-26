@@ -56,7 +56,9 @@ jobs:
 
     - name: Run Tests
       working-directory: ./e2e-tests/
+      env:
+        FIREFOX_BINARY: "/opt/hostedtoolcache/firefox/latest/x64/firefox"
       run: |
         echo "Running tests"
         cabal build plutus-playground-e2e-tests
-        cabal run plutus-playground-e2e-tests True
+        cabal run plutus-playground-e2e-tests $FIREFOX_BINARY
