@@ -109,17 +109,22 @@ source-repository-package
   tag: d2f86caa085402a953920c6714a0de6a50b655ec
   subdir:
     core
+    command-line
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-wallet
-  tag: ae7569293e94241ef6829139ec02bd91abd069df
+  location: https://github.com/j-mueller/cardano-wallet
+  tag: 9f56b9101c3aa3e4397737705207176b43126d74
   subdir:
     lib/text-class
     lib/strict-non-empty-containers
     lib/core
     lib/test-utils
     lib/numeric
+    lib/launcher
+    lib/core-integration
+    lib/cli
+    lib/shelley
 
 source-repository-package
   type: git
@@ -182,6 +187,7 @@ source-repository-package
     eras/byron/ledger/impl/test
     eras/shelley/impl
     eras/shelley-ma/impl
+    eras/shelley/chain-and-ledger/executable-spec
     libs/non-integral
     libs/small-steps
     semantics/small-steps-test
