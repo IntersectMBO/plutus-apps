@@ -1,4 +1,8 @@
+
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
@@ -10,6 +14,7 @@
 module Main where
 
 import qualified Cardano.Api                                as CAPI
+import           Cardano.Api.NetworkId.Extra                (NetworkIdWrapper (..))
 import qualified Cardano.BM.Backend.EKGView                 as EKG
 import           Cardano.BM.Data.Severity                   (Severity (..))
 import           Cardano.BM.Data.Tracer                     (HasPrivacyAnnotation (..), HasSeverityAnnotation (..))
@@ -18,7 +23,9 @@ import           Cardano.BM.Setup                           (setupTrace_)
 import           Cardano.BM.Trace                           (Trace)
 import           Cardano.CLI                                (LogOutput (..), Port, ekgEnabled, getEKGURL,
                                                              getPrometheusURL, withLoggingNamed)
+import qualified Cardano.ChainIndex.Types                   as PAB.CI
 import           Cardano.Launcher.Node                      (nodeSocketFile)
+import           Cardano.Node.Types                         (MockServerConfig (..), NodeMode (AlonzoNode))
 import           Cardano.Startup                            (installSignalHandlers, setDefaultFilePermissions,
                                                              withUtf8Encoding)
 import           Cardano.Wallet.Api.Types                   (EncodeAddress (..))
@@ -34,11 +41,14 @@ import           Cardano.Wallet.Shelley.Launch.Cluster      (ClusterLog (..), Cr
                                                              oneMillionAda, sendFaucetAssetsTo, sendFaucetFundsTo,
                                                              testMinSeverityFromEnv, tokenMetadataServerFromEnv,
                                                              walletListenFromEnv, walletMinSeverityFromEnv, withCluster)
+import           ContractExample                            (ExampleContracts)
 import           Control.Arrow                              (first)
-import           Control.Concurrent                         (forkIO)
+import           Control.Concurrent                         (threadDelay)
+import           Control.Concurrent.Async                   (async)
 import           Control.Lens
 import           Control.Monad                              (void, when)
 import           Control.Tracer                             (traceWith)
+import           Data.Default                               (Default (def))
 import           Data.Proxy                                 (Proxy (..))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
@@ -47,6 +57,14 @@ import qualified Plutus.ChainIndex.App                      as ChainIndex
 import           Plutus.ChainIndex.ChainIndexLog            (ChainIndexLog)
 import qualified Plutus.ChainIndex.Config                   as CI
 import qualified Plutus.ChainIndex.Logging                  as ChainIndex.Logging
+import           Plutus.PAB.App                             (StorageBackend (..))
+import           Plutus.PAB.Effects.Contract.Builtin        (handleBuiltin)
+import qualified Plutus.PAB.Run                             as PAB.Run
+import           Plutus.PAB.Run.Command                     (ConfigCommand (..))
+import           Plutus.PAB.Run.CommandParser               (AppOpts (..))
+import           Plutus.PAB.Types                           (Config (..), DbConfig (..))
+import qualified Plutus.PAB.Types                           as PAB.Config
+import           Servant.Client                             (BaseUrl (..), Scheme (..))
 import           System.Directory                           (createDirectory)
 import           System.FilePath                            ((</>))
 import           Test.Integration.Faucet                    (genRewardAccounts, maryIntegrationTestAssets, mirMnemonics,
@@ -111,7 +129,7 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
 
     whenReady dir trCluster LogOutputs{loWallet} rn@(RunningNode socketPath block0 (gp, vData)) = do
         withLoggingNamed "cardano-wallet" loWallet $ \(sb, (cfg, tr)) -> do
-            launchChainIndex dir rn
+            launchChainIndex dir rn >>= launchPAB dir rn
 
             ekgEnabled >>= flip when (EKG.plugin cfg tr sb >>= loadPlugin sb)
 
@@ -147,18 +165,42 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
                 (\u -> traceWith trCluster $ MsgBaseUrl (T.pack . show $ u)
                     ekgUrl prometheusUrl)
 
+newtype ChainIndexPort = ChainIndexPort Int
+
 {-| Launch the chain index in a separate thread.
 -}
-launchChainIndex :: FilePath -> RunningNode -> IO ()
+launchChainIndex :: FilePath -> RunningNode -> IO ChainIndexPort
 launchChainIndex dir (RunningNode socketPath _block0 (_gp, _vData)) = do
-        config <- ChainIndex.Logging.defaultConfig
-        (trace :: Trace IO ChainIndexLog, _) <- setupTrace_ config "chain-index"
-        let dbPath = dir </> "chain-index.db"
-            chainIndexConfig = CI.defaultConfig
-                        & CI.socketPath .~ nodeSocketFile socketPath
-                        & CI.dbPath .~ dbPath
-                        & CI.networkId .~ CAPI.Mainnet
-        void $ forkIO $ void $ ChainIndex.runMain trace chainIndexConfig
+    config <- ChainIndex.Logging.defaultConfig
+    (trace :: Trace IO ChainIndexLog, _) <- setupTrace_ config "chain-index"
+    let dbPath = dir </> "chain-index.db"
+        chainIndexConfig = CI.defaultConfig
+                    & CI.socketPath .~ nodeSocketFile socketPath
+                    & CI.dbPath .~ dbPath
+                    & CI.networkId .~ CAPI.Mainnet
+    void . async $ void $ ChainIndex.runMain trace chainIndexConfig
+    return $ ChainIndexPort $ chainIndexConfig ^. CI.port
+
+{-| Launch the PAB in a separate thread.
+-}
+launchPAB :: FilePath -> RunningNode -> ChainIndexPort -> IO ()
+launchPAB dir (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
+    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver}
+        networkID = NetworkIdWrapper CAPI.Mainnet
+        config =
+            PAB.Config.defaultConfig
+                { nodeServerConfig = def{mscSocketPath=nodeSocketFile socketPath,mscNodeMode=AlonzoNode,mscNetworkId=networkID}
+                , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
+                , chainIndexConfig = def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
+                }
+    -- TODO: For some reason this has to be async - program terminates if it's done synchronously???
+    void . async $ PAB.Run.runWithOpts @ExampleContracts handleBuiltin (Just config) opts{cmd=Migrate}
+    sleep 2
+    void . async $ PAB.Run.runWithOpts @ExampleContracts handleBuiltin (Just config) opts{cmd=PABWebserver}
+
+sleep :: Int -> IO ()
+sleep n = threadDelay $ n * 1_000_000
+
 
 -- Logging
 
