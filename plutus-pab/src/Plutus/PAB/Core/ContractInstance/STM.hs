@@ -15,7 +15,6 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , awaitEndpointResponse
     , waitForTxStatusChange
     , waitForTxOutStatusChange
-    , valueAt
     , currentSlot
     -- * State of a contract instance
     , InstanceState(..)
@@ -52,7 +51,6 @@ module Plutus.PAB.Core.ContractInstance.STM(
 import           Control.Applicative            (Alternative (..))
 import           Control.Concurrent.STM         (STM, TMVar, TVar)
 import qualified Control.Concurrent.STM         as STM
-import           Control.Lens                   (view)
 import           Control.Monad                  (guard, (<=<))
 import           Data.Aeson                     (Value)
 import           Data.Default                   (def)
@@ -61,12 +59,9 @@ import           Data.List.NonEmpty             (NonEmpty)
 import           Data.Map                       (Map)
 import qualified Data.Map                       as Map
 import           Data.Set                       (Set)
-import           Ledger                         (Address, Slot, TxId, TxOutRef, txOutTxOut, txOutValue)
-import           Ledger.AddressMap              (AddressMap)
-import qualified Ledger.AddressMap              as AM
+import           Ledger                         (Address, Slot, TxId, TxOutRef)
 import           Ledger.Time                    (POSIXTime (..))
 import qualified Ledger.TimeSlot                as TimeSlot
-import qualified Ledger.Value                   as Value
 import           Plutus.ChainIndex              (BlockNumber (..), ChainIndexTx, TxIdState (..), TxOutBalance,
                                                  TxOutStatus, TxStatus, transactionStatus)
 import           Plutus.ChainIndex.TxOutBalance (transactionOutputStatus)
@@ -153,7 +148,6 @@ data OpenTxOutProducedRequest =
 data BlockchainEnv =
     BlockchainEnv
         { beCurrentSlot  :: TVar Slot -- ^ Current slot
-        , beAddressMap   :: TVar AddressMap -- ^ Address map used for updating the chain index. TODO: Should not be part of 'BlockchainEnv'
         , beTxChanges    :: TVar (UtxoIndex TxIdState) -- ^ Map holding metadata which determines the status of transactions.
         , beTxOutChanges :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
         , beCurrentBlock :: TVar BlockNumber -- ^ Current block
@@ -164,7 +158,6 @@ emptyBlockchainEnv :: STM BlockchainEnv
 emptyBlockchainEnv =
     BlockchainEnv
         <$> STM.newTVar 0
-        <*> STM.newTVar mempty
         <*> STM.newTVar mempty
         <*> STM.newTVar mempty
         <*> STM.newTVar (BlockNumber 0)
@@ -412,13 +405,6 @@ waitForTxOutStatusChange oldStatus txOutRef BlockchainEnv{beTxChanges, beTxOutCh
     case txOutStatus of
       Right s | s /= oldStatus -> pure s
       _                        -> empty
-
--- | The value at an address
-valueAt :: Address -> BlockchainEnv -> STM Value.Value
-valueAt addr BlockchainEnv{beAddressMap} = do
-    am <- STM.readTVar beAddressMap
-    let utxos = view (AM.fundsAt addr) am
-    return $ foldMap (txOutValue . txOutTxOut) utxos
 
 -- | The current slot number
 currentSlot :: BlockchainEnv -> STM Slot

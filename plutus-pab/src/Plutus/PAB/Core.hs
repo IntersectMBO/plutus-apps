@@ -67,7 +67,6 @@ module Plutus.PAB.Core
     , finalResult
     , waitUntilFinished
     , blockchainEnv
-    , valueAtSTM
     , valueAt
     , askUserEnv
     , askBlockchainEnv
@@ -87,6 +86,7 @@ module Plutus.PAB.Core
 import           Control.Applicative                     (Alternative (..))
 import           Control.Concurrent.STM                  (STM)
 import qualified Control.Concurrent.STM                  as STM
+import           Control.Lens                            (view)
 import           Control.Monad                           (forM, guard, void)
 import           Control.Monad.Freer                     (Eff, LastMember, Member, interpret, reinterpret, runM, send,
                                                           subsume, type (~>))
@@ -96,18 +96,21 @@ import qualified Control.Monad.Freer.Extras.Modify       as Modify
 import           Control.Monad.Freer.Reader              (Reader (..), ask, asks, runReader)
 import           Control.Monad.IO.Class                  (MonadIO (..))
 import qualified Data.Aeson                              as JSON
+import           Data.Default                            (Default (def))
 import           Data.Foldable                           (traverse_)
 import           Data.Map                                (Map)
 import qualified Data.Map                                as Map
+import           Data.Maybe                              (catMaybes)
 import           Data.Proxy                              (Proxy (..))
 import           Data.Set                                (Set)
 import           Data.Text                               (Text)
-import           Ledger                                  (TxOutRef)
-import           Ledger.Tx                               (Address, CardanoTx)
+import           Ledger                                  (Address (addressCredential), TxOutRef)
+import           Ledger.Tx                               (CardanoTx, ciTxOutValue)
 import           Ledger.TxId                             (TxId)
 import           Ledger.Value                            (Value)
 import           Plutus.ChainIndex                       (ChainIndexQueryEffect, RollbackState (..), TxOutStatus,
                                                           TxStatus)
+import qualified Plutus.ChainIndex                       as ChainIndex
 import           Plutus.Contract.Effects                 (ActiveEndpoint (..), PABReq)
 import           Plutus.PAB.Core.ContractInstance        (ContractInstanceMsg, ContractInstanceState)
 import qualified Plutus.PAB.Core.ContractInstance        as ContractInstance
@@ -130,7 +133,7 @@ import qualified Wallet.API                              as WAPI
 import           Wallet.Effects                          (NodeClientEffect, WalletEffect)
 import           Wallet.Emulator.LogMessages             (RequestHandlerLogMsg, TxBalanceMsg)
 import           Wallet.Emulator.MultiAgent              (EmulatorEvent' (..), EmulatorTimeEvent (..))
-import           Wallet.Emulator.Wallet                  (Wallet, WalletEvent (..))
+import           Wallet.Emulator.Wallet                  (Wallet, WalletEvent (..), walletAddress)
 import           Wallet.Types                            (ContractActivityStatus, ContractInstanceId,
                                                           EndpointDescription (..), NotificationError)
 
@@ -249,25 +252,25 @@ activateContract' ::
     -> Wallet
     -> ContractDef t
     -> PABAction t env ContractInstanceId
-activateContract' state cid w def = do
+activateContract' state cid w contractDef = do
     PABRunner{runPABAction} <- pabRunner
 
     let handler :: forall a. Eff (ContractInstanceEffects t env '[IO]) a -> IO a
         handler x = fmap (either (error . show) id) (runPABAction $ handleAgentThread w x)
         args :: ContractActivationArgs (ContractDef t)
-        args = ContractActivationArgs{caWallet = Just w, caID = def}
+        args = ContractActivationArgs{caWallet = Just w, caID = contractDef}
     handleAgentThread w
         $ ContractInstance.startContractInstanceThread' @t @IO @(ContractInstanceEffects t env '[IO]) state cid handler args
 
 -- | Start a new instance of a contract
 activateContract :: forall t env. PABContract t => Wallet -> ContractDef t -> PABAction t env ContractInstanceId
-activateContract w def = do
+activateContract w contractDef = do
     PABRunner{runPABAction} <- pabRunner
 
     let handler :: forall a. Eff (ContractInstanceEffects t env '[IO]) a -> IO a
         handler x = fmap (either (error . show) id) (runPABAction $ handleAgentThread w x)
         args :: ContractActivationArgs (ContractDef t)
-        args = ContractActivationArgs{caWallet = Just w, caID = def}
+        args = ContractActivationArgs{caWallet = Just w, caID = contractDef}
     handleAgentThread w
         $ ContractInstance.activateContractSTM @t @IO @(ContractInstanceEffects t env '[IO]) handler args
 
@@ -562,15 +565,24 @@ finalResult instanceId = do
     instancesState <- asks @(PABEnvironment t env) instancesState
     pure $ Instances.finalResult instanceId instancesState
 
--- | An STM transaction returning the value at an address
-valueAtSTM :: forall t env. Address -> PABAction t env (STM Value)
-valueAtSTM address = do
-    blockchainEnv <- asks @(PABEnvironment t env) blockchainEnv
-    return $ Instances.valueAt address blockchainEnv
-
--- | The value at an address
-valueAt :: forall t env. Address -> PABAction t env Value
-valueAt address = valueAtSTM address >>= liftIO . STM.atomically
+-- | The value in a wallet.
+--
+-- TODO: Change from 'Wallet' to 'Address' (see SCP-2208).
+valueAt :: Wallet -> PABAction t env Value
+valueAt wallet = do
+  handleAgentThread wallet $ do
+    utxoRefs <- getAllUtxoRefs def
+    txOutsM <- traverse ChainIndex.txOutFromRef utxoRefs
+    pure $ foldMap (view ciTxOutValue) $ catMaybes txOutsM
+  where
+    cred = addressCredential $ walletAddress wallet
+    getAllUtxoRefs pq = do
+      utxoRefsPage <- snd <$> ChainIndex.utxoSetAtAddress pq cred
+      case ChainIndex.nextPageQuery utxoRefsPage of
+        Nothing -> pure $ ChainIndex.pageItems utxoRefsPage
+        Just newPageQuery -> do
+          restOfUtxoRefs <- getAllUtxoRefs newPageQuery
+          pure $ ChainIndex.pageItems utxoRefsPage <> restOfUtxoRefs
 
 -- | Wait until the contract is done, then return
 --   the error (if any)

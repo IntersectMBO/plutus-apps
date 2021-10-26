@@ -130,7 +130,11 @@ walletMockWallet (Wallet wid) = find ((==) wid . WalletId . CW.mwWalletId) CW.kn
 
 -- | The public key hash of a mock wallet.  (Fails if the wallet is not a mock wallet).
 walletPubKeyHash :: Wallet -> PubKeyHash
-walletPubKeyHash = CW.pubKeyHash . fromMaybe (error "walletPubKeyHash: Wallet is not a mock wallet") . walletMockWallet
+walletPubKeyHash w = CW.pubKeyHash
+                 $ fromMaybe (error $ "Wallet.Emulator.Wallet.walletPubKeyHash: Wallet "
+                                   <> show w
+                                   <> " is not a mock wallet")
+                 $ walletMockWallet w
 
 -- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
 walletAddress :: Wallet -> Address
