@@ -103,6 +103,12 @@ let additions =
     , repo = "https://github.com/input-output-hk/web-common.git"
     , version = "8f912caf709097c81328502f660b2278f171a4f9"
     }
+    , markdown =
+        { dependencies =
+            [ "const", "datetime", "functors", "lists", "ordered-collections", "parsing", "partial", "precise", "prelude", "strings", "unicode", "validation" ]
+        , repo = "https://github.com/jhbertra/purescript-markdown"
+        , version = "a9fbc4c42acf7b4be908832698b69ed558912496"
+        }
   , matryoshka =
     { dependencies =
         [ "prelude", "fixed-points", "free", "transformers", "profunctor" ]
