@@ -11,12 +11,11 @@ module Main where
 
 import qualified Cardano.Api                                as CAPI
 import qualified Cardano.BM.Backend.EKGView                 as EKG
-import           Cardano.BM.Data.LogItem                    (LogObject, LoggerName, loContent)
 import           Cardano.BM.Data.Severity                   (Severity (..))
 import           Cardano.BM.Data.Tracer                     (HasPrivacyAnnotation (..), HasSeverityAnnotation (..))
 import           Cardano.BM.Plugin                          (loadPlugin)
 import           Cardano.BM.Setup                           (setupTrace_)
-import           Cardano.BM.Trace                           (Trace, logDebug, logError, logNotice)
+import           Cardano.BM.Trace                           (Trace)
 import           Cardano.CLI                                (LogOutput (..), Port, ekgEnabled, getEKGURL,
                                                              getPrometheusURL, withLoggingNamed)
 import           Cardano.Launcher.Node                      (nodeSocketFile)
@@ -39,22 +38,15 @@ import           Control.Arrow                              (first)
 import           Control.Concurrent                         (forkIO)
 import           Control.Lens
 import           Control.Monad                              (void, when)
-import           Control.Monad.Freer.Extras.Beam            (BeamLog (SqlLog))
-import           Control.Tracer                             (Tracer, contramap, traceWith)
+import           Control.Tracer                             (traceWith)
 import           Data.Proxy                                 (Proxy (..))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Data.Text.Class                            (ToText (..))
-import           Database.Beam.Migrate.Simple               (autoMigrate)
-import qualified Database.Beam.Sqlite                       as Sqlite
-import qualified Database.Beam.Sqlite.Migrate               as Sqlite
-import qualified Database.SQLite.Simple                     as Sqlite
 import qualified Plutus.ChainIndex.App                      as ChainIndex
-import           Plutus.ChainIndex.ChainIndexLog            (ChainIndexLog (BeamLogItem))
+import           Plutus.ChainIndex.ChainIndexLog            (ChainIndexLog)
 import qualified Plutus.ChainIndex.Config                   as CI
-import           Plutus.ChainIndex.DbSchema                 (checkedSqliteDb)
 import qualified Plutus.ChainIndex.Logging                  as ChainIndex.Logging
-import           Plutus.Monitoring.Util                     (PrettyObject (..), convertLog)
 import           System.Directory                           (createDirectory)
 import           System.FilePath                            ((</>))
 import           Test.Integration.Faucet                    (genRewardAccounts, maryIntegrationTestAssets, mirMnemonics,
@@ -62,10 +54,8 @@ import           Test.Integration.Faucet                    (genRewardAccounts, 
 
 data LogOutputs =
     LogOutputs
-        { loCluster    :: [LogOutput]
-        , loWallet     :: [LogOutput]
-        , loChainIndex :: [LogOutput]
-        , loPAB        :: [LogOutput]
+        { loCluster :: [LogOutput]
+        , loWallet  :: [LogOutput]
         }
 
 -- Do all the program setup required for running the local cluster, create a
@@ -94,9 +84,6 @@ withLocalClusterSetup action = do
                 LogOutputs
                     <$> (logOutputs "cluster.log" <$> testMinSeverityFromEnv)
                     <*> (logOutputs "wallet.log" <$> walletMinSeverityFromEnv)
-                    <*> (logOutputs "chain-index.log" <$> walletMinSeverityFromEnv)
-                    <*> (logOutputs "pab.log" <$> walletMinSeverityFromEnv)
-
 
             action dir lops
 
@@ -122,17 +109,9 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
             maryIntegrationTestAssets (Coin 1_000_000_000)
         moveInstantaneousRewardsTo trCluster' socketPath dir rewards
 
-    whenReady dir trCluster LogOutputs{loWallet, loChainIndex} (RunningNode socketPath block0 (gp, vData)) = do
-        config <- ChainIndex.Logging.defaultConfig
-        (trace :: Trace IO ChainIndexLog, _) <- setupTrace_ config "chain-index"
-        let dbPath = dir </> "chain-index.db"
-            config = CI.defaultConfig
-                        & CI.socketPath .~ nodeSocketFile socketPath
-                        & CI.dbPath .~ dbPath
-                        & CI.networkId .~ CAPI.Mainnet
-        void $ forkIO $ void $ ChainIndex.runMain trace config
-
+    whenReady dir trCluster LogOutputs{loWallet} rn@(RunningNode socketPath block0 (gp, vData)) = do
         withLoggingNamed "cardano-wallet" loWallet $ \(sb, (cfg, tr)) -> do
+            launchChainIndex dir rn
 
             ekgEnabled >>= flip when (EKG.plugin cfg tr sb >>= loadPlugin sb)
 
@@ -168,12 +147,24 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
                 (\u -> traceWith trCluster $ MsgBaseUrl (T.pack . show $ u)
                     ekgUrl prometheusUrl)
 
+{-| Launch the chain index in a separate thread.
+-}
+launchChainIndex :: FilePath -> RunningNode -> IO ()
+launchChainIndex dir (RunningNode socketPath _block0 (_gp, _vData)) = do
+        config <- ChainIndex.Logging.defaultConfig
+        (trace :: Trace IO ChainIndexLog, _) <- setupTrace_ config "chain-index"
+        let dbPath = dir </> "chain-index.db"
+            chainIndexConfig = CI.defaultConfig
+                        & CI.socketPath .~ nodeSocketFile socketPath
+                        & CI.dbPath .~ dbPath
+                        & CI.networkId .~ CAPI.Mainnet
+        void $ forkIO $ void $ ChainIndex.runMain trace chainIndexConfig
+
 -- Logging
 
 data TestsLog
     = MsgBaseUrl Text Text Text -- wallet url, ekg url, prometheus url
     | MsgSettingUpFaucet
-    | MsgPAB
     | MsgCluster ClusterLog
     deriving (Show)
 
@@ -187,9 +178,6 @@ instance ToText TestsLog where
         MsgSettingUpFaucet -> "Setting up faucet..."
         MsgCluster msg -> toText msg
 
-instance HasPrivacyAnnotation (PrettyObject a)
-instance HasSeverityAnnotation (PrettyObject a) where
-    getSeverityAnnotation _ = Notice
 instance HasPrivacyAnnotation TestsLog
 instance HasSeverityAnnotation TestsLog where
     getSeverityAnnotation = \case
