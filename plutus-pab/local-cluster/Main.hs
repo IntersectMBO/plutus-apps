@@ -10,6 +10,7 @@ module Main where
 import           Cardano.BM.Data.Severity                   (Severity (..))
 import           Cardano.BM.Data.Tracer                     (HasPrivacyAnnotation (..), HasSeverityAnnotation (..))
 import           Cardano.BM.Plugin                          (loadPlugin)
+import           Cardano.BM.Trace                           (Trace, logDebug, logError, logNotice)
 import           Cardano.CLI                                (LogOutput (..), Port, ekgEnabled, getEKGURL,
                                                              getPrometheusURL, withLoggingNamed)
 import           Cardano.Startup                            (installSignalHandlers, setDefaultFilePermissions,
@@ -28,11 +29,19 @@ import           Cardano.Wallet.Shelley.Launch.Cluster      (ClusterLog (..), Cr
                                                              testMinSeverityFromEnv, tokenMetadataServerFromEnv,
                                                              walletListenFromEnv, walletMinSeverityFromEnv, withCluster)
 import           Control.Arrow                              (first)
+import           Control.Concurrent                         (forkIO)
 import           Control.Monad                              (void, when)
+import           Control.Monad.Freer.Extras.Beam            (BeamLog (SqlLog))
 import           Control.Tracer                             (contramap, traceWith)
 import           Data.Proxy                                 (Proxy (..))
 import           Data.Text                                  (Text)
 import           Data.Text.Class                            (ToText (..))
+import           Database.Beam.Migrate.Simple               (autoMigrate)
+import qualified Database.Beam.Sqlite                       as Sqlite
+import qualified Database.Beam.Sqlite.Migrate               as Sqlite
+import qualified Database.SQLite.Simple                     as Sqlite
+import           Plutus.ChainIndex.ChainIndexLog            (ChainIndexLog (BeamLogItem))
+import           Plutus.ChainIndex.DbSchema                 (checkedSqliteDb)
 import           System.Directory                           (createDirectory)
 import           System.FilePath                            ((</>))
 import           Test.Integration.Faucet                    (genRewardAccounts, maryIntegrationTestAssets, mirMnemonics,
@@ -67,6 +76,7 @@ withLocalClusterSetup action = do
             walletLogs <- logOutputs "wallet.log" <$> walletMinSeverityFromEnv
 
             action dir clusterLogs walletLogs
+
 main :: IO ()
 main = withLocalClusterSetup $ \dir clusterLogs walletLogs ->
     withLoggingNamed "cluster" clusterLogs $ \(_, (_, trCluster)) -> do
@@ -89,7 +99,7 @@ main = withLocalClusterSetup $ \dir clusterLogs walletLogs ->
             maryIntegrationTestAssets (Coin 1_000_000_000)
         moveInstantaneousRewardsTo trCluster' socketPath dir rewards
 
-    whenReady dir trCluster logs (RunningNode socketPath block0 (gp, vData)) =
+    whenReady dir trCluster logs (RunningNode socketPath block0 (gp, vData)) = do
         withLoggingNamed "cardano-wallet" logs $ \(sb, (cfg, tr)) -> do
 
             ekgEnabled >>= flip when (EKG.plugin cfg tr sb >>= loadPlugin sb)
@@ -109,7 +119,7 @@ main = withLocalClusterSetup $ \dir clusterLogs walletLogs ->
                 )
                 <$> getEKGURL
 
-            void $ serveWallet
+            void $ forkIO $ void $ serveWallet
                 (SomeNetworkDiscriminant $ Proxy @'Mainnet)
                 tracers
                 (SyncTolerance 10)
@@ -126,11 +136,23 @@ main = withLocalClusterSetup $ \dir clusterLogs walletLogs ->
                 (\u -> traceWith trCluster $ MsgBaseUrl (T.pack . show $ u)
                     ekgUrl prometheusUrl)
 
+        withLoggingNamed "chain-index" logs $ \(sb, (cfg, tr)) -> forkIO $ void $ do
+            Sqlite.withConnection (dir </> "chain-index.db") $ \conn -> do
+                Sqlite.runBeamSqliteDebug (traceWith trCluster . MsgChainIndex . T.pack) conn $ do
+                    autoMigrate Sqlite.migrationBackend checkedSqliteDb
+                pure ()
+        putStrLn "X"
+        () <- readLn
+        putStrLn "Y"
+        pure ()
+
 -- Logging
 
 data TestsLog
     = MsgBaseUrl Text Text Text -- wallet url, ekg url, prometheus url
     | MsgSettingUpFaucet
+    | MsgChainIndex Text
+    | MsgPAB
     | MsgCluster ClusterLog
     deriving (Show)
 
@@ -143,10 +165,12 @@ instance ToText TestsLog where
             ]
         MsgSettingUpFaucet -> "Setting up faucet..."
         MsgCluster msg -> toText msg
+        MsgChainIndex msg -> msg
 
 instance HasPrivacyAnnotation TestsLog
 instance HasSeverityAnnotation TestsLog where
     getSeverityAnnotation = \case
         MsgSettingUpFaucet -> Notice
+        MsgChainIndex{}    -> Notice
         MsgBaseUrl {}      -> Notice
         MsgCluster msg     -> getSeverityAnnotation msg

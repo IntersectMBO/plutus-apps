@@ -7,7 +7,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Config(
+module Plutus.ChainIndex.Config(
   ChainIndexConfig(..),
   DecodeConfigException(..),
   defaultConfig,
@@ -82,4 +82,5 @@ makeLensesFor [
   ] 'ChainIndexConfig
 
 newtype DecodeConfigException = DecodeConfigException String
-  deriving (Show, Exception)
+  deriving stock Show
+  deriving anyclass Exception

@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Logging where
+module Plutus.ChainIndex.Logging where
 
 import           Cardano.BM.Configuration       (setup)
 import qualified Cardano.BM.Configuration.Model as CM

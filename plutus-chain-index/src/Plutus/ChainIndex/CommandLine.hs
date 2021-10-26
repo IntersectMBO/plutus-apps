@@ -1,6 +1,6 @@
 {-# LANGUAGE ApplicativeDo  #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module CommandLine(
+module Plutus.ChainIndex.CommandLine(
   AppConfig(..)
   , Command(..)
   , CLIConfigOverrides(..)
@@ -15,9 +15,9 @@ import           Options.Applicative      (CommandFields, Mod, Parser, ParserInf
 
 import           Cardano.Api              (NetworkId (..), NetworkMagic (..))
 import           Cardano.BM.Data.Severity
-import           Config                   (ChainIndexConfig)
-import qualified Config
 import           GHC.Word                 (Word32)
+import           Plutus.ChainIndex.Config (ChainIndexConfig)
+import qualified Plutus.ChainIndex.Config as Config
 
 data CLIConfigOverrides =
   CLIConfigOverrides

@@ -5,6 +5,7 @@ packages: doc
           freer-extras
           playground-common
           plutus-chain-index
+          plutus-chain-index-core
           plutus-contract
           plutus-ledger
           plutus-pab
