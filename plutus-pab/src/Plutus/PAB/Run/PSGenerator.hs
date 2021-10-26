@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -18,39 +19,40 @@ module Plutus.PAB.Run.PSGenerator
     , pabTypes
     ) where
 
-import Cardano.Wallet.Mock.Types (WalletInfo)
-import Control.Applicative ((<|>))
-import Control.Lens (set, (&))
-import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage)
-import Data.Proxy (Proxy (Proxy))
-import Data.Text qualified as Text
-import Data.Typeable (Typeable)
-import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, buildBridge, equal, genericShow, mkSumType,
-                                   order, writePSTypesWith)
-import Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (ForeignOptions), genForeign,
-                                                   unwrapSingleConstructors)
-import Language.PureScript.Bridge.TypeParameters (A, B)
-import PSGenerator.Common qualified
-import Plutus.Contract.Checkpoint (CheckpointKey, CheckpointStore, CheckpointStoreItem)
-import Plutus.Contract.Resumable (Responses)
-import Plutus.Contract.StateMachine (InvalidTransition, SMContractError)
-import Plutus.Contract.StateMachine.OnChain (State)
-import Plutus.PAB.Effects.Contract qualified as Contract
-import Plutus.PAB.Effects.Contract.Builtin (Builtin)
-import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
-import Plutus.PAB.Webserver.API qualified as API
-import Plutus.PAB.Webserver.Types (ChainReport, CombinedWSStreamToClient, CombinedWSStreamToServer,
-                                   ContractActivationArgs, ContractInstanceClientState, ContractReport,
-                                   ContractSignatureResponse, FullReport, InstanceStatusToClient)
-import Servant ((:<|>))
-import Servant.PureScript (HasBridge, Settings, _generateSubscriberAPI, apiModuleName, defaultBridge, defaultSettings,
-                           languageBridge, writeAPIModuleWithSettings)
+import           Cardano.Wallet.Mock.Types                 (WalletInfo)
+import           Control.Applicative                       ((<|>))
+import           Control.Lens                              (set, (&))
+import           Control.Monad.Freer.Extras.Log            (LogLevel, LogMessage)
+import           Data.Proxy                                (Proxy (Proxy))
+import qualified Data.Text                                 as Text
+import           Data.Typeable                             (Typeable)
+import           Language.PureScript.Bridge                (BridgePart, Language (Haskell), SumType, argonaut,
+                                                            buildBridge, equal, genericShow, mkSumType, order,
+                                                            writePSTypes)
+import           Language.PureScript.Bridge.TypeParameters (A, B)
+import qualified PSGenerator.Common
+import           Plutus.Contract.Checkpoint                (CheckpointKey, CheckpointStore, CheckpointStoreItem)
+import           Plutus.Contract.Resumable                 (Responses)
+import           Plutus.Contract.StateMachine              (InvalidTransition, SMContractError)
+import           Plutus.Contract.StateMachine.OnChain      (State)
+import qualified Plutus.PAB.Effects.Contract               as Contract
+import           Plutus.PAB.Effects.Contract.Builtin       (Builtin)
+import           Plutus.PAB.Events.ContractInstanceState   (PartiallyDecodedResponse)
+import qualified Plutus.PAB.Webserver.API                  as API
+import           Plutus.PAB.Webserver.Types                (ChainReport, CombinedWSStreamToClient,
+                                                            CombinedWSStreamToServer, ContractActivationArgs,
+                                                            ContractInstanceClientState, ContractReport,
+                                                            ContractSignatureResponse, FullReport,
+                                                            InstanceStatusToClient)
+import           Servant                                   ((:<|>))
+import           Servant.PureScript                        (HasBridge, Settings, apiModuleName, defaultBridge,
+                                                            defaultSettings, languageBridge, writeAPIModuleWithSettings)
 
 -- | List of types linked to contract type `a` that need to be available in
 -- Purescript.
 class HasPSTypes a where
-    psTypes :: Proxy a -> [SumType 'Haskell]
-    psTypes _ = []
+    psTypes :: [SumType 'Haskell]
+    psTypes = []
 
 -- | PAB's main bridge that includes common bridges
 pabBridge :: BridgePart
@@ -77,42 +79,39 @@ pabTypes =
     PSGenerator.Common.ledgerTypes <>
     PSGenerator.Common.playgroundTypes <>
     PSGenerator.Common.walletTypes <>
-    [ (equal <*> (genericShow <*> mkSumType)) (Proxy @(Builtin A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(FullReport A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ChainReport)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(ContractReport A))
-    , (equal <*> (genericShow <*> mkSumType))
-          (Proxy @(ContractSignatureResponse A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(PartiallyDecodedResponse A))
+    [ order . equal . genericShow . argonaut $ mkSumType @(Builtin A)
+    , equal . genericShow . argonaut $ mkSumType @(FullReport A)
+    , equal . genericShow . argonaut $ mkSumType @ChainReport
+    , equal . genericShow . argonaut $ mkSumType @(ContractReport A)
+    , equal . genericShow . argonaut $ mkSumType @(ContractSignatureResponse A)
+    , equal . genericShow . argonaut $ mkSumType @(PartiallyDecodedResponse A)
 
     -- Contract request / response types
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @CheckpointStore)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @CheckpointKey)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(CheckpointStoreItem A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(Responses A))
+    , equal . genericShow . argonaut $ mkSumType @CheckpointStore
+    , order . genericShow . argonaut $ mkSumType @CheckpointKey
+    , equal . genericShow . argonaut $ mkSumType @(CheckpointStoreItem A)
+    , equal . genericShow . argonaut $ mkSumType @(Responses A)
 
     -- Contract error types
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(InvalidTransition A B))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(State A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @SMContractError)
+    , equal . genericShow . argonaut $ mkSumType @(InvalidTransition A B)
+    , equal . genericShow . argonaut $ mkSumType @(State A)
+    , equal . genericShow . argonaut $ mkSumType @SMContractError
 
     -- Logging types
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(LogMessage A))
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @LogLevel)
+    , equal . genericShow . argonaut $ mkSumType @(LogMessage A)
+    , order . equal . genericShow . argonaut $ mkSumType @LogLevel
 
     -- Web API types
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @(ContractActivationArgs A))
-    , (genericShow <*> mkSumType) (Proxy @(ContractInstanceClientState A))
-    , (genericShow <*> mkSumType) (Proxy @InstanceStatusToClient)
-    , (genericShow <*> mkSumType) (Proxy @CombinedWSStreamToClient)
-    , (genericShow <*> mkSumType) (Proxy @CombinedWSStreamToServer)
-    , (genericShow <*> mkSumType) (Proxy @WalletInfo)
+    , equal . genericShow . argonaut $ mkSumType @(ContractActivationArgs A)
+    , genericShow . argonaut $ mkSumType @(ContractInstanceClientState A)
+    , genericShow . argonaut $ mkSumType @InstanceStatusToClient
+    , genericShow . argonaut $ mkSumType @CombinedWSStreamToClient
+    , genericShow . argonaut $ mkSumType @CombinedWSStreamToServer
+    , genericShow . argonaut $ mkSumType @WalletInfo
     ]
 
 mySettings :: Settings
-mySettings =
-    (defaultSettings & set apiModuleName "Plutus.PAB.Webserver")
-        {_generateSubscriberAPI = False}
+mySettings = defaultSettings & set apiModuleName "Plutus.PAB.Webserver"
 
 ------------------------------------------------------------
 -- | Use the Proxy for specifying `a` when generating PS functions for the
@@ -137,24 +136,16 @@ generateDefault
     :: FilePath -- ^ Output directory of PS files
     -> IO ()
 generateDefault outputDir = do
-    writePSTypesWith
-        (genForeign (ForeignOptions {unwrapSingleConstructors = True}))
-        outputDir
-        (buildBridge pabBridge)
-        pabTypes
+    writePSTypes outputDir (buildBridge pabBridge) pabTypes
     putStrLn $ "Done: " <> outputDir
 
 -- | Generate PS modules in 'outputDir' for types specified with 'HasPSTypes'
 -- typeclass.
 generateWith
-    :: HasPSTypes a
-    => Proxy a  -- ^ Proxy for type `a` which defines the 'HasPSTypes' typeclass.
-    -> FilePath -- ^ Output directory of PS files
+    :: forall a
+     . HasPSTypes a
+    => FilePath -- ^ Output directory of PS files
     -> IO ()
-generateWith proxy outputDir = do
-    writePSTypesWith
-        (genForeign (ForeignOptions {unwrapSingleConstructors = True}))
-        outputDir
-        (buildBridge pabBridge)
-        (psTypes proxy)
+generateWith outputDir = do
+    writePSTypes outputDir (buildBridge pabBridge) (psTypes @a)
     putStrLn $ "Done: " <> outputDir

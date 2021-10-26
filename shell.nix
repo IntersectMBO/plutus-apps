@@ -3,7 +3,7 @@
 , packages ? import ./. { inherit system enableHaskellProfiling; }
 }:
 let
-  inherit (packages) pkgs plutus-apps plutus-playground plutus-pab docs webCommon;
+  inherit (packages) pkgs plutus-apps plutus-playground plutus-pab docs;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cardano-cli cardano-node;
 
@@ -99,7 +99,6 @@ let
     updateMaterialized
     updateClientDeps
     docs.build-and-serve-docs
-    webCommon.newComponent
   ]);
 
 in
