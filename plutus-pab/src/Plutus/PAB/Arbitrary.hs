@@ -20,6 +20,7 @@ import           Ledger.Crypto                     (PubKey, PubKeyHash, Signatur
 import           Ledger.Interval                   (Extended, Interval, LowerBound, UpperBound)
 import           Ledger.Slot                       (Slot)
 import           Ledger.Tx                         (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType, TxOut, TxOutRef)
+import           Ledger.Tx.CardanoAPI              (ToCardanoError)
 import           Ledger.TxId                       (TxId)
 import           Plutus.Contract.Effects           (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import           Plutus.Contract.StateMachine      (ThreadToken)
@@ -62,6 +63,10 @@ instance Arbitrary Ledger.ScriptError where
     shrink = genericShrink
 
 instance Arbitrary WalletAPIError where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary ToCardanoError where
     arbitrary = genericArbitrary
     shrink = genericShrink
 

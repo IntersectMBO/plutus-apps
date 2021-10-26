@@ -54,6 +54,7 @@ import           Control.Monad.IO.Class              (MonadIO (..))
 import           Data.Aeson                          (FromJSON, ToJSON)
 import           Data.Default                        (Default, def)
 import qualified Data.Map                            as Map
+import           Data.Text                           (Text)
 import           Data.Text.Prettyprint.Doc           (Pretty (..), pretty, viaShow, (<+>))
 import           Data.Time.Clock                     (UTCTime)
 import qualified Data.Time.Format.ISO8601            as F
@@ -107,22 +108,26 @@ data NodeMode =
 -- | Mock Node server configuration
 data MockServerConfig =
     MockServerConfig
-        { mscBaseUrl          :: BaseUrl
+        { mscBaseUrl                    :: BaseUrl
         -- ^ base url of the service
-        , mscInitialTxWallets :: [WalletNumber]
+        , mscInitialTxWallets           :: [WalletNumber]
         -- ^ The wallets that receive money from the initial transaction.
-        , mscSocketPath       :: FilePath
+        , mscSocketPath                 :: FilePath
         -- ^ Path to the socket used to communicate with the server.
-        , mscKeptBlocks       :: Integer
+        , mscKeptBlocks                 :: Integer
         -- ^ The number of blocks to keep for replaying to a newly connected clients
-        , mscSlotConfig       :: SlotConfig
+        , mscSlotConfig                 :: SlotConfig
         -- ^ Beginning of slot 0.
-        , mscFeeConfig        :: FeeConfig
+        , mscFeeConfig                  :: FeeConfig
         -- ^ Configure constant fee per transaction and ratio by which to
         -- multiply size-dependent scripts fee.
-        , mscNetworkId        :: NetworkIdWrapper
+        , mscNetworkId                  :: NetworkIdWrapper
         -- ^ NetworkId that's used with the CardanoAPI.
-        , mscNodeMode         :: NodeMode
+        , mscProtocolParametersJsonPath :: Maybe FilePath
+        -- ^ Path to a JSON file containing the protocol parameters
+        , mscPassphrase                 :: Maybe Text
+        -- ^ Wallet passphrase
+        , mscNodeMode                   :: NodeMode
         -- ^ Whether to connect to an Alonzo node or a mock node
         }
     deriving stock (Show, Eq, Generic)
@@ -144,6 +149,8 @@ defaultMockServerConfig =
       , mscSlotConfig = def
       , mscFeeConfig  = def
       , mscNetworkId = testnetNetworkId
+      , mscProtocolParametersJsonPath = Nothing
+      , mscPassphrase = Nothing
       , mscNodeMode  = MockNode
       }
 
@@ -172,13 +179,13 @@ instance Pretty MockServerLogMsg where
         StartingRandomTx          -> "Starting random transaction generation thread"
         KeepingOldBlocks          -> "Not starting block reaper thread (old blocks will be retained in-memory forever"
         RemovingOldBlocks         -> "Starting block reaper thread (old blocks will be removed)"
-        StartingMockServer p      -> "Starting Mock Node Server on port " <+> pretty p
+        StartingMockServer p      -> "Starting Mock Node Server on port" <+> pretty p
         StartingSlotCoordination initialSlotTime slotLength  ->
             "Starting slot coordination thread."
             <+> "Initial slot time:" <+> pretty (F.iso8601Show initialSlotTime)
             <+> "Slot length:" <+> viaShow slotLength
-        ProcessingChainEvent e    -> "Processing chain event " <+> pretty e
-        BlockOperation e          -> "Block operation " <+> pretty e
+        ProcessingChainEvent e    -> "Processing chain event" <+> pretty e
+        BlockOperation e          -> "Block operation" <+> pretty e
         CreatingRandomTransaction -> "Generating a random transaction"
 
 instance ToObject MockServerLogMsg where

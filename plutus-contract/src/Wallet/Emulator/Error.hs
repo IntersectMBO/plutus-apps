@@ -15,6 +15,7 @@ import           Data.Text.Prettyprint.Doc
 import           GHC.Generics              (Generic)
 
 import           Ledger                    (PubKeyHash, ValidationError)
+import           Ledger.Tx.CardanoAPI      (ToCardanoError)
 
 -- | An error thrown by wallet interactions.
 data WalletAPIError =
@@ -24,6 +25,8 @@ data WalletAPIError =
     -- ^ The private key of this public key hahs is not known to the wallet.
     | ValidationError ValidationError
     -- ^ There was an error during off-chain validation.
+    | ToCardanoError ToCardanoError
+    -- ^ There was an error while converting to Cardano.API format.
     | OtherError Text
     -- ^ Some other error occurred.
     deriving stock (Show, Eq, Generic)
@@ -36,6 +39,8 @@ instance Pretty WalletAPIError where
             "Private key not found:" <+> viaShow pk
         ValidationError e ->
             "Validation error:" <+> pretty e
+        ToCardanoError t ->
+            "Error during conversion to a Cardano.Api format:" <+> pretty t
         OtherError t ->
             "Other error:" <+> pretty t
 

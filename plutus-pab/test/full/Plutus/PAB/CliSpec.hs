@@ -140,6 +140,7 @@ startPab services pabConfig = do
               { minLogLevel = Nothing
               , logConfigPath = Nothing
               , configPath = Nothing
+              , passphrase = Nothing
               , runEkgServer = False
               , storageBackend = BeamSqliteBackend
               , cmd = services

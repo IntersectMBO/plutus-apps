@@ -132,7 +132,7 @@ data WalletMsg = StartingWallet Port
 
 instance Pretty WalletMsg where
     pretty = \case
-        StartingWallet port -> "Starting wallet server on port " <+> pretty port
+        StartingWallet port -> "Starting wallet server on port" <+> pretty port
         ChainClientMsg m    -> "Chain Client: " <+> pretty m
         Balancing m         -> pretty m
 

@@ -170,7 +170,7 @@ instance Pretty (ContractDef t) => Pretty (PABMultiAgentMsg t) where
                               <+> pretty n
                               <+> "contract instances."
         StartingPABBackendServer port ->
-            "Starting PAB backend server on port:" <+> pretty port
+            "Starting PAB backend server on port" <+> pretty port
         WalletBalancingMsg w m -> pretty w <> colon <+> pretty m
 
 data CoreMsg t =

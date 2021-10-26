@@ -34,6 +34,7 @@ import           Ledger.Interval                           (Extended, Interval, 
 import           Ledger.Scripts                            (ScriptError)
 import           Ledger.Slot                               (Slot)
 import           Ledger.TimeSlot                           (SlotConfig, SlotConversionError)
+import           Ledger.Tx.CardanoAPI                      (FromCardanoError, ToCardanoError)
 import           Ledger.Typed.Tx                           (ConnectionError, WrongOutTypeError)
 import           Ledger.Value                              (AssetClass, CurrencySymbol, TokenName, Value)
 import           Playground.Types                          (ContractCall, FunctionSchema, KnownCurrency)
@@ -43,7 +44,6 @@ import           Plutus.ChainIndex.Tx                      (ChainIndexTx, ChainI
 import           Plutus.ChainIndex.Types                   (BlockNumber, Depth, Point, RollbackState, Tip, TxOutState,
                                                             TxValidity)
 import           Plutus.ChainIndex.UtxoState               (InsertUtxoFailed, InsertUtxoPosition, RollbackFailed)
-import           Plutus.Contract.CardanoAPI                (FromCardanoError)
 import           Plutus.Contract.Checkpoint                (CheckpointError)
 import           Plutus.Contract.Effects                   (ActiveEndpoint, BalanceTxResponse, ChainIndexQuery,
                                                             ChainIndexResponse, PABReq, PABResp,
@@ -436,6 +436,7 @@ walletTypes =
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @EM.Wallet)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @EM.WalletNumber)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @WalletAPIError)
+    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ToCardanoError)
     , (order <*> (genericShow <*> mkSumType)) (Proxy @BeneficialOwner)
     , (order <*> (genericShow <*> mkSumType)) (Proxy @SequenceId)
     , (order <*> (genericShow <*> mkSumType)) (Proxy @TxKey)

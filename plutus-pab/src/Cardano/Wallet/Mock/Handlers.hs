@@ -204,5 +204,7 @@ fromWalletAPIError e@(PrivateKeyNotFound _) =
     err404 {errBody = BSL8.pack $ show e}
 fromWalletAPIError e@(ValidationError _) =
     err500 {errBody = BSL8.pack $ show $ pretty e}
+fromWalletAPIError e@(ToCardanoError _) =
+    err500 {errBody = BSL8.pack $ show $ pretty e}
 fromWalletAPIError (OtherError text) =
     err500 {errBody = BSL.fromStrict $ encodeUtf8 text}

@@ -51,6 +51,7 @@ import           Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (For
                                                              unwrapSingleConstructors)
 import           Language.PureScript.Bridge.TypeParameters  (A)
 import qualified Ledger.CardanoWallet                       as CW
+import           Ledger.Tx.CardanoAPI                       (ToCardanoError)
 import qualified PSGenerator.Common
 import qualified Playground.API                             as API
 import qualified Playground.Interpreter                     as PI
@@ -127,6 +128,7 @@ myTypes =
     , (genericShow <*> mkSumType) (Proxy @EM.NodeClientEvent)
     , (genericShow <*> mkSumType) (Proxy @PlaygroundError)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @WalletAPIError)
+    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ToCardanoError)
     , (order <*> (genericShow <*> mkSumType)) (Proxy @SequenceId)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @AnnotatedTx)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @DereferencedInput)
