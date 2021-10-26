@@ -12,31 +12,28 @@ import Chain.Types (Action(FocusTx), AnnotatedBlockchain(..), _chainFocusAppeari
 import Chain.Types (initialState) as Chain
 import Clipboard (class MonadClipboard)
 import Clipboard as Clipboard
+import ContractExample (ExampleContracts)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State (class MonadState)
 import Control.Monad.State.Extra (zoomStateT)
+import Data.Argonaut.Extra (encodeStringifyJson)
 import Data.Array (filter, find)
-import Data.BigInt.Argonaut as BigInt
-import Data.Either (Either(..))
 import Data.Lens (Lens', _1, _2, assign, modifying, to, use, view, preview)
 import Data.Lens.At (at)
 import Data.Lens.Extra (peruse, toSetOf)
 import Data.Lens.Index (ix)
 import Data.Map as Map
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (maybe)
 import Data.RawJson (RawJson(..))
 import Data.Set (Set)
 import Data.Set as Set
 import Data.Traversable (for_, sequence, traverse_)
-import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Effect.Aff.Class (class MonadAff)
-import Foreign.Generic (encodeJSON)
 import Halogen (Component, hoist)
 import Halogen as H
-import Halogen.HTML (HTML)
 import Ledger.Extra (adaToValue)
-import MonadApp (class MonadApp, activateContract, getFullReport, invokeEndpoint, runHalogenApp, getContractDefinitions, getContractInstances, getContractInstanceStatus)
+import MonadApp (class MonadApp, Env(..), activateContract, getFullReport, invokeEndpoint, runHalogenApp, getContractDefinitions, getContractInstances, getContractInstanceStatus)
 import Network.RemoteData (RemoteData(..))
 import Network.RemoteData as RemoteData
 import Network.StreamData as Stream
@@ -44,22 +41,18 @@ import Playground.Lenses (_endpointDescription, _schema)
 import Playground.Types (FunctionSchema(..), _FunctionSchema)
 import Plutus.Contract.Effects (ActiveEndpoint)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
-import Plutus.PAB.Webserver (SPParams_(..))
 import Plutus.PAB.Webserver.Types (ContractInstanceClientState(..), ContractSignatureResponse(..), CombinedWSStreamToClient, ContractActivationArgs(..))
 import Plutus.V1.Ledger.Ada (Ada(..))
 import Plutus.V1.Ledger.Value (Value)
-import Prim.TypeError (class Warn, Text)
 import Schema (FormSchema)
 import Schema.Types (formArgumentToJson, toArgument)
 import Schema.Types as Schema
 import Types (HAction(..), Output, Query(..), State(..), StreamError(..), View(..), WebSocketStatus(..), ContractSignatures(..), EndpointForm, WebStreamData, _webSocketMessage, _webSocketStatus, _annotatedBlockchain, _chainReport, _chainState, _contractActiveEndpoints, _contractSignatures, _contractStates, _currentView, _csContract, _csCurrentState, fromWebData)
 import Validation (_argument)
 import View as View
-import Wallet.Emulator.Wallet (Wallet(..))
 import Wallet.Types (EndpointDescription)
 import WebSocket.Support (FromSocket)
 import WebSocket.Support as WS
-import ContractExample (ExampleContracts)
 
 -- | The PAB has been completely rewritten, and the PAB client will soon follow. The immediate
 --   priority is the new Marlowe dashboard, however, so in the meantime large chunks of the PAB
@@ -80,14 +73,14 @@ initialState =
     }
 
 ------------------------------------------------------------
-ajaxSettings :: SPSettings_ SPParams_
-ajaxSettings = defaultSettings $ SPParams_ { baseURL: "/" }
+ajaxSettings :: Env
+ajaxSettings = Env { baseURL: "/" }
 
 initialMainFrame ::
   forall m.
   MonadAff m =>
   MonadClipboard m =>
-  Component HTML Query (HAction ExampleContracts) Output m
+  Component Query (HAction ExampleContracts) Output m
 initialMainFrame =
   hoist (flip runReaderT ajaxSettings)
     $ H.mkComponent
@@ -120,7 +113,7 @@ handleMessageFromSocket ::
 handleMessageFromSocket WS.WebSocketOpen = do
   assign _webSocketStatus WebSocketOpen
 
-handleMessageFromSocket (WS.ReceiveMessage (Right msg)) = pure unit
+handleMessageFromSocket (WS.ReceiveMessage (Right _)) = pure unit
 
 --case msg of
 --NewChainReport report -> assign _chainReport (Success report)
@@ -167,7 +160,7 @@ handleAction (ActivateContract contract) = do
               newForms = sequence $ createNewEndpointForms <$> contractSignatures <*> pure cs
             in
               cs /\ maybe [] (view Stream._Refreshing) newForms
-        modifying _contractStates $ (<>) $ Map.singleton cid $ map loadFormFromClientState clientState
+        modifying _contractStates $ Map.unionWith (const identity) $ Map.singleton cid $ map loadFormFromClientState clientState
         traverse_ updateFormsForContractInstance clientState
   modifying _contractSignatures Stream.refreshed
 
@@ -188,9 +181,7 @@ handleAction (ChainAction subaction) = do
   mAnnotatedBlockchain <-
     peruse (_chainReport <<< RemoteData._Success <<< _annotatedBlockchain <<< to AnnotatedBlockchain)
   let
-    wrapper ::
-      Warn (Text "The question, 'Should we animate this?' feels like it belongs in the Chain module. Not here.") =>
-      m Unit -> m Unit
+    wrapper :: m Unit -> m Unit
     wrapper = case subaction of
       (FocusTx _) -> animate (_chainState <<< _chainFocusAppearing :: Lens' (State ExampleContracts) Boolean)
       _ -> identity
@@ -217,7 +208,7 @@ handleAction (InvokeContractEndpoint contractInstanceId endpointForm) = do
     endpointDescription = view (_schema <<< _FunctionSchema <<< _endpointDescription) endpointForm
 
     mEncodedForm :: Maybe RawJson
-    mEncodedForm = RawJson <<< encodeJSON <$> formArgumentToJson (view _argument endpointForm)
+    mEncodedForm = RawJson <<< encodeStringifyJson <$> formArgumentToJson (view _argument endpointForm)
   for_ mEncodedForm
     $ \encodedForm -> do
         assign (_contractStates <<< at contractInstanceId) (Just Stream.Loading)

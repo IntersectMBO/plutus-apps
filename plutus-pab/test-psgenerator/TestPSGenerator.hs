@@ -17,8 +17,8 @@ import qualified Data.ByteString.Lazy                     as BSL
 import           Data.Proxy                               (Proxy (..))
 import qualified Data.Text                                as Text
 import           Language.PureScript.Bridge               (BridgePart, Language (Haskell), SumType, buildBridge,
-                                                           defaultBridge, equal, genericShow, mkSumType, writePSTypes,
-                                                           (<|>))
+                                                           defaultBridge, equal, genericShow, mkSumType, order,
+                                                           writePSTypes, (<|>))
 import qualified PSGenerator.Common
 import           Plutus.Contracts.Currency                (SimpleMPS (..))
 import           Plutus.PAB.Effects.Contract.ContractTest (TestContracts (Currency, GameStateMachine))
@@ -52,7 +52,7 @@ instance HasBridge TestBridge where
 
 testTypes :: [SumType 'Haskell]
 testTypes =
-    [ equal . genericShow $ mkSumType @TestContracts ]
+    [ order . equal . genericShow $ mkSumType @TestContracts ]
 
 main :: IO ()
 main = getArgs >>= \case

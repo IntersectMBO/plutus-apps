@@ -6,7 +6,6 @@ import Chain.View (chainView)
 import Data.Maybe (Maybe(Nothing))
 import Data.Newtype (wrap)
 import Halogen.HTML (HTML, h2_, text)
-import Plutus.V1.Ledger.Crypto (PubKeyHash(..))
 import Plutus.PAB.Webserver.Types (ChainReport(..))
 
 annotatedBlockchainPane :: forall p. Chain.State -> ChainReport -> HTML p Chain.Action
@@ -20,4 +19,4 @@ annotatedBlockchainPane chainState (ChainReport { annotatedBlockchain }) =
         ]
     ]
   where
-  namingFn (PubKeyHash { getPubKeyHash: hash }) = Nothing
+  namingFn _ = Nothing

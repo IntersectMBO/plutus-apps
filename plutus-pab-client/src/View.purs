@@ -1,7 +1,7 @@
 module View (render) where
 
 import Prologue hiding (div)
-import Bootstrap (col12_, col5_, container_, row_)
+import Bootstrap (col12_, container_, row_)
 import Chain.Types as Chain
 import Data.Lens (traversed, view)
 import Data.Lens.Extra (toArrayOf)
@@ -10,14 +10,11 @@ import Halogen.HTML (ClassName(..), ComponentHTML, HTML, div, div_, h1, text)
 import Halogen.HTML.Properties (class_, classes)
 import Icons (Icon(..), icon)
 import NavTabs (mainTabBar, viewContainer)
---import Network.RemoteData as RemoteData
 import Network.StreamData as Stream
 import Plutus.PAB.Webserver.Types (ChainReport)
-import Types (ContractSignatures, ContractStates, HAction(..), State(..), View(..), WebSocketStatus(..), WebStreamData, _csrDefinition, _utxoIndex, _unContractSignatures)
+import Types (ContractSignatures, ContractStates, HAction(..), State(..), View(..), WebSocketStatus(..), WebStreamData, _csrDefinition, _unContractSignatures)
 import View.Blockchain (annotatedBlockchainPane)
 import View.Contracts (contractStatusesPane, installedContractsPane)
-import View.Events (utxoIndexPane)
---import View.Events (eventsPane, utxoIndexPane)
 import View.Utils (streamErrorPane, webDataPane, webStreamDataPane)
 
 render ::
@@ -72,12 +69,11 @@ webSocketStatusIcon webSocketStatus =
   div
     [ classes
         [ webSocketStatusClass
-        , webSocketStatusClass
-            <> ClassName
-                ( case webSocketStatus of
-                    WebSocketOpen -> "-open"
-                    (WebSocketClosed _) -> "-closed"
-                )
+        , ClassName
+            $ "web-socket-status-"
+            <> case webSocketStatus of
+                WebSocketOpen -> "open"
+                (WebSocketClosed _) -> "closed"
         ]
     ]
     [ icon
@@ -145,19 +141,5 @@ blockchainPane currentView chainState chainReport =
   viewContainer currentView Blockchain
     [ row_
         [ col12_ [ ChainAction <$> annotatedBlockchainPane chainState chainReport ]
-        ]
-    ]
-
-eventLogPane ::
-  forall p a.
-  View ->
-  --Array (ChainEvent ContractExe) ->
-  ChainReport ->
-  HTML p (HAction a)
-eventLogPane currentView {-events-} chainReport =
-  viewContainer currentView EventLog
-    [ row_
-        --[ col7_ [ eventsPane events ]
-        [ col5_ [ utxoIndexPane (view _utxoIndex chainReport) ]
         ]
     ]

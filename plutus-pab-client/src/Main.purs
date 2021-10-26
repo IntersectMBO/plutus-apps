@@ -1,12 +1,11 @@
 module Main where
 
 import Prologue
-import Control.Coroutine (consumer)
-import Data.Maybe (Maybe(Nothing))
 import Effect (Effect)
-import Effect.Aff (forkAff)
-import Effect.Unsafe (unsafePerformEffect)
+import Effect.Aff (forkAff, launchAff_)
+import Effect.Class (liftEffect)
 import Halogen.Aff (awaitBody, runHalogenAff)
+import Halogen.Subscription as HS
 import Halogen.VDom.Driver (runUI)
 import MainFrame (initialMainFrame)
 import Plutus.PAB.Webserver.Types (CombinedWSStreamToClient, CombinedWSStreamToServer)
@@ -28,12 +27,9 @@ main = do
           (WS.URI "/ws")
           (\msg -> void $ driver.query $ ReceiveWebSocketMessage msg unit)
           wsManager
-    driver.subscribe
-      $ consumer
+    void
+      $ liftEffect
+      $ HS.subscribe driver.messages
       $ case _ of
           (SendWebSocketMessage msg) -> do
-            WS.managerWriteOutbound wsManager $ WS.SendMessage msg
-            pure Nothing
-
-onLoad :: Unit
-onLoad = unsafePerformEffect main
+            launchAff_ $ WS.managerWriteOutbound wsManager $ WS.SendMessage msg

@@ -27,7 +27,7 @@ import qualified ContractExample.PayToWallet               as Contracts.PayToWal
 import qualified ContractExample.WaitForTx                 as Contracts.WaitForTx
 import qualified Data.OpenApi.Schema                       as OpenApi
 import           Data.Row
-import           Language.PureScript.Bridge                (equal, genericShow, mkSumType)
+import           Language.PureScript.Bridge                (argonaut, equal, genericShow, mkSumType, order)
 import           Language.PureScript.Bridge.TypeParameters (A)
 import           Ledger                                    (TxId)
 import           Playground.Types                          (FunctionSchema)
@@ -69,11 +69,11 @@ instance Pretty ExampleContracts where
 
 instance HasPSTypes ExampleContracts where
     psTypes =
-        [ equal . genericShow $ mkSumType @ExampleContracts
+        [ equal . genericShow . argonaut $ mkSumType @ExampleContracts
         -- These types come from the Uniswap contract and need to be available in PS
-        , equal . genericShow $ mkSumType @Uniswap
-        , equal . genericShow $ mkSumType @(Coin A)
-        , equal . genericShow $ mkSumType @U
+        , equal . genericShow . argonaut $ mkSumType @Uniswap
+        , equal . genericShow . argonaut $ mkSumType @(Coin A)
+        , order . equal . genericShow $ argonaut $ mkSumType @U
         ]
 
 instance HasDefinitions ExampleContracts where

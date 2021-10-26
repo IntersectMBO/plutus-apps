@@ -79,8 +79,10 @@ pabTypes =
     PSGenerator.Common.ledgerTypes <>
     PSGenerator.Common.playgroundTypes <>
     PSGenerator.Common.walletTypes <>
-    [ order . equal . genericShow . argonaut $ mkSumType @(Builtin A)
-    , equal . genericShow . argonaut $ mkSumType @(FullReport A)
+    -- This type has been handwritten in the frontend. See note there, or try
+    -- generating it yourself to see why it's problematic.
+    -- [ order . equal . genericShow . argonaut $ mkSumType @(Builtin A)
+    [ equal . genericShow . argonaut $ mkSumType @(FullReport A)
     , equal . genericShow . argonaut $ mkSumType @ChainReport
     , equal . genericShow . argonaut $ mkSumType @(ContractReport A)
     , equal . genericShow . argonaut $ mkSumType @(ContractSignatureResponse A)

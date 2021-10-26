@@ -8,9 +8,8 @@ module View.Utils
 import Prologue hiding (div)
 import AjaxUtils (ajaxErrorPane)
 import Bootstrap (alertDanger_)
-import Data.Array as Array
+import Data.Argonaut.Decode (printJsonDecodeError)
 import Data.Tuple.Nested (tuple2, uncurry2)
-import Foreign (renderForeignError)
 import Halogen.HTML (ClassName(..), HTML, br_, div, div_, text)
 import Halogen.HTML.Properties (class_)
 import Icons (Icon(..), icon)
@@ -44,7 +43,7 @@ streamDataRefreshing :: ClassName
 streamDataRefreshing = ClassName "stream-data-refreshing"
 
 streamDataRefreshingContent :: ClassName
-streamDataRefreshingContent = streamDataRefreshing <> ClassName "-content"
+streamDataRefreshingContent = ClassName "stream-data-refreshing-content"
 
 -- | Make it easy to display successful `WebStreamData` and render the other states in a consistent way.
 webStreamDataPane :: forall a p i. (a -> HTML p i) -> WebStreamData a -> Array (HTML p i)
@@ -78,11 +77,11 @@ streamErrorPane (ServerError error) =
         ]
     ]
 
-streamErrorPane (DecodingError errors) =
+streamErrorPane (DecodingError error) =
   div
     [ class_ $ ClassName "ajax-error" ]
     [ alertDanger_
-        [ div_ (text <<< renderForeignError <$> Array.fromFoldable errors)
+        [ div_ [ text $ printJsonDecodeError error ]
         , br_
         , text "Please try again or contact support for assistance."
         ]

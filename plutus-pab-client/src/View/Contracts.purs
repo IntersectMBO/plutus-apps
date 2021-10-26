@@ -8,8 +8,6 @@ import Data.Array (mapWithIndex, null)
 import Data.Foldable.Extra (interleave)
 import Data.Lens (_1, view)
 import Data.Map as Map
-import Data.Maybe (Maybe(..))
-import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Halogen.HTML (ClassName(..), HTML, br_, button, div, div_, h2_, h3_, table, text, th, thead_, tr_, td_, tbody_)
 import Halogen.HTML.Events (onClick)
@@ -59,7 +57,7 @@ installedContractPane buttonsDisabled installedContract =
     [ col2_
         [ button
             [ classes [ btn, btnSmall, btnPrimary, btnBlock ]
-            , onClick (const $ Just $ ActivateContract installedContract)
+            , onClick (const $ ActivateContract installedContract)
             , disabled buttonsDisabled
             ]
             [ if buttonsDisabled then icon Spinner else text "Activate" ]
@@ -161,7 +159,7 @@ actionCard contractInstanceId wrapper endpointForm =
         , cardFooter_
             [ button
                 [ classes [ btn, btnSmall, btnPrimary ]
-                , onClick $ const $ Just $ InvokeContractEndpoint contractInstanceId endpointForm
+                , onClick $ const $ InvokeContractEndpoint contractInstanceId endpointForm
                 ]
                 [ text "Submit" ]
             ]

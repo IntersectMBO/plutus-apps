@@ -4,7 +4,6 @@ import Prologue
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Data.Bifunctor (class Bifunctor)
 import Data.Bitraversable (class Bifoldable, class Bitraversable, bifoldlDefault, bifoldrDefault, bisequenceDefault)
-import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Prism', prism)
 import Data.Traversable (class Foldable, class Traversable, foldlDefault, foldrDefault, sequenceDefault)
@@ -80,7 +79,7 @@ instance monadErrorStreamData :: MonadError e (StreamData e) where
 instance foldableStreamData :: Foldable (StreamData e) where
   foldMap f (Success a) = f a
   foldMap f (Refreshing a) = f a
-  foldMap _ (Failure e) = mempty
+  foldMap _ (Failure _) = mempty
   foldMap _ NotAsked = mempty
   foldMap _ Loading = mempty
   foldr f = foldrDefault f
@@ -89,7 +88,7 @@ instance foldableStreamData :: Foldable (StreamData e) where
 instance traversableStreamData :: Traversable (StreamData e) where
   traverse f (Success a) = Success <$> f a
   traverse f (Refreshing a) = Refreshing <$> f a
-  traverse f (Failure e) = pure (Failure e)
+  traverse _ (Failure e) = pure (Failure e)
   traverse _ NotAsked = pure NotAsked
   traverse _ Loading = pure Loading
   sequence = sequenceDefault

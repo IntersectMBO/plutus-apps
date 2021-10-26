@@ -3,33 +3,33 @@ module Types where
 import Prologue
 import Chain.Types as Chain
 import Clipboard as Clipboard
+import ContractExample (ExampleContracts)
 import Control.Monad.Gen as Gen
+import Data.Argonaut.Decode (JsonDecodeError)
 import Data.Bifunctor (lmap)
 import Data.Generic.Rep (class Generic)
-import Data.Show.Generic (genericShow)
-import Data.UUID.Argonaut (JsonUUID(..))
 import Data.Lens (Getter', Iso', Traversal', Lens', to, traversed)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Map (Map)
-import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.NonEmpty ((:|))
+import Data.Show.Generic (genericShow)
 import Data.Symbol (SProxy(..))
 import Data.Tuple.Nested (type (/\))
-import Data.UUID as UUID
-import Foreign (MultipleErrors)
-import Plutus.Contract.Resumable (Request)
+import Data.UUID.Argonaut (UUID)
+import Data.UUID.Argonaut as UUID
 import Ledger.Index (UtxoIndex)
-import Plutus.V1.Ledger.Tx (Tx)
-import Plutus.V1.Ledger.TxId (TxId)
 import Network.RemoteData (RemoteData)
 import Network.StreamData (StreamData)
 import Network.StreamData as Stream
 import Playground.Types (FunctionSchema)
-import Plutus.Contract.Effects (PABReq, ActiveEndpoint, _ExposeEndpointReq)
+import Plutus.Contract.Effects (ActiveEndpoint, PABReq)
+import Plutus.Contract.Resumable (Request)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
 import Plutus.PAB.Webserver.Types (ChainReport, ContractReport, ContractInstanceClientState, ContractSignatureResponse, _ChainReport, _ContractReport, _ContractInstanceClientState, _ContractSignatureResponse, CombinedWSStreamToClient, CombinedWSStreamToServer)
+import Plutus.V1.Ledger.Tx (Tx)
+import Plutus.V1.Ledger.TxId (TxId)
 import Schema (FormSchema)
 import Schema.Types (FormArgument, FormEvent)
 import Servant.PureScript (AjaxError)
@@ -38,7 +38,6 @@ import Wallet.Rollup.Types (AnnotatedTx)
 import Wallet.Types (ContractInstanceId, EndpointDescription)
 import Web.Socket.Event.CloseEvent (CloseEvent, reason) as WS
 import WebSocket.Support (FromSocket) as WS
-import ContractExample (ExampleContracts)
 
 data Query a
   = ReceiveWebSocketMessage (WS.FromSocket CombinedWSStreamToClient) a
@@ -47,7 +46,7 @@ data Output
   = SendWebSocketMessage CombinedWSStreamToServer
 
 data StreamError
-  = DecodingError MultipleErrors
+  = DecodingError JsonDecodeError
   | ServerError String
   | TransportError AjaxError
 
@@ -189,11 +188,11 @@ _contractActiveEndpoints =
 _rqRequest :: forall t. Lens' (Request t) t
 _rqRequest = _Newtype <<< prop (SProxy :: SProxy "rqRequest")
 
-_contractInstanceId :: Lens' ContractInstanceId JsonUUID
+_contractInstanceId :: Lens' ContractInstanceId UUID
 _contractInstanceId = _Newtype <<< prop (SProxy :: SProxy "unContractInstanceId")
 
 _contractInstanceIdString :: Getter' ContractInstanceId String
-_contractInstanceIdString = _contractInstanceId <<< _JsonUUID <<< to UUID.toString
+_contractInstanceIdString = _contractInstanceId <<< to UUID.toString
 
 ------------------------------------------------------------
 data View
@@ -214,5 +213,3 @@ instance showView :: Show View where
 ------------------------------------------------------------
 _getPubKeyHash :: forall s r a. Newtype s { getPubKeyHash :: a | r } => Lens' s a
 _getPubKeyHash = _Newtype <<< prop (SProxy :: SProxy "getPubKeyHash")
-
-propertyName _ = Nothing

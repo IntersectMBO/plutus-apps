@@ -18,9 +18,9 @@ let
     rm -rf $generatedDir
     # There might be local modifications so only copy when missing
     ! test -f ./plutus-pab.yaml && cp ../plutus-pab/plutus-pab.yaml.sample plutus-pab.yaml
-    $(nix-build ../default.nix --quiet --no-build-output -A plutus-pab.server-setup-invoker)/bin/plutus-pab-setup psgenerator $generatedDir
-    $(nix-build ../default.nix --quiet --no-build-output -A plutus-pab.test-generator)/bin/plutus-pab-test-psgenerator $generatedDir
-    $(nix-build ../default.nix --quiet --no-build-output -A plutus-pab.server-examples-invoker)/bin/plutus-pab-examples --config plutus-pab.yaml psapigenerator $generatedDir
+    $(nix-build ../default.nix -A plutus-pab.server-setup-invoker)/bin/plutus-pab-setup psgenerator $generatedDir
+    $(nix-build ../default.nix -A plutus-pab.test-generator)/bin/plutus-pab-test-psgenerator $generatedDir
+    $(nix-build ../default.nix -A plutus-pab.server-examples-invoker)/bin/plutus-pab-examples --config plutus-pab.yaml psapigenerator $generatedDir
   '';
 
   # For dev usage
