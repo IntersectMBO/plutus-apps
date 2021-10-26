@@ -4,16 +4,12 @@ module Schema.TypesTests
 
 import Prologue
 import Data.Argonaut.Core (Json, stringify)
-import Data.Argonaut.Encode (encodeJson)
 import Data.BigInt.Argonaut as BigInt
 import Data.Functor.Foldable (Fix(..))
 import Data.List (List(..), (:))
 import Data.List.NonEmpty (NonEmptyList(..))
-import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
-import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
-import Foreign.Class (encode)
 import PlutusTx.AssocMap as AssocMap
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
 import Playground.Types (ContractCall(..), FunctionSchema(..), KnownCurrency(..))

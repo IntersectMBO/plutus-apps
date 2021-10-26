@@ -4,28 +4,27 @@ module Gists.View
   , idLoadGist
   ) where
 
+import Prologue hiding (div)
 import Gists.Types (GistAction(..), parseGistUrl)
 import AjaxUtils (closeableAjaxErrorPane)
 import Auth (AuthRole(..), AuthStatus, authStatusAuthRole)
 import Bootstrap (btn, btnDanger, btnSecondary, btnSmall, empty, formControl, formGroup, isInvalid, isValid, nbsp)
 import DOM.HTML.Indexed.InputType (InputType(..))
-import Data.Either (Either(..), isRight, note)
 import Data.Lens (view)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (fromMaybe)
 import Gist (Gist, GistId, gistHtmlUrl)
 import Halogen.HTML (ClassName(ClassName), HTML, IProp, a, button, div, input, label, text)
 import Halogen.HTML.Events (onClick, onValueInput)
-import Halogen.HTML.Properties (class_, classes, disabled, for, href, id_, target, type_, value)
+import Halogen.HTML.Properties (class_, classes, disabled, for, href, id, target, type_, value)
 import Icons (Icon(..), icon)
 import Network.RemoteData (RemoteData(NotAsked, Loading, Failure, Success))
-import Prelude (const, ($), (<$>), (<<<), (<>), (=<<))
 import Servant.PureScript (AjaxError)
 
 idPublishGist :: forall r i. IProp ( id :: String | r ) i
-idPublishGist = id_ "publish-gist"
+idPublishGist = id "publish-gist"
 
 idLoadGist :: forall r i. IProp ( id :: String | r ) i
-idLoadGist = id_ "load-gist"
+idLoadGist = id "load-gist"
 
 gistControls ::
   forall a p.
@@ -50,12 +49,12 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
                 , input
                     [ type_ InputText
                     , value $ fromMaybe "" $ gistUrl
-                    , id_ gistIdInputId
+                    , id gistIdInputId
                     , classes
                         ( [ formControl, ClassName "form-control-sm" ]
                             <> case parsedGistId of
-                                Just (Left err) -> [ isInvalid ]
-                                Just (Right err) -> [ isValid ]
+                                Just (Left _) -> [ isInvalid ]
+                                Just (Right _) -> [ isValid ]
                                 Nothing -> []
                         )
                     , onValueInput SetGistUrl
@@ -67,13 +66,11 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
         , case createGistResult, gistErrorPaneVisible of
             Success gist, _ -> gistPane gist
             Failure err, true -> AjaxErrorPaneAction <$> closeableAjaxErrorPane err
-            Failure err, false -> empty
+            Failure _, false -> empty
             _, _ -> empty
         ]
   where
   gistIdInputId = "gist-id"
-
-  canTryLoad = isRight $ parseGistUrl =<< note "No gist Url set" gistUrl
 
   parsedGistId :: Maybe (Either String GistId)
   parsedGistId = parseGistUrl <$> gistUrl
@@ -145,15 +142,15 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
             [ btn
             , btnSmall
             , case parsedGistId of
-                Just (Left url) -> btnDanger
-                Just (Right url) -> btnSecondary
+                Just (Left _) -> btnDanger
+                Just (Right _) -> btnSecondary
                 Nothing -> btnSecondary
             ]
         , onClick $ const LoadGist
         , disabled
             $ case parsedGistId of
-                Just (Left url) -> true
-                Just (Right url) -> false
+                Just (Left _) -> true
+                Just (Right _) -> false
                 Nothing -> true
         ]
         [ text "Load" ]

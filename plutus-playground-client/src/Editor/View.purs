@@ -6,12 +6,12 @@ module Editor.View
   , editorFeedback
   ) where
 
+import Prologue hiding (div)
 import AjaxUtils (ajaxErrorPane)
 import Bootstrap (btn, card, cardHeader, cardHeader_, cardBody_, customSelect, empty, listGroupItem_, listGroup_, nbsp)
 import Data.Array as Array
-import Data.Either (Either(..))
 import Data.Lens (_Right, preview, to, view)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (fromMaybe, maybe)
 import Data.String as String
 import Editor.Lenses (_warnings)
 import Editor.State (initEditor)
@@ -19,7 +19,7 @@ import Editor.Types (Action(..), State(..), allKeyBindings)
 import Effect.Aff.Class (class MonadAff)
 import Halogen.HTML (ClassName(ClassName), ComponentHTML, HTML, a, button, code_, div, div_, option, p_, pre, pre_, select, slot, text)
 import Halogen.HTML.Events (onClick, onDragOver, onDrop, onMouseDown, onMouseMove, onMouseUp, onSelectedIndexChange)
-import Halogen.HTML.Properties (class_, classes, disabled, id_, selected, value)
+import Halogen.HTML.Properties (class_, classes, disabled, id, selected, value)
 import Halogen.Monaco (KeyBindings(..), monacoComponent)
 import Icons (Icon(..), icon)
 import Language.Haskell.Interpreter (CompilationError(CompilationError, RawError), InterpreterError(CompilationErrors, TimeoutError), Warning, _InterpreterResult, _Warning)
@@ -28,7 +28,6 @@ import LocalStorage (Key)
 import MainFrame.Lenses (_editorSlot)
 import MainFrame.Types (ChildSlots, HAction(..), View(..), WebCompilationResult)
 import Network.RemoteData (RemoteData(..), _Success, isLoading)
-import Prelude (const, map, not, pure, show, unit, ($), (<$>), (<<<), (<>), (==))
 import Web.UIEvent.MouseEvent (MouseEvent, pageY)
 
 editorPreferencesSelect :: forall p. KeyBindings -> HTML p Action
@@ -95,12 +94,12 @@ editorPane initialContents bufferLocalStorageKey editorState@(State { keyBinding
         unit
         HandleEditorMessage
     , case keyBindings of
-        Vim -> pre [ id_ "statusline" ] [ nbsp ]
-        _ -> pre [ id_ "statusline", class_ $ ClassName "hidden" ] [ nbsp ]
+        Vim -> pre [ id "statusline" ] [ nbsp ]
+        _ -> pre [ id "statusline", class_ $ ClassName "hidden" ] [ nbsp ]
     ]
 
 editorFeedback :: forall p. State -> WebCompilationResult -> HTML p Action
-editorFeedback editorState@(State { currentCodeIsCompiled, feedbackPaneExtend, feedbackPaneMinimised }) compilationResult =
+editorFeedback (State { currentCodeIsCompiled, feedbackPaneExtend, feedbackPaneMinimised }) compilationResult =
   div
     [ class_ $ ClassName "editor-feedback-container"
     -- This is also not the natural place to have these listeners. But see note [1] below.
@@ -124,8 +123,8 @@ editorFeedback editorState@(State { currentCodeIsCompiled, feedbackPaneExtend, f
             [ class_ $ ClassName "editor-feedback-header" ]
             [ p_ [ summaryText ]
             , case compilationResult of
-                Success (Left error) -> minMaxButton
-                Failure error -> minMaxButton
+                Success (Left _) -> minMaxButton
+                Failure _ -> minMaxButton
                 _ -> empty
             ]
         , div
@@ -147,8 +146,8 @@ editorFeedback editorState@(State { currentCodeIsCompiled, feedbackPaneExtend, f
   summaryText = case compilationResult of
     NotAsked -> text "Not compiled"
     Loading -> text "Compiling ..."
-    Success (Left error) -> text "Compilation failed"
-    Failure error -> text "Compilation failed"
+    Success (Left _) -> text "Compilation failed"
+    Failure _ -> text "Compilation failed"
     _ ->
       if currentCodeIsCompiled then
         text "Compilation successful"

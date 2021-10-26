@@ -26,7 +26,6 @@ import Prelude (Unit, bind, discard, not, pure, show, unit, void, (+), (-), ($),
 import StaticData (keybindingsLocalStorageKey)
 import Web.Event.Extra (preventDefault, readFileFromDragEvent)
 import Web.UIEvent.MouseEvent (pageY)
-import Type.Proxy (Proxy(..))
 
 initialState :: forall m. MonadEffect m => m State
 initialState =
@@ -50,7 +49,7 @@ handleAction ::
   Key ->
   Action ->
   HalogenM State action ChildSlots output m Unit
-handleAction bufferLocalStorageKey DoNothing = pure unit
+handleAction _ DoNothing = pure unit
 
 handleAction bufferLocalStorageKey Init = do
   binding <- loadKeyBindings
@@ -123,7 +122,7 @@ initEditor ::
   State ->
   Monaco.Editor ->
   m Unit
-initEditor initialContents bufferLocalStorageKey state@(State { keyBindings }) editor =
+initEditor initialContents bufferLocalStorageKey (State _) editor =
   liftEffect do
     savedContents <- getItem bufferLocalStorageKey
     let

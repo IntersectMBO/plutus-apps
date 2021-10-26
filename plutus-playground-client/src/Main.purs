@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Apply (void)
 import Control.Coroutine (Consumer, Process, connect, consumer, runProcess)
 import Data.Maybe (Maybe(Nothing))
 import Effect (Effect)
@@ -19,7 +20,7 @@ main = do
   mainFrame <- mkMainFrame
   runHalogenAff do
     body <- awaitBody
-    driver <- runUI mainFrame Mounted body
+    void $ runUI mainFrame Mounted body
     forkAff $ runProcess watchLocalStorageProcess
 
 watchLocalStorageProcess :: Process Aff Unit

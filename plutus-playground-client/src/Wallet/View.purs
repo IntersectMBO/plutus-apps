@@ -7,7 +7,6 @@ import Bootstrap (btn, btnSecondary, btnSmall, card, cardBody_, cardTitle_, floa
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Lens (view)
-import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Halogen.HTML (ClassName(ClassName), HTML, br_, button, div, div_, h2_, h3_, h4_, p_, span, text)
 import Halogen.HTML.Elements.Keyed as Keyed
@@ -68,7 +67,7 @@ walletPane signatures initialValue walletIndex simulatorWallet@(SimulatorWallet 
 
 -- this function is exported so that action panes can show their associated wallet
 walletIdPane :: forall p i. WalletNumber -> HTML p i
-walletIdPane wallet@(WalletNumber { getWallet }) =
+walletIdPane (WalletNumber { getWallet }) =
   span [ class_ $ ClassName "wallet-id" ]
     [ text $ "Wallet " <> show getWallet ]
 

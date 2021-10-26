@@ -1,11 +1,10 @@
 module NavTabs where
 
 import Bootstrap (active, container, hidden, navItem_, navLink, navTabs_)
-import Data.Maybe (Maybe(..))
 import Data.String as String
 import Halogen.HTML (HTML, a, div, div_, text)
 import Halogen.HTML.Events (onClick)
-import Halogen.HTML.Properties (classes, id_)
+import Halogen.HTML.Properties (classes, id)
 import Prelude (class Eq, class Show, const, show, ($), (<$>), (<>), (==))
 
 mainTabBar ::
@@ -26,7 +25,7 @@ mainTabBar mkAction tabs activeView =
   mkTab { link, title } =
     navItem_
       [ a
-          [ id_ $ "tab-" <> String.toLower (show link)
+          [ id $ "tab-" <> String.toLower (show link)
           , classes $ [ navLink ] <> activeClass
           , onClick $ const $ mkAction link
           ]

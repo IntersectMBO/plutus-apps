@@ -9,18 +9,18 @@ import Data.BigInt.Argonaut (BigInt)
 import Data.Lens (Iso', Lens', iso)
 import Data.Lens.Record (prop)
 import Data.Newtype (unwrap, wrap)
-import Data.Symbol (SProxy(..))
+import Type.Proxy (Proxy(..))
 import Plutus.V1.Ledger.Slot (Slot)
 import Prelude ((<<<))
 
 _caller :: forall r a. Lens' { caller :: a | r } a
-_caller = prop (SProxy :: SProxy "caller")
+_caller = prop (Proxy :: _ "caller")
 
 _blocks :: forall r a. Lens' { blocks :: a | r } a
-_blocks = prop (SProxy :: SProxy "blocks")
+_blocks = prop (Proxy :: _ "blocks")
 
 _InSlot :: Iso' Slot BigInt
 _InSlot = iso (_.getSlot <<< unwrap) (wrap <<< { getSlot: _ })
 
 _slot :: forall r a. Lens' { slot :: a | r } a
-_slot = prop (SProxy :: SProxy "slot")
+_slot = prop (Proxy :: _ "slot")

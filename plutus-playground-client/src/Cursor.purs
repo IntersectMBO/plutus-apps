@@ -23,17 +23,16 @@ module Cursor
   , right
   ) where
 
-import Prologue
+import Prologue hiding (clamp)
 import Control.Monad.Gen.Class (chooseInt)
 import Data.Array as Array
 import Data.Argonaut.Decode (class DecodeJson, decodeJson)
 import Data.Argonaut.Encode (class EncodeJson, encodeJson)
 import Data.Foldable (class Foldable, foldMap, foldl, foldr)
-import Data.Generic.Rep (class Generic)
 import Data.Lens (Traversal', wander)
 import Data.Lens.AffineTraversal (affineTraversal)
 import Data.Lens.Index (class Index)
-import Data.Maybe (Maybe, fromMaybe, maybe)
+import Data.Maybe (fromMaybe, maybe)
 import Data.Ord as Ord
 import Data.Traversable (class Traversable, sequenceDefault, traverse)
 import Data.Tuple (uncurry)
@@ -48,8 +47,6 @@ derive instance eqCursor :: Eq a => Eq (Cursor a)
 derive instance ordCursor :: Ord a => Ord (Cursor a)
 
 derive instance functorCursor :: Functor Cursor
-
-derive instance genericCursor :: Generic (Cursor a) _
 
 instance foldableCursor :: Foldable Cursor where
   foldr f acc (Cursor _ xs) = foldr f acc xs
@@ -74,7 +71,7 @@ instance indexCursor :: Index (Cursor a) Int a where
     where
     set c@(Cursor index xs) a = fromMaybe c $ Cursor index <$> Array.updateAt n a xs
 
-    pre c@(Cursor index xs) = maybe (Left c) Right $ Array.index xs n
+    pre c@(Cursor _ xs) = maybe (Left c) Right $ Array.index xs n
 
 instance encodeCursor :: EncodeJson a => EncodeJson (Cursor a) where
   encodeJson (Cursor n xs) = encodeJson [ encodeJson n, encodeJson xs ]
@@ -139,7 +136,7 @@ current :: forall a. Cursor a -> Maybe a
 current (Cursor index xs) = Array.index xs index
 
 getIndex :: forall a. Cursor a -> Int
-getIndex (Cursor index xs) = index
+getIndex (Cursor index _) = index
 
 setIndex :: forall a. Int -> Cursor a -> Cursor a
 setIndex newIndex (Cursor _ xs) = clamp $ Cursor newIndex xs

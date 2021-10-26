@@ -15,7 +15,7 @@ import Data.BigInt.Argonaut as BigInt
 import Data.Lens (_2, preview, to, toListOf, traversed, view)
 import Data.Lens.Index (ix)
 import Data.List (List)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe, fromMaybe)
 import Data.Newtype (wrap)
 import Data.Semiring (zero)
 import Data.Set (Set)
@@ -48,7 +48,7 @@ import Wallet.Emulator.Wallet (Wallet(..), WalletEvent(..))
 import Wallet.Lenses (_simulatorWalletBalance, _simulatorWalletWallet, _walletId)
 
 evaluationPane :: forall m. MonadAff m => State -> EvaluationResult -> ComponentHTML HAction ChildSlots m
-evaluationPane state evaluationResult@(EvaluationResult { emulatorLog, emulatorTrace, fundsDistribution, resultRollup, walletKeys }) =
+evaluationPane state (EvaluationResult { emulatorLog, emulatorTrace, fundsDistribution, resultRollup, walletKeys }) =
   div
     [ class_ $ ClassName "transactions" ]
     [ div

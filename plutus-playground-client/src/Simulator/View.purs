@@ -14,15 +14,14 @@ import Cursor (Cursor, current)
 import Cursor as Cursor
 import Data.Array as Array
 import Data.Either (Either(..))
-import Data.Int as Int
 import Data.Lens (_Right, view)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Maybe (Maybe(..))
 import Data.String as String
 import Halogen (RefLabel(RefLabel))
-import Halogen.HTML (ClassName(ClassName), HTML, IProp, a, button, code_, div, div_, h1_, p_, pre_, span, text, ul, li)
-import Halogen.HTML.Events (onClick, onValueInput)
-import Halogen.HTML.Properties (class_, classes, disabled, id_, ref)
+import Halogen.HTML (ClassName(ClassName), HTML, a, button, code_, div, div_, h1_, li, p_, pre_, span, text, ul)
+import Halogen.HTML.Events (onClick)
+import Halogen.HTML.Properties (class_, classes, disabled, id, ref)
 import Icons (Icon(..), icon)
 import Language.Haskell.Interpreter (CompilationError(..))
 import Language.Haskell.Interpreter as PI
@@ -31,9 +30,8 @@ import Network.RemoteData (RemoteData(..), _Success)
 import MainFrame.Lenses (_functionSchema, _result)
 import MainFrame.Types (HAction(..), View(..), SimulatorAction, WebCompilationResult, WebEvaluationResult)
 import Playground.Types (PlaygroundError(..), Simulation(..), SimulatorWallet)
-import Prelude (const, map, not, pure, show, (#), ($), (/=), (<$>), (<<<), (<>), (==), (>))
+import Prelude (const, not, pure, show, (#), ($), (/=), (<$>), (<<<), (<>), (==), (>))
 import Wallet.View (walletsPane)
-import Web.Event.Event (Event)
 
 simulatorTitle :: forall p. HTML p HAction
 simulatorTitle =
@@ -51,7 +49,7 @@ simulatorTitle =
 
 simulationsPane :: forall p. Value -> Maybe Int -> WebCompilationResult -> Cursor Simulation -> Maybe Simulation -> WebEvaluationResult -> HTML p HAction
 simulationsPane initialValue actionDrag compilationResult simulations lastEvaluatedSimulation evaluationResult = case current simulations of
-  Just (Simulation simulation@{ simulationWallets, simulationActions }) ->
+  Just (Simulation { simulationWallets, simulationActions }) ->
     div
       [ class_ $ ClassName "simulations" ]
       [ simulationsNav simulations
@@ -98,7 +96,7 @@ simulationsNav simulations =
 simulationNavItem :: forall p. Boolean -> Int -> Int -> Simulation -> Array (HTML p HAction)
 simulationNavItem canClose activeIndex index (Simulation { simulationName }) =
   [ li
-      [ id_ $ "simulation-nav-item-" <> show index
+      [ id $ "simulation-nav-item-" <> show index
       , class_ navItem
       ]
       [ a
@@ -122,7 +120,7 @@ simulationNavItem canClose activeIndex index (Simulation { simulationName }) =
 addSimulationControl :: forall p. HTML p HAction
 addSimulationControl =
   li
-    [ id_ "simulation-nav-item-add"
+    [ id "simulation-nav-item-add"
     , class_ navItem
     ]
     [ span

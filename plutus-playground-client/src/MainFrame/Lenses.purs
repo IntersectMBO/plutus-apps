@@ -37,12 +37,11 @@ import Auth (AuthStatus)
 import Chain.Types as Chain
 import Control.Monad.State.Class (class MonadState)
 import Cursor (Cursor)
-import Data.Either (Either)
 import Data.Lens (Lens', Traversal', _Right, lens, preview)
 import Data.Lens.Extra (peruse)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (fromMaybe)
 import Editor.Types (State) as Editor
 import Gist (Gist)
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult, SourceCode, _InterpreterResult)

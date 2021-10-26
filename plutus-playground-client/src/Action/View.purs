@@ -14,7 +14,7 @@ import Data.Tuple (Tuple(..))
 import Halogen.HTML (ClassName(ClassName), HTML, IProp, button, div, div_, h2_, h3_, input, label, p_, text)
 import Halogen.HTML.Elements.Keyed as Keyed
 import Halogen.HTML.Events (onChange, onClick, onDragEnd, onDragEnter, onDragLeave, onDragOver, onDragStart, onDrop, onValueInput)
-import Halogen.HTML.Properties (InputType(..), checked, class_, classes, draggable, for, id_, min, name, placeholder, required, type_, value)
+import Halogen.HTML.Properties (InputType(..), checked, class_, classes, draggable, for, id, min, name, placeholder, required, type_, value)
 import Icons (Icon(..), icon)
 import MainFrame.Types (DragAndDropEventType(..), HAction(..), SimulatorAction)
 import Playground.Lenses (_endpointDescription, _getEndpointDescription)
@@ -171,8 +171,8 @@ waitTypeRadioInputs index wait =
         [ classes [ formCheck, formCheckInline ] ]
         [ input
             ( case wait of
-                Left slot -> baseInputProps <> [ id_ waitForId, onChange $ const $ ModifyActions $ SetWaitTime index $ view _InSlot slot ]
-                Right _ -> baseInputProps <> [ id_ waitForId, checked true ]
+                Left slot -> baseInputProps <> [ id waitForId, onChange $ const $ ModifyActions $ SetWaitTime index $ view _InSlot slot ]
+                Right _ -> baseInputProps <> [ id waitForId, checked true ]
             )
         , label
             [ class_ formCheckLabel
@@ -184,8 +184,8 @@ waitTypeRadioInputs index wait =
         [ classes [ formCheck, formCheckInline ] ]
         [ input
             ( case wait of
-                Right blocks -> baseInputProps <> [ id_ waitUntilId, onChange $ const $ ModifyActions $ SetWaitUntilTime index $ review _InSlot blocks ]
-                Left _ -> baseInputProps <> [ id_ waitForId, checked true ]
+                Right blocks -> baseInputProps <> [ id waitUntilId, onChange $ const $ ModifyActions $ SetWaitUntilTime index $ review _InSlot blocks ]
+                Left _ -> baseInputProps <> [ id waitForId, checked true ]
             )
         , label
             [ class_ formCheckLabel

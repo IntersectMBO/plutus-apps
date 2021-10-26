@@ -12,13 +12,12 @@ import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Lens (_2, _Just, over, set)
 import Data.Lens.Index (ix)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Monoid.Additive (Additive(..))
 import Data.Newtype (unwrap)
 import Data.RawJson (RawJson)
 import Data.String.Extra as String
 import Data.Traversable (sequence, traverse)
-import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Foreign.Object as FO
 import PlutusTx.AssocMap as AssocMap
@@ -206,7 +205,7 @@ handleFormEvent initialValue event = cata (Fix <<< algebra event)
 
   algebra (SetField (SetValueField valueEvent)) (FormValueF value) = FormValueF $ handleValueEvent valueEvent value
 
-  algebra (SetField (SetPOSIXTimeRangeField newInterval)) arg@(FormPOSIXTimeRangeF _) = FormPOSIXTimeRangeF newInterval
+  algebra (SetField (SetPOSIXTimeRangeField newInterval)) (FormPOSIXTimeRangeF _) = FormPOSIXTimeRangeF newInterval
 
   algebra (SetSubField 1 subEvent) (FormTupleF field1 field2) = FormTupleF (handleFormEvent initialValue subEvent field1) field2
 
@@ -216,7 +215,7 @@ handleFormEvent initialValue event = cata (Fix <<< algebra event)
 
   algebra (SetSubField n subEvent) (FormArrayF schema fields) = FormArrayF schema $ over (ix n) (handleFormEvent initialValue subEvent) fields
 
-  algebra (SetSubField n subEvent) s@(FormObjectF fields) = FormObjectF $ over (ix n <<< _2) (handleFormEvent initialValue subEvent) fields
+  algebra (SetSubField n subEvent) (FormObjectF fields) = FormObjectF $ over (ix n <<< _2) (handleFormEvent initialValue subEvent) fields
 
   -- As the code stands, this is the only guarantee we get that every
   -- value in the array will conform to the schema: the fact that we
@@ -227,7 +226,7 @@ handleFormEvent initialValue event = cata (Fix <<< algebra event)
 
   algebra AddSubField arg = arg
 
-  algebra (RemoveSubField n) arg@(FormArrayF schema fields) = (FormArrayF schema (fromMaybe fields (Array.deleteAt n fields)))
+  algebra (RemoveSubField n) (FormArrayF schema fields) = (FormArrayF schema (fromMaybe fields (Array.deleteAt n fields)))
 
   algebra _ arg = arg
 

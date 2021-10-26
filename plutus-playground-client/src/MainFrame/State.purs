@@ -14,9 +14,8 @@ import Chain.Types (Action(..), AnnotatedBlockchain(..), _chainFocusAppearing, _
 import Chain.Types (initialState) as Chain
 import Clipboard (class MonadClipboard)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
-import Control.Monad.Error.Extra (mapError)
 import Control.Monad.Except.Extra (noteT)
-import Control.Monad.Except.Trans (ExceptT(..), except, mapExceptT, withExceptT, runExceptT)
+import Control.Monad.Except.Trans (ExceptT(..), except, runExceptT)
 import Control.Monad.Maybe.Extra (hoistMaybe)
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Control.Monad.Reader (class MonadAsk, runReaderT)
@@ -130,7 +129,7 @@ newtype Env
   = Env { spSettings :: SPSettings_ }
 
 instance hasSPSettingsEnv :: HasSPSettings Env where
-  spSettings (Env { spSettings }) = spSettings
+  spSettings (Env e) = e.spSettings
 
 mkMainFrame ::
   forall m n.
@@ -188,7 +187,7 @@ handleAction (ActionDragAndDrop index DragStart event) = do
   setDataTransferData event textPlain (show index)
   assign _actionDrag (Just index)
 
-handleAction (ActionDragAndDrop _ DragEnd event) = assign _actionDrag Nothing
+handleAction (ActionDragAndDrop _ DragEnd _) = assign _actionDrag Nothing
 
 handleAction (ActionDragAndDrop _ DragEnter event) = do
   preventDefault event
@@ -198,7 +197,7 @@ handleAction (ActionDragAndDrop _ DragOver event) = do
   preventDefault event
   setDropEffect DataTransfer.Move event
 
-handleAction (ActionDragAndDrop _ DragLeave event) = pure unit
+handleAction (ActionDragAndDrop _ DragLeave _) = pure unit
 
 handleAction (ActionDragAndDrop destination Drop event) = do
   use _actionDrag
@@ -287,7 +286,7 @@ handleAction AddSimulationSlot = do
       knownCurrencies <- getKnownCurrencies
       mSignatures <- peruse (_successfulCompilationResult <<< _functionSchema)
       case mSignatures of
-        Just signatures ->
+        Just _ ->
           modifying _simulations
             ( \simulations ->
                 let
@@ -347,7 +346,6 @@ handleAction CompileProgram = do
   case mContents of
     Nothing -> pure unit
     Just contents -> do
-      oldCompilationResult <- use _compilationResult
       oldSuccessfulCompilationResult <- use _lastSuccessfulCompilationResult
       assign _compilationResult Loading
       newCompilationResult <- postContract contents

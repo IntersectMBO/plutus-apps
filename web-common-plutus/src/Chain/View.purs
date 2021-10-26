@@ -81,14 +81,14 @@ amountClass :: ClassName
 amountClass = ClassName "amount"
 
 chainSlotView :: forall p. State -> Array AnnotatedTx -> HTML p Action
-chainSlotView state [] = empty
+chainSlotView _ [] = empty
 
 chainSlotView state chainSlot =
   div [ classes [ colXs12, colSm6, colMd3, colLg2, slotClass ] ]
     (blockView state <$> chainSlot)
 
 blockView :: forall p. State -> AnnotatedTx -> HTML p Action
-blockView state annotatedTx@(AnnotatedTx { txId, sequenceId }) =
+blockView state (AnnotatedTx { txId, sequenceId }) =
   div
     [ classes ([ card, clickable, ClassName "transaction" ] <> if isActive then [ active ] else [])
     , onClickFocusTx txId
@@ -98,11 +98,11 @@ blockView state annotatedTx@(AnnotatedTx { txId, sequenceId }) =
   isActive = has (_chainFocus <<< _Just <<< filtered (eq txId)) state
 
 detailView :: forall p. NamingFn -> State -> AnnotatedBlockchain -> HTML p Action
-detailView namingFn state@{ chainFocus: Just focussedTxId } annotatedBlockchain = case preview (_findTx focussedTxId) annotatedBlockchain of
+detailView namingFn { chainFocus: Just focussedTxId } annotatedBlockchain = case preview (_findTx focussedTxId) annotatedBlockchain of
   Just annotatedTx -> transactionDetailView namingFn annotatedBlockchain annotatedTx
   Nothing -> empty
 
-detailView _ state@{ chainFocus: Nothing } _ = empty
+detailView _ { chainFocus: Nothing } _ = empty
 
 transactionDetailView :: forall p. NamingFn -> AnnotatedBlockchain -> AnnotatedTx -> HTML p Action
 transactionDetailView namingFn annotatedBlockchain annotatedTx =
@@ -330,7 +330,7 @@ dereferencedInputView namingFn annotatedBlockchain (DereferencedInput { original
   originatingTx :: Maybe AnnotatedTx
   originatingTx = preview (_findTx txId) annotatedBlockchain
 
-dereferencedInputView namingFn annotatedBlockchain (InputNotFound txKey) =
+dereferencedInputView _ _ (InputNotFound txKey) =
   div
     [ classes [ card, entryClass, notFoundClass ] ]
     [ div [ classes [ cardHeader, textTruncate ] ]
@@ -360,7 +360,7 @@ outputView namingFn txId annotatedBlockchain outputIndex txOut =
   consumedInTx = findConsumptionPoint outputIndex txId annotatedBlockchain
 
 txOutOfView :: forall p. NamingFn -> Boolean -> TxOut -> Maybe (HTML p Action) -> HTML p Action
-txOutOfView namingFn showArrow txOut@(TxOut { txOutAddress, txOutValue }) mFooter =
+txOutOfView namingFn showArrow txOut@(TxOut { txOutValue }) mFooter =
   div
     [ classes [ card, entryClass, beneficialOwnerClass beneficialOwner ] ]
     [ div [ classes [ cardHeader, textTruncate ] ]

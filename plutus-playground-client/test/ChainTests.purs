@@ -5,7 +5,6 @@ module ChainTests
 import Prologue
 import Data.Array (mapWithIndex)
 import Data.BigInt.Argonaut as BigInt
-import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested ((/\))
 import PlutusTx.AssocMap as AssocMap
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))

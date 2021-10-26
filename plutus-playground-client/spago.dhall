@@ -19,7 +19,6 @@ You can edit this file as you like.
   , "enums"
   , "exceptions"
   , "foldable-traversable"
-  , "foreign-generic"
   , "foreign-object"
   , "gen"
   , "halogen"

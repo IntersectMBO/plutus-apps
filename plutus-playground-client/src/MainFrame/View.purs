@@ -155,7 +155,7 @@ editorMain contractDemos currentView editorState compilationResult =
         [ h1_ [ text "Editor" ]
         , button [ classes [ btn, ClassName "hidden" ] ] [ nbsp ]
         ] -- invisible button so the height matches the simulator header
-    , editorWrapper contractDemos currentView editorState compilationResult
+    , editorWrapper contractDemos editorState compilationResult
     ]
 
 simulationsMain :: forall m. MonadAff m => State -> ComponentHTML HAction ChildSlots m
@@ -181,8 +181,8 @@ mainComponentClasses currentView targetView =
   else
     [ containerFluid, hidden, ClassName "main" ]
 
-editorWrapper :: forall m. MonadAff m => Array ContractDemo -> View -> Editor.State -> WebCompilationResult -> ComponentHTML HAction ChildSlots m
-editorWrapper contractDemos currentView editorState compilationResult =
+editorWrapper :: forall m. MonadAff m => Array ContractDemo -> Editor.State -> WebCompilationResult -> ComponentHTML HAction ChildSlots m
+editorWrapper contractDemos editorState compilationResult =
   div
     [ classes [ ClassName "main-body", ClassName "editor" ] ]
     [ div
@@ -206,7 +206,7 @@ editorWrapper contractDemos currentView editorState compilationResult =
   defaultContents = view (_contractDemoEditorContents <<< _SourceCode) <$> lookupContractDemo "Vesting" contractDemos
 
 simulationsWrapper :: forall p. State -> HTML p HAction
-simulationsWrapper state@(State { actionDrag, currentView, compilationResult, simulations, lastEvaluatedSimulation, evaluationResult }) =
+simulationsWrapper state@(State { actionDrag, compilationResult, simulations, lastEvaluatedSimulation, evaluationResult }) =
   let
     knownCurrencies = evalState getKnownCurrencies state
 
@@ -233,12 +233,12 @@ transactionsWrapper simulations evaluationResult blockchainVisualisationState =
         , div
             [ class_ $ ClassName "simulation" ] case evaluationResult of
             Success (Right evaluation) -> [ evaluationPane blockchainVisualisationState evaluation ]
-            Success (Left error) ->
+            Success (Left _) ->
               [ text "Your simulation has errors. Click the "
               , strong_ [ text "Simulations" ]
               , text " tab above to fix them and recompile."
               ]
-            Failure error ->
+            Failure _ ->
               [ text "Your simulation has errors. Click the "
               , strong_ [ text "Simulations" ]
               , text " tab above to fix them and recompile."

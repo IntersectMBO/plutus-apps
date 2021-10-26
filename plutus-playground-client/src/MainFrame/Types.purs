@@ -102,6 +102,7 @@ type WebEvaluationResult
 type SimulatorAction
   = ContractCall FormArgument
 
+data Query :: forall k. k -> Type
 data Query a
 
 data HAction
@@ -165,7 +166,7 @@ instance actionIsEvent :: IsEvent HAction where
   toEvent Init = Nothing
   toEvent Mounted = Just $ defaultEvent "Mounted"
   toEvent (EditorAction (Editor.HandleDropEvent _)) = Just $ defaultEvent "DropScript"
-  toEvent (EditorAction action) = Just $ (defaultEvent "ConfigureEditor")
+  toEvent (EditorAction _) = Just $ (defaultEvent "ConfigureEditor")
   toEvent CompileProgram = Just $ defaultEvent "CompileProgram"
   toEvent (HandleBalancesChartMessage _) = Nothing
   toEvent CheckAuthStatus = Nothing

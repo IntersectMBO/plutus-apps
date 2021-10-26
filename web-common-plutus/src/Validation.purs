@@ -8,9 +8,7 @@ import Data.Functor.Foldable (Fix)
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Lens', view)
 import Data.Lens.Record (prop)
-import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
-import Data.Tuple (Tuple(..))
 import Matryoshka (Algebra, cata)
 import Playground.Types (ContractCall(..), _FunctionSchema)
 import Schema (FormArgumentF(..))
@@ -108,7 +106,7 @@ instance formArgumentValidation :: Validation (Fix FormArgumentF) where
 
     algebra (FormObjectF xs) = Array.concat $ map (\(Tuple name values) -> addPath name <$> values) xs
 
-    algebra (FormValueF x) = []
+    algebra (FormValueF _) = []
 
     algebra (FormPOSIXTimeRangeF _) = []
 

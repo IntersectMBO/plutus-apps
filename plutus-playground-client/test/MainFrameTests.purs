@@ -6,25 +6,22 @@ import Prologue
 import Animation (class MonadAnimate)
 import Auth (AuthRole(..), AuthStatus(..))
 import Clipboard (class MonadClipboard)
-import Control.Monad.Error.Extra (mapError)
-import Control.Monad.Except.Trans (class MonadThrow, except, throwError)
+import Control.Monad.Except.Trans (class MonadThrow, throwError)
 import Control.Monad.RWS.Trans (RWSResult(..), RWST(..), runRWST)
 import Control.Monad.Reader.Class (class MonadAsk)
 import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Control.Monad.State.Class (class MonadState, get)
 import Cursor as Cursor
-import Data.Either (Either(..), either)
+import Data.Either (either)
 import Data.Lens (Lens', _1, assign, preview, set, use, view)
 import Data.Lens.At (at)
 import Data.Lens.Index (ix)
 import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(Nothing, Just))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse_)
-import Data.Tuple (Tuple(Tuple))
 import Editor.Types (State(..)) as Editor
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Exception (Error, error)
@@ -94,7 +91,7 @@ derive newtype instance monadAskMockApp :: Monad m => MonadAsk Env (MockApp m)
 instance monadStateMockApp :: Monad m => MonadState State (MockApp m) where
   state f =
     MockApp
-      $ RWST \r (Tuple world appState) -> case f appState of
+      $ RWST \_ (Tuple world appState) -> case f appState of
           (Tuple a appState') -> pure $ RWSResult (Tuple world appState') a unit
 
 instance monadAppMockApp :: Monad m => MonadApp (MockApp m) where
@@ -102,29 +99,29 @@ instance monadAppMockApp :: Monad m => MonadApp (MockApp m) where
     MockApp do
       editorContents <- use (_1 <<< _editorContents)
       pure editorContents
-  editorSetContents contents cursor =
+  editorSetContents contents _ =
     MockApp
       $ assign (_1 <<< _editorContents) (Just contents)
   editorHandleAction _ = pure unit
-  editorSetAnnotations annotations = pure unit
+  editorSetAnnotations _ = pure unit
   --
   saveBuffer contents =
     MockApp
       $ assign (_1 <<< _localStorage <<< at (unwrap bufferLocalStorageKey)) (Just contents)
-  preventDefault event = pure unit
-  setDropEffect effectType event = pure unit
-  setDataTransferData event mimeType value = pure unit
-  readFileFromDragEvent event = pure "TEST"
+  preventDefault _ = pure unit
+  setDropEffect _ _ = pure unit
+  setDataTransferData _ _ _ = pure unit
+  readFileFromDragEvent _ = pure "TEST"
   --
   getOauthStatus = pure $ Success $ AuthStatus { _authStatusAuthRole: GithubUser }
   getGistByGistId gistId =
     MockApp do
       Tuple { gists } _ <- get
       pure $ RemoteData.fromMaybe $ Map.lookup gistId gists
-  postEvaluation evaluation = pure NotAsked
-  postGist newGist = pure NotAsked
-  postGistByGistId newGist gistId = pure NotAsked
-  postContract sourceCode =
+  postEvaluation _ = pure NotAsked
+  postGist _ = pure NotAsked
+  postGistByGistId _ _ = pure NotAsked
+  postContract _ =
     MockApp do
       Tuple { compilationResult } _ <- get
       pure compilationResult
@@ -141,7 +138,7 @@ instance monadRecMockApp :: Monad m => MonadRec (MockApp m) where
 
 -- | The mock app makes no attempt to animate anything, and just calls the embedded `action`.
 instance monadAnimateMockApp :: MonadAnimate (MockApp m) State where
-  animate toggle action = action
+  animate _ action = action
 
 instance monadClipboardMockApp :: Monad m => MonadClipboard (MockApp m) where
   copy _ = pure unit
@@ -160,7 +157,7 @@ execMockApp world queries = do
           , feedbackPanePreviousExtend: 0
           }
       )
-  RWSResult state result writer <-
+  RWSResult state _ _ <-
     runRWST
       (unwrap (traverse_ handleAction queries :: MockApp m Unit))
       (Env { spSettings: { baseURL: "/" } })
@@ -230,7 +227,7 @@ evalTests =
                   (Just sourceFile)
                   (preview (_localStorage <<< ix (unwrap bufferLocalStorageKey)) finalWorld)
     test "Loading a script works." do
-      Tuple finalWorld finalState <-
+      Tuple finalWorld _ <-
         ( execMockApp (set _editorContents Nothing mockWorld)
             [ LoadScript "Game" ]
         )

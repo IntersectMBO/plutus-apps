@@ -9,7 +9,7 @@ import Data.BigInt.Argonaut as BigInt
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Lens (view)
-import Data.Maybe (Maybe(Just), fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Newtype (unwrap)
 import Data.Tuple (Tuple(..), fst)
 import Data.Tuple.Nested ((/\))

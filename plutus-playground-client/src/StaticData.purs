@@ -12,7 +12,6 @@ import Data.Foldable as Foldable
 import Data.Lens (Lens', view)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
-import Data.Maybe (Maybe)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (class Foldable)
 import LocalStorage (Key(..))
