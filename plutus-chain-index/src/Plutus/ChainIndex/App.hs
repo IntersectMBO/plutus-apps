@@ -8,7 +8,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
-module Plutus.ChainIndex.App(main) where
+{-| Main entry points to the chain index.
+-}
+module Plutus.ChainIndex.App(main, runMain) where
 
 import qualified Control.Concurrent.STM          as STM
 import           Control.Exception               (throwIO)
@@ -135,39 +137,43 @@ main = do
       putStrLn "\nChain Index config:"
       print (pretty config)
 
-      Sqlite.withConnection (Config.cicDbPath config) $ \conn -> do
+      runMain trace config
 
-        -- Optimize Sqlite for write performance, halves the sync time.
-        -- https://sqlite.org/wal.html
-        Sqlite.execute_ conn "PRAGMA journal_mode=WAL"
-        Sqlite.runBeamSqliteDebug (logDebug trace . (BeamLogItem . SqlLog)) conn $ do
-          autoMigrate Sqlite.migrationBackend checkedSqliteDb
+runMain :: Trace IO ChainIndexLog -> Config.ChainIndexConfig -> IO ()
+runMain trace config = do
+  Sqlite.withConnection (Config.cicDbPath config) $ \conn -> do
 
-        -- Automatically delete the input when an output from a matching input/output pair is deleted.
-        -- See reduceOldUtxoDb in Plutus.ChainIndex.Handlers
-        Sqlite.execute_ conn "DROP TRIGGER IF EXISTS delete_matching_input"
-        Sqlite.execute_ conn
-          "CREATE TRIGGER delete_matching_input AFTER DELETE ON unspent_outputs \
-          \BEGIN \
-          \  DELETE FROM unmatched_inputs WHERE input_row_tip__row_slot = old.output_row_tip__row_slot \
-          \                                 AND input_row_out_ref = old.output_row_out_ref; \
-          \END"
+    -- Optimize Sqlite for write performance, halves the sync time.
+    -- https://sqlite.org/wal.html
+    Sqlite.execute_ conn "PRAGMA journal_mode=WAL"
+    Sqlite.runBeamSqliteDebug (logDebug trace . (BeamLogItem . SqlLog)) conn $ do
+      autoMigrate Sqlite.migrationBackend checkedSqliteDb
 
-        stateTVar <- STM.newTVarIO mempty
-        let runReq = RunRequirements trace stateTVar conn (Config.cicSecurityParam config)
+    -- Automatically delete the input when an output from a matching input/output pair is deleted.
+    -- See reduceOldUtxoDb in Plutus.ChainIndex.Handlers
+    Sqlite.execute_ conn "DROP TRIGGER IF EXISTS delete_matching_input"
+    Sqlite.execute_ conn
+      "CREATE TRIGGER delete_matching_input AFTER DELETE ON unspent_outputs \
+      \BEGIN \
+      \  DELETE FROM unmatched_inputs WHERE input_row_tip__row_slot = old.output_row_tip__row_slot \
+      \                                 AND input_row_out_ref = old.output_row_out_ref; \
+      \END"
 
-        Just resumePoints <- runChainIndex runReq getResumePoints
+    stateTVar <- STM.newTVarIO mempty
+    let runReq = RunRequirements trace stateTVar conn (Config.cicSecurityParam config)
 
-        putStr "\nPossible resume slots: "
-        putStrLn $ showResumePoints resumePoints
+    Just resumePoints <- runChainIndex runReq getResumePoints
 
-        putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config
-        void $ runChainSync (Config.cicSocketPath config)
-                            nullTracer
-                            (Config.cicSlotConfig config)
-                            (Config.cicNetworkId  config)
-                            resumePoints
-                            (chainSyncHandler runReq)
+    putStr "\nPossible resume slots: "
+    putStrLn $ showResumePoints resumePoints
 
-        putStrLn $ "Starting webserver on port " <> show (Config.cicPort config)
-        Server.serveChainIndexQueryServer (Config.cicPort config) runReq
+    putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config
+    void $ runChainSync (Config.cicSocketPath config)
+                        nullTracer
+                        (Config.cicSlotConfig config)
+                        (Config.cicNetworkId  config)
+                        resumePoints
+                        (chainSyncHandler runReq)
+
+    putStrLn $ "Starting webserver on port " <> show (Config.cicPort config)
+    Server.serveChainIndexQueryServer (Config.cicPort config) runReq

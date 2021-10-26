@@ -333,6 +333,8 @@ executable plutus-pab-local-cluster
         , contra-tracer
         , plutus-chain-index-core
         , plutus-chain-index
+        , cardano-api
+        , lens
 
 executable plutus-pab-test-psgenerator
     default-language: Haskell2010

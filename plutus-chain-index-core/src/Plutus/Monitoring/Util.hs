@@ -41,6 +41,7 @@ import           Data.Functor.Contravariant            (Contravariant (..))
 import qualified Data.HashMap.Strict                   as HM
 import           Data.Maybe                            (fromMaybe)
 import           Data.Text                             (Text)
+import           Data.Text.Class                       (ToText (..))
 import qualified Data.Text.Lazy                        as Text
 import           Data.Text.Prettyprint.Doc             (Pretty (..), defaultLayoutOptions, layoutPretty)
 import qualified Data.Text.Prettyprint.Doc.Render.Text as Render
@@ -142,7 +143,10 @@ newtype PrettyObject t = PrettyObject { unPrettyObject :: t }
     deriving newtype (ToJSON, FromJSON)
 
 instance (Pretty t) => ToObject (PrettyObject t) where
-    toObject _ (PrettyObject t) =
-        let str = Text.toStrict . Render.renderLazy . layoutPretty defaultLayoutOptions $ pretty t in
-        HM.singleton "string" (toJSON str)
-    textTransformer (PrettyObject t) _ = Text.toStrict . Render.renderLazy . layoutPretty defaultLayoutOptions $ pretty t
+    toObject _ o =
+        let str = toText o
+        in HM.singleton "string" (toJSON str)
+    textTransformer o _ = toText o
+
+instance (Pretty t) => ToText (PrettyObject t) where
+    toText (PrettyObject t) = Text.toStrict . Render.renderLazy . layoutPretty defaultLayoutOptions $ pretty t

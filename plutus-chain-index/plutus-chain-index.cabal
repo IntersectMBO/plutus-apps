@@ -56,7 +56,7 @@ library
         sqlite-simple -any,
         stm -any,
         yaml -any,
-        optparse-applicative -any,
+        optparse-applicative -any
 
 executable plutus-chain-index
   main-is: Main.hs

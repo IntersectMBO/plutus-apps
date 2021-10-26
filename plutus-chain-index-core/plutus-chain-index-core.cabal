@@ -103,7 +103,8 @@ library
         warp -any,
         servant-client -any,
         servant-client-core -any,
-        http-types -any
+        http-types -any,
+        text-class -any
 
 test-suite plutus-chain-index-test
     import: lang
