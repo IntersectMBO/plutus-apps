@@ -79,6 +79,7 @@ pkgs/.stack
 **/.psc-package2nix/
 **/.spago/
 **/.spago2nix/
+**/.psa-stash
 
 # Backend config files
 marlowe-playground-server/playground.yaml

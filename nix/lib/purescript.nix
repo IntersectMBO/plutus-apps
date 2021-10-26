@@ -22,7 +22,9 @@
 let
   addExtraSrc = k: v: "ln -sf ${v} ${k}";
   addExtraSrcs = builtins.concatStringsSep "\n" (builtins.attrValues (pkgs.lib.mapAttrs addExtraSrc extraSrcs));
-  extraPSPaths = builtins.concatStringsSep " " (map (d: "${d}/**/*.purs") (builtins.attrNames extraSrcs));
+  extraPSPaths = builtins.concatStringsSep " " (map (d: "'${d}/**/*.purs'") (builtins.attrNames extraSrcs));
+  getGlob = pkg: ''".spago/${pkg.name}/${pkg.version}/src/**/*.purs"'';
+  spagoSources = builtins.toString (builtins.map getGlob (builtins.attrValues spagoPackages.inputs));
 in
 stdenv.mkDerivation {
   inherit name src checkPhase;
@@ -32,8 +34,8 @@ stdenv.mkDerivation {
     easyPS.purs
     easyPS.spago
     easyPS.psc-package
+    easyPS.psa
     spagoPackages.installSpagoStyle
-    spagoPackages.buildSpagoStyle
   ];
   buildPhase = ''
     export HOME=$NIX_BUILD_TOP
@@ -43,7 +45,10 @@ stdenv.mkDerivation {
     ${addExtraSrcs}
 
     install-spago-style
-    build-spago-style src/**/*.purs test/**/*.purs ${extraPSPaths}
+    build-spago-style  ${extraPSPaths}
+    echo building project...
+    psa compile --strict --censor-lib --stash --is-lib=generated --is-lib=.spago ${spagoSources} ${extraPSPaths} "src/**/*.purs" "test/**/*.purs"
+    echo done.
     npm run webpack
   '';
   doCheck = true;
