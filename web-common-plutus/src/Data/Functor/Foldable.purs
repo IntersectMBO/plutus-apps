@@ -1,14 +1,12 @@
 module Data.Functor.Foldable where
 
-import AjaxUtils (defaultJsonOptions)
-import Data.Eq (class Eq, class Eq1)
-import Data.Functor (class Functor)
+import Prologue
+import Data.Argonaut.Decode (class DecodeJson, decodeJson)
+import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Eq (class Eq1)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Newtype (class Newtype)
-import Data.Show (class Show)
-import Foreign.Generic (genericDecode, genericEncode)
-import Foreign.Generic.Class (class Decode, class Encode)
 import Matryoshka (class Corecursive, class Recursive)
 import Schema (FormArgumentF)
 
@@ -30,11 +28,11 @@ instance corecursiveFix ∷ Functor f ⇒ Corecursive (Fix f) f where
   embed v = Fix v
 
 ------------------------------------------------------------
-instance encodeFix :: Encode (Fix FormArgumentF) where
-  encode (Fix value) = genericEncode defaultJsonOptions value
+instance encodeJsonFixFormArgumentF :: EncodeJson (Fix FormArgumentF) where
+  encodeJson (Fix f) = encodeJson f
 
-instance decodeFix :: Decode (Fix FormArgumentF) where
-  decode value = genericDecode defaultJsonOptions value
+instance decodeJsonFixFormArgumentF :: DecodeJson (Fix FormArgumentF) where
+  decodeJson json = Fix <$> decodeJson json
 
 --
 instance showFix :: Show (Fix FormArgumentF) where

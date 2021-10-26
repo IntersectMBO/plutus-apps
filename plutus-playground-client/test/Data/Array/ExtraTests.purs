@@ -3,6 +3,7 @@ module Data.Array.ExtraTests
   ) where
 
 import Prelude
+import Control.Monad.Gen (chooseInt)
 import Data.Array (length)
 import Data.Array.Extra (collapse, move)
 import Data.Map (Map)
@@ -26,13 +27,13 @@ moveTests = do
     test "length is always preserved" do
       quickCheck do
         xs <- arbitrary :: Gen (Array String)
-        source <- genLooseIndex xs
-        destination <- genLooseIndex xs
+        source <- chooseInt (-2) (length xs + 2)
+        destination <- chooseInt (-2) (length xs + 2)
         pure $ length xs === length (move source destination xs)
     test "identity move" do
       quickCheck do
         before <- arbitrary :: Gen (Array String)
-        source <- genIndex before
+        source <- chooseInt 0 (length before - 1)
         let
           after = move source source before
         pure $ before === after

@@ -56,7 +56,7 @@ evaluationPane state evaluationResult@(EvaluationResult { emulatorLog, emulatorT
         [ h2_ [ text "Transactions" ]
         , button
             [ classes [ btn ]
-            , onClick $ const $ Just $ ChangeView Simulations
+            , onClick $ const $ ChangeView Simulations
             ]
             [ icon Close ]
         ]
@@ -69,7 +69,7 @@ evaluationPane state evaluationResult@(EvaluationResult { emulatorLog, emulatorT
             unit
             (chartist balancesChartOptions)
             (balancesToChartistData fundsDistribution)
-            (Just <<< HandleBalancesChartMessage)
+            HandleBalancesChartMessage
         ]
     , div
         [ class_ $ ClassName "logs" ]

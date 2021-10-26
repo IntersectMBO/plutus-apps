@@ -106,7 +106,7 @@ instance formArgumentValidation :: Validation (Fix FormArgumentF) where
 
     algebra (FormArrayF _ xs) = Array.concat $ mapWithIndex (\i values -> addPath (show i) <$> values) xs
 
-    algebra (FormObjectF xs) = Array.concat $ map (\(Tuple (Tuple name values)) -> addPath name <$> values) xs
+    algebra (FormObjectF xs) = Array.concat $ map (\(Tuple name values) -> addPath name <$> values) xs
 
     algebra (FormValueF x) = []
 

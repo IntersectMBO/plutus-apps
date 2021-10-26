@@ -12,7 +12,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (wrap)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import PlutusTx.AssocMap (Map(..), fromTuples, unionWith)
+import PlutusTx.AssocMap (Map(..), unionWith)
 import Ledger.Extra (sum)
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
 import Test.Unit (TestSuite, suite, test)
@@ -40,7 +40,7 @@ gbp :: TokenName
 gbp = TokenName { unTokenName: "GBP" }
 
 baseValue :: Map CurrencySymbol (Map TokenName BigInt)
-baseValue = Map [ wrap $ Tuple currencies (Map [ wrap $ Tuple usd $ BigInt.fromInt 10 ]) ]
+baseValue = Map [ Tuple currencies (Map [ Tuple usd $ BigInt.fromInt 10 ]) ]
 
 indexTests :: TestSuite
 indexTests =
@@ -59,7 +59,7 @@ atTests :: TestSuite
 atTests =
   suite "At" do
     test "create" do
-      equalGenericShow
+      equal
         baseValue
         ( Map []
             # set (at currencies) (Just (Map []))
@@ -83,21 +83,21 @@ unionWithTests = do
   suite "unionWith" do
     let
       a =
-        fromTuples
+        Map
           [ "a" /\ 1
           , "b" /\ 2
           , "c" /\ 3
           ]
     let
       b =
-        fromTuples
+        Map
           [ "b" /\ 1
           , "c" /\ 2
           , "d" /\ 3
           ]
     test "Merge with (+)" do
       equal
-        ( fromTuples
+        ( Map
             [ "a" /\ 1
             , "b" /\ 3
             , "c" /\ 5
@@ -107,7 +107,7 @@ unionWithTests = do
         (unionWith (+) a b)
     test "Merge with (-)" do
       equal
-        ( fromTuples
+        ( Map
             [ "a" /\ 1
             , "b" /\ 1
             , "c" /\ 1
@@ -134,7 +134,7 @@ unionWithCurrenciesTests =
             ]
         )
     test "addition"
-      $ equalGenericShow
+      $ equal
           ( mkMap currencies
               [ Tuple usd 10
               , Tuple eur 50
@@ -143,7 +143,7 @@ unionWithCurrenciesTests =
           )
           (unionWith (unionWith (+)) valueA valueB)
     test "choice"
-      $ equalGenericShow
+      $ equal
           ( mkMap currencies
               [ Tuple usd 10
               , Tuple eur 20
@@ -168,7 +168,7 @@ sumTests =
           , Tuple gbp 40
           ]
     test "sum"
-      $ equalGenericShow
+      $ equal
           ( mkValue currencies
               ( [ Tuple usd 10
                 , Tuple eur 50
@@ -186,7 +186,7 @@ mkValue symbol pairs =
 mkMap :: CurrencySymbol -> Array (Tuple TokenName Int) -> Map CurrencySymbol (Map TokenName BigInt)
 mkMap symbol pairs =
   Map
-    [ wrap $ Tuple symbol (Map (mkTokenAmount <$> pairs)) ]
+    [ Tuple symbol (Map (mkTokenAmount <$> pairs)) ]
   where
   mkTokenAmount :: Tuple TokenName Int -> Tuple TokenName BigInt
-  mkTokenAmount (Tuple token amount) = wrap $ Tuple token (BigInt.fromInt amount)
+  mkTokenAmount (Tuple token amount) = Tuple token (BigInt.fromInt amount)

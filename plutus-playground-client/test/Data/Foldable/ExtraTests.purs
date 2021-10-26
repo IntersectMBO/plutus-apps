@@ -9,6 +9,7 @@ import Data.Foldable.Extra (interleave, countConsecutive)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.List as List
+import Data.Newtype (wrap)
 import Data.NonEmpty ((:|))
 import Data.Tuple (uncurry)
 import Data.Tuple.Nested (type (/\), (/\))
@@ -62,6 +63,7 @@ instance showMsg :: Show Msg where
 instance arbitraryMsg :: Arbitrary Msg where
   arbitrary =
     frequency
+      $ wrap
       $ (20.0 /\ pure Heartbeat)
       :| List.fromFoldable
           [ 1.0 /\ pure Startup

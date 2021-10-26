@@ -11,8 +11,8 @@ import Bootstrap.Extra (clickable)
 import Clipboard (showShortCopyLong)
 import Data.Array ((:))
 import Data.Array as Array
-import Data.BigInt.Argonaut (BigInteger)
-import Data.BigInt.Argonaut as BigInteger
+import Data.BigInt.Argonaut (BigInt)
+import Data.BigInt.Argonaut as BigInt
 import Data.Foldable (foldMap, foldr)
 import Data.Foldable.Extra (interleave)
 import Data.FoldableWithIndex (foldMapWithIndex, foldrWithIndex)
@@ -36,7 +36,7 @@ import Ledger.Extra (humaniseSlotInterval)
 import Plutus.V1.Ledger.Tx (TxOut(..))
 import Plutus.V1.Ledger.TxId (TxId(..))
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
-import Prelude (Ordering(..), const, eq, pure, show, zero, ($), (<$>), (<<<), (<>))
+import Prologue (Ordering(..), Tuple, const, eq, pure, show, zero, ($), (<$>), (<<<), (<>))
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput(..), SequenceId(..))
 import Web.UIEvent.MouseEvent (MouseEvent)
 
@@ -147,7 +147,7 @@ transactionDetailView namingFn annotatedBlockchain annotatedTx =
                           namingFn
                           (view _txIdOf annotatedTx)
                           annotatedBlockchain
-                          (BigInteger.fromInt index)
+                          (BigInt.fromInt index)
                           txout
                     )
                     (view (_tx <<< _txOutputs) annotatedTx)
@@ -252,10 +252,10 @@ balancesTable namingFn sequenceId balances =
                                     foldMap
                                       ( \token ->
                                           let
-                                            _thisBalance :: Traversal' (Map BeneficialOwner Value) BigInteger
+                                            _thisBalance :: Traversal' (Map BeneficialOwner Value) BigInt
                                             _thisBalance = ix owner <<< _value <<< ix currency <<< ix token
 
-                                            amount :: Maybe BigInteger
+                                            amount :: Maybe BigInt
                                             amount = preview _thisBalance balances
                                           in
                                             [ td [ class_ amountClass ]
@@ -284,7 +284,7 @@ collectBalanceTableHeadings balances = foldr collectCurrencies Map.empty $ Map.v
   collectCurrencies :: Value -> Map CurrencySymbol (Set TokenName) -> Map CurrencySymbol (Set TokenName)
   collectCurrencies (Value { getValue: entries }) ownersBalance = foldrWithIndex collectTokenNames ownersBalance entries
 
-  collectTokenNames :: CurrencySymbol -> AssocMap.Map TokenName BigInteger -> Map CurrencySymbol (Set TokenName) -> Map CurrencySymbol (Set TokenName)
+  collectTokenNames :: CurrencySymbol -> AssocMap.Map TokenName BigInt -> Map CurrencySymbol (Set TokenName) -> Map CurrencySymbol (Set TokenName)
   collectTokenNames currency currencyBalances = Map.insertWith Set.union currency $ AssocMap.keys currencyBalances
 
 sequenceIdView :: forall p i. SequenceId -> HTML p i
@@ -342,7 +342,7 @@ dereferencedInputView namingFn annotatedBlockchain (InputNotFound txKey) =
         ]
     ]
 
-outputView :: forall p. NamingFn -> TxId -> AnnotatedBlockchain -> BigInteger -> TxOut -> HTML p Action
+outputView :: forall p. NamingFn -> TxId -> AnnotatedBlockchain -> BigInt -> TxOut -> HTML p Action
 outputView namingFn txId annotatedBlockchain outputIndex txOut =
   txOutOfView namingFn false txOut
     $ case consumedInTx of
@@ -428,24 +428,24 @@ valueView (Value { getValue: (AssocMap.Map []) }) = empty
 
 valueView (Value { getValue: (AssocMap.Map currencies) }) = div_ (interleave hr_ (currencyView <$> currencies))
   where
-  currencyView :: Tuple CurrencySymbol (AssocMap.Map TokenName BigInteger) -> HTML p i
-  currencyView (Tuple (currency /\ (AssocMap.Map tokens))) =
+  currencyView :: Tuple CurrencySymbol (AssocMap.Map TokenName BigInt) -> HTML p i
+  currencyView (currency /\ (AssocMap.Map tokens)) =
     div_
       [ div [ class_ Bootstrap.textTruncate ]
           [ strong_ [ text $ showCurrency currency ] ]
       , div_ (tokenView <$> tokens)
       ]
 
-  tokenView :: Tuple TokenName BigInteger -> HTML p i
-  tokenView (Tuple (token /\ amount)) =
+  tokenView :: Tuple TokenName BigInt -> HTML p i
+  tokenView (token /\ amount) =
     row_
       [ col_ [ showToken token ]
       , div [ classes [ col, amountClass ] ]
           [ text $ formatAmount amount ]
       ]
 
-formatAmount :: BigInteger -> String
-formatAmount = BigInteger.format
+formatAmount :: BigInt -> String
+formatAmount = BigInt.toString
 
 showCurrency :: CurrencySymbol -> String
 showCurrency (CurrencySymbol { unCurrencySymbol: "" }) = "Ada"
@@ -461,6 +461,5 @@ onClickFocusTx :: forall p. TxId -> IProp ( onClick :: MouseEvent | p ) Action
 onClickFocusTx txId =
   onClick
     $ const
-    $ Just
     $ FocusTx
     $ Just txId

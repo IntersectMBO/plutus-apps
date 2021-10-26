@@ -88,7 +88,7 @@ subHeader state@(State { demoFilesMenuVisible, contractDemos, currentDemoName })
     [ classes [ navbar, navbarExpand, justifyContentBetween, ClassName "sub-header" ] ]
     [ a
         [ classes buttonClasses
-        , onClick $ const $ Just $ ToggleDemoFilesMenu
+        , onClick $ const $ ToggleDemoFilesMenu
         ]
         [ buttonIcon ]
     , contractDemosPane demoFilesMenuVisible contractDemos currentDemoName
@@ -133,7 +133,7 @@ demoScriptNavItem currentDemoName (ContractDemo { contractDemoName }) =
     [ class_ navItem ]
     [ a
         [ classes navLinkClasses
-        , onClick $ const $ Just $ LoadScript contractDemoName
+        , onClick $ const $ LoadScript contractDemoName
         ]
         [ text contractDemoName ]
     ]

@@ -45,8 +45,9 @@ import qualified Interpreter                               as Webghc
 import           Language.Haskell.Interpreter              (CompilationError, InterpreterError,
                                                             InterpreterResult (InterpreterResult),
                                                             SourceCode (SourceCode), Warning, result, warnings)
-import           Language.PureScript.Bridge                (BridgePart, Language (Haskell), SumType, buildBridge, equal,
-                                                            genericShow, mkSumType, order, writePSTypes)
+import           Language.PureScript.Bridge                (BridgePart, Language (Haskell), SumType, argonaut,
+                                                            buildBridge, equal, genericShow, mkSumType, order,
+                                                            writePSTypes)
 import           Language.PureScript.Bridge.TypeParameters (A)
 import qualified Ledger.CardanoWallet                      as CW
 import           Ledger.Tx.CardanoAPI                       (ToCardanoError)
@@ -105,38 +106,38 @@ myTypes :: [SumType 'Haskell]
 myTypes =
     PSGenerator.Common.ledgerTypes <>
     PSGenerator.Common.playgroundTypes <>
-    [ genericShow $ equal $ mkSumType @CompilationResult
-    , genericShow $ equal $ mkSumType @Warning
-    , genericShow $ equal $ mkSumType @SourceCode
-    , equal $ genericShow $ mkSumType @EM.Wallet
-    , equal $ genericShow $ mkSumType @CW.WalletNumber
-    , genericShow $ equal $ mkSumType @Simulation
-    , genericShow $ equal $ mkSumType @ContractDemo
-    , genericShow $ equal $ mkSumType @SimulatorWallet
-    , genericShow $ mkSumType @CompilationError
-    , genericShow $ mkSumType @Evaluation
-    , genericShow $ mkSumType @EvaluationResult
-    , genericShow $ mkSumType @EM.EmulatorEvent'
-    , genericShow $ mkSumType @(EM.EmulatorTimeEvent A)
-    , genericShow $ mkSumType @EM.ChainEvent
-    , genericShow $ mkSumType @Log.LogLevel
-    , genericShow $ mkSumType @(Log.LogMessage A)
-    , genericShow $ mkSumType @EM.WalletEvent
-    , genericShow $ mkSumType @EM.NodeClientEvent
-    , genericShow $ mkSumType @PlaygroundError
-    , equal $ genericShow $ mkSumType @WalletAPIError
-    , equal $ genericShow $ mkSumType @ToCardanoError
-    , order $ genericShow $ mkSumType @SequenceId
-    , equal $ genericShow $ mkSumType @AnnotatedTx
-    , equal $ genericShow $ mkSumType @DereferencedInput
-    , order $ genericShow $ mkSumType @BeneficialOwner
-    , equal $ genericShow $ mkSumType @TxKey
-    , genericShow $ mkSumType @InterpreterError
-    , genericShow $ equal $ mkSumType @(InterpreterResult A)
-    , genericShow $ mkSumType @CheckpointLogMsg
-    , genericShow $ mkSumType @CheckpointKey
-    , genericShow $ mkSumType @EM.RequestHandlerLogMsg
-    , genericShow $ mkSumType @EM.TxBalanceMsg
+    [ genericShow $ equal $ argonaut $ mkSumType @CompilationResult
+    , genericShow $ equal $ argonaut $ mkSumType @Warning
+    , genericShow $ equal $ argonaut $ mkSumType @SourceCode
+    , equal $ genericShow $ argonaut $ mkSumType @EM.Wallet
+    , equal $ genericShow $ argonaut $ mkSumType @CW.WalletNumber
+    , genericShow $ equal $ argonaut $ mkSumType @Simulation
+    , genericShow $ equal $ argonaut $ mkSumType @ContractDemo
+    , genericShow $ equal $ argonaut $ mkSumType @SimulatorWallet
+    , genericShow $ argonaut $ mkSumType @CompilationError
+    , genericShow $ argonaut $ mkSumType @Evaluation
+    , genericShow $ argonaut $ mkSumType @EvaluationResult
+    , genericShow $ argonaut $ mkSumType @EM.EmulatorEvent'
+    , genericShow $ argonaut $ mkSumType @(EM.EmulatorTimeEvent A)
+    , genericShow $ argonaut $ mkSumType @EM.ChainEvent
+    , equal $ order $ genericShow $ argonaut $ mkSumType @Log.LogLevel
+    , genericShow $ argonaut $ mkSumType @(Log.LogMessage A)
+    , genericShow $ argonaut $ mkSumType @EM.WalletEvent
+    , genericShow $ argonaut $ mkSumType @EM.NodeClientEvent
+    , genericShow $ argonaut $ mkSumType @PlaygroundError
+    , equal $ genericShow $ argonaut $ mkSumType @WalletAPIError
+    , equal $ genericShow $ argonaut $ mkSumType @ToCardanoError
+    , order $ genericShow $ argonaut $ mkSumType @SequenceId
+    , equal $ genericShow $ argonaut $ mkSumType @AnnotatedTx
+    , equal $ genericShow $ argonaut $ mkSumType @DereferencedInput
+    , order $ genericShow $ argonaut $ mkSumType @BeneficialOwner
+    , equal $ genericShow $ argonaut $ mkSumType @TxKey
+    , genericShow $ argonaut $ mkSumType @InterpreterError
+    , genericShow $ equal $ argonaut $ mkSumType @(InterpreterResult A)
+    , genericShow $ argonaut $ mkSumType @CheckpointLogMsg
+    , genericShow $ argonaut $ mkSumType @CheckpointKey
+    , genericShow $ argonaut $ mkSumType @EM.RequestHandlerLogMsg
+    , genericShow $ argonaut $ mkSumType @EM.TxBalanceMsg
     ]
 
 mySettings :: Settings

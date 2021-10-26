@@ -1,7 +1,6 @@
 module Test.Main where
 
 import Prologue
-import JsonEncodingTests as JsonEncodingTests
 import ChainTests as ChainTests
 import CursorTests as CursorTests
 import Data.Array.ExtraTests as Data.Array.ExtraTests
@@ -21,7 +20,6 @@ foreign import forDeps :: Effect Unit
 main :: Effect Unit
 main =
   runTest do
-    JsonEncodingTests.all
     ChainTests.all
     CursorTests.all
     Data.Array.ExtraTests.all

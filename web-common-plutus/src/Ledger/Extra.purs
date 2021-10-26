@@ -116,9 +116,7 @@ adaToValue (Lovelace ada) =
     { getValue:
         AssocMap.Map
           [ Tuple
-              ( Tuple
-                  (CurrencySymbol { unCurrencySymbol: "" })
-                  (AssocMap.Map [ Tuple (Tuple (TokenName { unTokenName: "" }) ada.getLovelace) ])
-              )
+              (CurrencySymbol { unCurrencySymbol: "" })
+              (AssocMap.Map [ Tuple (TokenName { unTokenName: "" }) ada.getLovelace ])
           ]
     }

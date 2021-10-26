@@ -28,7 +28,7 @@ mainTabBar mkAction tabs activeView =
       [ a
           [ id_ $ "tab-" <> String.toLower (show link)
           , classes $ [ navLink ] <> activeClass
-          , onClick $ const $ Just $ mkAction link
+          , onClick $ const $ mkAction link
           ]
           [ text title ]
       ]

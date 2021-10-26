@@ -3,6 +3,7 @@ module CursorTests
   ) where
 
 import Prologue
+import Control.Monad.Gen (chooseInt)
 import Cursor (Cursor)
 import Cursor as Cursor
 import Data.Array as Array
@@ -11,6 +12,7 @@ import Data.Show.Generic (genericShow)
 import Data.Lens (over, preview)
 import Data.Lens.Index (ix)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Array.NonEmpty (fromNonEmpty)
 import Data.NonEmpty (NonEmpty(NonEmpty))
 import Data.String.Extra (unlines)
 import Data.Tuple (Tuple(..))
@@ -45,8 +47,8 @@ applyOperation Last = Cursor.last
 
 genOperation :: forall a. Cursor a -> Gen Operation
 genOperation cursor = do
-  index <- genLooseIndex cursor
-  elements (NonEmpty (Set index) [ Left, Right ])
+  index <- chooseInt (-2) $ Cursor.length cursor + 2
+  elements (fromNonEmpty $ NonEmpty (Set index) [ Left, Right ])
 
 data Scenario a
   = Scenario (Cursor a) (Array Operation)
@@ -122,7 +124,7 @@ deleteAtTests =
     test "deleteAt amends the contents correctly." do
       quickCheck do
         cursor <- arbitrary :: Gen (Cursor String)
-        index <- genIndex cursor
+        index <- chooseInt 0 $ Cursor.length cursor - 1
         let
           deleted = Cursor.deleteAt index cursor
         pure
@@ -133,7 +135,7 @@ deleteAtTests =
     test "deleteAt preserves the cursor position." do
       quickCheck do
         cursor <- arbitrary :: Gen (Cursor Int)
-        index <- genIndex cursor
+        index <- chooseInt 0 $ Cursor.length cursor - 1
         let
           deleted = Cursor.deleteAt index cursor
         pure

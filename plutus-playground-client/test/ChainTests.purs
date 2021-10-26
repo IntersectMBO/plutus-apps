@@ -66,9 +66,9 @@ values :: Array Value
 values =
   [ Value
       { getValue:
-          AssocMap.fromTuples
+          AssocMap.Map
             [ currencies
-                /\ AssocMap.fromTuples
+                /\ AssocMap.Map
                     [ usdToken /\ BigInt.fromInt 10
                     , eurToken /\ BigInt.fromInt 20
                     ]
@@ -76,10 +76,10 @@ values =
       }
   , Value
       { getValue:
-          AssocMap.fromTuples
-            [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInt.fromInt 30 ]
+          AssocMap.Map
+            [ ada /\ AssocMap.Map [ adaToken /\ BigInt.fromInt 30 ]
             , currencies
-                /\ AssocMap.fromTuples
+                /\ AssocMap.Map
                     [ usdToken /\ BigInt.fromInt 40
                     , eurToken /\ BigInt.fromInt 50
                     ]
@@ -87,10 +87,10 @@ values =
       }
   , Value
       { getValue:
-          AssocMap.fromTuples
-            [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInt.fromInt 60 ]
+          AssocMap.Map
+            [ ada /\ AssocMap.Map [ adaToken /\ BigInt.fromInt 60 ]
             , currencies
-                /\ AssocMap.fromTuples
+                /\ AssocMap.Map
                     [ usdToken /\ BigInt.fromInt 70
                     ]
             ]

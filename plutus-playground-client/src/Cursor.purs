@@ -23,16 +23,20 @@ module Cursor
   , right
   ) where
 
+import Prologue
 import Control.Monad.Gen.Class (chooseInt)
 import Data.Array as Array
+import Data.Argonaut.Decode (class DecodeJson, decodeJson)
+import Data.Argonaut.Encode (class EncodeJson, encodeJson)
 import Data.Foldable (class Foldable, foldMap, foldl, foldr)
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Traversal', wander)
+import Data.Lens.AffineTraversal (affineTraversal)
 import Data.Lens.Index (class Index)
 import Data.Maybe (Maybe, fromMaybe, maybe)
 import Data.Ord as Ord
 import Data.Traversable (class Traversable, sequenceDefault, traverse)
-import Prelude (class Eq, class Functor, class Ord, class Show, bind, map, otherwise, pure, show, (#), ($), (+), (-), (<$>), (<<<), (<>), (>=), (>>>))
+import Data.Tuple (uncurry)
 import Test.QuickCheck.Arbitrary (class Arbitrary, arbitrary)
 import Test.QuickCheck.Gen (arrayOf)
 
@@ -66,30 +70,17 @@ instance arbitraryCursor :: Arbitrary a => Arbitrary (Cursor a) where
     pure $ Cursor index xs
 
 instance indexCursor :: Index (Cursor a) Int a where
-  ix n =
-    wander \coalg (Cursor index xs) ->
-      Array.index xs n
-        # maybe
-            (pure xs)
-            ( let
-                f x = fromMaybe xs $ Array.updateAt n x xs
-              in
-                coalg >>> map f
-            )
-        # map (Cursor index)
+  ix n = affineTraversal set pre
+    where
+    set c@(Cursor index xs) a = fromMaybe c $ Cursor index <$> Array.updateAt n a xs
+
+    pre c@(Cursor index xs) = maybe (Left c) Right $ Array.index xs n
 
 instance encodeCursor :: EncodeJson a => EncodeJson (Cursor a) where
-  encode (Cursor n xs) = encode [ encode n, encode xs ]
+  encodeJson (Cursor n xs) = encodeJson [ encodeJson n, encodeJson xs ]
 
 instance decodeCursor :: DecodeJson a => DecodeJson (Cursor a) where
-  decode value = do
-    xs <- readArray value
-    case xs of
-      [ x, y ] -> do
-        index <- readInt x
-        elements <- decode y
-        pure $ Cursor index elements
-      _ -> fail $ ForeignError "Decoding a Cursor, expected to see an array with exactly 2 elements."
+  decodeJson value = uncurry Cursor <$> decodeJson value
 
 _current :: forall a. Traversal' (Cursor a) a
 _current =

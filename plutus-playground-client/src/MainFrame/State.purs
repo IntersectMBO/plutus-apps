@@ -1,17 +1,19 @@
 module MainFrame.State
-  ( mkMainFrame
+  ( Env(..)
+  , mkMainFrame
   , handleAction
   , mkInitialState
   ) where
 
-import AjaxUtils (AjaxErrorPaneAction(..), ajaxErrorRefLabel, renderForeignErrors)
+import Affjax (printError)
+import AjaxUtils (AjaxErrorPaneAction(..), ajaxErrorRefLabel)
 import Analytics (analyticsTracking)
 import Animation (class MonadAnimate, animate)
 import Chain.State (handleAction) as Chain
 import Chain.Types (Action(..), AnnotatedBlockchain(..), _chainFocusAppearing, _txIdOf)
 import Chain.Types (initialState) as Chain
 import Clipboard (class MonadClipboard)
-import Control.Monad.Error.Class (class MonadThrow)
+import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Control.Monad.Error.Extra (mapError)
 import Control.Monad.Except.Extra (noteT)
 import Control.Monad.Except.Trans (ExceptT(..), except, mapExceptT, withExceptT, runExceptT)
@@ -23,13 +25,15 @@ import Control.Monad.State.Extra (zoomStateT)
 import Control.Monad.Trans.Class (lift)
 import Cursor (_current)
 import Cursor as Cursor
+import Data.Argonaut.Decode (printJsonDecodeError)
+import Data.Argonaut.Extra (parseDecodeJson, encodeStringifyJson)
 import Data.Array (catMaybes, (..))
 import Data.Array (deleteAt, snoc) as Array
 import Data.Array.Extra (move) as Array
 import Data.Bifunctor (lmap)
 import Data.BigInt.Argonaut (BigInt)
 import Data.BigInt.Argonaut as BigInt
-import Data.Either (Either(..), note)
+import Data.Either (Either(..), either, note)
 import Data.Lens (assign, modifying, over, to, traversed, use, view)
 import Data.Lens.Extra (peruse)
 import Data.Lens.Fold (maximumOf, lastOf, preview)
@@ -38,6 +42,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.MediaType.Common (textPlain)
 import Data.Newtype (unwrap)
 import Data.RawJson (RawJson(..))
+import Data.Semigroup (append)
 import Data.String as String
 import Data.Traversable (traverse)
 import Editor.State (initialState) as Editor
@@ -46,13 +51,11 @@ import Editor.Types (Action(..), State) as Editor
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Exception (Error, error)
-import Foreign.Generic (decodeJSON, encodeJSON)
 import Gist (_GistId, gistId)
 import Gists.Types (GistAction(..))
 import Gists.Types as Gists
 import Halogen (Component, hoist)
 import Halogen as H
-import Halogen.HTML (HTML)
 import Halogen.Query (HalogenM)
 import Language.Haskell.Interpreter (CompilationError(..), InterpreterError(..), SourceCode(..))
 import MainFrame.Lenses (_actionDrag, _authStatus, _blockchainVisualisationState, _compilationResult, _contractDemos, _createGistResult, _currentDemoName, _currentView, _demoFilesMenuVisible, _editorState, _evaluationResult, _functionSchema, _gistErrorPaneVisible, _gistUrl, _knownCurrencies, _lastEvaluatedSimulation, _lastSuccessfulCompilationResult, _resultRollup, _simulationActions, _simulationId, _simulationWallets, _simulations, _successfulCompilationResult, _successfulEvaluationResult, getKnownCurrencies)
@@ -62,13 +65,14 @@ import MainFrame.View (render)
 import Monaco (IMarkerData, markerSeverity)
 import Network.RemoteData (RemoteData(..), _Success, isSuccess)
 import Playground.Gists (mkNewGist, playgroundGistFile, simulationGistFile)
-import Playground.Server (SPParams_(..))
+import Playground.Server (class HasSPSettings, SPSettings_)
 import Playground.Types (ContractCall(..), ContractDemo(..), Evaluation(..), KnownCurrency, Simulation(..), SimulatorWallet(..), _CallEndpoint, _FunctionSchema)
 import Plutus.V1.Ledger.Value (Value)
 import Prelude (class Applicative, Unit, Void, add, const, bind, discard, flip, identity, join, not, mempty, one, pure, show, unit, unless, void, when, zero, (+), ($), (&&), (==), (<>), (<$>), (<*>), (>>=), (<<<))
 import Schema.Types (Expression, FormArgument, SimulationAction(..), formArgumentToJson, handleActionEvent, handleFormEvent, handleValueEvent, mkInitialValue, traverseFunctionSchema)
 import Simulator.View (simulatorTitleRefLabel, simulationsErrorRefLabel)
 import StaticData (mkContractDemos, lookupContractDemo)
+import Servant.PureScript (ErrorDescription(..))
 import Validation (_argumentValues, _argument)
 import Ledger.CardanoWallet (WalletNumber(WalletNumber))
 import Wallet.Lenses (_simulatorWalletBalance, _simulatorWalletWallet, _walletId)
@@ -92,7 +96,15 @@ mkSimulation simulationCurrencies simulationId =
 
 mkInitialState :: forall m. MonadThrow Error m => Editor.State -> m State
 mkInitialState editorState = do
-  contractDemos <- mapError (\e -> error $ "Could not load demo scripts. Parsing errors: " <> show e) mkContractDemos
+  contractDemos <-
+    either
+      ( throwError
+          <<< error
+          <<< append "Could not load demo scripts. Parsing errors: "
+          <<< printJsonDecodeError
+      )
+      pure
+      mkContractDemos
   pure
     $ State
         { demoFilesMenuVisible: false
@@ -114,19 +126,22 @@ mkInitialState editorState = do
         }
 
 ------------------------------------------------------------
-ajaxSettings :: SPSettings_ SPParams_
-ajaxSettings = defaultSettings $ SPParams_ { baseURL: "/api/" }
+newtype Env
+  = Env { spSettings :: SPSettings_ }
+
+instance hasSPSettingsEnv :: HasSPSettings Env where
+  spSettings (Env { spSettings }) = spSettings
 
 mkMainFrame ::
   forall m n.
   MonadThrow Error n =>
   MonadEffect n =>
   MonadAff m =>
-  n (Component HTML Query HAction Void m)
+  n (Component Query HAction Void m)
 mkMainFrame = do
   editorState <- Editor.initialState
   initialState <- mkInitialState editorState
-  pure $ hoist (flip runReaderT ajaxSettings)
+  pure $ hoist (flip runReaderT $ Env { spSettings: { baseURL: "/api/" } })
     $ H.mkComponent
         { initialState: const initialState
         , render
@@ -142,9 +157,10 @@ mkMainFrame = do
 
 -- TODO: use web-common withAnalytics function
 handleActionWithAnalyticsTracking ::
-  forall m.
+  forall env m.
+  HasSPSettings env =>
+  MonadAsk env m =>
   MonadEffect m =>
-  MonadAsk (SPSettings_ SPParams_) m =>
   MonadAff m =>
   HAction -> HalogenM State HAction ChildSlots Void m Unit
 handleActionWithAnalyticsTracking action = do
@@ -152,10 +168,11 @@ handleActionWithAnalyticsTracking action = do
   runHalogenApp $ handleAction action
 
 handleAction ::
-  forall m.
+  forall env m.
+  HasSPSettings env =>
   MonadState State m =>
   MonadClipboard m =>
-  MonadAsk (SPSettings_ SPParams_) m =>
+  MonadAsk env m =>
   MonadApp m =>
   MonadAnimate m State =>
   HAction -> m Unit
@@ -427,6 +444,11 @@ handleGistAction LoadGist =
         when (isSuccess aGist) do
           assign _currentView Editor
           assign _currentDemoName Nothing
+        let
+          errorToString { description } = case description of
+            UnexpectedHTTPStatus _ -> "TODO"
+            DecodingError e -> printJsonDecodeError e
+            ConnectingError e -> printError e
         gist <- ExceptT $ pure $ toEither (Left "Gist not loaded.") $ lmap errorToString aGist
         --
         -- Load the source, if available.
@@ -438,7 +460,7 @@ handleGistAction LoadGist =
         --
         -- Load the simulation, if available.
         simulationString <- noteT "Simulation not found in gist." $ view simulationGistFile gist
-        simulations <- mapExceptT (pure <<< unwrap) $ withExceptT renderForeignErrors $ decodeJSON simulationString
+        simulations <- except $ lmap printJsonDecodeError $ parseDecodeJson simulationString
         assign _simulations simulations
   where
   toEither :: forall e a. Either e a -> RemoteData e a -> Either e a
@@ -478,7 +500,7 @@ replaceViewOnSuccess result source target = do
 ------------------------------------------------------------
 toEvaluation :: SourceCode -> Simulation -> Maybe Evaluation
 toEvaluation sourceCode (Simulation { simulationActions, simulationWallets }) = do
-  program <- RawJson <<< encodeJSON <$> traverse toExpression simulationActions
+  program <- RawJson <<< encodeStringifyJson <$> traverse toExpression simulationActions
   pure
     $ Evaluation
         { wallets: simulationWallets
@@ -490,7 +512,7 @@ toExpression :: ContractCall FormArgument -> Maybe Expression
 toExpression = traverseContractCall encodeForm
   where
   encodeForm :: FormArgument -> Maybe RawJson
-  encodeForm argument = (RawJson <<< encodeJSON) <$> formArgumentToJson argument
+  encodeForm argument = (RawJson <<< encodeStringifyJson) <$> formArgumentToJson argument
 
 traverseContractCall ::
   forall m b a.

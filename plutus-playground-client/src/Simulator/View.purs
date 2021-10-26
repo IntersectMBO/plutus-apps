@@ -44,7 +44,7 @@ simulatorTitle =
     [ h1_ [ text "Simulator" ]
     , a
         [ class_ btn
-        , onClick $ const $ Just $ ChangeView Editor
+        , onClick $ const $ ChangeView Editor
         ]
         [ text "< Return to Editor" ]
     ]
@@ -103,13 +103,13 @@ simulationNavItem canClose activeIndex index (Simulation { simulationName }) =
       ]
       [ a
           [ classes navLinkClasses
-          , onClick $ const $ Just $ SetSimulationSlot index
+          , onClick $ const $ SetSimulationSlot index
           ]
           [ text simulationName ]
       , if canClose then
           button
             [ classes [ btn, navItemButtonClass ]
-            , onClick $ const $ Just $ RemoveSimulationSlot index
+            , onClick $ const $ RemoveSimulationSlot index
             ]
             [ icon Close ]
         else
@@ -129,7 +129,7 @@ addSimulationControl =
         [ class_ navLink ]
         [ button
             [ classes [ btn, navItemButtonClass ]
-            , onClick $ const $ Just $ AddSimulationSlot
+            , onClick $ const $ AddSimulationSlot
             ]
             [ icon Plus ]
         ]
@@ -140,7 +140,7 @@ evaluateActionsButton simulationWallets simulationActions evaluationResult =
   button
     [ classes [ btn, ClassName "btn-green" ]
     , disabled $ not valid
-    , onClick $ const $ Just EvaluateActions
+    , onClick $ const EvaluateActions
     ]
     [ btnText evaluationResult valid ]
   where
@@ -157,7 +157,7 @@ viewTransactionsButton simulations lastEvaluatedSimulation evaluationResult =
   button
     [ classes [ btn, ClassName "btn-turquoise" ]
     , disabled isDisabled
-    , onClick $ const $ Just $ ChangeView Transactions
+    , onClick $ const $ ChangeView Transactions
     ]
     [ text "Transactions" ]
   where
@@ -215,9 +215,6 @@ showCompilationError :: forall p i. CompilationError -> HTML p i
 showCompilationError (RawError error) = code_ [ text error ]
 
 showCompilationError (CompilationError { text: errors }) = pre_ [ text (String.joinWith "\n" errors) ]
-
-onIntInput :: forall i r. (Int -> i) -> IProp ( onInput :: Event, value :: String | r ) i
-onIntInput f = onValueInput $ map f <<< Int.fromString
 
 ------------------------------------------------------------
 simulatorTitleRefLabel :: RefLabel

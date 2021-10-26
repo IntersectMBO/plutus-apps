@@ -58,7 +58,7 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
                                 Just (Right err) -> [ isValid ]
                                 Nothing -> []
                         )
-                    , onValueInput $ Just <<< SetGistUrl
+                    , onValueInput SetGistUrl
                     ]
                 ]
             , loadButton
@@ -116,7 +116,7 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
       button
         [ idPublishGist
         , classes [ btn, btnSmall, btnSecondary ]
-        , onClick $ const $ Just PublishOrUpdateGist
+        , onClick $ const PublishOrUpdateGist
         ]
         [ text "Save" ]
     Loading ->
@@ -131,7 +131,7 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
       button
         [ idPublishGist
         , classes [ btn, btnSmall, btnSecondary ]
-        , onClick $ const $ Just PublishOrUpdateGist
+        , onClick $ const PublishOrUpdateGist
         ]
         [ text "Save" ]
 
@@ -149,7 +149,7 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
                 Just (Right url) -> btnSecondary
                 Nothing -> btnSecondary
             ]
-        , onClick $ const $ Just LoadGist
+        , onClick $ const LoadGist
         , disabled
             $ case parsedGistId of
                 Just (Left url) -> true

@@ -50,7 +50,7 @@ walletPane signatures initialValue walletIndex simulatorWallet@(SimulatorWallet 
         [ cardBody_
             [ button
                 [ classes [ btn, floatRight, ClassName "close-button" ]
-                , onClick $ const $ Just $ ModifyWallets $ RemoveWallet walletIndex
+                , onClick $ const $ ModifyWallets $ RemoveWallet walletIndex
                 ]
                 [ icon Close ]
             , cardTitle_ [ h3_ [ walletIdPane simulatorWalletWallet ] ]
@@ -77,7 +77,7 @@ addWalletPane =
   Tuple "add-wallet"
     $ div
         [ classes [ card, walletClass, ClassName "add-wallet" ]
-        , onClick $ const $ Just $ ModifyWallets AddWallet
+        , onClick $ const $ ModifyWallets AddWallet
         ]
         [ cardBody_
             [ icon Plus
@@ -89,7 +89,7 @@ actionButton :: forall p. Value -> SimulatorWallet -> FunctionSchema FormSchema 
 actionButton initialValue simulatorWallet functionSchema =
   button
     [ classes [ btn, btnSecondary, btnSmall, actionButtonClass ]
-    , onClick $ const $ Just $ ModifyActions $ AddAction
+    , onClick $ const $ ModifyActions $ AddAction
         $ CallEndpoint
             { argumentValues: toArgument initialValue <$> functionSchema
             , caller: view _simulatorWalletWallet simulatorWallet
@@ -107,7 +107,7 @@ addPayToWalletButton :: forall p. Value -> SimulatorWallet -> HTML p SimulationA
 addPayToWalletButton initialValue simulatorWallet =
   button
     [ classes [ btn, btnSecondary, btnSmall, actionButtonClass ]
-    , onClick $ const $ Just $ ModifyActions $ AddAction
+    , onClick $ const $ ModifyActions $ AddAction
         $ PayToWallet
             { sender: view _simulatorWalletWallet simulatorWallet
             , recipient: view _simulatorWalletWallet simulatorWallet

@@ -7,14 +7,13 @@ import Animation (class MonadAnimate)
 import Auth (AuthRole(..), AuthStatus(..))
 import Clipboard (class MonadClipboard)
 import Control.Monad.Error.Extra (mapError)
-import Control.Monad.Except (runExcept)
-import Control.Monad.Except.Trans (class MonadThrow)
+import Control.Monad.Except.Trans (class MonadThrow, except, throwError)
 import Control.Monad.RWS.Trans (RWSResult(..), RWST(..), runRWST)
 import Control.Monad.Reader.Class (class MonadAsk)
 import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Control.Monad.State.Class (class MonadState, get)
 import Cursor as Cursor
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Lens (Lens', _1, assign, preview, set, use, view)
 import Data.Lens.At (at)
 import Data.Lens.Index (ix)
@@ -29,21 +28,21 @@ import Data.Tuple (Tuple(Tuple))
 import Editor.Types (State(..)) as Editor
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Exception (Error, error)
-import Foreign.Generic (decodeJSON)
+import Data.Argonaut.Decode (printJsonDecodeError)
+import Data.Argonaut.Extra (parseDecodeJson)
 import Gist (Gist, GistId, gistId)
 import Gists.Types (GistAction(..))
 import Halogen.Monaco (KeyBindings(..)) as Editor
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult, SourceCode(..))
 import MainFrame.Lenses (_authStatus, _contractDemoEditorContents, _createGistResult, _currentView, _simulations)
 import MainFrame.MonadApp (class MonadApp)
-import MainFrame.State (handleAction, mkInitialState)
+import MainFrame.State (Env(..), handleAction, mkInitialState)
 import MainFrame.Types (HAction(..), State, View(Editor, Simulations), WebData)
 import Network.RemoteData (RemoteData(..), isNotAsked, isSuccess)
 import Network.RemoteData as RemoteData
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync as FS
 import Playground.Gists (playgroundGistFile)
-import Playground.Server (SPParams_(..))
 import Playground.Types (CompilationResult, ContractDemo, EvaluationResult)
 import StaticData (bufferLocalStorageKey, lookupContractDemo, mkContractDemos)
 import Test.QuickCheck ((<?>))
@@ -76,7 +75,7 @@ _localStorage = prop (SProxy :: SProxy "localStorage")
 
 -- | A dummy implementation of `MonadApp`, for testing the main handleAction loop.
 newtype MockApp m a
-  = MockApp (RWST (SPSettings_ SPParams_) Unit (Tuple World State) m a)
+  = MockApp (RWST Env Unit (Tuple World State) m a)
 
 derive instance newtypeMockApp :: Newtype (MockApp m a) _
 
@@ -90,7 +89,7 @@ derive newtype instance bindMockApp :: Bind m => Bind (MockApp m)
 
 derive newtype instance monadMockApp :: Monad m => Monad (MockApp m)
 
-derive newtype instance monadAskMockApp :: Monad m => MonadAsk (SPSettings_ SPParams_) (MockApp m)
+derive newtype instance monadAskMockApp :: Monad m => MonadAsk Env (MockApp m)
 
 instance monadStateMockApp :: Monad m => MonadState State (MockApp m) where
   state f =
@@ -164,7 +163,7 @@ execMockApp world queries = do
   RWSResult state result writer <-
     runRWST
       (unwrap (traverse_ handleAction queries :: MockApp m Unit))
-      (defaultSettings (SPParams_ { baseURL: "/" }))
+      (Env { spSettings: { baseURL: "/" } })
       (Tuple world initialState)
   pure state
 
@@ -208,7 +207,7 @@ evalTests =
         assert "Gist not loaded." $ isNotAsked (view _createGistResult finalState)
       test "Gist loaded successfully" do
         contents <- liftEffect $ FS.readTextFile UTF8 "test/gist1.json"
-        case runExcept $ decodeJSON contents of
+        case parseDecodeJson contents of
           Left err -> failure $ show err
           Right gist -> do
             Tuple finalWorld finalState <-
@@ -235,7 +234,11 @@ evalTests =
         ( execMockApp (set _editorContents Nothing mockWorld)
             [ LoadScript "Game" ]
         )
-      contractDemos :: Array ContractDemo <- mapError (error <<< show) mkContractDemos
+      contractDemos :: Array ContractDemo <-
+        either
+          (throwError <<< error <<< printJsonDecodeError)
+          pure
+          mkContractDemos
       equal' "Script gets loaded."
         (view _contractDemoEditorContents <$> lookupContractDemo "Game" contractDemos)
         finalWorld.editorContents
@@ -257,6 +260,6 @@ loadCompilationResponse1 ::
   m (Either String (WebData (Either InterpreterError (InterpreterResult CompilationResult))))
 loadCompilationResponse1 = do
   contents <- liftEffect $ FS.readTextFile UTF8 "generated/compilation_response.json"
-  case runExcept $ decodeJSON contents of
+  case parseDecodeJson contents of
     Left err -> pure $ Left $ show err
     Right value -> pure $ Right $ Success $ Right value

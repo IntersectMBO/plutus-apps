@@ -3,18 +3,17 @@ module Schema.TypesTests
   ) where
 
 import Prologue
+import Data.Argonaut.Core (Json, stringify)
+import Data.Argonaut.Encode (encodeJson)
 import Data.BigInt.Argonaut as BigInt
 import Data.Functor.Foldable (Fix(..))
-import Data.List (List(..))
+import Data.List (List(..), (:))
+import Data.List.NonEmpty (NonEmptyList(..))
 import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
 import Data.Tuple (Tuple(..))
-import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
-import Foreign (Foreign)
 import Foreign.Class (encode)
-import Foreign.Generic (encodeJSON)
-import Foreign.Object as FO
 import PlutusTx.AssocMap as AssocMap
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
 import Playground.Types (ContractCall(..), FunctionSchema(..), KnownCurrency(..))
@@ -74,8 +73,8 @@ validateTests = do
           ( makeTestAction
               $ Fix
               $ FormObjectF
-                  [ Tuple $ Tuple "name" (Fix $ FormStringF Nothing)
-                  , Tuple $ Tuple "test" (Fix $ FormIntF (Just 5))
+                  [ Tuple "name" (Fix $ FormStringF Nothing)
+                  , Tuple "test" (Fix $ FormIntF (Just 5))
                   ]
           )
       )
@@ -88,9 +87,15 @@ toArgumentTests = do
       initialValue =
         Value
           { getValue:
-              AssocMap.fromTuples
-                [ ( Tuple (CurrencySymbol { unCurrencySymbol: "12345" })
-                      (AssocMap.fromTuples [ Tuple (TokenName { unTokenName: "ADA" }) (BigInt.fromInt 100) ])
+              AssocMap.Map
+                [ ( Tuple
+                      (CurrencySymbol { unCurrencySymbol: "12345" })
+                      ( AssocMap.Map
+                          [ Tuple
+                              (TokenName { unTokenName: "ADA" })
+                              (BigInt.fromInt 100)
+                          ]
+                      )
                   )
                 ]
           }
@@ -126,21 +131,21 @@ formArgumentToJsonTests = do
         Nothing
         (formArgumentToJson (Fix $ FormIntF Nothing))
       equalJson
-        (Just (encodeJSON 5))
+        (Just "5")
         (formArgumentToJson (Fix $ FormIntF (Just 5)))
     test "BigInts" do
       equalJson
         Nothing
         (formArgumentToJson (Fix $ FormIntegerF Nothing))
       equalJson
-        (Just (encodeJSON (BigInt.fromInt 5)))
+        (Just "5")
         (formArgumentToJson (Fix $ FormIntegerF (Just (BigInt.fromInt 5))))
     test "Strings" do
       equalJson
         Nothing
         (formArgumentToJson (Fix $ FormStringF Nothing))
       equalJson
-        (Just (encodeJSON "Test"))
+        (Just "Test")
         (formArgumentToJson (Fix $ FormStringF (Just "Test")))
     test "Tuples" do
       equalJson
@@ -153,11 +158,11 @@ formArgumentToJsonTests = do
         Nothing
         (formArgumentToJson (Fix $ FormTupleF (Fix $ FormIntF (Just 5)) (Fix $ FormStringF Nothing)))
       equalJson
-        (Just (encodeJSON [ encode 5.0, encode "Test" ]))
+        (Just "[5,\"Test\"]")
         (formArgumentToJson (Fix $ FormTupleF (Fix $ FormIntF (Just 5)) (Fix $ FormStringF (Just "Test"))))
     test "Arrays" do
       equalJson
-        (Just (encodeJSON [ 1.0, 2.0, 3.0 ]))
+        (Just "[1,2,3 ]")
         ( formArgumentToJson
             ( Fix
                 $ FormArrayF FormSchemaInt
@@ -170,41 +175,35 @@ formArgumentToJsonTests = do
     test "Values" do
       equalJson
         ( Just
-            ( encodeJSON
-                ( FO.singleton "getValue"
-                    [ [ encode $ FO.singleton "unCurrencySymbol" ""
-                      , encode
-                          [ [ encode $ FO.singleton "unTokenName" ""
-                            , encode (BigInt.fromInt 4)
-                            ]
-                          ]
-                      ]
-                    ]
-                )
-            )
+            "{\"getValue\":[{\"unCurrencySymbol\":\"\"},[[{\"unCurrencySymbol\":\"\"},{\"unTokenName\":\"\"},4]]]}"
         )
         ( formArgumentToJson
             ( Fix
                 $ FormValueF
-                    (Value { getValue: AssocMap.fromTuples [ CurrencySymbol { unCurrencySymbol: "" } /\ AssocMap.fromTuples [ TokenName { unTokenName: "" } /\ BigInt.fromInt 4 ] ] })
+                    ( Value
+                        { getValue:
+                            AssocMap.Map
+                              [ Tuple
+                                  (CurrencySymbol { unCurrencySymbol: "" })
+                                  ( AssocMap.Map
+                                      [ Tuple
+                                          (TokenName { unTokenName: "" })
+                                          (BigInt.fromInt 4)
+                                      ]
+                                  )
+                              ]
+                        }
+                    )
             )
         )
     test "Objects" do
       equalJson
-        ( Just
-            ( encodeJSON
-                ( FO.fromFoldable
-                    [ "name" /\ encode "Tester"
-                    , "arg" /\ encode 20.0
-                    ]
-                )
-            )
-        )
+        (Just "{\"name\":\"Tester\",\"arg\":20}")
         ( formArgumentToJson
             ( Fix
                 $ FormObjectF
-                    [ Tuple $ "name" /\ (Fix $ FormStringF (Just "Tester"))
-                    , Tuple $ "arg" /\ (Fix $ FormIntF (Just 20))
+                    [ Tuple "name" $ Fix (FormStringF (Just "Tester"))
+                    , Tuple "arg" $ Fix (FormIntF (Just 20))
                     ]
             )
         )
@@ -213,22 +212,36 @@ mkInitialValueTests :: TestSuite
 mkInitialValueTests =
   suite "mkInitialValue" do
     test "balance" do
-      equalGenericShow
+      equal
         ( Value
             { getValue:
-                AssocMap.fromTuples
-                  [ ada /\ AssocMap.fromTuples [ adaToken /\ BigInt.fromInt 10 ]
-                  , currencies
-                      /\ AssocMap.fromTuples
-                          [ usdToken /\ BigInt.fromInt 10
-                          , eurToken /\ BigInt.fromInt 10
+                AssocMap.Map
+                  [ Tuple ada $ AssocMap.Map [ Tuple adaToken $ BigInt.fromInt 10 ]
+                  , Tuple
+                      currencies
+                      $ AssocMap.Map
+                          [ Tuple usdToken $ BigInt.fromInt 10
+                          , Tuple eurToken $ BigInt.fromInt 10
                           ]
                   ]
             }
         )
         ( mkInitialValue
-            [ KnownCurrency { hash: "", friendlyName: "Ada", knownTokens: (JsonNonEmptyList (pure (TokenName { unTokenName: "" }))) }
-            , KnownCurrency { hash: "Currency", friendlyName: "Currencies", knownTokens: JsonNonEmptyList (NonEmptyList ((TokenName { unTokenName: "USDToken" }) :| (Cons (TokenName { unTokenName: "EURToken" }) Nil))) }
+            [ KnownCurrency
+                { hash: ""
+                , friendlyName: "Ada"
+                , knownTokens:
+                    NonEmptyList $ TokenName { unTokenName: "" } :| Nil
+                }
+            , KnownCurrency
+                { hash: "Currency"
+                , friendlyName: "Currencies"
+                , knownTokens:
+                    NonEmptyList
+                      $ TokenName { unTokenName: "USDToken" }
+                      :| TokenName { unTokenName: "EURToken" }
+                      : Nil
+                }
             ]
             (BigInt.fromInt 10)
         )
@@ -248,5 +261,5 @@ usdToken = TokenName { unTokenName: "USDToken" }
 eurToken :: TokenName
 eurToken = TokenName { unTokenName: "EURToken" }
 
-equalJson :: Maybe String -> Maybe Foreign -> Test
-equalJson expected actual = equal expected (encodeJSON <$> actual)
+equalJson :: Maybe String -> Maybe Json -> Test
+equalJson expected actual = equal expected (stringify <$> actual)

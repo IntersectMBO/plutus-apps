@@ -4,10 +4,12 @@ module GistsTests
 
 import Prologue
 import Data.Either (Either(..))
+import Data.Function (on)
 import Data.Show.Generic (genericShow)
 import Gist (GistId(..))
 import Gists.Types (parseGistUrl)
 import Test.Unit (TestSuite, Test, suite, test)
+import Test.Unit.Assert (equal)
 
 all :: TestSuite
 all =
@@ -26,4 +28,4 @@ parseGistUrlTests =
     test "Too long" $ equalGistResult (Left "Could not parse Gist Url") (parseGistUrl "aaaabbbbccccddddeeeeffff000011112")
 
 equalGistResult :: Either String GistId -> Either String GistId -> Test
-equalGistResult = equalWithBiformatter identity genericShow
+equalGistResult = on equal (map genericShow)

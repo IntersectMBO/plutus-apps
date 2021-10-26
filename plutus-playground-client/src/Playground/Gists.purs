@@ -7,13 +7,13 @@ module Playground.Gists
   ) where
 
 import Cursor (Cursor)
+import Data.Argonaut.Extra (encodeStringifyJson)
 import Data.Array (catMaybes)
 import Data.Array as Array
 import Data.Lens (Traversal', view)
 import Data.Lens.Index (ix)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
-import Foreign.Generic (encodeJSON)
 import Gist (Gist, GistFile, NewGist(NewGist), NewGistFile(NewGistFile), gistFiles, gistFileContent)
 import Language.Haskell.Interpreter (SourceCode)
 import Playground.Types (Simulation)
@@ -38,7 +38,7 @@ mkNewGist { source, simulations } =
   gistFiles =
     catMaybes
       [ mkNewGistFile gistSourceFilename <<< unwrap <$> source
-      , Just (mkNewGistFile gistSimulationFilename $ encodeJSON simulations)
+      , Just (mkNewGistFile gistSimulationFilename $ encodeStringifyJson simulations)
       ]
 
   mkNewGistFile _newGistFilename _newGistFileContent =

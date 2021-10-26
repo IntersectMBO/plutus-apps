@@ -14,7 +14,7 @@ import Editor.Lenses (_currentCodeIsCompiled, _feedbackPaneDragStart, _feedbackP
 import Editor.Types (State(State), Action(..), readKeyBindings)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect)
-import Halogen (HalogenM, liftEffect, query, tell)
+import Halogen (HalogenM, liftEffect, tell)
 import Halogen.Monaco (KeyBindings(..))
 import Halogen.Monaco (Message(..), Query(..)) as Monaco
 import Language.Haskell.Interpreter (SourceCode(SourceCode))
@@ -26,6 +26,7 @@ import Prelude (Unit, bind, discard, not, pure, show, unit, void, (+), (-), ($),
 import StaticData (keybindingsLocalStorageKey)
 import Web.Event.Extra (preventDefault, readFileFromDragEvent)
 import Web.UIEvent.MouseEvent (pageY)
+import Type.Proxy (Proxy(..))
 
 initialState :: forall m. MonadEffect m => m State
 initialState =
@@ -49,6 +50,8 @@ handleAction ::
   Key ->
   Action ->
   HalogenM State action ChildSlots output m Unit
+handleAction bufferLocalStorageKey DoNothing = pure unit
+
 handleAction bufferLocalStorageKey Init = do
   binding <- loadKeyBindings
   assign _keyBindings binding
@@ -64,9 +67,9 @@ handleAction bufferLocalStorageKey (HandleEditorMessage (Monaco.TextChanged text
   liftEffect $ saveBuffer bufferLocalStorageKey text
 
 handleAction _ (SetKeyBindings binding) = do
-  void $ query _editorSlot unit $ tell $ Monaco.SetKeyBindings binding
-  void $ query _editorSlot unit $ tell $ Monaco.Focus
-  void $ query _editorSlot unit $ tell $ Monaco.Resize
+  void $ tell _editorSlot unit $ Monaco.SetKeyBindings binding
+  void $ tell _editorSlot unit $ Monaco.Focus
+  void $ tell _editorSlot unit $ Monaco.Resize
   assign _keyBindings binding
   liftEffect $ setItem keybindingsLocalStorageKey (show binding)
 
@@ -75,14 +78,14 @@ handleAction _ ToggleFeedbackPane = modifying _feedbackPaneMinimised not
 handleAction _ (HandleDragEvent event) = liftEffect $ preventDefault event
 
 handleAction _ (ScrollTo position) = do
-  void $ query _editorSlot unit $ tell $ Monaco.SetPosition position
-  void $ query _editorSlot unit $ tell $ Monaco.Focus
+  void $ tell _editorSlot unit $ Monaco.SetPosition position
+  void $ tell _editorSlot unit $ Monaco.Focus
 
 handleAction bufferLocalStorageKey (HandleDropEvent event) = do
   liftEffect $ preventDefault event
   contents <- liftAff $ readFileFromDragEvent event
-  void $ query _editorSlot unit $ tell $ Monaco.SetText contents
-  void $ query _editorSlot unit $ tell $ Monaco.SetPosition { column: 1, lineNumber: 1 }
+  void $ tell _editorSlot unit $ Monaco.SetText contents
+  void $ tell _editorSlot unit $ Monaco.SetPosition { column: 1, lineNumber: 1 }
   saveBuffer bufferLocalStorageKey contents
 
 handleAction _ (SetFeedbackPaneDragStart event) = do

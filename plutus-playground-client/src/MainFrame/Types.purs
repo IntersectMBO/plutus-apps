@@ -20,6 +20,7 @@ import Chain.Types (Action(..))
 import Chain.Types as Chain
 import Clipboard as Clipboard
 import Cursor (Cursor)
+import Data.Array.NonEmpty (fromNonEmpty)
 import Data.Either (Either)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
@@ -75,7 +76,7 @@ derive instance eqView :: Eq View
 derive instance genericView :: Generic View _
 
 instance arbitraryView :: Arbitrary View where
-  arbitrary = Gen.elements (Editor :| [ Simulations, Transactions ])
+  arbitrary = Gen.elements $ fromNonEmpty (Editor :| [ Simulations, Transactions ])
 
 instance showView :: Show View where
   show Editor = "Editor"

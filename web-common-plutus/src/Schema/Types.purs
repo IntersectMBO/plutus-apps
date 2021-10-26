@@ -2,15 +2,16 @@ module Schema.Types where
 
 import Prologue
 import Chain.Types (_value)
+import Data.Argonaut.Core (Json)
+import Data.Argonaut.Encode (encodeJson)
 import Data.Array as Array
-import Data.BigInt.Argonaut (BigInteger)
+import Data.BigInt.Argonaut (BigInt)
 import Data.Foldable (fold, foldMap)
 import Data.Functor.Foldable (Fix(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Lens (_2, _Just, over, set)
 import Data.Lens.Index (ix)
-import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid.Additive (Additive(..))
 import Data.Newtype (unwrap)
@@ -19,8 +20,6 @@ import Data.String.Extra as String
 import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
-import Foreign (Foreign)
-import Foreign.Class (encode)
 import Foreign.Object as FO
 import PlutusTx.AssocMap as AssocMap
 import Plutus.V1.Ledger.Interval (Extended(..), Interval(..), LowerBound(..), UpperBound(..))
@@ -56,7 +55,7 @@ instance showFormEvent :: Show FormEvent where
 
 data FieldEvent
   = SetIntField (Maybe Int)
-  | SetBigIntegerField (Maybe BigInteger)
+  | SetBigIntField (Maybe BigInt)
   | SetBoolField Boolean
   | SetStringField String
   | SetHexField String
@@ -71,9 +70,9 @@ instance showFieldEvent :: Show FieldEvent where
 
 data ActionEvent
   = AddAction (ContractCall FormArgument)
-  | AddWaitAction BigInteger
+  | AddWaitAction BigInt
   | RemoveAction Int
-  | SetWaitTime Int BigInteger
+  | SetWaitTime Int BigInt
   | SetWaitUntilTime Int Slot
   | SetPayToWalletValue Int ValueEvent
   | SetPayToWalletRecipient Int WalletNumber
@@ -133,50 +132,41 @@ defaultTimeRange =
     , ivTo: UpperBound PosInf true
     }
 
-formArgumentToJson :: FormArgument -> Maybe Foreign
+formArgumentToJson :: FormArgument -> Maybe Json
 formArgumentToJson = cata algebra
   where
-  algebra :: Algebra FormArgumentF (Maybe Foreign)
-  algebra FormUnitF = Just $ encode (mempty :: Array Unit)
+  algebra :: Algebra FormArgumentF (Maybe Json)
+  algebra FormUnitF = Just $ encodeJson (mempty :: Array Unit)
 
-  algebra (FormBoolF b) = Just $ encode b
+  algebra (FormBoolF b) = Just $ encodeJson b
 
-  algebra (FormIntF n) = encode <$> n
+  algebra (FormIntF n) = encodeJson <$> n
 
-  algebra (FormIntegerF n) = encode <$> n
+  algebra (FormIntegerF n) = encodeJson <$> n
 
-  algebra (FormStringF str) = encode <$> str
+  algebra (FormStringF str) = encodeJson <$> str
 
-  algebra (FormRadioF _ option) = encode <$> option
+  algebra (FormRadioF _ option) = encodeJson <$> option
 
-  algebra (FormHexF str) = encode <<< String.toHex <$> str
+  algebra (FormHexF str) = encodeJson <<< String.toHex <$> str
 
-  algebra (FormTupleF (Just fieldA) (Just fieldB)) = Just $ encode [ fieldA, fieldB ]
+  algebra (FormTupleF (Just fieldA) (Just fieldB)) = Just $ encodeJson [ fieldA, fieldB ]
 
   algebra (FormTupleF _ _) = Nothing
 
-  algebra (FormMaybeF _ field) = encode <$> field
+  algebra (FormMaybeF _ field) = encodeJson <$> field
 
-  algebra (FormArrayF _ fields) = Just $ encode fields
+  algebra (FormArrayF _ fields) = Just $ encodeJson fields
 
-  algebra (FormObjectF fields) = encodeFields fields
-    where
-    encodeFields :: Array (Tuple String (Maybe Foreign)) -> Maybe Foreign
-    encodeFields xs = map (encode <<< FO.fromFoldable) $ prepareObject xs
+  algebra (FormObjectF fields) = encodeJson <<< FO.fromFoldable <$> traverse sequence fields
 
-    prepareObject :: Array (Tuple String (Maybe Foreign)) -> Maybe (Array (Tuple String Foreign))
-    prepareObject = traverse processTuples
+  algebra (FormValueF x) = Just $ encodeJson x
 
-    processTuples :: Tuple String (Maybe Foreign) -> Maybe (Tuple String Foreign)
-    processTuples = unwrap >>> sequence
-
-  algebra (FormValueF x) = Just $ encode x
-
-  algebra (FormPOSIXTimeRangeF x) = Just $ encode x
+  algebra (FormPOSIXTimeRangeF x) = Just $ encodeJson x
 
   algebra (FormUnsupportedF _) = Nothing
 
-mkInitialValue :: Array KnownCurrency -> BigInteger -> Value
+mkInitialValue :: Array KnownCurrency -> BigInt -> Value
 mkInitialValue currencies initialBalance = Value { getValue: value }
   where
   value =
@@ -186,9 +176,9 @@ mkInitialValue currencies initialBalance = Value { getValue: value }
           ( \(KnownCurrency { hash, knownTokens }) ->
               map
                 ( \tokenName ->
-                    AssocMap.fromTuples
+                    AssocMap.Map
                       [ CurrencySymbol { unCurrencySymbol: hash }
-                          /\ AssocMap.fromTuples [ tokenName /\ Additive initialBalance ]
+                          /\ AssocMap.Map [ tokenName /\ Additive initialBalance ]
                       ]
                 )
                 $ Array.fromFoldable knownTokens
@@ -204,7 +194,7 @@ handleFormEvent initialValue event = cata (Fix <<< algebra event)
   where
   algebra (SetField (SetIntField n)) (FormIntF _) = FormIntF n
 
-  algebra (SetField (SetBigIntegerField n)) (FormIntegerF _) = FormIntegerF n
+  algebra (SetField (SetBigIntField n)) (FormIntegerF _) = FormIntegerF n
 
   algebra (SetField (SetBoolField n)) (FormBoolF _) = FormBoolF n
 
@@ -226,7 +216,7 @@ handleFormEvent initialValue event = cata (Fix <<< algebra event)
 
   algebra (SetSubField n subEvent) (FormArrayF schema fields) = FormArrayF schema $ over (ix n) (handleFormEvent initialValue subEvent) fields
 
-  algebra (SetSubField n subEvent) s@(FormObjectF fields) = FormObjectF $ over (ix n <<< _Newtype <<< _2) (handleFormEvent initialValue subEvent) fields
+  algebra (SetSubField n subEvent) s@(FormObjectF fields) = FormObjectF $ over (ix n <<< _2) (handleFormEvent initialValue subEvent) fields
 
   -- As the code stands, this is the only guarantee we get that every
   -- value in the array will conform to the schema: the fact that we

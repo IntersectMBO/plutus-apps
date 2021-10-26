@@ -4,7 +4,7 @@ import Prologue hiding (div)
 import Bootstrap (btn, btnInfo, btnLink, btnPrimary, btnSmall, col, col10_, col2_, colFormLabel, formCheckInput, formCheckLabel, formCheck_, formControl, formGroup, formGroup_, formRow_, formText, inputGroupAppend_, inputGroupPrepend_, inputGroup_, invalidFeedback_, row_, textMuted, validFeedback_, wasValidated)
 import Bootstrap as Bootstrap
 import Data.Array as Array
-import Data.BigInt.Argonaut as BigInteger
+import Data.BigInt.Argonaut as BigInt
 import Data.Functor.Foldable (Fix(..))
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Int as Int
@@ -57,7 +57,7 @@ actionArgumentField ancestors _ arg@(Fix (FormBoolF b)) =
         , id_ elementId
         , classes (Array.cons formCheckInput (actionArgumentClass ancestors))
         , checked b
-        , onChecked (Just <<< SetField <<< SetBoolField)
+        , onChecked (SetField <<< SetBoolField)
         ]
     , label
         [ class_ formCheckLabel
@@ -77,7 +77,7 @@ actionArgumentField ancestors _ arg@(Fix (FormIntF n)) =
         , value $ maybe "" show n
         , required true
         , placeholder "Int"
-        , onValueInput (Just <<< SetField <<< SetIntField <<< Int.fromString)
+        , onValueInput (SetField <<< SetIntField <<< Int.fromString)
         ]
     , validationFeedback (joinPath ancestors <$> validate arg)
     ]
@@ -90,7 +90,7 @@ actionArgumentField ancestors _ arg@(Fix (FormIntegerF n)) =
         , value $ maybe "" show n
         , required true
         , placeholder "Integer"
-        , onValueInput (Just <<< SetField <<< SetBigIntegerField <<< BigInteger.fromString)
+        , onValueInput (SetField <<< SetBigIntField <<< BigInt.fromString)
         ]
     , validationFeedback (joinPath ancestors <$> validate arg)
     ]
@@ -105,7 +105,7 @@ actionArgumentField ancestors _ arg@(Fix (FormStringF s)) =
         -- so don't mark these fields as required
         , required false
         , placeholder "String"
-        , onValueInput (Just <<< SetField <<< SetStringField)
+        , onValueInput (SetField <<< SetStringField)
         ]
     , validationFeedback (joinPath ancestors <$> validate arg)
     ]
@@ -129,7 +129,7 @@ actionArgumentField ancestors _ arg@(Fix (FormRadioF options s)) =
             , name option
             , value option
             , required (s == Nothing)
-            , onValueInput (Just <<< SetField <<< SetRadioField)
+            , onValueInput (SetField <<< SetRadioField)
             , checked (Just option == s)
             ]
         , label
@@ -147,7 +147,7 @@ actionArgumentField ancestors _ arg@(Fix (FormHexF s)) =
         , value $ fromMaybe "" s
         , required true
         , placeholder "String"
-        , onValueInput (Just <<< SetField <<< SetHexField)
+        , onValueInput (SetField <<< SetHexField)
         ]
     , validationFeedback (joinPath ancestors <$> validate arg)
     ]
@@ -166,7 +166,7 @@ actionArgumentField ancestors isNested (Fix (FormArrayF schema subFields)) =
         (mapWithIndex subFormContainer subFields)
     , button
         [ classes [ btn, btnInfo ]
-        , onClick $ const $ Just AddSubField
+        , onClick $ const AddSubField
         ]
         [ icon Plus ]
     ]
@@ -180,7 +180,7 @@ actionArgumentField ancestors isNested (Fix (FormArrayF schema subFields)) =
               , col2_
                   [ button
                       [ classes [ btn, btnLink ]
-                      , onClick $ const $ Just (RemoveSubField i)
+                      , onClick $ const $ RemoveSubField i
                       ]
                       [ icon Trash ]
                   ]
@@ -189,7 +189,7 @@ actionArgumentField ancestors isNested (Fix (FormArrayF schema subFields)) =
 
 actionArgumentField ancestors isNested (Fix (FormObjectF subFields)) =
   div [ nesting isNested ]
-    (mapWithIndex (\i (Tuple field) -> map (SetSubField i) (subForm field)) subFields)
+    (mapWithIndex (\i field -> map (SetSubField i) (subForm field)) subFields)
   where
   subForm (name /\ arg) =
     ( formGroup_
@@ -251,7 +251,7 @@ actionArgumentField ancestors isNested (Fix (FormPOSIXTimeRangeF interval)) =
   extentFieldInclusionButton inclusionLens inclusionIcon exclusionIcon =
     button
       [ classes [ btn, btnSmall, btnPrimary ]
-      , onClick $ const $ Just $ SetField $ SetPOSIXTimeRangeField $ over inclusionLens not interval
+      , onClick $ const $ SetField $ SetPOSIXTimeRangeField $ over inclusionLens not interval
       ]
       [ icon
           $ if view inclusionLens interval then
@@ -271,7 +271,7 @@ actionArgumentField ancestors isNested (Fix (FormPOSIXTimeRangeF interval)) =
             else
               btnInfo
           ]
-      , onClick $ const $ Just $ SetField $ SetPOSIXTimeRangeField $ set extensionLens value interval
+      , onClick $ const $ SetField $ SetPOSIXTimeRangeField $ set extensionLens value interval
       ]
       [ icon Infinity ]
 
@@ -285,7 +285,13 @@ actionArgumentField ancestors isNested (Fix (FormPOSIXTimeRangeF interval)) =
           $ case view extensionLens interval of
               Finite (POSIXTime time) -> show time.getPOSIXTime
               _ -> mempty
-      , onValueInput $ map (\n -> SetField (SetPOSIXTimeRangeField (set extensionLens (Finite (POSIXTime { getPOSIXTime: n })) interval))) <<< BigInteger.fromString
+      , onValueInput $ BigInt.fromString
+          >>> case _ of
+              Just n ->
+                SetField
+                  $ SetPOSIXTimeRangeField
+                  $ set extensionLens (Finite (POSIXTime { getPOSIXTime: n })) interval
+              Nothing -> SetField $ SetPOSIXTimeRangeField interval
       ]
 
 actionArgumentField ancestors isNested (Fix (FormValueF value)) =

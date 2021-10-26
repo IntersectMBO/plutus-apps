@@ -37,7 +37,7 @@ let additions =
         , "typelevel-prelude"
         ]
     , repo = "https://github.com/input-output-hk/purescript-bridge-json-helpers.git"
-    , version = "68265aaacc1a56c00a7625d424ff13d619681e5e"
+    , version = "16de087fde6e2d07e6bdae51383131ab81efa82d"
     }
   , web-common =
       { dependencies =
@@ -101,7 +101,7 @@ let additions =
           , "web-uievents"
           ]
     , repo = "https://github.com/input-output-hk/web-common.git"
-    , version = "048b6423f926a84b3587827ac89442e465fcdbf9"
+    , version = "8f912caf709097c81328502f660b2278f171a4f9"
     }
   , matryoshka =
     { dependencies =

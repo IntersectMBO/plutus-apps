@@ -11,7 +11,7 @@ import Bootstrap (btn, card, cardHeader, cardHeader_, cardBody_, customSelect, e
 import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Lens (_Right, preview, to, view)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.String as String
 import Editor.Lenses (_warnings)
 import Editor.State (initEditor)
@@ -35,10 +35,7 @@ editorPreferencesSelect :: forall p. KeyBindings -> HTML p Action
 editorPreferencesSelect active =
   select
     [ class_ customSelect
-    , onSelectedIndexChange
-        ( \index ->
-            SetKeyBindings <$> Array.index allKeyBindings index
-        )
+    , onSelectedIndexChange $ maybe DoNothing SetKeyBindings <<< Array.index allKeyBindings
     ]
     (editor <$> allKeyBindings)
   where
@@ -59,7 +56,7 @@ compileButton :: forall p. WebCompilationResult -> HTML p HAction
 compileButton compilationResult =
   button
     [ classes [ btn, ClassName "btn-green" ]
-    , onClick $ const $ Just CompileProgram
+    , onClick $ const CompileProgram
     , disabled (isLoading compilationResult)
     ]
     [ btnText ]
@@ -72,7 +69,7 @@ simulateButton :: forall p. Boolean -> WebCompilationResult -> HTML p HAction
 simulateButton currentCodeIsCompiled compilationResult =
   button
     [ classes [ btn, ClassName "btn-turquoise" ]
-    , onClick $ const $ Just (ChangeView Simulations)
+    , onClick $ const $ ChangeView Simulations
     , disabled isDisabled
     ]
     [ text "Simulate" ]
@@ -85,8 +82,8 @@ editorPane :: forall m. MonadAff m => Maybe String -> Key -> State -> ComponentH
 editorPane initialContents bufferLocalStorageKey editorState@(State { keyBindings }) =
   div
     [ class_ (ClassName "code-editor")
-    , onDragOver $ Just <<< HandleDragEvent
-    , onDrop $ Just <<< HandleDropEvent
+    , onDragOver HandleDragEvent
+    , onDrop HandleDropEvent
     -- This is not the natural place to have these listeners. But see note [1] below.
     , onMouseMove feedbackPaneResizeMouseMoveHandler
     , onMouseUp feedbackPaneResizeMouseUpHandler
@@ -96,7 +93,7 @@ editorPane initialContents bufferLocalStorageKey editorState@(State { keyBinding
         unit
         (monacoComponent (HM.settings (initEditor initialContents bufferLocalStorageKey editorState)))
         unit
-        (Just <<< HandleEditorMessage)
+        HandleEditorMessage
     , case keyBindings of
         Vim -> pre [ id_ "statusline" ] [ nbsp ]
         _ -> pre [ id_ "statusline", class_ $ ClassName "hidden" ] [ nbsp ]
@@ -114,7 +111,7 @@ editorFeedback editorState@(State { currentCodeIsCompiled, feedbackPaneExtend, f
         [ classes feedbackPaneClasses ]
         [ div
             [ class_ $ ClassName "editor-feedback-resize-bar"
-            , onMouseDown $ \event -> Just $ SetFeedbackPaneDragStart event
+            , onMouseDown SetFeedbackPaneDragStart
             -- Note [1]: This is the natural place to have these listeners. But because the mouse
             -- can - and probably will - move faster than this resize bar, they also need to be on
             -- the editor pane (to catch when the mouse moves up faster), and on the feedback
@@ -161,7 +158,7 @@ editorFeedback editorState@(State { currentCodeIsCompiled, feedbackPaneExtend, f
   minMaxButton =
     a
       [ class_ btn
-      , onClick $ const $ Just ToggleFeedbackPane
+      , onClick $ const ToggleFeedbackPane
       ]
       [ icon
           $ if feedbackPaneMinimised then
@@ -186,11 +183,11 @@ editorFeedback editorState@(State { currentCodeIsCompiled, feedbackPaneExtend, f
           )
           compilationResult
 
-feedbackPaneResizeMouseMoveHandler :: MouseEvent -> Maybe Action
-feedbackPaneResizeMouseMoveHandler event = Just $ FixFeedbackPaneExtend $ pageY event
+feedbackPaneResizeMouseMoveHandler :: MouseEvent -> Action
+feedbackPaneResizeMouseMoveHandler event = FixFeedbackPaneExtend $ pageY event
 
-feedbackPaneResizeMouseUpHandler :: MouseEvent -> Maybe Action
-feedbackPaneResizeMouseUpHandler event = Just $ ClearFeedbackPaneDragStart
+feedbackPaneResizeMouseUpHandler :: MouseEvent -> Action
+feedbackPaneResizeMouseUpHandler = const ClearFeedbackPaneDragStart
 
 interpreterErrorPane :: forall p. InterpreterError -> Array (HTML p Action)
 interpreterErrorPane (TimeoutError error) = [ listGroupItem_ [ div_ [ text error ] ] ]
@@ -213,7 +210,7 @@ compilationErrorPane (CompilationError error) =
         [ text $ "Compilation Error, Line " <> show error.row <> ", Column " <> show error.column
         , nbsp
         , a
-            [ onClick $ const $ Just $ ScrollTo { lineNumber: error.row, column: error.column } ]
+            [ onClick $ const $ ScrollTo { lineNumber: error.row, column: error.column } ]
             [ text "(jump)" ]
         ]
     , cardBody_

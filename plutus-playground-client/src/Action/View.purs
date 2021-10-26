@@ -78,7 +78,7 @@ actionPane actionDrag wallets index action =
                     [ text $ show (index + 1) ]
                 , button
                     [ classes [ btn, floatRight, ClassName "close-button" ]
-                    , onClick $ const $ Just $ ModifyActions $ RemoveAction index
+                    , onClick $ const $ ModifyActions $ RemoveAction index
                     ]
                     [ icon Close ]
                 , actionPaneBody index action
@@ -171,7 +171,7 @@ waitTypeRadioInputs index wait =
         [ classes [ formCheck, formCheckInline ] ]
         [ input
             ( case wait of
-                Left slot -> baseInputProps <> [ id_ waitForId, onChange $ const $ Just $ ModifyActions $ SetWaitTime index $ view _InSlot slot ]
+                Left slot -> baseInputProps <> [ id_ waitForId, onChange $ const $ ModifyActions $ SetWaitTime index $ view _InSlot slot ]
                 Right _ -> baseInputProps <> [ id_ waitForId, checked true ]
             )
         , label
@@ -184,7 +184,7 @@ waitTypeRadioInputs index wait =
         [ classes [ formCheck, formCheckInline ] ]
         [ input
             ( case wait of
-                Right blocks -> baseInputProps <> [ id_ waitUntilId, onChange $ const $ Just $ ModifyActions $ SetWaitUntilTime index $ review _InSlot blocks ]
+                Right blocks -> baseInputProps <> [ id_ waitUntilId, onChange $ const $ ModifyActions $ SetWaitUntilTime index $ review _InSlot blocks ]
                 Left _ -> baseInputProps <> [ id_ waitForId, checked true ]
             )
         , label
@@ -208,7 +208,7 @@ addWaitActionPane index =
         [ classes [ actionClass, ClassName "add-wait-action" ] ]
         [ div
             ( [ class_ card
-              , onClick $ const $ Just $ ChangeSimulation $ ModifyActions $ AddWaitAction $ BigInt.fromInt 10
+              , onClick $ const $ ChangeSimulation $ ModifyActions $ AddWaitAction $ BigInt.fromInt 10
               ]
                 <> dragTargetProperties index
             )
@@ -234,8 +234,8 @@ dragSourceProperties ::
     )
 dragSourceProperties index =
   [ draggable true
-  , onDragStart $ dragAndDropAction index DragStart
-  , onDragEnd $ dragAndDropAction index DragEnd
+  , onDragStart $ ActionDragAndDrop index DragStart
+  , onDragEnd $ ActionDragAndDrop index DragEnd
   ]
 
 dragTargetProperties ::
@@ -252,18 +252,15 @@ dragTargetProperties ::
         HAction
     )
 dragTargetProperties index =
-  [ onDragEnter $ dragAndDropAction index DragEnter
-  , onDragOver $ dragAndDropAction index DragOver
-  , onDragLeave $ dragAndDropAction index DragLeave
-  , onDrop $ dragAndDropAction index Drop
+  [ onDragEnter $ ActionDragAndDrop index DragEnter
+  , onDragOver $ ActionDragAndDrop index DragOver
+  , onDragLeave $ ActionDragAndDrop index DragLeave
+  , onDrop $ ActionDragAndDrop index Drop
   ]
-
-dragAndDropAction :: Int -> DragAndDropEventType -> DragEvent -> Maybe HAction
-dragAndDropAction index eventType = Just <<< ActionDragAndDrop index eventType
 
 -- defaults to 1 because all the BigInt fields here have a minimum value of 1
 onBigIntInput :: forall i r. (BigInt -> i) -> IProp ( onInput :: Event, value :: String | r ) i
-onBigIntInput f = onValueInput $ Just <<< f <<< fromMaybe one <<< BigInt.fromString
+onBigIntInput f = onValueInput $ f <<< fromMaybe one <<< BigInt.fromString
 
 actionClass :: ClassName
 actionClass = ClassName "action"

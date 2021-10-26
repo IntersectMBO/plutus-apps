@@ -50,7 +50,7 @@ import MainFrame.Lenses (_balancesChartSlot, _editorSlot, _editorState)
 import MainFrame.Types (ChildSlots, HAction, State, WebData)
 import Monaco (IMarkerData)
 import Network.RemoteData as RemoteData
-import Playground.Server (SPParams_)
+import Playground.Server (class HasSPSettings, SPSettings_)
 import Playground.Server as Server
 import Playground.Types (CompilationResult, Evaluation, EvaluationResult, PlaygroundError)
 import Prelude (class Applicative, class Apply, class Bind, class Functor, class Monad, Unit, Void, bind, identity, map, pure, unit, void, ($), (<$>), (<<<))
@@ -125,7 +125,8 @@ runHalogenApp :: forall m a. HalogenApp m a -> HalogenM State HAction ChildSlots
 runHalogenApp = unwrap
 
 instance monadAppHalogenApp ::
-  ( MonadAsk (SPSettings_ SPParams_) m
+  ( HasSPSettings env
+  , MonadAsk env m
   , MonadEffect m
   , MonadAff m
   ) =>
@@ -133,7 +134,7 @@ instance monadAppHalogenApp ::
   editorGetContents = do
     mText <- wrap $ query _editorSlot unit $ Monaco.GetText identity
     pure $ map SourceCode mText
-  editorSetContents (SourceCode contents) cursor = wrap $ void $ query _editorSlot unit $ tell $ Monaco.SetText contents
+  editorSetContents (SourceCode contents) cursor = wrap $ void $ tell _editorSlot unit $ Monaco.SetText contents
   editorHandleAction action = wrap $ HE.imapState _editorState $ Editor.handleAction bufferLocalStorageKey action
   editorSetAnnotations annotations = wrap $ void $ query _editorSlot unit $ Monaco.SetModelMarkers annotations identity
   setDropEffect dropEffect event = wrap $ liftEffect $ DataTransfer.setDropEffect dropEffect $ dataTransfer event
