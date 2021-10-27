@@ -650,7 +650,6 @@ data ToCardanoError
     | MissingMintingPolicyRedeemer
     | MissingMintingPolicy
     | ScriptPurposeNotSupported P.ScriptTag
-    | PublicKeyInputsNotSupported
     | Tag String ToCardanoError
     deriving stock (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -667,7 +666,6 @@ instance Pretty ToCardanoError where
     pretty MissingMintingPolicyRedeemer       = "Missing minting policy redeemer"
     pretty MissingMintingPolicy               = "Missing minting policy"
     pretty (ScriptPurposeNotSupported p)      = "Script purpose not supported:" <+> viaShow p
-    pretty PublicKeyInputsNotSupported        = "Public key inputs not supported"
     pretty (Tag t err)                        = pretty t <> colon <+> pretty err
 
 zeroExecutionUnits :: C.ExecutionUnits

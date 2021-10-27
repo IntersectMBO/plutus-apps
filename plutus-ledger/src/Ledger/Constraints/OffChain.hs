@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeOperators             #-}
 {-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE ViewPatterns              #-}
 module Ledger.Constraints.OffChain(
     -- * Lookups
     ScriptLookups(..)
@@ -32,6 +33,9 @@ module Ledger.Constraints.OffChain(
     , utxoIndex
     , validityTimeRange
     , emptyUnbalancedTx
+    , ScriptOutput(..)
+    , toScriptOutput
+    , fromScriptOutput
     , MkTxError(..)
     , mkTx
     , mkSomeTx
@@ -123,14 +127,9 @@ instance Monoid (ScriptLookups a) where
 --   instance's validator.
 typedValidatorLookups :: TypedValidator a -> ScriptLookups a
 typedValidatorLookups inst =
-    ScriptLookups
+    mempty
         { slMPS = Map.singleton (Scripts.forwardingMintingPolicyHash inst) (Scripts.forwardingMintingPolicy inst)
-        , slTxOutputs = Map.empty
-        , slOtherScripts = Map.empty
-        , slOtherData = Map.empty
-        , slPubKeyHashes = Map.empty
         , slTypedValidator = Just inst
-        , slOwnPubkeyHash = Nothing
         }
 
 -- | A script lookups value that uses the map of unspent outputs to resolve
@@ -163,6 +162,29 @@ pubKey pk = mempty { slPubKeyHashes = Map.singleton (pubKeyHash pk) pk }
 ownPubKeyHash :: PubKeyHash -> ScriptLookups a
 ownPubKeyHash ph = mempty { slOwnPubkeyHash = Just ph}
 
+data ScriptOutput =
+    ScriptOutput
+        { scriptOutputValidatorHash :: ValidatorHash
+        , scriptOutputValue         :: Value
+        , scriptOutputDatumHash     :: DatumHash
+        }
+    deriving stock (Eq, Generic, Show)
+    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+
+toScriptOutput :: ChainIndexTxOut -> Maybe ScriptOutput
+toScriptOutput (Tx.ScriptChainIndexTxOut _ validatorOrHash datumOrHash v)
+    = Just $ ScriptOutput (either id validatorHash validatorOrHash) v (either id datumHash datumOrHash)
+toScriptOutput Tx.PublicKeyChainIndexTxOut{}
+    = Nothing
+
+fromScriptOutput :: ScriptOutput -> ChainIndexTxOut
+fromScriptOutput (ScriptOutput vh v dh) =
+    Tx.ScriptChainIndexTxOut (Address.scriptHashAddress vh) (Left vh) (Left dh) v
+
+instance Pretty ScriptOutput where
+    pretty ScriptOutput{scriptOutputValidatorHash, scriptOutputValue} =
+        hang 2 $ vsep ["-" <+> pretty scriptOutputValue <+> "addressed to", pretty scriptOutputValidatorHash]
+
 -- | An unbalanced transaction. It needs to be balanced and signed before it
 --   can be submitted to the ledeger. See note [Submitting transactions from
 --   Plutus contracts] in 'Plutus.Contract.Wallet'.
@@ -170,7 +192,7 @@ data UnbalancedTx =
     UnbalancedTx
         { unBalancedTxTx                  :: Tx
         , unBalancedTxRequiredSignatories :: Map PubKeyHash (Maybe PubKey)
-        , unBalancedTxUtxoIndex           :: Map TxOutRef TxOut
+        , unBalancedTxUtxoIndex           :: Map TxOutRef ScriptOutput
         , unBalancedTxValidityTimeRange   :: POSIXTimeRange
         }
     deriving stock (Eq, Generic, Show)
@@ -370,7 +392,7 @@ updateUtxoIndex
     => m ()
 updateUtxoIndex = do
     ScriptLookups{slTxOutputs} <- ask
-    unbalancedTx . utxoIndex <>= fmap Tx.toTxOut slTxOutputs
+    unbalancedTx . utxoIndex <>= Map.mapMaybe toScriptOutput slTxOutputs
 
 -- | Add a typed input, checking the type of the output it spends. Return the value
 --   of the spent output.

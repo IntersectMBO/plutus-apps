@@ -25,7 +25,7 @@ import           Ledger                                    (Address, BlockId, Ch
                                                             Signature, StakeValidator, Tx, TxId, TxIn, TxInType, TxOut,
                                                             TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Validator)
 import           Ledger.Ada                                (Ada)
-import           Ledger.Constraints.OffChain               (MkTxError, UnbalancedTx)
+import           Ledger.Constraints.OffChain               (MkTxError, ScriptOutput, UnbalancedTx)
 import           Ledger.Credential                         (Credential, StakingCredential)
 import           Ledger.DCert                              (DCert)
 import           Ledger.Index                              (ExCPU, ExMemory, ScriptType, ScriptValidationEvent,
@@ -422,6 +422,7 @@ ledgerTypes =
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @WriteBalancedTxResponse)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @ActiveEndpoint)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @UnbalancedTx)
+    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ScriptOutput)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @TxValidity)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @TxOutState)
     , (equal <*> (genericShow <*> mkSumType)) (Proxy @(RollbackState A))
