@@ -22,7 +22,7 @@ $ cabal build
 ### Nix
 
 ```
-$ nix-build ../default.nix -A plutus.haskell.packages.plutus-pab
+$ nix-build ../default.nix -A plutus-apps.haskell.packages.plutus-pab
 ```
 
 ## Running
