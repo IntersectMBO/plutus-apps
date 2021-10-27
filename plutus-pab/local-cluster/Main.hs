@@ -219,7 +219,7 @@ launchPAB passPhrase dir walletUrl (RunningNode socketPath _block0 (_gp, _vData)
                 { nodeServerConfig = def{mscSocketPath=nodeSocketFile socketPath,mscNodeMode=AlonzoNode,mscNetworkId=networkID}
                 , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
                 , chainIndexConfig = def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
-                , walletServerConfig = def{Wallet.Config.baseUrl=WalletUrl walletUrl{baseUrlPath="/v2"}}
+                , walletServerConfig = def{Wallet.Config.baseUrl=WalletUrl walletUrl}
                 }
     -- TODO: For some reason this has to be async - program terminates if it's done synchronously???
     void . async $ PAB.Run.runWithOpts @ExampleContracts handleBuiltin (Just config) opts{cmd=Migrate}

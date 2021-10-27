@@ -245,6 +245,7 @@ executable plutus-pab-examples
     hs-source-dirs:   examples
     other-modules:
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         ContractExample.WaitForTx
         ContractExample
@@ -307,6 +308,7 @@ executable plutus-pab-local-cluster
     other-modules:
         ContractExample
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         ContractExample.WaitForTx
     default-language: Haskell2010
@@ -367,6 +369,7 @@ executable plutus-pab-test-psgenerator
     main-is:          TestPSGenerator.hs
     other-modules:
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.Effects.Contract.ContractTest
         Plutus.PAB.Simulator.Test
@@ -461,6 +464,7 @@ test-suite plutus-pab-test-full
         ContractExample
         ContractExample.WaitForTx
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.CoreSpec
         Plutus.PAB.CliSpec
@@ -523,6 +527,7 @@ test-suite plutus-pab-test-full-long-running
         ContractExample
         ContractExample.WaitForTx
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.CliSpec
         Plutus.PAB.Effects.Contract.ContractTest

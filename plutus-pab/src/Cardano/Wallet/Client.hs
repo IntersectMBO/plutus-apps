@@ -51,14 +51,14 @@ import           Plutus.PAB.Monitoring.PABLogMsg              (WalletClientMsg (
 import           Plutus.V1.Ledger.Crypto                      (PubKeyHash (..))
 import qualified PlutusTx.AssocMap                            as Map
 import           PlutusTx.Builtins.Internal                   (BuiltinByteString (..))
-import           Servant                                      ((:<|>) (..))
+import           Servant                                      ((:<|>) (..), (:>))
 import           Servant.Client                               (ClientEnv, ClientError, ClientM, client, runClientM)
 import           Wallet.Effects                               (WalletEffect (..))
 import           Wallet.Emulator.Error                        (WalletAPIError (..))
 import           Wallet.Emulator.Wallet                       (Wallet (..), WalletId (..))
 
 getWalletKey :: C.ApiT C.WalletId -> C.ApiT C.Role -> C.ApiT C.DerivationIndex -> Maybe Bool -> ClientM ApiVerificationKeyShelley
-getWalletKey :<|> _ :<|> _ :<|> _ = client (Proxy @C.WalletKeys)
+getWalletKey :<|> _ :<|> _ :<|> _ = client (Proxy @("v2" :> C.WalletKeys))
 
 handleWalletClient
     :: forall m effs.
