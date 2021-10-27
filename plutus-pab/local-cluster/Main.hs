@@ -25,13 +25,19 @@ import           Cardano.CLI                                (LogOutput (..), Por
                                                              getPrometheusURL, withLoggingNamed)
 import qualified Cardano.ChainIndex.Types                   as PAB.CI
 import           Cardano.Launcher.Node                      (nodeSocketFile)
+import           Cardano.Mnemonic                           (SomeMnemonic (..))
 import           Cardano.Node.Types                         (MockServerConfig (..), NodeMode (AlonzoNode))
 import           Cardano.Startup                            (installSignalHandlers, setDefaultFilePermissions,
                                                              withUtf8Encoding)
-import           Cardano.Wallet.Api.Types                   (EncodeAddress (..))
+import qualified Cardano.Wallet.Api.Client                  as WalletClient
+import           Cardano.Wallet.Api.Server                  (Listen (..))
+import           Cardano.Wallet.Api.Types                   (ApiMnemonicT (..), ApiT (..), ApiWallet (..),
+                                                             EncodeAddress (..), WalletOrAccountPostData (..))
+import qualified Cardano.Wallet.Api.Types                   as Wallet.Types
 import           Cardano.Wallet.Logging                     (stdoutTextTracer, trMessageText)
-import           Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (..))
+import           Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (..), Passphrase (..))
 import           Cardano.Wallet.Primitive.SyncProgress      (SyncTolerance (..))
+import           Cardano.Wallet.Primitive.Types             (WalletName (..))
 import           Cardano.Wallet.Primitive.Types.Coin        (Coin (..))
 import           Cardano.Wallet.Shelley                     (SomeNetworkDiscriminant (..), serveWallet, setupTracers,
                                                              tracerSeverities)
@@ -40,7 +46,7 @@ import           Cardano.Wallet.Shelley.Launch.Cluster      (ClusterLog (..), Cr
                                                              localClusterConfigFromEnv, moveInstantaneousRewardsTo,
                                                              oneMillionAda, sendFaucetAssetsTo, sendFaucetFundsTo,
                                                              testMinSeverityFromEnv, tokenMetadataServerFromEnv,
-                                                             walletListenFromEnv, walletMinSeverityFromEnv, withCluster)
+                                                             walletMinSeverityFromEnv, withCluster)
 import           ContractExample                            (ExampleContracts)
 import           Control.Arrow                              (first)
 import           Control.Concurrent                         (threadDelay)
@@ -50,9 +56,11 @@ import           Control.Monad                              (void, when)
 import           Control.Tracer                             (traceWith)
 import           Data.Default                               (Default (def))
 import           Data.Proxy                                 (Proxy (..))
+import           Data.String                                (IsString (..))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Data.Text.Class                            (ToText (..))
+import           Network.HTTP.Client                        (defaultManagerSettings, newManager)
 import qualified Plutus.ChainIndex.App                      as ChainIndex
 import           Plutus.ChainIndex.ChainIndexLog            (ChainIndexLog)
 import qualified Plutus.ChainIndex.Config                   as CI
@@ -62,13 +70,15 @@ import           Plutus.PAB.Effects.Contract.Builtin        (handleBuiltin)
 import qualified Plutus.PAB.Run                             as PAB.Run
 import           Plutus.PAB.Run.Command                     (ConfigCommand (..))
 import           Plutus.PAB.Run.CommandParser               (AppOpts (..))
+import qualified Plutus.PAB.Run.CommandParser               as PAB.Command
 import           Plutus.PAB.Types                           (Config (..), DbConfig (..))
 import qualified Plutus.PAB.Types                           as PAB.Config
-import           Servant.Client                             (BaseUrl (..), Scheme (..))
+import           Servant.Client                             (BaseUrl (..), Scheme (..), mkClientEnv, runClientM)
 import           System.Directory                           (createDirectory)
 import           System.FilePath                            ((</>))
 import           Test.Integration.Faucet                    (genRewardAccounts, maryIntegrationTestAssets, mirMnemonics,
                                                              shelleyIntegrationTestFunds)
+import qualified Test.Integration.Faucet                    as Faucet
 import           Test.Integration.Framework.DSL             (fixturePassphrase)
 
 data LogOutputs =
@@ -130,14 +140,17 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
 
     whenReady dir trCluster LogOutputs{loWallet} rn@(RunningNode socketPath block0 (gp, vData)) = do
         withLoggingNamed "cardano-wallet" loWallet $ \(sb, (cfg, tr)) -> do
+            let walletHost = "127.0.0.1"
+                walletPort = 46493
+
             launchChainIndex dir rn >>= launchPAB fixturePassphrase dir rn
+            void $ async $ restoreWallets walletHost walletPort
 
             ekgEnabled >>= flip when (EKG.plugin cfg tr sb >>= loadPlugin sb)
 
             let tracers = setupTracers (tracerSeverities (Just Debug)) tr
             let db = dir </> "wallets"
             createDirectory db
-            listen <- walletListenFromEnv
             tokenMetadataServer <- tokenMetadataServerFromEnv
 
             prometheusUrl <- (maybe "none"
@@ -155,8 +168,8 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
                 (SyncTolerance 10)
                 (Just db)
                 Nothing
-                "127.0.0.1"
-                listen
+                (fromString walletHost)
+                (ListenOnPort walletPort)
                 Nothing
                 Nothing
                 tokenMetadataServer
@@ -190,7 +203,7 @@ launchPAB ::
             RunningNode -> -- ^ Socket path
                 ChainIndexPort -> IO ()
 launchPAB passPhrase dir (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
-    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, passphrase = Just passPhrase}
+    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
         networkID = NetworkIdWrapper CAPI.Mainnet
         config =
             PAB.Config.defaultConfig
@@ -202,6 +215,32 @@ launchPAB passPhrase dir (RunningNode socketPath _block0 (_gp, _vData)) (ChainIn
     void . async $ PAB.Run.runWithOpts @ExampleContracts handleBuiltin (Just config) opts{cmd=Migrate}
     sleep 2
     void . async $ PAB.Run.runWithOpts @ExampleContracts handleBuiltin (Just config) opts{cmd=PABWebserver}
+
+{-| Set up wallets
+-}
+restoreWallets :: String -> Int -> IO ()
+restoreWallets walletHost walletPort = do
+    sleep 20
+    manager <- newManager defaultManagerSettings
+    let baseUrl = BaseUrl{baseUrlScheme=Http,baseUrlHost=walletHost,baseUrlPort=walletPort,baseUrlPath=""}
+        clientEnv = mkClientEnv manager baseUrl
+        mnemonic :: ApiMnemonicT '[15, 18, 21, 24] = ApiMnemonicT $ SomeMnemonic $ head Faucet.seqMnemonics
+        wpData    = Wallet.Types.WalletPostData
+                        Nothing
+                        mnemonic
+                        Nothing
+                        (ApiT $ WalletName "plutus-wallet")
+                        (ApiT $ Passphrase $ fromString $ T.unpack fixturePassphrase)
+        walletAcc = WalletOrAccountPostData{postData=Left wpData}
+    result <- flip runClientM clientEnv $ (WalletClient.postWallet WalletClient.walletClient) walletAcc
+    case result of
+        Left err -> do
+            putStrLn "restoreWallet failed"
+            putStrLn $ "Error: " <> show err
+            sleep 10
+            restoreWallets walletHost walletPort
+        Right (ApiWallet (ApiT i) _ _ _ _ _ _ _ _) -> do
+            putStrLn $ "Restored wallet: " <> show i
 
 sleep :: Int -> IO ()
 sleep n = threadDelay $ n * 1_000_000

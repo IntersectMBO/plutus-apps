@@ -353,6 +353,9 @@ executable plutus-pab-local-cluster
         , openapi3
         , async
         , servant-client
+        , http-client
+        , servant-client-core
+        , cardano-addresses
 
 executable plutus-pab-test-psgenerator
     default-language: Haskell2010
