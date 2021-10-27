@@ -32,13 +32,10 @@ import           Control.Monad.Freer.Error                    (Error, throwError
 import           Control.Monad.Freer.Reader                   (Reader, ask)
 import           Control.Monad.IO.Class                       (MonadIO (..))
 import           Data.Aeson                                   (toJSON)
-import           Data.Aeson.Extras                            (tryDecode)
-import qualified Data.Aeson.Types                             as Aeson
 import           Data.Bifunctor                               (bimap)
 import           Data.Coerce                                  (coerce)
 import           Data.Foldable                                (toList)
 import           Data.Functor                                 (void)
-import qualified Data.HashMap.Strict                          as Aeson
 import           Data.Proxy                                   (Proxy (Proxy))
 import           Data.Quantity                                (Quantity (..))
 import           Data.Text                                    (pack)
@@ -101,19 +98,20 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
                     case res of
                         -- TODO: use the right error case based on http error code
                         Left err -> pure $ Left $ OtherError $ pack $ show err
-                        Right (Aeson.Object (Aeson.toList -> [("transaction", Aeson.String hexCborTx)])) -> case tryDecode hexCborTx of
-                            Left _ -> throwError $ OtherError "Received unexpected JSON data (invalid hex-encoded bytes) from transactions-balance endpoint"
-                            Right cborTx ->
-                                either throwOtherError (pure . Right . Left . (`SomeTx` Cardano.Api.AlonzoEraInCardanoMode)) $
-                                    Cardano.Api.deserialiseFromCBOR (Cardano.Api.proxyToAsType Proxy) cborTx
-                        Right _ -> throwError $ OtherError "Received unexpected JSON data from transactions-balance endpoint"
+                        Right r  -> pure (Right $ fromApiSerialisedTransaction r)
+                        -- Right (Aeson.Object (Aeson.toList -> [("transaction", Aeson.String hexCborTx)])) -> case tryDecode hexCborTx of
+                        --     Left _ -> throwError $ OtherError "Received unexpected JSON data (invalid hex-encoded bytes) from transactions-balance endpoint"
+                        --     Right cborTx ->
+                        --         either throwOtherError (pure . Right . Left . (`SomeTx` Cardano.Api.AlonzoEraInCardanoMode)) $
+                        --             Cardano.Api.deserialiseFromCBOR (Cardano.Api.proxyToAsType Proxy) cborTx
+                        -- Right _ -> throwError $ OtherError "Received unexpected JSON data from transactions-balance endpoint"
 
         WalletAddSignature tx -> do
             sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
             passphrase <- maybe (throwError $ OtherError "Wallet passphrase required") pure mpassphrase
             lenientPP <- either throwOtherError pure $ fromText passphrase
-            let postData = C.ApiSignTransactionPostData (C.ApiT sealedTx) (C.ApiT lenientPP) Nothing
-            fmap fromApiSignedTransaction . runClient $ C.signTransaction C.transactionClient (C.ApiT walletId) postData
+            let postData = C.ApiSignTransactionPostData (C.ApiT sealedTx) (C.ApiT lenientPP)
+            fmap fromApiSerialisedTransaction . runClient $ C.signTransaction C.transactionClient (C.ApiT walletId) postData
 
         TotalFunds -> do
             C.ApiWallet{balance, assets} <- runClient $ C.getWallet C.walletClient (C.ApiT walletId)
@@ -124,8 +122,8 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
 tokenMapToValue :: C.TokenMap -> Value
 tokenMapToValue = Value . Map.fromList . fmap (bimap coerce (Map.fromList . fmap (bimap coerce (fromIntegral . C.unTokenQuantity)) . toList)) . C.toNestedList
 
-fromApiSignedTransaction :: C.ApiSignedTransaction -> CardanoTx
-fromApiSignedTransaction (C.ApiSignedTransaction (C.ApiT sealedTx) _ _) = Left $ case C.cardanoTx sealedTx of
+fromApiSerialisedTransaction :: C.ApiSerialisedTransaction -> CardanoTx
+fromApiSerialisedTransaction (C.ApiSerialisedTransaction (C.ApiT sealedTx)) = Left $ case C.cardanoTx sealedTx of
     Cardano.Api.InAnyCardanoEra Cardano.Api.ByronEra tx   -> SomeTx tx Cardano.Api.ByronEraInCardanoMode
     Cardano.Api.InAnyCardanoEra Cardano.Api.ShelleyEra tx -> SomeTx tx Cardano.Api.ShelleyEraInCardanoMode
     Cardano.Api.InAnyCardanoEra Cardano.Api.AllegraEra tx -> SomeTx tx Cardano.Api.AllegraEraInCardanoMode

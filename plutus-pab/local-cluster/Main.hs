@@ -69,6 +69,7 @@ import           System.Directory                           (createDirectory)
 import           System.FilePath                            ((</>))
 import           Test.Integration.Faucet                    (genRewardAccounts, maryIntegrationTestAssets, mirMnemonics,
                                                              shelleyIntegrationTestFunds)
+import           Test.Integration.Framework.DSL             (fixturePassphrase)
 
 data LogOutputs =
     LogOutputs
@@ -129,7 +130,7 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
 
     whenReady dir trCluster LogOutputs{loWallet} rn@(RunningNode socketPath block0 (gp, vData)) = do
         withLoggingNamed "cardano-wallet" loWallet $ \(sb, (cfg, tr)) -> do
-            launchChainIndex dir rn >>= launchPAB dir rn
+            launchChainIndex dir rn >>= launchPAB fixturePassphrase dir rn
 
             ekgEnabled >>= flip when (EKG.plugin cfg tr sb >>= loadPlugin sb)
 
@@ -183,9 +184,13 @@ launchChainIndex dir (RunningNode socketPath _block0 (_gp, _vData)) = do
 
 {-| Launch the PAB in a separate thread.
 -}
-launchPAB :: FilePath -> RunningNode -> ChainIndexPort -> IO ()
-launchPAB dir (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
-    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver}
+launchPAB ::
+    Text -> -- ^ Passphrase
+        FilePath -> -- ^ Temp directory
+            RunningNode -> -- ^ Socket path
+                ChainIndexPort -> IO ()
+launchPAB passPhrase dir (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
+    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, passphrase = Just passPhrase}
         networkID = NetworkIdWrapper CAPI.Mainnet
         config =
             PAB.Config.defaultConfig
