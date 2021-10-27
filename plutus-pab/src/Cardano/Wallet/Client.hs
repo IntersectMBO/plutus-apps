@@ -29,6 +29,7 @@ import qualified Cardano.Wallet.Primitive.Types.TokenQuantity as C
 import qualified Cardano.Wallet.Primitive.Types.Tx            as C
 import           Control.Monad.Freer                          (Eff, LastMember, Member, sendM, type (~>))
 import           Control.Monad.Freer.Error                    (Error, throwError)
+import           Control.Monad.Freer.Extras.Log               (LogMsg, logInfo, logWarn)
 import           Control.Monad.Freer.Reader                   (Reader, ask)
 import           Control.Monad.IO.Class                       (MonadIO (..))
 import           Data.Aeson                                   (toJSON)
@@ -46,6 +47,7 @@ import qualified Ledger.Ada                                   as Ada
 import           Ledger.Tx.CardanoAPI                         (SomeCardanoApiTx (..), ToCardanoError, toCardanoTxBody)
 import           Ledger.Value                                 (CurrencySymbol (..), TokenName (..), Value (..))
 import           Plutus.Contract.Wallet                       (export)
+import           Plutus.PAB.Monitoring.PABLogMsg              (WalletClientMsg (..))
 import           Plutus.V1.Ledger.Crypto                      (PubKeyHash (..))
 import qualified PlutusTx.AssocMap                            as Map
 import           PlutusTx.Builtins.Internal                   (BuiltinByteString (..))
@@ -66,6 +68,7 @@ handleWalletClient
     , Member (Error WalletAPIError) effs
     , Member (Reader ClientEnv) effs
     , Member (Reader Cardano.Api.ProtocolParameters) effs
+    , Member (LogMsg WalletClientMsg) effs
     )
     => MockServerConfig
     -> Wallet
@@ -78,35 +81,49 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
     protocolParams <- ask @Cardano.Api.ProtocolParameters
     let
         runClient :: ClientM a -> Eff effs a
-        runClient a = runClient' a >>= either throwError pure
+        runClient a = do
+            result <- runClient' a
+            case result of
+                Left err -> do
+                    logWarn (WalletClientError $ show err)
+                    throwError err
+                Right e -> pure e
         runClient' :: ClientM a -> Eff effs (Either ClientError a)
-        runClient' a = sendM $ liftIO $ runClientM a clientEnv
+        runClient' a = do
+            result <- sendM $ liftIO $ runClientM a clientEnv
+            case result of
+                Left err -> do
+                    logWarn (WalletClientError $ show err)
+                    throwError err
+                Right _ -> pure result
     case event of
         SubmitTxn tx -> do
+            logInfo HandleSubmitTxn
             sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
             void . runClient $ C.postExternalTransaction C.transactionClient (C.ApiBytesT (C.SerialisedTx $ C.serialisedTx sealedTx))
 
-        OwnPubKeyHash ->
+        OwnPubKeyHash -> do
+            logInfo HandleOwnPKHash
             fmap (PubKeyHash . BuiltinByteString . fst . getApiVerificationKey) . runClient $
                 getWalletKey (C.ApiT walletId) (C.ApiT C.UtxoExternal) (C.ApiT (C.DerivationIndex 0)) (Just True)
 
-        BalanceTx utx ->
+        BalanceTx utx -> do
+            logInfo HandleBalanceTx
             case export protocolParams networkId utx of
-                Left err -> throwOtherError $ pretty err
+                Left err -> do
+                    logWarn $ BalanceTxError $ show $ pretty $ err
+                    throwOtherError $ pretty err
                 Right ex -> do
                     res <- runClient' $ C.balanceTransaction C.transactionClient (C.ApiT walletId) (toJSON ex)
                     case res of
                         -- TODO: use the right error case based on http error code
                         Left err -> pure $ Left $ OtherError $ pack $ show err
-                        Right r  -> pure (Right $ fromApiSerialisedTransaction r)
-                        -- Right (Aeson.Object (Aeson.toList -> [("transaction", Aeson.String hexCborTx)])) -> case tryDecode hexCborTx of
-                        --     Left _ -> throwError $ OtherError "Received unexpected JSON data (invalid hex-encoded bytes) from transactions-balance endpoint"
-                        --     Right cborTx ->
-                        --         either throwOtherError (pure . Right . Left . (`SomeTx` Cardano.Api.AlonzoEraInCardanoMode)) $
-                        --             Cardano.Api.deserialiseFromCBOR (Cardano.Api.proxyToAsType Proxy) cborTx
-                        -- Right _ -> throwError $ OtherError "Received unexpected JSON data from transactions-balance endpoint"
+                        Right r  -> do
+                            logInfo HandleBalanceTxSuccess
+                            pure (Right $ fromApiSerialisedTransaction r)
 
         WalletAddSignature tx -> do
+            logInfo HandleWalletAddSignature
             sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
             passphrase <- maybe (throwError $ OtherError "Wallet passphrase required") pure mpassphrase
             lenientPP <- either throwOtherError pure $ fromText passphrase
@@ -114,6 +131,7 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
             fmap fromApiSerialisedTransaction . runClient $ C.signTransaction C.transactionClient (C.ApiT walletId) postData
 
         TotalFunds -> do
+            logInfo HandleTotalFunds
             C.ApiWallet{balance, assets} <- runClient $ C.getWallet C.walletClient (C.ApiT walletId)
             let C.ApiWalletBalance (Quantity avAda) _ _ = balance
                 C.ApiWalletAssetsBalance (C.ApiT avAssets) _ = assets

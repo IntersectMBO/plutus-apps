@@ -17,7 +17,8 @@ module Plutus.PAB.Monitoring.PABLogMsg(
     AppMsg(..),
     CoreMsg(..),
     PABMultiAgentMsg(..),
-    RequestSize(..)
+    RequestSize(..),
+    WalletClientMsg(..)
     ) where
 
 import           Cardano.BM.Data.Tracer           (ToObject (..), TracingVerbosity (..))
@@ -42,6 +43,24 @@ import           Plutus.PAB.Instances             ()
 import           Wallet.Emulator.LogMessages      (TxBalanceMsg)
 import           Wallet.Emulator.MultiAgent       (EmulatorEvent)
 import           Wallet.Emulator.Wallet           (Wallet)
+
+data WalletClientMsg =
+    HandleOwnPKHash
+    | HandleBalanceTx
+    | HandleSubmitTxn
+    | HandleWalletAddSignature
+    | HandleTotalFunds
+    | WalletClientError String
+    | BalanceTxError String
+    | HandleBalanceTxSuccess
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+instance Pretty WalletClientMsg where
+    pretty = viaShow
+
+instance ToObject WalletClientMsg where
+    toObject _ m = mkObjectStr (T.pack $ show m) ()
 
 data AppMsg t =
     ActiveContractsMsg
@@ -137,6 +156,7 @@ data PABMultiAgentMsg t =
     | RestoringPABState
     | StartingPABBackendServer Int
     | WalletBalancingMsg Wallet TxBalanceMsg
+    | WalletClient WalletClientMsg
     deriving stock Generic
 
 instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (PABMultiAgentMsg t) where
@@ -152,6 +172,7 @@ instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (PA
                                                   ) ()
         StartingPABBackendServer i -> mkObjectStr "starting backend server" (Tagged @"port" i)
         WalletBalancingMsg w m     -> mkObjectStr "balancing" (Tagged @"wallet" w, Tagged @"message" m)
+        WalletClient m -> toObject v m
 
 deriving stock instance (Show (ContractDef t)) => Show (PABMultiAgentMsg t)
 deriving anyclass instance (ToJSON (ContractDef t)) => ToJSON (PABMultiAgentMsg t)
@@ -172,6 +193,7 @@ instance Pretty (ContractDef t) => Pretty (PABMultiAgentMsg t) where
         StartingPABBackendServer port ->
             "Starting PAB backend server on port" <+> pretty port
         WalletBalancingMsg w m -> pretty w <> colon <+> pretty m
+        WalletClient m -> pretty m
 
 data CoreMsg t =
     FindingContract ContractInstanceId

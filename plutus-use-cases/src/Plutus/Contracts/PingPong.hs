@@ -28,7 +28,8 @@ module Plutus.Contracts.PingPong(
     runStop,
     runWaitForUpdate,
     combined,
-    simplePingPong
+    simplePingPong,
+    simplePingPongAuto
     ) where
 
 import           Control.Lens
@@ -160,6 +161,17 @@ combined = forever (selectList [initialise, ping, pong, runStop, wait]) where
             Just SM.OnChainState{SM.ocsTxOut=TypedScriptTxOut{tyTxOutData=s}} -> do
                 logInfo $ "new state: " <> Haskell.show s
                 tell (Last $ Just s)
+
+simplePingPongAuto :: Contract (Last PingPongState) PingPongSchema PingPongError ()
+simplePingPongAuto = do
+  logInfo @Haskell.String "Initialising PingPongAuto"
+  (SM.runInitialise client Pinged (Ada.lovelaceValueOf 2))
+  logInfo @Haskell.String "Waiting for PONG"
+  awaitPromise pong
+  logInfo @Haskell.String "Waiting for PING"
+  awaitPromise ping
+  logInfo @Haskell.String "Waiting for PONG"
+  awaitPromise pong
 
 simplePingPong :: Contract (Last PingPongState) PingPongSchema PingPongError ()
 simplePingPong =

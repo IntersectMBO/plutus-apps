@@ -58,6 +58,7 @@ data ExampleContracts = UniswapInit
                       | PrismUnlockExchange
                       | PrismUnlockSto
                       | PingPong
+                      | PingPongAuto -- ^ Variant of 'PingPong' that starts the initialise phase automatically
                       | WaitForTx TxId
     deriving (Eq, Ord, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
@@ -85,6 +86,7 @@ instance HasDefinitions ExampleContracts where
                      , PrismUnlockExchange
                      , PrismUnlockSto
                      , PingPong
+                     , PingPongAuto
                      ]
     getContract = getExampleContracts
     getSchema = getExampleContractsSchema
@@ -102,6 +104,7 @@ getExampleContractsSchema = \case
     PrismUnlockExchange -> Builtin.endpointsToSchemas @Contracts.Prism.UnlockExchangeSchema
     PrismUnlockSto      -> Builtin.endpointsToSchemas @Contracts.Prism.STOSubscriberSchema
     PingPong            -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
+    PingPongAuto        -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
     WaitForTx{}         -> Builtin.endpointsToSchemas @Empty
 
 getExampleContracts :: ExampleContracts -> SomeBuiltin
@@ -117,6 +120,7 @@ getExampleContracts = \case
     PrismUnlockExchange -> SomeBuiltin (Contracts.Prism.unlockExchange @() @Contracts.Prism.UnlockExchangeSchema)
     PrismUnlockSto      -> SomeBuiltin (Contracts.Prism.subscribeSTO @() @Contracts.Prism.STOSubscriberSchema)
     PingPong            -> SomeBuiltin Contracts.PingPong.simplePingPong
+    PingPongAuto        -> SomeBuiltin Contracts.PingPong.simplePingPongAuto
     WaitForTx txi       -> SomeBuiltin (Contracts.WaitForTx.waitForTx txi)
 
 handlers :: SimulatorEffectHandlers (Builtin ExampleContracts)

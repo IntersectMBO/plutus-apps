@@ -35,6 +35,8 @@ import           Cardano.Wallet.Api.Types                   (ApiMnemonicT (..), 
                                                              EncodeAddress (..), WalletOrAccountPostData (..))
 import qualified Cardano.Wallet.Api.Types                   as Wallet.Types
 import           Cardano.Wallet.Logging                     (stdoutTextTracer, trMessageText)
+import           Cardano.Wallet.Mock.Types                  (WalletUrl (..))
+import qualified Cardano.Wallet.Mock.Types                  as Wallet.Config
 import           Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (..), Passphrase (..))
 import           Cardano.Wallet.Primitive.SyncProgress      (SyncTolerance (..))
 import           Cardano.Wallet.Primitive.Types             (WalletName (..))
@@ -143,8 +145,7 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
             let walletHost = "127.0.0.1"
                 walletPort = 46493
 
-            launchChainIndex dir rn >>= launchPAB fixturePassphrase dir rn
-            void $ async $ restoreWallets walletHost walletPort
+            setupPABServices walletHost walletPort dir rn
 
             ekgEnabled >>= flip when (EKG.plugin cfg tr sb >>= loadPlugin sb)
 
@@ -181,6 +182,12 @@ main = withLocalClusterSetup $ \dir lo@LogOutputs{loCluster} ->
 
 newtype ChainIndexPort = ChainIndexPort Int
 
+setupPABServices :: String -> Int -> FilePath -> RunningNode -> IO ()
+setupPABServices walletHost walletPort dir rn = void $ async $ do -- TODO: better types for arguments
+    walletUrl <- restoreWallets walletHost walletPort
+    chainIndexPort <- launchChainIndex dir rn
+    launchPAB fixturePassphrase dir walletUrl rn chainIndexPort
+
 {-| Launch the chain index in a separate thread.
 -}
 launchChainIndex :: FilePath -> RunningNode -> IO ChainIndexPort
@@ -199,10 +206,12 @@ launchChainIndex dir (RunningNode socketPath _block0 (_gp, _vData)) = do
 -}
 launchPAB ::
     Text -> -- ^ Passphrase
-        FilePath -> -- ^ Temp directory
-            RunningNode -> -- ^ Socket path
-                ChainIndexPort -> IO ()
-launchPAB passPhrase dir (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
+    FilePath -> -- ^ Temp directory
+    BaseUrl -> -- ^ wallet url
+    RunningNode -> -- ^ Socket path
+    ChainIndexPort -> -- ^ Port of the chain index
+    IO ()
+launchPAB passPhrase dir walletUrl (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
     let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
         networkID = NetworkIdWrapper CAPI.Mainnet
         config =
@@ -210,6 +219,7 @@ launchPAB passPhrase dir (RunningNode socketPath _block0 (_gp, _vData)) (ChainIn
                 { nodeServerConfig = def{mscSocketPath=nodeSocketFile socketPath,mscNodeMode=AlonzoNode,mscNetworkId=networkID}
                 , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
                 , chainIndexConfig = def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
+                , walletServerConfig = def{Wallet.Config.baseUrl=WalletUrl walletUrl{baseUrlPath="/v2"}}
                 }
     -- TODO: For some reason this has to be async - program terminates if it's done synchronously???
     void . async $ PAB.Run.runWithOpts @ExampleContracts handleBuiltin (Just config) opts{cmd=Migrate}
@@ -218,9 +228,9 @@ launchPAB passPhrase dir (RunningNode socketPath _block0 (_gp, _vData)) (ChainIn
 
 {-| Set up wallets
 -}
-restoreWallets :: String -> Int -> IO ()
+restoreWallets :: String -> Int -> IO BaseUrl
 restoreWallets walletHost walletPort = do
-    sleep 20
+    sleep 15
     manager <- newManager defaultManagerSettings
     let baseUrl = BaseUrl{baseUrlScheme=Http,baseUrlHost=walletHost,baseUrlPort=walletPort,baseUrlPath=""}
         clientEnv = mkClientEnv manager baseUrl
@@ -237,10 +247,13 @@ restoreWallets walletHost walletPort = do
         Left err -> do
             putStrLn "restoreWallet failed"
             putStrLn $ "Error: " <> show err
-            sleep 10
+            putStrLn "restoreWallet: trying again in 30s"
+            sleep 15
             restoreWallets walletHost walletPort
         Right (ApiWallet (ApiT i) _ _ _ _ _ _ _ _) -> do
             putStrLn $ "Restored wallet: " <> show i
+            putStrLn $ "Passphrase: " <> T.unpack fixturePassphrase
+            return baseUrl
 
 sleep :: Int -> IO ()
 sleep n = threadDelay $ n * 1_000_000
