@@ -40,6 +40,7 @@ myTypes =
     functor . equal . genericShow . order . argonaut $ mkSumType @(TestRecord A),
     equal . genericShow . order . argonaut $ mkSumType @TestNewtype,
     equal . genericShow . order . argonaut $ mkSumType @TestNewtypeRecord,
+    equal . genericShow . order . argonaut $ mkSumType @TestMultiInlineRecords,
     equal . genericShow . order . argonaut $ mkSumType @TestTwoFields,
     equal . genericShow . order . argonaut $ mkSumType @TestEnum,
     equal . genericShow . order . argonaut $ mkSumType @MyUnit
@@ -56,7 +57,7 @@ roundtripSpec = do
         (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
         assertBool stderr $ not $ "[warn]" `isInfixOf` stderr
       it "should produce aeson-compatible argonaut instances" $ 
-        once $ property $
+        property $
           \testData -> bracket runApp killApp $
             \(hin, hout, hproc) -> do
               hPutStrLn hin $ toString $ encode @TestData testData

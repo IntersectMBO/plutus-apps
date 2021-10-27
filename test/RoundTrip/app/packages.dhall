@@ -30,6 +30,6 @@ in  upstream // {
       , "typelevel-prelude"
       ]
     , repo = "https://github.com/input-output-hk/purescript-bridge-json-helpers.git"
-    , version = "16de087fde6e2d07e6bdae51383131ab81efa82d"
+    , version = "0556c336c06fea6e388946271ae8965e775e3ed0"
     }
 }

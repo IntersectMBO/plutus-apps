@@ -1,14 +1,15 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 module RoundTrip.Types where
 
 import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Proxy (Proxy (..))
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, mkSumType, writePSTypes, writePSTypesWith)
 import Language.PureScript.Bridge.TypeParameters (A)
@@ -43,7 +44,8 @@ data TestSum
   | Number Double
   | String String
   | Array [Int]
-  | InlineRecord { why :: String, wouldYouDoThis :: Int }
+  | InlineRecord {why :: String, wouldYouDoThis :: Int}
+  | MultiInlineRecords TestMultiInlineRecords
   | Record (TestRecord Int)
   | NestedRecord (TestRecord (TestRecord Int))
   | NT TestNewtype
@@ -73,6 +75,7 @@ instance Arbitrary TestSum where
         String <$> arbitrary,
         Array <$> arbitrary,
         InlineRecord <$> arbitrary <*> arbitrary,
+        MultiInlineRecords <$> arbitrary,
         Record <$> arbitrary,
         NestedRecord <$> arbitrary,
         NT <$> arbitrary,
@@ -106,6 +109,29 @@ newtype TestRecursiveB = RecurseB TestRecursiveB
 instance FromJSON TestRecursiveB
 
 instance ToJSON TestRecursiveB
+
+data TestMultiInlineRecords
+  = Foo
+      { _foo1 :: Maybe Int,
+        _foo2 :: (),
+        tag :: String
+      }
+  | Bar
+      { _bar1 :: String,
+        _bar2 :: Bool
+      }
+  deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON TestMultiInlineRecords
+
+instance ToJSON TestMultiInlineRecords
+
+instance Arbitrary TestMultiInlineRecords where
+  arbitrary =
+    oneof
+      [ Foo <$> arbitrary <*> arbitrary <*> arbitrary,
+        Bar <$> arbitrary <*> arbitrary
+      ]
 
 data TestRecord a = TestRecord
   { _field1 :: Maybe Int,

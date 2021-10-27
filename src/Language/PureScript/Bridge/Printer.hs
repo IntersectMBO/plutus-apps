@@ -47,7 +47,7 @@ import           Text.PrettyPrint.Leijen.Text               (Doc,
                                                              renderPretty,
                                                              rparen,
                                                              textStrict, vsep,
-                                                             (<+>), hang, dquotes, char, backslash, nest, linebreak, lbrace, rbrace, softline, lbracket, rbracket)
+                                                             (<+>), hang, dquotes, char, backslash, nest, linebreak, lbrace, rbrace, softline, lbracket, rbracket, colon)
 import qualified Data.List.NonEmpty as NE
 import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.Char (isLower, toLower)
@@ -147,7 +147,9 @@ instanceToImportLines GenericShow =
 instanceToImportLines Json =
   importsFromList
     [ ImportLine "Control.Lazy" $ Set.singleton "defer"
+    , ImportLine "Data.Argonaut.Core" $ Set.singleton "jsonNull"
     , ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"]
+    , ImportLine "Data.Argonaut.Encode" $ Set.singleton "encodeJson"
     , ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"]
     , ImportLine "Data.Newtype" $ Set.singleton "unwrap"
     , ImportLine "Data.Tuple.Nested" $ Set.singleton "(/\\)"
@@ -377,8 +379,30 @@ sumTypeToEncode (SumType _ cs _)
   where
     constructorToEncode c@(DataConstructor name args) =
       ( constructorPattern c
-      , "E.encodeTagged" <+> dquotes (textStrict name) <+> constructor args <+> argsToEncode args
+      , case args of
+          Nullary -> "jsonNull"
+          Normal as -> "E.encodeTagged"
+              <+> dquotes (textStrict name)
+              <+> normalExpr as
+              <+> argsToEncode args
+          Record rs
+            | any ((== "tag") . _recLabel) rs -> "E.encodeTagged"
+              <+> dquotes (textStrict name)
+              <+> hrecord (fields rs)
+              <+> argsToEncode args
+            | otherwise -> hsep
+              [ "encodeJson"
+              , vrecord
+                  $ ("tag:" <+> dquotes (textStrict name))
+                  : (recordFieldToJson <$> NE.toList rs)
+              ]
       )
+    recordFieldToJson (RecordEntry name t) =
+      textStrict name
+        <> colon
+        <+> "flip E.encode"
+        <+> textStrict name
+        <+> typeToEncode t
     argsToEncode Nullary = "E.null"
     argsToEncode (Normal (t :| [])) = typeToEncode t
     argsToEncode (Normal ts) =
@@ -411,7 +435,7 @@ typeToEncode _ = "E.value"
 sumTypeToDecode :: SumType 'PureScript -> Doc
 sumTypeToDecode (SumType _ cs _)
   | isEnum cs = "D.enum"
-sumTypeToDecode (SumType _ [c] _) = "$" <+> constructorToDecode c
+sumTypeToDecode (SumType _ [c] _) = "$" <+> constructorToDecode False c
 sumTypeToDecode (SumType t cs _) = line <>
   hsep
     [ "$ D.sumType"
@@ -423,21 +447,37 @@ sumTypeToDecode (SumType t cs _) = line <>
     constructorToTagged dc = hsep
       [ dc ^. sigConstructor . to textStrict . to dquotes
       , "/\\"
-      , constructorToDecode dc
+      , constructorToDecode True dc
       ]
 
 
-constructorToDecode :: DataConstructor 'PureScript -> Doc
-constructorToDecode (DataConstructor name Nullary) =
+constructorToDecode :: Bool -> DataConstructor 'PureScript -> Doc
+constructorToDecode True (DataConstructor name Nullary) =
+  "pure" <+> textStrict name
+constructorToDecode False (DataConstructor name Nullary) =
   parens $ textStrict name <+> "<$" <+> "D.null"
-constructorToDecode (DataConstructor name (Normal (a :| []))) =
+constructorToDecode True dc@(DataConstructor _ (Normal _)) =
+  "D.content" <+> constructorToDecode False dc
+constructorToDecode False (DataConstructor name (Normal (a :| []))) =
   parens $ textStrict name <+> "<$>" <+> typeToDecode a
-constructorToDecode (DataConstructor name (Normal as)) =
+constructorToDecode False (DataConstructor name (Normal as)) =
   parens $ "D.tuple"
     <+> "$"
     <+> textStrict name
     <+> encloseHsep "</$\\>" mempty " </*\\>" (typeToDecode <$> NE.toList as)
-constructorToDecode (DataConstructor name (Record rs)) =
+constructorToDecode True dc@(DataConstructor name (Record rs))
+  | any ((== "tag") . _recLabel) rs =
+    "D.content" <+> constructorToDecode False dc
+  | otherwise = parens $ textStrict name
+    <+> "<$> D.object"
+    <+> dquotes (textStrict name)
+    <+> vrecord (fieldSignatures $ fieldDecoder <$> rs)
+    where
+      fieldDecoder r =
+        r
+          & recValue %~ mkType "_" . pure
+          & recLabel <>~ renderText (":" <+> typeToDecode (_recValue r))
+constructorToDecode False (DataConstructor name (Record rs)) =
   parens $ textStrict name
     <+> "<$> D.record"
     <+> dquotes (textStrict name)
