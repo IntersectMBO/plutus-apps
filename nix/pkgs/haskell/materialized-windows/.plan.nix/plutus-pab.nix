@@ -238,6 +238,7 @@
           buildable = true;
           modules = [
             "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
             "ContractExample/PayToWallet"
             "ContractExample/WaitForTx"
             "ContractExample"
@@ -290,9 +291,33 @@
             (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
             (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
+            (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
+            (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
+            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
+            (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
+            (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
+            (hsPkgs."row-types" or (errorHandler.buildDepError "row-types"))
+            (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
+            (hsPkgs."openapi3" or (errorHandler.buildDepError "openapi3"))
+            (hsPkgs."async" or (errorHandler.buildDepError "async"))
+            (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
+            (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
+            (hsPkgs."servant-client-core" or (errorHandler.buildDepError "servant-client-core"))
+            (hsPkgs."cardano-addresses" or (errorHandler.buildDepError "cardano-addresses"))
             ];
           buildable = true;
-          hsSourceDirs = [ "local-cluster" ];
+          modules = [
+            "ContractExample"
+            "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
+            "ContractExample/PayToWallet"
+            "ContractExample/WaitForTx"
+            ];
+          hsSourceDirs = [ "local-cluster" "examples" ];
           mainPath = [ "Main.hs" ];
           };
         "plutus-pab-test-psgenerator" = {
@@ -334,6 +359,7 @@
           buildable = true;
           modules = [
             "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
             "ContractExample/PayToWallet"
             "Plutus/PAB/Effects/Contract/ContractTest"
             "Plutus/PAB/Simulator/Test"
@@ -482,6 +508,7 @@
             "ContractExample"
             "ContractExample/WaitForTx"
             "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
             "ContractExample/PayToWallet"
             "Plutus/PAB/CoreSpec"
             "Plutus/PAB/CliSpec"
@@ -539,6 +566,7 @@
             "ContractExample"
             "ContractExample/WaitForTx"
             "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
             "ContractExample/PayToWallet"
             "Plutus/PAB/CliSpec"
             "Plutus/PAB/Effects/Contract/ContractTest"

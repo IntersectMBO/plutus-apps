@@ -79,6 +79,7 @@
           (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
           (hsPkgs."servant-client-core" or (errorHandler.buildDepError "servant-client-core"))
           (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
+          (hsPkgs."text-class" or (errorHandler.buildDepError "text-class"))
           ];
         buildable = true;
         modules = [
