@@ -50,7 +50,7 @@ type MyAPI =
   Header "TestHeader" TestHeader
     :> ( ( "hello"
              :> ( ( QueryFlag "myFlag"
-                      :> QueryParam "myParam" Hello
+                      :> QueryParam "myParam" Text
                       :> QueryParams "myParams" Hello
                       :> ReqBody '[JSON] Hello
                       :> Get '[JSON] Hello

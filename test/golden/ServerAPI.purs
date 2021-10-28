@@ -39,7 +39,7 @@ getHello ::
   MonadAff m =>
   Hello ->
   Boolean ->
-  Maybe Hello ->
+  Maybe String ->
   Array Hello ->
   m Hello
 getHello reqBody myFlag myParam myParams = do
