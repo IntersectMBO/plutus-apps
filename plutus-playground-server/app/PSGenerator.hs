@@ -50,7 +50,7 @@ import           Language.PureScript.Bridge                (BridgePart, Language
                                                             writePSTypes)
 import           Language.PureScript.Bridge.TypeParameters (A)
 import qualified Ledger.CardanoWallet                      as CW
-import           Ledger.Tx.CardanoAPI                       (ToCardanoError)
+import           Ledger.Tx.CardanoAPI                      (ToCardanoError)
 import qualified PSGenerator.Common
 import qualified Playground.API                            as API
 import qualified Playground.Interpreter                    as PI
