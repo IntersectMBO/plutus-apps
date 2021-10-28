@@ -140,7 +140,6 @@ library
         beam-migrate -any,
         beam-sqlite -any,
         bytestring -any,
-        cardano-api -any,
         cardano-slotting -any,
         cardano-wallet-core -any,
         containers -any,
@@ -152,7 +151,6 @@ library
         generic-arbitrary -any,
         http-client -any,
         http-client-tls -any,
-        iohk-monitoring -any,
         lens -any,
         lobemo-backend-ekg -any,
         memory -any,
@@ -193,6 +191,14 @@ library
         websockets -any,
         Win32-network -any,
         yaml -any,
+    if !os(ghcjs)
+        build-depends: cardano-api -any,
+                       iohk-monitoring -any,
+                       lobemo-backend-ekg -any
+
+    else
+        build-depends: cardano-api-stub,
+                       iohk-monitoring-stub
 
 executable plutus-pab-setup
     main-is:          Main.hs
@@ -217,7 +223,6 @@ executable plutus-pab-setup
         filepath -any,
         freer-extras -any,
         freer-simple -any,
-        iohk-monitoring -any,
         lens -any,
         lobemo-backend-ekg -any,
         monad-logger -any,
@@ -239,6 +244,8 @@ executable plutus-pab-setup
         unliftio-core -any,
         uuid -any,
         yaml -any,
+    if !os(ghcjs)
+        build-depends: iohk-monitoring -any
 
 executable plutus-pab-examples
     main-is:          Main.hs

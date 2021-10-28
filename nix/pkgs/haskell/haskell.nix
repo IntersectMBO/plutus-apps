@@ -12,8 +12,12 @@
   # Whether to set the `defer-plugin-errors` flag on those packages that need
   # it. If set to true, we will also build the haddocks for those packages.
 , deferPluginErrors
-}:
+, topLevelPkgs
+, ghcjsPluginPkgs ? null
+, cabalProjectLocal ? null
+}@args:
 let
+  compiler-nix-name = if topLevelPkgs.stdenv.hostPlatform.isGhcjs then "ghc8107" else args.compiler-nix-name;
   project = haskell-nix.cabalProject' ({ pkgs, ... }: {
     inherit compiler-nix-name;
     # This is incredibly difficult to get right, almost everything goes wrong, see https://github.com/input-output-hk/haskell.nix/issues/496
@@ -31,7 +35,8 @@ let
     # At the moment, we only need one but conceivably we might need one for darwin in future.
     # See https://github.com/input-output-hk/nix-tools/issues/97
     materialized =
-      if pkgs.stdenv.hostPlatform.isLinux then ./materialized-linux
+      if pkgs.stdenv.hostPlatform.isLinux then (if topLevelPkgs.stdenv.hostPlatform.isGhcjs then ./materialized-ghcjs-build else ./materialized-linux)
+      else if pkgs.stdenv.hostPlatform.isGhcjs then ./materialized-ghcjs
       else if pkgs.stdenv.hostPlatform.isDarwin then ./materialized-darwin
       else if pkgs.stdenv.hostPlatform.isWindows then ./materialized-windows
       else builtins.error "Don't have materialized files for this platform";
@@ -53,7 +58,7 @@ let
       "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" = "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx";
       "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" = "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
       "https://github.com/input-output-hk/cardano-wallet"."ae7569293e94241ef6829139ec02bd91abd069df" = "1mv1dhpkdj9ridm1fvq6jc85qs6zvbp172228rq72gyawjwrgvi6";
-      "https://github.com/input-output-hk/cardano-addresses"."d2f86caa085402a953920c6714a0de6a50b655ec" = "0p6jbnd7ky2yf7bwb1350k8880py8dgqg39k49q02a6ij4ld01ay";
+      "https://github.com/input-output-hk/cardano-addresses"."35f9c49dcd953b45da6dfbcb84b39c3f448ced58" = "sha256-dpRlLB0d6IhBwi3i6gGdNsD1Wt99ldiLTSwa1ld2YrM=";
       "https://github.com/input-output-hk/plutus"."3f089ccf0ca746b399c99afe51e063b0640af547" = "1nx8xmdgwmnsla4qg4k67f5md8vm3p1p9i25ndalrqdg40z90486";
     };
     # Configuration settings needed for cabal configure to work when cross compiling
@@ -62,12 +67,90 @@ let
     cabalProjectLocal = lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
       -- When cross compiling for windows we don't have a `ghc` package, so use
       -- the `plutus-ghc-stub` package instead.
+      packages:
+        stubs/plutus-ghc-stub
       package plutus-tx-plugin
         flags: +use-ghc-stub
 
       -- Exlcude test that use `doctest`.  They will not work for windows
       -- cross compilation and `cabal` will not be able to make a plan.
       package prettyprinter-configurable
+        tests: False
+    '' + lib.optionalString pkgs.stdenv.hostPlatform.isGhcjs ''
+      packages:
+        stubs/cardano-api-stub
+        stubs/iohk-monitoring-stub
+        stubs/plutus-ghc-stub
+        contrib/*
+      package plutus-tx-plugin
+        flags: +use-ghc-stub
+      package prettyprinter-configurable
+        tests: False
+      package network
+        tests: False
+
+      allow-newer:
+             stm:base
+
+           -- ghc-boot 8.10.4 is not in hackage, so haskell.nix needs consider 8.8.3
+           -- when cross compiling for windows or it will fail to find a solution including
+           -- a new Win32 version (ghc-boot depends on Win32 via directory)
+           , ghc-boot:base
+           , ghc-boot:ghc-boot-th
+           , snap-server:attoparsec
+           , io-streams-haproxy:attoparsec
+           , snap-core:attoparsec
+           , websockets:attoparsec
+           , jsaddle:base64-bytestring
+
+      source-repository-package
+        type: git
+        location: https://github.com/hamishmack/foundation
+        tag: 421e8056fabf30ef2f5b01bb61c6880d0dfaa1c8
+        --sha256: 0cbsj3dyycykh0lcnsglrzzh898n2iydyw8f2nwyfvfnyx6ac2im
+        subdir: foundation
+    '' + lib.optionalString (topLevelPkgs.stdenv.hostPlatform.isGhcjs && !pkgs.stdenv.hostPlatform.isGhcjs) ''
+      packages:
+        ${topLevelPkgs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.project.configured-src}
+        contrib/double-conversion-2.0.2.0
+
+      allow-newer: ghcjs:base16-bytestring
+                 , ghcjs:aeson
+                 , stm:base
+                 , cardano-binary:recursion-schemes
+                 , jsaddle:ghcjs-base
+                 , ghcjs-base:primitive
+                 , ghcjs-base:time
+                 , ghcjs-base:hashable
+                 , ghcjs-base:aeson
+                 , servant-foreign:lens
+                 , servant-client:http-client
+      constraints: plutus-tx-plugin +ghcjs-plugin,
+                   ghci +ghci
+
+      package ghci
+        flags: +ghci
+
+      package plutus-tx-plugin
+        flags: +ghcjs-plugin
+
+      -- The following is needed because Nix is doing something crazy.
+      package byron-spec-ledger
+        tests: False
+
+      package plutus-doc
+        tests: False
+
+      package prettyprinter-configurable
+        tests: False
+
+      package small-steps
+        tests: False
+
+      package small-steps-test
+        tests: False
+
+      package byron-spec-chain
         tests: False
     '';
     modules = [
@@ -123,6 +206,132 @@ let
       )
       ({ pkgs, config, ... }: {
         packages = {
+          ghcjs.components.library.build-tools = let alex = pkgs.haskell-nix.tool compiler-nix-name "alex" {
+            index-state = pkgs.haskell-nix.internalHackageIndexState;
+            version = "3.2.5";
+          }; in [ alex ];
+          ghcjs.flags.use-host-template-haskell = true;
+
+          # This is important. We may be reinstalling lib:ghci, and if we do
+          # it *must* have the ghci flag enabled (default is disabled).
+          ghci.flags.ghci = true;
+
+          plutus-use-cases.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+          plutus-tx-plugin.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  #                                              "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+          plutus-tx-tests.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  #                                              "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+          plutus-errors.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+          plutus-benchmark.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+
+          plutus-ledger.components.library.build-tools = if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) then [ pkgs.pkgsCross.ghcjs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.buildGHC ] else [ ];
+          plutus-ledger.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+          plutus-ledger-test.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+          plutus-pab.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+          Cabal.patches = [ ../../patches/cabal.patch ];
+
           plutus-contract.doHaddock = deferPluginErrors;
           plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
 
@@ -148,20 +357,44 @@ let
           # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
           playground-common.ghcOptions = [ "-Werror" ];
           plutus-contract.ghcOptions = [ "-Werror" ];
-          plutus-ledger.ghcOptions = [ "-Werror" ];
+          # plutus-ledger.ghcOptions = [ "-Werror" ];
+          plutus-ledger-api.ghcOptions = [ "-Werror" ];
           plutus-playground-server.ghcOptions = [ "-Werror" ];
-          plutus-pab.ghcOptions = [ "-Werror" ];
+          # plutus-pab.ghcOptions = [ "-Werror" ];
+          plutus-tx.ghcOptions = [ "-Werror" ];
+          # plutus-tx-plugin.ghcOptions = [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
-          plutus-use-cases.ghcOptions = [ "-Werror" ];
+          # plutus-use-cases.ghcOptions = [ "-Werror" ];
 
           # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
           # This will go away when we upgrade nixpkgs and things use ieee754 anyway.
           ieee.components.library.libs = lib.mkForce [ ];
-
+        };
+      })
+      ({ pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isGhcjs) {
+        packages = {
           # See https://github.com/input-output-hk/iohk-nix/pull/488
           cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
           cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
         };
+      })
+      # For GHCJS
+      ({ packages.ghcjs.src = topLevelPkgs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.project.configured-src; })
+      (lib.mkIf (topLevelPkgs.stdenv.hostPlatform.isGhcjs) {
+        packages.double-conversion.components.library.libs = lib.mkForce [ ];
+      })
+      ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform.isGhcjs) {
+        packages = {
+          lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
+          cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
+          cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
+          plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
+          iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
+        };
+      })
+      ({ pkgs, config, ... }@args: {
+        packages.cardano-addresses-jsbits.components.library.preConfigure =
+          (import (args.config.packages.cardano-addresses.src + "/jsbits/emscripten") args).packages.cardano-addresses-jsbits.components.library.preConfigure;
       })
     ] ++ lib.optional enableHaskellProfiling {
       enableLibraryProfiling = true;

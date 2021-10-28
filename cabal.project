@@ -23,6 +23,9 @@ benchmarks: true
 -- The only sensible test display option
 test-show-details: streaming
 
+package ghci
+  flags: +ghci
+
 allow-newer:
            -- Copied from plutus-core
            size-based:template-haskell
@@ -106,9 +109,10 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-addresses
-  tag: d2f86caa085402a953920c6714a0de6a50b655ec
+  tag: 35f9c49dcd953b45da6dfbcb84b39c3f448ced58
   subdir:
     core
+    jsbits
 
 source-repository-package
   type: git

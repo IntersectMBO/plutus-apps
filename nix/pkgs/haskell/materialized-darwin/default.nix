@@ -783,6 +783,7 @@
         iohk-monitoring = ./.plan.nix/iohk-monitoring.nix;
         io-sim = ./.plan.nix/io-sim.nix;
         cardano-crypto-test = ./.plan.nix/cardano-crypto-test.nix;
+        cardano-addresses-jsbits = ./.plan.nix/cardano-addresses-jsbits.nix;
         web-ghc = ./.plan.nix/web-ghc.nix;
         cardano-ledger-byron = ./.plan.nix/cardano-ledger-byron.nix;
         cardano-api = ./.plan.nix/cardano-api.nix;
@@ -939,6 +940,7 @@
             };
           "io-sim" = { flags = { "asserts" = lib.mkOverride 900 false; }; };
           "cardano-crypto-test" = { flags = {}; };
+          "cardano-addresses-jsbits" = { flags = {}; };
           "web-ghc" = {
             flags = { "defer-plugin-errors" = lib.mkOverride 900 false; };
             };
@@ -1299,6 +1301,7 @@
           "array".components.library.planned = lib.mkOverride 900 true;
           "cardano-api".components.library.planned = lib.mkOverride 900 true;
           "hspec-expectations".components.library.planned = lib.mkOverride 900 true;
+          "cardano-addresses-jsbits".components.library.planned = lib.mkOverride 900 true;
           "cardano-ledger-byron".components.library.planned = lib.mkOverride 900 true;
           "erf".components.library.planned = lib.mkOverride 900 true;
           "yaml".components.library.planned = lib.mkOverride 900 true;

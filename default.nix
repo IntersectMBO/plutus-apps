@@ -25,7 +25,7 @@
 , enableHaskellProfiling ? false
 }:
 let
-  inherit (packages) pkgs plutus-apps;
+  inherit (packages) pkgs plutus-apps ghcjsPluginPkgs;
   inherit (plutus-apps) haskell;
 in
 rec {

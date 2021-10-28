@@ -144,9 +144,7 @@ library
         openapi3 -any,
         cardano-wallet-core -any,
         text-class -any,
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        plutus-tx-plugin -any
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -203,12 +201,10 @@ test-suite plutus-contract-test
         plutus-contract -any,
         plutus-ledger -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         plutus-ledger-api -any,
         freer-simple -any,
         aeson -any,
         semigroupoids -any,
         row-types -any,
         QuickCheck -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
