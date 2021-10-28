@@ -17,7 +17,7 @@ import           Language.PureScript.Bridge                (BridgePart, Language
                                                             genericShow, mkSumType, order, psTypeParameters, typeModule,
                                                             typeName, (^==))
 import           Language.PureScript.Bridge.Builder        (BridgeData)
-import           Language.PureScript.Bridge.PSTypes        (psArray, psInt, psNumber, psString)
+import           Language.PureScript.Bridge.PSTypes        (psInt, psNumber, psString)
 import           Language.PureScript.Bridge.TypeParameters (A)
 import           Ledger                                    (Address, BlockId, ChainIndexTxOut, DatumHash, MintingPolicy,
                                                             OnChainTx, PubKey, PubKeyHash, RedeemerPtr, ScriptTag,

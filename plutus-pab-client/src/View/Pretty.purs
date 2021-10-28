@@ -8,6 +8,7 @@ import Data.Lens (view)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Map as Map
 import Data.Newtype (unwrap)
+import Data.Set as Set
 import Halogen.HTML (HTML, b_, div_, span_, text)
 import Plutus.Contract.Effects (ActiveEndpoint, BalanceTxResponse(..), WriteBalancedTxResponse(..), PABReq(..), PABResp(..))
 import Plutus.Contract.Resumable (Response(..))
@@ -254,7 +255,7 @@ instance prettyUnbalancedTx :: Pretty UnbalancedTx where
     span_
       [ text "UnbalancedTx:"
       , nbsp
-      , withBasicPlural (length txInputs) "input"
+      , withBasicPlural (Set.size txInputs) "input"
       , text ", "
       , withBasicPlural (length txOutputs) "output"
       , text ", "
@@ -267,7 +268,7 @@ instance prettyTx :: Pretty Tx where
     span_
       [ text "Tx:"
       , nbsp
-      , withBasicPlural (length txInputs) "input"
+      , withBasicPlural (Set.size txInputs) "input"
       , text ", "
       , withBasicPlural (length txOutputs) "output"
       , text ", "

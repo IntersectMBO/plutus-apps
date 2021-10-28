@@ -12,12 +12,10 @@ You can edit this file as you like.
   , "bifunctors"
   , "console"
   , "control"
-  , "coroutines"
   , "effect"
   , "either"
   , "enums"
   , "foldable-traversable"
-  , "foreign-generic"
   , "foreign-object"
   , "gen"
   , "halogen"
@@ -44,7 +42,7 @@ You can edit this file as you like.
   , "web-socket"
   , "web-uievents"
   ]
-, packages = ./packages.dhall
+, packages = ../packages.dhall
 , sources =
   [ "src/**/*.purs"
   , "generated/**/*.purs"
