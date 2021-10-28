@@ -10,7 +10,6 @@
   , "json-helpers"
   , "maybe"
   , "newtype"
-  , "node-process"
   , "node-readline"
   , "ordered-collections"
   , "prelude"

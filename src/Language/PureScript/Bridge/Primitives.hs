@@ -16,6 +16,18 @@ boolBridge = typeName ^== "Bool" >> return psBool
 eitherBridge :: BridgePart
 eitherBridge = typeName ^== "Either" >> psEither
 
+setBridge :: BridgePart
+setBridge = do
+  typeName ^== "Set"
+  typeModule ^== "Data.Set" <|> typeModule ^== "Data.Set.Internal"
+  psSet
+
+mapBridge :: BridgePart
+mapBridge = do
+  typeName ^== "Map"
+  typeModule ^== "Data.Map" <|> typeModule ^== "Data.Map.Internal"
+  psMap
+
 -- | Dummy bridge, translates every type with 'clearPackageFixUp'
 dummyBridge :: MonadReader BridgeData m => m PSType
 dummyBridge = clearPackageFixUp

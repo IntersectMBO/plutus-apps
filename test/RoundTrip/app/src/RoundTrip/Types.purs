@@ -17,8 +17,10 @@ import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
+import Data.Map (Map)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
+import Data.Set (Set)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
@@ -83,6 +85,8 @@ data TestSum
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
   | TwoFields TestTwoFields
+  | Set (Set Int)
+  | Map (Map String Int)
   | Unit Unit
   | MyUnit MyUnit
   | Pair (Tuple Int Number)
@@ -118,6 +122,8 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
     NT a -> E.encodeTagged "NT" a E.value
     NTRecord a -> E.encodeTagged "NTRecord" a E.value
     TwoFields a -> E.encodeTagged "TwoFields" a E.value
+    Set a -> E.encodeTagged "Set" a E.value
+    Map a -> E.encodeTagged "Map" a E.value
     Unit a -> E.encodeTagged "Unit" a E.unit
     MyUnit a -> E.encodeTagged "MyUnit" a E.value
     Pair a -> E.encodeTagged "Pair" a (E.tuple (E.value >/\< E.value))
@@ -146,6 +152,8 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
       , "NT" /\ D.content (NT <$> D.value)
       , "NTRecord" /\ D.content (NTRecord <$> D.value)
       , "TwoFields" /\ D.content (TwoFields <$> D.value)
+      , "Set" /\ D.content (Set <$> D.value)
+      , "Map" /\ D.content (Map <$> D.value)
       , "Unit" /\ D.content (Unit <$> D.unit)
       , "MyUnit" /\ D.content (MyUnit <$> D.value)
       , "Pair" /\ D.content (Pair <$> (D.tuple (D.value </\> D.value)))
@@ -223,6 +231,16 @@ _NTRecord = prism' NTRecord case _ of
 _TwoFields :: Prism' TestSum TestTwoFields
 _TwoFields = prism' TwoFields case _ of
   (TwoFields a) -> Just a
+  _ -> Nothing
+
+_Set :: Prism' TestSum (Set Int)
+_Set = prism' Set case _ of
+  (Set a) -> Just a
+  _ -> Nothing
+
+_Map :: Prism' TestSum (Map String Int)
+_Map = prism' Map case _ of
+  (Map a) -> Just a
   _ -> Nothing
 
 _Unit :: Prism' TestSum Unit

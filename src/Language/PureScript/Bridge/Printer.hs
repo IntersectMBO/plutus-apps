@@ -429,6 +429,10 @@ typeToEncode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) = pare
   "E.either" <+> typeToEncode l <+> typeToEncode r
 typeToEncode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) = parens $
   "E.tuple" <+> parens (hsep $ punctuate " >/\\<" $ typeToEncode <$> flattenTuple ts)
+typeToEncode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) = parens $
+  "E.tuple" <+> parens (hsep $ punctuate " >/\\<" $ typeToEncode <$> flattenTuple ts)
+typeToEncode (TypeInfo "purescript-ordered-collections" "Data.Map" "Map" [k, v]) = parens $
+  "E.dictionary" <+> typeToEncode k <+> typeToEncode v
 typeToEncode _ = "E.value"
 
 
@@ -496,6 +500,8 @@ typeToDecode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) = pare
   "D.either" <+> typeToDecode l <+> typeToDecode r
 typeToDecode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) = parens $
   "D.tuple" <+> encloseHsep lparen rparen " </\\>" (typeToDecode <$> flattenTuple ts)
+typeToDecode (TypeInfo "purescript-ordered-collections" "Data.Map" "Map" [k, v]) = parens $
+  "D.dictionary" <+> typeToDecode k <+> typeToDecode v
 typeToDecode _ = "D.value"
 
 

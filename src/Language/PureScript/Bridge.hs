@@ -133,12 +133,18 @@ bridgeSumType br (SumType t cs is) =
 --   "Language.PureScript.Bridge.Tuple".
 defaultBridge :: BridgePart
 defaultBridge =
-  textBridge <|> stringBridge <|> listBridge <|> maybeBridge <|> eitherBridge <|>
+  textBridge <|>
+  stringBridge <|>
+  listBridge <|>
+  maybeBridge <|>
+  eitherBridge <|>
   boolBridge <|>
   intBridge <|>
   doubleBridge <|>
   tupleBridge <|>
   unitBridge <|>
+  mapBridge <|>
+  setBridge <|>
   noContentBridge
 
 -- | Translate types in a constructor.

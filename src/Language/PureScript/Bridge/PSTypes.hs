@@ -83,3 +83,11 @@ psUnit =
     , _typeName = "Unit"
     , _typeParameters = []
     }
+
+psMap :: MonadReader BridgeData m => m PSType
+psMap =
+  TypeInfo "purescript-ordered-collections" "Data.Map" "Map" <$> psTypeParameters
+
+psSet :: MonadReader BridgeData m => m PSType
+psSet =
+  TypeInfo "purescript-ordered-collections" "Data.Set" "Set" <$> psTypeParameters

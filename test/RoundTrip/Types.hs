@@ -8,7 +8,9 @@ module RoundTrip.Types where
 
 import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Map (Map)
 import Data.Proxy (Proxy (..))
+import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Language.PureScript.Bridge (BridgePart, Language (..), SumType, buildBridge, defaultBridge, defaultSwitch, mkSumType, writePSTypes, writePSTypesWith)
@@ -51,6 +53,8 @@ data TestSum
   | NT TestNewtype
   | NTRecord TestNewtypeRecord
   | TwoFields TestTwoFields
+  | Set (Set Int)
+  | Map (Map String Int)
   | Unit ()
   | MyUnit MyUnit
   | Pair (Int, Double)
@@ -80,6 +84,8 @@ instance Arbitrary TestSum where
         NestedRecord <$> arbitrary,
         NT <$> arbitrary,
         NTRecord <$> arbitrary,
+        Map <$> arbitrary,
+        Set <$> arbitrary,
         TwoFields <$> arbitrary,
         pure $ Unit (),
         Pair <$> arbitrary,
