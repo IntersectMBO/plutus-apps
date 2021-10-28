@@ -41,7 +41,8 @@ let
       else if pkgs.stdenv.hostPlatform.isWindows then ./materialized-windows
       else builtins.error "Don't have materialized files for this platform";
     # If true, we check that the generated files are correct. Set in the CI so we don't make mistakes.
-    inherit checkMaterialization;
+    # inherit checkMaterialization;
+    checkMaterialization = true;
     sha256map = {
       "https://github.com/Quid2/flat.git"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
       "https://github.com/input-output-hk/purescript-bridge.git"."6a92d7853ea514be8b70bab5e72077bf5a510596" = "13j64vv116in3c204qsl1v0ajphac9fqvsjp7x3zzfr7n7g61drb";
@@ -59,16 +60,12 @@ let
       "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" = "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
       "https://github.com/input-output-hk/cardano-wallet"."ae7569293e94241ef6829139ec02bd91abd069df" = "1mv1dhpkdj9ridm1fvq6jc85qs6zvbp172228rq72gyawjwrgvi6";
       "https://github.com/input-output-hk/cardano-addresses"."35f9c49dcd953b45da6dfbcb84b39c3f448ced58" = "sha256-dpRlLB0d6IhBwi3i6gGdNsD1Wt99ldiLTSwa1ld2YrM=";
-      "https://github.com/input-output-hk/plutus"."3f089ccf0ca746b399c99afe51e063b0640af547" = "1nx8xmdgwmnsla4qg4k67f5md8vm3p1p9i25ndalrqdg40z90486";
+      "https://github.com/input-output-hk/plutus"."dda41bc89f93953b63ed0e37ae04c13319e6c87b" = "04gr909cqv86pf2ljyxh813jmn34p431jmjk24zq1jc0ppj30d7h";
     };
     # Configuration settings needed for cabal configure to work when cross compiling
     # for windows. We can't use `modules` for these as `modules` are only applied
     # after cabal has been configured.
     cabalProjectLocal = lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
-      -- When cross compiling for windows we don't have a `ghc` package, so use
-      -- the `plutus-ghc-stub` package instead.
-      packages:
-        stubs/plutus-ghc-stub
       package plutus-tx-plugin
         flags: +use-ghc-stub
 
@@ -78,9 +75,6 @@ let
         tests: False
     '' + lib.optionalString pkgs.stdenv.hostPlatform.isGhcjs ''
       packages:
-        stubs/cardano-api-stub
-        stubs/iohk-monitoring-stub
-        stubs/plutus-ghc-stub
         contrib/*
       package plutus-tx-plugin
         flags: +use-ghc-stub
@@ -157,20 +151,7 @@ let
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
         packages = {
           # Things that need plutus-tx-plugin
-          playground-common.package.buildable = false;
-          plutus-benchmark.package.buildable = false;
-          plutus-chain-index.package.buildable = false;
-          plutus-contract.package.buildable = false;
-          plutus-errors.package.buildable = false;
-          plutus-ledger.package.buildable = false;
-          plutus-pab.package.buildable = false;
-          plutus-playground-server.package.buildable = false; # Would also require libpq
-          plutus-tx-plugin.package.buildable = false;
-          plutus-use-cases.package.buildable = false;
           web-ghc.package.buildable = false;
-          # These need R
-          plutus-core.components.benchmarks.cost-model-test.buildable = lib.mkForce false;
-          plutus-core.components.benchmarks.update-cost-model.buildable = lib.mkForce false;
         };
       })
       ({ pkgs, ... }:

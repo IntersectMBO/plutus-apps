@@ -748,6 +748,7 @@
         ouroboros-consensus-shelley = ./.plan.nix/ouroboros-consensus-shelley.nix;
         cardano-slotting = ./.plan.nix/cardano-slotting.nix;
         playground-common = ./.plan.nix/playground-common.nix;
+        iohk-monitoring-stub = ./.plan.nix/iohk-monitoring-stub.nix;
         cardano-node = ./.plan.nix/cardano-node.nix;
         cardano-protocol-tpraos = ./.plan.nix/cardano-protocol-tpraos.nix;
         cardano-crypto-class = ./.plan.nix/cardano-crypto-class.nix;
@@ -781,6 +782,7 @@
         non-integral = ./.plan.nix/non-integral.nix;
         plutus-contract = ./.plan.nix/plutus-contract.nix;
         iohk-monitoring = ./.plan.nix/iohk-monitoring.nix;
+        cardano-api-stub = ./.plan.nix/cardano-api-stub.nix;
         io-sim = ./.plan.nix/io-sim.nix;
         cardano-crypto-test = ./.plan.nix/cardano-crypto-test.nix;
         cardano-addresses-jsbits = ./.plan.nix/cardano-addresses-jsbits.nix;
@@ -859,6 +861,7 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "playground-common" = { flags = {}; };
+          "iohk-monitoring-stub" = { flags = {}; };
           "cardano-node" = {
             flags = {
               "unexpected_thunks" = lib.mkOverride 900 false;
@@ -872,7 +875,10 @@
           "lobemo-backend-monitoring" = { flags = {}; };
           "tracer-transformers" = { flags = {}; };
           "plutus-tx-plugin" = {
-            flags = { "use-ghc-stub" = lib.mkOverride 900 false; };
+            flags = {
+              "use-ghc-stub" = lib.mkOverride 900 false;
+              "ghcjs-plugin" = lib.mkOverride 900 false;
+              };
             };
           "measures" = {
             flags = { "development" = lib.mkOverride 900 false; };
@@ -938,6 +944,7 @@
               "disable-observables" = lib.mkOverride 900 false;
               };
             };
+          "cardano-api-stub" = { flags = {}; };
           "io-sim" = { flags = { "asserts" = lib.mkOverride 900 false; }; };
           "cardano-crypto-test" = { flags = {}; };
           "cardano-addresses-jsbits" = { flags = {}; };
@@ -1035,6 +1042,7 @@
           "byteorder".components.library.planned = lib.mkOverride 900 true;
           "ntp-client".components.exes."demo-ntp-client".planned = lib.mkOverride 900 true;
           "ekg-json".components.library.planned = lib.mkOverride 900 true;
+          "cardano-api-stub".components.library.planned = lib.mkOverride 900 true;
           "tracer-transformers".components.exes."tracer-transfomers-example1".planned = lib.mkOverride 900 true;
           "semigroupoids".components.setup.planned = lib.mkOverride 900 true;
           "row-types".components.library.planned = lib.mkOverride 900 true;
@@ -1600,6 +1608,7 @@
           "memory".components.library.planned = lib.mkOverride 900 true;
           "cardano-protocol-tpraos".components.library.planned = lib.mkOverride 900 true;
           "cardano-node".components.library.planned = lib.mkOverride 900 true;
+          "iohk-monitoring-stub".components.library.planned = lib.mkOverride 900 true;
           "random-shuffle".components.library.planned = lib.mkOverride 900 true;
           "pretty-show".components.exes."ppsh".planned = lib.mkOverride 900 true;
           "typerep-map".components.sublibs."typerep-extra-impls".planned = lib.mkOverride 900 true;

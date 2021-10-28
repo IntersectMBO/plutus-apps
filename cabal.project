@@ -224,7 +224,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 3f089ccf0ca746b399c99afe51e063b0640af547
+  tag: dda41bc89f93953b63ed0e37ae04c13319e6c87b
   subdir:
     plutus-core
     plutus-ledger-api
@@ -232,4 +232,6 @@ source-repository-package
     plutus-tx-plugin
     word-array
     prettyprinter-configurable
+    stubs/cardano-api-stub
+    stubs/iohk-monitoring-stub
     stubs/plutus-ghc-stub

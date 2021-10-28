@@ -49,7 +49,6 @@
           (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
           (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-          (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
           (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."cardano-wallet-core" or (errorHandler.buildDepError "cardano-wallet-core"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
@@ -61,7 +60,6 @@
           (hsPkgs."generic-arbitrary" or (errorHandler.buildDepError "generic-arbitrary"))
           (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
           (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
-          (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
           (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
           (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
@@ -101,7 +99,16 @@
           (hsPkgs."websockets" or (errorHandler.buildDepError "websockets"))
           (hsPkgs."Win32-network" or (errorHandler.buildDepError "Win32-network"))
           (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
-          ];
+          ] ++ (if !system.isGhcjs
+          then [
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
+            (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
+            ]
+          else [
+            (hsPkgs."cardano-api-stub" or (errorHandler.buildDepError "cardano-api-stub"))
+            (hsPkgs."iohk-monitoring-stub" or (errorHandler.buildDepError "iohk-monitoring-stub"))
+            ]);
         build-tools = [
           (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
           (hsPkgs.buildPackages.cardano-cli.components.exes.cardano-cli or (pkgs.buildPackages.cardano-cli or (errorHandler.buildToolDepError "cardano-cli:cardano-cli")))
@@ -186,7 +193,6 @@
             (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
-            (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
             (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
             (hsPkgs."monad-logger" or (errorHandler.buildDepError "monad-logger"))
@@ -208,11 +214,11 @@
             (hsPkgs."unliftio-core" or (errorHandler.buildDepError "unliftio-core"))
             (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
             (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
-            ];
+            ] ++ (pkgs.lib).optional (!system.isGhcjs) (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"));
           buildable = true;
           modules = [ "CommandParser" ];
           hsSourceDirs = [ "app" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (!system.isGhcjs) "";
           };
         "plutus-pab-examples" = {
           depends = [

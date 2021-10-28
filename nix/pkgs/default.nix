@@ -54,10 +54,10 @@ let
     # Update the linux files (will do for all unixes atm).
     $(nix-build default.nix -A plutus-apps.haskell.project.plan-nix.passthru.updateMaterialized --argstr system x86_64-linux)
     $(nix-build default.nix -A plutus-apps.haskell.project.plan-nix.passthru.updateMaterialized --argstr system x86_64-darwin)
-    $(nix-build default.nix -A plutus-apps.haskell.project.plan-nix.passthru.updateMaterialized --argstr system windows)
     $(nix-build default.nix -A plutus-apps.haskell.project.projectCross.mingwW64.plan-nix.passthru.updateMaterialized --argstr system x86_64-linux)
-    $(nix-build ci.nix -A ghcjs.haskell.library.plutus-core.project.plan-nix.passthru.updateMaterialized --argstr system x86_64-linux)
-    $(nix-build ci.nix -A ghcjs.haskell.library.plutus-core.project.buildProject.plan-nix.passthru.updateMaterialized --argstr system x86_64-linux)
+    $(nix-build ci.nix -A mingwW64.haskell.library.plutus-ledger.project.plan-nix.passthru.updateMaterialized --argstr system x86_64-linux)
+    $(nix-build ci.nix -A ghcjs.haskell.library.plutus-ledger.project.plan-nix.passthru.updateMaterialized --argstr system x86_64-linux)
+    $(nix-build ci.nix -A ghcjs.haskell.library.plutus-ledger.project.buildProject.plan-nix.passthru.updateMaterialized --argstr system x86_64-linux)
 
     # This updates the sha files for the extra packages
     $(nix-build default.nix -A plutus-apps.haskell.extraPackages.updateAllShaFiles --argstr system x86_64-linux)
