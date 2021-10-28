@@ -5,7 +5,6 @@ import           Control.Monad           (void)
 import qualified Data.Map                as Map
 
 import qualified Ledger.Ada              as Ada
-import           Ledger.Constraints      (ScriptLookups (..))
 import qualified Ledger.Constraints      as Constraints
 import           Ledger.Scripts          (unitRedeemer)
 import           Ledger.Typed.Scripts    as Scripts
@@ -20,15 +19,8 @@ import           Test.Tasty
 theContract :: Contract () EmptySchema PubKeyError ()
 theContract = do
   (txOutRef, ciTxOut, pkInst) <- pubKeyContract (walletPubKeyHash w1) (Ada.lovelaceValueOf 10)
-  let lookups = ScriptLookups
-                  { slMPS = Map.empty
-                  , slTxOutputs = maybe mempty (Map.singleton txOutRef) ciTxOut
-                  , slOtherScripts = Map.singleton (Scripts.validatorHash pkInst) (Scripts.validatorScript pkInst)
-                  , slOtherData = Map.empty
-                  , slPubKeyHashes = Map.empty
-                  , slTypedValidator = Nothing
-                  , slOwnPubkeyHash = Nothing
-                  }
+  let lookups = maybe mempty (Constraints.unspentOutputs . Map.singleton txOutRef) ciTxOut
+              <> Constraints.otherScript (Scripts.validatorScript pkInst)
   void $ submitTxConstraintsWith @Scripts.Any lookups (Constraints.mustSpendScriptOutput txOutRef unitRedeemer)
 
 tests :: TestTree
