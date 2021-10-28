@@ -2,7 +2,7 @@ module Ledger.Extra where
 
 import Data.Lens (Lens', lens, view)
 import Data.Lens.Record (prop)
-import Data.Symbol (SProxy(..))
+import Type.Proxy (Proxy(..))
 import Data.Tuple (Tuple(..))
 import PlutusTx.AssocMap (unionWith)
 import PlutusTx.AssocMap as AssocMap
@@ -70,10 +70,10 @@ instance upperBoundHasBound :: HasBound (UpperBound v) v where
 
 ------------------------------------------------------------
 _ivFrom :: forall a r. Lens' { ivFrom :: a | r } a
-_ivFrom = prop (SProxy :: SProxy "ivFrom")
+_ivFrom = prop (Proxy :: _ "ivFrom")
 
 _ivTo :: forall a r. Lens' { ivTo :: a | r } a
-_ivTo = prop (SProxy :: SProxy "ivTo")
+_ivTo = prop (Proxy :: _ "ivTo")
 
 _LowerBoundExtended :: forall a. Lens' (LowerBound a) (Extended a)
 _LowerBoundExtended = lens get set
@@ -104,7 +104,7 @@ _UpperBoundInclusive = lens get set
   set (UpperBound e _) i = UpperBound e i
 
 _a :: forall a r. Lens' { a :: a | r } a
-_a = prop (SProxy :: SProxy "a")
+_a = prop (Proxy :: _ "a")
 
 ------------------------------------------------------------
 sum :: Value -> Value -> Value

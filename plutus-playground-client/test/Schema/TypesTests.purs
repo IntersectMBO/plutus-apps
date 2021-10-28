@@ -3,6 +3,7 @@ module Schema.TypesTests
   ) where
 
 import Prologue
+import Control.Monad.Error.Class (class MonadThrow)
 import Data.Argonaut.Core (Json, stringify)
 import Data.BigInt.Argonaut as BigInt
 import Data.Functor.Foldable (Fix(..))
@@ -10,28 +11,29 @@ import Data.List (List(..), (:))
 import Data.List.NonEmpty (NonEmptyList(..))
 import Data.NonEmpty ((:|))
 import Effect.Aff (Aff)
-import PlutusTx.AssocMap as AssocMap
-import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
+import Effect.Exception (Error)
+import Ledger.CardanoWallet (WalletNumber(..))
 import Playground.Types (ContractCall(..), FunctionSchema(..), KnownCurrency(..))
+import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
+import PlutusTx.AssocMap as AssocMap
 import Schema (FormSchema(..), FormArgumentF(..))
 import Schema.Types (FormArgument, formArgumentToJson, mkInitialValue, toArgument)
-import Test.Unit (TestSuite, Test, suite, test)
-import Test.Unit.Assert (equal)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
 import Validation (ValidationError(..), validate, withPath)
-import Ledger.CardanoWallet (WalletNumber(..))
 import Wallet.Types (EndpointDescription(..))
 
-all :: TestSuite
+all :: Spec Unit
 all =
-  suite "Schema.Types" do
-    validateTests
-    toArgumentTests
-    formArgumentToJsonTests
-    mkInitialValueTests
+  describe "Schema.Types" do
+    validateSpec
+    toArgumentSpec
+    formArgumentToJsonSpec
+    mkInitialValueSpec
 
-validateTests :: TestSuite
-validateTests = do
-  test "No validation errors" do
+validateSpec :: Spec Unit
+validateSpec = do
+  it "No validation errors" do
     isValid $ AddBlocks { blocks: one }
     isValid $ makeTestAction $ Fix $ FormIntF (Just 5)
     isValid $ makeTestAction $ Fix $ FormIntegerF (Just (BigInt.fromInt 5))
@@ -40,44 +42,47 @@ validateTests = do
     isValid $ makeTestAction $ Fix $ FormArrayF FormSchemaInt []
     isValid $ makeTestAction $ Fix $ FormObjectF []
   --
-  test "Validation errors" do
-    equal [ withPath [] Unsupported ] $ validate (makeTestAction $ Fix $ FormUnsupportedF "Test case.")
-    equal [ withPath [] Required ] $ validate (makeTestAction $ Fix $ FormIntF Nothing)
-    equal [ withPath [] Required ] $ validate (makeTestAction $ Fix $ FormIntegerF Nothing)
-    equal [ withPath [] Required ] $ validate (makeTestAction $ Fix $ FormStringF Nothing)
-    equal
-      [ withPath [ "_1" ] Required
-      , withPath [ "_2" ] Unsupported
-      ]
-      (validate (makeTestAction $ Fix $ FormTupleF (Fix $ FormIntF Nothing) (Fix $ FormUnsupportedF "Test.")))
-    equal [ withPath [ "_1" ] Required ] $ validate (makeTestAction $ Fix $ FormTupleF (Fix $ FormIntF Nothing) (Fix $ FormIntF (Just 5)))
-    equal [ withPath [ "_2" ] Required ] $ validate (makeTestAction $ Fix $ FormTupleF (Fix $ FormIntF (Just 5)) (Fix $ FormIntF Nothing))
-    equal [ withPath [ "2" ] Required ]
-      $ validate
-          ( makeTestAction
-              $ Fix
-              $ FormArrayF FormSchemaInt
-                  [ Fix $ FormIntF (Just 5)
-                  , Fix $ FormIntF (Just 6)
-                  , Fix $ FormIntF Nothing
-                  , Fix $ FormIntF (Just 7)
-                  ]
-          )
-    equal
-      [ withPath [ "name" ] Required ]
-      ( validate
-          ( makeTestAction
-              $ Fix
-              $ FormObjectF
-                  [ Tuple "name" (Fix $ FormStringF Nothing)
-                  , Tuple "test" (Fix $ FormIntF (Just 5))
-                  ]
-          )
+  it "Validation errors" do
+    validate (makeTestAction $ Fix $ FormUnsupportedF "Test case.") `shouldEqual` [ withPath [] Unsupported ]
+    validate (makeTestAction $ Fix $ FormIntF Nothing) `shouldEqual` [ withPath [] Required ]
+    validate (makeTestAction $ Fix $ FormIntegerF Nothing) `shouldEqual` [ withPath [] Required ]
+    validate (makeTestAction $ Fix $ FormStringF Nothing) `shouldEqual` [ withPath [] Required ]
+    validate (makeTestAction $ Fix $ FormTupleF (Fix $ FormIntF Nothing) (Fix $ FormUnsupportedF "Test."))
+      `shouldEqual`
+        [ withPath [ "_1" ] Required
+        , withPath [ "_2" ] Unsupported
+        ]
+    validate (makeTestAction $ Fix $ FormTupleF (Fix $ FormIntF Nothing) (Fix $ FormIntF (Just 5))) `shouldEqual` [ withPath [ "_1" ] Required ]
+    validate (makeTestAction $ Fix $ FormTupleF (Fix $ FormIntF (Just 5)) (Fix $ FormIntF Nothing))
+      `shouldEqual`
+        [ withPath [ "_2" ] Required ]
+    validate
+      ( makeTestAction
+          $ Fix
+          $ FormArrayF FormSchemaInt
+              [ Fix $ FormIntF (Just 5)
+              , Fix $ FormIntF (Just 6)
+              , Fix $ FormIntF Nothing
+              , Fix $ FormIntF (Just 7)
+              ]
       )
+      `shouldEqual`
+        [ withPath [ "2" ] Required ]
+    ( validate
+        ( makeTestAction
+            $ Fix
+            $ FormObjectF
+                [ Tuple "name" (Fix $ FormStringF Nothing)
+                , Tuple "test" (Fix $ FormIntF (Just 5))
+                ]
+        )
+    )
+      `shouldEqual`
+        [ withPath [ "name" ] Required ]
 
-toArgumentTests :: TestSuite
-toArgumentTests = do
-  suite "toArgument" do
+toArgumentSpec :: Spec Unit
+toArgumentSpec = do
+  describe "toArgument" do
     let
       initialValue :: Value
       initialValue =
@@ -95,14 +100,10 @@ toArgumentTests = do
                   )
                 ]
           }
-    test "FormIntF" do
-      equal
-        (toArgument initialValue FormSchemaInt)
-        (Fix (FormIntF Nothing))
-    test "Value" do
-      equal
-        (toArgument initialValue FormSchemaValue)
-        (Fix (FormValueF initialValue))
+    it "FormIntF" do
+      toArgument initialValue FormSchemaInt `shouldEqual` Fix (FormIntF Nothing)
+    it "Value" do
+      toArgument initialValue FormSchemaValue `shouldEqual` Fix (FormValueF initialValue)
 
 makeTestAction :: FormArgument -> ContractCall FormArgument
 makeTestAction argument =
@@ -117,33 +118,33 @@ makeTestAction argument =
     }
 
 isValid :: ContractCall FormArgument -> Aff Unit
-isValid = validate >>> equal []
+isValid = validate >>> flip shouldEqual []
 
-formArgumentToJsonTests :: TestSuite
-formArgumentToJsonTests = do
-  suite "FormArgument to JSON" do
-    test "Ints" do
+formArgumentToJsonSpec :: Spec Unit
+formArgumentToJsonSpec = do
+  describe "FormArgument to JSON" do
+    it "Ints" do
       equalJson
         Nothing
         (formArgumentToJson (Fix $ FormIntF Nothing))
       equalJson
         (Just "5")
         (formArgumentToJson (Fix $ FormIntF (Just 5)))
-    test "BigInts" do
+    it "BigInts" do
       equalJson
         Nothing
         (formArgumentToJson (Fix $ FormIntegerF Nothing))
       equalJson
         (Just "5")
         (formArgumentToJson (Fix $ FormIntegerF (Just (BigInt.fromInt 5))))
-    test "Strings" do
+    it "Strings" do
       equalJson
         Nothing
         (formArgumentToJson (Fix $ FormStringF Nothing))
       equalJson
-        (Just "Test")
+        (Just "\"Test\"")
         (formArgumentToJson (Fix $ FormStringF (Just "Test")))
-    test "Tuples" do
+    it "Tuples" do
       equalJson
         Nothing
         (formArgumentToJson (Fix $ FormTupleF (Fix $ FormIntF Nothing) (Fix $ FormStringF Nothing)))
@@ -156,9 +157,9 @@ formArgumentToJsonTests = do
       equalJson
         (Just "[5,\"Test\"]")
         (formArgumentToJson (Fix $ FormTupleF (Fix $ FormIntF (Just 5)) (Fix $ FormStringF (Just "Test"))))
-    test "Arrays" do
+    it "Arrays" do
       equalJson
-        (Just "[1,2,3 ]")
+        (Just "[1,2,3]")
         ( formArgumentToJson
             ( Fix
                 $ FormArrayF FormSchemaInt
@@ -168,10 +169,10 @@ formArgumentToJsonTests = do
                     ]
             )
         )
-    test "Values" do
+    it "Values" do
       equalJson
         ( Just
-            "{\"getValue\":[{\"unCurrencySymbol\":\"\"},[[{\"unCurrencySymbol\":\"\"},{\"unTokenName\":\"\"},4]]]}"
+            "{\"getValue\":[[{\"unCurrencySymbol\":\"\"},[[{\"unTokenName\":\"\"},4]]]]}"
         )
         ( formArgumentToJson
             ( Fix
@@ -192,7 +193,7 @@ formArgumentToJsonTests = do
                     )
             )
         )
-    test "Objects" do
+    it "Objects" do
       equalJson
         (Just "{\"name\":\"Tester\",\"arg\":20}")
         ( formArgumentToJson
@@ -204,12 +205,30 @@ formArgumentToJsonTests = do
             )
         )
 
-mkInitialValueTests :: TestSuite
-mkInitialValueTests =
-  suite "mkInitialValue" do
-    test "balance" do
-      equal
-        ( Value
+mkInitialValueSpec :: Spec Unit
+mkInitialValueSpec =
+  describe "mkInitialValue" do
+    it "balance" do
+      mkInitialValue
+        [ KnownCurrency
+            { hash: ""
+            , friendlyName: "Ada"
+            , knownTokens:
+                NonEmptyList $ TokenName { unTokenName: "" } :| Nil
+            }
+        , KnownCurrency
+            { hash: "Currency"
+            , friendlyName: "Currencies"
+            , knownTokens:
+                NonEmptyList
+                  $ TokenName { unTokenName: "USDToken" }
+                  :| TokenName { unTokenName: "EURToken" }
+                  : Nil
+            }
+        ]
+        (BigInt.fromInt 10)
+        `shouldEqual`
+          Value
             { getValue:
                 AssocMap.Map
                   [ Tuple ada $ AssocMap.Map [ Tuple adaToken $ BigInt.fromInt 10 ]
@@ -221,26 +240,6 @@ mkInitialValueTests =
                           ]
                   ]
             }
-        )
-        ( mkInitialValue
-            [ KnownCurrency
-                { hash: ""
-                , friendlyName: "Ada"
-                , knownTokens:
-                    NonEmptyList $ TokenName { unTokenName: "" } :| Nil
-                }
-            , KnownCurrency
-                { hash: "Currency"
-                , friendlyName: "Currencies"
-                , knownTokens:
-                    NonEmptyList
-                      $ TokenName { unTokenName: "USDToken" }
-                      :| TokenName { unTokenName: "EURToken" }
-                      : Nil
-                }
-            ]
-            (BigInt.fromInt 10)
-        )
 
 ada :: CurrencySymbol
 ada = CurrencySymbol { unCurrencySymbol: "" }
@@ -257,5 +256,5 @@ usdToken = TokenName { unTokenName: "USDToken" }
 eurToken :: TokenName
 eurToken = TokenName { unTokenName: "EURToken" }
 
-equalJson :: Maybe String -> Maybe Json -> Test
-equalJson expected actual = equal expected (stringify <$> actual)
+equalJson :: forall m. MonadThrow Error m => Maybe String -> Maybe Json -> m Unit
+equalJson expected actual = (stringify <$> actual) `shouldEqual` expected

@@ -70,12 +70,6 @@ psNonEmpty =
     TypeInfo "purescript-lists" "Data.List.Types" "NonEmptyList" <$>
     psTypeParameters
 
-psMap :: MonadReader BridgeData m => m PSType
-psMap = TypeInfo "purescript-ordered-collections" "Data.Map" "Map" <$> psTypeParameters
-
-psSet :: MonadReader BridgeData m => m PSType
-psSet = TypeInfo "purescript-ordered-collections" "Data.Set" "Set" <$> psTypeParameters
-
 psUUID :: PSType
 psUUID = TypeInfo "web-common" "Data.UUID.Argonaut" "UUID" []
 
@@ -85,12 +79,6 @@ uuidBridge = do
     typeModule ^== "Data.UUID" <|> typeModule ^== "Data.UUID.Types.Internal"
     pure psUUID
 
-mapBridge :: BridgePart
-mapBridge = do
-    typeName ^== "Map"
-    typeModule ^== "Data.Map.Internal"
-    psMap
-
 aesonValueBridge :: BridgePart
 aesonValueBridge = do
     typeName ^== "Value"
@@ -99,15 +87,9 @@ aesonValueBridge = do
 
 aesonBridge :: BridgePart
 aesonBridge =
-    mapBridge <|> aesonValueBridge <|> uuidBridge
+    aesonValueBridge <|> uuidBridge
 
 ------------------------------------------------------------
-setBridge :: BridgePart
-setBridge = do
-    typeName ^== "Set"
-    typeModule ^== "Data.Set" <|> typeModule ^== "Data.Set.Internal"
-    psArray
-
 nonEmptyBridge :: BridgePart
 nonEmptyBridge = do
     typeName ^== "NonEmpty"
@@ -115,7 +97,7 @@ nonEmptyBridge = do
     psNonEmpty
 
 containersBridge :: BridgePart
-containersBridge = nonEmptyBridge <|> setBridge <|> mapBridge
+containersBridge = nonEmptyBridge
 
 ------------------------------------------------------------
 psBigInteger :: PSType
@@ -317,7 +299,7 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @SlotConversionError
     , equal . genericShow . argonaut $ mkSumType @Tx
     , order . genericShow . argonaut $ mkSumType @TxId
-    , equal . genericShow . argonaut $ mkSumType @TxIn
+    , order . equal . genericShow . argonaut $ mkSumType @TxIn
     , equal . genericShow . argonaut $ mkSumType @TxOut
     , equal . genericShow . argonaut $ mkSumType @TxOutTx
     , order . genericShow . argonaut $ mkSumType @TxOutRef
@@ -433,13 +415,12 @@ playgroundTypes =
     , genericShow . order . argonaut $ mkSumType @EndpointDescription
     , genericShow . equal . argonaut $ mkSumType @KnownCurrency
     , genericShow . equal . argonaut $ mkSumType @(ContractCall A)
-    ] <>
-    [ order . argonaut $ mkSumType @GistId
-    , argonaut $ mkSumType @Gist
-    , argonaut $ mkSumType @GistFile
+    , order . equal . genericShow . argonaut $ mkSumType @GistId
+    , equal . genericShow . argonaut $ mkSumType @Gist
+    , equal . genericShow . argonaut $ mkSumType @GistFile
     , argonaut $ mkSumType @NewGist
     , argonaut $ mkSumType @NewGistFile
-    , argonaut $ mkSumType @Owner
-    , argonaut $ mkSumType @AuthStatus
+    , equal . genericShow . argonaut $ mkSumType @Owner
+    , equal . genericShow . argonaut $ mkSumType @AuthStatus
     , order . equal . genericShow . argonaut $ mkSumType @AuthRole
     ]

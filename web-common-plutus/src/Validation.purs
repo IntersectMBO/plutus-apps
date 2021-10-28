@@ -8,7 +8,7 @@ import Data.Functor.Foldable (Fix)
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Lens', view)
 import Data.Lens.Record (prop)
-import Data.Symbol (SProxy(..))
+import Type.Proxy (Proxy(..))
 import Matryoshka (Algebra, cata)
 import Playground.Types (ContractCall(..), _FunctionSchema)
 import Schema (FormArgumentF(..))
@@ -123,7 +123,7 @@ instance simulatorActionValidation :: Validation (ContractCall (Fix FormArgument
     arg = view (_argumentValues <<< _FunctionSchema <<< _argument) call
 
 _argument :: forall r a. Lens' { argument :: a | r } a
-_argument = prop (SProxy :: SProxy "argument")
+_argument = prop (Proxy :: _ "argument")
 
 _argumentValues :: forall r a. Lens' { argumentValues :: a | r } a
-_argumentValues = prop (SProxy :: SProxy "argumentValues")
+_argumentValues = prop (Proxy :: _ "argumentValues")

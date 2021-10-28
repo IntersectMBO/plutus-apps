@@ -15,7 +15,7 @@ import Data.Map (Map)
 import Data.Newtype (class Newtype)
 import Data.NonEmpty ((:|))
 import Data.Show.Generic (genericShow)
-import Data.Symbol (SProxy(..))
+import Type.Proxy (Proxy(..))
 import Data.Tuple.Nested (type (/\))
 import Data.UUID.Argonaut (UUID)
 import Data.UUID.Argonaut as UUID
@@ -116,67 +116,67 @@ derive instance newtypeState :: Newtype (State a) _
 derive instance genericState :: Generic (State a) _
 
 _currentView :: forall a. Lens' (State a) View
-_currentView = _Newtype <<< prop (SProxy :: SProxy "currentView")
+_currentView = _Newtype <<< prop (Proxy :: _ "currentView")
 
 _contractSignatures :: forall s r a. Newtype s { contractSignatures :: a | r } => Lens' s a
-_contractSignatures = _Newtype <<< prop (SProxy :: SProxy "contractSignatures")
+_contractSignatures = _Newtype <<< prop (Proxy :: _ "contractSignatures")
 
 _chainReport :: forall s r a. Newtype s { chainReport :: a | r } => Lens' s a
-_chainReport = _Newtype <<< prop (SProxy :: SProxy "chainReport")
+_chainReport = _Newtype <<< prop (Proxy :: _ "chainReport")
 
 _events :: forall s r a. Newtype s { events :: a | r } => Lens' s a
-_events = _Newtype <<< prop (SProxy :: SProxy "events")
+_events = _Newtype <<< prop (Proxy :: _ "events")
 
 _chainState :: forall a. Lens' (State a) Chain.State
-_chainState = _Newtype <<< prop (SProxy :: SProxy "chainState")
+_chainState = _Newtype <<< prop (Proxy :: _ "chainState")
 
 _contractStates :: forall a. Lens' (State a) ContractStates
-_contractStates = _Newtype <<< prop (SProxy :: SProxy "contractStates")
+_contractStates = _Newtype <<< prop (Proxy :: _ "contractStates")
 
 _annotatedBlockchain :: Lens' ChainReport (Array (Array AnnotatedTx))
-_annotatedBlockchain = _ChainReport <<< prop (SProxy :: SProxy "annotatedBlockchain")
+_annotatedBlockchain = _ChainReport <<< prop (Proxy :: _ "annotatedBlockchain")
 
 _transactionMap :: Lens' ChainReport (Map TxId Tx)
-_transactionMap = _ChainReport <<< prop (SProxy :: SProxy "transactionMap")
+_transactionMap = _ChainReport <<< prop (Proxy :: _ "transactionMap")
 
 _webSocketMessage :: forall s a r. Newtype s { webSocketMessage :: a | r } => Lens' s a
-_webSocketMessage = _Newtype <<< prop (SProxy :: SProxy "webSocketMessage")
+_webSocketMessage = _Newtype <<< prop (Proxy :: _ "webSocketMessage")
 
 _webSocketStatus :: forall s a r. Newtype s { webSocketStatus :: a | r } => Lens' s a
-_webSocketStatus = _Newtype <<< prop (SProxy :: SProxy "webSocketStatus")
+_webSocketStatus = _Newtype <<< prop (Proxy :: _ "webSocketStatus")
 
 _contractReport :: forall s a r. Newtype s { contractReport :: a | r } => Lens' s a
-_contractReport = _Newtype <<< prop (SProxy :: SProxy "contractReport")
+_contractReport = _Newtype <<< prop (Proxy :: _ "contractReport")
 
 _utxoIndex :: Lens' ChainReport UtxoIndex
-_utxoIndex = _ChainReport <<< prop (SProxy :: SProxy "utxoIndex")
+_utxoIndex = _ChainReport <<< prop (Proxy :: _ "utxoIndex")
 
 _crAvailableContracts :: forall t. Lens' (ContractReport t) (Array (ContractSignatureResponse t))
-_crAvailableContracts = _ContractReport <<< prop (SProxy :: SProxy "crAvailableContracts")
+_crAvailableContracts = _ContractReport <<< prop (Proxy :: _ "crAvailableContracts")
 
 _crActiveContractStates :: forall t. Lens' (ContractReport t) (Array (Tuple ContractInstanceId (PartiallyDecodedResponse PABReq)))
-_crActiveContractStates = _ContractReport <<< prop (SProxy :: SProxy "crActiveContractStates")
+_crActiveContractStates = _ContractReport <<< prop (Proxy :: _ "crActiveContractStates")
 
 _csrDefinition :: forall t. Lens' (ContractSignatureResponse t) t
-_csrDefinition = _ContractSignatureResponse <<< prop (SProxy :: SProxy "csrDefinition")
+_csrDefinition = _ContractSignatureResponse <<< prop (Proxy :: _ "csrDefinition")
 
 _unContractSignatures :: forall t. Lens' (ContractSignatures t) (Array (ContractSignatureResponse t))
-_unContractSignatures = _ContractSignatures <<< prop (SProxy :: SProxy "unContractSignatures")
+_unContractSignatures = _ContractSignatures <<< prop (Proxy :: _ "unContractSignatures")
 
 _csContract :: forall t. Lens' (ContractInstanceClientState t) ContractInstanceId
-_csContract = _Newtype <<< prop (SProxy :: SProxy "cicContract")
+_csContract = _Newtype <<< prop (Proxy :: _ "cicContract")
 
 _csCurrentState :: forall t. Lens' (ContractInstanceClientState t) (PartiallyDecodedResponse ActiveEndpoint)
-_csCurrentState = _Newtype <<< prop (SProxy :: SProxy "cicCurrentState")
+_csCurrentState = _Newtype <<< prop (Proxy :: _ "cicCurrentState")
 
 _csContractDefinition :: forall t. Lens' (ContractInstanceClientState t) t
-_csContractDefinition = _ContractInstanceClientState <<< prop (SProxy :: SProxy "cicDefinition")
+_csContractDefinition = _ContractInstanceClientState <<< prop (Proxy :: _ "cicDefinition")
 
 _hooks :: forall t. Lens' (PartiallyDecodedResponse t) (Array (Request t))
-_hooks = _Newtype <<< prop (SProxy :: SProxy "hooks")
+_hooks = _Newtype <<< prop (Proxy :: _ "hooks")
 
 _activeEndpoint :: Lens' ActiveEndpoint EndpointDescription
-_activeEndpoint = _Newtype <<< prop (SProxy :: SProxy "aeDescription")
+_activeEndpoint = _Newtype <<< prop (Proxy :: _ "aeDescription")
 
 _contractActiveEndpoints :: Traversal' (PartiallyDecodedResponse ActiveEndpoint) EndpointDescription
 _contractActiveEndpoints =
@@ -186,10 +186,10 @@ _contractActiveEndpoints =
     <<< _activeEndpoint
 
 _rqRequest :: forall t. Lens' (Request t) t
-_rqRequest = _Newtype <<< prop (SProxy :: SProxy "rqRequest")
+_rqRequest = _Newtype <<< prop (Proxy :: _ "rqRequest")
 
 _contractInstanceId :: Lens' ContractInstanceId UUID
-_contractInstanceId = _Newtype <<< prop (SProxy :: SProxy "unContractInstanceId")
+_contractInstanceId = _Newtype <<< prop (Proxy :: _ "unContractInstanceId")
 
 _contractInstanceIdString :: Getter' ContractInstanceId String
 _contractInstanceIdString = _contractInstanceId <<< to UUID.toString
@@ -212,4 +212,4 @@ instance showView :: Show View where
 
 ------------------------------------------------------------
 _getPubKeyHash :: forall s r a. Newtype s { getPubKeyHash :: a | r } => Lens' s a
-_getPubKeyHash = _Newtype <<< prop (SProxy :: SProxy "getPubKeyHash")
+_getPubKeyHash = _Newtype <<< prop (Proxy :: _ "getPubKeyHash")

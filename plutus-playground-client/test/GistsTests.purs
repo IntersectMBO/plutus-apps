@@ -3,28 +3,38 @@ module GistsTests
   ) where
 
 import Prologue
-import Data.Function (on)
-import Data.Show.Generic (genericShow)
 import Gist (GistId(..))
 import Gists.Types (parseGistUrl)
-import Test.Unit (TestSuite, Test, suite, test)
-import Test.Unit.Assert (equal)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
 
-all :: TestSuite
+all :: Spec Unit
 all =
-  suite "Gists" do
+  describe "Gists" do
     parseGistUrlTests
 
-parseGistUrlTests :: TestSuite
+parseGistUrlTests :: Spec Unit
 parseGistUrlTests =
-  suite "parseGistUrlTests" do
+  describe "parseGistUrlTests" do
     let
       gistId = GistId "9d8feacacd8c4b553f870c4448483938"
-    test "Ref" $ equalGistResult (Right gistId) (parseGistUrl "9d8feacacd8c4b553f870c4448483938")
-    test "Direct link" $ equalGistResult (Right gistId) (parseGistUrl "https://gist.github.com/9d8feacacd8c4b553f870c4448483938")
-    test "User link" $ equalGistResult (Right gistId) (parseGistUrl "https://gist.github.com/krisajenkins/9d8feacacd8c4b553f870c4448483938")
-    test "No ID" $ equalGistResult (Left "Could not parse Gist Url") (parseGistUrl "https://gist.github.com/")
-    test "Too long" $ equalGistResult (Left "Could not parse Gist Url") (parseGistUrl "aaaabbbbccccddddeeeeffff000011112")
-
-equalGistResult :: Either String GistId -> Either String GistId -> Test
-equalGistResult = on equal (map genericShow)
+    it "Ref" do
+      parseGistUrl "9d8feacacd8c4b553f870c4448483938"
+        `shouldEqual`
+          Right gistId
+    it "Direct link" do
+      parseGistUrl "https://gist.github.com/9d8feacacd8c4b553f870c4448483938"
+        `shouldEqual`
+          Right gistId
+    it "User link" do
+      parseGistUrl "https://gist.github.com/krisajenkins/9d8feacacd8c4b553f870c4448483938"
+        `shouldEqual`
+          Right gistId
+    it "No ID" do
+      parseGistUrl "https://gist.github.com/"
+        `shouldEqual`
+          Left "Could not parse Gist Url"
+    it "Too long" do
+      parseGistUrl "aaaabbbbccccddddeeeeffff000011112"
+        `shouldEqual`
+          Left "Could not parse Gist Url"

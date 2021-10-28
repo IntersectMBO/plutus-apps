@@ -2,32 +2,28 @@ module Test.Main where
 
 import Prologue
 import ChainTests as ChainTests
-import CursorTests as CursorTests
-import Data.Array.ExtraTests as Data.Array.ExtraTests
-import Data.Foldable.ExtraTests as Data.Foldable.ExtraTests
-import Data.String.ExtraTests as Data.String.ExtraTests
+import Data.BigInt.Argonaut (withJsonPatch)
 import EditorTests as EditorTests
 import Effect (Effect)
+import Effect.Aff (launchAff_)
 import GistsTests as GistsTests
-import StaticDataTests as StaticDataTests
-import PlutusTx.AssocMapTests as PlutusTx.AssocMapTests
 import MainFrameTests as MainFrameTests
-import Test.Unit.Main (runTest)
 import Schema.TypesTests as Schema.TypesTests
+import StaticDataTests as StaticDataTests
+import Test.Spec (around_)
+import Test.Spec.Reporter (consoleReporter)
+import Test.Spec.Runner (runSpec)
 
 foreign import forDeps :: Effect Unit
 
 main :: Effect Unit
 main =
-  runTest do
-    ChainTests.all
-    CursorTests.all
-    Data.Array.ExtraTests.all
-    Data.Foldable.ExtraTests.all
-    Data.String.ExtraTests.all
-    EditorTests.all
-    GistsTests.all
-    StaticDataTests.all
-    PlutusTx.AssocMapTests.all
-    MainFrameTests.all
-    Schema.TypesTests.all
+  launchAff_ do
+    runSpec [ consoleReporter ]
+      $ around_ withJsonPatch do
+          ChainTests.all
+          EditorTests.all
+          GistsTests.all
+          StaticDataTests.all
+          MainFrameTests.all
+          Schema.TypesTests.all

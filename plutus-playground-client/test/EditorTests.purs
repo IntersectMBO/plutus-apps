@@ -2,18 +2,19 @@ module EditorTests
   ( all
   ) where
 
-import Data.Traversable (traverse_)
-import Editor.Types (allKeyBindings, readKeyBindings)
 import Prologue
-import Test.Unit (TestSuite, suite, test)
-import Test.Unit.Assert (equal)
+import Data.Traversable (for_)
+import Editor.Types (allKeyBindings, readKeyBindings)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
 
-all :: TestSuite
+all :: Spec Unit
 all =
-  suite "Editor" do
+  describe "Editor" do
     readShowKeyBindingsTests
 
-readShowKeyBindingsTests :: TestSuite
+readShowKeyBindingsTests :: Spec Unit
 readShowKeyBindingsTests =
-  test "readShowKeyBindingsTests" do
-    traverse_ (\keyBindings -> equal keyBindings (readKeyBindings (show keyBindings))) allKeyBindings
+  it "readShowKeyBindingsTests" do
+    for_ allKeyBindings \keyBindings ->
+      readKeyBindings (show keyBindings) `shouldEqual` keyBindings

@@ -12,7 +12,7 @@ import Data.Foldable as Foldable
 import Data.Lens (Lens', view)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
-import Data.Symbol (SProxy(..))
+import Type.Proxy (Proxy(..))
 import Data.Traversable (class Foldable)
 import LocalStorage (Key(..))
 import Playground.Types (ContractDemo)
@@ -26,7 +26,7 @@ lookupContractDemo :: forall f. Foldable f => String -> f ContractDemo -> Maybe 
 lookupContractDemo key = Foldable.find (\demo -> view _contractDemoName demo == key)
 
 _contractDemoName :: Lens' ContractDemo String
-_contractDemoName = _Newtype <<< prop (SProxy :: SProxy "contractDemoName")
+_contractDemoName = _Newtype <<< prop (Proxy :: _ "contractDemoName")
 
 bufferLocalStorageKey :: Key
 bufferLocalStorageKey = Key "PlutusPlaygroundBuffer"

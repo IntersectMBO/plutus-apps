@@ -12,7 +12,7 @@ let additions =
         , "prelude"
         ]
     , repo = "https://github.com/input-output-hk/purescript-servant-support"
-    , version = "93ea0fa97d0ba04e8d408bbba51749a92d6477f5"
+    , version = "78a0693a9409bce31bf538a8f2aa54adb8200733"
     }
   , json-helpers =
     { dependencies =
@@ -37,7 +37,7 @@ let additions =
         , "typelevel-prelude"
         ]
     , repo = "https://github.com/input-output-hk/purescript-bridge-json-helpers.git"
-    , version = "16de087fde6e2d07e6bdae51383131ab81efa82d"
+    , version = "895db00f2fe97ee56b866bf1582b303d029c216a"
     }
   , web-common =
       { dependencies =
@@ -101,7 +101,7 @@ let additions =
           , "web-uievents"
           ]
     , repo = "https://github.com/input-output-hk/web-common.git"
-    , version = "8f912caf709097c81328502f660b2278f171a4f9"
+    , version = "2f02fa30f7dcd06568aabaa8921b9beed26923ff"
     }
   , matryoshka =
     { dependencies =

@@ -6,49 +6,49 @@ import Prologue
 import Data.Array (mapWithIndex)
 import Data.BigInt.Argonaut as BigInt
 import Data.Tuple.Nested ((/\))
-import PlutusTx.AssocMap as AssocMap
-import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
-import Playground.Types (SimulatorWallet(..))
-import Test.Unit (TestSuite, suite, test)
-import Test.Unit.Assert (equal)
-import Transaction.View (extractAmount)
 import Ledger.CardanoWallet (WalletNumber(..))
+import Playground.Types (SimulatorWallet(..))
+import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
+import PlutusTx.AssocMap as AssocMap
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+import Transaction.View (extractAmount)
 
-all :: TestSuite
+all :: Spec Unit
 all =
-  suite "Chain" do
+  describe "Chain" do
     extractAmountsTests
 
-extractAmountsTests :: TestSuite
+extractAmountsTests :: Spec Unit
 extractAmountsTests =
-  suite "extractAmount" do
-    test "All present"
-      $ equal
-          [ Just (BigInt.fromInt 10)
-          , Just (BigInt.fromInt 40)
-          , Just (BigInt.fromInt 70)
+  describe "extractAmount" do
+    it "All present"
+      $ map (extractAmount (currencies /\ usdToken)) wallets
+          `shouldEqual`
+            [ Just (BigInt.fromInt 10)
+            , Just (BigInt.fromInt 40)
+            , Just (BigInt.fromInt 70)
+            ]
+    it "All missing"
+      $ map (extractAmount (currencies /\ adaToken)) wallets
+          `shouldEqual`
+            [ Nothing
+            , Nothing
+            , Nothing
+            ]
+    it "Mixed" do
+      map (extractAmount (currencies /\ eurToken)) wallets
+        `shouldEqual`
+          [ Just (BigInt.fromInt 20)
+          , Just (BigInt.fromInt 50)
+          , Nothing
           ]
-          (map (extractAmount (currencies /\ usdToken)) wallets)
-    test "All missing"
-      $ equal
+      map (extractAmount (ada /\ adaToken)) wallets
+        `shouldEqual`
           [ Nothing
-          , Nothing
-          , Nothing
+          , Just (BigInt.fromInt 30)
+          , Just (BigInt.fromInt 60)
           ]
-          (map (extractAmount (currencies /\ adaToken)) wallets)
-    test "Mixed" do
-      equal
-        [ Just (BigInt.fromInt 20)
-        , Just (BigInt.fromInt 50)
-        , Nothing
-        ]
-        (map (extractAmount (currencies /\ eurToken)) wallets)
-      equal
-        [ Nothing
-        , Just (BigInt.fromInt 30)
-        , Just (BigInt.fromInt 60)
-        ]
-        (map (extractAmount (ada /\ adaToken)) wallets)
 
 wallets :: Array SimulatorWallet
 wallets =

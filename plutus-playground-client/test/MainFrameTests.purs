@@ -12,21 +12,23 @@ import Control.Monad.Reader.Class (class MonadAsk)
 import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Control.Monad.State.Class (class MonadState, get)
 import Cursor as Cursor
+import Data.Argonaut.Decode (printJsonDecodeError)
+import Data.Argonaut.Extra (parseDecodeJson)
+import Data.Bifunctor (lmap)
 import Data.Either (either)
-import Data.Lens (Lens', _1, assign, preview, set, use, view)
+import Data.Lens (Lens', _1, assign, preview, set, to, use, view, (^.))
 import Data.Lens.At (at)
 import Data.Lens.Index (ix)
 import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Newtype (class Newtype, unwrap)
-import Data.Symbol (SProxy(..))
+import Data.Show.Generic (genericShow)
 import Data.Traversable (traverse_)
 import Editor.Types (State(..)) as Editor
 import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Class.Console (log)
 import Effect.Exception (Error, error)
-import Data.Argonaut.Decode (printJsonDecodeError)
-import Data.Argonaut.Extra (parseDecodeJson)
 import Gist (Gist, GistId, gistId)
 import Gists.Types (GistAction(..))
 import Halogen.Monaco (KeyBindings(..)) as Editor
@@ -41,15 +43,17 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Sync as FS
 import Playground.Gists (playgroundGistFile)
 import Playground.Types (CompilationResult, ContractDemo, EvaluationResult)
+import Servant.PureScript (printAjaxError)
 import StaticData (bufferLocalStorageKey, lookupContractDemo, mkContractDemos)
 import Test.QuickCheck ((<?>))
-import Test.Unit (TestSuite, failure, suite, test)
-import Test.Unit.Assert (assert, equal, equal')
-import Test.Unit.QuickCheck (quickCheck)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (fail, shouldEqual, shouldSatisfy)
+import Test.Spec.QuickCheck (quickCheck)
+import Type.Proxy (Proxy(..))
 
-all :: TestSuite
+all :: Spec Unit
 all =
-  suite "MainFrame" do
+  describe "MainFrame" do
     evalTests
 
 ------------------------------------------------------------
@@ -62,13 +66,13 @@ type World
     }
 
 _gists :: forall r a. Lens' { gists :: a | r } a
-_gists = prop (SProxy :: SProxy "gists")
+_gists = prop (Proxy :: _ "gists")
 
 _editorContents :: forall r a. Lens' { editorContents :: a | r } a
-_editorContents = prop (SProxy :: SProxy "editorContents")
+_editorContents = prop (Proxy :: _ "editorContents")
 
 _localStorage :: forall r a. Lens' { localStorage :: a | r } a
-_localStorage = prop (SProxy :: SProxy "localStorage")
+_localStorage = prop (Proxy :: _ "localStorage")
 
 -- | A dummy implementation of `MonadApp`, for testing the main handleAction loop.
 newtype MockApp m a
@@ -174,38 +178,44 @@ mockWorld =
   , evaluationResult: NotAsked
   }
 
-evalTests :: TestSuite
+evalTests :: Spec Unit
 evalTests =
-  suite "handleAction" do
-    test "CheckAuthStatus" do
+  describe "handleAction" do
+    it "CheckAuthStatus" do
       Tuple _ finalState <- execMockApp mockWorld [ CheckAuthStatus ]
-      assert "Auth Status loaded." $ isSuccess (view _authStatus finalState)
-    test "ChangeView" do
+      (finalState ^. _authStatus <<< to (lmap printAjaxError))
+        `shouldSatisfy`
+          isSuccess
+    it "ChangeView" do
       quickCheck \aView -> do
         let
           result = execMockApp mockWorld [ ChangeView aView ]
         case result of
           Right (Tuple _ finalState) -> (aView == view _currentView finalState) <?> "Unexpected final view."
           Left err -> false <?> show err
-    suite "LoadGist" do
-      test "Bad URL" do
+    describe "LoadGist" do
+      it "Bad URL" do
         Tuple _ finalState <-
           execMockApp mockWorld
             [ GistAction $ SetGistUrl "9cfe"
             , GistAction LoadGist
             ]
-        assert "Gist not loaded." $ isNotAsked (view _createGistResult finalState)
-      test "Invalid URL" do
+        (finalState ^. _createGistResult <<< to (lmap printAjaxError))
+          `shouldSatisfy`
+            isNotAsked
+      it "Invalid URL" do
         Tuple _ finalState <-
           execMockApp mockWorld
             [ GistAction $ SetGistUrl "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             , GistAction LoadGist
             ]
-        assert "Gist not loaded." $ isNotAsked (view _createGistResult finalState)
-      test "Gist loaded successfully" do
+        (finalState ^. _createGistResult <<< to (lmap printAjaxError))
+          `shouldSatisfy`
+            isNotAsked
+      it "Gist loaded successfully" do
         contents <- liftEffect $ FS.readTextFile UTF8 "test/gist1.json"
         case parseDecodeJson contents of
-          Left err -> failure $ show err
+          Left err -> fail $ printJsonDecodeError err
           Right gist -> do
             Tuple finalWorld finalState <-
               execMockApp
@@ -213,20 +223,18 @@ evalTests =
                 [ GistAction $ SetGistUrl (unwrap (view gistId gist))
                 , GistAction LoadGist
                 ]
-            assert "Gist gets loaded." $ isSuccess (view _createGistResult finalState)
-            equal
-              2
-              (Cursor.length (view _simulations finalState))
+            (finalState ^. _createGistResult <<< to (lmap printAjaxError))
+              `shouldSatisfy`
+                isSuccess
+            Cursor.length (view _simulations finalState) `shouldEqual` 2
             case view playgroundGistFile gist of
-              Nothing -> failure "Could not read gist content. Sample test data may be incorrect."
+              Nothing -> fail "Could not read gist content. Sample it data may be incorrect."
               Just sourceFile -> do
-                equal' "Editor gets updated."
-                  (Just (SourceCode sourceFile))
-                  (view _editorContents finalWorld)
-                equal' "Source gets stored."
-                  (Just sourceFile)
-                  (preview (_localStorage <<< ix (unwrap bufferLocalStorageKey)) finalWorld)
-    test "Loading a script works." do
+                view _editorContents finalWorld `shouldEqual` Just (SourceCode sourceFile)
+                preview (_localStorage <<< ix (unwrap bufferLocalStorageKey)) finalWorld
+                  `shouldEqual`
+                    Just sourceFile
+    it "Loading a script works." do
       Tuple finalWorld _ <-
         ( execMockApp (set _editorContents Nothing mockWorld)
             [ LoadScript "Game" ]
@@ -236,20 +244,20 @@ evalTests =
           (throwError <<< error <<< printJsonDecodeError)
           pure
           mkContractDemos
-      equal' "Script gets loaded."
-        (view _contractDemoEditorContents <$> lookupContractDemo "Game" contractDemos)
-        finalWorld.editorContents
-    test "Loading a script switches back to the editor." do
+      finalWorld.editorContents
+        `shouldEqual`
+          (view _contractDemoEditorContents <$> lookupContractDemo "Game" contractDemos)
+    it "Loading a script switches back to the editor." do
       loadCompilationResponse1
         >>= case _ of
-            Left err -> failure err
+            Left err -> fail err
             Right compilationResult -> do
               Tuple _ finalState <-
                 execMockApp (mockWorld { compilationResult = compilationResult })
                   [ ChangeView Simulations
                   , LoadScript "Game"
                   ]
-              equal' "View is reset." Editor $ view _currentView finalState
+              view _currentView finalState `shouldEqual` Editor
 
 loadCompilationResponse1 ::
   forall m.

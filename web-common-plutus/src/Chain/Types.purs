@@ -5,12 +5,13 @@ import Clipboard (Action) as Clipboard
 import Data.BigInt.Argonaut (BigInt)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Lens (Fold', Iso', Lens', Prism', Traversal', anyOf, filtered, preview, prism', traversed)
+import Data.Lens (Fold', Iso', Lens', Prism', Traversal', anyOf, filtered, preview, prism', folded, traversed)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Newtype (class Newtype)
-import Data.Symbol (SProxy(..))
+import Type.Proxy (Proxy(..))
+import Data.Set (Set)
 import Plutus.V1.Ledger.Address (Address(..))
 import Plutus.V1.Ledger.Credential (Credential(..))
 import Plutus.V1.Ledger.Crypto (PubKey, Signature)
@@ -64,61 +65,61 @@ initialState =
   }
 
 _chainFocus :: forall r a. Lens' { chainFocus :: a | r } a
-_chainFocus = prop (SProxy :: SProxy "chainFocus")
+_chainFocus = prop (Proxy :: _ "chainFocus")
 
 _chainFocusAppearing :: forall r a. Lens' { chainFocusAppearing :: a | r } a
-_chainFocusAppearing = prop (SProxy :: SProxy "chainFocusAppearing")
+_chainFocusAppearing = prop (Proxy :: _ "chainFocusAppearing")
 
 _chainFocusAge :: forall r a. Lens' { chainFocusAge :: a | r } a
-_chainFocusAge = prop (SProxy :: SProxy "chainFocusAge")
+_chainFocusAge = prop (Proxy :: _ "chainFocusAge")
 
 _sequenceId :: Lens' AnnotatedTx SequenceId
-_sequenceId = _Newtype <<< prop (SProxy :: SProxy "sequenceId")
+_sequenceId = _Newtype <<< prop (Proxy :: _ "sequenceId")
 
 _dereferencedInputs :: Lens' AnnotatedTx (Array DereferencedInput)
-_dereferencedInputs = _Newtype <<< prop (SProxy :: SProxy "dereferencedInputs")
+_dereferencedInputs = _Newtype <<< prop (Proxy :: _ "dereferencedInputs")
 
 _value :: forall s a r. Newtype s { getValue :: a | r } => Lens' s a
-_value = _Newtype <<< prop (SProxy :: SProxy "getValue")
+_value = _Newtype <<< prop (Proxy :: _ "getValue")
 
 _txIdOf :: Lens' AnnotatedTx TxId
-_txIdOf = _Newtype <<< prop (SProxy :: SProxy "txId")
+_txIdOf = _Newtype <<< prop (Proxy :: _ "txId")
 
 _balances :: Lens' AnnotatedTx (Map BeneficialOwner Value)
-_balances = _Newtype <<< prop (SProxy :: SProxy "balances")
+_balances = _Newtype <<< prop (Proxy :: _ "balances")
 
 _tx :: Lens' AnnotatedTx Tx
-_tx = _Newtype <<< prop (SProxy :: SProxy "tx")
+_tx = _Newtype <<< prop (Proxy :: _ "tx")
 
 _txFee :: Lens' Tx Value
-_txFee = _Newtype <<< prop (SProxy :: SProxy "txFee")
+_txFee = _Newtype <<< prop (Proxy :: _ "txFee")
 
 _txMint :: Lens' Tx Value
-_txMint = _Newtype <<< prop (SProxy :: SProxy "txMint")
+_txMint = _Newtype <<< prop (Proxy :: _ "txMint")
 
 _txValidRange :: Lens' Tx (Interval Slot)
-_txValidRange = _Newtype <<< prop (SProxy :: SProxy "txValidRange")
+_txValidRange = _Newtype <<< prop (Proxy :: _ "txValidRange")
 
 _txSignatures :: Lens' Tx (Map PubKey Signature)
-_txSignatures = _Newtype <<< prop (SProxy :: SProxy "txSignatures")
+_txSignatures = _Newtype <<< prop (Proxy :: _ "txSignatures")
 
-_txInputs :: Lens' Tx (Array TxIn)
-_txInputs = _Newtype <<< prop (SProxy :: SProxy "txInputs")
+_txInputs :: Lens' Tx (Set TxIn)
+_txInputs = _Newtype <<< prop (Proxy :: _ "txInputs")
 
 _txOutputs :: Lens' Tx (Array TxOut)
-_txOutputs = _Newtype <<< prop (SProxy :: SProxy "txOutputs")
+_txOutputs = _Newtype <<< prop (Proxy :: _ "txOutputs")
 
 _txInRef :: Lens' TxIn TxOutRef
-_txInRef = _Newtype <<< prop (SProxy :: SProxy "txInRef")
+_txInRef = _Newtype <<< prop (Proxy :: _ "txInRef")
 
 _txOutRefId :: Lens' TxOutRef TxId
-_txOutRefId = _Newtype <<< prop (SProxy :: SProxy "txOutRefId")
+_txOutRefId = _Newtype <<< prop (Proxy :: _ "txOutRefId")
 
 _txKeyTxId :: Lens' TxKey TxId
-_txKeyTxId = _TxKey <<< prop (SProxy :: SProxy "_txKeyTxId")
+_txKeyTxId = _TxKey <<< prop (Proxy :: _ "_txKeyTxId")
 
 _txKeyTxOutRefIdx :: Lens' TxKey BigInt
-_txKeyTxOutRefIdx = _TxKey <<< prop (SProxy :: SProxy "_txKeyTxOutRefIdx")
+_txKeyTxOutRefIdx = _TxKey <<< prop (Proxy :: _ "_txKeyTxOutRefIdx")
 
 toBeneficialOwner :: TxOut -> BeneficialOwner
 toBeneficialOwner (TxOut { txOutAddress }) =
@@ -140,7 +141,7 @@ findConsumptionPoint :: BigInt -> TxId -> AnnotatedBlockchain -> Maybe Annotated
 findConsumptionPoint outputIndex txId = preview (_AnnotatedBlocks <<< filtered isMatchingTx)
   where
   isMatchingTx :: AnnotatedTx -> Boolean
-  isMatchingTx tx = anyOf (_tx <<< _txInputs <<< traversed <<< _txInRef) ((==) txOutRef) tx
+  isMatchingTx tx = anyOf (_tx <<< _txInputs <<< folded <<< _txInRef) ((==) txOutRef) tx
 
   txOutRef :: TxOutRef
   txOutRef =

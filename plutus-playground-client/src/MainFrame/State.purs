@@ -5,7 +5,6 @@ module MainFrame.State
   , mkInitialState
   ) where
 
-import Affjax (printError)
 import AjaxUtils (AjaxErrorPaneAction(..), ajaxErrorRefLabel)
 import Analytics (analyticsTracking)
 import Animation (class MonadAnimate, animate)
@@ -44,8 +43,8 @@ import Data.RawJson (RawJson(..))
 import Data.Semigroup (append)
 import Data.String as String
 import Data.Traversable (traverse)
-import Editor.State (initialState) as Editor
 import Editor.Lenses (_currentCodeIsCompiled, _feedbackPaneMinimised, _lastCompiledCode)
+import Editor.State (initialState) as Editor
 import Editor.Types (Action(..), State) as Editor
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect, liftEffect)
@@ -57,6 +56,7 @@ import Halogen (Component, hoist)
 import Halogen as H
 import Halogen.Query (HalogenM)
 import Language.Haskell.Interpreter (CompilationError(..), InterpreterError(..), SourceCode(..))
+import Ledger.CardanoWallet (WalletNumber(WalletNumber))
 import MainFrame.Lenses (_actionDrag, _authStatus, _blockchainVisualisationState, _compilationResult, _contractDemos, _createGistResult, _currentDemoName, _currentView, _demoFilesMenuVisible, _editorState, _evaluationResult, _functionSchema, _gistErrorPaneVisible, _gistUrl, _knownCurrencies, _lastEvaluatedSimulation, _lastSuccessfulCompilationResult, _resultRollup, _simulationActions, _simulationId, _simulationWallets, _simulations, _successfulCompilationResult, _successfulEvaluationResult, getKnownCurrencies)
 import MainFrame.MonadApp (class MonadApp, editorGetContents, editorHandleAction, editorSetAnnotations, editorSetContents, getGistByGistId, getOauthStatus, postGistByGistId, postContract, postEvaluation, postGist, preventDefault, resizeBalancesChart, resizeEditor, runHalogenApp, saveBuffer, scrollIntoView, setDataTransferData, setDropEffect)
 import MainFrame.Types (ChildSlots, DragAndDropEventType(..), HAction(..), Query, State(..), View(..), WalletEvent(..))
@@ -69,11 +69,10 @@ import Playground.Types (ContractCall(..), ContractDemo(..), Evaluation(..), Kno
 import Plutus.V1.Ledger.Value (Value)
 import Prelude (class Applicative, Unit, Void, add, const, bind, discard, flip, identity, join, not, mempty, one, pure, show, unit, unless, void, when, zero, (+), ($), (&&), (==), (<>), (<$>), (<*>), (>>=), (<<<))
 import Schema.Types (Expression, FormArgument, SimulationAction(..), formArgumentToJson, handleActionEvent, handleFormEvent, handleValueEvent, mkInitialValue, traverseFunctionSchema)
+import Servant.PureScript (printAjaxError)
 import Simulator.View (simulatorTitleRefLabel, simulationsErrorRefLabel)
 import StaticData (mkContractDemos, lookupContractDemo)
-import Servant.PureScript (ErrorDescription(..))
 import Validation (_argumentValues, _argument)
-import Ledger.CardanoWallet (WalletNumber(WalletNumber))
 import Wallet.Lenses (_simulatorWalletBalance, _simulatorWalletWallet, _walletId)
 import Web.HTML.Event.DataTransfer as DataTransfer
 
@@ -442,12 +441,10 @@ handleGistAction LoadGist =
         when (isSuccess aGist) do
           assign _currentView Editor
           assign _currentDemoName Nothing
-        let
-          errorToString { description } = case description of
-            UnexpectedHTTPStatus _ -> "TODO"
-            DecodingError e -> printJsonDecodeError e
-            ConnectingError e -> printError e
-        gist <- ExceptT $ pure $ toEither (Left "Gist not loaded.") $ lmap errorToString aGist
+        gist <-
+          except
+            $ toEither (Left "Gist not loaded.")
+            $ lmap printAjaxError aGist
         --
         -- Load the source, if available.
         content <- noteT "Source not found in gist." $ view playgroundGistFile gist

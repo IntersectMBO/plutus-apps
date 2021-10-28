@@ -12,7 +12,7 @@ let additions =
         , "prelude"
         ]
     , repo = "https://github.com/input-output-hk/purescript-servant-support"
-    , version = "93ea0fa97d0ba04e8d408bbba51749a92d6477f5"
+    , version = "78a0693a9409bce31bf538a8f2aa54adb8200733"
     }
   , json-helpers =
     { dependencies =
@@ -101,7 +101,7 @@ let additions =
           , "web-uievents"
           ]
     , repo = "https://github.com/input-output-hk/web-common.git"
-    , version = "8f912caf709097c81328502f660b2278f171a4f9"
+    , version = "24427cdfe380236b388d55d215c8b054fac646e1"
     }
     , markdown =
         { dependencies =

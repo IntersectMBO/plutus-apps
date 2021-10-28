@@ -3,16 +3,18 @@ module StaticDataTests
   ) where
 
 import Prologue
+import Data.Either (isRight)
 import StaticData (mkContractDemos)
-import Test.Unit (TestSuite, suite, test)
-import Test.Unit.Assert (equal)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldSatisfy)
 
-all :: TestSuite
+all :: Spec Unit
 all =
-  suite "StaticData" do
-    simulationDecodingTests
+  describe "StaticData" do
+    simulationDecodingSpec
 
-simulationDecodingTests :: TestSuite
-simulationDecodingTests =
-  suite "Simulation Decoding" do
-    test "contractDemos" $ equal (Right unit) $ unit <$ mkContractDemos
+simulationDecodingSpec :: Spec Unit
+simulationDecodingSpec =
+  describe "Simulation Decoding" do
+    it "contractDemos" do
+      mkContractDemos `shouldSatisfy` isRight

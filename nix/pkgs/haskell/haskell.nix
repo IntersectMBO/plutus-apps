@@ -39,7 +39,7 @@ let
     inherit checkMaterialization;
     sha256map = {
       "https://github.com/Quid2/flat.git"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
-      "https://github.com/input-output-hk/purescript-bridge.git"."35d863ba86c97d044025ce64b7cea0e1b0418bf0" = "00m0lv2fcv60mmgbsjw47pl6cyfb9id0x5j5dlykm34mknz9vc4z";
+      "https://github.com/input-output-hk/purescript-bridge.git"."366fc70b341e2633f3ad0158a577d52e1cd2b138" = "18j0rysfccbmfpbw2d1rsjkpd5h84alpsn6b5rwzdxw9h5vqi9m5";
       "https://github.com/input-output-hk/servant-purescript.git"."746a9a27654621ca6a24a31d083aba54dc58555a" = "1r11ddsxiymdlickcqc3mz4xv5kcm7xyggim1x3ailzhalxc3shw";
       "https://github.com/input-output-hk/cardano-base"."4ea7e2d927c9a7f78ddc69738409a5827ab66b98" = "0n0hxbr0l95cdc25jmmgs7apmmw17i91chhj5rzzv1k7f3iymf6d";
       "https://github.com/input-output-hk/cardano-crypto.git"."07397f0e50da97eaa0575d93bee7ac4b2b2576ec" = "06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3";
