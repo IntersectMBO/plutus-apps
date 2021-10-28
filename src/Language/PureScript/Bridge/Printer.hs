@@ -380,7 +380,7 @@ sumTypeToEncode (SumType _ cs _)
     constructorToEncode c@(DataConstructor name args) =
       ( constructorPattern c
       , case args of
-          Nullary -> "jsonNull"
+          Nullary -> "encodeJson { tag:" <+> dquotes (textStrict name) <> ", contents: jsonNull }"
           Normal as -> "E.encodeTagged"
               <+> dquotes (textStrict name)
               <+> normalExpr as

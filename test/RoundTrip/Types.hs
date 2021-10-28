@@ -113,8 +113,7 @@ instance ToJSON TestRecursiveB
 data TestMultiInlineRecords
   = Foo
       { _foo1 :: Maybe Int,
-        _foo2 :: (),
-        tag :: String
+        _foo2 :: ()
       }
   | Bar
       { _bar1 :: String,
@@ -129,7 +128,7 @@ instance ToJSON TestMultiInlineRecords
 instance Arbitrary TestMultiInlineRecords where
   arbitrary =
     oneof
-      [ Foo <$> arbitrary <*> arbitrary <*> arbitrary,
+      [ Foo <$> arbitrary <*> arbitrary,
         Bar <$> arbitrary <*> arbitrary
       ]
 

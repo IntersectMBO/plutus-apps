@@ -101,7 +101,7 @@ derive instance ordTestSum :: Ord TestSum
 
 instance encodeJsonTestSum :: EncodeJson TestSum where
   encodeJson = defer \_ -> case _ of
-    Nullary -> jsonNull
+    Nullary -> encodeJson { tag: "Nullary", contents: jsonNull }
     Bool a -> E.encodeTagged "Bool" a E.value
     Int a -> E.encodeTagged "Int" a E.value
     Number a -> E.encodeTagged "Number" a E.value
@@ -280,7 +280,7 @@ derive instance ordTestRecursiveA :: Ord TestRecursiveA
 
 instance encodeJsonTestRecursiveA :: EncodeJson TestRecursiveA where
   encodeJson = defer \_ -> case _ of
-    Nil -> jsonNull
+    Nil -> encodeJson { tag: "Nil", contents: jsonNull }
     Recurse a -> E.encodeTagged "Recurse" a E.value
 
 instance decodeJsonTestRecursiveA :: DecodeJson TestRecursiveA where
@@ -432,7 +432,6 @@ data TestMultiInlineRecords
   = Foo
     { _foo1 :: Maybe Int
     , _foo2 :: Unit
-    , tag :: String
     }
   | Bar
     { _bar1 :: String
@@ -448,11 +447,11 @@ derive instance ordTestMultiInlineRecords :: Ord TestMultiInlineRecords
 
 instance encodeJsonTestMultiInlineRecords :: EncodeJson TestMultiInlineRecords where
   encodeJson = defer \_ -> case _ of
-    Foo {_foo1, _foo2, tag} -> E.encodeTagged "Foo" {_foo1, _foo2, tag} (E.record
-      { _foo1: (E.maybe E.value) :: _ (Maybe Int)
-      , _foo2: E.unit :: _ Unit
-      , tag: E.value :: _ String
-      })
+    Foo {_foo1, _foo2} -> encodeJson
+      { tag: "Foo"
+      , _foo1: flip E.encode _foo1 (E.maybe E.value)
+      , _foo2: flip E.encode _foo2 E.unit
+      }
     Bar {_bar1, _bar2} -> encodeJson
       { tag: "Bar"
       , _bar1: flip E.encode _bar1 E.value
@@ -462,10 +461,9 @@ instance encodeJsonTestMultiInlineRecords :: EncodeJson TestMultiInlineRecords w
 instance decodeJsonTestMultiInlineRecords :: DecodeJson TestMultiInlineRecords where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "TestMultiInlineRecords" $ Map.fromFoldable
-      [ "Foo" /\ D.content (Foo <$> D.record "Foo"
+      [ "Foo" /\ (Foo <$> D.object "Foo"
         { _foo1: (D.maybe D.value) :: _ (Maybe Int)
         , _foo2: D.unit :: _ Unit
-        , tag: D.value :: _ String
         })
       , "Bar" /\ (Bar <$> D.object "Bar"
         { _bar1: D.value :: _ String
@@ -477,7 +475,7 @@ derive instance genericTestMultiInlineRecords :: Generic TestMultiInlineRecords 
 
 --------------------------------------------------------------------------------
 
-_Foo :: Prism' TestMultiInlineRecords {_foo1 :: Maybe Int, _foo2 :: Unit, tag :: String}
+_Foo :: Prism' TestMultiInlineRecords {_foo1 :: Maybe Int, _foo2 :: Unit}
 _Foo = prism' Foo case _ of
   (Foo a) -> Just a
   _ -> Nothing
