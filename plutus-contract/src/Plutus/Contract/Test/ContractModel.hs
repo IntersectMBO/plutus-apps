@@ -17,6 +17,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE QuantifiedConstraints      #-}
@@ -251,7 +252,18 @@ dummyModelState s = ModelState 0 Map.empty mempty s
 -- | The `Spec` monad is a state monad over the `ModelState`. It is used exclusively by the
 --   `nextState` function to model the effects of an action on the blockchain.
 newtype Spec state a = Spec (State (ModelState state) a)
-    deriving (Functor, Applicative, Monad, MonadState (ModelState state))
+    deriving (Functor, Applicative, Monad)
+
+instance MonadState state (Spec state) where
+    state f = Spec $ State.state $ \s -> case f (_contractState s) of
+        (a, cs) -> (a, s { _contractState = cs })
+    {-# INLINE state #-}
+
+    get = Spec $ fmap _contractState State.get
+    {-# INLINE get #-}
+
+    put cs = Spec $ State.modify' $ \s -> s { _contractState = cs }
+    {-# INLINE put #-}
 
 -- $contractModel
 --
@@ -495,15 +507,15 @@ modifyContractState f = modState contractState f
 
 -- | Set a specific field of the contract state.
 ($=) :: Setter' state a -> a -> Spec state ()
-l $= x = l $~ const x
+($=) = (.=)
 
 -- | Modify a specific field of the contract state.
 ($~) :: Setter' state a -> (a -> a) -> Spec state ()
-l $~ f = modState (contractState . l) f
+($~) = (%=)
 
 instance GetModelState (Spec state) where
     type StateType (Spec state) = state
-    getModelState = State.get
+    getModelState = Spec State.get
 
 handle :: (ContractModel s) => Handles s -> HandleFun s
 handle handles key =
