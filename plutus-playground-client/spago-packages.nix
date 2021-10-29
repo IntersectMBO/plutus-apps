@@ -101,6 +101,18 @@ let
         installPhase = "ln -s $src $out";
       };
 
+    "assert" = pkgs.stdenv.mkDerivation {
+        name = "assert";
+        version = "v5.0.0";
+        src = pkgs.fetchgit {
+          url = "https://github.com/purescript/purescript-assert.git";
+          rev = "71a3b1f3b9917c23691fdbb1858de171be871a10";
+          sha256 = "0r1l7j67an8dy1w4xdpr8nc30lsxv31xwqph9mkfh3nd49jlyyd3";
+        };
+        phases = "installPhase";
+        installPhase = "ln -s $src $out";
+      };
+
     "avar" = pkgs.stdenv.mkDerivation {
         name = "avar";
         version = "v4.0.0";
@@ -655,10 +667,10 @@ let
 
     "markdown" = pkgs.stdenv.mkDerivation {
         name = "markdown";
-        version = "a9fbc4c42acf7b4be908832698b69ed558912496";
+        version = "022d8afd0d9e0ef8114da9e9ef5a67d9ffc86a29";
         src = pkgs.fetchgit {
-          url = "https://github.com/jhbertra/purescript-markdown";
-          rev = "a9fbc4c42acf7b4be908832698b69ed558912496";
+          url = "https://github.com/input-output-hk/purescript-markdown";
+          rev = "022d8afd0d9e0ef8114da9e9ef5a67d9ffc86a29";
           sha256 = "008f2wvvddg436b84kgpwz8m5h912xg1wqq73p97i79zaq13w9zm";
         };
         phases = "installPhase";
@@ -679,11 +691,11 @@ let
 
     "matryoshka" = pkgs.stdenv.mkDerivation {
         name = "matryoshka";
-        version = "v0.4.0";
+        version = "v0.5.0";
         src = pkgs.fetchgit {
-          url = "https://github.com/slamdata/purescript-matryoshka.git";
-          rev = "caaca2d836d52159ba7963333996286a00428394";
-          sha256 = "1vm8papnpkmf4w51v6a2cnq408ayi75nz5b5zwiwksd35c8x2g64";
+          url = "https://github.com/purescript-contrib/purescript-matryoshka.git";
+          rev = "43eb7d9c2d42e2d8bafa4303b4f6185143846b05";
+          sha256 = "13n6wiwi7kbrhfvh25mk0p323l2q48cp7s0f7ad4y2jiks3lgipn";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";
@@ -1267,11 +1279,11 @@ let
 
     "web-common" = pkgs.stdenv.mkDerivation {
         name = "web-common";
-        version = "2f02fa30f7dcd06568aabaa8921b9beed26923ff";
+        version = "v1.0.0";
         src = pkgs.fetchgit {
-          url = "https://github.com/input-output-hk/web-common.git";
-          rev = "2f02fa30f7dcd06568aabaa8921b9beed26923ff";
-          sha256 = "1rk93h2myfqhmv9y89jyb0xlanil11jzf9xf9hcgqdharn0ygls3";
+          url = "https://github.com/input-output-hk/purescript-web-common";
+          rev = "91d74fcb5eafd13237f07320a3f7e142b5a9dc2b";
+          sha256 = "1xxr2q95w42l1d1fqindn16flxfx53bwaga538sh7a0ajs2ff69m";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";

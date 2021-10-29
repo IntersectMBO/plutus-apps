@@ -62,19 +62,15 @@ module.exports = {
                     {
                         loader: 'purs-loader',
                         options: {
+                            bundle: !(isWebpackDevServer || isWatch),
+                            psc: "psa compile",
+                            spago: true,
                             src: [
                                 'src/**/*.purs',
                                 'generated/**/*.purs',
-                                '.spago/*/*/src/**/*.purs',
-                                'web-common-plutus/**/*.purs',
-                                'web-common/**/*.purs'
+                                '../web-common-plutus/src/**/*.purs',
                             ],
-                            psc: null,
-                            bundle: !(isWebpackDevServer || isWatch),
-                            warnings: true,
                             watch: isWebpackDevServer || isWatch,
-                            pscPackage: false,
-                            pscIde: false
                         }
                     }
                 ]

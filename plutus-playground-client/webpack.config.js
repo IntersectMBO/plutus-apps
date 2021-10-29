@@ -48,20 +48,24 @@ module.exports = {
                 test: /\.purs$/,
                 use: [
                     {
-                        loader: "purs-loader",
-                        options: {
-                            src: [
-                                "src/**/*.purs",
-                                "generated/**/*.purs",
-                                ".spago/*/*/src/**/*.purs",
-                                "web-common/**/*.purs",
-                                "web-common-plutus/**/*.purs",
-                                "web-common-playground/**/*.purs",
-                            ],
-                            psc: "psa",
-                            bundle: !isDevelopment,
-                            watch: isDevelopment,
-                        },
+                        test: /\.purs$/,
+                        use: [
+                            {
+                                loader: 'purs-loader',
+                                options: {
+                                    bundle: !(isWebpackDevServer || isWatch),
+                                    psc: "psa compile",
+                                    spago: true,
+                                    src: [
+                                        'src/**/*.purs',
+                                        'generated/**/*.purs',
+                                        'web-common-plutus/src/**/*.purs',
+                                        'web-common-playground/src/**/*.purs',
+                                    ],
+                                    watch: isWebpackDevServer || isWatch,
+                                }
+                            }
+                        ]
                     },
                 ],
             }, {

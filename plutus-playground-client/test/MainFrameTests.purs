@@ -23,11 +23,9 @@ import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Newtype (class Newtype, unwrap)
-import Data.Show.Generic (genericShow)
 import Data.Traversable (traverse_)
 import Editor.Types (State(..)) as Editor
 import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Class.Console (log)
 import Effect.Exception (Error, error)
 import Gist (Gist, GistId, gistId)
 import Gists.Types (GistAction(..))

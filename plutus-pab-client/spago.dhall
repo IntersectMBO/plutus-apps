@@ -46,6 +46,6 @@ You can edit this file as you like.
 , sources =
   [ "src/**/*.purs"
   , "generated/**/*.purs"
-  , "web-common-plutus/**/*.purs"
+  , "../web-common-plutus/src/**/*.purs"
   ]
 }
