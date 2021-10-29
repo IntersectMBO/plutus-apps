@@ -3,7 +3,7 @@
 , packages ? import ./. { inherit system enableHaskellProfiling; }
 }:
 let
-  inherit (packages) pkgs plutus-apps plutus-playground plutus-pab docs;
+  inherit (packages) pkgs plutus-apps plutus-playground plutus-pab docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cardano-cli cardano-node;
 
@@ -118,5 +118,8 @@ haskell.project.shellFor {
   # affinity APIs!
   + lib.optionalString stdenv.isLinux ''
     ${utillinux}/bin/taskset -pc 0-1000 $$
+  ''
+  + ''
+    export WEB_COMMON_SRC=${webCommon}
   '';
 }

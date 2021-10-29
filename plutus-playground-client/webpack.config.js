@@ -48,26 +48,15 @@ module.exports = {
                 test: /\.purs$/,
                 use: [
                     {
-                        test: /\.purs$/,
-                        use: [
-                            {
-                                loader: 'purs-loader',
-                                options: {
-                                    bundle: !(isWebpackDevServer || isWatch),
-                                    psc: "psa compile",
-                                    spago: true,
-                                    src: [
-                                        'src/**/*.purs',
-                                        'generated/**/*.purs',
-                                        'web-common-plutus/src/**/*.purs',
-                                        'web-common-playground/src/**/*.purs',
-                                    ],
-                                    watch: isWebpackDevServer || isWatch,
-                                }
-                            }
-                        ]
-                    },
-                ],
+                        loader: 'purs-loader',
+                        options: {
+                            bundle: !isDevelopment,
+                            psc: "psa",
+                            spago: true,
+                            watch: isDevelopment,
+                        }
+                    }
+                ]
             }, {
                 test: /\.tsx?$/,
                 loader: "ts-loader",
@@ -111,7 +100,7 @@ module.exports = {
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template: "web-common/static/index.html",
+            template: `${process.env.WEB_COMMON_SRC}/static/index.html`,
             favicon: "static/favicon.ico",
             title: "Plutus Playground",
             productName: "plutus-playground",

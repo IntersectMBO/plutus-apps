@@ -209,7 +209,8 @@
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
         "spago2nix": "spago2nix",
         "sphinxcontrib-haddock": "sphinxcontrib-haddock",
-        "stackage-nix": "stackage-nix"
+        "stackage-nix": "stackage-nix",
+        "web-common": "web-common"
       }
     },
     "spago2nix": {
@@ -257,6 +258,22 @@
       "original": {
         "owner": "input-output-hk",
         "repo": "stackage.nix",
+        "type": "github"
+      }
+    },
+    "web-common": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1635526611,
+        "narHash": "sha256-qLUmwG7hKGbc3pFWkKSKFFE0uWxgPSrIUZspUwwEFCo=",
+        "owner": "input-output-hk",
+        "repo": "purescript-web-common",
+        "rev": "f1241ea27fc6acc78d093574e3707165b4ef9b3e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "purescript-web-common",
         "type": "github"
       }
     }
