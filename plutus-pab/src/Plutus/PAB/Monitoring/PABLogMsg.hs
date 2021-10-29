@@ -45,14 +45,8 @@ import           Wallet.Emulator.MultiAgent       (EmulatorEvent)
 import           Wallet.Emulator.Wallet           (Wallet)
 
 data WalletClientMsg =
-    HandleOwnPKHash
-    | HandleBalanceTx
-    | HandleSubmitTxn
-    | HandleWalletAddSignature
-    | HandleTotalFunds
-    | WalletClientError String
+    WalletClientError String
     | BalanceTxError String
-    | HandleBalanceTxSuccess
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 

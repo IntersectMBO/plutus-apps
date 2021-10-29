@@ -41,9 +41,10 @@ run = do
     result <- runError @_ @_ @ContractError $ submitTxConstraintsWith @Scripts.Any lookups constraints
     case result of
         Left err -> do
+            logWarn @Haskell.String "An error occurred. Integration test failed."
             logWarn err
         Right redeemingTx -> do
             let txi = getCardanoTxId redeemingTx
             logInfo @Haskell.String $ "Waiting for tx " <> show txi <> " to complete"
             mapError CError $ awaitTxConfirmed txi
-            logInfo @Haskell.String "Tx confirmed"
+            logInfo @Haskell.String "Tx confirmed. Integration test complete."

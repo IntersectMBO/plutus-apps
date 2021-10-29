@@ -96,6 +96,8 @@ withLocalClusterSetup
     :: (FilePath -> LogOutputs -> IO a)
     -> IO a
 withLocalClusterSetup action = do
+    putStrLn "Starting PAB local cluster. Please make sure the SHELLEY_TEST_DATA environment variable is set to 'plutus-pab/local-cluster/cluster-data/cardano-node-shelley' in the plutus-apps repository."
+
     -- Handle SIGTERM properly
     installSignalHandlers (putStrLn "Terminated")
 
