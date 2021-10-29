@@ -201,7 +201,7 @@ let
             if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
             then
               (
-                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
                 in
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
@@ -215,7 +215,7 @@ let
             if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
             then
               (
-                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
                 in
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
@@ -229,7 +229,7 @@ let
             if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
             then
               (
-                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
                 in
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
@@ -243,7 +243,7 @@ let
             if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
             then
               (
-                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
                 in
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
@@ -257,7 +257,7 @@ let
             if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
             then
               (
-                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
                 in
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
@@ -273,7 +273,7 @@ let
             if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
             then
               (
-                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
                 in
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
@@ -287,7 +287,7 @@ let
             if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
             then
               (
-                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
                 in
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
@@ -301,7 +301,7 @@ let
             if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
             then
               (
-                let attr = ghcjsPluginPkgs.haskell.projectPackages.plutus-tx-plugin.components.library;
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
                 in
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
