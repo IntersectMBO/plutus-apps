@@ -208,7 +208,7 @@ instance ContractModel AuctionModel where
             WaitUntil slot -> slot > s ^. currentSlot
             _              -> True
 
-    nextReactiveState slot'@(Slot s) = do
+    nextReactiveState slot' = do
       end  <- viewContractState endSlot
       p    <- viewContractState phase
       when (slot' >= end && p == Bidding) $ do
