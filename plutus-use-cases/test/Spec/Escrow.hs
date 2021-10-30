@@ -23,11 +23,11 @@ tests = testGroup "escrow"
     [ let con = void $ payEp @() @EscrowSchema @EscrowError (escrowParams startTime) in
       checkPredicate "can pay"
         ( assertDone con (Trace.walletInstanceTag w1) (const True) "escrow pay not done"
-        .&&. walletFundsChange w1 (Ada.lovelaceValueOf (-10))
+        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
         )
         $ do
           hdl <- Trace.activateContractWallet w1 con
-          Trace.callEndpoint @"pay-escrow" hdl (Ada.lovelaceValueOf 10)
+          Trace.callEndpoint @"pay-escrow" hdl (Ada.adaValueOf 10)
           void $ Trace.waitNSlots 1
 
     , let con = void $ selectEither (payEp @()
@@ -37,8 +37,8 @@ tests = testGroup "escrow"
                                     (redeemEp (escrowParams startTime)) in
       checkPredicate "can redeem"
         ( assertDone con (Trace.walletInstanceTag w3) (const True) "escrow redeem not done"
-          .&&. walletFundsChange w1 (Ada.lovelaceValueOf (-10))
-          .&&. walletFundsChange w2 (Ada.lovelaceValueOf 10)
+          .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
+          .&&. walletFundsChange w2 (Ada.adaValueOf 10)
           .&&. walletFundsChange w3 mempty
         )
         redeemTrace
@@ -61,10 +61,10 @@ tests = testGroup "escrow"
           ( walletFundsChange w1 (Ada.lovelaceValueOf 0)
 
           -- Wallet 2 pays 10 and receives 20, as per the contract.
-            .&&. walletFundsChange w2 (Ada.lovelaceValueOf 10)
+            .&&. walletFundsChange w2 (Ada.adaValueOf 10)
 
           -- Wallet 3 pays 10 and doesn't receive anything.
-            .&&. walletFundsChange w3 (Ada.lovelaceValueOf (-10))
+            .&&. walletFundsChange w3 (Ada.adaValueOf (-10))
           )
           redeem2Trace
 
@@ -92,8 +92,8 @@ escrowParams startTime =
   EscrowParams
     { escrowDeadline = startTime + 100000
     , escrowTargets  =
-        [ payToPubKeyTarget (walletPubKeyHash w1) (Ada.lovelaceValueOf 10)
-        , payToPubKeyTarget (walletPubKeyHash w2) (Ada.lovelaceValueOf 20)
+        [ payToPubKeyTarget (walletPubKeyHash w1) (Ada.adaValueOf 10)
+        , payToPubKeyTarget (walletPubKeyHash w2) (Ada.adaValueOf 20)
         ]
     }
 
@@ -111,8 +111,8 @@ redeemTrace = do
     hdl2 <- Trace.activateContractWallet w2 con
     hdl3 <- Trace.activateContractWallet w3 con
 
-    Trace.callEndpoint @"pay-escrow" hdl1 (Ada.lovelaceValueOf 20)
-    Trace.callEndpoint @"pay-escrow" hdl2 (Ada.lovelaceValueOf 10)
+    Trace.callEndpoint @"pay-escrow" hdl1 (Ada.adaValueOf 20)
+    Trace.callEndpoint @"pay-escrow" hdl2 (Ada.adaValueOf 10)
     _ <- Trace.waitNSlots 1
     Trace.callEndpoint @"redeem-escrow" hdl3 ()
     void $ Trace.waitNSlots 1
@@ -130,9 +130,9 @@ redeem2Trace = do
     hdl1 <- Trace.activateContractWallet w1 con
     hdl2 <- Trace.activateContractWallet w2 con
     hdl3 <- Trace.activateContractWallet w3 con
-    Trace.callEndpoint @"pay-escrow" hdl1 (Ada.lovelaceValueOf 20)
-    Trace.callEndpoint @"pay-escrow" hdl2 (Ada.lovelaceValueOf 10)
-    Trace.callEndpoint @"pay-escrow" hdl3 (Ada.lovelaceValueOf 10)
+    Trace.callEndpoint @"pay-escrow" hdl1 (Ada.adaValueOf 20)
+    Trace.callEndpoint @"pay-escrow" hdl2 (Ada.adaValueOf 10)
+    Trace.callEndpoint @"pay-escrow" hdl3 (Ada.adaValueOf 10)
     _ <- Trace.waitNSlots 1
     Trace.callEndpoint @"redeem-escrow" hdl1 ()
     void $ Trace.waitNSlots 1
@@ -148,7 +148,7 @@ refundTrace = do
                           (escrowParams startTime))
            <> void (refundEp (escrowParams startTime))
     hdl1 <- Trace.activateContractWallet w1 con
-    Trace.callEndpoint @"pay-escrow" hdl1 (Ada.lovelaceValueOf 20)
+    Trace.callEndpoint @"pay-escrow" hdl1 (Ada.adaValueOf 20)
     _ <- Trace.waitNSlots 100
     Trace.callEndpoint @"refund-escrow" hdl1 ()
     void $ Trace.waitNSlots 1

@@ -108,6 +108,7 @@
           "Ledger/Typed/Scripts/Validators"
           "Ledger/Typed/Tx"
           "Ledger/Typed/TypeUtils"
+          "Ledger/Value"
           ];
         hsSourceDirs = [ "src" ];
         };

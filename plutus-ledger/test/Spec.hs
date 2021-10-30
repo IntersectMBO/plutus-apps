@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+{-# LANGUAGE NumericUnderscores #-}
 module Main(main) where
 
 import Control.Lens
@@ -73,6 +74,7 @@ tests = testGroup "all tests" [
         ],
     testGroup "Etc." [
         testProperty "splitVal" splitVal,
+        testProperty "splitVal should respect min Ada per tx output" splitValMinAda,
         testProperty "encodeByteString" encodeByteStringTest,
         testProperty "encodeSerialise" encodeSerialiseTest
         ],
@@ -131,6 +133,14 @@ splitVal = property $ do
     vs <- forAll $ Gen.splitVal n i
     Hedgehog.assert $ sum vs == i
     Hedgehog.assert $ length vs <= n
+
+splitValMinAda :: Property
+splitValMinAda = property $ do
+    let minAda = Ada.getLovelace $ Ledger.minAdaTxOut + Ledger.maxFee
+    i <- forAll $ Gen.integral $ Range.linear minAda (100_000_000 :: Integer)
+    n <- forAll $ Gen.integral $ Range.linear 1 100
+    vs <- forAll $ Gen.splitVal n i
+    Hedgehog.assert $ all (\v -> v >= minAda) vs
 
 valueAddIdentity :: Property
 valueAddIdentity = property $ do
@@ -363,3 +373,4 @@ slotToTimeRangeBoundsInverseProp = property $ do
     let slotRange = PlutusTx.fmap (TimeSlot.posixTimeToEnclosingSlot sc)
                                   (TimeSlot.slotToPOSIXTimeRange sc slot)
     Hedgehog.assert $ interval slot slot == slotRange
+

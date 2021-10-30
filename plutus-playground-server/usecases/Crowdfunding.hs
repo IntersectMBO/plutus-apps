@@ -24,6 +24,7 @@ module Crowdfunding where
 import Control.Applicative (Applicative (pure))
 import Control.Monad (void)
 import Data.Default (Default (def))
+import Data.Text (Text)
 import Ledger (POSIXTime, POSIXTimeRange, PubKeyHash, ScriptContext (..), TxInfo (..), Validator, getCardanoTxId)
 import Ledger qualified
 import Ledger.Contexts qualified as V
@@ -165,7 +166,8 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId (submitTxConstraints inst tx)
+    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) (campaignCollectionDeadline cmp)
 
@@ -178,7 +180,11 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
                 <> Constraints.mustValidateIn (refundRange cmp)
                 <> Constraints.mustBeSignedBy contributor
     if Constraints.modifiesUtxoSet tx'
-    then void (submitTxConstraintsSpending inst utxo tx')
+    then do
+        logInfo @Text "Claiming refund"
+        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+                             <> Constraints.unspentOutputs utxo) tx'
+            >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
     else pure ()
 
 -- | The campaign owner's branch of the contract for a given 'Campaign'. It

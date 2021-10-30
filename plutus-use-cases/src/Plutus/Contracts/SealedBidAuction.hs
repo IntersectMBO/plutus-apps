@@ -1,17 +1,18 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DerivingVia       #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NoImplicitPrelude  #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeOperators      #-}
 module Plutus.Contracts.SealedBidAuction(
   AuctionParams(..)
   , BidArgs(..)
@@ -38,6 +39,7 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.Secrets
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, Void)
@@ -55,15 +57,15 @@ import Prelude qualified as Haskell
    brute-force attack or lookup table attack on the bids in the bidding phase. An
    implementation intended to be deployed in the real world may consider adding a
    salt to the secret bids or using some other more sophisticated mechanism to
-   avoid this attack. In other words, please don't blidnly deploy this code
+   avoid this attack. In other words, please don't blindly deploy this code
    without understanding the possible attack scenarios.
  -}
 
-data BidArgs = BidArgs{ secretBid :: SecretArgument Integer }
+newtype BidArgs = BidArgs { secretBid :: SecretArgument Integer }
           deriving stock (Haskell.Show, Generic)
           deriving anyclass (ToJSON, FromJSON)
 
-data RevealArgs = RevealArgs{ publicBid :: Integer }
+newtype RevealArgs = RevealArgs { publicBid :: Integer }
           deriving stock (Haskell.Show, Generic)
           deriving anyclass (ToJSON, FromJSON)
 
@@ -151,7 +153,7 @@ hashInteger = sha2_256 . packInteger
 
 {-# INLINABLE hashSecretInteger #-}
 hashSecretInteger :: Secret Integer -> BuiltinByteString
-hashSecretInteger = escape_sha2_256 . (fmap packInteger)
+hashSecretInteger = escape_sha2_256 . fmap packInteger
 
 {-# INLINABLE sealBid #-}
 sealBid :: RevealedBid -> SealedBid
@@ -168,8 +170,8 @@ auctionTransition
   -> State AuctionState
   -> AuctionInput
   -> Maybe (TxConstraints Void Void, State AuctionState)
-auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State{stateData=oldState} input =
-  case (oldState, input) of
+auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State{stateData=oldStateData, stateValue=oldStateValue} input =
+  case (oldStateData, input) of
     -- A new bid is placed, a bidder is only allowed to bid once
     (Ongoing bids, PlaceBid bid)
       | sealedBidBidder bid `notElem` map sealedBidBidder bids ->
@@ -177,18 +179,18 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State
             newState =
               State
                   { stateData  = Ongoing (bid:bids)
-                  , stateValue = apAsset
+                  , stateValue = oldStateValue
                   }
         in Just (constraints, newState)
 
     -- The first bid is revealed
     (Ongoing bids, RevealBid bid)
-      | (sealBid bid)  `elem` bids ->
+      | sealBid bid `elem` bids ->
         let constraints = Constraints.mustValidateIn (Interval.interval apEndTime (apPayoutTime - 1))
             newState =
               State
                   { stateData  = AwaitingPayout bid (filter (/= sealBid bid) bids)
-                  , stateValue = apAsset <> valueOfBid bid
+                  , stateValue = oldStateValue <> valueOfBid bid
                   }
         in Just (constraints, newState)
 
@@ -207,13 +209,13 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime, apPayoutTime} State
     -- than the current maximum bid
     (AwaitingPayout highestBid sealedBids, RevealBid bid)
       | revealedBid bid > revealedBid highestBid
-        && (sealBid bid)  `elem` sealedBids ->
+        && sealBid bid `elem` sealedBids ->
         let constraints = Constraints.mustValidateIn (Interval.to $ apPayoutTime - 1)
                         <> Constraints.mustPayToPubKey (revealedBidBidder highestBid) (valueOfBid highestBid)
             newState =
               State
                   { stateData = AwaitingPayout bid (filter (/= sealBid bid) sealedBids)
-                  , stateValue = apAsset <> valueOfBid bid
+                  , stateValue = Value.noAdaValue oldStateValue <> Ada.toValue (Ada.fromValue oldStateValue - Ada.lovelaceOf (revealedBid highestBid)) <> valueOfBid bid
                   }
         in Just (constraints, newState)
 

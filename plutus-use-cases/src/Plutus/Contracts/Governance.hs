@@ -39,6 +39,7 @@ import Data.String (fromString)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger (MintingPolicyHash, POSIXTime, PubKeyHash, TokenName)
+import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval qualified as Interval
@@ -199,7 +200,7 @@ contract params = forever $ mapError (review _GovError) endpoints where
 
     initLaw = endpoint @"new-law" $ \bsLaw -> do
         let mph = Scripts.forwardingMintingPolicyHash (typedValidator params)
-        void $ SM.runInitialise theClient (GovState (toBuiltin bsLaw) mph Nothing) mempty
+        void $ SM.runInitialise theClient (GovState (toBuiltin bsLaw) mph Nothing) (Ada.lovelaceValueOf 1)
         let tokens = Haskell.zipWith (const (mkTokenName (baseTokenName params))) (initialHolders params) [1..]
         void $ SM.runStep theClient $ MintTokens tokens
 

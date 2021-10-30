@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 {-| Example trace for the uniswap contract
 -}
 module Plutus.Contracts.Uniswap.Trace(
@@ -17,6 +18,7 @@ import Control.Monad.Freer.Error (throwError)
 import Data.Map qualified as Map
 import Data.Monoid qualified as Monoid
 import Data.Semigroup qualified as Semigroup
+import Data.Void (Void)
 import Ledger
 import Ledger.Ada (adaSymbol, adaToken)
 import Ledger.Constraints
@@ -49,7 +51,7 @@ uniswapTrace = do
     cid2 <- Emulator.activateContractWallet (knownWallet 3) (awaitPromise $ userEndpoints us)
     _ <- Emulator.waitNSlots 5
 
-    let cp = OffChain.CreateParams ada (coins Map.! "A") 100000 500000
+    let cp = OffChain.CreateParams ada (coins Map.! "A") 20_000_000 500000
 
     Emulator.callEndpoint @"create" cid1 cp
     _ <- Emulator.waitNSlots 5
@@ -71,8 +73,8 @@ setupTokens = do
     forM_ wallets $ \w -> do
         let pkh = walletPubKeyHash w
         when (pkh /= ownPK) $ do
-            tx <- submitTx $ mustPayToPubKey pkh v
-            awaitTxConfirmed $ getCardanoTxId tx
+            mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
+              >>= submitTxConfirmed . adjustUnbalancedTx
 
     tell $ Just $ Semigroup.Last cur
 

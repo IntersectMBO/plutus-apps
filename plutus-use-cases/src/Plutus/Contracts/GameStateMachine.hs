@@ -37,6 +37,7 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger hiding (to)
+import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
@@ -129,6 +130,8 @@ data GameState =
     | Locked MintingPolicyHash TokenName HashedString
     -- ^ Funds have been locked. In this state only the 'Guess' action is
     --   allowed.
+    | Finished
+    -- ^ All funds were unlocked.
     deriving stock (Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -141,7 +144,7 @@ instance Eq GameState where
 -- | Check whether a 'ClearString' is the preimage of a
 --   'HashedString'
 checkGuess :: HashedString -> ClearString -> Bool
-checkGuess (HashedString actual) (ClearString gss) = actual == (sha2_256 gss)
+checkGuess (HashedString actual) (ClearString gss) = actual == sha2_256 gss
 
 -- | Inputs (actions)
 data GameInput =
@@ -166,13 +169,16 @@ transition State{stateData=oldData, stateValue=oldValue} input = case (oldData, 
              )
     (Locked mph tn currentSecret, Guess theGuess nextSecret takenOut)
         | checkGuess currentSecret theGuess ->
-        let constraints = Constraints.mustSpendAtLeast (token mph tn) <> Constraints.mustMintCurrency mph tn 0 in
-        Just ( constraints
-             , State
-                { stateData = Locked mph tn nextSecret
-                , stateValue = oldValue - takenOut
-                }
-             )
+        let constraints = Constraints.mustSpendAtLeast (token mph tn) <> Constraints.mustMintCurrency mph tn 0
+            newValue = oldValue - takenOut
+         in Just ( constraints
+                 , State
+                    { stateData = if V.isZero (Ada.toValue $ Ada.fromValue newValue)
+                                     then Finished
+                                     else Locked mph tn nextSecret
+                    , stateValue = newValue
+                    }
+                 )
     _ -> Nothing
 
 type GameStateMachine = SM.StateMachine GameState GameInput
@@ -180,7 +186,8 @@ type GameStateMachine = SM.StateMachine GameState GameInput
 {-# INLINABLE machine #-}
 machine :: GameStateMachine
 machine = SM.mkStateMachine Nothing transition isFinal where
-    isFinal _ = False
+    isFinal Finished = True
+    isFinal _        = False
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Scripts.ValidatorType GameStateMachine

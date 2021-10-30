@@ -33,26 +33,26 @@ tests =
     testGroup "multi sig state machine tests"
     [ checkPredicate "lock, propose, sign 3x, pay - SUCCESS"
         (assertNoFailedTransactions
-        .&&. walletFundsChange w1 (Ada.lovelaceValueOf (-10))
-        .&&. walletFundsChange w2 (Ada.lovelaceValueOf 5))
+        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
+        .&&. walletFundsChange w2 (Ada.adaValueOf 5))
         (lockProposeSignPay 3 1)
 
     , checkPredicate "lock, propose, sign 2x, pay - FAILURE"
         (assertNotDone (MS.contract  @MS.MultiSigError params) (Trace.walletInstanceTag w1) "contract should proceed after invalid transition"
-        .&&. walletFundsChange w1 (Ada.lovelaceValueOf (-10))
-        .&&. walletFundsChange w2 (Ada.lovelaceValueOf 0))
+        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
+        .&&. walletFundsChange w2 mempty)
         (lockProposeSignPay 2 1)
 
     , checkPredicate "lock, propose, sign 3x, pay x2 - SUCCESS"
         (assertNoFailedTransactions
-        .&&. walletFundsChange w1 (Ada.lovelaceValueOf (-10))
-        .&&. walletFundsChange w2 (Ada.lovelaceValueOf 10))
+        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
+        .&&. walletFundsChange w2 (Ada.adaValueOf 10))
         (lockProposeSignPay 3 2)
 
     , checkPredicate "lock, propose, sign 3x, pay x3 - FAILURE"
         (assertNotDone (MS.contract  @MS.MultiSigError params) (Trace.walletInstanceTag w2) "contract should proceed after invalid transition"
-        .&&. walletFundsChange w1 (Ada.lovelaceValueOf (-10))
-        .&&. walletFundsChange w2 (Ada.lovelaceValueOf 10))
+        .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
+        .&&. walletFundsChange w2 (Ada.adaValueOf 10))
         (lockProposeSignPay 3 3)
 
     , goldenPir "test/Spec/multisigStateMachine.pir" $$(PlutusTx.compile [|| MS.mkValidator ||])
@@ -68,7 +68,7 @@ params = MS.Params keys 3 where
 payment :: POSIXTime -> MS.Payment
 payment startTime =
     MS.Payment
-        { MS.paymentAmount    = Ada.lovelaceValueOf 5
+        { MS.paymentAmount    = Ada.adaValueOf 5
         , MS.paymentRecipient = EM.walletPubKeyHash w2
         , MS.paymentDeadline  = startTime + 20000
         }
@@ -85,7 +85,7 @@ lockProposeSignPay signatures rounds = do
     handle1 <- activate w1
     handle2 <- activate w2
     handles <- traverse activate (drop 2 wallets)
-    _ <- Trace.callEndpoint @"lock" handle1 (Ada.lovelaceValueOf 10)
+    _ <- Trace.callEndpoint @"lock" handle1 (Ada.adaValueOf 10)
     _ <- Trace.waitNSlots 1
     startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
     let proposeSignPay = do

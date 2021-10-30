@@ -15,7 +15,7 @@
 module Spec.Contract(tests, loopCheckpointContract, initial, upd) where
 
 import Control.Lens hiding ((.>))
-import Control.Monad (forever, void)
+import Control.Monad (forever, replicateM_, void)
 import Control.Monad.Error.Lens
 import Control.Monad.Except (catchError)
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
@@ -125,10 +125,10 @@ tests =
                 (waitingForSlot theContract tag 20)
                 (void $ activateContract w1 theContract tag)
 
-        , let smallTx = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.lovelaceValueOf 10)
+        , let smallTx = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.adaValueOf 10)
               theContract :: Contract () Schema ContractError () = submitTx smallTx >>= awaitTxConfirmed . getCardanoTxId >> submitTx smallTx >>= awaitTxConfirmed . getCardanoTxId
           in run "handle several blockchain events"
-                (walletFundsChange w1 (Ada.lovelaceValueOf (-20))
+                (walletFundsChange w1 (Ada.adaValueOf (-20))
                     .&&. assertNoFailedTransactions
                     .&&. assertDone theContract tag (const True) "all blockchain events should be processed")
                 (void $ activateContract w1 theContract tag >> Trace.waitUntilSlot 3)
@@ -151,17 +151,17 @@ tests =
                 (void $ activateContract w1 theContract tag)
 
         , run "pay to wallet"
-            (walletFundsChange w1 (Ada.lovelaceValueOf (-200))
-                .&&. walletFundsChange w2 (Ada.lovelaceValueOf 200)
+            (walletFundsChange w1 (Ada.adaValueOf (-20))
+                .&&. walletFundsChange w2 (Ada.adaValueOf 20)
                 .&&. assertNoFailedTransactions)
-            (void $ Trace.payToWallet w1 w2 (Ada.lovelaceValueOf 200))
+            (void $ Trace.payToWallet w1 w2 (Ada.adaValueOf 20))
 
         , let theContract :: Contract () Schema ContractError () = void $ awaitUtxoProduced (walletAddress w2)
           in run "await utxo produced"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
                 activateContract w1 theContract tag
-                Trace.payToWallet w1 w2 (Ada.lovelaceValueOf 200)
+                Trace.payToWallet w1 w2 (Ada.adaValueOf 20)
                 Trace.waitNSlots 1
             )
 
@@ -170,7 +170,7 @@ tests =
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
                 activateContract w1 theContract tag
-                Trace.payToWallet w1 w2 (Ada.lovelaceValueOf 200)
+                Trace.payToWallet w1 w2 (Ada.adaValueOf 20)
                 Trace.waitNSlots 1
             )
 
@@ -179,13 +179,13 @@ tests =
                 (assertDone theContract tag (== walletPubKeyHash w2) "should return the wallet's public key")
                 (void $ activateContract w2 (void theContract) tag)
 
-        , let payment = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.lovelaceValueOf 10)
+        , let payment = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.adaValueOf 10)
               theContract :: Contract () Schema ContractError () = submitTx payment >>= awaitTxConfirmed . Ledger.getCardanoTxId
           in run "await tx confirmed"
             (assertDone theContract tag (const True) "should be done")
             (activateContract w1 theContract tag >> void (Trace.waitNSlots 1))
 
-        , let payment = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.lovelaceValueOf 10)
+        , let payment = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.adaValueOf 10)
               theContract :: Contract () Schema ContractError TxStatus =
                 submitTx payment >>= awaitTxStatusChange . Ledger.getCardanoTxId
           in run "await change in tx status"
@@ -196,7 +196,7 @@ tests =
                 -- Submit a payment tx of 10 lovelace to W2.
                 let w2PubKeyHash = walletPubKeyHash w2
                 let payment = Constraints.mustPayToPubKey w2PubKeyHash
-                                                          (Ada.lovelaceValueOf 10)
+                                                          (Ada.adaValueOf 10)
                 tx <- submitTx payment
                 -- There should be 2 utxos. We suppose the first belongs to the
                 -- wallet calling the contract and the second one to W2.
@@ -217,12 +217,11 @@ tests =
                 s <- awaitTxOutStatusChange utxo
                 tell [s]
 
-              expectedAccumState =
-                [ Committed TxValid Unspent
-                , Committed TxValid (Spent "2e02b91e17093a89ffbaa2b8b769e28cae83d567f4c183462bec16ea0fc7f8cd")
-                ]
+              isExpectedAccumState [Committed TxValid Unspent, Committed TxValid (Spent _)] = True
+              isExpectedAccumState _                                                        = False
+
           in run "await change in tx out status"
-            ( assertAccumState c tag ((==) expectedAccumState) "should be done"
+            ( assertAccumState c tag isExpectedAccumState "should be done"
             ) $ do
               _ <- activateContract w1 c tag
               void (Trace.waitNSlots 2)
@@ -242,7 +241,7 @@ tests =
             )
             $ do
                 hdl <- activateContract w1 loopCheckpointContract tag
-                sequence_ . replicate 4 $ callEndpoint @"1" hdl 1
+                replicateM_ 4 $ callEndpoint @"1" hdl 1
 
         , let theContract :: Contract () Schema ContractError () = logInfo @String "waiting for endpoint 1" >> awaitPromise (endpoint @"1" (logInfo . (<>) "Received value: " . show))
               matchLogs :: [EM.EmulatorTimeEvent ContractInstanceLog] -> Bool

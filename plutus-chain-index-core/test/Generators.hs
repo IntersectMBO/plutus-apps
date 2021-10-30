@@ -272,3 +272,4 @@ genTxStateTipAndTx  = do
   chainIndexTx <- genTx
   tip <- gets genStateTip
   pure (tip, chainIndexTx)
+

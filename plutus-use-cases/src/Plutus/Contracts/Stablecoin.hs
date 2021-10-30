@@ -84,6 +84,7 @@ import Control.Monad (forever, guard)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity (Identity (..))
 import GHC.Generics (Generic)
+import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKey)
@@ -402,7 +403,7 @@ instance AsSMContractError StablecoinError where
 contract :: Promise () StablecoinSchema StablecoinError ()
 contract = endpoint @"initialise" $ \sc -> do
     let theClient = machineClient (typedValidator sc) sc
-    _ <- SM.runInitialise theClient (initialState theClient) mempty
+    _ <- SM.runInitialise theClient (initialState theClient) (Ada.lovelaceValueOf 1)
     forever $ awaitPromise $ endpoint @"run step" $ \i -> do
         checkTransition theClient sc i
         SM.runStep theClient i

@@ -52,12 +52,12 @@ tests = testGroup "crowdfunding"
             void (Trace.activateContractWallet w1 $ theContract $ TimeSlot.scSlotZeroTime slotCfg)
 
     , checkPredicateOptions defaultCheckOptions "make contribution"
-        (walletFundsChange w1 (Ada.lovelaceValueOf (-100)))
-        $ let contribution = Ada.lovelaceValueOf 100
+        (walletFundsChange w1 (Ada.adaValueOf (-10)))
+        $ let contribution = Ada.adaValueOf 10
           in makeContribution w1 contribution >> void Trace.nextSlot
 
     , checkPredicate "make contributions and collect"
-        (walletFundsChange w1 (Ada.lovelaceValueOf 225))
+        (walletFundsChange w1 (Ada.adaValueOf 22.5))
         successfulCampaign
 
     , checkPredicate "cannot collect money too late"
@@ -65,9 +65,9 @@ tests = testGroup "crowdfunding"
         .&&. assertNoFailedTransactions)
         $ do
             ContractHandle{chInstanceId} <- startCampaign
-            makeContribution w2 (Ada.lovelaceValueOf 100)
-            makeContribution w3 (Ada.lovelaceValueOf 100)
-            makeContribution w4 (Ada.lovelaceValueOf 25)
+            makeContribution w2 (Ada.adaValueOf 10)
+            makeContribution w3 (Ada.adaValueOf 10)
+            makeContribution w4 (Ada.adaValueOf 2.5)
             Trace.freezeContractInstance chInstanceId
             -- Add some blocks to bring the total up to 31
             -- (that is, above the collection deadline)
@@ -80,9 +80,9 @@ tests = testGroup "crowdfunding"
         (walletFundsChange w1 PlutusTx.zero)
         $ do
             ContractHandle{chInstanceId} <- startCampaign
-            makeContribution w2 (Ada.lovelaceValueOf 100)
-            makeContribution w3 (Ada.lovelaceValueOf 100)
-            makeContribution w4 (Ada.lovelaceValueOf 25)
+            makeContribution w2 (Ada.adaValueOf 10)
+            makeContribution w3 (Ada.adaValueOf 10)
+            makeContribution w4 (Ada.adaValueOf 2.5)
             Trace.freezeContractInstance chInstanceId
             -- The contributions could be collected now, but without
             -- the slot notifications, wallet 1 is not aware that the
@@ -95,8 +95,8 @@ tests = testGroup "crowdfunding"
         .&&. walletFundsChange w3 mempty)
         $ do
             ContractHandle{chInstanceId} <- startCampaign
-            makeContribution w2 (Ada.lovelaceValueOf 50)
-            void $ makeContribution w3 (Ada.lovelaceValueOf 50)
+            makeContribution w2 (Ada.adaValueOf 50)
+            void $ makeContribution w3 (Ada.adaValueOf 50)
             Trace.freezeContractInstance chInstanceId
             void $ Trace.waitUntilSlot 31
 

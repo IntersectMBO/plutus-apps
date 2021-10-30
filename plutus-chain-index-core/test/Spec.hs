@@ -417,4 +417,3 @@ txOutStatusSpentUnspentProp = property $ do
     case txOutStatus of
       Right (TentativelyConfirmed _ TxValid (Spent txId)) | txId == txOutSpentTxId -> Hedgehog.assert True
       _                                                                            -> Hedgehog.assert False
-

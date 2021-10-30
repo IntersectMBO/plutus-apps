@@ -19,7 +19,7 @@ import Test.Tasty
 
 theContract :: Contract () EmptySchema PubKeyError ()
 theContract = do
-  (txOutRef, ciTxOut, pkInst) <- pubKeyContract (walletPubKeyHash w1) (Ada.lovelaceValueOf 10)
+  (txOutRef, ciTxOut, pkInst) <- pubKeyContract (walletPubKeyHash w1) (Ada.adaValueOf 10)
   let lookups = ScriptLookups
                   { slMPS = Map.empty
                   , slTxOutputs = maybe mempty (Map.singleton txOutRef) ciTxOut
