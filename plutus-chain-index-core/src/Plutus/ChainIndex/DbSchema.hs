@@ -66,6 +66,17 @@ instance Table ScriptRowT where
     data PrimaryKey ScriptRowT f = ScriptRowId (Columnar f ByteString) deriving (Generic, Beamable)
     primaryKey = ScriptRowId . _scriptRowHash
 
+data RedeemerRowT f = RedeemerRow
+    { _redeemerRowHash     :: Columnar f ByteString
+    , _redeemerRowRedeemer :: Columnar f ByteString
+    } deriving (Generic, Beamable)
+
+type RedeemerRow = RedeemerRowT Identity
+
+instance Table RedeemerRowT where
+    data PrimaryKey RedeemerRowT f = RedeemerRowId (Columnar f ByteString) deriving (Generic, Beamable)
+    primaryKey = RedeemerRowId . _redeemerRowHash
+
 data TxRowT f = TxRow
     { _txRowTxId :: Columnar f ByteString
     , _txRowTx   :: Columnar f ByteString
@@ -152,6 +163,7 @@ instance Table UnmatchedInputRowT where
 data Db f = Db
     { datumRows          :: f (TableEntity DatumRowT)
     , scriptRows         :: f (TableEntity ScriptRowT)
+    , redeemerRows       :: f (TableEntity RedeemerRowT)
     , txRows             :: f (TableEntity TxRowT)
     , addressRows        :: f (TableEntity AddressRowT)
     , assetClassRows     :: f (TableEntity AssetClassRowT)
@@ -163,6 +175,7 @@ data Db f = Db
 type AllTables (c :: * -> Constraint) f =
     ( c (f (TableEntity DatumRowT))
     , c (f (TableEntity ScriptRowT))
+    , c (f (TableEntity RedeemerRowT))
     , c (f (TableEntity TxRowT))
     , c (f (TableEntity AddressRowT))
     , c (f (TableEntity AssetClassRowT))
@@ -181,6 +194,7 @@ checkedSqliteDb = defaultMigratableDbSettings
     `withDbModification` dbModification
     { datumRows   = renameCheckedEntity (const "datums")
     , scriptRows  = renameCheckedEntity (const "scripts")
+    , redeemerRows = renameCheckedEntity (const "redeemers")
     , txRows      = renameCheckedEntity (const "txs")
     , addressRows = renameCheckedEntity (const "addresses")
     , assetClassRows = renameCheckedEntity (const "asset_classes")
@@ -259,9 +273,9 @@ instance HasDbType (ScriptHash, Script) where
     fromDbValue (ScriptRow hash script) = (fromDbValue hash, fromDbValue script)
 
 instance HasDbType (RedeemerHash, Redeemer) where
-    type DbType (RedeemerHash, Redeemer) = ScriptRow
-    toDbValue (hash, script) = ScriptRow (toDbValue hash) (toDbValue script)
-    fromDbValue (ScriptRow hash script) = (fromDbValue hash, fromDbValue script)
+    type DbType (RedeemerHash, Redeemer) = RedeemerRow
+    toDbValue (hash, redeemer) = RedeemerRow (toDbValue hash) (toDbValue redeemer)
+    fromDbValue (RedeemerRow hash redeemer) = (fromDbValue hash, fromDbValue redeemer)
 
 instance HasDbType (TxId, ChainIndexTx) where
     type DbType (TxId, ChainIndexTx) = TxRow

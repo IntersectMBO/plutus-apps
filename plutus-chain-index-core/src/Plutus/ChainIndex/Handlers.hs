@@ -77,7 +77,7 @@ handleQuery = \case
     DatumFromHash dh            -> getDatumFromHash dh
     ValidatorFromHash hash      -> getScriptFromHash hash
     MintingPolicyFromHash hash  -> getScriptFromHash hash
-    RedeemerFromHash hash       -> getScriptFromHash hash
+    RedeemerFromHash hash       -> getRedeemerFromHash hash
     StakeValidatorFromHash hash -> getScriptFromHash hash
     TxFromTxId txId             -> getTxFromTxId txId
     TxOutFromRef tor            -> getTxOutFromRef tor
@@ -109,6 +109,16 @@ getScriptFromHash ::
     ) => i
     -> Eff effs (Maybe o)
 getScriptFromHash = queryOne . queryKeyValue scriptRows _scriptRowHash _scriptRowScript
+
+getRedeemerFromHash ::
+    ( Member BeamEffect effs
+    , HasDbType i
+    , DbType i ~ ByteString
+    , HasDbType o
+    , DbType o ~ ByteString
+    ) => i
+    -> Eff effs (Maybe o)
+getRedeemerFromHash = queryOne . queryKeyValue redeemerRows _redeemerRowHash _redeemerRowRedeemer
 
 queryKeyValue ::
     ( HasDbType key
@@ -281,6 +291,7 @@ handleControl = \case
         combined $
             [ DeleteRows $ truncateTable (datumRows db)
             , DeleteRows $ truncateTable (scriptRows db)
+            , DeleteRows $ truncateTable (redeemerRows db)
             , DeleteRows $ truncateTable (txRows db)
             , DeleteRows $ truncateTable (addressRows db)
             , DeleteRows $ truncateTable (assetClassRows db)
@@ -383,7 +394,8 @@ insert = getAp . getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ A
 fromTx :: ChainIndexTx -> Db InsertRows
 fromTx tx = mempty
     { datumRows = fromMap citxData
-    , scriptRows = fromMap citxScripts <> fromMap citxRedeemers
+    , scriptRows = fromMap citxScripts
+    , redeemerRows = fromMap citxRedeemers
     , txRows = InsertRows [toDbValue (_citxTxId tx, tx)]
     , addressRows = fromPairs (fmap credential . txOutsWithRef)
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)
