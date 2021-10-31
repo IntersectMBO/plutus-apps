@@ -148,4 +148,4 @@ appendNewTipBlock lastTip block newSlot = do
               $ (Text.encodeUtf8 . Text.pack . show . hash)
               $ foldMap (getTxId . eitherTx txId txId) block
   let newTip = Tip newSlot blockId nextBlockNo
-  appendBlock newTip (fmap fromOnChainTx block)
+  appendBlock newTip (fmap fromOnChainTx block) True

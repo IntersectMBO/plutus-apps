@@ -159,7 +159,7 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlock tip_ transactions -> do
+    AppendBlock tip_ transactions toStoreTxs -> do
         oldState <- get @ChainIndexEmulatorState
         case UtxoState.insert (TxUtxoBalance.fromBlock tip_ transactions) (view utxoIndex oldState) of
             Left err -> do
@@ -169,7 +169,7 @@ handleControl = \case
             Right InsertUtxoSuccess{newIndex, insertPosition} -> do
                 put $ oldState
                         & set utxoIndex newIndex
-                        & over diskState (mappend $ foldMap DiskState.fromTx transactions)
+                        & over diskState (mappend $ foldMap DiskState.fromTx (if toStoreTxs then transactions else []))
                 logDebug $ InsertionSuccess tip_ insertPosition
     Rollback tip_ -> do
         oldState <- get @ChainIndexEmulatorState

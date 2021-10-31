@@ -12,5 +12,8 @@
       "unNetworkMagic": 1097911063
     },
     "tag": "Testnet"
+  },
+  "cicStoreFrom": {
+    "unBlockNo": 0
   }
 }

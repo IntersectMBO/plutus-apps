@@ -57,7 +57,7 @@ txFromTxIdSpec = property $ do
   txs <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
     Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
     liftIO $ runChainIndex conn $ do
-      appendBlock tip block
+      appendBlock tip block True
       tx <- txFromTxId (view citxTxId fstTx)
       tx' <- txFromTxId unknownTxId
       pure (tx, tx')
@@ -81,7 +81,7 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
     Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
     liftIO $ runChainIndex conn $ do
       -- Append the generated block in the chain index
-      appendBlock tip block
+      appendBlock tip block True
 
       forM addresses $ \addr -> do
         let pq = PageQuery 200 Nothing
@@ -111,7 +111,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
     Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
     liftIO $ runChainIndex conn $ do
       -- Append the generated block in the chain index
-      appendBlock tip block
+      appendBlock tip block True
 
       forM assetClasses $ \ac -> do
         let pq = PageQuery 200 Nothing
@@ -135,7 +135,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
     Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
     liftIO $ runChainIndex conn $ do
       -- Append the generated block in the chain index
-      appendBlock tip block
+      appendBlock tip block True
 
       let pq = PageQuery 200 Nothing
       (_, utxoRefs) <- utxoSetWithCurrency pq (AssetClass (Ada.adaSymbol, Ada.adaToken))
