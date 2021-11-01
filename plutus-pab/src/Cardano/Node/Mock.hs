@@ -88,7 +88,7 @@ runChainEffects trace slotCfg clientHandler stateVar eff = do
             runChain = interpret (mapLog ProcessingChainEvent)
                      . reinterpret (handleChain slotCfg)
                      . interpret (mapLog ProcessingChainEvent)
-                     . reinterpret handleControlChain
+                     . reinterpret (handleControlChain slotCfg)
 
             mergeState = interpret (handleZoomedState chainState)
 

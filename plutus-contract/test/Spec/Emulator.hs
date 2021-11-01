@@ -116,7 +116,7 @@ pubKey3 = walletPubKeyHash wallet3
 
 utxo :: Property
 utxo = property $ do
-    Mockchain txPool o <- forAll Gen.genMockchain
+    Mockchain txPool o _ <- forAll Gen.genMockchain
     Hedgehog.assert (unspentOutputs [map Valid txPool] == o)
 
 txnValid :: Property
@@ -153,7 +153,7 @@ selectCoinProp = property $ do
 
 txnUpdateUtxo :: Property
 txnUpdateUtxo = property $ do
-    (Mockchain m _, txn) <- forAll genChainTxn
+    (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
 
         -- submit the same txn twice, so it should be accepted the first time
@@ -173,14 +173,14 @@ txnUpdateUtxo = property $ do
 
 validTrace :: Property
 validTrace = property $ do
-    (Mockchain m _, txn) <- forAll genChainTxn
+    (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = Trace.liftWallet wallet1 (submitTxn $ Right txn)
     checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert
 
 validTrace2 :: Property
 validTrace2 = property $ do
-    (Mockchain m _, txn) <- forAll genChainTxn
+    (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = do
             Trace.liftWallet wallet1 (submitTxn $ Right txn)
@@ -190,7 +190,7 @@ validTrace2 = property $ do
 
 invalidTrace :: Property
 invalidTrace = property $ do
-    (Mockchain m _, txn) <- forAll genChainTxn
+    (Mockchain m _ _, txn) <- forAll genChainTxn
     let invalidTxn = txn { txMint = Ada.adaValueOf 1 }
         options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = Trace.liftWallet wallet1 (submitTxn $ Right invalidTxn)
@@ -205,7 +205,7 @@ invalidTrace = property $ do
 
 invalidScript :: Property
 invalidScript = property $ do
-    (Mockchain m _, txn1) <- forAll genChainTxn
+    (Mockchain m _ _, txn1) <- forAll genChainTxn
 
     -- modify one of the outputs to be a script output
     index <- forAll $ Gen.int (Range.linear 0 ((length $ txOutputs txn1) -1))

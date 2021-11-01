@@ -485,7 +485,7 @@ runChainEffects slotCfg action = do
                                 $ runWriter @[LogMessage Chain.ChainEvent]
                                 $ reinterpret @(LogMsg Chain.ChainEvent) @(Writer [LogMessage Chain.ChainEvent]) (handleLogWriter _singleton)
                                 $ runState oldState
-                                $ interpret Chain.handleControlChain
+                                $ interpret (Chain.handleControlChain slotCfg)
                                 $ interpret (Chain.handleChain slotCfg) action
                         STM.writeTVar _chainState newState
                         pure (a, logs)
