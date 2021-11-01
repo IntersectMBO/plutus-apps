@@ -179,10 +179,9 @@ transferred correctly, and contracts didn't crash.
      There is also a more general function :hsobj:`Plutus.Contract.Test.ContractModel.propRunActions` that allows
      the check at the end of each test to be customized.
 
-But what is the ``instanceSpec`` in the code above? :hsobj:`Plutus.Contract.Test.ContractModel.propRunActions_`
-creates the contract instances that are needed by a test, and the
-``instanceSpec`` tells it which contract instances to create. A handle
-is created for each contract instance, which is used to invoke their
+But how does ``quickCheck`` know what code to run when you check ``prop_Game``?
+:hsobj:`Plutus.Contract.Test.ContractModel.propRunActions_` needs to create a handle
+for each contract instance, which is used to invoke their
 :term:`endpoints<endpoint>` from the test. Different contracts have different :term:`endpoints<endpoint>`,
 of different types--and thus different :term:`schemas<schema>`. When we invoke an
 :term:`endpoint`, we need to know the :term:`schema` of the contract we are invoking,
@@ -212,11 +211,12 @@ we simply distinguish contract instance keys by the wallet they are running in:
    :start-after: START ContractInstanceKey
    :end-before: END ContractInstanceKey
 
-Once this type is defined, we can construct our :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceSpec`:
+Once this type is defined, we can construct our :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceSpec` by filling
+in the :hsobj:`Plutus.Contract.Test.ContractModel.initialHandleSpecs` field of the ``ContractModel`` class:
 
 .. literalinclude:: GameModel.hs
-   :start-after: START instanceSpec
-   :end-before: END instanceSpec
+   :start-after: START initialHandleSpecs
+   :end-before: END initialHandleSpecs
 
 This specifies (reading from right to left) that we should create one
 contract instance per wallet, running ``G.contract``, the contract
@@ -516,7 +516,7 @@ transfer the game :term:`token` from one wallet to another as specified by
    :end-before: END perform v1
 
 Every call to an end-point must be associated with one of the contract
-instances defined in our ``instanceSpec``; the ``handle`` argument to
+instances defined in our ``initialHandleSpecs``; the ``handle`` argument to
 :hsobj:`Plutus.Contract.Test.ContractModel.perform` lets us find the contract handle associated with each
 :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey`.
 

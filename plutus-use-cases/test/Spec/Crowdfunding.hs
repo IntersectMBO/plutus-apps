@@ -201,6 +201,9 @@ instance ContractModel CrowdfundingModel where
                                    , _endSlot             = TimeSlot.posixTimeToEnclosingSlot def $ campaignDeadline params
                                    }
 
+  initialHandleSpecs = ContractInstanceSpec (OwnerKey w1) w1 (crowdfunding params) :
+                       [ ContractInstanceSpec (ContributorKey w) w (crowdfunding params) | w <- contributorWallets ]
+
   perform h s a = case a of
     CWaitUntil slot -> void $ Trace.waitUntilSlot slot
     CContribute w v -> Trace.callEndpoint @"contribute" (h $ ContributorKey w) Contribution{contribValue=v}
@@ -280,9 +283,5 @@ instance ContractModel CrowdfundingModel where
 contributorWallets :: [Wallet]
 contributorWallets = [w2, w3, w4, w5, w6, w7, w8, w9, w10]
 
-handleSpecs :: [ContractInstanceSpec CrowdfundingModel]
-handleSpecs = ContractInstanceSpec (OwnerKey w1) w1 (crowdfunding params) :
-            [ ContractInstanceSpec (ContributorKey w) w (crowdfunding params) | w <- contributorWallets ]
-
 prop_Crowdfunding :: Actions CrowdfundingModel -> Property
-prop_Crowdfunding = propRunActions_ handleSpecs
+prop_Crowdfunding = propRunActions_

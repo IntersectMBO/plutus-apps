@@ -15,7 +15,7 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (Slot (..))
+import Ledger (Slot (..), minAdaTxOut)
 import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
@@ -72,6 +72,11 @@ instance ContractModel EscrowModel where
                                                              ]
                              }
 
+  initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w testContract | w <- testWallets ]
+    where
+      -- TODO: Lazy test contract for now
+      testContract = selectList [void $ payEp modelParams, void $ redeemEp modelParams, void $ refundEp modelParams] >> testContract
+
   nextState a = void $ case a of
     Pay w v -> do
       withdraw w (Ada.adaValueOf $ fromInteger v)
@@ -99,8 +104,9 @@ instance ContractModel EscrowModel where
              && (s ^. currentSlot < s ^. contractState . refundSlot - 1)
     Refund w -> s ^. currentSlot > s ^. contractState . refundSlot
              && Nothing /= (s ^. contractState . contributions . at w)
-    Pay w _ -> Nothing == s ^. contractState . contributions . at w
+    Pay w v -> Nothing == s ^. contractState . contributions . at w
             && s ^. currentSlot + 1 < s ^. contractState . refundSlot
+            && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
 
   perform h _ a = void $ case a of
     WaitUntil slot -> Trace.waitUntilSlot slot
@@ -130,14 +136,8 @@ instance ContractModel EscrowModel where
 testWallets :: [Wallet]
 testWallets = [w1, w2, w3, w4, w5, w6, w7, w8, w9, w10]
 
-handleSpecs :: [ContractInstanceSpec EscrowModel]
-handleSpecs = [ ContractInstanceSpec (WalletKey w) w testContract | w <- testWallets ]
-  where
-    -- TODO: Lazy test contract for now
-    testContract = selectList [void $ payEp modelParams, void $ redeemEp modelParams, void $ refundEp modelParams] >> testContract
-
 prop_Escrow :: Actions EscrowModel -> Property
-prop_Escrow = propRunActions_ handleSpecs
+prop_Escrow = propRunActions_
 
 tests :: TestTree
 tests = testGroup "escrow"

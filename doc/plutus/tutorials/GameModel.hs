@@ -95,6 +95,10 @@ instance ContractModel GameModel where
         }
 -- END initialState
 
+-- START initialHandleSpecs
+    initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w G.contract | w <- wallets ]
+-- END initialHandleSpecs
+
 -- START perform
     perform handle s cmd = case cmd of
         Lock w new val -> do
@@ -185,14 +189,9 @@ instance ContractModel GameModel where
     monitoring _ _ = id
 -- END monitoring
 
--- START instanceSpec
-instanceSpec :: [ContractInstanceSpec GameModel]
-instanceSpec = [ ContractInstanceSpec (WalletKey w) w G.contract | w <- wallets ]
--- END instanceSpec
-
 -- START prop_Game
 prop_Game :: Actions GameModel -> Property
-prop_Game actions = propRunActions_ instanceSpec actions
+prop_Game actions = propRunActions_ actions
 -- END prop_Game
 
 -- START propGame'
@@ -200,7 +199,6 @@ propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l s = propRunActionsWithOptions
                     (set minLogLevel l defaultCheckOptions)
                     defaultCoverageOptions
-                    instanceSpec
                     (\ _ -> pure True)
                     s
 -- END propGame'
@@ -225,7 +223,7 @@ guesses :: [String]
 guesses = ["hello", "secret", "hunter2", "*******"]
 
 -- START delay
-delay :: Int -> EmulatorTrace ()
+delay :: Int -> EmulatorTraceNoStartContract ()
 delay n = void $ waitNSlots (fromIntegral n)
 -- END delay
 
@@ -384,7 +382,7 @@ v1_model = ()
     precondition s _             = True
 -- END precondition v1
 
-    perform :: HandleFun GameModel -> ModelState GameModel -> Action GameModel -> EmulatorTrace ()
+    perform :: HandleFun GameModel -> ModelState GameModel -> Action GameModel -> EmulatorTraceNoStartContract ()
 -- START perform v1
     perform handle s cmd = case cmd of
         Lock w new val -> do
@@ -566,7 +564,7 @@ typeSignatures = id
 -- END precondition type
  precondition = ContractModel.precondition
 -- START perform type
- perform :: HandleFun state -> ModelState state -> Action state -> EmulatorTrace ()
+ perform :: HandleFun state -> ModelState state -> Action state -> EmulatorTraceNoStartContract ()
 -- END perform type
  perform = ContractModel.perform
 -- START shrinkAction type
