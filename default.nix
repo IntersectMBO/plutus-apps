@@ -50,11 +50,6 @@ rec {
     }) client server generate-purescript start-backend;
   };
 
-  plutus-pab = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-pab-client {
-    inherit (plutus-apps.lib) buildPursPackage buildNodeModules gitignore-nix filterNpm;
-    inherit haskell webCommonPlutus;
-  });
-
   plutus-use-cases = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-use-cases {
     inherit haskell;
   });
@@ -63,7 +58,7 @@ rec {
     inherit pkgs docs;
     inherit (plutus-apps.lib) gitignore-nix;
     inherit (plutus-apps) fixStylishHaskell fixPurty fixPngOptimization;
-    inherit plutus-playground web-ghc plutus-pab;
+    inherit plutus-playground web-ghc;
     src = ./.;
   };
 

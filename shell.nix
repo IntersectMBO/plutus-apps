@@ -84,11 +84,6 @@ let
     hlint
     plutus-playground.generate-purescript
     plutus-playground.start-backend
-    plutus-pab.generate-purescript
-    plutus-pab.migrate
-    plutus-pab.start-backend
-    plutus-pab.start-all-servers
-    plutus-pab.start-all-servers-m
     psa
     purescript-language-server
     purs

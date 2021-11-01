@@ -6,7 +6,6 @@
 , src
 , plutus-playground
 , web-ghc
-, plutus-pab
 , docs
 , vmCompileTests ? false
 }:
