@@ -140,7 +140,7 @@ main = do
       -- The printed slot number is only half helpful.
       -- The primary purpose of this query is to get the first response of the node for potential errors before opening the DB and starting the chain index.
       -- See #69.
-      putStrLn "\nQuery the tip of the local node:"
+      putStr "\nThe tip of the local node: "
       ChainTip slotNo _ _ <- getLocalChainTip $ LocalNodeConnectInfo
         { localConsensusModeParams = CardanoModeParams epochSlots
         , localNodeNetworkId = Config.cicNetworkId config
