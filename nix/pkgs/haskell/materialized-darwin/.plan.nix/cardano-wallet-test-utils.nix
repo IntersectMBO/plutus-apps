@@ -110,7 +110,7 @@
           buildable = true;
           modules = [ "Test/Hspec/ExtraSpec" ];
           hsSourceDirs = [ "test" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "test-utils-unit-test.hs" ];
           };
         };
       };

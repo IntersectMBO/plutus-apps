@@ -205,6 +205,7 @@
             (hsPkgs."hspec" or (errorHandler.buildDepError "hspec"))
             (hsPkgs."hspec-core" or (errorHandler.buildDepError "hspec-core"))
             (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
+            (hsPkgs."MonadRandom" or (errorHandler.buildDepError "MonadRandom"))
             (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
             (hsPkgs."ouroboros-consensus-shelley" or (errorHandler.buildDepError "ouroboros-consensus-shelley"))
             (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
@@ -228,7 +229,7 @@
             "Spec"
             ];
           hsSourceDirs = [ "test/unit" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "shelley-unit-test.hs" ];
           };
         "integration" = {
           depends = [
@@ -259,7 +260,7 @@
           buildable = true;
           modules = [ "Cardano/Wallet/Shelley/Faucet" ];
           hsSourceDirs = [ "test/integration" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "shelley-integration-test.hs" ];
           };
         };
       benchmarks = {
@@ -276,6 +277,7 @@
             (hsPkgs."deepseq" or (errorHandler.buildDepError "deepseq"))
             (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
             (hsPkgs."fmt" or (errorHandler.buildDepError "fmt"))
+            (hsPkgs."generic-lens" or (errorHandler.buildDepError "generic-lens"))
             (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
             (hsPkgs."say" or (errorHandler.buildDepError "say"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))

@@ -80,7 +80,7 @@
           buildable = true;
           modules = [ "Cardano/CLISpec" ];
           hsSourceDirs = [ "test/unit" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "cli-unit-test.hs" ];
           };
         };
       };

@@ -63,7 +63,7 @@
           buildable = true;
           modules = [ "Data/Text/ClassSpec" ];
           hsSourceDirs = [ "test/unit" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "text-class-unit-test.hs" ];
           };
         };
       };

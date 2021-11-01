@@ -115,7 +115,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/j-mueller/cardano-wallet
-  tag: 9f56b9101c3aa3e4397737705207176b43126d74
+  tag: 6be73ab852c0592713dfe78218856d4a8a0ee69e
   subdir:
     lib/text-class
     lib/strict-non-empty-containers
@@ -189,8 +189,11 @@ source-repository-package
     eras/shelley/impl
     eras/shelley-ma/impl
     eras/shelley/chain-and-ledger/executable-spec
+    eras/shelley/test-suite
+    shelley/chain-and-ledger/shelley-spec-ledger-test
     libs/non-integral
     libs/small-steps
+    libs/cardano-ledger-pretty
     semantics/small-steps-test
 
 -- A lot of plutus-apps dependencies have to be synchronized with the dependencies of

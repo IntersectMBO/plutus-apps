@@ -86,7 +86,7 @@
           buildable = true;
           modules = [ "Cardano/LauncherSpec" "Cardano/StartupSpec" ];
           hsSourceDirs = [ "test/unit" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "launcher-unit-test.hs" ];
           };
         };
       };
