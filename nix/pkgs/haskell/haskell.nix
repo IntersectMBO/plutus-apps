@@ -150,6 +150,8 @@ let
     modules = [
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
         packages = {
+          plutus-playground-server.package.buildable = false;
+
           # Things that need plutus-tx-plugin
           web-ghc.package.buildable = false;
         };
