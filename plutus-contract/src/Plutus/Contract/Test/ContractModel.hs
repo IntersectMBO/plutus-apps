@@ -321,7 +321,7 @@ class ( Typeable state
     precondition _ _ = True
 
     -- | `nextReactiveState` is run every time the model `wait`s for a slot to be reached. This
-    --   can be used to model reacive components of off-chain code.
+    --   can be used to model reactive components of off-chain code.
     nextReactiveState :: Slot -> Spec state ()
     nextReactiveState _ = return ()
 
