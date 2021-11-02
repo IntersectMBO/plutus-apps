@@ -31,6 +31,7 @@ module Plutus.Contracts.Crowdfunding (
     , theCampaign
     -- * Functionality for campaign contributors
     , contribute
+    , Contribution(..)
     -- * Functionality for campaign owners
     , scheduleCollection
     , campaignAddress
@@ -86,7 +87,7 @@ data Campaign = Campaign
     , campaignOwner              :: PubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
     --   funds if the campaign is successful.
-    } deriving (Generic, ToJSON, FromJSON, ToSchema)
+    } deriving (Generic, ToJSON, FromJSON, ToSchema, Haskell.Show)
 
 PlutusTx.makeLift ''Campaign
 
@@ -147,7 +148,7 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
 validRefund :: Campaign -> PubKeyHash -> TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
-    refundRange campaign `Interval.contains ` txInfoValidRange txinfo
+    refundRange campaign `Interval.contains` txInfoValidRange txinfo
     -- Check that the transaction is signed by the contributor
     && (txinfo `V.txSignedBy` contributor)
 

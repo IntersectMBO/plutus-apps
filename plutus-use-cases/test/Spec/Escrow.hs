@@ -1,22 +1,143 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeApplications #-}
-module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace) where
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeFamilies       #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace, prop_Escrow) where
 
+import Control.Lens hiding (both)
 import Control.Monad (void)
 import Data.Default (Default (def))
+import Data.Foldable
+import Data.Map (Map)
+import Data.Map qualified as Map
 
+import Ledger (Slot (..))
 import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract
+import Ledger.Value
+import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test
+import Plutus.Contract.Test.ContractModel
 
 import Plutus.Contracts.Escrow
 import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx.Monoid (inv)
 
+import Test.QuickCheck as QC hiding ((.&&.))
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
+import Test.Tasty.QuickCheck hiding ((.&&.))
+
+data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
+                               , _refundSlot    :: Slot
+                               , _targets       :: Map Wallet Value
+                               } deriving (Eq, Show)
+
+makeLenses ''EscrowModel
+
+modelParams :: EscrowParams d
+modelParams = escrowParams $ TimeSlot.scSlotZeroTime def
+
+deriving instance Eq (Action EscrowModel)
+deriving instance Show (Action EscrowModel)
+
+deriving instance Eq (ContractInstanceKey EscrowModel w s e)
+deriving instance Show (ContractInstanceKey EscrowModel w s e)
+
+instance ContractModel EscrowModel where
+  data Action EscrowModel = Pay Wallet Integer
+                          | Redeem Wallet
+                          | Refund Wallet
+                          | WaitUntil Slot
+
+  data ContractInstanceKey EscrowModel w s e where
+    WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError
+
+  initialState = EscrowModel { _contributions = Map.empty
+                             , _refundSlot    = TimeSlot.posixTimeToEnclosingSlot def
+                                              . escrowDeadline
+                                              $ modelParams
+                             -- TODO: This model is somewhat limited because we focus on one
+                             -- set of parameters only. The solution is to use the sealed bid
+                             -- auction trick to generate parameters dynamically that we can
+                             -- use later on.
+                             , _targets       = Map.fromList [ (w1, Ada.lovelaceValueOf 10)
+                                                             , (w2, Ada.lovelaceValueOf 20)
+                                                             ]
+                             }
+
+  nextState a = void $ case a of
+    Pay w v -> do
+      withdraw w (Ada.lovelaceValueOf v)
+      contributions $~ Map.insertWith (<>) w (Ada.lovelaceValueOf v)
+      wait 1
+    Redeem w -> do
+      targets <- viewContractState targets
+      contribs <- viewContractState contributions
+      sequence_ [ deposit w v | (w, v) <- Map.toList $ targets ]
+      let leftoverValue = fold contribs <> inv (fold targets)
+      deposit w leftoverValue
+      contributions $= Map.empty
+      wait 1
+    Refund w -> do
+      v <- viewContractState $ contributions . at w . to fold
+      contributions $~ Map.delete w
+      deposit w v
+      wait 1
+    WaitUntil s -> do
+      waitUntil s
+
+  precondition s a = case a of
+    WaitUntil slot' -> s ^. currentSlot < slot'
+    Redeem _ -> (s ^. contractState . contributions . to fold) `geq` (s ^. contractState . targets . to fold)
+             && (s ^. currentSlot < s ^. contractState . refundSlot - 1)
+    Refund w -> s ^. currentSlot > s ^. contractState . refundSlot
+             && Nothing /= (s ^. contractState . contributions . at w)
+    Pay w _ -> Nothing == s ^. contractState . contributions . at w
+            && s ^. currentSlot + 1 < s ^. contractState . refundSlot
+
+  perform h _ a = void $ case a of
+    WaitUntil slot -> Trace.waitUntilSlot slot
+    Pay w v        -> do
+      Trace.callEndpoint @"pay-escrow" (h $ WalletKey w) (Ada.lovelaceValueOf v)
+      Trace.waitNSlots 1
+    Redeem w       -> do
+      Trace.callEndpoint @"redeem-escrow" (h $ WalletKey w) ()
+      Trace.waitNSlots 1
+    Refund w       -> do
+      Trace.callEndpoint @"refund-escrow" (h $ WalletKey w) ()
+      Trace.waitNSlots 1
+
+  arbitraryAction s = oneof $ [ Pay <$> QC.elements testWallets <*> choose @Integer (10, 30)
+                              , Redeem <$> QC.elements testWallets
+                              , WaitUntil . step <$> choose @Int (1, 10) ] ++
+                              [ Refund <$> QC.elements (s ^. contractState . contributions . to Map.keys)
+                              | Prelude.not . null $ s ^. contractState . contributions . to Map.keys ]
+                  where
+                    slot = s ^. currentSlot
+                    step n = slot + fromIntegral n
+
+  shrinkAction _ (WaitUntil s) = WaitUntil . fromIntegral <$> (shrink . toInteger $ s)
+  -- TODO: This trick should be part of every model. We should make waiting a builtin thing
+  shrinkAction s _             = [WaitUntil $ s ^. currentSlot + n | n <- [1..10]]
+
+testWallets :: [Wallet]
+testWallets = [w1, w2, w3, w4, w5, w6, w7, w8, w9, w10]
+
+handleSpecs :: [ContractInstanceSpec EscrowModel]
+handleSpecs = [ ContractInstanceSpec (WalletKey w) w testContract | w <- testWallets ]
+  where
+    -- TODO: Lazy test contract for now
+    testContract = selectList [void $ payEp modelParams, void $ redeemEp modelParams, void $ refundEp modelParams] >> testContract
+
+prop_Escrow :: Actions EscrowModel -> Property
+prop_Escrow = propRunActions_ handleSpecs
 
 tests :: TestTree
 tests = testGroup "escrow"
@@ -82,6 +203,8 @@ tests = testGroup "escrow"
         $ \step -> reasonable' step
                                (Scripts.validatorScript $ typedValidator (escrowParams startTime))
                                32000
+
+    , testProperty "QuickCheck ContractModel" $ withMaxSuccess 10 prop_Escrow
     ]
 
     where
@@ -90,7 +213,7 @@ tests = testGroup "escrow"
 escrowParams :: POSIXTime -> EscrowParams d
 escrowParams startTime =
   EscrowParams
-    { escrowDeadline = startTime + 100000
+    { escrowDeadline = startTime + 10000
     , escrowTargets  =
         [ payToPubKeyTarget (walletPubKeyHash w1) (Ada.adaValueOf 10)
         , payToPubKeyTarget (walletPubKeyHash w2) (Ada.adaValueOf 20)
