@@ -332,6 +332,11 @@ class ( Typeable state
     precondition :: ModelState state -> Action state -> Bool
     precondition _ _ = True
 
+    -- | `nextReactiveState` is run every time the model `wait`s for a slot to be reached. This
+    --   can be used to model reactive components of off-chain code.
+    nextReactiveState :: Slot -> Spec state ()
+    nextReactiveState _ = return ()
+
     -- | This is where the model logic is defined. Given an action, `nextState` specifies the
     --   effects running that action has on the model state. It runs in the `Spec` monad, which is a
     --   state monad over the `ModelState`.
@@ -468,12 +473,18 @@ modState :: forall state a. Setter' (ModelState state) a -> (a -> a) -> Spec sta
 modState l f = Spec $ State.modify $ over l f
 
 -- | Wait the given number of slots. Updates the `currentSlot` of the model state.
-wait :: Integer -> Spec state ()
-wait n = modState currentSlotL (+ Slot n)
+wait :: ContractModel state => Integer -> Spec state ()
+wait n = do
+  Slot now <- viewModelState currentSlot
+  nextReactiveState (Slot $ now + n)
+  modState currentSlotL (const (Slot $ now + n))
 
 -- | Wait until the given slot. Has no effect if `currentSlot` is greater than the given slot.
-waitUntil :: Slot -> Spec state ()
-waitUntil n = modState currentSlotL (max n)
+waitUntil :: ContractModel state => Slot -> Spec state ()
+waitUntil (Slot n) = do
+  Slot now <- viewModelState currentSlot
+  when (now < n) $ do
+    wait (n - now)
 
 -- | Mint tokens. Minted tokens start out as `lockedValue` (i.e. owned by the contract) and can be
 --   transferred to wallets using `deposit`.

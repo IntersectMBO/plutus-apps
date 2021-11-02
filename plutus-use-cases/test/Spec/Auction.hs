@@ -165,8 +165,8 @@ data AuctionModel = AuctionModel
     { _currentBid :: Integer
     , _winner     :: Wallet
     , _endSlot    :: Slot
-    , _phase      :: Phase }
-    deriving (Show)
+    , _phase      :: Phase
+    } deriving (Show)
 
 data Phase = NotStarted | Bidding | AuctionOver
     deriving (Eq, Show)
@@ -208,6 +208,16 @@ instance ContractModel AuctionModel where
             WaitUntil slot -> slot > s ^. currentSlot
             _              -> True
 
+    nextReactiveState slot' = do
+      end  <- viewContractState endSlot
+      p    <- viewContractState phase
+      when (slot' >= end && p == Bidding) $ do
+        w   <- viewContractState winner
+        bid <- viewContractState currentBid
+        phase $= AuctionOver
+        deposit w theToken
+        deposit w1 $ Ada.lovelaceValueOf bid
+
     -- This command is only for setting up the model state with theToken
     nextState cmd = do
         slot <- viewModelState currentSlot
@@ -221,20 +231,12 @@ instance ContractModel AuctionModel where
             Bid w bid -> do
                 current <- viewContractState currentBid
                 leader  <- viewContractState winner
-                wait 2
-                when (bid > current && slot <= end) $ do
+                when (bid > current && slot < end) $ do
                     withdraw w $ Ada.lovelaceValueOf bid
                     deposit leader $ Ada.lovelaceValueOf current
                     currentBid $= bid
                     winner     $= w
-        slot' <- viewModelState currentSlot
-        p     <- viewContractState phase
-        when (slot' > end && p == Bidding) $ do
-            w   <- viewContractState winner
-            bid <- viewContractState currentBid
-            phase $= AuctionOver
-            deposit w theToken
-            deposit w1 $ Ada.lovelaceValueOf bid
+                wait 2
 
     perform _ _ Init = delay 3
     perform _ _ (WaitUntil slot) = void $ Trace.waitUntilSlot slot
