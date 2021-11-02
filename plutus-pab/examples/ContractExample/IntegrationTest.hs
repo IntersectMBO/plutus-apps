@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE TypeApplications   #-}
 
 module ContractExample.IntegrationTest(run) where
@@ -24,8 +25,14 @@ data IError =
     deriving stock (Eq, Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
+
 run :: Contract () EmptySchema IError ()
-run = do
+run = runError run' >>= \case
+    Left err -> logWarn @Haskell.String (show err)
+    Right () -> pure ()
+
+run' :: Contract () EmptySchema IError ()
+run' = do
     logInfo @Haskell.String "Starting integration test"
     pkh <- mapError CError ownPubKeyHash
     (txOutRef, ciTxOut, pkInst) <- mapError PKError (PubKey.pubKeyContract pkh (Ada.adaValueOf 10))

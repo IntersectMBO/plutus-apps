@@ -78,6 +78,7 @@ let
           playground-common.package.buildable = false;
           plutus-benchmark.package.buildable = false;
           plutus-chain-index.package.buildable = false;
+          plutus-chain-index-core.package.buildable = false;
           plutus-contract.package.buildable = false;
           plutus-errors.package.buildable = false;
           plutus-ledger.package.buildable = false;
