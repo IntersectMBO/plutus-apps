@@ -57,12 +57,12 @@ $ cd plutus-pab-client
 $ npm start
 ```
 
-The client is now running at https://localhost:8009 -- See [pab-demo-scripts.nix](https://github.com/input-output-hk/plutus/blob/pab-readme/plutus-pab-client/pab-demo-scripts.nix) for details on the service invcation and contract installation.
+The client is now running at https://localhost:8009 -- See [pab-demo-scripts.nix](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab-client/pab-demo-scripts.nix) for details on the service invcation and contract installation.
 
 **Note**: In order to support local modification of the client's pab config, a copy of `plutus-pab/plutus-pab.yaml.sample` is used only in the absense of `plutus-pab-client/plutus-pab.yaml`. You will need to manually delete the client's copy if the sample config's schema is updated.
 
 **Note**: By default the frontend will forward requests to `localhost:9080` - the first PAB instance. Connecting to the second
-instance currently requires changing the proxy config in [webpack.config.js](https://github.com/input-output-hk/plutus/blob/master/plutus-pab-client/webpack.config.js#L33-L41). The second instance runs on port 9086 so the linked section in the config file would have to be
+instance currently requires changing the proxy config in [webpack.config.js](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab-client/webpack.config.js#L33-L41). The second instance runs on port 9086 so the linked section in the config file would have to be
 updated accordingly.
 
 ## PAB Components
@@ -76,10 +76,7 @@ PAB contains several commands and services, which are outlined below.
 - [webserver](#webserver)
 - [node-server](#node-server)
 - [chain-index](#chain-index)
-- [metadata-server](#metadata-server)
-- [signing-process](#signing-process)
 - [default-logging-config](#default-logging-config)
-- [process-outboxes](#process-outboxes)
 
 ### psgenerator
 
@@ -93,7 +90,7 @@ Generates the purescript bridge code.
 
 #### Source
 
-- [app/PSGenerator.hs](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/app/PSGenerator.hs)
+- [src/Plutus/PAB/Run/PSGenerator.hs](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Plutus/PAB/Run/PSGenerator.hs)
 
 ### migrate
 
@@ -106,10 +103,10 @@ $ cabal run plutus-pab -- migrate
 Migrates the database in `pab-core.db` to the current schema.  The database contains the state for the contract instances.
 
 #### Source
-[Plutus.PAB.App.migrate](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Plutus/PAB/App.hs#L283)
+[Plutus.PAB.App.migrate](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Plutus/PAB/App.hs#L260)
 
 
-#### all-servers
+### all-servers
 
 ```
 $ cabal run plutus-pab -- all-servers
@@ -122,12 +119,9 @@ Combines the execution of all core services and mocks in the appropriate order:
 * mocks
     - mock node
     - mock wallet
-    - metadata
-    - signing-progress
 * core services
     - PAB webserver
     - chain index
-    - process-outboxes
 
 #### Dependencies
 
@@ -138,7 +132,7 @@ Combines the execution of all core services and mocks in the appropriate order:
 
 #### Source
 
-- [app/Main.hs](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/app/Main.hs#L246)
+- [src/Plutus/PAB/Run/CommandParser.hs](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Plutus/PAB/Run/CommandParser.hs#L155-L164)
 
 ### client-services
 
@@ -152,12 +146,9 @@ Starts all mocks and core services *except for* the mock node service:
 
 * mocks
     - mock wallet
-    - metadata
-    - signing-progress
 * core services
     - PAB webserver
     - chain index
-    - process-outboxes
 
 #### Dependencies
 
@@ -168,7 +159,7 @@ Starts all mocks and core services *except for* the mock node service:
 
 #### Source
 
-- [app/Main.hs](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/app/Main.hs#L262)
+- [src/Plutus/PAB/Run/CommandParser.hs](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Plutus/PAB/Run/CommandParser.hs#L166-L175)
 
 ### wallet-server
 
@@ -190,9 +181,9 @@ Plutus specific wallet implementation for managing user funds on the blockchain.
 
 #### Source
 
-- [Cardano.Wallet.Mock.API](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/Wallet/Mock/API.hs)
-- [Cardano.Wallet.Mock.Server.main](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/Wallet/Mock/Server.hs#L101)
-- [Cardano.Wallet.Mock.Types.Config](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/Wallet/Mock/Types.hs#L47)
+- [Cardano.Wallet.Mock.API](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/Mock/API.hs)
+- [Cardano.Wallet.Mock.Server.main](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/Mock/Server.hs#L70)
+- [Cardano.Wallet.Mock.Types.WalletConfig](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/Mock/Types.hs#L110)
 
 ### webserver
 
@@ -212,8 +203,8 @@ Serves the PAB user interface
 
 #### Source
 
-- [Plutus.PAB.Webserver.API](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Plutus/PAB/Webserver/API.hs#L23)
-- [Plutus.PAB.Webserver.Server.main](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Plutus/PAB/Webserver/Server.hs)
+- [Plutus.PAB.Webserver.API.API](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Plutus/PAB/Webserver/API.hs#L35)
+- [Plutus.PAB.Webserver.Server](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Plutus/PAB/Webserver/Server.hs)
 
 ### node-server
 
@@ -235,8 +226,8 @@ Mock-implementation of a Goguen node. Clients to this service are:
 
 #### Source
 
-- [Cardano.Node.API.API](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/Node/API.hs)
-- [Cardano.Node.Server.main](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/Node/Server.hs)
+- [Cardano.Node.API.API](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Node/API.hs#L14)
+- [Cardano.Node.Server.main](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Node/Server.hs#L56)
 
 ### chain-index
 
@@ -258,49 +249,8 @@ for datum and script hashes. Clients to this service are:
 
 #### Source
 
-- [Cardano.ChainIndex.API.API](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/ChainIndex/API.hs)
-- [Cardano.ChainIndex.Server.main](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/ChainIndex/Server.hs#L69)
-
-### metadata-server
-
-```
-$ cabal run plutus-pab -- metadata-server
-```
-
-#### Description
-
-Key-Value store for user-defined data (mock implementation)
-
-#### Dependencies
-
-- plutus-pab.yaml
-
-#### Source
-
-- [Cardano.Metadata.API.API](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/Metadata/API.hs)
-- [Cardano.Metadata.Server.main](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/Metadata/Server.hs#L196)
-
-### signing-process
-
-```
-$ cabal run plutus-pab -- signing-process
-```
-
-#### Description
-
-Attaches signatures to transactions so that they can be sent to the node. Clients to this service are:
-
-- PAB
-- mock wallet
-
-#### Dependencies
-
-- plutus-pab.yaml
-
-#### Source
-
-- [Cardano.SigningProcess.API.API](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/SigningProcess/API.hs#L11)
-- [Cardano.SigningProcess.Server.main](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Cardano/SigningProcess/Server.hs#L64)
+- [Plutus.ChainIndex.Api.API](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-chain-index/src/Plutus/ChainIndex/Api.hs#L106)
+- [Cardano.ChainIndex.Server.main](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/ChainIndex/Server.hs#L37)
 
 ### default-logging-config
 
@@ -314,24 +264,5 @@ Prints the default logging configuration to STDOUT
 
 #### Source
 
-- [app/Main.hs](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/app/Main.hs#L479)
-
-### contracts process-outboxes
-
-```
-$ cabal run plutus-pab -- contracts process-outboxes
-```
-
-#### Description
-
-A service that regularly looks at the contract instances requests and handles them
-
-#### Dependencies
-
-- plutus-pab.yaml
-- sqlite database
-- pab-client
-
-#### Source
-
-- [Plutus.PAB.Core.processAllContractOutboxes](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/src/Plutus/PAB/Core/ContractInstance.hs#L585)
+- [app/CommandParser.hs](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/app/CommandParser.hs#L59)
+- [app/Main.hs](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/app/Main.hs#L28)
