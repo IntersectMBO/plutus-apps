@@ -17,6 +17,7 @@ import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.String (joinWith)
+import Data.Tuple (Tuple)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Servant.PureScript (AjaxError, ErrorDescription(..), class ToURLPiece, toURLPiece)
 import ServerTypes (Hello, TestHeader)
@@ -41,7 +42,7 @@ getHello ::
   MonadAsk env m =>
   MonadError AjaxError m =>
   MonadAff m =>
-  Hello ->
+  Either (Tuple Int String) Hello ->
   Boolean ->
   Maybe String ->
   Array Hello ->
@@ -78,7 +79,10 @@ getHello reqBody myFlag myParam myParams = do
           , url = reqURL
           , headers = defaultRequest.headers <> reqHeaders
           , responseFormat = Response.json
-          , content = Just $ Request.json $ encodeJson reqBody
+          , content = Just
+              $ Request.json
+              $ flip E.encode reqBody
+              $ (E.either (E.tuple (E.value >/\< E.value)) E.value)
           }
   let
       decoder =

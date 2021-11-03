@@ -16,7 +16,7 @@ import qualified Data.Set as Set
 import Data.Text (Text, toUpper)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Language.PureScript.Bridge (ImportLine (importModule), ImportLines, PSType, TypeInfo (TypeInfo), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typesToImportLines)
+import Language.PureScript.Bridge (ImportLine (importModule), ImportLines, PSType, TypeInfo (TypeInfo), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typeToEncode, typesToImportLines)
 import Language.PureScript.Bridge.PSTypes (psString, psUnit)
 import Network.HTTP.Types.URI (urlEncode)
 import Servant.Foreign
@@ -244,7 +244,24 @@ genFnBody rParams req =
                             </> ", responseFormat =" <+> "Response.json"
                             <> ( case req ^. reqBody of
                                    Nothing -> mempty
-                                   Just _ -> line <> ", content = Just $ Request.json $ encodeJson reqBody"
+                                   Just body ->
+                                     line
+                                       <> hang
+                                         4
+                                         ( ", content = Just"
+                                             </> "$ Request.json"
+                                             </> "$ flip E.encode reqBody"
+                                             </> ( "$"
+                                                     <+> hang
+                                                       4
+                                                       ( docIntercalate line $
+                                                           fmap strictText $
+                                                             T.lines $
+                                                               renderText $
+                                                                 typeToEncode body
+                                                       )
+                                                 )
+                                         )
                                )
                             </> "}"
                         )
