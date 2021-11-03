@@ -9,7 +9,7 @@ module Plutus.PAB.Webserver.Client (
 ) where
 
 import Data.Aeson (FromJSON, ToJSON (..))
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Proxy
 import Data.Text (Text)
 import Plutus.PAB.Events.Contract

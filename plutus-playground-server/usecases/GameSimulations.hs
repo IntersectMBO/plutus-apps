@@ -6,7 +6,7 @@ module GameSimulations where
 
 import Game (GuessParams (GuessParams), LockParams (LockParams), amount, guessWord, registeredKnownCurrencies,
              secretWord)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Playground.Types (ContractCall (AddBlocks), Simulation (Simulation), SimulatorAction, simulationActions,
                          simulationId, simulationName, simulationWallets)
 import SimulationUtils (callEndpoint, simulatorWallet)

@@ -58,34 +58,34 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import Data.Either (rights)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (listToMaybe, mapMaybe)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, Slot, TxOutRef, Value, scriptCurrencySymbol)
-import qualified Ledger
+import Ledger qualified
 import Ledger.Constraints (ScriptLookups, TxConstraints (..), mintingPolicy, mustMintValueWithRedeemer,
                            mustPayToTheScript, mustSpendPubKeyOutput)
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import qualified Ledger.Constraints.OffChain as Constraints
+import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.TxConstraints (InputConstraint (..), OutputConstraint (..))
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Tx as Tx
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (TypedScriptTxOut (..))
-import qualified Ledger.Typed.Tx as Typed
-import qualified Ledger.Value as Value
+import Ledger.Typed.Tx qualified as Typed
+import Ledger.Value qualified as Value
 import Plutus.ChainIndex (ChainIndexTx (..))
 import Plutus.Contract
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
 import Plutus.Contract.StateMachine.OnChain (State (..), StateMachine (..), StateMachineInstance (..))
-import qualified Plutus.Contract.StateMachine.OnChain as SM
+import Plutus.Contract.StateMachine.OnChain qualified as SM
 import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (..), curPolicy, ttOutRef)
 import Plutus.Contract.Wallet (getUnspentOutput)
-import qualified PlutusTx
+import PlutusTx qualified
 import PlutusTx.Monoid (inv)
 
 -- $statemachine

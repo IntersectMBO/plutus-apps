@@ -16,16 +16,16 @@ module Plutus.Contracts.Swap(
     ) where
 
 import Ledger (POSIXTime, PubKey, PubKeyHash, Validator)
-import qualified Ledger
+import Ledger qualified
 import Ledger.Ada (Ada)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
-import qualified Ledger.Contexts as Validation
+import Ledger.Contexts qualified as Validation
 import Ledger.Oracle (Observation (..), SignedMessage)
-import qualified Ledger.Oracle as Oracle
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Oracle qualified as Oracle
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
-import qualified PlutusTx
+import PlutusTx qualified
 import PlutusTx.Prelude
 
 -- | A swap is an agreement to exchange cashflows at future dates. To keep

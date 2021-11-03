@@ -21,13 +21,13 @@ import Control.Exception (bracket, bracket_)
 import Control.Monad (mplus)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Logger (MonadLogger, MonadLoggerIO)
-import qualified Data.HashMap.Strict as H
+import Data.HashMap.Strict qualified as H
 import Data.Hashable (Hashable)
 import Data.Kind (Type)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
@@ -42,10 +42,10 @@ import Servant.API (StreamBody')
 import Servant.API.BrowserHeader (BrowserHeader)
 import Servant.API.WebSocket (WebSocket, WebSocketPending)
 import System.Metrics.Prometheus.Concurrent.RegistryT (RegistryT, registerCounter, registerGauge, registerHistogram)
-import qualified System.Metrics.Prometheus.Metric.Counter as Counter
-import qualified System.Metrics.Prometheus.Metric.Gauge as Gauge
-import qualified System.Metrics.Prometheus.Metric.Histogram as Histogram
-import qualified System.Metrics.Prometheus.MetricId as MetricId
+import System.Metrics.Prometheus.Metric.Counter qualified as Counter
+import System.Metrics.Prometheus.Metric.Gauge qualified as Gauge
+import System.Metrics.Prometheus.Metric.Histogram qualified as Histogram
+import System.Metrics.Prometheus.MetricId qualified as MetricId
 
 instance MonadLogger m => MonadLogger (RegistryT m)
 instance MonadLoggerIO m => MonadLoggerIO (RegistryT m)

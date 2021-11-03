@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeOperators    #-}
 module HelloWorldApp where
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Playground.Contract
 import Plutus.Contract
 import PlutusTx.Prelude

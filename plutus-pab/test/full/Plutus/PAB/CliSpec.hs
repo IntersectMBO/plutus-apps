@@ -17,16 +17,16 @@ module Plutus.PAB.CliSpec
     ( tests
     ) where
 
-import qualified Cardano.BM.Configuration.Model as CM
+import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Data.Severity (Severity (..))
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.BM.Setup (setupTrace_)
-import qualified Cardano.ChainIndex.Types as ChainIndex.Types
+import Cardano.ChainIndex.Types qualified as ChainIndex.Types
 import Cardano.Node.Types (NodeMode (..))
-import qualified Cardano.Node.Types as Node.Types
-import qualified Cardano.Wallet.Mock.Client as Wallet.Client
+import Cardano.Node.Types qualified as Node.Types
+import Cardano.Wallet.Mock.Client qualified as Wallet.Client
 import Cardano.Wallet.Mock.Types (WalletInfo (..))
-import qualified Cardano.Wallet.Mock.Types as Wallet.Types
+import Cardano.Wallet.Mock.Types qualified as Wallet.Types
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import Control.Concurrent.Availability (available, newToken, starting)
@@ -36,9 +36,9 @@ import Data.Coerce (coerce)
 import Data.Default (def)
 import Data.Either (isLeft)
 import Data.List (delete)
-import qualified Data.OpenApi.Schema as OpenApi
+import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Text.Prettyprint.Doc
 import Data.Yaml (decodeFileThrow)
 import GHC.Generics (Generic)
@@ -46,13 +46,13 @@ import Ledger.Ada (lovelaceValueOf)
 import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), defaultManagerSettings, newManager,
                             responseTimeoutNone)
 import Plutus.Contract
-import qualified Plutus.Contracts.PingPong as PingPong
+import Plutus.Contracts.PingPong qualified as PingPong
 import Plutus.PAB.App (StorageBackend (..))
-import qualified Plutus.PAB.App as App
+import Plutus.PAB.App qualified as App
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltin (..))
-import qualified Plutus.PAB.Effects.Contract.Builtin as Builtin
+import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Monitoring.Config (defaultConfig)
-import qualified Plutus.PAB.Monitoring.Monitoring as LM
+import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
 import Plutus.PAB.Monitoring.Util (PrettyObject (..), convertLog)
 import Plutus.PAB.Run (runWithOpts)
@@ -61,13 +61,13 @@ import Plutus.PAB.Run.Command (ConfigCommand (..), allServices)
 import Plutus.PAB.Run.CommandParser (AppOpts (..))
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
 import Plutus.PAB.Types (Config (..))
-import qualified Plutus.PAB.Types as PAB.Types
+import Plutus.PAB.Types qualified as PAB.Types
 import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Client (InstanceClient (..), PabClient (..), pabClient)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
 import Prettyprinter (Pretty)
 import Servant ((:<|>) (..))
-import qualified Servant
+import Servant qualified
 import Servant.Client (BaseUrl (..), ClientEnv, Scheme (Http), client, mkClientEnv, runClientM)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit

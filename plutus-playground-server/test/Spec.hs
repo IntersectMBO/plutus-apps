@@ -2,9 +2,9 @@ module Main
     ( main
     ) where
 
-import qualified GistSpec
-import qualified Playground.InterpreterSpec
-import qualified Playground.UsecasesSpec
+import GistSpec qualified
+import Playground.InterpreterSpec qualified
+import Playground.UsecasesSpec qualified
 import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()

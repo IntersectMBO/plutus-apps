@@ -85,23 +85,23 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity (Identity (..))
 import GHC.Generics (Generic)
 import Ledger.Constraints (TxConstraints)
-import qualified Ledger.Constraints as Constraints
+import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKey)
-import qualified Ledger.Interval as Interval
+import Ledger.Interval qualified as Interval
 import Ledger.Oracle
 import Ledger.Scripts (MintingPolicyHash)
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (TypedScriptTxOut (..))
 import Ledger.Value (AssetClass, TokenName, Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, OnChainState (..), SMContractError, State (..), StateMachine,
                                      StateMachineClient (..), Void)
-import qualified Plutus.Contract.StateMachine as SM
-import qualified PlutusTx
+import Plutus.Contract.StateMachine qualified as SM
+import PlutusTx qualified
 import PlutusTx.Prelude
 import PlutusTx.Ratio as R
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 -- | Conversion rate from peg currency (eg. USD) to base currency (eg. Ada)
 type ConversionRate = Ratio Integer

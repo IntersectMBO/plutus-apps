@@ -41,12 +41,12 @@ import Plutus.Contracts.GameStateMachine as G
 -- END import Game
 
 -- START import Ada
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Value
 -- END import Ada
 
 -- START import Scripts
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 -- END import Scripts
 
 -- START import Emulator

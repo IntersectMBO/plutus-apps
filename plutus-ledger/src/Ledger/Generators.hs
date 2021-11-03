@@ -45,39 +45,39 @@ module Ledger.Generators(
     signAll
     ) where
 
-import qualified Cardano.Api as C
+import Cardano.Api qualified as C
 import Control.Monad (replicateM)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.Trans.Writer (runWriter)
 import Data.Bifunctor (Bifunctor (..))
-import qualified Data.ByteString as BS
+import Data.ByteString qualified as BS
 import Data.Default (Default (def))
 import Data.Foldable (fold, foldl')
 import Data.Functor.Identity (Identity)
 import Data.List (sort)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (isNothing)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import GHC.Stack (HasCallStack)
-import qualified Gen.Cardano.Api.Typed as Gen
+import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 import Ledger
-import qualified Ledger.CardanoWallet as CW
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Fee (FeeConfig (fcScriptsFeeFactor), calcFees)
-import qualified Ledger.Index as Index
+import Ledger.Index qualified as Index
 import Ledger.TimeSlot (SlotConfig (..))
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Plutus.V1.Ledger.Ada as Ada
-import qualified Plutus.V1.Ledger.Contexts as Contexts
-import qualified Plutus.V1.Ledger.Interval as Interval
-import qualified Plutus.V1.Ledger.Scripts as Script
-import qualified Plutus.V1.Ledger.Value as Value
-import qualified PlutusTx
+import Ledger.TimeSlot qualified as TimeSlot
+import Plutus.V1.Ledger.Ada qualified as Ada
+import Plutus.V1.Ledger.Contexts qualified as Contexts
+import Plutus.V1.Ledger.Interval qualified as Interval
+import Plutus.V1.Ledger.Scripts qualified as Script
+import Plutus.V1.Ledger.Value qualified as Value
+import PlutusTx qualified
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx

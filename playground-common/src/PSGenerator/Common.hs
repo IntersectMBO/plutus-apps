@@ -50,7 +50,7 @@ import Plutus.Trace.Scheduler (Priority, SchedulerLog, StopReason, ThreadEvent, 
 import Plutus.Trace.Tag (Tag)
 import Schema (FormArgumentF, FormSchema)
 import Wallet.API (WalletAPIError)
-import qualified Wallet.Emulator.Types as EM
+import Wallet.Emulator.Types qualified as EM
 import Wallet.Rollup.Types (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId, TxKey)
 import Wallet.Types (AssertionError, ContractActivityStatus, ContractError, ContractInstanceId, EndpointDescription,
                      EndpointValue, MatchingError, Notification, NotificationError)

@@ -50,18 +50,18 @@ module Plutus.PAB.Core.ContractInstance.STM(
 
 import Control.Applicative (Alternative (..))
 import Control.Concurrent.STM (STM, TMVar, TVar)
-import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM qualified as STM
 import Control.Monad (guard, (<=<))
 import Data.Aeson (Value)
 import Data.Default (def)
 import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Set (Set)
 import Ledger (Address, Slot, TxId, TxOutRef)
 import Ledger.Time (POSIXTime (..))
-import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx, TxIdState (..), TxOutBalance, TxOutStatus, TxStatus,
                           transactionStatus)
 import Plutus.ChainIndex.TxOutBalance (transactionOutputStatus)
@@ -69,7 +69,7 @@ import Plutus.ChainIndex.UtxoState (UtxoIndex, UtxoState (..), utxoState)
 import Plutus.Contract.Effects (ActiveEndpoint (..))
 import Plutus.Contract.Resumable (IterationID, Request (..), RequestID)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue (..), NotificationError (..))
-import qualified Wallet.Types as Wallet (ContractActivityStatus (..))
+import Wallet.Types qualified as Wallet (ContractActivityStatus (..))
 
 {- Note [Contract instance thread model]
 

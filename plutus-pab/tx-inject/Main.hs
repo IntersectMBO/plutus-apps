@@ -19,10 +19,10 @@ import Control.Lens hiding (ix)
 import Control.Monad (forever)
 import Control.Monad.IO.Class (liftIO)
 import Control.RateLimit (rateLimitExecution)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import Data.Text qualified as T
+import Data.Text.IO qualified as T
 import Data.Time.Units (Microsecond, fromMicroseconds)
 import Data.Yaml (decodeFileThrow)
 import GHC.Generics (Generic)
@@ -35,7 +35,7 @@ import Text.Pretty.Simple (pPrint)
 
 import Cardano.Node.Types (MockServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
 import Ledger.Slot (Slot (..))

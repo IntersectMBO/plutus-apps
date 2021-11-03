@@ -17,7 +17,7 @@ import Control.Monad.Freer.Writer (runWriter)
 import Control.Monad.IO.Class (liftIO)
 import Data.Sequence (Seq)
 import Data.Set (member)
-import qualified Generators as Gen
+import Generators qualified as Gen
 import Ledger (Address (Address, addressCredential), TxOut (TxOut, txOutAddress), outValue)
 import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlock, txFromTxId,
                           utxoSetAtAddress, utxoSetWithCurrency)

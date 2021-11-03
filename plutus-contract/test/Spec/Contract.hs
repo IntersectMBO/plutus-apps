@@ -19,29 +19,29 @@ import Control.Monad (forever, void)
 import Control.Monad.Error.Lens
 import Control.Monad.Except (catchError)
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
-import qualified Control.Monad.Freer.Extras.Log as Log
+import Control.Monad.Freer.Extras.Log qualified as Log
 import Data.Functor.Apply ((.>))
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Void
 import Test.Tasty
 
 import Ledger (Address, PubKeyHash)
-import qualified Ledger
-import qualified Ledger.Ada as Ada
-import qualified Ledger.Constraints as Constraints
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (getCardanoTxId)
 import Plutus.Contract as Con
-import qualified Plutus.Contract.State as State
+import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test
 import Plutus.Contract.Types (ResumableResult (..), responses)
 import Plutus.Contract.Util (loopM)
-import qualified Plutus.Trace as Trace
+import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog (..), ContractInstanceMsg (..), ContractInstanceState (..),
                                     UserThreadMsg (..))
-import qualified PlutusTx
+import PlutusTx qualified
 import Prelude hiding (not)
-import qualified Wallet.Emulator as EM
+import Wallet.Emulator qualified as EM
 import Wallet.Emulator.Wallet (walletAddress)
 
 import Plutus.ChainIndex.Types

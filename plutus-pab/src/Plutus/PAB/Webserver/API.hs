@@ -11,8 +11,8 @@ module Plutus.PAB.Webserver.API
     , SwaggerAPI
     ) where
 
-import qualified Cardano.Wallet.Mock.API as Wallet
-import qualified Data.Aeson as JSON
+import Cardano.Wallet.Mock.API qualified as Wallet
+import Data.Aeson qualified as JSON
 import Data.Text (Text)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs, ContractInstanceClientState, ContractSignatureResponse,
                                    FullReport)

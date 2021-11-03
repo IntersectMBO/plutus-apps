@@ -11,7 +11,7 @@ import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.TxConstraints (addTxIn)
 
 import Data.Foldable (foldl')
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 
 import Ledger (TxOutRef)
 import Ledger.Tx (ChainIndexTxOut)

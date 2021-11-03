@@ -2,16 +2,16 @@
 module Spec.PubKey(tests, pubKeyTrace) where
 
 import Control.Monad (void)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Constraints (ScriptLookups (..))
-import qualified Ledger.Constraints as Constraints
+import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts (unitRedeemer)
 import Ledger.Typed.Scripts as Scripts
 import Plutus.Contract
 import Plutus.Contract.Test
-import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Trace.Emulator qualified as Trace
 
 import Plutus.Contracts.PubKey (PubKeyError, pubKeyContract)
 

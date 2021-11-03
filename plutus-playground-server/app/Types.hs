@@ -5,7 +5,7 @@ module Types
   ( Config(..)
   ) where
 
-import qualified Auth
+import Auth qualified
 import Data.Aeson (FromJSON, parseJSON, withObject, (.:))
 
 newtype Config = Config

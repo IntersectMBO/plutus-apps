@@ -7,13 +7,13 @@ module Playground.InterpreterSpec
     ) where
 
 import Control.Monad.Except (runExceptT)
-import qualified Data.Aeson as JSON
-import qualified Data.Aeson.Text as JSON
+import Data.Aeson qualified as JSON
+import Data.Aeson.Text qualified as JSON
 import Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as TL
+import Data.Text qualified as Text
+import Data.Text.Lazy qualified as TL
 import Language.Haskell.Interpreter (SourceCode (SourceCode))
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Playground.Interpreter (mkExpr, mkRunScript)
 import Playground.Types (ContractCall (AddBlocks), Evaluation (Evaluation), PlaygroundError, SimulatorAction,
                          SimulatorWallet (SimulatorWallet), program, sourceCode, wallets)

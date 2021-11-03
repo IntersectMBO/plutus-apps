@@ -48,24 +48,24 @@ import GHC.Generics (Generic)
 
 import Ledger (Datum (..), DatumHash, POSIXTime, PubKeyHash, TxId, ValidatorHash, getCardanoTxId, interval,
                scriptOutputsAt, txSignedBy, valuePaidTo)
-import qualified Ledger
+import Ledger qualified
 import Ledger.Constraints (TxConstraints)
-import qualified Ledger.Constraints as Constraints
+import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
 import Ledger.Interval (after, before, from)
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Tx as Tx
+import Ledger.Interval qualified as Interval
+import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, geq, lt)
 
 import Plutus.Contract
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
 import Prelude (Semigroup (..), foldMap)
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 type EscrowSchema =
         Endpoint "pay-escrow" Value

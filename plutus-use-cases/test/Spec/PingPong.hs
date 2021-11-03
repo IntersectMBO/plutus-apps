@@ -9,8 +9,8 @@ import Plutus.Contract.Test
 
 import Plutus.Contract.StateMachine (OnChainState)
 import Plutus.Contracts.PingPong (Input, PingPongError, PingPongSchema, PingPongState)
-import qualified Plutus.Contracts.PingPong as PingPong
-import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Contracts.PingPong qualified as PingPong
+import Plutus.Trace.Emulator qualified as Trace
 
 import Test.Tasty
 

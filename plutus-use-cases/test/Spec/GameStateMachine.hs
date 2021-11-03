@@ -25,18 +25,18 @@ import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.Maybe
 import Test.QuickCheck as QC hiding ((.&&.))
 import Test.Tasty hiding (after)
-import qualified Test.Tasty.HUnit as HUnit
+import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
-import qualified Ledger.Ada as Ada
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Ada qualified as Ada
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, isZero)
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.GameStateMachine as G
 import Plutus.Trace.Emulator as Trace
-import qualified PlutusTx
+import PlutusTx qualified
 
 -- * QuickCheck model
 

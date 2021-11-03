@@ -28,7 +28,7 @@ import Control.Monad.Freer.Extras.Pagination (pageOf)
 import Control.Monad.Freer.State (State, get, gets, modify, put)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), ChainIndexTxOut (..), MintingPolicy (MintingPolicy),
                MintingPolicyHash (MintingPolicyHash), StakeValidator (StakeValidator),
@@ -40,12 +40,12 @@ import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Emulator.DiskState (DiskState, addressMap, assetClassMap, dataMap, redeemerMap, scriptMap,
                                              txMap)
-import qualified Plutus.ChainIndex.Emulator.DiskState as DiskState
+import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
 import Plutus.ChainIndex.Tx (ChainIndexTx, _ValidTx, citxOutputs)
-import qualified Plutus.ChainIndex.TxUtxoBalance as TxUtxoBalance
+import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (Diagnostics (..), Point (PointAtGenesis), Tip (..), TxUtxoBalance (..))
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
-import qualified Plutus.ChainIndex.UtxoState as UtxoState
+import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
 
 data ChainIndexEmulatorState =

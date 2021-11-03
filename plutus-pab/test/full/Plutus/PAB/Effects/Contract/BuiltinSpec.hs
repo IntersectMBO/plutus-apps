@@ -13,7 +13,7 @@ module Plutus.PAB.Effects.Contract.BuiltinSpec
 import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
 import Data.UUID.V4 (nextRandom)
-import qualified Plutus.Contracts.PingPong as Contracts.PingPong
+import Plutus.Contracts.PingPong qualified as Contracts.PingPong
 import Plutus.PAB.CoreSpec (assertEqual, runScenario)
 import Plutus.PAB.Effects.Contract.Builtin (SomeBuiltin (..), SomeBuiltinState (..), fromResponse, getResponse)
 import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (..))

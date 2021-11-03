@@ -10,13 +10,13 @@ module Plutus.Trace.Emulator.Extract(
   Command(..)
 ) where
 
-import qualified Cardano.Api as C
-import qualified Cardano.Api.Shelley as C
-import qualified Control.Foldl as L
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Control.Foldl qualified as L
 import Control.Monad.Freer (run)
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Data.Foldable (traverse_)
 import Data.Int (Int64)
 import Data.Monoid (Sum (..))
@@ -26,14 +26,14 @@ import Ledger.Constraints.OffChain (UnbalancedTx (..))
 import Ledger.Index (ScriptValidationEvent (..), ValidatorMode (..), getScript)
 import Plutus.Contract.Wallet (export)
 import Plutus.Trace.Emulator (EmulatorConfig, EmulatorTrace)
-import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Trace.Emulator qualified as Trace
 import Plutus.V1.Ledger.Api (ExBudget (..))
 import Plutus.V1.Ledger.Scripts (Script (..))
-import qualified Streaming.Prelude as S
+import Streaming.Prelude qualified as S
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 import Text.Printf (printf)
-import qualified Wallet.Emulator.Folds as Folds
+import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream (foldEmulatorStreamM)
 
 -- | Configuration for 'writeScriptsTo'

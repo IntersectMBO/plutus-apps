@@ -6,14 +6,14 @@
 module Plutus.ChainIndex.Emulator.DiskStateSpec (tests) where
 
 import Control.Lens
-import qualified Data.Set as Set
-import qualified Plutus.ChainIndex.Emulator.DiskState as DiskState
+import Data.Set qualified as Set
+import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
 import Plutus.ChainIndex.Tx (txOutsWithRef)
 
-import qualified Generators as Gen
+import Generators qualified as Gen
 import Hedgehog (Property, forAll, property, (===))
 import Ledger (TxOut (txOutValue))
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Test.Tasty
 import Test.Tasty.Hedgehog (testProperty)
 

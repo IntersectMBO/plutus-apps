@@ -22,7 +22,7 @@ import Ledger.TxId (TxId)
 import Ledger.Value (Value)
 import Wallet.API (WalletAPIError, defaultSlotRange, payToPublicKeyHash)
 import Wallet.Effects (WalletEffect)
-import qualified Wallet.Emulator as EM
+import Wallet.Emulator qualified as EM
 import Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
 import Wallet.Emulator.Wallet (Wallet)
 

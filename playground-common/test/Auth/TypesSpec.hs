@@ -9,7 +9,7 @@ module Auth.TypesSpec
 import Auth.Types (OAuthToken (OAuthToken), Token (Token), TokenProvider (Github), oAuthTokenAccessToken,
                    oAuthTokenScope, oAuthTokenTokenType)
 import Data.Aeson (eitherDecode)
-import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Lazy qualified as LBS
 import Paths_playground_common (getDataFileName)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertEqual, testCase)

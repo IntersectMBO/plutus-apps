@@ -3,21 +3,21 @@
 
 module Spec.Rollup where
 
-import qualified Control.Foldl as L
+import Control.Foldl qualified as L
 import Control.Monad.Freer (run)
 import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Lazy qualified as LBS
 import Data.Default (Default (..))
 import Data.Text.Encoding (encodeUtf8)
 
 import Plutus.Contract.Trace
 
 import Plutus.Contracts.Crowdfunding
-import qualified Spec.GameStateMachine
-import qualified Spec.Vesting
+import Spec.GameStateMachine qualified
+import Spec.Vesting qualified
 
 import Plutus.Trace.Emulator (EmulatorTrace, runEmulatorStream)
-import qualified Streaming.Prelude as S
+import Streaming.Prelude qualified as S
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit (assertFailure)

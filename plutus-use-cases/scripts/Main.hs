@@ -9,27 +9,27 @@
 
 module Main(main, ExportTx(..)) where
 
-import qualified Cardano.Api as C
+import Cardano.Api qualified as C
 import Data.Default (Default (..))
 import Data.Monoid (Sum (..))
 import Ledger.Index (ValidatorMode (..))
 import Options.Applicative
 import Plutus.Contract.Wallet (ExportTx (..))
-import qualified Plutus.Contracts.Crowdfunding as Crowdfunding
-import qualified Plutus.Contracts.Uniswap.Trace as Uniswap
+import Plutus.Contracts.Crowdfunding qualified as Crowdfunding
+import Plutus.Contracts.Uniswap.Trace qualified as Uniswap
 import Plutus.Trace (Command (..), ScriptsConfig (..), showStats, writeScriptsTo)
-import qualified Spec.Currency as Currency
-import qualified Spec.Escrow as Escrow
-import qualified Spec.Future as Future
-import qualified Spec.GameStateMachine as GameStateMachine
-import qualified Spec.MultiSig as MultiSig
-import qualified Spec.MultiSigStateMachine as MultiSigStateMachine
-import qualified Spec.PingPong as PingPong
-import qualified Spec.Prism as Prism
-import qualified Spec.PubKey as PubKey
-import qualified Spec.Stablecoin as Stablecoin
-import qualified Spec.TokenAccount as TokenAccount
-import qualified Spec.Vesting as Vesting
+import Spec.Currency qualified as Currency
+import Spec.Escrow qualified as Escrow
+import Spec.Future qualified as Future
+import Spec.GameStateMachine qualified as GameStateMachine
+import Spec.MultiSig qualified as MultiSig
+import Spec.MultiSigStateMachine qualified as MultiSigStateMachine
+import Spec.PingPong qualified as PingPong
+import Spec.Prism qualified as Prism
+import Spec.PubKey qualified as PubKey
+import Spec.Stablecoin qualified as Stablecoin
+import Spec.TokenAccount qualified as TokenAccount
+import Spec.Vesting qualified as Vesting
 
 writeWhat :: Command -> String
 writeWhat (Scripts FullyAppliedValidators) = "scripts (fully applied)"

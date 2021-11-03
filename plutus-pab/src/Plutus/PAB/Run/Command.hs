@@ -14,7 +14,7 @@ module Plutus.PAB.Run.Command
     , allServices
     ) where
 
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import GHC.Generics (Generic)
 import Wallet.Types (ContractInstanceId)
 

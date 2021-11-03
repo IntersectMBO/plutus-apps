@@ -25,7 +25,7 @@ module Plutus.ChainIndex.DbSchema where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Data.Coerce (coerce)
 import Data.Either (fromRight)
 import Data.Kind (Constraint)

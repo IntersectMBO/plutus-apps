@@ -53,8 +53,8 @@ module Playground.Contract
     ) where
 
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Aeson as JSON
-import qualified Data.ByteString.Lazy.Char8 as LBC8
+import Data.Aeson qualified as JSON
+import Data.ByteString.Lazy.Char8 qualified as LBC8
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import GHC.Generics (Generic)
 import Ledger.Constraints (modifiesUtxoSet)

@@ -80,8 +80,8 @@ import Control.Applicative
 import Control.Lens (Iso', iso)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Map (Map)
-import qualified Data.Map as Map
-import qualified Data.OpenApi.Schema as OpenApi
+import Data.Map qualified as Map
+import Data.OpenApi.Schema qualified as OpenApi
 import Data.Semigroup (Max (..))
 import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)

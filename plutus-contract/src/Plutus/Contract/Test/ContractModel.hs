@@ -126,15 +126,15 @@ module Plutus.Contract.Test.ContractModel
 import Control.Lens
 import Control.Monad.Cont
 import Control.Monad.State (MonadState, State)
-import qualified Control.Monad.State as State
-import qualified Data.Aeson as JSON
+import Control.Monad.State qualified as State
+import Data.Aeson qualified as JSON
 import Data.Foldable
 import Data.List
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe
 import Data.Row (Row)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Typeable
 
 import Ledger.Index
@@ -146,20 +146,20 @@ import Plutus.Trace.Effects.EmulatorControl (discardWallets)
 import Plutus.Trace.Emulator as Trace (ContractHandle (..), ContractInstanceTag, EmulatorTrace, activateContract,
                                        freezeContractInstance, walletInstanceTag)
 import Plutus.V1.Ledger.Scripts
-import qualified PlutusTx.Builtins as Builtins
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.ErrorCodes
 import PlutusTx.Monoid (inv)
-import qualified Test.QuickCheck.DynamicLogic.Monad as DL
+import Test.QuickCheck.DynamicLogic.Monad qualified as DL
 import Test.QuickCheck.DynamicLogic.Quantify (Quantifiable (..), Quantification, arbitraryQ, chooseQ, elementsQ,
                                               exactlyQ, frequencyQ, mapQ, oneofQ, whereQ)
 import Test.QuickCheck.StateModel hiding (Action, Actions, arbitraryAction, initialState, monitoring, nextState,
                                    perform, precondition, shrinkAction, stateAfter)
-import qualified Test.QuickCheck.StateModel as StateModel
+import Test.QuickCheck.StateModel qualified as StateModel
 
 import Test.QuickCheck hiding ((.&&.), (.||.))
-import qualified Test.QuickCheck as QC
+import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Monadic (PropertyM, monadic)
-import qualified Test.QuickCheck.Monadic as QC
+import Test.QuickCheck.Monadic qualified as QC
 
 import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
 

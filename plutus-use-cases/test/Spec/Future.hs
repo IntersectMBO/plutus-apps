@@ -14,26 +14,26 @@ module Spec.Future(tests, theFuture, increaseMarginTrace, settleEarlyTrace, payO
 import Control.Monad (void)
 import Data.Default (Default (def))
 import Test.Tasty
-import qualified Test.Tasty.HUnit as HUnit
+import Test.Tasty.HUnit qualified as HUnit
 
 import Spec.TokenAccount (assertAccountBalance)
 
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Crypto (PrivateKey, PubKey (..))
 import Ledger.Oracle (Observation (..), SignedMessage)
-import qualified Ledger.Oracle as Oracle
+import Ledger.Oracle qualified as Oracle
 import Ledger.Time (POSIXTime)
-import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value (Value, scale)
 
-import qualified Ledger.CardanoWallet as CW
+import Ledger.CardanoWallet qualified as CW
 import Plutus.Contract.Test
 import Plutus.Contracts.Future (Future (..), FutureAccounts (..), FutureError, FutureSchema, FutureSetup (..),
                                 Role (..))
-import qualified Plutus.Contracts.Future as F
+import Plutus.Contracts.Future qualified as F
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
-import qualified Plutus.Trace.Emulator as Trace
-import qualified PlutusTx
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx qualified
 
 tests :: TestTree
 tests =

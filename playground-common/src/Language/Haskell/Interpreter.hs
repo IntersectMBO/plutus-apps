@@ -26,14 +26,14 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, evalStateT, get, put)
 import Control.Newtype.Generics (Newtype)
-import qualified Control.Newtype.Generics as Newtype
+import Control.Newtype.Generics qualified as Newtype
 import Control.Timeout (timeout)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (second)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Internal.Search as Text
+import Data.Text qualified as Text
+import Data.Text.Internal.Search qualified as Text
 import Data.Time.Units (TimeUnit)
 import GHC.Generics (Generic)
 import System.Environment (lookupEnv)

@@ -14,14 +14,14 @@ import PlutusTx (ToData (..))
 import PlutusTx.Prelude
 
 import Ledger.Constraints.TxConstraints
-import qualified Plutus.V1.Ledger.Address as Address
+import Plutus.V1.Ledger.Address qualified as Address
 import Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..))
-import qualified Plutus.V1.Ledger.Contexts as V
+import Plutus.V1.Ledger.Contexts qualified as V
 import Plutus.V1.Ledger.Interval (contains)
 import Plutus.V1.Ledger.Scripts (Datum (..))
 import Plutus.V1.Ledger.Tx (TxOut (..))
 import Plutus.V1.Ledger.Value (leq)
-import qualified Plutus.V1.Ledger.Value as Value
+import Plutus.V1.Ledger.Value qualified as Value
 
 {-# INLINABLE checkOwnInputConstraint #-}
 checkOwnInputConstraint :: ScriptContext -> InputConstraint a -> Bool

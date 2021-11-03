@@ -3,13 +3,13 @@
 module Spec.Currency(tests, currencyTrace) where
 
 import Control.Monad (void)
-import qualified Ledger
+import Ledger qualified
 import Plutus.Contract
 import Plutus.Contract.Test
 
 import Plutus.Contracts.Currency (OneShotCurrency)
-import qualified Plutus.Contracts.Currency as Cur
-import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Contracts.Currency qualified as Cur
+import Plutus.Trace.Emulator qualified as Trace
 
 import Test.Tasty
 

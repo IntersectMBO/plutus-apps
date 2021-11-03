@@ -19,11 +19,11 @@ import Control.Lens.Combinators (itraverse)
 import Control.Monad.State (StateT, evalStateT, runState)
 import Data.List (groupBy)
 import Data.Map (Map)
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+import Data.Map qualified as Map
+import Data.Set qualified as Set
 import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut (TxOut), ValidationPhase (..), Value,
                consumableInputs, eitherTx, outValue, txInRef, txOutRefId, txOutRefIdx, txOutValue, txOutputs)
-import qualified Ledger.Tx as Tx
+import Ledger.Tx qualified as Tx
 import PlutusTx.Monoid (inv)
 import Wallet.Emulator.Chain (ChainEvent (..))
 import Wallet.Rollup.Types

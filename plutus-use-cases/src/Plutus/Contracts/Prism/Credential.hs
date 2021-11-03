@@ -22,13 +22,13 @@ import GHC.Generics (Generic)
 import Ledger.Contexts (ScriptContext (..), txSignedBy)
 import Ledger.Crypto (PubKeyHash)
 import Ledger.Scripts (MintingPolicy, mintingPolicyHash, mkMintingPolicyScript)
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 import Plutus.Contracts.TokenAccount (Account (..))
-import qualified PlutusTx
+import PlutusTx qualified
 import PlutusTx.Prelude
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 import Schema (ToSchema)
 
 -- | Entity that is authorised to mint credential tokens

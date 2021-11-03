@@ -12,7 +12,7 @@ import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Ledger.Index (minFee)
 import Plutus.V1.Ledger.Ada (Ada)
-import qualified Plutus.V1.Ledger.Ada as Ada
+import Plutus.V1.Ledger.Ada qualified as Ada
 
 -- | Datatype to configure the fee in a transaction.
 --

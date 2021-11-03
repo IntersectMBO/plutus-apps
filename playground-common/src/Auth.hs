@@ -50,16 +50,16 @@ import Control.Newtype.Generics (Newtype, O, unpack)
 import Data.Aeson (FromJSON, ToJSON, Value (String), eitherDecode, parseJSON, withObject, (.:))
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map as Map
+import Data.ByteString.Lazy qualified as LBS
+import Data.Map qualified as Map
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import GHC.Generics (Generic)
 import Gist (Gist, GistId, NewGist)
-import qualified Gist
+import Gist qualified
 import Network.HTTP.Client.Conduit (getUri)
 import Network.HTTP.Conduit (Request, parseRequest, responseBody, responseStatus, setQueryString)
 import Network.HTTP.Simple (addRequestHeader)
@@ -72,7 +72,7 @@ import Servant.Client (BaseUrl, ClientError (FailureResponse), ClientM, mkClient
                        runClientM)
 import Web.Cookie (SetCookie, defaultSetCookie, parseCookies, setCookieExpires, setCookieHttpOnly, setCookieMaxAge,
                    setCookieName, setCookiePath, setCookieSecure, setCookieValue)
-import qualified Web.JWT as JWT
+import Web.JWT qualified as JWT
 
 -- | https://gist.github.com/alpmestan/757094ecf9401f85c5ba367ca20b8900
 type GetRedirect headers = Verb 'GET 302 '[ JSON] (headers NoContent)

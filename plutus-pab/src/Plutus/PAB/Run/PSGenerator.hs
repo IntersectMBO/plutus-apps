@@ -23,22 +23,22 @@ import Control.Applicative ((<|>))
 import Control.Lens (set, (&))
 import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage)
 import Data.Proxy (Proxy (Proxy))
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Typeable (Typeable)
 import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, buildBridge, equal, genericShow, mkSumType,
                                    order, writePSTypesWith)
 import Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (ForeignOptions), genForeign,
                                                    unwrapSingleConstructors)
 import Language.PureScript.Bridge.TypeParameters (A, B)
-import qualified PSGenerator.Common
+import PSGenerator.Common qualified
 import Plutus.Contract.Checkpoint (CheckpointKey, CheckpointStore, CheckpointStoreItem)
 import Plutus.Contract.Resumable (Responses)
 import Plutus.Contract.StateMachine (InvalidTransition, SMContractError)
 import Plutus.Contract.StateMachine.OnChain (State)
-import qualified Plutus.PAB.Effects.Contract as Contract
+import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.Contract.Builtin (Builtin)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
-import qualified Plutus.PAB.Webserver.API as API
+import Plutus.PAB.Webserver.API qualified as API
 import Plutus.PAB.Webserver.Types (ChainReport, CombinedWSStreamToClient, CombinedWSStreamToServer,
                                    ContractActivationArgs, ContractInstanceClientState, ContractReport,
                                    ContractSignatureResponse, FullReport, InstanceStatusToClient)

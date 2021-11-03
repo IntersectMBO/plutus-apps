@@ -10,13 +10,13 @@ where
 
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Logger (MonadLogger, logInfoN, runStderrLoggingT)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Time.Units (Second, fromMicroseconds)
 import Network.Wai.Handler.Warp (HostPreference, defaultSettings, setHost, setPort)
 import Options.Applicative (CommandFields, Mod, Parser, auto, command, customExecParser, disambiguate, fullDesc, help,
                             helper, idm, info, long, option, prefs, short, showDefault, showHelpOnEmpty,
                             showHelpOnError, strOption, subparser, value)
-import qualified Webserver
+import Webserver qualified
 
 data Command = Webserver
   { _host       :: !HostPreference,

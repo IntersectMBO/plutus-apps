@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Spec.Secrets (tests) where
 
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Maybe
 import Plutus.Contract.Secrets
 import Test.Tasty
-import qualified Test.Tasty.QuickCheck as QC
+import Test.Tasty.QuickCheck qualified as QC
 
 tests :: TestTree
 tests = testGroup "secrets"

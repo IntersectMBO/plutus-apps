@@ -20,7 +20,7 @@ import Plutus.ChainIndex.UtxoState as Export
 
 import Cardano.BM.Trace (Trace)
 import Control.Concurrent.STM (TVar)
-import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM qualified as STM
 import Control.Lens (unto)
 import Control.Monad.Freer (Eff, interpret, reinterpret, runM)
 import Control.Monad.Freer.Error (handleError, runError, throwError)
@@ -31,7 +31,7 @@ import Control.Monad.Freer.Reader (runReader)
 import Control.Monad.Freer.State (runState)
 import Control.Monad.Freer.Writer (runWriter)
 import Data.Sequence (Seq)
-import qualified Database.SQLite.Simple as Sqlite
+import Database.SQLite.Simple qualified as Sqlite
 import Plutus.Monitoring.Util (convertLog)
 
 -- | The required arguments to run the chain-index effects.

@@ -17,21 +17,21 @@ import Control.Lens hiding (elements)
 import Control.Monad (void, when)
 import Data.Default (Default (def))
 import Test.Tasty
-import qualified Test.Tasty.HUnit as HUnit
+import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Slot
 import Ledger.Time (POSIXTime)
-import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.Vesting
 import Plutus.Trace.Emulator (EmulatorTrace, callEndpoint)
-import qualified Plutus.Trace.Emulator as Trace
-import qualified PlutusTx
-import qualified PlutusTx.Numeric as Numeric
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx qualified
+import PlutusTx.Numeric qualified as Numeric
 import Prelude
 import Test.QuickCheck hiding ((.&&.))
 

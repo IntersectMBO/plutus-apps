@@ -22,7 +22,7 @@ import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
 import Control.Monad.Freer.State
-import qualified Control.Monad.State as S
+import Control.Monad.State qualified as S
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.List (partition, (\\))
@@ -31,8 +31,8 @@ import Data.Text.Prettyprint.Doc
 import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, OnChainTx (..), ScriptValidationEvent, Slot (..), Tx (..), TxId, eitherTx, txId)
-import qualified Ledger.Index as Index
-import qualified Ledger.Interval as Interval
+import Ledger.Index qualified as Index
+import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Util (uncurry3)
 

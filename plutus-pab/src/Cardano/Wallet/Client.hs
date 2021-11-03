@@ -12,21 +12,21 @@
 
 module Cardano.Wallet.Client where
 
-import qualified Cardano.Api
+import Cardano.Api qualified
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
-import qualified Cardano.Api.Shelley as Cardano.Api
+import Cardano.Api.Shelley qualified as Cardano.Api
 import Cardano.Node.Types (MockServerConfig (..))
-import qualified Cardano.Wallet.Api as C
-import qualified Cardano.Wallet.Api.Client as C
+import Cardano.Wallet.Api qualified as C
+import Cardano.Wallet.Api.Client qualified as C
 import Cardano.Wallet.Api.Types (ApiVerificationKeyShelley (..), ApiWallet (..))
-import qualified Cardano.Wallet.Api.Types as C
-import qualified Cardano.Wallet.Primitive.AddressDerivation as C
-import qualified Cardano.Wallet.Primitive.Types as C
-import qualified Cardano.Wallet.Primitive.Types.Hash as C
-import qualified Cardano.Wallet.Primitive.Types.TokenMap as C
-import qualified Cardano.Wallet.Primitive.Types.TokenPolicy as C
-import qualified Cardano.Wallet.Primitive.Types.TokenQuantity as C
-import qualified Cardano.Wallet.Primitive.Types.Tx as C
+import Cardano.Wallet.Api.Types qualified as C
+import Cardano.Wallet.Primitive.AddressDerivation qualified as C
+import Cardano.Wallet.Primitive.Types qualified as C
+import Cardano.Wallet.Primitive.Types.Hash qualified as C
+import Cardano.Wallet.Primitive.Types.TokenMap qualified as C
+import Cardano.Wallet.Primitive.Types.TokenPolicy qualified as C
+import Cardano.Wallet.Primitive.Types.TokenQuantity qualified as C
+import Cardano.Wallet.Primitive.Types.Tx qualified as C
 import Control.Monad.Freer (Eff, LastMember, Member, sendM, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logWarn)
@@ -43,13 +43,13 @@ import Data.Text (pack)
 import Data.Text.Class (fromText)
 import Data.Text.Prettyprint.Doc (Pretty (..))
 import Ledger (CardanoTx)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (..), ToCardanoError, toCardanoTxBody)
 import Ledger.Value (CurrencySymbol (..), TokenName (..), Value (..))
 import Plutus.Contract.Wallet (export)
 import Plutus.PAB.Monitoring.PABLogMsg (WalletClientMsg (..))
 import Plutus.V1.Ledger.Crypto (PubKeyHash (..))
-import qualified PlutusTx.AssocMap as Map
+import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Builtins.Internal (BuiltinByteString (..))
 import Servant ((:<|>) (..), (:>))
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)

@@ -10,9 +10,9 @@ import Control.Monad.Freer.Extras.Pagination (Page (nextPageQuery, pageItems), P
 import Data.List (sort)
 import Data.Maybe (listToMaybe)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Hedgehog (Property, forAll, property, (===))
-import qualified Hedgehog
+import Hedgehog qualified
 import Hedgehog.Gen as Gen
 import Hedgehog.Range as Gen
 import Test.Tasty

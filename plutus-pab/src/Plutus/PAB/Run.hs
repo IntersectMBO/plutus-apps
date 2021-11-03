@@ -14,8 +14,8 @@ module Plutus.PAB.Run
 , runWithOpts
 ) where
 
-import qualified Cardano.BM.Backend.EKGView as EKGView
-import qualified Cardano.BM.Configuration.Model as CM
+import Cardano.BM.Backend.EKGView qualified as EKGView
+import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.BM.Plugin (loadPlugin)
 import Cardano.BM.Setup (setupTrace_)
@@ -27,7 +27,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (for_)
-import qualified Data.OpenApi.Schema as OpenApi
+import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text.Extras (tshow)
 import Data.Yaml (decodeFileThrow)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions)
@@ -39,7 +39,7 @@ import Plutus.PAB.Run.CommandParser
 import Plutus.PAB.Run.PSGenerator (HasPSTypes)
 import Plutus.PAB.Types (Config (..), PABError (MissingConfigFileOption))
 import Prettyprinter (Pretty (pretty))
-import qualified Servant
+import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
 
 -- | PAB entry point for a contract type `a`.

@@ -8,9 +8,9 @@
 module Plutus.ChainIndex.TxOutBalance where
 
 import Control.Lens (view)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Ledger (TxIn (txInRef), TxOutRef (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxInputs, citxTxId, txOutsWithRef)
 import Plutus.ChainIndex.TxIdState (transactionStatus)

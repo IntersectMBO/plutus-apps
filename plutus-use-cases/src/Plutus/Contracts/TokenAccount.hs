@@ -41,27 +41,27 @@ import Control.Lens
 import Control.Monad (void)
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
 
 import Plutus.Contract
 import Plutus.Contract.Constraints
-import qualified PlutusTx
+import PlutusTx qualified
 
 import Ledger (Address, PubKeyHash, ValidatorHash)
-import qualified Ledger
-import qualified Ledger.Constraints as Constraints
-import qualified Ledger.Contexts as V
-import qualified Ledger.Scripts
+import Ledger qualified
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts qualified as V
+import Ledger.Scripts qualified
 import Ledger.Tx (CardanoTx)
 import Ledger.Typed.Scripts (ValidatorTypes (..))
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
-import qualified Ledger.Value as Value
-import qualified Plutus.Contract.Typed.Tx as TypedTx
+import Ledger.Value qualified as Value
+import Plutus.Contract.Typed.Tx qualified as TypedTx
 
-import qualified Plutus.Contracts.Currency as Currency
+import Plutus.Contracts.Currency qualified as Currency
 
 import Prettyprinter.Extras (PrettyShow (..))
 

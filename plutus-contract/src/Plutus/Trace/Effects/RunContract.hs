@@ -43,13 +43,13 @@ import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.State (State)
 import Control.Monad.Freer.TH (makeEffect)
 
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Maybe (mapMaybe)
 import Data.Profunctor (Profunctor (..))
 import Data.Proxy (Proxy (..))
-import qualified Data.Row.Internal as V
+import Data.Row.Internal qualified as V
 import Data.String (IsString (..))
-import qualified GHC.TypeLits
+import GHC.TypeLits qualified
 import Plutus.Contract (Contract, HasEndpoint)
 import Plutus.Contract.Effects (ActiveEndpoint, PABResp (ExposeEndpointResp), _ExposeEndpointReq)
 import Plutus.Contract.Resumable (Request (rqRequest), Requests (..))

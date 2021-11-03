@@ -24,9 +24,9 @@ import Data.Functor (void)
 import Data.Maybe (listToMaybe)
 import GHC.Generics (Generic)
 import Ledger (Block, Slot (..), Tx (..))
-import qualified Ledger.Index as Index
+import Ledger.Index qualified as Index
 import Ledger.TimeSlot (SlotConfig)
-import qualified Wallet.Emulator.Chain as EC
+import Wallet.Emulator.Chain qualified as EC
 
 type TxPool = [Tx]
 

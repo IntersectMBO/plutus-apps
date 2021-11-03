@@ -12,7 +12,7 @@
 -}
 module Cardano.Protocol.Socket.Mock.Client where
 
-import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Lazy qualified as LBS
 import Data.Time.Units (Second, TimeUnit, toMicroseconds)
 import Data.Void (Void)
 
@@ -22,8 +22,8 @@ import Control.Monad.Catch (catchAll)
 import Control.Tracer
 
 import Ouroboros.Network.Block (Point (..))
-import qualified Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
+import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
+import Ouroboros.Network.Protocol.LocalTxSubmission.Client qualified as TxSubmission
 
 import Ledger.TimeSlot (SlotConfig, currentSlot)
 import Ouroboros.Network.IOManager

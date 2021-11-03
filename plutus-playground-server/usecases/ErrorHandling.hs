@@ -14,11 +14,11 @@ import Control.Lens (makeClassyPrisms, prism', review)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (catching, throwing, throwing_)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 
 import Data.Default (Default (def))
 import Ledger.TimeSlot (SlotConfig)
-import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.TimeSlot qualified as TimeSlot
 import Playground.Contract
 import Plutus.Contract (AsContractError (_ContractError), ContractError, awaitTime, logInfo, mapError, selectList)
 import Prelude (Maybe (..), const, show, ($), (+), (.), (<>))

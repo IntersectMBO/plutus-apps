@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main(main) where
 
-import qualified Spec.Contract
-import qualified Spec.Emulator
-import qualified Spec.ErrorChecking
-import qualified Spec.Rows
-import qualified Spec.Secrets
-import qualified Spec.State
-import qualified Spec.ThreadToken
+import Spec.Contract qualified
+import Spec.Emulator qualified
+import Spec.ErrorChecking qualified
+import Spec.Rows qualified
+import Spec.Secrets qualified
+import Spec.State qualified
+import Spec.ThreadToken qualified
 import Test.Tasty
 
 main :: IO ()

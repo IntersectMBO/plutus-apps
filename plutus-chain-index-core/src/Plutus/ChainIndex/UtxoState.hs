@@ -39,7 +39,7 @@ module Plutus.ChainIndex.UtxoState(
 import Control.Lens (makeLenses, view)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.FingerTree (FingerTree, Measured (..))
-import qualified Data.FingerTree as FT
+import Data.FingerTree qualified as FT
 import Data.Function (on)
 import Data.Monoid (Sum (..))
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))

@@ -35,21 +35,21 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, PubKeyHash)
 import Ledger.Constraints (TxConstraints)
-import qualified Ledger.Constraints as Constraints
+import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
-import qualified Ledger.Contexts as Validation
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Contexts qualified as Validation
+import Ledger.Interval qualified as Interval
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
-import qualified Plutus.Contract.StateMachine as SM
-import qualified PlutusTx
+import Plutus.Contract.StateMachine qualified as SM
+import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..))
 
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 -- $multisig
 --   The n-out-of-m multisig contract works like a joint account of

@@ -27,7 +27,7 @@ module Plutus.Contract.Schema(
 import Data.Aeson (FromJSON, ToJSON (toJSON), Value)
 import Data.Row as Row
 import Data.Row.Internal
-import qualified Data.Row.Variants as Variants
+import Data.Row.Variants qualified as Variants
 import Data.Text.Prettyprint.Doc
 
 import Data.Row.Extras

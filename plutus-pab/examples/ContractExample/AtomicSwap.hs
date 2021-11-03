@@ -22,11 +22,11 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Plutus.Contracts.Escrow (EscrowParams (..))
-import qualified Plutus.Contracts.Escrow as Escrow
+import Plutus.Contracts.Escrow qualified as Escrow
 import Schema (ToSchema)
 
 import Ledger (CurrencySymbol, POSIXTime, PubKeyHash, TokenName, Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 import Plutus.Contract
 import Wallet.Emulator.Wallet (Wallet, walletPubKeyHash)
 

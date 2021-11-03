@@ -14,24 +14,24 @@ module Playground.Interpreter.Util
     , renderInstanceTrace
     ) where
 
-import qualified Control.Foldl as L
+import Control.Foldl qualified as L
 import Control.Lens (Traversal', preview)
 import Control.Monad (void)
 import Control.Monad.Freer (run)
 import Control.Monad.Freer.Error (Error, runError, throwError)
 import Data.Aeson (FromJSON, eitherDecode)
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.Foldable (traverse_)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (isJust)
 import Data.Text (Text)
 
 import Data.Default (Default (def))
-import qualified Data.Text.Encoding as Text
+import Data.Text.Encoding qualified as Text
 import Data.Text.Prettyprint.Doc (defaultLayoutOptions, layoutPretty, pretty, vsep)
 import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
 import Ledger.Value (Value)
@@ -39,17 +39,17 @@ import Playground.Types (ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, 
                          Expression, FunctionSchema (FunctionSchema), PlaygroundError (JsonDecodingError, OtherError),
                          SimulatorWallet (SimulatorWallet), amount, argument, argumentValues, caller, decodingError,
                          endpointDescription, expected, input, recipient, sender, simulatorWalletWallet)
-import qualified Playground.Types
+import Playground.Types qualified
 import Plutus.Contract (Contract)
 import Plutus.Trace (ContractConstraints, ContractInstanceTag)
 import Plutus.Trace.Emulator.Types (EmulatorRuntimeError (EmulatorJSONDecodingError), _ContractLog,
                                     _ReceiveEndpointCall, cilMessage)
 import Plutus.Trace.Playground (PlaygroundTrace, runPlaygroundStream, walletInstanceTag)
-import qualified Plutus.Trace.Playground
-import qualified Plutus.Trace.Playground as Trace
+import Plutus.Trace.Playground qualified
+import Plutus.Trace.Playground qualified as Trace
 import Streaming.Prelude (fst')
 import Wallet.Emulator.Folds (EmulatorEventFoldM)
-import qualified Wallet.Emulator.Folds as Folds
+import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.MultiAgent (EmulatorEvent, chainEvent, eteEvent, instanceEvent)
 import Wallet.Emulator.Stream (foldEmulatorStreamM)
 import Wallet.Emulator.Types (Wallet, WalletNumber, fromWalletNumber, walletPubKeyHash)

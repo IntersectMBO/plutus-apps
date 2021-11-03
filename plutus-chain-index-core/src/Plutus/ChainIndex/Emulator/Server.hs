@@ -9,19 +9,19 @@ module Plutus.ChainIndex.Emulator.Server(
     serveChainIndex) where
 
 import Control.Concurrent.STM (TVar)
-import qualified Control.Concurrent.STM as STM
-import qualified Control.Monad.Except as E
+import Control.Concurrent.STM qualified as STM
+import Control.Monad.Except qualified as E
 import Control.Monad.Freer (Eff, interpret, run, type (~>))
 import Control.Monad.Freer.Error (Error, runError)
 import Control.Monad.Freer.Extras.Log (handleLogIgnore)
 import Control.Monad.Freer.Extras.Modify (raiseEnd)
 import Control.Monad.Freer.State (evalState)
 import Control.Monad.IO.Class (MonadIO (liftIO))
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Data.Proxy (Proxy (..))
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Network.Wai.Handler.Warp as Warp
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.ChainIndex (ChainIndexError, ChainIndexLog)
 import Plutus.ChainIndex.Api (API)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)

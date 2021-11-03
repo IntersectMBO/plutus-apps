@@ -31,21 +31,21 @@ module Plutus.Contracts.Uniswap.OffChain
 
 import Control.Lens (view)
 import Control.Monad hiding (fmap)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Monoid (Last (..))
 import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
 import Ledger hiding (singleton)
 import Ledger.Constraints as Constraints
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
 import Plutus.Contract as Contract
-import qualified Plutus.Contracts.Currency as Currency
+import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap.OnChain (mkUniswapValidator, validateLiquidityMinting)
 import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
-import qualified PlutusTx
+import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
 import Prelude as Haskell (Int, Semigroup (..), String, div, dropWhile, flip, show, (^))
 import Text.Printf (printf)

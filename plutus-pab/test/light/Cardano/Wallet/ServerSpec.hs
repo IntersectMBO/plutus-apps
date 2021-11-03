@@ -12,7 +12,7 @@ module Cardano.Wallet.ServerSpec
 
 import Cardano.Wallet.Mock.Handlers
 import Control.Monad (replicateM)
-import qualified Data.ByteString as BS
+import Data.ByteString qualified as BS
 import Data.Word
 import Test.QuickCheck.Arbitrary (Arbitrary, arbitrary)
 import Test.QuickCheck.Instances.ByteString

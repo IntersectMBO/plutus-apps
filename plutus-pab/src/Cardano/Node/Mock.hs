@@ -16,9 +16,9 @@ import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, run
 import Control.Monad.Freer.Extras.Log
 import Control.Monad.Freer.Extras.Modify (handleZoomedState)
 import Control.Monad.Freer.Reader (Reader)
-import qualified Control.Monad.Freer.Reader as Eff
-import qualified Control.Monad.Freer.State as Eff
-import qualified Control.Monad.Freer.Writer as Eff
+import Control.Monad.Freer.Reader qualified as Eff
+import Control.Monad.Freer.State qualified as Eff
+import Control.Monad.Freer.Writer qualified as Eff
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Foldable (traverse_)
 import Data.Function ((&))
@@ -29,13 +29,13 @@ import Servant (NoContent (NoContent))
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Chain (handleChain, handleControlChain)
 import Cardano.Node.Types
-import qualified Cardano.Protocol.Socket.Mock.Client as Client
-import qualified Cardano.Protocol.Socket.Mock.Server as Server
+import Cardano.Protocol.Socket.Mock.Client qualified as Client
+import Cardano.Protocol.Socket.Mock.Server qualified as Server
 import Ledger (Tx)
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength), currentSlot)
 import Plutus.PAB.Arbitrary ()
-import qualified Plutus.PAB.Monitoring.Monitoring as LM
-import qualified Wallet.Emulator.Chain as Chain
+import Plutus.PAB.Monitoring.Monitoring qualified as LM
+import Wallet.Emulator.Chain qualified as Chain
 
 healthcheck :: Monad m => m NoContent
 healthcheck = pure NoContent

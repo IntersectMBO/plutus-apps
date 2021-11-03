@@ -43,14 +43,14 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (..), LogObserve, logD
 import Control.Monad.Freer.Extras.Modify (raiseEnd)
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.Freer.State (State, evalState, get, gets, modify, put)
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Foldable (traverse_)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (listToMaybe, mapMaybe)
-import qualified Data.Set as Set
-import qualified Data.Text as T
+import Data.Set qualified as Set
+import Data.Text qualified as T
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Tx (Address, TxIn (..), TxOut (..), TxOutRef, txId)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (ChainIndexTx, _citxOutputs, _citxTxId),
@@ -58,9 +58,9 @@ import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (ChainIndexTx, _ci
                           TxValidity (..), _ValidTx, citxInputs, citxOutputs, fromOnChainTx, txOutRefs)
 import Plutus.Contract (Contract (..))
 import Plutus.Contract.Effects (PABReq, PABResp (AwaitTxStatusChangeResp), matches)
-import qualified Plutus.Contract.Effects as E
+import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Resumable (Request (..), Response (..))
-import qualified Plutus.Contract.Resumable as State
+import Plutus.Contract.Resumable qualified as State
 import Plutus.Contract.Trace (handleBlockchainQueries)
 import Plutus.Contract.Trace.RequestHandler (RequestHandler (..), RequestHandlerLogMsg, tryHandler, wrapHandler)
 import Plutus.Contract.Types (ResumableResult (..), lastLogs, requests, resumableResult)
@@ -71,7 +71,7 @@ import Plutus.Trace.Emulator.Types (ContractConstraints, ContractHandle (..), Co
                                     EmulatorThreads, addEventInstanceState, emptyInstanceState, instanceIdThreads,
                                     toInstanceState)
 import Plutus.Trace.Scheduler (MessageCall (..), Priority (..), ThreadId, mkAgentSysCall)
-import qualified Wallet.API as WAPI
+import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
 import Wallet.Types (ContractInstanceId)

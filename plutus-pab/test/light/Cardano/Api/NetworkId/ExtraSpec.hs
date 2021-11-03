@@ -12,18 +12,18 @@ import Cardano.Api (NetworkId (..), NetworkMagic (..))
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
 import Control.Monad (void)
 import Data.Aeson (FromJSON, decode, encode)
-import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Lazy qualified as LBS
 import Hedgehog (MonadGen, Property)
-import qualified Hedgehog
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
-import qualified Test.SmallCheck.Series as SC
+import Hedgehog qualified
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
+import Test.SmallCheck.Series qualified as SC
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (HasCallStack, assertFailure, testCase)
 import Test.Tasty.Hedgehog (testProperty)
 import Test.Tasty.QuickCheck ((===))
-import qualified Test.Tasty.QuickCheck as QC
-import qualified Test.Tasty.SmallCheck as SC
+import Test.Tasty.QuickCheck qualified as QC
+import Test.Tasty.SmallCheck qualified as SC
 
 tests :: TestTree
 tests =

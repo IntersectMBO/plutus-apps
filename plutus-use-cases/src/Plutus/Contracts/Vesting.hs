@@ -29,25 +29,25 @@ module Plutus.Contracts.Vesting (
 import Control.Lens
 import Control.Monad (void, when)
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Prelude (Semigroup (..))
 
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), Validator)
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
-import qualified Ledger.Contexts as Validation
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Tx as Tx
+import Ledger.Contexts qualified as Validation
+import Ledger.Interval qualified as Interval
+import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (ValidatorTypes (..))
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 import Plutus.Contract
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), fold)
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 {- |
     A simple vesting scheme. Money is locked by a contract and may only be

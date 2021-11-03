@@ -20,17 +20,17 @@ import Control.Lens
 import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import qualified Ledger.Ada as Ada
-import qualified Ledger.Constraints as Constraints
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKeyHash)
 import Ledger.Tx (getCardanoTxId)
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName)
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError (..), SMContractError, StateMachineTransition (..))
-import qualified Plutus.Contract.StateMachine as SM
+import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
-import qualified Plutus.Contracts.Prism.Credential as Credential
+import Plutus.Contracts.Prism.Credential qualified as Credential
 import Plutus.Contracts.Prism.StateMachine as StateMachine
 import Schema (ToSchema)
 import Wallet.Emulator (walletPubKeyHash)

@@ -67,9 +67,9 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (for_, traverse_)
 import Data.Text (Text)
 import Data.Text.Prettyprint.Doc hiding (surround)
-import qualified Data.Text.Prettyprint.Doc.Render.String as Render
-import qualified Data.Text.Prettyprint.Doc.Render.Text as Render
-import qualified Debug.Trace as Trace
+import Data.Text.Prettyprint.Doc.Render.String qualified as Render
+import Data.Text.Prettyprint.Doc.Render.Text qualified as Render
+import Debug.Trace qualified as Trace
 import GHC.Generics (Generic)
 
 -- $log

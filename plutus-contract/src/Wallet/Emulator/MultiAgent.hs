@@ -26,26 +26,26 @@ import Control.Monad.Freer.Extras.Modify (handleZoomedState, raiseEnd, writeInto
 import Control.Monad.Freer.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
 import Ledger.Fee (FeeConfig)
 
 import Ledger hiding (to, value)
-import qualified Ledger.AddressMap as AM
-import qualified Ledger.Index as Index
-import qualified Plutus.ChainIndex.Emulator as ChainIndex
+import Ledger.AddressMap qualified as AM
+import Ledger.Index qualified as Index
+import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
-import qualified Plutus.Trace.Scheduler as Scheduler
-import qualified Wallet.API as WAPI
-import qualified Wallet.Emulator.Chain as Chain
+import Plutus.Trace.Scheduler qualified as Scheduler
+import Wallet.API qualified as WAPI
+import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
-import qualified Wallet.Emulator.NodeClient as NC
+import Wallet.Emulator.NodeClient qualified as NC
 import Wallet.Emulator.Wallet (Wallet (..))
-import qualified Wallet.Emulator.Wallet as Wallet
+import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Types (AssertionError (..))
 
 -- | Assertions which will be checked during execution of the emulator.

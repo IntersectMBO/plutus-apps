@@ -31,12 +31,12 @@ import Ledger.Scripts
 import Ledger.Tx
 import Ledger.Typed.Scripts
 import Plutus.V1.Ledger.Crypto
-import qualified Plutus.V1.Ledger.Value as Value
+import Plutus.V1.Ledger.Value qualified as Value
 
 import PlutusTx
 
 import Codec.Serialise (deserialise, serialise)
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (Object), object, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)

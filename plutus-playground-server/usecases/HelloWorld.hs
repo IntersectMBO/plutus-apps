@@ -11,11 +11,11 @@
 module HelloWorld where
 
 -- TRIM TO HERE
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Playground.Contract
 import Plutus.Contract
 import PlutusTx.Prelude
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 -- | A 'Contract' that logs a message.
 hello :: Contract () EmptySchema T.Text ()

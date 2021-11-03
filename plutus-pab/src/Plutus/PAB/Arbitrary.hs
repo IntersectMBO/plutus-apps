@@ -9,13 +9,13 @@
 module Plutus.PAB.Arbitrary where
 
 import Data.Aeson (Value)
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
 import Ledger (ValidatorHash (ValidatorHash))
-import qualified Ledger
+import Ledger qualified
 import Ledger.Address (Address (..))
 import Ledger.Bytes (LedgerBytes)
-import qualified Ledger.Bytes as LedgerBytes
+import Ledger.Bytes qualified as LedgerBytes
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Slot (Slot)
@@ -24,9 +24,9 @@ import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.TxId (TxId)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
-import qualified PlutusTx
-import qualified PlutusTx.AssocMap as AssocMap
-import qualified PlutusTx.Prelude as PlutusTx
+import PlutusTx qualified
+import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Prelude qualified as PlutusTx
 import Test.QuickCheck (Gen, oneof)
 import Test.QuickCheck.Arbitrary.Generic (Arbitrary, arbitrary, genericArbitrary, genericShrink, shrink)
 import Test.QuickCheck.Instances ()

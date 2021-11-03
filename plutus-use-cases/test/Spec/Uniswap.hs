@@ -4,8 +4,8 @@ module Spec.Uniswap(
     ) where
 
 import Plutus.Contract.Test
-import qualified Plutus.Contracts.Uniswap.Trace as Uniswap
-import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Contracts.Uniswap.Trace qualified as Uniswap
+import Plutus.Trace.Emulator qualified as Trace
 
 import Test.Tasty
 

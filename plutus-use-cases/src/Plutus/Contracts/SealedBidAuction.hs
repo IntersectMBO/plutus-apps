@@ -33,18 +33,18 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, PubKeyHash, Value)
-import qualified Ledger.Ada as Ada
-import qualified Ledger.Constraints as Constraints
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Interval qualified as Interval
+import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.Secrets
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, Void)
-import qualified Plutus.Contract.StateMachine as SM
-import qualified PlutusTx
+import Plutus.Contract.StateMachine qualified as SM
+import PlutusTx qualified
 import PlutusTx.Prelude
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 {- Note [Sealed bid auction disclaimer]
    This file implements a sealed bid auction using `SecretArgument`s. In the bidding

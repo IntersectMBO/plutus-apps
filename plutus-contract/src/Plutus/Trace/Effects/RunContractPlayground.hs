@@ -33,7 +33,7 @@ import Control.Monad.Freer.Extras.Log (LogMsg (..))
 import Control.Monad.Freer.Reader (ask)
 import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.Freer.TH (makeEffect)
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Map (Map)
 import Plutus.Contract (Contract (..), ContractInstanceId, EndpointDescription (..))
 import Plutus.Contract.Effects (PABResp (ExposeEndpointResp))

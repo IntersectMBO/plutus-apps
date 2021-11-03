@@ -85,20 +85,20 @@ module Plutus.PAB.Core
 
 import Control.Applicative (Alternative (..))
 import Control.Concurrent.STM (STM)
-import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM qualified as STM
 import Control.Lens (view)
 import Control.Monad (forM, guard, void)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, runM, send, subsume, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (..), LogObserve, handleObserveLog, mapLog)
-import qualified Control.Monad.Freer.Extras.Modify as Modify
+import Control.Monad.Freer.Extras.Modify qualified as Modify
 import Control.Monad.Freer.Reader (Reader (..), ask, asks, runReader)
 import Control.Monad.IO.Class (MonadIO (..))
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Default (Default (def))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
@@ -108,24 +108,24 @@ import Ledger.Tx (CardanoTx, ciTxOutValue)
 import Ledger.TxId (TxId)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (..), TxOutStatus, TxStatus)
-import qualified Plutus.ChainIndex as ChainIndex
+import Plutus.ChainIndex qualified as ChainIndex
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq)
 import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg, ContractInstanceState)
-import qualified Plutus.PAB.Core.ContractInstance as ContractInstance
+import Plutus.PAB.Core.ContractInstance qualified as ContractInstance
 import Plutus.PAB.Core.ContractInstance.STM (Activity (Active), BlockchainEnv, InstancesState, OpenEndpoint (..))
-import qualified Plutus.PAB.Core.ContractInstance.STM as Instances
+import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
 import Plutus.PAB.Effects.Contract (ContractDefinition, ContractEffect, ContractStore, PABContract (..), getState)
-import qualified Plutus.PAB.Effects.Contract as Contract
+import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.TimeEffect (TimeEffect (..), systemTime)
 import Plutus.PAB.Effects.UUID (UUIDEffect, handleUUIDEffect)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse, fromResp)
 import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (..))
 import Plutus.PAB.Timeout (Timeout)
-import qualified Plutus.PAB.Timeout as Timeout
+import Plutus.PAB.Timeout qualified as Timeout
 import Plutus.PAB.Types (PABError (ContractInstanceNotFound, InstanceAlreadyStopped, WalletError))
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
 import Wallet.API (PubKeyHash, Slot)
-import qualified Wallet.API as WAPI
+import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.MultiAgent (EmulatorEvent' (..), EmulatorTimeEvent (..))

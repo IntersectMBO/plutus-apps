@@ -36,7 +36,7 @@ import Control.Applicative (Alternative (..))
 import Control.Arrow ((>>>))
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM (STM)
-import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM qualified as STM
 import Control.Lens (preview)
 import Control.Monad (forM_, void)
 import Control.Monad.Freer
@@ -47,27 +47,27 @@ import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson (Value)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
-import qualified Plutus.Contract.Effects as Contract.Effects
+import Plutus.Contract.Effects qualified as Contract.Effects
 import Plutus.Contract.Resumable (Request (..), Response (..))
 import Plutus.Contract.State (ContractResponse (..), State (..))
-import qualified Plutus.Contract.Trace as RequestHandler
+import Plutus.Contract.Trace qualified as RequestHandler
 import Plutus.Contract.Trace.RequestHandler (RequestHandler (..), RequestHandlerLogMsg, extract, maybeToHandler,
                                              tryHandler', wrapHandler)
 import Plutus.PAB.Core.ContractInstance.RequestHandlers (ContractInstanceMsg (..))
 
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
-import qualified Wallet.Emulator.Wallet as Wallet
+import Wallet.Emulator.Wallet qualified as Wallet
 
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown))
 import Plutus.PAB.Core.ContractInstance.STM (Activity (Done, Stopped), BlockchainEnv (..), InstanceState (..),
                                              InstancesState, callEndpointOnInstance, emptyInstanceState)
-import qualified Plutus.PAB.Core.ContractInstance.STM as InstanceState
+import Plutus.PAB.Core.ContractInstance.STM qualified as InstanceState
 import Plutus.PAB.Effects.Contract (ContractEffect, ContractStore, PABContract (..))
-import qualified Plutus.PAB.Effects.Contract as Contract
+import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.UUID (UUIDEffect, uuidNextRandom)
 import Plutus.PAB.Events.Contract (ContractInstanceId (..))
 import Plutus.PAB.Types (PABError (..))

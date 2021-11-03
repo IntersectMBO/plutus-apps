@@ -13,7 +13,7 @@ module Cardano.ChainIndex.Server(
     ) where
 
 import Control.Concurrent.STM (TVar)
-import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer.Extras.Log
 import Servant.Client (BaseUrl (baseUrlPort))
 

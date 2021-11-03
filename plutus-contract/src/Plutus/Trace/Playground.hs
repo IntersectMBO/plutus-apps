@@ -32,20 +32,20 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (..), mapLog)
 import Control.Monad.Freer.Extras.Modify (raiseEnd)
 import Control.Monad.Freer.Reader (Reader)
 import Control.Monad.Freer.State (State, evalState)
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Foldable (traverse_)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 
 import Plutus.Contract (Contract (..))
 import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
 import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI, handleEmulatedWalletAPI)
-import qualified Plutus.Trace.Effects.EmulatedWalletAPI as EmulatedWalletAPI
+import Plutus.Trace.Effects.EmulatedWalletAPI qualified as EmulatedWalletAPI
 import Plutus.Trace.Effects.RunContractPlayground (RunContractPlayground, handleRunContractPlayground)
-import qualified Plutus.Trace.Effects.RunContractPlayground as RunContractPlayground
+import Plutus.Trace.Effects.RunContractPlayground qualified as RunContractPlayground
 import Plutus.Trace.Effects.Waiting (Waiting, handleWaiting)
-import qualified Plutus.Trace.Effects.Waiting as Waiting
+import Plutus.Trace.Effects.Waiting qualified as Waiting
 import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
 import Plutus.Trace.Emulator.System (launchSystemThreads)
 import Plutus.Trace.Emulator.Types (ContractConstraints, EmulatorMessage (..),

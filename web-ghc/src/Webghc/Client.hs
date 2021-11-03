@@ -5,7 +5,7 @@ module Webghc.Client where
 import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Proxy (Proxy (Proxy))
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Language.Haskell.Interpreter (CompilationError (RawError), InterpreterError (CompilationErrors),
                                      InterpreterResult)
 import Servant.Client (ClientEnv, ClientM, client, runClientM)

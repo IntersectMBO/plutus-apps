@@ -11,9 +11,9 @@
 module Plutus.PAB.Webserver.Types where
 
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Map (Map)
-import qualified Data.OpenApi.Schema as OpenApi
+import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text.Prettyprint.Doc (Pretty, pretty, (<+>))
 import GHC.Generics (Generic)
 import Ledger (PubKeyHash, Tx, TxId)

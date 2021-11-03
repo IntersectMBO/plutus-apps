@@ -36,13 +36,13 @@ import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError)
 import Control.Monad.Freer.State (State, get, gets, modify, put)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey, Value)
-import qualified Data.Aeson.Types as JSON
+import Data.Aeson.Types qualified as JSON
 import Data.IntervalMap.Interval (Interval (ClosedInterval))
-import qualified Data.IntervalSet as IS
+import Data.IntervalSet qualified as IS
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Text.Prettyprint.Doc (Pretty (..), colon, vsep, (<+>))
 import GHC.Generics (Generic)
 

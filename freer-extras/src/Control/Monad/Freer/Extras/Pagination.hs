@@ -43,11 +43,11 @@ module Control.Monad.Freer.Extras.Pagination
 import Control.Monad (guard)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (..))
-import qualified Data.List.NonEmpty as L
+import Data.List.NonEmpty qualified as L
 import Data.Maybe (isJust, listToMaybe)
-import qualified Data.OpenApi as OpenApi
+import Data.OpenApi qualified as OpenApi
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 

@@ -36,13 +36,13 @@ module Plutus.PAB.Effects.Contract(
 import Control.Monad.Freer (Eff, Member, send)
 import Data.Aeson (Value)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Proxy (Proxy (..))
 import Playground.Types (FunctionSchema)
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Resumable (Request, Response)
 import Plutus.Contract.State (ContractResponse)
-import qualified Plutus.Contract.State as C
+import Plutus.Contract.State qualified as C
 import Plutus.PAB.Webserver.Types (ContractActivationArgs)
 import Schema (FormSchema)
 import Wallet.Types (ContractActivityStatus (..), ContractInstanceId)

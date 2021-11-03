@@ -17,15 +17,15 @@ module Cardano.Wallet.Mock.Handlers
     ) where
 
 import Cardano.BM.Data.Trace (Trace)
-import qualified Cardano.Node.Client as NodeClient
-import qualified Cardano.Protocol.Socket.Mock.Client as MockClient
+import Cardano.Node.Client qualified as NodeClient
+import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.Types (MultiWalletEffect (..), WalletEffects, WalletInfo (..), WalletMsg (..), Wallets,
                                   fromWalletState)
 import Control.Concurrent (MVar)
 import Control.Concurrent.MVar (putMVar, takeMVar)
 import Control.Lens (at, (?~))
 import Control.Monad.Error (MonadError)
-import qualified Control.Monad.Except as MonadError
+import Control.Monad.Except qualified as MonadError
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.Extras
@@ -35,33 +35,33 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Crypto.Random (getRandomBytes)
 import Data.Bits (shiftL, shiftR)
 import Data.ByteArray (ScrubbedBytes, unpack)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as BSL8
-import qualified Data.ByteString.Lazy.Char8 as Char8
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Lazy.Char8 qualified as BSL8
+import Data.ByteString.Lazy.Char8 qualified as Char8
 import Data.Function ((&))
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Prettyprint.Doc (pretty)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
-import qualified Ledger.CardanoWallet as CW
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Crypto (PubKeyHash)
 import Ledger.Fee (FeeConfig)
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
-import qualified Plutus.ChainIndex.Client as ChainIndex
+import Plutus.ChainIndex.Client qualified as ChainIndex
 import Plutus.PAB.Arbitrary ()
-import qualified Plutus.PAB.Monitoring.Monitoring as LM
+import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Servant (ServerError (..), err400, err401, err404)
 import Servant.Client (ClientEnv)
 import Servant.Server (err500)
 import Wallet.API (WalletAPIError (..))
-import qualified Wallet.API as WAPI
+import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
-import qualified Wallet.Emulator.Wallet as Wallet
+import Wallet.Emulator.Wallet qualified as Wallet
 
 newtype Seed = Seed ScrubbedBytes
 

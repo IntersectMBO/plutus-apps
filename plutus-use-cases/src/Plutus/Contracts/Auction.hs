@@ -31,20 +31,20 @@ import Data.Monoid (Last (..))
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
 import Ledger (Ada, POSIXTime, PubKeyHash, Value)
-import qualified Ledger.Ada as Ada
-import qualified Ledger.Constraints as Constraints
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Interval qualified as Interval
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (TypedScriptTxOut (..))
 import Plutus.Contract
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, ThreadToken, Void,
                                      WaitingResult (..))
-import qualified Plutus.Contract.StateMachine as SM
+import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Util (loopM)
-import qualified PlutusTx
+import PlutusTx qualified
 import PlutusTx.Prelude
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 -- | Definition of an auction
 data AuctionParams

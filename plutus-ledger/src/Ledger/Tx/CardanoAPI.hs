@@ -52,50 +52,50 @@ module Ledger.Tx.CardanoAPI(
   , FromCardanoError(..)
 ) where
 
-import qualified Cardano.Api as C
-import qualified Cardano.Api.Byron as C
-import qualified Cardano.Api.Shelley as C
+import Cardano.Api qualified as C
+import Cardano.Api.Byron qualified as C
+import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Data.Tracer (ToObject (..))
 import Cardano.Chain.Common (addrToBase58)
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWitness as C
-import qualified Cardano.Ledger.Core as Ledger
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Core qualified as Ledger
 import Codec.Serialise (Serialise, deserialiseOrFail)
-import qualified Codec.Serialise as Codec
+import Codec.Serialise qualified as Codec
 import Codec.Serialise.Decoding (Decoder, decodeBytes, decodeSimple)
 import Codec.Serialise.Encoding (Encoding (..), Tokens (..))
 import Control.Applicative ((<|>))
 import Control.Lens hiding ((.=))
 import Control.Monad (when)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (Parser, parseFail, prependFailure, typeMismatch)
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Short as SBS
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Short qualified as SBS
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.OpenApi (NamedSchema (..), OpenApiType (..), byteSchema, declareSchemaRef, properties, required,
                      sketchSchema, type_)
-import qualified Data.OpenApi as OpenApi
+import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import qualified Ledger.Scripts as P
+import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
-import qualified Plutus.V1.Ledger.Ada as Ada
-import qualified Plutus.V1.Ledger.Api as Api
-import qualified Plutus.V1.Ledger.Api as P
-import qualified Plutus.V1.Ledger.Credential as Credential
-import qualified Plutus.V1.Ledger.Slot as P
-import qualified Plutus.V1.Ledger.Tx as P
-import qualified Plutus.V1.Ledger.Value as Value
-import qualified PlutusTx.Prelude as PlutusTx
+import Plutus.V1.Ledger.Ada qualified as Ada
+import Plutus.V1.Ledger.Api qualified as Api
+import Plutus.V1.Ledger.Api qualified as P
+import Plutus.V1.Ledger.Credential qualified as Credential
+import Plutus.V1.Ledger.Slot qualified as P
+import Plutus.V1.Ledger.Tx qualified as P
+import Plutus.V1.Ledger.Value qualified as Value
+import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
 
 instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where

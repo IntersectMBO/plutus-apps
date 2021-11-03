@@ -27,10 +27,10 @@ module Plutus.ChainIndex.Emulator.DiskState(
 import Control.Lens (At (..), Index, IxValue, Ixed (..), lens, makeLenses, view, (&), (.~), (^.))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger (Address (..), Script, ScriptHash, TxOut (..), TxOutRef)
 import Ledger.Credential (Credential)
@@ -38,7 +38,7 @@ import Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash)
 import Ledger.TxId (TxId)
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxData, citxRedeemers, citxScripts, citxTxId, txOutsWithRef)
 import Plutus.ChainIndex.Types (Diagnostics (..))
-import qualified Plutus.V1.Ledger.Ada as Ada
+import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 -- | Set of transaction output references for each address.

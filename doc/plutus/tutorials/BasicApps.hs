@@ -18,16 +18,16 @@ module BasicApps where
 
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Ledger
-import qualified Ledger.Ada as Ada
-import qualified Ledger.Constraints as Constraints
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
+import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
-import qualified PlutusTx as PlutusTx
+import PlutusTx qualified as PlutusTx
 import PlutusTx.Prelude
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 import Schema
 import Wallet.Emulator.Wallet
 

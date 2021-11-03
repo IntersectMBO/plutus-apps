@@ -35,21 +35,21 @@ import Plutus.Contract as Contract
 import Plutus.Contract.Wallet (getUnspentOutput)
 
 import Ledger (CurrencySymbol, PubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress, scriptCurrencySymbol)
-import qualified Ledger.Constraints as Constraints
-import qualified Ledger.Contexts as V
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts qualified as V
 import Ledger.Scripts
-import qualified PlutusTx
+import PlutusTx qualified
 
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Semigroup (Last (..))
 import GHC.Generics (Generic)
-import qualified PlutusTx.AssocMap as AssocMap
+import PlutusTx.AssocMap qualified as AssocMap
 import Prelude (Semigroup (..))
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 import Schema (ToSchema)
 
 {- HLINT ignore "Use uncurry" -}

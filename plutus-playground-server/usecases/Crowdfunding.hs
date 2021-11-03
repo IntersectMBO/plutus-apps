@@ -25,22 +25,22 @@ import Control.Applicative (Applicative (pure))
 import Control.Monad (void)
 import Data.Default (Default (def))
 import Ledger (POSIXTime, POSIXTimeRange, PubKeyHash, ScriptContext (..), TxInfo (..), Validator, getCardanoTxId)
-import qualified Ledger
-import qualified Ledger.Contexts as V
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Scripts as Scripts
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Typed.Scripts as Scripts hiding (validatorHash)
+import Ledger qualified
+import Ledger.Contexts qualified as V
+import Ledger.Interval qualified as Interval
+import Ledger.Scripts qualified as Scripts
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (Value)
 import Playground.Contract
 import Plutus.Contract
-import qualified Plutus.Contract.Constraints as Constraints
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
+import Plutus.Contract.Constraints qualified as Constraints
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..))
 import Prelude (Semigroup (..))
-import qualified Prelude as Haskell
-import qualified Wallet.Emulator as Emulator
+import Prelude qualified as Haskell
+import Wallet.Emulator qualified as Emulator
 
 -- | A crowdfunding campaign.
 data Campaign = Campaign

@@ -9,7 +9,7 @@ import Control.Monad.Except (ExceptT)
 import Control.Monad.Logger (LoggingT)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Trans.Class (lift)
-import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Lazy qualified as LBS
 import Data.Text (Text)
 import Network.HTTP.Client (managerModifyRequest)
 import Network.HTTP.Client.TLS (tlsManagerSettings)

@@ -19,8 +19,8 @@ import Servant.Client (ClientM, client)
 
 import Cardano.Node.API (API)
 import Cardano.Node.Types (MockServerLogMsg)
-import qualified Cardano.Protocol.Socket.Client as Client
-import qualified Cardano.Protocol.Socket.Mock.Client as MockClient
+import Cardano.Protocol.Socket.Client qualified as Client
+import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Monad.Freer.Extras.Log (LogMessage)
 import Wallet.Effects (NodeClientEffect (..))
 

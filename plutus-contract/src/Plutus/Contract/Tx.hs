@@ -10,11 +10,11 @@ import Data.Maybe (fromMaybe)
 
 import Data.Map (Map)
 import Ledger (Redeemer (..), TxOutRef, Validator)
-import qualified Ledger.Address as Address
+import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (UntypedConstraints)
 import Ledger.Tx (ChainIndexTxOut)
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
 
 -- | A set of constraints for a transaction that collects script outputs
 --   from the address of the given validator script, using the same redeemer

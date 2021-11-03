@@ -51,34 +51,34 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.List (elemIndex)
 import Data.Map (Map)
-import qualified Data.Map as Map
-import qualified Data.OpenApi.Schema as OpenApi
+import Data.Map qualified as Map
+import Data.OpenApi.Schema qualified as OpenApi
 import Data.Semigroup (First (..))
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
 
 import PlutusTx (FromData (..), ToData (..))
 import PlutusTx.Lattice
-import qualified PlutusTx.Numeric as N
+import PlutusTx.Numeric qualified as N
 
 import Ledger.Address (pubKeyHashAddress)
-import qualified Ledger.Address as Address
+import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints hiding (requiredSignatories)
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Orphans ()
 import Ledger.Scripts (Datum (..), DatumHash, MintingPolicy, MintingPolicyHash, Redeemer (..), Validator, ValidatorHash,
                        datumHash, mintingPolicyHash, validatorHash)
 import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (..), ScriptTag (..), Tx, TxOut (..), TxOutRef)
-import qualified Ledger.Tx as Tx
+import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (..))
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError)
-import qualified Ledger.Typed.Tx as Typed
+import Ledger.Typed.Tx qualified as Typed
 import Plutus.V1.Ledger.Crypto (PubKey, PubKeyHash)
 import Plutus.V1.Ledger.Time (POSIXTimeRange)
 import Plutus.V1.Ledger.Value (Value)
-import qualified Plutus.V1.Ledger.Value as Value
+import Plutus.V1.Ledger.Value qualified as Value
 
 data ScriptLookups a =
     ScriptLookups

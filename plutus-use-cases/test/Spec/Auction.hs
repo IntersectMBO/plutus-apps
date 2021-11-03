@@ -19,28 +19,28 @@ module Spec.Auction
 import Cardano.Crypto.Hash as Crypto
 import Control.Lens hiding (elements)
 import Control.Monad (void, when)
-import qualified Control.Monad.Freer as Freer
-import qualified Control.Monad.Freer.Error as Freer
+import Control.Monad.Freer qualified as Freer
+import Control.Monad.Freer.Error qualified as Freer
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.Default (Default (def))
 import Data.Monoid (Last (..))
 
 import Ledger (Ada, Slot (..), Value)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test hiding (not)
-import qualified Streaming.Prelude as S
-import qualified Wallet.Emulator.Folds as Folds
-import qualified Wallet.Emulator.Stream as Stream
+import Streaming.Prelude qualified as S
+import Wallet.Emulator.Folds qualified as Folds
+import Wallet.Emulator.Stream qualified as Stream
 
 import Ledger.TimeSlot (SlotConfig)
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Value as Value
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value qualified as Value
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.Auction hiding (Bid)
-import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Monoid (inv)
-import qualified PlutusTx.Prelude as PlutusTx
+import PlutusTx.Prelude qualified as PlutusTx
 
 import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty

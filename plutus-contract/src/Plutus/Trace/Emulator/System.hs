@@ -22,8 +22,8 @@ import Control.Monad.Freer
 import Control.Monad.Freer.Coroutine
 import Data.Foldable (traverse_)
 import Data.Maybe (maybeToList)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
 import Wallet.Emulator.Chain (ChainControlEffect, modifySlot, processBlock)
 import Wallet.Emulator.MultiAgent (MultiAgentControlEffect, MultiAgentEffect, walletAction, walletControlAction)
 

@@ -16,16 +16,16 @@ import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.Default (Default (def))
 
 import Ledger (Slot (..), Value)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Plutus.Contract.Test hiding (not)
 
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Value as Value
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value qualified as Value
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.SealedBidAuction
-import qualified Plutus.Trace.Emulator as Trace
-import qualified PlutusTx.Prelude as PlutusTx
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx.Prelude qualified as PlutusTx
 
 import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty

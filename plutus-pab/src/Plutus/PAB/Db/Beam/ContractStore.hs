@@ -26,15 +26,15 @@ import Control.Monad.Freer.Extras (LogMsg)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), addRows, selectList, selectOne, updateRows)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Builder (toLazyByteString)
-import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy.Char8 as LB
+import Data.ByteString.Char8 qualified as B
+import Data.ByteString.Lazy.Char8 qualified as LB
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8Builder)
-import qualified Data.Text.Encoding as Text
+import Data.Text.Encoding qualified as Text
 import Data.Typeable (Proxy (..), typeRep)
 import Data.UUID (fromText, toText)
 import Database.Beam
@@ -45,7 +45,7 @@ import Plutus.PAB.Monitoring.Monitoring (PABMultiAgentMsg)
 import Plutus.PAB.Types (PABError (..))
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
 import Wallet.Emulator.Wallet (Wallet (..))
-import qualified Wallet.Emulator.Wallet as Wallet
+import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Types (ContractActivityStatus (..), ContractInstanceId (..))
 
 -- | Convert from the internal representation of a contract into the database

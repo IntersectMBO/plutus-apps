@@ -19,7 +19,7 @@ module Plutus.PAB.Monitoring.Util (
     , PrettyObject(..)
     ) where
 
-import qualified Cardano.BM.Configuration.Model as CM
+import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Data.Counter
 import Cardano.BM.Data.LogItem
 import Cardano.BM.Data.Severity
@@ -32,18 +32,18 @@ import Control.Monad (void)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg (..), LogObserve (..), Observation (..))
-import qualified Control.Monad.Freer.Extras.Log as L
+import Control.Monad.Freer.Extras.Log qualified as L
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (FromJSON, ToJSON (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (for_)
 import Data.Functor.Contravariant (Contravariant (..))
-import qualified Data.HashMap.Strict as HM
+import Data.HashMap.Strict qualified as HM
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import qualified Data.Text.Lazy as Text
+import Data.Text.Lazy qualified as Text
 import Data.Text.Prettyprint.Doc (Pretty (..), defaultLayoutOptions, layoutPretty)
-import qualified Data.Text.Prettyprint.Doc.Render.Text as Render
+import Data.Text.Prettyprint.Doc.Render.Text qualified as Render
 
 toSeverity :: L.LogLevel -> Severity
 toSeverity = \case

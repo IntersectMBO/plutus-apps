@@ -5,8 +5,8 @@ module Playground.Usecases where
 
 import Data.ByteString (ByteString)
 import Data.FileEmbed (embedFile, makeRelativeToProject)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
 import Language.Haskell.Interpreter (SourceCode (SourceCode))
 
 marker :: T.Text

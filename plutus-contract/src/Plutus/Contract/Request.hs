@@ -88,18 +88,18 @@ module Plutus.Contract.Request(
     ) where
 
 import Control.Lens (Prism', preview, review, view)
-import qualified Control.Monad.Freer.Error as E
+import Control.Monad.Freer.Error qualified as E
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Aeson as JSON
-import qualified Data.Aeson.Types as JSON
+import Data.Aeson qualified as JSON
+import Data.Aeson.Types qualified as JSON
 import Data.Default (Default (def))
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Row
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
 import Data.Void (Void)
 import GHC.Natural (Natural)
@@ -109,15 +109,15 @@ import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingP
                TxOutRef (txOutRefId), Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
-import qualified Ledger.Constraints.OffChain as Constraints
+import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
 import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (..))
-import qualified Ledger.Value as V
+import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
-import qualified PlutusTx
+import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
-import qualified Plutus.Contract.Effects as E
+import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Schema (Input, Output)
 import Wallet.Types (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
 

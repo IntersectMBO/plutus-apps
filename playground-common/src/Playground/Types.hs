@@ -18,21 +18,21 @@ module Playground.Types where
 
 import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Aeson as JSON
+import Data.Aeson qualified as JSON
 import Data.Functor.Foldable (Fix)
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.OpenApi.Schema as OpenApi
+import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Language.Haskell.Interpreter (CompilationError, SourceCode)
-import qualified Language.Haskell.Interpreter as HI
+import Language.Haskell.Interpreter qualified as HI
 import Ledger (PubKeyHash, fromSymbol)
-import qualified Ledger.Ada as Ada
-import qualified Ledger.CardanoWallet as CW
+import Ledger.Ada qualified as Ada
+import Ledger.CardanoWallet qualified as CW
 import Ledger.Scripts (ValidatorHash)
 import Ledger.Slot (Slot)
 import Ledger.Value (TokenName)
-import qualified Ledger.Value as V
+import Ledger.Value qualified as V
 import Schema (FormArgumentF, FormSchema, ToArgument, ToSchema)
 import Wallet.Emulator.Types (EmulatorEvent, WalletNumber)
 import Wallet.Rollup.Types (AnnotatedTx)

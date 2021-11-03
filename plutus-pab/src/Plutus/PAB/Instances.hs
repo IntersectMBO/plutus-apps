@@ -14,7 +14,7 @@ import Servant.Client (ClientError)
 
 import Cardano.BM.Data.Tracer.Extras (StructuredLog, Tagged (..), mkObjectStr)
 import Control.Monad.Logger (Loc, LogSource)
-import qualified Data.OpenApi.Internal.ParamSchema as OpenApi
+import Data.OpenApi.Internal.ParamSchema qualified as OpenApi
 import Servant.API (FromHttpApiData, ToHttpApiData)
 import Wallet.Emulator.Wallet (WalletEvent (..))
 import Wallet.Types (ContractInstanceId (..))

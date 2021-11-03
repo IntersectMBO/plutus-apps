@@ -26,7 +26,7 @@ import Control.Retry (fibonacciBackoff, recovering, skipAsyncExceptions)
 import Control.Tracer (nullTracer)
 import Ledger.TimeSlot (SlotConfig, currentSlot)
 import Ouroboros.Network.IOManager
-import qualified Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
+import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
 
 import Cardano.Protocol.Socket.Type hiding (Tip)
 import Ledger (Slot (..))

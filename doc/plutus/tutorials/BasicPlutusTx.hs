@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 module BasicPlutusTx where
 
-import qualified PlutusCore.Default as PLC
+import PlutusCore.Default qualified as PLC
 -- Main Plutus Tx module.
 import PlutusTx
 -- Additional support for lifting.

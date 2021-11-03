@@ -26,7 +26,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Typeable
 
-import qualified Test.QuickCheck.DynamicLogic as DL
+import Test.QuickCheck.DynamicLogic qualified as DL
 import Test.QuickCheck.DynamicLogic.Quantify
 import Test.QuickCheck.StateModel
 

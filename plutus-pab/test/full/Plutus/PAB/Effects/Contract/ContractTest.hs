@@ -27,17 +27,17 @@ import Data.Row
 import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
 
-import qualified ContractExample.AtomicSwap as Contracts.AtomicSwap
-import qualified ContractExample.PayToWallet as Contracts.PayToWallet
+import ContractExample.AtomicSwap qualified as Contracts.AtomicSwap
+import ContractExample.PayToWallet qualified as Contracts.PayToWallet
 import Data.Text.Extras (tshow)
 import Playground.Types (FunctionSchema)
 import Plutus.Contract (awaitPromise)
-import qualified Plutus.Contracts.Currency as Contracts.Currency
-import qualified Plutus.Contracts.GameStateMachine as Contracts.GameStateMachine
-import qualified Plutus.Contracts.PingPong as Contracts.PingPong
+import Plutus.Contracts.Currency qualified as Contracts.Currency
+import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
+import Plutus.Contracts.PingPong qualified as Contracts.PingPong
 import Plutus.PAB.Effects.Contract (ContractEffect (..))
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions (..), SomeBuiltin (..))
-import qualified Plutus.PAB.Effects.Contract.Builtin as Builtin
+import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg)
 import Plutus.PAB.Types (PABError (..))
 import Schema (FormSchema)

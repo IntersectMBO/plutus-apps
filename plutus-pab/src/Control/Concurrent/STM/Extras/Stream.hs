@@ -21,7 +21,7 @@ module Control.Concurrent.STM.Extras.Stream
 
 import Control.Applicative (Alternative (..), Applicative (..))
 import Control.Concurrent.STM (STM)
-import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM qualified as STM
 import Control.Monad (guard)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (traverse_)

@@ -24,10 +24,10 @@ import Codec.Serialise (Serialise)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
-import qualified Data.OpenApi as OpenApi
+import Data.OpenApi qualified as OpenApi
 import Data.Text.Prettyprint.Doc (Pretty (pretty), (<+>))
-import qualified Data.Time.Clock as Time
-import qualified Data.Time.Clock.POSIX as Time
+import Data.Time.Clock qualified as Time
+import Data.Time.Clock.POSIX qualified as Time
 import GHC.Generics (Generic)
 import Ledger.Orphans ()
 import Plutus.V1.Ledger.Interval (Extended (..), Interval (Interval), LowerBound (..), UpperBound (..), interval,
@@ -37,7 +37,7 @@ import Plutus.V1.Ledger.Time (POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRang
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (Eq, (<$>))
 import Prelude (Eq, IO, Show, (<$>))
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 -- | Datatype to configure the length (ms) of one slot and the beginning of the
 -- first slot.

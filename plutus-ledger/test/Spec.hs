@@ -7,50 +7,50 @@ module Main(main) where
 import Control.Lens
 import Control.Monad (forM_, guard, replicateM, void)
 import Control.Monad.Trans.Except (runExcept)
-import qualified Data.Aeson as JSON
-import qualified Data.Aeson.Extras as JSON
-import qualified Data.Aeson.Internal as Aeson
-import qualified Data.ByteString as BSS
-import qualified Data.ByteString.Lazy as BSL
+import Data.Aeson qualified as JSON
+import Data.Aeson.Extras qualified as JSON
+import Data.Aeson.Internal qualified as Aeson
+import Data.ByteString qualified as BSS
+import Data.ByteString.Lazy qualified as BSL
 import Data.Default (Default (def))
 import Data.Either (isLeft, isRight)
 import Data.Foldable (fold, foldl', traverse_)
 import Data.List (sort)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (fromJust)
 import Data.Monoid (Sum (..))
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.String (IsString (fromString))
 import Hedgehog (Property, forAll, property)
-import qualified Hedgehog
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import Hedgehog qualified
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 import Ledger
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Bytes as Bytes
-import qualified Ledger.Constraints.OffChain as OC
-import qualified Ledger.Contexts as Validation
-import qualified Ledger.Crypto as Crypto
+import Ledger.Constraints.OffChain qualified as OC
+import Ledger.Contexts qualified as Validation
+import Ledger.Crypto qualified as Crypto
 import Ledger.Fee (FeeConfig (..), calcFees)
-import qualified Ledger.Generators as Gen
-import qualified Ledger.Index as Index
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Scripts as Scripts
+import Ledger.Generators qualified as Gen
+import Ledger.Index qualified as Index
+import Ledger.Interval qualified as Interval
+import Ledger.Scripts qualified as Scripts
 import Ledger.TimeSlot (SlotConfig (..))
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Tx as Tx
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx qualified as Tx
 import Ledger.Value (CurrencySymbol, Value (Value))
-import qualified Ledger.Value as Value
-import qualified PlutusCore.Default as PLC
+import Ledger.Value qualified as Value
+import PlutusCore.Default qualified as PLC
 import PlutusTx (CompiledCode, applyCode, liftCode)
-import qualified PlutusTx
-import qualified PlutusTx.AssocMap as AMap
-import qualified PlutusTx.AssocMap as AssocMap
-import qualified PlutusTx.Builtins as Builtins
-import qualified PlutusTx.Prelude as PlutusTx
+import PlutusTx qualified
+import PlutusTx.AssocMap qualified as AMap
+import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty hiding (after)
 import Test.Tasty.HUnit (testCase)
-import qualified Test.Tasty.HUnit as HUnit
+import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Hedgehog (testProperty)
 
 main :: IO ()

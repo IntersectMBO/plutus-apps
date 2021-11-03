@@ -2,8 +2,8 @@ module Main
     ( main
     ) where
 
-import qualified Plutus.PAB.CoreSpec
-import qualified Plutus.PAB.Effects.Contract.BuiltinSpec
+import Plutus.PAB.CoreSpec qualified
+import Plutus.PAB.Effects.Contract.BuiltinSpec qualified
 import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()

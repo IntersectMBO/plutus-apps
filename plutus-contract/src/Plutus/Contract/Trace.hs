@@ -50,27 +50,27 @@ import Control.Lens (makeClassyPrisms, preview)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve)
 import Control.Monad.Freer.Reader (Reader)
-import qualified Data.Aeson.Types as JSON
+import Data.Aeson.Types qualified as JSON
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Text.Prettyprint.Doc (Pretty, pretty, (<+>))
 import GHC.Generics (Generic)
 
 import Data.Text (Text)
 
 import Plutus.Contract.Effects (PABReq, PABResp)
-import qualified Plutus.Contract.Effects as E
+import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Trace.RequestHandler (RequestHandler (..), RequestHandlerLogMsg, generalise)
-import qualified Plutus.Contract.Trace.RequestHandler as RequestHandler
+import Plutus.Contract.Trace.RequestHandler qualified as RequestHandler
 
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Value (Value)
 
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.Trace.Emulator.Types (EmulatedWalletEffects)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator (Wallet)
-import qualified Wallet.Emulator as EM
+import Wallet.Emulator qualified as EM
 import Wallet.Types (ContractInstanceId, EndpointDescription (..), NotificationError (..))
 
 data EndpointError =

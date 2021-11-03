@@ -11,9 +11,9 @@ import Control.Monad.Logger (LoggingT)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Trans.Class (lift)
 import Data.Time (UTCTime)
-import qualified Data.Time as Time
+import Data.Time qualified as Time
 import Data.Time.Clock.POSIX (POSIXTime)
-import qualified Data.Time.Clock.POSIX as Time
+import Data.Time.Clock.POSIX qualified as Time
 
 class Monad m =>
       MonadNow m

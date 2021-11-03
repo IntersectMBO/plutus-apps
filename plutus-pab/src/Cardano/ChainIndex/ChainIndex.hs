@@ -11,17 +11,17 @@ module Cardano.ChainIndex.ChainIndex
 
 import Cardano.BM.Data.Trace (Trace)
 import Control.Concurrent.STM (TVar)
-import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer
 import Control.Monad.Freer.Error (runError)
-import qualified Control.Monad.Freer.State as Eff
+import Control.Monad.Freer.State qualified as Eff
 import Control.Monad.IO.Class (MonadIO (..))
 import Ledger.Blockchain (Block)
 import Ledger.Slot (Slot)
 
 import Cardano.ChainIndex.Types
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexLog)
-import qualified Plutus.ChainIndex.Emulator as ChainIndex
+import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
 import Plutus.Trace.Emulator.System (appendNewTipBlock)
 

@@ -4,7 +4,7 @@ module SimulationUtils where
 
 import Ledger.Scripts (ValidatorHash (ValidatorHash))
 import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName, Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 import Playground.Types (ContractCall (CallEndpoint), FunctionSchema (FunctionSchema), KnownCurrency (KnownCurrency),
                          SimulatorAction, SimulatorWallet (SimulatorWallet), argument, argumentValues, caller,
                          endpointDescription, hash, knownTokens, simulatorWalletBalance, simulatorWalletWallet)

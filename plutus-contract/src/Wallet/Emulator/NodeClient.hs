@@ -23,7 +23,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text.Prettyprint.Doc hiding (annotate)
 import GHC.Generics (Generic)
 import Ledger
-import qualified Ledger.AddressMap as AM
+import Ledger.AddressMap qualified as AM
 import Wallet.Effects (NodeClientEffect (..))
 import Wallet.Emulator.Chain
 

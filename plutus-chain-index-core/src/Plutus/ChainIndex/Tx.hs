@@ -35,9 +35,9 @@ import Codec.Serialise (Serialise)
 import Control.Lens (makeLenses, makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Text.Prettyprint.Doc
 import Data.Tuple (swap)
 import GHC.Generics (Generic)

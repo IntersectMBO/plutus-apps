@@ -12,22 +12,22 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
   ) where
 
 import Cardano.Api (BlockInMode (..), ChainPoint (..), NetworkId)
-import qualified Cardano.Api as C
+import Cardano.Api qualified as C
 import Cardano.Node.Types (NodeMode (..))
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
-import qualified Cardano.Protocol.Socket.Client as Client
-import qualified Cardano.Protocol.Socket.Mock.Client as MockClient
-import qualified Data.Map as Map
+import Cardano.Protocol.Socket.Client qualified as Client
+import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
+import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
 import Ledger (Block, Slot (..), TxId (..))
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                              emptyBlockchainEnv)
-import qualified Plutus.PAB.Core.ContractInstance.STM as S
+import Plutus.PAB.Core.ContractInstance.STM qualified as S
 import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
 
 import Control.Concurrent.STM (STM)
-import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM qualified as STM
 import Control.Lens
 import Control.Monad (forM_, void, when)
 import Control.Tracer (nullTracer)
@@ -40,8 +40,8 @@ import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutpu
                           UtxoState (..), blockId, citxTxId, dropOlder, fromOnChainTx, insert, utxoState)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint)
 import Plutus.ChainIndex.TxIdState (chainConstant)
-import qualified Plutus.ChainIndex.TxIdState as TxIdState
-import qualified Plutus.ChainIndex.TxOutBalance as TxOutBalance
+import Plutus.ChainIndex.TxIdState qualified as TxIdState
+import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 
 -- | Connect to the node and write node updates to the blockchain

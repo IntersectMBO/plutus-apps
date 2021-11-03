@@ -15,7 +15,7 @@ import Control.Monad.Freer.Delay (DelayEffect, handleDelayEffect)
 import Control.Monad.Freer.Error (handleError, runError, throwError)
 import Control.Monad.Freer.Extras (LogMsg, mapLog)
 import Control.Monad.Freer.Extras.Beam (handleBeam)
-import qualified Control.Monad.Freer.Extras.Modify as Modify
+import Control.Monad.Freer.Extras.Modify qualified as Modify
 import Control.Monad.Freer.Reader (runReader)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Typeable (Typeable)

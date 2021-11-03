@@ -23,7 +23,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 
 import Ledger.TimeSlot (SlotConfig)
-import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract
 
 -- $errorHandling

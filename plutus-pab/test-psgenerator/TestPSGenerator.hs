@@ -12,19 +12,19 @@ JSON deserialisation on the PS client side.
 module Main(main) where
 
 import Control.Monad (void)
-import qualified Data.Aeson.Encode.Pretty as JSON
-import qualified Data.ByteString.Lazy as BSL
+import Data.Aeson.Encode.Pretty qualified as JSON
+import Data.ByteString.Lazy qualified as BSL
 import Data.Proxy (Proxy (..))
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, buildBridge, defaultBridge, equal,
                                    genericShow, mkSumType, writePSTypesWith, (<|>))
 import Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (..), genForeign)
-import qualified PSGenerator.Common
+import PSGenerator.Common qualified
 import Plutus.Contracts.Currency (SimpleMPS (..))
 import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (Currency, GameStateMachine))
-import qualified Plutus.PAB.Simulator as Simulator
-import qualified Plutus.PAB.Simulator.Test as Simulator
-import qualified Plutus.PAB.Webserver.Handler as Webserver
+import Plutus.PAB.Simulator qualified as Simulator
+import Plutus.PAB.Simulator.Test qualified as Simulator
+import Plutus.PAB.Webserver.Handler qualified as Webserver
 import Plutus.PAB.Webserver.Types (ContractSignatureResponse, FullReport)
 import Servant.PureScript (HasBridge (..))
 import System.Environment (getArgs)

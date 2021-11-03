@@ -8,7 +8,7 @@ import Data.Default (Default (def))
 import Plutus.Contract.Test
 
 import Plutus.Contracts.ErrorHandling
-import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Trace.Emulator qualified as Trace
 
 import Test.Tasty
 

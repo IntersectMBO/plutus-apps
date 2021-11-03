@@ -10,13 +10,13 @@ import Control.Lens
 import Control.Monad (void)
 
 import Ledger (Value)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Value as Value
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value qualified as Value
 import Plutus.Contract.Test
 import Plutus.Contracts.SimpleEscrow
-import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Trace.Emulator qualified as Trace
 
 import Test.Tasty
 

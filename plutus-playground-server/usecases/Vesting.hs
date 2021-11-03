@@ -17,25 +17,25 @@ module Vesting where
 import Control.Lens (view)
 import Control.Monad (void, when)
 import Data.Default (Default (def))
-import qualified Data.Map as Map
-import qualified Data.Text as T
+import Data.Map qualified as Map
+import Data.Text qualified as T
 
 import Ledger (Address, POSIXTime, POSIXTimeRange, PubKeyHash, Validator)
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
-import qualified Ledger.Contexts as Validation
-import qualified Ledger.Interval as Interval
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Tx as Tx
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Contexts qualified as Validation
+import Ledger.Interval qualified as Interval
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 import Playground.Contract
 import Plutus.Contract
 import Plutus.Contract.Test
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), fold)
 import Prelude as Haskell (Semigroup (..), show)
 

@@ -2,10 +2,10 @@ module Main
     ( main
     ) where
 
-import qualified Auth.TypesSpec
-import qualified Playground.THSpec
-import qualified Playground.TypesSpec
-import qualified SchemaSpec
+import Auth.TypesSpec qualified
+import Playground.THSpec qualified
+import Playground.TypesSpec qualified
+import SchemaSpec qualified
 import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()

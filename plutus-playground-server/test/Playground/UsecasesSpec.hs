@@ -14,25 +14,25 @@ import Control.Monad.Except.Extras (mapError)
 import Control.Newtype.Generics (over)
 import Crowdfunding (Contribution (Contribution), contribValue)
 import Data.Aeson (ToJSON)
-import qualified Data.Aeson as JSON
-import qualified Data.Aeson.Text as JSON
+import Data.Aeson qualified as JSON
+import Data.Aeson.Text qualified as JSON
 import Data.Foldable (traverse_)
 import Data.List (isPrefixOf)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-import qualified Data.Text.Lazy as TL
+import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
+import Data.Text.Lazy qualified as TL
 import Data.Time.Units (Minute)
 import Game (GuessParams (GuessParams), LockParams (LockParams), amount, guessWord, secretWord)
-import qualified Interpreter as Webghc
+import Interpreter qualified as Webghc
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult (InterpreterResult, result),
                                      SourceCode (SourceCode))
 import Ledger.Ada (adaValueOf, lovelaceValueOf)
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Scripts (ValidatorHash (ValidatorHash))
 import Ledger.Value (TokenName (TokenName), Value)
-import qualified Playground.Interpreter as PI
+import Playground.Interpreter qualified as PI
 import Playground.Types (CompilationResult (CompilationResult),
                          ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet), Evaluation (Evaluation),
                          EvaluationResult (EvaluationResult), Expression, FunctionSchema (FunctionSchema),

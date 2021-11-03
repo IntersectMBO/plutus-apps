@@ -40,17 +40,17 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger (MintingPolicyHash, POSIXTime, PubKeyHash, TokenName)
 import Ledger.Constraints (TxConstraints)
-import qualified Ledger.Constraints as Constraints
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Typed.Scripts as Scripts
-import qualified Ledger.Value as Value
+import Ledger.Constraints qualified as Constraints
+import Ledger.Interval qualified as Interval
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
-import qualified Plutus.Contract.StateMachine as SM
-import qualified PlutusTx
-import qualified PlutusTx.AssocMap as AssocMap
+import Plutus.Contract.StateMachine qualified as SM
+import PlutusTx qualified
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 -- $governance
 -- * When the contract starts it produces a number of tokens that represent voting rights.

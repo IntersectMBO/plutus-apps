@@ -14,14 +14,14 @@ import Prelude (Show, String, show)
 import Control.Monad (void)
 import GHC.Generics (Generic)
 import Ledger.Typed.Scripts (TypedValidator, mkTypedValidator)
-import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, EmptySchema, logError, mapError)
 import Plutus.Contract.StateMachine (StateMachine, StateMachineClient, ThreadToken, mkStateMachine, stateData)
-import qualified Plutus.Contract.StateMachine as SM
+import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Test
 import Plutus.Trace (EmulatorTrace, activateContractWallet)
-import qualified Plutus.Trace as Trace
-import qualified PlutusTx
+import Plutus.Trace qualified as Trace
+import PlutusTx qualified
 
 import Test.Tasty
 

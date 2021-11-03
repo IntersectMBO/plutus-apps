@@ -15,7 +15,7 @@ import Data.Aeson as Aeson (FromJSON (..), ToJSON (..), Value (..))
 import Data.Aeson.Encoding.Internal (string)
 import Data.String
 import PlutusTx.Prelude as PlutusTx
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 
 -- | A secret value. A value of type `Secret a` can't leak onto
 -- the blockchain in plain-text unless you use an unsafe function.

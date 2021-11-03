@@ -51,31 +51,31 @@ import Control.Applicative (Applicative (..))
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
 import Ledger (POSIXTime, POSIXTimeRange, PubKeyHash, Validator, getCardanoTxId)
-import qualified Ledger
-import qualified Ledger.Ada as Ada
-import qualified Ledger.Constraints as Constraints
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts as V
-import qualified Ledger.Interval as Interval
-import qualified Ledger.Scripts as Scripts
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Typed.Scripts as Scripts hiding (validatorHash)
+import Ledger.Interval qualified as Interval
+import Ledger.Scripts qualified as Scripts
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (Value)
 import Plutus.Contract
-import qualified Plutus.Contract.Typed.Tx as Typed
+import Plutus.Contract.Typed.Tx qualified as Typed
 import Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
 import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
-import qualified Plutus.Trace.Emulator as Trace
-import qualified PlutusTx
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
 import Prelude (Semigroup (..), (<$>))
-import qualified Prelude as Haskell
+import Prelude qualified as Haskell
 import Schema (ToArgument, ToSchema)
 import Wallet.Emulator (Wallet (..), knownWallet)
-import qualified Wallet.Emulator as Emulator
+import Wallet.Emulator qualified as Emulator
 
 -- | A crowdfunding campaign.
 data Campaign = Campaign

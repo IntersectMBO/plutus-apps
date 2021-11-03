@@ -18,13 +18,13 @@ module Wallet.Graph
 
 import Data.Aeson.Types (ToJSON, toJSON)
 import Data.List (nub)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
-import qualified Data.Set as Set
-import qualified Data.Text as Text
+import Data.Set qualified as Set
+import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Address
 import Ledger.Blockchain
 import Ledger.Credential (Credential (..))

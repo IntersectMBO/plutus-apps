@@ -18,8 +18,8 @@ module Plutus.ChainIndex.TxIdState(
 
 import Control.Lens ((^.))
 import Data.FingerTree ((|>))
-import qualified Data.FingerTree as FT
-import qualified Data.Map as Map
+import Data.FingerTree qualified as FT
+import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
 import Ledger (OnChainTx, TxId, eitherTx)
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOutputs (..), citxOutputs, citxTxId)

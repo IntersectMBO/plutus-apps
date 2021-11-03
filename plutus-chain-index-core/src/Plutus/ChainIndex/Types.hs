@@ -35,19 +35,19 @@ module Plutus.ChainIndex.Types(
     ) where
 
 import Codec.Serialise (Serialise)
-import qualified Codec.Serialise as CBOR
+import Codec.Serialise qualified as CBOR
 import Control.Lens (makeLenses)
 import Control.Monad (void)
 import Crypto.Hash (SHA256, hash)
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.ByteArray as BA
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteArray qualified as BA
+import Data.ByteString.Lazy qualified as BSL
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Ledger (TxOutRef (..))

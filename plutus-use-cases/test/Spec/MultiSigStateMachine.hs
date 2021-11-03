@@ -13,20 +13,20 @@ module Spec.MultiSigStateMachine(tests, lockProposeSignPay) where
 
 import Data.Foldable (traverse_)
 
-import qualified Ledger.Ada as Ada
+import Ledger.Ada qualified as Ada
 import Ledger.Time (POSIXTime)
-import qualified Ledger.TimeSlot as TimeSlot
-import qualified Ledger.Typed.Scripts as Scripts
-import qualified Wallet.Emulator as EM
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Typed.Scripts qualified as Scripts
+import Wallet.Emulator qualified as EM
 
 import Plutus.Contract.Test
-import qualified Plutus.Contracts.MultiSigStateMachine as MS
+import Plutus.Contracts.MultiSigStateMachine qualified as MS
 import Plutus.Trace.Emulator (EmulatorTrace)
-import qualified Plutus.Trace.Emulator as Trace
-import qualified PlutusTx
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx qualified
 
 import Test.Tasty (TestTree, testGroup)
-import qualified Test.Tasty.HUnit as HUnit
+import Test.Tasty.HUnit qualified as HUnit
 
 tests :: TestTree
 tests =

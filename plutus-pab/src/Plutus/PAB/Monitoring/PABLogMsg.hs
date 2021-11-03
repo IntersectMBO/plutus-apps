@@ -30,7 +30,7 @@ import Control.Monad.Freer.Extras.Beam (BeamLog)
 import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Aeson.Text (encodeToLazyText)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Text.Prettyprint.Doc (Pretty (..), colon, viaShow, (<+>))
 import GHC.Generics (Generic)
 import Plutus.Contract.Effects (PABReq, PABResp)

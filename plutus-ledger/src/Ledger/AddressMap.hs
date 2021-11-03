@@ -33,12 +33,12 @@ import Codec.Serialise.Class (Serialise)
 import Control.Lens (At (..), Index, IxValue, Ixed (..), Lens', at, lens, non, (&), (.~), (^.))
 import Control.Monad (join)
 import Data.Aeson (FromJSON (..), ToJSON (..))
-import qualified Data.Aeson.Extras as JSON
+import Data.Aeson.Extras qualified as JSON
 import Data.Foldable (fold)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
 import Ledger.Blockchain

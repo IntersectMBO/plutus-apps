@@ -11,20 +11,20 @@
 
 module Plutus.PAB.Types where
 
-import qualified Cardano.ChainIndex.Types as ChainIndex
+import Cardano.ChainIndex.Types qualified as ChainIndex
 import Cardano.Node.Types (MockServerConfig (..))
-import qualified Cardano.Wallet.Mock.Types as Wallet
+import Cardano.Wallet.Mock.Types qualified as Wallet
 import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
 import Data.Aeson (FromJSON, ToJSON (..))
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Text (Text)
 import Data.Text.Prettyprint.Doc (Pretty, line, pretty, viaShow, (<+>))
 import Data.Time.Units (Second)
 import Data.UUID (UUID)
-import qualified Data.UUID.Extras as UUID
+import Data.UUID.Extras qualified as UUID
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, Tx, TxId, eitherTx, txId)
 import Ledger.Index as UtxoIndex

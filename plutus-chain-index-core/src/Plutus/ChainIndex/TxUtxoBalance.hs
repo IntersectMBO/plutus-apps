@@ -7,7 +7,7 @@ module Plutus.ChainIndex.TxUtxoBalance where
 
 import Control.Lens (view)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Ledger (TxIn (txInRef), TxOutRef (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxInputs, txOutsWithRef)
 import Plutus.ChainIndex.Types (Point (..), Tip (..), TxUtxoBalance (..), tubUnspentOutputs)

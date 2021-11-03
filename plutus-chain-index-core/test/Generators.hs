@@ -38,29 +38,29 @@ import Control.Lens (makeLenses, over, view)
 import Control.Monad (replicateM)
 import Control.Monad.Freer (Eff, LastMember, Member, runM, sendM, type (~>))
 import Control.Monad.Freer.State (State, evalState, execState, gets, modify, runState)
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Hedgehog (MonadGen)
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
-import qualified Ledger.Ada as Ada
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
+import Ledger.Ada qualified as Ada
 import Ledger.Address (pubKeyAddress)
-import qualified Ledger.Generators as Gen
-import qualified Ledger.Interval as Interval
+import Ledger.Generators qualified as Gen
+import Ledger.Interval qualified as Interval
 import Ledger.Slot (Slot (..))
 import Ledger.Tx (Address, TxIn (..), TxOut (..), TxOutRef (..))
 import Ledger.TxId (TxId (..))
 import Ledger.Value (Value)
-import qualified Ledger.Value as Value
+import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOutputs (..), txOutRefs)
-import qualified Plutus.ChainIndex.TxIdState as TxIdState
-import qualified Plutus.ChainIndex.TxOutBalance as TxOutBalance
-import qualified Plutus.ChainIndex.TxUtxoBalance as TxUtxoBalance
+import Plutus.ChainIndex.TxIdState qualified as TxIdState
+import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
+import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), Tip (..), TxIdState, TxOutBalance, TxUtxoBalance (..))
-import qualified PlutusTx.Prelude as PlutusTx
+import PlutusTx.Prelude qualified as PlutusTx
 
 -- | Generate a random tx id
 genRandomTxId :: MonadGen m => m TxId

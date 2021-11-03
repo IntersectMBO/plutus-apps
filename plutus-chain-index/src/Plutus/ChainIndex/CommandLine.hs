@@ -16,7 +16,7 @@ import Cardano.Api (NetworkId (..), NetworkMagic (..))
 import Cardano.BM.Data.Severity
 import GHC.Word (Word32)
 import Plutus.ChainIndex.Config (ChainIndexConfig)
-import qualified Plutus.ChainIndex.Config as Config
+import Plutus.ChainIndex.Config qualified as Config
 
 data CLIConfigOverrides =
   CLIConfigOverrides

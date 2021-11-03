@@ -6,9 +6,9 @@ module Data.UUID.Extras
     ) where
 
 import Data.Bits (shiftL, (.&.))
-import qualified Data.ByteString.Lazy as BL
+import Data.ByteString.Lazy qualified as BL
 import Data.UUID (UUID)
-import qualified Data.UUID as UUID
+import Data.UUID qualified as UUID
 import Data.Word (Word32)
 
 -- This is taken directly from the test suite of
