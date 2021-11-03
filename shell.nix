@@ -3,7 +3,7 @@
 , packages ? import ./. { inherit system enableHaskellProfiling; }
 }:
 let
-  inherit (packages) pkgs plutus-apps plutus-playground plutus-pab docs webCommon;
+  inherit (packages) pkgs plutus-apps plutus-playground docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cardano-cli cardano-node;
 
@@ -36,7 +36,7 @@ let
         # While nixpkgs-fmt does exclude patterns specified in `.ignore` this
         # does not appear to work inside the hook. For now we have to thus
         # maintain excludes here *and* in `./.ignore` and *keep them in sync*.
-        excludes = [ ".*nix/pkgs/haskell/materialized.*/.*" ".*/spago-packages.nix$" ".*/packages.nix$" ];
+        excludes = [ ".*nix/pkgs/haskell/materialized.*/.*" ".*/spago-packages.nix$" ];
       };
       shellcheck.enable = true;
       png-optimization = {

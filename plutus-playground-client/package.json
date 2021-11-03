@@ -9,9 +9,8 @@
     "build:webpack:dev": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development",
     "install:spago": "spago install",
     "docs": "spago docs",
-    "postinstall": "npm run install:spago",
     "repl": "spago repl",
-    "start": "plutus-playground-generate-purs && npm run install:spago && npm run build:webpack:dev",
+    "start": "plutus-playground-generate-purs && npm install && npm run install:spago && npm run build:webpack:dev",
     "test": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\"",
     "test:watch": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen"
   },

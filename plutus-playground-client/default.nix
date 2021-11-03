@@ -76,7 +76,6 @@ let
         web-common-playground = webCommonPlayground;
         generated = generated-purescript;
       };
-      packages = pkgs.callPackage ./packages.nix { };
       spagoPackages = pkgs.callPackage ./spago-packages.nix { };
     })
     (_: {
