@@ -55,7 +55,7 @@ type MyAPI =
                       :> ReqBody '[JSON] Hello
                       :> Get '[JSON] Hello
                   )
-                    :<|> Capture "name" Text :> Get '[JSON] Hello
+                    :<|> Capture "name" Text :> Get '[JSON] (Maybe Hello)
                 )
          )
            :<|> "testHeader" :> Get '[JSON] TestHeader

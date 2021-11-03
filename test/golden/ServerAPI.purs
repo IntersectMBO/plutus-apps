@@ -8,7 +8,9 @@ import Affjax.RequestHeader (RequestHeader(..))
 import Control.Monad.Error.Class (class MonadError, throwError)
 import Control.Monad.Reader.Class (asks, class MonadAsk)
 import Data.Argonaut.Decode (decodeJson)
+import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
 import Data.Argonaut.Encode (encodeJson)
+import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Array (fromFoldable, null)
 import Data.Either (Either(..))
 import Data.HTTP.Method (Method(..))
@@ -20,6 +22,8 @@ import Servant.PureScript (AjaxError, ErrorDescription(..), class ToURLPiece, to
 import ServerTypes (Hello, TestHeader)
 import Affjax.RequestBody (json) as Request
 import Affjax.ResponseFormat (json) as Response
+import Data.Argonaut.Decode.Aeson as D
+import Data.Argonaut.Encode.Aeson as E
 
 foreign import encodeURIComponent :: String -> String
 
@@ -76,13 +80,16 @@ getHello reqBody myFlag myParam myParams = do
           , responseFormat = Response.json
           , content = Just $ Request.json $ encodeJson reqBody
           }
+  let
+      decoder =
+        D.value
   result <- liftAff $ request affReq
   response <- case result of
     Left err -> throwError $ { request: affReq, description: ConnectingError err }
     Right r -> pure r
   when (unwrap response.status < 200 || unwrap response.status >= 299) $
     throwError $ { request: affReq, description: UnexpectedHTTPStatus response }
-  case decodeJson response.body of
+  case D.decode decoder response.body of
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
@@ -93,7 +100,7 @@ getHelloByName ::
   MonadError AjaxError m =>
   MonadAff m =>
   String ->
-  m Hello
+  m (Maybe Hello)
 getHelloByName name = do
   spSettings <- asks spSettings
   let testHeader = spSettings.testHeader
@@ -126,13 +133,16 @@ getHelloByName name = do
           , headers = defaultRequest.headers <> reqHeaders
           , responseFormat = Response.json
           }
+  let
+      decoder =
+        (D.maybe D.value)
   result <- liftAff $ request affReq
   response <- case result of
     Left err -> throwError $ { request: affReq, description: ConnectingError err }
     Right r -> pure r
   when (unwrap response.status < 200 || unwrap response.status >= 299) $
     throwError $ { request: affReq, description: UnexpectedHTTPStatus response }
-  case decodeJson response.body of
+  case D.decode decoder response.body of
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
@@ -173,13 +183,16 @@ getTestHeader = do
           , headers = defaultRequest.headers <> reqHeaders
           , responseFormat = Response.json
           }
+  let
+      decoder =
+        D.value
   result <- liftAff $ request affReq
   response <- case result of
     Left err -> throwError $ { request: affReq, description: ConnectingError err }
     Right r -> pure r
   when (unwrap response.status < 200 || unwrap response.status >= 299) $
     throwError $ { request: affReq, description: UnexpectedHTTPStatus response }
-  case decodeJson response.body of
+  case D.decode decoder response.body of
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
@@ -220,12 +233,15 @@ getBy = do
           , headers = defaultRequest.headers <> reqHeaders
           , responseFormat = Response.json
           }
+  let
+      decoder =
+        D.value
   result <- liftAff $ request affReq
   response <- case result of
     Left err -> throwError $ { request: affReq, description: ConnectingError err }
     Right r -> pure r
   when (unwrap response.status < 200 || unwrap response.status >= 299) $
     throwError $ { request: affReq, description: UnexpectedHTTPStatus response }
-  case decodeJson response.body of
+  case D.decode decoder response.body of
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body

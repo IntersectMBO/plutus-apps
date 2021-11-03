@@ -94,6 +94,8 @@ defaultSettings =
             ImportLine "Control.Monad.Reader.Class" (Set.fromList ["asks", "class MonadAsk"]),
             ImportLine "Data.Argonaut.Decode" (Set.fromList ["decodeJson"]),
             ImportLine "Data.Argonaut.Encode" (Set.fromList ["encodeJson"]),
+            ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"],
+            ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"],
             ImportLine "Data.Array" (Set.fromList ["fromFoldable", "null"]),
             ImportLine "Data.Either" (Set.fromList ["Either(..)"]),
             ImportLine "Data.HTTP.Method" (Set.fromList ["Method(..)"]),

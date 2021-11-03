@@ -11,11 +11,12 @@ module Servant.PureScript.CodeGen where
 import Control.Lens hiding (List, op)
 import Data.List (intersperse)
 import qualified Data.Map as Map
-import Data.Maybe (mapMaybe, maybeToList)
+import Data.Maybe (fromMaybe, mapMaybe, maybeToList)
 import qualified Data.Set as Set
 import Data.Text (Text, toUpper)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Language.PureScript.Bridge (ImportLine (importModule), ImportLines, PSType, TypeInfo (TypeInfo), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typesToImportLines)
+import Language.PureScript.Bridge (ImportLine (importModule), ImportLines, PSType, TypeInfo (TypeInfo), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typesToImportLines)
 import Language.PureScript.Bridge.PSTypes (psString, psUnit)
 import Network.HTTP.Types.URI (urlEncode)
 import Servant.Foreign
@@ -56,6 +57,8 @@ genModuleHeader moduleName imports =
         </> docIntercalate line importLines
         </> "import Affjax.RequestBody (json) as Request"
         </> "import Affjax.ResponseFormat (json) as Response"
+        </> "import Data.Argonaut.Decode.Aeson as D"
+        </> "import Data.Argonaut.Encode.Aeson as E"
   where
     exclude m = (/= m) . importModule
 
@@ -247,6 +250,24 @@ genFnBody rParams req =
                         )
                   )
             )
+          </> hang
+            4
+            ( "let"
+                </> hang
+                  2
+                  ( "decoder ="
+                      </> hang
+                        2
+                        ( docIntercalate line $
+                            fmap strictText $
+                              T.lines $
+                                renderText $
+                                  typeToDecode $
+                                    fromMaybe psUnit $
+                                      req ^. reqReturnType
+                        )
+                  )
+            )
           </> "result <- liftAff $ request affReq"
           </> hang
             2
@@ -264,7 +285,7 @@ genFnBody rParams req =
             Just _ ->
               hang
                 2
-                ( "case decodeJson response.body of"
+                ( "case D.decode decoder response.body of"
                     </> "Left err -> throwError $ { request: affReq, description: DecodingError err }"
                     </> "Right body -> pure body"
                 )
