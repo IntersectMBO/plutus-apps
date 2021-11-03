@@ -62,6 +62,7 @@ executable doc-doctests
       cardano-api -any,
       flat -any,
       plutus-core -any,
+      plutus-chain-index-core -any,
       plutus-tx -any,
       plutus-ledger -any,
       plutus-ledger-api -any,
