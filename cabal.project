@@ -73,7 +73,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/servant-purescript.git
-  tag: bc74e3e258764d62c836a0c53d61830ec0de2c79
+  tag: ebea59c7bdfc0338d83fca772b9a57e28560bcde
 
 -- Copied from plutus-core
 source-repository-package
