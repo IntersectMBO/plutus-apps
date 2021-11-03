@@ -5,6 +5,7 @@ packages: doc
           freer-extras
           playground-common
           plutus-chain-index
+          plutus-chain-index-core
           plutus-contract
           plutus-ledger
           plutus-pab
@@ -109,17 +110,22 @@ source-repository-package
   tag: d2f86caa085402a953920c6714a0de6a50b655ec
   subdir:
     core
+    command-line
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-wallet
-  tag: ae7569293e94241ef6829139ec02bd91abd069df
+  location: https://github.com/j-mueller/cardano-wallet
+  tag: 6be73ab852c0592713dfe78218856d4a8a0ee69e
   subdir:
     lib/text-class
     lib/strict-non-empty-containers
     lib/core
     lib/test-utils
     lib/numeric
+    lib/launcher
+    lib/core-integration
+    lib/cli
+    lib/shelley
 
 source-repository-package
   type: git
@@ -182,8 +188,12 @@ source-repository-package
     eras/byron/ledger/impl/test
     eras/shelley/impl
     eras/shelley-ma/impl
+    eras/shelley/chain-and-ledger/executable-spec
+    eras/shelley/test-suite
+    shelley/chain-and-ledger/shelley-spec-ledger-test
     libs/non-integral
     libs/small-steps
+    libs/cardano-ledger-pretty
     semantics/small-steps-test
 
 -- A lot of plutus-apps dependencies have to be synchronized with the dependencies of

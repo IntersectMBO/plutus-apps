@@ -22,6 +22,7 @@ import           Data.Text.Prettyprint.Doc
 import           GHC.Generics                              (Generic)
 
 import qualified ContractExample.AtomicSwap                as Contracts.AtomicSwap
+import qualified ContractExample.IntegrationTest           as Contracts.IntegrationTest
 import qualified ContractExample.PayToWallet               as Contracts.PayToWallet
 import qualified ContractExample.WaitForTx                 as Contracts.WaitForTx
 import           Data.Data                                 (Proxy (Proxy))
@@ -58,7 +59,9 @@ data ExampleContracts = UniswapInit
                       | PrismUnlockExchange
                       | PrismUnlockSto
                       | PingPong
+                      | PingPongAuto -- ^ Variant of 'PingPong' that starts the initialise phase automatically
                       | WaitForTx TxId
+                      | IntegrationTest -- ^ Contract that runs a number of transactions (no user input)
     deriving (Eq, Ord, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
@@ -85,6 +88,8 @@ instance HasDefinitions ExampleContracts where
                      , PrismUnlockExchange
                      , PrismUnlockSto
                      , PingPong
+                     , PingPongAuto
+                     , IntegrationTest
                      ]
     getContract = getExampleContracts
     getSchema = getExampleContractsSchema
@@ -102,7 +107,9 @@ getExampleContractsSchema = \case
     PrismUnlockExchange -> Builtin.endpointsToSchemas @Contracts.Prism.UnlockExchangeSchema
     PrismUnlockSto      -> Builtin.endpointsToSchemas @Contracts.Prism.STOSubscriberSchema
     PingPong            -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
+    PingPongAuto        -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
     WaitForTx{}         -> Builtin.endpointsToSchemas @Empty
+    IntegrationTest{}   -> Builtin.endpointsToSchemas @Empty
 
 getExampleContracts :: ExampleContracts -> SomeBuiltin
 getExampleContracts = \case
@@ -117,7 +124,9 @@ getExampleContracts = \case
     PrismUnlockExchange -> SomeBuiltin (Contracts.Prism.unlockExchange @() @Contracts.Prism.UnlockExchangeSchema)
     PrismUnlockSto      -> SomeBuiltin (Contracts.Prism.subscribeSTO @() @Contracts.Prism.STOSubscriberSchema)
     PingPong            -> SomeBuiltin Contracts.PingPong.simplePingPong
+    PingPongAuto        -> SomeBuiltin Contracts.PingPong.simplePingPongAuto
     WaitForTx txi       -> SomeBuiltin (Contracts.WaitForTx.waitForTx txi)
+    IntegrationTest     -> SomeBuiltin Contracts.IntegrationTest.run
 
 handlers :: SimulatorEffectHandlers (Builtin ExampleContracts)
 handlers =

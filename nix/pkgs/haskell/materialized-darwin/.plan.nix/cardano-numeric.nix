@@ -55,7 +55,7 @@
           buildable = true;
           modules = [ "Cardano/Numeric/UtilSpec" ];
           hsSourceDirs = [ "test/unit" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "numeric-unit-test.hs" ];
           };
         };
       };

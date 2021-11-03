@@ -45,7 +45,7 @@ import qualified Control.Concurrent.STM                         as STM
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Error                      (Error, handleError, throwError)
 import           Control.Monad.Freer.Extras.Beam                (handleBeam)
-import           Control.Monad.Freer.Extras.Log                 (mapLog)
+import           Control.Monad.Freer.Extras.Log                 (LogMsg, mapLog)
 import           Control.Monad.Freer.Reader                     (Reader)
 import           Control.Monad.IO.Class                         (MonadIO (..))
 import           Data.Aeson                                     (FromJSON, ToJSON, eitherDecode)
@@ -75,7 +75,8 @@ import           Plutus.PAB.Effects.Contract                    (ContractDefinit
 import           Plutus.PAB.Effects.Contract.Builtin            (Builtin, BuiltinHandler (..), HasDefinitions (..))
 import           Plutus.PAB.Monitoring.Monitoring               (convertLog, handleLogMsgTrace)
 import           Plutus.PAB.Monitoring.PABLogMsg                (PABLogMsg (..),
-                                                                 PABMultiAgentMsg (BeamLogItem, UserLog))
+                                                                 PABMultiAgentMsg (BeamLogItem, UserLog, WalletClient),
+                                                                 WalletClientMsg)
 import           Plutus.PAB.Timeout                             (Timeout (..))
 import           Plutus.PAB.Types                               (Config (Config), DbConfig (..), PABError (..),
                                                                  WebserverConfig (..), chainIndexConfig, dbConfig,
@@ -177,11 +178,12 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             -- handle 'WalletEffect'
             . flip handleError (throwError . WalletClientError)
             . flip handleError (throwError . WalletError)
+            . interpret (mapLog @_ @(PABMultiAgentMsg (Builtin a)) WalletClient)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv walletClientEnv)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ProtocolParameters protocolParameters)
-            . reinterpretN @'[_, _, _, _] (handleWalletEffect (nodeServerConfig config) wallet)
+            . reinterpretN @'[_, _, _, _, _] (handleWalletEffect (nodeServerConfig config) wallet)
 
         , onStartup = pure ()
 
@@ -195,6 +197,7 @@ handleWalletEffect
   , Member (Error WalletAPIError) effs
   , Member (Reader ClientEnv) effs
   , Member (Reader ProtocolParameters) effs
+  , Member (LogMsg WalletClientMsg) effs
   )
   => MockServerConfig
   -> Wallet

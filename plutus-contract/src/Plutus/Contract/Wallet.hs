@@ -28,6 +28,7 @@ import           Control.Monad.Error.Lens    (throwing)
 import           Control.Monad.Freer         (Eff, Member)
 import           Control.Monad.Freer.Error   (Error, throwError)
 import           Data.Aeson                  (ToJSON (..), Value (String), object, (.=))
+import qualified Data.Aeson.Extras           as Aeson.Extras
 import qualified Data.Aeson.Extras           as JSON
 import           Data.Map                    (Map)
 import qualified Data.Map                    as Map
@@ -160,9 +161,9 @@ instance ToJSON ExportTxInput where
 instance ToJSON ExportTx where
     toJSON ExportTx{partialTx, lookups, redeemers} =
         object
-            [ "transaction" .= toJSON (C.serialiseToTextEnvelope Nothing partialTx)
-            , "inputs"      .= toJSON lookups
-            , "redeemers"   .= toJSON redeemers
+            [ "transaction" .= Aeson.Extras.encodeByteString (C.serialiseToCBOR partialTx)
+            , "inputs"      .= lookups
+            , "redeemers"   .= redeemers
             ]
 
 export :: C.ProtocolParameters -> C.NetworkId -> UnbalancedTx -> Either CardanoAPI.ToCardanoError ExportTx

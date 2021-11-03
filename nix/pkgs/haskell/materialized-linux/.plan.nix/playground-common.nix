@@ -56,7 +56,7 @@
           (hsPkgs."newtype-generics" or (errorHandler.buildDepError "newtype-generics"))
           (hsPkgs."process" or (errorHandler.buildDepError "process"))
           (hsPkgs."prometheus" or (errorHandler.buildDepError "prometheus"))
-          (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
+          (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
           (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
           (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
           (hsPkgs."row-types" or (errorHandler.buildDepError "row-types"))

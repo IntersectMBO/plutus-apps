@@ -124,7 +124,7 @@ library
     build-depends:
         , freer-extras
         , playground-common
-        , plutus-chain-index
+        , plutus-chain-index-core
         , plutus-contract
         , plutus-ledger
         , plutus-tx
@@ -245,6 +245,7 @@ executable plutus-pab-examples
     hs-source-dirs:   examples
     other-modules:
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         ContractExample.WaitForTx
         ContractExample
@@ -299,6 +300,65 @@ executable plutus-uniswap
         , text
         , openapi3
 
+executable plutus-pab-local-cluster
+    main-is:          Main.hs
+    hs-source-dirs:
+        local-cluster
+        examples
+    other-modules:
+        ContractExample
+        ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
+        ContractExample.PayToWallet
+        ContractExample.WaitForTx
+    default-language: Haskell2010
+    ghc-options:
+        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+        -Wincomplete-uni-patterns -Wincomplete-record-updates
+        -Wno-missing-import-lists -Wredundant-constraints -O0
+
+    build-depends:
+        , aeson
+        , base              >=4.9 && <5
+        , containers
+        , directory
+        , filepath
+        , text
+        , text-class
+        , beam-sqlite
+        , sqlite-simple
+        , freer-extras
+        , plutus-pab
+        , beam-migrate
+        , plutus-use-cases
+        , cardano-wallet
+        , cardano-wallet-cli
+        , cardano-wallet-launcher
+        , cardano-wallet-core
+        , cardano-wallet-core-integration
+        , iohk-monitoring
+        , lobemo-backend-ekg
+        , contra-tracer
+        , plutus-chain-index-core
+        , plutus-chain-index
+        , cardano-api
+        , lens
+        , prettyprinter
+        , playground-common
+        , plutus-ledger
+        , plutus-ledger-api
+        , plutus-contract
+        , freer-simple
+        , data-default
+        , row-types
+        , purescript-bridge
+        , openapi3
+        , async
+        , servant-client
+        , http-client
+        , servant-client-core
+        , cardano-addresses
+
 executable plutus-pab-test-psgenerator
     default-language: Haskell2010
     hs-source-dirs:
@@ -309,6 +369,7 @@ executable plutus-pab-test-psgenerator
     main-is:          TestPSGenerator.hs
     other-modules:
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.Effects.Contract.ContractTest
         Plutus.PAB.Simulator.Test
@@ -403,6 +464,7 @@ test-suite plutus-pab-test-full
         ContractExample
         ContractExample.WaitForTx
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.CoreSpec
         Plutus.PAB.CliSpec
@@ -425,7 +487,7 @@ test-suite plutus-pab-test-full
         lens -any,
         monad-logger -any,
         mtl -any,
-        plutus-chain-index -any,
+        plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-pab,
         plutus-use-cases -any,
@@ -465,6 +527,7 @@ test-suite plutus-pab-test-full-long-running
         ContractExample
         ContractExample.WaitForTx
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.CliSpec
         Plutus.PAB.Effects.Contract.ContractTest
@@ -550,7 +613,7 @@ executable sync-client
         contra-tracer -any,
         either -any,
         optparse-applicative -any,
-        plutus-chain-index,
+        plutus-chain-index-core,
         plutus-ledger,
         plutus-pab,
         text
