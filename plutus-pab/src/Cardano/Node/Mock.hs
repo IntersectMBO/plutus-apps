@@ -8,34 +8,34 @@
 
 module Cardano.Node.Mock where
 
-import           Control.Concurrent                  (threadDelay)
-import           Control.Concurrent.MVar             (MVar, modifyMVar_, putMVar, takeMVar)
-import           Control.Lens                        (over, set, unto, view)
-import           Control.Monad                       (forever, void)
-import           Control.Monad.Freer                 (Eff, LastMember, Member, interpret, reinterpret, runM)
-import           Control.Monad.Freer.Extras.Log
-import           Control.Monad.Freer.Extras.Modify   (handleZoomedState)
-import           Control.Monad.Freer.Reader          (Reader)
-import qualified Control.Monad.Freer.Reader          as Eff
-import qualified Control.Monad.Freer.State           as Eff
-import qualified Control.Monad.Freer.Writer          as Eff
-import           Control.Monad.IO.Class              (MonadIO, liftIO)
-import           Data.Foldable                       (traverse_)
-import           Data.Function                       ((&))
-import           Data.Time.Units                     (Millisecond, toMicroseconds)
-import           Data.Time.Units.Extra               ()
-import           Servant                             (NoContent (NoContent))
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.MVar (MVar, modifyMVar_, putMVar, takeMVar)
+import Control.Lens (over, set, unto, view)
+import Control.Monad (forever, void)
+import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, runM)
+import Control.Monad.Freer.Extras.Log
+import Control.Monad.Freer.Extras.Modify (handleZoomedState)
+import Control.Monad.Freer.Reader (Reader)
+import qualified Control.Monad.Freer.Reader as Eff
+import qualified Control.Monad.Freer.State as Eff
+import qualified Control.Monad.Freer.Writer as Eff
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Foldable (traverse_)
+import Data.Function ((&))
+import Data.Time.Units (Millisecond, toMicroseconds)
+import Data.Time.Units.Extra ()
+import Servant (NoContent (NoContent))
 
-import           Cardano.BM.Data.Trace               (Trace)
-import           Cardano.Chain                       (handleChain, handleControlChain)
-import           Cardano.Node.Types
+import Cardano.BM.Data.Trace (Trace)
+import Cardano.Chain (handleChain, handleControlChain)
+import Cardano.Node.Types
 import qualified Cardano.Protocol.Socket.Mock.Client as Client
 import qualified Cardano.Protocol.Socket.Mock.Server as Server
-import           Ledger                              (Tx)
-import           Ledger.TimeSlot                     (SlotConfig (SlotConfig, scSlotLength), currentSlot)
-import           Plutus.PAB.Arbitrary                ()
-import qualified Plutus.PAB.Monitoring.Monitoring    as LM
-import qualified Wallet.Emulator.Chain               as Chain
+import Ledger (Tx)
+import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength), currentSlot)
+import Plutus.PAB.Arbitrary ()
+import qualified Plutus.PAB.Monitoring.Monitoring as LM
+import qualified Wallet.Emulator.Chain as Chain
 
 healthcheck :: Monad m => m NoContent
 healthcheck = pure NoContent

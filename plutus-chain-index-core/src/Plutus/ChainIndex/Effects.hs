@@ -26,15 +26,14 @@ module Plutus.ChainIndex.Effects(
     , getDiagnostics
     ) where
 
-import           Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
-import           Control.Monad.Freer.TH                (makeEffect)
-import           Ledger                                (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash,
-                                                        Redeemer, RedeemerHash, StakeValidator, StakeValidatorHash,
-                                                        TxId, Validator, ValidatorHash)
-import           Ledger.Credential                     (Credential)
-import           Ledger.Tx                             (ChainIndexTxOut, TxOutRef)
-import           Plutus.ChainIndex.Tx                  (ChainIndexTx)
-import           Plutus.ChainIndex.Types               (Diagnostics, Point, Tip)
+import Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
+import Control.Monad.Freer.TH (makeEffect)
+import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+               StakeValidatorHash, TxId, Validator, ValidatorHash)
+import Ledger.Credential (Credential)
+import Ledger.Tx (ChainIndexTxOut, TxOutRef)
+import Plutus.ChainIndex.Tx (ChainIndexTx)
+import Plutus.ChainIndex.Types (Diagnostics, Point, Tip)
 
 data ChainIndexQueryEffect r where
 

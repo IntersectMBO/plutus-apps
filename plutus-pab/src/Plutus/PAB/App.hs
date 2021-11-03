@@ -29,63 +29,59 @@ module Plutus.PAB.App(
     handleContractDefinition
     ) where
 
-import           Cardano.Api.NetworkId.Extra                    (NetworkIdWrapper (..))
-import           Cardano.Api.ProtocolParameters                 ()
-import           Cardano.Api.Shelley                            (ProtocolParameters)
-import           Cardano.BM.Trace                               (Trace, logDebug)
-import qualified Cardano.ChainIndex.Types                       as ChainIndex
-import           Cardano.Node.Client                            (handleNodeClientClient)
-import qualified Cardano.Node.Client                            as NodeClient
-import           Cardano.Node.Types                             (MockServerConfig (..), NodeMode (..))
-import qualified Cardano.Protocol.Socket.Mock.Client            as MockClient
-import qualified Cardano.Wallet.Client                          as WalletClient
-import qualified Cardano.Wallet.Mock.Client                     as WalletMockClient
-import qualified Cardano.Wallet.Mock.Types                      as Wallet
-import qualified Control.Concurrent.STM                         as STM
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error                      (Error, handleError, throwError)
-import           Control.Monad.Freer.Extras.Beam                (handleBeam)
-import           Control.Monad.Freer.Extras.Log                 (LogMsg, mapLog)
-import           Control.Monad.Freer.Reader                     (Reader)
-import           Control.Monad.IO.Class                         (MonadIO (..))
-import           Data.Aeson                                     (FromJSON, ToJSON, eitherDecode)
-import qualified Data.ByteString.Lazy                           as BSL
-import           Data.Coerce                                    (coerce)
-import           Data.Default                                   (def)
-import           Data.Text                                      (Text, pack, unpack)
-import           Data.Typeable                                  (Typeable)
-import           Database.Beam.Migrate.Simple
-import qualified Database.Beam.Sqlite                           as Sqlite
-import qualified Database.Beam.Sqlite.Migrate                   as Sqlite
-import           Database.SQLite.Simple                         (open)
-import qualified Database.SQLite.Simple                         as Sqlite
-import           Network.HTTP.Client                            (managerModifyRequest, newManager,
-                                                                 setRequestIgnoreStatus)
-import           Network.HTTP.Client.TLS                        (tlsManagerSettings)
-import qualified Plutus.ChainIndex.Client                       as ChainIndex
-import           Plutus.PAB.Core                                (EffectHandlers (..), PABAction)
-import qualified Plutus.PAB.Core                                as Core
+import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
+import Cardano.Api.ProtocolParameters ()
+import Cardano.Api.Shelley (ProtocolParameters)
+import Cardano.BM.Trace (Trace, logDebug)
+import qualified Cardano.ChainIndex.Types as ChainIndex
+import Cardano.Node.Client (handleNodeClientClient)
+import qualified Cardano.Node.Client as NodeClient
+import Cardano.Node.Types (MockServerConfig (..), NodeMode (..))
+import qualified Cardano.Protocol.Socket.Mock.Client as MockClient
+import qualified Cardano.Wallet.Client as WalletClient
+import qualified Cardano.Wallet.Mock.Client as WalletMockClient
+import qualified Cardano.Wallet.Mock.Types as Wallet
+import qualified Control.Concurrent.STM as STM
+import Control.Monad.Freer
+import Control.Monad.Freer.Error (Error, handleError, throwError)
+import Control.Monad.Freer.Extras.Beam (handleBeam)
+import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
+import Control.Monad.Freer.Reader (Reader)
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Aeson (FromJSON, ToJSON, eitherDecode)
+import qualified Data.ByteString.Lazy as BSL
+import Data.Coerce (coerce)
+import Data.Default (def)
+import Data.Text (Text, pack, unpack)
+import Data.Typeable (Typeable)
+import Database.Beam.Migrate.Simple
+import qualified Database.Beam.Sqlite as Sqlite
+import qualified Database.Beam.Sqlite.Migrate as Sqlite
+import Database.SQLite.Simple (open)
+import qualified Database.SQLite.Simple as Sqlite
+import Network.HTTP.Client (managerModifyRequest, newManager, setRequestIgnoreStatus)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
+import qualified Plutus.ChainIndex.Client as ChainIndex
+import Plutus.PAB.Core (EffectHandlers (..), PABAction)
+import qualified Plutus.PAB.Core as Core
 import qualified Plutus.PAB.Core.ContractInstance.BlockchainEnv as BlockchainEnv
-import           Plutus.PAB.Core.ContractInstance.STM           as Instances
-import qualified Plutus.PAB.Db.Beam.ContractStore               as BeamEff
-import           Plutus.PAB.Db.Memory.ContractStore             (InMemInstances, initialInMemInstances)
-import qualified Plutus.PAB.Db.Memory.ContractStore             as InMem
-import           Plutus.PAB.Db.Schema                           (checkedSqliteDb)
-import           Plutus.PAB.Effects.Contract                    (ContractDefinition (..))
-import           Plutus.PAB.Effects.Contract.Builtin            (Builtin, BuiltinHandler (..), HasDefinitions (..))
-import           Plutus.PAB.Monitoring.Monitoring               (convertLog, handleLogMsgTrace)
-import           Plutus.PAB.Monitoring.PABLogMsg                (PABLogMsg (..),
-                                                                 PABMultiAgentMsg (BeamLogItem, UserLog, WalletClient),
-                                                                 WalletClientMsg)
-import           Plutus.PAB.Timeout                             (Timeout (..))
-import           Plutus.PAB.Types                               (Config (Config), DbConfig (..), PABError (..),
-                                                                 WebserverConfig (..), chainIndexConfig, dbConfig,
-                                                                 endpointTimeout, nodeServerConfig, pabWebserverConfig,
-                                                                 walletServerConfig)
-import           Servant.Client                                 (ClientEnv, ClientError, mkClientEnv)
-import           Wallet.Effects                                 (WalletEffect (..))
-import           Wallet.Emulator.Error                          (WalletAPIError)
-import           Wallet.Emulator.Wallet                         (Wallet (..))
+import Plutus.PAB.Core.ContractInstance.STM as Instances
+import qualified Plutus.PAB.Db.Beam.ContractStore as BeamEff
+import Plutus.PAB.Db.Memory.ContractStore (InMemInstances, initialInMemInstances)
+import qualified Plutus.PAB.Db.Memory.ContractStore as InMem
+import Plutus.PAB.Db.Schema (checkedSqliteDb)
+import Plutus.PAB.Effects.Contract (ContractDefinition (..))
+import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..))
+import Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
+import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (..), PABMultiAgentMsg (BeamLogItem, UserLog, WalletClient),
+                                        WalletClientMsg)
+import Plutus.PAB.Timeout (Timeout (..))
+import Plutus.PAB.Types (Config (Config), DbConfig (..), PABError (..), WebserverConfig (..), chainIndexConfig,
+                         dbConfig, endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
+import Servant.Client (ClientEnv, ClientError, mkClientEnv)
+import Wallet.Effects (WalletEffect (..))
+import Wallet.Emulator.Error (WalletAPIError)
+import Wallet.Emulator.Wallet (Wallet (..))
 
 ------------------------------------------------------------
 

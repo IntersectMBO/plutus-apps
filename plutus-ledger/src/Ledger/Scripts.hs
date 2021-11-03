@@ -23,13 +23,13 @@ module Ledger.Scripts (
     , toCardanoAPIData
     ) where
 
-import qualified Cardano.Api              as Script
-import qualified Cardano.Api.Shelley      as Script
-import           Codec.Serialise          (serialise)
-import qualified Data.ByteString.Lazy     as BSL
-import qualified Data.ByteString.Short    as SBS
-import           Plutus.V1.Ledger.Scripts as Export
-import           PlutusTx.Builtins        as Builtins
+import qualified Cardano.Api as Script
+import qualified Cardano.Api.Shelley as Script
+import Codec.Serialise (serialise)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
+import Plutus.V1.Ledger.Scripts as Export
+import PlutusTx.Builtins as Builtins
 
 datumHash :: Datum -> DatumHash
 datumHash = DatumHash . dataHash . getDatum

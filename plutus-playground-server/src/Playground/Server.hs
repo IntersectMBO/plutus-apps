@@ -13,32 +13,32 @@
 module Playground.Server where
 
 import qualified Auth
-import           Auth.Types                   (OAuthClientId (OAuthClientId), OAuthClientSecret (OAuthClientSecret))
-import           Control.Monad.Except         (ExceptT, runExceptT, throwError)
-import           Control.Monad.IO.Class       (MonadIO, liftIO)
-import           Control.Monad.Logger         (LoggingT, runStderrLoggingT)
-import           Control.Monad.Reader         (ReaderT, runReaderT)
-import           Data.Aeson                   (decodeFileStrict)
-import           Data.Bits                    (toIntegralSized)
-import qualified Data.ByteString.Lazy.Char8   as BSL
-import           Data.Proxy                   (Proxy (Proxy))
-import           Data.Text                    (Text)
-import qualified Data.Text                    as Text
-import           Data.Time.Units              (Second, toMicroseconds)
-import           Language.Haskell.Interpreter (InterpreterError (CompilationErrors), InterpreterResult, SourceCode)
+import Auth.Types (OAuthClientId (OAuthClientId), OAuthClientSecret (OAuthClientSecret))
+import Control.Monad.Except (ExceptT, runExceptT, throwError)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Logger (LoggingT, runStderrLoggingT)
+import Control.Monad.Reader (ReaderT, runReaderT)
+import Data.Aeson (decodeFileStrict)
+import Data.Bits (toIntegralSized)
+import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.Proxy (Proxy (Proxy))
+import Data.Text (Text)
+import qualified Data.Text as Text
+import Data.Time.Units (Second, toMicroseconds)
+import Language.Haskell.Interpreter (InterpreterError (CompilationErrors), InterpreterResult, SourceCode)
 import qualified Language.Haskell.Interpreter as Interpreter
-import           Network.HTTP.Client.Conduit  (defaultManagerSettings, managerResponseTimeout, responseTimeoutMicro)
-import           Network.HTTP.Conduit         (newManager)
-import           Network.Wai.Middleware.Cors  (cors, simpleCorsResourcePolicy)
-import qualified Playground.Interpreter       as PI
-import           Playground.Types             (CompilationResult, Evaluation, EvaluationResult, PlaygroundError)
-import           Playground.Usecases          (vesting)
-import           Servant                      (Application, err400, errBody, hoistServer, serve)
-import           Servant.API                  (Get, JSON, Post, ReqBody, (:<|>) ((:<|>)), (:>))
-import           Servant.Client               (ClientEnv, mkClientEnv, parseBaseUrl)
-import           Servant.Server               (Handler (Handler), Server, ServerError)
-import           System.Environment           (lookupEnv)
-import qualified Web.JWT                      as JWT
+import Network.HTTP.Client.Conduit (defaultManagerSettings, managerResponseTimeout, responseTimeoutMicro)
+import Network.HTTP.Conduit (newManager)
+import Network.Wai.Middleware.Cors (cors, simpleCorsResourcePolicy)
+import qualified Playground.Interpreter as PI
+import Playground.Types (CompilationResult, Evaluation, EvaluationResult, PlaygroundError)
+import Playground.Usecases (vesting)
+import Servant (Application, err400, errBody, hoistServer, serve)
+import Servant.API (Get, JSON, Post, ReqBody, (:<|>) ((:<|>)), (:>))
+import Servant.Client (ClientEnv, mkClientEnv, parseBaseUrl)
+import Servant.Server (Handler (Handler), Server, ServerError)
+import System.Environment (lookupEnv)
+import qualified Web.JWT as JWT
 
 type API
      = "contract" :> ReqBody '[ JSON] SourceCode :> Post '[ JSON] (Either Interpreter.InterpreterError (InterpreterResult CompilationResult))

@@ -23,27 +23,26 @@ database schema for the data which we wish to store:
 
 module Plutus.ChainIndex.DbSchema where
 
-import           Codec.Serialise            (Serialise, deserialiseOrFail, serialise)
-import           Data.ByteString            (ByteString)
-import qualified Data.ByteString.Lazy       as BSL
-import           Data.Coerce                (coerce)
-import           Data.Either                (fromRight)
-import           Data.Kind                  (Constraint)
-import           Data.Semigroup.Generic     (GenericSemigroupMonoid (..))
-import           Data.Word                  (Word64)
-import           Database.Beam              (Beamable, Columnar, Database, DatabaseSettings, FromBackendRow, Generic,
-                                             Identity, Table (..), TableEntity, dbModification, withDbModification)
-import           Database.Beam.Migrate      (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
-                                             unCheckDatabase)
-import           Database.Beam.Sqlite       (Sqlite)
-import           Ledger                     (AssetClass, BlockId (..), Datum, DatumHash (..), MintingPolicy,
-                                             MintingPolicyHash (..), Redeemer, RedeemerHash (..), Script,
-                                             ScriptHash (..), Slot, StakeValidator, StakeValidatorHash (..), TxId (..),
-                                             TxOutRef (..), Validator, ValidatorHash (..))
-import           Plutus.ChainIndex.Tx       (ChainIndexTx)
-import           Plutus.ChainIndex.Types    (BlockNumber (..), Tip (..))
-import           Plutus.V1.Ledger.Api       (Credential)
-import           PlutusTx.Builtins.Internal (BuiltinByteString (..))
+import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as BSL
+import Data.Coerce (coerce)
+import Data.Either (fromRight)
+import Data.Kind (Constraint)
+import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
+import Data.Word (Word64)
+import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBackendRow, Generic, Identity, Table (..),
+                      TableEntity, dbModification, withDbModification)
+import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
+                              unCheckDatabase)
+import Database.Beam.Sqlite (Sqlite)
+import Ledger (AssetClass, BlockId (..), Datum, DatumHash (..), MintingPolicy, MintingPolicyHash (..), Redeemer,
+               RedeemerHash (..), Script, ScriptHash (..), Slot, StakeValidator, StakeValidatorHash (..), TxId (..),
+               TxOutRef (..), Validator, ValidatorHash (..))
+import Plutus.ChainIndex.Tx (ChainIndexTx)
+import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
+import Plutus.V1.Ledger.Api (Credential)
+import PlutusTx.Builtins.Internal (BuiltinByteString (..))
 
 data DatumRowT f = DatumRow
     { _datumRowHash  :: Columnar f ByteString

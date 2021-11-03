@@ -13,18 +13,18 @@ module Plutus.Trace.Effects.EmulatedWalletAPI(
     , handleEmulatedWalletAPI
     ) where
 
-import           Control.Monad.Freer        (Eff, Member, subsume, type (~>))
-import           Control.Monad.Freer.Error  (Error)
-import           Control.Monad.Freer.Extras (raiseEnd)
-import           Control.Monad.Freer.TH     (makeEffect)
-import           Ledger.Tx                  (txId)
-import           Ledger.TxId                (TxId)
-import           Ledger.Value               (Value)
-import           Wallet.API                 (WalletAPIError, defaultSlotRange, payToPublicKeyHash)
-import           Wallet.Effects             (WalletEffect)
-import qualified Wallet.Emulator            as EM
-import           Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
-import           Wallet.Emulator.Wallet     (Wallet)
+import Control.Monad.Freer (Eff, Member, subsume, type (~>))
+import Control.Monad.Freer.Error (Error)
+import Control.Monad.Freer.Extras (raiseEnd)
+import Control.Monad.Freer.TH (makeEffect)
+import Ledger.Tx (txId)
+import Ledger.TxId (TxId)
+import Ledger.Value (Value)
+import Wallet.API (WalletAPIError, defaultSlotRange, payToPublicKeyHash)
+import Wallet.Effects (WalletEffect)
+import qualified Wallet.Emulator as EM
+import Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
+import Wallet.Emulator.Wallet (Wallet)
 
 data EmulatedWalletAPI r where
     LiftWallet :: Wallet -> Eff '[WalletEffect, Error WalletAPIError] a -> EmulatedWalletAPI a

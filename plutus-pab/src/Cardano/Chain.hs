@@ -12,21 +12,21 @@
 
 module Cardano.Chain where
 
-import           Control.Concurrent
-import           Control.Concurrent.STM
-import           Control.Lens                   hiding (index)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
-import           Control.Monad.Freer.State      (State, get, gets, modify, put)
-import           Control.Monad.IO.Class         (MonadIO, liftIO)
-import           Data.Foldable                  (traverse_)
-import           Data.Functor                   (void)
-import           Data.Maybe                     (listToMaybe)
-import           GHC.Generics                   (Generic)
-import           Ledger                         (Block, Slot (..), Tx (..))
-import qualified Ledger.Index                   as Index
-import           Ledger.TimeSlot                (SlotConfig)
-import qualified Wallet.Emulator.Chain          as EC
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Lens hiding (index)
+import Control.Monad.Freer
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
+import Control.Monad.Freer.State (State, get, gets, modify, put)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Foldable (traverse_)
+import Data.Functor (void)
+import Data.Maybe (listToMaybe)
+import GHC.Generics (Generic)
+import Ledger (Block, Slot (..), Tx (..))
+import qualified Ledger.Index as Index
+import Ledger.TimeSlot (SlotConfig)
+import qualified Wallet.Emulator.Chain as EC
 
 type TxPool = [Tx]
 

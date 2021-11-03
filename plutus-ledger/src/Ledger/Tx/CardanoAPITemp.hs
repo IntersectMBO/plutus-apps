@@ -8,29 +8,29 @@
 -- until https://github.com/input-output-hk/cardano-node/pull/2936 or something similar gets merged.
 module Ledger.Tx.CardanoAPITemp (makeTransactionBody') where
 
-import qualified Data.Map.Strict                    as Map
-import qualified Data.Sequence.Strict               as Seq
-import qualified Data.Set                           as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as Seq
+import qualified Data.Set as Set
 
-import           Cardano.Api
-import           Cardano.Api.Shelley                hiding (toShelleyTxOut)
-import           Cardano.Ledger.BaseTypes           (StrictMaybe (..))
-import           Cardano.Ledger.Crypto              (StandardCrypto)
-import           Ouroboros.Consensus.Shelley.Eras   (StandardAlonzo)
+import Cardano.Api
+import Cardano.Api.Shelley hiding (toShelleyTxOut)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo)
 
-import qualified Cardano.Ledger.Core                as Ledger
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
-import qualified Cardano.Ledger.Alonzo.Data         as Alonzo
-import qualified Cardano.Ledger.Alonzo.Tx           as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody       as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWitness    as Alonzo
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
-import qualified Cardano.Ledger.ShelleyMA.TxBody    as Allegra
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 
-import qualified Cardano.Ledger.Keys                as Shelley
-import qualified Cardano.Ledger.Shelley.Tx          as Shelley
-import qualified Cardano.Ledger.Shelley.TxBody      as Shelley
+import qualified Cardano.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Shelley.Tx as Shelley
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 makeTransactionBody' :: TxBodyContent BuildTx AlonzoEra -> Either TxBodyError (TxBody AlonzoEra)
 makeTransactionBody'

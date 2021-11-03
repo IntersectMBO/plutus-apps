@@ -8,26 +8,26 @@ module Plutus.ChainIndex.Emulator.Server(
     serveChainIndexQueryServer,
     serveChainIndex) where
 
-import           Control.Concurrent.STM              (TVar)
-import qualified Control.Concurrent.STM              as STM
-import qualified Control.Monad.Except                as E
-import           Control.Monad.Freer                 (Eff, interpret, run, type (~>))
-import           Control.Monad.Freer.Error           (Error, runError)
-import           Control.Monad.Freer.Extras.Log      (handleLogIgnore)
-import           Control.Monad.Freer.Extras.Modify   (raiseEnd)
-import           Control.Monad.Freer.State           (evalState)
-import           Control.Monad.IO.Class              (MonadIO (liftIO))
-import qualified Data.ByteString.Lazy                as BSL
-import           Data.Proxy                          (Proxy (..))
-import qualified Data.Text                           as Text
-import qualified Data.Text.Encoding                  as Text
-import qualified Network.Wai.Handler.Warp            as Warp
-import           Plutus.ChainIndex                   (ChainIndexError, ChainIndexLog)
-import           Plutus.ChainIndex.Api               (API)
-import           Plutus.ChainIndex.Effects           (ChainIndexControlEffect, ChainIndexQueryEffect)
-import           Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState (..), handleControl, handleQuery)
-import           Plutus.ChainIndex.Server            hiding (serveChainIndexQueryServer)
-import           Servant.Server                      (Handler, ServerError, err500, errBody, hoistServer, serve)
+import Control.Concurrent.STM (TVar)
+import qualified Control.Concurrent.STM as STM
+import qualified Control.Monad.Except as E
+import Control.Monad.Freer (Eff, interpret, run, type (~>))
+import Control.Monad.Freer.Error (Error, runError)
+import Control.Monad.Freer.Extras.Log (handleLogIgnore)
+import Control.Monad.Freer.Extras.Modify (raiseEnd)
+import Control.Monad.Freer.State (evalState)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import qualified Data.ByteString.Lazy as BSL
+import Data.Proxy (Proxy (..))
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Network.Wai.Handler.Warp as Warp
+import Plutus.ChainIndex (ChainIndexError, ChainIndexLog)
+import Plutus.ChainIndex.Api (API)
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState (..), handleControl, handleQuery)
+import Plutus.ChainIndex.Server hiding (serveChainIndexQueryServer)
+import Servant.Server (Handler, ServerError, err500, errBody, hoistServer, serve)
 
 serveChainIndexQueryServer ::
     Int -- ^ Port

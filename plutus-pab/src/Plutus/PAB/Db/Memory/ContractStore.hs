@@ -17,19 +17,19 @@ module Plutus.PAB.Db.Memory.ContractStore(
     , initialInMemInstances
     ) where
 
-import           Control.Concurrent.STM      (TVar)
-import qualified Control.Concurrent.STM      as STM
-import           Control.Lens                (_Just, at, makeLensesFor, preview, set)
-import           Control.Monad.Freer         (Eff, LastMember, Member, type (~>))
-import           Control.Monad.Freer.Error   (Error, throwError)
-import           Control.Monad.Freer.Reader  (Reader, ask)
-import           Control.Monad.IO.Class      (MonadIO (..))
-import           Data.Map                    (Map)
-import           Plutus.PAB.Effects.Contract (ContractStore)
+import Control.Concurrent.STM (TVar)
+import qualified Control.Concurrent.STM as STM
+import Control.Lens (_Just, at, makeLensesFor, preview, set)
+import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Reader (Reader, ask)
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Map (Map)
+import Plutus.PAB.Effects.Contract (ContractStore)
 import qualified Plutus.PAB.Effects.Contract as Contract
-import           Plutus.PAB.Types            (PABError (..))
-import           Plutus.PAB.Webserver.Types  (ContractActivationArgs)
-import           Wallet.Types                (ContractInstanceId)
+import Plutus.PAB.Types (PABError (..))
+import Plutus.PAB.Webserver.Types (ContractActivationArgs)
+import Wallet.Types (ContractInstanceId)
 
 -- | The current state of a contract instance
 data InMemContractInstanceState t =

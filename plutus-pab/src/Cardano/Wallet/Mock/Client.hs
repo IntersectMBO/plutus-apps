@@ -7,22 +7,22 @@
 
 module Cardano.Wallet.Mock.Client where
 
-import           Cardano.Wallet.Mock.API     (API)
-import           Cardano.Wallet.Mock.Types   (WalletInfo (..))
-import           Control.Monad               (void)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error   (Error, throwError)
-import           Control.Monad.Freer.Reader  (Reader, ask)
-import           Control.Monad.IO.Class      (MonadIO (..))
-import           Data.Proxy                  (Proxy (Proxy))
-import           Ledger                      (Value)
-import           Ledger.Constraints.OffChain (UnbalancedTx)
-import           Ledger.Tx                   (Tx)
-import           Servant                     ((:<|>) (..))
-import           Servant.Client              (ClientEnv, ClientError, ClientM, client, runClientM)
-import           Wallet.Effects              (WalletEffect (..))
-import           Wallet.Emulator.Error       (WalletAPIError)
-import           Wallet.Emulator.Wallet      (Wallet (..), WalletId)
+import Cardano.Wallet.Mock.API (API)
+import Cardano.Wallet.Mock.Types (WalletInfo (..))
+import Control.Monad (void)
+import Control.Monad.Freer
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Reader (Reader, ask)
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Proxy (Proxy (Proxy))
+import Ledger (Value)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx (Tx)
+import Servant ((:<|>) (..))
+import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
+import Wallet.Effects (WalletEffect (..))
+import Wallet.Emulator.Error (WalletAPIError)
+import Wallet.Emulator.Wallet (Wallet (..), WalletId)
 
 createWallet :: ClientM WalletInfo
 submitTxn :: Wallet -> Tx -> ClientM ()

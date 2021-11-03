@@ -13,27 +13,27 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns -fno-warn-unused-do-bind -fno-warn-name-shadowing #-}
 module Spec.Vesting (tests, prop_Vesting, prop_CheckNoLockedFundsProof, retrieveFundsTrace) where
 
-import           Control.Lens                       hiding (elements)
-import           Control.Monad                      (void, when)
-import           Data.Default                       (Default (def))
-import           Test.Tasty
-import qualified Test.Tasty.HUnit                   as HUnit
-import           Test.Tasty.QuickCheck              (testProperty)
+import Control.Lens hiding (elements)
+import Control.Monad (void, when)
+import Data.Default (Default (def))
+import Test.Tasty
+import qualified Test.Tasty.HUnit as HUnit
+import Test.Tasty.QuickCheck (testProperty)
 
-import qualified Ledger.Ada                         as Ada
-import           Ledger.Slot
-import           Ledger.Time                        (POSIXTime)
-import qualified Ledger.TimeSlot                    as TimeSlot
-import           Ledger.Value
-import           Plutus.Contract.Test               hiding (not)
-import           Plutus.Contract.Test.ContractModel
-import           Plutus.Contracts.Vesting
-import           Plutus.Trace.Emulator              (EmulatorTrace, callEndpoint)
-import qualified Plutus.Trace.Emulator              as Trace
+import qualified Ledger.Ada as Ada
+import Ledger.Slot
+import Ledger.Time (POSIXTime)
+import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.Value
+import Plutus.Contract.Test hiding (not)
+import Plutus.Contract.Test.ContractModel
+import Plutus.Contracts.Vesting
+import Plutus.Trace.Emulator (EmulatorTrace, callEndpoint)
+import qualified Plutus.Trace.Emulator as Trace
 import qualified PlutusTx
-import qualified PlutusTx.Numeric                   as Numeric
-import           Prelude
-import           Test.QuickCheck                    hiding ((.&&.))
+import qualified PlutusTx.Numeric as Numeric
+import Prelude
+import Test.QuickCheck hiding ((.&&.))
 
 -- | The scenario used in the property tests. It sets up a vesting scheme for a
 --   total of 60 lovelace over 20 blocks (20 lovelace can be taken out before

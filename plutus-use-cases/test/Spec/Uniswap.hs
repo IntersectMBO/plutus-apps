@@ -3,11 +3,11 @@ module Spec.Uniswap(
     tests
     ) where
 
-import           Plutus.Contract.Test
+import Plutus.Contract.Test
 import qualified Plutus.Contracts.Uniswap.Trace as Uniswap
-import qualified Plutus.Trace.Emulator          as Trace
+import qualified Plutus.Trace.Emulator as Trace
 
-import           Test.Tasty
+import Test.Tasty
 
 tests :: TestTree
 tests = testGroup "uniswap" [

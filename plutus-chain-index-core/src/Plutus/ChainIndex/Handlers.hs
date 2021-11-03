@@ -18,48 +18,46 @@ module Plutus.ChainIndex.Handlers
     , ChainIndexState
     ) where
 
-import qualified Cardano.Api                           as C
-import           Control.Applicative                   (Const (..))
-import           Control.Lens                          (Lens', _Just, ix, view, (^?))
-import           Control.Monad.Freer                   (Eff, Member, type (~>))
-import           Control.Monad.Freer.Error             (Error, throwError)
-import           Control.Monad.Freer.Extras.Beam       (BeamEffect (..), BeamableSqlite, addRowsInBatches, combined,
-                                                        deleteRows, selectList, selectOne, selectPage, updateRows)
-import           Control.Monad.Freer.Extras.Log        (LogMsg, logDebug, logError, logWarn)
-import           Control.Monad.Freer.Extras.Pagination (Page (Page), PageQuery (..))
-import           Control.Monad.Freer.Reader            (Reader, ask)
-import           Control.Monad.Freer.State             (State, get, gets, put)
-import           Data.ByteString                       (ByteString)
-import qualified Data.FingerTree                       as FT
-import qualified Data.Map                              as Map
-import           Data.Maybe                            (catMaybes, fromMaybe, mapMaybe)
-import           Data.Monoid                           (Ap (..))
-import           Data.Proxy                            (Proxy (..))
-import qualified Data.Set                              as Set
-import           Data.Word                             (Word64)
-import           Database.Beam                         (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_,
-                                                        countAll_, delete, filter_, guard_, limit_, nub_, select, val_)
-import           Database.Beam.Backend.SQL             (BeamSqlBackendCanSerialize)
-import           Database.Beam.Query                   (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update,
-                                                        (&&.), (<-.), (<.), (==.), (>.))
-import           Database.Beam.Schema.Tables           (zipTables)
-import           Database.Beam.Sqlite                  (Sqlite)
-import           Ledger                                (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..),
-                                                        TxId (..), TxOut (..), TxOutRef (..))
-import           Ledger.Value                          (AssetClass (AssetClass), flattenValue)
-import           Plutus.ChainIndex.ChainIndexError     (ChainIndexError (..))
-import           Plutus.ChainIndex.ChainIndexLog       (ChainIndexLog (..))
-import           Plutus.ChainIndex.Compatibility       (toCardanoPoint)
-import           Plutus.ChainIndex.DbSchema
-import           Plutus.ChainIndex.Effects             (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
-import           Plutus.ChainIndex.Tx
-import qualified Plutus.ChainIndex.TxUtxoBalance       as TxUtxoBalance
-import           Plutus.ChainIndex.Types               (Depth (..), Diagnostics (..), Point (..), Tip (..),
-                                                        TxUtxoBalance (..), tipAsPoint)
-import           Plutus.ChainIndex.UtxoState           (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
-import qualified Plutus.ChainIndex.UtxoState           as UtxoState
-import qualified Plutus.V1.Ledger.Ada                  as Ada
-import           Plutus.V1.Ledger.Api                  (Credential (PubKeyCredential, ScriptCredential))
+import qualified Cardano.Api as C
+import Control.Applicative (Const (..))
+import Control.Lens (Lens', _Just, ix, view, (^?))
+import Control.Monad.Freer (Eff, Member, type (~>))
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, addRowsInBatches, combined, deleteRows,
+                                        selectList, selectOne, selectPage, updateRows)
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
+import Control.Monad.Freer.Extras.Pagination (Page (Page), PageQuery (..))
+import Control.Monad.Freer.Reader (Reader, ask)
+import Control.Monad.Freer.State (State, get, gets, put)
+import Data.ByteString (ByteString)
+import qualified Data.FingerTree as FT
+import qualified Data.Map as Map
+import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import Data.Monoid (Ap (..))
+import Data.Proxy (Proxy (..))
+import qualified Data.Set as Set
+import Data.Word (Word64)
+import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, guard_,
+                      limit_, nub_, select, val_)
+import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
+import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update, (&&.), (<-.), (<.), (==.),
+                            (>.))
+import Database.Beam.Schema.Tables (zipTables)
+import Database.Beam.Sqlite (Sqlite)
+import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxId (..), TxOut (..), TxOutRef (..))
+import Ledger.Value (AssetClass (AssetClass), flattenValue)
+import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
+import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
+import Plutus.ChainIndex.Compatibility (toCardanoPoint)
+import Plutus.ChainIndex.DbSchema
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
+import Plutus.ChainIndex.Tx
+import qualified Plutus.ChainIndex.TxUtxoBalance as TxUtxoBalance
+import Plutus.ChainIndex.Types (Depth (..), Diagnostics (..), Point (..), Tip (..), TxUtxoBalance (..), tipAsPoint)
+import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
+import qualified Plutus.ChainIndex.UtxoState as UtxoState
+import qualified Plutus.V1.Ledger.Ada as Ada
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
 

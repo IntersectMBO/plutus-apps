@@ -36,18 +36,18 @@ module Plutus.ChainIndex.UtxoState(
     , BlockCount (..)
     ) where
 
-import           Control.Lens                      (makeLenses, view)
-import           Data.Aeson                        (FromJSON, ToJSON)
-import           Data.FingerTree                   (FingerTree, Measured (..))
-import qualified Data.FingerTree                   as FT
-import           Data.Function                     (on)
-import           Data.Monoid                       (Sum (..))
-import           Data.Semigroup.Generic            (GenericSemigroupMonoid (..))
-import           GHC.Generics                      (Generic)
-import           Plutus.ChainIndex.ChainIndexError (InsertUtxoFailed (..), RollbackFailed (..))
-import           Plutus.ChainIndex.ChainIndexLog   (InsertUtxoPosition (..))
-import           Plutus.ChainIndex.Types           (Depth (..), Point (..), Tip (..), pointsToTip)
-import           Prettyprinter                     (Pretty (..))
+import Control.Lens (makeLenses, view)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.FingerTree (FingerTree, Measured (..))
+import qualified Data.FingerTree as FT
+import Data.Function (on)
+import Data.Monoid (Sum (..))
+import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
+import GHC.Generics (Generic)
+import Plutus.ChainIndex.ChainIndexError (InsertUtxoFailed (..), RollbackFailed (..))
+import Plutus.ChainIndex.ChainIndexLog (InsertUtxoPosition (..))
+import Plutus.ChainIndex.Types (Depth (..), Point (..), Tip (..), pointsToTip)
+import Prettyprinter (Pretty (..))
 
 -- | UTXO / ledger state, kept in memory. We are only interested in the UTXO set, everything else is stored
 --   on disk. This is OK because we don't need to validate transactions when they come in.

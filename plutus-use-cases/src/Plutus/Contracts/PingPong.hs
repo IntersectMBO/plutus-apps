@@ -32,22 +32,22 @@ module Plutus.Contracts.PingPong(
     simplePingPongAuto
     ) where
 
-import           Control.Lens
-import           Control.Monad                (forever, void)
-import           Data.Aeson                   (FromJSON, ToJSON)
-import           Data.Monoid                  (Last (..))
-import           GHC.Generics                 (Generic)
-import qualified Ledger.Ada                   as Ada
-import           Ledger.Constraints           (TxConstraints)
-import qualified Ledger.Typed.Scripts         as Scripts
-import           Ledger.Typed.Tx              (TypedScriptTxOut (..))
+import Control.Lens
+import Control.Monad (forever, void)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Monoid (Last (..))
+import GHC.Generics (Generic)
+import qualified Ledger.Ada as Ada
+import Ledger.Constraints (TxConstraints)
+import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Tx (TypedScriptTxOut (..))
 import qualified PlutusTx
-import           PlutusTx.Prelude             hiding (Applicative (..), check)
+import PlutusTx.Prelude hiding (Applicative (..), check)
 
-import           Plutus.Contract
-import           Plutus.Contract.StateMachine (AsSMContractError (..), OnChainState, State (..), Void)
+import Plutus.Contract
+import Plutus.Contract.StateMachine (AsSMContractError (..), OnChainState, State (..), Void)
 import qualified Plutus.Contract.StateMachine as SM
-import qualified Prelude                      as Haskell
+import qualified Prelude as Haskell
 
 data PingPongState = Pinged | Ponged | Stopped
     deriving stock (Haskell.Eq, Haskell.Show, Generic)

@@ -4,8 +4,8 @@
 module Plutus.Contract.StateMachine.MintingPolarity where
 
 import qualified PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude          as Haskell
+import PlutusTx.Prelude
+import qualified Prelude as Haskell
 
 data MintingPolarity = Mint | Burn deriving (Haskell.Eq, Haskell.Show)
 

@@ -1,21 +1,21 @@
 {-# LANGUAGE TypeApplications #-}
 module Spec.PubKey(tests, pubKeyTrace) where
 
-import           Control.Monad           (void)
-import qualified Data.Map                as Map
+import Control.Monad (void)
+import qualified Data.Map as Map
 
-import qualified Ledger.Ada              as Ada
-import           Ledger.Constraints      (ScriptLookups (..))
-import qualified Ledger.Constraints      as Constraints
-import           Ledger.Scripts          (unitRedeemer)
-import           Ledger.Typed.Scripts    as Scripts
-import           Plutus.Contract
-import           Plutus.Contract.Test
-import qualified Plutus.Trace.Emulator   as Trace
+import qualified Ledger.Ada as Ada
+import Ledger.Constraints (ScriptLookups (..))
+import qualified Ledger.Constraints as Constraints
+import Ledger.Scripts (unitRedeemer)
+import Ledger.Typed.Scripts as Scripts
+import Plutus.Contract
+import Plutus.Contract.Test
+import qualified Plutus.Trace.Emulator as Trace
 
-import           Plutus.Contracts.PubKey (PubKeyError, pubKeyContract)
+import Plutus.Contracts.PubKey (PubKeyError, pubKeyContract)
 
-import           Test.Tasty
+import Test.Tasty
 
 theContract :: Contract () EmptySchema PubKeyError ()
 theContract = do

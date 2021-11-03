@@ -15,27 +15,27 @@ module Cardano.BM.Data.Tracer.Extras(
     , Tagged(Tagged)
     ) where
 
-import           Cardano.BM.Data.Tracer                  (ToObject (..))
-import           Data.Aeson                              (ToJSON (..), Value (String))
-import           Data.HashMap.Strict                     (HashMap)
-import qualified Data.HashMap.Strict                     as HM
-import           Data.Proxy                              (Proxy (..))
-import           Data.Tagged                             (Tagged (Tagged))
-import           Data.Text                               (Text)
-import qualified Data.Text                               as Text
-import           Data.Text.Prettyprint.Doc               (Pretty (..), defaultLayoutOptions, layoutPretty)
-import qualified Data.Text.Prettyprint.Doc.Render.Text   as Render
-import           Data.UUID                               (UUID)
-import           GHC.TypeLits                            (KnownSymbol, symbolVal)
-import           Ledger.Tx                               (Tx)
-import qualified Ledger.Value                            as V
-import           Plutus.Contract.Checkpoint              (CheckpointLogMsg)
-import           Plutus.Contract.Resumable               (Response (..))
-import           Plutus.Contract.State                   (ContractRequest)
-import           Plutus.PAB.Events.Contract              (ContractInstanceId, IterationID)
-import           Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (..))
-import           Wallet.Emulator.LogMessages             (RequestHandlerLogMsg, TxBalanceMsg)
-import           Wallet.Types                            (EndpointDescription)
+import Cardano.BM.Data.Tracer (ToObject (..))
+import Data.Aeson (ToJSON (..), Value (String))
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HM
+import Data.Proxy (Proxy (..))
+import Data.Tagged (Tagged (Tagged))
+import Data.Text (Text)
+import qualified Data.Text as Text
+import Data.Text.Prettyprint.Doc (Pretty (..), defaultLayoutOptions, layoutPretty)
+import qualified Data.Text.Prettyprint.Doc.Render.Text as Render
+import Data.UUID (UUID)
+import GHC.TypeLits (KnownSymbol, symbolVal)
+import Ledger.Tx (Tx)
+import qualified Ledger.Value as V
+import Plutus.Contract.Checkpoint (CheckpointLogMsg)
+import Plutus.Contract.Resumable (Response (..))
+import Plutus.Contract.State (ContractRequest)
+import Plutus.PAB.Events.Contract (ContractInstanceId, IterationID)
+import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (..))
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
+import Wallet.Types (EndpointDescription)
 
 -- | Deriving 'ToObject' from 'Pretty'
 newtype PrettyToObject a = PrettyToObject { unPrettyToObject :: a }

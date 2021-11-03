@@ -4,13 +4,13 @@
 
 module GameSimulations where
 
-import           Game                  (GuessParams (GuessParams), LockParams (LockParams), amount, guessWord,
-                                        registeredKnownCurrencies, secretWord)
-import qualified Ledger.Ada            as Ada
-import           Playground.Types      (ContractCall (AddBlocks), Simulation (Simulation), SimulatorAction,
-                                        simulationActions, simulationId, simulationName, simulationWallets)
-import           SimulationUtils       (callEndpoint, simulatorWallet)
-import           Wallet.Emulator.Types (WalletNumber (..))
+import Game (GuessParams (GuessParams), LockParams (LockParams), amount, guessWord, registeredKnownCurrencies,
+             secretWord)
+import qualified Ledger.Ada as Ada
+import Playground.Types (ContractCall (AddBlocks), Simulation (Simulation), SimulatorAction, simulationActions,
+                         simulationId, simulationName, simulationWallets)
+import SimulationUtils (callEndpoint, simulatorWallet)
+import Wallet.Emulator.Types (WalletNumber (..))
 
 simulations :: [Simulation]
 simulations = [basicGame, badGuess]

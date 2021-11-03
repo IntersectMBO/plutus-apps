@@ -40,27 +40,27 @@ module Ledger.Tx
     , txId
     ) where
 
-import qualified Cardano.Api               as C
-import           Cardano.Crypto.Hash       (SHA256, digest)
-import qualified Codec.CBOR.Write          as Write
-import           Codec.Serialise           (Serialise (..))
-import           Control.Lens              hiding ((.=))
-import           Data.Aeson                (FromJSON, ToJSON)
-import           Data.Map                  (Map)
-import qualified Data.Map                  as Map
-import           Data.Proxy
-import           Data.Set                  (Set)
-import qualified Data.Set                  as Set
-import           Data.Text.Prettyprint.Doc (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
-import           GHC.Generics              (Generic)
-import           Ledger.Address            (pubKeyAddress, scriptAddress)
-import           Ledger.Crypto             (PrivateKey, PubKey, signTx, toPublicKey)
-import           Ledger.Scripts            (datumHash)
-import           Ledger.Tx.CardanoAPI      (SomeCardanoApiTx (SomeTx))
-import qualified Ledger.Tx.CardanoAPI      as CardanoAPI
-import           Plutus.V1.Ledger.Api      (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash,
-                                            TxId (..), Validator, ValidatorHash, Value, addressCredential, toBuiltin)
-import           Plutus.V1.Ledger.Tx       as Export
+import qualified Cardano.Api as C
+import Cardano.Crypto.Hash (SHA256, digest)
+import qualified Codec.CBOR.Write as Write
+import Codec.Serialise (Serialise (..))
+import Control.Lens hiding ((.=))
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Proxy
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.Text.Prettyprint.Doc (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
+import GHC.Generics (Generic)
+import Ledger.Address (pubKeyAddress, scriptAddress)
+import Ledger.Crypto (PrivateKey, PubKey, signTx, toPublicKey)
+import Ledger.Scripts (datumHash)
+import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
+import qualified Ledger.Tx.CardanoAPI as CardanoAPI
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId (..), Validator,
+                             ValidatorHash, Value, addressCredential, toBuiltin)
+import Plutus.V1.Ledger.Tx as Export
 
 -- | Transaction output that comes from a chain index query.
 --

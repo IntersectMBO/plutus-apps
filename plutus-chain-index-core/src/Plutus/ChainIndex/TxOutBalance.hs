@@ -7,18 +7,18 @@
 {-# LANGUAGE OverloadedStrings     #-}
 module Plutus.ChainIndex.TxOutBalance where
 
-import           Control.Lens                (view)
-import qualified Data.Map                    as Map
-import           Data.Set                    (Set)
-import qualified Data.Set                    as Set
-import           Ledger                      (TxIn (txInRef), TxOutRef (..))
-import           Plutus.ChainIndex.Tx        (ChainIndexTx (..), citxInputs, citxTxId, txOutsWithRef)
-import           Plutus.ChainIndex.TxIdState (transactionStatus)
-import           Plutus.ChainIndex.Types     (BlockNumber, Point (..), Tip (..), TxIdState, TxOutBalance (..),
-                                              TxOutState (..), TxOutStatus, TxStatusFailure (TxOutBalanceStateInvalid),
-                                              tobSpentOutputs, tobUnspentOutputs)
-import           Plutus.ChainIndex.UtxoState (RollbackFailed, RollbackResult, UtxoIndex,
-                                              UtxoState (UtxoState, _usTip, _usTxUtxoData), rollbackWith, usTxUtxoData)
+import Control.Lens (view)
+import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Ledger (TxIn (txInRef), TxOutRef (..))
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxInputs, citxTxId, txOutsWithRef)
+import Plutus.ChainIndex.TxIdState (transactionStatus)
+import Plutus.ChainIndex.Types (BlockNumber, Point (..), Tip (..), TxIdState, TxOutBalance (..), TxOutState (..),
+                                TxOutStatus, TxStatusFailure (TxOutBalanceStateInvalid), tobSpentOutputs,
+                                tobUnspentOutputs)
+import Plutus.ChainIndex.UtxoState (RollbackFailed, RollbackResult, UtxoIndex,
+                                    UtxoState (UtxoState, _usTip, _usTxUtxoData), rollbackWith, usTxUtxoData)
 
 -- | Given the current block, compute the status for the given transaction
 -- output by getting the state of the transaction that produced it and checking

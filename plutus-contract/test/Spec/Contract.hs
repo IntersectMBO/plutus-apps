@@ -14,39 +14,38 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 module Spec.Contract(tests, loopCheckpointContract, initial, upd) where
 
-import           Control.Lens                   hiding ((.>))
-import           Control.Monad                  (forever, void)
-import           Control.Monad.Error.Lens
-import           Control.Monad.Except           (catchError)
-import           Control.Monad.Freer.Extras.Log (LogLevel (..))
+import Control.Lens hiding ((.>))
+import Control.Monad (forever, void)
+import Control.Monad.Error.Lens
+import Control.Monad.Except (catchError)
+import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import qualified Control.Monad.Freer.Extras.Log as Log
-import           Data.Functor.Apply             ((.>))
-import qualified Data.Map                       as Map
-import           Data.Void
-import           Test.Tasty
+import Data.Functor.Apply ((.>))
+import qualified Data.Map as Map
+import Data.Void
+import Test.Tasty
 
-import           Ledger                         (Address, PubKeyHash)
+import Ledger (Address, PubKeyHash)
 import qualified Ledger
-import qualified Ledger.Ada                     as Ada
-import qualified Ledger.Constraints             as Constraints
-import           Ledger.Tx                      (getCardanoTxId)
-import           Plutus.Contract                as Con
-import qualified Plutus.Contract.State          as State
-import           Plutus.Contract.Test
-import           Plutus.Contract.Types          (ResumableResult (..), responses)
-import           Plutus.Contract.Util           (loopM)
-import qualified Plutus.Trace                   as Trace
-import           Plutus.Trace.Emulator          (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints,
-                                                 callEndpoint)
-import           Plutus.Trace.Emulator.Types    (ContractInstanceLog (..), ContractInstanceMsg (..),
-                                                 ContractInstanceState (..), UserThreadMsg (..))
+import qualified Ledger.Ada as Ada
+import qualified Ledger.Constraints as Constraints
+import Ledger.Tx (getCardanoTxId)
+import Plutus.Contract as Con
+import qualified Plutus.Contract.State as State
+import Plutus.Contract.Test
+import Plutus.Contract.Types (ResumableResult (..), responses)
+import Plutus.Contract.Util (loopM)
+import qualified Plutus.Trace as Trace
+import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
+import Plutus.Trace.Emulator.Types (ContractInstanceLog (..), ContractInstanceMsg (..), ContractInstanceState (..),
+                                    UserThreadMsg (..))
 import qualified PlutusTx
-import           Prelude                        hiding (not)
-import qualified Wallet.Emulator                as EM
-import           Wallet.Emulator.Wallet         (walletAddress)
+import Prelude hiding (not)
+import qualified Wallet.Emulator as EM
+import Wallet.Emulator.Wallet (walletAddress)
 
-import           Plutus.ChainIndex.Types
-import           Plutus.Contract.Effects        (ActiveEndpoint (..))
+import Plutus.ChainIndex.Types
+import Plutus.Contract.Effects (ActiveEndpoint (..))
 
 tests :: TestTree
 tests =

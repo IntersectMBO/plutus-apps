@@ -1,12 +1,12 @@
 module Plutus.ChainIndex.Compatibility where
 
-import           Cardano.Api                (AsType (..), Block (..), BlockHeader (..), BlockInMode (..), BlockNo (..),
-                                             CardanoMode, ChainPoint (..), ChainTip (..), Hash, SlotNo (..),
-                                             deserialiseFromRawBytes, proxyToAsType, serialiseToRawBytes)
-import           Data.Proxy                 (Proxy (..))
-import           Ledger                     (BlockId (..), Slot (..))
-import           Plutus.ChainIndex.Tx       (ChainIndexTx (..))
-import           Plutus.ChainIndex.Types    (BlockNumber (..), Point (..), Tip (..))
+import Cardano.Api (AsType (..), Block (..), BlockHeader (..), BlockInMode (..), BlockNo (..), CardanoMode,
+                    ChainPoint (..), ChainTip (..), Hash, SlotNo (..), deserialiseFromRawBytes, proxyToAsType,
+                    serialiseToRawBytes)
+import Data.Proxy (Proxy (..))
+import Ledger (BlockId (..), Slot (..))
+import Plutus.ChainIndex.Tx (ChainIndexTx (..))
+import Plutus.ChainIndex.Types (BlockNumber (..), Point (..), Tip (..))
 import qualified Plutus.Contract.CardanoAPI as C
 
 fromCardanoTip :: ChainTip -> Tip

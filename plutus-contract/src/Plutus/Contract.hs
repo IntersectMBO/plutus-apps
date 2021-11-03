@@ -105,23 +105,23 @@ module Plutus.Contract(
     , type Empty
     ) where
 
-import           Data.Aeson                     (ToJSON (toJSON))
-import           Data.Row
+import Data.Aeson (ToJSON (toJSON))
+import Data.Row
 
-import           Plutus.Contract.Request        (ContractRow)
-import qualified Plutus.Contract.Request        as Request
-import qualified Plutus.Contract.Schema         as Schema
-import           Plutus.Contract.Typed.Tx       as Tx
-import           Plutus.Contract.Types          (AsCheckpointError (..), AsContractError (..), CheckpointError (..),
-                                                 Contract (..), ContractError (..), IsContract (..), Promise (..),
-                                                 checkpoint, checkpointLoop, handleError, mapError, never, promiseBind,
-                                                 promiseMap, runError, select, selectEither, selectList, throwError)
+import Plutus.Contract.Request (ContractRow)
+import qualified Plutus.Contract.Request as Request
+import qualified Plutus.Contract.Schema as Schema
+import Plutus.Contract.Typed.Tx as Tx
+import Plutus.Contract.Types (AsCheckpointError (..), AsContractError (..), CheckpointError (..), Contract (..),
+                              ContractError (..), IsContract (..), Promise (..), checkpoint, checkpointLoop,
+                              handleError, mapError, never, promiseBind, promiseMap, runError, select, selectEither,
+                              selectList, throwError)
 
 import qualified Control.Monad.Freer.Extras.Log as L
-import qualified Control.Monad.Freer.Writer     as W
-import           Data.Functor.Apply             (liftF2)
-import           Prelude
-import           Wallet.API                     (WalletAPIError)
+import qualified Control.Monad.Freer.Writer as W
+import Data.Functor.Apply (liftF2)
+import Prelude
+import Wallet.API (WalletAPIError)
 import qualified Wallet.Types
 
 -- | Execute both contracts in any order

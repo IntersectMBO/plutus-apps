@@ -11,27 +11,26 @@ JSON deserialisation on the PS client side.
 -}
 module Main(main) where
 
-import           Control.Monad                              (void)
-import qualified Data.Aeson.Encode.Pretty                   as JSON
-import qualified Data.ByteString.Lazy                       as BSL
-import           Data.Proxy                                 (Proxy (..))
-import qualified Data.Text                                  as Text
-import           Language.PureScript.Bridge                 (BridgePart, Language (Haskell), SumType, buildBridge,
-                                                             defaultBridge, equal, genericShow, mkSumType,
-                                                             writePSTypesWith, (<|>))
-import           Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (..), genForeign)
+import Control.Monad (void)
+import qualified Data.Aeson.Encode.Pretty as JSON
+import qualified Data.ByteString.Lazy as BSL
+import Data.Proxy (Proxy (..))
+import qualified Data.Text as Text
+import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, buildBridge, defaultBridge, equal,
+                                   genericShow, mkSumType, writePSTypesWith, (<|>))
+import Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (..), genForeign)
 import qualified PSGenerator.Common
-import           Plutus.Contracts.Currency                  (SimpleMPS (..))
-import           Plutus.PAB.Effects.Contract.ContractTest   (TestContracts (Currency, GameStateMachine))
-import qualified Plutus.PAB.Simulator                       as Simulator
-import qualified Plutus.PAB.Simulator.Test                  as Simulator
-import qualified Plutus.PAB.Webserver.Handler               as Webserver
-import           Plutus.PAB.Webserver.Types                 (ContractSignatureResponse, FullReport)
-import           Servant.PureScript                         (HasBridge (..))
-import           System.Environment                         (getArgs)
-import           System.FilePath                            ((</>))
-import           Wallet.Emulator.Wallet                     (Wallet, knownWallet)
-import           Wallet.Types                               (ContractInstanceId (..))
+import Plutus.Contracts.Currency (SimpleMPS (..))
+import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (Currency, GameStateMachine))
+import qualified Plutus.PAB.Simulator as Simulator
+import qualified Plutus.PAB.Simulator.Test as Simulator
+import qualified Plutus.PAB.Webserver.Handler as Webserver
+import Plutus.PAB.Webserver.Types (ContractSignatureResponse, FullReport)
+import Servant.PureScript (HasBridge (..))
+import System.Environment (getArgs)
+import System.FilePath ((</>))
+import Wallet.Emulator.Wallet (Wallet, knownWallet)
+import Wallet.Types (ContractInstanceId (..))
 
 data TestBridge
 

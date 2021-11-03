@@ -7,15 +7,15 @@
 {-# LANGUAGE OverloadedStrings  #-}
 module Wallet.Emulator.Error where
 
-import           Control.Monad.Freer       (Eff, Member)
-import           Control.Monad.Freer.Error (Error, throwError)
-import           Data.Aeson                (FromJSON, ToJSON)
-import           Data.Text                 (Text)
-import           Data.Text.Prettyprint.Doc
-import           GHC.Generics              (Generic)
+import Control.Monad.Freer (Eff, Member)
+import Control.Monad.Freer.Error (Error, throwError)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text)
+import Data.Text.Prettyprint.Doc
+import GHC.Generics (Generic)
 
-import           Ledger                    (PubKeyHash, ValidationError)
-import           Ledger.Tx.CardanoAPI      (ToCardanoError)
+import Ledger (PubKeyHash, ValidationError)
+import Ledger.Tx.CardanoAPI (ToCardanoError)
 
 -- | An error thrown by wallet interactions.
 data WalletAPIError =

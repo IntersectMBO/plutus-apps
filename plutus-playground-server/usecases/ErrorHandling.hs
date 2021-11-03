@@ -10,19 +10,18 @@
 module ErrorHandling where
 
 -- TRIM TO HERE
-import           Control.Lens             (makeClassyPrisms, prism', review)
-import           Control.Monad            (void)
-import           Control.Monad.Error.Lens (catching, throwing, throwing_)
-import           Data.Text                (Text)
-import qualified Data.Text                as T
+import Control.Lens (makeClassyPrisms, prism', review)
+import Control.Monad (void)
+import Control.Monad.Error.Lens (catching, throwing, throwing_)
+import Data.Text (Text)
+import qualified Data.Text as T
 
-import           Data.Default             (Default (def))
-import           Ledger.TimeSlot          (SlotConfig)
-import qualified Ledger.TimeSlot          as TimeSlot
-import           Playground.Contract
-import           Plutus.Contract          (AsContractError (_ContractError), ContractError, awaitTime, logInfo,
-                                           mapError, selectList)
-import           Prelude                  (Maybe (..), const, show, ($), (+), (.), (<>))
+import Data.Default (Default (def))
+import Ledger.TimeSlot (SlotConfig)
+import qualified Ledger.TimeSlot as TimeSlot
+import Playground.Contract
+import Plutus.Contract (AsContractError (_ContractError), ContractError, awaitTime, logInfo, mapError, selectList)
+import Prelude (Maybe (..), const, show, ($), (+), (.), (<>))
 
 -- Demonstrates how to deal with errors in Plutus contracts. We define a custom
 -- error type 'MyError' with three constructors and use

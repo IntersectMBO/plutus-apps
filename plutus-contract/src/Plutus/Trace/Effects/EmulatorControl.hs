@@ -25,26 +25,24 @@ module Plutus.Trace.Effects.EmulatorControl(
     , getSlotConfig
     ) where
 
-import           Control.Lens                           (over, view)
-import           Control.Monad                          (void)
-import           Control.Monad.Freer                    (Eff, Member, type (~>))
-import           Control.Monad.Freer.Coroutine          (Yield)
-import           Control.Monad.Freer.Error              (Error)
-import           Control.Monad.Freer.State              (State, gets, modify)
-import           Control.Monad.Freer.TH                 (makeEffect)
-import qualified Data.Map                               as Map
-import           Ledger.TimeSlot                        (SlotConfig)
-import           Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError, getThread)
-import           Plutus.Trace.Emulator.Types            (EmulatorMessage (Freeze), EmulatorThreads)
-import           Plutus.Trace.Scheduler                 (EmSystemCall, MessageCall (Message), Priority (Normal),
-                                                         ThreadCall (Thaw), mkSysCall)
-import qualified Wallet.Emulator                        as EM
-import           Wallet.Emulator.Chain                  (ChainState)
-import           Wallet.Emulator.MultiAgent             (EmulatorState, MultiAgentControlEffect, walletControlAction,
-                                                         walletState)
-import           Wallet.Emulator.Wallet                 (SigningProcess, Wallet, WalletState)
-import qualified Wallet.Emulator.Wallet                 as W
-import           Wallet.Types                           (ContractInstanceId)
+import Control.Lens (over, view)
+import Control.Monad (void)
+import Control.Monad.Freer (Eff, Member, type (~>))
+import Control.Monad.Freer.Coroutine (Yield)
+import Control.Monad.Freer.Error (Error)
+import Control.Monad.Freer.State (State, gets, modify)
+import Control.Monad.Freer.TH (makeEffect)
+import qualified Data.Map as Map
+import Ledger.TimeSlot (SlotConfig)
+import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError, getThread)
+import Plutus.Trace.Emulator.Types (EmulatorMessage (Freeze), EmulatorThreads)
+import Plutus.Trace.Scheduler (EmSystemCall, MessageCall (Message), Priority (Normal), ThreadCall (Thaw), mkSysCall)
+import qualified Wallet.Emulator as EM
+import Wallet.Emulator.Chain (ChainState)
+import Wallet.Emulator.MultiAgent (EmulatorState, MultiAgentControlEffect, walletControlAction, walletState)
+import Wallet.Emulator.Wallet (SigningProcess, Wallet, WalletState)
+import qualified Wallet.Emulator.Wallet as W
+import Wallet.Types (ContractInstanceId)
 
 {- Note [The EmulatorControl effect]
 

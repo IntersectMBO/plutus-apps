@@ -27,19 +27,19 @@ module Plutus.Contract.StateMachine.OnChain(
     , threadTokenValueOrZero
     ) where
 
-import           Data.Aeson                               (FromJSON, ToJSON)
-import           Data.Void                                (Void)
-import           GHC.Generics                             (Generic)
-import           Ledger                                   (Address, ValidatorHash)
-import           Ledger.Constraints
-import           Ledger.Constraints.TxConstraints         (OutputConstraint (..))
-import           Ledger.Contexts                          (ScriptContext (..), TxInInfo (..), findOwnInput, ownHash)
-import           Ledger.Tx                                (TxOut (..))
-import           Ledger.Typed.Scripts
-import           Ledger.Value                             (Value, isZero)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Void (Void)
+import GHC.Generics (Generic)
+import Ledger (Address, ValidatorHash)
+import Ledger.Constraints
+import Ledger.Constraints.TxConstraints (OutputConstraint (..))
+import Ledger.Contexts (ScriptContext (..), TxInInfo (..), findOwnInput, ownHash)
+import Ledger.Tx (TxOut (..))
+import Ledger.Typed.Scripts
+import Ledger.Value (Value, isZero)
 import qualified PlutusTx
-import           PlutusTx.Prelude                         hiding (check)
-import qualified Prelude                                  as Haskell
+import PlutusTx.Prelude hiding (check)
+import qualified Prelude as Haskell
 
 import qualified Plutus.Contract.StateMachine.ThreadToken as TT
 

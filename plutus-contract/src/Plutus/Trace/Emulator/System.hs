@@ -17,27 +17,25 @@ module Plutus.Trace.Emulator.System
   , appendNewTipBlock
   ) where
 
-import           Control.Monad                 (forM_, void)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Coroutine
-import           Data.Foldable                 (traverse_)
-import           Data.Maybe                    (maybeToList)
-import qualified Data.Text                     as Text
-import qualified Data.Text.Encoding            as Text
-import           Wallet.Emulator.Chain         (ChainControlEffect, modifySlot, processBlock)
-import           Wallet.Emulator.MultiAgent    (MultiAgentControlEffect, MultiAgentEffect, walletAction,
-                                                walletControlAction)
+import Control.Monad (forM_, void)
+import Control.Monad.Freer
+import Control.Monad.Freer.Coroutine
+import Data.Foldable (traverse_)
+import Data.Maybe (maybeToList)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import Wallet.Emulator.Chain (ChainControlEffect, modifySlot, processBlock)
+import Wallet.Emulator.MultiAgent (MultiAgentControlEffect, MultiAgentEffect, walletAction, walletControlAction)
 
-import           Data.Hashable                 (hash)
-import           Data.String                   (IsString (..))
-import           Ledger                        (Block, Slot, TxId (..), eitherTx, txId)
-import           Plutus.ChainIndex             (BlockId (..), ChainIndexControlEffect, Tip (Tip, TipAtGenesis),
-                                                appendBlock, fromOnChainTx, getTip)
-import           Plutus.Trace.Emulator.Types   (EmulatorMessage (..))
-import           Plutus.Trace.Scheduler        (EmSystemCall, MessageCall (..), Priority (..), Tag, fork, mkSysCall,
-                                                sleep)
-import           Wallet.Emulator.NodeClient    (ChainClientNotification (..), clientNotify)
-import           Wallet.Emulator.Wallet        (Wallet (..))
+import Data.Hashable (hash)
+import Data.String (IsString (..))
+import Ledger (Block, Slot, TxId (..), eitherTx, txId)
+import Plutus.ChainIndex (BlockId (..), ChainIndexControlEffect, Tip (Tip, TipAtGenesis), appendBlock, fromOnChainTx,
+                          getTip)
+import Plutus.Trace.Emulator.Types (EmulatorMessage (..))
+import Plutus.Trace.Scheduler (EmSystemCall, MessageCall (..), Priority (..), Tag, fork, mkSysCall, sleep)
+import Wallet.Emulator.NodeClient (ChainClientNotification (..), clientNotify)
+import Wallet.Emulator.Wallet (Wallet (..))
 
 {- Note [Simulator Time]
 

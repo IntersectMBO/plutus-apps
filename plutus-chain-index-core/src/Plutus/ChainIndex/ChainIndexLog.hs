@@ -4,15 +4,15 @@
 {-# LANGUAGE OverloadedStrings  #-}
 module Plutus.ChainIndex.ChainIndexLog (ChainIndexLog(..), InsertUtxoPosition(..)) where
 
-import           Cardano.BM.Data.Tracer            (ToObject (..))
-import           Control.Monad.Freer.Extras.Beam   (BeamLog)
-import           Data.Aeson                        (FromJSON, ToJSON)
-import           GHC.Generics                      (Generic)
-import           Ledger                            (TxId, TxOut, TxOutRef)
-import           Plutus.ChainIndex.ChainIndexError (ChainIndexError)
-import           Plutus.ChainIndex.Types           (Tip (..))
-import           Plutus.Contract.CardanoAPI        (FromCardanoError (..))
-import           Prettyprinter                     (Pretty (..), colon, (<+>))
+import Cardano.BM.Data.Tracer (ToObject (..))
+import Control.Monad.Freer.Extras.Beam (BeamLog)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger (TxId, TxOut, TxOutRef)
+import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
+import Plutus.ChainIndex.Types (Tip (..))
+import Plutus.Contract.CardanoAPI (FromCardanoError (..))
+import Prettyprinter (Pretty (..), colon, (<+>))
 
 data ChainIndexLog =
     InsertionSuccess Tip InsertUtxoPosition

@@ -6,39 +6,37 @@
 
 module Main(main) where
 
-import           Control.Lens
-import           Control.Monad                            (foldM, forM_, join, replicateM)
-import           Control.Monad.Freer                      (Eff, Member, runM, sendM)
-import           Control.Monad.Freer.Error                (Error, runError, throwError)
-import           Data.Bifunctor                           (Bifunctor (..))
-import           Data.Either                              (isRight)
-import qualified Data.FingerTree                          as FT
-import           Data.Foldable                            (fold, toList)
-import           Data.List                                (nub, sort)
-import qualified Data.Map                                 as Map
-import qualified Data.Set                                 as Set
-import qualified Generators                               as Gen
-import           Hedgehog                                 (Property, annotateShow, assert, failure, forAll, property,
-                                                           (/==), (===))
-import qualified Hedgehog.Gen                             as Gen
-import qualified Hedgehog.Range                           as Range
-import           Ledger                                   (TxOutRef (TxOutRef, txOutRefId))
+import Control.Lens
+import Control.Monad (foldM, forM_, join, replicateM)
+import Control.Monad.Freer (Eff, Member, runM, sendM)
+import Control.Monad.Freer.Error (Error, runError, throwError)
+import Data.Bifunctor (Bifunctor (..))
+import Data.Either (isRight)
+import qualified Data.FingerTree as FT
+import Data.Foldable (fold, toList)
+import Data.List (nub, sort)
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import qualified Generators as Gen
+import Hedgehog (Property, annotateShow, assert, failure, forAll, property, (/==), (===))
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
+import Ledger (TxOutRef (TxOutRef, txOutRefId))
 import qualified Plutus.ChainIndex.Emulator.DiskStateSpec as DiskStateSpec
-import qualified Plutus.ChainIndex.Emulator.HandlersSpec  as EmulatorHandlersSpec
-import qualified Plutus.ChainIndex.HandlersSpec           as HandlersSpec
-import           Plutus.ChainIndex.Tx                     (citxTxId)
-import           Plutus.ChainIndex.TxIdState              (dropOlder, increaseDepth, transactionStatus)
-import qualified Plutus.ChainIndex.TxIdState              as TxIdState
-import qualified Plutus.ChainIndex.TxOutBalance           as TxOutBalance
-import qualified Plutus.ChainIndex.TxUtxoBalance          as TUB
-import           Plutus.ChainIndex.Types                  (BlockNumber (..), Depth (..), RollbackState (..), Tip (..),
-                                                           TxConfirmedState (..), TxIdState (..), TxOutState (..),
-                                                           TxStatusFailure (..), TxUtxoBalance (..), TxValidity (..),
-                                                           liftTxOutStatus, tipAsPoint, txOutStatusTxOutState)
-import           Plutus.ChainIndex.UtxoState              (InsertUtxoSuccess (..), RollbackResult (..))
-import qualified Plutus.ChainIndex.UtxoState              as UtxoState
-import           Test.Tasty
-import           Test.Tasty.Hedgehog                      (testProperty)
+import qualified Plutus.ChainIndex.Emulator.HandlersSpec as EmulatorHandlersSpec
+import qualified Plutus.ChainIndex.HandlersSpec as HandlersSpec
+import Plutus.ChainIndex.Tx (citxTxId)
+import Plutus.ChainIndex.TxIdState (dropOlder, increaseDepth, transactionStatus)
+import qualified Plutus.ChainIndex.TxIdState as TxIdState
+import qualified Plutus.ChainIndex.TxOutBalance as TxOutBalance
+import qualified Plutus.ChainIndex.TxUtxoBalance as TUB
+import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), RollbackState (..), Tip (..), TxConfirmedState (..),
+                                TxIdState (..), TxOutState (..), TxStatusFailure (..), TxUtxoBalance (..),
+                                TxValidity (..), liftTxOutStatus, tipAsPoint, txOutStatusTxOutState)
+import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..))
+import qualified Plutus.ChainIndex.UtxoState as UtxoState
+import Test.Tasty
+import Test.Tasty.Hedgehog (testProperty)
 
 main :: IO ()
 main = defaultMain tests

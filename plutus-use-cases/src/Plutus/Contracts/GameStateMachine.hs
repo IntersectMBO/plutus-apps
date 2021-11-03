@@ -32,28 +32,28 @@ module Plutus.Contracts.GameStateMachine(
     , token
     ) where
 
-import           Control.Lens                 (makeClassyPrisms)
-import           Control.Monad                (void)
-import           Data.Aeson                   (FromJSON, ToJSON)
-import           GHC.Generics                 (Generic)
-import           Ledger                       hiding (to)
-import           Ledger.Constraints           (TxConstraints)
-import qualified Ledger.Constraints           as Constraints
-import qualified Ledger.Typed.Scripts         as Scripts
-import qualified Ledger.Value                 as V
+import Control.Lens (makeClassyPrisms)
+import Control.Monad (void)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger hiding (to)
+import Ledger.Constraints (TxConstraints)
+import qualified Ledger.Constraints as Constraints
+import qualified Ledger.Typed.Scripts as Scripts
+import qualified Ledger.Value as V
 import qualified PlutusTx
-import           PlutusTx.Prelude             hiding (Applicative (..), check)
-import           Schema                       (ToArgument, ToSchema)
+import PlutusTx.Prelude hiding (Applicative (..), check)
+import Schema (ToArgument, ToSchema)
 
-import qualified Data.ByteString.Char8        as C
+import qualified Data.ByteString.Char8 as C
 
-import           Plutus.Contract.StateMachine (State (..), Void)
+import Plutus.Contract.StateMachine (State (..), Void)
 import qualified Plutus.Contract.StateMachine as SM
 
-import           Plutus.Contract
-import           Plutus.Contract.Secrets
+import Plutus.Contract
+import Plutus.Contract.Secrets
 
-import qualified Prelude                      as Haskell
+import qualified Prelude as Haskell
 
 newtype HashedString = HashedString BuiltinByteString
     deriving newtype (Eq, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)

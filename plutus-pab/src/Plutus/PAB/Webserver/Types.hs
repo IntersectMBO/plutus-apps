@@ -10,22 +10,22 @@
 
 module Plutus.PAB.Webserver.Types where
 
-import           Data.Aeson                              (FromJSON, ToJSON)
-import qualified Data.Aeson                              as JSON
-import           Data.Map                                (Map)
-import qualified Data.OpenApi.Schema                     as OpenApi
-import           Data.Text.Prettyprint.Doc               (Pretty, pretty, (<+>))
-import           GHC.Generics                            (Generic)
-import           Ledger                                  (PubKeyHash, Tx, TxId)
-import           Ledger.Index                            (UtxoIndex)
-import           Ledger.Slot                             (Slot)
-import           Playground.Types                        (FunctionSchema)
-import           Plutus.Contract.Effects                 (ActiveEndpoint, PABReq)
-import           Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
-import           Schema                                  (FormSchema)
-import           Wallet.Emulator.Wallet                  (Wallet)
-import           Wallet.Rollup.Types                     (AnnotatedTx)
-import           Wallet.Types                            (ContractActivityStatus, ContractInstanceId)
+import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Aeson as JSON
+import Data.Map (Map)
+import qualified Data.OpenApi.Schema as OpenApi
+import Data.Text.Prettyprint.Doc (Pretty, pretty, (<+>))
+import GHC.Generics (Generic)
+import Ledger (PubKeyHash, Tx, TxId)
+import Ledger.Index (UtxoIndex)
+import Ledger.Slot (Slot)
+import Playground.Types (FunctionSchema)
+import Plutus.Contract.Effects (ActiveEndpoint, PABReq)
+import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
+import Schema (FormSchema)
+import Wallet.Emulator.Wallet (Wallet)
+import Wallet.Rollup.Types (AnnotatedTx)
+import Wallet.Types (ContractActivityStatus, ContractInstanceId)
 
 data ContractReport t =
     ContractReport

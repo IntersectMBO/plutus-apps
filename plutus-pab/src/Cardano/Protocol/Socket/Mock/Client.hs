@@ -12,30 +12,29 @@
 -}
 module Cardano.Protocol.Socket.Mock.Client where
 
-import qualified Data.ByteString.Lazy                                as LBS
-import           Data.Time.Units                                     (Second, TimeUnit, toMicroseconds)
-import           Data.Void                                           (Void)
+import qualified Data.ByteString.Lazy as LBS
+import Data.Time.Units (Second, TimeUnit, toMicroseconds)
+import Data.Void (Void)
 
-import           Control.Concurrent
-import           Control.Concurrent.STM
-import           Control.Monad.Catch                                 (catchAll)
-import           Control.Tracer
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Monad.Catch (catchAll)
+import Control.Tracer
 
-import           Ouroboros.Network.Block                             (Point (..))
-import qualified Ouroboros.Network.Protocol.ChainSync.Client         as ChainSync
+import Ouroboros.Network.Block (Point (..))
+import qualified Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
 
-import           Ledger.TimeSlot                                     (SlotConfig, currentSlot)
-import           Ouroboros.Network.IOManager
-import           Ouroboros.Network.Mux
-import           Ouroboros.Network.NodeToClient                      (NodeToClientProtocols (..), connectTo,
-                                                                      versionedNodeToClientProtocols)
-import           Ouroboros.Network.Snocket
-import           Ouroboros.Network.Socket
+import Ledger.TimeSlot (SlotConfig, currentSlot)
+import Ouroboros.Network.IOManager
+import Ouroboros.Network.Mux
+import Ouroboros.Network.NodeToClient (NodeToClientProtocols (..), connectTo, versionedNodeToClientProtocols)
+import Ouroboros.Network.Snocket
+import Ouroboros.Network.Socket
 
-import           Cardano.Protocol.Socket.Client                      (ChainSyncHandle (..))
-import           Cardano.Protocol.Socket.Type
-import           Ledger                                              (Block, Slot (..), Tx (..))
+import Cardano.Protocol.Socket.Client (ChainSyncHandle (..))
+import Cardano.Protocol.Socket.Type
+import Ledger (Block, Slot (..), Tx (..))
 
 newtype TxSendHandle = TxSendHandle
     { tshQueue :: TQueue Tx }

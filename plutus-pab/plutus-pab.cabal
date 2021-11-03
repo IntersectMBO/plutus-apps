@@ -36,6 +36,7 @@ common lang
         DeriveTraversable
         ExplicitForAll
         GeneralizedNewtypeDeriving
+        ImportQualifiedPost
         ScopedTypeVariables
         StandaloneDeriving
 

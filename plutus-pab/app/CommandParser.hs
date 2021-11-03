@@ -10,12 +10,11 @@
 
 module CommandParser (parseOptions, AppOpts(..)) where
 
-import           Cardano.BM.Data.Severity (Severity (..))
-import           Options.Applicative      (CommandFields, Mod, Parser, argument, command, customExecParser,
-                                           disambiguate, flag, fullDesc, help, helper, idm, info, long, metavar, option,
-                                           prefs, progDesc, short, showHelpOnEmpty, showHelpOnError, str, subparser,
-                                           value)
-import           Plutus.PAB.Run.Command   (NoConfigCommand (..))
+import Cardano.BM.Data.Severity (Severity (..))
+import Options.Applicative (CommandFields, Mod, Parser, argument, command, customExecParser, disambiguate, flag,
+                            fullDesc, help, helper, idm, info, long, metavar, option, prefs, progDesc, short,
+                            showHelpOnEmpty, showHelpOnError, str, subparser, value)
+import Plutus.PAB.Run.Command (NoConfigCommand (..))
 
 data AppOpts = AppOpts { minLogLevel   :: Maybe Severity
                        , logConfigPath :: Maybe FilePath

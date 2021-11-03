@@ -24,15 +24,15 @@ module Plutus.Contract.Schema(
     , EmptySchema
     ) where
 
-import           Data.Aeson                (FromJSON, ToJSON (toJSON), Value)
-import           Data.Row                  as Row
-import           Data.Row.Internal
-import qualified Data.Row.Variants         as Variants
-import           Data.Text.Prettyprint.Doc
+import Data.Aeson (FromJSON, ToJSON (toJSON), Value)
+import Data.Row as Row
+import Data.Row.Internal
+import qualified Data.Row.Variants as Variants
+import Data.Text.Prettyprint.Doc
 
-import           Data.Row.Extras
+import Data.Row.Extras
 
-import           GHC.TypeLits
+import GHC.TypeLits
 
 {- Note [Contract Schema]
 

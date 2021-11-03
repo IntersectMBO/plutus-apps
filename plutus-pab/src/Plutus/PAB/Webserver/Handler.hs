@@ -24,42 +24,41 @@ module Plutus.PAB.Webserver.Handler
     , contractSchema
     ) where
 
-import qualified Cardano.Wallet.Mock.Client              as Wallet.Client
-import           Cardano.Wallet.Mock.Types               (WalletInfo (..))
-import           Control.Lens                            (preview)
-import           Control.Monad                           (join)
-import           Control.Monad.Freer                     (sendM)
-import           Control.Monad.Freer.Error               (throwError)
-import           Control.Monad.IO.Class                  (MonadIO (..))
-import qualified Data.Aeson                              as JSON
-import           Data.Either                             (fromRight)
-import           Data.Foldable                           (traverse_)
-import qualified Data.Map                                as Map
-import           Data.Maybe                              (fromMaybe, mapMaybe)
-import           Data.OpenApi.Schema                     (ToSchema)
-import           Data.Proxy                              (Proxy (..))
-import           Data.Text                               (Text)
-import           Ledger                                  (Value)
-import           Ledger.Constraints.OffChain             (UnbalancedTx)
-import           Ledger.Tx                               (Tx)
-import           Plutus.Contract.Effects                 (PABReq, _ExposeEndpointReq)
-import           Plutus.PAB.Core                         (PABAction)
-import qualified Plutus.PAB.Core                         as Core
-import qualified Plutus.PAB.Effects.Contract             as Contract
-import           Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (..), fromResp)
-import           Plutus.PAB.Types
-import           Plutus.PAB.Webserver.API                (API)
-import           Plutus.PAB.Webserver.Types
-import           Servant                                 (NoContent (NoContent), (:<|>) ((:<|>)))
-import           Servant.Client                          (ClientEnv, ClientM, runClientM)
-import           Servant.OpenApi                         (toOpenApi)
-import qualified Servant.Server                          as Servant
-import           Servant.Swagger.UI                      (SwaggerSchemaUI', swaggerSchemaUIServer)
+import qualified Cardano.Wallet.Mock.Client as Wallet.Client
+import Cardano.Wallet.Mock.Types (WalletInfo (..))
+import Control.Lens (preview)
+import Control.Monad (join)
+import Control.Monad.Freer (sendM)
+import Control.Monad.Freer.Error (throwError)
+import Control.Monad.IO.Class (MonadIO (..))
+import qualified Data.Aeson as JSON
+import Data.Either (fromRight)
+import Data.Foldable (traverse_)
+import qualified Data.Map as Map
+import Data.Maybe (fromMaybe, mapMaybe)
+import Data.OpenApi.Schema (ToSchema)
+import Data.Proxy (Proxy (..))
+import Data.Text (Text)
+import Ledger (Value)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx (Tx)
+import Plutus.Contract.Effects (PABReq, _ExposeEndpointReq)
+import Plutus.PAB.Core (PABAction)
+import qualified Plutus.PAB.Core as Core
+import qualified Plutus.PAB.Effects.Contract as Contract
+import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (..), fromResp)
+import Plutus.PAB.Types
+import Plutus.PAB.Webserver.API (API)
+import Plutus.PAB.Webserver.Types
+import Servant (NoContent (NoContent), (:<|>) ((:<|>)))
+import Servant.Client (ClientEnv, ClientM, runClientM)
+import Servant.OpenApi (toOpenApi)
+import qualified Servant.Server as Servant
+import Servant.Swagger.UI (SwaggerSchemaUI', swaggerSchemaUIServer)
 import qualified Wallet.Effects
-import           Wallet.Emulator.Error                   (WalletAPIError)
-import           Wallet.Emulator.Wallet                  (Wallet (..), WalletId, knownWallet)
-import           Wallet.Types                            (ContractActivityStatus, ContractInstanceId (..),
-                                                          parseContractActivityStatus)
+import Wallet.Emulator.Error (WalletAPIError)
+import Wallet.Emulator.Wallet (Wallet (..), WalletId, knownWallet)
+import Wallet.Types (ContractActivityStatus, ContractInstanceId (..), parseContractActivityStatus)
 
 healthcheck :: forall t env. PABAction t env ()
 healthcheck = pure ()

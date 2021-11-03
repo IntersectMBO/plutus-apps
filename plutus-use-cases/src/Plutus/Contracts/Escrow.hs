@@ -40,32 +40,32 @@ module Plutus.Contracts.Escrow(
     , EscrowSchema
     ) where
 
-import           Control.Lens             (makeClassyPrisms, review, view)
-import           Control.Monad            (void)
-import           Control.Monad.Error.Lens (throwing)
-import           Data.Aeson               (FromJSON, ToJSON)
-import           GHC.Generics             (Generic)
+import Control.Lens (makeClassyPrisms, review, view)
+import Control.Monad (void)
+import Control.Monad.Error.Lens (throwing)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 
-import           Ledger                   (Datum (..), DatumHash, POSIXTime, PubKeyHash, TxId, ValidatorHash,
-                                           getCardanoTxId, interval, scriptOutputsAt, txSignedBy, valuePaidTo)
+import Ledger (Datum (..), DatumHash, POSIXTime, PubKeyHash, TxId, ValidatorHash, getCardanoTxId, interval,
+               scriptOutputsAt, txSignedBy, valuePaidTo)
 import qualified Ledger
-import           Ledger.Constraints       (TxConstraints)
-import qualified Ledger.Constraints       as Constraints
-import           Ledger.Contexts          (ScriptContext (..), TxInfo (..))
-import           Ledger.Interval          (after, before, from)
-import qualified Ledger.Interval          as Interval
-import qualified Ledger.Tx                as Tx
-import           Ledger.Typed.Scripts     (TypedValidator)
-import qualified Ledger.Typed.Scripts     as Scripts
-import           Ledger.Value             (Value, geq, lt)
+import Ledger.Constraints (TxConstraints)
+import qualified Ledger.Constraints as Constraints
+import Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Ledger.Interval (after, before, from)
+import qualified Ledger.Interval as Interval
+import qualified Ledger.Tx as Tx
+import Ledger.Typed.Scripts (TypedValidator)
+import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Value (Value, geq, lt)
 
-import           Plutus.Contract
+import Plutus.Contract
 import qualified Plutus.Contract.Typed.Tx as Typed
 import qualified PlutusTx
-import           PlutusTx.Prelude         hiding (Applicative (..), Semigroup (..), check, foldMap)
+import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
-import           Prelude                  (Semigroup (..), foldMap)
-import qualified Prelude                  as Haskell
+import Prelude (Semigroup (..), foldMap)
+import qualified Prelude as Haskell
 
 type EscrowSchema =
         Endpoint "pay-escrow" Value

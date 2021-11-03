@@ -9,17 +9,16 @@ module Plutus.ChainIndex.Api
   , UtxoWithCurrencyRequest(..)
   ) where
 
-import           Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
-import           Data.Aeson                            (FromJSON, ToJSON)
-import           GHC.Generics                          (Generic)
-import           Ledger                                (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash,
-                                                        Redeemer, RedeemerHash, StakeValidator, StakeValidatorHash,
-                                                        TxId, Validator, ValidatorHash)
-import           Ledger.Credential                     (Credential)
-import           Ledger.Tx                             (ChainIndexTxOut, TxOutRef)
-import           Plutus.ChainIndex.Tx                  (ChainIndexTx)
-import           Plutus.ChainIndex.Types               (Diagnostics, Tip)
-import           Servant.API                           (Get, JSON, NoContent, Post, Put, ReqBody, (:<|>), (:>))
+import Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
+               StakeValidatorHash, TxId, Validator, ValidatorHash)
+import Ledger.Credential (Credential)
+import Ledger.Tx (ChainIndexTxOut, TxOutRef)
+import Plutus.ChainIndex.Tx (ChainIndexTx)
+import Plutus.ChainIndex.Types (Diagnostics, Tip)
+import Servant.API (Get, JSON, NoContent, Post, Put, ReqBody, (:<|>), (:>))
 
 -- | When requesting UTxOs of a given address, you need to provide the address,
 -- and optionnally the number of elements per page and the last item of the last

@@ -28,30 +28,29 @@ module Plutus.Contracts.Currency(
     , mintCurrency
     ) where
 
-import           Control.Lens
-import           PlutusTx.Prelude       hiding (Monoid (..), Semigroup (..))
+import Control.Lens
+import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
-import           Plutus.Contract        as Contract
-import           Plutus.Contract.Wallet (getUnspentOutput)
+import Plutus.Contract as Contract
+import Plutus.Contract.Wallet (getUnspentOutput)
 
-import           Ledger                 (CurrencySymbol, PubKeyHash, TxId, TxOutRef (..), getCardanoTxId,
-                                         pubKeyHashAddress, scriptCurrencySymbol)
-import qualified Ledger.Constraints     as Constraints
-import qualified Ledger.Contexts        as V
-import           Ledger.Scripts
+import Ledger (CurrencySymbol, PubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress, scriptCurrencySymbol)
+import qualified Ledger.Constraints as Constraints
+import qualified Ledger.Contexts as V
+import Ledger.Scripts
 import qualified PlutusTx
 
-import qualified Ledger.Typed.Scripts   as Scripts
-import           Ledger.Value           (TokenName, Value)
-import qualified Ledger.Value           as Value
+import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Value (TokenName, Value)
+import qualified Ledger.Value as Value
 
-import           Data.Aeson             (FromJSON, ToJSON)
-import           Data.Semigroup         (Last (..))
-import           GHC.Generics           (Generic)
-import qualified PlutusTx.AssocMap      as AssocMap
-import           Prelude                (Semigroup (..))
-import qualified Prelude                as Haskell
-import           Schema                 (ToSchema)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Semigroup (Last (..))
+import GHC.Generics (Generic)
+import qualified PlutusTx.AssocMap as AssocMap
+import Prelude (Semigroup (..))
+import qualified Prelude as Haskell
+import Schema (ToSchema)
 
 {- HLINT ignore "Use uncurry" -}
 

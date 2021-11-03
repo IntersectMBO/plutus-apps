@@ -5,15 +5,15 @@
 {-# LANGUAGE TypeApplications   #-}
 module Plutus.Contract.Tx where
 
-import           Control.Lens
-import           Data.Maybe                       (fromMaybe)
+import Control.Lens
+import Data.Maybe (fromMaybe)
 
-import           Data.Map                         (Map)
-import           Ledger                           (Redeemer (..), TxOutRef, Validator)
-import qualified Ledger.Address                   as Address
-import           Ledger.Constraints.TxConstraints (UntypedConstraints)
-import           Ledger.Tx                        (ChainIndexTxOut)
-import qualified Plutus.Contract.Typed.Tx         as Typed
+import Data.Map (Map)
+import Ledger (Redeemer (..), TxOutRef, Validator)
+import qualified Ledger.Address as Address
+import Ledger.Constraints.TxConstraints (UntypedConstraints)
+import Ledger.Tx (ChainIndexTxOut)
+import qualified Plutus.Contract.Typed.Tx as Typed
 import qualified PlutusTx
 
 -- | A set of constraints for a transaction that collects script outputs

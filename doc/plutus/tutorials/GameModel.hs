@@ -14,47 +14,47 @@
 
 module GameModel where
 
-import           Control.Applicative
-import           Control.Lens                       hiding (elements)
-import           Control.Monad
-import           System.Random
+import Control.Applicative
+import Control.Lens hiding (elements)
+import Control.Monad
+import System.Random
 
 -- START import Log
-import           Control.Monad.Freer.Extras.Log     (LogLevel (..))
+import Control.Monad.Freer.Extras.Log (LogLevel (..))
 -- END import Log
 
-import           Data.Maybe
-import           Test.QuickCheck
+import Data.Maybe
+import Test.QuickCheck
 
 -- START import Contract.Test
-import           Plutus.Contract.Test
+import Plutus.Contract.Test
 -- END import Contract.Test
 
 -- START import ContractModel
-import           Plutus.Contract.Test.ContractModel
+import Plutus.Contract.Test.ContractModel
 -- END import ContractModel
 
-import           Plutus.Contract.Test.ContractModel as ContractModel
+import Plutus.Contract.Test.ContractModel as ContractModel
 
 -- START import Game
-import           Plutus.Contracts.GameStateMachine  as G
+import Plutus.Contracts.GameStateMachine as G
 -- END import Game
 
 -- START import Ada
-import qualified Ledger.Ada                         as Ada
-import           Ledger.Value
+import qualified Ledger.Ada as Ada
+import Ledger.Value
 -- END import Ada
 
 -- START import Scripts
-import qualified Ledger.Typed.Scripts               as Scripts
+import qualified Ledger.Typed.Scripts as Scripts
 -- END import Scripts
 
 -- START import Emulator
-import           Plutus.Trace.Emulator              as Trace
+import Plutus.Trace.Emulator as Trace
 -- END import Emulator
 
 -- START import Contract.Security
-import           Plutus.Contract.Secrets
+import Plutus.Contract.Secrets
 -- END import Contract.Security
 
 

@@ -26,24 +26,24 @@
 --   validation time.
 module Ledger.Typed.Tx where
 
-import           Control.Lens              (preview)
-import           Ledger.Scripts
-import           Ledger.Tx
-import           Ledger.Typed.Scripts
-import           Plutus.V1.Ledger.Crypto
-import qualified Plutus.V1.Ledger.Value    as Value
+import Control.Lens (preview)
+import Ledger.Scripts
+import Ledger.Tx
+import Ledger.Typed.Scripts
+import Plutus.V1.Ledger.Crypto
+import qualified Plutus.V1.Ledger.Value as Value
 
-import           PlutusTx
+import PlutusTx
 
-import           Codec.Serialise           (deserialise, serialise)
-import qualified Data.ByteString.Lazy      as BSL
+import Codec.Serialise (deserialise, serialise)
+import qualified Data.ByteString.Lazy as BSL
 
-import           Data.Aeson                (FromJSON (..), ToJSON (..), Value (Object), object, (.:), (.=))
-import           Data.Aeson.Types          (typeMismatch)
-import           Data.Text.Prettyprint.Doc (Pretty (pretty), viaShow, (<+>))
-import           GHC.Generics              (Generic)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (Object), object, (.:), (.=))
+import Data.Aeson.Types (typeMismatch)
+import Data.Text.Prettyprint.Doc (Pretty (pretty), viaShow, (<+>))
+import GHC.Generics (Generic)
 
-import           Control.Monad.Except
+import Control.Monad.Except
 
 -- | A 'TxIn' tagged by two phantom types: a list of the types of the data scripts in the transaction; and the connection type of the input.
 data TypedScriptTxIn a = TypedScriptTxIn { tyTxInTxIn :: TxIn, tyTxInOutRef :: TypedScriptTxOutRef a }

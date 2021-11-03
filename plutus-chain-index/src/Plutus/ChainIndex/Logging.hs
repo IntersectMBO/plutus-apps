@@ -6,12 +6,12 @@
 
 module Plutus.ChainIndex.Logging where
 
-import           Cardano.BM.Configuration       (setup)
+import Cardano.BM.Configuration (setup)
 import qualified Cardano.BM.Configuration.Model as CM
-import           Cardano.BM.Data.BackendKind
-import           Cardano.BM.Data.Configuration  (Endpoint (..))
-import           Cardano.BM.Data.Output
-import           Cardano.BM.Data.Severity
+import Cardano.BM.Data.BackendKind
+import Cardano.BM.Data.Configuration (Endpoint (..))
+import Cardano.BM.Data.Output
+import Cardano.BM.Data.Severity
 
 -- | Logging (definitions from Plutus.PAB.Monitoring.Config)
 

@@ -46,9 +46,9 @@ module Plutus.Trace(
     , Scheduler.ThreadEvent
     ) where
 
-import           Plutus.Trace.Emulator         as X
-import           Plutus.Trace.Emulator.Extract as Extract
-import           Plutus.Trace.Scheduler        as Scheduler
+import Plutus.Trace.Emulator as X
+import Plutus.Trace.Emulator.Extract as Extract
+import Plutus.Trace.Scheduler as Scheduler
 
 {- Note [Trace]
 

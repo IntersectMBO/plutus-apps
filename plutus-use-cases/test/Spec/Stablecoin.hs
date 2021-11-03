@@ -11,34 +11,34 @@ module Spec.Stablecoin(
     ) where
 
 
-import           Control.Lens                (preview)
-import           Control.Monad               (void)
-import           Data.Maybe                  (listToMaybe, mapMaybe)
-import           Prelude                     hiding (negate)
+import Control.Lens (preview)
+import Control.Monad (void)
+import Data.Maybe (listToMaybe, mapMaybe)
+import Prelude hiding (negate)
 
-import           Ledger.Ada                  (adaSymbol, adaToken)
-import qualified Ledger.Ada                  as Ada
-import           Ledger.Address              (Address)
-import qualified Ledger.CardanoWallet        as CW
-import           Ledger.Crypto               (PrivateKey, toPublicKey)
-import           Ledger.Oracle               (Observation, SignedMessage, signObservation)
-import           Ledger.Time                 (POSIXTime)
-import qualified Ledger.TimeSlot             as TimeSlot
-import           Ledger.Typed.Scripts        (validatorAddress)
-import           Ledger.Value                (Value)
-import qualified Ledger.Value                as Value
-import           Plutus.Contract.Test
-import           Plutus.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..), SC (..), SCAction (..),
-                                              Stablecoin (..), StablecoinError, StablecoinSchema)
+import Ledger.Ada (adaSymbol, adaToken)
+import qualified Ledger.Ada as Ada
+import Ledger.Address (Address)
+import qualified Ledger.CardanoWallet as CW
+import Ledger.Crypto (PrivateKey, toPublicKey)
+import Ledger.Oracle (Observation, SignedMessage, signObservation)
+import Ledger.Time (POSIXTime)
+import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.Typed.Scripts (validatorAddress)
+import Ledger.Value (Value)
+import qualified Ledger.Value as Value
+import Plutus.Contract.Test
+import Plutus.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..), SC (..), SCAction (..),
+                                    Stablecoin (..), StablecoinError, StablecoinSchema)
 import qualified Plutus.Contracts.Stablecoin as Stablecoin
-import           Plutus.Trace.Emulator       (ContractHandle, EmulatorTrace)
-import qualified Plutus.Trace.Emulator       as Trace
-import           Plutus.Trace.Emulator.Types (_ContractLog, cilMessage)
-import           PlutusTx.Numeric            (negate, one, zero)
-import           PlutusTx.Ratio              as Ratio
-import           Wallet.Emulator.MultiAgent  (eteEvent)
+import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
+import qualified Plutus.Trace.Emulator as Trace
+import Plutus.Trace.Emulator.Types (_ContractLog, cilMessage)
+import PlutusTx.Numeric (negate, one, zero)
+import PlutusTx.Ratio as Ratio
+import Wallet.Emulator.MultiAgent (eteEvent)
 
-import           Test.Tasty
+import Test.Tasty
 
 user :: Wallet
 user = w1

@@ -12,13 +12,13 @@ module Main
     ( main
     ) where
 
-import           CommandParser        (AppOpts (..), parseOptions)
-import           Plutus.PAB.Run.Cli   (runNoConfigCommand)
+import CommandParser (AppOpts (..), parseOptions)
+import Plutus.PAB.Run.Cli (runNoConfigCommand)
 
-import           Control.Monad.Logger (logErrorN, runStdoutLoggingT)
-import           Data.Text.Extras     (tshow)
-import           Plutus.PAB.Types     (PABError)
-import           System.Exit          (ExitCode (ExitFailure), exitSuccess, exitWith)
+import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
+import Data.Text.Extras (tshow)
+import Plutus.PAB.Types (PABError)
+import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
 
 main :: IO ()
 main = do

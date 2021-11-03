@@ -44,45 +44,44 @@ module Plutus.Contracts.Future(
     , setupTokensTrace
     ) where
 
-import           Control.Lens                     (makeClassyPrisms, prism', review)
-import           Control.Monad                    (void)
-import           Control.Monad.Error.Lens         (throwing)
-import qualified Control.Monad.Freer              as Freer
-import qualified Control.Monad.Freer.Error        as Freer
-import           Data.Aeson                       (FromJSON, ToJSON)
-import           Data.Default                     (Default (..))
-import           GHC.Generics                     (Generic)
-import           Ledger                           (Address, Datum (..), POSIXTime, PubKey, PubKeyHash, Validator,
-                                                   ValidatorHash)
+import Control.Lens (makeClassyPrisms, prism', review)
+import Control.Monad (void)
+import Control.Monad.Error.Lens (throwing)
+import qualified Control.Monad.Freer as Freer
+import qualified Control.Monad.Freer.Error as Freer
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default (..))
+import GHC.Generics (Generic)
+import Ledger (Address, Datum (..), POSIXTime, PubKey, PubKeyHash, Validator, ValidatorHash)
 import qualified Ledger
-import qualified Ledger.Constraints               as Constraints
-import           Ledger.Constraints.TxConstraints (TxConstraints)
-import qualified Ledger.Interval                  as Interval
-import           Ledger.Oracle                    (Observation (..), SignedMessage (..))
-import qualified Ledger.Oracle                    as Oracle
-import           Ledger.Scripts                   (unitDatum)
-import           Ledger.Tokens
-import qualified Ledger.Typed.Scripts             as Scripts
-import           Ledger.Value                     as Value
-import           Plutus.Contract
-import           Plutus.Contract.Util             (loopM)
+import qualified Ledger.Constraints as Constraints
+import Ledger.Constraints.TxConstraints (TxConstraints)
+import qualified Ledger.Interval as Interval
+import Ledger.Oracle (Observation (..), SignedMessage (..))
+import qualified Ledger.Oracle as Oracle
+import Ledger.Scripts (unitDatum)
+import Ledger.Tokens
+import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Value as Value
+import Plutus.Contract
+import Plutus.Contract.Util (loopM)
 import qualified PlutusTx
-import           PlutusTx.Prelude
+import PlutusTx.Prelude
 
-import           Plutus.Contract.StateMachine     (AsSMContractError, State (..), StateMachine (..), Void)
-import qualified Plutus.Contract.StateMachine     as SM
-import qualified Plutus.Contracts.Currency        as Currency
-import           Plutus.Contracts.Escrow          (AsEscrowError (..), EscrowError, EscrowParams (..), RefundSuccess)
-import qualified Plutus.Contracts.Escrow          as Escrow
-import           Plutus.Contracts.TokenAccount    (Account (..))
-import qualified Plutus.Contracts.TokenAccount    as TokenAccount
-import qualified Plutus.Trace.Emulator            as Trace
-import qualified Streaming.Prelude                as S
-import qualified Wallet.Emulator.Folds            as Folds
-import qualified Wallet.Emulator.Stream           as Stream
-import qualified Wallet.Emulator.Wallet           as Wallet
+import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
+import qualified Plutus.Contract.StateMachine as SM
+import qualified Plutus.Contracts.Currency as Currency
+import Plutus.Contracts.Escrow (AsEscrowError (..), EscrowError, EscrowParams (..), RefundSuccess)
+import qualified Plutus.Contracts.Escrow as Escrow
+import Plutus.Contracts.TokenAccount (Account (..))
+import qualified Plutus.Contracts.TokenAccount as TokenAccount
+import qualified Plutus.Trace.Emulator as Trace
+import qualified Streaming.Prelude as S
+import qualified Wallet.Emulator.Folds as Folds
+import qualified Wallet.Emulator.Stream as Stream
+import qualified Wallet.Emulator.Wallet as Wallet
 
-import qualified Prelude                          as Haskell
+import qualified Prelude as Haskell
 
 -- $future
 -- A futures contract in Plutus. This example illustrates a number of concepts.

@@ -10,50 +10,48 @@
 {-# OPTIONS_GHC -Wno-orphans           #-}
 module Cardano.Protocol.Socket.Type where
 
-import           Codec.Serialise.Class                              (Serialise)
-import           Control.Monad                                      (forever)
-import           Control.Monad.Class.MonadST                        (MonadST)
-import           Control.Monad.Class.MonadTimer
-import           Crypto.Hash                                        (SHA256, hash)
-import           Data.Aeson                                         (FromJSON, ToJSON)
-import qualified Data.Aeson.Extras                                  as JSON
-import qualified Data.ByteArray                                     as BA
-import qualified Data.ByteString                                    as BS
-import qualified Data.ByteString.Lazy                               as BSL
-import           Data.Map                                           ((!))
-import qualified Data.Text                                          as Text
-import           Data.Time.Units.Extra                              ()
-import           Data.Void                                          (Void)
+import Codec.Serialise.Class (Serialise)
+import Control.Monad (forever)
+import Control.Monad.Class.MonadST (MonadST)
+import Control.Monad.Class.MonadTimer
+import Crypto.Hash (SHA256, hash)
+import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Aeson.Extras as JSON
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
+import Data.Map ((!))
+import qualified Data.Text as Text
+import Data.Time.Units.Extra ()
+import Data.Void (Void)
 
-import           GHC.Generics
-import           NoThunks.Class                                     (NoThunks)
+import GHC.Generics
+import NoThunks.Class (NoThunks)
 
-import           Cardano.Api                                        (NetworkId (..))
-import           Cardano.Chain.Slotting                             (EpochSlots (..))
-import           Codec.Serialise                                    (DeserialiseFailure)
-import qualified Codec.Serialise                                    as CBOR
-import           Network.TypedProtocol.Codec
-import qualified Ouroboros.Consensus.Byron.Ledger                   as Byron
-import           Ouroboros.Consensus.Cardano.Block                  (CardanoBlock, CodecConfig (..))
-import           Ouroboros.Consensus.Network.NodeToClient           (ClientCodecs, clientCodecs)
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion    (BlockNodeToClientVersion,
-                                                                     supportedNodeToClientVersions)
-import qualified Ouroboros.Consensus.Shelley.Ledger                 as Shelley
-import           Ouroboros.Consensus.Shelley.Protocol               (StandardCrypto)
-import           Ouroboros.Network.Block                            (HeaderHash, Point, StandardHash)
-import           Ouroboros.Network.Magic                            (NetworkMagic (..))
-import           Ouroboros.Network.Mux
-import           Ouroboros.Network.NodeToClient                     (NodeToClientVersion (..),
-                                                                     NodeToClientVersionData (..))
-import qualified Ouroboros.Network.Protocol.ChainSync.Codec         as ChainSync
-import qualified Ouroboros.Network.Protocol.ChainSync.Type          as ChainSync
+import Cardano.Api (NetworkId (..))
+import Cardano.Chain.Slotting (EpochSlots (..))
+import Codec.Serialise (DeserialiseFailure)
+import qualified Codec.Serialise as CBOR
+import Network.TypedProtocol.Codec
+import qualified Ouroboros.Consensus.Byron.Ledger as Byron
+import Ouroboros.Consensus.Cardano.Block (CardanoBlock, CodecConfig (..))
+import Ouroboros.Consensus.Network.NodeToClient (ClientCodecs, clientCodecs)
+import Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion, supportedNodeToClientVersions)
+import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
+import Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
+import Ouroboros.Network.Block (HeaderHash, Point, StandardHash)
+import Ouroboros.Network.Magic (NetworkMagic (..))
+import Ouroboros.Network.Mux
+import Ouroboros.Network.NodeToClient (NodeToClientVersion (..), NodeToClientVersionData (..))
+import qualified Ouroboros.Network.Protocol.ChainSync.Codec as ChainSync
+import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Codec as TxSubmission
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type  as TxSubmission
-import           Ouroboros.Network.Util.ShowProxy
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as TxSubmission
+import Ouroboros.Network.Util.ShowProxy
 
-import           Prettyprinter.Extras
+import Prettyprinter.Extras
 
-import           Ledger                                             (Block, OnChainTx (..), Tx (..), TxId (..))
+import Ledger (Block, OnChainTx (..), Tx (..), TxId (..))
 
 -- | Tip of the block chain type (used by node protocols).
 type Tip = Block

@@ -42,47 +42,47 @@ module Ledger.Index(
     getScript
     ) where
 
-import           Prelude                     hiding (lookup)
+import Prelude hiding (lookup)
 
 
-import           Codec.Serialise             (Serialise)
-import           Control.DeepSeq             (NFData)
-import           Control.Lens                (toListOf, view, (^.))
-import           Control.Lens.Indexed        (iforM_)
-import           Control.Monad
-import           Control.Monad.Except        (ExceptT, MonadError (..), runExcept, runExceptT)
-import           Control.Monad.Reader        (MonadReader (..), ReaderT (..), ask)
-import           Control.Monad.Writer        (MonadWriter, Writer, runWriter, tell)
-import           Data.Aeson                  (FromJSON, ToJSON)
-import           Data.Default                (Default (def))
-import           Data.Foldable               (asum, fold, foldl', traverse_)
-import qualified Data.Map                    as Map
-import qualified Data.OpenApi.Schema         as OpenApi
-import qualified Data.Set                    as Set
-import           Data.Text                   (Text)
-import           Data.Text.Prettyprint.Doc   (Pretty)
-import           GHC.Generics                (Generic)
-import           Ledger.Blockchain
-import           Ledger.Crypto
-import           Ledger.Orphans              ()
-import           Ledger.Scripts
-import qualified Ledger.TimeSlot             as TimeSlot
-import           Ledger.Tx                   (txId)
-import qualified Plutus.V1.Ledger.Ada        as Ada
-import           Plutus.V1.Ledger.Address
-import qualified Plutus.V1.Ledger.Api        as Api
-import           Plutus.V1.Ledger.Contexts   (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
-import qualified Plutus.V1.Ledger.Contexts   as Validation
-import           Plutus.V1.Ledger.Credential (Credential (..))
-import qualified Plutus.V1.Ledger.Interval   as Interval
-import qualified Plutus.V1.Ledger.Scripts    as Scripts
-import qualified Plutus.V1.Ledger.Slot       as Slot
-import           Plutus.V1.Ledger.Tx
-import           Plutus.V1.Ledger.TxId
-import qualified Plutus.V1.Ledger.Value      as V
-import           PlutusTx                    (toBuiltinData)
-import qualified PlutusTx.Numeric            as P
-import           Prettyprinter.Extras        (PrettyShow (..))
+import Codec.Serialise (Serialise)
+import Control.DeepSeq (NFData)
+import Control.Lens (toListOf, view, (^.))
+import Control.Lens.Indexed (iforM_)
+import Control.Monad
+import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
+import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
+import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default (def))
+import Data.Foldable (asum, fold, foldl', traverse_)
+import qualified Data.Map as Map
+import qualified Data.OpenApi.Schema as OpenApi
+import qualified Data.Set as Set
+import Data.Text (Text)
+import Data.Text.Prettyprint.Doc (Pretty)
+import GHC.Generics (Generic)
+import Ledger.Blockchain
+import Ledger.Crypto
+import Ledger.Orphans ()
+import Ledger.Scripts
+import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.Tx (txId)
+import qualified Plutus.V1.Ledger.Ada as Ada
+import Plutus.V1.Ledger.Address
+import qualified Plutus.V1.Ledger.Api as Api
+import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
+import qualified Plutus.V1.Ledger.Contexts as Validation
+import Plutus.V1.Ledger.Credential (Credential (..))
+import qualified Plutus.V1.Ledger.Interval as Interval
+import qualified Plutus.V1.Ledger.Scripts as Scripts
+import qualified Plutus.V1.Ledger.Slot as Slot
+import Plutus.V1.Ledger.Tx
+import Plutus.V1.Ledger.TxId
+import qualified Plutus.V1.Ledger.Value as V
+import PlutusTx (toBuiltinData)
+import qualified PlutusTx.Numeric as P
+import Prettyprinter.Extras (PrettyShow (..))
 
 -- | Context for validating transactions. We need access to the unspent
 --   transaction outputs of the blockchain, and we can throw 'ValidationError's.

@@ -5,11 +5,11 @@ module Data.UUID.Extras
     , sequenceIdToMockUUID
     ) where
 
-import           Data.Bits            (shiftL, (.&.))
+import Data.Bits (shiftL, (.&.))
 import qualified Data.ByteString.Lazy as BL
-import           Data.UUID            (UUID)
-import qualified Data.UUID            as UUID
-import           Data.Word            (Word32)
+import Data.UUID (UUID)
+import qualified Data.UUID as UUID
+import Data.Word (Word32)
 
 -- This is taken directly from the test suite of
 -- 'uuid:Data.UUID'. Strange that they don't include it in the core

@@ -16,26 +16,25 @@ module Plutus.Contracts.Prism.Mirror(
     , mirror
     ) where
 
-import           Control.Lens
-import           Control.Monad                       (forever, void)
-import           Data.Aeson                          (FromJSON, ToJSON)
-import           GHC.Generics                        (Generic)
-import qualified Ledger.Ada                          as Ada
-import qualified Ledger.Constraints                  as Constraints
-import           Ledger.Crypto                       (PubKeyHash)
-import           Ledger.Tx                           (getCardanoTxId)
-import qualified Ledger.Typed.Scripts                as Scripts
-import           Ledger.Value                        (TokenName)
-import           Plutus.Contract
-import           Plutus.Contract.StateMachine        (AsSMContractError (..), SMContractError,
-                                                      StateMachineTransition (..))
-import qualified Plutus.Contract.StateMachine        as SM
-import           Plutus.Contracts.Prism.Credential   (Credential (..), CredentialAuthority (..))
-import qualified Plutus.Contracts.Prism.Credential   as Credential
-import           Plutus.Contracts.Prism.StateMachine as StateMachine
-import           Schema                              (ToSchema)
-import           Wallet.Emulator                     (walletPubKeyHash)
-import           Wallet.Emulator.Wallet              (Wallet)
+import Control.Lens
+import Control.Monad (forever, void)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import qualified Ledger.Ada as Ada
+import qualified Ledger.Constraints as Constraints
+import Ledger.Crypto (PubKeyHash)
+import Ledger.Tx (getCardanoTxId)
+import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Value (TokenName)
+import Plutus.Contract
+import Plutus.Contract.StateMachine (AsSMContractError (..), SMContractError, StateMachineTransition (..))
+import qualified Plutus.Contract.StateMachine as SM
+import Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
+import qualified Plutus.Contracts.Prism.Credential as Credential
+import Plutus.Contracts.Prism.StateMachine as StateMachine
+import Schema (ToSchema)
+import Wallet.Emulator (walletPubKeyHash)
+import Wallet.Emulator.Wallet (Wallet)
 
 -- | Reference to a credential tied to a specific owner (public key address).
 --   From this, and the public key of the Mirror instance, we can compute the

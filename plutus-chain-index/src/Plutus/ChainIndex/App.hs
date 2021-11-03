@@ -12,45 +12,45 @@
 -}
 module Plutus.ChainIndex.App(main, runMain) where
 
-import qualified Control.Concurrent.STM          as STM
-import           Control.Exception               (throwIO)
-import           Control.Monad.Freer             (Eff, send)
-import           Control.Monad.Freer.Extras      (LogMsg (..))
-import           Control.Monad.Freer.Extras.Beam (BeamEffect, BeamLog (..))
-import           Control.Monad.Freer.Extras.Log  (LogLevel (..), LogMessage (..))
-import           Control.Tracer                  (nullTracer)
-import qualified Data.Aeson                      as A
-import           Data.Foldable                   (for_, traverse_)
-import           Data.Function                   ((&))
-import           Data.Functor                    (void)
-import           Data.Sequence                   ((<|))
-import           Data.Text.Prettyprint.Doc       (Pretty (..))
-import qualified Data.Yaml                       as Y
-import           Database.Beam.Migrate.Simple    (autoMigrate)
-import qualified Database.Beam.Sqlite            as Sqlite
-import qualified Database.Beam.Sqlite.Migrate    as Sqlite
-import qualified Database.SQLite.Simple          as Sqlite
-import           Options.Applicative             (execParser)
+import qualified Control.Concurrent.STM as STM
+import Control.Exception (throwIO)
+import Control.Monad.Freer (Eff, send)
+import Control.Monad.Freer.Extras (LogMsg (..))
+import Control.Monad.Freer.Extras.Beam (BeamEffect, BeamLog (..))
+import Control.Monad.Freer.Extras.Log (LogLevel (..), LogMessage (..))
+import Control.Tracer (nullTracer)
+import qualified Data.Aeson as A
+import Data.Foldable (for_, traverse_)
+import Data.Function ((&))
+import Data.Functor (void)
+import Data.Sequence ((<|))
+import Data.Text.Prettyprint.Doc (Pretty (..))
+import qualified Data.Yaml as Y
+import Database.Beam.Migrate.Simple (autoMigrate)
+import qualified Database.Beam.Sqlite as Sqlite
+import qualified Database.Beam.Sqlite.Migrate as Sqlite
+import qualified Database.SQLite.Simple as Sqlite
+import Options.Applicative (execParser)
 
-import qualified Cardano.BM.Configuration.Model  as CM
-import           Cardano.BM.Setup                (setupTrace_)
-import           Cardano.BM.Trace                (Trace, logDebug, logError)
+import qualified Cardano.BM.Configuration.Model as CM
+import Cardano.BM.Setup (setupTrace_)
+import Cardano.BM.Trace (Trace, logDebug, logError)
 
-import           Cardano.Api                     (ChainPoint)
-import           Cardano.Protocol.Socket.Client  (ChainSyncEvent (..), runChainSync)
-import           Ledger                          (Slot (..))
-import           Plutus.ChainIndex               (ChainIndexLog (..), RunRequirements (..), runChainIndexEffects)
-import           Plutus.ChainIndex.CommandLine   (AppConfig (..), Command (..), applyOverrides, cmdWithHelpParser)
-import           Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, tipFromCardanoBlock)
-import qualified Plutus.ChainIndex.Config        as Config
-import           Plutus.ChainIndex.DbSchema      (checkedSqliteDb)
-import           Plutus.ChainIndex.Effects       (ChainIndexControlEffect (..), ChainIndexQueryEffect (..), appendBlock,
-                                                  resumeSync, rollback)
-import           Plutus.ChainIndex.Handlers      (getResumePoints)
-import qualified Plutus.ChainIndex.Logging       as Logging
-import qualified Plutus.ChainIndex.Server        as Server
-import           Plutus.ChainIndex.Types         (pointSlot)
-import           Plutus.Monitoring.Util          (runLogEffects)
+import Cardano.Api (ChainPoint)
+import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
+import Ledger (Slot (..))
+import Plutus.ChainIndex (ChainIndexLog (..), RunRequirements (..), runChainIndexEffects)
+import Plutus.ChainIndex.CommandLine (AppConfig (..), Command (..), applyOverrides, cmdWithHelpParser)
+import Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, tipFromCardanoBlock)
+import qualified Plutus.ChainIndex.Config as Config
+import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..), appendBlock, resumeSync,
+                                  rollback)
+import Plutus.ChainIndex.Handlers (getResumePoints)
+import qualified Plutus.ChainIndex.Logging as Logging
+import qualified Plutus.ChainIndex.Server as Server
+import Plutus.ChainIndex.Types (pointSlot)
+import Plutus.Monitoring.Util (runLogEffects)
 
 
 runChainIndex

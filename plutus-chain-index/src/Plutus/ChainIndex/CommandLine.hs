@@ -8,15 +8,14 @@ module Plutus.ChainIndex.CommandLine(
   , cmdWithHelpParser
   ) where
 
-import           Control.Lens             (over)
-import           Options.Applicative      (CommandFields, Mod, Parser, ParserInfo, argument, auto, command, flag,
-                                           fullDesc, header, help, helper, hsubparser, info, long, metavar, option,
-                                           progDesc, short, str, value, (<**>))
+import Control.Lens (over)
+import Options.Applicative (CommandFields, Mod, Parser, ParserInfo, argument, auto, command, flag, fullDesc, header,
+                            help, helper, hsubparser, info, long, metavar, option, progDesc, short, str, value, (<**>))
 
-import           Cardano.Api              (NetworkId (..), NetworkMagic (..))
-import           Cardano.BM.Data.Severity
-import           GHC.Word                 (Word32)
-import           Plutus.ChainIndex.Config (ChainIndexConfig)
+import Cardano.Api (NetworkId (..), NetworkMagic (..))
+import Cardano.BM.Data.Severity
+import GHC.Word (Word32)
+import Plutus.ChainIndex.Config (ChainIndexConfig)
 import qualified Plutus.ChainIndex.Config as Config
 
 data CLIConfigOverrides =

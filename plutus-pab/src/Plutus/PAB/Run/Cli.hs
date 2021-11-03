@@ -21,60 +21,59 @@ module Plutus.PAB.Run.Cli (ConfigCommandArgs(..), runConfigCommand, runNoConfigC
 -- Command interpretation
 -----------------------------------------------------------------------------------------------------------------------
 
-import           Cardano.BM.Configuration              (Configuration)
-import qualified Cardano.BM.Configuration.Model        as CM
-import           Cardano.BM.Data.Trace                 (Trace)
-import qualified Cardano.ChainIndex.Server             as ChainIndex
-import qualified Cardano.Node.Server                   as NodeServer
-import           Cardano.Node.Types                    (MockServerConfig (..), NodeMode (..))
-import qualified Cardano.Wallet.Mock.Server            as WalletServer
-import           Cardano.Wallet.Mock.Types
-import           Control.Concurrent                    (takeMVar)
-import           Control.Concurrent.Async              (Async, async, waitAny)
-import           Control.Concurrent.Availability       (Availability, available, starting)
-import qualified Control.Concurrent.STM                as STM
-import           Control.Monad                         (forM, forM_, void)
-import           Control.Monad.Freer                   (Eff, LastMember, Member, interpret, runM)
-import           Control.Monad.Freer.Delay             (DelayEffect, delayThread, handleDelayEffect)
-import           Control.Monad.Freer.Error             (throwError)
-import           Control.Monad.Freer.Extras.Log        (logInfo)
-import           Control.Monad.Freer.Reader            (ask, runReader)
-import           Control.Monad.IO.Class                (liftIO)
-import           Control.Monad.Logger                  (logErrorN, runStdoutLoggingT)
-import           Data.Aeson                            (FromJSON, ToJSON)
-import           Data.Foldable                         (traverse_)
-import qualified Data.Map                              as Map
-import           Data.Maybe                            (fromMaybe)
-import qualified Data.OpenApi.Schema                   as OpenApi
-import           Data.Proxy                            (Proxy (..))
-import qualified Data.Set                              as Set
-import           Data.Text.Extras                      (tshow)
-import           Data.Text.Prettyprint.Doc             (Pretty (..), defaultLayoutOptions, layoutPretty, pretty)
-import           Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
-import           Data.Time.Units                       (Second)
-import           Plutus.Contract.Resumable             (responses)
-import           Plutus.Contract.State                 (State (..))
-import qualified Plutus.Contract.State                 as State
-import qualified Plutus.PAB.App                        as App
-import qualified Plutus.PAB.Core                       as Core
-import           Plutus.PAB.Core.ContractInstance      (ContractInstanceState (..), updateState)
-import           Plutus.PAB.Core.ContractInstance.STM  (InstanceState, emptyInstanceState)
-import qualified Plutus.PAB.Db.Beam                    as Beam
-import qualified Plutus.PAB.Effects.Contract           as Contract
-import           Plutus.PAB.Effects.Contract.Builtin   (Builtin, BuiltinHandler, HasDefinitions (..),
-                                                        SomeBuiltinState (..), getResponse)
-import qualified Plutus.PAB.Monitoring.Monitoring      as LM
-import           Plutus.PAB.Run.Command
-import           Plutus.PAB.Run.PSGenerator            (HasPSTypes (..))
-import qualified Plutus.PAB.Run.PSGenerator            as PSGenerator
-import           Plutus.PAB.Types                      (Config (..), chainIndexConfig, nodeServerConfig,
-                                                        walletServerConfig)
-import qualified Plutus.PAB.Webserver.Server           as PABServer
-import           Plutus.PAB.Webserver.Types            (ContractActivationArgs (..))
+import Cardano.BM.Configuration (Configuration)
+import qualified Cardano.BM.Configuration.Model as CM
+import Cardano.BM.Data.Trace (Trace)
+import qualified Cardano.ChainIndex.Server as ChainIndex
+import qualified Cardano.Node.Server as NodeServer
+import Cardano.Node.Types (MockServerConfig (..), NodeMode (..))
+import qualified Cardano.Wallet.Mock.Server as WalletServer
+import Cardano.Wallet.Mock.Types
+import Control.Concurrent (takeMVar)
+import Control.Concurrent.Async (Async, async, waitAny)
+import Control.Concurrent.Availability (Availability, available, starting)
+import qualified Control.Concurrent.STM as STM
+import Control.Monad (forM, forM_, void)
+import Control.Monad.Freer (Eff, LastMember, Member, interpret, runM)
+import Control.Monad.Freer.Delay (DelayEffect, delayThread, handleDelayEffect)
+import Control.Monad.Freer.Error (throwError)
+import Control.Monad.Freer.Extras.Log (logInfo)
+import Control.Monad.Freer.Reader (ask, runReader)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Foldable (traverse_)
+import qualified Data.Map as Map
+import Data.Maybe (fromMaybe)
+import qualified Data.OpenApi.Schema as OpenApi
+import Data.Proxy (Proxy (..))
+import qualified Data.Set as Set
+import Data.Text.Extras (tshow)
+import Data.Text.Prettyprint.Doc (Pretty (..), defaultLayoutOptions, layoutPretty, pretty)
+import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
+import Data.Time.Units (Second)
+import Plutus.Contract.Resumable (responses)
+import Plutus.Contract.State (State (..))
+import qualified Plutus.Contract.State as State
+import qualified Plutus.PAB.App as App
+import qualified Plutus.PAB.Core as Core
+import Plutus.PAB.Core.ContractInstance (ContractInstanceState (..), updateState)
+import Plutus.PAB.Core.ContractInstance.STM (InstanceState, emptyInstanceState)
+import qualified Plutus.PAB.Db.Beam as Beam
+import qualified Plutus.PAB.Effects.Contract as Contract
+import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions (..), SomeBuiltinState (..),
+                                            getResponse)
+import qualified Plutus.PAB.Monitoring.Monitoring as LM
+import Plutus.PAB.Run.Command
+import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
+import qualified Plutus.PAB.Run.PSGenerator as PSGenerator
+import Plutus.PAB.Types (Config (..), chainIndexConfig, nodeServerConfig, walletServerConfig)
+import qualified Plutus.PAB.Webserver.Server as PABServer
+import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
 import qualified Servant
-import           System.Exit                           (ExitCode (ExitFailure), exitWith)
-import qualified Wallet.Emulator.Wallet                as Wallet
-import qualified Wallet.Types                          as Wallet
+import System.Exit (ExitCode (ExitFailure), exitWith)
+import qualified Wallet.Emulator.Wallet as Wallet
+import qualified Wallet.Types as Wallet
 
 runNoConfigCommand ::
     NoConfigCommand

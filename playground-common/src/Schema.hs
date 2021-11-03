@@ -43,37 +43,34 @@ module Schema
     , formArgumentToJson
     ) where
 
-import           Crypto.Hash                              (Digest, SHA256)
-import           Data.Aeson                               (FromJSON, ToJSON, toJSON)
-import qualified Data.Aeson                               as JSON
-import           Data.Bifunctor                           (first)
-import           Data.Eq.Deriving                         (deriveEq1)
-import           Data.Functor.Foldable                    (Fix (Fix), cata)
-import qualified Data.HashMap.Strict                      as HashMap
+import Crypto.Hash (Digest, SHA256)
+import Data.Aeson (FromJSON, ToJSON, toJSON)
+import qualified Data.Aeson as JSON
+import Data.Bifunctor (first)
+import Data.Eq.Deriving (deriveEq1)
+import Data.Functor.Foldable (Fix (Fix), cata)
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map
-import           Data.Proxy                               (Proxy)
-import           Data.Text                                (Text)
-import qualified Data.Text                                as Text
-import           Data.UUID                                (UUID)
-import           GHC.Generics                             (C1, Constructor, D1, Generic, K1 (K1), M1 (M1), Rec0, Rep,
-                                                           S1, Selector, U1, conIsRecord, conName, from, selName,
-                                                           (:*:) ((:*:)), (:+:) (L1, R1))
-import           Ledger                                   (Ada, AssetClass, CurrencySymbol, DatumHash, Interval,
-                                                           POSIXTime, POSIXTimeRange, PubKey, PubKeyHash, RedeemerHash,
-                                                           Signature, Slot, TokenName, TxId, TxOutRef, ValidatorHash,
-                                                           Value)
-import           Ledger.Bytes                             (LedgerBytes)
-import           Ledger.CardanoWallet                     (WalletNumber)
-import           Plutus.Contract.Secrets                  (SecretArgument (EndpointSide, UserSide))
-import           Plutus.Contract.StateMachine.ThreadToken (ThreadToken)
+import Data.Proxy (Proxy)
+import Data.Text (Text)
+import qualified Data.Text as Text
+import Data.UUID (UUID)
+import GHC.Generics (C1, Constructor, D1, Generic, K1 (K1), M1 (M1), Rec0, Rep, S1, Selector, U1, conIsRecord, conName,
+                     from, selName, (:*:) ((:*:)), (:+:) (L1, R1))
+import Ledger (Ada, AssetClass, CurrencySymbol, DatumHash, Interval, POSIXTime, POSIXTimeRange, PubKey, PubKeyHash,
+               RedeemerHash, Signature, Slot, TokenName, TxId, TxOutRef, ValidatorHash, Value)
+import Ledger.Bytes (LedgerBytes)
+import Ledger.CardanoWallet (WalletNumber)
+import Plutus.Contract.Secrets (SecretArgument (EndpointSide, UserSide))
+import Plutus.Contract.StateMachine.ThreadToken (ThreadToken)
 import qualified PlutusTx.AssocMap
-import qualified PlutusTx.Prelude                         as P
-import qualified PlutusTx.Ratio                           as P
-import           Wallet.Emulator.Wallet                   (Wallet, WalletId)
-import           Wallet.Types                             (ContractInstanceId)
+import qualified PlutusTx.Prelude as P
+import qualified PlutusTx.Ratio as P
+import Wallet.Emulator.Wallet (Wallet, WalletId)
+import Wallet.Types (ContractInstanceId)
 
-import qualified Data.OpenApi.Schema                      as OpenApi
-import           Text.Show.Deriving                       (deriveShow1)
+import qualified Data.OpenApi.Schema as OpenApi
+import Text.Show.Deriving (deriveShow1)
 
 {- HLINT ignore "Avoid restricted function" -}
 

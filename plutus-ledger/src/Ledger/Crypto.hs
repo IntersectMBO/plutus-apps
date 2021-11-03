@@ -14,14 +14,14 @@ module Ledger.Crypto
     , passPhrase
     ) where
 
-import qualified Cardano.Crypto.Wallet   as Crypto
-import           Crypto.Hash             as Crypto
-import qualified Data.ByteArray          as BA
-import qualified Data.ByteString         as BS
-import           Plutus.V1.Ledger.Api
-import qualified Plutus.V1.Ledger.Bytes  as KB
-import           Plutus.V1.Ledger.Crypto as Export hiding (PrivateKey)
-import qualified PlutusTx.Prelude        as P
+import qualified Cardano.Crypto.Wallet as Crypto
+import Crypto.Hash as Crypto
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString as BS
+import Plutus.V1.Ledger.Api
+import qualified Plutus.V1.Ledger.Bytes as KB
+import Plutus.V1.Ledger.Crypto as Export hiding (PrivateKey)
+import qualified PlutusTx.Prelude as P
 
 type PrivateKey = Crypto.XPrv
 

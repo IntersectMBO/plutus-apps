@@ -15,26 +15,26 @@
 {-# LANGUAGE UndecidableInstances       #-}
 module Spec.Prism (tests, prismTrace, prop_Prism, prop_NoLock) where
 
-import           Control.Lens
-import           Control.Monad
-import           Data.Map                           (Map)
-import qualified Data.Map                           as Map
-import qualified Ledger.Ada                         as Ada
-import           Ledger.Value                       (TokenName)
-import           Plutus.Contract.Test               hiding (not)
-import           Plutus.Contract.Test.ContractModel as ContractModel
+import Control.Lens
+import Control.Monad
+import Data.Map (Map)
+import qualified Data.Map as Map
+import qualified Ledger.Ada as Ada
+import Ledger.Value (TokenName)
+import Plutus.Contract.Test hiding (not)
+import Plutus.Contract.Test.ContractModel as ContractModel
 
-import           Test.QuickCheck                    as QC hiding ((.&&.))
-import           Test.Tasty
-import           Test.Tasty.QuickCheck              (testProperty)
+import Test.QuickCheck as QC hiding ((.&&.))
+import Test.Tasty
+import Test.Tasty.QuickCheck (testProperty)
 
-import           Plutus.Contracts.Prism             hiding (mirror)
-import qualified Plutus.Contracts.Prism.Credential  as Credential
-import qualified Plutus.Contracts.Prism.Mirror      as C
-import           Plutus.Contracts.Prism.STO         (STOData (..))
-import qualified Plutus.Contracts.Prism.STO         as STO
-import qualified Plutus.Contracts.Prism.Unlock      as C
-import qualified Plutus.Trace.Emulator              as Trace
+import Plutus.Contracts.Prism hiding (mirror)
+import qualified Plutus.Contracts.Prism.Credential as Credential
+import qualified Plutus.Contracts.Prism.Mirror as C
+import Plutus.Contracts.Prism.STO (STOData (..))
+import qualified Plutus.Contracts.Prism.STO as STO
+import qualified Plutus.Contracts.Prism.Unlock as C
+import qualified Plutus.Trace.Emulator as Trace
 
 user, mirror, issuer :: Wallet
 user = w1

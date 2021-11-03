@@ -21,27 +21,26 @@ module Crowdfunding where
 -- Note [Transactions in the crowdfunding campaign] explains the structure of
 -- this contract on the blockchain.
 
-import           Control.Applicative         (Applicative (pure))
-import           Control.Monad               (void)
-import           Data.Default                (Default (def))
-import           Ledger                      (POSIXTime, POSIXTimeRange, PubKeyHash, ScriptContext (..), TxInfo (..),
-                                              Validator, getCardanoTxId)
+import Control.Applicative (Applicative (pure))
+import Control.Monad (void)
+import Data.Default (Default (def))
+import Ledger (POSIXTime, POSIXTimeRange, PubKeyHash, ScriptContext (..), TxInfo (..), Validator, getCardanoTxId)
 import qualified Ledger
-import qualified Ledger.Contexts             as V
-import qualified Ledger.Interval             as Interval
-import qualified Ledger.Scripts              as Scripts
-import qualified Ledger.TimeSlot             as TimeSlot
-import qualified Ledger.Typed.Scripts        as Scripts hiding (validatorHash)
-import           Ledger.Value                (Value)
-import           Playground.Contract
-import           Plutus.Contract
+import qualified Ledger.Contexts as V
+import qualified Ledger.Interval as Interval
+import qualified Ledger.Scripts as Scripts
+import qualified Ledger.TimeSlot as TimeSlot
+import qualified Ledger.Typed.Scripts as Scripts hiding (validatorHash)
+import Ledger.Value (Value)
+import Playground.Contract
+import Plutus.Contract
 import qualified Plutus.Contract.Constraints as Constraints
-import qualified Plutus.Contract.Typed.Tx    as Typed
+import qualified Plutus.Contract.Typed.Tx as Typed
 import qualified PlutusTx
-import           PlutusTx.Prelude            hiding (Applicative (..), Semigroup (..))
-import           Prelude                     (Semigroup (..))
-import qualified Prelude                     as Haskell
-import qualified Wallet.Emulator             as Emulator
+import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..))
+import Prelude (Semigroup (..))
+import qualified Prelude as Haskell
+import qualified Wallet.Emulator as Emulator
 
 -- | A crowdfunding campaign.
 data Campaign = Campaign

@@ -56,21 +56,21 @@ module Control.Monad.Freer.Extras.Log (
     , handleObserve
     ) where
 
-import           Control.Monad.Freer.Extras.Modify       (raiseUnder)
+import Control.Monad.Freer.Extras.Modify (raiseUnder)
 
-import           Control.Lens                            (AReview, Prism', makeLenses, prism', review)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.State               (State, get, put, runState)
-import           Control.Monad.Freer.TH                  (makeEffect)
-import           Control.Monad.Freer.Writer              (Writer (..), tell)
-import           Data.Aeson                              (FromJSON, ToJSON)
-import           Data.Foldable                           (for_, traverse_)
-import           Data.Text                               (Text)
-import           Data.Text.Prettyprint.Doc               hiding (surround)
+import Control.Lens (AReview, Prism', makeLenses, prism', review)
+import Control.Monad.Freer
+import Control.Monad.Freer.State (State, get, put, runState)
+import Control.Monad.Freer.TH (makeEffect)
+import Control.Monad.Freer.Writer (Writer (..), tell)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Foldable (for_, traverse_)
+import Data.Text (Text)
+import Data.Text.Prettyprint.Doc hiding (surround)
 import qualified Data.Text.Prettyprint.Doc.Render.String as Render
-import qualified Data.Text.Prettyprint.Doc.Render.Text   as Render
-import qualified Debug.Trace                             as Trace
-import           GHC.Generics                            (Generic)
+import qualified Data.Text.Prettyprint.Doc.Render.Text as Render
+import qualified Debug.Trace as Trace
+import GHC.Generics (Generic)
 
 -- $log
 -- This module provides effects and handlers for structured logging and

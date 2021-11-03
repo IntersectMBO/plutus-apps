@@ -33,19 +33,19 @@ module Plutus.PAB.Effects.Contract(
     , getDefinitions
     ) where
 
-import           Control.Monad.Freer        (Eff, Member, send)
-import           Data.Aeson                 (Value)
-import           Data.Map                   (Map)
-import qualified Data.Map                   as Map
-import           Data.Proxy                 (Proxy (..))
-import           Playground.Types           (FunctionSchema)
-import           Plutus.Contract.Effects    (PABReq, PABResp)
-import           Plutus.Contract.Resumable  (Request, Response)
-import           Plutus.Contract.State      (ContractResponse)
-import qualified Plutus.Contract.State      as C
-import           Plutus.PAB.Webserver.Types (ContractActivationArgs)
-import           Schema                     (FormSchema)
-import           Wallet.Types               (ContractActivityStatus (..), ContractInstanceId)
+import Control.Monad.Freer (Eff, Member, send)
+import Data.Aeson (Value)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Proxy (Proxy (..))
+import Playground.Types (FunctionSchema)
+import Plutus.Contract.Effects (PABReq, PABResp)
+import Plutus.Contract.Resumable (Request, Response)
+import Plutus.Contract.State (ContractResponse)
+import qualified Plutus.Contract.State as C
+import Plutus.PAB.Webserver.Types (ContractActivationArgs)
+import Schema (FormSchema)
+import Wallet.Types (ContractActivityStatus (..), ContractInstanceId)
 
 -- | A class of contracts running in the PAB. The purpose of the type
 --   parameter @contract@ is to allow for different ways of running

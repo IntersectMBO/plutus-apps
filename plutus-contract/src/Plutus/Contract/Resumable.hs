@@ -76,21 +76,21 @@ module Plutus.Contract.Resumable(
     , ReqMap(..)
     ) where
 
-import           Control.Applicative
-import           Control.Lens                  (Iso', iso)
-import           Data.Aeson                    (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
-import           Data.Map                      (Map)
-import qualified Data.Map                      as Map
-import qualified Data.OpenApi.Schema           as OpenApi
-import           Data.Semigroup                (Max (..))
-import           Data.Text.Prettyprint.Doc
-import           GHC.Generics                  (Generic)
-import           Numeric.Natural               (Natural)
+import Control.Applicative
+import Control.Lens (Iso', iso)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import qualified Data.OpenApi.Schema as OpenApi
+import Data.Semigroup (Max (..))
+import Data.Text.Prettyprint.Doc
+import GHC.Generics (Generic)
+import Numeric.Natural (Natural)
 
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Coroutine
-import           Control.Monad.Freer.NonDet
-import           Control.Monad.Freer.State
+import Control.Monad.Freer
+import Control.Monad.Freer.Coroutine
+import Control.Monad.Freer.NonDet
+import Control.Monad.Freer.State
 
 {- Note [Resumable state machine]
 

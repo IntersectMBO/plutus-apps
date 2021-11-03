@@ -18,13 +18,13 @@ module Plutus.Contracts.Uniswap.Types
   where
 
 import qualified Data.OpenApi.Schema as OpenApi
-import           Ledger
-import           Ledger.Value        (AssetClass (..), assetClass, assetClassValue, assetClassValueOf)
-import           Playground.Contract (FromJSON, Generic, ToJSON, ToSchema)
+import Ledger
+import Ledger.Value (AssetClass (..), assetClass, assetClassValue, assetClassValueOf)
+import Playground.Contract (FromJSON, Generic, ToJSON, ToSchema)
 import qualified PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude             as Haskell
-import           Text.Printf         (PrintfArg)
+import PlutusTx.Prelude
+import qualified Prelude as Haskell
+import Text.Printf (PrintfArg)
 
 -- | Uniswap coin token
 data U = U deriving (Haskell.Show, Haskell.Eq, Generic)

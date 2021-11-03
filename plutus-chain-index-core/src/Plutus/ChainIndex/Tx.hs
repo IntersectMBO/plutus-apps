@@ -31,22 +31,21 @@ module Plutus.ChainIndex.Tx(
     , _ValidTx
     ) where
 
-import           Codec.Serialise           (Serialise)
-import           Control.Lens              (makeLenses, makePrisms)
-import           Data.Aeson                (FromJSON, ToJSON)
-import           Data.Map                  (Map)
-import qualified Data.Map                  as Map
-import           Data.Set                  (Set)
-import qualified Data.Set                  as Set
-import           Data.Text.Prettyprint.Doc
-import           Data.Tuple                (swap)
-import           GHC.Generics              (Generic)
-import           Ledger                    (Address, Datum, DatumHash, MintingPolicy (getMintingPolicy),
-                                            MintingPolicyHash (MintingPolicyHash), OnChainTx (..), Redeemer (..),
-                                            RedeemerHash, Script, ScriptHash (..), SlotRange, SomeCardanoApiTx, Tx (..),
-                                            TxId, TxIn (txInType), TxInType (..), TxOut (txOutAddress), TxOutRef (..),
-                                            Validator (getValidator), ValidatorHash (ValidatorHash), datumHash,
-                                            mintingPolicyHash, redeemerHash, txId, validatorHash)
+import Codec.Serialise (Serialise)
+import Control.Lens (makeLenses, makePrisms)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.Text.Prettyprint.Doc
+import Data.Tuple (swap)
+import GHC.Generics (Generic)
+import Ledger (Address, Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
+               OnChainTx (..), Redeemer (..), RedeemerHash, Script, ScriptHash (..), SlotRange, SomeCardanoApiTx,
+               Tx (..), TxId, TxIn (txInType), TxInType (..), TxOut (txOutAddress), TxOutRef (..),
+               Validator (getValidator), ValidatorHash (ValidatorHash), datumHash, mintingPolicyHash, redeemerHash,
+               txId, validatorHash)
 
 -- | List of outputs of a transaction. There are no outputs if the transaction
 -- is invalid.

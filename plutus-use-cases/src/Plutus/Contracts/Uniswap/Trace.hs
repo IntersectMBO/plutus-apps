@@ -12,22 +12,22 @@ module Plutus.Contracts.Uniswap.Trace(
     , wallets
     ) where
 
-import           Control.Monad                     (forM_, when)
-import           Control.Monad.Freer.Error         (throwError)
-import qualified Data.Map                          as Map
-import qualified Data.Monoid                       as Monoid
-import qualified Data.Semigroup                    as Semigroup
-import           Ledger
-import           Ledger.Ada                        (adaSymbol, adaToken)
-import           Ledger.Constraints
-import           Ledger.Value                      as Value
-import           Plutus.Contract                   as Contract hiding (throwError)
-import qualified Plutus.Contracts.Currency         as Currency
-import           Plutus.Contracts.Uniswap.OffChain as OffChain
-import           Plutus.Contracts.Uniswap.Types    as Types
-import           Plutus.Trace.Emulator             (EmulatorRuntimeError (GenericError), EmulatorTrace)
-import qualified Plutus.Trace.Emulator             as Emulator
-import           Wallet.Emulator                   (Wallet (..), knownWallet, knownWallets, walletPubKeyHash)
+import Control.Monad (forM_, when)
+import Control.Monad.Freer.Error (throwError)
+import qualified Data.Map as Map
+import qualified Data.Monoid as Monoid
+import qualified Data.Semigroup as Semigroup
+import Ledger
+import Ledger.Ada (adaSymbol, adaToken)
+import Ledger.Constraints
+import Ledger.Value as Value
+import Plutus.Contract as Contract hiding (throwError)
+import qualified Plutus.Contracts.Currency as Currency
+import Plutus.Contracts.Uniswap.OffChain as OffChain
+import Plutus.Contracts.Uniswap.Types as Types
+import Plutus.Trace.Emulator (EmulatorRuntimeError (GenericError), EmulatorTrace)
+import qualified Plutus.Trace.Emulator as Emulator
+import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, walletPubKeyHash)
 
 -- | Set up a liquidity pool and call the "add" endpoint
 uniswapTrace :: EmulatorTrace ()

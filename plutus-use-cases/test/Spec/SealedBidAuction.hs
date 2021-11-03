@@ -9,27 +9,27 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing -fno-warn-orphans #-}
 module Spec.SealedBidAuction where
 
-import           Cardano.Crypto.Hash                as Crypto
-import           Control.Lens                       hiding (elements)
-import           Control.Monad                      (void, when)
-import           Control.Monad.Freer.Extras.Log     (LogLevel (..))
-import           Data.Default                       (Default (def))
+import Cardano.Crypto.Hash as Crypto
+import Control.Lens hiding (elements)
+import Control.Monad (void, when)
+import Control.Monad.Freer.Extras.Log (LogLevel (..))
+import Data.Default (Default (def))
 
-import           Ledger                             (Slot (..), Value)
-import qualified Ledger.Ada                         as Ada
-import           Plutus.Contract.Test               hiding (not)
+import Ledger (Slot (..), Value)
+import qualified Ledger.Ada as Ada
+import Plutus.Contract.Test hiding (not)
 
-import qualified Ledger.TimeSlot                    as TimeSlot
-import qualified Ledger.Value                       as Value
-import           Plutus.Contract.Secrets
-import           Plutus.Contract.Test.ContractModel
-import           Plutus.Contracts.SealedBidAuction
-import qualified Plutus.Trace.Emulator              as Trace
-import qualified PlutusTx.Prelude                   as PlutusTx
+import qualified Ledger.TimeSlot as TimeSlot
+import qualified Ledger.Value as Value
+import Plutus.Contract.Secrets
+import Plutus.Contract.Test.ContractModel
+import Plutus.Contracts.SealedBidAuction
+import qualified Plutus.Trace.Emulator as Trace
+import qualified PlutusTx.Prelude as PlutusTx
 
-import           Test.QuickCheck                    hiding ((.&&.))
-import           Test.Tasty
-import           Test.Tasty.QuickCheck              (testProperty)
+import Test.QuickCheck hiding ((.&&.))
+import Test.Tasty
+import Test.Tasty.QuickCheck (testProperty)
 
 instance Arbitrary AuctionParams where
   arbitrary = do

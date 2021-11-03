@@ -7,30 +7,29 @@
 
 module Plutus.ChainIndex.Emulator.HandlersSpec (tests) where
 
-import           Control.Lens
-import           Control.Monad                       (forM, forM_)
-import           Control.Monad.Freer                 (Eff, interpret, reinterpret, runM)
-import           Control.Monad.Freer.Error           (Error, runError)
-import           Control.Monad.Freer.Extras          (LogMessage, LogMsg (..), handleLogWriter)
-import           Control.Monad.Freer.State           (State, runState)
-import           Control.Monad.Freer.Writer          (runWriter)
-import           Control.Monad.IO.Class              (liftIO)
-import           Data.Sequence                       (Seq)
-import           Data.Set                            (member)
-import qualified Generators                          as Gen
-import           Ledger                              (Address (Address, addressCredential), TxOut (TxOut, txOutAddress),
-                                                      outValue)
-import           Plutus.ChainIndex                   (ChainIndexLog, Page (pageItems), PageQuery (PageQuery),
-                                                      appendBlock, txFromTxId, utxoSetAtAddress, utxoSetWithCurrency)
-import           Plutus.ChainIndex.ChainIndexError   (ChainIndexError)
-import           Plutus.ChainIndex.Effects           (ChainIndexControlEffect, ChainIndexQueryEffect)
-import           Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
-import           Plutus.ChainIndex.Tx                (_ValidTx, citxOutputs, citxTxId)
-import           Plutus.V1.Ledger.Value              (AssetClass (AssetClass), flattenValue)
+import Control.Lens
+import Control.Monad (forM, forM_)
+import Control.Monad.Freer (Eff, interpret, reinterpret, runM)
+import Control.Monad.Freer.Error (Error, runError)
+import Control.Monad.Freer.Extras (LogMessage, LogMsg (..), handleLogWriter)
+import Control.Monad.Freer.State (State, runState)
+import Control.Monad.Freer.Writer (runWriter)
+import Control.Monad.IO.Class (liftIO)
+import Data.Sequence (Seq)
+import Data.Set (member)
+import qualified Generators as Gen
+import Ledger (Address (Address, addressCredential), TxOut (TxOut, txOutAddress), outValue)
+import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlock, txFromTxId,
+                          utxoSetAtAddress, utxoSetWithCurrency)
+import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
+import Plutus.ChainIndex.Tx (_ValidTx, citxOutputs, citxTxId)
+import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
-import           Hedgehog                            (Property, assert, forAll, property, (===))
-import           Test.Tasty
-import           Test.Tasty.Hedgehog                 (testProperty)
+import Hedgehog (Property, assert, forAll, property, (===))
+import Test.Tasty
+import Test.Tasty.Hedgehog (testProperty)
 
 tests :: TestTree
 tests = do

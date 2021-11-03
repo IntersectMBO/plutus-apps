@@ -4,7 +4,7 @@ module Main
 
 import qualified Plutus.PAB.CoreSpec
 import qualified Plutus.PAB.Effects.Contract.BuiltinSpec
-import           Test.Tasty                              (defaultMain, testGroup)
+import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
 main =

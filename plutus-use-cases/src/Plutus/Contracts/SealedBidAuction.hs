@@ -28,23 +28,23 @@ module Plutus.Contracts.SealedBidAuction(
   , bidderContract
   ) where
 
-import           Control.Lens                     (makeClassyPrisms)
-import           Control.Monad                    (void)
-import           Data.Aeson                       (FromJSON, ToJSON)
-import           GHC.Generics                     (Generic)
-import           Ledger                           (POSIXTime, PubKeyHash, Value)
-import qualified Ledger.Ada                       as Ada
-import qualified Ledger.Constraints               as Constraints
-import           Ledger.Constraints.TxConstraints (TxConstraints)
-import qualified Ledger.Interval                  as Interval
-import qualified Ledger.Typed.Scripts             as Scripts
-import           Plutus.Contract
-import           Plutus.Contract.Secrets
-import           Plutus.Contract.StateMachine     (State (..), StateMachine (..), StateMachineClient, Void)
-import qualified Plutus.Contract.StateMachine     as SM
+import Control.Lens (makeClassyPrisms)
+import Control.Monad (void)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger (POSIXTime, PubKeyHash, Value)
+import qualified Ledger.Ada as Ada
+import qualified Ledger.Constraints as Constraints
+import Ledger.Constraints.TxConstraints (TxConstraints)
+import qualified Ledger.Interval as Interval
+import qualified Ledger.Typed.Scripts as Scripts
+import Plutus.Contract
+import Plutus.Contract.Secrets
+import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, Void)
+import qualified Plutus.Contract.StateMachine as SM
 import qualified PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude                          as Haskell
+import PlutusTx.Prelude
+import qualified Prelude as Haskell
 
 {- Note [Sealed bid auction disclaimer]
    This file implements a sealed bid auction using `SecretArgument`s. In the bidding

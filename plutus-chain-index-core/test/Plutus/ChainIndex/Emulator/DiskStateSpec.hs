@@ -5,17 +5,17 @@
 
 module Plutus.ChainIndex.Emulator.DiskStateSpec (tests) where
 
-import           Control.Lens
-import qualified Data.Set                             as Set
+import Control.Lens
+import qualified Data.Set as Set
 import qualified Plutus.ChainIndex.Emulator.DiskState as DiskState
-import           Plutus.ChainIndex.Tx                 (txOutsWithRef)
+import Plutus.ChainIndex.Tx (txOutsWithRef)
 
-import qualified Generators                           as Gen
-import           Hedgehog                             (Property, forAll, property, (===))
-import           Ledger                               (TxOut (txOutValue))
-import qualified Ledger.Ada                           as Ada
-import           Test.Tasty
-import           Test.Tasty.Hedgehog                  (testProperty)
+import qualified Generators as Gen
+import Hedgehog (Property, forAll, property, (===))
+import Ledger (TxOut (txOutValue))
+import qualified Ledger.Ada as Ada
+import Test.Tasty
+import Test.Tasty.Hedgehog (testProperty)
 
 tests :: TestTree
 tests = do

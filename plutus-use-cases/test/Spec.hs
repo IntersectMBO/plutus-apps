@@ -22,8 +22,8 @@ import qualified Spec.TokenAccount
 import qualified Spec.Uniswap
 import qualified Spec.Vesting
 
-import           Test.Tasty
-import           Test.Tasty.Hedgehog       (HedgehogTestLimit (..))
+import Test.Tasty
+import Test.Tasty.Hedgehog (HedgehogTestLimit (..))
 
 main :: IO ()
 main = defaultMain tests

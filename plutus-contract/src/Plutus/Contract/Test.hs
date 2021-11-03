@@ -67,71 +67,69 @@ module Plutus.Contract.Test(
     , goldenPir
     ) where
 
-import           Control.Applicative                   (liftA2)
-import           Control.Arrow                         ((>>>))
-import           Control.Foldl                         (FoldM)
-import qualified Control.Foldl                         as L
-import           Control.Lens                          (at, makeLenses, preview, to, (&), (.~), (^.))
-import           Control.Monad                         (unless)
-import           Control.Monad.Freer                   (Eff, reinterpret, runM, sendM)
-import           Control.Monad.Freer.Error             (Error, runError)
-import           Control.Monad.Freer.Extras.Log        (LogLevel (..), LogMessage (..))
-import           Control.Monad.Freer.Reader
-import           Control.Monad.Freer.Writer            (Writer (..), tell)
-import           Control.Monad.IO.Class                (MonadIO (liftIO))
-import           Data.Default                          (Default (..))
-import           Data.Foldable                         (fold, traverse_)
-import qualified Data.Map                              as M
-import           Data.Maybe                            (fromJust, mapMaybe)
-import           Data.Proxy                            (Proxy (..))
-import           Data.String                           (IsString (..))
-import qualified Data.Text                             as Text
-import           Data.Text.Prettyprint.Doc
-import           Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
-import           Data.Void
-import           GHC.TypeLits                          (KnownSymbol, Symbol, symbolVal)
-import           Plutus.Contract.Effects               (ActiveEndpoint (..), PABReq, PABResp)
+import Control.Applicative (liftA2)
+import Control.Arrow ((>>>))
+import Control.Foldl (FoldM)
+import qualified Control.Foldl as L
+import Control.Lens (at, makeLenses, preview, to, (&), (.~), (^.))
+import Control.Monad (unless)
+import Control.Monad.Freer (Eff, reinterpret, runM, sendM)
+import Control.Monad.Freer.Error (Error, runError)
+import Control.Monad.Freer.Extras.Log (LogLevel (..), LogMessage (..))
+import Control.Monad.Freer.Reader
+import Control.Monad.Freer.Writer (Writer (..), tell)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Default (Default (..))
+import Data.Foldable (fold, traverse_)
+import qualified Data.Map as M
+import Data.Maybe (fromJust, mapMaybe)
+import Data.Proxy (Proxy (..))
+import Data.String (IsString (..))
+import qualified Data.Text as Text
+import Data.Text.Prettyprint.Doc
+import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
+import Data.Void
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq, PABResp)
 
 
-import           Hedgehog                              (Property, forAll, property)
+import Hedgehog (Property, forAll, property)
 import qualified Hedgehog
-import           Test.Tasty.Golden                     (goldenVsString)
-import qualified Test.Tasty.HUnit                      as HUnit
-import           Test.Tasty.Providers                  (TestTree)
+import Test.Tasty.Golden (goldenVsString)
+import qualified Test.Tasty.HUnit as HUnit
+import Test.Tasty.Providers (TestTree)
 
-import qualified Ledger.Ada                            as Ada
-import           Ledger.Constraints.OffChain           (UnbalancedTx)
-import           Ledger.Tx                             (Tx)
-import qualified Plutus.Contract.Effects               as Requests
-import qualified Plutus.Contract.Request               as Request
-import           Plutus.Contract.Resumable             (Request (..), Response (..))
-import qualified Plutus.Contract.Resumable             as State
-import           Plutus.Contract.Types                 (Contract (..), IsContract (..), ResumableResult,
-                                                        shrinkResumableResult)
-import           PlutusTx                              (CompiledCode, FromData (..), getPir)
-import qualified PlutusTx.Prelude                      as P
+import qualified Ledger.Ada as Ada
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx (Tx)
+import qualified Plutus.Contract.Effects as Requests
+import qualified Plutus.Contract.Request as Request
+import Plutus.Contract.Resumable (Request (..), Response (..))
+import qualified Plutus.Contract.Resumable as State
+import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, shrinkResumableResult)
+import PlutusTx (CompiledCode, FromData (..), getPir)
+import qualified PlutusTx.Prelude as P
 
-import           Ledger                                (Validator)
+import Ledger (Validator)
 import qualified Ledger
-import           Ledger.Address                        (Address)
-import           Ledger.Generators                     (GeneratorModel, Mockchain (..))
-import qualified Ledger.Generators                     as Gen
-import           Ledger.Index                          (ScriptValidationEvent, ValidationError)
-import           Ledger.Slot                           (Slot)
-import           Ledger.Value                          (Value)
+import Ledger.Address (Address)
+import Ledger.Generators (GeneratorModel, Mockchain (..))
+import qualified Ledger.Generators as Gen
+import Ledger.Index (ScriptValidationEvent, ValidationError)
+import Ledger.Slot (Slot)
+import Ledger.Value (Value)
 
-import           Plutus.Contract.Trace                 as X
-import           Plutus.Trace.Emulator                 (EmulatorConfig (..), EmulatorTrace, runEmulatorStream)
-import           Plutus.Trace.Emulator.Types           (ContractConstraints, ContractInstanceLog,
-                                                        ContractInstanceState (..), ContractInstanceTag, UserThreadMsg)
-import qualified Streaming                             as S
-import qualified Streaming.Prelude                     as S
-import           Wallet.Emulator                       (EmulatorEvent, EmulatorTimeEvent)
-import           Wallet.Emulator.Chain                 (ChainEvent)
-import           Wallet.Emulator.Folds                 (EmulatorFoldErr (..), Outcome (..), describeError, postMapM)
-import qualified Wallet.Emulator.Folds                 as Folds
-import           Wallet.Emulator.Stream                (filterLogLevel, foldEmulatorStreamM, initialChainState,
-                                                        initialDist)
+import Plutus.Contract.Trace as X
+import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, runEmulatorStream)
+import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
+                                    ContractInstanceTag, UserThreadMsg)
+import qualified Streaming as S
+import qualified Streaming.Prelude as S
+import Wallet.Emulator (EmulatorEvent, EmulatorTimeEvent)
+import Wallet.Emulator.Chain (ChainEvent)
+import Wallet.Emulator.Folds (EmulatorFoldErr (..), Outcome (..), describeError, postMapM)
+import qualified Wallet.Emulator.Folds as Folds
+import Wallet.Emulator.Stream (filterLogLevel, foldEmulatorStreamM, initialChainState, initialDist)
 
 
 type TracePredicate = FoldM (Eff '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void)]) EmulatorEvent Bool

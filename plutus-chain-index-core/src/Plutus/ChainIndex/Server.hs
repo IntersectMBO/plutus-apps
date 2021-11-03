@@ -8,28 +8,27 @@ module Plutus.ChainIndex.Server(
     serveChainIndexQueryServer,
     serveChainIndex) where
 
-import           Control.Monad                     ((>=>))
-import qualified Control.Monad.Except              as E
-import           Control.Monad.Freer               (Eff, Member, type (~>))
-import           Control.Monad.Freer.Error         (Error, runError, throwError)
-import           Control.Monad.Freer.Extras.Modify (raiseEnd)
-import           Control.Monad.IO.Class            (MonadIO (liftIO))
-import qualified Data.ByteString.Lazy              as BSL
-import           Data.Default                      (Default (def))
-import           Data.Maybe                        (fromMaybe)
-import           Data.Proxy                        (Proxy (..))
-import qualified Data.Text                         as Text
-import qualified Data.Text.Encoding                as Text
-import qualified Network.Wai.Handler.Warp          as Warp
-import           Plutus.ChainIndex                 (RunRequirements, runChainIndexEffects)
-import           Plutus.ChainIndex.Api             (API, FromHashAPI, UtxoAtAddressRequest (UtxoAtAddressRequest),
-                                                    UtxoWithCurrencyRequest (UtxoWithCurrencyRequest))
-import           Plutus.ChainIndex.Effects         (ChainIndexControlEffect, ChainIndexQueryEffect)
-import qualified Plutus.ChainIndex.Effects         as E
-import           Servant.API                       ((:<|>) (..))
-import           Servant.API.ContentTypes          (NoContent (..))
-import           Servant.Server                    (Handler, ServerError, ServerT, err404, err500, errBody, hoistServer,
-                                                    serve)
+import Control.Monad ((>=>))
+import qualified Control.Monad.Except as E
+import Control.Monad.Freer (Eff, Member, type (~>))
+import Control.Monad.Freer.Error (Error, runError, throwError)
+import Control.Monad.Freer.Extras.Modify (raiseEnd)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import qualified Data.ByteString.Lazy as BSL
+import Data.Default (Default (def))
+import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (..))
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Network.Wai.Handler.Warp as Warp
+import Plutus.ChainIndex (RunRequirements, runChainIndexEffects)
+import Plutus.ChainIndex.Api (API, FromHashAPI, UtxoAtAddressRequest (UtxoAtAddressRequest),
+                              UtxoWithCurrencyRequest (UtxoWithCurrencyRequest))
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import qualified Plutus.ChainIndex.Effects as E
+import Servant.API ((:<|>) (..))
+import Servant.API.ContentTypes (NoContent (..))
+import Servant.Server (Handler, ServerError, ServerT, err404, err500, errBody, hoistServer, serve)
 
 serveChainIndexQueryServer ::
     Int -- ^ Port

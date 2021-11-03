@@ -36,33 +36,33 @@ module Plutus.PAB.Effects.Contract.Builtin(
     ) where
 
 
-import           Control.Monad                                    (unless)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error                        (Error, throwError)
-import           Control.Monad.Freer.Extras.Log                   (LogMsg (..), logDebug)
-import           Data.Aeson                                       (FromJSON, ToJSON, Value)
-import qualified Data.Aeson                                       as JSON
-import           Data.Foldable                                    (foldlM, traverse_)
-import qualified Data.OpenApi                                     as OpenApi
-import           Data.Proxy                                       (Proxy (..))
-import           Data.Row
-import           GHC.Generics                                     (Generic)
-import           Playground.Schema                                (endpointsToSchemas)
-import           Playground.Types                                 (FunctionSchema)
-import           Plutus.Contract                                  (ContractInstanceId, EmptySchema, IsContract (..))
-import           Plutus.Contract.Effects                          (PABReq, PABResp)
-import           Plutus.Contract.Resumable                        (Response, responses)
-import           Plutus.Contract.Schema                           (Input, Output)
-import           Plutus.Contract.State                            (ContractResponse (..), State (..))
-import qualified Plutus.Contract.State                            as ContractState
-import           Plutus.Contract.Types                            (ResumableResult (..), SuspendedContract (..))
-import           Plutus.PAB.Core.ContractInstance.RequestHandlers (ContractInstanceMsg (ContractLog, ProcessFirstInboxMessage))
-import           Plutus.PAB.Effects.Contract                      (ContractEffect (..), PABContract (..))
-import           Plutus.PAB.Monitoring.PABLogMsg                  (PABMultiAgentMsg (..))
-import           Plutus.PAB.Types                                 (PABError (..))
-import           Plutus.Trace.Emulator.Types                      (ContractInstanceStateInternal (..))
-import qualified Plutus.Trace.Emulator.Types                      as Emulator
-import           Schema                                           (FormSchema)
+import Control.Monad (unless)
+import Control.Monad.Freer
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Extras.Log (LogMsg (..), logDebug)
+import Data.Aeson (FromJSON, ToJSON, Value)
+import qualified Data.Aeson as JSON
+import Data.Foldable (foldlM, traverse_)
+import qualified Data.OpenApi as OpenApi
+import Data.Proxy (Proxy (..))
+import Data.Row
+import GHC.Generics (Generic)
+import Playground.Schema (endpointsToSchemas)
+import Playground.Types (FunctionSchema)
+import Plutus.Contract (ContractInstanceId, EmptySchema, IsContract (..))
+import Plutus.Contract.Effects (PABReq, PABResp)
+import Plutus.Contract.Resumable (Response, responses)
+import Plutus.Contract.Schema (Input, Output)
+import Plutus.Contract.State (ContractResponse (..), State (..))
+import qualified Plutus.Contract.State as ContractState
+import Plutus.Contract.Types (ResumableResult (..), SuspendedContract (..))
+import Plutus.PAB.Core.ContractInstance.RequestHandlers (ContractInstanceMsg (ContractLog, ProcessFirstInboxMessage))
+import Plutus.PAB.Effects.Contract (ContractEffect (..), PABContract (..))
+import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (..))
+import Plutus.PAB.Types (PABError (..))
+import Plutus.Trace.Emulator.Types (ContractInstanceStateInternal (..))
+import qualified Plutus.Trace.Emulator.Types as Emulator
+import Schema (FormSchema)
 
 -- | Contracts that are built into the PAB (ie. compiled with it) and receive
 --   an initial value of type 'a'.

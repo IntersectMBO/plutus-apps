@@ -24,11 +24,11 @@ module Wallet.Effects(
     , getClientSlotConfig
     ) where
 
-import           Control.Monad.Freer.TH      (makeEffect)
-import           Ledger                      (CardanoTx, PubKeyHash, Slot, Tx, Value)
-import           Ledger.Constraints.OffChain (UnbalancedTx)
-import           Ledger.TimeSlot             (SlotConfig)
-import           Wallet.Emulator.Error       (WalletAPIError)
+import Control.Monad.Freer.TH (makeEffect)
+import Ledger (CardanoTx, PubKeyHash, Slot, Tx, Value)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.TimeSlot (SlotConfig)
+import Wallet.Emulator.Error (WalletAPIError)
 
 data WalletEffect r where
     SubmitTxn :: CardanoTx -> WalletEffect ()

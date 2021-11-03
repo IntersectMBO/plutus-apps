@@ -16,21 +16,21 @@ module Wallet.Graph
   , UtxoLocation
   ) where
 
-import           Data.Aeson.Types  (ToJSON, toJSON)
-import           Data.List         (nub)
-import qualified Data.Map          as Map
-import           Data.Maybe        (catMaybes)
-import qualified Data.Set          as Set
-import qualified Data.Text         as Text
-import           GHC.Generics      (Generic)
+import Data.Aeson.Types (ToJSON, toJSON)
+import Data.List (nub)
+import qualified Data.Map as Map
+import Data.Maybe (catMaybes)
+import qualified Data.Set as Set
+import qualified Data.Text as Text
+import GHC.Generics (Generic)
 
-import qualified Ledger.Ada        as Ada
-import           Ledger.Address
-import           Ledger.Blockchain
-import           Ledger.Credential (Credential (..))
-import           Ledger.Crypto
-import           Ledger.Tx
-import           Ledger.TxId
+import qualified Ledger.Ada as Ada
+import Ledger.Address
+import Ledger.Blockchain
+import Ledger.Credential (Credential (..))
+import Ledger.Crypto
+import Ledger.Tx
+import Ledger.TxId
 
 -- | The owner of an unspent transaction output.
 data UtxOwner

@@ -70,76 +70,73 @@ module Plutus.PAB.Simulator(
     , waitForValidatedTxCount
     ) where
 
-import qualified Cardano.Wallet.Mock.Handlers                   as MockWallet
-import           Control.Concurrent                             (forkIO)
-import           Control.Concurrent.STM                         (STM, TQueue, TVar)
-import qualified Control.Concurrent.STM                         as STM
-import           Control.Lens                                   (_Just, at, makeLenses, makeLensesFor, preview, set,
-                                                                 view, (&), (.~), (?~), (^.))
-import           Control.Monad                                  (forM_, forever, guard, void, when)
-import           Control.Monad.Freer                            (Eff, LastMember, Member, interpret, reinterpret,
-                                                                 reinterpret2, reinterpretN, run, send, type (~>))
-import           Control.Monad.Freer.Delay                      (DelayEffect, delayThread, handleDelayEffect)
-import           Control.Monad.Freer.Error                      (Error, handleError, runError, throwError)
-import qualified Control.Monad.Freer.Extras                     as Modify
-import           Control.Monad.Freer.Extras.Log                 (LogLevel (Info), LogMessage, LogMsg (..),
-                                                                 handleLogWriter, logInfo, logLevel, mapLog)
-import           Control.Monad.Freer.Reader                     (Reader, ask, asks)
-import           Control.Monad.Freer.State                      (State (..), runState)
-import           Control.Monad.Freer.Writer                     (Writer (..), runWriter)
-import           Control.Monad.IO.Class                         (MonadIO (..))
-import qualified Data.Aeson                                     as JSON
-import           Data.Default                                   (Default (..))
-import           Data.Foldable                                  (fold, traverse_)
-import           Data.Map                                       (Map)
-import qualified Data.Map                                       as Map
-import           Data.Set                                       (Set)
-import           Data.Text                                      (Text)
-import qualified Data.Text                                      as Text
-import qualified Data.Text.IO                                   as Text
-import           Data.Text.Prettyprint.Doc                      (Pretty (pretty), defaultLayoutOptions, layoutPretty)
-import qualified Data.Text.Prettyprint.Doc.Render.Text          as Render
-import           Data.Time.Units                                (Millisecond)
-import           Ledger                                         (Address (..), Blockchain, CardanoTx, PubKeyHash, TxId,
-                                                                 TxOut (..), eitherTx, txFee, txId)
-import qualified Ledger.Ada                                     as Ada
-import           Ledger.CardanoWallet                           (MockWallet)
-import qualified Ledger.CardanoWallet                           as CW
-import           Ledger.Fee                                     (FeeConfig)
-import qualified Ledger.Index                                   as UtxoIndex
-import           Ledger.TimeSlot                                (SlotConfig (..))
-import           Ledger.Value                                   (Value, flattenValue)
-import           Plutus.ChainIndex.Emulator                     (ChainIndexControlEffect, ChainIndexEmulatorState,
-                                                                 ChainIndexError, ChainIndexLog,
-                                                                 ChainIndexQueryEffect (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
-                                                                 TxOutStatus, TxStatus, getTip)
-import qualified Plutus.ChainIndex.Emulator                     as ChainIndex
-import           Plutus.PAB.Core                                (EffectHandlers (..))
-import qualified Plutus.PAB.Core                                as Core
+import qualified Cardano.Wallet.Mock.Handlers as MockWallet
+import Control.Concurrent (forkIO)
+import Control.Concurrent.STM (STM, TQueue, TVar)
+import qualified Control.Concurrent.STM as STM
+import Control.Lens (_Just, at, makeLenses, makeLensesFor, preview, set, view, (&), (.~), (?~), (^.))
+import Control.Monad (forM_, forever, guard, void, when)
+import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, reinterpret2, reinterpretN, run, send,
+                            type (~>))
+import Control.Monad.Freer.Delay (DelayEffect, delayThread, handleDelayEffect)
+import Control.Monad.Freer.Error (Error, handleError, runError, throwError)
+import qualified Control.Monad.Freer.Extras as Modify
+import Control.Monad.Freer.Extras.Log (LogLevel (Info), LogMessage, LogMsg (..), handleLogWriter, logInfo, logLevel,
+                                       mapLog)
+import Control.Monad.Freer.Reader (Reader, ask, asks)
+import Control.Monad.Freer.State (State (..), runState)
+import Control.Monad.Freer.Writer (Writer (..), runWriter)
+import Control.Monad.IO.Class (MonadIO (..))
+import qualified Data.Aeson as JSON
+import Data.Default (Default (..))
+import Data.Foldable (fold, traverse_)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Set (Set)
+import Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
+import Data.Text.Prettyprint.Doc (Pretty (pretty), defaultLayoutOptions, layoutPretty)
+import qualified Data.Text.Prettyprint.Doc.Render.Text as Render
+import Data.Time.Units (Millisecond)
+import Ledger (Address (..), Blockchain, CardanoTx, PubKeyHash, TxId, TxOut (..), eitherTx, txFee, txId)
+import qualified Ledger.Ada as Ada
+import Ledger.CardanoWallet (MockWallet)
+import qualified Ledger.CardanoWallet as CW
+import Ledger.Fee (FeeConfig)
+import qualified Ledger.Index as UtxoIndex
+import Ledger.TimeSlot (SlotConfig (..))
+import Ledger.Value (Value, flattenValue)
+import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
+                                   ChainIndexQueryEffect (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
+                                   TxOutStatus, TxStatus, getTip)
+import qualified Plutus.ChainIndex.Emulator as ChainIndex
+import Plutus.PAB.Core (EffectHandlers (..))
+import qualified Plutus.PAB.Core as Core
 import qualified Plutus.PAB.Core.ContractInstance.BlockchainEnv as BlockchainEnv
-import           Plutus.PAB.Core.ContractInstance.STM           (Activity (..), BlockchainEnv (..), OpenEndpoint)
-import qualified Plutus.PAB.Core.ContractInstance.STM           as Instances
-import           Plutus.PAB.Effects.Contract                    (ContractStore)
-import qualified Plutus.PAB.Effects.Contract                    as Contract
-import           Plutus.PAB.Effects.Contract.Builtin            (HasDefinitions (..))
-import           Plutus.PAB.Effects.TimeEffect                  (TimeEffect)
-import           Plutus.PAB.Monitoring.PABLogMsg                (PABMultiAgentMsg (..))
-import           Plutus.PAB.Types                               (PABError (ContractInstanceNotFound, WalletError, WalletNotFound))
-import           Plutus.PAB.Webserver.Types                     (ContractActivationArgs (..))
-import           Plutus.Trace.Emulator.System                   (appendNewTipBlock)
-import           Plutus.V1.Ledger.Slot                          (Slot)
-import           Plutus.V1.Ledger.Tx                            (TxOutRef)
-import qualified Wallet.API                                     as WAPI
-import           Wallet.Effects                                 (NodeClientEffect (..), WalletEffect)
-import qualified Wallet.Emulator                                as Emulator
-import           Wallet.Emulator.Chain                          (ChainControlEffect, ChainState (..))
-import qualified Wallet.Emulator.Chain                          as Chain
-import           Wallet.Emulator.LogMessages                    (TxBalanceMsg)
-import           Wallet.Emulator.MultiAgent                     (EmulatorEvent' (..), _singleton)
-import qualified Wallet.Emulator.Stream                         as Emulator
-import           Wallet.Emulator.Wallet                         (Wallet (..), knownWallet, knownWallets)
-import qualified Wallet.Emulator.Wallet                         as Wallet
-import           Wallet.Types                                   (ContractInstanceId, NotificationError)
+import Plutus.PAB.Core.ContractInstance.STM (Activity (..), BlockchainEnv (..), OpenEndpoint)
+import qualified Plutus.PAB.Core.ContractInstance.STM as Instances
+import Plutus.PAB.Effects.Contract (ContractStore)
+import qualified Plutus.PAB.Effects.Contract as Contract
+import Plutus.PAB.Effects.Contract.Builtin (HasDefinitions (..))
+import Plutus.PAB.Effects.TimeEffect (TimeEffect)
+import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (..))
+import Plutus.PAB.Types (PABError (ContractInstanceNotFound, WalletError, WalletNotFound))
+import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
+import Plutus.Trace.Emulator.System (appendNewTipBlock)
+import Plutus.V1.Ledger.Slot (Slot)
+import Plutus.V1.Ledger.Tx (TxOutRef)
+import qualified Wallet.API as WAPI
+import Wallet.Effects (NodeClientEffect (..), WalletEffect)
+import qualified Wallet.Emulator as Emulator
+import Wallet.Emulator.Chain (ChainControlEffect, ChainState (..))
+import qualified Wallet.Emulator.Chain as Chain
+import Wallet.Emulator.LogMessages (TxBalanceMsg)
+import Wallet.Emulator.MultiAgent (EmulatorEvent' (..), _singleton)
+import qualified Wallet.Emulator.Stream as Emulator
+import Wallet.Emulator.Wallet (Wallet (..), knownWallet, knownWallets)
+import qualified Wallet.Emulator.Wallet as Wallet
+import Wallet.Types (ContractInstanceId, NotificationError)
 
 -- | The current state of a contract instance
 data SimulatorContractInstanceState t =

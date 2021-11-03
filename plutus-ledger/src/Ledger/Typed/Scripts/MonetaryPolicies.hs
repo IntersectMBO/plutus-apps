@@ -17,17 +17,17 @@ module Ledger.Typed.Scripts.MonetaryPolicies (
     , Any
     ) where
 
-import           PlutusTx
-import           PlutusTx.Prelude
+import PlutusTx
+import PlutusTx.Prelude
 
-import           Plutus.V1.Ledger.Address    (Address (..))
-import           Plutus.V1.Ledger.Contexts   (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
-import qualified Plutus.V1.Ledger.Contexts   as Validation
-import           Plutus.V1.Ledger.Credential (Credential (..))
-import           Plutus.V1.Ledger.Scripts
-import           Plutus.V1.Ledger.Tx         (TxOut (..))
+import Plutus.V1.Ledger.Address (Address (..))
+import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
+import qualified Plutus.V1.Ledger.Contexts as Validation
+import Plutus.V1.Ledger.Credential (Credential (..))
+import Plutus.V1.Ledger.Scripts
+import Plutus.V1.Ledger.Tx (TxOut (..))
 
-import           Ledger.Typed.TypeUtils
+import Ledger.Typed.TypeUtils
 
 type WrappedMintingPolicyType = BuiltinData -> BuiltinData -> ()
 

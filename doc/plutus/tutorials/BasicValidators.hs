@@ -7,24 +7,24 @@
 {-# LANGUAGE ViewPatterns        #-}
 module BasicValidators where
 
-import qualified PlutusCore.Default   as PLC
-import           PlutusTx
-import           PlutusTx.Lift
-import           PlutusTx.Prelude
+import qualified PlutusCore.Default as PLC
+import PlutusTx
+import PlutusTx.Lift
+import PlutusTx.Prelude
 
-import           Ledger               hiding (validatorHash)
-import           Ledger.Ada
-import           Ledger.Typed.Scripts
-import           Ledger.Value
+import Ledger hiding (validatorHash)
+import Ledger.Ada
+import Ledger.Typed.Scripts
+import Ledger.Value
 
-import qualified Data.ByteString      as BS
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 
-import           Codec.Serialise
-import qualified Flat                 as Flat
+import Codec.Serialise
+import qualified Flat as Flat
 
-import           Prelude              (IO, print, show)
-import qualified Prelude              as Haskell
+import Prelude (IO, print, show)
+import qualified Prelude as Haskell
 
 myKeyHash :: PubKeyHash
 myKeyHash = Haskell.undefined

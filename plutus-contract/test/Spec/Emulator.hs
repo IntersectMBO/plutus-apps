@@ -12,40 +12,40 @@
 module Spec.Emulator(tests) where
 
 
-import           Control.Lens
-import           Control.Monad              (void)
-import qualified Control.Monad.Freer        as Eff
-import qualified Control.Monad.Freer.Error  as E
-import           Control.Monad.Freer.Writer (Writer, runWriter, tell)
-import qualified Data.ByteString.Lazy       as BSL
-import           Data.ByteString.Lazy.Char8 (pack)
-import           Data.Default               (Default (..))
-import           Data.Foldable              (fold)
-import qualified Data.Set                   as Set
-import           Hedgehog                   (Property, forAll, property)
+import Control.Lens
+import Control.Monad (void)
+import qualified Control.Monad.Freer as Eff
+import qualified Control.Monad.Freer.Error as E
+import Control.Monad.Freer.Writer (Writer, runWriter, tell)
+import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy.Char8 (pack)
+import Data.Default (Default (..))
+import Data.Foldable (fold)
+import qualified Data.Set as Set
+import Hedgehog (Property, forAll, property)
 import qualified Hedgehog
-import qualified Hedgehog.Gen               as Gen
-import qualified Hedgehog.Range             as Range
-import           Ledger
-import qualified Ledger.Ada                 as Ada
-import           Ledger.Generators          (Mockchain (Mockchain))
-import qualified Ledger.Generators          as Gen
-import qualified Ledger.Index               as Index
-import           Ledger.Typed.Scripts       (wrapValidator)
-import qualified Ledger.Value               as Value
-import           Plutus.Contract.Test       hiding (not)
-import           Plutus.Trace               (EmulatorTrace, PrintEffect (..))
-import qualified Plutus.Trace               as Trace
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
+import Ledger
+import qualified Ledger.Ada as Ada
+import Ledger.Generators (Mockchain (Mockchain))
+import qualified Ledger.Generators as Gen
+import qualified Ledger.Index as Index
+import Ledger.Typed.Scripts (wrapValidator)
+import qualified Ledger.Value as Value
+import Plutus.Contract.Test hiding (not)
+import Plutus.Trace (EmulatorTrace, PrintEffect (..))
+import qualified Plutus.Trace as Trace
 import qualified PlutusTx
-import qualified PlutusTx.Numeric           as P
-import qualified PlutusTx.Prelude           as PlutusTx
-import           Test.Tasty
-import           Test.Tasty.Golden          (goldenVsString)
-import           Test.Tasty.Hedgehog        (testProperty)
-import           Wallet
-import qualified Wallet.API                 as W
-import qualified Wallet.Emulator.Chain      as Chain
-import           Wallet.Emulator.Types
+import qualified PlutusTx.Numeric as P
+import qualified PlutusTx.Prelude as PlutusTx
+import Test.Tasty
+import Test.Tasty.Golden (goldenVsString)
+import Test.Tasty.Hedgehog (testProperty)
+import Wallet
+import qualified Wallet.API as W
+import qualified Wallet.Emulator.Chain as Chain
+import Wallet.Emulator.Types
 import qualified Wallet.Graph
 
 

@@ -8,7 +8,7 @@ import qualified Spec.Rows
 import qualified Spec.Secrets
 import qualified Spec.State
 import qualified Spec.ThreadToken
-import           Test.Tasty
+import Test.Tasty
 
 main :: IO ()
 main = defaultMain tests

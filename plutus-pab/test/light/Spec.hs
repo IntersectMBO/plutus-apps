@@ -5,7 +5,7 @@ module Main
 import qualified Cardano.Api.NetworkId.ExtraSpec
 import qualified Cardano.Wallet.ServerSpec
 import qualified Control.Concurrent.STM.ExtrasSpec
-import           Test.Tasty                        (defaultMain, testGroup)
+import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
 main =

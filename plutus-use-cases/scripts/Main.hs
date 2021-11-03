@@ -9,27 +9,27 @@
 
 module Main(main, ExportTx(..)) where
 
-import qualified Cardano.Api                    as C
-import           Data.Default                   (Default (..))
-import           Data.Monoid                    (Sum (..))
-import           Ledger.Index                   (ValidatorMode (..))
-import           Options.Applicative
-import           Plutus.Contract.Wallet         (ExportTx (..))
-import qualified Plutus.Contracts.Crowdfunding  as Crowdfunding
+import qualified Cardano.Api as C
+import Data.Default (Default (..))
+import Data.Monoid (Sum (..))
+import Ledger.Index (ValidatorMode (..))
+import Options.Applicative
+import Plutus.Contract.Wallet (ExportTx (..))
+import qualified Plutus.Contracts.Crowdfunding as Crowdfunding
 import qualified Plutus.Contracts.Uniswap.Trace as Uniswap
-import           Plutus.Trace                   (Command (..), ScriptsConfig (..), showStats, writeScriptsTo)
-import qualified Spec.Currency                  as Currency
-import qualified Spec.Escrow                    as Escrow
-import qualified Spec.Future                    as Future
-import qualified Spec.GameStateMachine          as GameStateMachine
-import qualified Spec.MultiSig                  as MultiSig
-import qualified Spec.MultiSigStateMachine      as MultiSigStateMachine
-import qualified Spec.PingPong                  as PingPong
-import qualified Spec.Prism                     as Prism
-import qualified Spec.PubKey                    as PubKey
-import qualified Spec.Stablecoin                as Stablecoin
-import qualified Spec.TokenAccount              as TokenAccount
-import qualified Spec.Vesting                   as Vesting
+import Plutus.Trace (Command (..), ScriptsConfig (..), showStats, writeScriptsTo)
+import qualified Spec.Currency as Currency
+import qualified Spec.Escrow as Escrow
+import qualified Spec.Future as Future
+import qualified Spec.GameStateMachine as GameStateMachine
+import qualified Spec.MultiSig as MultiSig
+import qualified Spec.MultiSigStateMachine as MultiSigStateMachine
+import qualified Spec.PingPong as PingPong
+import qualified Spec.Prism as Prism
+import qualified Spec.PubKey as PubKey
+import qualified Spec.Stablecoin as Stablecoin
+import qualified Spec.TokenAccount as TokenAccount
+import qualified Spec.Vesting as Vesting
 
 writeWhat :: Command -> String
 writeWhat (Scripts FullyAppliedValidators) = "scripts (fully applied)"

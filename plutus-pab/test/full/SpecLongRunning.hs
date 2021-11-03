@@ -3,7 +3,7 @@ module Main
     ) where
 
 import qualified Plutus.PAB.CliSpec
-import           Test.Tasty         (defaultMain, testGroup)
+import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
 main =

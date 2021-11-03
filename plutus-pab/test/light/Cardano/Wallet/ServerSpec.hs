@@ -10,15 +10,15 @@ module Cardano.Wallet.ServerSpec
     ( tests
     ) where
 
-import           Cardano.Wallet.Mock.Handlers
-import           Control.Monad                        (replicateM)
-import qualified Data.ByteString                      as BS
-import           Data.Word
-import           Test.QuickCheck.Arbitrary            (Arbitrary, arbitrary)
-import           Test.QuickCheck.Instances.ByteString
-import           Test.Tasty
-import           Test.Tasty.HUnit                     (assertEqual, testCase)
-import           Test.Tasty.QuickCheck
+import Cardano.Wallet.Mock.Handlers
+import Control.Monad (replicateM)
+import qualified Data.ByteString as BS
+import Data.Word
+import Test.QuickCheck.Arbitrary (Arbitrary, arbitrary)
+import Test.QuickCheck.Instances.ByteString
+import Test.Tasty
+import Test.Tasty.HUnit (assertEqual, testCase)
+import Test.Tasty.QuickCheck
 
 
 tests :: TestTree

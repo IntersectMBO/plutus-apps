@@ -21,15 +21,15 @@ module Plutus.Contracts.Uniswap.OnChain
     , validateLiquidityMinting
     ) where
 
-import           Ledger
-import           Ledger.Constraints.OnChain       as Constraints
-import           Ledger.Constraints.TxConstraints as Constraints
-import           Ledger.Value                     (AssetClass (..), symbols)
-import           Plutus.Contracts.Uniswap.Pool    (calculateAdditionalLiquidity, calculateInitialLiquidity,
-                                                   calculateRemoval, checkSwap, lpTicker)
-import           Plutus.Contracts.Uniswap.Types
+import Ledger
+import Ledger.Constraints.OnChain as Constraints
+import Ledger.Constraints.TxConstraints as Constraints
+import Ledger.Value (AssetClass (..), symbols)
+import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateInitialLiquidity, calculateRemoval,
+                                      checkSwap, lpTicker)
+import Plutus.Contracts.Uniswap.Types
 import qualified PlutusTx
-import           PlutusTx.Prelude
+import PlutusTx.Prelude
 
 {-# INLINABLE findOwnInput' #-}
 findOwnInput' :: ScriptContext -> TxInInfo

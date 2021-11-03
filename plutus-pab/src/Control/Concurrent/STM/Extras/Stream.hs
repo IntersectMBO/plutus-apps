@@ -19,13 +19,13 @@ module Control.Concurrent.STM.Extras.Stream
   , dedupe
   ) where
 
-import           Control.Applicative    (Alternative (..), Applicative (..))
-import           Control.Concurrent.STM (STM)
+import Control.Applicative (Alternative (..), Applicative (..))
+import Control.Concurrent.STM (STM)
 import qualified Control.Concurrent.STM as STM
-import           Control.Monad          (guard)
-import           Data.Bifunctor         (Bifunctor (..))
-import           Data.Foldable          (traverse_)
-import           Numeric.Natural        (Natural)
+import Control.Monad (guard)
+import Data.Bifunctor (Bifunctor (..))
+import Data.Foldable (traverse_)
+import Numeric.Natural (Natural)
 
 -- | An STM stream of 'a's (poor man's pull-based FRP)
 newtype STMStream a = STMStream{ unSTMStream :: STM (a, Maybe (STMStream a)) }

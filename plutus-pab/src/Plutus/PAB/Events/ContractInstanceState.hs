@@ -11,17 +11,17 @@ module Plutus.PAB.Events.ContractInstanceState(
     , hasActiveRequests
     ) where
 
-import           Control.Monad.Freer.Extras.Log (LogMessage)
-import           Data.Aeson                     (FromJSON, ToJSON (..), Value)
-import qualified Data.Aeson.Encode.Pretty       as JSON
-import qualified Data.ByteString.Lazy.Char8     as BS8
-import qualified Data.OpenApi.Schema            as OpenApi
-import qualified Data.Text                      as Text
-import           Data.Text.Extras               (abbreviate)
-import           Data.Text.Prettyprint.Doc
-import           GHC.Generics                   (Generic)
-import qualified Plutus.Contract.Resumable      as Contract
-import qualified Plutus.Contract.State          as Contract
+import Control.Monad.Freer.Extras.Log (LogMessage)
+import Data.Aeson (FromJSON, ToJSON (..), Value)
+import qualified Data.Aeson.Encode.Pretty as JSON
+import qualified Data.ByteString.Lazy.Char8 as BS8
+import qualified Data.OpenApi.Schema as OpenApi
+import qualified Data.Text as Text
+import Data.Text.Extras (abbreviate)
+import Data.Text.Prettyprint.Doc
+import GHC.Generics (Generic)
+import qualified Plutus.Contract.Resumable as Contract
+import qualified Plutus.Contract.State as Contract
 
 -- TODO: Replace with type synonym for @ContractResponse Value Value Value h@
 data PartiallyDecodedResponse v =

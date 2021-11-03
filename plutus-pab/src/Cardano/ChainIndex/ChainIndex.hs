@@ -9,21 +9,21 @@ module Cardano.ChainIndex.ChainIndex
     , syncState
     ) where
 
-import           Cardano.BM.Data.Trace            (Trace)
-import           Control.Concurrent.STM           (TVar)
-import qualified Control.Concurrent.STM           as STM
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error        (runError)
-import qualified Control.Monad.Freer.State        as Eff
-import           Control.Monad.IO.Class           (MonadIO (..))
-import           Ledger.Blockchain                (Block)
-import           Ledger.Slot                      (Slot)
+import Cardano.BM.Data.Trace (Trace)
+import Control.Concurrent.STM (TVar)
+import qualified Control.Concurrent.STM as STM
+import Control.Monad.Freer
+import Control.Monad.Freer.Error (runError)
+import qualified Control.Monad.Freer.State as Eff
+import Control.Monad.IO.Class (MonadIO (..))
+import Ledger.Blockchain (Block)
+import Ledger.Slot (Slot)
 
-import           Cardano.ChainIndex.Types
-import           Plutus.ChainIndex.Emulator       (ChainIndexEmulatorState, ChainIndexLog)
-import qualified Plutus.ChainIndex.Emulator       as ChainIndex
-import           Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
-import           Plutus.Trace.Emulator.System     (appendNewTipBlock)
+import Cardano.ChainIndex.Types
+import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexLog)
+import qualified Plutus.ChainIndex.Emulator as ChainIndex
+import Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
+import Plutus.Trace.Emulator.System (appendNewTipBlock)
 
 -- | Update the chain index by asking the node for new blocks since the last
 --   time.

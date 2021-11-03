@@ -52,42 +52,41 @@ module Plutus.Contract.StateMachine(
     , Void
     ) where
 
-import           Control.Lens
-import           Control.Monad.Error.Lens
-import           Data.Aeson                                   (FromJSON, ToJSON)
-import           Data.Default                                 (Default (def))
-import           Data.Either                                  (rights)
-import           Data.Map                                     (Map)
-import qualified Data.Map                                     as Map
-import           Data.Maybe                                   (listToMaybe, mapMaybe)
-import qualified Data.Set                                     as Set
-import           Data.Text                                    (Text)
-import qualified Data.Text                                    as Text
-import           Data.Void                                    (Void, absurd)
-import           GHC.Generics                                 (Generic)
-import           Ledger                                       (POSIXTime, Slot, TxOutRef, Value, scriptCurrencySymbol)
+import Control.Lens
+import Control.Monad.Error.Lens
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default (def))
+import Data.Either (rights)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Maybe (listToMaybe, mapMaybe)
+import qualified Data.Set as Set
+import Data.Text (Text)
+import qualified Data.Text as Text
+import Data.Void (Void, absurd)
+import GHC.Generics (Generic)
+import Ledger (POSIXTime, Slot, TxOutRef, Value, scriptCurrencySymbol)
 import qualified Ledger
-import           Ledger.Constraints                           (ScriptLookups, TxConstraints (..), mintingPolicy,
-                                                               mustMintValueWithRedeemer, mustPayToTheScript,
-                                                               mustSpendPubKeyOutput)
-import           Ledger.Constraints.OffChain                  (UnbalancedTx)
-import qualified Ledger.Constraints.OffChain                  as Constraints
-import           Ledger.Constraints.TxConstraints             (InputConstraint (..), OutputConstraint (..))
-import qualified Ledger.TimeSlot                              as TimeSlot
-import qualified Ledger.Tx                                    as Tx
-import qualified Ledger.Typed.Scripts                         as Scripts
-import           Ledger.Typed.Tx                              (TypedScriptTxOut (..))
-import qualified Ledger.Typed.Tx                              as Typed
-import qualified Ledger.Value                                 as Value
-import           Plutus.ChainIndex                            (ChainIndexTx (..))
-import           Plutus.Contract
-import           Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
-import           Plutus.Contract.StateMachine.OnChain         (State (..), StateMachine (..), StateMachineInstance (..))
-import qualified Plutus.Contract.StateMachine.OnChain         as SM
-import           Plutus.Contract.StateMachine.ThreadToken     (ThreadToken (..), curPolicy, ttOutRef)
-import           Plutus.Contract.Wallet                       (getUnspentOutput)
+import Ledger.Constraints (ScriptLookups, TxConstraints (..), mintingPolicy, mustMintValueWithRedeemer,
+                           mustPayToTheScript, mustSpendPubKeyOutput)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import qualified Ledger.Constraints.OffChain as Constraints
+import Ledger.Constraints.TxConstraints (InputConstraint (..), OutputConstraint (..))
+import qualified Ledger.TimeSlot as TimeSlot
+import qualified Ledger.Tx as Tx
+import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Typed.Tx (TypedScriptTxOut (..))
+import qualified Ledger.Typed.Tx as Typed
+import qualified Ledger.Value as Value
+import Plutus.ChainIndex (ChainIndexTx (..))
+import Plutus.Contract
+import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
+import Plutus.Contract.StateMachine.OnChain (State (..), StateMachine (..), StateMachineInstance (..))
+import qualified Plutus.Contract.StateMachine.OnChain as SM
+import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (..), curPolicy, ttOutRef)
+import Plutus.Contract.Wallet (getUnspentOutput)
 import qualified PlutusTx
-import           PlutusTx.Monoid                              (inv)
+import PlutusTx.Monoid (inv)
 
 -- $statemachine
 -- To write your contract as a state machine you need

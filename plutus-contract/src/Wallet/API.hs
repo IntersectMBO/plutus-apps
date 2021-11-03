@@ -54,15 +54,15 @@ module Wallet.API(
     throwOtherError,
     ) where
 
-import           Control.Monad               (void)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error   (Error, throwError)
-import           Ledger                      hiding (inputs, out, value)
-import           Ledger.Constraints.OffChain (UnbalancedTx (..), emptyUnbalancedTx)
-import           Wallet.Effects
-import           Wallet.Emulator.Error
+import Control.Monad (void)
+import Control.Monad.Freer
+import Control.Monad.Freer.Error (Error, throwError)
+import Ledger hiding (inputs, out, value)
+import Ledger.Constraints.OffChain (UnbalancedTx (..), emptyUnbalancedTx)
+import Wallet.Effects
+import Wallet.Emulator.Error
 
-import           Prelude                     hiding (Ordering (..))
+import Prelude hiding (Ordering (..))
 
 -- | Transfer some funds to an address locked by a public key, returning the
 --   transaction that was submitted.

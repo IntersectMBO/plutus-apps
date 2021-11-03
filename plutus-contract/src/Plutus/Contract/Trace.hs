@@ -46,33 +46,32 @@ module Plutus.Contract.Trace
     , EM.knownWallet
     ) where
 
-import           Control.Lens                         (makeClassyPrisms, preview)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Extras.Log       (LogMessage, LogMsg, LogObserve)
-import           Control.Monad.Freer.Reader           (Reader)
-import qualified Data.Aeson.Types                     as JSON
-import           Data.Map                             (Map)
-import qualified Data.Map                             as Map
-import           Data.Text.Prettyprint.Doc            (Pretty, pretty, (<+>))
-import           GHC.Generics                         (Generic)
+import Control.Lens (makeClassyPrisms, preview)
+import Control.Monad.Freer
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve)
+import Control.Monad.Freer.Reader (Reader)
+import qualified Data.Aeson.Types as JSON
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Text.Prettyprint.Doc (Pretty, pretty, (<+>))
+import GHC.Generics (Generic)
 
-import           Data.Text                            (Text)
+import Data.Text (Text)
 
-import           Plutus.Contract.Effects              (PABReq, PABResp)
-import qualified Plutus.Contract.Effects              as E
-import           Plutus.Contract.Trace.RequestHandler (RequestHandler (..), RequestHandlerLogMsg, generalise)
+import Plutus.Contract.Effects (PABReq, PABResp)
+import qualified Plutus.Contract.Effects as E
+import Plutus.Contract.Trace.RequestHandler (RequestHandler (..), RequestHandlerLogMsg, generalise)
 import qualified Plutus.Contract.Trace.RequestHandler as RequestHandler
 
-import qualified Ledger.Ada                           as Ada
-import           Ledger.Value                         (Value)
+import qualified Ledger.Ada as Ada
+import Ledger.Value (Value)
 
-import           Plutus.ChainIndex                    (ChainIndexQueryEffect)
-import           Plutus.Trace.Emulator.Types          (EmulatedWalletEffects)
-import           Wallet.Effects                       (NodeClientEffect, WalletEffect)
-import           Wallet.Emulator                      (Wallet)
-import qualified Wallet.Emulator                      as EM
-import           Wallet.Types                         (ContractInstanceId, EndpointDescription (..),
-                                                       NotificationError (..))
+import Plutus.ChainIndex (ChainIndexQueryEffect)
+import Plutus.Trace.Emulator.Types (EmulatedWalletEffects)
+import Wallet.Effects (NodeClientEffect, WalletEffect)
+import Wallet.Emulator (Wallet)
+import qualified Wallet.Emulator as EM
+import Wallet.Types (ContractInstanceId, EndpointDescription (..), NotificationError (..))
 
 data EndpointError =
     EndpointNotActive (Maybe Wallet) EndpointDescription

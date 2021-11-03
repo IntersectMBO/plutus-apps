@@ -8,16 +8,16 @@ module Plutus.PAB.Webserver.Client (
   , pabClient
 ) where
 
-import           Data.Aeson                 (FromJSON, ToJSON (..))
-import qualified Data.Aeson                 as JSON
-import           Data.Proxy
-import           Data.Text                  (Text)
-import           Plutus.PAB.Events.Contract
-import           Plutus.PAB.Instances       ()
-import           Plutus.PAB.Webserver.API
-import           Plutus.PAB.Webserver.Types
-import           Servant.API
-import           Servant.Client
+import Data.Aeson (FromJSON, ToJSON (..))
+import qualified Data.Aeson as JSON
+import Data.Proxy
+import Data.Text (Text)
+import Plutus.PAB.Events.Contract
+import Plutus.PAB.Instances ()
+import Plutus.PAB.Webserver.API
+import Plutus.PAB.Webserver.Types
+import Servant.API
+import Servant.Client
 
 -- | Client for PAB. The first type-argument is contract type that is used for PAB-simulator.
 data PabClient t walletId = PabClient

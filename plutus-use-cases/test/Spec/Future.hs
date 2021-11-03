@@ -11,28 +11,28 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 module Spec.Future(tests, theFuture, increaseMarginTrace, settleEarlyTrace, payOutTrace) where
 
-import           Control.Monad           (void)
-import           Data.Default            (Default (def))
-import           Test.Tasty
-import qualified Test.Tasty.HUnit        as HUnit
+import Control.Monad (void)
+import Data.Default (Default (def))
+import Test.Tasty
+import qualified Test.Tasty.HUnit as HUnit
 
-import           Spec.TokenAccount       (assertAccountBalance)
+import Spec.TokenAccount (assertAccountBalance)
 
-import qualified Ledger.Ada              as Ada
-import           Ledger.Crypto           (PrivateKey, PubKey (..))
-import           Ledger.Oracle           (Observation (..), SignedMessage)
-import qualified Ledger.Oracle           as Oracle
-import           Ledger.Time             (POSIXTime)
-import qualified Ledger.TimeSlot         as TimeSlot
-import           Ledger.Value            (Value, scale)
+import qualified Ledger.Ada as Ada
+import Ledger.Crypto (PrivateKey, PubKey (..))
+import Ledger.Oracle (Observation (..), SignedMessage)
+import qualified Ledger.Oracle as Oracle
+import Ledger.Time (POSIXTime)
+import qualified Ledger.TimeSlot as TimeSlot
+import Ledger.Value (Value, scale)
 
-import qualified Ledger.CardanoWallet    as CW
-import           Plutus.Contract.Test
-import           Plutus.Contracts.Future (Future (..), FutureAccounts (..), FutureError, FutureSchema, FutureSetup (..),
-                                          Role (..))
+import qualified Ledger.CardanoWallet as CW
+import Plutus.Contract.Test
+import Plutus.Contracts.Future (Future (..), FutureAccounts (..), FutureError, FutureSchema, FutureSetup (..),
+                                Role (..))
 import qualified Plutus.Contracts.Future as F
-import           Plutus.Trace.Emulator   (ContractHandle, EmulatorTrace)
-import qualified Plutus.Trace.Emulator   as Trace
+import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
+import qualified Plutus.Trace.Emulator as Trace
 import qualified PlutusTx
 
 tests :: TestTree

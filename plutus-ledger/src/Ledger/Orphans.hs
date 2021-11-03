@@ -7,28 +7,28 @@
 
 module Ledger.Orphans where
 
-import qualified Cardano.Crypto.Wallet          as Crypto
-import           Control.Lens                   ((&), (.~), (?~))
-import           Control.Monad.Freer.Extras.Log (LogLevel, LogMessage)
-import qualified Crypto.Hash                    as Crypto
-import qualified Data.Aeson                     as JSON
-import qualified Data.Aeson.Extras              as JSON
-import           Data.Bifunctor                 (bimap)
-import qualified Data.OpenApi                   as OpenApi
-import qualified Data.Text                      as Text
-import           Data.Typeable
-import           GHC.Exts                       (IsList (..))
-import           Plutus.V1.Ledger.Ada
-import           Plutus.V1.Ledger.Api
-import           Plutus.V1.Ledger.Bytes         (bytes)
-import           Plutus.V1.Ledger.Crypto        (PrivateKey (PrivateKey, getPrivateKey), PubKey (..), Signature (..))
-import           Plutus.V1.Ledger.Slot          (Slot (..))
-import           Plutus.V1.Ledger.Tx
-import           Plutus.V1.Ledger.Value
-import           PlutusCore
-import qualified PlutusTx.AssocMap              as AssocMap
-import           Prelude                        as Haskell
-import           Web.HttpApiData                (FromHttpApiData (..), ToHttpApiData (..))
+import qualified Cardano.Crypto.Wallet as Crypto
+import Control.Lens ((&), (.~), (?~))
+import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage)
+import qualified Crypto.Hash as Crypto
+import qualified Data.Aeson as JSON
+import qualified Data.Aeson.Extras as JSON
+import Data.Bifunctor (bimap)
+import qualified Data.OpenApi as OpenApi
+import qualified Data.Text as Text
+import Data.Typeable
+import GHC.Exts (IsList (..))
+import Plutus.V1.Ledger.Ada
+import Plutus.V1.Ledger.Api
+import Plutus.V1.Ledger.Bytes (bytes)
+import Plutus.V1.Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (..), Signature (..))
+import Plutus.V1.Ledger.Slot (Slot (..))
+import Plutus.V1.Ledger.Tx
+import Plutus.V1.Ledger.Value
+import PlutusCore
+import qualified PlutusTx.AssocMap as AssocMap
+import Prelude as Haskell
+import Web.HttpApiData (FromHttpApiData (..), ToHttpApiData (..))
 
 
 instance ToHttpApiData PrivateKey where

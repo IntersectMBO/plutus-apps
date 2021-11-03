@@ -14,30 +14,30 @@
 module Vesting where
 -- TRIM TO HERE
 -- Vesting scheme as a PLC contract
-import           Control.Lens             (view)
-import           Control.Monad            (void, when)
-import           Data.Default             (Default (def))
-import qualified Data.Map                 as Map
-import qualified Data.Text                as T
+import Control.Lens (view)
+import Control.Monad (void, when)
+import Data.Default (Default (def))
+import qualified Data.Map as Map
+import qualified Data.Text as T
 
-import           Ledger                   (Address, POSIXTime, POSIXTimeRange, PubKeyHash, Validator)
-import qualified Ledger.Ada               as Ada
-import           Ledger.Constraints       (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
-import           Ledger.Contexts          (ScriptContext (..), TxInfo (..))
-import qualified Ledger.Contexts          as Validation
-import qualified Ledger.Interval          as Interval
-import qualified Ledger.TimeSlot          as TimeSlot
-import qualified Ledger.Tx                as Tx
-import qualified Ledger.Typed.Scripts     as Scripts
-import           Ledger.Value             (Value)
-import qualified Ledger.Value             as Value
-import           Playground.Contract
-import           Plutus.Contract
-import           Plutus.Contract.Test
+import Ledger (Address, POSIXTime, POSIXTimeRange, PubKeyHash, Validator)
+import qualified Ledger.Ada as Ada
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
+import Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import qualified Ledger.Contexts as Validation
+import qualified Ledger.Interval as Interval
+import qualified Ledger.TimeSlot as TimeSlot
+import qualified Ledger.Tx as Tx
+import qualified Ledger.Typed.Scripts as Scripts
+import Ledger.Value (Value)
+import qualified Ledger.Value as Value
+import Playground.Contract
+import Plutus.Contract
+import Plutus.Contract.Test
 import qualified Plutus.Contract.Typed.Tx as Typed
 import qualified PlutusTx
-import           PlutusTx.Prelude         hiding (Semigroup (..), fold)
-import           Prelude                  as Haskell (Semigroup (..), show)
+import PlutusTx.Prelude hiding (Semigroup (..), fold)
+import Prelude as Haskell (Semigroup (..), show)
 
 {- |
     A simple vesting scheme. Money is locked by a contract and may only be

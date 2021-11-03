@@ -18,41 +18,40 @@ module Plutus.PAB.Webserver.Server
     , startServerDebug'
     ) where
 
-import           Cardano.Wallet.Mock.Types              (WalletInfo (..))
-import           Control.Concurrent                     (MVar, forkFinally, forkIO, newEmptyMVar, putMVar)
-import           Control.Concurrent.Availability        (Availability, available, newToken)
-import qualified Control.Concurrent.STM                 as STM
-import           Control.Monad                          (void, when)
-import           Control.Monad.Except                   (ExceptT (ExceptT))
-import           Control.Monad.Freer.Extras.Log         (logInfo, logWarn)
-import           Control.Monad.IO.Class                 (liftIO)
-import           Data.Aeson                             (FromJSON, ToJSON)
-import           Data.Bifunctor                         (first)
-import qualified Data.ByteString.Lazy.Char8             as LBS
-import           Data.Function                          ((&))
-import           Data.Monoid                            (Endo (..))
-import qualified Data.OpenApi.Schema                    as OpenApi
-import           Data.Proxy                             (Proxy (Proxy))
-import           Network.Wai                            (Middleware)
-import qualified Network.Wai.Handler.Warp               as Warp
-import qualified Network.Wai.Middleware.Cors            as Cors
+import Cardano.Wallet.Mock.Types (WalletInfo (..))
+import Control.Concurrent (MVar, forkFinally, forkIO, newEmptyMVar, putMVar)
+import Control.Concurrent.Availability (Availability, available, newToken)
+import qualified Control.Concurrent.STM as STM
+import Control.Monad (void, when)
+import Control.Monad.Except (ExceptT (ExceptT))
+import Control.Monad.Freer.Extras.Log (logInfo, logWarn)
+import Control.Monad.IO.Class (liftIO)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Bifunctor (first)
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import Data.Function ((&))
+import Data.Monoid (Endo (..))
+import qualified Data.OpenApi.Schema as OpenApi
+import Data.Proxy (Proxy (Proxy))
+import Network.Wai (Middleware)
+import qualified Network.Wai.Handler.Warp as Warp
+import qualified Network.Wai.Middleware.Cors as Cors
 import qualified Network.Wai.Middleware.Servant.Options as Cors
-import           Plutus.PAB.Core                        (PABAction, PABRunner (..))
-import qualified Plutus.PAB.Core                        as Core
-import qualified Plutus.PAB.Effects.Contract            as Contract
-import qualified Plutus.PAB.Monitoring.PABLogMsg        as LM
-import           Plutus.PAB.Simulator                   (Simulation)
-import qualified Plutus.PAB.Simulator                   as Simulator
-import           Plutus.PAB.Types                       (PABError, WebserverConfig (..), baseUrl,
-                                                         defaultWebServerConfig)
-import           Plutus.PAB.Webserver.API               (API, SwaggerAPI, WSAPI, WalletProxy)
-import           Plutus.PAB.Webserver.Handler           (apiHandler, swagger, walletProxy, walletProxyClientEnv)
-import qualified Plutus.PAB.Webserver.WebSocket         as WS
-import           Servant                                (Application, Handler (Handler), Raw, ServerT, err500, errBody,
-                                                         hoistServer, serve, serveDirectoryFileServer, (:<|>) ((:<|>)))
+import Plutus.PAB.Core (PABAction, PABRunner (..))
+import qualified Plutus.PAB.Core as Core
+import qualified Plutus.PAB.Effects.Contract as Contract
+import qualified Plutus.PAB.Monitoring.PABLogMsg as LM
+import Plutus.PAB.Simulator (Simulation)
+import qualified Plutus.PAB.Simulator as Simulator
+import Plutus.PAB.Types (PABError, WebserverConfig (..), baseUrl, defaultWebServerConfig)
+import Plutus.PAB.Webserver.API (API, SwaggerAPI, WSAPI, WalletProxy)
+import Plutus.PAB.Webserver.Handler (apiHandler, swagger, walletProxy, walletProxyClientEnv)
+import qualified Plutus.PAB.Webserver.WebSocket as WS
+import Servant (Application, Handler (Handler), Raw, ServerT, err500, errBody, hoistServer, serve,
+                serveDirectoryFileServer, (:<|>) ((:<|>)))
 import qualified Servant
-import           Servant.Client                         (BaseUrl (baseUrlPort), ClientEnv)
-import           Wallet.Emulator.Wallet                 (WalletId)
+import Servant.Client (BaseUrl (baseUrlPort), ClientEnv)
+import Wallet.Emulator.Wallet (WalletId)
 
 asHandler :: forall t env a. PABRunner t env -> PABAction t env a -> Handler a
 asHandler PABRunner{runPABAction} = Servant.Handler . ExceptT . fmap (first mapError) . runPABAction where

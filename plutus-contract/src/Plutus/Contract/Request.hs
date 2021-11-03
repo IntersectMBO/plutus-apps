@@ -87,45 +87,44 @@ module Plutus.Contract.Request(
     , pabReq
     ) where
 
-import           Control.Lens                (Prism', preview, review, view)
-import qualified Control.Monad.Freer.Error   as E
-import           Data.Aeson                  (FromJSON, ToJSON)
-import qualified Data.Aeson                  as JSON
-import qualified Data.Aeson.Types            as JSON
-import           Data.Default                (Default (def))
-import           Data.List.NonEmpty          (NonEmpty)
-import           Data.Map                    (Map)
-import qualified Data.Map                    as Map
-import           Data.Maybe                  (catMaybes, mapMaybe)
-import           Data.Proxy                  (Proxy (..))
-import           Data.Row
-import qualified Data.Text                   as Text
-import           Data.Text.Extras            (tshow)
-import           Data.Void                   (Void)
-import           GHC.Natural                 (Natural)
-import           GHC.TypeLits                (Symbol, symbolVal)
-import           Ledger                      (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy,
-                                              MintingPolicyHash, POSIXTime, PubKeyHash, Redeemer, RedeemerHash, Slot,
-                                              StakeValidator, StakeValidatorHash, TxId, TxOutRef (txOutRefId),
-                                              Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
-import           Ledger.Constraints          (TxConstraints)
-import           Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
+import Control.Lens (Prism', preview, review, view)
+import qualified Control.Monad.Freer.Error as E
+import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Aeson as JSON
+import qualified Data.Aeson.Types as JSON
+import Data.Default (Default (def))
+import Data.List.NonEmpty (NonEmpty)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Maybe (catMaybes, mapMaybe)
+import Data.Proxy (Proxy (..))
+import Data.Row
+import qualified Data.Text as Text
+import Data.Text.Extras (tshow)
+import Data.Void (Void)
+import GHC.Natural (Natural)
+import GHC.TypeLits (Symbol, symbolVal)
+import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy, MintingPolicyHash, POSIXTime,
+               PubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId,
+               TxOutRef (txOutRefId), Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
+import Ledger.Constraints (TxConstraints)
+import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import qualified Ledger.Constraints.OffChain as Constraints
-import           Ledger.Tx                   (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
-import           Ledger.Typed.Scripts        (TypedValidator, ValidatorTypes (..))
-import qualified Ledger.Value                as V
-import           Plutus.Contract.Util        (loopM)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
+import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (..))
+import qualified Ledger.Value as V
+import Plutus.Contract.Util (loopM)
 import qualified PlutusTx
 
-import           Plutus.Contract.Effects     (ActiveEndpoint (..), PABReq (..), PABResp (..))
-import qualified Plutus.Contract.Effects     as E
-import           Plutus.Contract.Schema      (Input, Output)
-import           Wallet.Types                (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
+import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
+import qualified Plutus.Contract.Effects as E
+import Plutus.Contract.Schema (Input, Output)
+import Wallet.Types (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
 
-import           Plutus.ChainIndex           (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import           Plutus.ChainIndex.Types     (RollbackState (..), Tip, TxOutStatus, TxStatus)
-import           Plutus.Contract.Resumable
-import           Plutus.Contract.Types
+import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
+import Plutus.ChainIndex.Types (RollbackState (..), Tip, TxOutStatus, TxStatus)
+import Plutus.Contract.Resumable
+import Plutus.Contract.Types
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
 --   are unique.

@@ -7,11 +7,11 @@ module Ledger.Fee(
 , calcFees
 ) where
 
-import           Data.Aeson           (FromJSON, ToJSON)
-import           Data.Default         (Default (def))
-import           GHC.Generics         (Generic)
-import           Ledger.Index         (minFee)
-import           Plutus.V1.Ledger.Ada (Ada)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default (def))
+import GHC.Generics (Generic)
+import Ledger.Index (minFee)
+import Plutus.V1.Ledger.Ada (Ada)
 import qualified Plutus.V1.Ledger.Ada as Ada
 
 -- | Datatype to configure the fee in a transaction.

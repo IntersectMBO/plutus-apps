@@ -11,40 +11,38 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
   , garbageCollect
   ) where
 
-import           Cardano.Api                            (BlockInMode (..), ChainPoint (..), NetworkId)
-import qualified Cardano.Api                            as C
-import           Cardano.Node.Types                     (NodeMode (..))
-import           Cardano.Protocol.Socket.Client         (ChainSyncEvent (..))
-import qualified Cardano.Protocol.Socket.Client         as Client
-import qualified Cardano.Protocol.Socket.Mock.Client    as MockClient
-import qualified Data.Map                               as Map
-import           Data.Monoid                            (Last (..), Sum (..))
-import           Ledger                                 (Block, Slot (..), TxId (..))
-import           Plutus.PAB.Core.ContractInstance.STM   (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
-                                                         OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
-                                                         emptyBlockchainEnv)
-import qualified Plutus.PAB.Core.ContractInstance.STM   as S
-import           Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
+import Cardano.Api (BlockInMode (..), ChainPoint (..), NetworkId)
+import qualified Cardano.Api as C
+import Cardano.Node.Types (NodeMode (..))
+import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
+import qualified Cardano.Protocol.Socket.Client as Client
+import qualified Cardano.Protocol.Socket.Mock.Client as MockClient
+import qualified Data.Map as Map
+import Data.Monoid (Last (..), Sum (..))
+import Ledger (Block, Slot (..), TxId (..))
+import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
+                                             OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
+                                             emptyBlockchainEnv)
+import qualified Plutus.PAB.Core.ContractInstance.STM as S
+import Plutus.Trace.Emulator.ContractInstance (IndexedBlock (..), indexBlock)
 
-import           Control.Concurrent.STM                 (STM)
-import qualified Control.Concurrent.STM                 as STM
-import           Control.Lens
-import           Control.Monad                          (forM_, void, when)
-import           Control.Tracer                         (nullTracer)
-import           Data.Foldable                          (foldl', traverse_)
-import           Data.Maybe                             (catMaybes)
-import           Ledger.TimeSlot                        (SlotConfig)
-import           Plutus.ChainIndex                      (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..),
-                                                         Depth (..), InsertUtxoFailed (..), InsertUtxoSuccess (..),
-                                                         RollbackFailed (..), RollbackResult (..), Tip (..),
-                                                         TxConfirmedState (..), TxIdState (..), TxOutBalance,
-                                                         TxValidity (..), UtxoState (..), blockId, citxTxId, dropOlder,
-                                                         fromOnChainTx, insert, utxoState)
-import           Plutus.ChainIndex.Compatibility        (fromCardanoBlockHeader, fromCardanoPoint)
-import           Plutus.ChainIndex.TxIdState            (chainConstant)
-import qualified Plutus.ChainIndex.TxIdState            as TxIdState
-import qualified Plutus.ChainIndex.TxOutBalance         as TxOutBalance
-import           Plutus.Contract.CardanoAPI             (fromCardanoTx)
+import Control.Concurrent.STM (STM)
+import qualified Control.Concurrent.STM as STM
+import Control.Lens
+import Control.Monad (forM_, void, when)
+import Control.Tracer (nullTracer)
+import Data.Foldable (foldl', traverse_)
+import Data.Maybe (catMaybes)
+import Ledger.TimeSlot (SlotConfig)
+import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
+                          InsertUtxoFailed (..), InsertUtxoSuccess (..), RollbackFailed (..), RollbackResult (..),
+                          Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance, TxValidity (..),
+                          UtxoState (..), blockId, citxTxId, dropOlder, fromOnChainTx, insert, utxoState)
+import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint)
+import Plutus.ChainIndex.TxIdState (chainConstant)
+import qualified Plutus.ChainIndex.TxIdState as TxIdState
+import qualified Plutus.ChainIndex.TxOutBalance as TxOutBalance
+import Plutus.Contract.CardanoAPI (fromCardanoTx)
 
 -- | Connect to the node and write node updates to the blockchain
 --   env.

@@ -24,30 +24,29 @@ module Plutus.Contracts.Prism.Unlock(
     , UnlockError(..)
     ) where
 
-import           Control.Lens                        (makeClassyPrisms)
-import           Control.Monad                       (forever)
-import           Data.Aeson                          (FromJSON, ToJSON)
-import           GHC.Generics                        (Generic)
-import qualified Ledger.Ada                          as Ada
-import           Ledger.Constraints                  (ScriptLookups, SomeLookupsAndConstraints (..), TxConstraints (..))
-import qualified Ledger.Constraints                  as Constraints
-import           Ledger.Crypto                       (PubKeyHash)
-import           Ledger.Tx                           (getCardanoTxId)
-import           Ledger.Value                        (TokenName)
-import           Plutus.Contract
-import           Plutus.Contract.StateMachine        (InvalidTransition, SMContractError, StateMachine,
-                                                      StateMachineTransition (..))
-import qualified Plutus.Contract.StateMachine        as SM
-import           Plutus.Contracts.Prism.Credential   (Credential)
-import qualified Plutus.Contracts.Prism.Credential   as Credential
-import           Plutus.Contracts.Prism.STO          (STOData (..))
-import qualified Plutus.Contracts.Prism.STO          as STO
-import           Plutus.Contracts.Prism.StateMachine (IDAction (PresentCredential), IDState, UserCredential (..))
+import Control.Lens (makeClassyPrisms)
+import Control.Monad (forever)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import qualified Ledger.Ada as Ada
+import Ledger.Constraints (ScriptLookups, SomeLookupsAndConstraints (..), TxConstraints (..))
+import qualified Ledger.Constraints as Constraints
+import Ledger.Crypto (PubKeyHash)
+import Ledger.Tx (getCardanoTxId)
+import Ledger.Value (TokenName)
+import Plutus.Contract
+import Plutus.Contract.StateMachine (InvalidTransition, SMContractError, StateMachine, StateMachineTransition (..))
+import qualified Plutus.Contract.StateMachine as SM
+import Plutus.Contracts.Prism.Credential (Credential)
+import qualified Plutus.Contracts.Prism.Credential as Credential
+import Plutus.Contracts.Prism.STO (STOData (..))
+import qualified Plutus.Contracts.Prism.STO as STO
+import Plutus.Contracts.Prism.StateMachine (IDAction (PresentCredential), IDState, UserCredential (..))
 import qualified Plutus.Contracts.Prism.StateMachine as StateMachine
-import           Plutus.Contracts.TokenAccount       (TokenAccountError)
-import qualified Plutus.Contracts.TokenAccount       as TokenAccount
-import           Prelude                             as Haskell
-import           Schema                              (ToSchema)
+import Plutus.Contracts.TokenAccount (TokenAccountError)
+import qualified Plutus.Contracts.TokenAccount as TokenAccount
+import Prelude as Haskell
+import Schema (ToSchema)
 
 data STOSubscriber =
     STOSubscriber
