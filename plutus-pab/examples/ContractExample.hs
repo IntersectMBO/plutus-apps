@@ -21,31 +21,30 @@ import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Prettyprinter
 
-import qualified ContractExample.AtomicSwap                as Contracts.AtomicSwap
-import qualified ContractExample.IntegrationTest           as Contracts.IntegrationTest
-import qualified ContractExample.PayToWallet               as Contracts.PayToWallet
-import qualified ContractExample.WaitForTx                 as Contracts.WaitForTx
-import qualified Data.OpenApi.Schema                       as OpenApi
-import           Data.Row
-import           Language.PureScript.Bridge                (argonaut, equal, genericShow, mkSumType, order)
-import           Language.PureScript.Bridge.TypeParameters (A)
-import           Ledger                                    (TxId)
-import           Playground.Types                          (FunctionSchema)
-import qualified Plutus.Contracts.Currency                 as Contracts.Currency
-import qualified Plutus.Contracts.GameStateMachine         as Contracts.GameStateMachine
-import qualified Plutus.Contracts.PingPong                 as Contracts.PingPong
-import qualified Plutus.Contracts.Prism.Mirror             as Contracts.Prism
-import qualified Plutus.Contracts.Prism.Unlock             as Contracts.Prism
-import           Plutus.Contracts.Uniswap                  (Uniswap)
-import qualified Plutus.Contracts.Uniswap                  as Contracts.Uniswap
-import           Plutus.Contracts.Uniswap.Types            (Coin, U)
-import           Plutus.PAB.Effects.Contract.Builtin       (Builtin, BuiltinHandler (..), HasDefinitions (..),
-                                                            SomeBuiltin (..))
-import qualified Plutus.PAB.Effects.Contract.Builtin       as Builtin
-import           Plutus.PAB.Run.PSGenerator                (HasPSTypes (..))
-import           Plutus.PAB.Simulator                      (SimulatorEffectHandlers)
-import qualified Plutus.PAB.Simulator                      as Simulator
-import           Schema                                    (FormSchema)
+import ContractExample.AtomicSwap qualified as Contracts.AtomicSwap
+import ContractExample.IntegrationTest qualified as Contracts.IntegrationTest
+import ContractExample.PayToWallet qualified as Contracts.PayToWallet
+import ContractExample.WaitForTx qualified as Contracts.WaitForTx
+import Data.OpenApi.Schema qualified as OpenApi
+import Data.Row
+import Language.PureScript.Bridge (argonaut, equal, genericShow, mkSumType, order)
+import Language.PureScript.Bridge.TypeParameters (A)
+import Ledger (TxId)
+import Playground.Types (FunctionSchema)
+import Plutus.Contracts.Currency qualified as Contracts.Currency
+import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
+import Plutus.Contracts.PingPong qualified as Contracts.PingPong
+import Plutus.Contracts.Prism.Mirror qualified as Contracts.Prism
+import Plutus.Contracts.Prism.Unlock qualified as Contracts.Prism
+import Plutus.Contracts.Uniswap (Uniswap)
+import Plutus.Contracts.Uniswap qualified as Contracts.Uniswap
+import Plutus.Contracts.Uniswap.Types (Coin, U)
+import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..), SomeBuiltin (..))
+import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
+import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
+import Plutus.PAB.Simulator (SimulatorEffectHandlers)
+import Plutus.PAB.Simulator qualified as Simulator
+import Schema (FormSchema)
 
 data ExampleContracts = UniswapInit
                       | UniswapOwner
