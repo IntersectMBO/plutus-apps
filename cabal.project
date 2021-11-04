@@ -41,7 +41,6 @@ constraints:
   -- ones they reuse the one from 'some', but there isn't e.g. a proper version
   -- constraint from dependent-sum-template (which is the library we actually use).
   , dependent-sum > 0.6.2.0
-  , beam-migrate < 0.5.1.0
 
 -- These packages appear in our dependency tree and are very slow to build.
 -- Empirically, turning off optimization shaves off ~50% build time.
