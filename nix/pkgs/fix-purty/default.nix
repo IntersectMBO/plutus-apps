@@ -6,7 +6,6 @@ writeShellScriptBin "fix-purty" ''
   # ignore the exit code, which is usually unhelpful.
   ${fd}/bin/fd \
     --extension purs \
-    --exclude '*/.psc-package/*' \
     --exclude '*/.spago/*' \
     --exclude '*/node_modules/*' \
     --exclude '*/generated/*' \

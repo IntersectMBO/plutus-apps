@@ -31,7 +31,6 @@ stdenv.mkDerivation {
     nodeModules
     easyPS.purs
     easyPS.spago
-    easyPS.psc-package
     easyPS.psa
     spagoPackages.installSpagoStyle
   ];
