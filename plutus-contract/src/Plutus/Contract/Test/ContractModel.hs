@@ -17,6 +17,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE QuantifiedConstraints      #-}
@@ -122,47 +123,45 @@ module Plutus.Contract.Test.ContractModel
     , checkErrorWhitelistWithOptions
     ) where
 
-import           Control.Lens
-import           Control.Monad.Cont
-import           Control.Monad.State                   (MonadState, State)
-import qualified Control.Monad.State                   as State
-import qualified Data.Aeson                            as JSON
-import           Data.Foldable
-import           Data.List
-import           Data.Map                              (Map)
-import qualified Data.Map                              as Map
-import           Data.Maybe
-import           Data.Row                              (Row)
-import qualified Data.Text                             as Text
-import           Data.Typeable
+import Control.Lens
+import Control.Monad.Cont
+import Control.Monad.State (MonadState, State)
+import Control.Monad.State qualified as State
+import Data.Aeson qualified as JSON
+import Data.Foldable
+import Data.List
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe
+import Data.Row (Row)
+import Data.Text qualified as Text
+import Data.Typeable
 
-import           Ledger.Index
-import           Ledger.Slot
-import           Ledger.Value                          (Value, isZero, leq)
-import           Plutus.Contract                       (Contract, ContractInstanceId)
-import           Plutus.Contract.Test
-import           Plutus.Trace.Effects.EmulatorControl  (discardWallets)
-import           Plutus.Trace.Emulator                 as Trace (ContractHandle (..), ContractInstanceTag,
-                                                                 EmulatorTrace, activateContract,
-                                                                 freezeContractInstance, walletInstanceTag)
-import           Plutus.V1.Ledger.Scripts
-import qualified PlutusTx.Builtins                     as Builtins
-import           PlutusTx.ErrorCodes
-import           PlutusTx.Monoid                       (inv)
-import qualified Test.QuickCheck.DynamicLogic.Monad    as DL
-import           Test.QuickCheck.DynamicLogic.Quantify (Quantifiable (..), Quantification, arbitraryQ, chooseQ,
-                                                        elementsQ, exactlyQ, frequencyQ, mapQ, oneofQ, whereQ)
-import           Test.QuickCheck.StateModel            hiding (Action, Actions, arbitraryAction, initialState,
-                                                        monitoring, nextState, perform, precondition, shrinkAction,
-                                                        stateAfter)
-import qualified Test.QuickCheck.StateModel            as StateModel
+import Ledger.Index
+import Ledger.Slot
+import Ledger.Value (Value, isZero, leq)
+import Plutus.Contract (Contract, ContractInstanceId)
+import Plutus.Contract.Test
+import Plutus.Trace.Effects.EmulatorControl (discardWallets)
+import Plutus.Trace.Emulator as Trace (ContractHandle (..), ContractInstanceTag, EmulatorTrace, activateContract,
+                                       freezeContractInstance, walletInstanceTag)
+import Plutus.V1.Ledger.Scripts
+import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.ErrorCodes
+import PlutusTx.Monoid (inv)
+import Test.QuickCheck.DynamicLogic.Monad qualified as DL
+import Test.QuickCheck.DynamicLogic.Quantify (Quantifiable (..), Quantification, arbitraryQ, chooseQ, elementsQ,
+                                              exactlyQ, frequencyQ, mapQ, oneofQ, whereQ)
+import Test.QuickCheck.StateModel hiding (Action, Actions, arbitraryAction, initialState, monitoring, nextState,
+                                   perform, precondition, shrinkAction, stateAfter)
+import Test.QuickCheck.StateModel qualified as StateModel
 
-import           Test.QuickCheck                       hiding ((.&&.), (.||.))
-import qualified Test.QuickCheck                       as QC
-import           Test.QuickCheck.Monadic               (PropertyM, monadic)
-import qualified Test.QuickCheck.Monadic               as QC
+import Test.QuickCheck hiding ((.&&.), (.||.))
+import Test.QuickCheck qualified as QC
+import Test.QuickCheck.Monadic (PropertyM, monadic)
+import Test.QuickCheck.Monadic qualified as QC
 
-import           Wallet.Emulator.Chain                 hiding (_currentSlot, currentSlot)
+import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
 
 -- | Key-value map where keys and values have three indices that can vary between different elements
 --   of the map. Used to store `ContractHandle`s, which are indexed over observable state, schema,
@@ -251,7 +250,18 @@ dummyModelState s = ModelState 0 Map.empty mempty s
 -- | The `Spec` monad is a state monad over the `ModelState`. It is used exclusively by the
 --   `nextState` function to model the effects of an action on the blockchain.
 newtype Spec state a = Spec (State (ModelState state) a)
-    deriving (Functor, Applicative, Monad, MonadState (ModelState state))
+    deriving (Functor, Applicative, Monad)
+
+instance MonadState state (Spec state) where
+    state f = Spec $ State.state $ \s -> case f (_contractState s) of
+        (a, cs) -> (a, s { _contractState = cs })
+    {-# INLINE state #-}
+
+    get = Spec $ fmap _contractState State.get
+    {-# INLINE get #-}
+
+    put cs = Spec $ State.modify' $ \s -> s { _contractState = cs }
+    {-# INLINE put #-}
 
 -- $contractModel
 --
@@ -319,6 +329,11 @@ class ( Typeable state
     --   If an explicit `action` in a `DL` scenario violates the precondition an error is raised.
     precondition :: ModelState state -> Action state -> Bool
     precondition _ _ = True
+
+    -- | `nextReactiveState` is run every time the model `wait`s for a slot to be reached. This
+    --   can be used to model reactive components of off-chain code.
+    nextReactiveState :: Slot -> Spec state ()
+    nextReactiveState _ = return ()
 
     -- | This is where the model logic is defined. Given an action, `nextState` specifies the
     --   effects running that action has on the model state. It runs in the `Spec` monad, which is a
@@ -456,12 +471,18 @@ modState :: forall state a. Setter' (ModelState state) a -> (a -> a) -> Spec sta
 modState l f = Spec $ State.modify $ over l f
 
 -- | Wait the given number of slots. Updates the `currentSlot` of the model state.
-wait :: Integer -> Spec state ()
-wait n = modState currentSlotL (+ Slot n)
+wait :: ContractModel state => Integer -> Spec state ()
+wait n = do
+  Slot now <- viewModelState currentSlot
+  nextReactiveState (Slot $ now + n)
+  modState currentSlotL (const (Slot $ now + n))
 
 -- | Wait until the given slot. Has no effect if `currentSlot` is greater than the given slot.
-waitUntil :: Slot -> Spec state ()
-waitUntil n = modState currentSlotL (max n)
+waitUntil :: ContractModel state => Slot -> Spec state ()
+waitUntil (Slot n) = do
+  Slot now <- viewModelState currentSlot
+  when (now < n) $ do
+    wait (n - now)
 
 -- | Mint tokens. Minted tokens start out as `lockedValue` (i.e. owned by the contract) and can be
 --   transferred to wallets using `deposit`.
@@ -495,15 +516,15 @@ modifyContractState f = modState contractState f
 
 -- | Set a specific field of the contract state.
 ($=) :: Setter' state a -> a -> Spec state ()
-l $= x = l $~ const x
+($=) = (.=)
 
 -- | Modify a specific field of the contract state.
 ($~) :: Setter' state a -> (a -> a) -> Spec state ()
-l $~ f = modState (contractState . l) f
+($~) = (%=)
 
 instance GetModelState (Spec state) where
     type StateType (Spec state) = state
-    getModelState = State.get
+    getModelState = Spec State.get
 
 handle :: (ContractModel s) => Handles s -> HandleFun s
 handle handles key =

@@ -25,7 +25,7 @@ import Foreign.Class (class Decode, decode)
 import Halogen (HalogenM, liftEffect, raise)
 import Network.RemoteData as RemoteData
 import Playground.Lenses (_getEndpointDescription)
-import Plutus.PAB.Webserver (SPParams_, getApiFullreport, getApiContractInstances, getApiContractDefinitions, postApiContractActivate, getApiContractInstanceByContractinstanceidStatus)
+import Plutus.PAB.Webserver (SPParams_, getApiFullreport, getApiContractInstances, getApiContractDefinitions, postApiContractActivate)
 import Plutus.PAB.Webserver.Types (ContractInstanceClientState, ContractSignatureResponse, FullReport, CombinedWSStreamToServer, ContractActivationArgs)
 import Servant.PureScript.Ajax (AjaxError, ajax)
 import Servant.PureScript.Settings (SPSettings_)
@@ -98,6 +98,17 @@ instance monadAppHalogenApp :: (MonadAff m, MonadAsk (SPSettings_ SPParams_) m) 
 
 runAjax :: forall m a. Functor m => ExceptT AjaxError m a -> m (WebData a)
 runAjax action = RemoteData.fromEither <$> runExceptT action
+
+getApiContractInstanceByContractinstanceidStatus :: forall m. MonadError AjaxError m => MonadAff m => ContractInstanceId -> m (ContractInstanceClientState ExampleContracts)
+getApiContractInstanceByContractinstanceidStatus contractInstanceId = do
+  r <-
+    ajax decode
+      $ defaultRequest
+          { method = fromString "GET"
+          , url = "/api/contract/instance/" <> view _contractInstanceIdString contractInstanceId <> "/status"
+          , headers = defaultRequest.headers
+          }
+  pure r.body
 
 -- Not using the generated purescript function to avoid double encoding of RawJson which results always as a JSON String
 postApiContractInstanceByContractinstanceidEndpointByEndpointname :: forall m. MonadError AjaxError m => MonadAff m => RawJson -> String -> String -> m Unit

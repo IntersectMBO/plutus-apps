@@ -29,23 +29,23 @@ module Ledger.Oracle(
   , signObservation
   ) where
 
-import           Data.Aeson                (FromJSON, ToJSON)
-import           GHC.Generics              (Generic)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 
-import           PlutusTx
-import           PlutusTx.Prelude
+import PlutusTx
+import PlutusTx.Prelude
 
-import           Ledger.Constraints        (TxConstraints)
-import qualified Ledger.Constraints        as Constraints
-import           Ledger.Crypto             (PrivateKey, PubKey (..), Signature (..))
-import qualified Ledger.Crypto             as Crypto
-import           Ledger.Scripts            (Datum (..), DatumHash (..))
-import qualified Ledger.Scripts            as Scripts
-import           Plutus.V1.Ledger.Bytes
-import           Plutus.V1.Ledger.Contexts (ScriptContext)
-import           Plutus.V1.Ledger.Time     (POSIXTime)
+import Ledger.Constraints (TxConstraints)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Crypto (PrivateKey, PubKey (..), Signature (..))
+import Ledger.Crypto qualified as Crypto
+import Ledger.Scripts (Datum (..), DatumHash (..))
+import Ledger.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Bytes
+import Plutus.V1.Ledger.Contexts (ScriptContext)
+import Plutus.V1.Ledger.Time (POSIXTime)
 
-import qualified Prelude                   as Haskell
+import Prelude qualified as Haskell
 
 -- $oracles
 -- This module provides a way to verify signed messages, and a type for

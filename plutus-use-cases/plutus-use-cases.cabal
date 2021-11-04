@@ -61,7 +61,7 @@ library
     default-extensions: ExplicitForAll ScopedTypeVariables
                         DeriveGeneric StandaloneDeriving DeriveLift
                         GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
-                        DeriveTraversable MultiParamTypeClasses
+                        DeriveTraversable MultiParamTypeClasses ImportQualifiedPost
     ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wredundant-constraints -Widentities
@@ -122,6 +122,7 @@ test-suite plutus-use-cases-test
         Spec.TokenAccount
         Spec.Vesting
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options: -Wall -Wnoncanonical-monad-instances
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wredundant-constraints -Widentities -rtsopts
@@ -164,6 +165,7 @@ executable plutus-use-cases-scripts
         scripts
         test
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     other-modules:
         Spec.Auction
         Spec.Crowdfunding
@@ -218,7 +220,7 @@ executable plutus-use-cases-scripts
         plutus-ledger-api -any,
         plutus-tx -any,
         plutus-contract -any,
-        plutus-chain-index -any,
+        plutus-chain-index-core -any,
         plutus-ledger -any,
         plutus-use-cases -any,
         optparse-applicative -any,

@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 module HandlingBlockchainEvents() where
 
-import           Data.List.NonEmpty (NonEmpty)
-import           Ledger
-import           Plutus.ChainIndex  (ChainIndexTx, TxStatus)
-import           Plutus.Contract    as Contract
+import Data.List.NonEmpty (NonEmpty)
+import Ledger
+import Plutus.ChainIndex (ChainIndexTx, TxStatus)
+import Plutus.Contract as Contract
 
 -- BLOCK0
 {-| Wait until one or more unspent outputs are produced at an address.

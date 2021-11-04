@@ -17,18 +17,18 @@ module ContractExample.AtomicSwap(
     atomicSwap
     ) where
 
-import           Control.Lens
-import           Control.Monad           (void)
-import           Data.Aeson              (FromJSON, ToJSON)
-import           GHC.Generics            (Generic)
-import           Plutus.Contracts.Escrow (EscrowParams (..))
-import qualified Plutus.Contracts.Escrow as Escrow
-import           Schema                  (ToSchema)
+import Control.Lens
+import Control.Monad (void)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Plutus.Contracts.Escrow (EscrowParams (..))
+import Plutus.Contracts.Escrow qualified as Escrow
+import Schema (ToSchema)
 
-import           Ledger                  (CurrencySymbol, POSIXTime, PubKeyHash, TokenName, Value)
-import qualified Ledger.Value            as Value
-import           Plutus.Contract
-import           Wallet.Emulator.Wallet  (Wallet, walletPubKeyHash)
+import Ledger (CurrencySymbol, POSIXTime, PubKeyHash, TokenName, Value)
+import Ledger.Value qualified as Value
+import Plutus.Contract
+import Wallet.Emulator.Wallet (Wallet, walletPubKeyHash)
 
 -- | Describes an exchange of two
 --   'Value' amounts between two parties

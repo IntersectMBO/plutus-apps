@@ -8,22 +8,22 @@
 -- | Reduced example of the SM contract to reproduce the token handling in and around 'runStep'.
 module Spec.ThreadToken where
 
-import           PlutusTx.Prelude             hiding (Eq)
-import           Prelude                      (Show, String, show)
+import PlutusTx.Prelude hiding (Eq)
+import Prelude (Show, String, show)
 
-import           Control.Monad                (void)
-import           GHC.Generics                 (Generic)
-import           Ledger.Typed.Scripts         (TypedValidator, mkTypedValidator)
-import qualified Ledger.Typed.Scripts         as Scripts
-import           Plutus.Contract              (Contract, EmptySchema, logError, mapError)
-import           Plutus.Contract.StateMachine (StateMachine, StateMachineClient, ThreadToken, mkStateMachine, stateData)
-import qualified Plutus.Contract.StateMachine as SM
-import           Plutus.Contract.Test
-import           Plutus.Trace                 (EmulatorTrace, activateContractWallet)
-import qualified Plutus.Trace                 as Trace
-import qualified PlutusTx
+import Control.Monad (void)
+import GHC.Generics (Generic)
+import Ledger.Typed.Scripts (TypedValidator, mkTypedValidator)
+import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Contract (Contract, EmptySchema, logError, mapError)
+import Plutus.Contract.StateMachine (StateMachine, StateMachineClient, ThreadToken, mkStateMachine, stateData)
+import Plutus.Contract.StateMachine qualified as SM
+import Plutus.Contract.Test
+import Plutus.Trace (EmulatorTrace, activateContractWallet)
+import Plutus.Trace qualified as Trace
+import PlutusTx qualified
 
-import           Test.Tasty
+import Test.Tasty
 
 -- * Very simple plutus state machine using a thread token
 

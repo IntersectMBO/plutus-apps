@@ -11,7 +11,7 @@
     flags = { release = false; };
     package = {
       specVersion = "1.10";
-      identifier = { name = "cardano-wallet-core"; version = "2021.9.9"; };
+      identifier = { name = "cardano-wallet-core"; version = "2021.9.29"; };
       license = "Apache-2.0";
       copyright = "2018-2020 IOHK";
       maintainer = "operations@iohk.io";
@@ -36,6 +36,7 @@
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."async" or (errorHandler.buildDepError "async"))
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
+          (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
           (hsPkgs."bech32" or (errorHandler.buildDepError "bech32"))
           (hsPkgs."bech32-th" or (errorHandler.buildDepError "bech32-th"))
           (hsPkgs."binary" or (errorHandler.buildDepError "binary"))
@@ -44,8 +45,12 @@
           (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
           (hsPkgs."cardano-binary" or (errorHandler.buildDepError "cardano-binary"))
           (hsPkgs."cardano-crypto" or (errorHandler.buildDepError "cardano-crypto"))
+          (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
+          (hsPkgs."cardano-crypto-test" or (errorHandler.buildDepError "cardano-crypto-test"))
           (hsPkgs."cardano-numeric" or (errorHandler.buildDepError "cardano-numeric"))
           (hsPkgs."cardano-ledger-core" or (errorHandler.buildDepError "cardano-ledger-core"))
+          (hsPkgs."cardano-ledger-byron-test" or (errorHandler.buildDepError "cardano-ledger-byron-test"))
+          (hsPkgs."cardano-ledger-alonzo" or (errorHandler.buildDepError "cardano-ledger-alonzo"))
           (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."cborg" or (errorHandler.buildDepError "cborg"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
@@ -68,11 +73,14 @@
           (hsPkgs."generic-lens" or (errorHandler.buildDepError "generic-lens"))
           (hsPkgs."generic-arbitrary" or (errorHandler.buildDepError "generic-arbitrary"))
           (hsPkgs."hashable" or (errorHandler.buildDepError "hashable"))
+          (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
+          (hsPkgs."hedgehog-quickcheck" or (errorHandler.buildDepError "hedgehog-quickcheck"))
           (hsPkgs."http-api-data" or (errorHandler.buildDepError "http-api-data"))
           (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
           (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
           (hsPkgs."http-media" or (errorHandler.buildDepError "http-media"))
           (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
+          (hsPkgs."int-cast" or (errorHandler.buildDepError "int-cast"))
           (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
           (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
           (hsPkgs."lattices" or (errorHandler.buildDepError "lattices"))
@@ -92,6 +100,7 @@
           (hsPkgs."persistent" or (errorHandler.buildDepError "persistent"))
           (hsPkgs."persistent-sqlite" or (errorHandler.buildDepError "persistent-sqlite"))
           (hsPkgs."persistent-template" or (errorHandler.buildDepError "persistent-template"))
+          (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
           (hsPkgs."pretty-simple" or (errorHandler.buildDepError "pretty-simple"))
           (hsPkgs."profunctors" or (errorHandler.buildDepError "profunctors"))
           (hsPkgs."quiet" or (errorHandler.buildDepError "quiet"))
@@ -105,10 +114,13 @@
           (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
           (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
           (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
+          (hsPkgs."shelley-spec-ledger" or (errorHandler.buildDepError "shelley-spec-ledger"))
+          (hsPkgs."shelley-spec-ledger-test" or (errorHandler.buildDepError "shelley-spec-ledger-test"))
           (hsPkgs."split" or (errorHandler.buildDepError "split"))
           (hsPkgs."splitmix" or (errorHandler.buildDepError "splitmix"))
           (hsPkgs."statistics" or (errorHandler.buildDepError "statistics"))
           (hsPkgs."streaming-commons" or (errorHandler.buildDepError "streaming-commons"))
+          (hsPkgs."strict-containers" or (errorHandler.buildDepError "strict-containers"))
           (hsPkgs."strict-non-empty-containers" or (errorHandler.buildDepError "strict-non-empty-containers"))
           (hsPkgs."string-interpolate" or (errorHandler.buildDepError "string-interpolate"))
           (hsPkgs."template-haskell" or (errorHandler.buildDepError "template-haskell"))
@@ -192,6 +204,7 @@
           "Cardano/Wallet/Primitive/Types/Address"
           "Cardano/Wallet/Primitive/Types/Coin"
           "Cardano/Wallet/Primitive/Types/Hash"
+          "Cardano/Wallet/Primitive/Types/Redeemer"
           "Cardano/Wallet/Primitive/Types/RewardAccount"
           "Cardano/Wallet/Primitive/Types/TokenBundle"
           "Cardano/Wallet/Primitive/Types/TokenMap"
@@ -201,6 +214,7 @@
           "Cardano/Wallet/Primitive/Types/UTxO"
           "Cardano/Wallet/Primitive/Types/UTxOIndex"
           "Cardano/Wallet/Primitive/Types/UTxOIndex/Internal"
+          "Cardano/Wallet/Primitive/Types/UTxOSelection"
           "Cardano/Wallet/Registry"
           "Cardano/Wallet/TokenMetadata/MockServer"
           "Cardano/Wallet/Transaction"
@@ -220,7 +234,7 @@
           "Network/Wai/Middleware/Logging"
           "Ouroboros/Network/Client/Wallet"
           "UnliftIO/Compat"
-          "Cardano/Wallet/Primitive/CoinSelection/Gen"
+          "Cardano/Wallet/Primitive/CoinSelection/Balance/Gen"
           "Cardano/Wallet/Primitive/Types/Address/Gen"
           "Cardano/Wallet/Primitive/Types/Coin/Gen"
           "Cardano/Wallet/Primitive/Types/RewardAccount/Gen"
@@ -231,7 +245,9 @@
           "Cardano/Wallet/Primitive/Types/Tx/Gen"
           "Cardano/Wallet/Primitive/Types/UTxO/Gen"
           "Cardano/Wallet/Primitive/Types/UTxOIndex/Gen"
+          "Cardano/Wallet/Primitive/Types/UTxOSelection/Gen"
           "Cardano/Wallet/Gen"
+          "Cardano/Api/Gen"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -273,9 +289,11 @@
             (hsPkgs."foldl" or (errorHandler.buildDepError "foldl"))
             (hsPkgs."generic-arbitrary" or (errorHandler.buildDepError "generic-arbitrary"))
             (hsPkgs."generic-lens" or (errorHandler.buildDepError "generic-lens"))
+            (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."hedgehog-quickcheck" or (errorHandler.buildDepError "hedgehog-quickcheck"))
             (hsPkgs."hspec" or (errorHandler.buildDepError "hspec"))
             (hsPkgs."hspec-core" or (errorHandler.buildDepError "hspec-core"))
+            (hsPkgs."hspec-hedgehog" or (errorHandler.buildDepError "hspec-hedgehog"))
             (hsPkgs."http-api-data" or (errorHandler.buildDepError "http-api-data"))
             (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
             (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
@@ -292,8 +310,10 @@
             (hsPkgs."network-uri" or (errorHandler.buildDepError "network-uri"))
             (hsPkgs."nothunks" or (errorHandler.buildDepError "nothunks"))
             (hsPkgs."persistent" or (errorHandler.buildDepError "persistent"))
+            (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
             (hsPkgs."pretty-simple" or (errorHandler.buildDepError "pretty-simple"))
             (hsPkgs."regex-pcre-builtin" or (errorHandler.buildDepError "regex-pcre-builtin"))
+            (hsPkgs."shelley-spec-ledger" or (errorHandler.buildDepError "shelley-spec-ledger"))
             (hsPkgs."OddWord" or (errorHandler.buildDepError "OddWord"))
             (hsPkgs."ouroboros-consensus" or (errorHandler.buildDepError "ouroboros-consensus"))
             (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
@@ -335,6 +355,7 @@
             ];
           buildable = true;
           modules = [
+            "Cardano/Api/GenSpec"
             "Cardano/Byron/Codec/CborSpec"
             "Cardano/DB/Sqlite/DeleteSpec"
             "Cardano/Pool/DB/Arbitrary"
@@ -364,6 +385,7 @@
             "Cardano/Wallet/Primitive/AddressDiscovery/SharedSpec"
             "Cardano/Wallet/Primitive/Delegation/StateSpec"
             "Cardano/Wallet/Primitive/AddressDiscoverySpec"
+            "Cardano/Wallet/Primitive/CoinSelectionSpec"
             "Cardano/Wallet/Primitive/CoinSelection/BalanceSpec"
             "Cardano/Wallet/Primitive/CoinSelection/CollateralSpec"
             "Cardano/Wallet/Primitive/CollateralSpec"
@@ -386,10 +408,11 @@
             "Cardano/Wallet/Primitive/Types/UTxOSpec"
             "Cardano/Wallet/Primitive/Types/UTxOIndexSpec"
             "Cardano/Wallet/Primitive/Types/UTxOIndex/TypeErrorSpec"
+            "Cardano/Wallet/Primitive/Types/UTxOSelectionSpec"
+            "Cardano/Wallet/Primitive/Types/UTxOSelectionSpec/TypeErrorSpec"
             "Cardano/Wallet/Primitive/TypesSpec"
             "Cardano/Wallet/TokenMetadataSpec"
             "Cardano/Wallet/RegistrySpec"
-            "Cardano/Wallet/TransactionSpec"
             "Cardano/WalletSpec"
             "Control/Concurrent/ConciergeSpec"
             "Data/Function/UtilsSpec"
@@ -400,8 +423,8 @@
             "Network/Wai/Middleware/LoggingSpec"
             "Spec"
             ];
-          hsSourceDirs = [ "test/unit" "test/shared" ];
-          mainPath = [ "Main.hs" ];
+          hsSourceDirs = [ "test-common" "test/unit" ];
+          mainPath = [ "core-unit-test.hs" ];
           };
         };
       benchmarks = {
@@ -433,7 +456,7 @@
             ];
           buildable = true;
           modules = [ "Cardano/Wallet/DummyTarget/Primitive/Types" ];
-          hsSourceDirs = [ "test/bench/db" "test/shared" ];
+          hsSourceDirs = [ "bench" "test-common" ];
           };
         };
       };

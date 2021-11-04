@@ -3,11 +3,11 @@
 
 module Spec.DynamicLogic.Registry where
 
-import           Control.Concurrent
-import           Control.Monad
-import           Data.IORef
-import           GHC.Conc
-import           System.IO.Unsafe
+import Control.Concurrent
+import Control.Monad
+import Data.IORef
+import GHC.Conc
+import System.IO.Unsafe
 
 alive :: ThreadId -> IO Bool
 alive tid = do

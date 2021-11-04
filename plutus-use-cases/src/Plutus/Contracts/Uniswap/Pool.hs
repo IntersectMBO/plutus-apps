@@ -10,10 +10,10 @@ module Plutus.Contracts.Uniswap.Pool
   , lpTicker
   ) where
 
-import           Ledger.Value                   (TokenName (..), unAssetClass, unCurrencySymbol)
-import           Plutus.Contracts.Uniswap.Types
-import           PlutusTx.Prelude
-import           PlutusTx.Sqrt
+import Ledger.Value (TokenName (..), unAssetClass, unCurrencySymbol)
+import Plutus.Contracts.Uniswap.Types
+import PlutusTx.Prelude
+import PlutusTx.Sqrt
 
 {-# INLINABLE calculateInitialLiquidity #-}
 -- | The initial liquidity is 'ceil( sqrt(x*y) )' where 'x' is the amount of

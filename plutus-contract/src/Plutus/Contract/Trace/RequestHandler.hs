@@ -29,35 +29,35 @@ module Plutus.Contract.Trace.RequestHandler(
     , handleOwnInstanceIdQueries
     ) where
 
-import           Control.Applicative            (Alternative (empty, (<|>)))
-import           Control.Arrow                  (Arrow, Kleisli (..))
-import           Control.Category               (Category)
-import           Control.Lens
-import           Control.Monad                  (foldM, guard, join)
-import           Control.Monad.Freer
-import qualified Control.Monad.Freer.Error      as Eff
-import           Control.Monad.Freer.NonDet     (NonDet)
-import qualified Control.Monad.Freer.NonDet     as NonDet
-import           Control.Monad.Freer.Reader     (Reader, ask)
-import           Data.Monoid                    (Alt (..), Ap (..))
-import           Data.Text                      (Text)
+import Control.Applicative (Alternative (empty, (<|>)))
+import Control.Arrow (Arrow, Kleisli (..))
+import Control.Category (Category)
+import Control.Lens
+import Control.Monad (foldM, guard, join)
+import Control.Monad.Freer
+import Control.Monad.Freer.Error qualified as Eff
+import Control.Monad.Freer.NonDet (NonDet)
+import Control.Monad.Freer.NonDet qualified as NonDet
+import Control.Monad.Freer.Reader (Reader, ask)
+import Data.Monoid (Alt (..), Ap (..))
+import Data.Text (Text)
 
-import           Plutus.Contract.Resumable      (Request (..), Response (..))
+import Plutus.Contract.Resumable (Request (..), Response (..))
 
-import           Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
-import           Ledger                         (POSIXTime, POSIXTimeRange, PubKeyHash, Slot, SlotRange)
-import           Ledger.Constraints.OffChain    (UnbalancedTx)
-import qualified Ledger.TimeSlot                as TimeSlot
-import           Ledger.Tx                      (CardanoTx)
-import           Plutus.ChainIndex              (ChainIndexQueryEffect)
-import qualified Plutus.ChainIndex.Effects      as ChainIndexEff
-import           Plutus.Contract.Effects        (ChainIndexQuery (..), ChainIndexResponse (..))
-import qualified Plutus.Contract.Wallet         as Wallet
-import           Wallet.API                     (WalletAPIError)
-import           Wallet.Effects                 (NodeClientEffect, WalletEffect)
-import qualified Wallet.Effects
-import           Wallet.Emulator.LogMessages    (RequestHandlerLogMsg (..))
-import           Wallet.Types                   (ContractInstanceId)
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
+import Ledger (POSIXTime, POSIXTimeRange, PubKeyHash, Slot, SlotRange)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx (CardanoTx)
+import Plutus.ChainIndex (ChainIndexQueryEffect)
+import Plutus.ChainIndex.Effects qualified as ChainIndexEff
+import Plutus.Contract.Effects (ChainIndexQuery (..), ChainIndexResponse (..))
+import Plutus.Contract.Wallet qualified as Wallet
+import Wallet.API (WalletAPIError)
+import Wallet.Effects (NodeClientEffect, WalletEffect)
+import Wallet.Effects qualified
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (..))
+import Wallet.Types (ContractInstanceId)
 
 
 -- | Request handlers that can choose whether to handle an effect (using

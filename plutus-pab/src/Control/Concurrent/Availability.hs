@@ -5,8 +5,8 @@ module Control.Concurrent.Availability
     , available
     ) where
 
-import           Control.Concurrent     (MVar, newEmptyMVar, putMVar, takeMVar)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Concurrent (MVar, newEmptyMVar, putMVar, takeMVar)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 
 -- | A semaphore-like construct whereby a service can signal to
 -- another thread that it's finished its startup phase, and is now

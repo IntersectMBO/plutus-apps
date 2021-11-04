@@ -3,14 +3,14 @@
 {-# LANGUAGE TypeApplications #-}
 module Spec.ErrorHandling(tests) where
 
-import           Control.Monad                  (void)
-import           Data.Default                   (Default (def))
-import           Plutus.Contract.Test
+import Control.Monad (void)
+import Data.Default (Default (def))
+import Plutus.Contract.Test
 
-import           Plutus.Contracts.ErrorHandling
-import qualified Plutus.Trace.Emulator          as Trace
+import Plutus.Contracts.ErrorHandling
+import Plutus.Trace.Emulator qualified as Trace
 
-import           Test.Tasty
+import Test.Tasty
 
 tests :: TestTree
 tests = testGroup "error handling"

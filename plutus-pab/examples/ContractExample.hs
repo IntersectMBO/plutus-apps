@@ -15,37 +15,37 @@ module ContractExample(
     , handlers
     ) where
 
-import           Control.Monad.Freer
-import           Data.Aeson                                (FromJSON, ToJSON)
-import           Data.Default                              (Default (def))
-import           Data.Text.Prettyprint.Doc
-import           GHC.Generics                              (Generic)
+import Control.Monad.Freer
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default (def))
+import GHC.Generics (Generic)
+import Prettyprinter
 
-import qualified ContractExample.AtomicSwap                as Contracts.AtomicSwap
-import qualified ContractExample.PayToWallet               as Contracts.PayToWallet
-import qualified ContractExample.WaitForTx                 as Contracts.WaitForTx
-import           Data.Data                                 (Proxy (Proxy))
-import qualified Data.OpenApi.Schema                       as OpenApi
-import           Data.Row
-import           Language.PureScript.Bridge                (equal, genericShow, mkSumType)
-import           Language.PureScript.Bridge.TypeParameters (A)
-import           Ledger                                    (TxId)
-import           Playground.Types                          (FunctionSchema)
-import qualified Plutus.Contracts.Currency                 as Contracts.Currency
-import qualified Plutus.Contracts.GameStateMachine         as Contracts.GameStateMachine
-import qualified Plutus.Contracts.PingPong                 as Contracts.PingPong
-import qualified Plutus.Contracts.Prism.Mirror             as Contracts.Prism
-import qualified Plutus.Contracts.Prism.Unlock             as Contracts.Prism
-import           Plutus.Contracts.Uniswap                  (Uniswap)
-import qualified Plutus.Contracts.Uniswap                  as Contracts.Uniswap
-import           Plutus.Contracts.Uniswap.Types            (Coin, U)
-import           Plutus.PAB.Effects.Contract.Builtin       (Builtin, BuiltinHandler (..), HasDefinitions (..),
-                                                            SomeBuiltin (..))
-import qualified Plutus.PAB.Effects.Contract.Builtin       as Builtin
-import           Plutus.PAB.Run.PSGenerator                (HasPSTypes (..))
-import           Plutus.PAB.Simulator                      (SimulatorEffectHandlers)
-import qualified Plutus.PAB.Simulator                      as Simulator
-import           Schema                                    (FormSchema)
+import ContractExample.AtomicSwap qualified as Contracts.AtomicSwap
+import ContractExample.IntegrationTest qualified as Contracts.IntegrationTest
+import ContractExample.PayToWallet qualified as Contracts.PayToWallet
+import ContractExample.WaitForTx qualified as Contracts.WaitForTx
+import Data.Data (Proxy (Proxy))
+import Data.OpenApi.Schema qualified as OpenApi
+import Data.Row
+import Language.PureScript.Bridge (equal, genericShow, mkSumType)
+import Language.PureScript.Bridge.TypeParameters (A)
+import Ledger (TxId)
+import Playground.Types (FunctionSchema)
+import Plutus.Contracts.Currency qualified as Contracts.Currency
+import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
+import Plutus.Contracts.PingPong qualified as Contracts.PingPong
+import Plutus.Contracts.Prism.Mirror qualified as Contracts.Prism
+import Plutus.Contracts.Prism.Unlock qualified as Contracts.Prism
+import Plutus.Contracts.Uniswap (Uniswap)
+import Plutus.Contracts.Uniswap qualified as Contracts.Uniswap
+import Plutus.Contracts.Uniswap.Types (Coin, U)
+import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..), SomeBuiltin (..))
+import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
+import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
+import Plutus.PAB.Simulator (SimulatorEffectHandlers)
+import Plutus.PAB.Simulator qualified as Simulator
+import Schema (FormSchema)
 
 data ExampleContracts = UniswapInit
                       | UniswapOwner
@@ -58,7 +58,9 @@ data ExampleContracts = UniswapInit
                       | PrismUnlockExchange
                       | PrismUnlockSto
                       | PingPong
+                      | PingPongAuto -- ^ Variant of 'PingPong' that starts the initialise phase automatically
                       | WaitForTx TxId
+                      | IntegrationTest -- ^ Contract that runs a number of transactions (no user input)
     deriving (Eq, Ord, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
@@ -85,6 +87,8 @@ instance HasDefinitions ExampleContracts where
                      , PrismUnlockExchange
                      , PrismUnlockSto
                      , PingPong
+                     , PingPongAuto
+                     , IntegrationTest
                      ]
     getContract = getExampleContracts
     getSchema = getExampleContractsSchema
@@ -102,7 +106,9 @@ getExampleContractsSchema = \case
     PrismUnlockExchange -> Builtin.endpointsToSchemas @Contracts.Prism.UnlockExchangeSchema
     PrismUnlockSto      -> Builtin.endpointsToSchemas @Contracts.Prism.STOSubscriberSchema
     PingPong            -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
+    PingPongAuto        -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
     WaitForTx{}         -> Builtin.endpointsToSchemas @Empty
+    IntegrationTest{}   -> Builtin.endpointsToSchemas @Empty
 
 getExampleContracts :: ExampleContracts -> SomeBuiltin
 getExampleContracts = \case
@@ -117,7 +123,9 @@ getExampleContracts = \case
     PrismUnlockExchange -> SomeBuiltin (Contracts.Prism.unlockExchange @() @Contracts.Prism.UnlockExchangeSchema)
     PrismUnlockSto      -> SomeBuiltin (Contracts.Prism.subscribeSTO @() @Contracts.Prism.STOSubscriberSchema)
     PingPong            -> SomeBuiltin Contracts.PingPong.simplePingPong
+    PingPongAuto        -> SomeBuiltin Contracts.PingPong.simplePingPongAuto
     WaitForTx txi       -> SomeBuiltin (Contracts.WaitForTx.waitForTx txi)
+    IntegrationTest     -> SomeBuiltin Contracts.IntegrationTest.run
 
 handlers :: SimulatorEffectHandlers (Builtin ExampleContracts)
 handlers =

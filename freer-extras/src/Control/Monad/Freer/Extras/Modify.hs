@@ -38,15 +38,15 @@ module Control.Monad.Freer.Extras.Modify (
     , wrapError
     ) where
 
-import           Control.Lens
-import qualified Control.Monad.Except         as MTL
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error
-import           Control.Monad.Freer.Internal
-import           Control.Monad.Freer.Reader
-import           Control.Monad.Freer.State
-import           Control.Monad.Freer.Writer
-import qualified Control.Monad.State          as MTL
+import Control.Lens
+import Control.Monad.Except qualified as MTL
+import Control.Monad.Freer
+import Control.Monad.Freer.Error
+import Control.Monad.Freer.Internal
+import Control.Monad.Freer.Reader
+import Control.Monad.Freer.State
+import Control.Monad.Freer.Writer
+import Control.Monad.State qualified as MTL
 
 {- Note [Various raising helpers]
 These are all to help with the issue where you have something of type

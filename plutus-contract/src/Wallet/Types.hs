@@ -26,28 +26,28 @@ module Wallet.Types(
     , AsNotificationError(..)
     ) where
 
-import           Control.Lens                (prism')
-import           Control.Lens.TH             (makeClassyPrisms)
-import           Data.Aeson                  (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
-import qualified Data.Aeson                  as Aeson
-import qualified Data.Aeson.Encode.Pretty    as JSON
-import qualified Data.ByteString.Lazy.Char8  as BSL8
-import           Data.String                 (IsString (..))
-import           Data.Text                   (Text)
-import qualified Data.Text                   as T
-import           Data.Text.Prettyprint.Doc   (Pretty (..), colon, hang, viaShow, vsep, (<+>))
-import           Data.UUID                   (UUID)
-import qualified Data.UUID.Extras            as UUID
-import qualified Data.UUID.V4                as UUID
-import           GHC.Generics                (Generic)
-import qualified Language.Haskell.TH.Syntax  as TH
+import Control.Lens (prism')
+import Control.Lens.TH (makeClassyPrisms)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Encode.Pretty qualified as JSON
+import Data.ByteString.Lazy.Char8 qualified as BSL8
+import Data.String (IsString (..))
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.UUID (UUID)
+import Data.UUID.Extras qualified as UUID
+import Data.UUID.V4 qualified as UUID
+import GHC.Generics (Generic)
+import Language.Haskell.TH.Syntax qualified as TH
+import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
 
-import           Ledger.Constraints.OffChain (MkTxError)
-import           Plutus.Contract.Checkpoint  (AsCheckpointError (..), CheckpointError)
-import           Prettyprinter.Extras        (PrettyShow (..), Tagged (..))
-import           Wallet.Emulator.Error       (WalletAPIError)
+import Ledger.Constraints.OffChain (MkTxError)
+import Plutus.Contract.Checkpoint (AsCheckpointError (..), CheckpointError)
+import Prettyprinter.Extras (PrettyShow (..), Tagged (..))
+import Wallet.Emulator.Error (WalletAPIError)
 
-import qualified Data.OpenApi.Schema         as OpenApi
+import Data.OpenApi.Schema qualified as OpenApi
 
 -- | An error
 newtype MatchingError = WrongVariantError { unWrongVariantError :: Text }

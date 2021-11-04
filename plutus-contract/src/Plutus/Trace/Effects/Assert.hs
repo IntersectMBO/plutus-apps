@@ -18,15 +18,15 @@ module Plutus.Trace.Effects.Assert(
     , handleAssert
     ) where
 
-import           Control.Monad                 (unless)
-import           Control.Monad.Freer           (Eff, Member, type (~>))
-import           Control.Monad.Freer.Coroutine (Yield)
-import           Control.Monad.Freer.Error     (Error, throwError)
-import           Control.Monad.Freer.State     (State, get)
-import           Control.Monad.Freer.TH        (makeEffect)
-import           Plutus.Trace.Emulator.Types   (EmulatorMessage, EmulatorRuntimeError (AssertionError))
-import           Plutus.Trace.Scheduler        (EmSystemCall)
-import           Wallet.Emulator.MultiAgent    (EmulatorState)
+import Control.Monad (unless)
+import Control.Monad.Freer (Eff, Member, type (~>))
+import Control.Monad.Freer.Coroutine (Yield)
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.State (State, get)
+import Control.Monad.Freer.TH (makeEffect)
+import Plutus.Trace.Emulator.Types (EmulatorMessage, EmulatorRuntimeError (AssertionError))
+import Plutus.Trace.Scheduler (EmSystemCall)
+import Wallet.Emulator.MultiAgent (EmulatorState)
 
 data Assert r where
     Assert :: String -> (EmulatorState -> Bool) -> Assert ()

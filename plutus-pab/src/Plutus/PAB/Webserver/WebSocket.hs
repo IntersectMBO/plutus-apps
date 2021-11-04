@@ -24,42 +24,41 @@ module Plutus.PAB.Webserver.WebSocket
     , observableStateChange
     ) where
 
-import           Control.Concurrent.Async                (Async, async, waitAnyCancel)
-import           Control.Concurrent.STM                  (STM)
-import qualified Control.Concurrent.STM                  as STM
-import           Control.Concurrent.STM.Extras.Stream    (STMStream, foldM, singleton, unfold)
-import           Control.Exception                       (SomeException, handle)
-import           Control.Monad                           (forever, void)
-import           Control.Monad.Freer.Error               (throwError)
-import           Control.Monad.IO.Class                  (liftIO)
-import           Data.Aeson                              (ToJSON)
-import qualified Data.Aeson                              as JSON
-import           Data.Bifunctor                          (Bifunctor (..))
-import           Data.Foldable                           (fold)
-import qualified Data.Map                                as Map
-import           Data.Proxy                              (Proxy (..))
-import           Data.Set                                (Set)
-import qualified Data.Set                                as Set
-import           Data.Text                               (Text)
-import qualified Data.Text                               as Text
-import           Ledger                                  (PubKeyHash)
-import           Ledger.Slot                             (Slot)
-import qualified Network.WebSockets                      as WS
-import           Network.WebSockets.Connection           (Connection, PendingConnection)
-import           Plutus.Contract.Effects                 (ActiveEndpoint (..))
-import           Plutus.PAB.Core                         (PABAction)
-import qualified Plutus.PAB.Core                         as Core
-import           Plutus.PAB.Core.ContractInstance.STM    (BlockchainEnv, InstancesState, OpenEndpoint (..))
-import qualified Plutus.PAB.Core.ContractInstance.STM    as Instances
-import qualified Plutus.PAB.Effects.Contract             as Contract
-import           Plutus.PAB.Events.ContractInstanceState (fromResp)
-import           Plutus.PAB.Types                        (PABError (OtherError))
-import           Plutus.PAB.Webserver.API                ()
-import           Plutus.PAB.Webserver.Types              (CombinedWSStreamToClient (..), CombinedWSStreamToServer (..),
-                                                          ContractReport (..), ContractSignatureResponse (..),
-                                                          InstanceStatusToClient (..))
-import           Servant                                 ((:<|>) ((:<|>)))
-import           Wallet.Types                            (ContractInstanceId (..))
+import Control.Concurrent.Async (Async, async, waitAnyCancel)
+import Control.Concurrent.STM (STM)
+import Control.Concurrent.STM qualified as STM
+import Control.Concurrent.STM.Extras.Stream (STMStream, foldM, singleton, unfold)
+import Control.Exception (SomeException, handle)
+import Control.Monad (forever, void)
+import Control.Monad.Freer.Error (throwError)
+import Control.Monad.IO.Class (liftIO)
+import Data.Aeson (ToJSON)
+import Data.Aeson qualified as JSON
+import Data.Bifunctor (Bifunctor (..))
+import Data.Foldable (fold)
+import Data.Map qualified as Map
+import Data.Proxy (Proxy (..))
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Ledger (PubKeyHash)
+import Ledger.Slot (Slot)
+import Network.WebSockets qualified as WS
+import Network.WebSockets.Connection (Connection, PendingConnection)
+import Plutus.Contract.Effects (ActiveEndpoint (..))
+import Plutus.PAB.Core (PABAction)
+import Plutus.PAB.Core qualified as Core
+import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv, InstancesState, OpenEndpoint (..))
+import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
+import Plutus.PAB.Effects.Contract qualified as Contract
+import Plutus.PAB.Events.ContractInstanceState (fromResp)
+import Plutus.PAB.Types (PABError (OtherError))
+import Plutus.PAB.Webserver.API ()
+import Plutus.PAB.Webserver.Types (CombinedWSStreamToClient (..), CombinedWSStreamToServer (..), ContractReport (..),
+                                   ContractSignatureResponse (..), InstanceStatusToClient (..))
+import Servant ((:<|>) ((:<|>)))
+import Wallet.Types (ContractInstanceId (..))
 
 getContractReport :: forall t env. Contract.PABContract t => PABAction t env (ContractReport (Contract.ContractDef t))
 getContractReport = do

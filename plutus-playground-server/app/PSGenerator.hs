@@ -14,77 +14,71 @@ module PSGenerator
     ( generate
     ) where
 
-import qualified Auth
-import           Control.Applicative                        ((<|>))
-import           Control.Lens                               (itraverse, set, (&))
-import           Control.Monad                              (void)
-import           Control.Monad.Catch                        (MonadMask)
-import           Control.Monad.Except                       (MonadError, runExceptT)
-import           Control.Monad.Except.Extras                (mapError)
-import qualified Control.Monad.Freer.Extras.Log             as Log
-import           Control.Monad.IO.Class                     (MonadIO)
-import qualified Crowdfunding
-import qualified CrowdfundingSimulations
-import           Data.Aeson                                 (ToJSON, toJSON)
-import qualified Data.Aeson                                 as JSON
-import qualified Data.Aeson.Encode.Pretty                   as JSON
-import qualified Data.ByteString                            as BS
-import qualified Data.ByteString.Lazy                       as BSL
-import           Data.Monoid                                ()
-import           Data.Proxy                                 (Proxy (Proxy))
-import           Data.Text                                  (Text)
-import qualified Data.Text.Encoding                         as T (decodeUtf8, encodeUtf8)
-import           Data.Time.Units                            (Second)
-import qualified ErrorHandling
-import qualified ErrorHandlingSimulations
-import qualified Game
-import qualified GameSimulations
-import qualified HelloWorld
-import qualified HelloWorldSimulations
-import qualified Interpreter                                as Webghc
-import           Language.Haskell.Interpreter               (CompilationError, InterpreterError,
-                                                             InterpreterResult (InterpreterResult),
-                                                             SourceCode (SourceCode), Warning, result, warnings)
-import           Language.PureScript.Bridge                 (BridgePart, Language (Haskell), SumType, buildBridge,
-                                                             equal, genericShow, mkSumType, order, writePSTypesWith)
-import           Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (ForeignOptions), genForeign,
-                                                             unwrapSingleConstructors)
-import           Language.PureScript.Bridge.TypeParameters  (A)
-import qualified Ledger.CardanoWallet                       as CW
-import           Ledger.Tx.CardanoAPI                       (ToCardanoError)
-import qualified PSGenerator.Common
-import qualified Playground.API                             as API
-import qualified Playground.Interpreter                     as PI
-import           Playground.Types                           (CompilationResult (CompilationResult), ContractCall,
-                                                             ContractDemo (ContractDemo), Evaluation (Evaluation),
-                                                             EvaluationResult, FunctionSchema, KnownCurrency,
-                                                             PlaygroundError (InterpreterError),
-                                                             Simulation (Simulation), SimulatorAction, SimulatorWallet,
-                                                             contractDemoContext, contractDemoEditorContents,
-                                                             contractDemoName, contractDemoSimulations, functionSchema,
-                                                             knownCurrencies, program, simulationActions,
-                                                             simulationWallets, sourceCode, wallets)
-import           Playground.Usecases                        (crowdFunding, errorHandling, game, starter, vesting)
-import qualified Playground.Usecases                        as Usecases
-import           Plutus.Contract.Checkpoint                 (CheckpointKey, CheckpointLogMsg)
-import           Schema                                     (FormSchema, formArgumentToJson)
-import           Servant                                    ((:<|>))
-import           Servant.PureScript                         (HasBridge, Settings, _generateSubscriberAPI, apiModuleName,
-                                                             defaultBridge, defaultSettings, languageBridge,
-                                                             writeAPIModuleWithSettings)
-import qualified Starter
-import qualified StarterSimulations
-import           System.FilePath                            ((</>))
-import qualified Vesting
-import qualified VestingSimulations
-import           Wallet.API                                 (WalletAPIError)
-import qualified Wallet.Emulator.Chain                      as EM
-import qualified Wallet.Emulator.LogMessages                as EM
-import qualified Wallet.Emulator.MultiAgent                 as EM
-import qualified Wallet.Emulator.NodeClient                 as EM
-import qualified Wallet.Emulator.Wallet                     as EM
-import           Wallet.Rollup.Types                        (AnnotatedTx, BeneficialOwner, DereferencedInput,
-                                                             SequenceId, TxKey)
+import Auth qualified
+import Control.Applicative ((<|>))
+import Control.Lens (itraverse, set, (&))
+import Control.Monad (void)
+import Control.Monad.Catch (MonadMask)
+import Control.Monad.Except (MonadError, runExceptT)
+import Control.Monad.Except.Extras (mapError)
+import Control.Monad.Freer.Extras.Log qualified as Log
+import Control.Monad.IO.Class (MonadIO)
+import Crowdfunding qualified
+import CrowdfundingSimulations qualified
+import Data.Aeson (ToJSON, toJSON)
+import Data.Aeson qualified as JSON
+import Data.Aeson.Encode.Pretty qualified as JSON
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
+import Data.Monoid ()
+import Data.Proxy (Proxy (Proxy))
+import Data.Text (Text)
+import Data.Text.Encoding qualified as T (decodeUtf8, encodeUtf8)
+import Data.Time.Units (Second)
+import ErrorHandling qualified
+import ErrorHandlingSimulations qualified
+import Game qualified
+import GameSimulations qualified
+import HelloWorld qualified
+import HelloWorldSimulations qualified
+import Interpreter qualified as Webghc
+import Language.Haskell.Interpreter (CompilationError, InterpreterError, InterpreterResult (InterpreterResult),
+                                     SourceCode (SourceCode), Warning, result, warnings)
+import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, buildBridge, equal, genericShow, mkSumType,
+                                   order, writePSTypesWith)
+import Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (ForeignOptions), genForeign,
+                                                   unwrapSingleConstructors)
+import Language.PureScript.Bridge.TypeParameters (A)
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Tx.CardanoAPI (ToCardanoError)
+import PSGenerator.Common qualified
+import Playground.API qualified as API
+import Playground.Interpreter qualified as PI
+import Playground.Types (CompilationResult (CompilationResult), ContractCall, ContractDemo (ContractDemo),
+                         Evaluation (Evaluation), EvaluationResult, FunctionSchema, KnownCurrency,
+                         PlaygroundError (InterpreterError), Simulation (Simulation), SimulatorAction, SimulatorWallet,
+                         contractDemoContext, contractDemoEditorContents, contractDemoName, contractDemoSimulations,
+                         functionSchema, knownCurrencies, program, simulationActions, simulationWallets, sourceCode,
+                         wallets)
+import Playground.Usecases (crowdFunding, errorHandling, game, starter, vesting)
+import Playground.Usecases qualified as Usecases
+import Plutus.Contract.Checkpoint (CheckpointKey, CheckpointLogMsg)
+import Schema (FormSchema, formArgumentToJson)
+import Servant ((:<|>))
+import Servant.PureScript (HasBridge, Settings, _generateSubscriberAPI, apiModuleName, defaultBridge, defaultSettings,
+                           languageBridge, writeAPIModuleWithSettings)
+import Starter qualified
+import StarterSimulations qualified
+import System.FilePath ((</>))
+import Vesting qualified
+import VestingSimulations qualified
+import Wallet.API (WalletAPIError)
+import Wallet.Emulator.Chain qualified as EM
+import Wallet.Emulator.LogMessages qualified as EM
+import Wallet.Emulator.MultiAgent qualified as EM
+import Wallet.Emulator.NodeClient qualified as EM
+import Wallet.Emulator.Wallet qualified as EM
+import Wallet.Rollup.Types (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId, TxKey)
 
 myBridge :: BridgePart
 myBridge =

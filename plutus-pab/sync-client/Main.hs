@@ -1,25 +1,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Control.Concurrent             (threadDelay)
-import           Control.Monad                  (forever)
-import           Control.Tracer                 (nullTracer)
-import           Data.Either.Combinators        (maybeToRight)
-import           Data.List                      (elemIndex)
-import           Data.Proxy                     (Proxy (Proxy))
-import           Data.Text                      (pack)
-import           Data.Text.Encoding             (encodeUtf8)
-import           Options.Applicative
-import           Text.Read                      (readEither)
+import Control.Concurrent (threadDelay)
+import Control.Monad (forever)
+import Control.Tracer (nullTracer)
+import Data.Either.Combinators (maybeToRight)
+import Data.List (elemIndex)
+import Data.Proxy (Proxy (Proxy))
+import Data.Text (pack)
+import Data.Text.Encoding (encodeUtf8)
+import Options.Applicative
+import Text.Read (readEither)
 
-import           Cardano.Api                    (Block (..), BlockHeader (..), BlockInMode (..), ChainPoint (..),
-                                                 HasTypeProxy (..), deserialiseFromRawBytesHex,
-                                                 serialiseToRawBytesHexText)
-import           Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
-import           Cardano.Protocol.Socket.Type   (cfgNetworkId)
-import           Cardano.Slotting.Slot          (SlotNo (..))
-import           Ledger                         (Slot)
-import           Ledger.TimeSlot                (SlotConfig (..))
+import Cardano.Api (Block (..), BlockHeader (..), BlockInMode (..), ChainPoint (..), HasTypeProxy (..),
+                    deserialiseFromRawBytesHex, serialiseToRawBytesHexText)
+import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
+import Cardano.Protocol.Socket.Type (cfgNetworkId)
+import Cardano.Slotting.Slot (SlotNo (..))
+import Ledger (Slot)
+import Ledger.TimeSlot (SlotConfig (..))
 
 -- | We only need to know the location of the socket.
 --   We can get the protocol versions from Cardano.Protocol.Socket.Type

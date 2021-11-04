@@ -53,24 +53,24 @@ module Plutus.Trace.Scheduler(
     ) where
 
 
-import           Control.Lens                   hiding (Empty)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Coroutine
-import           Control.Monad.Freer.Extras.Log (LogMsg, logDebug)
-import           Control.Monad.Freer.Reader
-import           Data.Aeson                     (FromJSON, ToJSON)
-import           Data.HashMap.Strict            (HashMap)
-import qualified Data.HashMap.Strict            as HashMap
-import           Data.HashSet                   (HashSet)
-import qualified Data.HashSet                   as HashSet
-import           Data.Hashable                  (Hashable)
-import           Data.Map                       as Map
-import           Data.Sequence                  (Seq (..))
-import qualified Data.Sequence                  as Seq
-import           Data.Text.Prettyprint.Doc
-import           GHC.Generics                   (Generic)
-import           Plutus.Trace.Tag               (Tag)
-import           Prettyprinter.Extras           (PrettyShow (..), Tagged (..))
+import Control.Lens hiding (Empty)
+import Control.Monad.Freer
+import Control.Monad.Freer.Coroutine
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug)
+import Control.Monad.Freer.Reader
+import Data.Aeson (FromJSON, ToJSON)
+import Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet (HashSet)
+import Data.HashSet qualified as HashSet
+import Data.Hashable (Hashable)
+import Data.Map as Map
+import Data.Sequence (Seq (..))
+import Data.Sequence qualified as Seq
+import GHC.Generics (Generic)
+import Plutus.Trace.Tag (Tag)
+import Prettyprinter
+import Prettyprinter.Extras (PrettyShow (..), Tagged (..))
 
 {- Note [Thread Tag]
 

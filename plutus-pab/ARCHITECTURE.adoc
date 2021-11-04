@@ -51,14 +51,16 @@ Starts a new instance of the contract. Expects a `ContractActivationArgs` object
 
 [source,json]
 ----
-{ "caID": "Currency"
-, "caWallet": { "getWallet": 1 }
+{ "caID": { "tag": "Currency" }
+, "caWallet": { "getWalletId": "872cb83b5ee40eb23bfdab1772660c822a48d491" }
 }
 ----
 
 The `caID` field describes the contract that is to be started. In our case (simulator PAB configuration) the string `"Currency"` is enough to identify the currency contract.
 
-The `caWallet` field describes the wallet that this instance should connect to. In the simulator PAB configuration there are ten wallets with IDs 1-10 that can be used for test purposes.
+The `caWallet` field describes the wallet that this instance should connect to. In the simulator PAB configuration there are ten wallets that can be used for test purposes.
+
+Alternatively null can be passed as the value of `caWallet` to make use of the first known wallet.
 
 This call returns the UUID of the newly started contract instance.
 

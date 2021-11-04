@@ -16,15 +16,15 @@ module Test.QuickCheck.DynamicLogic.Quantify
     , Quantifiable(..)
     ) where
 
-import           Data.Maybe
-import           Data.Typeable
+import Data.Maybe
+import Data.Typeable
 
-import           Control.Monad
+import Control.Monad
 
-import           System.Random
-import           Test.QuickCheck
+import System.Random
+import Test.QuickCheck
 
-import           Test.QuickCheck.DynamicLogic.CanGenerate
+import Test.QuickCheck.DynamicLogic.CanGenerate
 
 -- | A `Quantification` over a type @a@ is a generator that can be used with
 --   `Plutus.Contract.Test.ContractModel.forAllQ` to generate random values in

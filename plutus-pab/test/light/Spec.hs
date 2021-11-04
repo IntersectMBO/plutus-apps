@@ -2,10 +2,10 @@ module Main
     ( main
     ) where
 
-import qualified Cardano.Api.NetworkId.ExtraSpec
-import qualified Cardano.Wallet.ServerSpec
-import qualified Control.Concurrent.STM.ExtrasSpec
-import           Test.Tasty                        (defaultMain, testGroup)
+import Cardano.Api.NetworkId.ExtraSpec qualified
+import Cardano.Wallet.ServerSpec qualified
+import Control.Concurrent.STM.ExtrasSpec qualified
+import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
 main =

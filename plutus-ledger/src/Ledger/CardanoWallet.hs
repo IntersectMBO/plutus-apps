@@ -23,24 +23,24 @@ module Ledger.CardanoWallet(
     pubKey
     ) where
 
-import           Cardano.Address.Derivation     (XPrv)
-import qualified Cardano.Crypto.Wallet          as Crypto
-import qualified Cardano.Wallet.Primitive.Types as CW
-import           Codec.Serialise                (serialise)
-import qualified Crypto.Hash                    as Crypto
-import           Data.Aeson                     (FromJSON, ToJSON)
-import           Data.Aeson.Extras              (encodeByteString)
-import qualified Data.ByteString                as BS
-import qualified Data.ByteString.Lazy           as BSL
-import           Data.Hashable                  (Hashable (..))
-import           Data.List                      (findIndex)
-import           Data.Maybe                     (fromMaybe)
-import qualified Data.Text                      as T
-import           GHC.Generics                   (Generic)
-import           Ledger.Crypto                  (PrivateKey, PubKey (..), PubKeyHash (..))
-import qualified Ledger.Crypto                  as Crypto
-import           Plutus.V1.Ledger.Bytes         (LedgerBytes (..))
-import           Servant.API                    (FromHttpApiData (..), ToHttpApiData (..))
+import Cardano.Address.Derivation (XPrv)
+import Cardano.Crypto.Wallet qualified as Crypto
+import Cardano.Wallet.Primitive.Types qualified as CW
+import Codec.Serialise (serialise)
+import Crypto.Hash qualified as Crypto
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson.Extras (encodeByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
+import Data.Hashable (Hashable (..))
+import Data.List (findIndex)
+import Data.Maybe (fromMaybe)
+import Data.Text qualified as T
+import GHC.Generics (Generic)
+import Ledger.Crypto (PrivateKey, PubKey (..), PubKeyHash (..))
+import Ledger.Crypto qualified as Crypto
+import Plutus.V1.Ledger.Bytes (LedgerBytes (..))
+import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
 
 newtype MockPrivateKey = MockPrivateKey { unMockPrivateKey :: XPrv }
 

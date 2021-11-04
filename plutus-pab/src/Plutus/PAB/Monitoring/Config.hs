@@ -5,12 +5,12 @@ module Plutus.PAB.Monitoring.Config (
     , loadConfig
     ) where
 
-import           Cardano.BM.Configuration       (setup)
-import qualified Cardano.BM.Configuration.Model as CM
-import           Cardano.BM.Data.BackendKind
-import           Cardano.BM.Data.Configuration  (Endpoint (..))
-import           Cardano.BM.Data.Output
-import           Cardano.BM.Data.Severity
+import Cardano.BM.Configuration (setup)
+import Cardano.BM.Configuration.Model qualified as CM
+import Cardano.BM.Data.BackendKind
+import Cardano.BM.Data.Configuration (Endpoint (..))
+import Cardano.BM.Data.Output
+import Cardano.BM.Data.Severity
 
 -- | A default 'CM.Configuration' that logs on 'Info' and above
 --   to stdout

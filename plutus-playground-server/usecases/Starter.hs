@@ -26,15 +26,15 @@ module Starter where
 --   * publish
 --   * redeem
 
-import           Control.Monad        (void)
-import           Ledger               (Address, ScriptContext)
-import qualified Ledger.Constraints   as Constraints
-import qualified Ledger.Typed.Scripts as Scripts
-import           Ledger.Value         (Value)
-import           Playground.Contract
-import           Plutus.Contract
-import qualified PlutusTx
-import           PlutusTx.Prelude     hiding (Applicative (..))
+import Control.Monad (void)
+import Ledger (Address, ScriptContext)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (Value)
+import Playground.Contract
+import Plutus.Contract
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Applicative (..))
 
 -- | These are the data script and redeemer types. We are using an integer
 --   value for both, but you should define your own types.

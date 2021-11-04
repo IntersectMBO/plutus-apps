@@ -10,24 +10,24 @@
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 module Spec.Governance(tests, doVoting) where
 
-import           Control.Lens                (view)
-import           Control.Monad               (void)
-import           Data.Foldable               (traverse_)
+import Control.Lens (view)
+import Control.Monad (void)
+import Data.Foldable (traverse_)
 
-import qualified Ledger
-import qualified Ledger.TimeSlot             as TimeSlot
-import qualified Ledger.Typed.Scripts        as Scripts
-import qualified Wallet.Emulator             as EM
+import Ledger qualified
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Typed.Scripts qualified as Scripts
+import Wallet.Emulator qualified as EM
 
-import           Plutus.Contract.Test
-import qualified Plutus.Contracts.Governance as Gov
-import           Plutus.Trace.Emulator       (EmulatorTrace)
-import qualified Plutus.Trace.Emulator       as Trace
-import qualified PlutusTx
-import           PlutusTx.Prelude            (BuiltinByteString, fromBuiltin)
+import Plutus.Contract.Test
+import Plutus.Contracts.Governance qualified as Gov
+import Plutus.Trace.Emulator (EmulatorTrace)
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx qualified
+import PlutusTx.Prelude (BuiltinByteString, fromBuiltin)
 
-import           Test.Tasty                  (TestTree, testGroup)
-import qualified Test.Tasty.HUnit            as HUnit
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit qualified as HUnit
 
 tests :: TestTree
 tests =

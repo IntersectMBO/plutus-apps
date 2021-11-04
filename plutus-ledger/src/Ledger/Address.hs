@@ -4,11 +4,11 @@ module Ledger.Address
     , scriptAddress
     ) where
 
-import           Ledger.Crypto               (pubKeyHash)
-import           Ledger.Scripts              (Validator, validatorHash)
-import           Plutus.V1.Ledger.Address    as Export
-import           Plutus.V1.Ledger.Credential (Credential (..))
-import           Plutus.V1.Ledger.Crypto     (PubKey)
+import Ledger.Crypto (pubKeyHash)
+import Ledger.Scripts (Validator, validatorHash)
+import Plutus.V1.Ledger.Address as Export
+import Plutus.V1.Ledger.Credential (Credential (..))
+import Plutus.V1.Ledger.Crypto (PubKey)
 
 {-# INLINABLE pubKeyAddress #-}
 -- | The address that should be targeted by a transaction output locked by the given public key.

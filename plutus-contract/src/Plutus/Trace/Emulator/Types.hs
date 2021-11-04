@@ -52,40 +52,38 @@ module Plutus.Trace.Emulator.Types(
     , UserThreadMsg(..)
     ) where
 
-import           Control.Lens
-import           Control.Monad.Freer.Coroutine
-import           Control.Monad.Freer.Error
-import           Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve)
-import           Control.Monad.Freer.Reader     (Reader)
-import           Data.Aeson                     (FromJSON, ToJSON)
-import qualified Data.Aeson                     as JSON
-import           Data.Map                       (Map)
-import           Data.Row                       (Row)
-import qualified Data.Row.Internal              as V
-import           Data.Sequence                  (Seq)
-import           Data.String                    (IsString (..))
-import           Data.Text                      (Text)
-import qualified Data.Text                      as T
-import           Data.Text.Prettyprint.Doc      (Pretty (..), braces, colon, fillSep, hang, parens, squotes, viaShow,
-                                                 vsep, (<+>))
-import           GHC.Generics                   (Generic)
-import           Ledger.Blockchain              (Block)
-import           Ledger.Slot                    (Slot (..))
-import           Plutus.ChainIndex              (ChainIndexQueryEffect)
-import           Plutus.Contract                (Contract (..), WalletAPIError)
-import           Plutus.Contract.Effects        (PABReq, PABResp)
-import           Plutus.Contract.Resumable      (Request (..), Requests (..), Response (..))
-import qualified Plutus.Contract.Resumable      as State
-import           Plutus.Contract.Schema         (Input, Output)
-import           Plutus.Contract.Types          (ResumableResult (..), SuspendedContract (..))
-import qualified Plutus.Contract.Types          as Contract.Types
-import           Plutus.Trace.Scheduler         (AgentSystemCall, ThreadId)
-import qualified Wallet.API                     as WAPI
-import           Wallet.Effects                 (NodeClientEffect, WalletEffect)
-import           Wallet.Emulator.LogMessages    (RequestHandlerLogMsg, TxBalanceMsg)
-import           Wallet.Emulator.Wallet         (Wallet (..))
-import           Wallet.Types                   (ContractInstanceId, EndpointDescription, Notification (..),
-                                                 NotificationError)
+import Control.Lens
+import Control.Monad.Freer.Coroutine
+import Control.Monad.Freer.Error
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve)
+import Control.Monad.Freer.Reader (Reader)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as JSON
+import Data.Map (Map)
+import Data.Row (Row)
+import Data.Row.Internal qualified as V
+import Data.Sequence (Seq)
+import Data.String (IsString (..))
+import Data.Text (Text)
+import Data.Text qualified as T
+import GHC.Generics (Generic)
+import Ledger.Blockchain (Block)
+import Ledger.Slot (Slot (..))
+import Plutus.ChainIndex (ChainIndexQueryEffect)
+import Plutus.Contract (Contract (..), WalletAPIError)
+import Plutus.Contract.Effects (PABReq, PABResp)
+import Plutus.Contract.Resumable (Request (..), Requests (..), Response (..))
+import Plutus.Contract.Resumable qualified as State
+import Plutus.Contract.Schema (Input, Output)
+import Plutus.Contract.Types (ResumableResult (..), SuspendedContract (..))
+import Plutus.Contract.Types qualified as Contract.Types
+import Plutus.Trace.Scheduler (AgentSystemCall, ThreadId)
+import Prettyprinter (Pretty (..), braces, colon, fillSep, hang, parens, squotes, viaShow, vsep, (<+>))
+import Wallet.API qualified as WAPI
+import Wallet.Effects (NodeClientEffect, WalletEffect)
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
+import Wallet.Emulator.Wallet (Wallet (..))
+import Wallet.Types (ContractInstanceId, EndpointDescription, Notification (..), NotificationError)
 
 type ContractConstraints s =
     ( V.Forall (Output s) V.Unconstrained1

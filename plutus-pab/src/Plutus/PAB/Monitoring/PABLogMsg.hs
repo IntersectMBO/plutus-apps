@@ -17,31 +17,44 @@ module Plutus.PAB.Monitoring.PABLogMsg(
     AppMsg(..),
     CoreMsg(..),
     PABMultiAgentMsg(..),
-    RequestSize(..)
+    RequestSize(..),
+    WalletClientMsg(..)
     ) where
 
-import           Cardano.BM.Data.Tracer           (ToObject (..), TracingVerbosity (..))
-import           Cardano.BM.Data.Tracer.Extras    (StructuredLog, Tagged (..), mkObjectStr)
-import           Cardano.ChainIndex.Types         (ChainIndexServerMsg)
-import           Cardano.Node.Types               (MockServerLogMsg)
-import           Cardano.Wallet.Mock.Types        (WalletMsg)
-import           Control.Monad.Freer.Extras.Beam  (BeamLog)
-import           Data.Aeson                       (FromJSON, ToJSON, Value)
-import           Data.Aeson.Text                  (encodeToLazyText)
-import           Data.Text                        (Text)
-import qualified Data.Text                        as T
-import           Data.Text.Prettyprint.Doc        (Pretty (..), colon, viaShow, (<+>))
-import           GHC.Generics                     (Generic)
-import           Plutus.Contract.Effects          (PABReq, PABResp)
-import           Plutus.Contract.Resumable        (Response)
-import           Plutus.Contract.State            (ContractResponse)
-import           Plutus.PAB.Core.ContractInstance (ContractInstanceMsg (..))
-import           Plutus.PAB.Effects.Contract      (PABContract (..))
-import           Plutus.PAB.Events.Contract       (ContractInstanceId)
-import           Plutus.PAB.Instances             ()
-import           Wallet.Emulator.LogMessages      (TxBalanceMsg)
-import           Wallet.Emulator.MultiAgent       (EmulatorEvent)
-import           Wallet.Emulator.Wallet           (Wallet)
+import Cardano.BM.Data.Tracer (ToObject (..), TracingVerbosity (..))
+import Cardano.BM.Data.Tracer.Extras (StructuredLog, Tagged (..), mkObjectStr)
+import Cardano.ChainIndex.Types (ChainIndexServerMsg)
+import Cardano.Node.Types (MockServerLogMsg)
+import Cardano.Wallet.Mock.Types (WalletMsg)
+import Control.Monad.Freer.Extras.Beam (BeamLog)
+import Data.Aeson (FromJSON, ToJSON, Value)
+import Data.Aeson.Text (encodeToLazyText)
+import Data.Text (Text)
+import Data.Text qualified as T
+import GHC.Generics (Generic)
+import Plutus.Contract.Effects (PABReq, PABResp)
+import Plutus.Contract.Resumable (Response)
+import Plutus.Contract.State (ContractResponse)
+import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg (..))
+import Plutus.PAB.Effects.Contract (PABContract (..))
+import Plutus.PAB.Events.Contract (ContractInstanceId)
+import Plutus.PAB.Instances ()
+import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
+import Wallet.Emulator.LogMessages (TxBalanceMsg)
+import Wallet.Emulator.MultiAgent (EmulatorEvent)
+import Wallet.Emulator.Wallet (Wallet)
+
+data WalletClientMsg =
+    WalletClientError String
+    | BalanceTxError String
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+instance Pretty WalletClientMsg where
+    pretty = viaShow
+
+instance ToObject WalletClientMsg where
+    toObject _ m = mkObjectStr (T.pack $ show m) ()
 
 data AppMsg t =
     ActiveContractsMsg
@@ -137,6 +150,7 @@ data PABMultiAgentMsg t =
     | RestoringPABState
     | StartingPABBackendServer Int
     | WalletBalancingMsg Wallet TxBalanceMsg
+    | WalletClient WalletClientMsg
     deriving stock Generic
 
 instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (PABMultiAgentMsg t) where
@@ -152,6 +166,7 @@ instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (PA
                                                   ) ()
         StartingPABBackendServer i -> mkObjectStr "starting backend server" (Tagged @"port" i)
         WalletBalancingMsg w m     -> mkObjectStr "balancing" (Tagged @"wallet" w, Tagged @"message" m)
+        WalletClient m -> toObject v m
 
 deriving stock instance (Show (ContractDef t)) => Show (PABMultiAgentMsg t)
 deriving anyclass instance (ToJSON (ContractDef t)) => ToJSON (PABMultiAgentMsg t)
@@ -172,6 +187,7 @@ instance Pretty (ContractDef t) => Pretty (PABMultiAgentMsg t) where
         StartingPABBackendServer port ->
             "Starting PAB backend server on port" <+> pretty port
         WalletBalancingMsg w m -> pretty w <> colon <+> pretty m
+        WalletClient m -> pretty m
 
 data CoreMsg t =
     FindingContract ContractInstanceId

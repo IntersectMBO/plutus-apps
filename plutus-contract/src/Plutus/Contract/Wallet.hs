@@ -21,35 +21,35 @@ module Plutus.Contract.Wallet(
     , export
     ) where
 
-import qualified Cardano.Api                 as C
-import qualified Cardano.Api.Shelley         as C
-import           Control.Monad               (join, (>=>))
-import           Control.Monad.Error.Lens    (throwing)
-import           Control.Monad.Freer         (Eff, Member)
-import           Control.Monad.Freer.Error   (Error, throwError)
-import           Data.Aeson                  (ToJSON (..), Value (String), object, (.=))
-import qualified Data.Aeson.Extras           as JSON
-import           Data.Map                    (Map)
-import qualified Data.Map                    as Map
-import           Data.Maybe                  (mapMaybe)
-import qualified Data.Set                    as Set
-import           Data.Typeable               (Typeable)
-import           Data.Void                   (Void)
-import           GHC.Generics                (Generic)
-import qualified Ledger                      as Plutus
-import qualified Ledger.Ada                  as Ada
-import           Ledger.Constraints          (mustPayToPubKey)
-import           Ledger.Constraints.OffChain (ScriptOutput (..), UnbalancedTx (..), mkTx)
-import           Ledger.Tx                   (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
-import qualified Plutus.Contract.CardanoAPI  as CardanoAPI
-import qualified Plutus.Contract.Request     as Contract
-import           Plutus.Contract.Types       (Contract (..))
-import           Plutus.V1.Ledger.Scripts    (MintingPolicyHash)
-import qualified PlutusTx
-import qualified Wallet.API                  as WAPI
-import           Wallet.Effects              (WalletEffect, balanceTx)
-import           Wallet.Emulator.Error       (WalletAPIError)
-import           Wallet.Types                (AsContractError (_ConstraintResolutionError, _OtherError))
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Control.Monad (join, (>=>))
+import Control.Monad.Error.Lens (throwing)
+import Control.Monad.Freer (Eff, Member)
+import Control.Monad.Freer.Error (Error, throwError)
+import Data.Aeson (ToJSON (..), Value (String), object, (.=))
+import Data.Aeson.Extras qualified as JSON
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.Set qualified as Set
+import Data.Typeable (Typeable)
+import Data.Void (Void)
+import GHC.Generics (Generic)
+import Ledger qualified as Plutus
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints (mustPayToPubKey)
+import Ledger.Constraints.OffChain (ScriptOutput (..), UnbalancedTx (..), mkTx)
+import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
+import Plutus.Contract.CardanoAPI qualified as CardanoAPI
+import Plutus.Contract.Request qualified as Contract
+import Plutus.Contract.Types (Contract (..))
+import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
+import PlutusTx qualified
+import Wallet.API qualified as WAPI
+import Wallet.Effects (WalletEffect, balanceTx)
+import Wallet.Emulator.Error (WalletAPIError)
+import Wallet.Types (AsContractError (_ConstraintResolutionError, _OtherError))
 
 {- Note [Submitting transactions from Plutus contracts]
 
@@ -160,9 +160,9 @@ instance ToJSON ExportTxInput where
 instance ToJSON ExportTx where
     toJSON ExportTx{partialTx, lookups, redeemers} =
         object
-            [ "transaction" .= toJSON (C.serialiseToTextEnvelope Nothing partialTx)
-            , "inputs"      .= toJSON lookups
-            , "redeemers"   .= toJSON redeemers
+            [ "transaction" .= Aeson.Extras.encodeByteString (C.serialiseToCBOR partialTx)
+            , "inputs"      .= lookups
+            , "redeemers"   .= redeemers
             ]
 
 export :: C.ProtocolParameters -> C.NetworkId -> UnbalancedTx -> Either CardanoAPI.ToCardanoError ExportTx

@@ -5,20 +5,20 @@
 {-# LANGUAGE TypeApplications  #-}
 module Spec.MultiSig(tests, failingTrace, succeedingTrace) where
 
-import           Control.Monad             (void)
-import qualified Ledger.Ada                as Ada
-import qualified Ledger.CardanoWallet      as CW
-import           Ledger.Index              (ValidationError (ScriptFailure))
-import           Ledger.Scripts            (ScriptError (EvaluationError))
-import           Plutus.Contract           (Contract, ContractError)
-import           Plutus.Contract.Test
-import           Plutus.Contracts.MultiSig as MS
-import           Plutus.Trace.Emulator     (EmulatorTrace)
-import qualified Plutus.Trace.Emulator     as Trace
-import qualified PlutusTx                  as PlutusTx
-import           Prelude                   hiding (not)
-import           Test.Tasty
-import           Wallet.Emulator.Wallet    (signPrivateKeys)
+import Control.Monad (void)
+import Ledger.Ada qualified as Ada
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Index (ValidationError (ScriptFailure))
+import Ledger.Scripts (ScriptError (EvaluationError))
+import Plutus.Contract (Contract, ContractError)
+import Plutus.Contract.Test
+import Plutus.Contracts.MultiSig as MS
+import Plutus.Trace.Emulator (EmulatorTrace)
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx qualified as PlutusTx
+import Prelude hiding (not)
+import Test.Tasty
+import Wallet.Emulator.Wallet (signPrivateKeys)
 
 tests :: TestTree
 tests = testGroup "multisig"

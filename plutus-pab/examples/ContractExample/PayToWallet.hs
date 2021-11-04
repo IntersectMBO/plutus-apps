@@ -13,14 +13,14 @@ module ContractExample.PayToWallet(
     , PayToWalletSchema
     ) where
 
-import           Data.Aeson            (FromJSON, ToJSON)
-import           GHC.Generics          (Generic)
-import           Schema                (ToSchema)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Schema (ToSchema)
 
-import           Ledger                (Value, getCardanoTxId)
-import           Ledger.Constraints
-import           Plutus.Contract
-import           Wallet.Emulator.Types (Wallet, walletPubKeyHash)
+import Ledger (Value, getCardanoTxId)
+import Ledger.Constraints
+import Plutus.Contract
+import Wallet.Emulator.Types (Wallet, walletPubKeyHash)
 
 data PayToWalletParams =
     PayToWalletParams
