@@ -52,8 +52,24 @@ module.exports = {
                         options: {
                             bundle: !isDevelopment,
                             psc: "psa",
-                            spago: true,
+                            pscArgs: {
+                                strict: true,
+                                censorLib: true,
+                                stash: isDevelopment,
+                                isLib: ["generated", ".spago"],
+                            },
+                            spago: isDevelopment,
                             watch: isDevelopment,
+                            src: isDevelopment
+                                ? []
+                                : [
+                                    '.spago/*/*/src/**/*.purs',
+                                    'src/**/*.purs',
+                                    'test/**/*.purs',
+                                    'generated/**/*.purs',
+                                    "web-common-plutus/src/**/*.purs",
+                                    "web-common-playground/src/**/*.purs",
+                                ],
                         }
                     }
                 ]

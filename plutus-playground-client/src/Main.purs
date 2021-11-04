@@ -6,7 +6,6 @@ import Data.Maybe (Maybe(Nothing))
 import Effect (Effect)
 import Effect.Aff (Aff, forkAff)
 import Effect.Class.Console (log)
-import Effect.Unsafe (unsafePerformEffect)
 import Halogen.Aff (awaitBody, runHalogenAff)
 import Halogen.VDom.Driver (runUI)
 import LocalStorage (RawStorageEvent)
@@ -31,6 +30,3 @@ watchLocalStorage =
   consumer \event -> do
     log $ "Got Local Storage Event: " <> show event
     pure Nothing
-
-onLoad :: Unit
-onLoad = unsafePerformEffect main
