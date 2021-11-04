@@ -36,8 +36,10 @@ import qualified Cardano.BM.Configuration.Model  as CM
 import           Cardano.BM.Setup                (setupTrace_)
 import           Cardano.BM.Trace                (Trace, logDebug, logError)
 
-import           Cardano.Api                     (ChainPoint)
+import           Cardano.Api                     (ChainPoint, ChainTip (..), ConsensusModeParams (..),
+                                                  LocalNodeConnectInfo (..), getLocalChainTip)
 import           Cardano.Protocol.Socket.Client  (ChainSyncEvent (..), runChainSync)
+import           Cardano.Protocol.Socket.Type    (epochSlots)
 import           Ledger                          (Slot (..))
 import           Plutus.ChainIndex               (ChainIndexLog (..), RunRequirements (..), runChainIndexEffects)
 import           Plutus.ChainIndex.CommandLine   (AppConfig (..), Command (..), applyOverrides, cmdWithHelpParser)
@@ -136,6 +138,17 @@ main = do
 
       putStrLn "\nChain Index config:"
       print (pretty config)
+
+      -- The printed slot number is only half helpful.
+      -- The primary purpose of this query is to get the first response of the node for potential errors before opening the DB and starting the chain index.
+      -- See #69.
+      putStr "\nThe tip of the local node: "
+      ChainTip slotNo _ _ <- getLocalChainTip $ LocalNodeConnectInfo
+        { localConsensusModeParams = CardanoModeParams epochSlots
+        , localNodeNetworkId = Config.cicNetworkId config
+        , localNodeSocketPath = Config.cicSocketPath config
+        }
+      print slotNo
 
       runMain trace config
 
