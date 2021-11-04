@@ -123,7 +123,7 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
     NTRecord a -> E.encodeTagged "NTRecord" a E.value
     TwoFields a -> E.encodeTagged "TwoFields" a E.value
     Set a -> E.encodeTagged "Set" a E.value
-    Map a -> E.encodeTagged "Map" a E.value
+    Map a -> E.encodeTagged "Map" a (E.dictionary E.value E.value)
     Unit a -> E.encodeTagged "Unit" a E.unit
     MyUnit a -> E.encodeTagged "MyUnit" a E.value
     Pair a -> E.encodeTagged "Pair" a (E.tuple (E.value >/\< E.value))
@@ -153,7 +153,7 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
       , "NTRecord" /\ D.content (NTRecord <$> D.value)
       , "TwoFields" /\ D.content (TwoFields <$> D.value)
       , "Set" /\ D.content (Set <$> D.value)
-      , "Map" /\ D.content (Map <$> D.value)
+      , "Map" /\ D.content (Map <$> (D.dictionary D.value D.value))
       , "Unit" /\ D.content (Unit <$> D.unit)
       , "MyUnit" /\ D.content (MyUnit <$> D.value)
       , "Pair" /\ D.content (Pair <$> (D.tuple (D.value </\> D.value)))

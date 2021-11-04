@@ -14,6 +14,7 @@ in  upstream // {
       , "effect"
       , "either"
       , "enums"
+      , "foldable-traversable"
       , "foreign-object"
       , "maybe"
       , "newtype"
@@ -30,6 +31,6 @@ in  upstream // {
       , "typelevel-prelude"
       ]
     , repo = "https://github.com/input-output-hk/purescript-bridge-json-helpers.git"
-    , version = "895db00f2fe97ee56b866bf1582b303d029c216a"
+    , version = "60615c36abaee16d8dbe09cdd0e772e6d523d024"
     }
 }
