@@ -62,6 +62,7 @@ runghcOpts implicitPrelude =
     "-XExplicitNamespaces",
     "-XFlexibleContexts",
     "-XGeneralizedNewtypeDeriving",
+    "-XImportQualifiedPost",
     "-XMultiParamTypeClasses",
     "-XNamedFieldPuns",
     "-XNumericUnderscores",
