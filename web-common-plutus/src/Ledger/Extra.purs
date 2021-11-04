@@ -1,5 +1,6 @@
 module Ledger.Extra where
 
+import Data.BigInt.Argonaut as BigInt
 import Data.Lens (Lens', lens, view)
 import Data.Lens.Record (prop)
 import Type.Proxy (Proxy(..))
@@ -11,7 +12,7 @@ import Plutus.V1.Ledger.Interval (Extended(..), Interval, LowerBound(..), UpperB
 import Plutus.V1.Ledger.Slot (Slot(..))
 import Plutus.V1.Ledger.Time (POSIXTime(..))
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
-import Prelude (show, (+), (<<<), (<>))
+import Prelude ((+), (<<<), (<>))
 
 humaniseSlotInterval :: Interval Slot -> String
 humaniseSlotInterval interval = case from, to of
@@ -27,7 +28,7 @@ humaniseSlot bound = start <> " " <> end
   where
   start = case hasBound bound of
     NegInf -> "the start of time"
-    Finite (Slot slot) -> "Slot " <> show slot.getSlot
+    Finite (Slot slot) -> "Slot " <> BigInt.toString slot.getSlot
     PosInf -> "the end of time"
 
   end = case isInclusive bound of
@@ -48,7 +49,7 @@ humaniseTime bound = start <> " " <> end
   where
   start = case hasBound bound of
     NegInf -> "the start of time"
-    Finite (POSIXTime time) -> "POSIXTime " <> show time.getPOSIXTime
+    Finite (POSIXTime time) -> "POSIXTime " <> BigInt.toString time.getPOSIXTime
     PosInf -> "the end of time"
 
   end = case isInclusive bound of

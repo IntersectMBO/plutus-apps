@@ -104,7 +104,7 @@ actionPaneBody index (PayToWallet { sender, recipient, amount }) =
         , input
             [ type_ InputNumber
             , classes [ formControl ]
-            , value $ show $ view _walletId recipient
+            , value $ BigInt.toString $ view _walletId recipient
             , required true
             , min 1.0
             , placeholder "Wallet ID"
@@ -129,7 +129,7 @@ actionPaneBody index (AddBlocks { blocks }) =
                 [ input
                     [ type_ InputNumber
                     , classes [ formControl, ClassName $ "action-argument-0-blocks" ]
-                    , value $ show blocks
+                    , value $ BigInt.toString blocks
                     , required true
                     , min 1.0
                     , placeholder "Block Number"
@@ -152,7 +152,7 @@ actionPaneBody index (AddBlocksUntil { slot }) =
                 [ input
                     [ type_ InputNumber
                     , classes [ formControl, ClassName $ "action-argument-0-until-slot" ]
-                    , value $ show $ view _InSlot slot
+                    , value $ BigInt.toString $ view _InSlot slot
                     , required true
                     , min 1.0
                     , placeholder "Slot Number"

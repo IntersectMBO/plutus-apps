@@ -79,7 +79,7 @@ balanceRow handler currencyIndex currencySymbol tokenIndex (Tuple tokenName amou
                   [ input
                       [ type_ InputNumber
                       , classes [ formControl, ClassName "balance-amount" ]
-                      , value $ show amount
+                      , value $ BigInt.toString amount
                       , required true
                       , placeholder "Amount"
                       , min zero

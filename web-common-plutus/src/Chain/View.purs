@@ -338,7 +338,7 @@ dereferencedInputView _ _ (InputNotFound txKey) =
     , cardBody_
         [ txIdView (view _txKeyTxId txKey)
         , br_
-        , text $ "Index: " <> show (view _txKeyTxOutRefIdx txKey)
+        , text $ "Index: " <> BigInt.toString (view _txKeyTxOutRefIdx txKey)
         ]
     ]
 

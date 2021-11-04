@@ -85,7 +85,7 @@ evaluationPane state (EvaluationResult { emulatorLog, emulatorTrace, fundsDistri
         ]
     ]
   where
-  namingFn pubKeyHash = preview (ix pubKeyHash <<< _walletId <<< to (\n -> "Wallet " <> show n)) (AssocMap.Map walletKeys)
+  namingFn pubKeyHash = preview (ix pubKeyHash <<< _walletId <<< to (\n -> "Wallet " <> BigInt.toString n)) (AssocMap.Map walletKeys)
 
 eveEvent :: forall a. MultiAgent.EmulatorTimeEvent a -> a
 eveEvent (MultiAgent.EmulatorTimeEvent { _eteEvent }) = _eteEvent
@@ -152,7 +152,7 @@ emulatorEventPane (ChainEvent (TxnValidationFail _ (TxId txId) _ error _)) =
 
 emulatorEventPane (ChainEvent (SlotAdd (Slot slot))) =
   div [ class_ $ ClassName "info" ]
-    [ text $ "Add slot " <> show slot.getSlot ]
+    [ text $ "Add slot " <> BigInt.toString slot.getSlot ]
 
 -- TODO: convert Wallet back to WalletNumber?
 emulatorEventPane (WalletEvent (Wallet walletId) (GenericLog logMessageText)) =
@@ -175,7 +175,7 @@ emulatorEventPane _ = div [] []
 
 ------------------------------------------------------------
 formatWalletId :: SimulatorWallet -> String
-formatWalletId wallet = "Wallet " <> show (view (_simulatorWalletWallet <<< _walletId) wallet)
+formatWalletId wallet = "Wallet " <> BigInt.toString (view (_simulatorWalletWallet <<< _walletId) wallet)
 
 extractAmount :: Tuple CurrencySymbol TokenName -> SimulatorWallet -> Maybe BigInt
 extractAmount (Tuple currencySymbol tokenName) =

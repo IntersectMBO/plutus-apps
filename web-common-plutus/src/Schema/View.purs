@@ -85,7 +85,7 @@ actionArgumentField ancestors _ arg@(Fix (FormIntegerF n)) =
     [ input
         [ type_ InputNumber
         , classes (Array.cons formControl (actionArgumentClass ancestors))
-        , value $ maybe "" show n
+        , value $ maybe "" BigInt.toString n
         , required true
         , placeholder "Integer"
         , onValueInput (SetField <<< SetBigIntField <<< BigInt.fromString)

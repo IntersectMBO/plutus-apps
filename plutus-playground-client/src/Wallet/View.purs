@@ -6,6 +6,7 @@ module Wallet.View
 import Bootstrap (btn, btnSecondary, btnSmall, card, cardBody_, cardTitle_, floatRight)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
+import Data.BigInt.Argonaut as BigInt
 import Data.Lens (view)
 import Data.Tuple (Tuple(..))
 import Halogen.HTML (ClassName(ClassName), HTML, br_, button, div, div_, h2_, h3_, h4_, p_, span, text)
@@ -13,6 +14,7 @@ import Halogen.HTML.Elements.Keyed as Keyed
 import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (class_, classes)
 import Icons (Icon(..), icon)
+import Ledger.CardanoWallet (WalletNumber(..))
 import MainFrame.Types (HAction(..), WalletEvent(..))
 import Playground.Lenses (_endpointDescription, _getEndpointDescription)
 import Playground.Types (ContractCall(..), FunctionSchema, SimulatorWallet(..), _FunctionSchema)
@@ -21,7 +23,6 @@ import Prelude (const, show, ($), (<), (<>), (<$>), (<<<))
 import Schema (FormSchema)
 import Schema.Types (ActionEvent(..), SimulationAction(..), Signatures, toArgument)
 import ValueEditor (valueForm)
-import Ledger.CardanoWallet (WalletNumber(..))
 import Wallet.Lenses (_simulatorWalletWallet)
 
 walletsPane :: forall p. Signatures -> Value -> Array SimulatorWallet -> HTML p HAction
@@ -69,7 +70,7 @@ walletPane signatures initialValue walletIndex simulatorWallet@(SimulatorWallet 
 walletIdPane :: forall p i. WalletNumber -> HTML p i
 walletIdPane (WalletNumber { getWallet }) =
   span [ class_ $ ClassName "wallet-id" ]
-    [ text $ "Wallet " <> show getWallet ]
+    [ text $ "Wallet " <> BigInt.toString getWallet ]
 
 addWalletPane :: forall p. Tuple String (HTML p HAction)
 addWalletPane =
