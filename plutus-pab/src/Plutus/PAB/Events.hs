@@ -20,12 +20,12 @@ module Plutus.PAB.Events
 
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON, Value)
-import Data.Text.Prettyprint.Doc (Pretty, pretty, (<+>))
 import GHC.Generics (Generic)
 import Ledger.Tx (Tx, txId)
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.State (ContractResponse)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs)
+import Prettyprinter (Pretty, pretty, (<+>))
 import Wallet.Types (ContractInstanceId)
 
 -- | A structure which ties together all possible event types into one parent.

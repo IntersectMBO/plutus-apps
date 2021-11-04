@@ -43,8 +43,8 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Prettyprint.Doc (Pretty (..), colon, vsep, (<+>))
 import GHC.Generics (Generic)
+import Prettyprinter (Pretty (..), colon, vsep, (<+>))
 
 -- $checkpoints
 -- This module contains a checkpoints mechanism that can be used to store

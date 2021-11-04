@@ -33,9 +33,6 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Prettyprint.Doc (Doc, Pretty, defaultLayoutOptions, fill, indent, layoutPretty, line, parens, pretty,
-                                  viaShow, vsep, (<+>))
-import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
 import Ledger (Address, Blockchain, Tx (Tx), TxId, TxIn (TxIn), TxInType (..), TxOut (TxOut),
                TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txFee, txMint, txOutValue, txOutputs, txSignatures)
 import Ledger.Ada (Ada (Lovelace))
@@ -47,6 +44,9 @@ import Plutus.V1.Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
+import Prettyprinter (Doc, Pretty, defaultLayoutOptions, fill, indent, layoutPretty, line, parens, pretty, viaShow,
+                      vsep, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Folds (EmulatorEventFold)
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Types (Wallet (Wallet))

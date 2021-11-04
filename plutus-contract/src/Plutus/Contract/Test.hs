@@ -86,11 +86,11 @@ import Data.Maybe (fromJust, mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.String (IsString (..))
 import Data.Text qualified as Text
-import Data.Text.Prettyprint.Doc
-import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
 import Data.Void
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq, PABResp)
+import Prettyprinter
+import Prettyprinter.Render.Text (renderStrict)
 
 
 import Hedgehog (Property, forAll, property)

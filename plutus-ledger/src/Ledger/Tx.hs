@@ -51,7 +51,6 @@ import Data.Map qualified as Map
 import Data.Proxy
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text.Prettyprint.Doc (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 import GHC.Generics (Generic)
 import Ledger.Address (pubKeyAddress, scriptAddress)
 import Ledger.Crypto (PrivateKey, PubKey, signTx, toPublicKey)
@@ -61,6 +60,7 @@ import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId (..), Validator,
                              ValidatorHash, Value, addressCredential, toBuiltin)
 import Plutus.V1.Ledger.Tx as Export
+import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 
 -- | Transaction output that comes from a chain index query.
 --

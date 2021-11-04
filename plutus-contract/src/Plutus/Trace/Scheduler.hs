@@ -67,9 +67,9 @@ import Data.Hashable (Hashable)
 import Data.Map as Map
 import Data.Sequence (Seq (..))
 import Data.Sequence qualified as Seq
-import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
 import Plutus.Trace.Tag (Tag)
+import Prettyprinter
 import Prettyprinter.Extras (PrettyShow (..), Tagged (..))
 
 {- Note [Thread Tag]

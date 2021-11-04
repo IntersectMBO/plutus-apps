@@ -44,9 +44,9 @@ import Data.Monoid (First (..))
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
-import Data.Text.Prettyprint.Doc (Pretty (..), (<+>))
 import GHC.Generics (Generic)
 import Ledger.Tx (TxOutTx (..), spentOutputs, txId, unspentOutputsTx, updateUtxo, validValuesTx)
+import Prettyprinter (Pretty (..), (<+>))
 
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts

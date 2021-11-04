@@ -17,8 +17,8 @@ import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Default (Default (..))
 import Data.Text.Encoding qualified as T
-import Data.Text.Prettyprint.Doc (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
-import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
+import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
+import Prettyprinter.Render.Text (renderStrict)
 import Test.Tasty
 import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit

@@ -39,7 +39,6 @@ import Data.List (delete)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Text qualified as Text
-import Data.Text.Prettyprint.Doc
 import Data.Yaml (decodeFileThrow)
 import GHC.Generics (Generic)
 import Ledger.Ada (lovelaceValueOf)
@@ -65,6 +64,7 @@ import Plutus.PAB.Types qualified as PAB.Types
 import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Client (InstanceClient (..), PabClient (..), pabClient)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
+import Prettyprinter
 import Prettyprinter (Pretty)
 import Servant ((:<|>) (..))
 import Servant qualified

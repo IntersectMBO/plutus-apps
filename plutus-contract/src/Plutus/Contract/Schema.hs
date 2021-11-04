@@ -28,7 +28,7 @@ import Data.Aeson (FromJSON, ToJSON (toJSON), Value)
 import Data.Row as Row
 import Data.Row.Internal
 import Data.Row.Variants qualified as Variants
-import Data.Text.Prettyprint.Doc
+import Prettyprinter
 
 import Data.Row.Extras
 

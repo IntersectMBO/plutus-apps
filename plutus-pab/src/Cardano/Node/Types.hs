@@ -55,7 +55,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default, def)
 import Data.Map qualified as Map
 import Data.Text (Text)
-import Data.Text.Prettyprint.Doc (Pretty (..), pretty, viaShow, (<+>))
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
@@ -65,6 +64,7 @@ import Ledger (Tx, txId)
 import Ledger.CardanoWallet (WalletNumber (..))
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Trace qualified as Trace
+import Prettyprinter (Pretty (..), pretty, viaShow, (<+>))
 import Servant.Client (BaseUrl (..), Scheme (..))
 import Wallet.Emulator (Wallet)
 import Wallet.Emulator qualified as EM

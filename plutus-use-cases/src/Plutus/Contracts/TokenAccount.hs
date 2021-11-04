@@ -42,8 +42,8 @@ import Control.Monad (void)
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
-import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
+import Prettyprinter
 
 import Plutus.Contract
 import Plutus.Contract.Constraints

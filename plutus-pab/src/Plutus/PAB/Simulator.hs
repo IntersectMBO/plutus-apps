@@ -96,8 +96,6 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
-import Data.Text.Prettyprint.Doc (Pretty (pretty), defaultLayoutOptions, layoutPretty)
-import Data.Text.Prettyprint.Doc.Render.Text qualified as Render
 import Data.Time.Units (Millisecond)
 import Ledger (Address (..), Blockchain, CardanoTx, PubKeyHash, TxId, TxOut (..), eitherTx, txFee, txId)
 import Ledger.Ada qualified as Ada
@@ -126,6 +124,8 @@ import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
 import Plutus.Trace.Emulator.System (appendNewTipBlock)
 import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Tx (TxOutRef)
+import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
+import Prettyprinter.Render.Text qualified as Render
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect (..), WalletEffect)
 import Wallet.Emulator qualified as Emulator

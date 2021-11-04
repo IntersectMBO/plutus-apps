@@ -60,8 +60,6 @@ import Data.Foldable (fold, toList)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
-import Data.Text.Prettyprint.Doc (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
-import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
 import Ledger (Block, OnChainTx (..), TxId)
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
@@ -78,6 +76,8 @@ import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventIn
                                                instContractState, instEvents, instHandlersHistory)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceTag, UserThreadMsg, _HandledRequest,
                                     cilMessage, cilTag, toInstanceState)
+import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
+import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Chain (ChainEvent (..), _TxnValidate, _TxnValidationFail)
 import Wallet.Emulator.LogMessages (_BalancingUnbalancedTx, _ValidationFailed)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorTimeEvent, chainEvent, eteEvent, instanceEvent,

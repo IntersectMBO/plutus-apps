@@ -24,8 +24,8 @@ import Control.Monad.Freer.Extras.Log (LogMsg)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Row
-import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
+import Prettyprinter
 
 import ContractExample.AtomicSwap qualified as Contracts.AtomicSwap
 import ContractExample.PayToWallet qualified as Contracts.PayToWallet

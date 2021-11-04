@@ -85,9 +85,9 @@ import Control.Monad.Freer.TH (makeEffect)
 import Data.Default (Default (..))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
-import Data.Text.Prettyprint.Doc (defaultLayoutOptions, layoutPretty, pretty)
-import Data.Text.Prettyprint.Doc.Render.String (renderString)
 import Plutus.Trace.Scheduler (EmSystemCall, ThreadId, exit, runThreads)
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty)
+import Prettyprinter.Render.String (renderString)
 import System.IO (Handle, hPutStrLn, stdout)
 import Wallet.Emulator.Chain (ChainControlEffect)
 import Wallet.Emulator.Chain qualified as ChainState

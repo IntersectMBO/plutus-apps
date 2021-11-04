@@ -38,7 +38,6 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text.Prettyprint.Doc
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
 import Ledger (Address, Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
@@ -46,6 +45,7 @@ import Ledger (Address, Datum, DatumHash, MintingPolicy (getMintingPolicy), Mint
                Tx (..), TxId, TxIn (txInType), TxInType (..), TxOut (txOutAddress), TxOutRef (..),
                Validator (getValidator), ValidatorHash (ValidatorHash), datumHash, mintingPolicyHash, redeemerHash,
                txId, validatorHash)
+import Prettyprinter
 
 -- | List of outputs of a transaction. There are no outputs if the transaction
 -- is invalid.

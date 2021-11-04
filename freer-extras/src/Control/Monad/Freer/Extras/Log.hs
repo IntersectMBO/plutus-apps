@@ -66,11 +66,11 @@ import Control.Monad.Freer.Writer (Writer (..), tell)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (for_, traverse_)
 import Data.Text (Text)
-import Data.Text.Prettyprint.Doc hiding (surround)
-import Data.Text.Prettyprint.Doc.Render.String qualified as Render
-import Data.Text.Prettyprint.Doc.Render.Text qualified as Render
 import Debug.Trace qualified as Trace
 import GHC.Generics (Generic)
+import Prettyprinter hiding (surround)
+import Prettyprinter.Render.String qualified as Render
+import Prettyprinter.Render.Text qualified as Render
 
 -- $log
 -- This module provides effects and handlers for structured logging and

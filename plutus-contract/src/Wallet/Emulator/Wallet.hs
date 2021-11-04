@@ -42,7 +42,6 @@ import Data.Set qualified as Set
 import Data.String (IsString (..))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
-import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic (..))
 import Ledger hiding (from, to)
 import Ledger.Ada qualified as Ada
@@ -61,6 +60,7 @@ import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffec
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prelude as P
+import Prettyprinter
 import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect (..), publishTx)

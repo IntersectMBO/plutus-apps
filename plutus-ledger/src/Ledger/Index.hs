@@ -60,7 +60,6 @@ import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Set qualified as Set
 import Data.Text (Text)
-import Data.Text.Prettyprint.Doc (Pretty)
 import GHC.Generics (Generic)
 import Ledger.Blockchain
 import Ledger.Crypto
@@ -82,6 +81,7 @@ import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value qualified as V
 import PlutusTx (toBuiltinData)
 import PlutusTx.Numeric qualified as P
+import Prettyprinter (Pretty)
 import Prettyprinter.Extras (PrettyShow (..))
 
 -- | Context for validating transactions. We need access to the unspent

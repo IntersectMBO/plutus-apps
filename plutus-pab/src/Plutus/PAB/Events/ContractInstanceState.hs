@@ -18,10 +18,10 @@ import Data.ByteString.Lazy.Char8 qualified as BS8
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text qualified as Text
 import Data.Text.Extras (abbreviate)
-import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
 import Plutus.Contract.Resumable qualified as Contract
 import Plutus.Contract.State qualified as Contract
+import Prettyprinter
 
 -- TODO: Replace with type synonym for @ContractResponse Value Value Value h@
 data PartiallyDecodedResponse v =

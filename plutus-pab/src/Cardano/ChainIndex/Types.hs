@@ -14,8 +14,8 @@ import Control.Lens (makeLenses)
 import Control.Monad.Freer.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default, def)
-import Data.Text.Prettyprint.Doc (Pretty (..), parens, (<+>))
 import GHC.Generics (Generic)
+import Prettyprinter (Pretty (..), parens, (<+>))
 import Servant.Client (BaseUrl (..), Scheme (..))
 
 import Cardano.BM.Data.Trace (Trace)

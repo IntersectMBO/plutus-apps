@@ -42,8 +42,8 @@ import Data.HashMap.Strict qualified as HM
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Lazy qualified as Text
-import Data.Text.Prettyprint.Doc (Pretty (..), defaultLayoutOptions, layoutPretty)
-import Data.Text.Prettyprint.Doc.Render.Text qualified as Render
+import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty)
+import Prettyprinter.Render.Text qualified as Render
 
 toSeverity :: L.LogLevel -> Severity
 toSeverity = \case

@@ -30,9 +30,9 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
-import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
 import Ledger.Fee (FeeConfig)
+import Prettyprinter
 
 import Ledger hiding (to, value)
 import Ledger.AddressMap qualified as AM

@@ -49,8 +49,6 @@ import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Text.Extras (tshow)
-import Data.Text.Prettyprint.Doc (Pretty (..), defaultLayoutOptions, layoutPretty, pretty)
-import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
 import Data.Time.Units (Second)
 import Plutus.Contract.Resumable (responses)
 import Plutus.Contract.State (State (..))
@@ -70,6 +68,8 @@ import Plutus.PAB.Run.PSGenerator qualified as PSGenerator
 import Plutus.PAB.Types (Config (..), chainIndexConfig, nodeServerConfig, walletServerConfig)
 import Plutus.PAB.Webserver.Server qualified as PABServer
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
+import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, pretty)
+import Prettyprinter.Render.Text (renderStrict)
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitWith)
 import Wallet.Emulator.Wallet qualified as Wallet

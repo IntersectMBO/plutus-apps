@@ -19,7 +19,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
 import Data.Aeson.Encode.Pretty qualified as JSON
 import Data.ByteString.Lazy.Char8 qualified as BSL8
-import Data.Text.Prettyprint.Doc (Pretty, colon, hang, parens, pretty, viaShow, vsep, (<+>))
 import GHC.Generics (Generic)
 import Ledger.Tx (Tx, txId)
 import Plutus.Contract.Effects (PABReq (..), PABResp (..))
@@ -28,6 +27,7 @@ import Plutus.Contract.Trace.RequestHandler (RequestHandlerLogMsg)
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Events.Contract (ContractInstanceId (..))
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
+import Prettyprinter (Pretty, colon, hang, parens, pretty, viaShow, vsep, (<+>))
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
 import Wallet.Emulator.Types (Wallet)
 import Wallet.Types (NotificationError)

@@ -35,12 +35,12 @@ import Data.ByteString.Lazy.Char8 qualified as BSL8
 import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Prettyprint.Doc (Pretty (..), colon, hang, viaShow, vsep, (<+>))
 import Data.UUID (UUID)
 import Data.UUID.Extras qualified as UUID
 import Data.UUID.V4 qualified as UUID
 import GHC.Generics (Generic)
 import Language.Haskell.TH.Syntax qualified as TH
+import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
 
 import Ledger.Constraints.OffChain (MkTxError)
 import Plutus.Contract.Checkpoint (AsCheckpointError (..), CheckpointError)

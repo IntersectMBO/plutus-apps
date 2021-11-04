@@ -42,7 +42,6 @@ import Data.ByteString.Lazy.Char8 qualified as Char8
 import Data.Function ((&))
 import Data.Map qualified as Map
 import Data.Text.Encoding (encodeUtf8)
-import Data.Text.Prettyprint.Doc (pretty)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
@@ -54,6 +53,7 @@ import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Client qualified as ChainIndex
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
+import Prettyprinter (pretty)
 import Servant (ServerError (..), err400, err401, err404)
 import Servant.Client (ClientEnv)
 import Servant.Server (err500)

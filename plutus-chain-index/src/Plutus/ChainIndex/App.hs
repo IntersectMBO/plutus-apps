@@ -24,13 +24,13 @@ import Data.Foldable (for_, traverse_)
 import Data.Function ((&))
 import Data.Functor (void)
 import Data.Sequence ((<|))
-import Data.Text.Prettyprint.Doc (Pretty (..))
 import Data.Yaml qualified as Y
 import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
 import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.SQLite.Simple qualified as Sqlite
 import Options.Applicative (execParser)
+import Prettyprinter (Pretty (..))
 
 import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Setup (setupTrace_)

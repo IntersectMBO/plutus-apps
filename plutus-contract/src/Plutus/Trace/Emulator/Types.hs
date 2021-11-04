@@ -66,7 +66,6 @@ import Data.Sequence (Seq)
 import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Prettyprint.Doc (Pretty (..), braces, colon, fillSep, hang, parens, squotes, viaShow, vsep, (<+>))
 import GHC.Generics (Generic)
 import Ledger.Blockchain (Block)
 import Ledger.Slot (Slot (..))
@@ -79,6 +78,7 @@ import Plutus.Contract.Schema (Input, Output)
 import Plutus.Contract.Types (ResumableResult (..), SuspendedContract (..))
 import Plutus.Contract.Types qualified as Contract.Types
 import Plutus.Trace.Scheduler (AgentSystemCall, ThreadId)
+import Prettyprinter (Pretty (..), braces, colon, fillSep, hang, parens, squotes, viaShow, vsep, (<+>))
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)

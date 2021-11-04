@@ -20,10 +20,10 @@ import Control.Monad.Freer.Extras.Log (LogMsg, logInfo)
 import Control.Monad.Freer.State
 import Control.Monad.Freer.TH
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Text.Prettyprint.Doc hiding (annotate)
 import GHC.Generics (Generic)
 import Ledger
 import Ledger.AddressMap qualified as AM
+import Prettyprinter hiding (annotate)
 import Wallet.Effects (NodeClientEffect (..))
 import Wallet.Emulator.Chain
 

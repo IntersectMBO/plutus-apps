@@ -27,7 +27,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.List (partition, (\\))
 import Data.Maybe (mapMaybe)
-import Data.Text.Prettyprint.Doc
 import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, OnChainTx (..), ScriptValidationEvent, Slot (..), Tx (..), TxId, eitherTx, txId)
@@ -35,6 +34,7 @@ import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Util (uncurry3)
+import Prettyprinter
 
 -- | Events produced by the blockchain emulator.
 data ChainEvent =

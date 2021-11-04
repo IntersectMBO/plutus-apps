@@ -25,7 +25,6 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import Data.OpenApi qualified as OpenApi
-import Data.Text.Prettyprint.Doc (Pretty (pretty), (<+>))
 import Data.Time.Clock qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
 import GHC.Generics (Generic)
@@ -38,6 +37,7 @@ import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (Eq, (<$>))
 import Prelude (Eq, IO, Show, (<$>))
 import Prelude qualified as Haskell
+import Prettyprinter (Pretty (pretty), (<+>))
 
 -- | Datatype to configure the length (ms) of one slot and the beginning of the
 -- first slot.

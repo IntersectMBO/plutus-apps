@@ -32,8 +32,6 @@ import Data.Text (Text)
 
 import Data.Default (Default (def))
 import Data.Text.Encoding qualified as Text
-import Data.Text.Prettyprint.Doc (defaultLayoutOptions, layoutPretty, pretty, vsep)
-import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
 import Ledger.Value (Value)
 import Playground.Types (ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet), EvaluationResult,
                          Expression, FunctionSchema (FunctionSchema), PlaygroundError (JsonDecodingError, OtherError),
@@ -47,6 +45,8 @@ import Plutus.Trace.Emulator.Types (EmulatorRuntimeError (EmulatorJSONDecodingEr
 import Plutus.Trace.Playground (PlaygroundTrace, runPlaygroundStream, walletInstanceTag)
 import Plutus.Trace.Playground qualified
 import Plutus.Trace.Playground qualified as Trace
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, vsep)
+import Prettyprinter.Render.Text (renderStrict)
 import Streaming.Prelude (fst')
 import Wallet.Emulator.Folds (EmulatorEventFoldM)
 import Wallet.Emulator.Folds qualified as Folds

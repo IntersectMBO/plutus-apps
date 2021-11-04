@@ -18,8 +18,8 @@ module ContractExample(
 import Control.Monad.Freer
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
-import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
+import Prettyprinter
 
 import ContractExample.AtomicSwap qualified as Contracts.AtomicSwap
 import ContractExample.IntegrationTest qualified as Contracts.IntegrationTest

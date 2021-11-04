@@ -24,10 +24,10 @@ import Cardano.Api (NetworkId (..))
 import Control.Exception (Exception)
 import Control.Lens (makeLensesFor)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Text.Prettyprint.Doc (Pretty (..), viaShow, vsep, (<+>))
 import GHC.Generics (Generic)
 import Ledger.TimeSlot (SlotConfig (..))
 import Ouroboros.Network.Magic (NetworkMagic (..))
+import Prettyprinter (Pretty (..), viaShow, vsep, (<+>))
 
 data ChainIndexConfig = ChainIndexConfig
   { cicSocketPath    :: String

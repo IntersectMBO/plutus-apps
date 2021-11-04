@@ -20,7 +20,6 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.Foldable (traverse_)
 import Data.Int (Int64)
 import Data.Monoid (Sum (..))
-import Data.Text.Prettyprint.Doc (Pretty (..))
 import Flat (flat)
 import Ledger.Constraints.OffChain (UnbalancedTx (..))
 import Ledger.Index (ScriptValidationEvent (..), ValidatorMode (..), getScript)
@@ -29,6 +28,7 @@ import Plutus.Trace.Emulator (EmulatorConfig, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import Plutus.V1.Ledger.Api (ExBudget (..))
 import Plutus.V1.Ledger.Scripts (Script (..))
+import Prettyprinter (Pretty (..))
 import Streaming.Prelude qualified as S
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))

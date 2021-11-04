@@ -53,8 +53,8 @@ import Control.Monad.Freer.Reader (Reader)
 import Data.Aeson.Types qualified as JSON
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Text.Prettyprint.Doc (Pretty, pretty, (<+>))
 import GHC.Generics (Generic)
+import Prettyprinter (Pretty, pretty, (<+>))
 
 import Data.Text (Text)
 

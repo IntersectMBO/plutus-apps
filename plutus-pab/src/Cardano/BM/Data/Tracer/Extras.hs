@@ -23,8 +23,6 @@ import Data.Proxy (Proxy (..))
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Prettyprint.Doc (Pretty (..), defaultLayoutOptions, layoutPretty)
-import Data.Text.Prettyprint.Doc.Render.Text qualified as Render
 import Data.UUID (UUID)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Ledger.Tx (Tx)
@@ -34,6 +32,8 @@ import Plutus.Contract.Resumable (Response (..))
 import Plutus.Contract.State (ContractRequest)
 import Plutus.PAB.Events.Contract (ContractInstanceId, IterationID)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (..))
+import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty)
+import Prettyprinter.Render.Text qualified as Render
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Types (EndpointDescription)
 

@@ -21,7 +21,6 @@ import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Text (Text)
-import Data.Text.Prettyprint.Doc (Pretty, line, pretty, viaShow, (<+>))
 import Data.Time.Units (Second)
 import Data.UUID (UUID)
 import Data.UUID.Extras qualified as UUID
@@ -30,6 +29,7 @@ import Ledger (Block, Blockchain, Tx, TxId, eitherTx, txId)
 import Ledger.Index as UtxoIndex
 import Plutus.Contract.Types (ContractError)
 import Plutus.PAB.Instances ()
+import Prettyprinter (Pretty, line, pretty, viaShow, (<+>))
 import Servant.Client (BaseUrl (..), ClientError, Scheme (Http))
 import Wallet.API (WalletAPIError)
 import Wallet.Emulator.Wallet (Wallet)

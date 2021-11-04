@@ -23,7 +23,7 @@ import PlutusTx.Prelude
 -- >>> import PlutusTx
 -- >>> import PlutusCore
 -- >>> import PlutusCore.Evaluation.Machine.Ck
--- >>> import Data.Text.Prettyprint.Doc
+-- >>> import Prettyprinter
 
 -- BLOCK2
 integerOne :: CompiledCode Integer

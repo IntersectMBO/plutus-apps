@@ -164,6 +164,7 @@ test-suite plutus-contract-test
     -- TODO: put this back, turns out there were lots of warnings in the `plutus-emulator` tests...
     --import: lang
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     type: exitcode-stdio-1.0
     main-is: Spec.hs
     ghc-options: -Wall -Wnoncanonical-monad-instances

@@ -79,7 +79,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
 import Data.List.NonEmpty (NonEmpty)
 import Data.OpenApi.Schema qualified as OpenApi
-import Data.Text.Prettyprint.Doc (Pretty (..), hsep, indent, viaShow, vsep, (<+>))
 import GHC.Generics (Generic)
 import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, PubKeyHash, Redeemer,
                RedeemerHash, StakeValidator, StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
@@ -93,6 +92,7 @@ import Ledger.Tx (CardanoTx, ChainIndexTxOut, getCardanoTxId)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
 import Plutus.ChainIndex.Types (Tip (..), TxOutStatus, TxStatus)
+import Prettyprinter (Pretty (..), hsep, indent, viaShow, vsep, (<+>))
 import Wallet.API (WalletAPIError)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue)
 

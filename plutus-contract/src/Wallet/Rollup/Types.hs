@@ -13,10 +13,10 @@ import Control.Lens (makeLenses, makeLensesFor)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Map (Map)
 import Data.OpenApi.Schema qualified as OpenApi
-import Data.Text.Prettyprint.Doc (Pretty, pretty, viaShow)
 import GHC.Generics
 import Ledger
 import Ledger.Credential (Credential (..))
+import Prettyprinter (Pretty, pretty, viaShow)
 
 data TxKey =
     TxKey

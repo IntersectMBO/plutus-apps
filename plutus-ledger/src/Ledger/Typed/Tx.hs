@@ -40,8 +40,8 @@ import Data.ByteString.Lazy qualified as BSL
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (Object), object, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
-import Data.Text.Prettyprint.Doc (Pretty (pretty), viaShow, (<+>))
 import GHC.Generics (Generic)
+import Prettyprinter (Pretty (pretty), viaShow, (<+>))
 
 import Control.Monad.Except
 
