@@ -27,44 +27,43 @@ module Wallet.Emulator.Stream(
     , foldEmulatorStreamM
     ) where
 
-import qualified Control.Foldl                          as L
-import           Control.Lens                           (filtered, makeLenses, preview, view)
-import           Control.Monad.Freer                    (Eff, Member, interpret, reinterpret, run, subsume, type (~>))
-import           Control.Monad.Freer.Coroutine          (Yield, yield)
-import           Control.Monad.Freer.Error              (Error, runError)
-import           Control.Monad.Freer.Extras             (raiseEnd, wrapError)
-import           Control.Monad.Freer.Extras.Log         (LogLevel, LogMessage (..), LogMsg (..), logMessageContent,
-                                                         mapMLog)
-import           Control.Monad.Freer.Extras.Stream      (runStream)
-import           Control.Monad.Freer.State              (State, gets, runState)
-import           Data.Bifunctor                         (first)
-import           Data.Default                           (Default (..))
-import           Data.Map                               (Map)
-import qualified Data.Map                               as Map
-import           Data.Maybe                             (fromMaybe)
-import qualified Data.Set                               as Set
-import qualified Ledger.AddressMap                      as AM
-import           Ledger.Blockchain                      (Block, OnChainTx (..))
-import           Ledger.Fee                             (FeeConfig)
-import           Ledger.Slot                            (Slot)
-import           Ledger.Value                           (Value)
-import           Plutus.ChainIndex                      (ChainIndexError)
-import           Streaming                              (Stream)
-import qualified Streaming                              as S
-import           Streaming.Prelude                      (Of)
-import qualified Streaming.Prelude                      as S
-import           Wallet.API                             (WalletAPIError)
-import           Wallet.Emulator                        (EmulatorEvent, EmulatorEvent')
-import qualified Wallet.Emulator                        as EM
-import           Wallet.Emulator.Chain                  (ChainControlEffect, ChainEffect, _SlotAdd)
-import           Wallet.Emulator.MultiAgent             (EmulatorState, EmulatorTimeEvent (..), MultiAgentControlEffect,
-                                                         MultiAgentEffect, chainEvent, eteEvent)
-import           Wallet.Emulator.Wallet                 (Wallet (..), walletAddress)
+import Control.Foldl qualified as L
+import Control.Lens (filtered, makeLenses, preview, view)
+import Control.Monad.Freer (Eff, Member, interpret, reinterpret, run, subsume, type (~>))
+import Control.Monad.Freer.Coroutine (Yield, yield)
+import Control.Monad.Freer.Error (Error, runError)
+import Control.Monad.Freer.Extras (raiseEnd, wrapError)
+import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage (..), LogMsg (..), logMessageContent, mapMLog)
+import Control.Monad.Freer.Extras.Stream (runStream)
+import Control.Monad.Freer.State (State, gets, runState)
+import Data.Bifunctor (first)
+import Data.Default (Default (..))
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Set qualified as Set
+import Ledger.AddressMap qualified as AM
+import Ledger.Blockchain (Block, OnChainTx (..))
+import Ledger.Fee (FeeConfig)
+import Ledger.Slot (Slot)
+import Ledger.Value (Value)
+import Plutus.ChainIndex (ChainIndexError)
+import Streaming (Stream)
+import Streaming qualified as S
+import Streaming.Prelude (Of)
+import Streaming.Prelude qualified as S
+import Wallet.API (WalletAPIError)
+import Wallet.Emulator (EmulatorEvent, EmulatorEvent')
+import Wallet.Emulator qualified as EM
+import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, _SlotAdd)
+import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (..), MultiAgentControlEffect, MultiAgentEffect,
+                                   chainEvent, eteEvent)
+import Wallet.Emulator.Wallet (Wallet (..), walletAddress)
 
 -- TODO: Move these two to 'Wallet.Emulator.XXX'?
-import           Ledger.TimeSlot                        (SlotConfig)
-import           Plutus.Contract.Trace                  (InitialDistribution, defaultDist, knownWallets)
-import           Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
+import Ledger.TimeSlot (SlotConfig)
+import Plutus.Contract.Trace (InitialDistribution, defaultDist, knownWallets)
+import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
 
 {- Note [Emulator event stream]
 

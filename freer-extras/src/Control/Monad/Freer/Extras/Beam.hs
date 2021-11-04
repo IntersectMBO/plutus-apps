@@ -18,37 +18,35 @@
 
 module Control.Monad.Freer.Extras.Beam where
 
-import           Cardano.BM.Data.Tracer                   (ToObject (..))
-import           Cardano.BM.Trace                         (Trace, logDebug)
-import           Control.Concurrent                       (threadDelay)
-import           Control.Exception                        (try)
-import           Control.Monad                            (guard)
-import           Control.Monad.Freer                      (Eff, LastMember, Member, type (~>))
-import           Control.Monad.Freer.Error                (Error, throwError)
-import           Control.Monad.Freer.Extras.Pagination    (Page (..), PageQuery (..), PageSize (..))
-import           Control.Monad.Freer.Reader               (Reader, ask)
-import           Control.Monad.Freer.TH                   (makeEffect)
-import           Data.Aeson                               (FromJSON, ToJSON)
-import           Data.Foldable                            (traverse_)
-import qualified Data.List.NonEmpty                       as L
-import           Data.Maybe                               (isJust, listToMaybe)
-import           Data.Text                                (Text)
-import qualified Data.Text                                as Text
-import           Database.Beam                            (Beamable, DatabaseEntity, FromBackendRow, Identity,
-                                                           MonadIO (liftIO), Q, QBaseScope, QExpr, SqlDelete, SqlInsert,
-                                                           SqlSelect, SqlUpdate, TableEntity, asc_, filter_,
-                                                           insertValues, limit_, orderBy_, runDelete, runInsert,
-                                                           runSelectReturningList, runSelectReturningOne, runUpdate,
-                                                           select, val_, (>.))
-import           Database.Beam.Backend.SQL                (BeamSqlBackendCanSerialize, HasSqlValueSyntax)
-import           Database.Beam.Backend.SQL.BeamExtensions (BeamHasInsertOnConflict (anyConflict, insertOnConflict, onConflictDoNothing))
-import           Database.Beam.Query.Internal             (QNested)
-import           Database.Beam.Schema.Tables              (FieldsFulfillConstraint)
-import           Database.Beam.Sqlite                     (Sqlite, SqliteM, runBeamSqliteDebug)
-import           Database.Beam.Sqlite.Syntax              (SqliteValueSyntax)
-import qualified Database.SQLite.Simple                   as Sqlite
-import           GHC.Generics                             (Generic)
-import           Prettyprinter                            (Pretty (..), colon, (<+>))
+import Cardano.BM.Data.Tracer (ToObject (..))
+import Cardano.BM.Trace (Trace, logDebug)
+import Control.Concurrent (threadDelay)
+import Control.Exception (try)
+import Control.Monad (guard)
+import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
+import Control.Monad.Freer.Reader (Reader, ask)
+import Control.Monad.Freer.TH (makeEffect)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Foldable (traverse_)
+import Data.List.NonEmpty qualified as L
+import Data.Maybe (isJust, listToMaybe)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Database.Beam (Beamable, DatabaseEntity, FromBackendRow, Identity, MonadIO (liftIO), Q, QBaseScope, QExpr,
+                      SqlDelete, SqlInsert, SqlSelect, SqlUpdate, TableEntity, asc_, filter_, insertValues, limit_,
+                      orderBy_, runDelete, runInsert, runSelectReturningList, runSelectReturningOne, runUpdate, select,
+                      val_, (>.))
+import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize, HasSqlValueSyntax)
+import Database.Beam.Backend.SQL.BeamExtensions (BeamHasInsertOnConflict (anyConflict, insertOnConflict, onConflictDoNothing))
+import Database.Beam.Query.Internal (QNested)
+import Database.Beam.Schema.Tables (FieldsFulfillConstraint)
+import Database.Beam.Sqlite (Sqlite, SqliteM, runBeamSqliteDebug)
+import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
+import Database.SQLite.Simple qualified as Sqlite
+import GHC.Generics (Generic)
+import Prettyprinter (Pretty (..), colon, (<+>))
 
 type BeamableSqlite table = (Beamable table, FieldsFulfillConstraint (BeamSqlBackendCanSerialize Sqlite) table)
 

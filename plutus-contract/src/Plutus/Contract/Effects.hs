@@ -74,28 +74,27 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     ActiveEndpoint(..),
     ) where
 
-import           Control.Lens                (Iso', Prism', iso, makePrisms, prism')
-import           Data.Aeson                  (FromJSON, ToJSON)
-import qualified Data.Aeson                  as JSON
-import           Data.List.NonEmpty          (NonEmpty)
-import qualified Data.OpenApi.Schema         as OpenApi
-import           Data.Text.Prettyprint.Doc   (Pretty (..), hsep, indent, viaShow, vsep, (<+>))
-import           GHC.Generics                (Generic)
-import           Ledger                      (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash,
-                                              PubKeyHash, Redeemer, RedeemerHash, StakeValidator, StakeValidatorHash,
-                                              TxId, TxOutRef, ValidatorHash)
-import           Ledger.Constraints.OffChain (UnbalancedTx)
-import           Ledger.Credential           (Credential)
-import           Ledger.Scripts              (Validator)
-import           Ledger.Slot                 (Slot (..), SlotRange)
-import           Ledger.Time                 (POSIXTime (..), POSIXTimeRange)
-import           Ledger.TimeSlot             (SlotConversionError)
-import           Ledger.Tx                   (CardanoTx, ChainIndexTxOut, getCardanoTxId)
-import           Plutus.ChainIndex           (Page (pageItems), PageQuery)
-import           Plutus.ChainIndex.Tx        (ChainIndexTx (_citxTxId))
-import           Plutus.ChainIndex.Types     (Tip (..), TxOutStatus, TxStatus)
-import           Wallet.API                  (WalletAPIError)
-import           Wallet.Types                (ContractInstanceId, EndpointDescription, EndpointValue)
+import Control.Lens (Iso', Prism', iso, makePrisms, prism')
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as JSON
+import Data.List.NonEmpty (NonEmpty)
+import Data.OpenApi.Schema qualified as OpenApi
+import GHC.Generics (Generic)
+import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, PubKeyHash, Redeemer,
+               RedeemerHash, StakeValidator, StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Credential (Credential)
+import Ledger.Scripts (Validator)
+import Ledger.Slot (Slot (..), SlotRange)
+import Ledger.Time (POSIXTime (..), POSIXTimeRange)
+import Ledger.TimeSlot (SlotConversionError)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, getCardanoTxId)
+import Plutus.ChainIndex (Page (pageItems), PageQuery)
+import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
+import Plutus.ChainIndex.Types (Tip (..), TxOutStatus, TxStatus)
+import Prettyprinter (Pretty (..), hsep, indent, viaShow, vsep, (<+>))
+import Wallet.API (WalletAPIError)
+import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue)
 
 -- | Requests that 'Contract's can make
 data PABReq =

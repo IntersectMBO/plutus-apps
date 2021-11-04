@@ -33,42 +33,39 @@ module Plutus.Trace.Effects.RunContract(
     , startContractThread
     ) where
 
-import           Control.Lens                            (preview)
-import           Control.Monad                           (void)
-import           Control.Monad.Freer                     (Eff, Member, interpret, send, type (~>))
-import           Control.Monad.Freer.Coroutine           (Yield (..))
-import           Control.Monad.Freer.Error               (Error, throwError)
-import           Control.Monad.Freer.Extras.Log          (LogMsg, logError, mapLog)
-import           Control.Monad.Freer.Reader              (Reader, ask)
-import           Control.Monad.Freer.State               (State)
-import           Control.Monad.Freer.TH                  (makeEffect)
+import Control.Lens (preview)
+import Control.Monad (void)
+import Control.Monad.Freer (Eff, Member, interpret, send, type (~>))
+import Control.Monad.Freer.Coroutine (Yield (..))
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Extras.Log (LogMsg, logError, mapLog)
+import Control.Monad.Freer.Reader (Reader, ask)
+import Control.Monad.Freer.State (State)
+import Control.Monad.Freer.TH (makeEffect)
 
-import qualified Data.Aeson                              as JSON
-import           Data.Maybe                              (mapMaybe)
-import           Data.Profunctor                         (Profunctor (..))
-import           Data.Proxy                              (Proxy (..))
-import qualified Data.Row.Internal                       as V
-import           Data.String                             (IsString (..))
-import qualified GHC.TypeLits
-import           Plutus.Contract                         (Contract, HasEndpoint)
-import           Plutus.Contract.Effects                 (ActiveEndpoint, PABResp (ExposeEndpointResp),
-                                                          _ExposeEndpointReq)
-import           Plutus.Contract.Resumable               (Request (rqRequest), Requests (..))
-import           Plutus.Contract.Schema                  (Input, Output)
-import           Plutus.Contract.Types                   (IsContract (..), ResumableResult (..))
-import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, nextId)
-import           Plutus.Trace.Emulator.ContractInstance  (contractThread, getThread)
-import           Plutus.Trace.Emulator.Types             (ContractHandle (..), ContractInstanceState (..),
-                                                          ContractInstanceTag,
-                                                          EmulatorMessage (ContractInstanceStateRequest, ContractInstanceStateResponse, EndpointCall),
-                                                          EmulatorRuntimeError (EmulatorJSONDecodingError),
-                                                          EmulatorThreads, UserThreadMsg (UserThreadErr))
-import           Plutus.Trace.Scheduler                  (AgentSystemCall, EmSystemCall, MessageCall (Message),
-                                                          Priority (..), Tag, ThreadId, fork, mkSysCall, sleep)
-import           Wallet.Emulator.MultiAgent              (EmulatorEvent' (..), MultiAgentEffect,
-                                                          handleMultiAgentEffects)
-import           Wallet.Emulator.Wallet                  (Wallet (..))
-import           Wallet.Types                            (EndpointDescription (..), EndpointValue (..))
+import Data.Aeson qualified as JSON
+import Data.Maybe (mapMaybe)
+import Data.Profunctor (Profunctor (..))
+import Data.Proxy (Proxy (..))
+import Data.Row.Internal qualified as V
+import Data.String (IsString (..))
+import GHC.TypeLits qualified
+import Plutus.Contract (Contract, HasEndpoint)
+import Plutus.Contract.Effects (ActiveEndpoint, PABResp (ExposeEndpointResp), _ExposeEndpointReq)
+import Plutus.Contract.Resumable (Request (rqRequest), Requests (..))
+import Plutus.Contract.Schema (Input, Output)
+import Plutus.Contract.Types (IsContract (..), ResumableResult (..))
+import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, nextId)
+import Plutus.Trace.Emulator.ContractInstance (contractThread, getThread)
+import Plutus.Trace.Emulator.Types (ContractHandle (..), ContractInstanceState (..), ContractInstanceTag,
+                                    EmulatorMessage (ContractInstanceStateRequest, ContractInstanceStateResponse, EndpointCall),
+                                    EmulatorRuntimeError (EmulatorJSONDecodingError), EmulatorThreads,
+                                    UserThreadMsg (UserThreadErr))
+import Plutus.Trace.Scheduler (AgentSystemCall, EmSystemCall, MessageCall (Message), Priority (..), Tag, ThreadId, fork,
+                               mkSysCall, sleep)
+import Wallet.Emulator.MultiAgent (EmulatorEvent' (..), MultiAgentEffect, handleMultiAgentEffects)
+import Wallet.Emulator.Wallet (Wallet (..))
+import Wallet.Types (EndpointDescription (..), EndpointValue (..))
 
 type ContractConstraints s =
     ( V.Forall (Output s) V.Unconstrained1

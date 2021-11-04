@@ -18,29 +18,29 @@
 module Plutus.Contracts.SimpleEscrow
   where
 
-import           Control.Lens             (makeClassyPrisms, view)
-import           Control.Monad            (void)
-import           Control.Monad.Error.Lens (throwing)
-import           Data.Aeson               (FromJSON, ToJSON)
-import           GHC.Generics             (Generic)
+import Control.Lens (makeClassyPrisms, view)
+import Control.Monad (void)
+import Control.Monad.Error.Lens (throwing)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 
-import           Ledger                   (POSIXTime, PubKeyHash, TxId, getCardanoTxId, txSignedBy, valuePaidTo)
-import qualified Ledger
-import qualified Ledger.Constraints       as Constraints
-import           Ledger.Contexts          (ScriptContext (..), TxInfo (..))
-import           Ledger.Interval          (after, before)
-import qualified Ledger.Interval          as Interval
-import qualified Ledger.Tx                as Tx
-import qualified Ledger.Typed.Scripts     as Scripts
-import           Ledger.Value             (Value, geq)
+import Ledger (POSIXTime, PubKeyHash, TxId, getCardanoTxId, txSignedBy, valuePaidTo)
+import Ledger qualified
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Ledger.Interval (after, before)
+import Ledger.Interval qualified as Interval
+import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (Value, geq)
 
-import           Plutus.Contract
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
-import           PlutusTx.Prelude         hiding (Applicative (..), Semigroup (..), check, foldMap)
+import Plutus.Contract
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
-import           Prelude                  (Semigroup (..), foldMap)
-import qualified Prelude                  as Haskell
+import Prelude (Semigroup (..), foldMap)
+import Prelude qualified as Haskell
 
 data EscrowParams =
   EscrowParams

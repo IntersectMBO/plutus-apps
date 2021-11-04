@@ -40,11 +40,11 @@ module Ledger.Constraints(
     , mkSomeTx
     ) where
 
-import           Ledger.Constraints.OffChain      (MkTxError (..), ScriptLookups (..), SomeLookupsAndConstraints (..),
-                                                   UnbalancedTx, mintingPolicy, mkSomeTx, mkTx, otherData, otherScript,
-                                                   ownPubKeyHash, pubKey, typedValidatorLookups, unspentOutputs)
-import           Ledger.Constraints.OnChain       (checkScriptContext)
-import           Ledger.Constraints.TxConstraints
+import Ledger.Constraints.OffChain (MkTxError (..), ScriptLookups (..), SomeLookupsAndConstraints (..), UnbalancedTx,
+                                    mintingPolicy, mkSomeTx, mkTx, otherData, otherScript, ownPubKeyHash, pubKey,
+                                    typedValidatorLookups, unspentOutputs)
+import Ledger.Constraints.OnChain (checkScriptContext)
+import Ledger.Constraints.TxConstraints
 
 -- $constraints
 -- This module defines 'Ledger.Constraints.TxConstraints.TxConstraints', a list

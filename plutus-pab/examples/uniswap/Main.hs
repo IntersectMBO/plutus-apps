@@ -12,31 +12,30 @@ module Main
     ( main
     ) where
 
-import           Control.Monad                       (forM, void)
-import           Control.Monad.Freer                 (interpret)
-import           Control.Monad.IO.Class              (MonadIO (..))
-import           Data.Aeson                          (FromJSON, Result (..), ToJSON, encode, fromJSON)
-import           Data.Default                        (Default (def))
-import qualified Data.Map.Strict                     as Map
-import qualified Data.Monoid                         as Monoid
-import qualified Data.OpenApi.Schema                 as OpenApi
-import qualified Data.Semigroup                      as Semigroup
-import           Data.Text                           (Text)
-import           Data.Text.Prettyprint.Doc           (Pretty (..), viaShow)
-import           GHC.Generics                        (Generic)
-import           Ledger.Ada                          (adaSymbol, adaToken)
-import           Plutus.Contract
-import qualified Plutus.Contracts.Currency           as Currency
-import qualified Plutus.Contracts.Uniswap            as Uniswap
-import           Plutus.Contracts.Uniswap.Trace      as US
-import           Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..),
-                                                      SomeBuiltin (..))
-import qualified Plutus.PAB.Effects.Contract.Builtin as Builtin
-import           Plutus.PAB.Simulator                (SimulatorEffectHandlers, logString)
-import qualified Plutus.PAB.Simulator                as Simulator
-import qualified Plutus.PAB.Webserver.Server         as PAB.Server
-import           Prelude                             hiding (init)
-import           Wallet.Emulator.Types               (knownWallet)
+import Control.Monad (forM, void)
+import Control.Monad.Freer (interpret)
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Aeson (FromJSON, Result (..), ToJSON, encode, fromJSON)
+import Data.Default (Default (def))
+import Data.Map.Strict qualified as Map
+import Data.Monoid qualified as Monoid
+import Data.OpenApi.Schema qualified as OpenApi
+import Data.Semigroup qualified as Semigroup
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import Ledger.Ada (adaSymbol, adaToken)
+import Plutus.Contract
+import Plutus.Contracts.Currency qualified as Currency
+import Plutus.Contracts.Uniswap qualified as Uniswap
+import Plutus.Contracts.Uniswap.Trace as US
+import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..), SomeBuiltin (..))
+import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
+import Plutus.PAB.Simulator (SimulatorEffectHandlers, logString)
+import Plutus.PAB.Simulator qualified as Simulator
+import Plutus.PAB.Webserver.Server qualified as PAB.Server
+import Prelude hiding (init)
+import Prettyprinter (Pretty (..), viaShow)
+import Wallet.Emulator.Types (knownWallet)
 
 main :: IO ()
 main = void $ Simulator.runSimulationWith handlers $ do

@@ -3,9 +3,9 @@
 
 module Data.Time.Units.Extra where
 
-import           Data.Aeson      (FromJSON, ToJSON, parseJSON, toJSON, withScientific)
-import           Data.Scientific (toBoundedInteger)
-import           Data.Time.Units (Millisecond, Second)
+import Data.Aeson (FromJSON, ToJSON, parseJSON, toJSON, withScientific)
+import Data.Scientific (toBoundedInteger)
+import Data.Time.Units (Millisecond, Second)
 
 instance FromJSON Second where
     parseJSON =

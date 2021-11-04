@@ -63,15 +63,15 @@ module Plutus.Contracts.Prism(
     , contract
     ) where
 
-import           Control.Lens
-import           Data.Aeson                          (FromJSON, ToJSON)
-import           GHC.Generics                        (Generic)
-import           Plutus.Contracts.Prism.Credential
-import           Plutus.Contracts.Prism.Mirror
-import           Plutus.Contracts.Prism.StateMachine
-import           Plutus.Contracts.Prism.Unlock
+import Control.Lens
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Plutus.Contracts.Prism.Credential
+import Plutus.Contracts.Prism.Mirror
+import Plutus.Contracts.Prism.StateMachine
+import Plutus.Contracts.Prism.Unlock
 
-import           Plutus.Contract
+import Plutus.Contract
 
 -- | The roles that we pass to 'contract'.
 data Role

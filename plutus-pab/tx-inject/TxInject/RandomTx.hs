@@ -11,23 +11,23 @@ module TxInject.RandomTx(
     generateTx
     ) where
 
-import           Control.Monad.Primitive (PrimMonad, PrimState)
-import           Data.List.NonEmpty      (NonEmpty (..))
-import qualified Data.Map                as Map
-import           Data.Maybe              (fromMaybe)
-import qualified Data.Set                as Set
-import qualified Hedgehog.Gen            as Gen
-import           System.Random.MWC       as MWC
+import Control.Monad.Primitive (PrimMonad, PrimState)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Set qualified as Set
+import Hedgehog.Gen qualified as Gen
+import System.Random.MWC as MWC
 
-import qualified Ledger.Ada              as Ada
-import qualified Ledger.Address          as Address
-import qualified Ledger.CardanoWallet    as CW
-import           Ledger.Crypto           (PrivateKey, PubKey)
-import qualified Ledger.Generators       as Generators
-import           Ledger.Index            (UtxoIndex (..), runValidation, validateTransaction)
-import           Ledger.Slot             (Slot (..))
-import           Ledger.Tx               (Tx, TxOut (..))
-import qualified Ledger.Tx               as Tx
+import Ledger.Ada qualified as Ada
+import Ledger.Address qualified as Address
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Crypto (PrivateKey, PubKey)
+import Ledger.Generators qualified as Generators
+import Ledger.Index (UtxoIndex (..), runValidation, validateTransaction)
+import Ledger.Slot (Slot (..))
+import Ledger.Tx (Tx, TxOut (..))
+import Ledger.Tx qualified as Tx
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada

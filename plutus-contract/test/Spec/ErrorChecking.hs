@@ -10,32 +10,32 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Spec.ErrorChecking where
 
-import           Control.Monad
-import           Data.Row
-import           Test.Tasty
+import Control.Monad
+import Data.Row
+import Test.Tasty
 
-import qualified Ledger.Ada                         as Ada
-import           Ledger.Address
-import           Ledger.Constraints
-import           Ledger.Contexts                    (ScriptContext (..))
-import           Ledger.Scripts
-import           Ledger.Tx
-import qualified Ledger.Typed.Scripts               as Scripts hiding (validatorHash)
-import           Ledger.Typed.Scripts.Validators    hiding (validatorHash)
-import           Plutus.Contract                    as Contract
-import           Plutus.Contract.Test               hiding (not)
-import           Plutus.Contract.Test.ContractModel
-import           Plutus.Trace.Emulator              as Trace
-import qualified PlutusTx
-import           PlutusTx.ErrorCodes
-import           PlutusTx.IsData.Class
-import           PlutusTx.Prelude
+import Ledger.Ada qualified as Ada
+import Ledger.Address
+import Ledger.Constraints
+import Ledger.Contexts (ScriptContext (..))
+import Ledger.Scripts
+import Ledger.Tx
+import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
+import Ledger.Typed.Scripts.Validators hiding (validatorHash)
+import Plutus.Contract as Contract
+import Plutus.Contract.Test hiding (not)
+import Plutus.Contract.Test.ContractModel
+import Plutus.Trace.Emulator as Trace
+import PlutusTx qualified
+import PlutusTx.ErrorCodes
+import PlutusTx.IsData.Class
+import PlutusTx.Prelude
 
-import qualified Prelude                            as Haskell
+import Prelude qualified as Haskell
 
-import           Test.QuickCheck                    hiding (Success)
-import           Test.Tasty.HUnit
-import           Test.Tasty.QuickCheck              hiding (Success)
+import Test.QuickCheck hiding (Success)
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck hiding (Success)
 
 tests :: TestTree
 tests = testGroup "error checking"

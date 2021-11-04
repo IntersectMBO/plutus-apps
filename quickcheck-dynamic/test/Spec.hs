@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main(main) where
 
-import qualified Spec.DynamicLogic.RegistryModel
-import           Test.Tasty
+import Spec.DynamicLogic.RegistryModel qualified
+import Test.Tasty
 
 main :: IO ()
 main = defaultMain tests

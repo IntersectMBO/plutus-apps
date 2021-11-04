@@ -32,28 +32,28 @@ module Plutus.Contracts.GameStateMachine(
     , token
     ) where
 
-import           Control.Lens                 (makeClassyPrisms)
-import           Control.Monad                (void)
-import           Data.Aeson                   (FromJSON, ToJSON)
-import           GHC.Generics                 (Generic)
-import           Ledger                       hiding (to)
-import           Ledger.Constraints           (TxConstraints)
-import qualified Ledger.Constraints           as Constraints
-import qualified Ledger.Typed.Scripts         as Scripts
-import qualified Ledger.Value                 as V
-import qualified PlutusTx
-import           PlutusTx.Prelude             hiding (Applicative (..), check)
-import           Schema                       (ToArgument, ToSchema)
+import Control.Lens (makeClassyPrisms)
+import Control.Monad (void)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger hiding (to)
+import Ledger.Constraints (TxConstraints)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value qualified as V
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Applicative (..), check)
+import Schema (ToArgument, ToSchema)
 
-import qualified Data.ByteString.Char8        as C
+import Data.ByteString.Char8 qualified as C
 
-import           Plutus.Contract.StateMachine (State (..), Void)
-import qualified Plutus.Contract.StateMachine as SM
+import Plutus.Contract.StateMachine (State (..), Void)
+import Plutus.Contract.StateMachine qualified as SM
 
-import           Plutus.Contract
-import           Plutus.Contract.Secrets
+import Plutus.Contract
+import Plutus.Contract.Secrets
 
-import qualified Prelude                      as Haskell
+import Prelude qualified as Haskell
 
 newtype HashedString = HashedString BuiltinByteString
     deriving newtype (Eq, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)

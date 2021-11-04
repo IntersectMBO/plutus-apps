@@ -71,60 +71,56 @@ module Plutus.Trace.Emulator(
     , interpretEmulatorTrace
     ) where
 
-import           Control.Foldl                           (generalize, list)
-import           Control.Lens                            hiding ((:>))
-import           Control.Monad                           (forM_, void)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Coroutine           (Yield)
-import           Control.Monad.Freer.Error               (Error, handleError, throwError)
-import           Control.Monad.Freer.Extras.Log          (LogMessage (..), LogMsg (..), mapLog)
-import           Control.Monad.Freer.Extras.Modify       (raiseEnd)
-import           Control.Monad.Freer.Reader              (Reader, runReader)
-import           Control.Monad.Freer.State               (State, evalState)
-import           Control.Monad.Freer.TH                  (makeEffect)
-import           Data.Default                            (Default (..))
-import qualified Data.Map                                as Map
-import           Data.Maybe                              (fromMaybe)
-import           Data.Text.Prettyprint.Doc               (defaultLayoutOptions, layoutPretty, pretty)
-import           Data.Text.Prettyprint.Doc.Render.String (renderString)
-import           Plutus.Trace.Scheduler                  (EmSystemCall, ThreadId, exit, runThreads)
-import           System.IO                               (Handle, hPutStrLn, stdout)
-import           Wallet.Emulator.Chain                   (ChainControlEffect)
-import qualified Wallet.Emulator.Chain                   as ChainState
-import           Wallet.Emulator.MultiAgent              (EmulatorEvent, EmulatorEvent' (..), EmulatorState (..),
-                                                          MultiAgentControlEffect, MultiAgentEffect, _eteEmulatorTime,
-                                                          _eteEvent, schedulerEvent)
-import           Wallet.Emulator.Stream                  (EmulatorConfig (..), EmulatorErr (..), feeConfig,
-                                                          foldEmulatorStreamM, initialChainState, initialDist,
-                                                          runTraceStream, slotConfig)
-import           Wallet.Emulator.Wallet                  (Entity, balances)
-import qualified Wallet.Emulator.Wallet                  as Wallet
+import Control.Foldl (generalize, list)
+import Control.Lens hiding ((:>))
+import Control.Monad (forM_, void)
+import Control.Monad.Freer
+import Control.Monad.Freer.Coroutine (Yield)
+import Control.Monad.Freer.Error (Error, handleError, throwError)
+import Control.Monad.Freer.Extras.Log (LogMessage (..), LogMsg (..), mapLog)
+import Control.Monad.Freer.Extras.Modify (raiseEnd)
+import Control.Monad.Freer.Reader (Reader, runReader)
+import Control.Monad.Freer.State (State, evalState)
+import Control.Monad.Freer.TH (makeEffect)
+import Data.Default (Default (..))
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
+import Plutus.Trace.Scheduler (EmSystemCall, ThreadId, exit, runThreads)
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty)
+import Prettyprinter.Render.String (renderString)
+import System.IO (Handle, hPutStrLn, stdout)
+import Wallet.Emulator.Chain (ChainControlEffect)
+import Wallet.Emulator.Chain qualified as ChainState
+import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (..), EmulatorState (..), MultiAgentControlEffect,
+                                   MultiAgentEffect, _eteEmulatorTime, _eteEvent, schedulerEvent)
+import Wallet.Emulator.Stream (EmulatorConfig (..), EmulatorErr (..), feeConfig, foldEmulatorStreamM, initialChainState,
+                               initialDist, runTraceStream, slotConfig)
+import Wallet.Emulator.Wallet (Entity, balances)
+import Wallet.Emulator.Wallet qualified as Wallet
 
-import qualified Ledger.CardanoWallet                    as CW
-import           Plutus.Trace.Effects.Assert             (Assert, handleAssert)
-import qualified Plutus.Trace.Effects.Assert             as Assert
-import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
-import           Plutus.Trace.Effects.EmulatedWalletAPI  (EmulatedWalletAPI, handleEmulatedWalletAPI)
-import qualified Plutus.Trace.Effects.EmulatedWalletAPI  as EmulatedWalletAPI
-import           Plutus.Trace.Effects.EmulatorControl    (EmulatorControl, handleEmulatorControl)
-import qualified Plutus.Trace.Effects.EmulatorControl    as EmulatorControl
-import           Plutus.Trace.Effects.RunContract        (RunContract, handleRunContract)
-import qualified Plutus.Trace.Effects.RunContract        as RunContract
-import           Plutus.Trace.Effects.Waiting            (Waiting, handleWaiting)
-import qualified Plutus.Trace.Effects.Waiting            as Waiting
-import           Plutus.Trace.Emulator.System            (launchSystemThreads)
-import           Plutus.Trace.Emulator.Types             (ContractConstraints, ContractHandle (..),
-                                                          ContractInstanceLog (..), ContractInstanceMsg (..),
-                                                          ContractInstanceTag, Emulator, EmulatorMessage (..),
-                                                          EmulatorRuntimeError (..), EmulatorThreads,
-                                                          UserThreadMsg (..))
-import           Streaming                               (Stream)
-import           Streaming.Prelude                       (Of (..))
+import Ledger.CardanoWallet qualified as CW
+import Plutus.Trace.Effects.Assert (Assert, handleAssert)
+import Plutus.Trace.Effects.Assert qualified as Assert
+import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
+import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI, handleEmulatedWalletAPI)
+import Plutus.Trace.Effects.EmulatedWalletAPI qualified as EmulatedWalletAPI
+import Plutus.Trace.Effects.EmulatorControl (EmulatorControl, handleEmulatorControl)
+import Plutus.Trace.Effects.EmulatorControl qualified as EmulatorControl
+import Plutus.Trace.Effects.RunContract (RunContract, handleRunContract)
+import Plutus.Trace.Effects.RunContract qualified as RunContract
+import Plutus.Trace.Effects.Waiting (Waiting, handleWaiting)
+import Plutus.Trace.Effects.Waiting qualified as Waiting
+import Plutus.Trace.Emulator.System (launchSystemThreads)
+import Plutus.Trace.Emulator.Types (ContractConstraints, ContractHandle (..), ContractInstanceLog (..),
+                                    ContractInstanceMsg (..), ContractInstanceTag, Emulator, EmulatorMessage (..),
+                                    EmulatorRuntimeError (..), EmulatorThreads, UserThreadMsg (..))
+import Streaming (Stream)
+import Streaming.Prelude (Of (..))
 
-import qualified Data.Aeson                              as A
-import           Ledger.TimeSlot                         (SlotConfig)
-import           Plutus.V1.Ledger.Slot                   (getSlot)
-import           Plutus.V1.Ledger.Value                  (Value (..), flattenValue)
+import Data.Aeson qualified as A
+import Ledger.TimeSlot (SlotConfig)
+import Plutus.V1.Ledger.Slot (getSlot)
+import Plutus.V1.Ledger.Value (Value (..), flattenValue)
 
 -- | A very simple effect for interpreting the output printing done by the
 -- trace printing functions:

@@ -14,9 +14,9 @@ module Plutus.PAB.Run.Command
     , allServices
     ) where
 
-import qualified Data.Aeson   as JSON
-import           GHC.Generics (Generic)
-import           Wallet.Types (ContractInstanceId)
+import Data.Aeson qualified as JSON
+import GHC.Generics (Generic)
+import Wallet.Types (ContractInstanceId)
 
 -- | A command for which a config.yaml file is required
 data ConfigCommand =

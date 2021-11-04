@@ -13,75 +13,70 @@
 -- | Start a local cluster of cardano nodes and PAB(s)
 module Main where
 
-import qualified Cardano.Api                                as CAPI
-import           Cardano.Api.NetworkId.Extra                (NetworkIdWrapper (..))
-import qualified Cardano.BM.Backend.EKGView                 as EKG
-import           Cardano.BM.Data.Severity                   (Severity (..))
-import           Cardano.BM.Data.Tracer                     (HasPrivacyAnnotation (..), HasSeverityAnnotation (..))
-import           Cardano.BM.Plugin                          (loadPlugin)
-import           Cardano.BM.Setup                           (setupTrace_)
-import           Cardano.BM.Trace                           (Trace)
-import           Cardano.CLI                                (LogOutput (..), Port, ekgEnabled, getEKGURL,
-                                                             getPrometheusURL, withLoggingNamed)
-import qualified Cardano.ChainIndex.Types                   as PAB.CI
-import           Cardano.Launcher.Node                      (nodeSocketFile)
-import           Cardano.Mnemonic                           (SomeMnemonic (..))
-import           Cardano.Node.Types                         (MockServerConfig (..), NodeMode (AlonzoNode))
-import           Cardano.Startup                            (installSignalHandlers, setDefaultFilePermissions,
-                                                             withUtf8Encoding)
-import qualified Cardano.Wallet.Api.Client                  as WalletClient
-import           Cardano.Wallet.Api.Server                  (Listen (..))
-import           Cardano.Wallet.Api.Types                   (ApiMnemonicT (..), ApiT (..), ApiWallet (..),
-                                                             EncodeAddress (..), WalletOrAccountPostData (..))
-import qualified Cardano.Wallet.Api.Types                   as Wallet.Types
-import           Cardano.Wallet.Logging                     (stdoutTextTracer, trMessageText)
-import           Cardano.Wallet.Mock.Types                  (WalletUrl (..))
-import qualified Cardano.Wallet.Mock.Types                  as Wallet.Config
-import           Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (..), Passphrase (..))
-import           Cardano.Wallet.Primitive.SyncProgress      (SyncTolerance (..))
-import           Cardano.Wallet.Primitive.Types             (WalletName (..))
-import           Cardano.Wallet.Primitive.Types.Coin        (Coin (..))
-import           Cardano.Wallet.Shelley                     (SomeNetworkDiscriminant (..), serveWallet, setupTracers,
-                                                             tracerSeverities)
-import           Cardano.Wallet.Shelley.Launch              (withSystemTempDir)
-import           Cardano.Wallet.Shelley.Launch.Cluster      (ClusterLog (..), Credential (..), RunningNode (..),
-                                                             localClusterConfigFromEnv, moveInstantaneousRewardsTo,
-                                                             oneMillionAda, sendFaucetAssetsTo, sendFaucetFundsTo,
-                                                             testMinSeverityFromEnv, tokenMetadataServerFromEnv,
-                                                             walletMinSeverityFromEnv, withCluster)
-import           ContractExample                            (ExampleContracts)
-import           Control.Arrow                              (first)
-import           Control.Concurrent                         (threadDelay)
-import           Control.Concurrent.Async                   (async)
-import           Control.Lens
-import           Control.Monad                              (void, when)
-import           Control.Tracer                             (traceWith)
-import           Data.Default                               (Default (def))
-import           Data.Proxy                                 (Proxy (..))
-import           Data.String                                (IsString (..))
-import           Data.Text                                  (Text)
-import qualified Data.Text                                  as T
-import           Data.Text.Class                            (ToText (..))
-import           Network.HTTP.Client                        (defaultManagerSettings, newManager)
-import qualified Plutus.ChainIndex.App                      as ChainIndex
-import           Plutus.ChainIndex.ChainIndexLog            (ChainIndexLog)
-import qualified Plutus.ChainIndex.Config                   as CI
-import qualified Plutus.ChainIndex.Logging                  as ChainIndex.Logging
-import           Plutus.PAB.App                             (StorageBackend (..))
-import           Plutus.PAB.Effects.Contract.Builtin        (handleBuiltin)
-import qualified Plutus.PAB.Run                             as PAB.Run
-import           Plutus.PAB.Run.Command                     (ConfigCommand (..))
-import           Plutus.PAB.Run.CommandParser               (AppOpts (..))
-import qualified Plutus.PAB.Run.CommandParser               as PAB.Command
-import           Plutus.PAB.Types                           (Config (..), DbConfig (..))
-import qualified Plutus.PAB.Types                           as PAB.Config
-import           Servant.Client                             (BaseUrl (..), Scheme (..), mkClientEnv, runClientM)
-import           System.Directory                           (createDirectory)
-import           System.FilePath                            ((</>))
-import           Test.Integration.Faucet                    (genRewardAccounts, maryIntegrationTestAssets, mirMnemonics,
-                                                             shelleyIntegrationTestFunds)
-import qualified Test.Integration.Faucet                    as Faucet
-import           Test.Integration.Framework.DSL             (fixturePassphrase)
+import Cardano.Api qualified as CAPI
+import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
+import Cardano.BM.Backend.EKGView qualified as EKG
+import Cardano.BM.Data.Severity (Severity (..))
+import Cardano.BM.Data.Tracer (HasPrivacyAnnotation (..), HasSeverityAnnotation (..))
+import Cardano.BM.Plugin (loadPlugin)
+import Cardano.BM.Setup (setupTrace_)
+import Cardano.BM.Trace (Trace)
+import Cardano.CLI (LogOutput (..), Port, ekgEnabled, getEKGURL, getPrometheusURL, withLoggingNamed)
+import Cardano.ChainIndex.Types qualified as PAB.CI
+import Cardano.Launcher.Node (nodeSocketFile)
+import Cardano.Mnemonic (SomeMnemonic (..))
+import Cardano.Node.Types (MockServerConfig (..), NodeMode (AlonzoNode))
+import Cardano.Startup (installSignalHandlers, setDefaultFilePermissions, withUtf8Encoding)
+import Cardano.Wallet.Api.Client qualified as WalletClient
+import Cardano.Wallet.Api.Server (Listen (..))
+import Cardano.Wallet.Api.Types (ApiMnemonicT (..), ApiT (..), ApiWallet (..), EncodeAddress (..),
+                                 WalletOrAccountPostData (..))
+import Cardano.Wallet.Api.Types qualified as Wallet.Types
+import Cardano.Wallet.Logging (stdoutTextTracer, trMessageText)
+import Cardano.Wallet.Mock.Types (WalletUrl (..))
+import Cardano.Wallet.Mock.Types qualified as Wallet.Config
+import Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (..), Passphrase (..))
+import Cardano.Wallet.Primitive.SyncProgress (SyncTolerance (..))
+import Cardano.Wallet.Primitive.Types (WalletName (..))
+import Cardano.Wallet.Primitive.Types.Coin (Coin (..))
+import Cardano.Wallet.Shelley (SomeNetworkDiscriminant (..), serveWallet, setupTracers, tracerSeverities)
+import Cardano.Wallet.Shelley.Launch (withSystemTempDir)
+import Cardano.Wallet.Shelley.Launch.Cluster (ClusterLog (..), Credential (..), RunningNode (..),
+                                              localClusterConfigFromEnv, moveInstantaneousRewardsTo, oneMillionAda,
+                                              sendFaucetAssetsTo, sendFaucetFundsTo, testMinSeverityFromEnv,
+                                              tokenMetadataServerFromEnv, walletMinSeverityFromEnv, withCluster)
+import ContractExample (ExampleContracts)
+import Control.Arrow (first)
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (async)
+import Control.Lens
+import Control.Monad (void, when)
+import Control.Tracer (traceWith)
+import Data.Default (Default (def))
+import Data.Proxy (Proxy (..))
+import Data.String (IsString (..))
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.Text.Class (ToText (..))
+import Network.HTTP.Client (defaultManagerSettings, newManager)
+import Plutus.ChainIndex.App qualified as ChainIndex
+import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog)
+import Plutus.ChainIndex.Config qualified as CI
+import Plutus.ChainIndex.Logging qualified as ChainIndex.Logging
+import Plutus.PAB.App (StorageBackend (..))
+import Plutus.PAB.Effects.Contract.Builtin (handleBuiltin)
+import Plutus.PAB.Run qualified as PAB.Run
+import Plutus.PAB.Run.Command (ConfigCommand (..))
+import Plutus.PAB.Run.CommandParser (AppOpts (..))
+import Plutus.PAB.Run.CommandParser qualified as PAB.Command
+import Plutus.PAB.Types (Config (..), DbConfig (..))
+import Plutus.PAB.Types qualified as PAB.Config
+import Servant.Client (BaseUrl (..), Scheme (..), mkClientEnv, runClientM)
+import System.Directory (createDirectory)
+import System.FilePath ((</>))
+import Test.Integration.Faucet (genRewardAccounts, maryIntegrationTestAssets, mirMnemonics, shelleyIntegrationTestFunds)
+import Test.Integration.Faucet qualified as Faucet
+import Test.Integration.Framework.DSL (fixturePassphrase)
 
 data LogOutputs =
     LogOutputs

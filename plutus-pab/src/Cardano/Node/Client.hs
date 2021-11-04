@@ -8,21 +8,21 @@
 
 module Cardano.Node.Client where
 
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Reader          (Reader, ask)
-import           Control.Monad.IO.Class
-import           Data.Proxy                          (Proxy (Proxy))
-import           Ledger                              (Block)
-import           Ledger.TimeSlot                     (SlotConfig)
-import           Servant                             (NoContent, (:<|>) (..))
-import           Servant.Client                      (ClientM, client)
+import Control.Monad.Freer
+import Control.Monad.Freer.Reader (Reader, ask)
+import Control.Monad.IO.Class
+import Data.Proxy (Proxy (Proxy))
+import Ledger (Block)
+import Ledger.TimeSlot (SlotConfig)
+import Servant (NoContent, (:<|>) (..))
+import Servant.Client (ClientM, client)
 
-import           Cardano.Node.API                    (API)
-import           Cardano.Node.Types                  (MockServerLogMsg)
-import qualified Cardano.Protocol.Socket.Client      as Client
-import qualified Cardano.Protocol.Socket.Mock.Client as MockClient
-import           Control.Monad.Freer.Extras.Log      (LogMessage)
-import           Wallet.Effects                      (NodeClientEffect (..))
+import Cardano.Node.API (API)
+import Cardano.Node.Types (MockServerLogMsg)
+import Cardano.Protocol.Socket.Client qualified as Client
+import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
+import Control.Monad.Freer.Extras.Log (LogMessage)
+import Wallet.Effects (NodeClientEffect (..))
 
 healthcheck :: ClientM NoContent
 consumeEventHistory :: ClientM [LogMessage MockServerLogMsg]

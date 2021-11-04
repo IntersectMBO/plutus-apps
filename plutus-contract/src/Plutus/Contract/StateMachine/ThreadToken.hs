@@ -17,20 +17,20 @@
 --   and ensuring that the state was produced by running the state machine from its initial state.
 module Plutus.Contract.StateMachine.ThreadToken where
 
-import           PlutusTx.Prelude                             hiding (Monoid (..), Semigroup (..))
+import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
-import           Data.Aeson                                   (FromJSON, ToJSON)
-import qualified Data.OpenApi                                 as OpenApi
-import           GHC.Generics                                 (Generic)
-import           Ledger                                       (CurrencySymbol, TxOutRef (..))
-import qualified Ledger.Contexts                              as V
-import           Ledger.Scripts
-import qualified Ledger.Typed.Scripts                         as Scripts
-import           Ledger.Value                                 (TokenName (..), Value (..))
-import qualified Ledger.Value                                 as Value
-import           Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
-import qualified PlutusTx
-import qualified Prelude                                      as Haskell
+import Data.Aeson (FromJSON, ToJSON)
+import Data.OpenApi qualified as OpenApi
+import GHC.Generics (Generic)
+import Ledger (CurrencySymbol, TxOutRef (..))
+import Ledger.Contexts qualified as V
+import Ledger.Scripts
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (TokenName (..), Value (..))
+import Ledger.Value qualified as Value
+import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
+import PlutusTx qualified
+import Prelude qualified as Haskell
 
 data ThreadToken = ThreadToken
     { ttOutRef         :: TxOutRef

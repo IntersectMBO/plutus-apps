@@ -6,61 +6,54 @@
 
 module PSGenerator.Common where
 
-import           Auth                                      (AuthRole, AuthStatus)
-import           Control.Applicative                       (empty, (<|>))
-import           Control.Monad.Freer.Extras.Beam           (BeamError, BeamLog)
-import           Control.Monad.Freer.Extras.Pagination     (Page, PageQuery, PageSize)
-import           Control.Monad.Reader                      (MonadReader)
-import           Data.Proxy                                (Proxy (Proxy))
-import           Gist                                      (Gist, GistFile, GistId, NewGist, NewGistFile, Owner)
-import           Language.PureScript.Bridge                (BridgePart, Language (Haskell), PSType, SumType,
-                                                            TypeInfo (TypeInfo), doCheck, equal, equal1, functor,
-                                                            genericShow, haskType, isTuple, mkSumType, order,
-                                                            psTypeParameters, typeModule, typeName, (^==))
-import           Language.PureScript.Bridge.Builder        (BridgeData)
-import           Language.PureScript.Bridge.PSTypes        (psArray, psInt, psNumber, psString)
-import           Language.PureScript.Bridge.TypeParameters (A)
-import           Ledger                                    (Address, BlockId, ChainIndexTxOut, DatumHash, MintingPolicy,
-                                                            OnChainTx, PubKey, PubKeyHash, RedeemerPtr, ScriptTag,
-                                                            Signature, StakeValidator, Tx, TxId, TxIn, TxInType, TxOut,
-                                                            TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Validator)
-import           Ledger.Ada                                (Ada)
-import           Ledger.Constraints.OffChain               (MkTxError, UnbalancedTx)
-import           Ledger.Credential                         (Credential, StakingCredential)
-import           Ledger.DCert                              (DCert)
-import           Ledger.Index                              (ExCPU, ExMemory, ScriptType, ScriptValidationEvent,
-                                                            ValidationError)
-import           Ledger.Interval                           (Extended, Interval, LowerBound, UpperBound)
-import           Ledger.Scripts                            (ScriptError)
-import           Ledger.Slot                               (Slot)
-import           Ledger.TimeSlot                           (SlotConfig, SlotConversionError)
-import           Ledger.Tx.CardanoAPI                      (FromCardanoError, ToCardanoError)
-import           Ledger.Typed.Tx                           (ConnectionError, WrongOutTypeError)
-import           Ledger.Value                              (AssetClass, CurrencySymbol, TokenName, Value)
-import           Playground.Types                          (ContractCall, FunctionSchema, KnownCurrency)
-import           Plutus.ChainIndex.ChainIndexError         (ChainIndexError)
-import           Plutus.ChainIndex.ChainIndexLog           (ChainIndexLog)
-import           Plutus.ChainIndex.Tx                      (ChainIndexTx, ChainIndexTxOutputs)
-import           Plutus.ChainIndex.Types                   (BlockNumber, Depth, Point, RollbackState, Tip, TxOutState,
-                                                            TxValidity)
-import           Plutus.ChainIndex.UtxoState               (InsertUtxoFailed, InsertUtxoPosition, RollbackFailed)
-import           Plutus.Contract.Checkpoint                (CheckpointError)
-import           Plutus.Contract.Effects                   (ActiveEndpoint, BalanceTxResponse, ChainIndexQuery,
-                                                            ChainIndexResponse, PABReq, PABResp,
-                                                            WriteBalancedTxResponse)
-import           Plutus.Contract.Resumable                 (IterationID, Request, RequestID, Response)
-import           Plutus.Trace.Emulator.Types               (ContractInstanceLog, ContractInstanceMsg,
-                                                            ContractInstanceTag, EmulatorRuntimeError, UserThreadMsg)
-import           Plutus.Trace.Scheduler                    (Priority, SchedulerLog, StopReason, ThreadEvent, ThreadId)
-import           Plutus.Trace.Tag                          (Tag)
-import           Schema                                    (FormArgumentF, FormSchema)
-import           Wallet.API                                (WalletAPIError)
-import qualified Wallet.Emulator.Types                     as EM
-import           Wallet.Rollup.Types                       (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId,
-                                                            TxKey)
-import           Wallet.Types                              (AssertionError, ContractActivityStatus, ContractError,
-                                                            ContractInstanceId, EndpointDescription, EndpointValue,
-                                                            MatchingError, Notification, NotificationError)
+import Auth (AuthRole, AuthStatus)
+import Control.Applicative (empty, (<|>))
+import Control.Monad.Freer.Extras.Beam (BeamError, BeamLog)
+import Control.Monad.Freer.Extras.Pagination (Page, PageQuery, PageSize)
+import Control.Monad.Reader (MonadReader)
+import Data.Proxy (Proxy (Proxy))
+import Gist (Gist, GistFile, GistId, NewGist, NewGistFile, Owner)
+import Language.PureScript.Bridge (BridgePart, Language (Haskell), PSType, SumType, TypeInfo (TypeInfo), doCheck, equal,
+                                   equal1, functor, genericShow, haskType, isTuple, mkSumType, order, psTypeParameters,
+                                   typeModule, typeName, (^==))
+import Language.PureScript.Bridge.Builder (BridgeData)
+import Language.PureScript.Bridge.PSTypes (psArray, psInt, psNumber, psString)
+import Language.PureScript.Bridge.TypeParameters (A)
+import Ledger (Address, BlockId, ChainIndexTxOut, DatumHash, MintingPolicy, OnChainTx, PubKey, PubKeyHash, RedeemerPtr,
+               ScriptTag, Signature, StakeValidator, Tx, TxId, TxIn, TxInType, TxOut, TxOutRef, TxOutTx, UtxoIndex,
+               ValidationPhase, Validator)
+import Ledger.Ada (Ada)
+import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
+import Ledger.Credential (Credential, StakingCredential)
+import Ledger.DCert (DCert)
+import Ledger.Index (ExCPU, ExMemory, ScriptType, ScriptValidationEvent, ValidationError)
+import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
+import Ledger.Scripts (ScriptError)
+import Ledger.Slot (Slot)
+import Ledger.TimeSlot (SlotConfig, SlotConversionError)
+import Ledger.Tx.CardanoAPI (FromCardanoError, ToCardanoError)
+import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
+import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)
+import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
+import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
+import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog)
+import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOutputs)
+import Plutus.ChainIndex.Types (BlockNumber, Depth, Point, RollbackState, Tip, TxOutState, TxValidity)
+import Plutus.ChainIndex.UtxoState (InsertUtxoFailed, InsertUtxoPosition, RollbackFailed)
+import Plutus.Contract.Checkpoint (CheckpointError)
+import Plutus.Contract.Effects (ActiveEndpoint, BalanceTxResponse, ChainIndexQuery, ChainIndexResponse, PABReq, PABResp,
+                                WriteBalancedTxResponse)
+import Plutus.Contract.Resumable (IterationID, Request, RequestID, Response)
+import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg, ContractInstanceTag, EmulatorRuntimeError,
+                                    UserThreadMsg)
+import Plutus.Trace.Scheduler (Priority, SchedulerLog, StopReason, ThreadEvent, ThreadId)
+import Plutus.Trace.Tag (Tag)
+import Schema (FormArgumentF, FormSchema)
+import Wallet.API (WalletAPIError)
+import Wallet.Emulator.Types qualified as EM
+import Wallet.Rollup.Types (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId, TxKey)
+import Wallet.Types (AssertionError, ContractActivityStatus, ContractError, ContractInstanceId, EndpointDescription,
+                     EndpointValue, MatchingError, Notification, NotificationError)
 
 psJson :: PSType
 psJson = TypeInfo "web-common" "Data.RawJson" "RawJson" []

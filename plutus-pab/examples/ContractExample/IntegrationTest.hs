@@ -7,17 +7,17 @@
 
 module ContractExample.IntegrationTest(run) where
 
-import           Data.Aeson              (FromJSON, ToJSON)
-import qualified Data.Map                as Map
-import           GHC.Generics            (Generic)
-import qualified Ledger.Ada              as Ada
-import qualified Ledger.Constraints      as Constraints
-import           Ledger.Scripts          (Datum (..), Redeemer (..), unitRedeemer)
-import           Ledger.Tx               (getCardanoTxId)
-import           Ledger.Typed.Scripts    as Scripts
-import           Plutus.Contract
-import qualified Plutus.Contracts.PubKey as PubKey
-import           Prelude                 as Haskell
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map qualified as Map
+import GHC.Generics (Generic)
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
+import Ledger.Scripts (Datum (..), Redeemer (..), unitRedeemer)
+import Ledger.Tx (getCardanoTxId)
+import Ledger.Typed.Scripts as Scripts
+import Plutus.Contract
+import Plutus.Contracts.PubKey qualified as PubKey
+import Prelude as Haskell
 
 data IError =
     PKError PubKey.PubKeyError

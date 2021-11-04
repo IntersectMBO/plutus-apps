@@ -10,30 +10,28 @@
 
 module Cardano.Protocol.Socket.Client where
 
-import           Control.Concurrent
-import           Control.Monad.Catch                         (Handler (..), SomeException (..))
-import           Data.Aeson                                  (FromJSON, ToJSON)
-import           Data.Text                                   (Text, pack)
-import           GHC.Generics                                (Generic)
+import Control.Concurrent
+import Control.Monad.Catch (Handler (..), SomeException (..))
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text, pack)
+import GHC.Generics (Generic)
 
-import           Cardano.Api                                 (BlockInMode (..), CardanoMode, ChainPoint (..),
-                                                              ChainTip (..), ConsensusModeParams (..),
-                                                              LocalChainSyncClient (..), LocalNodeClientProtocols (..),
-                                                              LocalNodeClientProtocolsInMode, LocalNodeConnectInfo (..),
-                                                              NetworkId, connectToLocalNode)
-import           Cardano.BM.Data.Trace                       (Trace)
-import           Cardano.BM.Data.Tracer                      (ToObject (..))
-import           Cardano.BM.Trace                            (logDebug, logWarning)
-import           Control.Retry                               (fibonacciBackoff, recovering, skipAsyncExceptions)
-import           Control.Tracer                              (nullTracer)
-import           Ledger.TimeSlot                             (SlotConfig, currentSlot)
-import           Ouroboros.Network.IOManager
-import qualified Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
+import Cardano.Api (BlockInMode (..), CardanoMode, ChainPoint (..), ChainTip (..), ConsensusModeParams (..),
+                    LocalChainSyncClient (..), LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
+                    LocalNodeConnectInfo (..), NetworkId, connectToLocalNode)
+import Cardano.BM.Data.Trace (Trace)
+import Cardano.BM.Data.Tracer (ToObject (..))
+import Cardano.BM.Trace (logDebug, logWarning)
+import Control.Retry (fibonacciBackoff, recovering, skipAsyncExceptions)
+import Control.Tracer (nullTracer)
+import Ledger.TimeSlot (SlotConfig, currentSlot)
+import Ouroboros.Network.IOManager
+import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
 
-import           Cardano.Protocol.Socket.Type                hiding (Tip)
-import           Ledger                                      (Slot (..))
-import           Plutus.ChainIndex.Compatibility             (fromCardanoPoint, fromCardanoTip)
-import           Plutus.ChainIndex.Types                     (Point, Tip)
+import Cardano.Protocol.Socket.Type hiding (Tip)
+import Ledger (Slot (..))
+import Plutus.ChainIndex.Compatibility (fromCardanoPoint, fromCardanoTip)
+import Plutus.ChainIndex.Types (Point, Tip)
 
 data ChainSyncHandle event = ChainSyncHandle
     { cshCurrentSlot :: IO Slot

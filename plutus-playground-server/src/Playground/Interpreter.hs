@@ -8,32 +8,31 @@
 
 module Playground.Interpreter where
 
-import           Control.Exception            (IOException, try)
-import           Control.Monad.Catch          (MonadMask)
-import           Control.Monad.Error.Class    (MonadError, liftEither, throwError)
-import           Control.Monad.Except.Extras  (mapError)
-import           Control.Monad.IO.Class       (MonadIO, liftIO)
-import qualified Control.Newtype.Generics     as Newtype
-import qualified Data.Aeson                   as JSON
-import           Data.Bifunctor               (first)
-import qualified Data.ByteString.Char8        as BS8
-import qualified Data.ByteString.Lazy.Char8   as BSL
-import           Data.Text                    (Text)
-import qualified Data.Text                    as Text
-import           Language.Haskell.Interpreter (CompilationError (CompilationError, RawError),
-                                               InterpreterError (CompilationErrors),
-                                               InterpreterResult (InterpreterResult), SourceCode (SourceCode),
-                                               Warning (Warning), avoidUnsafe)
-import           Language.Haskell.TH          (Ppr, Q, pprint, runQ)
-import           Language.Haskell.TH.Syntax   (liftString)
-import           Playground.Types             (CompilationResult (CompilationResult),
-                                               Evaluation (program, sourceCode, wallets), EvaluationResult,
-                                               PlaygroundError (InterpreterError, JsonDecodingError, OtherError, decodingError, expected, input))
-import           Servant.Client               (ClientEnv)
-import qualified Text.Regex                   as Regex
-import           Webghc.Client                (runscript)
-import           Webghc.Server                (CompileRequest (CompileRequest))
-import qualified Webghc.Server                as Webghc
+import Control.Exception (IOException, try)
+import Control.Monad.Catch (MonadMask)
+import Control.Monad.Error.Class (MonadError, liftEither, throwError)
+import Control.Monad.Except.Extras (mapError)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Newtype.Generics qualified as Newtype
+import Data.Aeson qualified as JSON
+import Data.Bifunctor (first)
+import Data.ByteString.Char8 qualified as BS8
+import Data.ByteString.Lazy.Char8 qualified as BSL
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Language.Haskell.Interpreter (CompilationError (CompilationError, RawError),
+                                     InterpreterError (CompilationErrors), InterpreterResult (InterpreterResult),
+                                     SourceCode (SourceCode), Warning (Warning), avoidUnsafe)
+import Language.Haskell.TH (Ppr, Q, pprint, runQ)
+import Language.Haskell.TH.Syntax (liftString)
+import Playground.Types (CompilationResult (CompilationResult), Evaluation (program, sourceCode, wallets),
+                         EvaluationResult,
+                         PlaygroundError (InterpreterError, JsonDecodingError, OtherError, decodingError, expected, input))
+import Servant.Client (ClientEnv)
+import Text.Regex qualified as Regex
+import Webghc.Client (runscript)
+import Webghc.Server (CompileRequest (CompileRequest))
+import Webghc.Server qualified as Webghc
 
 replaceModuleName :: Text -> Text
 replaceModuleName script =

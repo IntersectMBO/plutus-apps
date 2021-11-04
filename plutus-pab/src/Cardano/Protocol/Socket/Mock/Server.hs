@@ -10,52 +10,48 @@
 
 module Cardano.Protocol.Socket.Mock.Server where
 
-import           Cardano.BM.Data.Trace                               (Trace)
-import           Cardano.Node.Types                                  (MockServerLogMsg (..))
-import qualified Data.ByteString.Lazy                                as LBS
-import           Data.List                                           (intersect)
-import           Data.Maybe                                          (listToMaybe)
-import           Data.Text                                           (Text)
-import           Data.Void                                           (Void)
+import Cardano.BM.Data.Trace (Trace)
+import Cardano.Node.Types (MockServerLogMsg (..))
+import Data.ByteString.Lazy qualified as LBS
+import Data.List (intersect)
+import Data.Maybe (listToMaybe)
+import Data.Text (Text)
+import Data.Void (Void)
 
-import           Control.Concurrent
-import           Control.Concurrent.Async
-import           Control.Concurrent.STM
-import           Control.Lens                                        hiding (index, ix)
-import           Control.Monad.Freer                                 (interpret, runM)
-import           Control.Monad.Freer.State                           (runState)
-import           Control.Monad.Reader
-import           Control.Tracer
+import Control.Concurrent
+import Control.Concurrent.Async
+import Control.Concurrent.STM
+import Control.Lens hiding (index, ix)
+import Control.Monad.Freer (interpret, runM)
+import Control.Monad.Freer.State (runState)
+import Control.Monad.Reader
+import Control.Tracer
 
-import           Ouroboros.Network.Protocol.ChainSync.Server         (ChainSyncServer (..), ServerStIdle (..),
-                                                                      ServerStIntersect (..), ServerStNext (..))
-import qualified Ouroboros.Network.Protocol.ChainSync.Server         as ChainSync
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Server as TxSubmission
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type   as TxSubmission
-import qualified Plutus.PAB.Monitoring.Util                          as LM
+import Ouroboros.Network.Protocol.ChainSync.Server (ChainSyncServer (..), ServerStIdle (..), ServerStIntersect (..),
+                                                    ServerStNext (..))
+import Ouroboros.Network.Protocol.ChainSync.Server qualified as ChainSync
+import Ouroboros.Network.Protocol.LocalTxSubmission.Server qualified as TxSubmission
+import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as TxSubmission
+import Plutus.PAB.Monitoring.Util qualified as LM
 
-import           Cardano.Slotting.Slot                               (SlotNo (..), WithOrigin (..))
-import           Ouroboros.Network.Block                             (Point (..), pointSlot)
-import           Ouroboros.Network.IOManager
-import           Ouroboros.Network.Mux
-import           Ouroboros.Network.NodeToClient                      (NodeToClientProtocols (..),
-                                                                      nodeToClientCodecCBORTerm,
-                                                                      nodeToClientHandshakeCodec, nullErrorPolicies,
-                                                                      versionedNodeToClientProtocols)
-import qualified Ouroboros.Network.Point                             as OP (Block (..))
-import           Ouroboros.Network.Protocol.Handshake.Codec
-import           Ouroboros.Network.Protocol.Handshake.Version
-import           Ouroboros.Network.Snocket
-import           Ouroboros.Network.Socket
+import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
+import Ouroboros.Network.Block (Point (..), pointSlot)
+import Ouroboros.Network.IOManager
+import Ouroboros.Network.Mux
+import Ouroboros.Network.NodeToClient (NodeToClientProtocols (..), nodeToClientCodecCBORTerm,
+                                       nodeToClientHandshakeCodec, nullErrorPolicies, versionedNodeToClientProtocols)
+import Ouroboros.Network.Point qualified as OP (Block (..))
+import Ouroboros.Network.Protocol.Handshake.Codec
+import Ouroboros.Network.Protocol.Handshake.Version
+import Ouroboros.Network.Snocket
+import Ouroboros.Network.Socket
 
-import           Cardano.Protocol.Socket.Type
+import Cardano.Protocol.Socket.Type
 
-import           Cardano.Chain                                       (MockNodeServerChainState (..), addTxToPool,
-                                                                      chainNewestFirst, channel, currentSlot,
-                                                                      getChannel, getTip, handleControlChain, tip,
-                                                                      txPool)
-import           Ledger                                              (Block, Slot (..), Tx (..))
-import qualified Wallet.Emulator.Chain                               as Chain
+import Cardano.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel, currentSlot, getChannel,
+                      getTip, handleControlChain, tip, txPool)
+import Ledger (Block, Slot (..), Tx (..))
+import Wallet.Emulator.Chain qualified as Chain
 
 data CommandChannel = CommandChannel
   { ccCommand  :: TQueue ServerCommand

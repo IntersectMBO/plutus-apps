@@ -6,9 +6,9 @@ module Plutus.PAB.Events.Contract(
   , IterationID
   ) where
 
-import           Plutus.Contract.Resumable (IterationID)
+import Plutus.Contract.Resumable (IterationID)
 
-import           Wallet.Types              (ContractInstanceId (..))
+import Wallet.Types (ContractInstanceId (..))
 
 -- $contract-events
 -- The events that compiled Plutus contracts are concerned with. For each type

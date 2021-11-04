@@ -7,33 +7,31 @@
 
 module Plutus.ChainIndex.HandlersSpec (tests) where
 
-import           Control.Concurrent.STM            (newTVarIO)
-import           Control.Lens
-import           Control.Monad                     (forM, forM_)
-import           Control.Monad.Freer               (Eff)
-import           Control.Monad.Freer.Extras.Beam   (BeamEffect)
-import           Control.Monad.IO.Class            (liftIO)
-import           Control.Tracer                    (nullTracer)
-import           Data.Set                          (member)
-import           Database.Beam.Migrate.Simple      (autoMigrate)
-import qualified Database.Beam.Sqlite              as Sqlite
-import qualified Database.Beam.Sqlite.Migrate      as Sqlite
-import qualified Database.SQLite.Simple            as Sqlite
-import qualified Generators                        as Gen
-import           Hedgehog                          (Property, assert, forAll, property, (===))
-import           Ledger                            (Address (Address, addressCredential), TxOut (TxOut, txOutAddress),
-                                                    outValue)
-import           Plutus.ChainIndex                 (Page (pageItems), PageQuery (PageQuery), RunRequirements (..),
-                                                    appendBlock, citxOutputs, runChainIndexEffects, txFromTxId,
-                                                    utxoSetAtAddress, utxoSetWithCurrency)
-import           Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
-import           Plutus.ChainIndex.DbSchema        (checkedSqliteDb)
-import           Plutus.ChainIndex.Effects         (ChainIndexControlEffect, ChainIndexQueryEffect)
-import           Plutus.ChainIndex.Tx              (_ValidTx, citxTxId)
-import qualified Plutus.V1.Ledger.Ada              as Ada
-import           Plutus.V1.Ledger.Value            (AssetClass (AssetClass), flattenValue)
-import           Test.Tasty
-import           Test.Tasty.Hedgehog               (testProperty)
+import Control.Concurrent.STM (newTVarIO)
+import Control.Lens
+import Control.Monad (forM, forM_)
+import Control.Monad.Freer (Eff)
+import Control.Monad.Freer.Extras.Beam (BeamEffect)
+import Control.Monad.IO.Class (liftIO)
+import Control.Tracer (nullTracer)
+import Data.Set (member)
+import Database.Beam.Migrate.Simple (autoMigrate)
+import Database.Beam.Sqlite qualified as Sqlite
+import Database.Beam.Sqlite.Migrate qualified as Sqlite
+import Database.SQLite.Simple qualified as Sqlite
+import Generators qualified as Gen
+import Hedgehog (Property, assert, forAll, property, (===))
+import Ledger (Address (Address, addressCredential), TxOut (TxOut, txOutAddress), outValue)
+import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), RunRequirements (..), appendBlock, citxOutputs,
+                          runChainIndexEffects, txFromTxId, utxoSetAtAddress, utxoSetWithCurrency)
+import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
+import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Tx (_ValidTx, citxTxId)
+import Plutus.V1.Ledger.Ada qualified as Ada
+import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
+import Test.Tasty
+import Test.Tasty.Hedgehog (testProperty)
 
 tests :: TestTree
 tests = do

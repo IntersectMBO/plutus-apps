@@ -26,22 +26,22 @@ module Gist
     , NewGistFile(..)
     ) where
 
-import           Auth.Types        (Token, TokenProvider (Github))
-import           Data.Aeson        (FromJSON, GFromJSON, ToJSON, Value, Zero, genericParseJSON, object, parseJSON,
-                                    toJSON, withObject, (.!=), (.:), (.:?), (.=))
-import           Data.Aeson.Casing (aesonPrefix, snakeCase)
-import           Data.Aeson.Types  (Parser)
-import           Data.Bifunctor    (bimap)
-import           Data.Map          (Map)
-import           Data.Proxy        (Proxy (Proxy))
-import           Data.Text         (Text)
-import qualified Data.Text         as T
-import           GHC.Generics      (Generic, Rep)
-import           Servant.API       (Capture, FromHttpApiData (parseQueryParam), Get, Header, JSON, Post, ReqBody,
-                                    ToHttpApiData (toQueryParam), (:<|>), (:>))
-import           Servant.Client    (ClientM, client)
-import qualified Servant.Extra
-import           Text.Read         (readEither)
+import Auth.Types (Token, TokenProvider (Github))
+import Data.Aeson (FromJSON, GFromJSON, ToJSON, Value, Zero, genericParseJSON, object, parseJSON, toJSON, withObject,
+                   (.!=), (.:), (.:?), (.=))
+import Data.Aeson.Casing (aesonPrefix, snakeCase)
+import Data.Aeson.Types (Parser)
+import Data.Bifunctor (bimap)
+import Data.Map (Map)
+import Data.Proxy (Proxy (Proxy))
+import Data.Text (Text)
+import Data.Text qualified as T
+import GHC.Generics (Generic, Rep)
+import Servant.API (Capture, FromHttpApiData (parseQueryParam), Get, Header, JSON, Post, ReqBody,
+                    ToHttpApiData (toQueryParam), (:<|>), (:>))
+import Servant.Client (ClientM, client)
+import Servant.Extra qualified
+import Text.Read (readEither)
 
 type API = Header "Authorization" (Token 'Github) :> "gists" :> GistAPI
 

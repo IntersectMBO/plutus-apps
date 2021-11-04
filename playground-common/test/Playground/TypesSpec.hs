@@ -4,10 +4,10 @@ module Playground.TypesSpec
     ( tests
     ) where
 
-import           Data.Aeson       (encode, object, toJSON)
-import           Playground.Types (adaCurrency)
-import           Test.Tasty       (TestTree, testGroup)
-import           Test.Tasty.HUnit (assertEqual, testCase)
+import Data.Aeson (encode, object, toJSON)
+import Playground.Types (adaCurrency)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertEqual, testCase)
 
 tests :: TestTree
 tests = knownCurrenciesSpec

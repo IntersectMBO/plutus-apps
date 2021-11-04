@@ -20,53 +20,53 @@
 
 module Wallet.Emulator.Wallet where
 
-import qualified Cardano.Wallet.Primitive.Types as Cardano.Wallet
-import           Control.Lens                   hiding (from, to)
-import           Control.Monad                  (foldM)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error
-import           Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
-import           Control.Monad.Freer.State
-import           Control.Monad.Freer.TH         (makeEffect)
-import           Data.Aeson                     (FromJSON (..), ToJSON (..), ToJSONKey)
-import qualified Data.Aeson                     as Aeson
-import           Data.Bifunctor
-import           Data.Default                   (Default (def))
-import           Data.Foldable
-import qualified Data.Map                       as Map
-import           Data.Maybe
-import qualified Data.OpenApi.Schema            as OpenApi
-import           Data.Ord
-import           Data.Semigroup                 (Sum (..))
-import qualified Data.Set                       as Set
-import           Data.String                    (IsString (..))
-import qualified Data.Text                      as T
-import           Data.Text.Class                (fromText, toText)
-import           Data.Text.Prettyprint.Doc
-import           GHC.Generics                   (Generic (..))
-import           Ledger                         hiding (from, to)
-import qualified Ledger.Ada                     as Ada
-import           Ledger.CardanoWallet           (MockWallet, WalletNumber)
-import qualified Ledger.CardanoWallet           as CW
-import           Ledger.Constraints.OffChain    (UnbalancedTx (..))
-import qualified Ledger.Constraints.OffChain    as U
-import           Ledger.Credential              (Credential (..))
-import           Ledger.Fee                     (FeeConfig (..), calcFees)
-import           Ledger.TimeSlot                (posixTimeRangeToContainedSlotRange)
-import qualified Ledger.Tx                      as Tx
-import qualified Ledger.Value                   as Value
-import           Plutus.ChainIndex              (PageQuery)
-import qualified Plutus.ChainIndex              as ChainIndex
-import           Plutus.ChainIndex.Emulator     (ChainIndexEmulatorState, ChainIndexQueryEffect)
-import           Plutus.Contract.Checkpoint     (CheckpointLogMsg)
-import qualified PlutusTx.Prelude               as PlutusTx
-import           Prelude                        as P
-import           Servant.API                    (FromHttpApiData (..), ToHttpApiData (..))
-import qualified Wallet.API                     as WAPI
-import           Wallet.Effects                 (NodeClientEffect, WalletEffect (..), publishTx)
-import           Wallet.Emulator.Chain          (ChainState (..))
-import           Wallet.Emulator.LogMessages    (RequestHandlerLogMsg, TxBalanceMsg (..))
-import           Wallet.Emulator.NodeClient     (NodeClientState, emptyNodeClientState)
+import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
+import Control.Lens hiding (from, to)
+import Control.Monad (foldM)
+import Control.Monad.Freer
+import Control.Monad.Freer.Error
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
+import Control.Monad.Freer.State
+import Control.Monad.Freer.TH (makeEffect)
+import Data.Aeson (FromJSON (..), ToJSON (..), ToJSONKey)
+import Data.Aeson qualified as Aeson
+import Data.Bifunctor
+import Data.Default (Default (def))
+import Data.Foldable
+import Data.Map qualified as Map
+import Data.Maybe
+import Data.OpenApi.Schema qualified as OpenApi
+import Data.Ord
+import Data.Semigroup (Sum (..))
+import Data.Set qualified as Set
+import Data.String (IsString (..))
+import Data.Text qualified as T
+import Data.Text.Class (fromText, toText)
+import GHC.Generics (Generic (..))
+import Ledger hiding (from, to)
+import Ledger.Ada qualified as Ada
+import Ledger.CardanoWallet (MockWallet, WalletNumber)
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Constraints.OffChain (UnbalancedTx (..))
+import Ledger.Constraints.OffChain qualified as U
+import Ledger.Credential (Credential (..))
+import Ledger.Fee (FeeConfig (..), calcFees)
+import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
+import Ledger.Tx qualified as Tx
+import Ledger.Value qualified as Value
+import Plutus.ChainIndex (PageQuery)
+import Plutus.ChainIndex qualified as ChainIndex
+import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
+import Plutus.Contract.Checkpoint (CheckpointLogMsg)
+import PlutusTx.Prelude qualified as PlutusTx
+import Prelude as P
+import Prettyprinter
+import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
+import Wallet.API qualified as WAPI
+import Wallet.Effects (NodeClientEffect, WalletEffect (..), publishTx)
+import Wallet.Emulator.Chain (ChainState (..))
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg (..))
+import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
 
 newtype SigningProcess = SigningProcess {
     unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PubKeyHash] -> Tx -> Eff effs Tx

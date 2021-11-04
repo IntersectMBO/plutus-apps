@@ -5,13 +5,13 @@
 
 module Webserver where
 
-import           Data.Proxy               (Proxy (Proxy))
-import           Data.Time.Units          (Second)
-import           Network.Wai.Handler.Warp as Warp
-import           Playground.Server        (initializeServerContext)
-import qualified Playground.Server        as Server
-import           Servant                  (serve, (:<|>) ((:<|>)))
-import qualified Webghc.Server            as Webghc
+import Data.Proxy (Proxy (Proxy))
+import Data.Time.Units (Second)
+import Network.Wai.Handler.Warp as Warp
+import Playground.Server (initializeServerContext)
+import Playground.Server qualified as Server
+import Servant (serve, (:<|>) ((:<|>)))
+import Webghc.Server qualified as Webghc
 
 type API = Server.Web :<|> Webghc.API
 

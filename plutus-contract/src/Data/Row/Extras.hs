@@ -16,16 +16,16 @@ module Data.Row.Extras(
     , type (.\\)
     ) where
 
-import           Data.Aeson        (FromJSON, ToJSON, (.:), (.=))
-import qualified Data.Aeson        as Aeson
-import qualified Data.Aeson.Types  as Aeson
-import           Data.Row          hiding (type (.\\))
-import           Data.Row.Internal hiding (type (.\\))
-import qualified Data.Row.Records  as Records
-import qualified Data.Row.Variants as Variants
-import           Data.Text         (Text)
-import qualified Data.Text         as Text
-import           GHC.TypeLits      hiding (Text)
+import Data.Aeson (FromJSON, ToJSON, (.:), (.=))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
+import Data.Row hiding (type (.\\))
+import Data.Row.Internal hiding (type (.\\))
+import Data.Row.Records qualified as Records
+import Data.Row.Variants qualified as Variants
+import Data.Text (Text)
+import Data.Text qualified as Text
+import GHC.TypeLits hiding (Text)
 
 newtype JsonVar s = JsonVar { unJsonVar :: Var s }
 

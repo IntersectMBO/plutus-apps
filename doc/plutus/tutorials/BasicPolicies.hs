@@ -4,15 +4,15 @@
 {-# LANGUAGE TemplateHaskell     #-}
 module BasicPolicies where
 
-import qualified PlutusCore.Default   as PLC
-import           PlutusTx
-import           PlutusTx.Lift
-import           PlutusTx.Prelude
+import PlutusCore.Default qualified as PLC
+import PlutusTx
+import PlutusTx.Lift
+import PlutusTx.Prelude
 
-import           Ledger
-import           Ledger.Ada
-import           Ledger.Typed.Scripts
-import           Ledger.Value
+import Ledger
+import Ledger.Ada
+import Ledger.Typed.Scripts
+import Ledger.Value
 
 tname :: TokenName
 tname = error ()

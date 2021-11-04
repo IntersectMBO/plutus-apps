@@ -20,38 +20,33 @@ module Plutus.ChainIndex.Emulator.Handlers(
     , utxoIndex
     ) where
 
-import           Control.Lens                          (at, ix, makeLenses, over, preview, set, to, view, (&))
-import           Control.Monad.Freer                   (Eff, Member, type (~>))
-import           Control.Monad.Freer.Error             (Error, throwError)
-import           Control.Monad.Freer.Extras.Log        (LogMsg, logDebug, logError, logWarn)
-import           Control.Monad.Freer.Extras.Pagination (pageOf)
-import           Control.Monad.Freer.State             (State, get, gets, modify, put)
-import           Data.Maybe                            (catMaybes, fromMaybe)
-import           Data.Semigroup.Generic                (GenericSemigroupMonoid (..))
-import qualified Data.Set                              as Set
-import           GHC.Generics                          (Generic)
-import           Ledger                                (Address (addressCredential), ChainIndexTxOut (..),
-                                                        MintingPolicy (MintingPolicy),
-                                                        MintingPolicyHash (MintingPolicyHash),
-                                                        StakeValidator (StakeValidator),
-                                                        StakeValidatorHash (StakeValidatorHash), TxId,
-                                                        TxOut (txOutAddress), TxOutRef (..), Validator (Validator),
-                                                        ValidatorHash (ValidatorHash), txOutDatumHash, txOutValue)
-import           Ledger.Scripts                        (ScriptHash (ScriptHash))
-import           Plutus.ChainIndex.ChainIndexError     (ChainIndexError (..))
-import           Plutus.ChainIndex.ChainIndexLog       (ChainIndexLog (..))
-import           Plutus.ChainIndex.Effects             (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
-import           Plutus.ChainIndex.Emulator.DiskState  (DiskState, addressMap, assetClassMap, dataMap, redeemerMap,
-                                                        scriptMap, txMap)
-import qualified Plutus.ChainIndex.Emulator.DiskState  as DiskState
-import           Plutus.ChainIndex.Tx                  (ChainIndexTx, _ValidTx, citxOutputs)
-import qualified Plutus.ChainIndex.TxUtxoBalance       as TxUtxoBalance
-import           Plutus.ChainIndex.Types               (Diagnostics (..), Point (PointAtGenesis), Tip (..),
-                                                        TxUtxoBalance (..))
-import           Plutus.ChainIndex.UtxoState           (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip,
-                                                        utxoState)
-import qualified Plutus.ChainIndex.UtxoState           as UtxoState
-import           Plutus.V1.Ledger.Api                  (Credential (PubKeyCredential, ScriptCredential))
+import Control.Lens (at, ix, makeLenses, over, preview, set, to, view, (&))
+import Control.Monad.Freer (Eff, Member, type (~>))
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
+import Control.Monad.Freer.Extras.Pagination (pageOf)
+import Control.Monad.Freer.State (State, get, gets, modify, put)
+import Data.Maybe (catMaybes, fromMaybe)
+import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
+import Data.Set qualified as Set
+import GHC.Generics (Generic)
+import Ledger (Address (addressCredential), ChainIndexTxOut (..), MintingPolicy (MintingPolicy),
+               MintingPolicyHash (MintingPolicyHash), StakeValidator (StakeValidator),
+               StakeValidatorHash (StakeValidatorHash), TxId, TxOut (txOutAddress), TxOutRef (..),
+               Validator (Validator), ValidatorHash (ValidatorHash), txOutDatumHash, txOutValue)
+import Ledger.Scripts (ScriptHash (ScriptHash))
+import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
+import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
+import Plutus.ChainIndex.Emulator.DiskState (DiskState, addressMap, assetClassMap, dataMap, redeemerMap, scriptMap,
+                                             txMap)
+import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
+import Plutus.ChainIndex.Tx (ChainIndexTx, _ValidTx, citxOutputs)
+import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
+import Plutus.ChainIndex.Types (Diagnostics (..), Point (PointAtGenesis), Tip (..), TxUtxoBalance (..))
+import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
+import Plutus.ChainIndex.UtxoState qualified as UtxoState
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
 
 data ChainIndexEmulatorState =
     ChainIndexEmulatorState

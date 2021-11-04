@@ -5,14 +5,14 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Plutus.ChainIndex.TxUtxoBalance where
 
-import           Control.Lens                (view)
-import           Data.Set                    (Set)
-import qualified Data.Set                    as Set
-import           Ledger                      (TxIn (txInRef), TxOutRef (..))
-import           Plutus.ChainIndex.Tx        (ChainIndexTx (..), citxInputs, txOutsWithRef)
-import           Plutus.ChainIndex.Types     (Point (..), Tip (..), TxUtxoBalance (..), tubUnspentOutputs)
-import           Plutus.ChainIndex.UtxoState (RollbackFailed, RollbackResult, UtxoIndex,
-                                              UtxoState (UtxoState, _usTip, _usTxUtxoData), rollbackWith, usTxUtxoData)
+import Control.Lens (view)
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Ledger (TxIn (txInRef), TxOutRef (..))
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxInputs, txOutsWithRef)
+import Plutus.ChainIndex.Types (Point (..), Tip (..), TxUtxoBalance (..), tubUnspentOutputs)
+import Plutus.ChainIndex.UtxoState (RollbackFailed, RollbackResult, UtxoIndex,
+                                    UtxoState (UtxoState, _usTip, _usTxUtxoData), rollbackWith, usTxUtxoData)
 
 fromTx :: ChainIndexTx -> TxUtxoBalance
 fromTx tx =

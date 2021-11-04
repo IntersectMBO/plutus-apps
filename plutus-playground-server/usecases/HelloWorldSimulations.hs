@@ -4,11 +4,11 @@
 
 module HelloWorldSimulations where
 
-import           HelloWorld            (registeredKnownCurrencies)
-import           Playground.Types      (ContractCall (AddBlocks), Simulation (Simulation), simulationActions,
-                                        simulationId, simulationName, simulationWallets)
-import           SimulationUtils       (simulatorWallet)
-import           Wallet.Emulator.Types (WalletNumber (..))
+import HelloWorld (registeredKnownCurrencies)
+import Playground.Types (ContractCall (AddBlocks), Simulation (Simulation), simulationActions, simulationId,
+                         simulationName, simulationWallets)
+import SimulationUtils (simulatorWallet)
+import Wallet.Emulator.Types (WalletNumber (..))
 
 simulations :: [Simulation]
 simulations = [helloWorld]

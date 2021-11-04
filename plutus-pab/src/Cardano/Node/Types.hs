@@ -42,38 +42,38 @@ module Cardano.Node.Types
     )
         where
 
-import           Cardano.BM.Data.Tracer              (ToObject (..))
-import           Cardano.BM.Data.Tracer.Extras       (Tagged (..), mkObjectStr)
-import           Cardano.Chain                       (MockNodeServerChainState, fromEmulatorChainState)
-import qualified Cardano.Protocol.Socket.Mock.Client as Client
-import           Control.Lens                        (makeLenses, view)
-import           Control.Monad.Freer.Extras.Log      (LogMessage, LogMsg (..))
-import           Control.Monad.Freer.Reader          (Reader)
-import           Control.Monad.Freer.State           (State)
-import           Control.Monad.IO.Class              (MonadIO (..))
-import           Data.Aeson                          (FromJSON, ToJSON)
-import           Data.Default                        (Default, def)
-import qualified Data.Map                            as Map
-import           Data.Text                           (Text)
-import           Data.Text.Prettyprint.Doc           (Pretty (..), pretty, viaShow, (<+>))
-import           Data.Time.Clock                     (UTCTime)
-import qualified Data.Time.Format.ISO8601            as F
-import           Data.Time.Units                     (Millisecond)
-import           Data.Time.Units.Extra               ()
-import           GHC.Generics                        (Generic)
-import           Ledger                              (Tx, txId)
-import           Ledger.CardanoWallet                (WalletNumber (..))
-import           Ledger.TimeSlot                     (SlotConfig)
-import qualified Plutus.Contract.Trace               as Trace
-import           Servant.Client                      (BaseUrl (..), Scheme (..))
-import           Wallet.Emulator                     (Wallet)
-import qualified Wallet.Emulator                     as EM
-import           Wallet.Emulator.Chain               (ChainControlEffect, ChainEffect, ChainEvent)
-import qualified Wallet.Emulator.MultiAgent          as MultiAgent
+import Cardano.BM.Data.Tracer (ToObject (..))
+import Cardano.BM.Data.Tracer.Extras (Tagged (..), mkObjectStr)
+import Cardano.Chain (MockNodeServerChainState, fromEmulatorChainState)
+import Cardano.Protocol.Socket.Mock.Client qualified as Client
+import Control.Lens (makeLenses, view)
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (..))
+import Control.Monad.Freer.Reader (Reader)
+import Control.Monad.Freer.State (State)
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default, def)
+import Data.Map qualified as Map
+import Data.Text (Text)
+import Data.Time.Clock (UTCTime)
+import Data.Time.Format.ISO8601 qualified as F
+import Data.Time.Units (Millisecond)
+import Data.Time.Units.Extra ()
+import GHC.Generics (Generic)
+import Ledger (Tx, txId)
+import Ledger.CardanoWallet (WalletNumber (..))
+import Ledger.TimeSlot (SlotConfig)
+import Plutus.Contract.Trace qualified as Trace
+import Prettyprinter (Pretty (..), pretty, viaShow, (<+>))
+import Servant.Client (BaseUrl (..), Scheme (..))
+import Wallet.Emulator (Wallet)
+import Wallet.Emulator qualified as EM
+import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent)
+import Wallet.Emulator.MultiAgent qualified as MultiAgent
 
-import           Cardano.Api.NetworkId.Extra         (NetworkIdWrapper (..), testnetNetworkId)
-import           Ledger.Fee                          (FeeConfig)
-import           Plutus.PAB.Arbitrary                ()
+import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..), testnetNetworkId)
+import Ledger.Fee (FeeConfig)
+import Plutus.PAB.Arbitrary ()
 
 -- Configuration ------------------------------------------------------------------------------------------------------
 

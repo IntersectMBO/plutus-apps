@@ -16,18 +16,17 @@ module Plutus.ChainIndex.TxIdState(
     , dropOlder
     ) where
 
-import           Control.Lens                ((^.))
-import           Data.FingerTree             ((|>))
-import qualified Data.FingerTree             as FT
-import qualified Data.Map                    as Map
-import           Data.Monoid                 (Last (..), Sum (..))
-import           Ledger                      (OnChainTx, TxId, eitherTx)
-import           Plutus.ChainIndex.Tx        (ChainIndexTx (..), ChainIndexTxOutputs (..), citxOutputs, citxTxId)
-import           Plutus.ChainIndex.Types     (BlockNumber (..), Depth (..), Point (..), RollbackState (..), Tip (..),
-                                              TxConfirmedState (..), TxIdState (..), TxStatus, TxStatusFailure (..),
-                                              TxValidity (..))
-import           Plutus.ChainIndex.UtxoState (RollbackFailed (..), RollbackResult (..), UtxoIndex, UtxoState (..),
-                                              rollbackWith, tip, utxoState, viewTip)
+import Control.Lens ((^.))
+import Data.FingerTree ((|>))
+import Data.FingerTree qualified as FT
+import Data.Map qualified as Map
+import Data.Monoid (Last (..), Sum (..))
+import Ledger (OnChainTx, TxId, eitherTx)
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOutputs (..), citxOutputs, citxTxId)
+import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), Point (..), RollbackState (..), Tip (..),
+                                TxConfirmedState (..), TxIdState (..), TxStatus, TxStatusFailure (..), TxValidity (..))
+import Plutus.ChainIndex.UtxoState (RollbackFailed (..), RollbackResult (..), UtxoIndex, UtxoState (..), rollbackWith,
+                                    tip, utxoState, viewTip)
 
 
 -- | The 'TxStatus' of a transaction right after it was added to the chain

@@ -5,11 +5,11 @@
 {-# LANGUAGE RecordWildCards    #-}
 module Plutus.ChainIndex.ChainIndexError (ChainIndexError(..), InsertUtxoFailed(..), RollbackFailed(..)) where
 
-import           Control.Monad.Freer.Extras.Beam (BeamError)
-import           Data.Aeson                      (FromJSON, ToJSON)
-import           GHC.Generics                    (Generic)
-import           Plutus.ChainIndex.Types         (Point (..), Tip (..))
-import           Prettyprinter                   (Pretty (..), colon, (<+>))
+import Control.Monad.Freer.Extras.Beam (BeamError)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Plutus.ChainIndex.Types (Point (..), Tip (..))
+import Prettyprinter (Pretty (..), colon, (<+>))
 
 data ChainIndexError =
     InsertionFailed InsertUtxoFailed

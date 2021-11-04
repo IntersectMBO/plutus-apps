@@ -16,21 +16,21 @@ module Plutus.Contracts.Prism.StateMachine(
     , mkMachineClient
     ) where
 
-import           Data.Aeson                        (FromJSON, ToJSON)
-import           Data.Hashable                     (Hashable)
-import           GHC.Generics                      (Generic)
-import qualified Ledger.Constraints                as Constraints
-import           Ledger.Constraints.TxConstraints  (TxConstraints)
-import           Ledger.Crypto                     (PubKeyHash)
-import qualified Ledger.Typed.Scripts              as Scripts
-import           Ledger.Value                      (TokenName, Value)
-import           Plutus.Contract.StateMachine      (State (..), StateMachine (..), StateMachineClient (..), Void)
-import qualified Plutus.Contract.StateMachine      as StateMachine
-import           Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
-import qualified Plutus.Contracts.Prism.Credential as Credential
-import qualified PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude                           as Haskell
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Hashable (Hashable)
+import GHC.Generics (Generic)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.TxConstraints (TxConstraints)
+import Ledger.Crypto (PubKeyHash)
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (TokenName, Value)
+import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient (..), Void)
+import Plutus.Contract.StateMachine qualified as StateMachine
+import Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
+import Plutus.Contracts.Prism.Credential qualified as Credential
+import PlutusTx qualified
+import PlutusTx.Prelude
+import Prelude qualified as Haskell
 
 data IDState =
     Active -- ^ The credential is active and can be used in transactions

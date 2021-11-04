@@ -65,26 +65,26 @@ module Wallet.Emulator.Types(
     selectCoin
     ) where
 
-import qualified Cardano.Crypto.Wallet          as Crypto
-import           Control.Lens                   hiding (index)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error      (Error)
-import qualified Control.Monad.Freer.Extras     as Eff
-import           Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
-import           Control.Monad.Freer.State      (State)
+import Cardano.Crypto.Wallet qualified as Crypto
+import Control.Lens hiding (index)
+import Control.Monad.Freer
+import Control.Monad.Freer.Error (Error)
+import Control.Monad.Freer.Extras qualified as Eff
+import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
+import Control.Monad.Freer.State (State)
 
-import           Ledger
-import           Plutus.ChainIndex              (ChainIndexError)
-import           Wallet.API                     (WalletAPIError (..))
+import Ledger
+import Plutus.ChainIndex (ChainIndexError)
+import Wallet.API (WalletAPIError (..))
 
-import           Ledger.CardanoWallet           (MockWallet (..), WalletNumber (..), toWalletNumber)
-import           Ledger.Fee                     (FeeConfig)
-import           Ledger.TimeSlot                (SlotConfig)
-import           Wallet.Emulator.Chain
-import           Wallet.Emulator.MultiAgent
-import           Wallet.Emulator.NodeClient
-import           Wallet.Emulator.Wallet
-import           Wallet.Types                   (AsAssertionError (..), AssertionError (..))
+import Ledger.CardanoWallet (MockWallet (..), WalletNumber (..), toWalletNumber)
+import Ledger.Fee (FeeConfig)
+import Ledger.TimeSlot (SlotConfig)
+import Wallet.Emulator.Chain
+import Wallet.Emulator.MultiAgent
+import Wallet.Emulator.NodeClient
+import Wallet.Emulator.Wallet
+import Wallet.Types (AsAssertionError (..), AssertionError (..))
 
 type EmulatorEffs = '[MultiAgentEffect, ChainEffect, ChainControlEffect]
 

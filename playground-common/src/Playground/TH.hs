@@ -15,14 +15,14 @@ module Playground.TH
     , mkKnownCurrencies
     ) where
 
-import           Language.Haskell.TH (Body (NormalB), Clause (Clause), Dec (FunD, SigD, TySynD, ValD),
-                                      Exp (ListE, VarE), Info (TyConI, VarI), Name, Pat (VarP), Q,
-                                      Type (AppT, ArrowT, ConT, ForallT, ListT, TupleT, VarT), lookupValueName, mkName,
-                                      nameBase, normalB, reify, sigD, valD, varP)
-import           Playground.Schema   (endpointsToSchemas)
-import           Playground.Types    (FunctionSchema (FunctionSchema), adaCurrency)
-import           Schema              (FormSchema, toSchema)
-import           Wallet.Types        (EndpointDescription (EndpointDescription))
+import Language.Haskell.TH (Body (NormalB), Clause (Clause), Dec (FunD, SigD, TySynD, ValD), Exp (ListE, VarE),
+                            Info (TyConI, VarI), Name, Pat (VarP), Q,
+                            Type (AppT, ArrowT, ConT, ForallT, ListT, TupleT, VarT), lookupValueName, mkName, nameBase,
+                            normalB, reify, sigD, valD, varP)
+import Playground.Schema (endpointsToSchemas)
+import Playground.Types (FunctionSchema (FunctionSchema), adaCurrency)
+import Schema (FormSchema, toSchema)
+import Wallet.Types (EndpointDescription (EndpointDescription))
 
 mkFunctions :: [Name] -> Q [Dec]
 mkFunctions names = do

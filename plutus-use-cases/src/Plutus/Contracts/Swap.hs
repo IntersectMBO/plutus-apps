@@ -15,18 +15,18 @@ module Plutus.Contracts.Swap(
     swapValidator
     ) where
 
-import           Ledger               (POSIXTime, PubKey, PubKeyHash, Validator)
-import qualified Ledger
-import           Ledger.Ada           (Ada)
-import qualified Ledger.Ada           as Ada
-import           Ledger.Contexts      (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
-import qualified Ledger.Contexts      as Validation
-import           Ledger.Oracle        (Observation (..), SignedMessage)
-import qualified Ledger.Oracle        as Oracle
-import qualified Ledger.Typed.Scripts as Scripts
-import           Ledger.Value         (Value)
-import qualified PlutusTx
-import           PlutusTx.Prelude
+import Ledger (POSIXTime, PubKey, PubKeyHash, Validator)
+import Ledger qualified
+import Ledger.Ada (Ada)
+import Ledger.Ada qualified as Ada
+import Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
+import Ledger.Contexts qualified as Validation
+import Ledger.Oracle (Observation (..), SignedMessage)
+import Ledger.Oracle qualified as Oracle
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (Value)
+import PlutusTx qualified
+import PlutusTx.Prelude
 
 -- | A swap is an agreement to exchange cashflows at future dates. To keep
 --  things simple, this is an interest rate swap (meaning that the cashflows are

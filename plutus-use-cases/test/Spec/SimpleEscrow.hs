@@ -6,19 +6,19 @@
 
 module Spec.SimpleEscrow(tests) where
 
-import           Control.Lens
-import           Control.Monad                 (void)
+import Control.Lens
+import Control.Monad (void)
 
-import           Ledger                        (Value)
-import qualified Ledger.Ada                    as Ada
-import           Ledger.Time                   (POSIXTime)
-import qualified Ledger.TimeSlot               as TimeSlot
-import qualified Ledger.Value                  as Value
-import           Plutus.Contract.Test
-import           Plutus.Contracts.SimpleEscrow
-import qualified Plutus.Trace.Emulator         as Trace
+import Ledger (Value)
+import Ledger.Ada qualified as Ada
+import Ledger.Time (POSIXTime)
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value qualified as Value
+import Plutus.Contract.Test
+import Plutus.Contracts.SimpleEscrow
+import Plutus.Trace.Emulator qualified as Trace
 
-import           Test.Tasty
+import Test.Tasty
 
 tests :: TestTree
 tests = testGroup "simple-escrow"

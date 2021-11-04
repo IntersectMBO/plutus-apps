@@ -36,6 +36,7 @@ common lang
         DeriveTraversable
         ExplicitForAll
         GeneralizedNewtypeDeriving
+        ImportQualifiedPost
         ScopedTypeVariables
         StandaloneDeriving
 
@@ -201,6 +202,7 @@ executable plutus-pab-setup
         CommandParser
 
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
@@ -250,6 +252,7 @@ executable plutus-pab-examples
         ContractExample.WaitForTx
         ContractExample
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
@@ -280,6 +283,7 @@ executable plutus-uniswap
     hs-source-dirs:   examples/uniswap
     other-modules:
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
@@ -312,6 +316,7 @@ executable plutus-pab-local-cluster
         ContractExample.PayToWallet
         ContractExample.WaitForTx
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
@@ -361,6 +366,7 @@ executable plutus-pab-local-cluster
 
 executable plutus-pab-test-psgenerator
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     hs-source-dirs:
         test-psgenerator
         test/full
@@ -411,6 +417,7 @@ executable plutus-pab-test-psgenerator
 
 test-suite plutus-pab-test-light
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     hs-source-dirs:   test/light
     type:             exitcode-stdio-1.0
     main-is:          Spec.hs
@@ -454,6 +461,7 @@ test-suite plutus-pab-test-light
 
 test-suite plutus-pab-test-full
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     hs-source-dirs:
         test/full
         examples
@@ -517,6 +525,7 @@ test-suite plutus-pab-test-full
 
 test-suite plutus-pab-test-full-long-running
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     hs-source-dirs:
         test/full
         examples

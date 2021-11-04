@@ -16,20 +16,20 @@
 --   as one.
 module Plutus.Contracts.PubKey(pubKeyContract, typedValidator, PubKeyError(..), AsPubKeyError(..)) where
 
-import           Control.Lens
-import           Control.Monad.Error.Lens
-import           Data.Aeson               (FromJSON, ToJSON)
-import qualified Data.Map                 as Map
-import           GHC.Generics             (Generic)
+import Control.Lens
+import Control.Monad.Error.Lens
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map qualified as Map
+import GHC.Generics (Generic)
 
-import           Ledger                   hiding (initialise, to)
-import           Ledger.Contexts          as V
-import           Ledger.Typed.Scripts     (TypedValidator)
-import qualified Ledger.Typed.Scripts     as Scripts
-import qualified PlutusTx
+import Ledger hiding (initialise, to)
+import Ledger.Contexts as V
+import Ledger.Typed.Scripts (TypedValidator)
+import Ledger.Typed.Scripts qualified as Scripts
+import PlutusTx qualified
 
-import qualified Ledger.Constraints       as Constraints
-import           Plutus.Contract          as Contract
+import Ledger.Constraints qualified as Constraints
+import Plutus.Contract as Contract
 
 mkValidator :: PubKeyHash -> () -> () -> ScriptContext -> Bool
 mkValidator pk' _ _ p = V.txSignedBy (scriptContextTxInfo p) pk'

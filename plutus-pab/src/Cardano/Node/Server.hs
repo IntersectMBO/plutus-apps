@@ -8,31 +8,31 @@ module Cardano.Node.Server
     ( main
     ) where
 
-import           Cardano.BM.Data.Trace               (Trace)
-import           Cardano.Node.API                    (API)
-import           Cardano.Node.Mock
-import           Cardano.Node.Types
-import qualified Cardano.Protocol.Socket.Mock.Client as Client
-import qualified Cardano.Protocol.Socket.Mock.Server as Server
-import           Control.Concurrent                  (MVar, forkIO, newMVar)
-import           Control.Concurrent.Availability     (Availability, available)
-import           Control.Monad                       (void)
-import           Control.Monad.Freer.Delay           (delayThread, handleDelayEffect)
-import           Control.Monad.Freer.Extras.Log      (logInfo)
-import           Control.Monad.IO.Class              (liftIO)
-import           Data.Function                       ((&))
-import qualified Data.Map.Strict                     as Map
-import           Data.Proxy                          (Proxy (Proxy))
-import           Data.Time.Clock.POSIX               (posixSecondsToUTCTime)
-import           Data.Time.Units                     (Millisecond, Second)
-import qualified Ledger.Ada                          as Ada
-import           Ledger.TimeSlot                     (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
-import qualified Network.Wai.Handler.Warp            as Warp
-import           Plutus.PAB.Arbitrary                ()
-import qualified Plutus.PAB.Monitoring.Monitoring    as LM
-import           Servant                             (Application, hoistServer, serve, (:<|>) ((:<|>)))
-import           Servant.Client                      (BaseUrl (baseUrlPort))
-import           Wallet.Emulator.Wallet              (fromWalletNumber)
+import Cardano.BM.Data.Trace (Trace)
+import Cardano.Node.API (API)
+import Cardano.Node.Mock
+import Cardano.Node.Types
+import Cardano.Protocol.Socket.Mock.Client qualified as Client
+import Cardano.Protocol.Socket.Mock.Server qualified as Server
+import Control.Concurrent (MVar, forkIO, newMVar)
+import Control.Concurrent.Availability (Availability, available)
+import Control.Monad (void)
+import Control.Monad.Freer.Delay (delayThread, handleDelayEffect)
+import Control.Monad.Freer.Extras.Log (logInfo)
+import Control.Monad.IO.Class (liftIO)
+import Data.Function ((&))
+import Data.Map.Strict qualified as Map
+import Data.Proxy (Proxy (Proxy))
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Units (Millisecond, Second)
+import Ledger.Ada qualified as Ada
+import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
+import Network.Wai.Handler.Warp qualified as Warp
+import Plutus.PAB.Arbitrary ()
+import Plutus.PAB.Monitoring.Monitoring qualified as LM
+import Servant (Application, hoistServer, serve, (:<|>) ((:<|>)))
+import Servant.Client (BaseUrl (baseUrlPort))
+import Wallet.Emulator.Wallet (fromWalletNumber)
 
 app ::
     Trace IO MockServerLogMsg

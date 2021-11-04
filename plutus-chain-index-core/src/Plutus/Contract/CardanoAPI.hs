@@ -14,12 +14,12 @@ module Plutus.Contract.CardanoAPI(
   , module Export
 ) where
 
-import qualified Cardano.Api          as C
-import qualified Data.Set             as Set
-import qualified Ledger               as P
-import           Ledger.Tx.CardanoAPI as Export
-import           Plutus.ChainIndex.Tx (ChainIndexTx (..))
-import qualified Plutus.ChainIndex.Tx as ChainIndex.Tx
+import Cardano.Api qualified as C
+import Data.Set qualified as Set
+import Ledger qualified as P
+import Ledger.Tx.CardanoAPI as Export
+import Plutus.ChainIndex.Tx (ChainIndexTx (..))
+import Plutus.ChainIndex.Tx qualified as ChainIndex.Tx
 
 fromCardanoBlock :: C.BlockInMode C.CardanoMode -> Either FromCardanoError [ChainIndexTx]
 fromCardanoBlock (C.BlockInMode (C.Block C.BlockHeader {} txs) eraInMode) =

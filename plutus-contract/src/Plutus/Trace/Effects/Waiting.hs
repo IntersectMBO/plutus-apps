@@ -18,16 +18,16 @@ module Plutus.Trace.Effects.Waiting(
     , handleWaiting
     ) where
 
-import           Control.Monad.Freer           (Eff, Member, type (~>))
-import           Control.Monad.Freer.Coroutine (Yield)
-import           Control.Monad.Freer.TH        (makeEffect)
-import           Data.Default                  (Default (def))
-import           Ledger.Slot                   (Slot)
-import           Ledger.Time                   (DiffMilliSeconds, POSIXTime, fromMilliSeconds)
-import qualified Ledger.TimeSlot               as TimeSlot
-import           Numeric.Natural               (Natural)
-import           Plutus.Trace.Emulator.Types   (EmulatorMessage (NewSlot))
-import           Plutus.Trace.Scheduler        (EmSystemCall, Priority (Sleeping), sleep)
+import Control.Monad.Freer (Eff, Member, type (~>))
+import Control.Monad.Freer.Coroutine (Yield)
+import Control.Monad.Freer.TH (makeEffect)
+import Data.Default (Default (def))
+import Ledger.Slot (Slot)
+import Ledger.Time (DiffMilliSeconds, POSIXTime, fromMilliSeconds)
+import Ledger.TimeSlot qualified as TimeSlot
+import Numeric.Natural (Natural)
+import Plutus.Trace.Emulator.Types (EmulatorMessage (NewSlot))
+import Plutus.Trace.Scheduler (EmSystemCall, Priority (Sleeping), sleep)
 
 data Waiting r where
     WaitUntilSlot :: Slot -> Waiting Slot

@@ -23,19 +23,19 @@ module Plutus.Contracts.MultiSig
     , validate
     ) where
 
-import           Control.Monad            (void)
-import           Data.Aeson               (FromJSON, ToJSON)
-import           GHC.Generics             (Generic)
-import           Ledger
-import qualified Ledger.Constraints       as Constraints
-import           Ledger.Contexts          as V
-import qualified Ledger.Typed.Scripts     as Scripts
-import           Plutus.Contract
-import qualified Plutus.Contract.Typed.Tx as Tx
-import qualified PlutusTx
-import           PlutusTx.Prelude         hiding (Semigroup (..), foldMap)
+import Control.Monad (void)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts as V
+import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Contract
+import Plutus.Contract.Typed.Tx qualified as Tx
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Semigroup (..), foldMap)
 
-import           Prelude                  as Haskell (Semigroup (..), Show, foldMap)
+import Prelude as Haskell (Semigroup (..), Show, foldMap)
 
 type MultiSigSchema =
         Endpoint "lock" (MultiSig, Value)
