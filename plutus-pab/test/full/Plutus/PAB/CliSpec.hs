@@ -38,7 +38,6 @@ import Data.Either (isLeft)
 import Data.List (delete)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text qualified as Text
-import Data.Text.Prettyprint.Doc
 import Data.Yaml (decodeFileThrow)
 import GHC.Generics (Generic)
 import Ledger.Ada (lovelaceValueOf)
@@ -64,7 +63,7 @@ import Plutus.PAB.Types qualified as PAB.Types
 import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Client (InstanceClient (..), PabClient (..), pabClient)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
-import Prettyprinter (Pretty)
+import Prettyprinter
 import Servant ((:<|>) (..))
 import Servant qualified
 import Servant.Client (BaseUrl (..), ClientEnv, Scheme (Http), client, mkClientEnv, runClientM)
