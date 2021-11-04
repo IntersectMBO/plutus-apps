@@ -32,7 +32,7 @@ data Configuration = Configuration
 slotConfig :: SlotConfig
 slotConfig =
   SlotConfig
-    { scSlotZeroTime = 1591566291000
+    { scSlotZeroTime = 1596059091000
     , scSlotLength   = 1000
     }
 
