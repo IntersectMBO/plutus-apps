@@ -28,6 +28,7 @@ $ nix-build ../default.nix -A plutus-apps.haskell.packages.plutus-pab
 ## PAB Components
 PAB contains several commands and services, which are outlined below.
 
+- [pab-local-cluster](#pab-local-cluster)
 - [psgenerator](#psgenerator)
 - [migrate](#migrate)
 - [all-servers](#all-servers)
@@ -37,6 +38,51 @@ PAB contains several commands and services, which are outlined below.
 - [node-server](#node-server)
 - [chain-index](#chain-index)
 - [default-logging-config](#default-logging-config)
+
+
+### pab-local-cluster
+
+#### Description
+
+Can be used to run end-to-end tests using a private local testnet.
+
+#### Example
+
+1. Build necessary components:
+
+```
+> cabal build plutus-pab-local-cluster cardano-node cardano-wallet
+```
+
+2. Get config data:
+
+  Clone <https://github.com/input-output-hk/cardano-wallet/> to $DIR and set the
+  `SHELLEY_TEST_DATA` environment variable:
+
+  ```
+  export SHELLEY_TEST_DATA=$DIR/lib/shelley/test/data/cardano-node-shelley
+  ```
+
+3. Run the local cluster:
+
+```
+> cabal exec plutus-pab-local-cluster
+```
+
+4. Wait until the message `Starting PAB backend server on port 9080` appears.
+
+5. Run the integration test:
+
+```
+curl -H "Content-Type: application/json" -v \
+       -X POST \
+       -d '{"caID":{"tag":"IntegrationTest"},"caWallet":{"getWalletId":"2d4cc31a4b3116ab86bfe529d30d9c362acd0b44"}}' \
+       localhost:9080/api/contract/activate
+```
+
+A couple of log messages appear, the last one should say something like "Tx
+confirmed. Integration test complete."
+
 
 ### psgenerator
 
