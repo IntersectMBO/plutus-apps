@@ -160,7 +160,7 @@ instance ToJSON ExportTxInput where
 instance ToJSON ExportTx where
     toJSON ExportTx{partialTx, lookups, redeemers} =
         object
-            [ "transaction" .= Aeson.Extras.encodeByteString (C.serialiseToCBOR partialTx)
+            [ "transaction" .= JSON.encodeByteString (C.serialiseToCBOR partialTx)
             , "inputs"      .= lookups
             , "redeemers"   .= redeemers
             ]
