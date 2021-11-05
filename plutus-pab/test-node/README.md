@@ -85,7 +85,7 @@ You will need ~6 terminals to run all the different components.
 
   ```
   > curl -H "content-type: application/json" \
-      -XGET localhost:8090/v2/wallets/0b815c70d6a469dc5bb3cfa806a39999e57f28bd/addresses | jq '.'
+      -XGET localhost:8090/v2/wallets/$WALLET_ID/addresses | jq '.'
   ```
 
   (Any address will do.)
@@ -149,7 +149,7 @@ You will need ~6 terminals to run all the different components.
 
   ```
   > curl -H "Content-Type: application/json" -v -X POST -d \
-    '{"caID":{"tag":"IntegrationTest"},"caWallet":{"getWalletId":"$WALLET_ID"}}' \
+    "{\"caID\":{\"tag\":\"IntegrationTest\"},\"caWallet\":{\"getWalletId\":\"$WALLET_ID\"}}" \
     localhost:9080/api/contract/activate
   ```
 
