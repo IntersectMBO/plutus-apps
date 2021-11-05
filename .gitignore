@@ -75,10 +75,9 @@ pkgs/.stack
 **/yarn-error.log
 **/yarn.lock
 **/.psci_modules/
-**/.psc-package/
-**/.psc-package2nix/
 **/.spago/
 **/.spago2nix/
+**/.psa-stash
 
 # Backend config files
 marlowe-playground-server/playground.yaml

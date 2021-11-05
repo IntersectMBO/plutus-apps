@@ -23,18 +23,19 @@ module Cursor
   , right
   ) where
 
+import Prologue hiding (clamp)
 import Control.Monad.Gen.Class (chooseInt)
 import Data.Array as Array
+import Data.Argonaut.Decode (class DecodeJson, decodeJson)
+import Data.Argonaut.Encode (class EncodeJson, encodeJson)
 import Data.Foldable (class Foldable, foldMap, foldl, foldr)
-import Data.Generic.Rep (class Generic)
 import Data.Lens (Traversal', wander)
+import Data.Lens.AffineTraversal (affineTraversal)
 import Data.Lens.Index (class Index)
-import Data.Maybe (Maybe, fromMaybe, maybe)
+import Data.Maybe (fromMaybe, maybe)
 import Data.Ord as Ord
 import Data.Traversable (class Traversable, sequenceDefault, traverse)
-import Foreign (ForeignError(..), fail, readArray, readInt)
-import Foreign.Class (class Decode, class Encode, decode, encode)
-import Prelude (class Eq, class Functor, class Ord, class Show, bind, map, otherwise, pure, show, (#), ($), (+), (-), (<$>), (<<<), (<>), (>=), (>>>))
+import Data.Tuple (uncurry)
 import Test.QuickCheck.Arbitrary (class Arbitrary, arbitrary)
 import Test.QuickCheck.Gen (arrayOf)
 
@@ -46,8 +47,6 @@ derive instance eqCursor :: Eq a => Eq (Cursor a)
 derive instance ordCursor :: Ord a => Ord (Cursor a)
 
 derive instance functorCursor :: Functor Cursor
-
-derive instance genericCursor :: Generic (Cursor a) _
 
 instance foldableCursor :: Foldable Cursor where
   foldr f acc (Cursor _ xs) = foldr f acc xs
@@ -68,30 +67,17 @@ instance arbitraryCursor :: Arbitrary a => Arbitrary (Cursor a) where
     pure $ Cursor index xs
 
 instance indexCursor :: Index (Cursor a) Int a where
-  ix n =
-    wander \coalg (Cursor index xs) ->
-      Array.index xs n
-        # maybe
-            (pure xs)
-            ( let
-                f x = fromMaybe xs $ Array.updateAt n x xs
-              in
-                coalg >>> map f
-            )
-        # map (Cursor index)
+  ix n = affineTraversal set pre
+    where
+    set c@(Cursor index xs) a = fromMaybe c $ Cursor index <$> Array.updateAt n a xs
 
-instance encodeCursor :: Encode a => Encode (Cursor a) where
-  encode (Cursor n xs) = encode [ encode n, encode xs ]
+    pre c@(Cursor _ xs) = maybe (Left c) Right $ Array.index xs n
 
-instance decodeCursor :: Decode a => Decode (Cursor a) where
-  decode value = do
-    xs <- readArray value
-    case xs of
-      [ x, y ] -> do
-        index <- readInt x
-        elements <- decode y
-        pure $ Cursor index elements
-      _ -> fail $ ForeignError "Decoding a Cursor, expected to see an array with exactly 2 elements."
+instance encodeCursor :: EncodeJson a => EncodeJson (Cursor a) where
+  encodeJson (Cursor n xs) = encodeJson [ encodeJson n, encodeJson xs ]
+
+instance decodeCursor :: DecodeJson a => DecodeJson (Cursor a) where
+  decodeJson value = uncurry Cursor <$> decodeJson value
 
 _current :: forall a. Traversal' (Cursor a) a
 _current =
@@ -150,7 +136,7 @@ current :: forall a. Cursor a -> Maybe a
 current (Cursor index xs) = Array.index xs index
 
 getIndex :: forall a. Cursor a -> Int
-getIndex (Cursor index xs) = index
+getIndex (Cursor index _) = index
 
 setIndex :: forall a. Int -> Cursor a -> Cursor a
 setIndex newIndex (Cursor _ xs) = clamp $ Cursor newIndex xs

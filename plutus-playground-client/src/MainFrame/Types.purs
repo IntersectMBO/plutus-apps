@@ -20,6 +20,7 @@ import Chain.Types (Action(..))
 import Chain.Types as Chain
 import Clipboard as Clipboard
 import Cursor (Cursor)
+import Data.Array.NonEmpty (fromNonEmpty)
 import Data.Either (Either)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
@@ -37,7 +38,7 @@ import Playground.Types (CompilationResult, ContractCall, ContractDemo, Evaluati
 import Plutus.V1.Ledger.Tx (Tx)
 import Prelude (class Eq, class Show, Unit, show, ($))
 import Schema.Types (ActionEvent(..), FormArgument, SimulationAction(..))
-import Servant.PureScript.Ajax (AjaxError)
+import Servant.PureScript (AjaxError)
 import Test.QuickCheck.Arbitrary (class Arbitrary)
 import Test.QuickCheck.Gen as Gen
 import ValueEditor (ValueEvent(..))
@@ -75,7 +76,7 @@ derive instance eqView :: Eq View
 derive instance genericView :: Generic View _
 
 instance arbitraryView :: Arbitrary View where
-  arbitrary = Gen.elements (Editor :| [ Simulations, Transactions ])
+  arbitrary = Gen.elements $ fromNonEmpty (Editor :| [ Simulations, Transactions ])
 
 instance showView :: Show View where
   show Editor = "Editor"
@@ -101,6 +102,7 @@ type WebEvaluationResult
 type SimulatorAction
   = ContractCall FormArgument
 
+data Query :: forall k. k -> Type
 data Query a
 
 data HAction
@@ -164,7 +166,7 @@ instance actionIsEvent :: IsEvent HAction where
   toEvent Init = Nothing
   toEvent Mounted = Just $ defaultEvent "Mounted"
   toEvent (EditorAction (Editor.HandleDropEvent _)) = Just $ defaultEvent "DropScript"
-  toEvent (EditorAction action) = Just $ (defaultEvent "ConfigureEditor")
+  toEvent (EditorAction _) = Just $ (defaultEvent "ConfigureEditor")
   toEvent CompileProgram = Just $ defaultEvent "CompileProgram"
   toEvent (HandleBalancesChartMessage _) = Nothing
   toEvent CheckAuthStatus = Nothing

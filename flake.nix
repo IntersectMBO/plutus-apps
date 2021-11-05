@@ -73,6 +73,10 @@
       url = "github:input-output-hk/stackage.nix";
       flake = false;
     };
+    web-common = {
+      url = "github:input-output-hk/purescript-web-common";
+      flake = false;
+    };
   };
 
   outputs = { self, flake-utils, ... }@inputs:

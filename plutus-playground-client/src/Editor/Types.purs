@@ -39,6 +39,7 @@ data Action
   | SetFeedbackPaneDragStart MouseEvent
   | ClearFeedbackPaneDragStart
   | FixFeedbackPaneExtend Int
+  | DoNothing
 
 allKeyBindings :: Array KeyBindings
 allKeyBindings = enumFromTo bottom top

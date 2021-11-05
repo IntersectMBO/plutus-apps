@@ -44,10 +44,8 @@ import HelloWorldSimulations qualified
 import Interpreter qualified as Webghc
 import Language.Haskell.Interpreter (CompilationError, InterpreterError, InterpreterResult (InterpreterResult),
                                      SourceCode (SourceCode), Warning, result, warnings)
-import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, buildBridge, equal, genericShow, mkSumType,
-                                   order, writePSTypesWith)
-import Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (ForeignOptions), genForeign,
-                                                   unwrapSingleConstructors)
+import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, argonaut, buildBridge, equal, genericShow,
+                                   mkSumType, order, writePSTypes)
 import Language.PureScript.Bridge.TypeParameters (A)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Tx.CardanoAPI (ToCardanoError)
@@ -65,8 +63,8 @@ import Playground.Usecases qualified as Usecases
 import Plutus.Contract.Checkpoint (CheckpointKey, CheckpointLogMsg)
 import Schema (FormSchema, formArgumentToJson)
 import Servant ((:<|>))
-import Servant.PureScript (HasBridge, Settings, _generateSubscriberAPI, apiModuleName, defaultBridge, defaultSettings,
-                           languageBridge, writeAPIModuleWithSettings)
+import Servant.PureScript (HasBridge, Settings, apiModuleName, defaultBridge, defaultSettings, languageBridge,
+                           writeAPIModuleWithSettings)
 import Starter qualified
 import StarterSimulations qualified
 import System.FilePath ((</>))
@@ -102,44 +100,42 @@ myTypes :: [SumType 'Haskell]
 myTypes =
     PSGenerator.Common.ledgerTypes <>
     PSGenerator.Common.playgroundTypes <>
-    [ (genericShow <*> (equal <*> mkSumType)) (Proxy @CompilationResult)
-    , (genericShow <*> (equal <*> mkSumType)) (Proxy @Warning)
-    , (genericShow <*> (equal <*> mkSumType)) (Proxy @SourceCode)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @EM.Wallet)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @CW.WalletNumber)
-    , (genericShow <*> (equal <*> mkSumType)) (Proxy @Simulation)
-    , (genericShow <*> (equal <*> mkSumType)) (Proxy @ContractDemo)
-    , (genericShow <*> (equal <*> mkSumType)) (Proxy @SimulatorWallet)
-    , (genericShow <*> mkSumType) (Proxy @CompilationError)
-    , (genericShow <*> mkSumType) (Proxy @Evaluation)
-    , (genericShow <*> mkSumType) (Proxy @EvaluationResult)
-    , (genericShow <*> mkSumType) (Proxy @EM.EmulatorEvent')
-    , (genericShow <*> mkSumType) (Proxy @(EM.EmulatorTimeEvent A))
-    , (genericShow <*> mkSumType) (Proxy @EM.ChainEvent)
-    , (genericShow <*> mkSumType) (Proxy @Log.LogLevel)
-    , (genericShow <*> mkSumType) (Proxy @(Log.LogMessage A))
-    , (genericShow <*> mkSumType) (Proxy @EM.WalletEvent)
-    , (genericShow <*> mkSumType) (Proxy @EM.NodeClientEvent)
-    , (genericShow <*> mkSumType) (Proxy @PlaygroundError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @WalletAPIError)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @ToCardanoError)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @SequenceId)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @AnnotatedTx)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @DereferencedInput)
-    , (order <*> (genericShow <*> mkSumType)) (Proxy @BeneficialOwner)
-    , (equal <*> (genericShow <*> mkSumType)) (Proxy @TxKey)
-    , (genericShow <*> mkSumType) (Proxy @InterpreterError)
-    , (genericShow <*> (equal <*> mkSumType)) (Proxy @(InterpreterResult A))
-    , (genericShow <*> mkSumType) (Proxy @CheckpointLogMsg)
-    , (genericShow <*> mkSumType) (Proxy @CheckpointKey)
-    , (genericShow <*> mkSumType) (Proxy @EM.RequestHandlerLogMsg)
-    , (genericShow <*> mkSumType) (Proxy @EM.TxBalanceMsg)
+    [ genericShow $ equal $ argonaut $ mkSumType @CompilationResult
+    , genericShow $ equal $ argonaut $ mkSumType @Warning
+    , genericShow $ equal $ argonaut $ mkSumType @SourceCode
+    , equal $ genericShow $ argonaut $ mkSumType @EM.Wallet
+    , equal $ genericShow $ argonaut $ mkSumType @CW.WalletNumber
+    , genericShow $ equal $ argonaut $ mkSumType @Simulation
+    , genericShow $ equal $ argonaut $ mkSumType @ContractDemo
+    , genericShow $ equal $ argonaut $ mkSumType @SimulatorWallet
+    , genericShow $ argonaut $ mkSumType @CompilationError
+    , genericShow $ argonaut $ mkSumType @Evaluation
+    , genericShow $ argonaut $ mkSumType @EvaluationResult
+    , genericShow $ argonaut $ mkSumType @EM.EmulatorEvent'
+    , genericShow $ argonaut $ mkSumType @(EM.EmulatorTimeEvent A)
+    , genericShow $ argonaut $ mkSumType @EM.ChainEvent
+    , equal $ order $ genericShow $ argonaut $ mkSumType @Log.LogLevel
+    , genericShow $ argonaut $ mkSumType @(Log.LogMessage A)
+    , genericShow $ argonaut $ mkSumType @EM.WalletEvent
+    , genericShow $ argonaut $ mkSumType @EM.NodeClientEvent
+    , genericShow $ argonaut $ mkSumType @PlaygroundError
+    , equal $ genericShow $ argonaut $ mkSumType @WalletAPIError
+    , equal $ genericShow $ argonaut $ mkSumType @ToCardanoError
+    , order $ genericShow $ argonaut $ mkSumType @SequenceId
+    , equal $ genericShow $ argonaut $ mkSumType @AnnotatedTx
+    , equal $ genericShow $ argonaut $ mkSumType @DereferencedInput
+    , order $ genericShow $ argonaut $ mkSumType @BeneficialOwner
+    , equal $ genericShow $ argonaut $ mkSumType @TxKey
+    , genericShow $ argonaut $ mkSumType @InterpreterError
+    , genericShow $ equal $ argonaut $ mkSumType @(InterpreterResult A)
+    , genericShow $ argonaut $ mkSumType @CheckpointLogMsg
+    , genericShow $ argonaut $ mkSumType @CheckpointKey
+    , genericShow $ argonaut $ mkSumType @EM.RequestHandlerLogMsg
+    , genericShow $ argonaut $ mkSumType @EM.TxBalanceMsg
     ]
 
 mySettings :: Settings
-mySettings =
-    (defaultSettings & set apiModuleName "Playground.Server")
-        {_generateSubscriberAPI = False}
+mySettings = defaultSettings & set apiModuleName "Playground.Server"
 
 multilineString :: Text -> Text -> Text
 multilineString name value =
@@ -226,6 +222,7 @@ toExpression = traverse (fmap encodeToText . formArgumentToJson)
 ------------------------------------------------------------
 generate :: FilePath -> IO ()
 generate outputDir = do
+    writePSTypes outputDir (buildBridge myBridge) myTypes
     writeAPIModuleWithSettings
         mySettings
         outputDir
@@ -233,11 +230,6 @@ generate outputDir = do
         (Proxy
              @(API.API
                :<|> Auth.FrontendAPI))
-    writePSTypesWith
-        (genForeign (ForeignOptions {unwrapSingleConstructors = True}))
-        outputDir
-        (buildBridge myBridge)
-        myTypes
     writeUsecases outputDir
     writeTestData outputDir
     putStrLn $ "Done: " <> outputDir
