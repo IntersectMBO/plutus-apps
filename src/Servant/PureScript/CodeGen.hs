@@ -16,7 +16,7 @@ import qualified Data.Set as Set
 import Data.Text (Text, toUpper)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Language.PureScript.Bridge (ImportLine (importModule), ImportLines, PSType, TypeInfo (TypeInfo), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typeToEncode, typesToImportLines)
+import Language.PureScript.Bridge (ImportLine (importModule), ImportLines, PSType, TypeInfo (TypeInfo), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typeToEncode, typesToImportLines, flattenTypeInfo)
 import Language.PureScript.Bridge.PSTypes (psString, psUnit)
 import Network.HTTP.Types.URI (urlEncode)
 import Servant.Foreign
@@ -352,6 +352,7 @@ reqsToImportLines =
   typesToImportLines
     . Set.fromList
     . filter (("Prim" /=) . view typeModule)
+    . concatMap flattenTypeInfo
     . concatMap reqToPSTypes
 
 reqToPSTypes :: Req PSType -> [PSType]
