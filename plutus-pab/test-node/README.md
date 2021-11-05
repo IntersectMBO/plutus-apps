@@ -143,7 +143,18 @@ You will need ~6 terminals to run all the different components.
   When it's fully synced the slot should be the same slot that the
   plutus-pab-examples process last printed to the console. Note that the PAB
   process will be silent for a while, after the initial log messages, before
-  it starts printing log messages about its sync status.
+  it starts printing log messages about its sync status. **You _must_ wait**
+  for the PAB to start printing messages like:
+
+  ```
+  ...
+  Current block: 327295. Current slot: 41749136.
+  Current block: 327295. Current slot: 41749150.
+  ```
+
+  before running the next step. (In fact, it's okay not to wait, and it will
+  complete eventually; but if you want to see it live, then wait.)
+
 
 8. **Start the integration test**
 
@@ -157,3 +168,5 @@ You will need ~6 terminals to run all the different components.
 
   There will be a message like `"Tx confirmed. Integration test complete."`
   printed from the console running the pab.
+
+That's it!
