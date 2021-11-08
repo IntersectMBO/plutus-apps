@@ -12,6 +12,7 @@
 module Ledger.Index(
     -- * Types for transaction validation based on UTXO index
     ValidationMonad,
+    ValidationCtx(..),
     UtxoIndex(..),
     insert,
     insertCollateral,
@@ -54,7 +55,6 @@ import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default (Default (def))
 import Data.Foldable (asum, fold, foldl', traverse_)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
@@ -86,7 +86,9 @@ import Prettyprinter.Extras (PrettyShow (..))
 
 -- | Context for validating transactions. We need access to the unspent
 --   transaction outputs of the blockchain, and we can throw 'ValidationError's.
-type ValidationMonad m = (MonadReader UtxoIndex m, MonadError ValidationError m, MonadWriter [ScriptValidationEvent] m)
+type ValidationMonad m = (MonadReader ValidationCtx m, MonadError ValidationError m, MonadWriter [ScriptValidationEvent] m)
+
+data ValidationCtx = ValidationCtx { vctxIndex :: UtxoIndex, vctxSlotConfig :: TimeSlot.SlotConfig }
 
 -- | The UTxOs of a blockchain indexed by their references.
 newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map TxOutRef TxOut }
@@ -159,12 +161,12 @@ deriving via (PrettyShow ValidationPhase) instance Pretty ValidationPhase
 type ValidationErrorInPhase = (ValidationPhase, ValidationError)
 
 -- | A monad for running transaction validation inside, which is an instance of 'ValidationMonad'.
-newtype Validation a = Validation { _runValidation :: (ReaderT UtxoIndex (ExceptT ValidationError (Writer [ScriptValidationEvent]))) a }
-    deriving newtype (Functor, Applicative, Monad, MonadReader UtxoIndex, MonadError ValidationError, MonadWriter [ScriptValidationEvent])
+newtype Validation a = Validation { _runValidation :: (ReaderT ValidationCtx (ExceptT ValidationError (Writer [ScriptValidationEvent]))) a }
+    deriving newtype (Functor, Applicative, Monad, MonadReader ValidationCtx, MonadError ValidationError, MonadWriter [ScriptValidationEvent])
 
 -- | Run a 'Validation' on a 'UtxoIndex'.
-runValidation :: Validation (Maybe ValidationErrorInPhase, UtxoIndex) -> UtxoIndex -> ((Maybe ValidationErrorInPhase, UtxoIndex), [ScriptValidationEvent])
-runValidation l idx = runWriter $ fmap (either (\e -> (Just (Phase1, e), idx)) id) $ runExceptT $ runReaderT (_runValidation l) idx
+runValidation :: Validation (Maybe ValidationErrorInPhase, UtxoIndex) -> ValidationCtx -> ((Maybe ValidationErrorInPhase, UtxoIndex), [ScriptValidationEvent])
+runValidation l ctx = runWriter $ fmap (either (\e -> (Just (Phase1, e), vctxIndex ctx)) id) $ runExceptT $ runReaderT (_runValidation l) ctx
 
 -- | Determine the unspent value that a ''TxOutRef' refers to.
 lkpValue :: ValidationMonad m => TxOutRef -> m V.Value
@@ -174,7 +176,7 @@ lkpValue = fmap txOutValue . lkpTxOut
 --   output for this reference exists. If you want to handle the lookup error
 --   you can use 'runLookup'.
 lkpTxOut :: ValidationMonad m => TxOutRef -> m TxOut
-lkpTxOut t = lookup t =<< ask
+lkpTxOut t = lookup t . vctxIndex =<< ask
 
 -- | Validate a transaction in a 'ValidationMonad' context.
 validateTransaction :: ValidationMonad m
@@ -187,7 +189,7 @@ validateTransaction h t = do
     _ <- lkpOutputs $ toListOf (inputs . scriptTxIns) t
 
     -- see note [Minting of Ada]
-    emptyUtxoSet <- reader (Map.null . getIndex)
+    emptyUtxoSet <- reader (Map.null . getIndex . vctxIndex)
     unless emptyUtxoSet (checkTransactionFee t)
 
     validateTransactionOffChain t
@@ -201,7 +203,7 @@ validateTransactionOffChain t = do
     checkFeeIsAda t
 
     -- see note [Minting of Ada]
-    emptyUtxoSet <- reader (Map.null . getIndex)
+    emptyUtxoSet <- reader (Map.null . getIndex . vctxIndex)
     unless emptyUtxoSet (checkMintingAuthorised t)
 
     checkValidInputs (toListOf (inputs . pubKeyTxIns)) t
@@ -212,13 +214,13 @@ validateTransactionOffChain t = do
         checkValidInputs (toListOf (inputs . scriptTxIns)) t
         unless emptyUtxoSet (checkMintingScripts t)
 
-        idx <- ask
+        idx <- vctxIndex <$> ask
         pure (Nothing, insert t idx)
         )
     `catchError` payCollateral
     where
         payCollateral e = do
-            idx <- ask
+            idx <- vctxIndex <$> ask
             pure (Just (Phase2, e), insertCollateral t idx)
 
 -- | Check that a transaction can be validated in the given slot.
@@ -385,6 +387,7 @@ checkTransactionFee tx =
 -- | Create the data about the transaction which will be passed to a validator script.
 mkTxInfo :: ValidationMonad m => Tx -> m TxInfo
 mkTxInfo tx = do
+    slotCfg <- vctxSlotConfig <$> ask
     txins <- traverse mkIn $ Set.toList $ view inputs tx
     let ptx = TxInfo
             { txInfoInputs = txins
@@ -393,7 +396,7 @@ mkTxInfo tx = do
             , txInfoFee = txFee tx
             , txInfoDCert = [] -- DCerts not supported in emulator
             , txInfoWdrl = [] -- Withdrawals not supported in emulator
-            , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange def $ txValidRange tx
+            , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
             , txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
             , txInfoData = Map.toList (tx ^. datumWitnesses)
             , txInfoId = txId tx

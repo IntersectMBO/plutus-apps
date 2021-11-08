@@ -83,15 +83,15 @@ handleControlChain ::
      , Member (LogMsg EC.ChainEvent) effs
      , LastMember m effs
      , MonadIO m )
-  => EC.ChainControlEffect ~> Eff effs
-handleControlChain = \case
+  => SlotConfig -> EC.ChainControlEffect ~> Eff effs
+handleControlChain slotCfg = \case
     EC.ProcessBlock -> do
         st <- get
         let pool  = st ^. txPool
             slot  = st ^. currentSlot
             idx   = st ^. index
             EC.ValidatedBlock block events rest =
-                EC.validateBlock slot idx pool
+                EC.validateBlock slotCfg slot idx pool
 
         let st' = st & txPool .~ rest
                      & tip    ?~ block
