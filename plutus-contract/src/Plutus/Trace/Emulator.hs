@@ -162,7 +162,7 @@ handleEmulatorTrace slotCfg action = do
             . flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
             . interpret (handleEmulatorControl @_ @effs slotCfg)
-            . interpret (handleWaiting @_ @effs)
+            . interpret (handleWaiting @_ @effs slotCfg)
             . interpret (handleAssert @_ @effs)
             . interpret (handleRunContract @_ @effs)
             $ raiseEnd action

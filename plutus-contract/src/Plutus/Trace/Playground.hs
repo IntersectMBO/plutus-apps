@@ -103,13 +103,14 @@ handlePlaygroundTrace ::
     , Member (State EmulatorThreads) effs
     , Member ContractInstanceIdEff effs
     )
-    => Contract w s e ()
+    => EmulatorConfig
+    -> Contract w s e ()
     -> PlaygroundTrace a
     -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
-handlePlaygroundTrace contract action = do
+handlePlaygroundTrace conf contract action = do
     _ <- flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
-            . interpret (handleWaiting @_ @effs)
+            . interpret (handleWaiting @_ @effs (_slotConfig conf))
             . subsume
             . interpret (handleRunContractPlayground @w @s @e @_ @effs contract)
             $ raiseEnd action
@@ -129,7 +130,7 @@ runPlaygroundStream :: forall w s e effs a.
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
 runPlaygroundStream conf contract =
     let wallets = fromMaybe knownWallets (preview (initialChainState . _Left . to Map.keys) conf)
-    in runTraceStream conf . interpretPlaygroundTrace contract wallets
+    in runTraceStream conf . interpretPlaygroundTrace conf contract wallets
 
 interpretPlaygroundTrace :: forall w s e effs a.
     ( Member MultiAgentEffect effs
@@ -143,11 +144,12 @@ interpretPlaygroundTrace :: forall w s e effs a.
     , JSON.ToJSON w
     , Monoid w
     )
-    => Contract w s e () -- ^ The contract
+    => EmulatorConfig
+    -> Contract w s e () -- ^ The contract
     -> [Wallet] -- ^ Wallets that should be simulated in the emulator
     -> PlaygroundTrace a
     -> Eff effs ()
-interpretPlaygroundTrace contract wallets action =
+interpretPlaygroundTrace conf contract wallets action =
     evalState @EmulatorThreads mempty
         $ evalState @(Map Wallet ContractInstanceId) Map.empty
         $ handleDeterministicIds
@@ -156,7 +158,7 @@ interpretPlaygroundTrace contract wallets action =
         $ do
             raise $ launchSystemThreads wallets
             void
-                $ handlePlaygroundTrace contract
+                $ handlePlaygroundTrace conf contract
                 $ do
                     void Waiting.nextSlot
                     traverse_ RunContractPlayground.launchContract wallets

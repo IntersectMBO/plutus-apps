@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
@@ -21,7 +22,6 @@ module Plutus.Trace.Effects.Waiting(
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Coroutine (Yield)
 import Control.Monad.Freer.TH (makeEffect)
-import Data.Default (Default (def))
 import Ledger.Slot (Slot)
 import Ledger.Time (DiffMilliSeconds, POSIXTime, fromMilliSeconds)
 import Ledger.TimeSlot qualified as TimeSlot
@@ -31,6 +31,7 @@ import Plutus.Trace.Scheduler (EmSystemCall, Priority (Sleeping), sleep)
 
 data Waiting r where
     WaitUntilSlot :: Slot -> Waiting Slot
+    GetSlotConfig :: Waiting TimeSlot.SlotConfig
 
 makeEffect ''Waiting
 
@@ -38,8 +39,9 @@ makeEffect ''Waiting
 -- we know has passed.
 waitUntilTime :: Member Waiting effs => POSIXTime -> Eff effs POSIXTime
 waitUntilTime time = do
-  slot <- waitUntilSlot (TimeSlot.posixTimeToEnclosingSlot def time)
-  return $ TimeSlot.slotToEndPOSIXTime def slot
+    slotConfig <- getSlotConfig
+    slot <- waitUntilSlot (TimeSlot.posixTimeToEnclosingSlot slotConfig time)
+    return $ TimeSlot.slotToEndPOSIXTime slotConfig slot
 
 -- | Wait until the beginning of the next slot, returning
 --   the new slot number.
@@ -65,15 +67,18 @@ waitNMilliSeconds ::
     ( Member Waiting effs )
     => DiffMilliSeconds
     -> Eff effs Slot
-waitNMilliSeconds n =
-    waitNSlots (fromIntegral $ TimeSlot.posixTimeToEnclosingSlot def $ fromMilliSeconds n)
+waitNMilliSeconds n = do
+    slotConfig <- getSlotConfig
+    waitNSlots (fromIntegral $ TimeSlot.posixTimeToEnclosingSlot slotConfig $ fromMilliSeconds n)
 
 handleWaiting ::
     forall effs effs2.
     ( Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     )
-    => Waiting
+    => TimeSlot.SlotConfig
+    -> Waiting
     ~> Eff effs
-handleWaiting = \case
+handleWaiting slotConfig = \case
+    GetSlotConfig -> pure slotConfig
     WaitUntilSlot s -> go where
         go = sleep @effs2 Sleeping >>= \case { Just (NewSlot _ sl) | sl >= s -> pure sl; _ -> go }
