@@ -55,7 +55,6 @@ module Plutus.Contract.StateMachine(
 import Control.Lens
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default (Default (def))
 import Data.Either (rights)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -72,7 +71,6 @@ import Ledger.Constraints (ScriptLookups, TxConstraints (..), mintingPolicy, mus
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Constraints.TxConstraints (InputConstraint (..), OutputConstraint (..))
-import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (TypedScriptTxOut (..))
@@ -265,8 +263,8 @@ waitForUpdateUntilTime ::
     )
     => StateMachineClient state i
     -> POSIXTime
-    -> Contract w schema e (WaitingResult Slot i state)
-waitForUpdateUntilTime sm timeoutTime = waitForUpdateUntilSlot sm (TimeSlot.posixTimeToEnclosingSlot def timeoutTime)
+    -> Contract w schema e (WaitingResult POSIXTime i state)
+waitForUpdateUntilTime client timeoutTime = waitForUpdateTimeout client (isTime timeoutTime) >>= fmap (fmap (tyTxOutData . ocsTxOut)) . awaitPromise
 
 -- | Wait until the on-chain state of the state machine instance has changed,
 --   and return the new state, or return 'Nothing' if the instance has been
