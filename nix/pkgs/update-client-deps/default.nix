@@ -10,7 +10,6 @@
 , nodejs
 , nodePackages
 , purs
-, psc-package
 , spago
 , spago2nix
 , clang
@@ -28,7 +27,6 @@ lib.meta.addMetaAttrs { platforms = lib.platforms.linux; } (writeShellScriptBin 
     nodejs
     nodePackages.node-gyp
     purs
-    psc-package
     spago
     spago2nix
   ] ++ lib.optionals stdenv.isDarwin [ clang ])}

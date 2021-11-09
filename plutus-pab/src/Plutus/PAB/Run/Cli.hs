@@ -268,7 +268,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (R
 
 runConfigCommand _ _ PSApiGenerator {psApiGenOutputDir} = do
     PSGenerator.generateAPIModule (Proxy @a) psApiGenOutputDir
-    PSGenerator.generateWith (Proxy @a) psApiGenOutputDir
+    PSGenerator.generateWith @a psApiGenOutputDir
 
 toPABMsg :: Trace m (LM.AppMsg (Builtin a)) -> Trace m (LM.PABLogMsg (Builtin a))
 toPABMsg = LM.convertLog LM.PABMsg

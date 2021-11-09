@@ -114,12 +114,13 @@ constantFee = def { fcScriptsFeeFactor = 0 }
 --   unspent outputs of the chain when it is first created.
 data Mockchain = Mockchain {
     mockchainInitialTxPool :: [Tx],
-    mockchainUtxo          :: Map TxOutRef TxOut
+    mockchainUtxo          :: Map TxOutRef TxOut,
+    mockchainSlotConfig    :: SlotConfig
     } deriving Show
 
 -- | The empty mockchain.
 emptyChain :: Mockchain
-emptyChain = Mockchain [] Map.empty
+emptyChain = Mockchain [] Map.empty def
 
 -- | Generate a mockchain.
 --
@@ -130,9 +131,11 @@ genMockchain' :: MonadGen m
 genMockchain' gm = do
     let (txn, ot) = genInitialTransaction gm
         tid = txId txn
+    slotCfg <- genSlotConfig
     pure Mockchain {
         mockchainInitialTxPool = [txn],
-        mockchainUtxo = Map.fromList $ first (TxOutRef tid) <$> zip [0..] ot
+        mockchainUtxo = Map.fromList $ first (TxOutRef tid) <$> zip [0..] ot,
+        mockchainSlotConfig = slotCfg
         }
 
 -- | Generate a mockchain using the default 'GeneratorModel'.
@@ -171,7 +174,7 @@ genValidTransaction' :: MonadGen m
     -> FeeConfig
     -> Mockchain
     -> m Tx
-genValidTransaction' g feeCfg (Mockchain _ ops) = do
+genValidTransaction' g feeCfg (Mockchain _ ops _) = do
     -- Take a random number of UTXO from the input
     nUtxo <- if Map.null ops
                 then Gen.discard
@@ -350,10 +353,10 @@ assertValid tx mc = Hedgehog.assert $ isNothing $ validateMockchain mc tx
 
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> Tx -> Maybe Index.ValidationError
-validateMockchain (Mockchain txPool _) tx = result where
+validateMockchain (Mockchain txPool _ slotCfg) tx = result where
     h      = 1
     idx    = Index.initialise [map Valid txPool]
-    result = fmap snd $ fst $ fst $ Index.runValidation (Index.validateTransaction h tx) idx
+    result = fmap snd $ fst $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx slotCfg)
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
      parts equals the original value.
@@ -379,7 +382,8 @@ genTxInfo :: MonadGen m => Mockchain -> m TxInfo
 genTxInfo chain = do
     tx <- genValidTransaction chain
     let idx = UtxoIndex $ mockchainUtxo chain
-    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) idx
+    let slotCfg = mockchainSlotConfig chain
+    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx slotCfg)
     either (const Gen.discard) pure res
 
 genScriptPurposeSpending :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose

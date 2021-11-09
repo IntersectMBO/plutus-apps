@@ -17,8 +17,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.Proxy (Proxy (..))
 import Data.Text qualified as Text
 import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, buildBridge, defaultBridge, equal,
-                                   genericShow, mkSumType, writePSTypesWith, (<|>))
-import Language.PureScript.Bridge.CodeGenSwitches (ForeignOptions (..), genForeign)
+                                   genericShow, mkSumType, order, writePSTypes, (<|>))
 import PSGenerator.Common qualified
 import Plutus.Contracts.Currency (SimpleMPS (..))
 import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (Currency, GameStateMachine))
@@ -52,16 +51,12 @@ instance HasBridge TestBridge where
 
 testTypes :: [SumType 'Haskell]
 testTypes =
-    [ (equal <*> (genericShow <*> mkSumType)) (Proxy @TestContracts) ]
+    [ order . equal . genericShow $ mkSumType @TestContracts ]
 
 main :: IO ()
 main = getArgs >>= \case
     [outputDir] -> do
-        writePSTypesWith
-            (genForeign (ForeignOptions {unwrapSingleConstructors = True}))
-            outputDir
-            (buildBridge testBridge)
-            testTypes
+        writePSTypes outputDir (buildBridge testBridge) testTypes
         writeTestData outputDir
     _ -> putStrLn "Usage: plutus-pab-test-psgenerator FILEPATH"
 

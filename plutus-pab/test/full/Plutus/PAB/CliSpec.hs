@@ -37,7 +37,6 @@ import Data.Default (def)
 import Data.Either (isLeft)
 import Data.List (delete)
 import Data.OpenApi.Schema qualified as OpenApi
-import Data.Proxy (Proxy (Proxy))
 import Data.Text qualified as Text
 import Data.Yaml (decodeFileThrow)
 import GHC.Generics (Generic)
@@ -65,7 +64,6 @@ import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Client (InstanceClient (..), PabClient (..), pabClient)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
 import Prettyprinter
-import Prettyprinter (Pretty)
 import Servant ((:<|>) (..))
 import Servant qualified
 import Servant.Client (BaseUrl (..), ClientEnv, Scheme (Http), client, mkClientEnv, runClientM)
@@ -90,7 +88,7 @@ instance HasDefinitions TestingContracts where
   getContract _  = SomeBuiltin PingPong.simplePingPong
 
 instance HasPSTypes TestingContracts where
-  psTypes _ = undefined
+  psTypes = undefined
 
 instance Pretty TestingContracts where
   pretty = viaShow

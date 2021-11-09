@@ -58,7 +58,7 @@ defaultConfig = ChainIndexConfig
   , cicSecurityParam = 2160
   , cicSlotConfig =
       SlotConfig
-        { scSlotZeroTime = 1591566291000
+        { scSlotZeroTime = 1596059091000
         , scSlotLength   = 1000
         }
   }

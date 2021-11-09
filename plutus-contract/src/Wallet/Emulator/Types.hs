@@ -106,6 +106,6 @@ processEmulated slotCfg feeCfg act =
         & reinterpret2 @ChainEffect @(State ChainState) @(LogMsg ChainEvent) (handleChain slotCfg)
         & interpret (Eff.handleZoomedState chainState)
         & interpret (mapLog (review chainEvent))
-        & reinterpret2 @ChainControlEffect @(State ChainState) @(LogMsg ChainEvent) handleControlChain
+        & reinterpret2 @ChainControlEffect @(State ChainState) @(LogMsg ChainEvent) (handleControlChain slotCfg)
         & interpret (Eff.handleZoomedState chainState)
         & interpret (mapLog (review chainEvent))

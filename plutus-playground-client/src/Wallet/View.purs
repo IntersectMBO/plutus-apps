@@ -6,14 +6,15 @@ module Wallet.View
 import Bootstrap (btn, btnSecondary, btnSmall, card, cardBody_, cardTitle_, floatRight)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
+import Data.BigInt.Argonaut as BigInt
 import Data.Lens (view)
-import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Halogen.HTML (ClassName(ClassName), HTML, br_, button, div, div_, h2_, h3_, h4_, p_, span, text)
 import Halogen.HTML.Elements.Keyed as Keyed
 import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (class_, classes)
 import Icons (Icon(..), icon)
+import Ledger.CardanoWallet (WalletNumber(..))
 import MainFrame.Types (HAction(..), WalletEvent(..))
 import Playground.Lenses (_endpointDescription, _getEndpointDescription)
 import Playground.Types (ContractCall(..), FunctionSchema, SimulatorWallet(..), _FunctionSchema)
@@ -22,7 +23,6 @@ import Prelude (const, show, ($), (<), (<>), (<$>), (<<<))
 import Schema (FormSchema)
 import Schema.Types (ActionEvent(..), SimulationAction(..), Signatures, toArgument)
 import ValueEditor (valueForm)
-import Ledger.CardanoWallet (WalletNumber(..))
 import Wallet.Lenses (_simulatorWalletWallet)
 
 walletsPane :: forall p. Signatures -> Value -> Array SimulatorWallet -> HTML p HAction
@@ -50,7 +50,7 @@ walletPane signatures initialValue walletIndex simulatorWallet@(SimulatorWallet 
         [ cardBody_
             [ button
                 [ classes [ btn, floatRight, ClassName "close-button" ]
-                , onClick $ const $ Just $ ModifyWallets $ RemoveWallet walletIndex
+                , onClick $ const $ ModifyWallets $ RemoveWallet walletIndex
                 ]
                 [ icon Close ]
             , cardTitle_ [ h3_ [ walletIdPane simulatorWalletWallet ] ]
@@ -68,16 +68,16 @@ walletPane signatures initialValue walletIndex simulatorWallet@(SimulatorWallet 
 
 -- this function is exported so that action panes can show their associated wallet
 walletIdPane :: forall p i. WalletNumber -> HTML p i
-walletIdPane wallet@(WalletNumber { getWallet }) =
+walletIdPane (WalletNumber { getWallet }) =
   span [ class_ $ ClassName "wallet-id" ]
-    [ text $ "Wallet " <> show getWallet ]
+    [ text $ "Wallet " <> BigInt.toString getWallet ]
 
 addWalletPane :: forall p. Tuple String (HTML p HAction)
 addWalletPane =
   Tuple "add-wallet"
     $ div
         [ classes [ card, walletClass, ClassName "add-wallet" ]
-        , onClick $ const $ Just $ ModifyWallets AddWallet
+        , onClick $ const $ ModifyWallets AddWallet
         ]
         [ cardBody_
             [ icon Plus
@@ -89,7 +89,7 @@ actionButton :: forall p. Value -> SimulatorWallet -> FunctionSchema FormSchema 
 actionButton initialValue simulatorWallet functionSchema =
   button
     [ classes [ btn, btnSecondary, btnSmall, actionButtonClass ]
-    , onClick $ const $ Just $ ModifyActions $ AddAction
+    , onClick $ const $ ModifyActions $ AddAction
         $ CallEndpoint
             { argumentValues: toArgument initialValue <$> functionSchema
             , caller: view _simulatorWalletWallet simulatorWallet
@@ -107,7 +107,7 @@ addPayToWalletButton :: forall p. Value -> SimulatorWallet -> HTML p SimulationA
 addPayToWalletButton initialValue simulatorWallet =
   button
     [ classes [ btn, btnSecondary, btnSmall, actionButtonClass ]
-    , onClick $ const $ Just $ ModifyActions $ AddAction
+    , onClick $ const $ ModifyActions $ AddAction
         $ PayToWallet
             { sender: view _simulatorWalletWallet simulatorWallet
             , recipient: view _simulatorWalletWallet simulatorWallet

@@ -51,7 +51,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx (..))
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (..))
 import Ledger.Fee (FeeConfig (..), calcFees)
-import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
+import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
@@ -210,7 +210,7 @@ handleWallet feeCfg = \case
         slotConfig <- WAPI.getClientSlotConfig
         let validitySlotRange = posixTimeRangeToContainedSlotRange slotConfig (utx' ^. U.validityTimeRange)
         let utx = utx' & U.tx . validRange .~ validitySlotRange
-        utxWithFees <- validateTxAndAddFees feeCfg utxo utx
+        utxWithFees <- validateTxAndAddFees feeCfg slotConfig utxo utx
         -- balance to add fees
         tx' <- handleBalanceTx utxo (utx & U.tx . fee .~ (utxWithFees ^. U.tx . fee))
         tx'' <- handleAddSignature tx'
@@ -260,15 +260,16 @@ validateTxAndAddFees ::
     , Member (State WalletState) effs
     )
     => FeeConfig
+    -> SlotConfig
     -> Map.Map TxOutRef ChainIndexTxOut
     -> UnbalancedTx
     -> Eff effs UnbalancedTx
-validateTxAndAddFees feeCfg ownTxOuts utx = do
+validateTxAndAddFees feeCfg slotCfg ownTxOuts utx = do
     -- Balance and sign just for validation
     tx <- handleBalanceTx ownTxOuts utx
     signedTx <- handleAddSignature tx
     let utxoIndex        = Ledger.UtxoIndex $ fmap toTxOut $ (U.fromScriptOutput <$> unBalancedTxUtxoIndex utx) <> ownTxOuts
-        ((e, _), events) = Ledger.runValidation (Ledger.validateTransactionOffChain signedTx) utxoIndex
+        ((e, _), events) = Ledger.runValidation (Ledger.validateTransactionOffChain signedTx) (Ledger.ValidationCtx utxoIndex slotCfg)
     for_ e $ \(phase, ve) -> do
         logWarn $ ValidationFailed phase (txId tx) tx ve events
         throwError $ WAPI.ValidationError ve
