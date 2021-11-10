@@ -18,6 +18,7 @@ module Ledger.Constraints(
     , mustIncludeDatum
     , mustPayToOtherScript
     , mustHashDatum
+    , mustSatisfyAnyOf
     -- * Queries
     , modifiesUtxoSet
     , isSatisfiable
