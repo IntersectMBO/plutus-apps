@@ -81,6 +81,12 @@ let
         tests: False
       package network
         tests: False
+      package double-conversion
+        tests: False
+      package freer-extras
+        tests: False
+      package beam-sqlite
+        tests: False
 
       allow-newer:
              stm:base
@@ -144,15 +150,6 @@ let
         tests: False
 
       package byron-spec-chain
-        tests: False
-
-      package double-conversion
-        tests: False
-
-      package freer-extras
-        tests: False
-
-      package beam-sqlite
         tests: False
     '';
     modules = [
