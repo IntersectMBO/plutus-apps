@@ -30,7 +30,7 @@ oneAtATimePolicy _ ctx =
         minted = txInfoMint txinfo
     -- Here we're looking at some specific token name, which we
     -- will assume we've got from elsewhere for now.
-    in valueOf minted ownSymbol tname == 1
+    in currencyValueOf minted ownSymbol == singleton ownSymbol tname 1
 
 -- We can use 'compile' to turn a minting policy into a compiled Plutus Core program,
 -- just as for validator scripts. We also provide a 'wrapMintingPolicy' function
