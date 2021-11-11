@@ -81,6 +81,31 @@ checkThreadTokenInner :: CurrencySymbol -> ValidatorHash -> Value -> Integer -> 
 checkThreadTokenInner currency (ValidatorHash vHash) vl i =
     Value.valueOf vl currency (TokenName vHash) == i
 
+-- | Check exactly `n` thread tokens and no other tokens with the given
+-- @CurrencySymbol@ are in the given @Value@.
+{-# INLINABLE checkThreadTokenInner #-}
+checkThreadTokenInner ::
+    -- | The currency symbol of the thread token.
+    CurrencySymbol ->
+    -- | The hash of the (state machine) validator script using this thread
+    -- token. This is used as the @TokenName@ of the thread token.
+    ValidatorHash ->
+    -- | The value to check.
+    Value ->
+    -- | The expected number of thread tokens in the given value, `n`.
+    Integer ->
+    -- | True if and only if exactly `n` thread tokens (and no other tokens)
+    -- with the given @CurrencySymbol@ are in the given @Value@.
+    Bool
+checkThreadTokenInner currency (ValidatorHash vHash) value n = case Map.lookup ownSymbol (getValue vl) of
+    Nothing -> n == 0
+    Just tokens -> all
+        (\(tokenName, n') -> if tokenName == vHash
+            then n' == n
+            else n' == 0
+        )
+        (Map.toList tokens)
+
 {-# INLINABLE checkThreadToken #-}
 checkThreadToken :: Maybe ThreadToken -> ValidatorHash -> Value -> Integer -> Bool
 checkThreadToken Nothing _ _ _ = True

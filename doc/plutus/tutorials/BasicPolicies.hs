@@ -30,7 +30,14 @@ oneAtATimePolicy _ ctx =
         minted = txInfoMint txinfo
     -- Here we're looking at some specific token name, which we
     -- will assume we've got from elsewhere for now.
-    in valueOf minted ownSymbol tname == 1
+    in case Map.lookup ownSymbol (getValue minted) of
+        Nothing -> n == 0
+        Just tokens -> all
+            (\(tname', n') -> if tname' == tname
+                then n' == 1
+                else n' == 0
+            )
+            (Map.toList tokens)
 
 -- We can use 'compile' to turn a minting policy into a compiled Plutus Core program,
 -- just as for validator scripts. We also provide a 'wrapMintingPolicy' function
