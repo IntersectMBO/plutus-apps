@@ -354,14 +354,23 @@ let
           ieee.components.library.libs = lib.mkForce [ ];
         };
       })
-      ({ pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isGhcjs) {
-        packages = {
-          # See https://github.com/input-output-hk/iohk-nix/pull/488
-          # TODO figure out why this needs to be `buildPackages` here for ghcjs to work.
-          cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
-          cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
-        };
-      })
+      ({ pkgs, ... }:
+        if (topLevelPkgs.stdenv.hostPlatform.isGhcjs) then {
+          packages = {
+            # See https://github.com/input-output-hk/iohk-nix/pull/488
+            # TODO figure out why this needs to be `buildPackages` here for ghcjs to work.
+            cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
+            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
+          };
+        }
+        else {
+          packages = {
+            # See https://github.com/input-output-hk/iohk-nix/pull/488
+            # TODO figure out why this needs to be `buildPackages` here for ghcjs to work.
+            cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf ] ];
+            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf ] ];
+          };
+        })
       # For GHCJS
       ({ packages.ghcjs.src = topLevelPkgs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.project.configured-src; })
       (lib.mkIf (topLevelPkgs.stdenv.hostPlatform.isGhcjs) {
