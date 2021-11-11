@@ -112,6 +112,7 @@ let
       packages:
         ${topLevelPkgs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.project.configured-src}
         contrib/double-conversion-2.0.2.0
+        contrib/lzma-0.0.0.3
 
       allow-newer: ghcjs:base16-bytestring
                  , ghcjs:aeson

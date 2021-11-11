@@ -274,7 +274,7 @@
         "text".revision = (((hackage."text")."1.2.4.1").revisions).default;
         "aeson-pretty".revision = (((hackage."aeson-pretty")."0.8.8").revisions).default;
         "aeson-pretty".flags.lib-only = false;
-        "tasty-golden".revision = (((hackage."tasty-golden")."2.3.4").revisions).default;
+        "tasty-golden".revision = (((hackage."tasty-golden")."2.3.3.2").revisions).default;
         "tasty-golden".flags.build-example = false;
         "persistent".revision = (((hackage."persistent")."2.13.1.1").revisions).default;
         "mtl".revision = (((hackage."mtl")."2.2.2").revisions).default;
@@ -542,8 +542,7 @@
         "temporary".revision = (((hackage."temporary")."1.3").revisions).default;
         "optics-th".revision = (((hackage."optics-th")."0.3.0.2").revisions).default;
         "unbounded-delays".revision = (((hackage."unbounded-delays")."0.1.1.1").revisions).default;
-        "tasty".revision = (((hackage."tasty")."1.4.1").revisions).default;
-        "tasty".flags.unix = true;
+        "tasty".revision = (((hackage."tasty")."1.2.3").revisions).default;
         "tasty".flags.clock = true;
         "statistics-linreg".revision = (((hackage."statistics-linreg")."0.3").revisions).default;
         "deepseq".revision = (((hackage."deepseq")."1.4.4.0").revisions).default;
@@ -647,7 +646,6 @@
         "warp-tls".revision = (((hackage."warp-tls")."3.3.1").revisions).default;
         "microstache".revision = (((hackage."microstache")."1.0.1.2").revisions).default;
         "unix-time".revision = (((hackage."unix-time")."0.4.7").revisions).default;
-        "lzma".revision = (((hackage."lzma")."0.0.0.3").revisions).default;
         "base-compat-batteries".revision = (((hackage."base-compat-batteries")."0.11.2").revisions).default;
         "extra".revision = (((hackage."extra")."1.7.9").revisions).default;
         "old-locale".revision = (((hackage."old-locale")."1.0.0.7").revisions).default;
@@ -791,6 +789,7 @@
         cardano-ledger-core = ./.plan.nix/cardano-ledger-core.nix;
         cardano-ledger-shelley-ma = ./.plan.nix/cardano-ledger-shelley-ma.nix;
         goblins = ./.plan.nix/goblins.nix;
+        lzma = ./.plan.nix/lzma.nix;
         lobemo-backend-trace-forwarder = ./.plan.nix/lobemo-backend-trace-forwarder.nix;
         prettyprinter-configurable = ./.plan.nix/prettyprinter-configurable.nix;
         cardano-numeric = ./.plan.nix/cardano-numeric.nix;
@@ -1005,6 +1004,7 @@
           "goblins" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
+          "lzma" = { flags = {}; };
           "lobemo-backend-trace-forwarder" = { flags = {}; };
           "prettyprinter-configurable" = { flags = {}; };
           "cardano-numeric" = {
@@ -1344,6 +1344,7 @@
           "plutus-pab".components.exes."plutus-pab-examples".planned = lib.mkOverride 900 true;
           "servant-blaze".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-network-testing".components.library.planned = lib.mkOverride 900 true;
+          "lzma".components.tests."lzma-tests".planned = lib.mkOverride 900 true;
           "free".components.library.planned = lib.mkOverride 900 true;
           "unliftio-core".components.library.planned = lib.mkOverride 900 true;
           "servant-websockets".components.exes."websocket-stream".planned = lib.mkOverride 900 true;
