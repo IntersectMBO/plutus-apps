@@ -384,6 +384,7 @@ let
       })
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform.isGhcjs) {
         packages = {
+          cardano-wallet-core.components.library.build-tools = [ pkgs.buildPackages.buildPackages.gitReallyMinimal ];
           lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
           cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
           cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
