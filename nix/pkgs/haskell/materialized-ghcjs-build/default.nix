@@ -580,7 +580,6 @@
         "foundation".flags.linktest = false;
         "foundation".flags.bench-all = false;
         "foundation".flags.bounds-check = false;
-        "test-framework-quickcheck2".revision = (((hackage."test-framework-quickcheck2")."0.3.0.5").revisions).default;
         "temporary".revision = (((hackage."temporary")."1.3").revisions).default;
         "optics-th".revision = (((hackage."optics-th")."0.3.0.2").revisions).default;
         "unbounded-delays".revision = (((hackage."unbounded-delays")."0.1.1.1").revisions).default;
@@ -1155,7 +1154,6 @@
           "cryptohash-sha1".components.library.planned = lib.mkOverride 900 true;
           "plutus-ledger".components.tests."plutus-ledger-test".planned = lib.mkOverride 900 true;
           "formatting".components.library.planned = lib.mkOverride 900 true;
-          "freer-extras".components.tests."freer-extras-test".planned = lib.mkOverride 900 true;
           "network-mux".components.exes."mux-demo".planned = lib.mkOverride 900 true;
           "monad-par".components.library.planned = lib.mkOverride 900 true;
           "attoparsec-iso8601".components.library.planned = lib.mkOverride 900 true;
@@ -1365,7 +1363,6 @@
           "concurrent-output".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-network-framework".components.exes."demo-ping-pong".planned = lib.mkOverride 900 true;
           "plutus-pab".components.tests."plutus-pab-test-full".planned = lib.mkOverride 900 true;
-          "double-conversion".components.tests."tests".planned = lib.mkOverride 900 true;
           "ghcjs".components.exes."ghcjs-boot".planned = lib.mkOverride 900 true;
           "path-pieces".components.library.planned = lib.mkOverride 900 true;
           "mono-traversable".components.library.planned = lib.mkOverride 900 true;
@@ -1617,7 +1614,6 @@
           "hedgehog".components.library.planned = lib.mkOverride 900 true;
           "stringsearch".components.library.planned = lib.mkOverride 900 true;
           "system-filepath".components.setup.planned = lib.mkOverride 900 true;
-          "test-framework-quickcheck2".components.library.planned = lib.mkOverride 900 true;
           "measures".components.library.planned = lib.mkOverride 900 true;
           "foundation".components.library.planned = lib.mkOverride 900 true;
           "ghcjs".components.exes."ghcjs-pkg".planned = lib.mkOverride 900 true;
