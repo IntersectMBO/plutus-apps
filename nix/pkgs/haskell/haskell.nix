@@ -146,6 +146,15 @@ let
 
       package byron-spec-chain
         tests: False
+
+      package double-conversion
+        tests: False
+
+      package freer-extras
+        tests: False
+
+      package beam-sqlite
+        tests: False
     '';
     modules = [
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
@@ -383,6 +392,7 @@ let
           cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
           plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
           iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
+          plutus-pab.components.tests.psgenerator.buildable = false;
         };
       })
       ({ pkgs, config, ... }@args: {
