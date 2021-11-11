@@ -71,6 +71,18 @@ library
     double-conversion/src/fixed-dtoa.cc
     double-conversion/src/strtod.cc
 
+  if !impl(ghcjs)
+    if os(windows)
+      if arch(x86_64)
+        extra-libraries: stdc++-6 gcc_s_seh-1
+      else
+        extra-libraries: stdc++-6 gcc_s_dw2-1
+    else
+      if os(darwin)
+        extra-libraries: c++
+      else
+        extra-libraries: stdc++
+
   include-dirs:
     double-conversion/src
     include

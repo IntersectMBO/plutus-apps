@@ -62,6 +62,19 @@
           (hsPkgs."ghc-prim" or (errorHandler.buildDepError "ghc-prim"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           ];
+        libs = (pkgs.lib).optionals (!(compiler.isGhcjs && true)) (if system.isWindows
+          then if system.isX86_64
+            then [
+              (pkgs."stdc++-6" or (errorHandler.sysDepError "stdc++-6"))
+              (pkgs."gcc_s_seh-1" or (errorHandler.sysDepError "gcc_s_seh-1"))
+              ]
+            else [
+              (pkgs."stdc++-6" or (errorHandler.sysDepError "stdc++-6"))
+              (pkgs."gcc_s_dw2-1" or (errorHandler.sysDepError "gcc_s_dw2-1"))
+              ]
+          else if system.isOsx
+            then [ (pkgs."c++" or (errorHandler.sysDepError "c++")) ]
+            else [ (pkgs."stdc++" or (errorHandler.sysDepError "stdc++")) ]);
         buildable = true;
         modules = [
           "Data/Double/Conversion/FFI"
