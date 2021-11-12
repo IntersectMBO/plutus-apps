@@ -62,35 +62,10 @@
           (hsPkgs."ghc-prim" or (errorHandler.buildDepError "ghc-prim"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           ];
-        libs = (pkgs.lib).optionals (!(compiler.isGhcjs && true)) (if system.isWindows
-          then if system.isX86_64
-            then [
-              (pkgs."stdc++-6" or (errorHandler.sysDepError "stdc++-6"))
-              (pkgs."gcc_s_seh-1" or (errorHandler.sysDepError "gcc_s_seh-1"))
-              ]
-            else [
-              (pkgs."stdc++-6" or (errorHandler.sysDepError "stdc++-6"))
-              (pkgs."gcc_s_dw2-1" or (errorHandler.sysDepError "gcc_s_dw2-1"))
-              ]
-          else if system.isOsx
-            then [ (pkgs."c++" or (errorHandler.sysDepError "c++")) ]
-            else [ (pkgs."stdc++" or (errorHandler.sysDepError "stdc++")) ]);
         buildable = true;
         modules = [
-          "Data/Double/Conversion/FFI"
           "Data/Double/Conversion/ByteString"
           "Data/Double/Conversion/Text"
-          ];
-        cSources = [
-          "cbits/hs-double-conversion.cc"
-          "double-conversion/src/bignum.cc"
-          "double-conversion/src/bignum-dtoa.cc"
-          "double-conversion/src/cached-powers.cc"
-          "double-conversion/src/diy-fp.cc"
-          "double-conversion/src/double-conversion.cc"
-          "double-conversion/src/fast-dtoa.cc"
-          "double-conversion/src/fixed-dtoa.cc"
-          "double-conversion/src/strtod.cc"
           ];
         includeDirs = [ "double-conversion/src" "include" ];
         };
