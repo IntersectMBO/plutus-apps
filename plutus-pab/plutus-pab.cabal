@@ -153,6 +153,7 @@ library
         generic-arbitrary -any,
         http-client -any,
         http-client-tls -any,
+        iohk-monitoring -any,
         lens -any,
         lobemo-backend-ekg -any,
         memory -any,
@@ -194,11 +195,8 @@ library
         Win32-network -any,
         yaml -any,
     if !os(ghcjs)
-        build-depends: iohk-monitoring -any,
+        build-depends:
                        lobemo-backend-ekg -any
-
-    else
-        build-depends: iohk-monitoring-stub
 
 executable plutus-pab-setup
     main-is:          Main.hs

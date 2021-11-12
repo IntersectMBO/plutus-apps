@@ -61,6 +61,7 @@
           (hsPkgs."generic-arbitrary" or (errorHandler.buildDepError "generic-arbitrary"))
           (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
           (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
+          (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
           (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
           (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
@@ -100,14 +101,7 @@
           (hsPkgs."websockets" or (errorHandler.buildDepError "websockets"))
           (hsPkgs."Win32-network" or (errorHandler.buildDepError "Win32-network"))
           (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
-          ] ++ (if !system.isGhcjs
-          then [
-            (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
-            (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
-            ]
-          else [
-            (hsPkgs."iohk-monitoring-stub" or (errorHandler.buildDepError "iohk-monitoring-stub"))
-            ]);
+          ] ++ (pkgs.lib).optional (!system.isGhcjs) (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"));
         build-tools = [
           (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
           (hsPkgs.buildPackages.cardano-cli.components.exes.cardano-cli or (pkgs.buildPackages.cardano-cli or (errorHandler.buildToolDepError "cardano-cli:cardano-cli")))
