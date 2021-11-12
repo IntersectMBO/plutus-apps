@@ -71,7 +71,7 @@ import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
-import Prelude (Semigroup (..), (<$>))
+import Prelude (Semigroup (..), (<$>), (>>=))
 import Prelude qualified as Haskell
 import Schema (ToArgument, ToSchema)
 import Wallet.Emulator (Wallet (..), knownWallet)
@@ -207,7 +207,8 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId (submitTxConstraints inst tx)
+    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) $ campaignCollectionDeadline cmp
 
@@ -222,7 +223,9 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     if Constraints.modifiesUtxoSet tx'
     then do
         logInfo @Text "Claiming refund"
-        void (submitTxConstraintsSpending inst utxo tx')
+        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+                             <> Constraints.unspentOutputs utxo) tx'
+            >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
     else pure ()
 
 -- | The campaign owner's branch of the contract for a given 'Campaign'. It
@@ -244,7 +247,9 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
             <> Constraints.mustValidateIn (collectionRange cmp)
 
     logInfo @Text "Collecting funds"
-    void $ submitTxConstraintsSpending inst unspentOutputs tx
+    void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+                         <> Constraints.unspentOutputs unspentOutputs) tx
+        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 -- | Call the "schedule collection" endpoint and instruct the campaign owner's
 --   wallet (wallet 1) to start watching the campaign address.
@@ -266,7 +271,7 @@ makeContribution w v = do
 successfulCampaign :: EmulatorTrace ()
 successfulCampaign = do
     _ <- startCampaign
-    makeContribution (knownWallet 2) (Ada.lovelaceValueOf 100)
-    makeContribution (knownWallet 3) (Ada.lovelaceValueOf 100)
-    makeContribution (knownWallet 4) (Ada.lovelaceValueOf 25)
+    makeContribution (knownWallet 2) (Ada.adaValueOf 10)
+    makeContribution (knownWallet 3) (Ada.adaValueOf 10)
+    makeContribution (knownWallet 4) (Ada.adaValueOf 2.5)
     void $ Trace.waitUntilSlot 21

@@ -251,8 +251,9 @@ pay ::
 pay inst escrow vl = do
     pk <- ownPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
-                <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
-    getCardanoTxId <$> submitTxConstraints inst tx
+          <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
+    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+    getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
 
 newtype RedeemSuccess = RedeemSuccess TxId
     deriving (Haskell.Eq, Haskell.Show)
@@ -291,7 +292,11 @@ redeem inst escrow = mapError (review _EscrowError) $ do
     then throwing _RedeemFailed DeadlinePassed
     else if foldMap (view Tx.ciTxOutValue) unspentOutputs `lt` targetTotal escrow
          then throwing _RedeemFailed NotEnoughFundsAtAddress
-         else RedeemSuccess . getCardanoTxId <$> submitTxConstraintsSpending inst unspentOutputs tx
+         else do
+           utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
+                                 <> Constraints.unspentOutputs unspentOutputs
+                                  ) tx
+           RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
 
 newtype RefundSuccess = RefundSuccess TxId
     deriving newtype (Haskell.Eq, Haskell.Show, Generic)
@@ -319,7 +324,11 @@ refund inst escrow = do
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
-    then RefundSuccess . getCardanoTxId <$> submitTxConstraintsSpending inst unspentOutputs tx'
+    then do
+        utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
+                              <> Constraints.unspentOutputs unspentOutputs
+                               ) tx'
+        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
     else throwing _RefundFailed ()
 
 -- | Pay some money into the escrow contract. Then release all funds to their

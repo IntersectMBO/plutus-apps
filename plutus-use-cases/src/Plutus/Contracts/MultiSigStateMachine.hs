@@ -34,6 +34,7 @@ import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, PubKeyHash)
+import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
@@ -97,6 +98,8 @@ data MSState =
 
     | CollectingSignatures Payment [PubKeyHash]
     -- ^ A payment has been proposed and is awaiting signatures.
+    | Finished
+    -- ^ The payment was made
     deriving stock (Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -221,10 +224,13 @@ transition params State{ stateData =s, stateValue=currentValue} i = case (s, i) 
                 constraints =
                     Constraints.mustValidateIn (Interval.to $ paymentDeadline - 1)
                     <> Constraints.mustPayToPubKey paymentRecipient paymentAmount
+                newValue = currentValue - paymentAmount
             in Just ( constraints
                     , State
-                        { stateData = Holding
-                        , stateValue = currentValue - paymentAmount
+                        { stateData = if Value.isZero (Ada.toValue $ Ada.fromValue newValue)
+                                         then Finished
+                                         else Holding
+                        , stateValue = newValue
                         }
                     )
     _ -> Nothing
@@ -234,7 +240,8 @@ type MultiSigSym = StateMachine MSState Input
 {-# INLINABLE machine #-}
 machine :: Params -> MultiSigSym
 machine params = SM.mkStateMachine Nothing (transition params) isFinal where
-    isFinal _ = False
+    isFinal Finished = True
+    isFinal _        = False
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Params -> Scripts.ValidatorType MultiSigSym

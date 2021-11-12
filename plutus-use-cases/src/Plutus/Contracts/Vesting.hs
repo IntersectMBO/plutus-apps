@@ -35,6 +35,7 @@ import Prelude (Semigroup (..))
 import GHC.Generics (Generic)
 import Ledger (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), Validator)
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
+import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
 import Ledger.Contexts qualified as Validation
 import Ledger.Interval qualified as Interval
@@ -187,7 +188,8 @@ vestFundsC
     -> Contract w s e ()
 vestFundsC vesting = mapError (review _VestingError) $ do
     let tx = payIntoContract (totalAmount vesting)
-    void $ submitTxConstraints (typedValidator vesting) tx
+    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) tx
+      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 data Liveness = Alive | Dead
 
@@ -223,5 +225,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    void $ submitTxConstraintsSpending inst unspentOutputs tx
+    mkTxConstraints (Constraints.typedValidatorLookups inst
+                  <> Constraints.unspentOutputs unspentOutputs) tx
+      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
     return liveness

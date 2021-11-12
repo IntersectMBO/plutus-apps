@@ -32,6 +32,7 @@ module Ledger.Constraints.OffChain(
     , utxoIndex
     , validityTimeRange
     , emptyUnbalancedTx
+    , adjustUnbalancedTx
     , MkTxError(..)
     , mkTx
     , mkSomeTx
@@ -62,6 +63,7 @@ import PlutusTx (FromData (..), ToData (..))
 import PlutusTx.Lattice
 import PlutusTx.Numeric qualified as N
 
+import Ledger qualified
 import Ledger.Address (pubKeyHashAddress)
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints hiding (requiredSignatories)
@@ -75,6 +77,7 @@ import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError)
 import Ledger.Typed.Tx qualified as Typed
+import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Crypto (PubKey, PubKeyHash)
 import Plutus.V1.Ledger.Time (POSIXTimeRange)
 import Plutus.V1.Ledger.Value (Value)
@@ -325,6 +328,21 @@ mkTx
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> Either MkTxError UnbalancedTx
 mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
+
+-- | Each transaction output should contain a minimum amount of Ada (this is a
+-- restriction on the real Cardano network).
+--
+-- TODO: In the future, the minimum Ada value should be configurable.
+adjustUnbalancedTx :: UnbalancedTx -> UnbalancedTx
+adjustUnbalancedTx = over (tx . Tx.outputs) adjustTxOuts
+  where
+    adjustTxOuts :: [TxOut] -> [TxOut]
+    adjustTxOuts = fmap adjustTxOut . filter (not . Value.isZero . txOutValue)
+
+    adjustTxOut :: TxOut -> TxOut
+    adjustTxOut txOut =
+      let missingLovelace = max 0 (Ledger.minAdaTxOut - Ada.fromValue (txOutValue txOut))
+       in txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace }
 
 -- | Add the remaining balance of the total value that the tx must spend.
 --   See note [Balance of value spent]

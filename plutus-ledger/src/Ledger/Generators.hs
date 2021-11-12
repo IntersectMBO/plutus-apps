@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -56,6 +57,7 @@ import Data.Default (Default (def))
 import Data.Foldable (fold, foldl')
 import Data.Functor.Identity (Identity)
 import Data.List (sort)
+import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (isNothing)
@@ -72,11 +74,11 @@ import Ledger.Fee (FeeConfig (fcScriptsFeeFactor), calcFees)
 import Ledger.Index qualified as Index
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
-import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 
 -- | Attach signatures of all known private keys to a transaction.
@@ -94,7 +96,7 @@ data GeneratorModel = GeneratorModel {
 -- | A generator model with some sensible defaults.
 generatorModel :: GeneratorModel
 generatorModel =
-    let vl = Ada.lovelaceValueOf 100000
+    let vl = Ada.lovelaceValueOf 100_000_000
         pubKeys = toPublicKey <$> knownPrivateKeys
 
     in
@@ -181,12 +183,12 @@ genValidTransaction' g feeCfg (Mockchain _ ops _) = do
                 else Gen.int (Range.linear 1 (Map.size ops))
     let ins = Set.fromList $ pubKeyTxIn . fst <$> inUTXO
         inUTXO = take nUtxo $ Map.toList ops
-        totalVal = foldl' (+) 0 $ map (Ada.fromValue . txOutValue . snd) inUTXO
+        totalVal = foldl' (<>) mempty $ map (txOutValue . snd) inUTXO
     genValidTransactionSpending' g feeCfg ins totalVal
 
 genValidTransactionSpending :: MonadGen m
     => Set.Set TxIn
-    -> Ada
+    -> Value
     -> m Tx
 genValidTransactionSpending = genValidTransactionSpending' generatorModel constantFee
 
@@ -194,21 +196,36 @@ genValidTransactionSpending' :: MonadGen m
     => GeneratorModel
     -> FeeConfig
     -> Set.Set TxIn
-    -> Ada
+    -> Value
     -> m Tx
 genValidTransactionSpending' g feeCfg ins totalVal = do
     mintAmount <- toInteger <$> Gen.int (Range.linear 0 maxBound)
     mintTokenName <- genTokenName
-    let mintValue = Value.singleton (scriptCurrencySymbol alwaysSucceedPolicy) mintTokenName mintAmount
+    let mintValue = if mintAmount == 0
+                       then Nothing
+                       else Just $ Value.singleton (scriptCurrencySymbol alwaysSucceedPolicy) mintTokenName mintAmount
         fee' = calcFees feeCfg 0
         numOut = Set.size (gmPubKeys g) - 1
-    if fee' < totalVal
+        totalValAda = Ada.fromValue totalVal
+        totalValTokens = if Value.isZero (Value.noAdaValue totalVal) then Nothing else Just (Value.noAdaValue totalVal)
+    if fee' < totalValAda
         then do
-            outVals <- fmap Ada.toValue <$> splitVal numOut (totalVal - fee')
+            -- We only split the Ada part of the input value
+            splitOutVals <- splitVal numOut (totalValAda - fee')
+            let outVals = case totalValTokens <> mintValue of
+                  Nothing -> do
+                    fmap Ada.toValue splitOutVals
+                  Just mv -> do
+                    -- If there is a minted value, we look for a value in the
+                    -- splitted values which can be associated with it.
+                    let outValForMint =
+                          maybe mempty id $ List.find (\v -> v >= Ledger.minAdaTxOut)
+                                          $ List.sort splitOutVals
+                    Ada.toValue outValForMint <> mv : fmap Ada.toValue (List.delete outValForMint splitOutVals)
             let tx = mempty
                         { txInputs = ins
-                        , txOutputs = uncurry pubKeyTxOut <$> zip (mintValue:outVals) (Set.toList $ gmPubKeys g)
-                        , txMint = mintValue
+                        , txOutputs = uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
+                        , txMint = maybe mempty id mintValue
                         , txMintScripts = Set.singleton alwaysSucceedPolicy
                         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
                         , txFee = Ada.toValue fee'
@@ -359,7 +376,8 @@ validateMockchain (Mockchain txPool _ slotCfg) tx = result where
     result = fmap snd $ fst $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx slotCfg)
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
-     parts equals the original value.
+     parts equals the original value. Each part should contain the required
+     minimum amount of Ada.
 
      I noticed how for values of `mx` > 1000 the resulting lists are much smaller than
      one would expect. I think this may be caused by the way we select the next value
@@ -370,13 +388,14 @@ splitVal :: (MonadGen m, Integral n) => Int -> n -> m [n]
 splitVal _  0     = pure []
 splitVal mx init' = go 0 0 [] where
     go i c l =
-        if i >= pred mx
+        if i >= pred mx || init' - c < 2 * minAda
         then pure $ (init' - c) : l
         else do
-            v <- Gen.integral (Range.linear 1 $ init' - c)
+            v <- Gen.integral (Range.linear minAda $ init' - c - minAda)
             if v + c == init'
             then pure $ v : l
             else go (succ i) (v + c) (v : l)
+    minAda = fromIntegral $ Ada.getLovelace $ Ledger.minAdaTxOut + Ledger.maxFee
 
 genTxInfo :: MonadGen m => Mockchain -> m TxInfo
 genTxInfo chain = do

@@ -189,3 +189,4 @@ runMain trace config = do
 
     putStrLn $ "Starting webserver on port " <> show (Config.cicPort config)
     Server.serveChainIndexQueryServer (Config.cicPort config) runReq
+

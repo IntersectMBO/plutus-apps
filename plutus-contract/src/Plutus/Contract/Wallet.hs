@@ -40,7 +40,7 @@ import GHC.Generics (Generic)
 import Ledger qualified as Plutus
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
-import Ledger.Constraints.OffChain (UnbalancedTx (..), mkTx)
+import Ledger.Constraints.OffChain (UnbalancedTx (..), adjustUnbalancedTx, mkTx)
 import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Request qualified as Contract
@@ -102,7 +102,7 @@ getUnspentOutput = do
     ownPK <- Contract.ownPubKeyHash
     let constraints = mustPayToPubKey ownPK (Ada.lovelaceValueOf 1)
     utx <- either (throwing _ConstraintResolutionError) pure (mkTx @Void mempty constraints)
-    tx <- Contract.balanceTx utx
+    tx <- Contract.balanceTx (adjustUnbalancedTx utx)
     case Set.lookupMin (getCardanoTxInputs tx) of
         Just inp -> pure $ txInRef inp
         Nothing  -> throwing _OtherError "Balanced transaction has no inputs"

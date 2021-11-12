@@ -16,7 +16,9 @@ module Plutus.Trace.Effects.EmulatedWalletAPI(
 import Control.Monad.Freer (Eff, Member, subsume, type (~>))
 import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Extras (raiseEnd)
+import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.TH (makeEffect)
+import Data.Text (Text)
 import Ledger.Tx (txId)
 import Ledger.TxId (TxId)
 import Ledger.Value (Value)
@@ -27,14 +29,15 @@ import Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
 import Wallet.Emulator.Wallet (Wallet)
 
 data EmulatedWalletAPI r where
-    LiftWallet :: Wallet -> Eff '[WalletEffect, Error WalletAPIError] a -> EmulatedWalletAPI a
+    LiftWallet :: Wallet -> Eff '[WalletEffect, Error WalletAPIError, LogMsg Text] a -> EmulatedWalletAPI a
 
 makeEffect ''EmulatedWalletAPI
 
 -- | Make a payment from one wallet to another
 payToWallet ::
     forall effs.
-    Member EmulatedWalletAPI effs
+    ( Member EmulatedWalletAPI effs
+    )
     => Wallet
     -> Wallet
     -> Value
@@ -56,6 +59,7 @@ handleEmulatedWalletAPI ::
 handleEmulatedWalletAPI = \case
     LiftWallet w action ->
         walletAction w
+            $ subsume
             $ subsume
             $ subsume
             $ raiseEnd action

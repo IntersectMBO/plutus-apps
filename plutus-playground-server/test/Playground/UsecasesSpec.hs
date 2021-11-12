@@ -256,10 +256,10 @@ crowdfundingTest =
         , testCase "should run successful campaign" $
           evaluate successfulCampaign >>=
           hasFundsDistribution
-              [ mkSimulatorWallet w1 $ lovelaceValueOf 600000
-              , mkSimulatorWallet w2 $ lovelaceValueOf 190000
-              , mkSimulatorWallet w3 $ lovelaceValueOf 200000
-              , mkSimulatorWallet w4 $ lovelaceValueOf 210000
+              [ mkSimulatorWallet w1 $ lovelaceValueOf 600_000_000
+              , mkSimulatorWallet w2 $ lovelaceValueOf 190_000_000
+              , mkSimulatorWallet w3 $ lovelaceValueOf 200_000_000
+              , mkSimulatorWallet w4 $ lovelaceValueOf 210_000_000
               ]
         ]
   where
@@ -267,17 +267,17 @@ crowdfundingTest =
     successfulCampaign =
         Evaluation
             { wallets =
-                  [ mkSimulatorWallet w1 $ lovelaceValueOf 300000
-                  , mkSimulatorWallet w2 $ lovelaceValueOf 300000
-                  , mkSimulatorWallet w3 $ lovelaceValueOf 300000
-                  , mkSimulatorWallet w4 $ lovelaceValueOf 300000
+                  [ mkSimulatorWallet w1 $ lovelaceValueOf 300_000_000
+                  , mkSimulatorWallet w2 $ lovelaceValueOf 300_000_000
+                  , mkSimulatorWallet w3 $ lovelaceValueOf 300_000_000
+                  , mkSimulatorWallet w4 $ lovelaceValueOf 300_000_000
                   ]
             , program =
                   toJSONString
                       [ scheduleCollection w1
-                      , contribute w2 $ lovelaceValueOf 110000
-                      , contribute w3 $ lovelaceValueOf 100000
-                      , contribute w4 $ lovelaceValueOf 90000
+                      , contribute w2 $ lovelaceValueOf 110_000_000
+                      , contribute w3 $ lovelaceValueOf 100_000_000
+                      , contribute w4 $ lovelaceValueOf 90_000_000
                       , AddBlocks 1
                       , AddBlocksUntil 41
                       , AddBlocks 1

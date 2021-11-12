@@ -4,11 +4,9 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE PatternGuards       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE ViewPatterns        #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
@@ -129,7 +127,7 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                 | otherwise ->
                     let txc =
                             newConstraints
-                                { txOwnOutputs=
+                                { txOwnOutputs =
                                     [ OutputConstraint
                                         { ocDatum = newData
                                           -- Check that the thread token value is still there

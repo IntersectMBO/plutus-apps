@@ -45,6 +45,7 @@ import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
 import Ledger (PubKeyHash, getCardanoTxId, getCardanoTxOutRefs, pubKeyAddress, pubKeyHash, pubKeyHashAddress,
                toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs, txOutputs)
+import Ledger qualified
 import Ledger.Ada (adaSymbol, adaToken, lovelaceValueOf)
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
@@ -78,6 +79,7 @@ import Wallet.API (WalletAPIError, ownPubKeyHash)
 import Wallet.API qualified as WAPI
 import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
+import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Rollup (doAnnotateBlockchain)
 import Wallet.Rollup.Types (DereferencedInput, dereferencedInputs, isFound)
 import Wallet.Types (ContractInstanceId)
@@ -188,7 +190,7 @@ waitForTxStatusChangeTest = runScenario $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  void $ Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 1_000_000)
+  void $ Simulator.payToPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
   Simulator.waitNSlots 1
   txStatus' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 2"
@@ -198,7 +200,7 @@ waitForTxStatusChangeTest = runScenario $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ (n - 1) $ do
-    void $ Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 1_000_000)
+    void $ Simulator.payToPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
     Simulator.waitNSlots 1
 
   txStatus'' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
@@ -233,7 +235,7 @@ waitForTxOutStatusChangeTest = runScenario $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  tx2 <- Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 1_000_000)
+  tx2 <- Simulator.payToPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
   Simulator.waitNSlots 1
   txOutStatus1' <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
@@ -247,7 +249,7 @@ waitForTxOutStatusChangeTest = runScenario $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ n $ do
-    void $ Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 1_000_000)
+    void $ Simulator.payToPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
     Simulator.waitNSlots 1
 
   txOutStatus1'' <- Simulator.waitForTxOutStatusChange txOutRef1
@@ -262,7 +264,7 @@ waitForTxOutStatusChangeTest = runScenario $ do
 valueAtTest :: IO ()
 valueAtTest = runScenario $ do
     let initialBalance = lovelaceValueOf 100_000_000_000
-        payment = lovelaceValueOf 50
+        payment = lovelaceValueOf 50_000_000
         fee     = lovelaceValueOf 10 -- TODO: Calculate the fee from the tx
 
     initialValue <- Core.valueAt defaultWallet
@@ -322,7 +324,7 @@ guessingGameTest =
     testCase "Guessing Game" $
           runScenario $ do
               let openingBalance = 100_000_000_000
-                  lockAmount = 15
+                  lockAmount = 15_000_000
                   pubKeyHashFundsChange msg delta = do
                         address <- pubKeyHashAddress <$> Simulator.handleAgentThread defaultWallet ownPubKeyHash
                         balance <- Simulator.valueAt address

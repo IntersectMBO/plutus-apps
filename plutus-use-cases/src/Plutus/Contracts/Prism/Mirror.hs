@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
@@ -23,7 +24,6 @@ import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKeyHash)
-import Ledger.Tx (getCardanoTxId)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName)
 import Plutus.Contract
@@ -79,8 +79,8 @@ createTokens authority = endpoint @"issue" $ \CredentialOwnerReference{coTokenNa
             <> Constraints.mustBeSignedBy pk
             <> Constraints.mustPayToPubKey pk (Ada.lovelaceValueOf 1)   -- Add self-spend to force an input
     _ <- mapError CreateTokenTxError $ do
-            tx <- submitTxConstraintsWith @Scripts.Any lookups constraints
-            awaitTxConfirmed (getCardanoTxId tx)
+            mkTxConstraints @Scripts.Any lookups constraints
+              >>= submitTxConfirmed . Constraints.adjustUnbalancedTx
     let stateMachine = StateMachine.mkMachineClient authority (walletPubKeyHash coOwner) coTokenName
     void $ mapError StateMachineError $ SM.runInitialise stateMachine Active theToken
 
@@ -97,8 +97,8 @@ revokeToken authority = endpoint @"revoke" $ \CredentialOwnerReference{coTokenNa
     case t of
         Left{} -> return () -- Ignore invalid transitions
         Right StateMachineTransition{smtConstraints=constraints, smtLookups=lookups'} -> do
-            tx <- submitTxConstraintsWith (lookups <> lookups') constraints
-            awaitTxConfirmed (getCardanoTxId tx)
+            mkTxConstraints (lookups <> lookups') constraints
+              >>= submitTxConfirmed . Constraints.adjustUnbalancedTx
 
 ---
 -- Errors and Logging

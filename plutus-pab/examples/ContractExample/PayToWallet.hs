@@ -14,10 +14,11 @@ module ContractExample.PayToWallet(
     ) where
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import Schema (ToSchema)
 
-import Ledger (Value, getCardanoTxId)
+import Ledger (Value)
 import Ledger.Constraints
 import Plutus.Contract
 import Wallet.Emulator.Types (Wallet, walletPubKeyHash)
@@ -35,5 +36,5 @@ type PayToWalletSchema = Endpoint "Pay to wallet" PayToWalletParams
 payToWallet :: Promise () PayToWalletSchema ContractError ()
 payToWallet = endpoint @"Pay to wallet" $ \PayToWalletParams{amount, wallet} -> do
   let pkh = walletPubKeyHash wallet
-  txid <- submitTx (mustPayToPubKey pkh amount)
-  awaitTxConfirmed (getCardanoTxId txid)
+  mkTxConstraints @Void mempty (mustPayToPubKey pkh amount)
+    >>= submitTxConfirmed . adjustUnbalancedTx

@@ -129,7 +129,8 @@ lockEp = endpoint @"lock" $ \params -> do
   let valRange = Interval.to (Haskell.pred $ deadline params)
       tx = Constraints.mustPayToTheScript params (paying params)
             <> Constraints.mustValidateIn valRange
-  void $ submitTxConstraints escrowInstance tx
+  void $ mkTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
+         >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 -- | Attempts to redeem the 'Value' locked into this script by paying in from
 -- the callers address to the payee.
@@ -151,7 +152,12 @@ redeemEp = endpoint @"redeem" redeem
 
       if time >= deadline params
       then throwing _RedeemFailed DeadlinePassed
-      else RedeemSuccess . getCardanoTxId <$> do submitTxConstraintsSpending escrowInstance unspentOutputs tx
+      else do
+        utx <- Constraints.adjustUnbalancedTx
+           <$> mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+                              <> Constraints.unspentOutputs unspentOutputs
+                               ) tx
+        RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
 
 -- | Refunds the locked amount back to the 'payee'.
 refundEp :: Promise () EscrowSchema EscrowError RefundSuccess
@@ -164,7 +170,12 @@ refundEp = endpoint @"refund" refund
                   <> Constraints.mustValidateIn (Interval.from (deadline params))
 
       if Constraints.modifiesUtxoSet tx
-      then RefundSuccess . getCardanoTxId <$> submitTxConstraintsSpending escrowInstance unspentOutputs tx
+      then do
+        utx <- Constraints.adjustUnbalancedTx
+           <$> mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+                              <> Constraints.unspentOutputs unspentOutputs
+                               ) tx
+        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
       else throwing _RefundFailed ()
 
 PlutusTx.unstableMakeIsData ''EscrowParams

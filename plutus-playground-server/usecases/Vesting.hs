@@ -23,6 +23,7 @@ import Data.Text qualified as T
 import Ledger (Address, POSIXTime, POSIXTimeRange, PubKeyHash, Validator)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
+import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
 import Ledger.Contexts qualified as Validation
 import Ledger.Interval qualified as Interval
@@ -163,7 +164,8 @@ vestFundsC
     -> Contract () s T.Text ()
 vestFundsC vesting = do
     let txn = payIntoContract (totalAmount vesting)
-    void $ submitTxConstraints (typedValidator vesting) txn
+    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) txn
+      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 data Liveness = Alive | Dead
 
@@ -205,7 +207,9 @@ retrieveFundsC vesting payment = do
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    void $ submitTxConstraintsSpending inst unspentOutputs txn
+    mkTxConstraints (Constraints.typedValidatorLookups inst
+                  <> Constraints.unspentOutputs unspentOutputs) txn
+      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
     return liveness
 
 endpoints :: Contract () VestingSchema T.Text ()
