@@ -28,6 +28,7 @@ common lang
                  -Wredundant-constraints -Widentities
                  -- See Plutus Tx readme
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+                 -Wno-unused-packages
 
 flag defer-plugin-errors
     description:
