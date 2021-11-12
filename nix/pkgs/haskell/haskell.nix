@@ -319,6 +319,21 @@ let
               )
             else __trace "nativePlutus is null" [ ];
 
+          plutus-contract.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
+
+
           Cabal.patches = [ ../../patches/cabal.patch ];
 
           plutus-contract.doHaddock = deferPluginErrors;
