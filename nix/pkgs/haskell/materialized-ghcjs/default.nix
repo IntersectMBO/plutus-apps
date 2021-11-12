@@ -579,8 +579,6 @@
         "hashable".revision = (((hackage."hashable")."1.3.2.0").revisions).default;
         "hashable".flags.integer-gmp = true;
         "hashable".flags.random-initial-seed = false;
-        "clock".revision = (((hackage."clock")."0.8.2").revisions).default;
-        "clock".flags.llvm = false;
         "retry".revision = (((hackage."retry")."0.9.0.0").revisions).default;
         "retry".flags.lib-werror = false;
         "adjunctions".revision = (((hackage."adjunctions")."4.4").revisions).default;
@@ -784,6 +782,7 @@
         double-conversion = ./.plan.nix/double-conversion.nix;
         strict-non-empty-containers = ./.plan.nix/strict-non-empty-containers.nix;
         plutus-chain-index = ./.plan.nix/plutus-chain-index.nix;
+        clock = ./.plan.nix/clock.nix;
         typed-protocols-cborg = ./.plan.nix/typed-protocols-cborg.nix;
         Win32-network = ./.plan.nix/Win32-network.nix;
         cardano-ledger-core = ./.plan.nix/cardano-ledger-core.nix;
@@ -997,6 +996,7 @@
             flags = { "release" = lib.mkOverride 900 false; };
             };
           "plutus-chain-index" = { flags = {}; };
+          "clock" = { flags = { "llvm" = lib.mkOverride 900 false; }; };
           "typed-protocols-cborg" = { flags = {}; };
           "Win32-network" = { flags = { "demo" = lib.mkOverride 900 false; }; };
           "cardano-ledger-core" = { flags = {}; };

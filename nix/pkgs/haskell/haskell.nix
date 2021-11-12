@@ -87,6 +87,9 @@ let
         tests: False
       package beam-sqlite
         tests: False
+      package clock
+        tests: False
+        benchmarks: False
 
       allow-newer:
              stm:base
