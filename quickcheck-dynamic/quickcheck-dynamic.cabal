@@ -61,3 +61,4 @@ test-suite quickcheck-dynamic-test
         quickcheck-dynamic -any,
         tasty -any,
         tasty-quickcheck -any,
+        time

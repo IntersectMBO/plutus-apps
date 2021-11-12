@@ -60,29 +60,6 @@ flag developer
   manual: True
 
 library
-  c-sources:
-    cbits/hs-double-conversion.cc
-    double-conversion/src/bignum.cc
-    double-conversion/src/bignum-dtoa.cc
-    double-conversion/src/cached-powers.cc
-    double-conversion/src/diy-fp.cc
-    double-conversion/src/double-conversion.cc
-    double-conversion/src/fast-dtoa.cc
-    double-conversion/src/fixed-dtoa.cc
-    double-conversion/src/strtod.cc
-
-  if !impl(ghcjs)
-    if os(windows)
-      if arch(x86_64)
-        extra-libraries: stdc++-6 gcc_s_seh-1
-      else
-        extra-libraries: stdc++-6 gcc_s_dw2-1
-    else
-      if os(darwin)
-        extra-libraries: c++
-      else
-        extra-libraries: stdc++
-
   include-dirs:
     double-conversion/src
     include
@@ -90,9 +67,6 @@ library
   exposed-modules:
     Data.Double.Conversion.ByteString
     Data.Double.Conversion.Text
-
-  other-modules:
-    Data.Double.Conversion.FFI
 
   build-depends:
     base == 4.*,
