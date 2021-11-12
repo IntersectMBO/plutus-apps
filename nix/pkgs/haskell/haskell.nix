@@ -360,7 +360,7 @@ let
 
           # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
           playground-common.ghcOptions = [ "-Werror" ];
-          plutus-contract.ghcOptions = [ "-Werror" ];
+          # plutus-contract.ghcOptions = [ "-Werror" ];
           # plutus-ledger.ghcOptions = [ "-Werror" ];
           plutus-ledger-api.ghcOptions = [ "-Werror" ];
           plutus-playground-server.ghcOptions = [ "-Werror" ];
