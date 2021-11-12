@@ -128,13 +128,17 @@ fromBase16 s = bimap show WalletId (fromText s)
 walletMockWallet :: Wallet -> Maybe MockWallet
 walletMockWallet (Wallet wid) = find ((==) wid . WalletId . CW.mwWalletId) CW.knownWallets
 
--- | The public key hash of a mock wallet.  (Fails if the wallet is not a mock wallet).
-walletPubKeyHash :: Wallet -> PubKeyHash
-walletPubKeyHash w = CW.pubKeyHash
-                 $ fromMaybe (error $ "Wallet.Emulator.Wallet.walletPubKeyHash: Wallet "
+-- | The public key of a mock wallet.  (Fails if the wallet is not a mock wallet).
+walletPubKey :: Wallet -> PubKey
+walletPubKey w = CW.pubKey
+                 $ fromMaybe (error $ "Wallet.Emulator.Wallet.walletPubKey: Wallet "
                                    <> show w
                                    <> " is not a mock wallet")
                  $ walletMockWallet w
+
+-- | The public key hash of a mock wallet.  (Fails if the wallet is not a mock wallet).
+walletPubKeyHash :: Wallet -> PubKeyHash
+walletPubKeyHash = pubKeyHash . walletPubKey
 
 -- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
 walletAddress :: Wallet -> Address
