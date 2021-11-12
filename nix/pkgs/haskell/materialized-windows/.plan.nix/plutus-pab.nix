@@ -49,6 +49,7 @@
           (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
           (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+          (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
           (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."cardano-wallet-core" or (errorHandler.buildDepError "cardano-wallet-core"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
@@ -101,12 +102,10 @@
           (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
           ] ++ (if !system.isGhcjs
           then [
-            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
             (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
             (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
             ]
           else [
-            (hsPkgs."cardano-api-stub" or (errorHandler.buildDepError "cardano-api-stub"))
             (hsPkgs."iohk-monitoring-stub" or (errorHandler.buildDepError "iohk-monitoring-stub"))
             ]);
         build-tools = [
