@@ -55,7 +55,7 @@ library
     build-tool-depends:
         cardano-node:cardano-node -any, cardano-cli:cardano-cli -any
     ghc-options:
-        -Wunused-packages
+        -Wno-unused-packages
 
     exposed-modules:
         Cardano.Api.NetworkId.Extra
