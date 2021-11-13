@@ -33,7 +33,7 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck hiding ((.&&.))
 
-import Ledger (Value)
+import Ledger (Value, leq)
 import Ledger.Ada qualified as Ada
 import Ledger.Slot (Slot (..))
 import Ledger.Time (POSIXTime)
@@ -237,9 +237,10 @@ instance ContractModel CrowdfundingModel where
   -- The 'precondition' says when a particular command is allowed.
   precondition s cmd = case cmd of
     CWaitUntil slot -> slot > s ^. currentSlot
-    CContribute w _ -> w `notElem` Map.keys (s ^. contractState . contributions)
+    CContribute w v -> w `notElem` Map.keys (s ^. contractState . contributions)
                     && w /= (s ^. contractState . ownerWallet)
                     && s ^. currentSlot < s ^. contractState . endSlot
+                    && Ledger.minAdaTxOut `leq` v
     CStart          -> Prelude.not (s ^. contractState . ownerOnline || s ^. contractState . ownerContractDone)
 
   -- To generate a random test case we need to know how to generate a random
