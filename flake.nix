@@ -20,7 +20,7 @@
       flake = false;
     };
     haskell-nix = {
-      url = "github:input-output-hk/haskell.nix/hkm/R_X86_64_TLSGD-Fix";
+      url = "github:input-output-hk/haskell.nix/angerman-patch-2";
       flake = false;
     };
 
