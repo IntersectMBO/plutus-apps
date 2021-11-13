@@ -67,15 +67,15 @@ instance ContractModel EscrowModel where
                              -- set of parameters only. The solution is to use the sealed bid
                              -- auction trick to generate parameters dynamically that we can
                              -- use later on.
-                             , _targets       = Map.fromList [ (w1, Ada.lovelaceValueOf 10)
-                                                             , (w2, Ada.lovelaceValueOf 20)
+                             , _targets       = Map.fromList [ (w1, Ada.adaValueOf 10)
+                                                             , (w2, Ada.adaValueOf 20)
                                                              ]
                              }
 
   nextState a = void $ case a of
     Pay w v -> do
-      withdraw w (Ada.lovelaceValueOf v)
-      contributions $~ Map.insertWith (<>) w (Ada.lovelaceValueOf v)
+      withdraw w (Ada.adaValueOf v)
+      contributions $~ Map.insertWith (<>) w (Ada.adaValueOf v)
       wait 1
     Redeem w -> do
       targets <- viewContractState targets

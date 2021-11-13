@@ -247,7 +247,7 @@ instance ContractModel CrowdfundingModel where
   arbitraryAction s = oneof $
     [ CWaitUntil . step <$> choose (1, 100 :: Integer) ]
     ++
-    [ CContribute <$> QC.elements availableWallets <*> (Ada.lovelaceValueOf . abs <$> arbitrary)
+    [ CContribute <$> QC.elements availableWallets <*> (Ada.adaValueOf . abs <$> choose (2, 100))
     | Prelude.not . null $ availableWallets
     , s ^. currentSlot < s ^. contractState . endSlot ]
     ++
