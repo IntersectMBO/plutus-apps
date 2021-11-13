@@ -33,11 +33,12 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck hiding ((.&&.))
 
-import Ledger (Value, leq)
+import Ledger (Value, minAdaTxOut)
 import Ledger.Ada qualified as Ada
 import Ledger.Slot (Slot (..))
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value (leq)
 import Plutus.Contract hiding (currentSlot, runError)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
@@ -240,7 +241,7 @@ instance ContractModel CrowdfundingModel where
     CContribute w v -> w `notElem` Map.keys (s ^. contractState . contributions)
                     && w /= (s ^. contractState . ownerWallet)
                     && s ^. currentSlot < s ^. contractState . endSlot
-                    && Ledger.minAdaTxOut `leq` v
+                    && Ada.toValue Ledger.minAdaTxOut `leq` v
     CStart          -> Prelude.not (s ^. contractState . ownerOnline || s ^. contractState . ownerContractDone)
 
   -- To generate a random test case we need to know how to generate a random
@@ -248,7 +249,7 @@ instance ContractModel CrowdfundingModel where
   arbitraryAction s = oneof $
     [ CWaitUntil . step <$> choose (1, 100 :: Integer) ]
     ++
-    [ CContribute <$> QC.elements availableWallets <*> (Ada.adaValueOf . abs <$> choose (2, 100))
+    [ CContribute <$> QC.elements availableWallets <*> (Ada.lovelaceValueOf . abs <$> choose (2000000, 100000000))
     | Prelude.not . null $ availableWallets
     , s ^. currentSlot < s ^. contractState . endSlot ]
     ++

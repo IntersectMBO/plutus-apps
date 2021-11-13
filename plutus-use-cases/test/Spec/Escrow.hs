@@ -74,8 +74,8 @@ instance ContractModel EscrowModel where
 
   nextState a = void $ case a of
     Pay w v -> do
-      withdraw w (Ada.adaValueOf v)
-      contributions $~ Map.insertWith (<>) w (Ada.adaValueOf v)
+      withdraw w (Ada.adaValueOf $ fromInteger v)
+      contributions $~ Map.insertWith (<>) w (Ada.adaValueOf $ fromInteger v)
       wait 1
     Redeem w -> do
       targets <- viewContractState targets
