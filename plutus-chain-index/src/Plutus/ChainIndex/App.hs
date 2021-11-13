@@ -51,7 +51,7 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryE
 import Plutus.ChainIndex.Handlers (getResumePoints)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
-import Plutus.ChainIndex.Types (pointSlot)
+import Plutus.ChainIndex.Types (BlockProcessOption (..), pointSlot)
 import Plutus.Monitoring.Util (runLogEffects)
 
 
@@ -83,8 +83,8 @@ chainSyncHandler runReq storeFrom
     case ciBlock of
       Left err    ->
         logError (trace runReq) (ConversionFailed err)
-      Right txs ->
-        void $ runChainIndex runReq $ appendBlock (tipFromCardanoBlock block) txs (blockNo >= storeFrom)
+      Right txs -> void $ runChainIndex runReq $
+        appendBlock (tipFromCardanoBlock block) txs (BlockProcessOption (blockNo >= storeFrom))
 chainSyncHandler runReq _
   (RollBackward point _) _ = do
     putStr "Rolling back to "

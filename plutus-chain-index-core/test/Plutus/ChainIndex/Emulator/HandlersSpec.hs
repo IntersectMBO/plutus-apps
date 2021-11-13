@@ -15,6 +15,7 @@ import Control.Monad.Freer.Extras (LogMessage, LogMsg (..), handleLogWriter)
 import Control.Monad.Freer.State (State, runState)
 import Control.Monad.Freer.Writer (runWriter)
 import Control.Monad.IO.Class (liftIO)
+import Data.Default (def)
 import Data.Sequence (Seq)
 import Data.Set (member)
 import Generators qualified as Gen
@@ -53,7 +54,7 @@ txFromTxIdSpec = property $ do
   (tip, block@(fstTx:_)) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
   unknownTxId <- forAll Gen.genRandomTxId
   txs <- liftIO $ runEmulatedChainIndex mempty $ do
-    appendBlock tip block True
+    appendBlock tip block def
     tx <- txFromTxId (view citxTxId fstTx)
     tx' <- txFromTxId unknownTxId
     pure (tx, tx')
@@ -75,7 +76,7 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlock tip block True
+    appendBlock tip block def
 
     forM addresses $ \addr -> do
       let pq = PageQuery 200 Nothing
@@ -102,7 +103,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlock tip block True
+    appendBlock tip block def
 
     forM assetClasses $ \ac -> do
       let pq = PageQuery 200 Nothing
@@ -125,7 +126,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlock tip block True
+    appendBlock tip block def
 
     let pq = PageQuery 200 Nothing
     (_, utxoRefs) <- utxoSetWithCurrency pq (AssetClass ("", ""))
