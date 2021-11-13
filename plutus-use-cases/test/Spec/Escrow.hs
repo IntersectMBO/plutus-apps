@@ -105,7 +105,7 @@ instance ContractModel EscrowModel where
   perform h _ a = void $ case a of
     WaitUntil slot -> Trace.waitUntilSlot slot
     Pay w v        -> do
-      Trace.callEndpoint @"pay-escrow" (h $ WalletKey w) (Ada.lovelaceValueOf v)
+      Trace.callEndpoint @"pay-escrow" (h $ WalletKey w) (Ada.adaValueOf $ fromInteger v)
       Trace.waitNSlots 1
     Redeem w       -> do
       Trace.callEndpoint @"redeem-escrow" (h $ WalletKey w) ()
