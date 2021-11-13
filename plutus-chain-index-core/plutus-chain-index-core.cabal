@@ -115,6 +115,7 @@ test-suite plutus-chain-index-test
         Plutus.ChainIndex.Emulator.DiskStateSpec
         Plutus.ChainIndex.Emulator.HandlersSpec
         Plutus.ChainIndex.HandlersSpec
+        Util
     build-depends:
         plutus-ledger -any,
         plutus-ledger-api -any,
