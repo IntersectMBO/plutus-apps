@@ -13,6 +13,8 @@ packages: doc
           quickcheck-dynamic
           web-ghc
 
+          contrib/cardano-crypto-07397f
+
 -- We never, ever, want this.
 write-ghc-environment-files: never
 
