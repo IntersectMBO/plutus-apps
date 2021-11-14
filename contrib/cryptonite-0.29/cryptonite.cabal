@@ -389,6 +389,9 @@ Library
   else
     Other-modules:  Crypto.Random.Entropy.Unix
 
+  if os(ghcjs)
+    js-sources: jsbits/cryptonite.js
+
   if impl(ghc) && flag(integer-gmp)
     Build-depends:   integer-gmp
 
