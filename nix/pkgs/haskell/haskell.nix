@@ -317,6 +317,11 @@ let
                 [
                   "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
                   "-host-package-db ${attr}/package.conf.d"
+                  # Let's not fail on this nonsense.
+                  #src/Plutus/PAB/Run.hs:32:1: error: [-Wdeprecations, -Werror=deprecations]
+                  #    Module ‘Data.Yaml’:
+                  #      GHCJS is not supported yet (will break at runtime once called).
+                  "-Wno-deprecations"
                   "-Werror"
                 ]
               )
