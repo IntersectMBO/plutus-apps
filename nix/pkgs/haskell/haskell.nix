@@ -104,6 +104,9 @@ let
            , snap-core:attoparsec
            , websockets:attoparsec
            , jsaddle:base64-bytestring
+           -- no idea why ouroboros-consensus-byron restricts to <.28
+           , ouroboros-consensus-byron:cryptonite
+
 
       source-repository-package
         type: git
