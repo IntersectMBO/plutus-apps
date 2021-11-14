@@ -242,8 +242,7 @@ executable plutus-pab-setup
         unliftio-core -any,
         uuid -any,
         yaml -any,
-    if !os(ghcjs)
-        build-depends: iohk-monitoring -any
+        iohk-monitoring -any
 
 executable plutus-pab-examples
     main-is:          Main.hs
