@@ -207,11 +207,12 @@
             (hsPkgs."unliftio-core" or (errorHandler.buildDepError "unliftio-core"))
             (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
             (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
-            ] ++ (pkgs.lib).optional (!system.isGhcjs) (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"));
+            (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
+            ];
           buildable = true;
           modules = [ "CommandParser" ];
           hsSourceDirs = [ "app" ];
-          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (!system.isGhcjs) "";
+          mainPath = [ "Main.hs" ];
           };
         "plutus-pab-examples" = {
           depends = [
