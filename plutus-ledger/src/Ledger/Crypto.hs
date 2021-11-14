@@ -18,9 +18,9 @@ import Cardano.Crypto.Wallet qualified as Crypto
 import Crypto.Hash as Crypto
 import Data.ByteArray qualified as BA
 import Data.ByteString qualified as BS
-import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Bytes qualified as KB
 import Plutus.V1.Ledger.Crypto as Export hiding (PrivateKey)
+import Plutus.V2.Ledger.Api
 import PlutusTx.Prelude qualified as P
 
 type PrivateKey = Crypto.XPrv

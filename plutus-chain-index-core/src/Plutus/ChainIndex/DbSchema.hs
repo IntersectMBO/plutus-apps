@@ -41,7 +41,7 @@ import Ledger (AssetClass, BlockId (..), Datum, DatumHash (..), MintingPolicy, M
                TxOutRef (..), Validator, ValidatorHash (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
-import Plutus.V1.Ledger.Api (Credential)
+import Plutus.V2.Ledger.Api (Credential)
 import PlutusTx.Builtins.Internal (BuiltinByteString (..))
 
 data DatumRowT f = DatumRow

@@ -57,9 +57,9 @@ import Ledger.Crypto (PrivateKey, PubKey, signTx, toPublicKey)
 import Ledger.Scripts (datumHash)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId (..), Validator,
-                             ValidatorHash, Value, addressCredential, toBuiltin)
 import Plutus.V1.Ledger.Tx as Export
+import Plutus.V2.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId (..), Validator,
+                             ValidatorHash, Value, addressCredential, toBuiltin)
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 
 -- | Transaction output that comes from a chain index query.

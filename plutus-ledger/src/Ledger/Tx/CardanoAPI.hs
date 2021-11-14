@@ -89,12 +89,12 @@ import GHC.Generics (Generic)
 import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Plutus.V1.Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Api qualified as Api
-import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Credential qualified as Credential
 import Plutus.V1.Ledger.Slot qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Api qualified as Api
+import Plutus.V2.Ledger.Api qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
 

@@ -72,7 +72,6 @@ import Ledger.Tx (txId)
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Api qualified as Api
 import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Credential (Credential (..))
@@ -82,6 +81,7 @@ import Plutus.V1.Ledger.Slot qualified as Slot
 import Plutus.V1.Ledger.Tx
 import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value qualified as V
+import Plutus.V2.Ledger.Api qualified as Api
 import PlutusTx (toBuiltinData)
 import PlutusTx.Numeric qualified as P
 import Prettyprinter (Pretty)

@@ -57,7 +57,7 @@ import Plutus.ChainIndex.Types (Depth (..), Diagnostics (..), Point (..), Tip (.
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
+import Plutus.V2.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
 

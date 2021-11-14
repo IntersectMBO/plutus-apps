@@ -19,12 +19,12 @@ import Data.Text qualified as Text
 import Data.Typeable
 import GHC.Exts (IsList (..))
 import Plutus.V1.Ledger.Ada
-import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Bytes (bytes)
 import Plutus.V1.Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (..), Signature (..))
 import Plutus.V1.Ledger.Slot (Slot (..))
 import Plutus.V1.Ledger.Tx
 import Plutus.V1.Ledger.Value
+import Plutus.V2.Ledger.Api hiding (fromList)
 import PlutusCore
 import PlutusTx.AssocMap qualified as AssocMap
 import Prelude as Haskell

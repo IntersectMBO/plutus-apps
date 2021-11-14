@@ -46,7 +46,7 @@ import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (Diagnostics (..), Point (PointAtGenesis), Tip (..), TxUtxoBalance (..))
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
+import Plutus.V2.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
 
 data ChainIndexEmulatorState =
     ChainIndexEmulatorState
