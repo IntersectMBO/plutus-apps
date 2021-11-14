@@ -124,6 +124,8 @@
         "entropy".revision = (((hackage."entropy")."0.4.1.6").revisions).default;
         "entropy".flags.halvm = false;
         "Stream".revision = (((hackage."Stream")."0.4.7.2").revisions).default;
+        "gauge".revision = (((hackage."gauge")."0.2.5").revisions).default;
+        "gauge".flags.analysis = true;
         "system-filepath".revision = (((hackage."system-filepath")."0.4.14").revisions).default;
         "wai".revision = (((hackage."wai")."3.2.3").revisions).default;
         "ral".revision = (((hackage."ral")."0.1").revisions).default;
@@ -1277,6 +1279,7 @@
           "stm".components.library.planned = lib.mkOverride 900 true;
           "ntp-client".components.exes."demo-ntp-client".planned = lib.mkOverride 900 true;
           "vector-sized".components.library.planned = lib.mkOverride 900 true;
+          "cardano-crypto".components.tests."cardano-crypto-test".planned = lib.mkOverride 900 true;
           "composition-prelude".components.library.planned = lib.mkOverride 900 true;
           "aeson-pretty".components.library.planned = lib.mkOverride 900 true;
           "th-lift".components.library.planned = lib.mkOverride 900 true;
@@ -1370,6 +1373,7 @@
           "quickcheck-instances".components.library.planned = lib.mkOverride 900 true;
           "doctest".components.exes."doctest".planned = lib.mkOverride 900 true;
           "network-mux".components.library.planned = lib.mkOverride 900 true;
+          "gauge".components.library.planned = lib.mkOverride 900 true;
           "small-steps-test".components.library.planned = lib.mkOverride 900 true;
           "dependent-sum-template".components.library.planned = lib.mkOverride 900 true;
           "generic-data".components.library.planned = lib.mkOverride 900 true;
@@ -1606,6 +1610,7 @@
           "transformers-compat".components.library.planned = lib.mkOverride 900 true;
           "integer-gmp".components.library.planned = lib.mkOverride 900 true;
           "plutus-ledger".components.library.planned = lib.mkOverride 900 true;
+          "cardano-crypto".components.benchmarks."cardano-crypto-bench".planned = lib.mkOverride 900 true;
           "streaming-commons".components.library.planned = lib.mkOverride 900 true;
           "cmdargs".components.library.planned = lib.mkOverride 900 true;
           "StateVar".components.library.planned = lib.mkOverride 900 true;

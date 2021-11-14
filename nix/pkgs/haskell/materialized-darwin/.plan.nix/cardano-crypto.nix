@@ -63,6 +63,7 @@
           "Cardano/Internal/Compat"
           ];
         cSources = [ "cbits/ed25519/ed25519.c" "cbits/encrypted_sign.c" ];
+        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/cardano-crypto.js";
         hsSourceDirs = [ "src" ];
         includeDirs = [ "cbits/ed25519" "cbits" ];
         };
@@ -139,14 +140,4 @@
           };
         };
       };
-    } // {
-    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "3";
-      rev = "minimal";
-      sha256 = "";
-      }) // {
-      url = "3";
-      rev = "minimal";
-      sha256 = "";
-      };
-    }
+    } // rec { src = (pkgs.lib).mkDefault ../contrib/cardano-crypto-07397f; }
