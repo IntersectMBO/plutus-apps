@@ -61,6 +61,8 @@ library
   cc-options:          -Wall -Wno-unused-function
   if impl(ghc >= 8.6)
     default-extensions: NoStarIsType
+  if os(ghcjs)
+    js-sources: jsbits/cardano-crypto.js
 
 test-suite cardano-crypto-test
   type:                exitcode-stdio-1.0
