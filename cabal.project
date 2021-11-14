@@ -75,10 +75,10 @@ source-repository-package
   tag: a0c7c7e37c95564061247461aef4be505a853538
 
 -- Copied from plutus-core
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-crypto.git
-  tag: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
+-- source-repository-package
+--  type: git
+--  location: https://github.com/input-output-hk/cardano-crypto.git
+--  tag: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
 
 -- Copied from plutus-core
 source-repository-package
