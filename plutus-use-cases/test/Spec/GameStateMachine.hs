@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Spec.GameStateMachine
   ( tests, successTrace, successTrace2, traceLeaveOneAdaInScript, failTrace
-  , prop_Game, propGame'
+  , prop_Game, propGame', prop_GameWhitelist
   , prop_NoLockedFunds
   , prop_CheckNoLockedFundsProof
   ) where
@@ -167,6 +167,9 @@ handleSpec = [ ContractInstanceSpec (WalletKey w) w G.contract | w <- wallets ]
 -- | The main property. 'propRunActions_' checks that balances match the model after each test.
 prop_Game :: Actions GameModel -> Property
 prop_Game = propRunActions_ handleSpec
+
+prop_GameWhitelist :: Actions GameModel -> Property
+prop_GameWhitelist = checkErrorWhitelist handleSpec defaultWhitelist
 
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions

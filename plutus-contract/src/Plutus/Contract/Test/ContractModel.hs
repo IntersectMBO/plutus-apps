@@ -116,8 +116,10 @@ module Plutus.Contract.Test.ContractModel
     , NoLockedFundsProof(..)
     , checkNoLockedFundsProof
     -- $checkNoPartiality
-    , Whitelist(..)
+    , Whitelist
     , whitelistOk
+    , mkWhitelist
+    , errorPrefixes
     , defaultWhitelist
     , checkErrorWhitelist
     , checkErrorWhitelistWithOptions
@@ -134,6 +136,8 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Row (Row)
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Typeable
 
@@ -1173,12 +1177,18 @@ checkNoLockedFundsProof options spec NoLockedFundsProof{nlfpMainStrategy   = mai
 
 -- | A whitelist entry tells you what final log entry prefixes
 -- are acceptable for a given error
-data Whitelist = Whitelist { errorPrefixes :: [Text.Text] }
+data Whitelist = Whitelist { errorPrefixes :: Set Text.Text }
+
+instance Semigroup Whitelist where
+  Whitelist wl <> Whitelist wl' = Whitelist $ wl <> wl'
+
+instance Monoid Whitelist where
+  mempty = defaultWhitelist
 
 -- | Check that the last entry in a log is accepted by a whitelist entry
 isAcceptedBy :: Maybe Text.Text -> Whitelist -> Bool
 isAcceptedBy Nothing _           = False
-isAcceptedBy (Just lastEntry) wl = any (`Text.isPrefixOf` lastEntry) (errorPrefixes wl)
+isAcceptedBy (Just lastEntry) wl = any (`Text.isPrefixOf` lastEntry) (Set.toList $ errorPrefixes wl)
 
 {- Note [Maintaining `whitelistOk` and `checkErrorWhitelist`]
    The intended use case of `checkErrorWhitelist` is to be able to assert that failures of
@@ -1199,8 +1209,11 @@ whitelistOk wl = noPreludePartials
       -- validator that returns a boolean fails correctly.
       all (\ec -> Prelude.not $ (Just $ Builtins.fromBuiltin ec) `isAcceptedBy` wl) (Map.keys allErrorCodes \\ [checkHasFailedError])
 
+mkWhitelist :: [Text.Text] -> Whitelist
+mkWhitelist txs = defaultWhitelist <> Whitelist (Set.fromList txs)
+
 defaultWhitelist :: Whitelist
-defaultWhitelist = Whitelist [Builtins.fromBuiltin checkHasFailedError]
+defaultWhitelist = Whitelist . Set.singleton $ Builtins.fromBuiltin checkHasFailedError
 
 -- | Check that running a contract model does not result in validation
 -- failures that are not accepted by the whitelist.
