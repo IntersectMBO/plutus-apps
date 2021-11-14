@@ -1,2 +1,2 @@
-var h$cardano_crypto = {};
+var h$cryptonite = {};
 (function(Module) {

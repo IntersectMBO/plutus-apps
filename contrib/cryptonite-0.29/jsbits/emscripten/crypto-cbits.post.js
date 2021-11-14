@@ -1,1 +1,1 @@
-})(h$cardano_crypto);
+})(h$cryptonite);
