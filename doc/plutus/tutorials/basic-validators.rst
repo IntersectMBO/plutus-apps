@@ -84,7 +84,7 @@ Using the validation context
 .. Still have issues generating the haddock for plutus-ledger, unfortunately
 
 Validators have access to the :term:`validation context` as their third argument.
-This will always be a value of type :hsobj:`Plutus.V1.Ledger.Contexts.ScriptContext` encoded as ``Data``.
+This will always be a value of type :hsobj:`Plutus.V2.Ledger.Contexts.ScriptContext` encoded as ``Data``.
 
 The validation context gives validators a great deal of power, because it allows them to inspect other inputs and outputs of the current transaction.
 For example, here is a validator that will only accept the transaction if a particular payment is made as part of it.

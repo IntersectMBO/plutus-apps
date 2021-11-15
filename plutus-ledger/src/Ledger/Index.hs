@@ -59,6 +59,7 @@ import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (asum, fold, foldl', traverse_)
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -72,8 +73,6 @@ import Ledger.Tx (txId)
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
-import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Scripts
@@ -82,6 +81,8 @@ import Plutus.V1.Ledger.Tx
 import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value qualified as V
 import Plutus.V2.Ledger.Api qualified as Api
+import Plutus.V2.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
+import Plutus.V2.Ledger.Contexts qualified as Validation
 import PlutusTx (toBuiltinData)
 import PlutusTx.Numeric qualified as P
 import Prettyprinter (Pretty)
@@ -414,6 +415,18 @@ checkTransactionFee tx =
     then pure ()
     else throwError $ TransactionFeeTooLow (txFee tx) (minFee tx)
 
+-- FIXME: Unsafe not fully tested code. Better API please.
+rdptrInv :: Tx -> (RedeemerPtr, Redeemer) -> Maybe (ScriptPurpose, Redeemer)
+rdptrInv tx (RedeemerPtr Mint i, r) =
+    if fromIntegral i < Set.size (txMintScripts tx)
+        then Just (Minting $ V.mpsSymbol $ mintingPolicyHash $ Set.elemAt (fromIntegral i) (txMintScripts tx), r)
+        else Nothing
+rdptrInv tx (RedeemerPtr Spend i, r) =
+    if fromIntegral i < Set.size (txInputs tx)
+        then Just (Spending $ txInRef $ Set.elemAt (fromIntegral i) (txInputs tx), r)
+        else Nothing
+rdptrInv _ _ = Nothing -- DCerts & Withdrawals not supported in emulator
+
 -- | Create the data about the transaction which will be passed to a validator script.
 mkTxInfo :: ValidationMonad m => Tx -> m TxInfo
 mkTxInfo tx = do
@@ -425,10 +438,11 @@ mkTxInfo tx = do
             , txInfoMint = txMint tx
             , txInfoFee = txFee tx
             , txInfoDCert = [] -- DCerts not supported in emulator
-            , txInfoWdrl = [] -- Withdrawals not supported in emulator
+            , txInfoWdrl = Api.fromList [] -- Withdrawals not supported in emulator
             , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
             , txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
-            , txInfoData = Map.toList (tx ^. datumWitnesses)
+            , txInfoRedeemers = Api.fromList (mapMaybe (rdptrInv tx) (Map.toList (tx ^. redeemers)))
+            , txInfoData = Api.fromList (Map.toList (tx ^. datumWitnesses))
             , txInfoId = txId tx
             }
     pure ptx

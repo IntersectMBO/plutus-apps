@@ -34,7 +34,7 @@ import PlutusTx.Prelude (check)
 
 import Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Address (Address (..), scriptHashAddress)
-import Plutus.V1.Ledger.Contexts qualified as Validation
+import Plutus.V2.Ledger.Contexts qualified as Validation
 
 import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Ledger.Typed.TypeUtils (Any)

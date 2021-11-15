@@ -76,9 +76,9 @@ import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
+import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 
 -- | Attach signatures of all known private keys to a transaction.

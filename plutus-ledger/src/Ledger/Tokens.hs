@@ -7,9 +7,9 @@ module Ledger.Tokens(
   , paidTo
   ) where
 
-import Plutus.V1.Ledger.Contexts
 import Plutus.V1.Ledger.Value (AssetClass, Value, leq)
 import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Contexts
 
 -- $tokens
 -- The extended UTXO ledger with scripts that Plutus runs on supports

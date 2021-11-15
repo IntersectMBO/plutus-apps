@@ -42,8 +42,8 @@ import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts (Datum (..), DatumHash (..))
 import Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Bytes
-import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Time (POSIXTime)
+import Plutus.V2.Ledger.Contexts (ScriptContext)
 
 import Prelude qualified as Haskell
 

@@ -18,12 +18,12 @@ import Ledger.Constraints.TxConstraints
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address qualified as Address
-import Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..))
-import Plutus.V1.Ledger.Contexts qualified as V
 import Plutus.V1.Ledger.Interval (contains)
 import Plutus.V1.Ledger.Scripts (Datum (..))
 import Plutus.V1.Ledger.Tx (TxOut (..))
 import Plutus.V1.Ledger.Value (leq)
+import Plutus.V2.Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..))
+import Plutus.V2.Ledger.Contexts qualified as V
 
 {-# INLINABLE checkOwnInputConstraint #-}
 checkOwnInputConstraint :: ScriptContext -> InputConstraint a -> Bool
@@ -55,7 +55,7 @@ checkTxConstraint :: ScriptContext -> TxConstraint -> Bool
 checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustIncludeDatum dv ->
         traceIfFalse "L2" -- "Missing datum"
-        $ dv `elem` fmap snd (txInfoData scriptContextTxInfo)
+        $ dv `elem` txInfoData scriptContextTxInfo
     MustValidateIn interval ->
         traceIfFalse "L3" -- "Wrong validation interval"
         $ interval `contains` txInfoValidRange scriptContextTxInfo
