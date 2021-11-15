@@ -57,6 +57,16 @@ package ouroboros-consensus-cardano
   optimization: False
 package cardano-api
   optimization: False
+package cardano-wallet
+  optimization: False
+package cardano-wallet-core
+  optimization: False
+package cardano-wallet-cli
+  optimization: False
+package cardano-wallet-launcher
+  optimization: False
+package cardano-wallet-core-integration
+  optimization: False
 
 -- Copied from plutus-core
 source-repository-package
