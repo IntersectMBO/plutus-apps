@@ -208,6 +208,11 @@ function h$cryptonite_blake2b_finalize(ctx_d, ctx_o, hashlen, out_d, out_o) {
   h$copyFromHeap(out_ptr, out_d, out_o, hashlen);
 }
 
+/* ED25519 */
+var h$ed25519_pk_size      = 32;
+var h$ed25519_sk_size      = 64;
+var h$ed25519_sig_size     = 64;
+
 function h$cryptonite_ed25519_point_base_scalarmul(r_d, r_o, s_d, s_o) {
   h$logWrapper("h$cardano_crypto_ed25519_point_base_scalarmul");
   // XXX sizes
@@ -236,10 +241,43 @@ function h$cryptonite_ed25519_scalar_decode_long(out_d, out_o, in_d, in_o, len) 
   return r;
 }
 
-var h$cryptonite_ed25519_sign_open = h$cardano_crypto_ed25519_sign_open;
-var h$cryptonite_ed25519_sign      = h$cardano_crypto_ed25519_sign;
-var h$cryptonite_ed25519_publickey = h$cardano_crypto_ed25519_publickey;
-var h$cryptonite_ed25519_point_add = h$cardano_crypto_ed25519_point_add;
+function h$cryptonite_ed25519_sign_open(m_d, m_o, mlen, pk_d, pk_o, sig_d, sig_o) {
+  h$logWrapper("h$cryptonite_ed25519_sign_open");
+  var m_ptr   = h$getTmpBufferWith(0, m_d,   m_o,   mlen),
+      pk_ptr  = h$getTmpBufferWith(1, pk_d,  pk_o,  h$ed25519_pk_size),
+      sig_ptr = h$getTmpBufferWith(2, sig_d, sig_o, h$ed25519_sig_size);
+  return h$cryptonite._cryptonite_ed25519_sign_open(m_ptr, mlen, pk_ptr, sig_ptr);
+}
+
+function h$cryptonite_ed25519_sign(m_d, m_o, mlen, salt_d, salt_o, slen, sk_d, sk_o, pk_d, pk_o, sig_d, sig_o) {
+  h$logWrapper("h$cryptonite_ed25519_sign");
+  var m_ptr    = h$getTmpBufferWith(0, m_d, m_o, mlen),
+      salt_ptr = h$getTmpBufferWith(1, salt_d, salt_o, slen),
+      sk_ptr   = h$getTmpBufferWith(2, sk_d, sk_o, h$ed25519_sk_size),
+      pk_ptr   = h$getTmpBufferWith(3, pk_d, pk_o, h$ed25519_pk_size),
+      sig_ptr  = h$getTmpBuffer(4, h$ed25519_sig_size);
+  h$cryptonite._cryptonite_ed25519_sign
+             (m_ptr, mlen, salt_ptr, slen, sk_ptr, pk_ptr, sig_ptr);
+  h$copyFromHeap(sig_ptr, sig_d, sig_o, h$ed25519_sig_size);
+}
+
+function h$cryptonite_ed25519_publickey(sk_d, sk_o, pk_d, pk_o) {
+  h$logWrapper("h$cryptonite_ed25519_publickey");
+  var sk_ptr = h$getTmpBufferWith(0, sk_d, sk_o, h$ed25519_sk_size),
+      pk_ptr = h$getTmpBuffer(1, h$ed25519_pk_size);
+  h$cryptonite._cryptonite_ed25519_publickey(sk_ptr, pk_ptr);
+  h$copyFromHeap(pk_ptr, pk_d, pk_o, h$ed25519_pk_size);
+}
+
+function h$cryptonite_ed25519_point_add(pk1_d, pk1_o, pk2_d, pk2_o, res_d, res_o) {
+  h$logWrapper("h$cryptonite_ed25519_point_add");
+  var pk1_ptr = h$getTmpBufferWith(0, pk1_d, pk1_o, h$ed25519_pk_size),
+      pk2_ptr = h$getTmpBufferWith(1, pk2_d, pk2_o, h$ed25519_pk_size),
+      res_ptr = h$getTmpBuffer(2, h$ed25519_pk_size);
+  var r = h$cryptonite._cryptonite_ed25519_point_add(pk1_ptr, pk2_ptr, res_ptr);
+  h$copyFromHeap(res_ptr, res_d, res_o, h$ed25519_pk_size);
+  return r;
+}
 
 /* pbkdf */
 

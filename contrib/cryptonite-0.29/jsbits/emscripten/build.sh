@@ -22,7 +22,11 @@ emcc -o crypto-cbits.js -s WASM=0 \
                          ,'_cryptonite_fastpbkdf2_hmac_sha512'\
                          ,'_cryptonite_ed25519_point_base_scalarmul'\
                          ,'_cryptonite_ed25519_point_encode'\
-                         ,'_cryptonite_ed25519_scalar_decode_long' ]" \
+                         ,'_cryptonite_ed25519_scalar_decode_long'\
+                         ,'_cryptonite_ed25519_sign_open'\
+                         ,'_cryptonite_ed25519_sign'\
+                         ,'_cryptonite_ed25519_publickey'\
+                         ,'_cryptonite_ed25519_point_add' ]" \
   -I. -I../../cbits \
   -I../../cbits/decaf/include \
   -I../../cbits/decaf/include/arch_32 \
