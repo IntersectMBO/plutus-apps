@@ -19,6 +19,7 @@ emcc -o crypto-cbits.js -s WASM=0 \
                          ,'_cryptonite_blake2b_init', '_cryptonite_blake2b_update', '_cryptonite_blake2b_finalize'\
                          ,'_cryptonite_poly1305_init', '_cryptonite_poly1305_update', '_cryptonite_poly1305_finalize'\
                          ,'_cryptonite_chacha_init', '_cryptonite_chacha_combine', '_cryptonite_chacha_generate'\
+                         ,'_cryptonite_chacha_init_core'\
                          ,'_cryptonite_fastpbkdf2_hmac_sha512'\
                          ,'_cryptonite_ed25519_point_base_scalarmul'\
                          ,'_cryptonite_ed25519_point_encode'\

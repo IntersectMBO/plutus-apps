@@ -388,6 +388,7 @@ function h$wallet_encrypted_new_from_mkg( pass_d, pass_o, pass_len
 
 /* chacha */
 var h$chacha_ctx_size = 132;
+var h$chacha_state_size = 64;
 
 function h$cryptonite_chacha_generate(dst_d, dst_o, ctx_d, ctx_o, bytes) {
   h$logWrapper("h$cryptonite_chacha_generate");
@@ -415,6 +416,16 @@ function h$cryptonite_chacha_init( ctx_d, ctx_o, nb_rounds, keylen, key_d, key_o
   h$cryptonite._cryptonite_chacha_init(ctx_ptr, nb_rounds, keylen, key_ptr, ivlen, iv_ptr);
   h$copyFromHeap(ctx_ptr, ctx_d, ctx_o, h$chacha_ctx_size);
 }
+
+function h$cryptonite_chacha_init_core( st_d, st_o, keylen, key_d, key_o, ivlen, iv_d, iv_o) {
+  var key_ptr = h$getTmpBufferWith(0, key_d, key_o, keylen),
+      iv_ptr  = h$getTmpBufferWith(1, iv_d, iv_o, ivlen),
+      st_ptr = h$getTmpBuffer(2, h$chacha_state_size);
+  h$cryptonite._cryptonite_chacha_init_core(st_ptr, keylen, key_ptr, ivlen, iv_ptr);
+  h$copyFromHeap(st_ptr, ctx_d, ctx_o, h$chacha_st_size);
+}
+
+
 
 /* poly1305 */
 var h$poly1305_ctx_size = 88;
