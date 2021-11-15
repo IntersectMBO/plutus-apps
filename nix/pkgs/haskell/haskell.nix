@@ -430,7 +430,7 @@ let
             iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
             plutus-pab.components.tests.psgenerator.buildable = false;
             cryptonite.components.library.preConfigure = runEmscripten;
-            # cardano-crypto.components.library.preConfigure = runEmscripten;
+            cardano-crypto.components.library.preConfigure = runEmscripten;
           };
       })
       ({ pkgs, config, ... }@args: {
