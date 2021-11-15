@@ -16,12 +16,14 @@ import Ledger qualified
 import Ledger.Address (Address (..))
 import Ledger.Bytes (LedgerBytes)
 import Ledger.Bytes qualified as LedgerBytes
+import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Slot (Slot)
 import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType, TxOut, TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.TxId (TxId)
+import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
 import PlutusTx qualified
@@ -59,6 +61,18 @@ instance Arbitrary Ledger.ValidationError where
     shrink = genericShrink
 
 instance Arbitrary Ledger.ScriptError where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary MkTxError where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary ConnectionError where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary WrongOutTypeError where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
@@ -169,6 +183,10 @@ instance Arbitrary Ledger.TokenName where
     shrink = genericShrink
 
 instance Arbitrary Ledger.CurrencySymbol where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary Ledger.Ada where
     arbitrary = genericArbitrary
     shrink = genericShrink
 

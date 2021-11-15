@@ -161,9 +161,9 @@ pay account vl = do
         <> show vl
         <> " into "
         <> show account
-    mapError (review _TAContractError)
-        $ submitTxConstraints inst
-        $ payTx vl
+    mapError (review _TAContractError) $
+          mkTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
+      >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 -- | Create a transaction that spends all outputs belonging to the 'Account'.
 redeemTx :: forall w s e.
@@ -202,8 +202,10 @@ redeem
   -> Contract w s e CardanoTx
 redeem pk account = mapError (review _TokenAccountError) $ do
     (constraints, lookups) <- redeemTx account pk
-    tx <- either (throwing _ConstraintResolutionError) pure (Constraints.mkTx lookups constraints)
-    submitUnbalancedTx tx
+    utx <- either (throwing _ConstraintResolutionError)
+                  (pure . Constraints.adjustUnbalancedTx)
+                  (Constraints.mkTx lookups constraints)
+    submitUnbalancedTx utx
 
 -- | @balance account@ returns the value of all unspent outputs that can be
 --   unlocked with @accountToken account@

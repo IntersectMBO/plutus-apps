@@ -1,11 +1,12 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeOperators      #-}
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
 
 module Cardano.Wallet.Mock.Handlers
@@ -41,6 +42,7 @@ import Data.ByteString.Lazy.Char8 qualified as BSL8
 import Data.ByteString.Lazy.Char8 qualified as Char8
 import Data.Function ((&))
 import Data.Map qualified as Map
+import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
@@ -80,8 +82,14 @@ byteString2Integer = BS.foldl' (\i b -> (i `shiftL` 8) + fromIntegral b) 0
 integer2ByteString32 :: Integer -> BS.ByteString
 integer2ByteString32 i = BS.unfoldr (\l' -> if l' < 0 then Nothing else Just (fromIntegral (i `shiftR` l'), l' - 8)) (31*8)
 
-distributeNewWalletFunds :: forall effs. (Member WAPI.WalletEffect effs, Member (Error WalletAPIError) effs) => PubKeyHash -> Eff effs CardanoTx
-distributeNewWalletFunds = WAPI.payToPublicKeyHash WAPI.defaultSlotRange (Ada.adaValueOf 10000)
+distributeNewWalletFunds :: forall effs.
+    ( Member WAPI.WalletEffect effs
+    , Member (Error WalletAPIError) effs
+    , Member (LogMsg Text) effs
+    )
+    => PubKeyHash
+    -> Eff effs CardanoTx
+distributeNewWalletFunds = WAPI.payToPublicKeyHash WAPI.defaultSlotRange (Ada.adaValueOf 10_000)
 
 newWallet :: forall m effs. (LastMember m effs, MonadIO m) => Eff effs MockWallet
 newWallet = do
@@ -96,6 +104,7 @@ handleMultiWallet :: forall m effs.
     , Member (State Wallets) effs
     , Member (Error WAPI.WalletAPIError) effs
     , Member (LogMsg WalletMsg) effs
+    , Member (LogMsg Text) effs
     , LastMember m effs
     , MonadIO m
     )
@@ -128,8 +137,7 @@ handleMultiWallet feeCfg = \case
         _ <- evalState sourceWallet $
             interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
             $ interpret (Wallet.handleWallet feeCfg)
-            $ distributeNewWalletFunds
-            $ pkh
+            $ distributeNewWalletFunds pkh
         return $ WalletInfo{wiWallet = walletId, wiPubKeyHash = pkh}
     GetWalletInfo wllt -> do
         wallets <- get @Wallets
@@ -205,6 +213,10 @@ fromWalletAPIError e@(PrivateKeyNotFound _) =
 fromWalletAPIError e@(ValidationError _) =
     err500 {errBody = BSL8.pack $ show $ pretty e}
 fromWalletAPIError e@(ToCardanoError _) =
+    err500 {errBody = BSL8.pack $ show $ pretty e}
+fromWalletAPIError e@ChangeHasLessThanNAda {} =
+    err500 {errBody = BSL8.pack $ show $ pretty e}
+fromWalletAPIError e@PaymentMkTxError {} =
     err500 {errBody = BSL8.pack $ show $ pretty e}
 fromWalletAPIError (OtherError text) =
     err500 {errBody = BSL.fromStrict $ encodeUtf8 text}

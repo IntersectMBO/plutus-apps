@@ -94,7 +94,6 @@ library
         typed-protocols -any,
         unordered-containers -any,
         bytestring -any,
-        data-default -any,
         text -any,
         servant -any,
         servant-server -any,
@@ -116,6 +115,7 @@ test-suite plutus-chain-index-test
         Plutus.ChainIndex.Emulator.DiskStateSpec
         Plutus.ChainIndex.Emulator.HandlersSpec
         Plutus.ChainIndex.HandlersSpec
+        Util
     build-depends:
         plutus-ledger -any,
         plutus-ledger-api -any,
@@ -128,6 +128,7 @@ test-suite plutus-chain-index-test
         bytestring -any,
         containers -any,
         contra-tracer -any,
+        data-default -any,
         fingertree -any,
         freer-extras -any,
         freer-simple -any,

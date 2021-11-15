@@ -13,7 +13,10 @@ module Ledger.Constraints.OnChain where
 import PlutusTx (ToData (..))
 import PlutusTx.Prelude
 
+import Ledger qualified
 import Ledger.Constraints.TxConstraints
+import Ledger.Value qualified as Value
+import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address qualified as Address
 import Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..))
 import Plutus.V1.Ledger.Contexts qualified as V
@@ -21,7 +24,6 @@ import Plutus.V1.Ledger.Interval (contains)
 import Plutus.V1.Ledger.Scripts (Datum (..))
 import Plutus.V1.Ledger.Tx (TxOut (..))
 import Plutus.V1.Ledger.Value (leq)
-import Plutus.V1.Ledger.Value qualified as Value
 
 {-# INLINABLE checkOwnInputConstraint #-}
 checkOwnInputConstraint :: ScriptContext -> InputConstraint a -> Bool
@@ -40,7 +42,10 @@ checkOwnOutputConstraint
 checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} OutputConstraint{ocDatum, ocValue} =
     let hsh = V.findDatumHash (Datum $ toBuiltinData ocDatum) scriptContextTxInfo
         checkOutput TxOut{txOutValue, txOutDatumHash=Just svh} =
-            txOutValue == ocValue && hsh == Just svh
+               Ada.fromValue txOutValue >= Ada.fromValue ocValue
+            && Ada.fromValue txOutValue <= Ada.fromValue ocValue + Ledger.minAdaTxOut
+            && Value.noAdaValue txOutValue == Value.noAdaValue ocValue
+            && hsh == Just svh
         checkOutput _       = False
     in traceIfFalse "L1" -- "Output constraint"
     $ any checkOutput (V.getContinuingOutputs ctx)
@@ -83,7 +88,11 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
             hsh = V.findDatumHash dv scriptContextTxInfo
             addr = Address.scriptHashAddress vlh
             checkOutput TxOut{txOutAddress, txOutValue, txOutDatumHash=Just svh} =
-                txOutValue == vl && hsh == Just svh && txOutAddress == addr
+                   Ada.fromValue txOutValue >= Ada.fromValue vl
+                && Ada.fromValue txOutValue <= Ada.fromValue vl + Ledger.minAdaTxOut
+                && Value.noAdaValue txOutValue == Value.noAdaValue vl
+                && hsh == Just svh
+                && txOutAddress == addr
             checkOutput _ = False
         in
         traceIfFalse "Lb" -- "MustPayToOtherScript"

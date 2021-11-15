@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DerivingStrategies  #-}
+{-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -36,7 +37,7 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.BM.Trace (Trace, logDebug, logError)
 
-import Cardano.Api (ChainPoint, ChainTip (..), ConsensusModeParams (..), LocalNodeConnectInfo (..), getLocalChainTip)
+import Cardano.Api qualified as C
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
 import Cardano.Protocol.Socket.Type (epochSlots)
 import Ledger (Slot (..))
@@ -50,7 +51,7 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryE
 import Plutus.ChainIndex.Handlers (getResumePoints)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
-import Plutus.ChainIndex.Types (pointSlot)
+import Plutus.ChainIndex.Types (BlockProcessOption (..), pointSlot)
 import Plutus.Monitoring.Util (runLogEffects)
 
 
@@ -72,31 +73,32 @@ runChainIndex runReq effect = do
 
 chainSyncHandler
   :: RunRequirements
+  -> C.BlockNo
   -> ChainSyncEvent
   -> Slot
   -> IO ()
-chainSyncHandler runReq
-  (RollForward block _) _ = do
+chainSyncHandler runReq storeFrom
+  (RollForward block@(C.BlockInMode (C.Block (C.BlockHeader _ _ blockNo) _) _) _) _ = do
     let ciBlock = fromCardanoBlock block
     case ciBlock of
       Left err    ->
         logError (trace runReq) (ConversionFailed err)
-      Right txs ->
-        void $ runChainIndex runReq $ appendBlock (tipFromCardanoBlock block) txs
-chainSyncHandler runReq
+      Right txs -> void $ runChainIndex runReq $
+        appendBlock (tipFromCardanoBlock block) txs (BlockProcessOption (blockNo >= storeFrom))
+chainSyncHandler runReq _
   (RollBackward point _) _ = do
     putStr "Rolling back to "
     print point
     -- Do we really want to pass the tip of the new blockchain to the
     -- rollback function (rather than the point where the chains diverge)?
     void $ runChainIndex runReq $ rollback (fromCardanoPoint point)
-chainSyncHandler runReq
+chainSyncHandler runReq _
   (Resume point) _ = do
     putStr "Resuming from "
     print point
     void $ runChainIndex runReq $ resumeSync $ fromCardanoPoint point
 
-showResumePoints :: [ChainPoint] -> String
+showResumePoints :: [C.ChainPoint] -> String
 showResumePoints = \case
   []  -> "none"
   [x] -> showPoint x
@@ -142,10 +144,10 @@ main = do
       -- The primary purpose of this query is to get the first response of the node for potential errors before opening the DB and starting the chain index.
       -- See #69.
       putStr "\nThe tip of the local node: "
-      ChainTip slotNo _ _ <- getLocalChainTip $ LocalNodeConnectInfo
-        { localConsensusModeParams = CardanoModeParams epochSlots
-        , localNodeNetworkId = Config.cicNetworkId config
-        , localNodeSocketPath = Config.cicSocketPath config
+      C.ChainTip slotNo _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
+        { C.localConsensusModeParams = C.CardanoModeParams epochSlots
+        , C.localNodeNetworkId = Config.cicNetworkId config
+        , C.localNodeSocketPath = Config.cicSocketPath config
         }
       print slotNo
 
@@ -185,7 +187,8 @@ runMain trace config = do
                         (Config.cicSlotConfig config)
                         (Config.cicNetworkId  config)
                         resumePoints
-                        (chainSyncHandler runReq)
+                        (chainSyncHandler runReq (Config.cicStoreFrom config))
 
     putStrLn $ "Starting webserver on port " <> show (Config.cicPort config)
     Server.serveChainIndexQueryServer (Config.cicPort config) runReq
+

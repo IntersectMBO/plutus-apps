@@ -82,7 +82,7 @@ generateTx gen slot (UtxoIndex utxo) = do
     -- Total Ada amount that we want to spend
     let sourceAda =
           foldMap
-            (Ada.fromValue . txOutValue . snd)
+            (txOutValue . snd)
             inputs
         -- inputs of the transaction
         sourceTxIns = Set.fromList $ fmap (Tx.pubKeyTxIn . fst) inputs

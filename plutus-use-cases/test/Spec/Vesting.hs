@@ -2,8 +2,8 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE MonoLocalBinds      #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
@@ -20,6 +20,7 @@ import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
+import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Slot
 import Ledger.Time (POSIXTime)
@@ -36,13 +37,13 @@ import Prelude
 import Test.QuickCheck hiding ((.&&.))
 
 -- | The scenario used in the property tests. It sets up a vesting scheme for a
---   total of 60 lovelace over 20 blocks (20 lovelace can be taken out before
+--   total of 60 ada over 20 blocks (20 ada can be taken out before
 --   that, at 10 blocks).
 vesting :: POSIXTime -> VestingParams
 vesting startTime =
     VestingParams
-        { vestingTranche1 = VestingTranche (startTime + 10000) (Ada.lovelaceValueOf 20)
-        , vestingTranche2 = VestingTranche (startTime + 20000) (Ada.lovelaceValueOf 40)
+        { vestingTranche1 = VestingTranche (startTime + 10000) (Ada.adaValueOf 20)
+        , vestingTranche2 = VestingTranche (startTime + 20000) (Ada.adaValueOf 40)
         , vestingOwner    = walletPubKeyHash w1 }
 
 params :: VestingParams
@@ -109,12 +110,15 @@ instance ContractModel VestingModel where
   nextState (Retrieve w v) = do
     slot   <- viewModelState currentSlot
     amount <- viewContractState vestedAmount
+    let newAmount = amount Numeric.- v
     s      <- getContractState
     when ( enoughValueLeft slot s v
          && v `leq` amount
-         && walletPubKeyHash w == vestingOwner params) $ do
+         && walletPubKeyHash w == vestingOwner params
+         && Ada.fromValue v >= Ledger.minAdaTxOut
+         && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)) $ do
       deposit w v
-      vestedAmount $= (amount Numeric.- v)
+      vestedAmount $= newAmount
     wait 2
 
   nextState (WaitUntil s) = do
@@ -131,16 +135,21 @@ instance ContractModel VestingModel where
 
   precondition s (Retrieve w v) = enoughValueLeft slot (s ^. contractState) v
                                 && walletPubKeyHash w == vestingOwner params
+                                && Ada.fromValue v >= Ledger.minAdaTxOut
+                                && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)
     where
       slot   = s ^. currentSlot
-
+      amount = s ^. contractState . vestedAmount
+      newAmount = amount Numeric.- v
 
   precondition s (WaitUntil slot') = s ^. currentSlot < slot'
 
   arbitraryAction s = frequency [ (1, Vest <$> genWallet)
                                 , (1, Retrieve <$> genWallet
-                                           <*> (Ada.lovelaceValueOf
-                                                <$> choose (0, (valueOf amount Ada.adaSymbol Ada.adaToken))))
+                                               <*> (Ada.lovelaceValueOf
+                                                   <$> choose (Ada.getLovelace Ledger.minAdaTxOut, valueOf amount Ada.adaSymbol Ada.adaToken)
+                                                   )
+                                  )
                                 , (1, WaitUntil . Slot <$> choose (n+1, n+30 :: Integer)) ]
     where
       amount   = s ^. contractState . vestedAmount
@@ -176,7 +185,7 @@ genWallet :: Gen Wallet
 genWallet = elements wallets
 
 shrinkValue :: Value -> [Value]
-shrinkValue v = Ada.lovelaceValueOf <$> (shrink (valueOf v Ada.adaSymbol Ada.adaToken))
+shrinkValue v = Ada.lovelaceValueOf <$> filter (\val -> val >= Ada.getLovelace Ledger.minAdaTxOut) (shrink (valueOf v Ada.adaSymbol Ada.adaToken))
 
 handleSpec :: [ContractInstanceSpec VestingModel]
 handleSpec = [ ContractInstanceSpec (WalletKey w) w (vestingContract params) | w <- [w1, w2, w3] ]
@@ -223,7 +232,7 @@ tests =
     , checkPredicate "retrieve some funds"
         (walletFundsChange w2 (Numeric.negate $ totalAmount $ vesting startTime)
         .&&. assertNoFailedTransactions
-        .&&. walletFundsChange w1 (Ada.lovelaceValueOf 10))
+        .&&. walletFundsChange w1 (Ada.adaValueOf 10))
         retrieveFundsTrace
 
     , checkPredicate "cannot retrieve more than allowed"
@@ -234,7 +243,7 @@ tests =
             hdl2 <- Trace.activateContractWallet w2 con
             Trace.callEndpoint @"vest funds" hdl2 ()
             Trace.waitNSlots 10
-            Trace.callEndpoint @"retrieve funds" hdl1 (Ada.lovelaceValueOf 30)
+            Trace.callEndpoint @"retrieve funds" hdl1 (Ada.adaValueOf 30)
             void $ Trace.waitNSlots 1
 
     , checkPredicate "can retrieve everything at the end"
@@ -266,14 +275,14 @@ retrieveFundsTrace = do
     hdl2 <- Trace.activateContractWallet w2 con
     Trace.callEndpoint @"vest funds" hdl2 ()
     Trace.waitNSlots 10
-    Trace.callEndpoint @"retrieve funds" hdl1 (Ada.lovelaceValueOf 10)
+    Trace.callEndpoint @"retrieve funds" hdl1 (Ada.adaValueOf 10)
     void $ Trace.waitNSlots 2
 
 expectedError :: VestingError
 expectedError =
-    let payment = Ada.lovelaceValueOf 30
-        maxPayment = Ada.lovelaceValueOf 20
-        mustRemainLocked = Ada.lovelaceValueOf 40
+    let payment = Ada.adaValueOf 30
+        maxPayment = Ada.adaValueOf 20
+        mustRemainLocked = Ada.adaValueOf 40
     in InsufficientFundsError payment maxPayment mustRemainLocked
 
 

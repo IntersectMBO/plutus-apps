@@ -1,15 +1,16 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DerivingVia       #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NoImplicitPrelude  #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeOperators      #-}
 module Plutus.Contracts.Auction(
     AuctionState(..),
     AuctionInput(..),
@@ -37,6 +38,7 @@ import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (TypedScriptTxOut (..))
+import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, ThreadToken, Void,
                                      WaitingResult (..))
@@ -120,8 +122,8 @@ auctionTransition
     -> State AuctionState
     -> AuctionInput
     -> Maybe (TxConstraints Void Void, State AuctionState)
-auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=oldState} input =
-    case (oldState, input) of
+auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=oldStateData, stateValue=oldStateValue} input =
+    case (oldStateData, input) of
 
         (Ongoing HighestBid{highestBid, highestBidder}, Bid{newBid, newBidder}) | newBid > highestBid -> -- if the new bid is higher,
             let constraints =
@@ -130,7 +132,9 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=old
                 newState =
                     State
                         { stateData = Ongoing HighestBid{highestBid = newBid, highestBidder = newBidder}
-                        , stateValue = apAsset <> Ada.toValue newBid -- and lock the new bid in the script output
+                        , stateValue = Value.noAdaValue oldStateValue
+                                    <> Ada.toValue (Ada.fromValue oldStateValue - highestBid)
+                                    <> Ada.toValue newBid -- and lock the new bid in the script output
                         }
             in Just (constraints, newState)
 

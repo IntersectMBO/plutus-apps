@@ -33,7 +33,7 @@ import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, R
 import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
-import Plutus.ChainIndex.Types (Diagnostics, Point, Tip)
+import Plutus.ChainIndex.Types (BlockProcessOption, Diagnostics, Point, Tip)
 
 data ChainIndexQueryEffect r where
 
@@ -78,7 +78,7 @@ makeEffect ''ChainIndexQueryEffect
 data ChainIndexControlEffect r where
 
     -- | Add a new block to the chain index by giving a new tip and list of tx.
-    AppendBlock :: Tip -> [ChainIndexTx] -> ChainIndexControlEffect ()
+    AppendBlock :: Tip -> [ChainIndexTx] -> BlockProcessOption -> ChainIndexControlEffect ()
 
     -- | Roll back to a previous state (previous tip)
     Rollback    :: Point -> ChainIndexControlEffect ()

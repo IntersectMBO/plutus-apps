@@ -15,6 +15,7 @@ module Plutus.PAB.Effects.ContractTest.Uniswap
 
 import Control.Monad (forM_, when)
 import Data.Semigroup qualified as Semigroup
+import Data.Void (Void)
 import Ledger
 import Ledger.Constraints
 import Ledger.Value as Value
@@ -31,8 +32,8 @@ initContract = do
     forM_ wallets $ \w -> do
         let pkh = pubKeyHash $ walletPubKey w
         when (pkh /= ownPK) $ do
-            tx <- submitTx $ mustPayToPubKey pkh v
-            awaitTxConfirmed $ txId tx
+            mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
+              >>= submitTxConfirmed . adjustUnbalancedTx
     tell $ Just $ Semigroup.Last cur
   where
     amount = 1000000

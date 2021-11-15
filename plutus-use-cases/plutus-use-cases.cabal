@@ -72,7 +72,6 @@ library
         aeson -any,
         bytestring -any,
         containers -any,
-        data-default -any,
         mtl -any,
         plutus-core -any,
         plutus-tx -any,

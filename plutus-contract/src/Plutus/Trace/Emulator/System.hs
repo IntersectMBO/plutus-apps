@@ -20,6 +20,7 @@ module Plutus.Trace.Emulator.System
 import Control.Monad (forM_, void)
 import Control.Monad.Freer
 import Control.Monad.Freer.Coroutine
+import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Maybe (maybeToList)
 import Data.Text qualified as Text
@@ -148,4 +149,4 @@ appendNewTipBlock lastTip block newSlot = do
               $ (Text.encodeUtf8 . Text.pack . show . hash)
               $ foldMap (getTxId . eitherTx txId txId) block
   let newTip = Tip newSlot blockId nextBlockNo
-  appendBlock newTip (fmap fromOnChainTx block)
+  appendBlock newTip (fmap fromOnChainTx block) def

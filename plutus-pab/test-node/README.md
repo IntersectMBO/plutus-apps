@@ -15,15 +15,19 @@ Steps:
 
 You will need ~6 terminals to run all the different components.
 
+1. Install cardano-node using the instructions found [here](https://github.com/input-output-hk/cardano-node/blob/master/README.rst)
 
-1. Build all the necessary components:
+  Please make sure that the binary that you are executing is indeed that one that
+  you installed by using the command: `which cardano-node`.
+
+2. Build all the necessary components:
 
   ```
   > cd $PLUTUS
   > cabal build plutus-pab-examples plutus-chain-index cardano-node cardano-wallet
   ```
 
-2. Start the testnet node locally:
+3. Start the testnet node locally:
 
   ```
   > cd $PLUTUS/plutus-pab/test-node/
@@ -33,7 +37,7 @@ You will need ~6 terminals to run all the different components.
   Note: It's important that this is done from the specific directory, because
   the config paths are relative.
 
-3. Run the cardano wallet backend:
+4. Run the cardano wallet backend:
 
   ```
   > cd $PLUTUS/plutus-pab/test-node/
@@ -42,7 +46,7 @@ You will need ~6 terminals to run all the different components.
       --node-socket testnet/node.sock
   ```
 
-4. Create or restore a public testnet wallet:
+5. Create or restore a public testnet wallet:
 
   Here you have a few options. You can re-use an existing wallet, or create
   one.
@@ -99,14 +103,14 @@ You will need ~6 terminals to run all the different components.
 
   ![](faucet-example.png)
 
-5. Start the chain index:
+6. Start the chain index:
 
   ```
   > cd $PLUTUS/plutus-pab/test-node/
   > cabal exec -- plutus-chain-index --config testnet/chain-index-config.json start-index
   ```
 
-6. Start the PAB:
+7. Start the PAB:
 
   If it's the first time your running, you'll need to ask the PAB to make the
   database:
@@ -126,7 +130,7 @@ You will need ~6 terminals to run all the different components.
     --passphrase pab123456789
   ```
 
-7. Wait for all chain clients (`cardano-node`, `cardano-wallet`,
+8. Wait for all chain clients (`cardano-node`, `cardano-wallet`,
    `plutus-pab-examples`, `plutus-chain-index`) to fully synchronise with the testnet.
 
   On my computer, the wallet takes about 1 hour, and the chain index takes
@@ -156,7 +160,7 @@ You will need ~6 terminals to run all the different components.
   complete eventually; but if you want to see it live, then wait.)
 
 
-8. **Start the integration test**
+9. **Start the integration test**
 
   ```
   > curl -H "Content-Type: application/json" -v -X POST -d \
@@ -164,7 +168,7 @@ You will need ~6 terminals to run all the different components.
     localhost:9080/api/contract/activate
   ```
 
-9. Wait for the integration test to finish.
+10. Wait for the integration test to finish.
 
   There will be a message like `"Tx confirmed. Integration test complete."`
   printed from the console running the pab.

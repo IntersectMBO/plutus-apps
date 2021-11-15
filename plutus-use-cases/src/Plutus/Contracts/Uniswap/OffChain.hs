@@ -180,8 +180,9 @@ start = do
         us   = uniswap cs
         inst = uniswapInstance us
         tx   = mustPayToTheScript (Factory []) $ unitValue c
-    ledgerTx <- submitTxConstraints inst tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+
+    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+      >>= submitTxConfirmed . adjustUnbalancedTx
     void $ waitNSlots 1
 
     logInfo @String $ printf "started Uniswap %s at address %s" (show us) (show $ uniswapAddress us)
@@ -214,8 +215,7 @@ create us CreateParams{..} = do
                    Constraints.mustMintValue (unitValue psC <> valueOf lC liquidity)              <>
                    Constraints.mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData $ Create lp)
 
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
 
     logInfo $ "created liquidity pool: " ++ show lp
 
@@ -247,8 +247,7 @@ close us CloseParams{..} = do
                    Constraints.mustSpendScriptOutput oref2 redeemer    <>
                    Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData $ Pool lp liquidity)
 
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
 
     logInfo $ "closed liquidity pool: " ++ show lp
 
@@ -282,8 +281,7 @@ remove us RemoveParams{..} = do
                    Constraints.mustMintValue (negate lVal)        <>
                    Constraints.mustSpendScriptOutput oref redeemer
 
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
 
     logInfo $ "removed liquidity from pool: " ++ show lp
 
@@ -327,8 +325,7 @@ add us AddParams{..} = do
     logInfo $ show lookups
     logInfo $ show tx
 
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
 
     logInfo $ "added liquidity to pool: " ++ show lp
 
@@ -363,10 +360,8 @@ swap us SwapParams{..} = do
         tx      = mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData Swap) <>
                   Constraints.mustPayToTheScript (Pool lp liquidity) val
 
-    logInfo $ show tx
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    logInfo $ show ledgerTx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+
     logInfo $ "swapped with: " ++ show lp
 
 -- | Finds all liquidity pools and their liquidity belonging to the Uniswap instance.
