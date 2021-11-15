@@ -26,7 +26,16 @@
       licenseFiles = [ "LICENSE" ];
       dataDir = ".";
       dataFiles = [];
-      extraSrcFiles = [ "README.md" "cbits/*.h" "cbits/ed25519/*.h" ];
+      extraSrcFiles = [
+        "README.md"
+        "cbits/*.h"
+        "cbits/ed25519/*.h"
+        "jsbits/emscripten/build.sh"
+        "jsbits/emscripten/crc32.js"
+        "jsbits/emscripten/crypto-cbits.pre.js"
+        "jsbits/emscripten/crypto-cbits.post.js"
+        "jsbits/emscripten/crypto-wrappers.js"
+        ];
       extraTmpFiles = [];
       extraDocFiles = [];
       };
