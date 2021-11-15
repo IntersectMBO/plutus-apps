@@ -11,7 +11,7 @@
     flags = { golden-tests = false; golden-tests-exe = false; };
     package = {
       specVersion = "1.10";
-      identifier = { name = "cardano-crypto"; version = "1.1.0"; };
+      identifier = { name = "cardano-crypto"; version = "1.1.1"; };
       license = "MIT";
       copyright = "2016-2021 IOHK";
       maintainer = "contact@typed.io";
