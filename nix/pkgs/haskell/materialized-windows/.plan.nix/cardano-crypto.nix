@@ -35,6 +35,7 @@
         "jsbits/emscripten/crypto-cbits.pre.js"
         "jsbits/emscripten/crypto-cbits.post.js"
         "jsbits/emscripten/crypto-wrappers.js"
+        "jsbits/emscripten/extern.js"
         ];
       extraTmpFiles = [];
       extraDocFiles = [];
