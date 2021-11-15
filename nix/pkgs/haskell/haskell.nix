@@ -410,15 +410,28 @@ let
         packages.double-conversion.components.library.libs = lib.mkForce [ ];
       })
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform.isGhcjs) {
-        packages = {
-          cardano-wallet-core.components.library.build-tools = [ pkgs.buildPackages.buildPackages.gitReallyMinimal ];
-          lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
-          cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
-          cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
-          plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
-          iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
-          plutus-pab.components.tests.psgenerator.buildable = false;
-        };
+        packages =
+          let runEmscripten = ''
+            patchShebangs jsbits/emscripten/build.sh
+            (cd jsbits/emscripten && PATH=${
+                # The extra buildPackages here is for closurecompiler.
+                # Without it we get `unknown emulation for platform: js-unknown-ghcjs` errors.
+                lib.makeBinPath (with pkgs.buildPackages.buildPackages;
+                  [ emscripten closurecompiler coreutils ])
+              }:$PATH ./build.sh)
+          '';
+          in
+          {
+            cardano-wallet-core.components.library.build-tools = [ pkgs.buildPackages.buildPackages.gitReallyMinimal ];
+            lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
+            cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
+            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.buildPackages.libsodium-vrf ] ];
+            plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
+            iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
+            plutus-pab.components.tests.psgenerator.buildable = false;
+            cryptonite.components.library.preConfigure = runEmscripten;
+            # cardano-crypto.components.library.preConfigure = runEmscripten;
+          };
       })
       ({ pkgs, config, ... }@args: {
         packages.cardano-addresses-jsbits.components.library.preConfigure =
