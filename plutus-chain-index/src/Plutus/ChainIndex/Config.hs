@@ -17,10 +17,11 @@ module Plutus.ChainIndex.Config(
   port,
   networkId,
   securityParam,
-  slotConfig
+  slotConfig,
+  storeFrom
   ) where
 
-import Cardano.Api (NetworkId (..))
+import Cardano.Api (BlockNo (..), NetworkId (..))
 import Control.Exception (Exception)
 import Control.Lens (makeLensesFor)
 import Data.Aeson (FromJSON, ToJSON)
@@ -36,6 +37,7 @@ data ChainIndexConfig = ChainIndexConfig
   , cicNetworkId     :: NetworkId
   , cicSecurityParam :: Int -- ^ The number of blocks after which a transaction cannot be rolled back anymore
   , cicSlotConfig    :: SlotConfig
+  , cicStoreFrom     :: BlockNo -- ^ Only store transactions from this block number onward
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -47,6 +49,8 @@ deriving anyclass instance FromJSON NetworkId
 deriving anyclass instance ToJSON NetworkId
 deriving anyclass instance FromJSON NetworkMagic
 deriving anyclass instance ToJSON NetworkMagic
+deriving anyclass instance FromJSON BlockNo
+deriving anyclass instance ToJSON BlockNo
 
 -- | These settings work with the Alonzo Purple testnet
 defaultConfig :: ChainIndexConfig
@@ -61,15 +65,17 @@ defaultConfig = ChainIndexConfig
         { scSlotZeroTime = 1596059091000
         , scSlotLength   = 1000
         }
+  , cicStoreFrom = BlockNo 0
   }
 
 instance Pretty ChainIndexConfig where
-  pretty ChainIndexConfig{cicSocketPath, cicDbPath, cicPort, cicNetworkId, cicSecurityParam} =
+  pretty ChainIndexConfig{cicSocketPath, cicDbPath, cicPort, cicNetworkId, cicSecurityParam, cicStoreFrom} =
     vsep [ "Socket:" <+> pretty cicSocketPath
          , "Db:" <+> pretty cicDbPath
          , "Port:" <+> pretty cicPort
          , "Network Id:" <+> viaShow cicNetworkId
          , "Security Param:" <+> pretty cicSecurityParam
+         , "Store from:" <+> viaShow cicStoreFrom
          ]
 
 makeLensesFor [
@@ -78,7 +84,8 @@ makeLensesFor [
   ("cicPort", "port"),
   ("cicNetworkId", "networkId"),
   ("cicSecurityParam", "securityParam"),
-  ("cicSlotConfig", "slotConfig")
+  ("cicSlotConfig", "slotConfig"),
+  ("cicStoreFrom", "storeFrom")
   ] 'ChainIndexConfig
 
 newtype DecodeConfigException = DecodeConfigException String

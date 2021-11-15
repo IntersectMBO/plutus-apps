@@ -123,6 +123,7 @@
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."fingertree" or (errorHandler.buildDepError "fingertree"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
@@ -140,6 +141,7 @@
             "Plutus/ChainIndex/Emulator/DiskStateSpec"
             "Plutus/ChainIndex/Emulator/HandlersSpec"
             "Plutus/ChainIndex/HandlersSpec"
+            "Util"
             ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];

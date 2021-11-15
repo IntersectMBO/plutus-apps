@@ -43,7 +43,8 @@ import Plutus.ChainIndex.Emulator.DiskState (DiskState, addressMap, assetClassMa
 import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
 import Plutus.ChainIndex.Tx (ChainIndexTx, _ValidTx, citxOutputs)
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
-import Plutus.ChainIndex.Types (Diagnostics (..), Point (PointAtGenesis), Tip (..), TxUtxoBalance (..))
+import Plutus.ChainIndex.Types (BlockProcessOption (..), Diagnostics (..), Point (PointAtGenesis), Tip (..),
+                                TxUtxoBalance (..))
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
@@ -159,7 +160,7 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlock tip_ transactions -> do
+    AppendBlock tip_ transactions opts -> do
         oldState <- get @ChainIndexEmulatorState
         case UtxoState.insert (TxUtxoBalance.fromBlock tip_ transactions) (view utxoIndex oldState) of
             Left err -> do
@@ -169,7 +170,8 @@ handleControl = \case
             Right InsertUtxoSuccess{newIndex, insertPosition} -> do
                 put $ oldState
                         & set utxoIndex newIndex
-                        & over diskState (mappend $ foldMap DiskState.fromTx transactions)
+                        & over diskState
+                            (mappend $ foldMap DiskState.fromTx (if bpoStoreTxs opts then transactions else []))
                 logDebug $ InsertionSuccess tip_ insertPosition
     Rollback tip_ -> do
         oldState <- get @ChainIndexEmulatorState

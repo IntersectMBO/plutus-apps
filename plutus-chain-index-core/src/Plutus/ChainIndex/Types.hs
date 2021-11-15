@@ -32,6 +32,7 @@ module Plutus.ChainIndex.Types(
     , TxOutBalance(..)
     , tobUnspentOutputs
     , tobSpentOutputs
+    , BlockProcessOption(..)
     ) where
 
 import Codec.Serialise (Serialise)
@@ -42,6 +43,7 @@ import Crypto.Hash (SHA256, hash)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
 import Data.ByteString.Lazy qualified as BSL
+import Data.Default (Default (..))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
@@ -345,3 +347,18 @@ instance Semigroup TxUtxoBalance where
 instance Monoid TxUtxoBalance where
     mappend = (<>)
     mempty = TxUtxoBalance mempty mempty
+
+-- | User-customizable options to process a block.
+-- See #73 for more motivations.
+newtype BlockProcessOption =
+  BlockProcessOption
+    { bpoStoreTxs :: Bool
+    -- ^ Should the chain index store this batch of transactions or not.
+    -- If not, only handle the tip and UTXOs.
+    -- This, for example, allows applications to skip unwanted pre-Alonzo transactions.
+    }
+
+-- We should think twice when setting the default option.
+-- For now, it should store all data to avoid weird non-backward-compatible bugs in the future.
+instance Default BlockProcessOption where
+  def = BlockProcessOption True
