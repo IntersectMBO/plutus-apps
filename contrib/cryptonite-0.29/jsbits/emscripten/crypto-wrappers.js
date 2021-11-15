@@ -422,7 +422,7 @@ function h$cryptonite_chacha_init_core( st_d, st_o, keylen, key_d, key_o, ivlen,
       iv_ptr  = h$getTmpBufferWith(1, iv_d, iv_o, ivlen),
       st_ptr = h$getTmpBuffer(2, h$chacha_state_size);
   h$cryptonite._cryptonite_chacha_init_core(st_ptr, keylen, key_ptr, ivlen, iv_ptr);
-  h$copyFromHeap(st_ptr, ctx_d, ctx_o, h$chacha_st_size);
+  h$copyFromHeap(st_ptr, st_d, st_o, h$chacha_st_size);
 }
 
 
