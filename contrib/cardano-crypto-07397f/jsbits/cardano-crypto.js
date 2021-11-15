@@ -21266,41 +21266,17 @@ var ASM_CONSTS = {
       abort('Assertion failed: ' + UTF8ToString(condition) + ', at: ' + [filename ? UTF8ToString(filename) : 'unknown filename', line, func ? UTF8ToString(func) : 'unknown function']);
     }
 
-  /** @type {function(...*):?} */
-  function _cryptonite_chacha_combine(
-  ) {
-  err('missing function: cryptonite_chacha_combine'); abort(-1);
-  }
+  function _cryptonite_chacha_combine(...args) { return h$cryptonite._cryptonite_chacha_combine(...args); }
 
-  /** @type {function(...*):?} */
-  function _cryptonite_chacha_init(
-  ) {
-  err('missing function: cryptonite_chacha_init'); abort(-1);
-  }
+  function _cryptonite_chacha_init(...args) { return h$cryptonite._cryptonite_chacha_init(...args); }
 
-  /** @type {function(...*):?} */
-  function _cryptonite_fastpbkdf2_hmac_sha512(
-  ) {
-  err('missing function: cryptonite_fastpbkdf2_hmac_sha512'); abort(-1);
-  }
+  function _cryptonite_fastpbkdf2_hmac_sha512(...args) { return h$cryptonite._cryptonite_fastpbkdf2_hmac_sha512(...args); }
 
-  /** @type {function(...*):?} */
-  function _cryptonite_sha512_finalize(
-  ) {
-  err('missing function: cryptonite_sha512_finalize'); abort(-1);
-  }
+  function _cryptonite_sha512_finalize(...args) { return h$cryptonite._cryptonite_sha512_finalize(...args); }
 
-  /** @type {function(...*):?} */
-  function _cryptonite_sha512_init(
-  ) {
-  err('missing function: cryptonite_sha512_init'); abort(-1);
-  }
+  function _cryptonite_sha512_init(...args) { return h$cryptonite._cryptonite_sha512_init(...args); }
 
-  /** @type {function(...*):?} */
-  function _cryptonite_sha512_update(
-  ) {
-  err('missing function: cryptonite_sha512_update'); abort(-1);
-  }
+  function _cryptonite_sha512_update(...args) { return h$cryptonite._cryptonite_sha512_update(...args); }
 
   function _emscripten_memcpy_big(dest, src, num) {
       HEAPU8.copyWithin(dest, src, src + num);

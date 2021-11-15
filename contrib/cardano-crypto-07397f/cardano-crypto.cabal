@@ -18,6 +18,7 @@ extra-source-files:  README.md
                      jsbits/emscripten/crypto-cbits.pre.js
                      jsbits/emscripten/crypto-cbits.post.js
                      jsbits/emscripten/crypto-wrappers.js
+                     jsbits/emscripten/extern.js
 cabal-version:       >=1.10
 
 flag golden-tests

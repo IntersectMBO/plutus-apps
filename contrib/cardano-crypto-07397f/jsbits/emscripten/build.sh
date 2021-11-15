@@ -22,7 +22,8 @@ emcc -o crypto-cbits.js -s WASM=0 \
   -I../../cbits/ \
   -I../../cbits/ed25519 \
   ../../cbits/encrypted_sign.c \
-  ../../cbits/ed25519/ed25519.c
+  ../../cbits/ed25519/ed25519.c \
+  --js-library extern.js
 
 closure-compiler --js=crypto-cbits.js --js_output_file=crypto-cbits.min.js
 
