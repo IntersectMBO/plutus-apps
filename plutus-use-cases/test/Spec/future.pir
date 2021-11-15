@@ -254,7 +254,15 @@
                         [ List DCert ]
                         (fun
                           [
-                            List [ [ Tuple2 StakingCredential ] (con integer) ]
+                            [
+                              (lam
+                                k
+                                (type)
+                                (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                              )
+                              StakingCredential
+                            ]
+                            (con integer)
                           ]
                           (fun
                             [ Interval (con integer) ]
@@ -262,10 +270,32 @@
                               [ List (con bytestring) ]
                               (fun
                                 [
-                                  List
-                                  [ [ Tuple2 (con bytestring) ] (con data) ]
+                                  [
+                                    (lam
+                                      k
+                                      (type)
+                                      (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                                    )
+                                    ScriptPurpose
+                                  ]
+                                  (con data)
                                 ]
-                                (fun (con bytestring) TxInfo)
+                                (fun
+                                  [
+                                    [
+                                      (lam
+                                        k
+                                        (type)
+                                        (lam
+                                          v (type) [ List [ [ Tuple2 k ] v ] ]
+                                        )
+                                      )
+                                      (con bytestring)
+                                    ]
+                                    (con data)
+                                  ]
+                                  (fun (con bytestring) TxInfo)
+                                )
                               )
                             )
                           )
