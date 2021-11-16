@@ -431,6 +431,7 @@ let
             plutus-pab.components.tests.psgenerator.buildable = false;
             cryptonite.components.library.preConfigure = runEmscripten;
             cardano-crypto.components.library.preConfigure = runEmscripten;
+            direct-sqlite.components.library.preConfigure = runEmscripten;
           };
       })
       ({ pkgs, config, ... }@args: {
