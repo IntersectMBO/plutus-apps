@@ -65,6 +65,9 @@ library
   include-dirs:     .
   ghc-options:      -Wall -fwarn-tabs
 
+  if os(ghcjs)
+    js-sources: jsbits/direct-sqlite.js
+
   if flag(systemlib)
     extra-libraries: sqlite3
     cpp-options:     -Ddirect_sqlite_systemlib
