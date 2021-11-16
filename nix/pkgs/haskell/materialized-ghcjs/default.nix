@@ -353,7 +353,6 @@
         "tls-session-manager".revision = (((hackage."tls-session-manager")."0.0.4").revisions).default;
         "ekg-core".revision = (((hackage."ekg-core")."0.1.1.7").revisions).default;
         "constraints".revision = (((hackage."constraints")."0.13").revisions).default;
-        "basement".revision = (((hackage."basement")."0.0.11").revisions).default;
         "bech32".revision = (((hackage."bech32")."1.1.1").revisions).default;
         "bech32".flags.static = false;
         "bech32".flags.release = false;
@@ -770,6 +769,7 @@
         plutus-ghc-stub = ./.plan.nix/plutus-ghc-stub.nix;
         ouroboros-network-framework = ./.plan.nix/ouroboros-network-framework.nix;
         double-conversion = ./.plan.nix/double-conversion.nix;
+        basement = ./.plan.nix/basement.nix;
         cardano-numeric = ./.plan.nix/cardano-numeric.nix;
         tracer-transformers = ./.plan.nix/tracer-transformers.nix;
         plutus-playground-server = ./.plan.nix/plutus-playground-server.nix;
@@ -999,6 +999,7 @@
           "double-conversion" = {
             flags = { "developer" = lib.mkOverride 900 false; };
             };
+          "basement" = { flags = {}; };
           "cardano-numeric" = {
             flags = { "release" = lib.mkOverride 900 false; };
             };
@@ -1060,6 +1061,7 @@
           "http-client-tls".components.library.planned = lib.mkOverride 900 true;
           "base-orphans".components.library.planned = lib.mkOverride 900 true;
           "setenv".components.library.planned = lib.mkOverride 900 true;
+          "foundation".components.benchmarks."bench".planned = lib.mkOverride 900 true;
           "criterion-measurement".components.library.planned = lib.mkOverride 900 true;
           "tls-session-manager".components.library.planned = lib.mkOverride 900 true;
           "yaml".components.library.planned = lib.mkOverride 900 true;
@@ -1481,6 +1483,7 @@
           "word-array".components.library.planned = lib.mkOverride 900 true;
           "old-locale".components.library.planned = lib.mkOverride 900 true;
           "th-lift-instances".components.library.planned = lib.mkOverride 900 true;
+          "foundation".components.tests."check-foundation".planned = lib.mkOverride 900 true;
           "network-info".components.library.planned = lib.mkOverride 900 true;
           "bifunctors".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-classes-base".components.library.planned = lib.mkOverride 900 true;

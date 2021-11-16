@@ -18,7 +18,7 @@
       };
     package = {
       specVersion = "1.18";
-      identifier = { name = "foundation"; version = "0.0.25"; };
+      identifier = { name = "foundation"; version = "0.0.26.1"; };
       license = "BSD-3-Clause";
       copyright = "2015-2017 Vincent Hanquez <vincent@snarc.org>, 2017- Foundation Maintainers";
       maintainer = "vincent@snarc.org";
@@ -250,15 +250,4 @@
           };
         };
       };
-    } // {
-    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "15";
-      rev = "minimal";
-      sha256 = "";
-      }) // {
-      url = "15";
-      rev = "minimal";
-      sha256 = "";
-      };
-    postUnpack = "sourceRoot+=/foundation; echo source root reset to \$sourceRoot";
-    }
+    } // rec { src = (pkgs.lib).mkDefault ../contrib/foundation-0.0.26.1; }
