@@ -21,6 +21,10 @@ build-type:         Simple
 extra-source-files: cbits/sqlite3.c
                     cbits/sqlite3.h
                     cbits/sqlite3ext.h
+                    jsbits/emscripten/build.sh
+                    jsbits/emscripten/direct-sqlite-wrappers.js
+                    jsbits/emscripten/direct-sqlite.pre.js
+                    jsbits/emscripten/direct-sqlite.post.js
                     changelog
 cabal-version:      >= 1.10
 
