@@ -150,7 +150,7 @@ library
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
-    if !(impl(ghcjs) || os(ghcjs) || os(windows))
+    if !os(windows)
         exposed-modules:
             Plutus.Contract.Test
             Plutus.Contract.Test.ContractModel
