@@ -160,3 +160,5 @@ library
   c-sources:         cbits/foundation_mem.c
   if impl(ghc < 8.2)
     c-sources:       cbits/basement_rts.c
+  if os(ghcjs)
+    js-sources: jsbits/basement.js
