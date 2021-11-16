@@ -12,9 +12,9 @@ pabWebserverConfig:
   endpointTimeout: 5
 
 walletServerConfig:
-  baseUrl: http://localhost:9081
-  wallet:
-    getWallet: 1
+  tag: LocalWalletConfig
+  walletSettings:
+    baseUrl: http://localhost:9081
 
 nodeServerConfig:
   mscBaseUrl: http://localhost:9082
@@ -36,7 +36,6 @@ nodeServerConfig:
 
 chainIndexConfig:
   ciBaseUrl: http://localhost:9083
-  ciWatchedAddresses: []
 
 requestProcessingConfig:
   requestProcessingInterval: 1

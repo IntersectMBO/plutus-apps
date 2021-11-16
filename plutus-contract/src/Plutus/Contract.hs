@@ -80,6 +80,7 @@ module Plutus.Contract(
     , Request.submitBalancedTx
     , Request.balanceTx
     , Request.mkTxConstraints
+    , Request.yieldUnbalancedTx
     -- ** Creating transactions
     , module Tx
     -- ** Tx confirmation
@@ -106,12 +107,12 @@ module Plutus.Contract(
     ) where
 
 import Data.Aeson (ToJSON (toJSON))
-import Data.Row
+import Data.Row (Empty, HasType, type (.\/))
 
 import Plutus.Contract.Request (ContractRow)
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Schema qualified as Schema
-import Plutus.Contract.Typed.Tx as Tx
+import Plutus.Contract.Typed.Tx as Tx (collectFromScript, collectFromScriptFilter)
 import Plutus.Contract.Types (AsCheckpointError (..), AsContractError (..), CheckpointError (..), Contract (..),
                               ContractError (..), IsContract (..), Promise (..), checkpoint, checkpointLoop,
                               handleError, mapError, never, promiseBind, promiseMap, runError, select, selectEither,

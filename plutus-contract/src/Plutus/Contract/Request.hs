@@ -82,6 +82,7 @@ module Plutus.Contract.Request(
     , submitTxConstraintsWith
     , submitTxConfirmed
     , mkTxConstraints
+    , yieldUnbalancedTx
     -- * Etc.
     , ContractRow
     , pabReq
@@ -97,8 +98,8 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, mapMaybe)
-import Data.Proxy (Proxy (..))
-import Data.Row
+import Data.Proxy (Proxy (Proxy))
+import Data.Row (AllUniqueLabels, HasType, KnownSymbol, type (.==))
 import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
 import Data.Void (Void)
@@ -111,20 +112,24 @@ import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
-import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (..))
+import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
 import PlutusTx qualified
 
-import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
+import Plutus.Contract.Effects (ActiveEndpoint (..),
+                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+                                PABResp (ExposeEndpointResp))
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Schema (Input, Output)
 import Wallet.Types (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
 
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import Plutus.ChainIndex.Types (RollbackState (..), Tip, TxOutStatus, TxStatus)
-import Plutus.Contract.Resumable
-import Plutus.Contract.Types
+import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
+import Plutus.Contract.Resumable (prompt)
+import Plutus.Contract.Types (AsContractError (_ConstraintResolutionError, _OtherError, _ResumableError, _WalletError),
+                              Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), runError,
+                              throwError)
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
 --   are unique.
@@ -790,3 +795,11 @@ submitTxConstraintsWith sl constraints = mkTxConstraints sl constraints >>= subm
 --   confirmed on the ledger before returning.
 submitTxConfirmed :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e ()
 submitTxConfirmed t = submitUnbalancedTx t >>= awaitTxConfirmed . getCardanoTxId
+
+-- | Take an 'UnbalancedTx' then balance, sign and submit it to the blockchain
+-- without returning any results.
+yieldUnbalancedTx
+    :: forall w s e. (AsContractError e)
+    => UnbalancedTx
+    -> Contract w s e ()
+yieldUnbalancedTx utx = pabReq (YieldUnbalancedTxReq utx) E._YieldUnbalancedTxResp

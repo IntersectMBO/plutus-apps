@@ -13,13 +13,14 @@ module Cardano.Wallet.Mock.Server
     ) where
 
 import Cardano.BM.Data.Trace (Trace)
-import Cardano.ChainIndex.Types (ChainIndexUrl (..))
-import Cardano.Node.Client as NodeClient
+import Cardano.ChainIndex.Types (ChainIndexUrl (ChainIndexUrl))
+import Cardano.Node.Client qualified as NodeClient
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.API (API)
-import Cardano.Wallet.Mock.Handlers
-import Cardano.Wallet.Mock.Types (Port (..), WalletConfig (..), WalletMsg (..), WalletUrl (..), Wallets, createWallet,
-                                  getWalletInfo, multiWallet)
+import Cardano.Wallet.Mock.Handlers (processWalletEffects)
+import Cardano.Wallet.Mock.Types (Port (Port), WalletMsg (StartingWallet), Wallets, createWallet, getWalletInfo,
+                                  multiWallet)
+import Cardano.Wallet.Types (LocalWalletSettings (LocalWalletSettings, baseUrl), WalletUrl (WalletUrl))
 import Control.Concurrent.Availability (Availability, available)
 import Control.Concurrent.MVar (MVar, newMVar)
 import Control.Monad ((>=>))
@@ -38,10 +39,10 @@ import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
-import Servant (Application, NoContent (..), err404, hoistServer, serve, (:<|>) ((:<|>)))
+import Servant (Application, NoContent (NoContent), err404, hoistServer, serve, (:<|>) ((:<|>)))
 import Servant.Client (BaseUrl (baseUrlPort), ClientEnv, mkClientEnv)
 import Wallet.Effects (balanceTx, submitTxn, totalFunds, walletAddSignature)
-import Wallet.Emulator.Wallet (Wallet (..), WalletId)
+import Wallet.Emulator.Wallet (Wallet (Wallet), WalletId)
 import Wallet.Emulator.Wallet qualified as Wallet
 
 app :: Trace IO WalletMsg
@@ -66,8 +67,8 @@ app trace txSendHandle chainSyncHandle chainIndexEnv mVarState feeCfg slotCfg =
             (\w tx -> fmap (fromRight (error "Cardano.Wallet.Mock.Server: Expecting a mock tx, not an Alonzo tx when adding a signature."))
                     $ multiWallet (Wallet w) (walletAddSignature $ Right tx))
 
-main :: Trace IO WalletMsg -> WalletConfig -> FeeConfig -> FilePath -> SlotConfig -> ChainIndexUrl -> Availability -> IO ()
-main trace WalletConfig { baseUrl } feeCfg serverSocket slotCfg (ChainIndexUrl chainUrl) availability = LM.runLogEffects trace $ do
+main :: Trace IO WalletMsg -> LocalWalletSettings -> FeeConfig -> FilePath -> SlotConfig -> ChainIndexUrl -> Availability -> IO ()
+main trace LocalWalletSettings { baseUrl } feeCfg serverSocket slotCfg (ChainIndexUrl chainUrl) availability = LM.runLogEffects trace $ do
     chainIndexEnv <- buildEnv chainUrl defaultManagerSettings
     let knownWallets = Map.fromList $ zip Wallet.knownWallets (Wallet.fromMockWallet <$> CW.knownWallets)
     mVarState <- liftIO $ newMVar knownWallets

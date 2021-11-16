@@ -23,6 +23,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _WriteBalancedTxReq,
     _ExposeEndpointReq,
     _PosixTimeRangeToContainedSlotRangeReq,
+    _YieldUnbalancedTxReq,
     -- ** Chain index query effect types
     _DatumFromHash,
     _ValidatorFromHash,
@@ -52,6 +53,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _WriteBalancedTxResp,
     _ExposeEndpointResp,
     _PosixTimeRangeToContainedSlotRangeResp,
+    _YieldUnbalancedTxResp,
     -- ** Chain index response effect types
     _DatumHashResponse,
     _ValidatorHashResponse,
@@ -85,14 +87,14 @@ import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPoli
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Credential (Credential)
 import Ledger.Scripts (Validator)
-import Ledger.Slot (Slot (..), SlotRange)
-import Ledger.Time (POSIXTime (..), POSIXTimeRange)
+import Ledger.Slot (Slot, SlotRange)
+import Ledger.Time (POSIXTime, POSIXTimeRange)
 import Ledger.TimeSlot (SlotConversionError)
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, getCardanoTxId)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
-import Plutus.ChainIndex.Types (Tip (..), TxOutStatus, TxStatus)
-import Prettyprinter (Pretty (..), hsep, indent, viaShow, vsep, (<+>))
+import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
+import Prettyprinter (Pretty (pretty), hsep, indent, viaShow, vsep, (<+>))
 import Wallet.API (WalletAPIError)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue)
 
@@ -113,6 +115,7 @@ data PABReq =
     | WriteBalancedTxReq CardanoTx
     | ExposeEndpointReq ActiveEndpoint
     | PosixTimeRangeToContainedSlotRangeReq POSIXTimeRange
+    | YieldUnbalancedTxReq UnbalancedTx
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
@@ -133,6 +136,7 @@ instance Pretty PABReq where
     WriteBalancedTxReq tx                   -> "Write balanced tx:" <+> pretty tx
     ExposeEndpointReq ep                    -> "Expose endpoint:" <+> pretty ep
     PosixTimeRangeToContainedSlotRangeReq r -> "Posix time range to contained slot range:" <+> pretty r
+    YieldUnbalancedTxReq utx                -> "Yield unbalanced tx:" <+> pretty utx
 
 -- | Responses that 'Contract's receive
 data PABResp =
@@ -151,6 +155,7 @@ data PABResp =
     | WriteBalancedTxResp WriteBalancedTxResponse
     | ExposeEndpointResp EndpointDescription (EndpointValue JSON.Value)
     | PosixTimeRangeToContainedSlotRangeResp (Either SlotConversionError SlotRange)
+    | YieldUnbalancedTxResp ()
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -171,6 +176,7 @@ instance Pretty PABResp where
     WriteBalancedTxResp r                    -> "Write balanced tx:" <+> pretty r
     ExposeEndpointResp desc rsp              -> "Call endpoint" <+> pretty desc <+> "with" <+> pretty rsp
     PosixTimeRangeToContainedSlotRangeResp r -> "Slot range:" <+> pretty r
+    YieldUnbalancedTxResp ()                 -> "Yielded unbalanced tx"
 
 matches :: PABReq -> PABResp -> Bool
 matches a b = case (a, b) of
@@ -190,6 +196,7 @@ matches a b = case (a, b) of
   (ExposeEndpointReq ActiveEndpoint{aeDescription}, ExposeEndpointResp desc _)
     | aeDescription == desc -> True
   (PosixTimeRangeToContainedSlotRangeReq{}, PosixTimeRangeToContainedSlotRangeResp{}) -> True
+  (YieldUnbalancedTxReq{}, YieldUnbalancedTxResp{})        -> True
   _                                                        -> False
 
 chainIndexMatches :: ChainIndexQuery -> ChainIndexResponse -> Bool

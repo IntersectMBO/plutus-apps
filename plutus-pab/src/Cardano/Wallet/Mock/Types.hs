@@ -20,9 +20,6 @@ module Cardano.Wallet.Mock.Types (
     , createWallet
     , multiWallet
     , getWalletInfo
-    -- * wallet configuration
-    , WalletConfig (..)
-    , defaultWalletConfig
 
      -- * wallet log messages
     , WalletMsg (..)
@@ -31,15 +28,14 @@ module Cardano.Wallet.Mock.Types (
     , Port (..)
     , NodeClient (..)
     , ChainClient (..)
-    , WalletUrl (..)
     , ChainIndexUrl
     -- * Wallet info
     , WalletInfo(..)
     , fromWalletState
     ) where
 
-import Cardano.BM.Data.Tracer (ToObject (..))
-import Cardano.BM.Data.Tracer.Extras (Tagged (..), mkObjectStr)
+import Cardano.BM.Data.Tracer (ToObject (toObject))
+import Cardano.BM.Data.Tracer.Extras (Tagged (Tagged), mkObjectStr)
 import Cardano.ChainIndex.Types (ChainIndexUrl)
 import Control.Monad.Freer (Eff)
 import Control.Monad.Freer.Error (Error)
@@ -47,21 +43,20 @@ import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.State (State)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger (PubKeyHash)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.PAB.Arbitrary ()
-import Prettyprinter (Pretty (..), (<+>))
-import Servant (ServerError (..))
-import Servant.Client (BaseUrl (..), ClientError, Scheme (..))
+import Prettyprinter (Pretty (pretty), (<+>))
+import Servant (ServerError)
+import Servant.Client (ClientError)
 import Servant.Client.Internal.HttpClient (ClientEnv)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
-import Wallet.Emulator.Wallet (Wallet (..), WalletId (..), WalletState (..), toMockWallet, walletPubKeyHash)
+import Wallet.Emulator.Wallet (Wallet, WalletId, WalletState (WalletState, _mockWallet), toMockWallet, walletPubKeyHash)
 
 -- | Information about an emulated wallet.
 data WalletInfo =
@@ -99,29 +94,9 @@ newtype NodeClient = NodeClient ClientEnv
 
 newtype ChainClient = ChainClient ClientEnv
 
-newtype WalletUrl = WalletUrl BaseUrl
-    deriving (Eq, Show, ToJSON, FromJSON) via BaseUrl
-
 newtype Port = Port Int
     deriving (Show)
     deriving (Eq, Num, ToJSON, FromJSON, Pretty) via Int
-
-newtype WalletConfig =
-    WalletConfig
-        { baseUrl :: WalletUrl
-        }
-    deriving (Show, Eq, Generic)
-    deriving anyclass (FromJSON, ToJSON)
-
-defaultWalletConfig :: WalletConfig
-defaultWalletConfig =
-  WalletConfig
-    -- See Note [pab-ports] in "test/full/Plutus/PAB/CliSpec.hs".
-    { baseUrl = WalletUrl $ BaseUrl Http "localhost" 9081 ""
-    }
-
-instance Default WalletConfig where
-  def = defaultWalletConfig
 
 data WalletMsg = StartingWallet Port
                | ChainClientMsg Text

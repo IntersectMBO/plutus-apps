@@ -27,7 +27,7 @@ import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.Extras.Log qualified as EmulatorLog
 import Control.Monad.Freer.Extras.State (use)
 import Control.Monad.Freer.State (State)
-import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
 import Data.Foldable (fold, traverse_)
 
@@ -37,8 +37,8 @@ import Data.Either (isRight)
 import Data.Map qualified as Map
 import Data.Maybe (isJust)
 import Data.Monoid qualified as M
-import Data.Proxy (Proxy (..))
-import Data.Semigroup (Last (..))
+import Data.Proxy (Proxy (Proxy))
+import Data.Semigroup (Last (Last))
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -51,25 +51,25 @@ import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Value (valueOf)
-import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown), TxOutState (..),
-                          TxValidity (TxValid), chainConstant)
-import Plutus.Contract.State (ContractResponse (..))
-import Plutus.Contracts.Currency (OneShotCurrency, SimpleMPS (..))
+import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown),
+                          TxOutState (Spent, Unspent), TxValidity (TxValid), chainConstant)
+import Plutus.Contract.State (ContractResponse (ContractResponse, hooks))
+import Plutus.Contracts.Currency (OneShotCurrency, SimpleMPS (SimpleMPS, amount, tokenName))
 import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
-import Plutus.Contracts.PingPong (PingPongState (..))
-import Plutus.PAB.Core as Core
+import Plutus.Contracts.PingPong (PingPongState (Pinged, Ponged))
+import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg)
-import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..))
+import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv)
 import Plutus.PAB.Core.ContractInstance.STM qualified as STM
 import Plutus.PAB.Effects.Contract (ContractEffect, serialisableState)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin)
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
-import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (..))
+import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (Currency, GameStateMachine, PingPong))
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
-import Plutus.PAB.Simulator (Simulation, TxCounts (..))
+import Plutus.PAB.Simulator (Simulation, TxCounts)
 import Plutus.PAB.Simulator qualified as Simulator
 import Plutus.PAB.Simulator.Test qualified as Simulator
-import Plutus.PAB.Types (PABError (..), chainOverviewBlockchain, mkChainOverview)
+import Plutus.PAB.Types (PABError (OtherError), chainOverviewBlockchain, mkChainOverview)
 import Plutus.PAB.Webserver.WebSocket qualified as WS
 import PlutusTx.Monoid (Group (inv))
 import Test.QuickCheck.Instances.UUID ()
@@ -325,17 +325,18 @@ guessingGameTest =
           runScenario $ do
               let openingBalance = 100_000_000_000
                   lockAmount = 15_000_000
-                  pubKeyHashFundsChange msg delta = do
-                        address <- pubKeyHashAddress <$> Simulator.handleAgentThread defaultWallet ownPubKeyHash
+                  pubKeyHashFundsChange cid msg delta = do
+                        address <- pubKeyHashAddress <$> Simulator.handleAgentThread defaultWallet (Just cid) ownPubKeyHash
                         balance <- Simulator.valueAt address
                         fees <- Simulator.walletFees defaultWallet
                         assertEqual msg
                             (openingBalance + delta)
                             (valueOf (balance <> fees) adaSymbol adaToken)
-              initialTxCounts <- Simulator.txCounts
-              pubKeyHashFundsChange "Check our opening balance." 0
-              -- need to add contract address to wallet's watched addresses
+
               instanceId <- Simulator.activateContract defaultWallet GameStateMachine
+
+              initialTxCounts <- Simulator.txCounts
+              pubKeyHashFundsChange instanceId "Check our opening balance." 0
 
               assertTxCounts
                   "Activating the game does not generate transactions."
@@ -350,7 +351,7 @@ guessingGameTest =
               assertTxCounts
                   "Locking the game state machine should produce two transactions"
                   (initialTxCounts & Simulator.txValidated +~ 2)
-              pubKeyHashFundsChange "Locking the game should reduce our balance." (negate lockAmount)
+              pubKeyHashFundsChange instanceId "Locking the game should reduce our balance." (negate lockAmount)
               game1Id <- Simulator.activateContract defaultWallet GameStateMachine
 
               guess
@@ -378,7 +379,7 @@ guessingGameTest =
               assertTxCounts
                 "A correct guess creates a third transaction."
                 (initialTxCounts & Simulator.txValidated +~ 3)
-              pubKeyHashFundsChange "The wallet should now have its money back." 0
+              pubKeyHashFundsChange instanceId "The wallet should now have its money back." 0
               blocks <- Simulator.blockchain
               assertBool
                   "We have some confirmed blocks in this test."

@@ -10,7 +10,7 @@
   {
     flags = { defer-plugin-errors = false; };
     package = {
-      specVersion = "2.2";
+      specVersion = "3.0";
       identifier = { name = "plutus-contract"; version = "0.1.0.0"; };
       license = "Apache-2.0";
       copyright = "";
@@ -124,6 +124,7 @@
           "Wallet"
           "Wallet/API"
           "Wallet/Effects"
+          "Wallet/Error"
           "Wallet/Graph"
           "Wallet/Types"
           "Plutus/Trace"
@@ -154,6 +155,7 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."cardano-api".components.sublibs.gen or (errorHandler.buildDepError "cardano-api:gen"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
@@ -189,6 +191,7 @@
             "Spec/State"
             "Spec/ThreadToken"
             "Spec/Secrets"
+            "Spec/Plutus/Contract/Wallet"
             ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];

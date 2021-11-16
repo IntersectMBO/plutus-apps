@@ -10,7 +10,7 @@
   {
     flags = { defer-plugin-errors = false; };
     package = {
-      specVersion = "2.2";
+      specVersion = "3.0";
       identifier = { name = "plutus-pab"; version = "0.1.0.0"; };
       license = "Apache-2.0";
       copyright = "";
@@ -123,7 +123,9 @@
           "Cardano/Node/Types"
           "Cardano/Protocol/Socket/Mock/Client"
           "Cardano/Protocol/Socket/Mock/Server"
-          "Cardano/Wallet/Client"
+          "Cardano/Wallet/LocalClient"
+          "Cardano/Wallet/RemoteClient"
+          "Cardano/Wallet/Types"
           "Cardano/Wallet/Mock/API"
           "Cardano/Wallet/Mock/Client"
           "Cardano/Wallet/Mock/Handlers"
@@ -424,7 +426,9 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."cardano-api".components.sublibs.gen or (errorHandler.buildDepError "cardano-api:gen"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
@@ -453,6 +457,7 @@
           buildable = true;
           modules = [
             "Cardano/Api/NetworkId/ExtraSpec"
+            "Cardano/Wallet/RemoteClientSpec"
             "Cardano/Wallet/ServerSpec"
             "Control/Concurrent/STM/ExtrasSpec"
             ];

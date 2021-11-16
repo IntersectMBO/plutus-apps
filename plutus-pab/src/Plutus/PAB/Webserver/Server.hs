@@ -18,7 +18,7 @@ module Plutus.PAB.Webserver.Server
     , startServerDebug'
     ) where
 
-import Cardano.Wallet.Mock.Types (WalletInfo (..))
+import Cardano.Wallet.Mock.Types (WalletInfo (WalletInfo, wiPubKeyHash, wiWallet))
 import Control.Concurrent (MVar, forkFinally, forkIO, newEmptyMVar, putMVar)
 import Control.Concurrent.Availability (Availability, available, newToken)
 import Control.Concurrent.STM qualified as STM
@@ -30,20 +30,21 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Function ((&))
-import Data.Monoid (Endo (..))
+import Data.Monoid (Endo (Endo, appEndo))
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Network.Wai (Middleware)
 import Network.Wai.Handler.Warp qualified as Warp
 import Network.Wai.Middleware.Cors qualified as Cors
 import Network.Wai.Middleware.Servant.Options qualified as Cors
-import Plutus.PAB.Core (PABAction, PABRunner (..))
+import Plutus.PAB.Core (PABAction, PABRunner (PABRunner, runPABAction))
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Monitoring.PABLogMsg qualified as LM
 import Plutus.PAB.Simulator (Simulation)
 import Plutus.PAB.Simulator qualified as Simulator
-import Plutus.PAB.Types (PABError, WebserverConfig (..), baseUrl, defaultWebServerConfig)
+import Plutus.PAB.Types (PABError, WebserverConfig (WebserverConfig, endpointTimeout, permissiveCorsPolicy, staticDir),
+                         baseUrl, defaultWebServerConfig)
 import Plutus.PAB.Webserver.API (API, SwaggerAPI, WSAPI, WalletProxy)
 import Plutus.PAB.Webserver.Handler (apiHandler, swagger, walletProxy, walletProxyClientEnv)
 import Plutus.PAB.Webserver.WebSocket qualified as WS
@@ -73,38 +74,46 @@ app ::
     , OpenApi.ToSchema (Contract.ContractDef t)
     ) =>
     Maybe FilePath
-    -> Either ClientEnv (PABAction t env WalletInfo) -- ^ wallet client (if wallet proxy is enabled)
+    -> Either (Maybe ClientEnv) (PABAction t env WalletInfo) -- ^ wallet client (if wallet proxy is enabled)
     -> PABRunner t env
     -> Application
 app fp walletClient pabRunner = do
     let apiServer :: ServerT (CombinedAPI t) Handler
         apiServer =
-            (Servant.hoistServer
+            Servant.hoistServer
                 (Proxy @(BaseCombinedAPI t))
                 (asHandler pabRunner)
-                (apiHandler :<|> WS.wsHandler)) :<|> (swagger @t)
+                (apiHandler :<|> WS.wsHandler) :<|> (swagger @t)
 
     case fp of
         Nothing -> do
-            let wp = either walletProxyClientEnv walletProxy walletClient
-                rest = Proxy @(CombinedAPI t :<|> (WalletProxy WalletId))
-                wpServer =
-                    Servant.hoistServer
-                        (Proxy @(WalletProxy WalletId))
-                        (asHandler pabRunner)
-                        wp
-            Servant.serve rest (apiServer :<|> wpServer)
+            let wpM = either (fmap walletProxyClientEnv) (Just . walletProxy) walletClient
+            case wpM of
+                Nothing -> do
+                    Servant.serve (Proxy @(CombinedAPI t)) apiServer
+                Just wp -> do
+                    let wpServer =
+                            Servant.hoistServer
+                                (Proxy @(WalletProxy WalletId))
+                                (asHandler pabRunner)
+                                wp
+                        rest = Proxy @(CombinedAPI t :<|> WalletProxy WalletId)
+                    Servant.serve rest (apiServer :<|> wpServer)
         Just filePath -> do
-            let wp = either walletProxyClientEnv walletProxy walletClient
-                wpServer =
-                    Servant.hoistServer
-                        (Proxy @(WalletProxy WalletId))
-                        (asHandler pabRunner)
-                        wp
+            let
                 fileServer :: ServerT Raw Handler
                 fileServer = serveDirectoryFileServer filePath
-                rest = Proxy @(CombinedAPI t :<|> (WalletProxy WalletId) :<|> Raw)
-            Servant.serve rest (apiServer :<|> wpServer :<|> fileServer)
+            case either (fmap walletProxyClientEnv) (Just . walletProxy) walletClient of
+                Nothing -> do
+                    Servant.serve (Proxy @(CombinedAPI t :<|> Raw)) (apiServer :<|> fileServer)
+                Just wp -> do
+                    let wpServer =
+                            Servant.hoistServer
+                                (Proxy @(WalletProxy WalletId))
+                                (asHandler pabRunner)
+                                wp
+                        rest = Proxy @(CombinedAPI t :<|> WalletProxy WalletId :<|> Raw)
+                    Servant.serve rest (apiServer :<|> wpServer :<|> fileServer)
 
 -- | Start the server using the config. Returns an action that shuts it down
 --   again, and an MVar that is filled when the webserver
@@ -118,7 +127,8 @@ startServer ::
     , OpenApi.ToSchema (Contract.ContractDef t)
     )
     => WebserverConfig -- ^ Optional file path for static assets
-    -> Either ClientEnv (PABAction t env WalletInfo)
+    -> Either (Maybe ClientEnv) (PABAction t env WalletInfo)
+    -- ^ How to generate a new wallet, either by proxying the request to the wallet API, or by running the PAB action
     -> Availability
     -> PABAction t env (MVar (), PABAction t env ())
 startServer WebserverConfig{baseUrl, staticDir, permissiveCorsPolicy, endpointTimeout} walletClient availability = do
@@ -153,7 +163,7 @@ startServer' ::
     )
     => [Middleware] -- ^ Optional wai middleware
     -> Int -- ^ Port
-    -> Either ClientEnv (PABAction t env WalletInfo) -- ^ How to generate a new wallet, either by proxying the request to the wallet API, or by running the PAB action
+    -> Either (Maybe ClientEnv) (PABAction t env WalletInfo) -- ^ How to generate a new wallet, either by proxying the request to the wallet API, or by running the PAB action
     -> Maybe FilePath -- ^ Optional file path for static assets
     -> Availability
     -> Int

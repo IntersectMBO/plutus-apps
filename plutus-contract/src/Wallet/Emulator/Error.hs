@@ -33,6 +33,8 @@ data WalletAPIError =
     -- ^ There was an error while converting to Cardano.API format.
     | PaymentMkTxError Constraints.MkTxError
     -- ^ There was an error while creating a payment transaction
+    | RemoteClientFunctionNotYetSupported Text
+    -- ^ The called wallet effect is not yet supported in a remote wallet client scenario.
     | OtherError Text
     -- ^ Some other error occurred.
     deriving stock (Show, Eq, Generic)
@@ -51,6 +53,8 @@ instance Pretty WalletAPIError where
             "Error during conversion to a Cardano.Api format:" <+> pretty t
         PaymentMkTxError e ->
             "Payment transaction error:" <+> pretty e
+        RemoteClientFunctionNotYetSupported e ->
+            "Remote client function not yet supported:" <+> pretty e
         OtherError t ->
             "Other error:" <+> pretty t
 

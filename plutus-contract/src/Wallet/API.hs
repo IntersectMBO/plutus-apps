@@ -25,6 +25,7 @@ module Wallet.API(
     submitTxn,
     ownPubKeyHash,
     balanceTx,
+    yieldUnbalancedTx,
     NodeClientEffect,
     publishTx,
     getClientSlot,
@@ -50,25 +51,27 @@ module Wallet.API(
     after,
     contains,
     -- * Error handling
-    WalletAPIError(..),
-    throwInsufficientFundsError,
-    throwOtherError,
+    Wallet.Error.WalletAPIError(..),
+    Wallet.Error.throwInsufficientFundsError,
+    Wallet.Error.throwOtherError,
     ) where
 
 import Control.Monad (unless, void)
-import Control.Monad.Freer
+import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logWarn)
 import Data.Default (Default (def))
 import Data.Text (Text)
 import Data.Void (Void)
-import Ledger hiding (inputs, out, value)
+import Ledger (CardanoTx, Interval (Interval, ivFrom, ivTo), PubKey (PubKey, getPubKey),
+               PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after, always, before, contains,
+               interval, isEmpty, member, singleton, width)
 import Ledger.Constraints qualified as Constraints
 import Ledger.TimeSlot qualified as TimeSlot
-import Wallet.Effects
-import Wallet.Emulator.Error
-
-import Prelude hiding (Ordering (..))
+import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientSlot, getClientSlotConfig, ownPubKeyHash,
+                       publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
+import Wallet.Error (WalletAPIError (PaymentMkTxError))
+import Wallet.Error qualified
 
 -- | Transfer some funds to an address locked by a public key, returning the
 --   transaction that was submitted.

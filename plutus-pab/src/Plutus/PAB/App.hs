@@ -14,7 +14,6 @@
 {-# LANGUAGE StrictData            #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
@@ -29,32 +28,35 @@ module Plutus.PAB.App(
     handleContractDefinition
     ) where
 
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
+import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
 import Cardano.Api.ProtocolParameters ()
 import Cardano.Api.Shelley (ProtocolParameters)
 import Cardano.BM.Trace (Trace, logDebug)
 import Cardano.ChainIndex.Types qualified as ChainIndex
 import Cardano.Node.Client (handleNodeClientClient)
 import Cardano.Node.Client qualified as NodeClient
-import Cardano.Node.Types (MockServerConfig (..), NodeMode (..))
+import Cardano.Node.Types (MockServerConfig (MockServerConfig, mscBaseUrl, mscNetworkId, mscNodeMode, mscProtocolParametersJsonPath, mscSlotConfig, mscSocketPath),
+                           NodeMode (AlonzoNode, MockNode))
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
-import Cardano.Wallet.Client qualified as WalletClient
+import Cardano.Wallet.LocalClient qualified as LocalWalletClient
 import Cardano.Wallet.Mock.Client qualified as WalletMockClient
-import Cardano.Wallet.Mock.Types qualified as Wallet
+import Cardano.Wallet.RemoteClient qualified as RemoteWalletClient
+import Cardano.Wallet.Types qualified as Wallet
 import Control.Concurrent.STM qualified as STM
-import Control.Monad.Freer
+import Control.Lens (preview)
+import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, reinterpret2, reinterpretN, type (~>))
 import Control.Monad.Freer.Error (Error, handleError, throwError)
 import Control.Monad.Freer.Extras.Beam (handleBeam)
 import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
-import Control.Monad.Freer.Reader (Reader)
-import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Freer.Reader (Reader, ask, runReader)
+import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson (FromJSON, ToJSON, eitherDecode)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Coerce (coerce)
 import Data.Default (def)
 import Data.Text (Text, pack, unpack)
 import Data.Typeable (Typeable)
-import Database.Beam.Migrate.Simple
+import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
 import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.SQLite.Simple (open)
@@ -62,26 +64,30 @@ import Database.SQLite.Simple qualified as Sqlite
 import Network.HTTP.Client (managerModifyRequest, newManager, setRequestIgnoreStatus)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Plutus.ChainIndex.Client qualified as ChainIndex
-import Plutus.PAB.Core (EffectHandlers (..), PABAction)
+import Plutus.PAB.Core (EffectHandlers (EffectHandlers), PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance.BlockchainEnv qualified as BlockchainEnv
-import Plutus.PAB.Core.ContractInstance.STM as Instances
+import Plutus.PAB.Core.ContractInstance.STM as Instances (InstancesState, emptyInstancesState)
 import Plutus.PAB.Db.Beam.ContractStore qualified as BeamEff
 import Plutus.PAB.Db.Memory.ContractStore (InMemInstances, initialInMemInstances)
 import Plutus.PAB.Db.Memory.ContractStore qualified as InMem
 import Plutus.PAB.Db.Schema (checkedSqliteDb)
-import Plutus.PAB.Effects.Contract (ContractDefinition (..))
-import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (..), HasDefinitions (..))
+import Plutus.PAB.Effects.Contract (ContractDefinition (AddDefinition, GetDefinitions))
+import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (BuiltinHandler, contractHandler),
+                                            HasDefinitions (getDefinitions))
 import Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
-import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (..), PABMultiAgentMsg (BeamLogItem, UserLog, WalletClient),
+import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (SMultiAgent), PABMultiAgentMsg (BeamLogItem, UserLog, WalletClient),
                                         WalletClientMsg)
-import Plutus.PAB.Timeout (Timeout (..))
-import Plutus.PAB.Types (Config (Config), DbConfig (..), PABError (..), WebserverConfig (..), chainIndexConfig,
-                         dbConfig, endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
+import Plutus.PAB.Timeout (Timeout (Timeout))
+import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
+                         PABError (BeamEffectError, ChainIndexError, NodeClientError, RemoteWalletWithMockNodeError, WalletClientError, WalletError),
+                         WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, endpointTimeout,
+                         nodeServerConfig, pabWebserverConfig, walletServerConfig)
 import Servant.Client (ClientEnv, ClientError, mkClientEnv)
-import Wallet.Effects (WalletEffect (..))
-import Wallet.Emulator.Error (WalletAPIError)
-import Wallet.Emulator.Wallet (Wallet (..))
+import Wallet.Effects (WalletEffect)
+import Wallet.Emulator.Wallet (Wallet)
+import Wallet.Error (WalletAPIError)
+import Wallet.Types (ContractInstanceId)
 
 ------------------------------------------------------------
 
@@ -89,7 +95,7 @@ import Wallet.Emulator.Wallet (Wallet (..))
 data AppEnv a =
     AppEnv
         { dbConnection          :: Sqlite.Connection
-        , walletClientEnv       :: ClientEnv
+        , walletClientEnv       :: Maybe ClientEnv -- ^ No 'ClientEnv' when in the remote client setting.
         , nodeClientEnv         :: ClientEnv
         , chainIndexEnv         :: ClientEnv
         , txSendHandle          :: MockClient.TxSendHandle
@@ -154,7 +160,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . interpret (handleBeam (convertLog (SMultiAgent . BeamLogItem) trace))
             . reinterpretN @'[_, _, _, _, _] handleContractDefinition
 
-        , handleServicesEffects = \wallet ->
+        , handleServicesEffects = \wallet cidM -> do
             -- handle 'NodeClientEffect'
             flip handleError (throwError . NodeClientError)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
@@ -176,10 +182,11 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . flip handleError (throwError . WalletError)
             . interpret (mapLog @_ @(PABMultiAgentMsg (Builtin a)) WalletClient)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv walletClientEnv)
+            . reinterpret (Core.handleMappedReader @(AppEnv a) @(Maybe ClientEnv) walletClientEnv)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ProtocolParameters protocolParameters)
-            . reinterpretN @'[_, _, _, _, _] (handleWalletEffect (nodeServerConfig config) wallet)
+            . interpret (Core.handleInstancesStateReader @(Builtin a) @(AppEnv a))
+            . reinterpretN @'[_, _, _, _, _, _] (handleWalletEffect (nodeServerConfig config) cidM wallet)
 
         , onStartup = pure ()
 
@@ -191,16 +198,29 @@ handleWalletEffect
   ( LastMember IO effs
   , Member (Error ClientError) effs
   , Member (Error WalletAPIError) effs
-  , Member (Reader ClientEnv) effs
+  , Member (Error PABError) effs
+  , Member (Reader (Maybe ClientEnv)) effs
   , Member (Reader ProtocolParameters) effs
   , Member (LogMsg WalletClientMsg) effs
+  , Member (Reader InstancesState) effs
   )
   => MockServerConfig
+  -> Maybe ContractInstanceId
   -> Wallet
   -> WalletEffect
   ~> Eff effs
-handleWalletEffect (mscNodeMode -> MockNode) = WalletMockClient.handleWalletClient @IO
-handleWalletEffect config                    = WalletClient.handleWalletClient config
+handleWalletEffect MockServerConfig { mscNodeMode = MockNode } _ w eff = do
+    clientEnvM <- ask @(Maybe ClientEnv)
+    case clientEnvM of
+        Nothing -> throwError RemoteWalletWithMockNodeError
+        Just clientEnv ->
+            runReader clientEnv $ WalletMockClient.handleWalletClient @IO w eff
+handleWalletEffect nodeCfg@MockServerConfig { mscNodeMode = AlonzoNode } cidM w eff = do
+    clientEnvM <- ask @(Maybe ClientEnv)
+    case clientEnvM of
+        Nothing -> RemoteWalletClient.handleWalletClient nodeCfg cidM eff
+        Just clientEnv ->
+            runReader clientEnv $ LocalWalletClient.handleWalletClient @IO nodeCfg w eff
 
 runApp ::
     forall a b.
@@ -215,7 +235,12 @@ runApp ::
     -> Config -- ^ Client configuration
     -> App a b -- ^ Action
     -> IO (Either PABError b)
-runApp storageBackend trace contractHandler config@Config{pabWebserverConfig=WebserverConfig{endpointTimeout}} = Core.runPAB (Timeout endpointTimeout) (appEffectHandlers storageBackend config trace contractHandler)
+runApp
+    storageBackend
+    trace
+    contractHandler
+    config@Config{pabWebserverConfig=WebserverConfig{endpointTimeout}} =
+    Core.runPAB (Timeout endpointTimeout) (appEffectHandlers storageBackend config trace contractHandler)
 
 type App a b = PABAction (Builtin a) (AppEnv a) b
 
@@ -224,11 +249,11 @@ data StorageBackend = BeamSqliteBackend | InMemoryBackend
 
 mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
 mkEnv appTrace appConfig@Config { dbConfig
-             , nodeServerConfig =  MockServerConfig{mscBaseUrl, mscSocketPath, mscSlotConfig, mscProtocolParametersJsonPath}
+             , nodeServerConfig = MockServerConfig{mscBaseUrl, mscSocketPath, mscSlotConfig, mscProtocolParametersJsonPath}
              , walletServerConfig
              , chainIndexConfig
              } = do
-    walletClientEnv <- clientEnv (Wallet.baseUrl walletServerConfig)
+    walletClientEnv <- maybe (pure Nothing) (fmap Just . clientEnv) $ preview Wallet._LocalWalletConfig walletServerConfig
     nodeClientEnv <- clientEnv mscBaseUrl
     chainIndexEnv <- clientEnv (ChainIndex.ciBaseUrl chainIndexConfig)
     dbConnection <- dbConnect appTrace dbConfig
@@ -248,7 +273,8 @@ mkEnv appTrace appConfig@Config { dbConfig
     readPP path = do
       bs <- BSL.readFile path
       case eitherDecode bs of
-        Left err -> error $ "Error reading protocol parameters JSON file: " ++ show mscProtocolParametersJsonPath ++ " (" ++ err ++ ")"
+        Left err -> error $ "Error reading protocol parameters JSON file: "
+                         ++ show mscProtocolParametersJsonPath ++ " (" ++ err ++ ")"
         Right params -> pure params
 
 

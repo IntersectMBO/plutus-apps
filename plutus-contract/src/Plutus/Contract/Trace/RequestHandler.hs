@@ -27,6 +27,7 @@ module Plutus.Contract.Trace.RequestHandler(
     , handlePendingTransactions
     , handleChainIndexQueries
     , handleOwnInstanceIdQueries
+    , handleYieldedUnbalancedTx
     ) where
 
 import Control.Applicative (Alternative (empty, (<|>)))
@@ -39,7 +40,7 @@ import Control.Monad.Freer.Error qualified as Eff
 import Control.Monad.Freer.NonDet (NonDet)
 import Control.Monad.Freer.NonDet qualified as NonDet
 import Control.Monad.Freer.Reader (Reader, ask)
-import Data.Monoid (Alt (..), Ap (..))
+import Data.Monoid (Alt (Alt), Ap (Ap))
 import Data.Text (Text)
 
 import Plutus.Contract.Resumable (Request (..), Response (..))
@@ -51,14 +52,14 @@ import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as ChainIndexEff
-import Plutus.Contract.Effects (ChainIndexQuery (..), ChainIndexResponse (..))
+import Plutus.Contract.Effects (ChainIndexQuery (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
+                                ChainIndexResponse (DatumHashResponse, GetTipResponse, MintingPolicyHashResponse, RedeemerHashResponse, StakeValidatorHashResponse, TxIdResponse, TxOutRefResponse, UtxoSetAtResponse, UtxoSetMembershipResponse, UtxoSetWithCurrencyResponse, ValidatorHashResponse))
 import Plutus.Contract.Wallet qualified as Wallet
 import Wallet.API (WalletAPIError)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Effects qualified
-import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (..))
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (HandleTxFailed, SlotNoticationTargetVsCurrent))
 import Wallet.Types (ContractInstanceId)
-
 
 -- | Request handlers that can choose whether to handle an effect (using
 --   'Alternative'). This is useful if 'req' is a sum type.
@@ -241,3 +242,14 @@ handleOwnInstanceIdQueries ::
     => RequestHandler effs a ContractInstanceId
 handleOwnInstanceIdQueries = RequestHandler $ \_ ->
     surroundDebug @Text "handleOwnInstanceIdQueries" ask
+
+handleYieldedUnbalancedTx ::
+    forall effs.
+    ( Member WalletEffect effs
+    , Member (LogObserve (LogMessage Text)) effs
+    )
+    => RequestHandler effs UnbalancedTx ()
+handleYieldedUnbalancedTx =
+    RequestHandler $ \utx ->
+        surroundDebug @Text "handleYieldedUnbalancedTx" $ do
+            Wallet.yieldUnbalancedTx utx

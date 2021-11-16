@@ -23,9 +23,11 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxInsCollateral
   , fromCardanoTxInWitness
   , fromCardanoTxOut
+  , fromCardanoTxOutDatumHash
   , fromCardanoAddress
   , fromCardanoMintValue
   , fromCardanoValue
+  , fromCardanoPolicyId
   , fromCardanoFee
   , fromCardanoValidityRange
   , fromCardanoScriptInEra
@@ -55,7 +57,7 @@ module Ledger.Tx.CardanoAPI(
 import Cardano.Api qualified as C
 import Cardano.Api.Byron qualified as C
 import Cardano.Api.Shelley qualified as C
-import Cardano.BM.Data.Tracer (ToObject (..))
+import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.Chain.Common (addrToBase58)
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
@@ -63,9 +65,9 @@ import Cardano.Ledger.Core qualified as Ledger
 import Codec.Serialise (Serialise, deserialiseOrFail)
 import Codec.Serialise qualified as Codec
 import Codec.Serialise.Decoding (Decoder, decodeBytes, decodeSimple)
-import Codec.Serialise.Encoding (Encoding (..), Tokens (..))
+import Codec.Serialise.Encoding (Encoding (Encoding), Tokens (TkBytes, TkSimple))
 import Control.Applicative ((<|>))
-import Control.Lens hiding ((.=))
+import Control.Lens ((&), (.~), (?~))
 import Control.Monad (when)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
 import Data.Aeson qualified as Aeson
@@ -78,8 +80,8 @@ import Data.ByteString.Short qualified as SBS
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
-import Data.OpenApi (NamedSchema (..), OpenApiType (..), byteSchema, declareSchemaRef, properties, required,
-                     sketchSchema, type_)
+import Data.OpenApi (NamedSchema (NamedSchema), OpenApiType (OpenApiObject), byteSchema, declareSchemaRef, properties,
+                     required, sketchSchema, type_)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
@@ -96,7 +98,7 @@ import Plutus.V1.Ledger.Slot qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
-import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
+import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
 
 instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where
   declareNamedSchema _ = do
