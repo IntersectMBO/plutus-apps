@@ -107,13 +107,6 @@ let
            -- no idea why ouroboros-consensus-byron restricts to <.28
            , ouroboros-consensus-byron:cryptonite
 
-
-      source-repository-package
-        type: git
-        location: https://github.com/hamishmack/foundation
-        tag: 421e8056fabf30ef2f5b01bb61c6880d0dfaa1c8
-        --sha256: 0cbsj3dyycykh0lcnsglrzzh898n2iydyw8f2nwyfvfnyx6ac2im
-        subdir: foundation
     '' + lib.optionalString (topLevelPkgs.stdenv.hostPlatform.isGhcjs && !pkgs.stdenv.hostPlatform.isGhcjs) ''
       packages:
         ${topLevelPkgs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.project.configured-src}
