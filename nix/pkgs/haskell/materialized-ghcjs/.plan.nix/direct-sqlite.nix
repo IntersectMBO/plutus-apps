@@ -64,6 +64,7 @@
           "Database/SQLite3/Direct"
           ];
         cSources = (pkgs.lib).optional (!flags.systemlib) "cbits/sqlite3.c";
+        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/direct-sqlite.js";
         includeDirs = [ "." ] ++ (pkgs.lib).optional (!flags.systemlib) "cbits";
         };
       tests = {
