@@ -434,12 +434,6 @@
         "attoparsec-iso8601".flags.developer = false;
         "mono-traversable".revision = (((hackage."mono-traversable")."1.0.15.1").revisions).default;
         "fingertree".revision = (((hackage."fingertree")."0.1.4.2").revisions).default;
-        "direct-sqlite".revision = (((hackage."direct-sqlite")."2.3.26").revisions).default;
-        "direct-sqlite".flags.haveusleep = true;
-        "direct-sqlite".flags.urifilenames = true;
-        "direct-sqlite".flags.systemlib = false;
-        "direct-sqlite".flags.fulltextsearch = true;
-        "direct-sqlite".flags.json1 = true;
         "th-reify-many".revision = (((hackage."th-reify-many")."0.1.9").revisions).default;
         "witherable".revision = (((hackage."witherable")."0.4.1").revisions).default;
         "snap-core".revision = (((hackage."snap-core")."1.0.4.2").revisions).default;
@@ -734,6 +728,7 @@
         lobemo-scribe-systemd = ./.plan.nix/lobemo-scribe-systemd.nix;
         base-deriving-via = ./.plan.nix/base-deriving-via.nix;
         cardano-crypto-class = ./.plan.nix/cardano-crypto-class.nix;
+        direct-sqlite = ./.plan.nix/direct-sqlite.nix;
         monoidal-synchronisation = ./.plan.nix/monoidal-synchronisation.nix;
         iohk-monitoring-stub = ./.plan.nix/iohk-monitoring-stub.nix;
         cardano-ledger-shelley-ma = ./.plan.nix/cardano-ledger-shelley-ma.nix;
@@ -902,6 +897,15 @@
             };
           "cardano-crypto-class" = {
             flags = { "development" = lib.mkOverride 900 false; };
+            };
+          "direct-sqlite" = {
+            flags = {
+              "haveusleep" = lib.mkOverride 900 true;
+              "urifilenames" = lib.mkOverride 900 true;
+              "systemlib" = lib.mkOverride 900 false;
+              "fulltextsearch" = lib.mkOverride 900 true;
+              "json1" = lib.mkOverride 900 true;
+              };
             };
           "monoidal-synchronisation" = { flags = {}; };
           "iohk-monitoring-stub" = { flags = {}; };
@@ -1524,6 +1528,7 @@
           "warp-tls".components.library.planned = lib.mkOverride 900 true;
           "deriving-compat".components.library.planned = lib.mkOverride 900 true;
           "path-pieces".components.library.planned = lib.mkOverride 900 true;
+          "direct-sqlite".components.tests."test".planned = lib.mkOverride 900 true;
           "fast-logger".components.library.planned = lib.mkOverride 900 true;
           "data-default".components.library.planned = lib.mkOverride 900 true;
           "transformers-compat".components.library.planned = lib.mkOverride 900 true;
