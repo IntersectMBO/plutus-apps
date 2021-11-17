@@ -421,7 +421,7 @@ let
               nativeBuildInputs = attrs.nativeBuildInputs or [ ] ++ (with pkgs.buildPackages.buildPackages; [ emscripten python2 ]);
               prePatch = ''
                 export HOME=$(mktemp -d)
-                            export PYTHON=${pkgs.buildPackages.buildPackages.python2}/bin/python
+                export PYTHON=${pkgs.buildPackages.buildPackages.python2}/bin/python
               '' + attrs.prePatch or "";
               configurePhase = ''
                 emconfigure ./configure --prefix=$out
