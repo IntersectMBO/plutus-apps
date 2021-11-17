@@ -91,6 +91,9 @@ let
         tests: False
         benchmarks: False
 
+      package cryptohash-sha256
+        flags: -use-cbits
+
       allow-newer:
              stm:base
 
