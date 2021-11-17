@@ -417,7 +417,7 @@ function h$cryptonite_chacha_init( ctx_d, ctx_o, nb_rounds, keylen, key_d, key_o
   h$copyFromHeap(ctx_ptr, ctx_d, ctx_o, h$chacha_ctx_size);
 }
 
-function h$cryptonite_cryptonite_chacha_random( rounds, dst_d, dst_o, state_d, state_o, bytes) {
+function h$cryptonite_chacha_random( rounds, dst_d, dst_o, state_d, state_o, bytes) {
   var dst_ptr = h$getTmpBufferWith(0, dst_d, dst_o, bytes);
       st_ptr  = h$getTmpBufferWith(1, st_d, st_o, h$chacha_state_size);
   h$cryptonite._cryptonite_chacha_random( rounds, dst_ptr, st_ptr, bytes);
