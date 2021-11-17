@@ -99,16 +99,15 @@
     "haskell-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1636940594,
-        "narHash": "sha256-gXjzrbldqu3tKxIY8xRqn2otLQcXXh++tayxvUTvmak=",
+        "lastModified": 1637101192,
+        "narHash": "sha256-FMAwhSBCE4+iRBim+4H81ZSf6WsAnn5NLlpedWBOYJM=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "0b942979b4bec158504e7dd9324665e781901dd4",
+        "rev": "64cd5f70ce0d619390039a1a3d57c442552b0924",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "angerman-patch-2",
         "repo": "haskell.nix",
         "type": "github"
       }
