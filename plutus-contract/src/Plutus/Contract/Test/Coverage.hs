@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Plutus.Contract.Test.Coverage
   ( getInvokedEndpoints
   , getCoverageReport
@@ -12,6 +13,7 @@ import Data.Set qualified as Set
 
 import Data.Text qualified as Text
 
+import Control.DeepSeq
 import Control.Lens
 
 import Ledger qualified
@@ -51,4 +53,18 @@ getCoverageReport es =
     event <- es
     log <- extractLog $ event ^. eteEvent
     logEvent <- log
-    return $ coverageReportFromLogMsg (Text.unpack logEvent)
+    let msg = Text.unpack logEvent
+    return $ coverageReportFromLogMsg msg
+
+-- TODO: Move this to plutus core to avoid orhpan instance
+instance NFData CovLoc where
+  rnf (CovLoc f sl el sc ec) =
+    rnf f  `seq`
+    rnf sl `seq`
+    rnf el `seq`
+    rnf sc `seq`
+    rnf ec
+instance NFData CoverageAnnotation where
+  rnf (CoverLocation loc) = rnf loc
+  rnf (CoverBool loc b)   = rnf b `seq` rnf loc
+deriving instance NFData CoverageReport

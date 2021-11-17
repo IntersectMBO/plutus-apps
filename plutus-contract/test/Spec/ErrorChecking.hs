@@ -29,7 +29,7 @@ import Plutus.Trace.Emulator as Trace
 import PlutusTx qualified
 import PlutusTx.ErrorCodes
 import PlutusTx.IsData.Class
-import PlutusTx.Prelude
+import PlutusTx.Prelude hiding ((<$))
 
 import Prelude qualified as Haskell
 
@@ -48,23 +48,23 @@ tests = testGroup "error checking"
 
 -- | Normal failures should be allowed
 prop_FailFalse :: Property
-prop_FailFalse = checkErrorWhitelist defaultWhitelist (Actions [FailFalse])
+prop_FailFalse = checkErrorWhitelist defaultWhitelist (actionsFromList [FailFalse])
 
 -- | Head Nil failure should not be allowed
 prop_FailHeadNil :: Property
-prop_FailHeadNil = checkErrorWhitelist defaultWhitelist (Actions [FailHeadNil])
+prop_FailHeadNil = checkErrorWhitelist defaultWhitelist (actionsFromList [FailHeadNil])
 
 -- | Division by zero failure should not be allowed
 prop_DivZero :: Property
-prop_DivZero = checkErrorWhitelist defaultWhitelist (Actions [DivZero])
+prop_DivZero = checkErrorWhitelist defaultWhitelist (actionsFromList [DivZero])
 
 -- | Division by zero failure should not be allowed (tracing before the failure).
 prop_DivZero_t :: Property
-prop_DivZero_t = checkErrorWhitelist defaultWhitelist (Actions [DivZero_t])
+prop_DivZero_t = checkErrorWhitelist defaultWhitelist (actionsFromList [DivZero_t])
 
 -- | Successful validation should be allowed
 prop_Success :: Property
-prop_Success = checkErrorWhitelist defaultWhitelist (Actions [Success])
+prop_Success = checkErrorWhitelist defaultWhitelist (actionsFromList [Success])
 
 -- | This QuickCheck model only provides an interface to the validators used in this
 -- test that are convenient for testing them in isolation.
@@ -84,7 +84,7 @@ instance ContractModel DummyModel where
                          | Success
                          deriving (Haskell.Eq, Haskell.Show)
 
-  perform handle _ cmd = void $ case cmd of
+  perform handle _ _ cmd = void $ case cmd of
     FailFalse -> do
       callEndpoint @"failFalse" (handle $ WalletKey w1) ()
       Trace.waitNSlots 2
@@ -103,7 +103,11 @@ instance ContractModel DummyModel where
 
   initialState = DummyModel
 
-  initialHandleSpecs = [ContractInstanceSpec (WalletKey w1) w1 contract]
+  initialInstances = [Key (WalletKey w1)]
+
+  instanceWallet (WalletKey w) = w
+
+  instanceContract _ _ (WalletKey _) = contract
 
   nextState _ = wait 2
 

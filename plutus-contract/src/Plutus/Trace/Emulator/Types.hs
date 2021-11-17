@@ -52,6 +52,7 @@ module Plutus.Trace.Emulator.Types(
     , UserThreadMsg(..)
     ) where
 
+import Control.DeepSeq
 import Control.Lens
 import Control.Monad.Freer.Coroutine
 import Control.Monad.Freer.Error
@@ -175,6 +176,9 @@ instance Pretty EmulatorRuntimeError where
 data ContractInstanceTag = ContractInstanceTag { unContractInstanceTag :: Text, shortContractInstanceTag :: Text }
     deriving stock (Eq, Ord, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
+
+instance NFData ContractInstanceTag where
+  rnf (ContractInstanceTag txt txt') = rnf txt `seq` rnf txt' `seq` ()
 
 instance Pretty ContractInstanceTag where
   pretty = pretty . shortContractInstanceTag
