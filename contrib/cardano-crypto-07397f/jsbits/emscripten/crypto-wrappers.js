@@ -230,5 +230,5 @@ function h$getpwuid_r(uid, pwd_d, pwd_o, buf_d, buf_o, buflen, result_d, result_
 
 // TODO: move to foundation
 function h$foundation_sysrandom_linux(buf_d, buf_o, size) {
-  cryptoObj.getRandomValues(typedArray);
+  return -19; // ENODEV; foundation returns the same for non-linux hosts.
 }

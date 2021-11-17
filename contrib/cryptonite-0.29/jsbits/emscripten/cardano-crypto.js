@@ -8,7 +8,7 @@ function h$crc32(crc, ptr_d, ptr_o, len) {
                 tmp = tmp & 1 ? 3988292384 ^ tmp >>> 1 : tmp >>> 1;
             }
             h$crc32table[i] = tmp;
-        }        
+        }
     }
 
     crc = crc ^ -1;
@@ -683,7 +683,7 @@ function asmFunc(env) {
  function $0() {
   $102();
  }
- 
+
  function $1($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -698,7 +698,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 16 | 0;
   return;
  }
- 
+
  function $2($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -783,7 +783,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 192 | 0;
   return;
  }
- 
+
  function $3($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0;
@@ -791,7 +791,7 @@ function asmFunc(env) {
   HEAP32[($3_1 + 12 | 0) >> 2] = $0_1;
   return (HEAPU8[(HEAP32[($3_1 + 12 | 0) >> 2] | 0) >> 0] | 0) & 255 | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 1 | 0) >> 0] | 0) & 255 | 0) << 8 | 0) | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 2 | 0) >> 0] | 0) & 255 | 0) << 16 | 0) | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 3 | 0) >> 0] | 0) & 255 | 0) << 24 | 0) | 0 | 0;
  }
- 
+
  function $4($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -3841,7 +3841,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 128 | 0;
   return;
  }
- 
+
  function $5($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0, $167 = 0, $176 = 0, $185 = 0, $194 = 0, $203 = 0, $212 = 0, $221 = 0, $230 = 0, $239 = 0;
@@ -3907,7 +3907,7 @@ function asmFunc(env) {
   global$0 = $3_1 + 64 | 0;
   return;
  }
- 
+
  function $6($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -3920,7 +3920,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $7($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -3939,7 +3939,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 176 | 0;
   return;
  }
- 
+
  function $8($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -3960,7 +3960,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 144 | 0;
   return;
  }
- 
+
  function $9($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -6867,7 +6867,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 192 | 0;
   return;
  }
- 
+
  function $10($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -7040,7 +7040,7 @@ function asmFunc(env) {
   HEAP8[((HEAP32[($4_1 + 52 | 0) >> 2] | 0) + 31 | 0) >> 0] = ((HEAP32[($4_1 + 36 | 0) >> 2] | 0) >>> 24 | 0) & 255 | 0;
   return;
  }
- 
+
  function $11($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -7414,7 +7414,7 @@ function asmFunc(env) {
   HEAP32[((HEAP32[($4_1 + 44 | 0) >> 2] | 0) + 36 | 0) >> 2] = ((HEAP32[($4_1 + 8 | 0) >> 2] | 0) >>> 6 | 0) & 33554431 | 0;
   return;
  }
- 
+
  function $12($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -9220,7 +9220,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 160 | 0;
   return;
  }
- 
+
  function $13($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -9239,7 +9239,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 176 | 0;
   return;
  }
- 
+
  function $14($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -9446,7 +9446,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 240 | 0;
   return;
  }
- 
+
  function $15($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -9464,7 +9464,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 176 | 0;
   return;
  }
- 
+
  function $16($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -9477,7 +9477,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $17($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -9649,7 +9649,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 256 | 0;
   return;
  }
- 
+
  function $18($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -9755,7 +9755,7 @@ function asmFunc(env) {
   HEAP8[($192 + 63 | 0) >> 0] = (((HEAPU8[($192 + 63 | 0) >> 0] | 0) << $194 | 0) >> $194 | 0) + (((HEAPU8[($4_1 + 23 | 0) >> 0] | 0) << $189 | 0) >> $189 | 0) | 0;
   return;
  }
- 
+
  function $19($0_1, $1_1, $2_1, $3_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -9980,7 +9980,7 @@ function asmFunc(env) {
   global$0 = $6_1 + 320 | 0;
   return;
  }
- 
+
  function $20($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -10184,7 +10184,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 448 | 0;
   return;
  }
- 
+
  function $21($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12000,7 +12000,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 176 | 0;
   return;
  }
- 
+
  function $22($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0;
@@ -12024,7 +12024,7 @@ function asmFunc(env) {
   global$0 = $3_1 + 96 | 0;
   return;
  }
- 
+
  function $23($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12034,7 +12034,7 @@ function asmFunc(env) {
   HEAP32[($4_1 + 8 | 0) >> 2] = $1_1;
   return ((HEAP32[($4_1 + 12 | 0) >> 2] | 0) - (HEAP32[($4_1 + 8 | 0) >> 2] | 0) | 0) >>> 31 | 0 | 0;
  }
- 
+
  function $24($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12044,7 +12044,7 @@ function asmFunc(env) {
   HEAP32[($4_1 + 8 | 0) >> 2] = $1_1;
   return (((HEAP32[($4_1 + 12 | 0) >> 2] | 0) ^ (HEAP32[($4_1 + 8 | 0) >> 2] | 0) | 0) - 1 | 0) >>> 31 | 0 | 0;
  }
- 
+
  function $25($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0, i64toi32_i32$1 = 0, i64toi32_i32$0 = 0;
@@ -12063,7 +12063,7 @@ function asmFunc(env) {
   global$0 = $3_1 + 16 | 0;
   return;
  }
- 
+
  function $26($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12281,7 +12281,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 96 | 0;
   return;
  }
- 
+
  function $27($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12498,7 +12498,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 32 | 0;
   return;
  }
- 
+
  function $28($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12508,7 +12508,7 @@ function asmFunc(env) {
   HEAP32[($4_1 + 8 | 0) >> 2] = $1_1;
   return (HEAP32[($4_1 + 12 | 0) >> 2] | 0) << (HEAP32[($4_1 + 8 | 0) >> 2] | 0) | 0 | ((HEAP32[($4_1 + 12 | 0) >> 2] | 0) >>> (32 - (HEAP32[($4_1 + 8 | 0) >> 2] | 0) | 0) | 0) | 0 | 0;
  }
- 
+
  function $29($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12574,7 +12574,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 32 | 0;
   return;
  }
- 
+
  function $30($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12588,7 +12588,7 @@ function asmFunc(env) {
   HEAP8[((HEAP32[($4_1 + 12 | 0) >> 2] | 0) + 3 | 0) >> 0] = (HEAP32[($4_1 + 8 | 0) >> 2] | 0) >>> 24 | 0;
   return;
  }
- 
+
  function $31($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0;
@@ -12607,7 +12607,7 @@ function asmFunc(env) {
   global$0 = $3_1 + 16 | 0;
   return;
  }
- 
+
  function $32($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12825,7 +12825,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 96 | 0;
   return;
  }
- 
+
  function $33($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12917,7 +12917,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 320 | 0;
   return;
  }
- 
+
  function $34($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12947,7 +12947,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 16 | 0;
   return;
  }
- 
+
  function $35($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -12957,7 +12957,7 @@ function asmFunc(env) {
   HEAP32[($4_1 + 8 | 0) >> 2] = $1_1;
   return (HEAP32[($4_1 + 12 | 0) >> 2] | 0) >>> (HEAP32[($4_1 + 8 | 0) >> 2] | 0) | 0 | ((HEAP32[($4_1 + 12 | 0) >> 2] | 0) << (32 - (HEAP32[($4_1 + 8 | 0) >> 2] | 0) | 0) | 0) | 0 | 0;
  }
- 
+
  function $36($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -13033,7 +13033,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 32 | 0;
   return;
  }
- 
+
  function $37($0_1, $0$hi) {
   $0_1 = $0_1 | 0;
   $0$hi = $0$hi | 0;
@@ -13101,7 +13101,7 @@ function asmFunc(env) {
   i64toi32_i32$HIGH_BITS = i64toi32_i32$1;
   return i64toi32_i32$2 | 0;
  }
- 
+
  function $38($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -13115,7 +13115,7 @@ function asmFunc(env) {
   HEAP8[(HEAP32[($4_1 + 12 | 0) >> 2] | 0) >> 0] = (HEAP32[($4_1 + 8 | 0) >> 2] | 0) >>> 24 | 0;
   return;
  }
- 
+
  function $39($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0;
@@ -13123,7 +13123,7 @@ function asmFunc(env) {
   HEAP32[($3_1 + 12 | 0) >> 2] = $0_1;
   return (HEAP32[($3_1 + 12 | 0) >> 2] | 0) << 24 | 0 | (((HEAP32[($3_1 + 12 | 0) >> 2] | 0) & 65280 | 0) << 8 | 0) | 0 | (((HEAP32[($3_1 + 12 | 0) >> 2] | 0) >>> 8 | 0) & 65280 | 0) | 0 | ((HEAP32[($3_1 + 12 | 0) >> 2] | 0) >>> 24 | 0) | 0 | 0;
  }
- 
+
  function $40($0_1) {
   $0_1 = $0_1 | 0;
   var i64toi32_i32$1 = 0, i64toi32_i32$0 = 0, $3_1 = 0;
@@ -13166,7 +13166,7 @@ function asmFunc(env) {
   global$0 = $3_1 + 16 | 0;
   return;
  }
- 
+
  function $41($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -13305,7 +13305,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 160 | 0;
   return;
  }
- 
+
  function $42($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -16133,7 +16133,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 736 | 0;
   return;
  }
- 
+
  function $43($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -16169,7 +16169,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 16 | 0;
   return;
  }
- 
+
  function $44($0_1, $0$hi, $1_1) {
   $0_1 = $0_1 | 0;
   $0$hi = $0$hi | 0;
@@ -16235,7 +16235,7 @@ function asmFunc(env) {
   i64toi32_i32$HIGH_BITS = i64toi32_i32$1;
   return i64toi32_i32$2 | 0;
  }
- 
+
  function $45($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -16370,7 +16370,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 48 | 0;
   return;
  }
- 
+
  function $46($0_1, $0$hi) {
   $0_1 = $0_1 | 0;
   $0$hi = $0$hi | 0;
@@ -16438,7 +16438,7 @@ function asmFunc(env) {
   i64toi32_i32$HIGH_BITS = i64toi32_i32$1;
   return i64toi32_i32$2 | 0;
  }
- 
+
  function $47($0_1, $1_1, $1$hi) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -16602,7 +16602,7 @@ function asmFunc(env) {
   HEAP8[(HEAP32[($4_1 + 12 | 0) >> 2] | 0) >> 0] = $29_1;
   return;
  }
- 
+
  function $48($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0;
@@ -16610,7 +16610,7 @@ function asmFunc(env) {
   HEAP32[($3_1 + 12 | 0) >> 2] = $0_1;
   return (HEAP32[($3_1 + 12 | 0) >> 2] | 0) << 24 | 0 | (((HEAP32[($3_1 + 12 | 0) >> 2] | 0) & 65280 | 0) << 8 | 0) | 0 | (((HEAP32[($3_1 + 12 | 0) >> 2] | 0) >>> 8 | 0) & 65280 | 0) | 0 | ((HEAP32[($3_1 + 12 | 0) >> 2] | 0) >>> 24 | 0) | 0 | 0;
  }
- 
+
  function $49($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -16625,7 +16625,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $50($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -16699,7 +16699,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 192 | 0;
   return;
  }
- 
+
  function $51($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17196,7 +17196,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 80 | 0;
   return;
  }
- 
+
  function $52($0_1, $0$hi, $1_1) {
   $0_1 = $0_1 | 0;
   $0$hi = $0$hi | 0;
@@ -17262,7 +17262,7 @@ function asmFunc(env) {
   i64toi32_i32$HIGH_BITS = i64toi32_i32$1;
   return i64toi32_i32$2 | 0;
  }
- 
+
  function $53($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17292,7 +17292,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $54($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17354,7 +17354,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 240 | 0;
   return;
  }
- 
+
  function $55($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17386,7 +17386,7 @@ function asmFunc(env) {
   }
   return;
  }
- 
+
  function $56($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17402,7 +17402,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 16 | 0;
   return;
  }
- 
+
  function $57($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17415,7 +17415,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $58($0_1, $1_1, $2_1, $3_1, $4_1, $5_1, $6_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17438,7 +17438,7 @@ function asmFunc(env) {
   global$0 = $9_1 + 32 | 0;
   return;
  }
- 
+
  function $59($0_1, $1_1, $2_1, $3_1, $4_1, $5_1, $6_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17505,7 +17505,7 @@ function asmFunc(env) {
   global$0 = $9_1 + 544 | 0;
   return;
  }
- 
+
  function $60($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17564,7 +17564,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 416 | 0;
   return;
  }
- 
+
  function $61($0_1, $1_1, $2_1, $3_1, $4_1, $5_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17609,7 +17609,7 @@ function asmFunc(env) {
   global$0 = $8_1 + 800 | 0;
   return;
  }
- 
+
  function $62($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17623,7 +17623,7 @@ function asmFunc(env) {
   HEAP8[(HEAP32[($4_1 + 12 | 0) >> 2] | 0) >> 0] = (HEAP32[($4_1 + 8 | 0) >> 2] | 0) >>> 24 | 0;
   return;
  }
- 
+
  function $63($0_1, $1_1, $2_1, $3_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17643,7 +17643,7 @@ function asmFunc(env) {
   global$0 = $6_1 + 16 | 0;
   return;
  }
- 
+
  function $64($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17658,7 +17658,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 16 | 0;
   return;
  }
- 
+
  function $65($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17673,7 +17673,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $66($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17739,7 +17739,7 @@ function asmFunc(env) {
   HEAP32[(i64toi32_i32$1 + 204 | 0) >> 2] = i64toi32_i32$0;
   return;
  }
- 
+
  function $67($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17783,7 +17783,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $68($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -17953,7 +17953,7 @@ function asmFunc(env) {
   HEAP32[(i64toi32_i32$0 + 204 | 0) >> 2] = i64toi32_i32$2;
   return;
  }
- 
+
  function $69($0_1, $1_1, $1$hi) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18117,7 +18117,7 @@ function asmFunc(env) {
   HEAP8[(HEAP32[($4_1 + 12 | 0) >> 2] | 0) >> 0] = $29_1;
   return;
  }
- 
+
  function $70($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18130,7 +18130,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $71($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18145,7 +18145,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 16 | 0;
   return;
  }
- 
+
  function $72($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18160,7 +18160,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 16 | 0;
   return;
  }
- 
+
  function $73($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18203,7 +18203,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return 0 | 0;
  }
- 
+
  function $74($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0, i64toi32_i32$0 = 0, i64toi32_i32$2 = 0, i64toi32_i32$1 = 0, $79_1 = 0;
@@ -18231,7 +18231,7 @@ function asmFunc(env) {
   global$0 = $3_1 + 16 | 0;
   return;
  }
- 
+
  function $75($0_1) {
   $0_1 = $0_1 | 0;
   var i64toi32_i32$0 = 0, i64toi32_i32$1 = 0, i64toi32_i32$2 = 0, i64toi32_i32$4 = 0, i64toi32_i32$3 = 0, $3_1 = 0, $37$hi = 0, $38$hi = 0, $44_1 = 0, $39$hi = 0, $40$hi = 0, $41$hi = 0, $45_1 = 0, $42$hi = 0, $43$hi = 0, $44$hi = 0, $45$hi = 0, $46_1 = 0, $46$hi = 0, $47$hi = 0, $48$hi = 0, $49$hi = 0, $48_1 = 0, $50$hi = 0, $51$hi = 0, $52$hi = 0, $53$hi = 0, $49_1 = 0, $54$hi = 0, $55$hi = 0, $56$hi = 0, $57$hi = 0, $50_1 = 0, $58$hi = 0, $59$hi = 0, $60$hi = 0, $61$hi = 0, $52_1 = 0, $62$hi = 0, $63$hi = 0, $64$hi = 0, $65$hi = 0, $53_1 = 0, $66$hi = 0, $39_1 = 0, $43_1 = 0, $47_1 = 0, $51_1 = 0, $55_1 = 0, $59_1 = 0, $63_1 = 0;
@@ -18456,7 +18456,7 @@ function asmFunc(env) {
   i64toi32_i32$HIGH_BITS = i64toi32_i32$0;
   return i64toi32_i32$1 | 0;
  }
- 
+
  function $76($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18521,7 +18521,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 80 | 0;
   return $50_1 | 0;
  }
- 
+
  function $77($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18536,7 +18536,7 @@ function asmFunc(env) {
   HEAP8[((HEAP32[($4_1 + 4 | 0) >> 2] | 0) + 3 | 0) >> 0] = (HEAP32[($4_1 + 8 | 0) >> 2] | 0) >>> 24 | 0;
   return;
  }
- 
+
  function $78($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18586,7 +18586,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 32 | 0;
   return 0 | 0;
  }
- 
+
  function $79($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18599,7 +18599,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $80($0_1, $1_1, $1$hi) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -18676,7 +18676,7 @@ function asmFunc(env) {
   HEAP32[(i64toi32_i32$3 + 76 | 0) >> 2] = i64toi32_i32$4;
   return;
  }
- 
+
  function $81($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -39422,7 +39422,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 288 | 0;
   return;
  }
- 
+
  function $82($0_1, $0$hi, $1_1) {
   $0_1 = $0_1 | 0;
   $0$hi = $0$hi | 0;
@@ -39488,7 +39488,7 @@ function asmFunc(env) {
   i64toi32_i32$HIGH_BITS = i64toi32_i32$1;
   return i64toi32_i32$2 | 0;
  }
- 
+
  function $83($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -39573,7 +39573,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 96 | 0;
   return $96_1 | 0;
  }
- 
+
  function $84($0_1) {
   $0_1 = $0_1 | 0;
   var i64toi32_i32$1 = 0, i64toi32_i32$2 = 0, $8$hi = 0, $9$hi = 0, $3_1 = 0;
@@ -39592,7 +39592,7 @@ function asmFunc(env) {
   i64toi32_i32$2 = HEAP32[(i64toi32_i32$2 + 80 | 0) >> 2] | 0;
   return ((i64toi32_i32$2 | 0) != (0 | 0) | ($8$hi | 0) != ($9$hi | 0) | 0) & 1 | 0 | 0;
  }
- 
+
  function $85($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0, i64toi32_i32$1 = 0, i64toi32_i32$0 = 0;
@@ -39612,7 +39612,7 @@ function asmFunc(env) {
   global$0 = $3_1 + 16 | 0;
   return;
  }
- 
+
  function $86($0_1, $1_1, $1$hi) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -39795,7 +39795,7 @@ function asmFunc(env) {
   HEAP8[((HEAP32[($4_1 + 12 | 0) >> 2] | 0) + 7 | 0) >> 0] = $32_1;
   return;
  }
- 
+
  function $87($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0, i64toi32_i32$1 = 0, i64toi32_i32$0 = 0;
@@ -39807,7 +39807,7 @@ function asmFunc(env) {
   HEAP32[(i64toi32_i32$1 + 92 | 0) >> 2] = i64toi32_i32$0;
   return;
  }
- 
+
  function $88($0_1, $1_1, $2_1, $3_1, $4_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -39882,7 +39882,7 @@ function asmFunc(env) {
   global$0 = $7_1 + 32 | 0;
   return;
  }
- 
+
  function $89($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0;
@@ -39890,7 +39890,7 @@ function asmFunc(env) {
   HEAP32[($3_1 + 12 | 0) >> 2] = $0_1;
   return HEAP32[(HEAP32[($3_1 + 12 | 0) >> 2] | 0) >> 2] | 0 | 0;
  }
- 
+
  function $90($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0;
@@ -39898,7 +39898,7 @@ function asmFunc(env) {
   HEAP32[($3_1 + 12 | 0) >> 2] = $0_1;
   return (HEAPU8[(HEAP32[($3_1 + 12 | 0) >> 2] | 0) >> 0] | 0) & 255 | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 1 | 0) >> 0] | 0) & 255 | 0) << 8 | 0) | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 2 | 0) >> 0] | 0) & 255 | 0) << 16 | 0) | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 3 | 0) >> 0] | 0) & 255 | 0) << 24 | 0) | 0 | 0;
  }
- 
+
  function $91($0_1, $1_1, $2_1, $3_1, $4_1, $5_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -39921,7 +39921,7 @@ function asmFunc(env) {
   global$0 = $8_1 + 32 | 0;
   return;
  }
- 
+
  function $92($0_1, $1_1, $2_1, $3_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -40055,7 +40055,7 @@ function asmFunc(env) {
   global$0 = $6_1 + 96 | 0;
   return;
  }
- 
+
  function $93($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -40191,7 +40191,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 80 | 0;
   return;
  }
- 
+
  function $94($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -40201,7 +40201,7 @@ function asmFunc(env) {
   HEAP32[($4_1 + 8 | 0) >> 2] = $1_1;
   return (HEAP32[($4_1 + 12 | 0) >> 2] | 0) << (HEAP32[($4_1 + 8 | 0) >> 2] | 0) | 0 | ((HEAP32[($4_1 + 12 | 0) >> 2] | 0) >>> (32 - (HEAP32[($4_1 + 8 | 0) >> 2] | 0) | 0) | 0) | 0 | 0;
  }
- 
+
  function $95($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -40359,7 +40359,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 96 | 0;
   return;
  }
- 
+
  function $96($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -40392,7 +40392,7 @@ function asmFunc(env) {
   global$0 = $4_1 + 16 | 0;
   return;
  }
- 
+
  function $97($0_1) {
   $0_1 = $0_1 | 0;
   var $3_1 = 0;
@@ -40400,7 +40400,7 @@ function asmFunc(env) {
   HEAP32[($3_1 + 12 | 0) >> 2] = $0_1;
   return (HEAPU8[(HEAP32[($3_1 + 12 | 0) >> 2] | 0) >> 0] | 0) & 255 | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 1 | 0) >> 0] | 0) & 255 | 0) << 8 | 0) | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 2 | 0) >> 0] | 0) & 255 | 0) << 16 | 0) | 0 | (((HEAPU8[((HEAP32[($3_1 + 12 | 0) >> 2] | 0) + 3 | 0) >> 0] | 0) & 255 | 0) << 24 | 0) | 0 | 0;
  }
- 
+
  function $98($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -40440,7 +40440,7 @@ function asmFunc(env) {
   global$0 = $5_1 + 32 | 0;
   return;
  }
- 
+
  function $99($0_1, $1_1, $2_1, $3_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -41248,7 +41248,7 @@ function asmFunc(env) {
   global$0 = $6_1 + 128 | 0;
   return;
  }
- 
+
  function $100($0_1, $1_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -41519,24 +41519,24 @@ function asmFunc(env) {
   global$0 = $4_1 + 80 | 0;
   return;
  }
- 
+
  function $101() {
   return 27700 | 0;
  }
- 
+
  function $102() {
   global$2 = 5271104;
   global$1 = (28216 + 15 | 0) & -16 | 0;
  }
- 
+
  function $103() {
   return global$0 - global$1 | 0 | 0;
  }
- 
+
  function $104() {
   return global$1 | 0;
  }
- 
+
  function $105($0_1) {
   $0_1 = $0_1 | 0;
   var $4_1 = 0, $6_1 = 0, $5_1 = 0, $8_1 = 0, $3_1 = 0, $2_1 = 0, $11_1 = 0, $7_1 = 0, i64toi32_i32$0 = 0, i64toi32_i32$1 = 0, $9_1 = 0, i64toi32_i32$2 = 0, $10_1 = 0, $1_1 = 0, $80_1 = 0, $93_1 = 0, $104_1 = 0, $112_1 = 0, $120_1 = 0, $211 = 0, $222 = 0, $230 = 0, $238 = 0, $273 = 0, $340 = 0, $347 = 0, $354 = 0, $445 = 0, $456 = 0, $464 = 0, $472 = 0, $1160 = 0, $1167 = 0, $1174 = 0, $1294 = 0, $1296 = 0, $1357 = 0, $1364 = 0, $1371 = 0, $1608 = 0, $1615 = 0, $1622 = 0;
@@ -42908,7 +42908,7 @@ function asmFunc(env) {
   global$0 = $1_1 + 16 | 0;
   return $0_1 | 0;
  }
- 
+
  function $106($0_1) {
   $0_1 = $0_1 | 0;
   var $2_1 = 0, $6_1 = 0, $1_1 = 0, $4_1 = 0, $3_1 = 0, $5_1 = 0, $7_1 = 0, $379 = 0, $386 = 0, $393 = 0;
@@ -43296,11 +43296,11 @@ function asmFunc(env) {
    HEAP32[(0 + 27736 | 0) >> 2] = $1_1 ? $1_1 : -1;
   }
  }
- 
+
  function $107() {
   return __wasm_memory_size() << 16 | 0 | 0;
  }
- 
+
  function $108($0_1) {
   $0_1 = $0_1 | 0;
   var $1_1 = 0, $2_1 = 0;
@@ -43330,7 +43330,7 @@ function asmFunc(env) {
   HEAP32[($101() | 0) >> 2] = 48;
   return -1 | 0;
  }
- 
+
  function $109($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -43470,7 +43470,7 @@ function asmFunc(env) {
   }
   return $0_1 | 0;
  }
- 
+
  function $110($0_1, $1_1, $2_1) {
   $0_1 = $0_1 | 0;
   $1_1 = $1_1 | 0;
@@ -43559,42 +43559,42 @@ function asmFunc(env) {
   }
   return $0_1 | 0;
  }
- 
+
  function $111($0_1) {
   $0_1 = $0_1 | 0;
  }
- 
+
  function $112($0_1) {
   $0_1 = $0_1 | 0;
  }
- 
+
  function $113() {
   $111(28200 | 0);
   return 28208 | 0;
  }
- 
+
  function $114() {
   $112(28200 | 0);
  }
- 
+
  function $115($0_1) {
   $0_1 = $0_1 | 0;
   return 1 | 0;
  }
- 
+
  function $116($0_1) {
   $0_1 = $0_1 | 0;
  }
- 
+
  function $117() {
   return global$0 | 0;
  }
- 
+
  function $118($0_1) {
   $0_1 = $0_1 | 0;
   global$0 = $0_1;
  }
- 
+
  function $119($0_1) {
   $0_1 = $0_1 | 0;
   var $1_1 = 0;
@@ -43602,7 +43602,7 @@ function asmFunc(env) {
   global$0 = $1_1;
   return $1_1 | 0;
  }
- 
+
  function $120($0_1) {
   $0_1 = $0_1 | 0;
   var $2_1 = 0, $1_1 = 0;
@@ -43668,7 +43668,7 @@ function asmFunc(env) {
   }
   return $2_1 | 0;
  }
- 
+
  function $121($0_1) {
   $0_1 = $0_1 | 0;
   var i64toi32_i32$1 = 0, i64toi32_i32$0 = 0, $1_1 = 0, $2_1 = 0;
@@ -43704,7 +43704,7 @@ function asmFunc(env) {
   HEAP32[($0_1 + 8 | 0) >> 2] = i64toi32_i32$1;
   return 0 | 0;
  }
- 
+
  function _ZN17compiler_builtins3int3mul3Mul3mul17h070e9a1c69faec5bE(var$0, var$0$hi, var$1, var$1$hi) {
   var$0 = var$0 | 0;
   var$0$hi = var$0$hi | 0;
@@ -43774,7 +43774,7 @@ function asmFunc(env) {
   i64toi32_i32$HIGH_BITS = i64toi32_i32$1;
   return i64toi32_i32$2 | 0;
  }
- 
+
  function __wasm_i64_mul(var$0, var$0$hi, var$1, var$1$hi) {
   var$0 = var$0 | 0;
   var$0$hi = var$0$hi | 0;
@@ -43790,7 +43790,7 @@ function asmFunc(env) {
   i64toi32_i32$HIGH_BITS = i64toi32_i32$0;
   return i64toi32_i32$1 | 0;
  }
- 
+
  function __wasm_rotl_i32(var$0, var$1) {
   var$0 = var$0 | 0;
   var$1 = var$1 | 0;
@@ -43799,7 +43799,7 @@ function asmFunc(env) {
   var$1 = (0 - var$1 | 0) & 31 | 0;
   return ((-1 >>> var$2 | 0) & var$0 | 0) << var$2 | 0 | (((-1 << var$1 | 0) & var$0 | 0) >>> var$1 | 0) | 0 | 0;
  }
- 
+
  // EMSCRIPTEN_END_FUNCS
 ;
  bufferView = HEAPU8;
@@ -43808,44 +43808,44 @@ function asmFunc(env) {
  function __wasm_memory_size() {
   return buffer.byteLength / 65536 | 0;
  }
- 
+
  return {
-  "__wasm_call_ctors": $0, 
-  "cryptonite_ed25519_scalar_decode_long": $1, 
-  "cryptonite_ed25519_point_encode": $6, 
-  "cryptonite_ed25519_point_base_scalarmul": $16, 
-  "cryptonite_sha512_init": $40, 
-  "cryptonite_sha512_update": $41, 
-  "cryptonite_sha512_finalize": $45, 
-  "cryptonite_md5_init": $25, 
-  "cryptonite_md5_update": $26, 
-  "cryptonite_md5_finalize": $29, 
-  "cryptonite_sha256_init": $31, 
-  "cryptonite_sha256_update": $32, 
-  "cryptonite_sha256_finalize": $36, 
-  "cryptonite_sha3_init": $49, 
-  "cryptonite_sha3_update": $50, 
-  "cryptonite_sha3_finalize": $56, 
-  "cryptonite_fastpbkdf2_hmac_sha512": $58, 
-  "cryptonite_blake2b_init": $70, 
-  "cryptonite_blake2b_update": $71, 
-  "cryptonite_blake2b_finalize": $72, 
-  "__indirect_function_table": FUNCTION_TABLE, 
-  "cryptonite_chacha_init": $91, 
-  "cryptonite_chacha_combine": $92, 
-  "cryptonite_chacha_generate": $95, 
-  "cryptonite_poly1305_init": $96, 
-  "cryptonite_poly1305_update": $98, 
-  "cryptonite_poly1305_finalize": $100, 
-  "__errno_location": $101, 
-  "fflush": $120, 
-  "malloc": $105, 
-  "emscripten_stack_get_end": $104, 
-  "stackSave": $117, 
-  "stackRestore": $118, 
-  "stackAlloc": $119, 
-  "emscripten_stack_init": $102, 
-  "emscripten_stack_get_free": $103, 
+  "__wasm_call_ctors": $0,
+  "cryptonite_ed25519_scalar_decode_long": $1,
+  "cryptonite_ed25519_point_encode": $6,
+  "cryptonite_ed25519_point_base_scalarmul": $16,
+  "cryptonite_sha512_init": $40,
+  "cryptonite_sha512_update": $41,
+  "cryptonite_sha512_finalize": $45,
+  "cryptonite_md5_init": $25,
+  "cryptonite_md5_update": $26,
+  "cryptonite_md5_finalize": $29,
+  "cryptonite_sha256_init": $31,
+  "cryptonite_sha256_update": $32,
+  "cryptonite_sha256_finalize": $36,
+  "cryptonite_sha3_init": $49,
+  "cryptonite_sha3_update": $50,
+  "cryptonite_sha3_finalize": $56,
+  "cryptonite_fastpbkdf2_hmac_sha512": $58,
+  "cryptonite_blake2b_init": $70,
+  "cryptonite_blake2b_update": $71,
+  "cryptonite_blake2b_finalize": $72,
+  "__indirect_function_table": FUNCTION_TABLE,
+  "cryptonite_chacha_init": $91,
+  "cryptonite_chacha_combine": $92,
+  "cryptonite_chacha_generate": $95,
+  "cryptonite_poly1305_init": $96,
+  "cryptonite_poly1305_update": $98,
+  "cryptonite_poly1305_finalize": $100,
+  "__errno_location": $101,
+  "fflush": $120,
+  "malloc": $105,
+  "emscripten_stack_get_end": $104,
+  "stackSave": $117,
+  "stackRestore": $118,
+  "stackAlloc": $119,
+  "emscripten_stack_init": $102,
+  "emscripten_stack_get_free": $103,
   "free": $106
  };
 }
@@ -44602,7 +44602,7 @@ function initRuntime() {
   assert(!runtimeInitialized);
   runtimeInitialized = true;
 
-  
+
   callRuntimeCallbacks(__ATINIT__);
 }
 
@@ -44993,7 +44993,7 @@ var tempI64;
 // === Body ===
 
 var ASM_CONSTS = {
-  
+
 };
 
 
@@ -46171,5 +46171,5 @@ function h$getpwuid_r(uid, pwd_d, pwd_o, buf_d, buf_o, buflen, result_d, result_
 
 // TODO: move to foundation
 function h$foundation_sysrandom_linux(buf_d, buf_o, size) {
-  cryptoObj.getRandomValues(typedArray);
+  return -19; // ENODEV; foundation returns the same for non-linux hosts.
 }
