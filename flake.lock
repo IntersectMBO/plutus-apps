@@ -99,15 +99,16 @@
     "haskell-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1637101192,
-        "narHash": "sha256-FMAwhSBCE4+iRBim+4H81ZSf6WsAnn5NLlpedWBOYJM=",
+        "lastModified": 1637125068,
+        "narHash": "sha256-TPSi38gIKbgVsK64i9Hp9dz0y3geeyi6TvDIiY5xgEI=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "64cd5f70ce0d619390039a1a3d57c442552b0924",
+        "rev": "c0a074b70135572e7168bc8fd438ea14e84f5ba2",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "hkm/ghcjs-dirname-shim",
         "repo": "haskell.nix",
         "type": "github"
       }
