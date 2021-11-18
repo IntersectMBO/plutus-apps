@@ -38,12 +38,20 @@
       extraDocFiles = [];
       };
     components = {
+      "library" = {
+        buildable = true;
+        modules = [ "Test" ];
+        cSources = [ "cbits/test.c" ];
+        jsSources = [ "jsbits/test.js" ];
+        hsSourceDirs = [ "src" ];
+        };
       exes = {
         "ghcjs-c-interop" = {
-          depends = [ (hsPkgs."base" or (errorHandler.buildDepError "base")) ];
+          depends = [
+            (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."ghcjs-c-interop" or (errorHandler.buildDepError "ghcjs-c-interop"))
+            ];
           buildable = true;
-          cSources = [ "cbits/test.c" ];
-          jsSources = [ "jsbits/test.js" ];
           hsSourceDirs = [ "app" ];
           mainPath = [ "Main.hs" ];
           };

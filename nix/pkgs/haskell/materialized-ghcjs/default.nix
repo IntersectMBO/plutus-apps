@@ -1545,6 +1545,7 @@
           "cmdargs".components.library.planned = lib.mkOverride 900 true;
           "StateVar".components.library.planned = lib.mkOverride 900 true;
           "case-insensitive".components.library.planned = lib.mkOverride 900 true;
+          "ghcjs-c-interop".components.library.planned = lib.mkOverride 900 true;
           "dns".components.library.planned = lib.mkOverride 900 true;
           "resource-pool".components.library.planned = lib.mkOverride 900 true;
           "optparse-generic".components.library.planned = lib.mkOverride 900 true;
