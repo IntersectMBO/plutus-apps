@@ -27,6 +27,7 @@ extra-source-files: CHANGELOG.md
                     jsbits/emscripten/extern.js
 
 library
+    build-depends:    base
     hs-source-dirs:   src
     exposed-modules:  Test
     c-sources:        cbits/test.c
