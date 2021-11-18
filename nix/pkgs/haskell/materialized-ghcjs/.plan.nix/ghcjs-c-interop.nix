@@ -39,6 +39,7 @@
       };
     components = {
       "library" = {
+        depends = [ (hsPkgs."base" or (errorHandler.buildDepError "base")) ];
         buildable = true;
         modules = [ "Test" ];
         cSources = [ "cbits/test.c" ];
