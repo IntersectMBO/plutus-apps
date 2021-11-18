@@ -1,0 +1,45 @@
+{ system
+  , compiler
+  , flags
+  , pkgs
+  , hsPkgs
+  , pkgconfPkgs
+  , errorHandler
+  , config
+  , ... }:
+  {
+    flags = {};
+    package = {
+      specVersion = "2.4";
+      identifier = { name = "ghcjs-c-interop"; version = "0.1.0.0"; };
+      license = "NONE";
+      copyright = "";
+      maintainer = "moritz.angermann@gmail.com";
+      author = "Moritz Angermann";
+      homepage = "";
+      url = "";
+      synopsis = "";
+      description = "";
+      buildType = "Simple";
+      isLocal = true;
+      detailLevel = "FullDetails";
+      licenseFiles = [];
+      dataDir = ".";
+      dataFiles = [];
+      extraSrcFiles = [ "CHANGELOG.md" ];
+      extraTmpFiles = [];
+      extraDocFiles = [];
+      };
+    components = {
+      exes = {
+        "ghcjs-c-interop" = {
+          depends = [ (hsPkgs."base" or (errorHandler.buildDepError "base")) ];
+          buildable = true;
+          cSources = [ "cbits/test.c" ];
+          jsSources = [ "jsbits/test.js" ];
+          hsSourceDirs = [ "app" ];
+          mainPath = [ "Main.hs" ];
+          };
+        };
+      };
+    } // rec { src = (pkgs.lib).mkDefault ../contrib/ghcjs-c-interop; }

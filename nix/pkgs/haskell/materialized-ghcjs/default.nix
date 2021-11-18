@@ -720,6 +720,7 @@
         plutus-use-cases = ./.plan.nix/plutus-use-cases.nix;
         ouroboros-consensus = ./.plan.nix/ouroboros-consensus.nix;
         goblins = ./.plan.nix/goblins.nix;
+        ghcjs-c-interop = ./.plan.nix/ghcjs-c-interop.nix;
         small-steps-test = ./.plan.nix/small-steps-test.nix;
         cardano-api = ./.plan.nix/cardano-api.nix;
         contra-tracer = ./.plan.nix/contra-tracer.nix;
@@ -885,6 +886,7 @@
           "goblins" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
+          "ghcjs-c-interop" = { flags = {}; };
           "small-steps-test" = { flags = {}; };
           "cardano-api" = { flags = {}; };
           "contra-tracer" = { flags = {}; };
@@ -1317,6 +1319,7 @@
           "network-mux".components.library.planned = lib.mkOverride 900 true;
           "gauge".components.library.planned = lib.mkOverride 900 true;
           "small-steps-test".components.library.planned = lib.mkOverride 900 true;
+          "ghcjs-c-interop".components.exes."ghcjs-c-interop".planned = lib.mkOverride 900 true;
           "dependent-sum-template".components.library.planned = lib.mkOverride 900 true;
           "generic-data".components.library.planned = lib.mkOverride 900 true;
           "servant-client-core".components.library.planned = lib.mkOverride 900 true;
