@@ -1,2 +1,2 @@
-var h$cardano_crypto = {};
+var h$ghcjs_c_interop = {};
 (function(Module) {
