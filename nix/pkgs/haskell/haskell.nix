@@ -440,7 +440,7 @@ let
             cryptonite.components.library.preConfigure = runEmscripten;
             cardano-crypto.components.library.preConfigure = runEmscripten;
             direct-sqlite.components.library.preConfigure = runEmscripten;
-            ghcjs-c-interop.components.library.preConfigure = runEmscripten;
+            ghcjs-c-interop.components.exes.ghcjs-c-interop.preConfigure = runEmscripten;
           };
       })
       ({ pkgs, config, ... }@args: {

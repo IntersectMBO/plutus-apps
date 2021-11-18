@@ -20,7 +20,11 @@ maintainer:         moritz.angermann@gmail.com
 -- copyright:
 -- category:
 extra-source-files: CHANGELOG.md
-
+                    jsbits/emscripten/build.sh
+                    jsbits/emscripten/test-cbits.pre.js
+                    jsbits/emscripten/test-cbits.post.js
+                    jsbits/emscripten/test-wrappers.js
+                    jsbits/emscripten/extern.js
 executable ghcjs-c-interop
     main-is:          Main.hs
     c-sources:        cbits/test.c
