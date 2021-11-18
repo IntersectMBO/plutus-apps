@@ -8,6 +8,7 @@ foreign import ccall "test_fold" test_fold :: (FunPtr (Int -> Int -> Int)) -> In
 
 add :: Int -> Int -> Int
 add x y = x+y
+{-# NOINLINE add #-}
 
 doFold :: IO ()
 doFold = do

@@ -12,9 +12,10 @@ PKG=test
 
 emcc -o $PKG-cbits.js -s WASM=0 \
   -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
-  -s "EXPORTED_RUNTIME_METHODS=['printErr']" \
+  -s ALLOW_TABLE_GROWTH \
+  -s "EXPORTED_RUNTIME_METHODS=['printErr','addFunction','removeFunction']" \
   -s "EXPORTED_FUNCTIONS=['_malloc', '_free',\
-                          '_fold']" \
+                          '_test_fold']" \
   -I. -I../../cbits \
   ../../cbits/test.c \
   --js-library extern.js
