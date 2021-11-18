@@ -20,7 +20,7 @@
       flake = false;
     };
     haskell-nix = {
-      url = "github:input-output-hk/haskell.nix/hkm/ghcjs-dirname-shim";
+      url = "github:input-output-hk/haskell.nix";
       flake = false;
     };
 
