@@ -26,7 +26,14 @@
       licenseFiles = [];
       dataDir = ".";
       dataFiles = [];
-      extraSrcFiles = [ "CHANGELOG.md" ];
+      extraSrcFiles = [
+        "CHANGELOG.md"
+        "jsbits/emscripten/build.sh"
+        "jsbits/emscripten/test-cbits.pre.js"
+        "jsbits/emscripten/test-cbits.post.js"
+        "jsbits/emscripten/test-wrappers.js"
+        "jsbits/emscripten/extern.js"
+        ];
       extraTmpFiles = [];
       extraDocFiles = [];
       };
