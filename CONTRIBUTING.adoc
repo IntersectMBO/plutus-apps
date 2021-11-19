@@ -177,6 +177,54 @@ You can update it xref:update-nix-pins[with the Nix flake commands].
 
 You will need to update the xref:update-generated[package set] after this to reflect the new build plan that Cabal will pick.
 
+=== How to work with a local copy of source dependencies
+
+Sometimes you may want to make a change that spans both `plutus-apps` *and* some of its dependencies (most commonly, the packages in `plutus`).
+The obvious workflow is to make changes in the `plutus` repository, update the pin in `plutus-apps` to point to the new commit, test, repeat.
+But this is very tedious and it's much nicer to work with a local checkout where cabal can incrementally rebuild the whole thing.
+
+Here's an example of doing this for some packages in `plutus`. 
+You may need to adapt this example depending on what exactly you're trying to do.
+
+First of all, we add some lines to `cabal.project.local` (we do this to avoid modifying `cabal.project`, which is tracked by git, as much as possible).
+```
+-- Add the packages that we want to pull in locally as "local" packages
+-- (assuming a `plutus-core` checkout in `../plutus`)
+packages:
+  ../plutus/plutus-core
+  ../plutus/plutus-tx
+  ../plutus/plutus-tx-plugin
+  ../plutus/plutus-ledger-api
+
+-- Sometimes cabal may get upset about dependencies, you can make its life easier
+-- by turning off unnecessary features for the altered packages.
+package plutus-core
+  benchmarks: false
+  tests: false
+package plutus-tx
+  benchmarks: false
+  tests: false
+package plutus-tx-plugin
+  benchmarks: false
+  tests: false
+```
+
+Then we unfortunately do need to modify the main `cabal.project`, to comment out the packages that we are replacing with local ones.
+```
+source-repository-package
+  ...
+  subdir:
+    --plutus-core
+    --plutus-ledger-api
+    --plutus-tx
+    --plutus-tx-plugin
+    word-array
+    prettyprinter-configurable
+    stubs/plutus-ghc-stub
+```
+
+After this, a `cabal build` should build with the local checkouts of `plutus` for the packages you specified.
+
 == Working conventions
 
 === Code is communication
