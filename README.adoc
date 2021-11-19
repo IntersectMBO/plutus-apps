@@ -121,6 +121,14 @@ Run `cabal build plutus-pab` from the root to build the Plutus PAB library.
 
 See the link:./cabal.project[cabal project file] to see the other packages that you can build with `cabal`.
 
+=== Deployment
+
+The Plutus Playground is automatically deployed upon certain pushes to GitHub
+
+* https://plutus-playground-plutus-apps-staging.plutus.aws.iohkdev.io/[Staging] is deployed from every commit pushed to `main` (this URL subject to change)
+* https://playground.plutus.iohkdev.io/[Production] is deployed from every release tag (matching `plutus-pab/v[0-9]+.[0-9]+.[0-9]+`)
+
+For more details, including instructions for setting up ad hoc testing deployments, see https://github.com/input-output-hk/plutus-ops[the plutus-ops repo].
 
 [[nix-advice]]
 == Nix
