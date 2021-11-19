@@ -44,8 +44,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
 import Data.ByteString.Lazy qualified as BSL
 import Data.Default (Default (..))
-import Data.Map (Map)
-import Data.Map qualified as Map
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Monoid (Last (..), Sum (..))
 import Data.OpenApi qualified as OpenApi
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
