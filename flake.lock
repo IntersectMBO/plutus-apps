@@ -99,15 +99,16 @@
     "haskell-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1637230769,
-        "narHash": "sha256-GElVi3+yP6tEySL8P1uO1+ngKFIqYTxQ3/2pSk0kUbQ=",
+        "lastModified": 1637304895,
+        "narHash": "sha256-rfwGTreZvn8U1PAh887gonqir0qV1+UJ1519Bn0xU70=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "9dd933d6e8cf5f0ac92c1fe694ef7d8895942310",
+        "rev": "ad2e76215a9042dc6c4aec1ac8f6a892290f9518",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "angerman/fix-ghcjs",
         "repo": "haskell.nix",
         "type": "github"
       }
