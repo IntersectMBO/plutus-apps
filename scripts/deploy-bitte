@@ -17,7 +17,7 @@ then
 fi
 
 ref="${GITHUB_REF_SLUG:-}"
-ref="${ref/plutus-pab\/v+([0-9]).+([0-9]).+([0-9])/plutus-pab-vx.x.x}"
+ref="${ref/v+([0-9])-+([0-9])-+([0-9])/vYYYY-MM-DD}"
 declare -r ref
 
 if [ -z "${ref}" ]
@@ -26,7 +26,7 @@ then
 fi
 
 declare -A ref_env_mapping=(
-    [plutus-pab-vx.x.x]=plutusProduction
+    [vYYYY-MM-DD]=plutusProduction
     [main]=plutusStaging
 )
 
