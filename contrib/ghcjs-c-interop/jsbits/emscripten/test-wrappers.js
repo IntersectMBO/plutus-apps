@@ -60,13 +60,11 @@ function h$getTmpBufferWith(n, buf_d, buf_o, len) {
   return buf_ptr;
 }
 
-
 function h$test_fold(stbl_buf, stbl_ptr, n) {
   var f = h$deRefStablePtr(stbl_ptr);
       fptr = h$ghcjs_c_interop.addFunction(f)
       ret = h$ghcjs_c_interop._test_fold(fptr, n);
   h$ghcjs_c_interop.removeFunction(fptr);
-  console.log(ret);
   return ret;
 }
 
