@@ -55,8 +55,8 @@ import Debug.Trace qualified as Debug
 --   on disk. This is OK because we don't need to validate transactions when they come in.
 data UtxoState a =
     UtxoState
-        { _usTxUtxoData :: a -- One of 'TxUtxoBalance', 'TxOutBalance' or 'TxIdState'
-        , _usTip        :: Tip -- ^ Tip of our chain sync client
+        { _usTxUtxoData :: !a -- One of 'TxUtxoBalance', 'TxOutBalance' or 'TxIdState'
+        , _usTip        :: !Tip -- ^ Tip of our chain sync client
         }
         deriving stock (Eq, Show, Generic)
         deriving (Semigroup, Monoid) via (GenericSemigroupMonoid (UtxoState a))

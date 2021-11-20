@@ -268,10 +268,10 @@ data TxStatusFailure
       deriving (Show, Eq)
 
 data TxIdState = TxIdState
-  { txnsConfirmed :: Map TxId TxConfirmedState
+  { txnsConfirmed :: !(Map TxId TxConfirmedState)
   -- ^ Number of times this transaction has been added as well as other
   -- necessary metadata.
-  , txnsDeleted   :: Map TxId (Sum Int)
+  , txnsDeleted   :: !(Map TxId (Sum Int))
   -- ^ Number of times this transaction has been deleted.
   }
   deriving stock (Eq, Generic, Show)
@@ -290,9 +290,9 @@ instance Monoid TxIdState where
 
 data TxConfirmedState =
   TxConfirmedState
-    { timesConfirmed :: Sum Int
-    , blockAdded     :: Last BlockNumber
-    , validity       :: Last TxValidity
+    { timesConfirmed :: !(Sum Int)
+    , blockAdded     :: !(Last BlockNumber)
+    , validity       :: !(Last TxValidity)
     }
     deriving stock (Eq, Generic, Show)
     deriving (Semigroup, Monoid) via (GenericSemigroupMonoid TxConfirmedState)
