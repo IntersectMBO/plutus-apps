@@ -47,6 +47,7 @@ import Data.Default (Default (..))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
+import Data.OpenApi qualified as OpenApi
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -77,7 +78,7 @@ data Tip =
         , tipBlockNo :: BlockNumber -- ^ Last block number
         }
     deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON)
+    deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
 -- | When performing a rollback the chain sync protocol does not provide a block
 --   number where to resume from.
@@ -239,7 +240,7 @@ liftTxOutStatus = void
 
 newtype BlockNumber = BlockNumber { unBlockNumber :: Word64 }
     deriving stock (Eq, Ord, Show, Generic)
-    deriving newtype (Num, Real, Enum, Integral, Pretty, ToJSON, FromJSON)
+    deriving newtype (Num, Real, Enum, Integral, Pretty, ToJSON, FromJSON, OpenApi.ToSchema)
 
 data Diagnostics =
     Diagnostics
@@ -252,7 +253,7 @@ data Diagnostics =
         , someTransactions   :: [TxId]
         }
         deriving stock (Eq, Ord, Show, Generic)
-        deriving anyclass (ToJSON, FromJSON)
+        deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
 -- | Datatype returned when we couldn't get the state of a tx or a tx output.
 data TxStatusFailure

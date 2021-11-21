@@ -29,12 +29,13 @@ import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinDat
                              CurrencySymbol (CurrencySymbol), Data, Datum (Datum), DatumHash (DatumHash), Extended,
                              Interval, LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
-                             Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script,
+                             Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script, StakeValidator (StakeValidator),
                              StakeValidatorHash (StakeValidatorHash), StakingCredential, TokenName (TokenName),
                              TxId (TxId), TxOut, TxOutRef, UpperBound, Validator (Validator),
                              ValidatorHash (ValidatorHash), Value (Value), fromBytes)
 import Plutus.V1.Ledger.Bytes (bytes)
 import Plutus.V1.Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
+import Plutus.V1.Ledger.Scripts (ScriptHash (..))
 import Plutus.V1.Ledger.Slot (Slot (Slot))
 import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
@@ -143,6 +144,7 @@ deriving instance OpenApi.ToSchema Credential
 deriving newtype instance OpenApi.ToSchema PubKey
 deriving newtype instance OpenApi.ToSchema TokenName
 deriving instance OpenApi.ToSchema StakingCredential
+deriving newtype instance OpenApi.ToSchema StakeValidator
 deriving newtype instance OpenApi.ToSchema StakeValidatorHash
 deriving newtype instance OpenApi.ToSchema PubKeyHash
 deriving newtype instance OpenApi.ToSchema LedgerBytes
@@ -166,3 +168,4 @@ deriving instance OpenApi.ToSchema ann => OpenApi.ToSchema (Version ann)
 instance OpenApi.ToSchema Script where
     declareNamedSchema _ =
         pure $ OpenApi.NamedSchema (Just "Script") (OpenApi.toSchema (Proxy :: Proxy String))
+deriving newtype instance OpenApi.ToSchema ScriptHash

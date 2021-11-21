@@ -22,8 +22,8 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.ChainIndex (RunRequirements, runChainIndexEffects)
-import Plutus.ChainIndex.Api (API, FromHashAPI, UtxoAtAddressRequest (UtxoAtAddressRequest),
-                              UtxoWithCurrencyRequest (UtxoWithCurrencyRequest))
+import Plutus.ChainIndex.Api (API, FromHashAPI, FullAPI, UtxoAtAddressRequest (UtxoAtAddressRequest),
+                              UtxoWithCurrencyRequest (UtxoWithCurrencyRequest), swagger)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as E
 import Servant.API ((:<|>) (..))
@@ -36,7 +36,7 @@ serveChainIndexQueryServer ::
     -> IO ()
 serveChainIndexQueryServer port runReq = do
     let server = hoistServer (Proxy @API) (runChainIndexQuery runReq) serveChainIndex
-    Warp.run port (serve (Proxy @API) server)
+    Warp.run port (serve (Proxy @FullAPI) (server :<|> swagger))
 
 runChainIndexQuery ::
     RunRequirements

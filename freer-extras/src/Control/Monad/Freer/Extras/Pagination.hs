@@ -82,6 +82,8 @@ data Page a = Page
     deriving stock (Eq, Ord, Show, Generic, Functor)
     deriving anyclass (ToJSON, FromJSON)
 
+deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Page a)
+
 -- | Given a 'Set', request the 'Page' with the given 'PageQuery'.
 pageOf
   :: (Eq a)
