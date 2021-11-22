@@ -11,7 +11,8 @@ set -euo pipefail
 NAME=direct-sqlite
 
 emcc -o $NAME.js -s WASM=0 \
-  -s "EXPORTED_RUNTIME_METHODS=['printErr']" \
+  -s ALLOW_TABLE_GROWTH \
+  -s "EXPORTED_RUNTIME_METHODS=['printErr','addFunction','removeFunction','getTempRet0','setTempRet0']" \
   -s "EXPORTED_FUNCTIONS=['_malloc', '_free',\
                          '_sqlite3_open',
                          '_sqlite3_close',
