@@ -28,7 +28,6 @@ import Control.Monad.Error.Lens (throwing)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
 import Data.Aeson (ToJSON (..), Value (String), object, (.=))
-import Data.Aeson.Extras qualified as Aeson.Extras
 import Data.Aeson.Extras qualified as JSON
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -40,7 +39,7 @@ import GHC.Generics (Generic)
 import Ledger qualified as Plutus
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
-import Ledger.Constraints.OffChain (UnbalancedTx (..), adjustUnbalancedTx, mkTx)
+import Ledger.Constraints.OffChain (ScriptOutput (..), UnbalancedTx (..), adjustUnbalancedTx, mkTx)
 import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Request qualified as Contract
@@ -161,7 +160,7 @@ instance ToJSON ExportTxInput where
 instance ToJSON ExportTx where
     toJSON ExportTx{partialTx, lookups, redeemers} =
         object
-            [ "transaction" .= Aeson.Extras.encodeByteString (C.serialiseToCBOR partialTx)
+            [ "transaction" .= JSON.encodeByteString (C.serialiseToCBOR partialTx)
             , "inputs"      .= lookups
             , "redeemers"   .= redeemers
             ]
@@ -177,21 +176,20 @@ export params networkId UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBa
 mkPartialTx :: [WAPI.PubKeyHash] -> C.ProtocolParameters -> C.NetworkId -> Plutus.Tx -> Either CardanoAPI.ToCardanoError (C.Tx C.AlonzoEra)
 mkPartialTx requiredSigners params networkId = fmap (C.makeSignedTransaction []) . CardanoAPI.toCardanoTxBody requiredSigners (Just params) networkId
 
-mkInputs :: C.NetworkId -> Map Plutus.TxOutRef Plutus.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
+mkInputs :: C.NetworkId -> Map Plutus.TxOutRef ScriptOutput -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList
 
-toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> Plutus.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
-toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} Plutus.TxOut{Plutus.txOutAddress, Plutus.txOutValue, Plutus.txOutDatumHash=Just dh} = do
-    cardanoValue <- CardanoAPI.toCardanoValue txOutValue
+toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> ScriptOutput -> Either CardanoAPI.ToCardanoError ExportTxInput
+toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} (ScriptOutput vh value dh) = do
+    cardanoValue <- CardanoAPI.toCardanoValue value
     let otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList cardanoValue
     ExportTxInput
         <$> CardanoAPI.toCardanoTxId txOutRefId
         <*> pure (C.TxIx $ fromInteger txOutRefIdx)
-        <*> CardanoAPI.toCardanoAddress networkId txOutAddress
+        <*> CardanoAPI.toCardanoAddress networkId (Plutus.scriptHashAddress vh)
         <*> pure (C.selectLovelace cardanoValue)
         <*> CardanoAPI.toCardanoScriptDataHash dh
         <*> pure otherQuantities
-toExportTxInput _ _ _ = Left CardanoAPI.PublicKeyInputsNotSupported
 
 mkRedeemers :: Plutus.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
 mkRedeemers tx = (++) <$> mkSpendingRedeemers tx <*> mkMintingRedeemers tx
