@@ -96,6 +96,8 @@ module Plutus.Contract.Test.ContractModel
     , SchemaConstraints
     , ContractInstanceSpec(..)
     , HandleFun
+    -- ** Model properties
+    , propSanityCheckModel
     -- ** Emulator properties
     , propRunActions_
     , propRunActions
@@ -1110,6 +1112,12 @@ checkNoCrashes = foldr (\ (ContractInstanceSpec k w c) -> (assertOutcome c (inst
         notError Failed{}  = False
         notError Done{}    = True
         notError NotDone{} = True
+
+-- | Sanity check a `ContractModel`. Ensures that wallet balances are not always unchanged.
+propSanityCheckModel :: forall state. ContractModel state => Property
+propSanityCheckModel = QC.expectFailure $ noBalanceChanges . stateAfter @state
+  where
+    noBalanceChanges s = all isZero (s ^. balanceChanges)
 
 -- $noLockedFunds
 -- Showing that funds can not be locked in the contract forever.

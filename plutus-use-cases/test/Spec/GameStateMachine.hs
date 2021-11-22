@@ -19,6 +19,7 @@ module Spec.GameStateMachine
   , prop_Game, propGame', prop_GameWhitelist
   , prop_NoLockedFunds
   , prop_CheckNoLockedFundsProof
+  , prop_SanityCheckModel
   ) where
 
 import Control.Lens
@@ -171,6 +172,9 @@ prop_Game = propRunActions_ handleSpec
 prop_GameWhitelist :: Actions GameModel -> Property
 prop_GameWhitelist = checkErrorWhitelist handleSpec defaultWhitelist
 
+prop_SanityCheckModel :: Property
+prop_SanityCheckModel = propSanityCheckModel @GameModel
+
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions
                   (set minLogLevel l defaultCheckOptions)
@@ -293,6 +297,9 @@ tests =
 
     , testProperty "can always get the funds out" $
         withMaxSuccess 10 prop_NoLockedFunds
+
+    , testProperty "sanity check the contract model" $
+        prop_SanityCheckModel
     ]
 
 initialVal :: Value
