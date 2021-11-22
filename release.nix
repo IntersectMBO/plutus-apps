@@ -1,4 +1,4 @@
-{ supportedSystems ? [ "x86_64-linux" "x86_64-darwin" ]
+{ supportedSystems ? [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ]
 , rootsOnly ? false
   # We explicitly pass true here in the GitHub action but don't want to slow down hydra
 , checkMaterialization ? false
