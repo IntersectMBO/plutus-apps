@@ -86,7 +86,7 @@ let
       package freer-extras
         tests: False
       package beam-sqlite
-        tests: False
+        tests: True
       package clock
         tests: False
         benchmarks: False
