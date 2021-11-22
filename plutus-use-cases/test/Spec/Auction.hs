@@ -209,11 +209,16 @@ instance ContractModel AuctionModel where
         case cmd of
             WaitUntil slot -> slot > s ^. currentSlot
 
-            -- In order to place a bid, we need to satifsy the constraint where
+            -- In order to place a bid, we need to satisfy the constraint where
             -- each tx output must have at least N Ada.
+            --
             -- When we bid, we must make sure that we don't bid too high such
-            -- that we can't pay to fees anymore and have a tx output of less
-            -- than N Ada.
+            -- that:
+            --     - we can't pay for fees anymore
+            --     - we have a tx output of less than N Ada.
+            --
+            -- We suppose the initial balance is 100 Ada. Needs to be changed if
+            -- the emulator initialises the wallets with a different value.
             Bid w bid      -> let currentWalletBalance = Ada.adaOf 100 + Ada.fromValue (s ^. balanceChange w)
                                   current = s ^. contractState . currentBid
                                in    bid > current
