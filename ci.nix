@@ -12,7 +12,7 @@ let
   inherit (import (sources.plutus-core + "/nix/lib/ci.nix")) dimension platformFilterGeneric filterAttrsOnlyRecursive filterSystems;
   # limit supportedSystems to what the CI can actually build
   # currently that is linux and darwin.
-  systems = filterSystems supportedSystems;
+  systems = builtins.listToAttrs (builtins.map (name: { inherit name; value = name; }) supportedSystems);
   crossSystems =
     let pkgs = (import ./default.nix { }).pkgs;
     in { inherit (pkgs.lib.systems.examples) ghcjs mingwW64; };
