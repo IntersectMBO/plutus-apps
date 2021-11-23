@@ -46,7 +46,7 @@ let
       "https://github.com/Quid2/flat.git"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
       "https://github.com/input-output-hk/purescript-bridge.git"."6a92d7853ea514be8b70bab5e72077bf5a510596" = "13j64vv116in3c204qsl1v0ajphac9fqvsjp7x3zzfr7n7g61drb";
       "https://github.com/input-output-hk/servant-purescript.git"."a0c7c7e37c95564061247461aef4be505a853538" = "177na04jf6wf18kandzsah40lw3xswmmccpr3hkb8wb4hypcffnf";
-      "https://github.com/input-output-hk/cardano-base"."4ea7e2d927c9a7f78ddc69738409a5827ab66b98" = "0n0hxbr0l95cdc25jmmgs7apmmw17i91chhj5rzzv1k7f3iymf6d";
+      "https://github.com/input-output-hk/cardano-base"."73faef0523b5de0acd77ff995036192520d10310" = "sha256-RKIZatexnIFq57x+ppRBkYWhkY0Pui4x56TNFbyJr+U=";
       "https://github.com/input-output-hk/cardano-crypto.git"."07397f0e50da97eaa0575d93bee7ac4b2b2576ec" = "06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3";
       "https://github.com/input-output-hk/cardano-ledger-specs"."bf008ce028751cae9fb0b53c3bef20f07c06e333" = "0my3801w1vinc0kf5yh9lxl6saqxgwm6ccg0vvzi104pafcwwcqx";
       "https://github.com/input-output-hk/cardano-prelude"."fd773f7a58412131512b9f694ab95653ac430852" = "02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6";
@@ -424,7 +424,7 @@ let
                 export PYTHON=${pkgs.buildPackages.buildPackages.python2}/bin/python
               '' + attrs.prePatch or "";
               configurePhase = ''
-                emconfigure ./configure --prefix=$out
+                emconfigure ./configure --prefix=$out --enable-minimal --disable-shared --without-pthreads --disable-ssp --disable-asm --disable-pie CFLAGS=-Os
               '';
               CC = "emcc";
             });
@@ -434,6 +434,13 @@ let
             lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
             cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
             cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
+            cardano-crypto-class.components.library.build-tools = with pkgs.buildPackages.buildPackages; [ emscripten python2 ];
+            cardano-crypto-class.components.library.preConfigure = ''
+              ls -l
+              emcc $(js-unknown-ghcjs-pkg-config --libs --cflags libsodium) jsbits/libsodium.c -o jsbits/libsodium.js -s WASM=0 \
+                -s "EXTRA_EXPORTED_RUNTIME_METHODS=['printErr']" \
+                -s "EXPORTED_FUNCTIONS=['_malloc', '_sodium_init', '_sodium_malloc', '_sodium_free', '_crypto_hash_sha256', '_crypto_hash_sha256_bytes']"
+            '';
             plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
             iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
             plutus-pab.components.tests.psgenerator.buildable = false;
