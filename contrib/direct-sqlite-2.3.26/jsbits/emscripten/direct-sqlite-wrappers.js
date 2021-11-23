@@ -259,7 +259,7 @@
         };
         cb_ptr = h$direct_sqlite.addFunction(cb_);
     }
-    return h$withCString(sql_d, sql_o, function(sql) {
+    return h$direct_sqlite.h$withCString(sql_d, sql_o, function(sql) {
       // console.log("exec", h$direct_sqlite.h$debugHeapStr(sql));
 
       var ptr_ptr = ptr_d === null ? null : h$direct_sqlite.h$getTmpBufferWith(2, ptr_d, ptr_o, 4);
