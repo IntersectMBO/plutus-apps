@@ -439,8 +439,8 @@ let
               ls -l
               emcc $(js-unknown-ghcjs-pkg-config --libs --cflags libsodium) jsbits/libsodium.c -o jsbits/libsodium.js -s WASM=0 \
                 -s "EXTRA_EXPORTED_RUNTIME_METHODS=['printErr']" \
-                -s "EXPORTED_FUNCTIONS=['_malloc', '_sodium_init', '_sodium_malloc', '_sodium_free', '_crypto_hash_sha256', '_crypto_hash_sha256_bytes']"
-            '';
+                -s "EXPORTED_FUNCTIONS=['_malloc', '_free', '_crypto_generichash_blake2b', '_crypto_generichash_blake2b_final', '_crypto_generichash_blake2b_init', '_crypto_generichash_blake2b_update', '_crypto_hash_sha256', '_crypto_hash_sha256_final', '_crypto_hash_sha256_init', '_crypto_hash_sha256_update', '_crypto_sign_ed25519_detached', '_crypto_sign_ed25519_seed_keypair', '_crypto_sign_ed25519_sk_to_pk', '_crypto_sign_ed25519_sk_to_seed', '_crypto_sign_ed25519_verify_detached', '_sodium_compare', '_sodium_free', '_sodium_init', '_sodium_malloc', '_sodium_memzero']"
+           '';
             plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
             iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
             plutus-pab.components.tests.psgenerator.buildable = false;
