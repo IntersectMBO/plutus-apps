@@ -52,7 +52,7 @@
     return h$buffers[n];
   }
 
-  h$direct_sqlite.$getTmpBufferWith = function(n, buf_d, buf_o, len) {
+  h$direct_sqlite.h$getTmpBufferWith = function(n, buf_d, buf_o, len) {
     // fixme: we can avoid the copying if the buffer is already the actual
     //        heap buffer
     var buf_ptr = h$direct_sqlite.h$getTmpBuffer(n, len);
