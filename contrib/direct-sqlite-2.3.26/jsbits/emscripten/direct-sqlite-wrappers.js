@@ -10,7 +10,7 @@
     /* console.log(x); */
   }
 
-  function h$copyToHeap(buf_d, buf_o, tgt, len) {
+  h$direct_sqlite.h$copyToHeap = function(buf_d, buf_o, tgt, len) {
     if(len === 0) return;
     var u8 = buf_d.u8;
     var hexes = "";
@@ -21,7 +21,7 @@
     // h$logWrapper("=> " + len + " " + hexes + " " + buf_o + " " + buf_d.len);
   }
 
-  function h$copyFromHeap(src, buf_d, buf_o, len) {
+  h$direct_sqlite.h$copyFromHeap = function(src, buf_d, buf_o, len) {
     var u8 = buf_d.u8;
     var hexes = "";
     for(var i=0;i<len;i++) {
@@ -40,7 +40,7 @@
   var h$buffers     = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var h$bufferSizes = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 
-  function h$getTmpBuffer(n, minSize) {
+  h$direct_sqlite.h$getTmpBuffer = function(n, minSize) {
     var sn = h$bufferSizes[n];
     if(sn < minSize) {
       if(sn > 0) {
@@ -52,42 +52,42 @@
     return h$buffers[n];
   }
 
-  function h$getTmpBufferWith(n, buf_d, buf_o, len) {
+  h$direct_sqlite.$getTmpBufferWith = function(n, buf_d, buf_o, len) {
     // fixme: we can avoid the copying if the buffer is already the actual
     //        heap buffer
-    var buf_ptr = h$getTmpBuffer(n, len);
-    h$copyToHeap(buf_d, buf_o, buf_ptr, len);
+    var buf_ptr = h$direct_sqlite.h$getTmpBuffer(n, len);
+    h$direct_sqlite.h$copyToHeap(buf_d, buf_o, buf_ptr, len);
     return buf_ptr;
   }
 
 
-  function h$copyStringToHeap(n, str_d, str_o) {
+  h$direct_sqlite.h$copyStringToHeap = function(n, str_d, str_o) {
     if(str_d === null) return null;
-    return ptr = h$getTmpBufferWith(n, str_d, str_o, str_d.len);
+    return ptr = h$direct_sqlite.h$getTmpBufferWith(n, str_d, str_o, str_d.len);
   }
 
-  function h$withCString(str_d, str_o, cont) {
-    return h$withCBuffer(str_d, str_o, str_d === null ? 0 : str_d.len, cont);
+  h$direct_sqlite.h$withCString = function(str_d, str_o, cont) {
+    return h$direct_sqlite.h$withCBuffer(str_d, str_o, str_d === null ? 0 : str_d.len, cont);
   }
 
-  function h$withCBuffer(str_d, str_o, len, cont) {
+  h$direct_sqlite.h$withCBuffer = function(str_d, str_o, len, cont) {
     var str = h$direct_sqlite._malloc(len);
-    if(str_d !== null) h$copyToHeap(str_d, str_o, str, len);
+    if(str_d !== null) h$direct_sqlite.h$copyToHeap(str_d, str_o, str, len);
     var ret = cont(str);
     h$direct_sqlite._free(str);
     return ret;
   }
 
-  function h$withOutBuffer(ptr_d, ptr_o, len, cont) {
+  h$direct_sqlite.h$withOutBuffer = function(ptr_d, ptr_o, len, cont) {
     var ptr = h$direct_sqlite._malloc(len);
-    h$copyToHeap(ptr_d, ptr_o, ptr, len);
+    h$direct_sqlite.h$copyToHeap(ptr_d, ptr_o, ptr, len);
     var ret = cont(ptr);
-    h$copyFromHeap(ptr, ptr_d, ptr_o, len);
+    h$direct_sqlite.h$copyFromHeap(ptr, ptr_d, ptr_o, len);
     h$direct_sqlite._free(ptr);
     return ret;
   }
 
-  function h$withFunction(stbl_ptr, g, cont) {
+  h$direct_sqlite.h$withFunction = function(stbl_ptr, g, cont) {
     var f = h$deRefStablePtr(stbl_ptr);
     if(f === null) return cont(null);
     // g takes as first argument the "real" function we want to call.
@@ -126,8 +126,8 @@
 
   // sqlite3_open ::  CString -> Ptr (Ptr CDatabase) -> IO CError
   function h$sqlite3_open(str_d, str_o, db_d, db_o) {
-    var str = h$copyStringToHeap(0, str_d, str_o);
-        ptr = h$getTmpBufferWith(1, db_d, db_o, 4);
+    var str = h$direct_sqlite.h$copyStringToHeap(0, str_d, str_o);
+        ptr = h$direct_sqlite.h$getTmpBufferWith(1, db_d, db_o, 4);
         ret = h$direct_sqlite._sqlite3_open(str, ptr);
 
     // make sure to return a pointer! Needs to be a pair! ([d,0])
@@ -175,7 +175,7 @@
       };
       cb_ptr = h$direct_sqlite.addFunction(cb_);
     }
-    var ctx_ptr = ctx_d === null ? null : h$getTmpBufferWith(0, ctx_d, ctx_o, 4);
+    var ctx_ptr = ctx_d === null ? null : h$direct_sqlite.h$getTmpBufferWith(0, ctx_d, ctx_o, 4);
         ret = h$direct_sqlite._sqlite3_trace(db_d.i3[0], cb_ptr, ctx_ptr);
 
     if(cb_ptr !== null) {
@@ -262,8 +262,8 @@
     return h$withCString(sql_d, sql_o, function(sql) {
       // console.log("exec", h$direct_sqlite.h$debugHeapStr(sql));
 
-      var ptr_ptr = ptr_d === null ? null : h$getTmpBufferWith(2, ptr_d, ptr_o, 4);
-      var ret = h$withOutBuffer(res_d, res_o, 4, function(res_ptr) {
+      var ptr_ptr = ptr_d === null ? null : h$direct_sqlite.h$getTmpBufferWith(2, ptr_d, ptr_o, 4);
+      var ret = h$direct_sqlite.h$withOutBuffer(res_d, res_o, 4, function(res_ptr) {
             return h$direct_sqlite._sqlite3_exec(db_d.i3[0], sql, cb_ptr, null, res_ptr);
           });
       // I don't think we need to read back anything from a FunPtr value. Just pass it.
@@ -279,10 +279,10 @@
   }
   // sqlite3_prepare_v2 :: Ptr CDatabase -> CString -> CNumBytes -> Ptr (Ptr CStatement) -> Ptr CString -> IO CError
   function h$sqlite3_prepare_v2(db_d, db_o, sql_d, sql_o, bytes, hdl_d, hdl_o, res_d, res_o) {
-    return h$withCString(sql_d, sql_o, function(sql) {
+    return h$direct_sqlite.h$withCString(sql_d, sql_o, function(sql) {
       // console.log("prepare", h$direct_sqlite.h$debugHeapStr(sql));
-      var hdl_ptr = h$getTmpBufferWith(1, hdl_d, hdl_o, 4);
-          res_ptr = res_d === null ? null : h$getTmpBufferWith(2, res_d, res_o, 4);
+      var hdl_ptr = h$direct_sqlite.h$getTmpBufferWith(1, hdl_d, hdl_o, 4);
+          res_ptr = res_d === null ? null : h$direct_sqlite.h$getTmpBufferWith(2, res_d, res_o, 4);
       // console.log(sql_d, sql_o, sql);
       var ret = h$direct_sqlite._sqlite3_prepare_v2(db_d.i3[0], sql, bytes, hdl_ptr, res_ptr);
       var hdl_ptr_ = h$direct_sqlite.h$ptr(hdl_ptr);
@@ -341,7 +341,7 @@
   }
   // sqlite3_bind_parameter_index :: Ptr CStatement -> CString -> IO CParamIndex
   function h$sqlite3_bind_parameter_index(stmt_d, stmt_o, str_d, str_o) {
-    return h$withCString(str_d, str_o, function (str) {
+    return h$direct_sqlite.h$withCString(str_d, str_o, function (str) {
       return h$direct_sqlite._sqlite3_bind_parameter_index(stmt_d.i3[0], str);
     });
   }
@@ -356,7 +356,7 @@
   }
   // sqlite3_bind_blob :: Ptr CStatement -> CParamIndex -> Ptr a -> CNumBytes -> Ptr CDestructor -> IO CError
   function h$sqlite3_bind_blob(stmt_d, stmt_o, idx, ptr_d, ptr_o, bytes, destr_d, destr_o) {
-    return h$withCBuffer(ptr_d, ptr_o, bytes, function (blob) {
+    return h$direct_sqlite.h$withCBuffer(ptr_d, ptr_o, bytes, function (blob) {
       return h$direct_sqlite._sqlite3_bind_blob(stmt_d.i3[0], idx, blob, bytes, destr_o);
     });
   }
@@ -366,7 +366,7 @@
   }``
   // sqlite3_bind_text :: Ptr CStatement -> CParamIndex -> CString -> CNumBytes -> Ptr CDestructor -> IO CError
   function h$sqlite3_bind_text(stmt_d, stmt_o, idx, str_d, str_o, bytes, destr_d, destr_o) {
-    return h$withCBuffer(str_d, str_o, bytes, function(str) {
+    return h$direct_sqlite.h$withCBuffer(str_d, str_o, bytes, function(str) {
       // CDestructor is either (null, 0) for STATIC, or (null, -1) for TRANSIENT
       // we always free the string in the Emscripten heap right afterwards, so what
       // ever destructor is set, we are TRANSIENT in the emscripten heap!
@@ -434,7 +434,7 @@
   }
   // sqlite3_create_function_v2 :: Ptr CDatabase -> CString -> CArgCount -> CInt -> Ptr a -> FunPtr CFunc -> FunPtr CFunc -> FunPtr CFuncFinal -> FunPtr (CFuncDestroy a) -> IO CError
   function h$sqlite3_create_function_v2(db_d, db_o, name_d, name_o, nargs, enc, user_data_d, user_data_o, fun_buf, fun_sptr, step_buf, step_sptr, final_buf, final_sptr, destroy_buf, destroy_sptr) {
-    var name = name_d === null ? null : h$copyStringToHeap(0, name_d, name_o);
+    var name = name_d === null ? null : h$direct_sqlite.h$copyStringToHeap(0, name_d, name_o);
         user_data = user_data_o; // so user_data is really a StablePtr; we'll just store the stablePtr offset.
         cb_fun = h$deRefStablePtr(fun_sptr);
         cb_step = h$deRefStablePtr(step_sptr);
@@ -530,7 +530,7 @@
   // sqlite3_result_zeroblob :: Ptr CContext -> CNumBytes -> IO ()
   // sqlite3_result_text     :: Ptr CContext -> CString -> CNumBytes -> Ptr CDestructor -> IO ()
   function h$sqlite3_result_text(ctx_d, ctx_o, str_d, str_o, nbytes, destr_d, destr_o) {
-    var str = h$getTmpBufferWith(0, str_d, str_o, nbytes);
+    var str = h$direct_sqlite.h$getTmpBufferWith(0, str_d, str_o, nbytes);
     return h$direct_sqlite._sqlite3_result_text(ctx_d, str, nbytes, null);
   }
   // sqlite3_result_int64    :: Ptr CContext -> Int64 -> IO ()
@@ -542,7 +542,7 @@
   // sqlite3_result_value    :: Ptr CContext -> Ptr CValue -> IO ()
   // sqlite3_result_error    :: Ptr CContext -> CString -> CNumBytes -> IO ()
   function h$sqlite3_result_error(ctx_d, ctx_o, str_d, str_o, nbytes) {
-    return h$withCBuffer(str_d, str_o, nbytes, function(str){
+    return h$direct_sqlite.h$withCBuffer(str_d, str_o, nbytes, function(str){
       // console.log("result_error", h$direct_sqlite.h$debugHeapStr(str), nbytes);
       return h$direct_sqlite._sqlite3_result_error(ctx_d, str, nbytes);
     });
@@ -556,15 +556,15 @@
   //                             -> IO CError
   function h$sqlite3_create_collation_v2(db_d, db_o, name_d, name_o, flags, user_data_d, user_data_o, f_cmp_buf, f_cmp_sptr, f_destroy_buf, f_destroy_sptr) {
     // console.log("sqlite3_create_collation_v2", db_d, db_o, name_d, name_o, flags, user_data_d, user_data_o, f_cmp_buf, f_cmp_sptr, f_destroy_buf, f_destroy_sptr);
-    return h$withCString(name_d, name_o, function(name) {
+    return h$direct_sqlite.h$withCString(name_d, name_o, function(name) {
       // console.log("user data:", user_data_d, user_data_o, user_data_d === null ? 0 : user_data_d.len);
       // meh user_data is again some `castFunPtrToPtr`, so offset is probably some
       // offset into ???
-      return h$withCBuffer(user_data_d, 0, user_data_d === null ? 0 : user_data_d.len, function(user_data) {
-        return h$withFunction(f_cmp_sptr, function(f, user_data_ptr, len_a, str_a, len_b, str_b) {
+      return h$direct_sqlite.h$withCBuffer(user_data_d, 0, user_data_d === null ? 0 : user_data_d.len, function(user_data) {
+        return h$direct_sqlite.h$withFunction(f_cmp_sptr, function(f, user_data_ptr, len_a, str_a, len_b, str_b) {
           return f([user_data_d, user_data_o], len_a, [{ dv: new DataView(h$direct_sqlite.HEAPU8.buffer), u8: h$direct_sqlite.HEAPU8 }, str_a], len_b, [{ dv: new DataView(h$direct_sqlite.HEAPU8.buffer), u8: h$direct_sqlite.HEAPU8 }, str_b]);
         }, function(fcmp_ptr) {
-          return h$withFunction(f_destroy_sptr, function (f, user_data_ptr) {
+          return h$direct_sqlite.h$withFunction(f_destroy_sptr, function (f, user_data_ptr) {
             return f([user_data_d, user_data_o]);
           }, function(fdestroy_ptr) {
             return h$direct_sqlite._sqlite3_create_collation_v2(db_d.i3[0], name, flags, user_data, fcmp_ptr, fdestroy_ptr);
@@ -583,12 +583,12 @@
   // sqlite3_wal_hook :: Ptr CDatabase -> FunPtr CWalHook -> Ptr a -> IO (Ptr ())
   // sqlite3_blob_open :: Ptr CDatabase -> CString -> CString -> CString -> Int64 -> CInt -> Ptr (Ptr CBlob) -> IO CError
   function h$sqlite3_blob_open(db_d, db_o, db_name_d, db_name_o, db_table_d, db_table_o, db_column_d, db_column_o, rowid_msw, rowid_lsw, flags, out_ptr_d, out_ptr_o) {
-    var db_name = db_name_d === null ? null : h$copyStringToHeap(0, db_name_d, db_name_o);
-        db_table = db_table_d === null ? null : h$copyStringToHeap(1, db_table_d, db_table_o);
-        db_column = db_column_d === null ? null : h$copyStringToHeap(2, db_column_d, db_column_o);
-        out_ptr = out_ptr_d === null ? null : h$getTmpBufferWith(3, out_ptr_d, out_ptr_o, 4);
+    var db_name = db_name_d === null ? null : h$direct_sqlite.h$copyStringToHeap(0, db_name_d, db_name_o);
+        db_table = db_table_d === null ? null : h$direct_sqlite.h$copyStringToHeap(1, db_table_d, db_table_o);
+        db_column = db_column_d === null ? null : h$direct_sqlite.h$copyStringToHeap(2, db_column_d, db_column_o);
+        out_ptr = out_ptr_d === null ? null : h$direct_sqlite.h$getTmpBufferWith(3, out_ptr_d, out_ptr_o, 4);
     var ret = h$direct_sqlite._sqlite3_blob_open(db_d.i3[0], db_name, db_table, db_column, rowid_lsw, rowid_msw, flags, out_ptr);
-    h$copyFromHeap(out_ptr, out_ptr_d, out_ptr_o, 4);
+    h$direct_sqlite.h$copyFromHeap(out_ptr, out_ptr_d, out_ptr_o, 4);
     out_ptr_d.arr = [[out_ptr_d.i3[0],0]];
     return ret;
   }
@@ -604,14 +604,14 @@
   // sqlite3_blob_read :: Ptr CBlob -> Ptr a -> CInt -> CInt -> IO CError
   function h$sqlite3_blob_read(blob_d, blob_o, out_ptr_d, out_ptr_o, nbytes, offset) {
     // console.log("blob_read", blob_d, out_ptr_d, out_ptr_o, nbytes, offset);
-    var out_ptr = out_ptr_d === null ? null : h$getTmpBufferWith(0, out_ptr_d, out_ptr_o, nbytes);
+    var out_ptr = out_ptr_d === null ? null : h$direct_sqlite.h$getTmpBufferWith(0, out_ptr_d, out_ptr_o, nbytes);
     var ret = h$direct_sqlite._sqlite3_blob_read(blob_d, out_ptr, nbytes, offset);
-    h$copyFromHeap(out_ptr, out_ptr_d, out_ptr_o, nbytes);
+    h$direct_sqlite.h$copyFromHeap(out_ptr, out_ptr_d, out_ptr_o, nbytes);
     return ret;
   }
   // sqlite3_blob_write :: Ptr CBlob -> Ptr a -> CInt -> CInt -> IO CError
   function h$sqlite3_blob_write(blob_d, blob_o, in_ptr_d, in_ptr_o, nbytes, offset) {
-    return h$withCBuffer(in_ptr_d, in_ptr_o, nbytes, function(in_ptr) {
+    return h$direct_sqlite.h$withCBuffer(in_ptr_d, in_ptr_o, nbytes, function(in_ptr) {
       // console.log("blob_write", blob_d, in_ptr, nbytes, offset);
       return h$direct_sqlite._sqlite3_blob_write(blob_d, in_ptr, nbytes, offset);
     });
