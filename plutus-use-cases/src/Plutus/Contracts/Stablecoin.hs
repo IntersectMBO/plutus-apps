@@ -89,13 +89,13 @@ import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKey)
 import Ledger.Interval qualified as Interval
-import Ledger.Oracle
 import Ledger.Scripts (MintingPolicyHash)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (TypedScriptTxOut (..))
 import Ledger.Value (AssetClass, TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract
+import Plutus.Contract.Oracle
 import Plutus.Contract.StateMachine (AsSMContractError, OnChainState (..), SMContractError, State (..), StateMachine,
                                      StateMachineClient (..), Void)
 import Plutus.Contract.StateMachine qualified as SM

@@ -52,13 +52,13 @@ import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
-import Ledger.Oracle (Observation (..), SignedMessage (..))
-import Ledger.Oracle qualified as Oracle
 import Ledger.Scripts (unitDatum)
 import Ledger.Tokens
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value as Value
 import Plutus.Contract
+import Plutus.Contract.Oracle (Observation (..), SignedMessage (..))
+import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Contract.Util (loopM)
 import PlutusTx qualified
 import PlutusTx.Prelude

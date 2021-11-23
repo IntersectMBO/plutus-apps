@@ -8,6 +8,7 @@ packages: doc
           plutus-chain-index-core
           plutus-contract
           plutus-ledger
+          plutus-ledger-constraints
           plutus-pab
           plutus-playground-server
           plutus-use-cases

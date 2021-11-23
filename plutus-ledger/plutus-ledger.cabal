@@ -48,15 +48,10 @@ library
         Ledger.AddressMap
         Ledger.Blockchain
         Ledger.CardanoWallet
-        Ledger.Constraints
-        Ledger.Constraints.OffChain
-        Ledger.Constraints.OnChain
-        Ledger.Constraints.TxConstraints
         Ledger.Contexts
         Ledger.Crypto
         Ledger.Fee
         Ledger.Generators
-        Ledger.Oracle
         Ledger.Orphans
         Ledger.Index
         Ledger.Scripts

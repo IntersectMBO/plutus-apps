@@ -75,6 +75,7 @@ library
         playground-common -any,
         plutus-contract -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         plutus-tx -any,
         regex-compat -any,
         plutus-contract -any,
@@ -130,6 +131,7 @@ library plutus-playground-usecases
         plutus-contract -any,
         plutus-tx -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         row-types -any,
         text -any,
         transformers -any
@@ -199,6 +201,7 @@ executable plutus-playground-server
         wai -any,
         plutus-contract -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         row-types -any,
         warp -any,
         web-ghc -any
@@ -238,6 +241,7 @@ test-suite plutus-playground-server-test
         plutus-playground-server -any,
         plutus-tx -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         plutus-playground-usecases -any,
         plutus-contract -any,
         tasty -any,
@@ -245,7 +249,6 @@ test-suite plutus-playground-server-test
         text -any,
         time-units -any,
         transformers -any,
-        plutus-ledger -any,
         web-ghc -any
 
     if !(impl(ghcjs) || os(ghcjs))

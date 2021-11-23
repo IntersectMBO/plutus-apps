@@ -24,11 +24,11 @@ import Spec.TokenAccount (assertAccountBalance)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Crypto (PrivateKey, PubKey (..))
-import Ledger.Oracle (Observation (..), SignedMessage)
-import Ledger.Oracle qualified as Oracle
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value (Value, scale)
+import Plutus.Contract.Oracle (Observation (..), SignedMessage)
+import Plutus.Contract.Oracle qualified as Oracle
 
 import Ledger.CardanoWallet qualified as CW
 import Plutus.Contract.Test

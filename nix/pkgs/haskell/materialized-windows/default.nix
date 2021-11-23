@@ -811,6 +811,7 @@
         cardano-ledger-shelley-test = ./.plan.nix/cardano-ledger-shelley-test.nix;
         strict-non-empty-containers = ./.plan.nix/strict-non-empty-containers.nix;
         plutus-chain-index = ./.plan.nix/plutus-chain-index.nix;
+        plutus-ledger-constraints = ./.plan.nix/plutus-ledger-constraints.nix;
         typed-protocols-cborg = ./.plan.nix/typed-protocols-cborg.nix;
         Win32-network = ./.plan.nix/Win32-network.nix;
         cardano-ledger-core = ./.plan.nix/cardano-ledger-core.nix;
@@ -1012,6 +1013,7 @@
             flags = { "release" = lib.mkOverride 900 false; };
             };
           "plutus-chain-index" = { flags = {}; };
+          "plutus-ledger-constraints" = { flags = {}; };
           "typed-protocols-cborg" = { flags = {}; };
           "Win32-network" = { flags = { "demo" = lib.mkOverride 900 false; }; };
           "cardano-ledger-core" = { flags = {}; };
@@ -1217,6 +1219,7 @@
           "adjunctions".components.library.planned = lib.mkOverride 900 true;
           "http-api-data".components.library.planned = lib.mkOverride 900 true;
           "plutus-chain-index".components.library.planned = lib.mkOverride 900 true;
+          "plutus-ledger-constraints".components.library.planned = lib.mkOverride 900 true;
           "pem".components.library.planned = lib.mkOverride 900 true;
           "strict-non-empty-containers".components.library.planned = lib.mkOverride 900 true;
           "small-steps-test".components.library.planned = lib.mkOverride 900 true;
@@ -1420,6 +1423,7 @@
           "canonical-json".components.library.planned = lib.mkOverride 900 true;
           "bytestring".components.library.planned = lib.mkOverride 900 true;
           "purescript-bridge".components.library.planned = lib.mkOverride 900 true;
+          "plutus-ledger-constraints".components.tests."plutus-ledger-constraints-test".planned = lib.mkOverride 900 true;
           "cardano-cli".components.library.planned = lib.mkOverride 900 true;
           "wai-cors".components.library.planned = lib.mkOverride 900 true;
           "freer-simple".components.exes."freer-examples".planned = lib.mkOverride 900 true;

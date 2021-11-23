@@ -29,7 +29,6 @@ import Hedgehog.Range qualified as Range
 import Ledger
 import Ledger.Ada qualified as Ada
 import Ledger.Bytes as Bytes
-import Ledger.Constraints.OffChain qualified as OC
 import Ledger.Contexts qualified as Validation
 import Ledger.Crypto qualified as Crypto
 import Ledger.Fee (FeeConfig (..), calcFees)
@@ -96,9 +95,6 @@ tests = testGroup "all tests" [
                     vlJson = "{\"getValue\":[[{\"unCurrencySymbol\":\"\"},[[{\"unTokenName\":\"\"},50]]]]}"
                     vlValue = Ada.lovelaceValueOf 50
                 in byteStringJson vlJson vlValue)),
-    testGroup "Constraints" [
-        testProperty "missing value spent" missingValueSpentProp
-        ],
     testGroup "Tx" [
         testProperty "TxOut fromTxOut/toTxOut" ciTxOutRoundTrip
         ],
@@ -240,55 +236,6 @@ byteStringJson jsonString value =
         HUnit.assertEqual "Simple Decode" (Right value) (JSON.eitherDecode jsonString)
     , testCase "encoding" $ HUnit.assertEqual "Simple Encode" jsonString (JSON.encode value)
     ]
-
--- | Check that 'missingValueSpent' is the smallest value needed to
---   meet the requirements.
-missingValueSpentProp :: Property
-missingValueSpentProp = property $ do
-    let valueSpentBalances = Gen.choice
-            [ OC.provided <$> nonNegativeValue
-            , OC.required <$> nonNegativeValue
-            ]
-        empty = OC.ValueSpentBalances mempty mempty
-    balances <- foldl (<>) empty <$> forAll (Gen.list (Range.linear 0 10000) valueSpentBalances)
-    let missing = OC.missingValueSpent balances
-        actual = OC.vbsProvided balances
-    Hedgehog.annotateShow missing
-    Hedgehog.annotateShow actual
-    Hedgehog.assert (OC.vbsRequired balances `Value.leq` (actual <> missing))
-
-    -- To make sure that this is indeed the smallest value meeting
-    -- the requirements, we reduce it by one and check that the property doesn't
-    -- hold anymore.
-    smaller <- forAll (reduceByOne missing)
-    forM_ smaller $ \smaller' ->
-        Hedgehog.assert (not (OC.vbsRequired balances `Value.leq` (actual <> smaller')))
-
-
--- | Reduce one of the elements in a 'Value' by one.
---   Returns 'Nothing' if the value contains no positive
---   elements.
-reduceByOne :: Hedgehog.MonadGen m => Value -> m (Maybe Value)
-reduceByOne (Value.Value value) = do
-    let flat = do
-            (currency, rest) <- AMap.toList value
-            (tokenName, amount) <- AMap.toList rest
-            guard (amount > 0)
-            pure (currency, tokenName, pred amount)
-    if null flat
-        then pure Nothing
-        else (\(cur, tok, amt) -> Just $ Value.singleton cur tok amt) <$> Gen.element flat
-
--- | A 'Value' with non-negative entries taken from a relatively
---   small pool of MPS hashes and token names.
-nonNegativeValue :: Hedgehog.MonadGen m => m Value
-nonNegativeValue =
-    let mpsHashes = ["ffff", "dddd", "cccc", "eeee", "1010"]
-        tokenNames = ["a", "b", "c", "d"]
-    in Value.singleton
-        <$> Gen.element mpsHashes
-        <*> Gen.element tokenNames
-        <*> Gen.integral (Range.linear 0 10000)
 
 -- | Validate inverse property between 'fromTxOut' and 'toTxOut given a 'TxOut'.
 ciTxOutRoundTrip :: Property
