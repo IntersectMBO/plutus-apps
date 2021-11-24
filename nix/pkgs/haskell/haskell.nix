@@ -450,10 +450,6 @@ let
             ghcjs-c-interop.components.library.preConfigure = runEmscripten;
           };
       })
-      ({ pkgs, config, ... }@args: {
-        packages.cardano-addresses-jsbits.components.library.preConfigure =
-          (import (args.config.packages.cardano-addresses.src + "/jsbits/emscripten") args).packages.cardano-addresses-jsbits.components.library.preConfigure;
-      })
     ] ++ lib.optional enableHaskellProfiling {
       enableLibraryProfiling = true;
       enableExecutableProfiling = true;
