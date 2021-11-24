@@ -190,6 +190,9 @@ library
   if os(osx)
     exposed-modules: Foundation.System.Bindings.Macos
 
+  if os(ghcjs)
+    js-sources: jsbits/foundation.js
+
   default-extensions: NoImplicitPrelude
                       RebindableSyntax
                       TypeFamilies

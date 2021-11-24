@@ -166,6 +166,7 @@
           "cbits/foundation_time.c"
           "cbits/foundation_utf8.c"
           ];
+        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/foundation.js";
         includeDirs = [ "cbits" ];
         };
       tests = {
