@@ -16,18 +16,19 @@ module Plutus.PAB.CliSpec
     ) where
 
 import Cardano.BM.Configuration.Model qualified as CM
-import Cardano.BM.Data.Severity (Severity (..))
+import Cardano.BM.Data.Severity (Severity)
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.ChainIndex.Types qualified as ChainIndex.Types
-import Cardano.Node.Types (NodeMode (..))
+import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode))
 import Cardano.Node.Types qualified as Node.Types
 import Cardano.Wallet.Mock.Client qualified as Wallet.Client
-import Cardano.Wallet.Mock.Types (WalletInfo (..))
-import Cardano.Wallet.Mock.Types qualified as Wallet.Types
+import Cardano.Wallet.Mock.Types (WalletInfo (WalletInfo))
+import Cardano.Wallet.Types qualified as Wallet.Types
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import Control.Concurrent.Availability (available, newToken, starting)
+import Control.Lens (over)
 import Control.Monad (forM_, void, when)
 import Data.Aeson (FromJSON, ToJSON, toJSON)
 import Data.Coerce (coerce)
@@ -41,34 +42,34 @@ import GHC.Generics (Generic)
 import Ledger.Ada (lovelaceValueOf)
 import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), defaultManagerSettings, newManager,
                             responseTimeoutNone)
-import Plutus.Contract
 import Plutus.Contracts.PingPong qualified as PingPong
-import Plutus.PAB.App (StorageBackend (..))
+import Plutus.PAB.App (StorageBackend (BeamSqliteBackend))
 import Plutus.PAB.App qualified as App
-import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltin (..))
+import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltin (SomeBuiltin))
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Monitoring.Config (defaultConfig)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
-import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
-import Plutus.PAB.Monitoring.Util (PrettyObject (..), convertLog)
+import Plutus.PAB.Monitoring.PABLogMsg (AppMsg)
+import Plutus.PAB.Monitoring.Util (PrettyObject, convertLog)
 import Plutus.PAB.Run (runWithOpts)
-import Plutus.PAB.Run.Cli (ConfigCommandArgs (..), runConfigCommand)
-import Plutus.PAB.Run.Command (ConfigCommand (..), allServices)
-import Plutus.PAB.Run.CommandParser (AppOpts (..))
-import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
-import Plutus.PAB.Types (Config (..))
+import Plutus.PAB.Run.Cli (ConfigCommandArgs, runConfigCommand)
+import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ForkCommands, Migrate), allServices)
+import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, runEkgServer, storageBackend))
+import Plutus.PAB.Run.PSGenerator (HasPSTypes (psTypes))
+import Plutus.PAB.Types (Config (Config, chainIndexConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig))
 import Plutus.PAB.Types qualified as PAB.Types
 import Plutus.PAB.Webserver.API (API)
-import Plutus.PAB.Webserver.Client (InstanceClient (..), PabClient (..), pabClient)
-import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
-import Prettyprinter
-import Servant ((:<|>) (..))
+import Plutus.PAB.Webserver.Client (InstanceClient (callInstanceEndpoint),
+                                    PabClient (PabClient, activateContract, instanceClient), pabClient)
+import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
+import Prettyprinter (Pretty (pretty), viaShow)
+import Servant ((:<|>))
 import Servant qualified
-import Servant.Client (BaseUrl (..), ClientEnv, Scheme (Http), client, mkClientEnv, runClientM)
+import Servant.Client (BaseUrl (BaseUrl), ClientEnv, Scheme (Http), client, mkClientEnv, runClientM)
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.HUnit
+import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import Wallet.Emulator.Wallet (Wallet, knownWallet)
-import Wallet.Types (ContractInstanceId (..))
+import Wallet.Types (ContractInstanceId)
 
 tests :: TestTree
 tests =
@@ -113,7 +114,7 @@ bumpConfig
   -> Config    -- ^ Config to bump.
   -> Config    -- ^ Bumped config!
 bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverConfig{PAB.Types.baseUrl=p_u}
-                               , walletServerConfig   = w@Wallet.Types.WalletConfig{Wallet.Types.baseUrl=w_u}
+                               , walletServerConfig
                                , nodeServerConfig     = n@Node.Types.MockServerConfig{Node.Types.mscBaseUrl=n_u,Node.Types.mscSocketPath=soc}
                                , chainIndexConfig     = c@ChainIndex.Types.ChainIndexConfig{ChainIndex.Types.ciBaseUrl=c_u}
                                , dbConfig             = db@PAB.Types.DbConfig{PAB.Types.dbConfigFile=dbFile}
@@ -122,7 +123,7 @@ bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverCon
     bump (BaseUrl scheme url port path) = BaseUrl scheme url (port + x) path
     newConf
       = conf { pabWebserverConfig   = p { PAB.Types.baseUrl          = bump p_u }
-             , walletServerConfig   = w { Wallet.Types.baseUrl       = coerce $ bump $ coerce w_u }
+             , walletServerConfig   = over (Wallet.Types.walletSettingsL . Wallet.Types.baseUrlL) (coerce . bump . coerce) walletServerConfig
              , nodeServerConfig     = n { Node.Types.mscBaseUrl      = bump n_u, Node.Types.mscSocketPath = soc ++ "." ++ show x }
              , chainIndexConfig     = c { ChainIndex.Types.ciBaseUrl = coerce $ bump $ coerce c_u }
              , dbConfig             = db { PAB.Types.dbConfigFile    = "file::" <> dbName <> "?mode=memory&cache=shared" }

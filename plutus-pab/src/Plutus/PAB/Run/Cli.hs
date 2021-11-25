@@ -26,9 +26,11 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
 import Cardano.Node.Server qualified as NodeServer
-import Cardano.Node.Types (MockServerConfig (..), NodeMode (..))
+import Cardano.Node.Types (MockServerConfig (mscFeeConfig, mscNodeMode, mscSlotConfig, mscSocketPath),
+                           NodeMode (AlonzoNode, MockNode))
 import Cardano.Wallet.Mock.Server qualified as WalletServer
-import Cardano.Wallet.Mock.Types
+import Cardano.Wallet.Mock.Types (WalletMsg)
+import Cardano.Wallet.Types (WalletConfig (LocalWalletConfig, RemoteWalletConfig))
 import Control.Concurrent (takeMVar)
 import Control.Concurrent.Async (Async, async, waitAny)
 import Control.Concurrent.Availability (Availability, available, starting)
@@ -46,29 +48,30 @@ import Data.Foldable (traverse_)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
-import Data.Proxy (Proxy (..))
+import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
 import Data.Text.Extras (tshow)
 import Data.Time.Units (Second)
 import Plutus.Contract.Resumable (responses)
-import Plutus.Contract.State (State (..))
+import Plutus.Contract.State (State (State, record))
 import Plutus.Contract.State qualified as State
 import Plutus.PAB.App qualified as App
 import Plutus.PAB.Core qualified as Core
-import Plutus.PAB.Core.ContractInstance (ContractInstanceState (..), updateState)
+import Plutus.PAB.Core.ContractInstance (ContractInstanceState (ContractInstanceState), updateState)
 import Plutus.PAB.Core.ContractInstance.STM (InstanceState, emptyInstanceState)
 import Plutus.PAB.Db.Beam qualified as Beam
 import Plutus.PAB.Effects.Contract qualified as Contract
-import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions (..), SomeBuiltinState (..),
-                                            getResponse)
+import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltinState, getResponse)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
-import Plutus.PAB.Run.Command
-import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
+import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, PSApiGenerator, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartMockNode, psApiGenOutputDir),
+                               NoConfigCommand (PSGenerator, WriteDefaultConfig, outputFile, psGenOutputDir))
+import Plutus.PAB.Run.PSGenerator (HasPSTypes)
 import Plutus.PAB.Run.PSGenerator qualified as PSGenerator
-import Plutus.PAB.Types (Config (..), chainIndexConfig, nodeServerConfig, walletServerConfig)
+import Plutus.PAB.Types (Config (Config, dbConfig, pabWebserverConfig), chainIndexConfig, nodeServerConfig,
+                         walletServerConfig)
 import Plutus.PAB.Webserver.Server qualified as PABServer
-import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
-import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, pretty)
+import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
+import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, pretty)
 import Prettyprinter.Render.Text (renderStrict)
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitWith)
@@ -119,15 +122,19 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Mi
     App.migrate (toPABMsg ccaTrace) dbConfig
 
 -- Run mock wallet service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig},ccaAvailability} MockWallet =
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet =
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
-        walletServerConfig
+        ws
         (mscFeeConfig nodeServerConfig)
         (mscSocketPath nodeServerConfig)
         (mscSlotConfig nodeServerConfig)
         (ChainIndex.ciBaseUrl chainIndexConfig)
         ccaAvailability
+
+-- Run mock wallet service
+runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {walletServerConfig = RemoteWalletConfig}} MockWallet =
+    error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run mock wallet in remote wallet config."
 
 -- Run mock node server
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartMockNode =

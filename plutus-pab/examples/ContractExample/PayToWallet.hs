@@ -18,23 +18,21 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import Schema (ToSchema)
 
-import Ledger (Value)
-import Ledger.Constraints
-import Plutus.Contract
-import Wallet.Emulator.Types (Wallet, walletPubKeyHash)
+import Ledger (PubKeyHash, Value)
+import Ledger.Constraints (adjustUnbalancedTx, mustPayToPubKey)
+import Plutus.Contract (ContractError, Endpoint, Promise, endpoint, mkTxConstraints, yieldUnbalancedTx)
 
 data PayToWalletParams =
     PayToWalletParams
         { amount :: Value
-        , wallet :: Wallet
+        , pkh    :: PubKeyHash
         }
         deriving stock (Eq, Show, Generic)
         deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type PayToWalletSchema = Endpoint "Pay to wallet" PayToWalletParams
+type PayToWalletSchema = Endpoint "PayToWallet" PayToWalletParams
 
 payToWallet :: Promise () PayToWalletSchema ContractError ()
-payToWallet = endpoint @"Pay to wallet" $ \PayToWalletParams{amount, wallet} -> do
-  let pkh = walletPubKeyHash wallet
-  mkTxConstraints @Void mempty (mustPayToPubKey pkh amount)
-    >>= submitTxConfirmed . adjustUnbalancedTx
+payToWallet = endpoint @"PayToWallet" $ \PayToWalletParams{amount, pkh} -> do
+  utx <- mkTxConstraints @Void mempty (mustPayToPubKey pkh amount)
+  yieldUnbalancedTx $ adjustUnbalancedTx utx

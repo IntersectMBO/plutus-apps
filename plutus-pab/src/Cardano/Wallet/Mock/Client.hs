@@ -8,21 +8,21 @@
 module Cardano.Wallet.Mock.Client where
 
 import Cardano.Wallet.Mock.API (API)
-import Cardano.Wallet.Mock.Types (WalletInfo (..))
+import Cardano.Wallet.Mock.Types (WalletInfo (wiPubKeyHash))
 import Control.Monad (void)
-import Control.Monad.Freer
+import Control.Monad.Freer (Eff, LastMember, Member, sendM, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
-import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Proxy (Proxy (Proxy))
-import Ledger (Value)
+import Ledger (PubKeyHash, Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Tx (Tx)
-import Servant ((:<|>) (..))
+import Ledger.Tx (CardanoTx, Tx)
+import Servant ((:<|>) ((:<|>)))
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
-import Wallet.Effects (WalletEffect (..))
+import Wallet.Effects (WalletEffect (BalanceTx, OwnPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
 import Wallet.Emulator.Error (WalletAPIError)
-import Wallet.Emulator.Wallet (Wallet (..), WalletId)
+import Wallet.Emulator.Wallet (Wallet (Wallet, getWalletId), WalletId)
 
 createWallet :: ClientM WalletInfo
 submitTxn :: Wallet -> Tx -> ClientM ()
@@ -50,6 +50,7 @@ handleWalletClient ::
   ( LastMember m effs
   , MonadIO m
   , Member (Error ClientError) effs
+  , Member (Error WalletAPIError) effs
   , Member (Reader ClientEnv) effs
   )
   => Wallet
@@ -60,11 +61,35 @@ handleWalletClient wallet event = do
     let
         runClient :: forall a. ClientM a -> Eff effs a
         runClient a = (sendM $ liftIO $ runClientM a clientEnv) >>= either throwError pure
+
+        submitTxnH :: CardanoTx -> Eff effs ()
+        submitTxnH (Left _) = error "Cardano.Wallet.Mock.Client: Expecting a mock tx, not an Alonzo tx when submitting it."
+        submitTxnH (Right tx) = runClient (submitTxn wallet tx)
+
+        ownPubKeyHashH :: Eff effs PubKeyHash
+        ownPubKeyHashH = wiPubKeyHash <$> runClient (ownPublicKey wallet)
+
+        balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
+        balanceTxH utx = runClient (fmap (fmap Right) $ balanceTx wallet utx)
+
+        walletAddSignatureH :: CardanoTx -> Eff effs CardanoTx
+        walletAddSignatureH (Left _) = error "Cardano.Wallet.Mock.Client: Expecting a mock tx, not an Alonzo tx when adding a signature."
+        walletAddSignatureH (Right tx) = runClient $ fmap Right $ sign wallet tx
+
+        totalFundsH :: Eff effs Value
+        totalFundsH = runClient (totalFunds wallet)
+
+        yieldUnbalancedTx :: UnbalancedTx -> Eff effs ()
+        yieldUnbalancedTx utx = do
+            balancedTxM <- balanceTxH utx
+            case balancedTxM of
+              Left err         -> throwError err
+              Right balancedTx -> walletAddSignatureH balancedTx >>= submitTxnH
+
     case event of
-        SubmitTxn (Left _)            -> error "Cardano.Wallet.Mock.Client: Expecting a mock tx, not an Alonzo tx when submitting it."
-        SubmitTxn (Right tx)          -> runClient (submitTxn wallet tx)
-        OwnPubKeyHash                 -> wiPubKeyHash <$> runClient (ownPublicKey wallet)
-        BalanceTx utx                 -> runClient (fmap (fmap Right) $ balanceTx wallet utx)
-        WalletAddSignature (Left _)   -> error "Cardano.Wallet.Mock.Client: Expection a mock tx, not an Alonzo tx when adding a signature."
-        WalletAddSignature (Right tx) -> runClient $ fmap Right $ sign wallet tx
-        TotalFunds                    -> runClient (totalFunds wallet)
+        SubmitTxn tx          -> submitTxnH tx
+        OwnPubKeyHash         -> ownPubKeyHashH
+        BalanceTx utx         -> balanceTxH utx
+        WalletAddSignature tx -> walletAddSignatureH tx
+        TotalFunds            -> totalFundsH
+        YieldUnbalancedTx utx -> yieldUnbalancedTx utx

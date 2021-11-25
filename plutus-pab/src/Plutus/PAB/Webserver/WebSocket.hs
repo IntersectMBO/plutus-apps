@@ -34,10 +34,10 @@ import Control.Monad.Freer.Error (throwError)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (ToJSON)
 import Data.Aeson qualified as JSON
-import Data.Bifunctor (Bifunctor (..))
+import Data.Bifunctor (Bifunctor (first))
 import Data.Foldable (fold)
 import Data.Map qualified as Map
-import Data.Proxy (Proxy (..))
+import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -46,19 +46,23 @@ import Ledger (PubKeyHash)
 import Ledger.Slot (Slot)
 import Network.WebSockets qualified as WS
 import Network.WebSockets.Connection (Connection, PendingConnection)
-import Plutus.Contract.Effects (ActiveEndpoint (..))
+import Plutus.Contract.Effects (ActiveEndpoint)
+import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core (PABAction)
 import Plutus.PAB.Core qualified as Core
-import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv, InstancesState, OpenEndpoint (..))
+import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv, InstancesState, OpenEndpoint (oepName))
 import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Events.ContractInstanceState (fromResp)
 import Plutus.PAB.Types (PABError (OtherError))
 import Plutus.PAB.Webserver.API ()
-import Plutus.PAB.Webserver.Types (CombinedWSStreamToClient (..), CombinedWSStreamToServer (..), ContractReport (..),
-                                   ContractSignatureResponse (..), InstanceStatusToClient (..))
+import Plutus.PAB.Webserver.Types (CombinedWSStreamToClient (InstanceUpdate, SlotChange),
+                                   CombinedWSStreamToServer (Subscribe, Unsubscribe),
+                                   ContractReport (ContractReport, crActiveContractStates, crAvailableContracts),
+                                   ContractSignatureResponse (ContractSignatureResponse),
+                                   InstanceStatusToClient (ContractFinished, NewActiveEndpoints, NewObservableState, NewYieldedExportTxs))
 import Servant ((:<|>) ((:<|>)))
-import Wallet.Types (ContractInstanceId (..))
+import Wallet.Types (ContractInstanceId)
 
 getContractReport :: forall t env. Contract.PABContract t => PABAction t env (ContractReport (Contract.ContractDef t))
 getContractReport = do
@@ -108,6 +112,12 @@ openEndpoints contractInstanceId instancesState = do
       instanceState <- Instances.instanceState contractInstanceId instancesState
       fmap (oepName . snd) . Map.toList <$> Instances.openEndpoints instanceState
 
+yieldedExportTxsChange :: ContractInstanceId -> InstancesState -> STMStream [ExportTx]
+yieldedExportTxsChange contractInstanceId instancesState =
+    unfold $ do
+      instanceState <- Instances.instanceState contractInstanceId instancesState
+      Instances.yieldedExportTxs instanceState
+
 finalValue :: ContractInstanceId -> InstancesState -> STMStream (Maybe JSON.Value)
 finalValue contractInstanceId instancesState =
     singleton $ Instances.finalResult contractInstanceId instancesState
@@ -118,6 +128,7 @@ instanceUpdates instanceId instancesState =
     fold
         [ NewObservableState <$> observableStateChange instanceId instancesState
         , NewActiveEndpoints <$> openEndpoints instanceId instancesState
+        , NewYieldedExportTxs      <$> yieldedExportTxsChange instanceId instancesState
         , ContractFinished   <$> finalValue instanceId instancesState
         ]
 

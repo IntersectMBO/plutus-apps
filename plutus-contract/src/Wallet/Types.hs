@@ -45,7 +45,7 @@ import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
 import Ledger.Constraints.OffChain (MkTxError)
 import Plutus.Contract.Checkpoint (AsCheckpointError (..), CheckpointError)
 import Prettyprinter.Extras (PrettyShow (..), Tagged (..))
-import Wallet.Emulator.Error (WalletAPIError)
+import Wallet.Error (WalletAPIError)
 
 import Data.OpenApi.Schema qualified as OpenApi
 

@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 name:          plutus-pab
 version:       0.1.0.0
 license:       Apache-2.0
@@ -72,7 +72,9 @@ library
         Cardano.Node.Types
         Cardano.Protocol.Socket.Mock.Client
         Cardano.Protocol.Socket.Mock.Server
-        Cardano.Wallet.Client
+        Cardano.Wallet.LocalClient
+        Cardano.Wallet.RemoteClient
+        Cardano.Wallet.Types
         Cardano.Wallet.Mock.API
         Cardano.Wallet.Mock.Client
         Cardano.Wallet.Mock.Handlers
@@ -423,6 +425,7 @@ test-suite plutus-pab-test-light
     main-is:          Spec.hs
     other-modules:
         Cardano.Api.NetworkId.ExtraSpec
+        Cardano.Wallet.RemoteClientSpec
         Cardano.Wallet.ServerSpec
         Control.Concurrent.STM.ExtrasSpec
 
@@ -433,7 +436,9 @@ test-suite plutus-pab-test-light
         base >=4.9 && <5,
         bytestring -any,
         cardano-api -any,
+        cardano-api:gen -any,
         containers -any,
+        data-default -any,
         freer-extras -any,
         freer-simple -any,
         hedgehog -any,

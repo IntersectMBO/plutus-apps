@@ -218,5 +218,7 @@ fromWalletAPIError e@ChangeHasLessThanNAda {} =
     err500 {errBody = BSL8.pack $ show $ pretty e}
 fromWalletAPIError e@PaymentMkTxError {} =
     err500 {errBody = BSL8.pack $ show $ pretty e}
+fromWalletAPIError e@(RemoteClientFunctionNotYetSupported _) =
+    err500 {errBody = BSL8.pack $ show $ pretty e}
 fromWalletAPIError (OtherError text) =
     err500 {errBody = BSL.fromStrict $ encodeUtf8 text}

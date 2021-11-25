@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# LANGUAGE TypeOperators      #-}
@@ -21,7 +20,8 @@ import Servant.API.WebSocket (WebSocketPending)
 import Servant.Swagger.UI (SwaggerSchemaUI)
 import Wallet.Types (ContractInstanceId)
 
-type WalletProxy walletId = "wallet" :> (Wallet.API walletId)
+-- TODO: This wallet proxy will be eventually removed. See SCP-3096.
+type WalletProxy walletId = "wallet" :> Wallet.API walletId
 
 type WSAPI =
     "ws" :>

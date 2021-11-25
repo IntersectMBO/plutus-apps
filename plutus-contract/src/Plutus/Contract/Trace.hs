@@ -24,7 +24,6 @@ module Plutus.Contract.Trace
     , AsTraceError(..)
     , toNotifyError
     -- * Handle contract requests
-    , handleBlockchainQueries
     , handleSlotNotifications
     , handleTimeNotifications
     , handleOwnPubKeyHashQueries
@@ -35,6 +34,7 @@ module Plutus.Contract.Trace
     , handlePendingTransactions
     , handleChainIndexQueries
     , handleOwnInstanceIdQueries
+    , handleYieldedUnbalancedTx
     -- * Initial distributions of emulated chains
     , InitialDistribution
     , defaultDist
@@ -47,7 +47,7 @@ module Plutus.Contract.Trace
     ) where
 
 import Control.Lens (makeClassyPrisms, preview)
-import Control.Monad.Freer
+import Control.Monad.Freer (Member)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve)
 import Control.Monad.Freer.Reader (Reader)
 import Data.Aeson.Types qualified as JSON
@@ -60,18 +60,17 @@ import Data.Text (Text)
 
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Effects qualified as E
-import Plutus.Contract.Trace.RequestHandler (RequestHandler (..), RequestHandlerLogMsg, generalise)
+import Plutus.Contract.Trace.RequestHandler (RequestHandler, RequestHandlerLogMsg, generalise)
 import Plutus.Contract.Trace.RequestHandler qualified as RequestHandler
 
 import Ledger.Ada qualified as Ada
 import Ledger.Value (Value)
 
 import Plutus.ChainIndex (ChainIndexQueryEffect)
-import Plutus.Trace.Emulator.Types (EmulatedWalletEffects)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator (Wallet)
 import Wallet.Emulator qualified as EM
-import Wallet.Types (ContractInstanceId, EndpointDescription (..), NotificationError (..))
+import Wallet.Types (ContractInstanceId, EndpointDescription, NotificationError (EndpointNotAvailable))
 
 data EndpointError =
     EndpointNotActive (Maybe Wallet) EndpointDescription
@@ -139,23 +138,6 @@ handleTimeToSlotConversions ::
 handleTimeToSlotConversions =
     generalise (preview E._PosixTimeRangeToContainedSlotRangeReq) (E.PosixTimeRangeToContainedSlotRangeResp . Right) RequestHandler.handleTimeToSlotConversions
 
-handleBlockchainQueries ::
-    RequestHandler
-        (Reader ContractInstanceId ': EmulatedWalletEffects)
-        PABReq
-        PABResp
-handleBlockchainQueries =
-    handleUnbalancedTransactions
-    <> handlePendingTransactions
-    <> handleChainIndexQueries
-    <> handleOwnPubKeyHashQueries
-    <> handleOwnInstanceIdQueries
-    <> handleSlotNotifications
-    <> handleCurrentSlotQueries
-    <> handleTimeNotifications
-    <> handleCurrentTimeQueries
-    <> handleTimeToSlotConversions
-
 handleUnbalancedTransactions ::
     ( Member (LogObserve (LogMessage Text)) effs
     , Member (LogMsg RequestHandlerLogMsg) effs
@@ -206,6 +188,17 @@ handleOwnInstanceIdQueries ::
     => RequestHandler effs PABReq PABResp
 handleOwnInstanceIdQueries =
     generalise (preview E._OwnContractInstanceIdReq) E.OwnContractInstanceIdResp RequestHandler.handleOwnInstanceIdQueries
+
+handleYieldedUnbalancedTx ::
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member WalletEffect effs
+    )
+    => RequestHandler effs PABReq PABResp
+handleYieldedUnbalancedTx =
+    generalise
+        (preview E._YieldUnbalancedTxReq)
+        E.YieldUnbalancedTxResp
+        RequestHandler.handleYieldedUnbalancedTx
 
 defaultDist :: InitialDistribution
 defaultDist = defaultDistFor EM.knownWallets
