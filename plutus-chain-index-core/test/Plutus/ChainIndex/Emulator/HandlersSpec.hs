@@ -22,6 +22,7 @@ import Generators qualified as Gen
 import Ledger (outValue)
 import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlock, txFromTxId,
                           utxoSetMembership, utxoSetWithCurrency)
+import Plutus.ChainIndex.Api (IsUtxoResponse (isUtxo), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
@@ -102,7 +103,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
 
     forM assetClasses $ \ac -> do
       let pq = PageQuery 200 Nothing
-      (_, utxoRefs) <- utxoSetWithCurrency pq ac
+      UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq ac
       pure $ pageItems utxoRefs
 
   case result of
@@ -121,7 +122,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
     appendBlock tip block def
 
     let pq = PageQuery 200 Nothing
-    (_, utxoRefs) <- utxoSetWithCurrency pq (AssetClass ("", ""))
+    UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq (AssetClass ("", ""))
     pure $ pageItems utxoRefs
 
   case result of
@@ -141,7 +142,7 @@ doNotStoreTxs = property $ do
     utxosStored <- traverse utxoSetMembership (S.toList (view Gen.txgsUtxoSet state))
     pure (tx, concat utxosFromAddr, utxosStored)
   case result of
-    Right (Nothing, [], utxosStored) -> Hedgehog.assert $ and (snd <$> utxosStored)
+    Right (Nothing, [], utxosStored) -> Hedgehog.assert $ and (isUtxo <$> utxosStored)
     _                                -> Hedgehog.assert False
 
 -- | Run an emulated chain index effect against a starting state

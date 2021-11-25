@@ -5,6 +5,8 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
+
 module Ledger.Blockchain (
     OnChainTx(..),
     _Valid,
@@ -41,6 +43,7 @@ import Data.ByteString qualified as BS
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (First (..))
+import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
@@ -48,6 +51,7 @@ import GHC.Generics (Generic)
 import Ledger.Tx (TxOutTx (..), spentOutputs, txId, unspentOutputsTx, updateUtxo, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
+import Data.OpenApi qualified as OpenApi
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx (Tx, TxIn, TxOut, TxOutRef (..), collateralInputs, inputs, txOutDatum, txOutPubKey,
@@ -67,6 +71,9 @@ instance ToJSON BlockId where
 
 instance FromJSON BlockId where
     parseJSON v = BlockId <$> JSON.decodeByteString v
+
+instance OpenApi.ToSchema BlockId where
+    declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy @String)
 
 instance Pretty BlockId where
     pretty (BlockId blockId) = "BlockId(" <> pretty (either (const $ JSON.encodeByteString blockId) id $ decodeUtf8' blockId) <> ")"

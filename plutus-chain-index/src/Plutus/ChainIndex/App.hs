@@ -189,6 +189,9 @@ runMain trace config = do
                         resumePoints
                         (chainSyncHandler runReq (Config.cicStoreFrom config))
 
-    putStrLn $ "Starting webserver on port " <> show (Config.cicPort config)
+    let port = show (Config.cicPort config)
+    putStrLn $ "Starting webserver on port " <> port
+    putStrLn $ "A Swagger UI for the endpoints are available at "
+            <> "http://localhost:" <> port <> "/swagger/swagger-ui"
     Server.serveChainIndexQueryServer (Config.cicPort config) runReq
 

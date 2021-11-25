@@ -92,6 +92,7 @@ import Ledger.Time (POSIXTime, POSIXTimeRange)
 import Ledger.TimeSlot (SlotConversionError)
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, getCardanoTxId)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
 import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
 import Prettyprinter (Pretty (pretty), hsep, indent, viaShow, vsep, (<+>))
@@ -257,9 +258,9 @@ data ChainIndexResponse =
   | TxOutRefResponse (Maybe ChainIndexTxOut)
   | RedeemerHashResponse (Maybe Redeemer)
   | TxIdResponse (Maybe ChainIndexTx)
-  | UtxoSetMembershipResponse (Tip, Bool)
-  | UtxoSetAtResponse (Tip, Page TxOutRef)
-  | UtxoSetWithCurrencyResponse (Tip, Page TxOutRef)
+  | UtxoSetMembershipResponse IsUtxoResponse
+  | UtxoSetAtResponse UtxosResponse
+  | UtxoSetWithCurrencyResponse UtxosResponse
   | GetTipResponse Tip
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -273,18 +274,18 @@ instance Pretty ChainIndexResponse where
         RedeemerHashResponse r -> "Chain index redeemer from hash response:" <+> pretty r
         TxOutRefResponse t -> "Chain index utxo from utxo ref response:" <+> pretty t
         TxIdResponse t -> "Chain index tx from tx id response:" <+> pretty (_citxTxId <$> t)
-        UtxoSetMembershipResponse (tip, b) ->
+        UtxoSetMembershipResponse (IsUtxoResponse tip b) ->
                 "Chain index response whether tx output ref is part of the UTxO set:"
             <+> pretty b
             <+> "with tip"
             <+> pretty tip
-        UtxoSetAtResponse (tip, txOutRefPage) ->
+        UtxoSetAtResponse (UtxosResponse tip txOutRefPage) ->
                 "Chain index UTxO set from address response:"
             <+> "Current tip is"
             <+> pretty tip
             <+> "and utxo refs are"
             <+> hsep (fmap pretty $ pageItems txOutRefPage)
-        UtxoSetWithCurrencyResponse (tip, txOutRefPage) ->
+        UtxoSetWithCurrencyResponse (UtxosResponse tip txOutRefPage) ->
                 "Chain index UTxO with asset class response:"
             <+> "Current tip is"
             <+> pretty tip

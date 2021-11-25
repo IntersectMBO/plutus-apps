@@ -23,10 +23,11 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.ChainIndex (ChainIndexError, ChainIndexLog)
-import Plutus.ChainIndex.Api (API)
+import Plutus.ChainIndex.Api (API, FullAPI, swagger)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState (..), handleControl, handleQuery)
 import Plutus.ChainIndex.Server hiding (serveChainIndexQueryServer)
+import Servant.API ((:<|>) (..))
 import Servant.Server (Handler, ServerError, err500, errBody, hoistServer, serve)
 
 serveChainIndexQueryServer ::
@@ -35,7 +36,7 @@ serveChainIndexQueryServer ::
     -> IO ()
 serveChainIndexQueryServer port diskState = do
     let server = hoistServer (Proxy @API) (runChainIndexQuery diskState) serveChainIndex
-    Warp.run port (serve (Proxy @API) server)
+    Warp.run port (serve (Proxy @FullAPI) (server :<|> swagger))
 
 runChainIndexQuery ::
     TVar ChainIndexEmulatorState

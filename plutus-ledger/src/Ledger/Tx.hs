@@ -48,12 +48,14 @@ import Control.Lens hiding ((.=))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.OpenApi qualified as OpenApi
 import Data.Proxy
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Address (pubKeyAddress, scriptAddress)
 import Ledger.Crypto (PrivateKey, PubKey, signTx, toPublicKey)
+import Ledger.Orphans ()
 import Ledger.Scripts (datumHash)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
@@ -80,7 +82,7 @@ data ChainIndexTxOut =
                           , _ciTxOutDatum     :: Either DatumHash Datum
                           , _ciTxOutValue     :: Value
                           }
-  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
 makeLenses ''ChainIndexTxOut
 makePrisms ''ChainIndexTxOut

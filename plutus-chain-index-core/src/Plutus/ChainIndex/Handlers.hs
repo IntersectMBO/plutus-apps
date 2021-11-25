@@ -47,6 +47,7 @@ import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxId (..), TxOut (..), TxOutRef (..))
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Compatibility (toCardanoPoint)
@@ -87,7 +88,7 @@ handleQuery = \case
         utxoState <- gets @ChainIndexState UtxoState.utxoState
         case UtxoState.tip utxoState of
             TipAtGenesis -> throwError QueryFailedNoTip
-            tp           -> pure (tp, TxUtxoBalance.isUnspentOutput r utxoState)
+            tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxoState))
     UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
@@ -186,14 +187,14 @@ getUtxoSetAtAddress
     )
   => PageQuery TxOutRef
   -> Credential
-  -> Eff effs (Tip, Page TxOutRef)
+  -> Eff effs UtxosResponse
 getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
   utxoState <- gets @ChainIndexState UtxoState.utxoState
 
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
           logWarn TipIsGenesis
-          pure (TipAtGenesis, Page pageQuery Nothing [])
+          pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
       tp           -> do
           let query =
                 fmap _addressRowOutRef
@@ -207,7 +208,7 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
           outRefs <- selectPage (fmap toDbValue pageQuery) query
           let page = fmap fromDbValue outRefs
 
-          pure (tp, page)
+          pure (UtxosResponse tp page)
 
 getUtxoSetWithCurrency
   :: forall effs.
@@ -217,14 +218,14 @@ getUtxoSetWithCurrency
     )
   => PageQuery TxOutRef
   -> AssetClass
-  -> Eff effs (Tip, Page TxOutRef)
+  -> Eff effs UtxosResponse
 getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
   utxoState <- gets @ChainIndexState UtxoState.utxoState
 
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
           logWarn TipIsGenesis
-          pure (TipAtGenesis, Page pageQuery Nothing [])
+          pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
       tp           -> do
           let query =
                 fmap _assetClassRowOutRef
@@ -238,7 +239,7 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
           outRefs <- selectPage (fmap toDbValue pageQuery) query
           let page = fmap fromDbValue outRefs
 
-          pure (tp, page)
+          pure (UtxosResponse tp page)
 
 handleControl ::
     forall effs.

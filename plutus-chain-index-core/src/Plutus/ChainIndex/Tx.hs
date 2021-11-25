@@ -36,6 +36,7 @@ import Control.Lens (makeLenses, makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.OpenApi qualified as OpenApi
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Tuple (swap)
@@ -52,7 +53,7 @@ import Prettyprinter
 data ChainIndexTxOutputs =
     InvalidTx -- ^ The transaction is invalid so there is no outputs
   | ValidTx [TxOut]
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 makePrisms ''ChainIndexTxOutputs
 
@@ -76,7 +77,7 @@ data ChainIndexTx = ChainIndexTx {
     -- 'ChainIndexTx' fields. Useful because 'ChainIndexTx' doesn't have all the
     -- details of the tx, so we keep it as a safety net. Might be Nothing if we
     -- are in the emulator.
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise)
+    } deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
 
 makeLenses ''ChainIndexTx
 
