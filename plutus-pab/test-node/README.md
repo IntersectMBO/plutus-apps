@@ -24,7 +24,7 @@ You will need ~6 terminals to run all the different components.
 
   ```
   > cd $PLUTUS
-  > cabal build plutus-pab-examples plutus-chain-index cardano-node cardano-wallet
+  > cabal build plutus-pab-examples plutus-chain-index cardano-node cardano-wallet plutus-doc
   ```
 
 3. Start the testnet node locally:
