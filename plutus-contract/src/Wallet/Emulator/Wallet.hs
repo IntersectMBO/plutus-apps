@@ -58,6 +58,7 @@ import Ledger.Tx qualified as Tx
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
+import Plutus.ChainIndex.Api (UtxosResponse (page))
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract (WalletAPIError)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
@@ -287,7 +288,7 @@ ownOutputs WalletState{_mockWallet} = do
     allUtxoSet :: Maybe (PageQuery TxOutRef) -> Eff effs [TxOutRef]
     allUtxoSet Nothing = pure []
     allUtxoSet (Just pq) = do
-      refPage <- snd <$> ChainIndex.utxoSetAtAddress pq cred
+      refPage <- page <$> ChainIndex.utxoSetAtAddress pq cred
       nextItems <- allUtxoSet (ChainIndex.nextPageQuery refPage)
       pure $ ChainIndex.pageItems refPage ++ nextItems
 

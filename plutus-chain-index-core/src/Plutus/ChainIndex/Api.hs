@@ -9,8 +9,10 @@ module Plutus.ChainIndex.Api
   ( API
   , FromHashAPI
   , FullAPI
+  , IsUtxoResponse(..)
   , SwaggerAPI
   , UtxoAtAddressRequest(..)
+  , UtxosResponse(..)
   , UtxoWithCurrencyRequest(..)
   , swagger
   ) where
@@ -113,14 +115,28 @@ data UtxoWithCurrencyRequest = UtxoWithCurrencyRequest
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
+-- | Response type for the utxo-{at-address|with-currency} endpoints.
+data UtxosResponse = UtxosResponse
+    { currentTip :: Tip
+    , page       :: Page TxOutRef
+    }
+    deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
+
+-- | Response type for the is-utxo endpoint.
+data IsUtxoResponse = IsUtxoResponse
+    { currentTip :: Tip
+    , isUtxo     :: Bool
+    }
+    deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
+
 type API
     = "healthcheck" :> Description "Is the server alive?" :> Get '[JSON] NoContent
     :<|> "from-hash" :> FromHashAPI
     :<|> "tx-out" :> Description "Get a transaction output from its reference." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] ChainIndexTxOut
     :<|> "tx" :> Description "Get a transaction from its id." :> ReqBody '[JSON] TxId :> Post '[JSON] ChainIndexTx
-    :<|> "is-utxo" :> Description "Check if the reference is an UTxO." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] (Tip, Bool)
-    :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoAtAddressRequest :> Post '[JSON] (Tip, Page TxOutRef)
-    :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] (Tip, Page TxOutRef)
+    :<|> "is-utxo" :> Description "Check if the reference is an UTxO." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] IsUtxoResponse
+    :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoAtAddressRequest :> Post '[JSON] UtxosResponse
+    :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] UtxosResponse
     :<|> "tip" :> Description "Get the current synced tip." :> Get '[JSON] Tip
     :<|> "collect-garbage" :> Description "Collect chain index garbage to free up space." :> Put '[JSON] NoContent
     :<|> "diagnostics" :> Description "Get the current stats of the chain index." :> Get '[JSON] Diagnostics

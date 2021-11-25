@@ -125,6 +125,7 @@ import Plutus.Contract.Schema (Input, Output)
 import Wallet.Types (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
 
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
+import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse (page))
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
 import Plutus.Contract.Resumable (prompt)
 import Plutus.Contract.Types (AsContractError (_ConstraintResolutionError, _OtherError, _ResumableError, _WalletError),
@@ -336,7 +337,7 @@ utxoRefMembership ::
     ( AsContractError e
     )
     => TxOutRef
-    -> Contract w s e (Tip, Bool)
+    -> Contract w s e IsUtxoResponse
 utxoRefMembership ref = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetMembership ref) E._ChainIndexQueryResp
   case cir of
@@ -351,7 +352,7 @@ utxoRefsAt ::
     )
     => PageQuery TxOutRef
     -> Address
-    -> Contract w s e (Tip, Page TxOutRef)
+    -> Contract w s e UtxosResponse
 utxoRefsAt pq addr = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
   case cir of
@@ -366,7 +367,7 @@ utxoRefsWithCurrency ::
     )
     => PageQuery TxOutRef
     -> AssetClass
-    -> Contract w s e (Tip, Page TxOutRef)
+    -> Contract w s e UtxosResponse
 utxoRefsWithCurrency pq assetClass = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetWithCurrency pq assetClass) E._ChainIndexQueryResp
   case cir of
@@ -388,7 +389,7 @@ foldUtxoRefsAt f ini addr = go ini (Just def)
   where
     go acc Nothing = pure acc
     go acc (Just pq) = do
-      page <- snd <$> utxoRefsAt pq addr
+      page <- page <$> utxoRefsAt pq addr
       newAcc <- f acc page
       go newAcc (nextPageQuery page)
 

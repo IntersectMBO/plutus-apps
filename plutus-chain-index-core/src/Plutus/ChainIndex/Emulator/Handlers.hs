@@ -35,6 +35,7 @@ import Ledger (Address (addressCredential), ChainIndexTxOut (..), MintingPolicy 
                StakeValidatorHash (StakeValidatorHash), TxId, TxOut (txOutAddress), TxOutRef (..),
                Validator (Validator), ValidatorHash (ValidatorHash), txOutDatumHash, txOutValue)
 import Ledger.Scripts (ScriptHash (ScriptHash))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
@@ -124,7 +125,7 @@ handleQuery = \case
         utxo <- gets (utxoState . view utxoIndex)
         case tip utxo of
             TipAtGenesis -> throwError QueryFailedNoTip
-            tp           -> pure (tp, TxUtxoBalance.isUnspentOutput r utxo)
+            tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxo))
     UtxoSetAtAddress pageQuery cred -> do
         state <- get
         let outRefs = view (diskState . addressMap . at cred) state
@@ -135,8 +136,8 @@ handleQuery = \case
         case tip utxo of
             TipAtGenesis -> do
                 logWarn TipIsGenesis
-                pure (TipAtGenesis, pageOf pageQuery Set.empty)
-            tp           -> pure (tp, page)
+                pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
+            tp           -> pure (UtxosResponse tp page)
     UtxoSetWithCurrency pageQuery assetClass -> do
         state <- get
         let outRefs = view (diskState . assetClassMap . at assetClass) state
@@ -146,8 +147,8 @@ handleQuery = \case
         case tip utxo of
             TipAtGenesis -> do
                 logWarn TipIsGenesis
-                pure (TipAtGenesis, pageOf pageQuery Set.empty)
-            tp           -> pure (tp, page)
+                pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
+            tp           -> pure (UtxosResponse tp page)
     GetTip ->
         gets (tip . utxoState . view utxoIndex)
 
