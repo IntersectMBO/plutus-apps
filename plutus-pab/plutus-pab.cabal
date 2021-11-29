@@ -454,6 +454,7 @@ test-suite plutus-pab-test-light
         plutus-contract -any,
         plutus-pab,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
