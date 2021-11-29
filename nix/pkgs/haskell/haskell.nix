@@ -82,6 +82,7 @@ let
           plutus-contract.package.buildable = false;
           plutus-errors.package.buildable = false;
           plutus-ledger.package.buildable = false;
+          plutus-ledger-constraints.package.buildable = false;
           plutus-pab.package.buildable = false;
           plutus-playground-server.package.buildable = false; # Would also require libpq
           plutus-tx-plugin.package.buildable = false;
@@ -149,8 +150,11 @@ let
 
           # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
           playground-common.ghcOptions = [ "-Werror" ];
+          plutus-chain-index.ghcOptions = [ "-Werror" ];
+          plutus-chain-index-core.ghcOptions = [ "-Werror" ];
           plutus-contract.ghcOptions = [ "-Werror" ];
           plutus-ledger.ghcOptions = [ "-Werror" ];
+          plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
           plutus-playground-server.ghcOptions = [ "-Werror" ];
           plutus-pab.ghcOptions = [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];

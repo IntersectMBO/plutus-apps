@@ -10,7 +10,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
-module Ledger.Oracle(
+module Plutus.Contract.Oracle(
   -- * Signed messages
   -- $oracles
   --

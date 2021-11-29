@@ -47,10 +47,10 @@ module Ledger.Constraints.OffChain(
     , missingValueSpent
     ) where
 
-import Control.Lens
-import Control.Monad.Except
-import Control.Monad.Reader
-import Control.Monad.State
+import Control.Lens (At (at), iforM_, makeLensesFor, over, use, view, (%=), (.=), (<>=))
+import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
+import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
+import Control.Monad.State (MonadState (get, put), execStateT, gets)
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
@@ -58,26 +58,30 @@ import Data.List (elemIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
-import Data.Semigroup (First (..))
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Prettyprinter
+import Prettyprinter (Pretty (pretty), colon, hang, vsep, (<+>))
 
-import PlutusTx (FromData (..), ToData (..))
-import PlutusTx.Lattice
+import PlutusTx (FromData, ToData (toBuiltinData))
+import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), MeetSemiLattice ((/\)))
 import PlutusTx.Numeric qualified as N
 
+import Data.Semigroup (First (First, getFirst))
 import Ledger qualified
 import Ledger.Address (pubKeyHashAddress)
 import Ledger.Address qualified as Address
-import Ledger.Constraints.TxConstraints hiding (requiredSignatories)
+import Ledger.Constraints.TxConstraints (InputConstraint (InputConstraint, icRedeemer, icTxOutRef),
+                                         OutputConstraint (OutputConstraint, ocDatum, ocValue),
+                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKey, MustProduceAtLeast, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
+                                         TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Orphans ()
-import Ledger.Scripts (Datum (..), DatumHash, MintingPolicy, MintingPolicyHash, Redeemer (..), Validator, ValidatorHash,
+import Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, Validator, ValidatorHash,
                        datumHash, mintingPolicyHash, validatorHash)
-import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (..), ScriptTag (..), Tx, TxOut (..), TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
+                  TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
-import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (..))
+import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError)
 import Ledger.Typed.Tx qualified as Typed

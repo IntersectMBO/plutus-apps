@@ -21,10 +21,10 @@ import Ledger.Ada (Ada)
 import Ledger.Ada qualified as Ada
 import Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
 import Ledger.Contexts qualified as Validation
-import Ledger.Oracle (Observation (..), SignedMessage)
-import Ledger.Oracle qualified as Oracle
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
+import Plutus.Contract.Oracle (Observation (..), SignedMessage)
+import Plutus.Contract.Oracle qualified as Oracle
 import PlutusTx qualified
 import PlutusTx.Prelude
 

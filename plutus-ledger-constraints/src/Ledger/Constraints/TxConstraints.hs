@@ -17,18 +17,20 @@
 module Ledger.Constraints.TxConstraints where
 
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Bifunctor (Bifunctor (..))
+import Data.Bifunctor (Bifunctor (bimap))
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
-import Prettyprinter hiding ((<>))
+import Prettyprinter (Pretty (pretty, prettyList), hang, viaShow, vsep, (<+>))
 
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Prelude
+import PlutusTx.Prelude (Bool (False, True), Foldable (foldMap), Functor (fmap), Integer, JoinSemiLattice ((\/)),
+                         Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concatMap, foldl, mapMaybe, not,
+                         null, ($), (.), (>>=), (||))
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Interval qualified as I
-import Plutus.V1.Ledger.Scripts (Datum (..), DatumHash, MintingPolicyHash, Redeemer, ValidatorHash, unitRedeemer)
+import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicyHash, Redeemer, ValidatorHash, unitRedeemer)
 import Plutus.V1.Ledger.Time (POSIXTimeRange)
 import Plutus.V1.Ledger.Tx (TxOutRef)
 import Plutus.V1.Ledger.Value (TokenName, Value, isZero)

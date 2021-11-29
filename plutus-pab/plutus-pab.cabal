@@ -130,6 +130,7 @@ library
         , plutus-chain-index-core
         , plutus-contract
         , plutus-ledger
+        , plutus-ledger-constraints
         , plutus-tx
         , plutus-tx-plugin
 
@@ -271,6 +272,7 @@ executable plutus-pab-examples
         , playground-common
         , plutus-contract
         , plutus-ledger
+        , plutus-ledger-constraints
         , plutus-pab
         , plutus-use-cases
         , prettyprinter
@@ -354,6 +356,7 @@ executable plutus-pab-local-cluster
         , playground-common
         , plutus-ledger
         , plutus-ledger-api
+        , plutus-ledger-constraints
         , plutus-contract
         , freer-simple
         , data-default
@@ -401,6 +404,7 @@ executable plutus-pab-test-psgenerator
         plutus-pab,
         plutus-use-cases -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
@@ -505,6 +509,7 @@ test-suite plutus-pab-test-full
         plutus-pab,
         plutus-use-cases -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
@@ -566,6 +571,7 @@ test-suite plutus-pab-test-full-long-running
         plutus-pab,
         plutus-use-cases -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,

@@ -10,19 +10,24 @@
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 module Ledger.Constraints.OnChain where
 
-import PlutusTx (ToData (..))
-import PlutusTx.Prelude
+import PlutusTx (ToData (toBuiltinData))
+import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False), Eq ((==)), Functor (fmap), Maybe (Just),
+                         Ord ((<=), (>=)), all, any, elem, isJust, isNothing, maybe, snd, traceIfFalse, ($), (&&), (.))
 
 import Ledger qualified
-import Ledger.Constraints.TxConstraints
+import Ledger.Constraints.TxConstraints (InputConstraint (InputConstraint, icTxOutRef),
+                                         OutputConstraint (OutputConstraint, ocDatum, ocValue),
+                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKey, MustProduceAtLeast, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
+                                         TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address qualified as Address
-import Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..))
+import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
+                                  TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
+                                  TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoValidRange),
+                                  TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue))
 import Plutus.V1.Ledger.Contexts qualified as V
 import Plutus.V1.Ledger.Interval (contains)
-import Plutus.V1.Ledger.Scripts (Datum (..))
-import Plutus.V1.Ledger.Tx (TxOut (..))
 import Plutus.V1.Ledger.Value (leq)
 
 {-# INLINABLE checkOwnInputConstraint #-}
@@ -40,7 +45,7 @@ checkOwnOutputConstraint
     -> OutputConstraint o
     -> Bool
 checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} OutputConstraint{ocDatum, ocValue} =
-    let hsh = V.findDatumHash (Datum $ toBuiltinData ocDatum) scriptContextTxInfo
+    let hsh = V.findDatumHash (Ledger.Datum $ toBuiltinData ocDatum) scriptContextTxInfo
         checkOutput TxOut{txOutValue, txOutDatumHash=Just svh} =
                Ada.fromValue txOutValue >= Ada.fromValue ocValue
             && Ada.fromValue txOutValue <= Ada.fromValue ocValue + Ledger.minAdaTxOut
