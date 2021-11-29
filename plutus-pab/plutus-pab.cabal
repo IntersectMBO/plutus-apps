@@ -17,7 +17,7 @@ build-type:    Simple
 
 source-repository head
     type:     git
-    location: https://github.com/iohk/plutus
+    location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
     description:
@@ -454,6 +454,7 @@ test-suite plutus-pab-test-light
         plutus-contract -any,
         plutus-pab,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,

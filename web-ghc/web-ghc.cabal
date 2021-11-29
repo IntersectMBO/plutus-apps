@@ -16,7 +16,7 @@ data-files:
 
 source-repository head
     type: git
-    location: https://github.com/iohk/plutus
+    location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
     description:
