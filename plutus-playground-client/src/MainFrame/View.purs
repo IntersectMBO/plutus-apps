@@ -1,9 +1,8 @@
 module MainFrame.View (render) where
 
 import Bootstrap (active, btn, containerFluid, hidden, justifyContentBetween, mlAuto, mrAuto, navItem, navLink, navbar, navbarBrand, navbarExpand, navbarNav, navbarText, nbsp)
-import Chain.Types as Chain
 import Control.Monad.State (evalState)
-import Cursor (Cursor)
+import Cursor (Cursor, current)
 import Data.Either (Either(..))
 import Data.Lens (view)
 import Data.Maybe (Maybe(..))
@@ -22,9 +21,9 @@ import Halogen.HTML.Properties (class_, classes, height, href, src, target, widt
 import Icons (Icon(..), icon)
 import Language.Haskell.Interpreter (_SourceCode)
 import MainFrame.Lenses (getKnownCurrencies, _contractDemoEditorContents)
-import MainFrame.Types (ChildSlots, HAction(..), State(..), View(..), WebCompilationResult, WebEvaluationResult)
+import MainFrame.Types (ChildSlots, FullSimulation, HAction(..), State(..), View(..), WebCompilationResult)
 import Network.RemoteData (RemoteData(..))
-import Playground.Types (ContractDemo(..), Simulation)
+import Playground.Types (ContractDemo(..))
 import Prelude (class Eq, const, ($), (<$>), (<<<), (==))
 import Schema.Types (mkInitialValue)
 import Simulator.View (simulatorTitle, simulationsPane, simulationsNav)
@@ -34,7 +33,7 @@ import Transaction.View (evaluationPane)
 foreign import plutusLogo :: String
 
 render :: forall m. MonadAff m => State -> ComponentHTML HAction ChildSlots m
-render state@(State { contractDemos, currentView, editorState, compilationResult, simulations, evaluationResult, blockchainVisualisationState }) =
+render state@(State { contractDemos, currentView, editorState, compilationResult, simulations }) =
   div
     [ class_ $ ClassName "frame" ]
     [ releaseBanner
@@ -42,7 +41,7 @@ render state@(State { contractDemos, currentView, editorState, compilationResult
     , subHeader state
     , editorMain contractDemos currentView editorState compilationResult
     , simulationsMain state
-    , transactionsMain currentView simulations evaluationResult blockchainVisualisationState
+    , transactionsMain currentView simulations
     , mainFooter
     ]
 
@@ -166,12 +165,12 @@ simulationsMain state@(State { currentView }) =
     , simulationsWrapper state
     ]
 
-transactionsMain :: forall m. MonadAff m => View -> Cursor Simulation -> WebEvaluationResult -> Chain.State -> ComponentHTML HAction ChildSlots m
-transactionsMain currentView simulations evaluationResult blockchainVisualisationState =
+transactionsMain :: forall m. MonadAff m => View -> Cursor FullSimulation -> ComponentHTML HAction ChildSlots m
+transactionsMain currentView simulations =
   main
     [ classes $ mainComponentClasses currentView Transactions ]
     [ simulatorTitle
-    , transactionsWrapper simulations evaluationResult blockchainVisualisationState
+    , transactionsWrapper simulations
     ]
 
 mainComponentClasses :: forall view. Eq view => view -> view -> Array (ClassName)
@@ -206,7 +205,7 @@ editorWrapper contractDemos editorState compilationResult =
   defaultContents = view (_contractDemoEditorContents <<< _SourceCode) <$> lookupContractDemo "Vesting" contractDemos
 
 simulationsWrapper :: forall p. State -> HTML p HAction
-simulationsWrapper state@(State { actionDrag, compilationResult, simulations, lastEvaluatedSimulation, evaluationResult }) =
+simulationsWrapper state@(State { actionDrag, compilationResult, simulations }) =
   let
     knownCurrencies = evalState getKnownCurrencies state
 
@@ -219,36 +218,36 @@ simulationsWrapper state@(State { actionDrag, compilationResult, simulations, la
           actionDrag
           compilationResult
           simulations
-          lastEvaluatedSimulation
-          evaluationResult
       ]
 
-transactionsWrapper :: forall m. MonadAff m => Cursor Simulation -> WebEvaluationResult -> Chain.State -> ComponentHTML HAction ChildSlots m
-transactionsWrapper simulations evaluationResult blockchainVisualisationState =
+transactionsWrapper :: forall m. MonadAff m => Cursor FullSimulation -> ComponentHTML HAction ChildSlots m
+transactionsWrapper simulations =
   div
     [ classes [ ClassName "main-body", ClassName "simulator" ] ]
     [ div
         [ class_ $ ClassName "simulations" ]
         [ simulationsNav simulations
         , div
-            [ class_ $ ClassName "simulation" ] case evaluationResult of
-            Success (Right evaluation) -> [ evaluationPane blockchainVisualisationState evaluation ]
-            Success (Left _) ->
-              [ text "Your simulation has errors. Click the "
-              , strong_ [ text "Simulations" ]
-              , text " tab above to fix them and recompile."
-              ]
-            Failure _ ->
-              [ text "Your simulation has errors. Click the "
-              , strong_ [ text "Simulations" ]
-              , text " tab above to fix them and recompile."
-              ]
-            Loading -> [ icon Spinner ]
-            NotAsked ->
-              [ text "Click the "
-              , strong_ [ text "Simulations" ]
-              , text " tab above and evaluate a simulation to see some results."
-              ]
+            [ class_ $ ClassName "simulation" ] case current simulations of
+            Just { evaluationResult, blockchainVisualisationState } -> case evaluationResult of
+              Success (Right evaluation) -> [ evaluationPane blockchainVisualisationState evaluation ]
+              Success (Left _) ->
+                [ text "Your simulation has errors. Click the "
+                , strong_ [ text "Simulations" ]
+                , text " tab above to fix them and recompile."
+                ]
+              Failure _ ->
+                [ text "Your simulation has errors. Click the "
+                , strong_ [ text "Simulations" ]
+                , text " tab above to fix them and recompile."
+                ]
+              Loading -> [ icon Spinner ]
+              NotAsked ->
+                [ text "Click the "
+                , strong_ [ text "Simulations" ]
+                , text " tab above and evaluate a simulation to see some results."
+                ]
+            Nothing -> []
         ]
     ]
 

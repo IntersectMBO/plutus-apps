@@ -29,8 +29,7 @@ import Data.Array as Array
 import Data.Argonaut.Decode (class DecodeJson, decodeJson)
 import Data.Argonaut.Encode (class EncodeJson, encodeJson)
 import Data.Foldable (class Foldable, foldMap, foldl, foldr)
-import Data.Lens (Traversal', wander)
-import Data.Lens.AffineTraversal (affineTraversal)
+import Data.Lens.AffineTraversal (AffineTraversal', affineTraversal)
 import Data.Lens.Index (class Index)
 import Data.Maybe (fromMaybe, maybe)
 import Data.Ord as Ord
@@ -79,18 +78,12 @@ instance encodeCursor :: EncodeJson a => EncodeJson (Cursor a) where
 instance decodeCursor :: DecodeJson a => DecodeJson (Cursor a) where
   decodeJson value = uncurry Cursor <$> decodeJson value
 
-_current :: forall a. Traversal' (Cursor a) a
-_current =
-  wander \coalg (Cursor index xs) ->
-    Array.index xs index
-      # maybe
-          (pure xs)
-          ( let
-              f x = fromMaybe xs $ Array.updateAt index x xs
-            in
-              coalg >>> map f
-          )
-      # map (Cursor index)
+_current :: forall a. AffineTraversal' (Cursor a) a
+_current = affineTraversal set pre
+  where
+  set (Cursor index xs) a = Cursor index $ fromMaybe xs $ Array.updateAt index a xs
+
+  pre c@(Cursor index xs) = maybe (Left c) Right $ Array.index xs index
 
 clamp :: forall a. Cursor a -> Cursor a
 clamp (Cursor index xs) =

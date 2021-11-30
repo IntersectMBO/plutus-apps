@@ -28,9 +28,9 @@ import Language.Haskell.Interpreter as PI
 import Plutus.V1.Ledger.Value (Value)
 import Network.RemoteData (RemoteData(..), _Success)
 import MainFrame.Lenses (_functionSchema, _result)
-import MainFrame.Types (HAction(..), View(..), SimulatorAction, WebCompilationResult, WebEvaluationResult)
+import MainFrame.Types (FullSimulation, HAction(..), View(..), SimulatorAction, WebCompilationResult, WebEvaluationResult)
 import Playground.Types (PlaygroundError(..), Simulation(..), SimulatorWallet)
-import Prelude (const, not, pure, show, (#), ($), (/=), (<$>), (<<<), (<>), (==), (>))
+import Prelude (const, not, pure, show, (#), ($), (<$>), (<<<), (<>), (==), (>))
 import Wallet.View (walletsPane)
 
 simulatorTitle :: forall p. HTML p HAction
@@ -47,9 +47,9 @@ simulatorTitle =
         [ text "< Return to Editor" ]
     ]
 
-simulationsPane :: forall p. Value -> Maybe Int -> WebCompilationResult -> Cursor Simulation -> Maybe Simulation -> WebEvaluationResult -> HTML p HAction
-simulationsPane initialValue actionDrag compilationResult simulations lastEvaluatedSimulation evaluationResult = case current simulations of
-  Just (Simulation { simulationWallets, simulationActions }) ->
+simulationsPane :: forall p. Value -> Maybe Int -> WebCompilationResult -> Cursor FullSimulation -> HTML p HAction
+simulationsPane initialValue actionDrag compilationResult simulations = case current simulations of
+  Just { simulation: Simulation { simulationWallets, simulationActions }, evaluationResult } ->
     div
       [ class_ $ ClassName "simulations" ]
       [ simulationsNav simulations
@@ -58,14 +58,14 @@ simulationsPane initialValue actionDrag compilationResult simulations lastEvalua
           [ div
               [ classes [ ClassName "simulation-controls", floatRight ] ]
               [ evaluateActionsButton simulationWallets simulationActions evaluationResult
-              , viewTransactionsButton simulations lastEvaluatedSimulation evaluationResult
+              , viewTransactionsButton evaluationResult
               ]
           , walletsPane endpointSignatures initialValue simulationWallets
           , actionsPane actionDrag simulationWallets simulationActions
           , div
               [ classes [ ClassName "simulation-controls" ] ]
               [ evaluateActionsButton simulationWallets simulationActions evaluationResult
-              , viewTransactionsButton simulations lastEvaluatedSimulation evaluationResult
+              , viewTransactionsButton evaluationResult
               ]
           , case evaluationResult of
               Failure error -> ajaxErrorPane error
@@ -80,7 +80,7 @@ simulationsPane initialValue actionDrag compilationResult simulations lastEvalua
   where
   endpointSignatures = view (_Success <<< _Right <<< _Newtype <<< _result <<< _functionSchema) compilationResult
 
-simulationsNav :: forall p. Cursor Simulation -> HTML p HAction
+simulationsNav :: forall p. Cursor FullSimulation -> HTML p HAction
 simulationsNav simulations =
   ul
     [ classes [ nav, ClassName "nav-tabs" ]
@@ -93,8 +93,8 @@ simulationsNav simulations =
         <> [ addSimulationControl ]
     )
 
-simulationNavItem :: forall p. Boolean -> Int -> Int -> Simulation -> Array (HTML p HAction)
-simulationNavItem canClose activeIndex index (Simulation { simulationName }) =
+simulationNavItem :: forall p. Boolean -> Int -> Int -> FullSimulation -> Array (HTML p HAction)
+simulationNavItem canClose activeIndex index { simulation: Simulation { simulationName } } =
   [ li
       [ id $ "simulation-nav-item-" <> show index
       , class_ navItem
@@ -150,8 +150,8 @@ evaluateActionsButton simulationWallets simulationActions evaluationResult =
 
   btnText _ _ = text "Evaluate"
 
-viewTransactionsButton :: forall p. Cursor Simulation -> Maybe Simulation -> WebEvaluationResult -> HTML p HAction
-viewTransactionsButton simulations lastEvaluatedSimulation evaluationResult =
+viewTransactionsButton :: forall p. WebEvaluationResult -> HTML p HAction
+viewTransactionsButton evaluationResult =
   button
     [ classes [ btn, ClassName "btn-turquoise" ]
     , disabled isDisabled
@@ -160,7 +160,7 @@ viewTransactionsButton simulations lastEvaluatedSimulation evaluationResult =
     [ text "Transactions" ]
   where
   isDisabled = case evaluationResult of
-    Success _ -> (current simulations) /= lastEvaluatedSimulation
+    Success _ -> false
     _ -> true
 
 actionsErrorPane :: forall p i. PlaygroundError -> HTML p i

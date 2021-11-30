@@ -57,9 +57,9 @@ import Halogen as H
 import Halogen.Query (HalogenM)
 import Language.Haskell.Interpreter (CompilationError(..), InterpreterError(..), SourceCode(..))
 import Ledger.CardanoWallet (WalletNumber(WalletNumber))
-import MainFrame.Lenses (_actionDrag, _authStatus, _blockchainVisualisationState, _compilationResult, _contractDemos, _createGistResult, _currentDemoName, _currentView, _demoFilesMenuVisible, _editorState, _evaluationResult, _functionSchema, _gistErrorPaneVisible, _gistUrl, _knownCurrencies, _lastEvaluatedSimulation, _lastSuccessfulCompilationResult, _resultRollup, _simulationActions, _simulationId, _simulationWallets, _simulations, _successfulCompilationResult, _successfulEvaluationResult, getKnownCurrencies)
+import MainFrame.Lenses (_actionDrag, _authStatus, _blockchainVisualisationState, _compilationResult, _contractDemos, _createGistResult, _currentDemoName, _currentView, _demoFilesMenuVisible, _editorState, _evaluationResult, _functionSchema, _gistErrorPaneVisible, _gistUrl, _knownCurrencies, _lastSuccessfulCompilationResult, _resultRollup, _simulation, _simulationActions, _simulationId, _simulationWallets, _simulations, _successfulCompilationResult, _successfulEvaluationResult, getKnownCurrencies)
 import MainFrame.MonadApp (class MonadApp, editorGetContents, editorHandleAction, editorSetAnnotations, editorSetContents, getGistByGistId, getOauthStatus, postGistByGistId, postContract, postEvaluation, postGist, preventDefault, resizeBalancesChart, resizeEditor, runHalogenApp, saveBuffer, scrollIntoView, setDataTransferData, setDropEffect)
-import MainFrame.Types (ChildSlots, DragAndDropEventType(..), HAction(..), Query, State(..), View(..), WalletEvent(..))
+import MainFrame.Types (ChildSlots, DragAndDropEventType(..), FullSimulation, HAction(..), Query, State(..), View(..), WalletEvent(..))
 import MainFrame.View (render)
 import Monaco (IMarkerData, markerSeverity)
 import Network.RemoteData (RemoteData(..), _Success, isSuccess)
@@ -92,6 +92,13 @@ mkSimulation simulationCurrencies simulationId =
     , simulationWallets: mkSimulatorWallet simulationCurrencies <<< BigInt.fromInt <$> 1 .. 2
     }
 
+mkFullSimulation :: Simulation -> FullSimulation
+mkFullSimulation simulation =
+  { simulation
+  , evaluationResult: NotAsked
+  , blockchainVisualisationState: Chain.initialState
+  }
+
 mkInitialState :: forall m. MonadThrow Error m => Editor.State -> m State
 mkInitialState editorState = do
   contractDemos <-
@@ -115,12 +122,9 @@ mkInitialState editorState = do
         , lastSuccessfulCompilationResult: Nothing
         , simulations: Cursor.empty
         , actionDrag: Nothing
-        , evaluationResult: NotAsked
-        , lastEvaluatedSimulation: Nothing
         , authStatus: NotAsked
         , createGistResult: NotAsked
         , gistUrl: Nothing
-        , blockchainVisualisationState: Chain.initialState
         }
 
 ------------------------------------------------------------
@@ -201,7 +205,7 @@ handleAction (ActionDragAndDrop _ DragLeave _) = pure unit
 handleAction (ActionDragAndDrop destination Drop event) = do
   use _actionDrag
     >>= case _ of
-        Just source -> modifying (_simulations <<< _current <<< _simulationActions) (Array.move source destination)
+        Just source -> modifying (_simulations <<< _current <<< _simulation <<< _simulationActions) (Array.move source destination)
         _ -> pure unit
   preventDefault event
   assign _actionDrag Nothing
@@ -227,7 +231,7 @@ handleAction EvaluateActions =
   void
     $ runMaybeT
     $ do
-        simulation <- peruse (_simulations <<< _current)
+        simulation <- peruse (_simulations <<< _current <<< _simulation)
         evaluation <-
           MaybeT do
             contents <- editorGetContents
@@ -239,7 +243,6 @@ handleAction EvaluateActions =
           Success (Right _) -> do
             -- on successful evaluation, update last evaluated simulation, and reset and show transactions
             when (isSuccess result) do
-              assign _lastEvaluatedSimulation simulation
               assign _blockchainVisualisationState Chain.initialState
               -- preselect the first transaction (if any)
               mAnnotatedBlockchain <- peruse (_successfulEvaluationResult <<< _resultRollup <<< to AnnotatedBlockchain)
@@ -266,7 +269,7 @@ handleAction (LoadScript key) = do
       assign _demoFilesMenuVisible false
       assign _currentView Editor
       assign _currentDemoName (Just contractDemoName)
-      assign _simulations $ Cursor.fromArray contractDemoSimulations
+      assign _simulations $ mkFullSimulation <$> Cursor.fromArray contractDemoSimulations
       assign (_editorState <<< _lastCompiledCode) (Just contractDemoEditorContents)
       assign (_editorState <<< _currentCodeIsCompiled) true
       assign _compilationResult (Success <<< Right $ contractDemoContext)
@@ -289,12 +292,12 @@ handleAction AddSimulationSlot = do
           modifying _simulations
             ( \simulations ->
                 let
-                  maxsimulationId = fromMaybe 0 $ maximumOf (traversed <<< _simulationId) simulations
+                  maxsimulationId = fromMaybe 0 $ maximumOf (traversed <<< _simulation <<< _simulationId) simulations
 
                   simulationId = maxsimulationId + 1
                 in
                   Cursor.snoc simulations
-                    (mkSimulation knownCurrencies simulationId)
+                    (mkFullSimulation $ mkSimulation knownCurrencies simulationId)
             )
         Nothing -> pure unit
       assign _currentView Simulations
@@ -321,13 +324,13 @@ handleAction (RemoveSimulationSlot index) = do
 
 handleAction (ModifyWallets action) = do
   knownCurrencies <- getKnownCurrencies
-  modifying (_simulations <<< _current <<< _simulationWallets) (handleActionWalletEvent (mkSimulatorWallet knownCurrencies) action)
+  modifying (_simulations <<< _current <<< _simulation <<< _simulationWallets) (handleActionWalletEvent (mkSimulatorWallet knownCurrencies) action)
 
 handleAction (ChangeSimulation subaction) = do
   knownCurrencies <- getKnownCurrencies
   let
     initialValue = mkInitialValue knownCurrencies zero
-  modifying (_simulations <<< _current <<< _simulationActions) (handleSimulationAction initialValue subaction)
+  modifying (_simulations <<< _current <<< _simulation <<< _simulationActions) (handleSimulationAction initialValue subaction)
 
 handleAction (ChainAction subaction) = do
   mAnnotatedBlockchain <-
@@ -383,7 +386,7 @@ handleAction CompileProgram = do
         )
         ( assign _simulations
             $ case newCurrencies of
-                Just currencies -> Cursor.singleton $ mkSimulation currencies 1
+                Just currencies -> Cursor.singleton $ mkFullSimulation $ mkSimulation currencies 1
                 Nothing -> Cursor.empty
         )
       pure unit
@@ -411,7 +414,7 @@ handleGistAction PublishOrUpdateGist = do
     $ runMaybeT do
         mContents <- lift $ editorGetContents
         simulations <- use _simulations
-        newGist <- hoistMaybe $ mkNewGist { source: mContents, simulations }
+        newGist <- hoistMaybe $ mkNewGist { source: mContents, simulations: _.simulation <$> simulations }
         mGist <- use _createGistResult
         assign _createGistResult Loading
         newResult <-
@@ -456,7 +459,7 @@ handleGistAction LoadGist =
         -- Load the simulation, if available.
         simulationString <- noteT "Simulation not found in gist." $ view simulationGistFile gist
         simulations <- except $ lmap printJsonDecodeError $ parseDecodeJson simulationString
-        assign _simulations simulations
+        assign _simulations $ mkFullSimulation <$> simulations
   where
   toEither :: forall e a. Either e a -> RemoteData e a -> Either e a
   toEither _ (Success a) = Right a

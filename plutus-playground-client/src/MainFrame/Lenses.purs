@@ -1,33 +1,35 @@
 module MainFrame.Lenses
-  ( _demoFilesMenuVisible
-  , _gistErrorPaneVisible
-  , _currentView
-  , _contractDemos
-  , _currentDemoName
-  , _editorState
-  , _simulations
-  , _actionDrag
-  , _evaluationResult
-  , _successfulEvaluationResult
-  , _lastEvaluatedSimulation
-  , _compilationResult
-  , _successfulCompilationResult
-  , _lastSuccessfulCompilationResult
+  ( _actionDrag
   , _authStatus
-  , _createGistResult
-  , _gistUrl
-  , _blockchainVisualisationState
-  , _editorSlot
   , _balancesChartSlot
+  , _blockchainVisualisationState
+  , _compilationResult
   , _contractDemoEditorContents
-  , _simulationId
-  , _simulationActions
-  , _simulationWallets
-  , _resultRollup
+  , _contractDemos
+  , _createGistResult
+  , _currentDemoName
+  , _currentView
+  , _demoFilesMenuVisible
+  , _editorSlot
+  , _editorState
+  , _evaluationResult
   , _functionSchema
-  , _walletKeys
+  , _gistErrorPaneVisible
+  , _gistUrl
   , _knownCurrencies
+  , _lastSuccessfulCompilationResult
   , _result
+  , _resultRollup
+  , _simulation
+  , _simulationActions
+  , _simulationBlockchainVisualisationState
+  , _simulationEvaluationResult
+  , _simulationId
+  , _simulationWallets
+  , _simulations
+  , _successfulCompilationResult
+  , _successfulEvaluationResult
+  , _walletKeys
   , _warnings
   , getKnownCurrencies
   ) where
@@ -36,19 +38,20 @@ import Prologue
 import Auth (AuthStatus)
 import Chain.Types as Chain
 import Control.Monad.State.Class (class MonadState)
-import Cursor (Cursor)
-import Data.Lens (Lens', Traversal', _Right, lens, preview)
+import Cursor (Cursor, _current)
+import Data.Lens (Lens', _Right, lens, preview, set)
 import Data.Lens.Extra (peruse)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
+import Data.Lens.Types (AffineTraversal')
 import Data.Maybe (fromMaybe)
 import Editor.Types (State) as Editor
 import Gist (Gist)
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult, SourceCode, _InterpreterResult)
 import Ledger.CardanoWallet (WalletNumber)
-import MainFrame.Types (State, View, WebData)
-import Network.RemoteData (_Success)
-import Playground.Types (CompilationResult, ContractCall, ContractDemo, EvaluationResult, FunctionSchema, KnownCurrency, PlaygroundError, Simulation, SimulatorWallet)
+import MainFrame.Types (FullSimulation, State, View, WebData, WebEvaluationResult)
+import Network.RemoteData (_Success, RemoteData(NotAsked))
+import Playground.Types (CompilationResult, ContractCall, ContractDemo, EvaluationResult, FunctionSchema, KnownCurrency, Simulation, SimulatorWallet)
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Schema (FormSchema)
 import Schema.Types (FormArgument)
@@ -73,20 +76,17 @@ _currentDemoName = _Newtype <<< prop (Proxy :: _ "currentDemoName")
 _editorState :: Lens' State Editor.State
 _editorState = _Newtype <<< prop (Proxy :: _ "editorState")
 
-_simulations :: Lens' State (Cursor Simulation)
+_simulations :: Lens' State (Cursor FullSimulation)
 _simulations = _Newtype <<< prop (Proxy :: _ "simulations")
 
 _actionDrag :: Lens' State (Maybe Int)
 _actionDrag = _Newtype <<< prop (Proxy :: _ "actionDrag")
 
-_evaluationResult :: Lens' State (WebData (Either PlaygroundError EvaluationResult))
-_evaluationResult = _Newtype <<< prop (Proxy :: _ "evaluationResult")
+_evaluationResult :: Lens' State WebEvaluationResult
+_evaluationResult = withDefault NotAsked (_simulations <<< _current <<< _simulationEvaluationResult)
 
-_successfulEvaluationResult :: Traversal' State EvaluationResult
+_successfulEvaluationResult :: AffineTraversal' State EvaluationResult
 _successfulEvaluationResult = _evaluationResult <<< _Success <<< _Right
-
-_lastEvaluatedSimulation :: Lens' State (Maybe Simulation)
-_lastEvaluatedSimulation = _Newtype <<< prop (Proxy :: _ "lastEvaluatedSimulation")
 
 _compilationResult :: Lens' State (WebData (Either InterpreterError (InterpreterResult CompilationResult)))
 _compilationResult = _Newtype <<< lens g s
@@ -97,7 +97,7 @@ _compilationResult = _Newtype <<< lens g s
     Just cr -> r { compilationResult = c, lastSuccessfulCompilationResult = Just cr }
     Nothing -> r { compilationResult = c }
 
-_successfulCompilationResult :: Traversal' State CompilationResult
+_successfulCompilationResult :: AffineTraversal' State CompilationResult
 _successfulCompilationResult = _compilationResult <<< _Success <<< _Right <<< _InterpreterResult <<< _result
 
 _lastSuccessfulCompilationResult :: Lens' State (Maybe CompilationResult)
@@ -113,7 +113,24 @@ _gistUrl :: Lens' State (Maybe String)
 _gistUrl = _Newtype <<< prop (Proxy :: _ "gistUrl")
 
 _blockchainVisualisationState :: Lens' State Chain.State
-_blockchainVisualisationState = _Newtype <<< prop (Proxy :: _ "blockchainVisualisationState")
+_blockchainVisualisationState = withDefault Chain.initialState (_simulations <<< _current <<< _simulationBlockchainVisualisationState)
+
+_simulation :: Lens' FullSimulation Simulation
+_simulation = prop (Proxy :: _ "simulation")
+
+_simulationEvaluationResult :: Lens' FullSimulation WebEvaluationResult
+_simulationEvaluationResult = prop (Proxy :: _ "evaluationResult")
+
+_simulationBlockchainVisualisationState :: Lens' FullSimulation Chain.State
+_simulationBlockchainVisualisationState = prop (Proxy :: _ "blockchainVisualisationState")
+
+------------------------------------------------------------
+withDefault :: forall s a. a -> AffineTraversal' s a -> Lens' s a
+withDefault def l = lens doGet doSet
+  where
+  doGet s = fromMaybe def $ preview l s
+
+  doSet s a = set l a s
 
 ------------------------------------------------------------
 _editorSlot :: Proxy "editorSlot"
