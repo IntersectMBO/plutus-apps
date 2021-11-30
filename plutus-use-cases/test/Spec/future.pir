@@ -419,13 +419,8 @@
                 (fun
                   (con bytestring)
                   (fun
-                    [
-                      [
-                        (lam
-                          k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                        )
-                        (con bytestring)
-                      ]
+                    [ Maybe (con data) ]
+                    (fun
                       [
                         [
                           (lam
@@ -433,10 +428,20 @@
                           )
                           (con bytestring)
                         ]
-                        (con integer)
+                        [
+                          [
+                            (lam
+                              k
+                              (type)
+                              (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                            )
+                            (con bytestring)
+                          ]
+                          (con integer)
+                        ]
                       ]
-                    ]
-                    TxConstraint
+                      TxConstraint
+                    )
                   )
                 )
               )

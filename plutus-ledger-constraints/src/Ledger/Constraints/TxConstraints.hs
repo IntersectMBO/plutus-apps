@@ -48,7 +48,7 @@ data TxConstraint =
     | MustSpendPubKeyOutput TxOutRef
     | MustSpendScriptOutput TxOutRef Redeemer
     | MustMintValue MintingPolicyHash Redeemer TokenName Integer
-    | MustPayToPubKey PubKeyHash Value
+    | MustPayToPubKey PubKeyHash (Maybe Datum) Value
     | MustPayToOtherScript ValidatorHash Datum Value
     | MustHashDatum DatumHash Datum
     | MustSatisfyAnyOf [TxConstraint]
@@ -73,8 +73,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must spend script output:", pretty ref, pretty red]
         MustMintValue mps red tn i ->
             hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i]
-        MustPayToPubKey pk v ->
-            hang 2 $ vsep ["must pay to pubkey:", pretty pk, pretty v]
+        MustPayToPubKey pk datum v ->
+            hang 2 $ vsep ["must pay to pubkey:", pretty pk, pretty datum, pretty v]
         MustPayToOtherScript vlh dv vl ->
             hang 2 $ vsep ["must pay to script:", pretty vlh, pretty dv, pretty vl]
         MustHashDatum dvh dv ->
@@ -194,7 +194,12 @@ mustPayToTheScript dt vl =
 {-# INLINABLE mustPayToPubKey #-}
 -- | Lock the value with a public key
 mustPayToPubKey :: forall i o. PubKeyHash -> Value -> TxConstraints i o
-mustPayToPubKey pk = singleton . MustPayToPubKey pk
+mustPayToPubKey pk = singleton . MustPayToPubKey pk Nothing
+
+{-# INLINABLE mustPayWithDatumToPubKey #-}
+-- | Lock the value and datum with a public key
+mustPayWithDatumToPubKey :: forall i o. PubKeyHash -> Datum -> Value -> TxConstraints i o
+mustPayWithDatumToPubKey pk datum = singleton . MustPayToPubKey pk (Just datum)
 
 {-# INLINABLE mustPayToOtherScript #-}
 -- | Lock the value with a public key
@@ -265,7 +270,7 @@ pubKeyPayments :: forall i o. TxConstraints i o -> [(PubKeyHash, Value)]
 pubKeyPayments TxConstraints{txConstraints} =
     Map.toList
     $ Map.fromListWith (<>)
-      (txConstraints >>= \case { MustPayToPubKey pk vl -> [(pk, vl)]; _ -> [] })
+      (txConstraints >>= \case { MustPayToPubKey pk _ vl -> [(pk, vl)]; _ -> [] })
 
 -- | The minimum 'Value' that satisfies all 'MustSpendAtLeast' constraints
 {-# INLINABLE mustSpendAtLeastTotal #-}
@@ -310,7 +315,7 @@ modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
             MustSpendPubKeyOutput{}     -> True
             MustSpendScriptOutput{}     -> True
             MustMintValue{}             -> True
-            MustPayToPubKey _ vl        -> not (isZero vl)
+            MustPayToPubKey _ _ vl      -> not (isZero vl)
             MustPayToOtherScript _ _ vl -> not (isZero vl)
             MustSatisfyAnyOf xs         -> any requiresInputOutput xs
             _                           -> False

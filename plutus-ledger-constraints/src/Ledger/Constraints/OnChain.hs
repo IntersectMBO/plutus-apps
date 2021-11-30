@@ -11,7 +11,7 @@
 module Ledger.Constraints.OnChain where
 
 import PlutusTx (ToData (toBuiltinData))
-import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False), Eq ((==)), Functor (fmap), Maybe (Just),
+import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)), Functor (fmap), Maybe (Just),
                          Ord ((<=), (>=)), all, any, elem, isJust, isNothing, maybe, snd, traceIfFalse, ($), (&&), (.))
 
 import Ledger qualified
@@ -85,9 +85,15 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
-    MustPayToPubKey pk vl ->
+    MustPayToPubKey pk mdv vl ->
+        let outs = V.txInfoOutputs scriptContextTxInfo
+            hsh dv = V.findDatumHash dv scriptContextTxInfo
+            checkOutput (Just dv) TxOut{txOutDatumHash=Just svh} = hsh dv == Just svh
+            -- return 'True' by default meaning we fail only when the provided datum is not found
+            checkOutput _ _                                      = True
+        in
         traceIfFalse "La" -- "MustPayToPubKey"
-        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk
+        $ vl `leq` V.valuePaidTo scriptContextTxInfo pk && any (checkOutput mdv) outs
     MustPayToOtherScript vlh dv vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh = V.findDatumHash dv scriptContextTxInfo

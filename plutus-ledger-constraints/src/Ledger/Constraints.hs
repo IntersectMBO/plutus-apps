@@ -6,6 +6,7 @@ module Ledger.Constraints(
     -- * Defining constraints
     , TC.mustPayToTheScript
     , TC.mustPayToPubKey
+    , TC.mustPayWithDatumToPubKey
     , TC.mustMintCurrency
     , TC.mustMintCurrencyWithRedeemer
     , TC.mustMintValue
