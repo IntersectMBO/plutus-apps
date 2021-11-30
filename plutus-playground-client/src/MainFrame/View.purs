@@ -36,20 +36,13 @@ render :: forall m. MonadAff m => State -> ComponentHTML HAction ChildSlots m
 render state@(State { contractDemos, currentView, editorState, compilationResult, simulations }) =
   div
     [ class_ $ ClassName "frame" ]
-    [ releaseBanner
-    , mainHeader
+    [ mainHeader
     , subHeader state
     , editorMain contractDemos currentView editorState compilationResult
     , simulationsMain state
     , transactionsMain currentView simulations
     , mainFooter
     ]
-
-releaseBanner :: forall p. HTML p HAction
-releaseBanner =
-  div
-    [ class_ $ ClassName "release-banner" ]
-    [ text "Plutus Refresh - Updated 25th January 2021" ]
 
 mainHeader :: forall p. HTML p HAction
 mainHeader =
