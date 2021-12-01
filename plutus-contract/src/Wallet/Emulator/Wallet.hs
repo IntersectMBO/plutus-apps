@@ -144,7 +144,7 @@ walletPubKey w = CW.pubKey
 
 -- | The public key hash of a mock wallet.  (Fails if the wallet is not a mock wallet).
 walletPubKeyHash :: Wallet -> PubKeyHash
-walletPubKeyHash = pubKeyHash . walletPubKey
+walletPubKeyHash = Ledger.pubKeyHash . walletPubKey
 
 -- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
 walletAddress :: Wallet -> Address
