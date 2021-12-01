@@ -24,6 +24,7 @@ import Data.Aeson qualified as A
 import Data.Foldable (for_, traverse_)
 import Data.Function ((&))
 import Data.Functor (void)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Sequence ((<|))
 import Data.Yaml qualified as Y
 import Database.Beam.Migrate.Simple (autoMigrate)
@@ -40,7 +41,6 @@ import Cardano.BM.Trace (Trace, logDebug, logError)
 import Cardano.Api qualified as C
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
 import Cardano.Protocol.Socket.Type (epochSlots)
-import Ledger (Slot (..))
 import Plutus.ChainIndex (ChainIndexLog (..), RunRequirements (..), runChainIndexEffects)
 import Plutus.ChainIndex.CommandLine (AppConfig (..), Command (..), applyOverrides, cmdWithHelpParser)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, tipFromCardanoBlock)
@@ -73,27 +73,28 @@ runChainIndex runReq effect = do
 
 chainSyncHandler
   :: RunRequirements
-  -> C.BlockNo
+  -> Config.ChainIndexConfig
+  -> IORef (Integer, Integer)
   -> ChainSyncEvent
-  -> Slot
   -> IO ()
-chainSyncHandler runReq storeFrom
-  (RollForward block@(C.BlockInMode (C.Block (C.BlockHeader _ _ blockNo) _) _) _) _ = do
+chainSyncHandler runReq config lastProgressRef
+  (RollForward block@(C.BlockInMode (C.Block (C.BlockHeader blockSlot _ blockNo) _) _) _) = do
+    showProgress config lastProgressRef blockSlot
     let ciBlock = fromCardanoBlock block
     case ciBlock of
       Left err    ->
         logError (trace runReq) (ConversionFailed err)
       Right txs -> void $ runChainIndex runReq $
-        appendBlock (tipFromCardanoBlock block) txs (BlockProcessOption (blockNo >= storeFrom))
-chainSyncHandler runReq _
-  (RollBackward point _) _ = do
+        appendBlock (tipFromCardanoBlock block) txs (BlockProcessOption (blockNo >= Config.cicStoreFrom config))
+chainSyncHandler runReq _ _
+  (RollBackward point _) = do
     putStr "Rolling back to "
     print point
     -- Do we really want to pass the tip of the new blockchain to the
     -- rollback function (rather than the point where the chains diverge)?
     void $ runChainIndex runReq $ rollback (fromCardanoPoint point)
-chainSyncHandler runReq _
-  (Resume point) _ = do
+chainSyncHandler runReq _ _
+  (Resume point) = do
     putStr "Resuming from "
     print point
     void $ runChainIndex runReq $ resumeSync $ fromCardanoPoint point
@@ -106,6 +107,24 @@ showResumePoints = \case
   where
     showPoint = show . toInteger . pointSlot . fromCardanoPoint
 
+getTipSlot :: Config.ChainIndexConfig -> IO Integer
+getTipSlot config = do
+  C.ChainTip (C.SlotNo slotNo) _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
+    { C.localConsensusModeParams = C.CardanoModeParams epochSlots
+    , C.localNodeNetworkId = Config.cicNetworkId config
+    , C.localNodeSocketPath = Config.cicSocketPath config
+    }
+  pure $ fromIntegral slotNo
+
+showProgress :: Config.ChainIndexConfig -> IORef (Integer, Integer) -> C.SlotNo -> IO ()
+showProgress config lastProgressRef (C.SlotNo blockSlot) = do
+  (lastProgress, tipSlot) <- readIORef lastProgressRef
+  let pct = (100 * fromIntegral blockSlot) `div` tipSlot
+  if pct > lastProgress then do
+    putStrLn $ "Syncing (" ++ show pct ++ "%)"
+    newTipSlot <- getTipSlot config
+    writeIORef lastProgressRef (pct, newTipSlot)
+  else pure ()
 
 main :: IO ()
 main = do
@@ -140,17 +159,6 @@ main = do
       putStrLn "\nChain Index config:"
       print (pretty config)
 
-      -- The printed slot number is only half helpful.
-      -- The primary purpose of this query is to get the first response of the node for potential errors before opening the DB and starting the chain index.
-      -- See #69.
-      putStr "\nThe tip of the local node: "
-      C.ChainTip slotNo _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
-        { C.localConsensusModeParams = C.CardanoModeParams epochSlots
-        , C.localNodeNetworkId = Config.cicNetworkId config
-        , C.localNodeSocketPath = Config.cicSocketPath config
-        }
-      print slotNo
-
       runMain trace config
 
 runMain :: Trace IO ChainIndexLog -> Config.ChainIndexConfig -> IO ()
@@ -181,13 +189,20 @@ runMain trace config = do
     putStr "\nPossible resume slots: "
     putStrLn $ showResumePoints resumePoints
 
+    -- The primary purpose of this query is to get the first response of the node for potential errors before opening the DB and starting the chain index.
+    -- See #69.
+    putStr "\nThe tip of the local node: "
+    slotNo <- getTipSlot config
+    print slotNo
+    progressRef <- newIORef (0, slotNo)
+
     putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config
     void $ runChainSync (Config.cicSocketPath config)
                         nullTracer
                         (Config.cicSlotConfig config)
                         (Config.cicNetworkId  config)
                         resumePoints
-                        (chainSyncHandler runReq (Config.cicStoreFrom config))
+                        (\evt _ -> chainSyncHandler runReq config progressRef evt)
 
     let port = show (Config.cicPort config)
     putStrLn $ "Starting webserver on port " <> port
