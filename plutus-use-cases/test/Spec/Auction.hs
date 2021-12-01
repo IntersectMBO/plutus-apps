@@ -279,9 +279,10 @@ delay :: Integer -> Trace.EmulatorTrace ()
 delay n = void $ Trace.waitNSlots $ fromIntegral n
 
 prop_Auction :: Actions AuctionModel -> Property
-prop_Auction =
-    propRunActionsWithOptions (set minLogLevel Debug options) handleSpec
-        (const $ pure True)  -- TODO: check termination
+prop_Auction script =
+    propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions handleSpec
+        (\ _ -> pure True)  -- TODO: check termination
+        script
 
 handleSpec :: [ContractInstanceSpec AuctionModel]
 handleSpec = ContractInstanceSpec SellerH w1 seller :

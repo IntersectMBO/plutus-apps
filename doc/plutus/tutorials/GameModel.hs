@@ -199,6 +199,7 @@ prop_Game actions = propRunActions_ instanceSpec actions
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l s = propRunActionsWithOptions
                     (set minLogLevel l defaultCheckOptions)
+                    defaultCoverageOptions
                     instanceSpec
                     (\ _ -> pure True)
                     s

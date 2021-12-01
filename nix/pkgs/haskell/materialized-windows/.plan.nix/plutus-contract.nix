@@ -148,6 +148,7 @@
           ] ++ (pkgs.lib).optionals (!(compiler.isGhcjs && true || system.isGhcjs || system.isWindows)) [
           "Plutus/Contract/Test"
           "Plutus/Contract/Test/ContractModel"
+          "Plutus/Contract/Test/Coverage"
           ];
         hsSourceDirs = [ "src" ];
         };

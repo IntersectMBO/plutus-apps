@@ -17,6 +17,7 @@
 module Spec.GameStateMachine
   ( tests, successTrace, successTrace2, traceLeaveOneAdaInScript, failTrace
   , prop_Game, propGame', prop_GameWhitelist
+  , check_prop_Game_with_coverage
   , prop_NoLockedFunds
   , prop_CheckNoLockedFundsProof
   , prop_SanityCheckModel
@@ -26,7 +27,7 @@ import Control.Lens
 import Control.Monad
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.Maybe
-import Test.QuickCheck as QC hiding ((.&&.))
+import Test.QuickCheck as QC hiding (checkCoverage, (.&&.))
 import Test.Tasty hiding (after)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
@@ -41,6 +42,7 @@ import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.GameStateMachine as G
 import Plutus.Trace.Emulator as Trace
 import PlutusTx qualified
+import PlutusTx.Coverage
 --
 -- * QuickCheck model
 
@@ -121,9 +123,10 @@ instance ContractModel GameModel where
     -- command given the current model state.
     arbitraryAction s = oneof $
         [ genLockAction ] ++
-        [ Guess w   <$> genGuess  <*> genGuess <*> choose (Ada.getLovelace Ledger.minAdaTxOut, val) | val > Ada.getLovelace Ledger.minAdaTxOut, Just w <- [tok] ] ++
+        [ Guess w   <$> genGuess  <*> genGuess <*> genGuessAmount | val > Ada.getLovelace Ledger.minAdaTxOut, Just w <- [tok] ] ++
         [ GiveToken <$> genWallet | isJust tok ]
         where
+            genGuessAmount = frequency [(1, pure val), (1, pure $ Ada.getLovelace Ledger.minAdaTxOut), (8, choose (Ada.getLovelace Ledger.minAdaTxOut, val))]
             tok = s ^. contractState . hasToken
             val = s ^. contractState . gameValue
             genLockAction :: Gen (Action GameModel)
@@ -175,9 +178,18 @@ prop_GameWhitelist = checkErrorWhitelist handleSpec defaultWhitelist
 prop_SanityCheckModel :: Property
 prop_SanityCheckModel = propSanityCheckModel @GameModel
 
+check_prop_Game_with_coverage :: IO CoverageReport
+check_prop_Game_with_coverage =
+  quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+    propRunActionsWithOptions defaultCheckOptions
+                              covopts
+                              handleSpec
+                              (const (pure True))
+
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions
                   (set minLogLevel l defaultCheckOptions)
+                  defaultCoverageOptions
                   handleSpec
                   (\ _ -> pure True)
 

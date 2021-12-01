@@ -48,7 +48,6 @@ import Data.Maybe (mapMaybe)
 import Data.Profunctor (Profunctor (..))
 import Data.Proxy (Proxy (..))
 import Data.Row.Internal qualified as V
-import Data.String (IsString (..))
 import GHC.TypeLits qualified
 import Plutus.Contract (Contract, HasEndpoint)
 import Plutus.Contract.Effects (ActiveEndpoint, PABResp (ExposeEndpointResp), _ExposeEndpointReq)
@@ -60,7 +59,7 @@ import Plutus.Trace.Emulator.ContractInstance (contractThread, getThread)
 import Plutus.Trace.Emulator.Types (ContractHandle (..), ContractInstanceState (..), ContractInstanceTag,
                                     EmulatorMessage (ContractInstanceStateRequest, ContractInstanceStateResponse, EndpointCall),
                                     EmulatorRuntimeError (EmulatorJSONDecodingError), EmulatorThreads,
-                                    UserThreadMsg (UserThreadErr))
+                                    UserThreadMsg (UserThreadErr), walletInstanceTag)
 import Plutus.Trace.Scheduler (AgentSystemCall, EmSystemCall, MessageCall (Message), Priority (..), Tag, ThreadId, fork,
                                mkSysCall, sleep)
 import Wallet.Emulator.MultiAgent (EmulatorEvent' (..), MultiAgentEffect, handleMultiAgentEffects)
@@ -77,12 +76,6 @@ type ContractConstraints s =
     , V.Forall (Output s) JSON.FromJSON
     , V.Forall (Output s) JSON.ToJSON
     )
-
--- | The 'ContractInstanceTag' for the contract instance of a wallet. Useful if
---   there is only a single contract instance for this wallet.
---   See note [Wallet contract instances]
-walletInstanceTag :: Wallet -> ContractInstanceTag
-walletInstanceTag (Wallet i) = fromString $ "Contract instance for wallet " <> show i
 
 -- | Run a Plutus contract (client side)
 data RunContract r where

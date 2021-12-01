@@ -1,21 +1,21 @@
 Slot 0: TxnValidate 98d5fbcefe21113b3f0390c1441e075b8a870cc5a8fa2a56dcde1d8247e41715
-Slot 1: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
           Contract instance started
-Slot 1: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
           Receive endpoint call on 'schedule collection' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "schedule collection")]),Object (fromList [("unEndpointValue",Array [])])]),("tag",String "ExposeEndpointResp")])
-Slot 1: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
           Contract log: String "Campaign started. Waiting for campaign deadline to collect funds."
-Slot 1: 00000000-0000-4000-8000-000000000001 {Contract instance for wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58}:
+Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W7ce8}:
           Contract instance started
-Slot 1: 00000000-0000-4000-8000-000000000001 {Contract instance for wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58}:
+Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W7ce8}:
           Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 1.0e7]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
-Slot 1: 00000000-0000-4000-8000-000000000001 {Contract instance for wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58}:
+Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W7ce8}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",10000000)])])"
-Slot 1: 00000000-0000-4000-8000-000000000002 {Contract instance for wallet c30efb78b4e272685c1f9f0c93787fd4b6743154}:
+Slot 1: 00000000-0000-4000-8000-000000000002 {Wallet Wc30e}:
           Contract instance started
-Slot 1: 00000000-0000-4000-8000-000000000002 {Contract instance for wallet c30efb78b4e272685c1f9f0c93787fd4b6743154}:
+Slot 1: 00000000-0000-4000-8000-000000000002 {Wallet Wc30e}:
           Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 1.0e7]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
-Slot 1: 00000000-0000-4000-8000-000000000002 {Contract instance for wallet c30efb78b4e272685c1f9f0c93787fd4b6743154}:
+Slot 1: 00000000-0000-4000-8000-000000000002 {Wallet Wc30e}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",10000000)])])"
 Slot 1: W7ce812d: Balancing an unbalanced transaction:
                     Tx:
@@ -37,13 +37,13 @@ Slot 1: W7ce812d: Balancing an unbalanced transaction:
                     Validity range:
                       (-∞ , POSIXTime 1596059111000 ]
 Slot 1: W7ce812d: Finished balancing. e9628f4a7231fbe76f221ae02309b0d44df8d902154ab1bd93e38a274d52f370
-Slot 1: 00000000-0000-4000-8000-000000000003 {Contract instance for wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8}:
+Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W5f5a}:
           Contract instance started
 Slot 1: W7ce812d: Submitting tx: e9628f4a7231fbe76f221ae02309b0d44df8d902154ab1bd93e38a274d52f370
 Slot 1: W7ce812d: TxSubmit: e9628f4a7231fbe76f221ae02309b0d44df8d902154ab1bd93e38a274d52f370
-Slot 1: 00000000-0000-4000-8000-000000000003 {Contract instance for wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8}:
+Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W5f5a}:
           Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 2500000.0]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
-Slot 1: 00000000-0000-4000-8000-000000000003 {Contract instance for wallet 5f5a4f5f465580a5500b9a9cede7f4e014a37ea8}:
+Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W5f5a}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",2500000)])])"
 Slot 1: Wc30efb7: Balancing an unbalanced transaction:
                     Tx:
@@ -92,7 +92,7 @@ Slot 1: W5f5a4f5: TxSubmit: c351875a8d5d26a87f1cf365f007f8a543040e9d8d182d608223
 Slot 1: TxnValidate c351875a8d5d26a87f1cf365f007f8a543040e9d8d182d608223edd245c5ea9e
 Slot 1: TxnValidate 2f869889c09e76fb2cbfe2a3a0d512bfc86fe515d0cee53ecea4a79d3e695029
 Slot 1: TxnValidate e9628f4a7231fbe76f221ae02309b0d44df8d902154ab1bd93e38a274d52f370
-Slot 20: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
            Contract log: String "Collecting funds"
 Slot 20: W872cb83: Balancing an unbalanced transaction:
                      Tx:
@@ -128,6 +128,6 @@ Slot 20: W872cb83: Balancing an unbalanced transaction:
 Slot 20: W872cb83: Finished balancing. 3a20125dbda70ddc4408207505e362966252b6941ec7eb334ca11f11fc96ac35
 Slot 20: W872cb83: Submitting tx: 3a20125dbda70ddc4408207505e362966252b6941ec7eb334ca11f11fc96ac35
 Slot 20: W872cb83: TxSubmit: 3a20125dbda70ddc4408207505e362966252b6941ec7eb334ca11f11fc96ac35
-Slot 20: 00000000-0000-4000-8000-000000000000 {Contract instance for wallet 872cb83b5ee40eb23bfdab1772660c822a48d491}:
+Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W872c}:
            Contract instance stopped (no errors)
 Slot 20: TxnValidate 3a20125dbda70ddc4408207505e362966252b6941ec7eb334ca11f11fc96ac35

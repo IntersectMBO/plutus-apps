@@ -24,6 +24,7 @@
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
@@ -98,6 +99,13 @@ module Plutus.Contract.Test.ContractModel
     , HandleFun
     -- ** Model properties
     , propSanityCheckModel
+    -- ** Coverage cheking options
+    , CoverageOptions
+    , defaultCoverageOptions
+    , endpointCoverageReq
+    , checkCoverage
+    , coverageIndex
+    , quickCheckWithCoverage
     -- ** Emulator properties
     , propRunActions_
     , propRunActions
@@ -129,15 +137,19 @@ module Plutus.Contract.Test.ContractModel
 
 import Control.Lens
 import Control.Monad.Cont
+import Control.Monad.Freer (Eff, run)
+import Control.Monad.Freer.Extras.Log (LogMessage, logMessageContent)
 import Control.Monad.State (MonadState, State)
 import Control.Monad.State qualified as State
 import Data.Aeson qualified as JSON
 import Data.Foldable
+import Data.IORef
 import Data.List
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Row (Row)
+import Data.Row.Records (labels')
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
@@ -147,14 +159,19 @@ import Ledger.Index
 import Ledger.Slot
 import Ledger.Value (Value, isZero, leq)
 import Plutus.Contract (Contract, ContractInstanceId)
+import Plutus.Contract.Schema (Input)
 import Plutus.Contract.Test
+import Plutus.Contract.Test.Coverage
 import Plutus.Trace.Effects.EmulatorControl (discardWallets)
 import Plutus.Trace.Emulator as Trace (ContractHandle (..), ContractInstanceTag, EmulatorTrace, activateContract,
-                                       freezeContractInstance, walletInstanceTag)
+                                       freezeContractInstance, runEmulatorStream, walletInstanceTag)
+import Plutus.Trace.Emulator.Types (UserThreadMsg (UserThreadErr), unContractInstanceTag)
 import Plutus.V1.Ledger.Scripts
 import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.Coverage
 import PlutusTx.ErrorCodes
 import PlutusTx.Monoid (inv)
+import Streaming qualified as S
 import Test.QuickCheck.DynamicLogic.Monad qualified as DL
 import Test.QuickCheck.DynamicLogic.Quantify (Quantifiable (..), Quantification, arbitraryQ, chooseQ, elementsQ,
                                               exactlyQ, frequencyQ, mapQ, oneofQ, whereQ)
@@ -162,12 +179,14 @@ import Test.QuickCheck.StateModel hiding (Action, Actions, arbitraryAction, init
                                    perform, precondition, shrinkAction, stateAfter)
 import Test.QuickCheck.StateModel qualified as StateModel
 
-import Test.QuickCheck hiding ((.&&.), (.||.))
+import Test.QuickCheck hiding (checkCoverage, (.&&.), (.||.))
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Monadic (PropertyM, monadic)
 import Test.QuickCheck.Monadic qualified as QC
 
 import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
+import Wallet.Emulator.MultiAgent (EmulatorEvent, eteEvent)
+import Wallet.Emulator.Stream (EmulatorErr)
 
 -- | Key-value map where keys and values have three indices that can vary between different elements
 --   of the map. Used to store `ContractHandle`s, which are indexed over observable state, schema,
@@ -229,7 +248,6 @@ instancesForOtherWallets _ IMNil = []
 instancesForOtherWallets w (IMCons _ (WalletContractHandle w' h) m)
   | w /= w'   = chInstanceId h : instancesForOtherWallets w m
   | otherwise = instancesForOtherWallets w m
-
 
 -- | A function returning the `ContractHandle` corresponding to a `ContractInstanceKey`. A
 --   `HandleFun` is provided to the `perform` function to enable calling contract endpoints with
@@ -996,18 +1014,108 @@ instance GetModelState (DL state) where
 -- actions using `arbitraryAction`, or you can use `forAllDL` to generate a `Actions` from a `DL`
 -- scenario.
 
-finalChecks :: CheckOptions -> TracePredicate -> PropertyM (ContractMonad state) a -> PropertyM (ContractMonad state) a
-finalChecks opts predicate prop = do
+-- | Options for controlling coverage checking requirements
+--
+-- * `checkCoverage` tells you whether or not to run the coverage checks at all.
+-- * `endpointCoverageEq instance endpointName` tells us what percentage of tests are required to include
+-- a call to the endpoint `endpointName` in the contract at `instance`.
+-- * `coverIndex` is the coverage index obtained from the `CompiledCodeIn` of the validator.
+data CoverageOptions = CoverageOptions { _checkCoverage       :: Bool
+                                       , _endpointCoverageReq :: ContractInstanceTag -> String -> Double
+                                       , _coverageIndex       :: CoverageIndex
+                                       , _coverageIORef       :: Maybe (IORef CoverageReport)
+                                       }
+
+makeLenses ''CoverageOptions
+
+-- | Default coverage checking options are:
+-- * not to check coverage
+-- * set the requriements for every endpoint to 20% and
+-- * not to cover any source locations in the validator scripts.
+defaultCoverageOptions :: CoverageOptions
+defaultCoverageOptions = CoverageOptions { _checkCoverage = False
+                                         , _endpointCoverageReq = \ _ _ -> 20
+                                         , _coverageIndex = mempty
+                                         , _coverageIORef = Nothing }
+
+-- | Run QuickCheck on a property that tracks coverage and print its coverage report.
+quickCheckWithCoverage :: QC.Testable prop => CoverageOptions -> (CoverageOptions -> prop) -> IO CoverageReport
+quickCheckWithCoverage copts prop = do
+  copts <- case copts ^. coverageIORef of
+    Nothing -> do
+      ref <- newIORef mempty
+      return $ copts { _coverageIORef = Just ref }
+    _ -> return copts
+  QC.quickCheck $ prop $ copts { _checkCoverage = True }
+  case copts ^. coverageIORef of
+    Nothing -> fail "Unreachable case in quickCheckWithCoverage"
+    Just ref -> do
+      report <- readIORef ref
+      putStrLn ""
+      putStrLn . show $ pprCoverageReport (copts ^. coverageIndex) report
+      return report
+
+finalChecks :: CheckOptions
+            -> CoverageOptions
+            -> [ContractInstanceSpec state]
+            -> TracePredicate
+            -> PropertyM (ContractMonad state) a
+            -> PropertyM (ContractMonad state) a
+finalChecks opts copts handleSpecs predicate prop = do
     x  <- prop
     tr <- QC.run State.get
-    x <$ checkPredicateInner opts predicate (void $ runEmulatorAction tr IMNil)
-                             debugOutput assertResult
+    let action = void $ runEmulatorAction tr IMNil
+        stream :: forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
+        stream = fst <$> runEmulatorStream (opts ^. emulatorConfig) action
+        (result, events) = S.streamFold (,[]) run (\ (msg S.:> es) -> (fst es, (msg ^. logMessageContent) : snd es)) stream
+    case result of
+      Just err -> do
+        QC.monitor $ counterexample (show err)
+        QC.assert False
+      _ -> return ()
+    addEndpointCoverage copts handleSpecs events $
+      x <$ checkPredicateInnerStream opts (noMainThreadDumbdums .&&. predicate) (void stream) debugOutput assertResult
     where
         debugOutput :: Monad m => String -> PropertyM m ()
         debugOutput = QC.monitor . whenFail . putStrLn
 
         assertResult :: Monad m => Bool -> PropertyM m ()
         assertResult = QC.assert
+
+        -- don't accept traces where the main thread crashes
+        noMainThreadDumbdums :: TracePredicate
+        noMainThreadDumbdums = assertUserLog $ \ log -> null [ () | UserThreadErr _ <- view eteEvent <$> log ]
+
+-- | Check endpoint coverage
+addEndpointCoverage :: CoverageOptions
+                    -> [ContractInstanceSpec state]
+                    -> [EmulatorEvent]
+                    -> PropertyM (ContractMonad state) a
+                    -> PropertyM (ContractMonad state) a
+addEndpointCoverage copts specs es pm
+  | copts ^. checkCoverage, Just ref <- copts ^. coverageIORef = do
+    x <- pm
+    let -- Endpoint covereage
+        epsToCover = [(contractInstanceSpecTag s, contractInstanceEndpoints s) | s <- specs]
+        epsCovered = getInvokedEndpoints es
+        endpointCovers = [ QC.cover (view endpointCoverageReq copts t e)
+                                    (e `elem` fold (Map.lookup t epsCovered))
+                                    (Text.unpack (unContractInstanceTag t) ++ " at endpoint " ++ e)
+                         | (t, eps) <- epsToCover
+                         , e <- eps ]
+    QC.monitor . foldr (.) id $ endpointCovers
+    QC.monitor $ \ p -> ioProperty $ do
+      modifyIORef ref (getCoverageReport es <>)
+      return p
+    QC.monitor QC.checkCoverage
+    return x
+  | otherwise = pm
+
+contractInstanceEndpoints :: ContractInstanceSpec state -> [String]
+contractInstanceEndpoints (ContractInstanceSpec _ _ (_ :: Contract w schema err ())) = labels' @(Input schema)
+
+contractInstanceSpecTag :: ContractInstanceSpec state -> ContractInstanceTag
+contractInstanceSpecTag (ContractInstanceSpec _ w _) = walletInstanceTag w
 
 activateWallets :: forall state. ContractModel state => [ContractInstanceSpec state] -> EmulatorTrace (Handles state)
 activateWallets [] = return IMNil
@@ -1042,7 +1150,7 @@ propRunActions ::
     -> (ModelState state -> TracePredicate) -- ^ Predicate to check at the end
     -> Actions state                         -- ^ The actions to run
     -> Property
-propRunActions = propRunActionsWithOptions defaultCheckOptions
+propRunActions = propRunActionsWithOptions defaultCheckOptions defaultCoverageOptions
 
 -- | Run a `Actions` in the emulator and check that the model and the emulator agree on the final
 --   wallet balance changes, that no off-chain contract instance crashed, and that the given
@@ -1076,24 +1184,26 @@ propRunActions = propRunActionsWithOptions defaultCheckOptions
 propRunActionsWithOptions ::
     ContractModel state
     => CheckOptions                          -- ^ Emulator options
+    -> CoverageOptions                       -- ^ Coverage options
     -> [ContractInstanceSpec state]          -- ^ Required wallet contract instances
     -> (ModelState state -> TracePredicate)  -- ^ Predicate to check at the end
     -> Actions state                          -- ^ The actions to run
     -> Property
-propRunActionsWithOptions opts handleSpecs predicate actions' =
-  propRunActionsWithOptions' opts handleSpecs predicate (toStateModelActions actions')
+propRunActionsWithOptions opts copts handleSpecs predicate actions' =
+  propRunActionsWithOptions' opts copts handleSpecs predicate (toStateModelActions actions')
 
 propRunActionsWithOptions' ::
     ContractModel state
     => CheckOptions                          -- ^ Emulator options
+    -> CoverageOptions                       -- ^ Coverage options
     -> [ContractInstanceSpec state]          -- ^ Required wallet contract instances
     -> (ModelState state -> TracePredicate)  -- ^ Predicate to check at the end
     -> StateModel.Actions (ModelState state) -- ^ The actions to run
     -> Property
-propRunActionsWithOptions' opts handleSpecs predicate actions =
-    monadic (flip State.evalState mempty) $ finalChecks opts finalPredicate $ do
-        QC.run $ setHandles $ activateWallets handleSpecs
-        void $ runActionsInState StateModel.initialState actions
+propRunActionsWithOptions' opts copts handleSpecs predicate actions =
+    monadic (flip State.evalState mempty) $ finalChecks opts copts handleSpecs finalPredicate $ do
+            QC.run $ setHandles $ activateWallets handleSpecs
+            void $ runActionsInState StateModel.initialState actions
     where
         finalState     = StateModel.stateAfter actions
         finalPredicate = predicate finalState .&&. checkBalances finalState
@@ -1162,7 +1272,7 @@ checkNoLockedFundsProof options spec NoLockedFundsProof{nlfpMainStrategy   = mai
             as'' = toStateModelActions as' in
         foldl (QC..&&.) (counterexample "Main strategy" $ prop as'') [ walletProp as w bal | (w, bal) <- Map.toList (s ^. balanceChanges) ]
     where
-        prop = propRunActionsWithOptions' options spec (\ _ -> pure True)
+        prop = propRunActionsWithOptions' options defaultCoverageOptions spec (\ _ -> pure True)
 
         mainProp as = do
             mapM_ action as
@@ -1230,17 +1340,18 @@ checkErrorWhitelist :: ContractModel m
                     -> Whitelist
                     -> Actions m
                     -> Property
-checkErrorWhitelist = checkErrorWhitelistWithOptions defaultCheckOptions
+checkErrorWhitelist = checkErrorWhitelistWithOptions defaultCheckOptions defaultCoverageOptions
 
 -- | Check that running a contract model does not result in validation
 -- failures that are not accepted by the whitelist.
 checkErrorWhitelistWithOptions :: forall m. ContractModel m
                                => CheckOptions
+                               -> CoverageOptions
                                -> [ContractInstanceSpec m]
                                -> Whitelist
                                -> Actions m
                                -> Property
-checkErrorWhitelistWithOptions opts handleSpecs whitelist acts = property $ go check acts
+checkErrorWhitelistWithOptions opts copts handleSpecs whitelist acts = property $ go check acts
   where
     check :: TracePredicate
     check = checkOnchain .&&. (assertNoFailedTransactions .||. checkOffchain)
@@ -1260,6 +1371,6 @@ checkErrorWhitelistWithOptions opts handleSpecs whitelist acts = property $ go c
     checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _) <- events ]
 
     go :: TracePredicate -> Actions m -> Property
-    go check actions = monadic (flip State.evalState mempty) $ finalChecks opts check $ do
+    go check actions = monadic (flip State.evalState mempty) $ finalChecks opts copts handleSpecs check $ do
                         QC.run $ setHandles $ activateWallets handleSpecs
                         void $ runActionsInState StateModel.initialState (toStateModelActions actions)
