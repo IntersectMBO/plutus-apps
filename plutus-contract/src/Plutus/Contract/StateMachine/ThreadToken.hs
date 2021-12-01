@@ -36,7 +36,7 @@ data ThreadToken = ThreadToken
     { ttOutRef         :: TxOutRef
     , ttCurrencySymbol :: CurrencySymbol
     }
-    deriving stock (Haskell.Eq, Haskell.Show, Generic)
+    deriving stock (Haskell.Eq, Haskell.Show, Haskell.Ord, Generic)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
 
