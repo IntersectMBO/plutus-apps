@@ -6,6 +6,7 @@ module MainFrame.Types
   , WebData
   , WebCompilationResult
   , WebEvaluationResult
+  , FullSimulation
   , SimulatorAction
   , Query
   , HAction(..)
@@ -54,14 +55,11 @@ newtype State
   , editorState :: Editor.State
   , compilationResult :: WebCompilationResult
   , lastSuccessfulCompilationResult :: Maybe CompilationResult
-  , simulations :: Cursor Simulation
+  , simulations :: Cursor FullSimulation
   , actionDrag :: Maybe Int
-  , evaluationResult :: WebEvaluationResult
-  , lastEvaluatedSimulation :: Maybe Simulation
   , authStatus :: WebData AuthStatus
   , createGistResult :: WebData Gist
   , gistUrl :: Maybe String
-  , blockchainVisualisationState :: Chain.State
   }
 
 derive instance newtypeState :: Newtype State _
@@ -97,6 +95,12 @@ type WebCompilationResult
 
 type WebEvaluationResult
   = WebData (Either PlaygroundError EvaluationResult)
+
+type FullSimulation
+  = { simulation :: Simulation
+    , blockchainVisualisationState :: Chain.State
+    , evaluationResult :: WebEvaluationResult
+    }
 
 -- this synonym is defined in playground-common/src/Playground/Types.hs
 type SimulatorAction
