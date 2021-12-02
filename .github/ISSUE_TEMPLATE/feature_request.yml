@@ -12,15 +12,6 @@ body:
       options:
       - label: I have searched the existing issues
         required: true
-  - type: dropdown
-    id: area
-    attributes:
-      label: Area
-      options:
-        - Plutus Application Framework - Related to the Plutus application backend (PAB), emulator, Plutus libraries
-        - Other - Any other topic (Playgrounds, etc.)
-    validations:
-      required: true
   - type: textarea
     id: description
     attributes:
