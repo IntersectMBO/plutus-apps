@@ -12,9 +12,9 @@ pabWebserverConfig:
   endpointTimeout: 5
 
 walletServerConfig:
-  baseUrl: http://localhost:8090
-  wallet:
-    getWallet: 1
+  tag: LocalWalletConfig
+  walletSettings:
+    baseUrl: http://localhost:8090
 
 nodeServerConfig:
   mscSocketPath: testnet/node.sock
