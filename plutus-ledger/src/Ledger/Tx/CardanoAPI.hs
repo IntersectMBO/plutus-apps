@@ -59,7 +59,6 @@ import Cardano.Api.Byron qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.Chain.Common (addrToBase58)
-import Cardano.Ledger.Alonzo.Data qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.Core qualified as Ledger
@@ -429,11 +428,8 @@ toCardanoTxOut networkId datums (P.TxOut addr value datumHash) =
   where
     cardanoDatumHash =
       case flip Map.lookup datums =<< datumHash of
-        Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toScriptData $ P.getDatum datum)
+        Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
         Nothing    -> toCardanoTxOutDatumHash datumHash
-
-toScriptData :: P.BuiltinData -> C.ScriptData
-toScriptData d = C.fromAlonzoData $ Alonzo.Data $ P.builtinDataToData d
 
 fromCardanoAddress :: C.AddressInEra era -> Either FromCardanoError P.Address
 fromCardanoAddress (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress address)) =
