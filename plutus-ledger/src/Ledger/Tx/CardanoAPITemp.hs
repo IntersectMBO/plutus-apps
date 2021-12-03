@@ -8,6 +8,7 @@
 -- until https://github.com/input-output-hk/cardano-node/pull/2936 or something similar gets merged.
 module Ledger.Tx.CardanoAPITemp (makeTransactionBody') where
 
+import Data.List qualified as List
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
@@ -108,11 +109,12 @@ makeTransactionBody'
           ]
 
     scriptdata :: [ScriptData]
-    scriptdata =
-        [ d | (_, AnyScriptWitness
-                    (PlutusScriptWitness
-                       _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
-            ]
+    scriptdata = List.nub $
+      [ d | TxOut _ _ (TxOutDatum ScriptDataInAlonzoEra d) <- txOuts ]
+      ++ [ d | (_, AnyScriptWitness
+                      (PlutusScriptWitness
+                        _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
+              ]
 
     redeemers :: Alonzo.Redeemers StandardAlonzo
     redeemers =
