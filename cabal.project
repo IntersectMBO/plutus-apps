@@ -221,7 +221,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: dda41bc89f93953b63ed0e37ae04c13319e6c87b
+  tag: 55fe3aaf042e514d9483f3cec950e74b4522bcfa
   subdir:
     plutus-core
     plutus-ledger-api

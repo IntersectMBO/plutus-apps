@@ -93,7 +93,7 @@
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
             (hsPkgs."ghc-prim" or (errorHandler.buildDepError "ghc-prim"))
             ];
-          buildable = if flags.use-ghc-stub then false else true;
+          buildable = true;
           modules = [
             "Budget/Lib"
             "Budget/Spec"
