@@ -16,6 +16,8 @@ module Plutus.ChainIndex.Client(
     , getIsUtxo
     , getUtxoSetAtAddress
     , getUtxoSetWithCurrency
+    , getTxs
+    , getTxoSetAtAddress
     , getTip
     , collectGarbage
     ) where
@@ -53,6 +55,8 @@ getTx :: TxId -> ClientM ChainIndexTx
 getIsUtxo :: TxOutRef -> ClientM IsUtxoResponse
 getUtxoSetAtAddress :: UtxoAtAddressRequest -> ClientM UtxosResponse
 getUtxoSetWithCurrency :: UtxoWithCurrencyRequest -> ClientM UtxosResponse
+getTxs :: [TxId] -> ClientM [ChainIndexTx]
+getTxoSetAtAddress :: TxoAtAddressRequest -> ClientM (Page TxOutRef)
 getTip :: ClientM Tip
 
 (healthCheck, (getDatum, getValidator, getMintingPolicy, getStakeValidator, getRedeemer), getTxOut, getTx, getIsUtxo, getUtxoSetAtAddress, getUtxoSetWithCurrency, getTxs, getTxoSetAtAddress, getTip, collectGarbage) =
