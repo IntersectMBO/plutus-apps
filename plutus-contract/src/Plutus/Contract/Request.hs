@@ -39,6 +39,9 @@ module Plutus.Contract.Request(
     , utxosAt
     , utxosTxOutTxAt
     , utxosTxOutTxFromTx
+    , txsFromTxIds
+    , txoRefsAt
+    , txsAt
     , getTip
     -- ** Waiting for changes to the UTXO set
     , fundsAtAddressGt
@@ -461,6 +464,67 @@ utxosTxOutTxFromTx tx =
     mkOutRef txOutRef = do
       ciTxOutM <- txOutFromRef txOutRef
       pure $ ciTxOutM >>= \ciTxOut -> pure (txOutRef, (ciTxOut, tx))
+
+foldTxoRefsAt ::
+    forall w s e a.
+    ( AsContractError e
+    )
+    => (a -> Page TxOutRef -> Contract w s e a)
+    -> a
+    -> Address
+    -> Contract w s e a
+foldTxoRefsAt f ini addr = go ini (Just def)
+  where
+    go acc Nothing = pure acc
+    go acc (Just pq) = do
+      page <- txoRefsAt pq addr
+      newAcc <- f acc page
+      go newAcc (nextPageQuery page)
+
+-- | Get the transactions at an address.
+txsAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Address
+    -> Contract w s e [ChainIndexTx]
+txsAt addr = do
+  foldTxoRefsAt f [] addr
+  where
+    f acc page = do
+      let txoRefs = pageItems page
+      let txIds = txOutRefId <$> txoRefs
+      txs <- txsFromTxIds txIds
+      pure $ acc <> txs
+
+-- | Get the transaction outputs at an address.
+txoRefsAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => PageQuery TxOutRef
+    -> Address
+    -> Contract w s e (Page TxOutRef)
+txoRefsAt pq addr = do
+  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  case cir of
+    E.TxoSetAtResponse r -> pure r
+    _ -> throwError $ review _OtherError
+                    $ Text.pack "Could not request TxoSetAtAddress from the chain index"
+
+-- | Get the transactions for a list of transaction ids.
+txsFromTxIds ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => [TxId]
+    -> Contract w s e [ChainIndexTx]
+txsFromTxIds txid = do
+  cir <- pabReq (ChainIndexQueryReq $ E.TxsFromTxIds txid) E._ChainIndexQueryResp
+  case cir of
+    E.TxIdsResponse r -> pure r
+    _ -> throwError $ review _OtherError
+                    $ Text.pack "Could not request TxsFromTxIds from the chain index"
 
 getTip ::
     forall w s e.
