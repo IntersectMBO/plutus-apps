@@ -216,6 +216,8 @@ chainIndexMatches q r = case (q, r) of
     (UtxoSetMembership{}, UtxoSetMembershipResponse{})       -> True
     (UtxoSetAtAddress{}, UtxoSetAtResponse{})                -> True
     (UtxoSetWithCurrency{}, UtxoSetWithCurrencyResponse{})   -> True
+    (TxsFromTxIds{}, TxIdsResponse{})                        -> True
+    (TxoSetAtAddress{}, TxoSetAtResponse{})                  -> True
     (GetTip{}, GetTipResponse{})                             -> True
     _                                                        -> False
 
