@@ -39,7 +39,7 @@ import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, guard_,
-                      limit_, nub_, select, val_)
+                      in_, limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update, (&&.), (<-.), (<.), (==.),
                             (>.))
@@ -92,6 +92,8 @@ handleQuery = \case
     UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
+    TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
+    TxsFromTxIds txids             -> getTxsFromTxIds txids
     GetTip -> getTip
 
 getTip :: Member BeamEffect effs => Eff effs Tip
@@ -240,6 +242,49 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
           let page = fmap fromDbValue outRefs
 
           pure (UtxosResponse tp page)
+
+getTxsFromTxIds
+  :: forall effs.
+    ( Member (State ChainIndexState) effs
+    , Member BeamEffect effs
+    , Member (LogMsg ChainIndexLog) effs
+    )
+  => [TxId]
+  -> Eff effs [ChainIndexTx]
+getTxsFromTxIds txIds =
+  do
+    let
+      txIds' = toDbValue <$> txIds
+      query =
+        fmap _txRowTx
+          $ filter_ (\row -> _txRowTxId row `in_` fmap val_ txIds')
+          $ all_ (txRows db)
+    txs <- selectList $ select query
+    pure $ fmap fromDbValue txs
+
+getTxoSetAtAddress
+  :: forall effs.
+    ( Member (State ChainIndexState) effs
+    , Member BeamEffect effs
+    , Member (LogMsg ChainIndexLog) effs
+    )
+  => PageQuery TxOutRef
+  -> Credential
+  -> Eff effs (Page TxOutRef)
+getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
+  utxoState <- gets @ChainIndexState UtxoState.utxoState
+  case UtxoState.tip utxoState of
+      TipAtGenesis -> do
+          logWarn TipIsGenesis
+          pure $ Page pageQuery Nothing []
+      tp           -> do
+          let query =
+                fmap _addressRowOutRef
+                  $ filter_ (\row -> _addressRowCred row ==. val_ cred)
+                  $ all_ (addressRows db)
+          txOutRefs <- selectPage (fmap toDbValue pageQuery) query
+          let page = fmap fromDbValue txOutRefs
+          pure page
 
 handleControl ::
     forall effs.

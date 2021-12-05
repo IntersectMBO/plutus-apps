@@ -16,6 +16,8 @@ module Plutus.ChainIndex.Effects(
     , utxoSetMembership
     , utxoSetAtAddress
     , utxoSetWithCurrency
+    , txsFromTxIds
+    , txoSetAtAddress
     , getTip
     -- * Control effect
     , ChainIndexControlEffect(..)
@@ -70,6 +72,12 @@ data ChainIndexQueryEffect r where
     -- Note that requesting unspent outputs containing Ada should not return
     -- anything, as this request will always return all unspent outputs.
     UtxoSetWithCurrency :: PageQuery TxOutRef -> AssetClass -> ChainIndexQueryEffect UtxosResponse
+
+    -- | Get the transactions for a list of tx IDs.
+    TxsFromTxIds :: [TxId] -> ChainIndexQueryEffect [ChainIndexTx]
+
+    -- | Outputs located at addresses with the given credential.
+    TxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (Page TxOutRef)
 
     -- | Get the tip of the chain index
     GetTip :: ChainIndexQueryEffect Tip

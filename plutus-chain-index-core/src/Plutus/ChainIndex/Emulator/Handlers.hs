@@ -149,6 +149,18 @@ handleQuery = \case
                 logWarn TipIsGenesis
                 pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
             tp           -> pure (UtxosResponse tp page)
+    TxsFromTxIds is -> catMaybes <$> mapM getTxFromTxId is
+    TxoSetAtAddress pageQuery cred -> do
+        state <- get
+        let outRefs = view (diskState . addressMap . at cred) state
+            txoRefs = fromMaybe mempty outRefs
+            utxo = view (utxoIndex . to utxoState) state
+            page = pageOf pageQuery txoRefs
+        case tip utxo of
+            TipAtGenesis -> do
+                logWarn TipIsGenesis
+                pure $ pageOf pageQuery Set.empty
+            tp           -> pure page
     GetTip ->
         gets (tip . utxoState . view utxoIndex)
 
