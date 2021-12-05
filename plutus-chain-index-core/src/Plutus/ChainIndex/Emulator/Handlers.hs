@@ -160,7 +160,7 @@ handleQuery = \case
             TipAtGenesis -> do
                 logWarn TipIsGenesis
                 pure $ pageOf pageQuery Set.empty
-            tp           -> pure page
+            _            -> pure page
     GetTip ->
         gets (tip . utxoState . view utxoIndex)
 

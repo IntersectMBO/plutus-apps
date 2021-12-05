@@ -245,9 +245,7 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
 
 getTxsFromTxIds
   :: forall effs.
-    ( Member (State ChainIndexState) effs
-    , Member BeamEffect effs
-    , Member (LogMsg ChainIndexLog) effs
+    ( Member BeamEffect effs
     )
   => [TxId]
   -> Eff effs [ChainIndexTx]
@@ -277,13 +275,13 @@ getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
       TipAtGenesis -> do
           logWarn TipIsGenesis
           pure $ Page pageQuery Nothing []
-      tp           -> do
+      _           -> do
           let query =
                 fmap _addressRowOutRef
                   $ filter_ (\row -> _addressRowCred row ==. val_ cred)
                   $ all_ (addressRows db)
-          txOutRefs <- selectPage (fmap toDbValue pageQuery) query
-          let page = fmap fromDbValue txOutRefs
+          txOutRefs' <- selectPage (fmap toDbValue pageQuery) query
+          let page = fmap fromDbValue txOutRefs'
           pure page
 
 handleControl ::
