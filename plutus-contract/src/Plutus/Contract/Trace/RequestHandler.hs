@@ -232,6 +232,8 @@ handleChainIndexQueries = RequestHandler $ \chainIndexQuery ->
         UtxoSetMembership txOutRef -> UtxoSetMembershipResponse <$> ChainIndexEff.utxoSetMembership txOutRef
         UtxoSetAtAddress pq c      -> UtxoSetAtResponse <$> ChainIndexEff.utxoSetAtAddress pq c
         UtxoSetWithCurrency pq ac  -> UtxoSetWithCurrencyResponse <$> ChainIndexEff.utxoSetWithCurrency pq ac
+        TxsFromTxIds txids         -> TxIdsResponse <$> ChainIndexEff.txsFromTxIds txids
+        TxoSetAtAddress pq c       -> TxoSetAtResponse <$> ChainIndexEff.txoSetAtAddress pq c
         GetTip                     -> GetTipResponse <$> ChainIndexEff.getTip
 
 handleOwnInstanceIdQueries ::
