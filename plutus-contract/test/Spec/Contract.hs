@@ -29,6 +29,7 @@ import Ledger (Address, PubKeyHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
+import Ledger.Scripts (datumHash)
 import Ledger.Tx (getCardanoTxId)
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
@@ -39,6 +40,8 @@ import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog (..), ContractInstanceMsg (..), ContractInstanceState (..),
                                     UserThreadMsg (..))
+import Plutus.V1.Ledger.Scripts (Datum (..), DatumHash)
+import Plutus.V1.Ledger.Tx (TxOut (..))
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
@@ -191,6 +194,24 @@ tests =
           in run "await change in tx status"
             (assertDone theContract tag ((==) (Committed TxValid ())) "should be done")
             (activateContract w1 theContract tag >> void (Trace.waitNSlots 1))
+
+        , let c :: Contract [Maybe DatumHash] Schema ContractError () = do
+                let w2PubKeyHash = walletPubKeyHash w2
+                let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash datum (Ada.adaValueOf 10)
+                tx <- submitTx payment
+                let txOuts = fmap fst $ Ledger.getCardanoTxOutRefs tx
+                -- tell the tx out' datum hash that was specified by 'mustPayWithDatumToPubKey'
+                tell [txOutDatumHash (txOuts !! 1)]
+
+              datum = Datum $ PlutusTx.toBuiltinData (23 :: Integer)
+              isExpectedDatumHash [Just hash] = hash == datumHash datum
+              isExpectedDatumHash _           = False
+
+          in run "mustPayWithDatumToPubKey produces datum in TxOut"
+            ( assertAccumState c tag isExpectedDatumHash "should be done"
+            ) $ do
+              _ <- activateContract w1 c tag
+              void (Trace.waitNSlots 2)
 
         , let c :: Contract [TxOutStatus] Schema ContractError () = do
                 -- Submit a payment tx of 10 lovelace to W2.
