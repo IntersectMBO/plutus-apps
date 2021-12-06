@@ -1,0 +1,15 @@
+version: '3.3'
+services:
+    cardano-node:
+        image: inputoutput/cardano-node:${NODE_TAG}
+        restart: always
+        volumes:
+          - ./configuration/config/:/app/cardano/config/
+          - ./configuration/topology/:/app/cardano/topology/
+          - ./configuration/sockets:/app/cardano/sockets/
+          - ./database:/db
+        command: "run --topology /app/cardano/topology/alonzo-purple-topology.json --config /app/cardano/config/alonzo-purple-config.json --port 3001 --host-addr 0.0.0.0 --database-path /db --socket-path /app/cardano/sockets/node.socket"
+        ports:
+          - 3001
+        environment:
+          - CARDANO_NODE_SOCKET_PATH=/app/cardano/sockets/node.socket
