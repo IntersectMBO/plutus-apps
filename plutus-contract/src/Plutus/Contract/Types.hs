@@ -74,7 +74,7 @@ import Control.Monad.Freer
 import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Error qualified as E
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, handleLogIgnore, handleLogWriter)
-import Control.Monad.Freer.Extras.Modify (raiseEnd, raiseUnderN, writeIntoState)
+import Control.Monad.Freer.Extras.Modify (raiseEnd, raiseUnder, writeIntoState)
 import Control.Monad.Freer.State
 import Control.Monad.Freer.Writer (Writer)
 import Control.Monad.Freer.Writer qualified as W
@@ -282,7 +282,7 @@ runError ::
   forall w s e e0 a.
   Contract w s e a
   -> Contract w s e0 (Either e a)
-runError (Contract r) = Contract (E.runError $ raiseUnderN @'[E.Error e0] r)
+runError (Contract r) = Contract (E.runError $ raiseUnder r)
 
 -- | Handle errors, potentially throwing new errors.
 handleError ::
@@ -291,7 +291,7 @@ handleError ::
   -> Contract w s e a
   -> Contract w s e' a
 handleError f (Contract c) = Contract c' where
-  c' = E.handleError @e (raiseUnderN @'[E.Error e'] c) (fmap unContract f)
+  c' = E.handleError @e (raiseUnder c) (fmap unContract f)
 
 type SuspendedContractEffects w e =
   Error e
