@@ -857,6 +857,8 @@ mkTxContract lookups txc = do
         Left err -> throwError err
         Right r' -> return r'
 
+{-| Arguments and result of a call to 'mkTx'
+-}
 data MkTxLog =
     MkTxLog
         { mkTxLogLookups       :: ScriptLookups Any
@@ -864,7 +866,7 @@ data MkTxLog =
         , mkTxLogResult        :: Either Constraints.MkTxError UnbalancedTx
         }
         deriving stock (Show, Generic)
-        deriving anyclass (ToJSON)
+        deriving anyclass (ToJSON, FromJSON)
 
 -- | Build a transaction that satisfies the constraints
 mkTxConstraints :: forall a w s e.

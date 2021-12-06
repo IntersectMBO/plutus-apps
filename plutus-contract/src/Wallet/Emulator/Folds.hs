@@ -46,6 +46,7 @@ module Wallet.Emulator.Folds (
     , preMapMaybeM
     , preMapMaybe
     , postMapM
+    , mkTxLogs
     ) where
 
 import Control.Applicative ((<|>))
@@ -69,14 +70,15 @@ import Ledger.Tx (Address, Tx, TxOut (txOutValue), TxOutTx (txOutTxOut))
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
+import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Resumable (Request, Response)
 import Plutus.Contract.Resumable qualified as State
 import Plutus.Contract.Types (ResumableResult (_finalState, _observableState, _requests))
 import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventInstanceState, emptyInstanceState,
                                                instContractState, instEvents, instHandlersHistory)
-import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceTag, UserThreadMsg, _HandledRequest,
-                                    cilMessage, cilTag, toInstanceState)
-import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, vsep)
+import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (ContractLog), ContractInstanceTag,
+                                    UserThreadMsg, _HandledRequest, cilMessage, cilTag, toInstanceState)
+import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate, _TxnValidationFail)
 import Wallet.Emulator.LogMessages (_BalancingUnbalancedTx, _ValidationFailed)
@@ -117,6 +119,18 @@ scriptEvents = preMapMaybe (preview (eteEvent . chainEvent) >=> getEvent) (conca
 -- | Unbalanced transactions that are sent to the wallet for balancing
 walletTxBalanceEvents :: EmulatorEventFold [UnbalancedTx]
 walletTxBalanceEvents = preMapMaybe (preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _BalancingUnbalancedTx)) L.list
+
+mkTxLogs :: EmulatorEventFold [MkTxLog]
+mkTxLogs =
+    let getTxLogEvent :: ContractInstanceMsg -> Maybe MkTxLog
+        getTxLogEvent (ContractLog vl) = case JSON.fromJSON vl of
+            JSON.Error _   -> Nothing
+            JSON.Success a -> Just a
+        getTxLogEvent _ = Nothing
+
+        flt :: EmulatorEvent -> Maybe MkTxLog
+        flt = fmap (view (eteEvent . cilMessage)) . traverse (preview instanceEvent) >=> getTxLogEvent
+    in preMapMaybe flt L.list
 
 -- | The state of a contract instance, recovered from the emulator log.
 instanceState ::

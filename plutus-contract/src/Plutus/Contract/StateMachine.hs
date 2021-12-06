@@ -79,12 +79,12 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (TypedScriptTxOut (TypedScriptTxOut, tyTxOutData, tyTxOutTxOut))
 import Ledger.Typed.Tx qualified as Typed
 import Ledger.Value qualified as Value
-import Plutus.Contract.Request (mkTxContract)
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs))
 import Plutus.Contract (AsContractError (_ConstraintResolutionError, _ContractError), Contract, ContractError, Promise,
                         awaitPromise, isSlot, isTime, logWarn, mapError, never, ownPaymentPubKeyHash, promiseBind,
                         select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt, utxosTxOutTxAt,
                         utxosTxOutTxFromTx)
+import Plutus.Contract.Request (mkTxContract)
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
 import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue),
                                              StateMachine (StateMachine, smFinal, smThreadToken, smTransition),
