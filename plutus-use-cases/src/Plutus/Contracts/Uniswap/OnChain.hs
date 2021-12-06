@@ -290,5 +290,5 @@ validateLiquidityMinting Uniswap{..} tn _ ctx
     [_, _] -> True
     _      -> traceError "pool state minting without Uniswap input"
   where
-    lpC :: Coin Liquidity
+    lpC :: Coin PoolState
     lpC = mkCoin (ownCurrencySymbol ctx) tn
