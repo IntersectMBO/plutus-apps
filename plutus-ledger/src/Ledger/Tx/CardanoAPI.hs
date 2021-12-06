@@ -303,6 +303,7 @@ fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
              $ SBS.fromShort bs
    in either (const Nothing) Just script
 
+
 toCardanoTxBody ::
     [Api.PubKeyHash] -- ^ Required signers of the transaction
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
@@ -312,7 +313,7 @@ toCardanoTxBody ::
 toCardanoTxBody sigs protocolParams networkId P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId) txOutputs
+    txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
@@ -419,11 +420,16 @@ fromCardanoTxOut (C.TxOut addr value datumHash) =
     <*> pure (fromCardanoTxOutValue value)
     <*> pure (fromCardanoTxOutDatumHash datumHash)
 
-toCardanoTxOut :: C.NetworkId -> P.TxOut -> Either ToCardanoError (C.TxOut C.CtxTx C.AlonzoEra)
-toCardanoTxOut networkId (P.TxOut addr value datumHash) =
+toCardanoTxOut :: C.NetworkId -> Map P.DatumHash P.Datum -> P.TxOut -> Either ToCardanoError (C.TxOut C.CtxTx C.AlonzoEra)
+toCardanoTxOut networkId datums (P.TxOut addr value datumHash) =
     C.TxOut <$> toCardanoAddress networkId addr
             <*> toCardanoTxOutValue value
-            <*> toCardanoTxOutDatumHash datumHash
+            <*> cardanoDatumHash
+  where
+    cardanoDatumHash =
+      case flip Map.lookup datums =<< datumHash of
+        Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
+        Nothing    -> toCardanoTxOutDatumHash datumHash
 
 fromCardanoAddress :: C.AddressInEra era -> Either FromCardanoError P.Address
 fromCardanoAddress (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress address)) =
