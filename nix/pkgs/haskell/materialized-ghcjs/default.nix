@@ -1343,6 +1343,7 @@
           "tls".components.library.planned = lib.mkOverride 900 true;
           "plutus-playground-server".components.tests."plutus-playground-server-test".planned = lib.mkOverride 900 true;
           "typerep-map".components.library.planned = lib.mkOverride 900 true;
+          "cryptonite".components.setup.planned = lib.mkOverride 900 true;
           "ap-normalize".components.library.planned = lib.mkOverride 900 true;
           "plutus-use-cases".components.tests."plutus-use-cases-test".planned = lib.mkOverride 900 true;
           "scientific".components.library.planned = lib.mkOverride 900 true;
@@ -1383,6 +1384,7 @@
           "plutus-chain-index".components.exes."plutus-chain-index".planned = lib.mkOverride 900 true;
           "wai-websockets".components.library.planned = lib.mkOverride 900 true;
           "hspec-discover".components.exes."hspec-discover".planned = lib.mkOverride 900 true;
+          "cardano-crypto".components.setup.planned = lib.mkOverride 900 true;
           "haskell-lexer".components.library.planned = lib.mkOverride 900 true;
           "singleton-bool".components.library.planned = lib.mkOverride 900 true;
           "splitmix".components.library.planned = lib.mkOverride 900 true;

@@ -167,6 +167,7 @@
         "th-abstraction".revision = (((hackage."th-abstraction")."0.3.2.0").revisions).default;
         "finite-typelits".revision = (((hackage."finite-typelits")."0.1.4.2").revisions).default;
         "servant-openapi3".revision = (((hackage."servant-openapi3")."2.0.1.2").revisions).default;
+        "tasty-kat".revision = (((hackage."tasty-kat")."0.0.3").revisions).default;
         "data-default-instances-containers".revision = (((hackage."data-default-instances-containers")."0.0.1").revisions).default;
         "base16-bytestring".revision = (((hackage."base16-bytestring")."1.0.1.0").revisions).default;
         "regex-base".revision = (((hackage."regex-base")."0.94.0.1").revisions).default;
@@ -193,16 +194,6 @@
         "unbounded-delays".revision = (((hackage."unbounded-delays")."0.1.1.1").revisions).default;
         "doctest".revision = (((hackage."doctest")."0.18.1").revisions).default;
         "asn1-parse".revision = (((hackage."asn1-parse")."0.9.5").revisions).default;
-        "cryptonite".revision = (((hackage."cryptonite")."0.27").revisions).default;
-        "cryptonite".flags.check_alignment = false;
-        "cryptonite".flags.support_sse = false;
-        "cryptonite".flags.old_toolchain_inliner = false;
-        "cryptonite".flags.integer-gmp = true;
-        "cryptonite".flags.use_target_attributes = true;
-        "cryptonite".flags.support_deepseq = true;
-        "cryptonite".flags.support_pclmuldq = false;
-        "cryptonite".flags.support_aesni = true;
-        "cryptonite".flags.support_rdrand = true;
         "parallel".revision = (((hackage."parallel")."3.2.2.0").revisions).default;
         "vector-algorithms".revision = (((hackage."vector-algorithms")."0.8.0.4").revisions).default;
         "vector-algorithms".flags.unsafechecks = false;
@@ -792,6 +783,7 @@
         plutus-chain-index = ./.plan.nix/plutus-chain-index.nix;
         typed-protocols-examples = ./.plan.nix/typed-protocols-examples.nix;
         byron-spec-ledger = ./.plan.nix/byron-spec-ledger.nix;
+        cryptonite = ./.plan.nix/cryptonite.nix;
         plutus-pab = ./.plan.nix/plutus-pab.nix;
         plutus-use-cases = ./.plan.nix/plutus-use-cases.nix;
         ouroboros-consensus = ./.plan.nix/ouroboros-consensus.nix;
@@ -929,6 +921,19 @@
           "plutus-chain-index" = { flags = {}; };
           "typed-protocols-examples" = { flags = {}; };
           "byron-spec-ledger" = { flags = {}; };
+          "cryptonite" = {
+            flags = {
+              "check_alignment" = lib.mkOverride 900 false;
+              "support_sse" = lib.mkOverride 900 false;
+              "old_toolchain_inliner" = lib.mkOverride 900 false;
+              "integer-gmp" = lib.mkOverride 900 true;
+              "use_target_attributes" = lib.mkOverride 900 true;
+              "support_deepseq" = lib.mkOverride 900 true;
+              "support_pclmuldq" = lib.mkOverride 900 false;
+              "support_aesni" = lib.mkOverride 900 true;
+              "support_rdrand" = lib.mkOverride 900 true;
+              };
+            };
           "plutus-pab" = {
             flags = { "defer-plugin-errors" = lib.mkOverride 900 false; };
             };
@@ -1098,6 +1103,7 @@
           "lifted-base".components.library.planned = lib.mkOverride 900 true;
           "lazysmallcheck".components.library.planned = lib.mkOverride 900 true;
           "blaze-builder".components.library.planned = lib.mkOverride 900 true;
+          "tasty-kat".components.library.planned = lib.mkOverride 900 true;
           "http-client-tls".components.library.planned = lib.mkOverride 900 true;
           "shelly".components.library.planned = lib.mkOverride 900 true;
           "base-orphans".components.library.planned = lib.mkOverride 900 true;
@@ -1286,6 +1292,7 @@
           "mwc-random".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-io".components.library.planned = lib.mkOverride 900 true;
           "strict".components.library.planned = lib.mkOverride 900 true;
+          "cryptonite".components.tests."test-cryptonite".planned = lib.mkOverride 900 true;
           "ghci".components.library.planned = lib.mkOverride 900 true;
           "freer-simple".components.exes."freer-examples".planned = lib.mkOverride 900 true;
           "jwt".components.library.planned = lib.mkOverride 900 true;
@@ -1296,6 +1303,7 @@
           "sop-core".components.library.planned = lib.mkOverride 900 true;
           "entropy".components.setup.planned = lib.mkOverride 900 true;
           "comonad".components.library.planned = lib.mkOverride 900 true;
+          "cryptonite".components.benchmarks."bench-cryptonite".planned = lib.mkOverride 900 true;
           "openapi3".components.exes."example".planned = lib.mkOverride 900 true;
           "generic-data".components.setup.planned = lib.mkOverride 900 true;
           "data-fix".components.library.planned = lib.mkOverride 900 true;
@@ -1400,6 +1408,7 @@
           "ghcjs".components.exes."private-ghcjs-unlit".planned = lib.mkOverride 900 true;
           "plutus-playground-server".components.tests."plutus-playground-server-test".planned = lib.mkOverride 900 true;
           "typerep-map".components.library.planned = lib.mkOverride 900 true;
+          "cryptonite".components.setup.planned = lib.mkOverride 900 true;
           "ap-normalize".components.library.planned = lib.mkOverride 900 true;
           "plutus-use-cases".components.tests."plutus-use-cases-test".planned = lib.mkOverride 900 true;
           "scientific".components.library.planned = lib.mkOverride 900 true;
@@ -1443,6 +1452,7 @@
           "plutus-chain-index".components.exes."plutus-chain-index".planned = lib.mkOverride 900 true;
           "wai-websockets".components.library.planned = lib.mkOverride 900 true;
           "hspec-discover".components.exes."hspec-discover".planned = lib.mkOverride 900 true;
+          "cardano-crypto".components.setup.planned = lib.mkOverride 900 true;
           "haskell-lexer".components.library.planned = lib.mkOverride 900 true;
           "singleton-bool".components.library.planned = lib.mkOverride 900 true;
           "splitmix".components.library.planned = lib.mkOverride 900 true;

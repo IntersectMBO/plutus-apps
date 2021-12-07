@@ -10,7 +10,7 @@
   {
     flags = { golden-tests = false; golden-tests-exe = false; };
     package = {
-      specVersion = "1.10";
+      specVersion = "2.0";
       identifier = { name = "cardano-crypto"; version = "1.1.1"; };
       license = "MIT";
       copyright = "2016-2021 IOHK";
@@ -20,8 +20,12 @@
       url = "";
       synopsis = "Cryptography primitives for cardano";
       description = "";
-      buildType = "Simple";
+      buildType = "Custom";
       isLocal = true;
+      setup-depends = [
+        (hsPkgs.buildPackages.base or (pkgs.buildPackages.base or (errorHandler.setupDepError "base")))
+        (hsPkgs.buildPackages.Cabal or (pkgs.buildPackages.Cabal or (errorHandler.setupDepError "Cabal")))
+        ];
       detailLevel = "FullDetails";
       licenseFiles = [ "LICENSE" ];
       dataDir = ".";
@@ -36,6 +40,7 @@
         "jsbits/emscripten/crypto-cbits.post.js"
         "jsbits/emscripten/crypto-wrappers.js"
         "jsbits/emscripten/extern.js"
+        "jsbits/bindings.js"
         ];
       extraTmpFiles = [];
       extraDocFiles = [];
@@ -73,7 +78,7 @@
           "Cardano/Internal/Compat"
           ];
         cSources = [ "cbits/ed25519/ed25519.c" "cbits/encrypted_sign.c" ];
-        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/cardano-crypto.js";
+        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/bindings.js";
         hsSourceDirs = [ "src" ];
         includeDirs = [ "cbits/ed25519" "cbits" ];
         };
@@ -90,8 +95,11 @@
             ] ++ (pkgs.lib).optional (flags.golden-tests-exe) (hsPkgs."inspector" or (errorHandler.buildDepError "inspector"));
           buildable = if flags.golden-tests-exe then true else false;
           modules = [ "Test/Orphans" ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
-          mainPath = [ "GoldenTest.hs" ] ++ [ "" ];
+          mainPath = ([ "GoldenTest.hs" ] ++ [
+            ""
+            ]) ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         };
       tests = {
@@ -116,6 +124,7 @@
             "Test/Cardano/Crypto/Encoding/Seed"
             "Utils"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };
@@ -131,6 +140,7 @@
             ] ++ (pkgs.lib).optional (flags.golden-tests) (hsPkgs."inspector" or (errorHandler.buildDepError "inspector"));
           buildable = if flags.golden-tests then true else false;
           modules = [ "Test/Orphans" ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "GoldenTest.hs" ];
           };
@@ -146,6 +156,7 @@
             (hsPkgs."gauge" or (errorHandler.buildDepError "gauge"))
             ];
           buildable = true;
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "benchs" ];
           };
         };
