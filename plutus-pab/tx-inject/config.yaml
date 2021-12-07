@@ -8,15 +8,17 @@ pabWebserverConfig:
   permissiveCorsPolicy: False
 
 walletServerConfig:
-  baseUrl: http://localhost:9081
-  wallet:
-    getWallet: 1
+  tag: LocalWalletConfig
+  walletSettings:
+    baseUrl: http://localhost:9081
 
 nodeServerConfig:
   mscBaseUrl: http://localhost:9082
   mscSocketPath: /tmp/node-server.sock
   mscKeptBlocks: 100000
-  mscNetworkId: "1097911063"
+  # mscNetworkId: "8"
+  # mscNetworkId: "1097911063"
+  mscNetworkId: "3"
   mscSlotConfig:
     scSlotZeroTime: 1596059091000 # Wednesday, July 29, 2020 21:44:51 - shelley launch time in milliseconds
     scSlotLength: 1000 # In milliseconds

@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Strict            #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
 {-| Misc. types used in this package
@@ -12,6 +13,7 @@ module Plutus.ChainIndex.Types(
     , Tip(..)
     , Point(..)
     , pointsToTip
+    , blockNumber
     , tipAsPoint
     , TxValidity(..)
     , TxStatus
@@ -44,8 +46,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
 import Data.ByteString.Lazy qualified as BSL
 import Data.Default (Default (..))
-import Data.Map (Map)
-import Data.Map qualified as Map
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Monoid (Last (..), Sum (..))
 import Data.OpenApi qualified as OpenApi
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
@@ -104,6 +106,10 @@ instance Pretty Point where
         <>  ", blockId="
         <+> pretty pointBlockId
         <>  ")"
+
+blockNumber :: Tip -> Integer
+blockNumber TipAtGenesis = 0
+blockNumber (Tip _ _ bn) = toInteger bn
 
 tipAsPoint :: Tip -> Point
 tipAsPoint TipAtGenesis = PointAtGenesis
@@ -295,7 +301,11 @@ data TxConfirmedState =
     , validity       :: Last TxValidity
     }
     deriving stock (Eq, Generic, Show)
-    deriving (Semigroup, Monoid) via (GenericSemigroupMonoid TxConfirmedState)
+    deriving (Monoid) via (GenericSemigroupMonoid TxConfirmedState)
+
+instance Semigroup TxConfirmedState where
+    (TxConfirmedState tc ba v) <> (TxConfirmedState tc' ba' v') =
+        TxConfirmedState (tc <> tc') (ba <> ba') (v <> v')
 
 -- | The effect of a transaction (or a number of them) on the tx output set.
 data TxOutBalance =
@@ -332,7 +342,6 @@ data TxUtxoBalance =
         }
         deriving stock (Eq, Show, Generic)
         deriving anyclass (FromJSON, ToJSON, Serialise)
-
 
 makeLenses ''TxUtxoBalance
 
