@@ -116,6 +116,7 @@ let
         contrib/double-conversion-2.0.2.0
         contrib/lzma-0.0.0.3
         contrib/cardano-crypto-07397f
+        contrib/cryptonite-0.29
 
       allow-newer: ghcjs:base16-bytestring
                  , ghcjs:aeson
@@ -128,6 +129,9 @@ let
                  , ghcjs-base:aeson
                  , servant-foreign:lens
                  , servant-client:http-client
+                 -- no idea why ouroboros-consensus-byron restricts to <.28
+                 , ouroboros-consensus-byron:cryptonite
+
       constraints: plutus-tx-plugin +ghcjs-plugin,
                    ghci +ghci
 
