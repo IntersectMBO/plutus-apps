@@ -83,14 +83,18 @@ postBuildHook :: Args -> BuildFlags -> PackageDescription -> LocalBuildInfo -> I
 postBuildHook args flags desc lbi = do
     readBuildTargets silent desc (buildArgs flags) >>= \case
         [BuildTargetComponent (CLibName _)] -> print "OK. Lib" >> buildEMCCLib desc lbi
+        [BuildTargetComponent (CExeName _)] -> print "OK. Exe"
         [BuildTargetComponent (CTestName _)] -> print "OK. Test"
+        [BuildTargetComponent (CBenchName _)] -> print "OK. Bench"
         _ -> print "EEk!"
 
 postConfHook :: Args -> ConfigFlags -> PackageDescription -> LocalBuildInfo -> IO ()
 postConfHook args flags desc lbi = do
     readBuildTargets silent desc (configArgs flags) >>= \case
-        [BuildTargetComponent (CLibName _)] -> print "OK. Lib" >> return ()
+        [BuildTargetComponent (CLibName _)] -> print "OK. Lib"
+        [BuildTargetComponent (CExeName _)] -> print "OK. Exe" >> linkEMCCLib desc lbi
         [BuildTargetComponent (CTestName _)] -> print "OK. Test" >> linkEMCCLib desc lbi
+        [BuildTargetComponent (CBenchName _)] -> print "OK. Bench" >> linkEMCCLib desc lbi
         _ -> print "EEk!"
 
 -- we somehow need to inject the freshly build "emcc/lib.js" into each component.
