@@ -33,6 +33,7 @@ library
         Plutus.ChainIndex.App
         Plutus.ChainIndex.CommandLine
         Plutus.ChainIndex.Config
+        Plutus.ChainIndex.Lib
         Plutus.ChainIndex.Logging
     hs-source-dirs: src
     build-depends:

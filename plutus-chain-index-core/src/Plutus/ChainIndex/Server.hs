@@ -42,7 +42,7 @@ runChainIndexQuery ::
     RunRequirements
     -> Eff '[Error ServerError, ChainIndexQueryEffect, ChainIndexControlEffect] ~> Handler
 runChainIndexQuery runReq action = do
-    (result, _) <- liftIO $ runChainIndexEffects runReq $ runError $ raiseEnd action
+    result <- liftIO $ runChainIndexEffects runReq $ runError $ raiseEnd action
     case result of
         Right (Right a) -> pure a
         Right (Left e) -> E.throwError e

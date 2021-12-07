@@ -12,7 +12,7 @@ import Control.Lens (view)
 import Control.Monad (forM)
 import Control.Monad.Freer (Eff)
 import Control.Monad.Freer.Extras.Beam (BeamEffect)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Tracer (nullTracer)
 import Data.Default (def)
 import Data.Set qualified as S
@@ -21,19 +21,18 @@ import Database.Beam.Sqlite qualified as Sqlite
 import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.SQLite.Simple qualified as Sqlite
 import Generators qualified as Gen
-import Hedgehog (Property, assert, forAll, property, (===))
+import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
 import Ledger (outValue)
 import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), RunRequirements (..), appendBlock, citxOutputs,
                           runChainIndexEffects, txFromTxId, utxoSetMembership, utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (IsUtxoResponse (isUtxo), UtxosResponse (UtxosResponse))
-import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Tx (_ValidTx, citxTxId)
 import Plutus.ChainIndex.Types (BlockProcessOption (..))
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
-import Test.Tasty
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 import Util (utxoSetFromBlockAddrs)
 
@@ -61,17 +60,15 @@ txFromTxIdSpec :: Property
 txFromTxIdSpec = property $ do
   (tip, block@(fstTx:_)) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
   unknownTxId <- forAll Gen.genRandomTxId
-  txs <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
-    Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
-    liftIO $ runChainIndex conn $ do
+  txs <- runChainIndexTest $ do
       appendBlock tip block def
       tx <- txFromTxId (view citxTxId fstTx)
       tx' <- txFromTxId unknownTxId
       pure (tx, tx')
 
   case txs of
-    Right (Just tx, Nothing) -> fstTx === tx
-    _                        -> Hedgehog.assert False
+    (Just tx, Nothing) -> fstTx === tx
+    _                  -> Hedgehog.assert False
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns
@@ -80,16 +77,12 @@ eachTxOutRefAtAddressShouldBeUnspentSpec :: Property
 eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
   ((tip, block), state) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
 
-  result <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
-    Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
-    liftIO $ runChainIndex conn $ do
+  utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
       appendBlock tip block def
       utxoSetFromBlockAddrs block
 
-  case result of
-    Left _           -> Hedgehog.assert False
-    Right utxoGroups -> S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
+  S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns
@@ -104,9 +97,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
              $ flattenValue
              $ view (traverse . citxOutputs . _ValidTx . traverse . outValue) block
 
-  result <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
-    Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
-    liftIO $ runChainIndex conn $ do
+  utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
       appendBlock tip block def
 
@@ -115,9 +106,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
         UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq ac
         pure $ pageItems utxoRefs
 
-  case result of
-    Left _           -> Hedgehog.assert False
-    Right utxoGroups -> S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
+  S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
 
 -- | Requesting UTXOs containing Ada should not return anything because every
 -- transaction output must have a minimum of 1 ADA. So asking for UTXOs with ADA
@@ -126,9 +115,7 @@ cantRequestForTxOutRefsWithAdaSpec :: Property
 cantRequestForTxOutRefsWithAdaSpec = property $ do
   (tip, block) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
 
-  result <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
-    Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
-    liftIO $ runChainIndex conn $ do
+  utxoRefs <- runChainIndexTest $ do
       -- Append the generated block in the chain index
       appendBlock tip block def
 
@@ -136,9 +123,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
       UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq (AssetClass (Ada.adaSymbol, Ada.adaToken))
       pure $ pageItems utxoRefs
 
-  case result of
-    Left _         -> Hedgehog.assert False
-    Right utxoRefs -> Hedgehog.assert $ null utxoRefs
+  Hedgehog.assert $ null utxoRefs
 
 -- | Do not store txs through BlockProcessOption.
 -- The UTxO set must still be stored.
@@ -146,27 +131,32 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
 doNotStoreTxs :: Property
 doNotStoreTxs = property $ do
   ((tip, block), state) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
-  result <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
-    Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
-    liftIO $ runChainIndex conn $ do
+  result <- runChainIndexTest $ do
       appendBlock tip block BlockProcessOption{bpoStoreTxs=False}
       tx <- txFromTxId (view citxTxId (head block))
       utxosFromAddr <- utxoSetFromBlockAddrs block
       utxosStored <- traverse utxoSetMembership (S.toList (view Gen.txgsUtxoSet state))
       pure (tx, concat utxosFromAddr, utxosStored)
   case result of
-    Right (Nothing, [], utxosStored) -> Hedgehog.assert $ and (isUtxo <$> utxosStored)
-    _                                -> Hedgehog.assert False
+    (Nothing, [], utxosStored) -> Hedgehog.assert $ and (isUtxo <$> utxosStored)
+    _                          -> Hedgehog.assert False
 
--- | Run a chain index action against a SQLite connection.
-runChainIndex
-  :: Sqlite.Connection
-  -> Eff '[ ChainIndexQueryEffect
+-- | Run a chain index test against an in-memory SQLite database.
+runChainIndexTest
+  :: (MonadTest m
+      , MonadIO m)
+  => Eff '[ ChainIndexQueryEffect
           , ChainIndexControlEffect
           , BeamEffect
           ] a
-  -> IO (Either ChainIndexError a)
-runChainIndex conn action = do
-  stateTVar <- newTVarIO mempty
-  (r, _) <- runChainIndexEffects (RunRequirements nullTracer stateTVar conn 10) action
-  pure r
+  -> m a
+runChainIndexTest action = do
+  result <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
+    Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
+    stateTVar <- newTVarIO mempty
+    runChainIndexEffects (RunRequirements nullTracer stateTVar conn 10) action
+
+  case result of
+    Left _  -> Hedgehog.failure
+    Right a -> pure a
+

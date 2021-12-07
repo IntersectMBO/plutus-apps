@@ -62,7 +62,7 @@ startNodeClient socket mode slotConfig networkId instancesState = do
       AlonzoNode -> do
         let resumePoints = []
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
-          (\block slot -> handleSyncAction $ processChainSyncEvent env block slot)
+          (\block -> handleSyncAction $ processChainSyncEvent env block)
     pure env
 
 -- | Deal with sync action failures from running this STM action. For now, we
@@ -95,11 +95,11 @@ blockAndSlot BlockchainEnv{beCurrentBlock, beCurrentSlot} =
   (,) <$> STM.readTVar beCurrentSlot <*> STM.readTVar beCurrentBlock
 
 -- | Process a chain sync event that we receive from the alonzo node client
-processChainSyncEvent :: BlockchainEnv -> ChainSyncEvent -> Slot -> STM (Either SyncActionFailure (Slot, BlockNumber))
-processChainSyncEvent blockchainEnv event _slot = do
+processChainSyncEvent :: BlockchainEnv -> ChainSyncEvent -> STM (Either SyncActionFailure (Slot, BlockNumber))
+processChainSyncEvent blockchainEnv event = do
   result <- case event of
               Resume _ -> Right <$> blockAndSlot blockchainEnv
-              RollForward  (BlockInMode (C.Block header transactions) era) _ ->
+              RollForward (BlockInMode (C.Block header transactions) era) _ _ ->
                 case era of
                   -- Unfortunately, we need to pattern match again all eras because
                   -- 'processBlock' has the constraints 'C.IsCardanoEra era', but not

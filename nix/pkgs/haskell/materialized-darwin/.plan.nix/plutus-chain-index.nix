@@ -59,6 +59,7 @@
           "Plutus/ChainIndex/App"
           "Plutus/ChainIndex/CommandLine"
           "Plutus/ChainIndex/Config"
+          "Plutus/ChainIndex/Lib"
           "Plutus/ChainIndex/Logging"
           ];
         hsSourceDirs = [ "src" ];

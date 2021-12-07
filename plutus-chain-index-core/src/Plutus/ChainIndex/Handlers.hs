@@ -281,7 +281,10 @@ handleControl = \case
                 put rolledBackIndex
                 rollbackUtxoDb $ tipAsPoint newTip
                 logDebug $ RollbackSuccess newTip
-    ResumeSync tip_ -> restoreStateFromDb tip_
+    ResumeSync tip_ -> do
+        rollbackUtxoDb tip_
+        newState <- restoreStateFromDb
+        put newState
     CollectGarbage -> do
         -- Rebuild the index using only transactions that still have at
         -- least one output in the UTXO set
@@ -357,21 +360,15 @@ rollbackUtxoDb (Point (toDbValue -> slot) _) = do
     deleteRows $ delete (unspentOutputRows db) (\row -> unTipRowId (_unspentOutputRowTip row) >. val_ slot)
     deleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
 
-restoreStateFromDb ::
-    ( Member (State ChainIndexState) effs
-    , Member BeamEffect effs
-    )
-    => Point
-    -> Eff effs ()
-restoreStateFromDb point = do
-    rollbackUtxoDb point
+restoreStateFromDb :: Member BeamEffect effs => Eff effs ChainIndexState
+restoreStateFromDb = do
     uo <- selectList . select $ all_ (unspentOutputRows db)
     ui <- selectList . select $ all_ (unmatchedInputRows db)
     let balances = Map.fromListWith (<>) $ fmap outputToTxUtxoBalance uo ++ fmap inputToTxUtxoBalance ui
     tips <- selectList . select
         . orderBy_ (asc_ . _tipRowSlot)
         $ all_ (tipRows db)
-    put $ FT.fromList . fmap (toUtxoState balances) $ tips
+    pure $ FT.fromList . fmap (toUtxoState balances) $ tips
     where
         outputToTxUtxoBalance :: UnspentOutputRow -> (Word64, TxUtxoBalance)
         outputToTxUtxoBalance (UnspentOutputRow (TipRowId slot) outRef)
