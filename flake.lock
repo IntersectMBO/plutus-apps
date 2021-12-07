@@ -99,11 +99,11 @@
     "haskell-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1638844144,
-        "narHash": "sha256-ZA+nYo5NN/XJER5mpAss2y5/Oi1SZFj+QSdEXO6E6aY=",
+        "lastModified": 1638846821,
+        "narHash": "sha256-k8GtEv9k0eNA7GSodf1I5xBf2O1bgSCbTIfaDOj8Yo0=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "84cbf21424ffdd0e1c62f5a3aa8cb1696902d85d",
+        "rev": "7a72494377b37c0839201978c49c861215abc00b",
         "type": "github"
       },
       "original": {
