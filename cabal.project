@@ -14,6 +14,7 @@ packages: doc
           web-ghc
 
           contrib/cardano-crypto-07397f
+          contrib/cryptonite-0.29
 
 -- We never, ever, want this.
 write-ghc-environment-files: never
@@ -32,6 +33,7 @@ allow-newer:
            -- Copied from plutus-core
            size-based:template-haskell
            , ouroboros-consensus-byron:formatting
+           , ouroboros-consensus-byron:cryptonite
            , beam-core:aeson
            , beam-sqlite:aeson
            , beam-sqlite:dlist
