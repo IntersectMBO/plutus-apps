@@ -75,7 +75,7 @@ import Ledger (Ada, CurrencySymbol, Interval, MintingPolicy, OnChainTx (Valid), 
                SomeCardanoApiTx (SomeTx), TokenName,
                Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
                TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (txOutValue), TxOutRef (TxOutRef),
-               UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature,
+               UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature',
                mkMintingPolicyScript, pubKeyTxIn, pubKeyTxOut, scriptCurrencySymbol, toPublicKey, txId)
 import Ledger qualified
 import Ledger.CardanoWallet qualified as CW
@@ -92,7 +92,7 @@ import PlutusTx qualified
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx
-signAll tx = foldl' (flip addSignature) tx
+signAll tx = foldl' (flip addSignature') tx
            $ fmap unPaymentPrivateKey knownPaymentPrivateKeys
 
 -- | The parameters for the generators in this module.
