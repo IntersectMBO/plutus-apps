@@ -1,3 +1,4 @@
+cabal-version:       2.0
 Name:                cryptonite
 version:             0.29
 Synopsis:            Cryptography Primitives sink
@@ -32,10 +33,9 @@ Author:              Vincent Hanquez <vincent@snarc.org>
 Maintainer:          vincent@snarc.org
 Category:            Cryptography
 Stability:           experimental
-Build-Type:          Simple
+Build-Type:          Custom
 Homepage:            https://github.com/haskell-crypto/cryptonite
 Bug-reports:         https://github.com/haskell-crypto/cryptonite/issues
-Cabal-Version:       1.18
 tested-with:         GHC==8.8.2, GHC==8.6.5, GHC==8.4.4, GHC==8.2.2, GHC==8.0.2
 extra-doc-files:     README.md CHANGELOG.md
 extra-source-files:  cbits/*.h
@@ -59,6 +59,12 @@ extra-source-files:  cbits/*.h
                      cbits/aes/x86ni_impl.c
                      cbits/cryptonite_hash_prefix.c
                      tests/*.hs
+                     jsbits/bindings.js
+
+custom-setup
+  setup-depends:
+    base  >= 4.5,
+    Cabal >= 2.4
 
 source-repository head
   type: git
@@ -390,7 +396,8 @@ Library
     Other-modules:  Crypto.Random.Entropy.Unix
 
   if os(ghcjs)
-    js-sources: jsbits/cryptonite.js
+    js-sources: jsbits/bindings.js
+    extra-bundled-libraries: EMCCcryptonite EMCCcryptonite.exported
 
   if impl(ghc) && flag(integer-gmp)
     Build-depends:   integer-gmp
@@ -473,6 +480,10 @@ Test-Suite test-cryptonite
                    , cryptonite
   ghc-options:       -Wall -fno-warn-orphans -fno-warn-missing-signatures -rtsopts
   default-language:  Haskell2010
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 Benchmark bench-cryptonite
   type:              exitcode-stdio-1.0
@@ -488,3 +499,7 @@ Benchmark bench-cryptonite
                    , cryptonite
   ghc-options:       -Wall -fno-warn-missing-signatures
   default-language:  Haskell2010
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js

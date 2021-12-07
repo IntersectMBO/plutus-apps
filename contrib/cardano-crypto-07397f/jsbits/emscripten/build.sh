@@ -8,6 +8,13 @@ set -euo pipefail
 #  ln -s ../cryptonite/cbits cryptonite
 #  ln -s ../cardano-crypto/cbits cardano-crypto
 
+cd ../..
+mkdir -p dist/build
+cd dist/build
+emcc -c -I../../cbits -I../../cbits/ed25519 ../../cbits/encrypted_sign.c
+emcc -c -I../../cbits -I../../cbits/ed25519 ../../cbits/ed25519/ed25519.c
+emar -r libEMCCcardano-crypto.js_a *.o
+cd ../../jsbits/emscripten
 
 emcc -o crypto-cbits.js -s WASM=0 \
   -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
@@ -18,11 +25,7 @@ emcc -o crypto-cbits.js -s WASM=0 \
                          ,'_wallet_encrypted_derive_public', '_wallet_encrypted_derive_private', '_wallet_encrypted_derive_public'\
                          ,'_wallet_encrypted_sign', '_wallet_encrypted_from_secret', '_wallet_encrypted_change_pass'\
                          ,'_wallet_encrypted_new_from_mkg']" \
-  -I. -I../../cbits \
-  -I../../cbits/ \
-  -I../../cbits/ed25519 \
-  ../../cbits/encrypted_sign.c \
-  ../../cbits/ed25519/ed25519.c \
+  ../../dist/build/libEMCCcardano-crypto.js_a \
   --js-library extern.js
 
 closure-compiler --js=crypto-cbits.js --js_output_file=crypto-cbits.min.js

@@ -1,3 +1,4 @@
+cabal-version:       2.0
 name:                cardano-crypto
 version:             1.1.1
 synopsis:            Cryptography primitives for cardano
@@ -9,7 +10,7 @@ author:              Vincent Hanquez
 maintainer:          contact@typed.io
 copyright:           2016-2021 IOHK
 category:            Crypto
-build-type:          Simple
+build-type:          Custom
 extra-source-files:  README.md
                      cbits/*.h
                      cbits/ed25519/*.h
@@ -19,7 +20,11 @@ extra-source-files:  README.md
                      jsbits/emscripten/crypto-cbits.post.js
                      jsbits/emscripten/crypto-wrappers.js
                      jsbits/emscripten/extern.js
-cabal-version:       >=1.10
+                     jsbits/bindings.js
+custom-setup
+  setup-depends:
+    base  >= 4.5,
+    Cabal >= 2.4
 
 flag golden-tests
   description:       compile the golden tests and run them
@@ -68,7 +73,8 @@ library
   if impl(ghc >= 8.6)
     default-extensions: NoStarIsType
   if os(ghcjs)
-    js-sources: jsbits/cardano-crypto.js
+    js-sources: jsbits/bindings.js
+    extra-bundled-libraries: EMCCcardano-crypto EMCCcardano-crypto.exported
 
 test-suite cardano-crypto-test
   type:                exitcode-stdio-1.0
@@ -91,6 +97,10 @@ test-suite cardano-crypto-test
                      , foundation
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 test-suite cardano-crypto-golden-tests
   type:                exitcode-stdio-1.0
@@ -112,6 +122,10 @@ test-suite cardano-crypto-golden-tests
     buildable:         True
   else
     buildable:         False
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 executable golden-tests
   hs-source-dirs:      test
@@ -133,6 +147,11 @@ executable golden-tests
   default-extensions:  NoImplicitPrelude
   default-language:    Haskell2010
 
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
+
 benchmark cardano-crypto-bench
   type:                exitcode-stdio-1.0
   hs-source-dirs:      benchs
@@ -145,6 +164,11 @@ benchmark cardano-crypto-bench
                      , gauge
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
+
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 source-repository head
   type:     git
