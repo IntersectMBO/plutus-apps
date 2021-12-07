@@ -62,7 +62,7 @@ See an update proposal submitted to the chain and follow along as we go through 
 1. Submitting a transaction containing a pre-built Plutus script.
 
 [Exercise 3](./3_Alonzo-purple-exercise-3.md)
-[(Model Solution)](Alonzo-solutions/exercise3/e3SampleSolution.md)
+[(Model Solution)](./solutions/exercise3/e3SampleSolution.md)
 
 ## Exercise 4: Compiling and Submitting Simple Plutus Scripts
 
@@ -73,7 +73,7 @@ See an update proposal submitted to the chain and follow along as we go through 
 4. Determining what effect your Plutus transactions have had on the blockchain.
 
 [Exercise 4](./4_Alonzo-purple-exercise-4.md)
-[(Model Solution)](Alonzo-solutions/exercise4/Exercise4-solution.md)
+[(Model Solution)](./solutions/exercise4/Exercise4-solution.md)
 
 ## Exercise 5: Managing Native Tokens
 
