@@ -17,6 +17,7 @@ module Ledger.CardanoWallet(
     knownWallets,
     knownWallet,
     fromSeed,
+    fromSeed',
     -- ** Keys
     privateKey,
     pubKeyHash,
@@ -68,10 +69,10 @@ newtype WalletNumber = WalletNumber { getWallet :: Integer }
     deriving anyclass (FromJSON, ToJSON)
 
 fromWalletNumber :: WalletNumber -> MockWallet
-fromWalletNumber (WalletNumber i) = fromSeed (BSL.toStrict $ serialise i)
+fromWalletNumber (WalletNumber i) = fromSeed' (BSL.toStrict $ serialise i)
 
-fromSeed :: BS.ByteString -> MockWallet
-fromSeed bs = MockWallet{mwWalletId, mwKey} where
+fromSeed :: BS.ByteString -> Crypto.Passphrase -> MockWallet
+fromSeed bs passPhrase = MockWallet{mwWalletId, mwKey} where
     missing = max 0 (32 - BS.length bs)
     bs' = bs <> BS.replicate missing 0
     mwWalletId = CW.WalletId
@@ -81,7 +82,21 @@ fromSeed bs = MockWallet{mwWalletId, mwKey} where
         $ getLedgerBytes
         $ getPubKey
         $ Crypto.toPublicKey k
-    k = Crypto.generateFromSeed bs'
+    k = Crypto.generateFromSeed bs' passPhrase
+    mwKey = MockPrivateKey k
+
+fromSeed' :: BS.ByteString -> MockWallet
+fromSeed' bs = MockWallet{mwWalletId, mwKey} where
+    missing = max 0 (32 - BS.length bs)
+    bs' = bs <> BS.replicate missing 0
+    mwWalletId = CW.WalletId
+        $ fromMaybe (error "Ledger.CardanoWallet.fromSeed: digestFromByteString")
+        $ Crypto.digestFromByteString
+        $ Crypto.hashWith Crypto.Blake2b_160
+        $ getLedgerBytes
+        $ getPubKey
+        $ Crypto.toPublicKey k
+    k = Crypto.generateFromSeed' bs'
     mwKey = MockPrivateKey k
 
 toWalletNumber :: MockWallet -> WalletNumber

@@ -27,7 +27,7 @@ import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts (validatorAddress)
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
-import Plutus.Contract.Oracle (Observation, SignedMessage, signObservation)
+import Plutus.Contract.Oracle (Observation, SignedMessage, signObservation')
 import Plutus.Contract.Test
 import Plutus.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..), SC (..), SCAction (..),
                                     Stablecoin (..), StablecoinError, StablecoinSchema)
@@ -63,7 +63,7 @@ coin = Stablecoin
     }
 
 signConversionRate :: POSIXTime -> ConversionRate -> SignedMessage (Observation ConversionRate)
-signConversionRate startTime rate = signObservation startTime rate oraclePrivateKey
+signConversionRate startTime rate = signObservation' startTime rate oraclePrivateKey
 
 stablecoinAddress :: Address
 stablecoinAddress = validatorAddress $ Stablecoin.typedValidator coin

@@ -83,7 +83,7 @@ import PlutusTx qualified
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx
-signAll tx = foldl' (flip addSignature) tx knownPrivateKeys
+signAll tx = foldl' (\ctx pk -> addSignature' pk ctx) tx knownPrivateKeys
 
 -- | The parameters for the generators in this module.
 data GeneratorModel = GeneratorModel {

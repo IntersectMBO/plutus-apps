@@ -203,7 +203,7 @@ settleEarly hdl = do
     void $ Trace.waitNSlots 1
 
 mkSignedMessage :: POSIXTime -> Value -> SignedMessage (Observation Value)
-mkSignedMessage time vl = Oracle.signObservation time vl (fst oracleKeys)
+mkSignedMessage time vl = Oracle.signObservation' time vl (fst oracleKeys)
 
 testAccounts :: FutureAccounts
 testAccounts =

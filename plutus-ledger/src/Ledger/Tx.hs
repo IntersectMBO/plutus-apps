@@ -30,6 +30,7 @@ module Ledger.Tx
     , SomeCardanoApiTx(..)
     -- * Transactions
     , addSignature
+    , addSignature'
     , pubKeyTxOut
     , scriptTxOut
     , scriptTxOut'
@@ -54,7 +55,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Address (pubKeyAddress, scriptAddress)
-import Ledger.Crypto (PrivateKey, PubKey, signTx, toPublicKey)
+import Ledger.Crypto (Passphrase, PrivateKey, PubKey, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Scripts (datumHash)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
@@ -184,10 +185,16 @@ scriptTxOut v vs = scriptTxOut' v (scriptAddress vs)
 pubKeyTxOut :: Value -> PubKey -> TxOut
 pubKeyTxOut v pk = TxOut (pubKeyAddress pk) v Nothing
 
--- | Sign the transaction with a 'PrivateKey' and add the signature to the
+-- | Sign the transaction with a 'PrivateKey' and passphrase (ByteString) and add the signature to the
 --   transaction's list of signatures.
-addSignature :: PrivateKey -> Tx -> Tx
-addSignature privK tx = tx & signatures . at pubK ?~ sig where
-    sig = signTx (txId tx) privK
+addSignature :: PrivateKey -> Passphrase -> Tx -> Tx
+addSignature privK passPhrase tx = tx & signatures . at pubK ?~ sig where
+    sig = signTx (txId tx) privK passPhrase
     pubK = toPublicKey privK
 
+-- | Sign the transaction with a 'PrivateKey' that has no passphrase and add the signature to the
+--   transaction's list of signatures
+addSignature' :: PrivateKey -> Tx -> Tx
+addSignature' privK tx = tx & signatures . at pubK ?~ sig where
+    sig = signTx' (txId tx) privK
+    pubK = toPublicKey privK

@@ -27,6 +27,9 @@ module Plutus.Contract.Oracle(
   -- * Signing messages
   , signMessage
   , signObservation
+  -- * Signing messages with no passphrase
+  , signMessage'
+  , signObservation'
   ) where
 
 import Data.Aeson (FromJSON, ToJSON)
@@ -37,7 +40,7 @@ import PlutusTx.Prelude
 
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Crypto (PrivateKey, PubKey (..), Signature (..))
+import Ledger.Crypto (Passphrase, PrivateKey, PubKey (..), Signature (..))
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts (Datum (..), DatumHash (..))
 import Ledger.Scripts qualified as Scripts
@@ -196,11 +199,11 @@ verifySignedMessageOffChain pk s@SignedMessage{osmSignature, osmMessageHash} =
 
 -- | Encode a message of type @a@ as a @Data@ value and sign the
 --   hash of the datum.
-signMessage :: ToData a => a -> PrivateKey -> SignedMessage a
-signMessage msg pk =
+signMessage :: ToData a => a -> PrivateKey -> Passphrase -> SignedMessage a
+signMessage msg pk pass =
   let dt = Datum (toBuiltinData msg)
       DatumHash msgHash = Scripts.datumHash dt
-      sig     = Crypto.sign msgHash pk
+      sig     = Crypto.sign msgHash pk pass
   in SignedMessage
         { osmSignature = sig
         , osmMessageHash = DatumHash msgHash
@@ -208,8 +211,25 @@ signMessage msg pk =
         }
 
 -- | Encode an observation of a value of type @a@ that was made at the given time
-signObservation :: ToData a => POSIXTime -> a -> PrivateKey -> SignedMessage (Observation a)
+signObservation :: ToData a => POSIXTime -> a -> PrivateKey -> Passphrase -> SignedMessage (Observation a)
 signObservation time vl = signMessage Observation{obsValue=vl, obsTime=time}
+
+-- | Encode a message of type @a@ as a @Data@ value and sign the
+--   hash of the datum.
+signMessage' :: ToData a => a -> PrivateKey -> SignedMessage a
+signMessage' msg pk =
+  let dt = Datum (toBuiltinData msg)
+      DatumHash msgHash = Scripts.datumHash dt
+      sig     = Crypto.sign' msgHash pk
+  in SignedMessage
+        { osmSignature = sig
+        , osmMessageHash = DatumHash msgHash
+        , osmDatum = dt
+        }
+
+-- | Encode an observation of a value of type @a@ that was made at the given time
+signObservation' :: ToData a => POSIXTime -> a -> PrivateKey -> SignedMessage (Observation a)
+signObservation' time vl = signMessage' Observation{obsValue=vl, obsTime=time}
 
 makeLift ''SignedMessage
 makeIsDataIndexed ''SignedMessage [('SignedMessage,0)]
