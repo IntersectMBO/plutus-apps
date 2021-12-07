@@ -24,6 +24,7 @@
 // EMCC:EXPORTED_FUNCTIONS  _cryptonite_ed25519_sign
 // EMCC:EXPORTED_FUNCTIONS  _cryptonite_ed25519_publickey
 // EMCC:EXPORTED_FUNCTIONS  _cryptonite_ed25519_point_add
+// EMCC:EXPORTED_FUNCTIONS  _cryptonite_aes_cpu_init
 
 
 function h$logWrapper(x) {
@@ -480,6 +481,11 @@ function h$cryptonite_poly1305_finalize(mac8_d, mac8_o, ctx_d, ctx_o) {
       mac8_ptr = h$getTmpBuffer(1, h$poly1305_mac_size);
   _cryptonite_poly1305_finalize(mac8_ptr, ctx_ptr);
   h$copyFromHeap(mac8_ptr, mac8_d, mac8_o, h$poly1305_mac_size);
+}
+
+function h$cryptonite_aes_cpu_init() {
+  h$ret1 = _cryptonite_aes_cpu_init();
+  return HEAPU8;
 }
 
 // temporary fixes
