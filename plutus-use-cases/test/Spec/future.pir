@@ -467,7 +467,8 @@
                 )
               )
               (vardecl
-                MustSatisfyAnyOf (fun [ List TxConstraint ] TxConstraint)
+                MustSatisfyAnyOf
+                (fun [ List [ List TxConstraint ] ] TxConstraint)
               )
               (vardecl
                 MustSpendAtLeast

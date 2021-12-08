@@ -5636,7 +5636,7 @@
                         )
                         (vardecl
                           MustSatisfyAnyOf
-                          (fun [ List TxConstraint ] TxConstraint)
+                          (fun [ List [ List TxConstraint ] ] TxConstraint)
                         )
                         (vardecl
                           MustSpendAtLeast
@@ -10799,7 +10799,7 @@
                                         ]
                                         (lam
                                           xs
-                                          [ List TxConstraint ]
+                                          [ List [ List TxConstraint ] ]
                                           {
                                             [
                                               [
@@ -10817,24 +10817,49 @@
                                                                 Bool
                                                               ]
                                                             }
-                                                            TxConstraint
+                                                            [
+                                                              List TxConstraint
+                                                            ]
                                                           }
                                                           [
                                                             { fMonoidSum Bool }
                                                             fAdditiveMonoidBool
                                                           ]
                                                         ]
-                                                        (lam
-                                                          w
-                                                          TxConstraint
+                                                        [
                                                           [
+                                                            {
+                                                              {
+                                                                fFoldableNil_cfoldMap
+                                                                [
+                                                                  (lam
+                                                                    a (type) a
+                                                                  )
+                                                                  Bool
+                                                                ]
+                                                              }
+                                                              TxConstraint
+                                                            }
                                                             [
-                                                              wcheckTxConstraint
-                                                              ww
+                                                              {
+                                                                fMonoidProduct
+                                                                Bool
+                                                              }
+                                                              fMultiplicativeMonoidBool
                                                             ]
-                                                            w
                                                           ]
-                                                        )
+                                                          (lam
+                                                            w
+                                                            TxConstraint
+                                                            [
+                                                              [
+                                                                wcheckTxConstraint
+                                                                ww
+                                                              ]
+                                                              w
+                                                            ]
+                                                          )
+                                                        ]
                                                       ]
                                                       xs
                                                     ]

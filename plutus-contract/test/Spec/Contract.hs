@@ -300,6 +300,13 @@ tests =
                 void $ Trace.assert "Always fails" $ const False
                 void $ Trace.waitNSlots 10
           in checkEmulatorFails "assert throws error" (defaultCheckOptions & minLogLevel .~ Debug) (waitingForSlot theContract tag 10) emTrace
+
+        , let c :: Contract () Schema ContractError () = do
+                let payment = Constraints.mustSatisfyAnyOf [mempty]
+                void $ submitTx payment
+          in run "mustSatisfyAnyOf [mempty] works"
+            ( assertDone c tag (const True) "should be done"
+            ) $ (void $ activateContract w1 c tag)
         ]
 
 checkpointContract :: Contract () Schema ContractError ()

@@ -113,7 +113,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         $ V.findDatum dvh scriptContextTxInfo == Just dv
     MustSatisfyAnyOf xs ->
         traceIfFalse "Ld" -- "MustSatisfyAnyOf"
-        $ any (checkTxConstraint ctx) xs
+        $ any (all (checkTxConstraint ctx)) xs
 
 {-# INLINABLE checkScriptContext #-}
 -- | Does the 'ScriptContext' satisfy the constraints?

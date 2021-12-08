@@ -25,8 +25,8 @@ import Prettyprinter (Pretty (pretty, prettyList), hang, viaShow, vsep, (<+>))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude (Bool (False, True), Foldable (foldMap), Functor (fmap), Integer, JoinSemiLattice ((\/)),
-                         Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concatMap, foldl, mapMaybe, not,
-                         null, ($), (.), (>>=), (||))
+                         Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concat, foldl, map, mapMaybe,
+                         not, null, ($), (.), (>>=), (||))
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Interval qualified as I
@@ -51,7 +51,7 @@ data TxConstraint =
     | MustPayToPubKey PubKeyHash (Maybe Datum) Value
     | MustPayToOtherScript ValidatorHash Datum Value
     | MustHashDatum DatumHash Datum
-    | MustSatisfyAnyOf [TxConstraint]
+    | MustSatisfyAnyOf [[TxConstraint]]
     deriving stock (Haskell.Show, Generic, Haskell.Eq)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -255,7 +255,7 @@ mustHashDatum dvh = singleton . MustHashDatum dvh
 
 {-# INLINABLE mustSatisfyAnyOf #-}
 mustSatisfyAnyOf :: forall i o. [TxConstraints i o] -> TxConstraints i o
-mustSatisfyAnyOf = singleton . MustSatisfyAnyOf . concatMap txConstraints
+mustSatisfyAnyOf = singleton . MustSatisfyAnyOf . map txConstraints
 
 {-# INLINABLE isSatisfiable #-}
 -- | Are the constraints satisfiable?
@@ -317,7 +317,7 @@ modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
             MustMintValue{}             -> True
             MustPayToPubKey _ _ vl      -> not (isZero vl)
             MustPayToOtherScript _ _ vl -> not (isZero vl)
-            MustSatisfyAnyOf xs         -> any requiresInputOutput xs
+            MustSatisfyAnyOf xs         -> any requiresInputOutput $ concat xs
             _                           -> False
     in any requiresInputOutput txConstraints
         || not (null txOwnOutputs)

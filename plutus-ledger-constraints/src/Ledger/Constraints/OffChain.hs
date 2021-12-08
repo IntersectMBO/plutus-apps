@@ -616,6 +616,6 @@ processConstraint = \case
         s <- get
         let tryNext [] =
                 throwError CannotSatisfyAny
-            tryNext (h:q) = do
-                processConstraint h `catchError` \_ -> put s >> tryNext q
+            tryNext (hs:qs) = do
+                (traverse_ processConstraint hs) `catchError` \_ -> put s >> tryNext qs
         tryNext xs
