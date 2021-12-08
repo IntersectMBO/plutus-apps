@@ -19,7 +19,7 @@ import Distribution.Simple.Program.Db (lookupKnownProgram, lookupProgram, knownP
 import Distribution.Simple.Program (Program, gccProgram, arProgram, runDbProgram, simpleProgram, ghcProgram)
 import Distribution.Simple.Utils (createDirectoryIfMissingVerbose)
 import Distribution.Types.HookedBuildInfo
-import Data.List (isPrefixOf, intercalate)
+import Data.List (isPrefixOf, isSuffixOf, intercalate)
 import System.Environment (getArgs, getProgName)
 
 
