@@ -485,7 +485,7 @@ function h$cryptonite_poly1305_finalize(mac8_d, mac8_o, ctx_d, ctx_o) {
 
 function h$cryptonite_aes_cpu_init() {
   h$ret1 = _cryptonite_aes_cpu_init();
-  return { dv: new DataView(HEAPU8.buffer) };
+  return { dv: new DataView(HEAPU8.buffer), u8: HEAPU8 };
 }
 
 // temporary fixes
