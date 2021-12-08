@@ -1,5 +1,6 @@
 
-// EMCC:EXPORTED_FUNCTIONS  _foundation_rngV1_generate
+// EMCC:EXPORTED_FUNCTIONS _malloc _free
+// EMCC:EXPORTED_FUNCTIONS _foundation_rngV1_generate
 
 function h$foundation_sysrandom_linux(buf_d, buf_o, size) {
     return -19; // ENODEV; foundation returns the same for non-linux hosts.
