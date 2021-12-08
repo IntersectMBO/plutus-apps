@@ -5,6 +5,7 @@ import Distribution.Types.PackageDescription
 import Distribution.Types.LocalBuildInfo
 import Distribution.Simple.PackageIndex
 import Distribution.Types.InstalledPackageInfo hiding (includeDirs)
+import qualified Distribution.Types.InstalledPackageInfo as IPI
 import Distribution.Types.PackageName
 import System.FilePath
 import Control.Monad (filterM, forM_, forM)
@@ -34,12 +35,13 @@ buildEMCCLib desc lbi = do
     --
     case library desc of
         Just lib -> do
+            let depIncludeDirs = concatMap IPI.includeDirs (topologicalOrder $ installedPkgs lbi)
             -- alright, let's compile all .c files into .o files with emcc, which is the `gcc` program.
             forM_ (cSources . libBuildInfo $ lib) $ \src -> do
                 let dst = (buildDir lbi) </> "emcc" </> (src -<.> "o")
                 createDirectoryIfMissingVerbose verbosity True (takeDirectory dst)
                 runDbProgram verbosity gccProgram (withPrograms lbi) $
-                    ["-c", src, "-o", dst] ++ ["-I" <> incDir | incDir <- (includeDirs . libBuildInfo $ lib)]
+                    ["-c", src, "-o", dst] ++ ["-I" <> incDir | incDir <- (includeDirs . libBuildInfo $ lib) ++ depIncludeDirs]
 
             -- and now construct a canonical `.js_a` file.
             let dstLib = (buildDir lbi) </> "libEMCC" <> (unPackageName . pkgName . package $ desc) <> ".js_a"
