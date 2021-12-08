@@ -8,6 +8,7 @@
 -- across to the test suite.
 module Plutus.PAB.Arbitrary where
 
+import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
@@ -29,7 +30,7 @@ import Plutus.Contract.StateMachine (ThreadToken)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
-import Test.QuickCheck (Gen, oneof)
+import Test.QuickCheck (Gen, Positive (..), oneof, sized)
 import Test.QuickCheck.Arbitrary.Generic (Arbitrary, arbitrary, genericArbitrary, genericShrink, shrink)
 import Test.QuickCheck.Instances ()
 import Wallet (WalletAPIError)
@@ -156,7 +157,49 @@ instance Arbitrary ThreadToken where
     shrink = genericShrink
 
 instance Arbitrary PlutusTx.Data where
-    arbitrary = genericArbitrary
+    arbitrary = sized arbitraryData
+      where
+        arbitraryData :: Int -> Gen PlutusTx.Data
+        arbitraryData n =
+            oneof [ arbitraryConstr n
+                  , arbitraryMap n
+                  , arbitraryList n
+                  , arbitraryI
+                  , arbitraryB
+                  ]
+
+        arbitraryConstr n = do
+          (n', m) <- segmentRange (n - 1)
+          (Positive ix) <- arbitrary
+          args <- replicateM m (arbitraryData n')
+          pure $ PlutusTx.Constr ix args
+
+        arbitraryMap n = do
+           -- NOTE: A pair always has at least 2 constructors/nodes so we divide by 2
+          (n', m) <- segmentRange ((n - 1) `div` 2)
+          PlutusTx.Map <$> replicateM m (arbitraryPair $ n')
+
+        arbitraryPair n = do
+          (,) <$> arbitraryData half <*> arbitraryData half
+          where
+            half = n `div` 2
+
+        arbitraryList n = do
+          (n', m) <- segmentRange (n - 1)
+          PlutusTx.List <$> replicateM m (arbitraryData n')
+
+        arbitraryI =
+          PlutusTx.I <$> arbitrary
+
+        arbitraryB =
+          PlutusTx.B <$> arbitrary
+
+        -- Used to break the sized generator up more or less evenly
+        segmentRange n = do
+          (Positive m) <- arbitrary
+          let n' = n `div` (m + 1) -- Prevent division by 0
+          pure (n', if n' > 0 then m else 0) -- Prevent segments of 0
+
     shrink = genericShrink
 
 instance Arbitrary PlutusTx.BuiltinData where
