@@ -20,8 +20,12 @@
       url = "";
       synopsis = "Collection of smart contracts to develop the plutus/wallet interface";
       description = "Collection of smart contracts to develop the plutus/wallet interface.";
-      buildType = "Simple";
+      buildType = "Custom";
       isLocal = true;
+      setup-depends = [
+        (hsPkgs.buildPackages.base or (pkgs.buildPackages.base or (errorHandler.setupDepError "base")))
+        (hsPkgs.buildPackages.Cabal or (pkgs.buildPackages.Cabal or (errorHandler.setupDepError "Cabal")))
+        ];
       detailLevel = "FullDetails";
       licenseFiles = [ "LICENSE" "NOTICE" ];
       dataDir = ".";
@@ -156,8 +160,9 @@
             "Spec/TokenAccount"
             "Spec/Vesting"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "scripts" "test" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         };
       tests = {
@@ -211,6 +216,7 @@
             "Spec/TokenAccount"
             "Spec/Vesting"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };

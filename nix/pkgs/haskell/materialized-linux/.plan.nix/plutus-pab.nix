@@ -20,8 +20,12 @@
       url = "";
       synopsis = "";
       description = "Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>";
-      buildType = "Simple";
+      buildType = "Custom";
       isLocal = true;
+      setup-depends = [
+        (hsPkgs.buildPackages.base or (pkgs.buildPackages.base or (errorHandler.setupDepError "base")))
+        (hsPkgs.buildPackages.Cabal or (pkgs.buildPackages.Cabal or (errorHandler.setupDepError "Cabal")))
+        ];
       detailLevel = "FullDetails";
       licenseFiles = [ "LICENSE" "NOTICE" ];
       dataDir = ".";
@@ -211,8 +215,9 @@
             ];
           buildable = true;
           modules = [ "CommandParser" ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "app" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         "plutus-pab-examples" = {
           depends = [
@@ -242,8 +247,9 @@
             "ContractExample/WaitForTx"
             "ContractExample"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "examples" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         "plutus-uniswap" = {
           depends = [
@@ -262,8 +268,9 @@
             (hsPkgs."openapi3" or (errorHandler.buildDepError "openapi3"))
             ];
           buildable = true;
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "examples/uniswap" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         "plutus-pab-test-psgenerator" = {
           depends = [
@@ -308,8 +315,11 @@
             "Plutus/PAB/Effects/Contract/ContractTest"
             "Plutus/PAB/Simulator/Test"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test-psgenerator" "test/full" "examples" ];
-          mainPath = [ "TestPSGenerator.hs" ];
+          mainPath = [
+            "TestPSGenerator.hs"
+            ] ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         "tx-inject" = {
           depends = [
@@ -334,10 +344,11 @@
             ];
           buildable = true;
           modules = [ "TxInject/RandomTx" ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "tx-inject" ];
-          mainPath = [
+          mainPath = ([
             "Main.hs"
-            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
+            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "") ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         "sync-client" = {
           depends = [
@@ -353,10 +364,11 @@
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             ];
           buildable = true;
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "sync-client" ];
-          mainPath = [
+          mainPath = ([
             "Main.hs"
-            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
+            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "") ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         };
       tests = {
@@ -400,6 +412,7 @@
             "Cardano/Wallet/ServerSpec"
             "Control/Concurrent/STM/ExtrasSpec"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test/light" ];
           mainPath = [ "Spec.hs" ];
           };
@@ -459,6 +472,7 @@
             "Plutus/PAB/Effects/Contract/ContractTest"
             "Plutus/PAB/Simulator/Test"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test/full" "examples" ];
           mainPath = [ "Spec.hs" ];
           };
@@ -514,6 +528,7 @@
             "Plutus/PAB/Effects/Contract/ContractTest"
             "Plutus/PAB/Simulator/Test"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test/full" "examples" ];
           mainPath = [ "SpecLongRunning.hs" ];
           };
