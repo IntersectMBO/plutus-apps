@@ -51,6 +51,7 @@ module Plutus.Contract.Test(
     , waitingForSlot
     , valueAtAddress
     , dataAtAddress
+    , outputsAtAddress
     , reasonable
     , reasonable'
     -- * Checking predicates
@@ -355,6 +356,27 @@ dataAtAddress address check =
           tell @(Doc Void) ("Data at address" <+> pretty address <+> "was"
               <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxo)
       pure result
+
+-- | Get a pair of a given type 'd' datum and the corresponding value out of a Transaction Output.
+getTxOuts :: forall d. (FromData d) => Ledger.TxOutTx -> Maybe (Either Ledger.DatumHash d, Value)
+getTxOuts (Ledger.TxOutTx _ (Ledger.TxOut _ _ Nothing)) = Nothing
+getTxOuts (Ledger.TxOutTx tx' (Ledger.TxOut _ vl (Just datumHash))) = Just $
+    case Ledger.lookupDatum tx' datumHash >>= (Ledger.getDatum >>> fromBuiltinData @d) of
+        Just dt -> (Right dt, vl)
+        _       -> (Left datumHash, vl)
+
+-- | Check the list of outputs at an address meet some conditions.
+outputsAtAddress :: forall d. FromData d => Address -> ([(Either Ledger.DatumHash d, Value)] -> Bool) -> TracePredicate
+outputsAtAddress address check =
+  flip postMapM (L.generalize $ Folds.utxoAtAddress address) $ \utxo -> do
+    let outputs = mapMaybe (getTxOuts @d) (snd <$> M.toList utxo)
+        result = check outputs
+    unless result $ do
+      tell @(Doc Void)
+        ( "Outputs at address" <+> pretty address <+> "were"
+            <+> foldMap (pretty . Ledger.txOutTxOut) utxo
+        )
+    pure result
 
 waitingForSlot
     :: forall w s e a.
