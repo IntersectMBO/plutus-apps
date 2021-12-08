@@ -135,24 +135,24 @@ library
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 test-suite plutus-ledger-test
+    import: lang
     type: exitcode-stdio-1.0
     main-is: Spec.hs
     hs-source-dirs: test
     default-language: Haskell2010
     default-extensions: ImportQualifiedPost
+    other-modules:
+        Ledger.Tx.CardanoAPISpec
     build-depends:
+        aeson -any,
         base >=4.9 && <5,
+        bytestring -any,
+        cardano-api -any,
+        cardano-api:gen -any,
         containers -any,
-        data-default -any,
         hedgehog -any,
+        plutus-ledger -any,
+        plutus-tx -any,
         tasty -any,
         tasty-hedgehog -any,
         tasty-hunit -any,
-        transformers -any,
-        plutus-ledger -any,
-        plutus-tx -any,
-        lens -any,
-        bytestring -any,
-        aeson -any,
-        plutus-core -any,
-        plutus-tx-plugin -any

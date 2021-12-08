@@ -43,7 +43,8 @@ module Ledger.Generators(
     genTokenName,
     splitVal,
     validateMockchain,
-    signAll
+    signAll,
+    knownPaymentPublicKeys
     ) where
 
 import Cardano.Api qualified as C
@@ -51,7 +52,7 @@ import Control.Monad (replicateM)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.Trans.Writer (runWriter)
-import Data.Bifunctor (Bifunctor (..))
+import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS
 import Data.Default (Default (def))
 import Data.Foldable (fold, foldl')
@@ -68,11 +69,19 @@ import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger
+import Ledger (Ada, CurrencySymbol, Interval, MintingPolicy, OnChainTx (Valid), POSIXTime (POSIXTime, getPOSIXTime),
+               POSIXTimeRange, PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey),
+               RedeemerPtr (RedeemerPtr), ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange,
+               SomeCardanoApiTx (SomeTx), TokenName,
+               Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
+               TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (txOutValue), TxOutRef (TxOutRef),
+               UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature,
+               mkMintingPolicyScript, pubKeyTxIn, pubKeyTxOut, scriptCurrencySymbol, toPublicKey, txId)
+import Ledger qualified
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Fee (FeeConfig (fcScriptsFeeFactor), calcFees)
 import Ledger.Index qualified as Index
-import Ledger.TimeSlot (SlotConfig (..))
+import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Ada qualified as Ada
@@ -83,13 +92,14 @@ import PlutusTx qualified
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx
-signAll tx = foldl' (flip addSignature) tx knownPrivateKeys
+signAll tx = foldl' (flip addSignature) tx
+           $ fmap unPaymentPrivateKey knownPaymentPrivateKeys
 
 -- | The parameters for the generators in this module.
 data GeneratorModel = GeneratorModel {
-    gmInitialBalance :: Map PubKey Value,
+    gmInitialBalance :: Map PaymentPubKey Value,
     -- ^ Value created at the beginning of the blockchain.
-    gmPubKeys        :: Set PubKey
+    gmPubKeys        :: Set PaymentPubKey
     -- ^ Public keys that are to be used for generating transactions.
     } deriving Show
 
@@ -97,7 +107,7 @@ data GeneratorModel = GeneratorModel {
 generatorModel :: GeneratorModel
 generatorModel =
     let vl = Ada.lovelaceValueOf 100_000_000
-        pubKeys = toPublicKey <$> knownPrivateKeys
+        pubKeys = knownPaymentPublicKeys
 
     in
     GeneratorModel
@@ -152,7 +162,7 @@ genInitialTransaction ::
     -> (Tx, [TxOut])
 genInitialTransaction GeneratorModel{..} =
     let
-        o = (uncurry $ flip pubKeyTxOut) <$> Map.toList gmInitialBalance
+        o = fmap (\f -> f Nothing) $ (uncurry $ flip pubKeyTxOut) <$> Map.toList gmInitialBalance
         t = fold gmInitialBalance
     in (mempty {
         txOutputs = o,
@@ -224,7 +234,7 @@ genValidTransactionSpending' g feeCfg ins totalVal = do
                     Ada.toValue outValForMint <> mv : fmap Ada.toValue (List.delete outValForMint splitOutVals)
             let tx = mempty
                         { txInputs = ins
-                        , txOutputs = uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
+                        , txOutputs = fmap (\f -> f Nothing) $ uncurry pubKeyTxOut <$> zip outVals (Set.toList $ gmPubKeys g)
                         , txMint = maybe mempty id mintValue
                         , txMintScripts = Set.singleton alwaysSucceedPolicy
                         , txRedeemers = Map.singleton (RedeemerPtr Mint 0) Script.unitRedeemer
@@ -286,7 +296,7 @@ genSomeCardanoApiTx = Gen.choice [ genByronEraInCardanoModeTx
                                  , genAlonzoEraInCardanoModeTx
                                  ]
 
-genByronEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
+genByronEraInCardanoModeTx :: (GenBase m ~ Identity, MonadGen m) => m SomeCardanoApiTx
 genByronEraInCardanoModeTx = do
   tx <- fromGenT $ Gen.genTx C.ByronEra
   pure $ SomeTx tx C.ByronEraInCardanoMode
@@ -425,5 +435,9 @@ genMintingPolicyContext chain = do
     purpose <- genScriptPurposeMinting txInfo
     pure $ ScriptContext txInfo purpose
 
-knownPrivateKeys :: [PrivateKey]
-knownPrivateKeys = CW.privateKey <$> CW.knownWallets
+knownPaymentPublicKeys :: [PaymentPubKey]
+knownPaymentPublicKeys =
+    PaymentPubKey . toPublicKey . unPaymentPrivateKey <$> knownPaymentPrivateKeys
+
+knownPaymentPrivateKeys :: [PaymentPrivateKey]
+knownPaymentPrivateKeys = CW.paymentPrivateKey <$> CW.knownMockWallets

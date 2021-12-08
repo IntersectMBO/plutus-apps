@@ -19,9 +19,9 @@ module Plutus.Contracts.Prism.StateMachine(
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
+import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
-import Ledger.Crypto (PubKeyHash)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient (..), Void)
@@ -47,7 +47,7 @@ data IDAction =
 -- | A 'Credential' issued to a user (public key address)
 data UserCredential =
     UserCredential
-        { ucAddress    :: PubKeyHash
+        { ucAddress    :: PaymentPubKeyHash
         -- ^ Address of the credential holder
         , ucCredential ::  Credential
         -- ^ The credential
@@ -100,7 +100,7 @@ machineClient inst credentialData =
     let machine = credentialStateMachine credentialData
     in StateMachine.mkStateMachineClient (StateMachine.StateMachineInstance machine inst)
 
-mkMachineClient :: CredentialAuthority -> PubKeyHash -> TokenName -> StateMachineClient IDState IDAction
+mkMachineClient :: CredentialAuthority -> PaymentPubKeyHash -> TokenName -> StateMachineClient IDState IDAction
 mkMachineClient authority credentialOwner tokenName =
     let credential = Credential{credAuthority=authority,credName=tokenName}
         userCredential =

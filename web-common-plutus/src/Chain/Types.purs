@@ -12,6 +12,7 @@ import Data.Map (Map)
 import Data.Newtype (class Newtype)
 import Type.Proxy (Proxy(..))
 import Data.Set (Set)
+import Ledger.Address (PaymentPubKeyHash(..))
 import Plutus.V1.Ledger.Address (Address(..))
 import Plutus.V1.Ledger.Credential (Credential(..))
 import Plutus.V1.Ledger.Crypto (PubKey, Signature)
@@ -127,7 +128,7 @@ toBeneficialOwner (TxOut { txOutAddress }) =
     Address { addressCredential } = txOutAddress
   in
     case addressCredential of
-      PubKeyCredential pkh -> OwnedByPubKey pkh
+      PubKeyCredential pkh -> OwnedByPaymentPubKey $ PaymentPubKeyHash { unPaymentPubKeyHash: pkh }
       ScriptCredential vh -> OwnedByScript vh
 
 _findTx :: forall m. Monoid m => TxId -> Fold' m AnnotatedBlockchain AnnotatedTx

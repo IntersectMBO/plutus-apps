@@ -5,50 +5,34 @@
 {-# LANGUAGE NumericUnderscores #-}
 module Main(main) where
 
-import Control.Lens
-import Control.Monad (forM_, guard, replicateM, void)
-import Control.Monad.Trans.Except (runExcept)
+import Control.Monad (forM_)
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Internal qualified as Aeson
-import Data.ByteString qualified as BSS
 import Data.ByteString.Lazy qualified as BSL
-import Data.Default (Default (def))
-import Data.Either (isLeft, isRight)
-import Data.Foldable (fold, foldl', traverse_)
 import Data.List (sort)
 import Data.Map qualified as Map
 import Data.Maybe (fromJust)
-import Data.Monoid (Sum (..))
-import Data.Set qualified as Set
 import Data.String (IsString (fromString))
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger
+import Ledger (DiffMilliSeconds (DiffMilliSeconds), Interval (Interval), LowerBound (LowerBound), Slot (Slot),
+               UpperBound (UpperBound), fromMilliSeconds, interval)
+import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Bytes as Bytes
-import Ledger.Contexts qualified as Validation
-import Ledger.Crypto qualified as Crypto
 import Ledger.Fee (FeeConfig (..), calcFees)
 import Ledger.Generators qualified as Gen
-import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
-import Ledger.Scripts qualified as Scripts
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
-import Ledger.Value (CurrencySymbol, Value (Value))
+import Ledger.Tx.CardanoAPISpec qualified
 import Ledger.Value qualified as Value
-import PlutusCore.Default qualified as PLC
-import PlutusTx (CompiledCode, applyCode, liftCode)
-import PlutusTx qualified
-import PlutusTx.AssocMap qualified as AMap
-import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude qualified as PlutusTx
-import Test.Tasty hiding (after)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Hedgehog (testProperty)
@@ -114,7 +98,8 @@ tests = testGroup "all tests" [
         ],
     testGroup "SomeCardanoApiTx" [
         testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
-        ]
+        ],
+    Ledger.Tx.CardanoAPISpec.tests
     ]
 
 initialTxnValid :: Property
@@ -178,7 +163,7 @@ intvlContains :: Property
 intvlContains = property $ do
     -- generate two intervals from a sorted list of ints
     -- the outer interval contains the inner interval
-    ints <- forAll $ traverse (const $ Gen.integral (fromIntegral <$> Range.linearBounded @Int)) [1..4]
+    ints <- forAll $ traverse (const $ Gen.integral (fromIntegral <$> Range.linearBounded @Int)) [(1::Integer)..4]
     let [i1, i2, i3, i4] = Slot <$> sort ints
         outer = Interval.interval i1 i4
         inner = Interval.interval i2 i3
@@ -230,7 +215,7 @@ currencySymbolIsStringShow = property $ do
     let cs' = fromString (show cs)
     Hedgehog.assert $ cs' == cs
 
--- byteStringJson :: (Eq a, JSON.FromJSON a) => BSL.ByteString -> a -> [TestCase]
+byteStringJson :: (Show a, Eq a, JSON.ToJSON a, JSON.FromJSON a) => BSL.ByteString -> a -> [TestTree]
 byteStringJson jsonString value =
     [ testCase "decoding" $
         HUnit.assertEqual "Simple Decode" (Right value) (JSON.eitherDecode jsonString)
@@ -254,7 +239,7 @@ calcFeesTest = property $ do
 initialSlotToTimeProp :: Property
 initialSlotToTimeProp = property $ do
     sc <- forAll Gen.genSlotConfig
-    n <- forAll $ Gen.int (fromInteger <$> Range.linear 0 (fromIntegral $ scSlotLength sc))
+    n <- forAll $ Gen.int (fromInteger <$> Range.linear 0 (scSlotLength sc))
     let diff = DiffMilliSeconds $ toInteger n
     let time = TimeSlot.scSlotZeroTime sc + fromMilliSeconds diff
     if diff >= fromIntegral (scSlotLength sc)

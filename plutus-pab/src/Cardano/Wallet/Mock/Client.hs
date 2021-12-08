@@ -8,39 +8,39 @@
 module Cardano.Wallet.Mock.Client where
 
 import Cardano.Wallet.Mock.API (API)
-import Cardano.Wallet.Mock.Types (WalletInfo (wiPubKeyHash))
+import Cardano.Wallet.Mock.Types (WalletInfo (wiPaymentPubKeyHash))
 import Control.Monad (void)
 import Control.Monad.Freer (Eff, LastMember, Member, sendM, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Proxy (Proxy (Proxy))
-import Ledger (PubKeyHash, Value)
+import Ledger (PaymentPubKeyHash, Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Tx (CardanoTx, Tx)
 import Servant ((:<|>) ((:<|>)))
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
-import Wallet.Effects (WalletEffect (BalanceTx, OwnPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
+import Wallet.Effects (WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Wallet (Wallet (Wallet, getWalletId), WalletId)
 
 createWallet :: ClientM WalletInfo
 submitTxn :: Wallet -> Tx -> ClientM ()
-ownPublicKey :: Wallet -> ClientM WalletInfo
+ownPaymentPublicKey :: Wallet -> ClientM WalletInfo
 balanceTx :: Wallet -> UnbalancedTx -> ClientM (Either WalletAPIError Tx)
 totalFunds :: Wallet -> ClientM Value
 sign :: Wallet -> Tx -> ClientM Tx
-(createWallet, submitTxn, ownPublicKey, balanceTx, totalFunds, sign) =
+(createWallet, submitTxn, ownPaymentPublicKey, balanceTx, totalFunds, sign) =
   ( createWallet_
   , \(Wallet wid) tx -> void (submitTxn_ wid tx)
-  , ownPublicKey_ . getWalletId
+  , ownPaymentPublicKey_ . getWalletId
   , balanceTx_ . getWalletId
   , totalFunds_ . getWalletId
   , sign_ . getWalletId)
   where
     ( createWallet_
       :<|> (submitTxn_
-      :<|> ownPublicKey_
+      :<|> ownPaymentPublicKey_
       :<|> balanceTx_
       :<|> totalFunds_
       :<|> sign_)) = client (Proxy @(API WalletId))
@@ -66,8 +66,8 @@ handleWalletClient wallet event = do
         submitTxnH (Left _) = error "Cardano.Wallet.Mock.Client: Expecting a mock tx, not an Alonzo tx when submitting it."
         submitTxnH (Right tx) = runClient (submitTxn wallet tx)
 
-        ownPubKeyHashH :: Eff effs PubKeyHash
-        ownPubKeyHashH = wiPubKeyHash <$> runClient (ownPublicKey wallet)
+        ownPaymentPubKeyHashH :: Eff effs PaymentPubKeyHash
+        ownPaymentPubKeyHashH = wiPaymentPubKeyHash <$> runClient (ownPaymentPublicKey wallet)
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = runClient (fmap (fmap Right) $ balanceTx wallet utx)
@@ -88,7 +88,7 @@ handleWalletClient wallet event = do
 
     case event of
         SubmitTxn tx          -> submitTxnH tx
-        OwnPubKeyHash         -> ownPubKeyHashH
+        OwnPaymentPubKeyHash  -> ownPaymentPubKeyHashH
         BalanceTx utx         -> balanceTxH utx
         WalletAddSignature tx -> walletAddSignatureH tx
         TotalFunds            -> totalFundsH

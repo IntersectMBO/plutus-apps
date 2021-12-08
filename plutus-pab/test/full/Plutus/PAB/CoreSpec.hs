@@ -43,8 +43,8 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
-import Ledger (PubKeyHash, getCardanoTxId, getCardanoTxOutRefs, pubKeyAddress, pubKeyHash, pubKeyHashAddress,
-               toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs, txOutputs)
+import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxId, getCardanoTxOutRefs, pubKeyAddress, pubKeyHash,
+               pubKeyHashAddress, toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs, txOutputs)
 import Ledger qualified
 import Ledger.Ada (adaSymbol, adaToken, lovelaceValueOf)
 import Ledger.Ada qualified as Ada
@@ -75,7 +75,7 @@ import PlutusTx.Monoid (Group (inv))
 import Test.QuickCheck.Instances.UUID ()
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
-import Wallet.API (WalletAPIError, ownPubKeyHash)
+import Wallet.API (WalletAPIError, ownPaymentPubKeyHash)
 import Wallet.API qualified as WAPI
 import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
@@ -102,8 +102,8 @@ runScenario sim = do
 defaultWallet :: Wallet
 defaultWallet = knownWallet 1
 
-defaultWalletPubKeyHash :: PubKeyHash
-defaultWalletPubKeyHash = CW.pubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 1)
+defaultWalletPaymentPubKeyHash :: PaymentPubKeyHash
+defaultWalletPaymentPubKeyHash = CW.paymentPubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 1)
 
 activateContractTests :: TestTree
 activateContractTests =
@@ -182,7 +182,7 @@ waitForTxStatusChangeTest = runScenario $ do
   -- for a status change.
   (w1, pk1) <- Simulator.addWallet
   Simulator.waitNSlots 1
-  tx <- Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 100_000_000)
+  tx <- Simulator.payToPaymentPublicKeyHash w1 pk1 (lovelaceValueOf 100_000_000)
   txStatus <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 1"
               (TentativelyConfirmed 1 TxValid ())
@@ -190,7 +190,7 @@ waitForTxStatusChangeTest = runScenario $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  void $ Simulator.payToPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+  void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
   Simulator.waitNSlots 1
   txStatus' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 2"
@@ -200,7 +200,7 @@ waitForTxStatusChangeTest = runScenario $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ (n - 1) $ do
-    void $ Simulator.payToPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
     Simulator.waitNSlots 1
 
   txStatus'' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
@@ -218,12 +218,18 @@ waitForTxOutStatusChangeTest = runScenario $ do
   Simulator.waitNSlots 1
   (w2, pk2) <- Simulator.addWallet
   Simulator.waitNSlots 1
-  tx <- Simulator.payToPublicKeyHash w1 pk2 (lovelaceValueOf 100_000_000)
+  tx <- Simulator.payToPaymentPublicKeyHash w1 pk2 (lovelaceValueOf 100_000_000)
   -- We should have 2 UTxOs present.
   -- We find the 'TxOutRef' from wallet 1
-  let txOutRef1 = head $ fmap snd $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just pk1) $ getCardanoTxOutRefs tx
+  let txOutRef1 = head
+                $ fmap snd
+                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk1))
+                $ getCardanoTxOutRefs tx
   -- We find the 'TxOutRef' from wallet 2
-  let txOutRef2 = head $ fmap snd $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just pk2) $ getCardanoTxOutRefs tx
+  let txOutRef2 = head
+                $ fmap snd
+                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
+                $ getCardanoTxOutRefs tx
   txOutStatus1 <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
               (TentativelyConfirmed 1 TxValid Unspent)
@@ -235,7 +241,7 @@ waitForTxOutStatusChangeTest = runScenario $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  tx2 <- Simulator.payToPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+  tx2 <- Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
   Simulator.waitNSlots 1
   txOutStatus1' <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
@@ -249,7 +255,7 @@ waitForTxOutStatusChangeTest = runScenario $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ n $ do
-    void $ Simulator.payToPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
+    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
     Simulator.waitNSlots 1
 
   txOutStatus1'' <- Simulator.waitForTxOutStatusChange txOutRef1
@@ -270,9 +276,9 @@ valueAtTest = runScenario $ do
     initialValue <- Core.valueAt defaultWallet
 
     let mockWallet = knownWallet 2
-        mockWalletPubKeyHash = CW.pubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 2)
+        mockWalletPubKeyHash = CW.paymentPubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 2)
 
-    tx <- Simulator.payToPublicKeyHash defaultWallet mockWalletPubKeyHash payment
+    tx <- Simulator.payToPaymentPublicKeyHash defaultWallet mockWalletPubKeyHash payment
     -- Waiting for the tx to be confirmed
     void $ Core.waitForTxStatusChange $ getCardanoTxId tx
     finalValue <- Core.valueAt defaultWallet
@@ -326,7 +332,8 @@ guessingGameTest =
               let openingBalance = 100_000_000_000
                   lockAmount = 15_000_000
                   pubKeyHashFundsChange cid msg delta = do
-                        address <- pubKeyHashAddress <$> Simulator.handleAgentThread defaultWallet (Just cid) ownPubKeyHash
+                        address <- pubKeyHashAddress <$> Simulator.handleAgentThread defaultWallet (Just cid) ownPaymentPubKeyHash
+                                                     <*> pure Nothing
                         balance <- Simulator.valueAt address
                         fees <- Simulator.walletFees defaultWallet
                         assertEqual msg

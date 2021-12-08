@@ -55,14 +55,14 @@ credential :: Credential
 credential =
     Credential
         { credName = kyc
-        , credAuthority = CredentialAuthority (walletPubKeyHash mirror)
+        , credAuthority = CredentialAuthority (mockWalletPaymentPubKeyHash mirror)
         }
 
 stoSubscriber :: STOSubscriber
 stoSubscriber =
     STOSubscriber
         { wCredential = credential
-        , wSTOIssuer = walletPubKeyHash issuer
+        , wSTOIssuer = mockWalletPaymentPubKeyHash issuer
         , wSTOTokenName = sto
         , wSTOAmount = numTokens
         }
@@ -70,7 +70,7 @@ stoSubscriber =
 stoData :: STOData
 stoData =
     STOData
-        { stoIssuer = walletPubKeyHash issuer
+        { stoIssuer = mockWalletPaymentPubKeyHash issuer
         , stoTokenName = sto
         , stoCredentialToken = Credential.token credential
         }

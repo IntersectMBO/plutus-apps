@@ -15,7 +15,7 @@ module Plutus.Contracts.Swap(
     swapValidator
     ) where
 
-import Ledger (POSIXTime, PubKey, PubKeyHash, Validator)
+import Ledger (POSIXTime, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
 import Ledger qualified
 import Ledger.Ada (Ada)
 import Ledger.Ada qualified as Ada
@@ -44,7 +44,7 @@ data Swap = Swap
     , swapFixedRate       :: !Rational -- ^ Interest rate fixed at the beginning of the contract
     , swapFloatingRate    :: !Rational -- ^ Interest rate whose value will be observed (by an oracle) on the day of the payment
     , swapMargin          :: !Ada -- ^ Margin deposited at the beginning of the contract to protect against default (one party failing to pay)
-    , swapOracle          :: !PubKey -- ^ Public key of the oracle (see note [Oracles] in [[Plutus.Contracts]])
+    , swapOracle          :: !PaymentPubKey -- ^ Public key of the oracle (see note [Oracles] in [[Plutus.Contracts]])
     }
 
 PlutusTx.makeLift ''Swap
@@ -56,8 +56,8 @@ PlutusTx.makeLift ''Swap
 --   In the future we could also put the `swapMargin` value in here to implement
 --   a variable margin.
 data SwapOwners = SwapOwners {
-    swapOwnersFixedLeg :: PubKeyHash,
-    swapOwnersFloating :: PubKeyHash
+    swapOwnersFixedLeg :: PaymentPubKeyHash,
+    swapOwnersFloating :: PaymentPubKeyHash
     }
 
 PlutusTx.unstableMakeIsData ''SwapOwners
@@ -68,7 +68,7 @@ type SwapOracleMessage = SignedMessage (Observation Rational)
 mkValidator :: Swap -> SwapOwners -> SwapOracleMessage -> ScriptContext -> Bool
 mkValidator Swap{..} SwapOwners{..} redeemer p@ScriptContext{scriptContextTxInfo=txInfo} =
     let
-        extractVerifyAt :: SignedMessage (Observation Rational) -> PubKey -> POSIXTime -> Rational
+        extractVerifyAt :: SignedMessage (Observation Rational) -> PaymentPubKey -> POSIXTime -> Rational
         extractVerifyAt sm pk time =
             case Oracle.verifySignedMessageOnChain p pk sm of
                 Left _ -> traceError "checkSignatureAndDecode failed"
@@ -84,8 +84,8 @@ mkValidator Swap{..} SwapOwners{..} redeemer p@ScriptContext{scriptContextTxInfo
         adaValueIn :: Value -> Integer
         adaValueIn v = Ada.getLovelace (Ada.fromValue v)
 
-        isPubKeyOutput :: TxOut -> PubKeyHash -> Bool
-        isPubKeyOutput o k = maybe False ((==) k) (Validation.pubKeyOutput o)
+        isPaymentPubKeyOutput :: TxOut -> PaymentPubKeyHash -> Bool
+        isPaymentPubKeyOutput o k = maybe False ((==) (unPaymentPubKeyHash k)) (Validation.pubKeyOutput o)
 
         -- Verify the authenticity of the oracle value and compute
         -- the payments.
@@ -133,12 +133,14 @@ mkValidator Swap{..} SwapOwners{..} redeemer p@ScriptContext{scriptContextTxInfo
         -- True if the transaction input is the margin payment of the
         -- fixed leg
         iP1 :: TxInInfo -> Bool
-        iP1 TxInInfo{txInInfoResolved=TxOut{txOutValue}} = Validation.txSignedBy txInfo swapOwnersFixedLeg && adaValueIn txOutValue == margin
+        iP1 TxInInfo{txInInfoResolved=TxOut{txOutValue}} =
+            Validation.txSignedBy txInfo (unPaymentPubKeyHash swapOwnersFixedLeg) && adaValueIn txOutValue == margin
 
         -- True if the transaction input is the margin payment of the
         -- floating leg
         iP2 :: TxInInfo -> Bool
-        iP2 TxInInfo{txInInfoResolved=TxOut{txOutValue}} = Validation.txSignedBy txInfo swapOwnersFloating && adaValueIn txOutValue == margin
+        iP2 TxInInfo{txInInfoResolved=TxOut{txOutValue}} =
+            Validation.txSignedBy txInfo (unPaymentPubKeyHash swapOwnersFloating) && adaValueIn txOutValue == margin
 
         inConditions = (iP1 t1 && iP2 t2) || (iP1 t2 && iP2 t1)
 
@@ -148,11 +150,13 @@ mkValidator Swap{..} SwapOwners{..} redeemer p@ScriptContext{scriptContextTxInfo
 
         -- True if the output is the payment of the fixed leg.
         ol1 :: TxOut -> Bool
-        ol1 o@TxOut{txOutValue} = isPubKeyOutput o swapOwnersFixedLeg && adaValueIn txOutValue <= fixedRemainder
+        ol1 o@TxOut{txOutValue} =
+            isPaymentPubKeyOutput o swapOwnersFixedLeg && adaValueIn txOutValue <= fixedRemainder
 
         -- True if the output is the payment of the floating leg.
         ol2 :: TxOut -> Bool
-        ol2 o@TxOut{txOutValue} = isPubKeyOutput o swapOwnersFloating && adaValueIn txOutValue <= floatRemainder
+        ol2 o@TxOut{txOutValue} =
+            isPaymentPubKeyOutput o swapOwnersFloating && adaValueIn txOutValue <= floatRemainder
 
         -- NOTE: I didn't include a check that the time is greater
         -- than the observation time. This is because the time is

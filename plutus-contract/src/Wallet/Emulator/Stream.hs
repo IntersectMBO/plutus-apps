@@ -33,17 +33,18 @@ import Control.Monad.Freer (Eff, Member, interpret, reinterpret, run, subsume, t
 import Control.Monad.Freer.Coroutine (Yield, yield)
 import Control.Monad.Freer.Error (Error, runError)
 import Control.Monad.Freer.Extras (raiseEnd, wrapError)
-import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage (..), LogMsg (..), logMessageContent, mapMLog)
+import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage (LogMessage, _logLevel), LogMsg (LMessage),
+                                       logMessageContent, mapMLog)
 import Control.Monad.Freer.Extras.Stream (runStream)
 import Control.Monad.Freer.State (State, gets, runState)
 import Data.Bifunctor (first)
-import Data.Default (Default (..))
+import Data.Default (Default (def))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Ledger.AddressMap qualified as AM
-import Ledger.Blockchain (Block, OnChainTx (..))
+import Ledger.Blockchain (Block, OnChainTx (Valid))
 import Ledger.Fee (FeeConfig)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
@@ -56,9 +57,9 @@ import Wallet.API (WalletAPIError)
 import Wallet.Emulator (EmulatorEvent, EmulatorEvent')
 import Wallet.Emulator qualified as EM
 import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, _SlotAdd)
-import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (..), MultiAgentControlEffect, MultiAgentEffect,
-                                   chainEvent, eteEvent)
-import Wallet.Emulator.Wallet (Wallet (..), walletAddress)
+import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (EmulatorTimeEvent), MultiAgentControlEffect,
+                                   MultiAgentEffect, chainEvent, eteEvent)
+import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
 -- TODO: Move these two to 'Wallet.Emulator.XXX'?
 import Ledger.TimeSlot (SlotConfig)
@@ -151,7 +152,7 @@ initialDist = either id (walletFunds . map Valid) where
     walletFunds :: Block -> Map Wallet Value
     walletFunds theBlock =
         let values = AM.values $ AM.fromChain [theBlock]
-            getFunds wllt = fromMaybe mempty $ Map.lookup (walletAddress wllt) values
+            getFunds wllt = fromMaybe mempty $ Map.lookup (mockWalletAddress wllt) values
         in Map.fromSet getFunds (Set.fromList knownWallets)
 
 instance Default EmulatorConfig where
@@ -164,7 +165,7 @@ instance Default EmulatorConfig where
 initialState :: EmulatorConfig -> EM.EmulatorState
 initialState EmulatorConfig{_initialChainState} =
     either
-        (EM.emulatorStateInitialDist . Map.mapKeys EM.walletPubKeyHash)
+        (EM.emulatorStateInitialDist . Map.mapKeys EM.mockWalletPaymentPubKeyHash)
         EM.emulatorStatePool
         _initialChainState
 

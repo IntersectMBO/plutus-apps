@@ -52,7 +52,7 @@ import Wallet.Emulator.Folds (EmulatorEventFoldM)
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.MultiAgent (EmulatorEvent, chainEvent, eteEvent, instanceEvent)
 import Wallet.Emulator.Stream (foldEmulatorStreamM)
-import Wallet.Emulator.Types (Wallet, WalletNumber, fromWalletNumber, walletPubKeyHash)
+import Wallet.Emulator.Types (Wallet, WalletNumber, fromWalletNumber, mockWalletPaymentPubKeyHash)
 import Wallet.Types (EndpointDescription (getEndpointDescription))
 
 -- | Unfortunately any uncaught errors in the interpreter kill the
@@ -94,7 +94,7 @@ isInteresting x =
 
 evaluationResultFold :: [WalletNumber] -> EmulatorEventFoldM effs EvaluationResult
 evaluationResultFold wallets =
-    let pkh wallet = (walletPubKeyHash $ fromWalletNumber wallet, wallet)
+    let pkh wallet = (mockWalletPaymentPubKeyHash $ fromWalletNumber wallet, wallet)
     in Playground.Types.EvaluationResult
             <$> L.generalize (reverse <$> Folds.annotatedBlockchain)
             <*> L.generalize (filter isInteresting <$> Folds.emulatorLog)

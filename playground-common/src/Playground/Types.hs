@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveLift                 #-}
 {-# LANGUAGE DeriveTraversable          #-}
@@ -26,7 +25,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Language.Haskell.Interpreter (CompilationError, SourceCode)
 import Language.Haskell.Interpreter qualified as HI
-import Ledger (PubKeyHash, fromSymbol)
+import Ledger (PaymentPubKeyHash, fromSymbol)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Scripts (ValidatorHash)
@@ -135,8 +134,8 @@ data Evaluation =
         }
     deriving (Generic, ToJSON, FromJSON)
 
-pubKeys :: Evaluation -> [PubKeyHash]
-pubKeys Evaluation {wallets} = CW.pubKeyHash . CW.fromWalletNumber . simulatorWalletWallet <$> wallets
+pubKeys :: Evaluation -> [PaymentPubKeyHash]
+pubKeys Evaluation {wallets} = CW.paymentPubKeyHash . CW.fromWalletNumber . simulatorWalletWallet <$> wallets
 
 data EvaluationResult =
     EvaluationResult
@@ -145,7 +144,7 @@ data EvaluationResult =
         , emulatorTrace     :: Text
         , fundsDistribution :: [SimulatorWallet]
         , feesDistribution  :: [SimulatorWallet]
-        , walletKeys        :: [(PubKeyHash, WalletNumber)]
+        , walletKeys        :: [(PaymentPubKeyHash, WalletNumber)]
         }
     deriving (Show, Generic, ToJSON, FromJSON)
 

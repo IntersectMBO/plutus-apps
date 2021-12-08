@@ -20,7 +20,7 @@ import Data.Default (Default (def))
 import Data.Map qualified as Map
 import Data.Text qualified as T
 
-import Ledger (Address, POSIXTime, POSIXTimeRange, PubKeyHash, Validator)
+import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
@@ -75,7 +75,7 @@ PlutusTx.makeLift ''VestingTranche
 data VestingParams = VestingParams {
     vestingTranche1 :: VestingTranche,
     vestingTranche2 :: VestingTranche,
-    vestingOwner    :: PubKeyHash
+    vestingOwner    :: PaymentPubKeyHash
     } deriving Generic
 
 PlutusTx.makeLift ''VestingParams
@@ -124,7 +124,7 @@ validate VestingParams{vestingTranche1, vestingTranche2, vestingOwner} () () ctx
             -- is "vestingOwner can do with the funds what they want" (as opposed
             -- to "the funds must be paid to vestingOwner"). This is enforcey by
             -- the following condition:
-            && Validation.txSignedBy txInfo vestingOwner
+            && Validation.txSignedBy txInfo (unPaymentPubKeyHash vestingOwner)
             -- That way the recipient of the funds can pay them to whatever address they
             -- please, potentially saving one transaction.
 
@@ -215,7 +215,7 @@ retrieveFundsC vesting payment = do
 endpoints :: Contract () VestingSchema T.Text ()
 endpoints = vestingContract vestingParams
   where
-    vestingOwner = walletPubKeyHash w1
+    vestingOwner = mockWalletPaymentPubKeyHash w1
     vestingParams =
         VestingParams {vestingTranche1, vestingTranche2, vestingOwner}
     vestingTranche1 =

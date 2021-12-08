@@ -25,7 +25,7 @@ module Plutus.PAB.Webserver.Handler
     ) where
 
 import Cardano.Wallet.Mock.Client qualified as Wallet.Client
-import Cardano.Wallet.Mock.Types (WalletInfo (WalletInfo, wiPubKeyHash, wiWallet))
+import Cardano.Wallet.Mock.Types (WalletInfo (WalletInfo, wiPaymentPubKeyHash, wiWallet))
 import Control.Lens (preview)
 import Control.Monad (join)
 import Control.Monad.Freer (sendM)
@@ -230,8 +230,8 @@ walletProxy ::
 walletProxy createNewWallet =
     createNewWallet
     :<|> (\w tx -> fmap (const NoContent) (Core.handleAgentThread (Wallet w) Nothing $ Wallet.Effects.submitTxn $ Right tx))
-    :<|> (\w -> (\pkh -> WalletInfo{wiWallet=Wallet w, wiPubKeyHash = pkh })
-            <$> Core.handleAgentThread (Wallet w) Nothing Wallet.Effects.ownPubKeyHash)
+    :<|> (\w -> (\pkh -> WalletInfo{wiWallet=Wallet w, wiPaymentPubKeyHash = pkh })
+            <$> Core.handleAgentThread (Wallet w) Nothing Wallet.Effects.ownPaymentPubKeyHash)
     :<|> (\w -> fmap (fmap (fromRight (error "Plutus.PAB.Webserver.Handler: Expecting a mock tx, not an Alonzo tx when submitting it.")))
               . Core.handleAgentThread (Wallet w) Nothing . Wallet.Effects.balanceTx)
     :<|> (\w -> Core.handleAgentThread (Wallet w) Nothing Wallet.Effects.totalFunds)

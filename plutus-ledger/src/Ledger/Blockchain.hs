@@ -48,14 +48,15 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (TxOutTx (..), spentOutputs, txId, unspentOutputsTx, updateUtxo, validValuesTx)
+import Ledger.Tx (spentOutputs, txId, unspentOutputsTx, updateUtxo)
 import Prettyprinter (Pretty (..), (<+>))
 
+import Data.Either (fromRight)
 import Data.OpenApi qualified as OpenApi
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx (Tx, TxIn, TxOut, TxOutRef (..), collateralInputs, inputs, txOutDatum, txOutPubKey,
-                            txOutValue, txOutputs, updateUtxoCollateral)
+import Plutus.V1.Ledger.Tx (Tx, TxIn, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx), collateralInputs,
+                            inputs, txOutDatum, txOutPubKey, txOutValue, txOutputs, updateUtxoCollateral, validValuesTx)
 import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value (Value)
 
@@ -76,7 +77,7 @@ instance OpenApi.ToSchema BlockId where
     declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy @String)
 
 instance Pretty BlockId where
-    pretty (BlockId blockId) = "BlockId(" <> pretty (either (const $ JSON.encodeByteString blockId) id $ decodeUtf8' blockId) <> ")"
+    pretty (BlockId blockId) = "BlockId(" <> pretty (fromRight (JSON.encodeByteString blockId) $ decodeUtf8' blockId) <> ")"
 
 -- | A transaction on the blockchain.
 -- Invalid transactions are still put on the chain to be able to collect fees.

@@ -33,7 +33,7 @@ import Data.Map qualified as Map
 import Prelude (Semigroup (..))
 
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), Validator)
+import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
@@ -91,7 +91,7 @@ PlutusTx.makeLift ''VestingTranche
 data VestingParams = VestingParams {
     vestingTranche1 :: VestingTranche,
     vestingTranche2 :: VestingTranche,
-    vestingOwner    :: PubKeyHash
+    vestingOwner    :: PaymentPubKeyHash
     } deriving Generic
 
 PlutusTx.makeLift ''VestingParams
@@ -140,7 +140,7 @@ validate VestingParams{vestingTranche1, vestingTranche2, vestingOwner} () () ctx
             -- is "vestingOwner can do with the funds what they want" (as opposed
             -- to "the funds must be paid to vestingOwner"). This is enforcey by
             -- the following condition:
-            && Validation.txSignedBy txInfo vestingOwner
+            && Validation.txSignedBy txInfo (unPaymentPubKeyHash vestingOwner)
             -- That way the recipient of the funds can pay them to whatever address they
             -- please, potentially saving one transaction.
 

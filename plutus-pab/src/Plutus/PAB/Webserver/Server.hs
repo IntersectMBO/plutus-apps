@@ -18,7 +18,7 @@ module Plutus.PAB.Webserver.Server
     , startServerDebug'
     ) where
 
-import Cardano.Wallet.Mock.Types (WalletInfo (WalletInfo, wiPubKeyHash, wiWallet))
+import Cardano.Wallet.Mock.Types (WalletInfo (WalletInfo, wiPaymentPubKeyHash, wiWallet))
 import Control.Concurrent (MVar, forkFinally, forkIO, newEmptyMVar, putMVar)
 import Control.Concurrent.Availability (Availability, available, newToken)
 import Control.Concurrent.STM qualified as STM
@@ -221,5 +221,5 @@ startServerDebug' conf = do
     tk <- newToken
     let mkWalletInfo = do
             (wllt, pk) <- Simulator.addWallet
-            pure $ WalletInfo{wiWallet = wllt, wiPubKeyHash = pk}
+            pure $ WalletInfo{wiWallet = wllt, wiPaymentPubKeyHash = pk}
     snd <$> startServer conf (Right mkWalletInfo) tk

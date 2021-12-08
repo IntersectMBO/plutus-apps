@@ -34,7 +34,7 @@ run = runError run' >>= \case
 run' :: Contract () EmptySchema IError ()
 run' = do
     logInfo @Haskell.String "Starting integration test"
-    pkh <- mapError CError ownPubKeyHash
+    pkh <- mapError CError ownPaymentPubKeyHash
     (txOutRef, ciTxOut, pkInst) <- mapError PKError (PubKey.pubKeyContract pkh (Ada.adaValueOf 10))
     logInfo @Haskell.String "pubKey contract complete:"
     logInfo txOutRef

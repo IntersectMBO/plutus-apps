@@ -14,13 +14,13 @@ module Ledger.CardanoWallet(
     WalletNumber(..),
     fromWalletNumber,
     toWalletNumber,
-    knownWallets,
-    knownWallet,
+    knownMockWallets,
+    knownMockWallet,
     fromSeed,
     -- ** Keys
-    privateKey,
-    pubKeyHash,
-    pubKey
+    paymentPrivateKey,
+    paymentPubKeyHash,
+    paymentPubKey
     ) where
 
 import Cardano.Address.Derivation (XPrv)
@@ -37,10 +37,12 @@ import Data.List (findIndex)
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
-import Ledger.Crypto (PrivateKey, PubKey (..), PubKeyHash (..))
+import Ledger (PaymentPrivateKey (PaymentPrivateKey), PaymentPubKey (PaymentPubKey, unPaymentPubKey),
+               PaymentPubKeyHash (PaymentPubKeyHash))
+import Ledger.Crypto (PubKey (..))
 import Ledger.Crypto qualified as Crypto
-import Plutus.V1.Ledger.Bytes (LedgerBytes (..))
-import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
+import Plutus.V1.Ledger.Bytes (LedgerBytes (getLedgerBytes))
+import Servant.API (FromHttpApiData, ToHttpApiData)
 
 newtype MockPrivateKey = MockPrivateKey { unMockPrivateKey :: XPrv }
 
@@ -56,8 +58,9 @@ instance Hashable MockPrivateKey where
 -- | Emulated wallet with a key and a passphrase
 data MockWallet =
     MockWallet
-        { mwWalletId :: CW.WalletId
-        , mwKey      :: MockPrivateKey
+        { mwWalletId   :: CW.WalletId
+        , mwPaymentKey :: MockPrivateKey
+        , mwStakeKey   :: Maybe MockPrivateKey
         }
         deriving Show
 
@@ -71,9 +74,10 @@ fromWalletNumber :: WalletNumber -> MockWallet
 fromWalletNumber (WalletNumber i) = fromSeed (BSL.toStrict $ serialise i)
 
 fromSeed :: BS.ByteString -> MockWallet
-fromSeed bs = MockWallet{mwWalletId, mwKey} where
+fromSeed bs = MockWallet{mwWalletId, mwPaymentKey, mwStakeKey} where
     missing = max 0 (32 - BS.length bs)
     bs' = bs <> BS.replicate missing 0
+    k = Crypto.generateFromSeed bs'
     mwWalletId = CW.WalletId
         $ fromMaybe (error "Ledger.CardanoWallet.fromSeed: digestFromByteString")
         $ Crypto.digestFromByteString
@@ -81,32 +85,32 @@ fromSeed bs = MockWallet{mwWalletId, mwKey} where
         $ getLedgerBytes
         $ getPubKey
         $ Crypto.toPublicKey k
-    k = Crypto.generateFromSeed bs'
-    mwKey = MockPrivateKey k
+    mwPaymentKey = MockPrivateKey k
+    mwStakeKey = Nothing
 
 toWalletNumber :: MockWallet -> WalletNumber
 toWalletNumber MockWallet{mwWalletId=w} =
     maybe (error "Ledger.CardanoWallet.toWalletNumber: not a known wallet")
           (WalletNumber . toInteger . succ)
-          $ findIndex ((==) w . mwWalletId) knownWallets
+          $ findIndex ((==) w . mwWalletId) knownMockWallets
 
 -- | The wallets used in mockchain simulations by default. There are
 --   ten wallets by default.
-knownWallets :: [MockWallet]
-knownWallets = fromWalletNumber . WalletNumber <$> [1..10]
+knownMockWallets :: [MockWallet]
+knownMockWallets = fromWalletNumber . WalletNumber <$> [1..10]
 
 -- | Get a known wallet from an @Integer@ indexed from 1 to 10.
-knownWallet :: Integer -> MockWallet
-knownWallet = (knownWallets !!) . pred . fromInteger
+knownMockWallet :: Integer -> MockWallet
+knownMockWallet = (knownMockWallets !!) . pred . fromInteger
 
 -- | Mock wallet's private key
-privateKey :: MockWallet -> PrivateKey
-privateKey = unMockPrivateKey . mwKey
+paymentPrivateKey :: MockWallet -> PaymentPrivateKey
+paymentPrivateKey = PaymentPrivateKey . unMockPrivateKey . mwPaymentKey
 
 -- | The mock wallet's public key hash
-pubKeyHash :: MockWallet -> PubKeyHash
-pubKeyHash = Crypto.pubKeyHash . pubKey
+paymentPubKeyHash :: MockWallet -> PaymentPubKeyHash
+paymentPubKeyHash = PaymentPubKeyHash . Crypto.pubKeyHash . unPaymentPubKey . paymentPubKey
 
--- | The mock wallet's public key
-pubKey :: MockWallet -> PubKey
-pubKey = Crypto.toPublicKey . unMockPrivateKey . mwKey
+-- | The mock wallet's payment public key
+paymentPubKey :: MockWallet -> PaymentPubKey
+paymentPubKey = PaymentPubKey . Crypto.toPublicKey . unMockPrivateKey . mwPaymentKey

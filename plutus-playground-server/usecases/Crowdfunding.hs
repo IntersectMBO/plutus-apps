@@ -25,7 +25,8 @@ import Control.Applicative (Applicative (pure))
 import Control.Monad (void)
 import Data.Default (Default (def))
 import Data.Text (Text)
-import Ledger (POSIXTime, POSIXTimeRange, PubKeyHash, ScriptContext (..), TxInfo (..), Validator, getCardanoTxId)
+import Ledger (POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (..), TxInfo (..),
+               Validator, getCardanoTxId)
 import Ledger qualified
 import Ledger.Contexts qualified as V
 import Ledger.Interval qualified as Interval
@@ -49,7 +50,7 @@ data Campaign = Campaign
     -- ^ The date by which the campaign funds can be contributed.
     , campaignCollectionDeadline :: POSIXTime
     -- ^ The date by which the campaign owner has to collect the funds
-    , campaignOwner              :: PubKeyHash
+    , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
     --   funds if the campaign is successful.
     } deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -82,7 +83,7 @@ mkCampaign ddl collectionDdl ownerWallet =
     Campaign
         { campaignDeadline = ddl
         , campaignCollectionDeadline = collectionDdl
-        , campaignOwner = Emulator.walletPubKeyHash ownerWallet
+        , campaignOwner = Emulator.mockWalletPaymentPubKeyHash ownerWallet
         }
 
 -- | The 'POSIXTimeRange' during which the funds can be collected
@@ -98,7 +99,7 @@ refundRange cmp =
 data Crowdfunding
 instance Scripts.ValidatorTypes Crowdfunding where
     type instance RedeemerType Crowdfunding = CampaignAction
-    type instance DatumType Crowdfunding = PubKeyHash
+    type instance DatumType Crowdfunding = PaymentPubKeyHash
 
 typedValidator :: Campaign -> Scripts.TypedValidator Crowdfunding
 typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
@@ -108,26 +109,26 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
         wrap = Scripts.wrapValidator
 
 {-# INLINABLE validRefund #-}
-validRefund :: Campaign -> PubKeyHash -> TxInfo -> Bool
+validRefund :: Campaign -> PaymentPubKeyHash -> TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
     (refundRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the contributor
-    && (txinfo `V.txSignedBy` contributor)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash contributor)
 
 validCollection :: Campaign -> TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
     (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `V.txSignedBy` campaignOwner campaign)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 -- | The validator script is of type 'CrowdfundingValidator', and is
 -- additionally parameterized by a 'Campaign' definition. This argument is
 -- provided by the Plutus client, using 'PlutusTx.applyCode'.
 -- As a result, the 'Campaign' definition is part of the script address,
 -- and different campaigns have different addresses.
-mkValidator :: Campaign -> PubKeyHash -> CampaignAction -> ScriptContext -> Bool
+mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> ScriptContext -> Bool
 mkValidator c con act p = case act of
     -- the "refund" branch
     Refund  -> validRefund c con (scriptContextTxInfo p)
@@ -153,7 +154,7 @@ theCampaign :: POSIXTime -> Campaign
 theCampaign startTime = Campaign
     { campaignDeadline = startTime + 40000
     , campaignCollectionDeadline = startTime + 60000
-    , campaignOwner = Emulator.walletPubKeyHash (Emulator.knownWallet 1)
+    , campaignOwner = Emulator.mockWalletPaymentPubKeyHash (Emulator.knownWallet 1)
     }
 
 -- | The "contribute" branch of the contract for a specific 'Campaign'. Exposes
@@ -162,7 +163,7 @@ theCampaign startTime = Campaign
 --   refund if the funding was not collected.
 contribute :: AsContractError e => Campaign -> Promise () CrowdfundingSchema e ()
 contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
-    contributor <- ownPubKeyHash
+    contributor <- ownPaymentPubKeyHash
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
