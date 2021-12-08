@@ -20,8 +20,12 @@
       url = "";
       synopsis = "";
       description = "Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>";
-      buildType = "Simple";
+      buildType = "Custom";
       isLocal = true;
+      setup-depends = [
+        (hsPkgs.buildPackages.base or (pkgs.buildPackages.base or (errorHandler.setupDepError "base")))
+        (hsPkgs.buildPackages.Cabal or (pkgs.buildPackages.Cabal or (errorHandler.setupDepError "Cabal")))
+        ];
       detailLevel = "FullDetails";
       licenseFiles = [ "LICENSE" "NOTICE" ];
       dataDir = ".";
@@ -137,8 +141,9 @@
             ];
           buildable = true;
           modules = [ "CommandLine" "Config" "Logging" ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "app" ];
-          mainPath = [ "Main.hs" ];
+          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (system.isGhcjs) "";
           };
         };
       tests = {
@@ -172,6 +177,7 @@
             "Plutus/ChainIndex/Emulator/HandlersSpec"
             "Plutus/ChainIndex/HandlersSpec"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };
