@@ -10,8 +10,14 @@ synopsis: Collection of smart contracts to develop the plutus/wallet interface
 description:
     Collection of smart contracts to develop the plutus/wallet interface.
 category: Language
-build-type: Simple
 extra-doc-files: README.md
+
+build-type: Custom
+
+custom-setup
+  setup-depends:
+    base  >= 4.5,
+    Cabal >= 2.4
 
 source-repository head
     type: git
@@ -151,6 +157,10 @@ test-suite plutus-use-cases-test
         foldl -any,
         streaming -any,
         plutus-tx-plugin -any
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 -- runs emulator traces from plutus-use-cases-tests and
 -- writes all applied validator scripts to a folder
@@ -224,3 +234,7 @@ executable plutus-use-cases-scripts
         cardano-binary -any,
         cborg -any,
         memory -any
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
