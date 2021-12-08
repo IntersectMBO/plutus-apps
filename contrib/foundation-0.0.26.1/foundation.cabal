@@ -1,3 +1,4 @@
+cabal-version:       2.0
 name:                foundation
 version:             0.0.26.1
 synopsis:            Alternative prelude with batteries and no dependencies
@@ -25,11 +26,15 @@ copyright:           2015-2017 Vincent Hanquez <vincent@snarc.org>, 2017- Founda
 author:              Vincent Hanquez <vincent@snarc.org>
 maintainer:          vincent@snarc.org
 category:            foundation
-build-type:          Simple
+build-type:          Custom
 homepage:            https://github.com/haskell-foundation/foundation
 bug-reports:         https://github.com/haskell-foundation/foundation/issues
-cabal-version:       1.18
 extra-source-files:  cbits/*.h
+
+custom-setup
+  setup-depends:
+    base  >= 4.5,
+    Cabal >= 2.4
 
 source-repository head
   type: git
@@ -191,7 +196,8 @@ library
     exposed-modules: Foundation.System.Bindings.Macos
 
   if os(ghcjs)
-    js-sources: jsbits/foundation.js
+    js-sources: jsbits/bindings.js
+    extra-bundled-libraries: EMCCfoundation EMCCfoundation.exported
 
   default-extensions: NoImplicitPrelude
                       RebindableSyntax
