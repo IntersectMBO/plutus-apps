@@ -15,11 +15,16 @@ import Distribution.Simple.BuildTarget (readBuildTargets, BuildTarget(..))
 import Distribution.Verbosity (silent, verbose)
 import Distribution.Types.ComponentName
 import Distribution.Simple.Program.Types (programPath)
-import Distribution.Simple.Program.Db (lookupKnownProgram, lookupProgram)
-import Distribution.Simple.Program (gccProgram, arProgram, runDbProgram)
+import Distribution.Simple.Program.Db (lookupKnownProgram, lookupProgram, knownPrograms)
+import Distribution.Simple.Program (Program, gccProgram, arProgram, runDbProgram, simpleProgram, ghcProgram)
 import Distribution.Simple.Utils (createDirectoryIfMissingVerbose)
 import Distribution.Types.HookedBuildInfo
 import Data.List (isPrefixOf, intercalate)
+import System.Environment (getArgs, getProgName)
+
+
+emarProgram :: Program
+emarProgram = simpleProgram "emar"
 
 buildEMCCLib :: PackageDescription -> LocalBuildInfo -> IO ()
 buildEMCCLib desc lbi = do
@@ -38,7 +43,7 @@ buildEMCCLib desc lbi = do
 
             -- and now construct a canonical `.js_a` file.
             let dstLib = (buildDir lbi) </> "libEMCC" <> (unPackageName . pkgName . package $ desc) <> ".js_a"
-            runDbProgram verbosity arProgram (withPrograms lbi) $
+            runDbProgram verbosity emarProgram (withPrograms lbi) $
                 [ "-r",  dstLib ] ++ [ (buildDir lbi) </> "emcc" </> (src -<.> "o") | src <- cSources . libBuildInfo $ lib ]
 
             let expLib = (buildDir lbi) </> "libEMCC" <> (unPackageName . pkgName . package $ desc) <> ".exported.js_a"
@@ -81,21 +86,27 @@ linkEMCCLib desc lbi = do
 
 postBuildHook :: Args -> BuildFlags -> PackageDescription -> LocalBuildInfo -> IO ()
 postBuildHook args flags desc lbi = do
-    readBuildTargets silent desc (buildArgs flags) >>= \case
-        [BuildTargetComponent (CLibName _)] -> print "OK. Lib" >> buildEMCCLib desc lbi
-        [BuildTargetComponent (CExeName _)] -> print "OK. Exe"
-        [BuildTargetComponent (CTestName _)] -> print "OK. Test"
-        [BuildTargetComponent (CBenchName _)] -> print "OK. Bench"
-        _ -> print "EEk!"
+    case (takeFileName . programPath <$> lookupProgram ghcProgram (withPrograms lbi)) of
+        Just "js-unknown-ghcjs-ghc" ->
+            readBuildTargets silent desc (buildArgs flags) >>= \case
+                [BuildTargetComponent (CLibName _)] -> print "OK. Lib (Build)" >> buildEMCCLib desc lbi
+                [BuildTargetComponent (CExeName _)] -> print "OK. Exe"
+                [BuildTargetComponent (CTestName _)] -> print "OK. Test"
+                [BuildTargetComponent (CBenchName _)] -> print "OK. Bench"
+                _ -> print "EEk!"
+        _ -> return ()
 
 postConfHook :: Args -> ConfigFlags -> PackageDescription -> LocalBuildInfo -> IO ()
 postConfHook args flags desc lbi = do
-    readBuildTargets silent desc (configArgs flags) >>= \case
-        [BuildTargetComponent (CLibName _)] -> print "OK. Lib"
-        [BuildTargetComponent (CExeName _)] -> print "OK. Exe" >> linkEMCCLib desc lbi
-        [BuildTargetComponent (CTestName _)] -> print "OK. Test" >> linkEMCCLib desc lbi
-        [BuildTargetComponent (CBenchName _)] -> print "OK. Bench" >> linkEMCCLib desc lbi
-        _ -> print "EEk!"
+    case (takeFileName . programPath <$> lookupProgram ghcProgram (withPrograms lbi)) of
+        Just "js-unknown-ghcjs-ghc" ->
+            readBuildTargets silent desc (configArgs flags) >>= \case
+                [BuildTargetComponent (CLibName _)] -> print "OK. Lib"
+                [BuildTargetComponent (CExeName _)] -> print "OK. Exe (Link)" >> linkEMCCLib desc lbi
+                [BuildTargetComponent (CTestName _)] -> print "OK. Test (Link)" >> linkEMCCLib desc lbi
+                [BuildTargetComponent (CBenchName _)] -> print "OK. Bench (Link)" >> linkEMCCLib desc lbi
+                _ -> print "EEk!"
+        _ -> return ()
 
 -- we somehow need to inject the freshly build "emcc/lib.js" into each component.
 -- I'm not sure w ecan abuse preBuildHooks for this.
@@ -105,8 +116,19 @@ preBuildHook args flags = do
     pure (Just (emptyBuildInfo { jsSources = ["dist/build" </> "emcc" </> "lib.js"] }), [])
 
 main :: IO ()
-main = defaultMainWithHooks (simpleUserHooks {
-      postConf = postConfHook
---    , preBuild = preBuildHook
-    , postBuild = postBuildHook
-    })
+main = do
+    args <- getArgs
+    defaultMainWithHooksArgs emccHooks (injectEmar args)
+  where
+    injectEmar :: [String] -> [String]
+    injectEmar [] = []
+    injectEmar (x:xs) | "--with-gcc=" `isPrefixOf` x = x:("--with-emar="<> (takeDirectory $ drop 11 $ x) </> "emar"):injectEmar xs
+    injectEmar (x:xs) = x:injectEmar xs
+
+    emccHooks :: UserHooks
+    emccHooks = simpleUserHooks
+        { postConf = postConfHook
+        --    , preBuild = preBuildHook
+        , postBuild = postBuildHook
+        , hookedPrograms = [emarProgram]
+        }
