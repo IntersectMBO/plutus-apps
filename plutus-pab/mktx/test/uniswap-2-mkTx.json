@@ -1,0 +1,157 @@
+{
+    "mkTxLogResult": {
+        "Right": {
+            "unBalancedTxTx": {
+                "txData": [],
+                "txInputs": [],
+                "txRedeemers": [],
+                "txOutputs": [
+                    {
+                        "txOutValue": {
+                            "getValue": [
+                                [
+                                    {
+                                        "unCurrencySymbol": "9a58345cbb583d61cac68ab8b90e95ba885dc803830e7b67f6354654"
+                                    },
+                                    [
+                                        [
+                                            {
+                                                "unTokenName": "A"
+                                            },
+                                            1000000
+                                        ],
+                                        [
+                                            {
+                                                "unTokenName": "B"
+                                            },
+                                            1000000
+                                        ],
+                                        [
+                                            {
+                                                "unTokenName": "C"
+                                            },
+                                            1000000
+                                        ],
+                                        [
+                                            {
+                                                "unTokenName": "D"
+                                            },
+                                            1000000
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        },
+                        "txOutAddress": {
+                            "addressStakingCredential": null,
+                            "addressCredential": {
+                                "contents": {
+                                    "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                },
+                                "tag": "PubKeyCredential"
+                            }
+                        },
+                        "txOutDatumHash": null
+                    }
+                ],
+                "txValidRange": {
+                    "ivTo": [
+                        {
+                            "tag": "PosInf"
+                        },
+                        true
+                    ],
+                    "ivFrom": [
+                        {
+                            "tag": "NegInf"
+                        },
+                        true
+                    ]
+                },
+                "txMint": {
+                    "getValue": []
+                },
+                "txFee": {
+                    "getValue": []
+                },
+                "txCollateral": [],
+                "txMintScripts": [],
+                "txSignatures": []
+            },
+            "unBalancedTxRequiredSignatories": [],
+            "unBalancedTxValidityTimeRange": {
+                "ivTo": [
+                    {
+                        "tag": "PosInf"
+                    },
+                    true
+                ],
+                "ivFrom": [
+                    {
+                        "tag": "NegInf"
+                    },
+                    true
+                ]
+            },
+            "unBalancedTxUtxoIndex": []
+        }
+    },
+    "mkTxLogTxConstraints": {
+        "txOwnInputs": [],
+        "txOwnOutputs": [],
+        "txConstraints": [
+            {
+                "contents": [
+                    {
+                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                    },
+                    {
+                        "getValue": [
+                            [
+                                {
+                                    "unCurrencySymbol": "9a58345cbb583d61cac68ab8b90e95ba885dc803830e7b67f6354654"
+                                },
+                                [
+                                    [
+                                        {
+                                            "unTokenName": "A"
+                                        },
+                                        1000000
+                                    ],
+                                    [
+                                        {
+                                            "unTokenName": "B"
+                                        },
+                                        1000000
+                                    ],
+                                    [
+                                        {
+                                            "unTokenName": "C"
+                                        },
+                                        1000000
+                                    ],
+                                    [
+                                        {
+                                            "unTokenName": "D"
+                                        },
+                                        1000000
+                                    ]
+                                ]
+                            ]
+                        ]
+                    }
+                ],
+                "tag": "MustPayToPubKey"
+            }
+        ]
+    },
+    "mkTxLogLookups": {
+        "slOtherScripts": [],
+        "slOwnPubkeyHash": null,
+        "slPubKeyHashes": [],
+        "slOtherData": [],
+        "slTypedValidator": null,
+        "slTxOutputs": [],
+        "slMPS": []
+    }
+}
