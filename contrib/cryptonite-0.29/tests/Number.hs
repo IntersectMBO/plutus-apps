@@ -48,11 +48,11 @@ tests = testGroup "number"
             bits  = 5 + baseBits -- generating lower than 5 bits causes an error ..
             prime = withTestDRG testDRG $ generatePrime bits
          in bits == numBits prime
-    , testProperty "generate-safe-prime" $ \testDRG (Int0_2901 baseBits') ->
-        let baseBits = baseBits' `mod` 200
-            bits = 6 + baseBits
-            prime = withTestDRG testDRG $ generateSafePrime bits
-         in bits == numBits prime
+    -- , testProperty "generate-safe-prime" $ \testDRG (Int0_2901 baseBits') ->
+    --     let baseBits = baseBits' `mod` 200
+    --         bits = 6 + baseBits
+    --         prime = withTestDRG testDRG $ generateSafePrime bits
+    --      in bits == numBits prime
     , testProperty "as-power-of-2-and-odd" $ \n ->
         let (e, a1) = asPowerOf2AndOdd n
          in n == (2^e)*a1
