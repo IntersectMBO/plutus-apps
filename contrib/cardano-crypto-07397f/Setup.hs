@@ -122,7 +122,9 @@ main = do
   where
     injectEmar :: [String] -> [String]
     injectEmar [] = []
-    injectEmar (x:xs) | "--with-gcc=" `isPrefixOf` x = x:("--with-emar="<> (takeDirectory $ drop 11 $ x) </> "emar"):injectEmar xs
+    injectEmar (x:xs) | "--with-gcc=" `isPrefixOf` x
+                      , "emcc" `isSuffixOf` x
+        = x:("--with-emar="<> (takeDirectory $ drop 11 $ x) </> "emar"):injectEmar xs
     injectEmar (x:xs) = x:injectEmar xs
 
     emccHooks :: UserHooks
