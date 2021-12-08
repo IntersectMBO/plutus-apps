@@ -105,6 +105,7 @@
                     {
                         "getPubKeyHash": "2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c"
                     },
+                    null,
                     {
                         "getValue": [
                             [

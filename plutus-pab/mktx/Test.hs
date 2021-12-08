@@ -16,8 +16,11 @@ import System.Exit (die)
 import PlutusTx qualified
 
 import Data.Aeson
+import Data.ByteString.Lazy qualified as B
+
+import Control.Monad (when)
 import GHC.Generics
-import System.Directory
+import System.Environment
 import System.FilePath ((<.>), (</>))
 
 {-
@@ -40,18 +43,24 @@ readJSONFile file = do
         Left err -> die ("error decoding JSON file " ++ file ++ " " ++ show err)
         Right x  -> pure x
 
-runTxTest :: C.ProtocolParameters -> FilePath -> IO ()
-runTxTest protocol_parameters test_file = do
+runTxTest :: Bool -> C.ProtocolParameters -> FilePath -> IO ()
+runTxTest generate protocol_parameters test_file = do
     putStr ("running test " ++ test_file ++ ": ")
     test_case <- readJSONFile test_file
     let result = mkTx (mkTxLogLookups test_case)
                       (mkTxLogTxConstraints test_case)
-    if result == mkTxLogResult test_case
-        then putStrLn "[OK]"
-        else putStrLn "[FAIL]" >> die "test failure"
+    when (result /= mkTxLogResult test_case) (die "mktx failure")
     case result of
-        Right unbound_tx -> print (export protocol_parameters C.Mainnet unbound_tx)
+        Right unbound_tx -> do
+            let exp_file = test_file <.> "export"
+                exp_tx = export protocol_parameters C.Mainnet unbound_tx
+            if generate
+            then B.writeFile exp_file (encode $ toJSON exp_tx)
+            else do
+              exp_expected <- readJSONFile exp_file
+              when (exp_tx /= exp_expected) (die "export failure")
         _                -> pure ()
+    putStrLn "[OK]"
 
 testcases :: [String]
 testcases = [ "crowdfunding-success-1-mkTx"
@@ -110,7 +119,10 @@ testcases = [ "crowdfunding-success-1-mkTx"
 
 main :: IO ()
 main = do
+    args <- getArgs
+    let generate = args == ["generate"]
     -- test transactions against known results
-    pparams <- readJSONFile "protocol-parameters.json"
-    mapM_ (runTxTest pparams) (map (\x -> "test" </> x <.> "json") testcases)
+    pparams <- readJSONFile ("mktx" </> "protocol-parameters.json")
+    mapM_ (runTxTest generate pparams)
+          (map (\x -> "mktx" </> "test" </> x <.> "json") testcases)
     -- XXX test JSON construction/consistency

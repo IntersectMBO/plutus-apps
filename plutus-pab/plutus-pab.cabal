@@ -640,9 +640,9 @@ executable sync-client
         text
 
 
--- produce transactions by reading JSON input
--- intended for JS library
-executable pab-mktx
+-- test JSON transaction processing, intended for JS library
+test-suite pab-mktx
+    type:             exitcode-stdio-1.0
     main-is: Test.hs
     hs-source-dirs:
         mktx

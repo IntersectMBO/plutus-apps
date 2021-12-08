@@ -232,6 +232,7 @@
                     {
                         "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
                     },
+                    null,
                     {
                         "getValue": [
                             [
@@ -257,6 +258,7 @@
                     {
                         "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
                     },
+                    null,
                     {
                         "getValue": [
                             [
