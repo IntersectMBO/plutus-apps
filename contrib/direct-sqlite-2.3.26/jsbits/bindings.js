@@ -133,28 +133,28 @@ function h$logWrapper(x) {
 
   h$debugHeapStr = function(offset) {
     var len = 0;
-    while(this.HEAPU8[offset+len] !== 0){ len++; };
+    while(HEAPU8[offset+len] !== 0){ len++; };
     return new TextDecoder("utf-8").decode(HEAPU8.subarray(offset, offset+len+1));
   }
 
   h$cstring = function(offset) {
     if(offset == 0) return null;
     var len = 0;
-    while(this.HEAPU8[offset+len] !== 0){ len++; };
+    while(HEAPU8[offset+len] !== 0){ len++; };
     var str = h$newByteArray(len+1);
-    str.u8.set(this.HEAPU8.subarray(offset,offset+len+1));
+    str.u8.set(HEAPU8.subarray(offset,offset+len+1));
     return str;
   }
 
   h$ptr = function(offset) {
     var ptr = h$newByteArray(4);
-    ptr.u8.set(this.HEAPU8.subarray(offset, offset+4));
+    ptr.u8.set(HEAPU8.subarray(offset, offset+4));
     return ptr;
   }
 
   h$nptr = function(offset,n) {
     var ptr = h$newByteArray(4*n);
-    ptr.u8.set(this.HEAPU8.subarray(offset, offset+4*n));
+    ptr.u8.set(HEAPU8.subarray(offset, offset+4*n));
     return ptr;
   }
 
