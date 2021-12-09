@@ -264,6 +264,10 @@ test-suite check-foundation
   default-language:  Haskell2010
   if impl(ghc >= 8.0)
     ghc-options:     -Wno-redundant-constraints
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 test-suite foundation-link
   type:              exitcode-stdio-1.0
@@ -279,6 +283,10 @@ test-suite foundation-link
     buildable:     True
   else
     buildable:     False
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 test-suite doctest
   type:              exitcode-stdio-1.0
@@ -297,6 +305,10 @@ test-suite doctest
       buildable:     True
     else
       buildable:     False
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 Benchmark bench
   main-is:           Main.hs
@@ -319,3 +331,7 @@ Benchmark bench
     if flag(bench-all)
       cpp-options:     -DBENCH_ALL
       build-depends:   text, attoparsec, vector, bytestring
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
