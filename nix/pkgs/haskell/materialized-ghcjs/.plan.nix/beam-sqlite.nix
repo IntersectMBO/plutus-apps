@@ -10,7 +10,7 @@
   {
     flags = { werror = false; };
     package = {
-      specVersion = "1.18";
+      specVersion = "2.2";
       identifier = { name = "beam-sqlite"; version = "0.5.0.0"; };
       license = "MIT";
       copyright = "(C) 2017-2018 Travis Athougies";
@@ -20,8 +20,12 @@
       url = "";
       synopsis = "Beam driver for SQLite";
       description = "Beam driver for the <https://sqlite.org/ SQLite> embedded database.\nSee <https://haskell-beam.github.io/beam/user-guide/backends/beam-sqlite/ here>\nfor more information";
-      buildType = "Simple";
+      buildType = "Custom";
       isLocal = true;
+      setup-depends = [
+        (hsPkgs.buildPackages.base or (pkgs.buildPackages.base or (errorHandler.setupDepError "base")))
+        (hsPkgs.buildPackages.Cabal or (pkgs.buildPackages.Cabal or (errorHandler.setupDepError "Cabal")))
+        ];
       detailLevel = "FullDetails";
       licenseFiles = [ "LICENSE" ];
       dataDir = ".";
@@ -78,6 +82,7 @@
             "Database/Beam/Sqlite/Test/Migrate"
             "Database/Beam/Sqlite/Test/Select"
             ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
           };
