@@ -1061,6 +1061,7 @@
           "lazysmallcheck".components.library.planned = lib.mkOverride 900 true;
           "blaze-builder".components.library.planned = lib.mkOverride 900 true;
           "tasty-kat".components.library.planned = lib.mkOverride 900 true;
+          "direct-sqlite".components.setup.planned = lib.mkOverride 900 true;
           "http-client-tls".components.library.planned = lib.mkOverride 900 true;
           "base-orphans".components.library.planned = lib.mkOverride 900 true;
           "setenv".components.library.planned = lib.mkOverride 900 true;

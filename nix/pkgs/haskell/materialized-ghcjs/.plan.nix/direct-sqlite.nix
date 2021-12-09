@@ -16,7 +16,7 @@
       json1 = true;
       };
     package = {
-      specVersion = "1.10";
+      specVersion = "2.0";
       identifier = { name = "direct-sqlite"; version = "2.3.26"; };
       license = "BSD-3-Clause";
       copyright = "Copyright (c) 2012 - 2014 Irene Knapp,\n2014 - 2018 Janne Hellsten,\n2018 - 2020 Sergey Bushnyak";
@@ -26,8 +26,12 @@
       url = "";
       synopsis = "Low-level binding to SQLite3.  Includes UTF8 and BLOB support.";
       description = "This package is not very different from the other SQLite3 bindings out\nthere, but it fixes a few deficiencies I was finding.  As compared to\nbindings-sqlite3, it is slightly higher-level, in that it supports\nmarshalling of data values to and from the database.  In particular,\nit supports strings encoded as UTF8, and BLOBs represented as\nByteStrings.";
-      buildType = "Simple";
+      buildType = "Custom";
       isLocal = true;
+      setup-depends = [
+        (hsPkgs.buildPackages.base or (pkgs.buildPackages.base or (errorHandler.setupDepError "base")))
+        (hsPkgs.buildPackages.Cabal or (pkgs.buildPackages.Cabal or (errorHandler.setupDepError "Cabal")))
+        ];
       detailLevel = "FullDetails";
       licenseFiles = [ "LICENSE" ];
       dataDir = ".";
@@ -64,7 +68,7 @@
           "Database/SQLite3/Direct"
           ];
         cSources = (pkgs.lib).optional (!flags.systemlib) "cbits/sqlite3.c";
-        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/direct-sqlite.js";
+        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/bindings.js";
         includeDirs = [ "." ] ++ (pkgs.lib).optional (!flags.systemlib) "cbits";
         };
       tests = {
@@ -81,6 +85,7 @@
             ];
           buildable = true;
           modules = [ "StrictEq" ];
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
           };
