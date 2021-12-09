@@ -104,10 +104,7 @@
           "Cardano/Crypto/Libsodium/UnsafeC"
           "Cardano/Foreign"
           ];
-        jsSources = (pkgs.lib).optionals (compiler.isGhcjs && true || system.isGhcjs) [
-          "jsbits/libsodium.js"
-          "jsbits/wrappers.js.pp"
-          ];
+        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/bindings.js.pp";
         hsSourceDirs = [ "src" ];
         };
       tests = {
@@ -119,20 +116,12 @@
             (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
             ] ++ (pkgs.lib).optional (system.isLinux || system.isOsx) (hsPkgs."unix" or (errorHandler.buildDepError "unix"));
           buildable = true;
+          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "memory-example" ];
           mainPath = [ "Main.hs" ];
           };
         };
       };
-    } // {
-    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "3";
-      rev = "minimal";
-      sha256 = "";
-      }) // {
-      url = "3";
-      rev = "minimal";
-      sha256 = "";
-      };
-    postUnpack = "sourceRoot+=/cardano-crypto-class; echo source root reset to \$sourceRoot";
+    } // rec {
+    src = (pkgs.lib).mkDefault ../contrib/cardano-base-dac284/cardano-crypto-class;
     }

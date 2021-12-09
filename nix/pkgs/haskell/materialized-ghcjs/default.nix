@@ -1244,6 +1244,7 @@
           "cryptonite".components.tests."test-cryptonite".planned = lib.mkOverride 900 true;
           "freer-simple".components.exes."freer-examples".planned = lib.mkOverride 900 true;
           "jwt".components.library.planned = lib.mkOverride 900 true;
+          "cardano-crypto-class".components.tests."test-memory-example".planned = lib.mkOverride 900 true;
           "plutus-core".components.exes."uplc".planned = lib.mkOverride 900 true;
           "cborg".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab".components.exes."tx-inject".planned = lib.mkOverride 900 true;
