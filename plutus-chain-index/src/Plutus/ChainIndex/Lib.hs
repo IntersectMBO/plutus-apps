@@ -17,7 +17,26 @@ A minimal example that just syncs the chain index:
 @
 
 -}
-module Plutus.ChainIndex.Lib where
+module Plutus.ChainIndex.Lib (
+    RunRequirements(..)
+    , withRunRequirements
+    , withDefaultRunRequirements
+    , defaultLoggingConfig
+    , Config.defaultConfig
+    -- * Chain index effects
+    , CI.handleChainIndexEffects
+    , runChainIndexEffects
+    -- * Chain synchronisation
+    , syncChainIndex
+    -- ** Synchronisation handlers
+    , ChainSyncHandler
+    , ChainSyncEvent(..)
+    , defaultChainSynHandler
+    , storeFromBlockNo
+    , showingProgress
+    -- * Utils
+    , getTipSlot
+) where
 
 import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer (Eff)
@@ -48,6 +67,7 @@ import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryE
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.Monitoring.Util (runLogEffects)
 
+-- | Generate the requirements to run the chain index effects given logging configuration and chain index configuration.
 withRunRequirements :: CM.Configuration -> Config.ChainIndexConfig -> (RunRequirements -> IO ()) -> IO ()
 withRunRequirements logConfig config cont = do
   Sqlite.withConnection (Config.cicDbPath config) $ \conn -> do
@@ -73,13 +93,20 @@ withRunRequirements logConfig config cont = do
     stateTVar <- STM.newTVarIO mempty
     cont $ RunRequirements trace stateTVar conn (Config.cicSecurityParam config)
 
+-- | Generate the requirements to run the chain index effects given default configurations.
 withDefaultRunRequirements :: (RunRequirements -> IO ()) -> IO ()
 withDefaultRunRequirements cont = do
     logConfig <- Logging.defaultConfig
     withRunRequirements logConfig Config.defaultConfig cont
 
+-- | The default logging configuration.
+defaultLoggingConfig :: IO CM.Configuration
+defaultLoggingConfig = Logging.defaultConfig
+
+-- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
 
+-- | The default chain synchronisation event handler. Updates the in-memory state and the database.
 defaultChainSynHandler :: RunRequirements -> ChainSyncHandler
 defaultChainSynHandler runReq
     (RollForward block _ opt) = do
@@ -96,25 +123,21 @@ defaultChainSynHandler runReq
     (Resume point) = do
         void $ runChainIndexDuringSync runReq $ resumeSync $ fromCardanoPoint point
 
+-- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
 storeFromBlockNo :: C.BlockNo -> ChainSyncHandler -> ChainSyncHandler
 storeFromBlockNo storeFrom handler (RollForward block@(C.BlockInMode (C.Block (C.BlockHeader _ _ blockNo) _) _) tip opt) =
     handler (RollForward block tip opt{ CI.bpoStoreTxs = blockNo >= storeFrom })
 storeFromBlockNo _ handler evt = handler evt
 
--- filterTxs :: (C.Tx era -> Bool) -> ChainSyncHandler -> ChainSyncHandler
--- filterTxs isAccepted handler (RollForward (C.BlockInMode (C.Block header txs) mode) tip opt) =
---     handler (RollForward (C.BlockInMode (C.Block header (filter isAccepted txs) mode) tip opt))
--- filterTxs _ handler evt = handler evt
-
 -- | Get the slot number of the current tip of the node.
-getTipSlot :: Config.ChainIndexConfig -> IO Integer
+getTipSlot :: Config.ChainIndexConfig -> IO C.SlotNo
 getTipSlot config = do
-  C.ChainTip (C.SlotNo slotNo) _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
+  C.ChainTip slotNo _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
     { C.localConsensusModeParams = C.CardanoModeParams epochSlots
     , C.localNodeNetworkId = Config.cicNetworkId config
     , C.localNodeSocketPath = Config.cicSocketPath config
     }
-  pure $ fromIntegral slotNo
+  pure slotNo
 
 showProgress :: IORef Integer -> C.SlotNo -> C.SlotNo -> IO ()
 showProgress lastProgressRef (C.SlotNo tipSlot) (C.SlotNo blockSlot) = do
@@ -137,6 +160,7 @@ showingProgress handler = do
             handler $ RollForward block tip opt
         evt -> handler evt
 
+-- | Synchronise the chain index with the node using the given handler.
 syncChainIndex :: Config.ChainIndexConfig -> RunRequirements -> ChainSyncHandler -> IO ()
 syncChainIndex config runReq syncHandler = do
     Just resumePoints <- runChainIndexDuringSync runReq getResumePoints

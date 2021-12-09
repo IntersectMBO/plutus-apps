@@ -36,7 +36,7 @@ import Control.Monad.IO.Class (liftIO)
 import Database.SQLite.Simple qualified as Sqlite
 import Plutus.Monitoring.Util (convertLog, runLogEffects)
 
--- | The required arguments to run the chain-index effects.
+-- | The required arguments to run the chain index effects.
 data RunRequirements = RunRequirements
     { trace         :: Trace IO ChainIndexLog
     , stateTVar     :: TVar ChainIndexState
@@ -44,7 +44,7 @@ data RunRequirements = RunRequirements
     , securityParam :: Int
     }
 
--- | Run the chain-index effects.
+-- | Run the chain index effects.
 runChainIndexEffects
     :: RunRequirements
     -> Eff '[ChainIndexQueryEffect, ChainIndexControlEffect, BeamEffect] a
@@ -54,7 +54,7 @@ runChainIndexEffects runReq action =
         $ handleChainIndexEffects runReq
         $ raiseEnd action
 
--- | Handle the chain-index effects from the set of all effects.
+-- | Handle the chain index effects from the set of all effects.
 handleChainIndexEffects
     :: (LastMember IO effs, Member (LogMsg ChainIndexLog) effs)
     => RunRequirements

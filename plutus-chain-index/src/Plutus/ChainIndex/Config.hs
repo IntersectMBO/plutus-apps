@@ -52,13 +52,13 @@ deriving anyclass instance ToJSON NetworkMagic
 deriving anyclass instance FromJSON BlockNo
 deriving anyclass instance ToJSON BlockNo
 
--- | These settings work with the Alonzo Purple testnet
+-- | These settings work with the main testnet
 defaultConfig :: ChainIndexConfig
 defaultConfig = ChainIndexConfig
-  { cicSocketPath = "/tmp/node-server.sock"
+  { cicSocketPath = "testnet/node.sock"
   , cicDbPath     = "/tmp/chain-index.db"
   , cicPort       = 9083
-  , cicNetworkId  = Testnet $ NetworkMagic 8
+  , cicNetworkId  = Testnet $ NetworkMagic 1097911063
   , cicSecurityParam = 2160
   , cicSlotConfig =
       SlotConfig
