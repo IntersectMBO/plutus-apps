@@ -186,6 +186,7 @@ test-suite plutus-contract-test
         Spec.ThreadToken
         Spec.Secrets
         Spec.Plutus.Contract.Wallet
+        Spec.Plutus.Contract.Oracle
     build-depends:
         base >=4.9 && <5,
         bytestring -any,
