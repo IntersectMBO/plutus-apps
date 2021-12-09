@@ -1,3 +1,4 @@
+cabal-version:      2.0
 name:               direct-sqlite
 version:            2.3.26
 synopsis:           Low-level binding to SQLite3.  Includes UTF8 and BLOB support.
@@ -17,7 +18,6 @@ maintainer:         Sergey Bushnyak <sergey.bushnyak@sigrlami.eu>
 category:           Database
 homepage:           https://github.com/IreneKnapp/direct-sqlite
 bug-reports:        https://github.com/IreneKnapp/direct-sqlite/issues/new
-build-type:         Simple
 extra-source-files: cbits/sqlite3.c
                     cbits/sqlite3.h
                     cbits/sqlite3ext.h
@@ -26,7 +26,12 @@ extra-source-files: cbits/sqlite3.c
                     jsbits/emscripten/direct-sqlite.pre.js
                     jsbits/emscripten/direct-sqlite.post.js
                     changelog
-cabal-version:      >= 1.10
+build-type:         Custom
+
+custom-setup
+  setup-depends:
+    base  >= 4.5,
+    Cabal >= 2.4
 
 source-repository head
   type:     git
@@ -66,7 +71,8 @@ library
   ghc-options:      -Wall -fwarn-tabs
 
   if os(ghcjs)
-    js-sources: jsbits/direct-sqlite.js
+    js-sources: jsbits/bindings.js
+    extra-bundled-libraries: EMCCdirect-sqlite EMCCdirect-sqlite.exported
 
   if flag(systemlib)
     extra-libraries: sqlite3
@@ -113,3 +119,7 @@ test-suite test
                       OverloadedStrings
                       DeriveDataTypeable
   ghc-options:        -Wall -threaded -fno-warn-name-shadowing -fno-warn-unused-do-bind
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
