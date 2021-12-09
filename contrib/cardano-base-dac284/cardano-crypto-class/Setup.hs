@@ -62,6 +62,11 @@ buildEMCCLib desc lbi = do
 --
 linkEMCCLib :: PackageDescription -> LocalBuildInfo -> IO ()
 linkEMCCLib desc lbi = do
+    let extraLibs = [ "-l" <> l | l <- concatMap IPI.extraLibraries (topologicalOrder $ installedPkgs lbi)
+                                , l /= "m"
+                                , l /= "dl" ]
+        libDirs = [ "-L" <> path | path <- concatMap IPI.libraryDirs (topologicalOrder $ installedPkgs lbi) ]
+
     let verbosity = verbose
     libs <- filterM doesFileExist $
             concatMap (\x -> [ libDir </> "libEMCC" <> (unPackageName . pkgName . sourcePackageId $ x) <> ".js_a"
@@ -83,7 +88,7 @@ linkEMCCLib desc lbi = do
         , "-s", "EXPORTED_RUNTIME_METHODS=['printErr','addFunction','removeFunction','getTempRet0','setTempRet0']"
         --
         , "-s", "EXPORTED_FUNCTIONS=['" <> intercalate "', '" exfns <> "']"
-        ] ++ libs
+        ] ++ libs ++ libDirs ++ extraLibs
 
 
 postBuildHook :: Args -> BuildFlags -> PackageDescription -> LocalBuildInfo -> IO ()
