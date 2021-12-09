@@ -128,7 +128,7 @@ import Plutus.Contract.Schema (Input, Output)
 import Wallet.Types (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
 
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse (page))
+import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse (paget), UtxosResponse (page))
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
 import Plutus.Contract.Resumable (prompt)
 import Plutus.Contract.Types (AsContractError (_ConstraintResolutionError, _OtherError, _ResumableError, _WalletError),
@@ -477,7 +477,7 @@ foldTxoRefsAt f ini addr = go ini (Just def)
   where
     go acc Nothing = pure acc
     go acc (Just pq) = do
-      page <- txoRefsAt pq addr
+      page <- paget <$> txoRefsAt pq addr
       newAcc <- f acc page
       go newAcc (nextPageQuery page)
 
@@ -504,7 +504,7 @@ txoRefsAt ::
     )
     => PageQuery TxOutRef
     -> Address
-    -> Contract w s e (Page TxOutRef)
+    -> Contract w s e TxosResponse
 txoRefsAt pq addr = do
   cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
   case cir of

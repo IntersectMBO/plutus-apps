@@ -47,7 +47,8 @@ import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxId (..), TxOut (..), TxOutRef (..))
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
-import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
+                              UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Compatibility (toCardanoPoint)
@@ -268,13 +269,13 @@ getTxoSetAtAddress
     )
   => PageQuery TxOutRef
   -> Credential
-  -> Eff effs (Page TxOutRef)
+  -> Eff effs TxosResponse
 getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
   utxoState <- gets @ChainIndexState UtxoState.utxoState
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
           logWarn TipIsGenesis
-          pure $ Page pageQuery Nothing []
+          pure (TxosResponse (Page pageQuery Nothing []))
       _           -> do
           let query =
                 fmap _addressRowOutRef
@@ -282,7 +283,7 @@ getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
                   $ all_ (addressRows db)
           txOutRefs' <- selectPage (fmap toDbValue pageQuery) query
           let page = fmap fromDbValue txOutRefs'
-          pure page
+          pure $ TxosResponse page
 
 handleControl ::
     forall effs.

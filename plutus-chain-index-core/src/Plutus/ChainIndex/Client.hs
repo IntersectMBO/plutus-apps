@@ -31,7 +31,8 @@ import Ledger (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, Red
                StakeValidatorHash, TxId, Validator, ValidatorHash)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Network.HTTP.Types.Status (Status (..))
-import Plutus.ChainIndex.Api (API, IsUtxoResponse, TxoAtAddressRequest (TxoAtAddressRequest), UtxoAtAddressRequest (UtxoAtAddressRequest),
+import Plutus.ChainIndex.Api (API, IsUtxoResponse, TxoAtAddressRequest (TxoAtAddressRequest), TxosResponse,
+                              UtxoAtAddressRequest (UtxoAtAddressRequest),
                               UtxoWithCurrencyRequest (UtxoWithCurrencyRequest), UtxosResponse)
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx)
@@ -56,7 +57,7 @@ getIsUtxo :: TxOutRef -> ClientM IsUtxoResponse
 getUtxoSetAtAddress :: UtxoAtAddressRequest -> ClientM UtxosResponse
 getUtxoSetWithCurrency :: UtxoWithCurrencyRequest -> ClientM UtxosResponse
 getTxs :: [TxId] -> ClientM [ChainIndexTx]
-getTxoSetAtAddress :: TxoAtAddressRequest -> ClientM (Page TxOutRef)
+getTxoSetAtAddress :: TxoAtAddressRequest -> ClientM TxosResponse
 getTip :: ClientM Tip
 
 (healthCheck, (getDatum, getValidator, getMintingPolicy, getStakeValidator, getRedeemer), getTxOut, getTx, getIsUtxo, getUtxoSetAtAddress, getUtxoSetWithCurrency, getTxs, getTxoSetAtAddress, getTip, collectGarbage) =

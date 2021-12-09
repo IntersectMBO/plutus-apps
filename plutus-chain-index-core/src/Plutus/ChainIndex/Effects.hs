@@ -34,7 +34,7 @@ import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, R
                StakeValidatorHash, TxId, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
-import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse)
+import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (BlockProcessOption, Diagnostics, Point, Tip)
 
@@ -77,7 +77,7 @@ data ChainIndexQueryEffect r where
     TxsFromTxIds :: [TxId] -> ChainIndexQueryEffect [ChainIndexTx]
 
     -- | Outputs located at addresses with the given credential.
-    TxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (Page TxOutRef)
+    TxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect TxosResponse
 
     -- | Get the tip of the chain index
     GetTip :: ChainIndexQueryEffect Tip

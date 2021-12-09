@@ -96,7 +96,8 @@ import Ledger.Time (POSIXTime, POSIXTimeRange)
 import Ledger.TimeSlot (SlotConversionError)
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, getCardanoTxId)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
-import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
+                              UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
 import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
 import Prettyprinter (Pretty (pretty), hsep, indent, viaShow, vsep, (<+>))
@@ -272,7 +273,7 @@ data ChainIndexResponse =
   | UtxoSetAtResponse UtxosResponse
   | UtxoSetWithCurrencyResponse UtxosResponse
   | TxIdsResponse [ChainIndexTx]
-  | TxoSetAtResponse (Page TxOutRef)
+  | TxoSetAtResponse TxosResponse
   | GetTipResponse Tip
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -304,7 +305,7 @@ instance Pretty ChainIndexResponse where
             <+> "and utxo refs are"
             <+> hsep (fmap pretty $ pageItems txOutRefPage)
         TxIdsResponse t -> "Chain index txs from tx ids response:" <+> pretty (_citxTxId <$> t)
-        TxoSetAtResponse txOutRefPage ->
+        TxoSetAtResponse (TxosResponse txOutRefPage) ->
                 "Chain index TxO set from address response:"
             <+> "The txo refs are"
             <+> hsep (fmap pretty $ pageItems txOutRefPage)

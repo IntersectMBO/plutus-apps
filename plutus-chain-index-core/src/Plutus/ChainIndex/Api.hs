@@ -16,6 +16,7 @@ module Plutus.ChainIndex.Api
   , UtxoWithCurrencyRequest(..)
   , swagger
   , TxoAtAddressRequest(..)
+  , TxosResponse(..)
   ) where
 
 import Control.Monad.Freer.Extras.Pagination (Page, PageQuery)
@@ -134,7 +135,13 @@ data TxoAtAddressRequest = TxoAtAddressRequest
     { pageQuery  :: Maybe (PageQuery TxOutRef)
     , credential :: Credential
     }
-    deriving (Show, Eq, Generic, FromJSON, ToJSON)
+    deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
+
+-- | Response type for the txo-at-address endpoint.
+data TxosResponse = TxosResponse
+    { paget :: Page TxOutRef
+    }
+    deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
 type API
     = "healthcheck" :> Description "Is the server alive?" :> Get '[JSON] NoContent
@@ -144,8 +151,8 @@ type API
     :<|> "is-utxo" :> Description "Check if the reference is an UTxO." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] IsUtxoResponse
     :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoAtAddressRequest :> Post '[JSON] UtxosResponse
     :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] UtxosResponse
-    :<|> "txs" :> ReqBody '[JSON] [TxId] :> Post '[JSON] [ChainIndexTx]
-    :<|> "txo-at-address" :> ReqBody '[JSON] TxoAtAddressRequest :> Post '[JSON] (Page TxOutRef)
+    :<|> "txs" :> Description "Get transactions from a list of their ids." :> ReqBody '[JSON] [TxId] :> Post '[JSON] [ChainIndexTx]
+    :<|> "txo-at-address" :> Description "Get TxOs at an address." :> ReqBody '[JSON] TxoAtAddressRequest :> Post '[JSON] TxosResponse
     :<|> "tip" :> Description "Get the current synced tip." :> Get '[JSON] Tip
     :<|> "collect-garbage" :> Description "Collect chain index garbage to free up space." :> Put '[JSON] NoContent
     :<|> "diagnostics" :> Description "Get the current stats of the chain index." :> Get '[JSON] Diagnostics
