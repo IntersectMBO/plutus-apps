@@ -114,6 +114,9 @@ tests = testGroup "all tests" [
         ],
     testGroup "SomeCardanoApiTx" [
         testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
+        ],
+    testGroup "Signing" [
+        testProperty "signed payload verifies with public key" signAndVerifyTest
         ]
     ]
 
@@ -321,3 +324,12 @@ slotToTimeRangeBoundsInverseProp = property $ do
                                   (TimeSlot.slotToPOSIXTimeRange sc slot)
     Hedgehog.assert $ interval slot slot == slotRange
 
+signAndVerifyTest :: Property
+signAndVerifyTest = property $ do
+  seed <- forAll Gen.genSeed
+  pass <- forAll Gen.genPassphrase
+  let
+    privKey = generateFromSeed seed pass
+    pubKey = toPublicKey privKey
+  payload <- forAll $ Gen.bytes $ Range.singleton 128
+  Hedgehog.assert $ (\x -> signedBy x pubKey payload) $ Crypto.sign payload privKey pass

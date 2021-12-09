@@ -41,6 +41,8 @@ module Ledger.Generators(
     genSizedByteString,
     genSizedByteStringExact,
     genTokenName,
+    genSeed,
+    genPassphrase,
     splitVal,
     validateMockchain,
     signAll
@@ -424,6 +426,15 @@ genMintingPolicyContext chain = do
     txInfo <- genTxInfo chain
     purpose <- genScriptPurposeMinting txInfo
     pure $ ScriptContext txInfo purpose
+
+-- | Seed suitable for testing a seed but not for actual wallets as ScrubbedBytes isn't used to ensure
+--  memory isn't inspectable
+genSeed :: MonadGen m => m BS.ByteString
+genSeed =  Gen.bytes $ Range.singleton 32
+
+genPassphrase :: MonadGen m => m Passphrase
+genPassphrase =
+  Passphrase <$> Gen.utf8 (Range.singleton 16) Gen.unicode
 
 knownPrivateKeys :: [PrivateKey]
 knownPrivateKeys = CW.privateKey <$> CW.knownWallets
