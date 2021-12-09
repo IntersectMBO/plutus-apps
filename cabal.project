@@ -15,6 +15,7 @@ packages: doc
 
           contrib/cardano-crypto-07397f
           contrib/cryptonite-0.29
+          contrib/cardano-base-dac284/cardano-crypto-class
 
 -- We never, ever, want this.
 write-ghc-environment-files: never
@@ -88,7 +89,7 @@ source-repository-package
     base-deriving-via
     binary
     binary/test
-    cardano-crypto-class
+    -- cardano-crypto-class
     cardano-crypto-praos
     cardano-crypto-tests
     measures
