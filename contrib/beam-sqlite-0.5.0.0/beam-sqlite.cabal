@@ -1,3 +1,4 @@
+cabal-version:       2.2
 name:                beam-sqlite
 version:             0.5.0.0
 synopsis:            Beam driver for SQLite
@@ -11,11 +12,16 @@ author:              Travis Athougies
 maintainer:          travis@athougies.net
 copyright:           (C) 2017-2018 Travis Athougies
 category:            Database
-build-type:          Simple
 extra-source-files:  README.md
 extra-doc-files:     ChangeLog.md
 bug-reports:          https://github.com/haskell-beam/beam/issues
-cabal-version:       1.18
+build-type:          Custom
+
+custom-setup
+  setup-depends:
+    base  >= 4.5,
+    Cabal >= 2.4
+
 
 library
   exposed-modules:    Database.Beam.Sqlite
@@ -88,6 +94,11 @@ test-suite beam-sqlite-tests
     StandaloneDeriving,
     TypeApplications,
     TypeFamilies
+
+  if os(ghcjs)
+    js-sources: dist/build/emcc/lib.js
+    -- this is a hack, as js-sources apparently doesn't work.
+    ghc-options: dist/build/emcc/lib.js
 
 flag werror
   description: Enable -Werror during development
