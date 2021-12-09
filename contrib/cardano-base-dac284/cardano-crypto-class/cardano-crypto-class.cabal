@@ -12,11 +12,17 @@ author:              IOHK
 maintainer:          operations@iohk.io
 copyright:           2019-2021 IOHK
 category:            Currency
-build-type:          Simple
+build-type:          Custom
 extra-source-files:  README.md
                      jsbits/libsodium.c
                      jsbits/libsodium.js
                      jsbits/wrappers.js.pp
+
+custom-setup
+  setup-depends:
+    base  >= 4.5,
+    Cabal >= 2.4
+
 
 flag development
     description: Disable `-Werror`
