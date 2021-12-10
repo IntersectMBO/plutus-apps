@@ -273,7 +273,6 @@
         "string-conv".flags.lib-werror = false;
         "safe".revision = (((hackage."safe")."0.3.19").revisions).default;
         "hspec-core".revision = (((hackage."hspec-core")."2.8.3").revisions).default;
-        "scrypt".revision = (((hackage."scrypt")."0.5.0").revisions).default;
         "contravariant".revision = (((hackage."contravariant")."1.5.5").revisions).default;
         "contravariant".flags.tagged = true;
         "contravariant".flags.semigroups = true;
@@ -823,6 +822,7 @@
         io-classes = ./.plan.nix/io-classes.nix;
         cardano-slotting = ./.plan.nix/cardano-slotting.nix;
         typed-protocols = ./.plan.nix/typed-protocols.nix;
+        scrypt = ./.plan.nix/scrypt.nix;
         network-info = ./.plan.nix/network-info.nix;
         gauge = ./.plan.nix/gauge.nix;
         small-steps = ./.plan.nix/small-steps.nix;
@@ -1032,6 +1032,7 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "typed-protocols" = { flags = {}; };
+          "scrypt" = { flags = {}; };
           "network-info" = { flags = {}; };
           "gauge" = { flags = { "analysis" = lib.mkOverride 900 true; }; };
           "small-steps" = {
@@ -1248,6 +1249,7 @@
           "ouroboros-consensus-cardano".components.library.planned = lib.mkOverride 900 true;
           "pretty-simple".components.library.planned = lib.mkOverride 900 true;
           "reflection".components.library.planned = lib.mkOverride 900 true;
+          "scrypt".components.tests."scrypt-test".planned = lib.mkOverride 900 true;
           "insert-ordered-containers".components.library.planned = lib.mkOverride 900 true;
           "cardano-ledger-shelley".components.library.planned = lib.mkOverride 900 true;
           "hspec-discover".components.library.planned = lib.mkOverride 900 true;
