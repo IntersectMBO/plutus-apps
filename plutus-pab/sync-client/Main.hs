@@ -17,7 +17,6 @@ import Cardano.Api (Block (..), BlockHeader (..), BlockInMode (..), ChainPoint (
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
 import Cardano.Protocol.Socket.Type (cfgNetworkId)
 import Cardano.Slotting.Slot (SlotNo (..))
-import Ledger (Slot)
 import Ledger.TimeSlot (SlotConfig (..))
 
 -- | We only need to know the location of the socket.
@@ -39,20 +38,19 @@ slotConfig =
 -- | A simple callback that reads the incoming data, from the node.
 processBlock
   :: ChainSyncEvent
-  -> Slot
   -> IO ()
-processBlock (RollForward (BlockInMode (Block (BlockHeader (SlotNo slot) hsh _) _) _) _) _ =
+processBlock (RollForward (BlockInMode (Block (BlockHeader (SlotNo slot) hsh _) _) _) _) =
   putStrLn $ "Received block " <> show (serialiseToRawBytesHexText hsh)
           <> " for slot "      <> show slot
-processBlock (Resume (ChainPoint (SlotNo slot) hsh)) _ =
+processBlock (Resume (ChainPoint (SlotNo slot) hsh)) =
   putStrLn $ "Resuming from slot " <> show slot
           <> " at hash " <> show (serialiseToRawBytesHexText hsh)
-processBlock (Resume ChainPointAtGenesis) _ =
+processBlock (Resume ChainPointAtGenesis) =
   putStrLn "Resuming from genesis block"
-processBlock (RollBackward (ChainPoint (SlotNo slot) hsh) _) _ =
+processBlock (RollBackward (ChainPoint (SlotNo slot) hsh) _) =
   putStrLn $ "Rolling backward to slot " <> show slot
           <> " at hash " <> show (serialiseToRawBytesHexText hsh)
-processBlock (RollBackward ChainPointAtGenesis _) _ =
+processBlock (RollBackward ChainPointAtGenesis _) =
   putStrLn $ "Rolling backward to genesis"
 
 hashParser :: ReadM ChainPoint
