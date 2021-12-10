@@ -107,7 +107,6 @@
         "parsers".flags.binary = true;
         "parsers".flags.parsec = true;
         "parsers".flags.attoparsec = true;
-        "network-info".revision = (((hackage."network-info")."0.2.0.10").revisions).default;
         "base58-bytestring".revision = (((hackage."base58-bytestring")."0.1.0").revisions).default;
         "random".revision = (((hackage."random")."1.2.0").revisions).default;
         "unix-time".revision = (((hackage."unix-time")."0.4.7").revisions).default;
@@ -797,6 +796,7 @@
         io-classes = ./.plan.nix/io-classes.nix;
         cardano-slotting = ./.plan.nix/cardano-slotting.nix;
         typed-protocols = ./.plan.nix/typed-protocols.nix;
+        network-info = ./.plan.nix/network-info.nix;
         gauge = ./.plan.nix/gauge.nix;
         small-steps = ./.plan.nix/small-steps.nix;
         cardano-crypto-wrapper = ./.plan.nix/cardano-crypto-wrapper.nix;
@@ -989,6 +989,7 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "typed-protocols" = { flags = {}; };
+          "network-info" = { flags = {}; };
           "gauge" = { flags = { "analysis" = lib.mkOverride 900 true; }; };
           "small-steps" = {
             flags = { "sts_assert" = lib.mkOverride 900 false; };
