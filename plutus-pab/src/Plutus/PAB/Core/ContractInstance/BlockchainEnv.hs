@@ -99,7 +99,7 @@ processChainSyncEvent :: BlockchainEnv -> ChainSyncEvent -> STM (Either SyncActi
 processChainSyncEvent blockchainEnv event = do
   result <- case event of
               Resume _ -> Right <$> blockAndSlot blockchainEnv
-              RollForward (BlockInMode (C.Block header transactions) era) _ _ ->
+              RollForward (BlockInMode (C.Block header transactions) era) _ ->
                 case era of
                   -- Unfortunately, we need to pattern match again all eras because
                   -- 'processBlock' has the constraints 'C.IsCardanoEra era', but not

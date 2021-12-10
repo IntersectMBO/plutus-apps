@@ -3,6 +3,7 @@
 {-# LANGUAGE MonoLocalBinds    #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeApplications  #-}
 
 module Plutus.ChainIndex.HandlersSpec (tests) where
@@ -29,7 +30,7 @@ import Plutus.ChainIndex.Api (IsUtxoResponse (isUtxo), UtxosResponse (UtxosRespo
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Tx (_ValidTx, citxTxId)
-import Plutus.ChainIndex.Types (BlockProcessOption (..))
+import Plutus.ChainIndex.Types (ChainSyncBlock (..), TxProcessOption (..))
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Test.Tasty (TestTree, testGroup)
@@ -61,7 +62,7 @@ txFromTxIdSpec = property $ do
   (tip, block@(fstTx:_)) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
   unknownTxId <- forAll Gen.genRandomTxId
   txs <- runChainIndexTest $ do
-      appendBlock tip block def
+      appendBlock (Block tip (map (, def) block))
       tx <- txFromTxId (view citxTxId fstTx)
       tx' <- txFromTxId unknownTxId
       pure (tx, tx')
@@ -79,7 +80,7 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlock tip block def
+      appendBlock (Block tip (map (, def) block))
       utxoSetFromBlockAddrs block
 
   S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
@@ -99,7 +100,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlock tip block def
+      appendBlock (Block tip (map (, def) block))
 
       forM assetClasses $ \ac -> do
         let pq = PageQuery 200 Nothing
@@ -117,7 +118,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
 
   utxoRefs <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlock tip block def
+      appendBlock (Block tip (map (, def) block))
 
       let pq = PageQuery 200 Nothing
       UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq (AssetClass (Ada.adaSymbol, Ada.adaToken))
@@ -132,7 +133,7 @@ doNotStoreTxs :: Property
 doNotStoreTxs = property $ do
   ((tip, block), state) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
   result <- runChainIndexTest $ do
-      appendBlock tip block BlockProcessOption{bpoStoreTxs=False}
+      appendBlock (Block tip (map (, TxProcessOption{tpoStoreTx=False}) block))
       tx <- txFromTxId (view citxTxId (head block))
       utxosFromAddr <- utxoSetFromBlockAddrs block
       utxosStored <- traverse utxoSetMembership (S.toList (view Gen.txgsUtxoSet state))

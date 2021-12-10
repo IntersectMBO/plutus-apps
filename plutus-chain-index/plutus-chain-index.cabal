@@ -49,6 +49,7 @@ library
         cardano-api -any,
         containers -any,
         contra-tracer -any,
+        data-default -any,
         freer-simple -any,
         iohk-monitoring -any,
         lens -any,

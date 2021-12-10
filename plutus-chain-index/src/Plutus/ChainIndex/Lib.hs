@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 {-| Using the chain index as a library.
 
 A minimal example that just syncs the chain index:
@@ -33,6 +34,7 @@ module Plutus.ChainIndex.Lib (
     , ChainSyncEvent(..)
     , defaultChainSynHandler
     , storeFromBlockNo
+    , filterTxs
     , showingProgress
     -- * Utils
     , getTipSlot
@@ -42,6 +44,7 @@ import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer (Eff)
 import Control.Monad.Freer.Extras.Beam (BeamEffect, BeamLog (SqlLog))
 import Control.Monad.Freer.Extras.Log qualified as Log
+import Data.Default (def)
 import Data.Functor (void)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Database.Beam.Migrate.Simple (autoMigrate)
@@ -54,12 +57,13 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.BM.Trace (Trace, logDebug, logError, nullTracer)
 
-import Cardano.Protocol.Socket.Client (ChainSyncEvent (..), runChainSync)
+import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
+import Ledger.Slot (Slot (..))
 import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequirements), getResumePoints,
-                          runChainIndexEffects)
+                          runChainIndexEffects, tipBlockNo)
 import Plutus.ChainIndex qualified as CI
-import Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, tipFromCardanoBlock)
+import Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, fromCardanoTip, tipFromCardanoBlock)
 import Plutus.ChainIndex.Config qualified as Config
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..), appendBlock, resumeSync,
@@ -103,31 +107,51 @@ withDefaultRunRequirements cont = do
 defaultLoggingConfig :: IO CM.Configuration
 defaultLoggingConfig = Logging.defaultConfig
 
+-- | Chain synchronisation events.
+data ChainSyncEvent
+    = Resume       CI.Point
+    | RollForward  CI.ChainSyncBlock CI.Tip
+    | RollBackward CI.Point CI.Tip
+
+toCardanoChainSyncHandler :: RunRequirements -> ChainSyncHandler -> C.ChainSyncEvent -> IO ()
+toCardanoChainSyncHandler runReq handler = \case
+    C.RollBackward cp ct -> handler (RollBackward (fromCardanoPoint cp) (fromCardanoTip ct))
+    C.Resume cp -> handler (Resume (fromCardanoPoint cp))
+    C.RollForward block ct -> do
+        let ciBlock = fromCardanoBlock block
+        case ciBlock of
+            Left err    ->
+                logError (CI.trace runReq) (CI.ConversionFailed err)
+            Right txs ->
+                handler (RollForward (CI.Block (tipFromCardanoBlock block) (map (, def) txs)) (fromCardanoTip ct))
+
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
 
 -- | The default chain synchronisation event handler. Updates the in-memory state and the database.
 defaultChainSynHandler :: RunRequirements -> ChainSyncHandler
-defaultChainSynHandler runReq
-    (RollForward block _ opt) = do
-        let ciBlock = fromCardanoBlock block
-        case ciBlock of
-            Left err    ->
-                logError (CI.trace runReq) (CI.ConversionFailed err)
-            Right txs -> void $ runChainIndexDuringSync runReq $
-                appendBlock (tipFromCardanoBlock block) txs opt
-defaultChainSynHandler runReq
-    (RollBackward point _) = do
-        void $ runChainIndexDuringSync runReq $ rollback (fromCardanoPoint point)
-defaultChainSynHandler runReq
-    (Resume point) = do
-        void $ runChainIndexDuringSync runReq $ resumeSync $ fromCardanoPoint point
+defaultChainSynHandler runReq evt = void $ runChainIndexDuringSync runReq $ case evt of
+    (RollForward block _)  -> appendBlock block
+    (RollBackward point _) -> rollback point
+    (Resume point)         -> resumeSync point
 
 -- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
-storeFromBlockNo :: C.BlockNo -> ChainSyncHandler -> ChainSyncHandler
-storeFromBlockNo storeFrom handler (RollForward block@(C.BlockInMode (C.Block (C.BlockHeader _ _ blockNo) _) _) tip opt) =
-    handler (RollForward block tip opt{ CI.bpoStoreTxs = blockNo >= storeFrom })
+storeFromBlockNo :: CI.BlockNumber -> ChainSyncHandler -> ChainSyncHandler
+storeFromBlockNo storeFrom handler (RollForward (CI.Block blockTip txs) chainTip) =
+    handler (RollForward (CI.Block blockTip (map (\(tx, opt) -> (tx, opt { CI.tpoStoreTx = CI.tpoStoreTx opt && store })) txs)) chainTip)
+        where store = tipBlockNo blockTip >= storeFrom
 storeFromBlockNo _ handler evt = handler evt
+
+-- | Changes the given @ChainSyncHandler@ to only process and store certain transactions.
+filterTxs :: (CI.ChainIndexTx -> Bool) -- ^ Only process transactions for which this function returns @True@.
+  -> (CI.ChainIndexTx -> Bool) -- ^ From those, only store transactions for which this function returns @True@.
+  -> ChainSyncHandler -- ^ The @ChainSyncHandler@ on which the returned @ChainSyncHandler@ is based.
+  -> ChainSyncHandler
+filterTxs isAccepted isStored handler (RollForward (CI.Block blockTip txs) chainTip) =
+    let txs' = map (\(tx, opt) -> (tx, opt { CI.tpoStoreTx = CI.tpoStoreTx opt && isStored tx }))
+                $ filter (isAccepted . fst) txs
+    in handler (RollForward (CI.Block blockTip txs') chainTip)
+filterTxs _ _ handler evt = handler evt
 
 -- | Get the slot number of the current tip of the node.
 getTipSlot :: Config.ChainIndexConfig -> IO C.SlotNo
@@ -139,10 +163,10 @@ getTipSlot config = do
     }
   pure slotNo
 
-showProgress :: IORef Integer -> C.SlotNo -> C.SlotNo -> IO ()
-showProgress lastProgressRef (C.SlotNo tipSlot) (C.SlotNo blockSlot) = do
+showProgress :: IORef Integer -> Slot -> Slot -> IO ()
+showProgress lastProgressRef (Slot tipSlot) (Slot blockSlot) = do
   lastProgress <- readIORef lastProgressRef
-  let pct = (100 * fromIntegral blockSlot) `div` fromIntegral tipSlot
+  let pct = (100 * blockSlot) `div` tipSlot
   if pct > lastProgress then do
     putStrLn $ "Syncing (" ++ show pct ++ "%)"
     writeIORef lastProgressRef pct
@@ -155,21 +179,22 @@ showingProgress handler = do
     -- See #69.
     lastProgressRef <- newIORef 0
     pure $ \case
-        (RollForward block@(C.BlockInMode (C.Block (C.BlockHeader blockSlot _ _) _) _) tip@(C.ChainTip tipSlot _ _) opt) -> do
+        (RollForward block@(CI.Block (CI.Tip blockSlot _ _) _) tip@(CI.Tip tipSlot _ _)) -> do
             showProgress lastProgressRef tipSlot blockSlot
-            handler $ RollForward block tip opt
+            handler $ RollForward block tip
         evt -> handler evt
 
 -- | Synchronise the chain index with the node using the given handler.
 syncChainIndex :: Config.ChainIndexConfig -> RunRequirements -> ChainSyncHandler -> IO ()
 syncChainIndex config runReq syncHandler = do
     Just resumePoints <- runChainIndexDuringSync runReq getResumePoints
-    void $ runChainSync (Config.cicSocketPath config)
-                        nullTracer
-                        (Config.cicSlotConfig config)
-                        (Config.cicNetworkId  config)
-                        resumePoints
-                        syncHandler
+    void $ C.runChainSync
+        (Config.cicSocketPath config)
+        nullTracer
+        (Config.cicSlotConfig config)
+        (Config.cicNetworkId  config)
+        resumePoints
+        (toCardanoChainSyncHandler runReq syncHandler)
 
 
 runChainIndexDuringSync

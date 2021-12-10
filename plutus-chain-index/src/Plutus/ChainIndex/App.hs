@@ -24,6 +24,7 @@ import Prettyprinter (Pretty (..))
 import Cardano.BM.Configuration.Model qualified as CM
 
 import Plutus.ChainIndex.CommandLine (AppConfig (..), Command (..), applyOverrides, cmdWithHelpParser)
+import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
 import Plutus.ChainIndex.Lib (defaultChainSynHandler, getTipSlot, showingProgress, storeFromBlockNo, syncChainIndex,
                               withRunRequirements)
@@ -74,7 +75,7 @@ runMain logConfig config = do
 
     syncHandler
       <- defaultChainSynHandler runReq
-        & storeFromBlockNo (Config.cicStoreFrom config)
+        & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)
         & showingProgress
 
     putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config

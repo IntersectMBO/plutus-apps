@@ -41,7 +41,7 @@ processBlock
   :: ChainSyncEvent
   -> Slot
   -> IO ()
-processBlock (RollForward (BlockInMode (Block (BlockHeader (SlotNo slot) hsh _) _) _) _ _) _ =
+processBlock (RollForward (BlockInMode (Block (BlockHeader (SlotNo slot) hsh _) _) _) _) _ =
   putStrLn $ "Received block " <> show (serialiseToRawBytesHexText hsh)
           <> " for slot "      <> show slot
 processBlock (Resume (ChainPoint (SlotNo slot) hsh)) _ =

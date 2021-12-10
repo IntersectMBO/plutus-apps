@@ -31,8 +31,8 @@ import Wallet.Emulator.MultiAgent (MultiAgentControlEffect, MultiAgentEffect, wa
 import Data.Hashable (hash)
 import Data.String (IsString (..))
 import Ledger (Block, Slot, TxId (..), eitherTx, txId)
-import Plutus.ChainIndex (BlockId (..), ChainIndexControlEffect, Tip (Tip, TipAtGenesis), appendBlock, fromOnChainTx,
-                          getTip)
+import Plutus.ChainIndex (BlockId (..), ChainIndexControlEffect, ChainSyncBlock (Block), Tip (Tip, TipAtGenesis),
+                          appendBlock, fromOnChainTx, getTip)
 import Plutus.Trace.Emulator.Types (EmulatorMessage (..))
 import Plutus.Trace.Scheduler (EmSystemCall, MessageCall (..), Priority (..), Tag, fork, mkSysCall, sleep)
 import Wallet.Emulator.NodeClient (ChainClientNotification (..), clientNotify)
@@ -149,4 +149,4 @@ appendNewTipBlock lastTip block newSlot = do
               $ (Text.encodeUtf8 . Text.pack . show . hash)
               $ foldMap (getTxId . eitherTx txId txId) block
   let newTip = Tip newSlot blockId nextBlockNo
-  appendBlock newTip (fmap fromOnChainTx block) def
+  appendBlock (Block newTip (fmap (\tx -> (fromOnChainTx tx, def)) block))

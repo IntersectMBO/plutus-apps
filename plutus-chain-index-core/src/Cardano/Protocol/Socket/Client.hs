@@ -24,7 +24,6 @@ import Cardano.BM.Data.Tracer (ToObject (..))
 import Cardano.BM.Trace (logDebug, logWarning)
 import Control.Retry (fibonacciBackoff, recovering, skipAsyncExceptions)
 import Control.Tracer (nullTracer)
-import Data.Default (def)
 import Ledger.TimeSlot (SlotConfig, currentSlot)
 import Ouroboros.Network.IOManager
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
@@ -32,7 +31,7 @@ import Ouroboros.Network.Protocol.ChainSync.Client qualified as ChainSync
 import Cardano.Protocol.Socket.Type hiding (Tip)
 import Ledger (Slot (..))
 import Plutus.ChainIndex.Compatibility (fromCardanoPoint, fromCardanoTip)
-import Plutus.ChainIndex.Types (BlockProcessOption (..), Point, Tip)
+import Plutus.ChainIndex.Types (Point, Tip)
 
 data ChainSyncHandle event = ChainSyncHandle
     { cshCurrentSlot :: IO Slot
@@ -41,7 +40,7 @@ data ChainSyncHandle event = ChainSyncHandle
 
 data ChainSyncEvent =
     Resume       !ChainPoint
-  | RollForward  !(BlockInMode CardanoMode) !ChainTip !BlockProcessOption
+  | RollForward  !(BlockInMode CardanoMode) !ChainTip
   | RollBackward !ChainPoint !ChainTip
 
 {- | The `Slot` parameter here represents the `current` slot as computed from the
@@ -85,7 +84,7 @@ runChainSync
   -> [ChainPoint]
   -> (ChainSyncEvent -> IO ())
   -> IO (ChainSyncHandle ChainSyncEvent)
-runChainSync socketPath trace slotConfig networkId resumePoints onChainSynEvent = do
+runChainSync socketPath trace slotConfig networkId resumePoints onChainSyncEvent = do
     let handle = ChainSyncHandle {
           cshCurrentSlot = currentSlot slotConfig,
           cshHandler = chainSyncEventHandler }
@@ -103,7 +102,7 @@ runChainSync socketPath trace slotConfig networkId resumePoints onChainSynEvent 
 
     pure handle
     where
-      chainSyncEventHandler evt _ = onChainSynEvent evt
+      chainSyncEventHandler evt _ = onChainSyncEvent evt
       localNodeConnectInfo = LocalNodeConnectInfo {
         localConsensusModeParams = CardanoModeParams epochSlots,
         localNodeNetworkId = networkId,
@@ -157,7 +156,7 @@ chainSyncClient trace slotConfig resumePoints chainSyncEventHandler =
             ChainSync.ChainSyncClient $ do
               slot <- currentSlot slotConfig
               logDebug trace (RolledForward $ fromCardanoTip tip)
-              chainSyncEventHandler (RollForward block tip def) slot
+              chainSyncEventHandler (RollForward block tip) slot
               pure requestNext
         , ChainSync.recvMsgRollBackward = \point tip ->
             ChainSync.ChainSyncClient $ do
