@@ -118,8 +118,6 @@
         "entropy".flags.halvm = false;
         "Stream".revision = (((hackage."Stream")."0.4.7.2").revisions).default;
         "lzma".revision = (((hackage."lzma")."0.0.0.3").revisions).default;
-        "gauge".revision = (((hackage."gauge")."0.2.5").revisions).default;
-        "gauge".flags.analysis = true;
         "system-filepath".revision = (((hackage."system-filepath")."0.4.14").revisions).default;
         "wai".revision = (((hackage."wai")."3.2.3").revisions).default;
         "ral".revision = (((hackage."ral")."0.1").revisions).default;
@@ -782,6 +780,7 @@
         io-classes = ./.plan.nix/io-classes.nix;
         cardano-slotting = ./.plan.nix/cardano-slotting.nix;
         typed-protocols = ./.plan.nix/typed-protocols.nix;
+        gauge = ./.plan.nix/gauge.nix;
         small-steps = ./.plan.nix/small-steps.nix;
         cardano-crypto-wrapper = ./.plan.nix/cardano-crypto-wrapper.nix;
         network-mux = ./.plan.nix/network-mux.nix;
@@ -970,6 +969,7 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "typed-protocols" = { flags = {}; };
+          "gauge" = { flags = { "analysis" = lib.mkOverride 900 true; }; };
           "small-steps" = {
             flags = { "sts_assert" = lib.mkOverride 900 false; };
             };
@@ -1564,6 +1564,7 @@
           "base-compat".components.library.planned = lib.mkOverride 900 true;
           "half".components.library.planned = lib.mkOverride 900 true;
           "smallcheck".components.library.planned = lib.mkOverride 900 true;
+          "gauge".components.benchmarks."self".planned = lib.mkOverride 900 true;
           "time-compat".components.library.planned = lib.mkOverride 900 true;
           "string-conv".components.library.planned = lib.mkOverride 900 true;
           "hostname".components.library.planned = lib.mkOverride 900 true;
