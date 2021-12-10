@@ -5,13 +5,11 @@ labels: ["enhancement"]
 #assignees:
 #  -
 body:
-  - type: checkboxes
+  - type: markdown
     attributes:
-      label: Is there an existing issue for this?
-      description: Please search to see if an issue already exists for this enhancement.
-      options:
-      - label: I have searched the existing issues
-        required: true
+      value: |
+        Thanks for taking the time to fill out this feature request.
+        Please check the existing issues, [Plutus docs](https://plutus-apps.readthedocs.io/en/latest/), [technical report](https://github.com/input-output-hk/plutus-apps/blob/main/README.adoc#specifications-and-design) and [Cardano Stack Exchange](https://cardano.stackexchange.com/) before raising.
   - type: textarea
     id: description
     attributes:
@@ -24,12 +22,5 @@ body:
     attributes:
       label: Describe alternatives you've considered
       description: A clear and concise description of any alternative solutions or features you've considered.
-    validations:
-      required: true
-  - type: textarea
-    id: additional-screenshots
-    attributes:
-      label: Additional context / screenshots
-      description: Add any other context or screenshots about the feature request here.
     validations:
       required: false
