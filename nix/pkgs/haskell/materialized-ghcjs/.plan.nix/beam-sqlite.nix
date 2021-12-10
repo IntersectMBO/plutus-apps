@@ -20,12 +20,8 @@
       url = "";
       synopsis = "Beam driver for SQLite";
       description = "Beam driver for the <https://sqlite.org/ SQLite> embedded database.\nSee <https://haskell-beam.github.io/beam/user-guide/backends/beam-sqlite/ here>\nfor more information";
-      buildType = "Custom";
+      buildType = "Simple";
       isLocal = true;
-      setup-depends = [
-        (hsPkgs.buildPackages.base or (pkgs.buildPackages.base or (errorHandler.setupDepError "base")))
-        (hsPkgs.buildPackages.Cabal or (pkgs.buildPackages.Cabal or (errorHandler.setupDepError "Cabal")))
-        ];
       detailLevel = "FullDetails";
       licenseFiles = [ "LICENSE" ];
       dataDir = ".";

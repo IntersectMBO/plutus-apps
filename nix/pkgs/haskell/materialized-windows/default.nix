@@ -1274,7 +1274,6 @@
           "word8".components.library.planned = lib.mkOverride 900 true;
           "http-client".components.library.planned = lib.mkOverride 900 true;
           "generics-sop".components.library.planned = lib.mkOverride 900 true;
-          "cardano-crypto-class".components.setup.planned = lib.mkOverride 900 true;
           "cardano-ledger-byron-test".components.library.planned = lib.mkOverride 900 true;
           "call-stack".components.library.planned = lib.mkOverride 900 true;
           "playground-common".components.tests."playground-common-test".planned = lib.mkOverride 900 true;
@@ -1381,7 +1380,6 @@
           "plutus-chain-index".components.exes."plutus-chain-index".planned = lib.mkOverride 900 true;
           "wai-websockets".components.library.planned = lib.mkOverride 900 true;
           "hspec-discover".components.exes."hspec-discover".planned = lib.mkOverride 900 true;
-          "cardano-crypto".components.setup.planned = lib.mkOverride 900 true;
           "haskell-lexer".components.library.planned = lib.mkOverride 900 true;
           "singleton-bool".components.library.planned = lib.mkOverride 900 true;
           "splitmix".components.library.planned = lib.mkOverride 900 true;
