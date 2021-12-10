@@ -18,6 +18,7 @@ packages: doc
           contrib/cardano-base-dac284/cardano-crypto-class
           contrib/gauge-0.2.5
           contrib/unix-compat-0.5.3
+          contrib/network-info-0.2.0.10
 
 -- We never, ever, want this.
 write-ghc-environment-files: never
