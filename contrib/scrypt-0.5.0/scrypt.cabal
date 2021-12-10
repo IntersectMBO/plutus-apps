@@ -1,0 +1,68 @@
+name:           scrypt
+version:        0.5.0
+license:        BSD3
+license-file:   LICENSE
+category:       Cryptography
+copyright:      Copyright 2011 Falko Peters
+author:         Falko Peters <falko.peters@gmail.com>
+maintainer:     Falko Peters <falko.peters@gmail.com>
+stability:      experimental
+cabal-version:  >= 1.8
+homepage:       http://github.com/informatikr/scrypt
+bug-reports:    http://github.com/informatikr/scrypt/issues
+build-type:     Simple
+synopsis:
+    Stronger password hashing via sequential memory-hard functions.
+description:
+    This package provides bindings to Colin Percival's `scrypt` 
+    implementation (<http://www.tarsnap.com/scrypt.html>). Scrypt is a key
+    derivation function designed to be far more secure against hardware
+    brute-force attacks than alternative functions such as PBKDF2 or bcrypt.
+    .
+    Details of the scrypt key derivation function are given in a paper by
+    Colin Percival, Stronger Key Derivation via Sequential Memory-Hard
+    Functions: <http://www.tarsnap.com/scrypt/scrypt.pdf>.
+
+extra-source-files:
+    README.markdown,
+    cbits/crypto_scrypt.h,
+    cbits/sha256.h,
+    cbits/sysendian.h
+
+source-repository head
+    type:     git
+    location: http://github.com/informatikr/scrypt
+
+library
+    exposed-modules: Crypto.Scrypt
+    hs-source-dirs: src
+    build-depends:
+        base == 4.*,
+        base64-bytestring >= 0.1,
+        bytestring >= 0.9,
+        entropy >= 0.2
+
+    ghc-options: -Wall
+    ghc-prof-options: -auto-all
+
+    c-sources: cbits/crypto_scrypt-sse.c, cbits/sha256.c
+    cc-options: -msse2
+    include-dirs: cbits
+    includes: crypto_scrypt.h
+    install-includes: crypto_scrypt.h
+
+test-suite scrypt-test
+    type: exitcode-stdio-1.0
+    hs-source-dirs: test
+    main-is: Test.hs
+    build-depends:
+        scrypt,
+        base == 4.*,
+        bytestring >= 0.9,
+        HUnit >= 1.2,
+        QuickCheck == 2.*,
+        test-framework >= 0.6,
+        test-framework-hunit >= 0.2,
+        test-framework-quickcheck2 >= 0.2
+    ghc-options: -Wall
+    ghc-prof-options: -auto-all
