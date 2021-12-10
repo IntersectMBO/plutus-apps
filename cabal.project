@@ -17,6 +17,7 @@ packages: doc
           contrib/cryptonite-0.29
           contrib/cardano-base-dac284/cardano-crypto-class
           contrib/gauge-0.2.5
+          contrib/unix-compat-0.5.3
 
 -- We never, ever, want this.
 write-ghc-environment-files: never
