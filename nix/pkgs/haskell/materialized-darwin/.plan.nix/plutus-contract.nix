@@ -196,6 +196,7 @@
             "Spec/ThreadToken"
             "Spec/Secrets"
             "Spec/Plutus/Contract/Wallet"
+            "Spec/Plutus/Contract/Oracle"
             ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
