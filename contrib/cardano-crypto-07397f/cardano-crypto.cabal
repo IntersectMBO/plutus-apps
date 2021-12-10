@@ -10,7 +10,7 @@ author:              Vincent Hanquez
 maintainer:          contact@typed.io
 copyright:           2016-2021 IOHK
 category:            Crypto
-build-type:          Custom
+build-type:          Simple
 extra-source-files:  README.md
                      cbits/*.h
                      cbits/ed25519/*.h
@@ -21,10 +21,6 @@ extra-source-files:  README.md
                      jsbits/emscripten/crypto-wrappers.js
                      jsbits/emscripten/extern.js
                      jsbits/bindings.js
-custom-setup
-  setup-depends:
-    base  >= 4.5,
-    Cabal >= 2.4
 
 flag golden-tests
   description:       compile the golden tests and run them

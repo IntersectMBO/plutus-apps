@@ -61,7 +61,13 @@ buildEMCCLib desc lbi = do
 -- however we don't have figured out how to get the EXPORTED_FUNCTIONS from each dependency merged yet.
 --
 linkEMCCLib :: PackageDescription -> LocalBuildInfo -> IO ()
-linkEMCCLib desc lbi = do
+linkEMCCLib desc lbi = linkCLib ("emcc" </> "lib.js") desc lbi
+
+linkEMCCTHLib :: PackageDescription -> LocalBuildInfo -> IO ()
+linkEMCCTHLib desc lbi = linkCLib ("th-support.js") desc lbi
+
+linkCLib :: String -> PackageDescription -> LocalBuildInfo -> IO ()
+linkCLib libname desc lbi = do
     let extraLibs = [ "-l" <> l | l <- concatMap IPI.extraLibraries (topologicalOrder $ installedPkgs lbi)
                                 , l /= "m"
                                 , l /= "dl" ]
@@ -80,7 +86,7 @@ linkEMCCLib desc lbi = do
 
     createDirectoryIfMissingVerbose verbosity True ((buildDir lbi) </> "emcc")
     runDbProgram verbosity gccProgram (withPrograms lbi) $
-        [ "-o", (buildDir lbi) </> "emcc" </> "lib.js"
+        [ "-o", (buildDir lbi) </> libname
         , "-s", "WASM=0"
         , "-s", "ALLOW_TABLE_GROWTH" -- we need this for addFunction/removeFunction
         -- addFunction, removeFunction are for dynamic functions.
@@ -106,7 +112,11 @@ postBuildHook args flags desc lbi = do
 postConfHook :: Args -> ConfigFlags -> PackageDescription -> LocalBuildInfo -> IO ()
 postConfHook args flags desc lbi = do
     case (takeFileName . programPath <$> lookupProgram ghcProgram (withPrograms lbi)) of
-        Just "js-unknown-ghcjs-ghc" ->
+        Just "js-unknown-ghcjs-ghc" -> do
+            -- always link the TH lib
+            -- this is technically only needed if the package uses TH somewhere.
+            linkEMCCTHLib desc lbi
+            -- only link the final lib if we want to produce an output.
             readBuildTargets silent desc (configArgs flags) >>= \case
                 [BuildTargetComponent (CLibName _)] -> print "OK. Lib"
                 [BuildTargetComponent (CExeName _)] -> print "OK. Exe (Link)" >> linkEMCCLib desc lbi

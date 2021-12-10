@@ -26,15 +26,10 @@ copyright:           2015-2017 Vincent Hanquez <vincent@snarc.org>, 2017- Founda
 author:              Vincent Hanquez <vincent@snarc.org>
 maintainer:          vincent@snarc.org
 category:            foundation
-build-type:          Custom
+build-type:          Simple
 homepage:            https://github.com/haskell-foundation/foundation
 bug-reports:         https://github.com/haskell-foundation/foundation/issues
 extra-source-files:  cbits/*.h
-
-custom-setup
-  setup-depends:
-    base  >= 4.5,
-    Cabal >= 2.4
 
 source-repository head
   type: git
