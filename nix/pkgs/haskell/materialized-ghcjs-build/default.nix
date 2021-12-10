@@ -1715,7 +1715,6 @@
           "text-class".components.library.planned = lib.mkOverride 900 true;
           "byteable".components.library.planned = lib.mkOverride 900 true;
           "indexed-profunctors".components.library.planned = lib.mkOverride 900 true;
-          "plutus-ledger".components.setup.planned = lib.mkOverride 900 true;
           "semigroups".components.library.planned = lib.mkOverride 900 true;
           "easy-file".components.library.planned = lib.mkOverride 900 true;
           "test-framework-hunit".components.library.planned = lib.mkOverride 900 true;

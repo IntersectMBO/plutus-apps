@@ -36,10 +36,10 @@
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           ] ++ (pkgs.lib).optional (system.isWindows) (hsPkgs."lzma-clib" or (errorHandler.buildDepError "lzma-clib"));
-        libs = (pkgs.lib).optional (!system.isWindows) (pkgs."lzma" or (errorHandler.sysDepError "lzma"));
+        libs = (pkgs.lib).optionals (!system.isWindows) ((pkgs.lib).optional (!system.isGhcjs) (pkgs."lzma" or (errorHandler.sysDepError "lzma")));
         buildable = true;
         modules = [ "LibLzma" "Codec/Compression/Lzma" ];
-        cSources = [ "cbits/lzma_wrapper.c" ];
+        cSources = (pkgs.lib).optional (!system.isGhcjs) "cbits/lzma_wrapper.c";
         hsSourceDirs = [ "src" ];
         includes = (pkgs.lib).optional (!system.isWindows) "lzma.h";
         };
