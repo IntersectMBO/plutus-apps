@@ -53,6 +53,7 @@ Library
     c-sources: cbits/network-windows.c
     extra-libraries: iphlpapi
   else
-    c-sources: cbits/network-unix.c
+    if !os(ghcjs)
+      c-sources: cbits/network-unix.c
   if os(solaris)
     extra-libraries: socket, nsl
