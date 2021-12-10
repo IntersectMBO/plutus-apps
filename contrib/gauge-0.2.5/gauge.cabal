@@ -1,0 +1,164 @@
+name:           gauge
+version:        0.2.5
+synopsis:       small framework for performance measurement and analysis
+license:        BSD3
+license-file:   LICENSE
+author:         Bryan O'Sullivan <bos@serpentine.com>
+maintainer:     Vincent Hanquez <vincent@snarc.org>
+copyright:      2009-2016 Bryan O'Sullivan and others
+category:       Development, Performance, Testing, Benchmarking
+homepage:       https://github.com/vincenthz/hs-gauge
+bug-reports:    https://github.com/vincenthz/hs-gauge/issues
+build-type:     Simple
+cabal-version:  >= 1.10
+extra-source-files:
+  README.markdown
+  changelog.md
+  cbits/*.h
+tested-with:
+  GHC==7.10.3,
+  GHC==8.0.2,
+  GHC==8.2.2,
+  GHC==8.4.3,
+  GHC==8.6.5,
+  GHC==8.8.1
+
+description:
+  This library provides a powerful but simple way to measure software
+  performance.  It provides both a framework for executing and
+  analysing benchmarks and a set of driver functions that makes it
+  easy to build and run benchmarks, and to analyse their results.
+
+flag analysis
+  description: Build with statistical analysis support
+  manual: True
+  default: True
+
+library
+  exposed-modules:
+    Gauge
+    Gauge.Main
+    Gauge.Main.Options
+    Gauge.Benchmark
+  other-modules:
+    Gauge.IO.Printf
+    Gauge.Measurement
+    Gauge.Monad
+    Gauge.ListMap
+    Gauge.Time
+    Gauge.Optional
+    Gauge.CSV
+    Gauge.Format
+
+    Gauge.Source.RUsage
+    Gauge.Source.GC
+    Gauge.Source.Time
+    System.Random.MWC
+
+  if flag(analysis) && !impl(ghcjs)
+      exposed-modules:
+        Gauge.Analysis
+      other-modules:
+        Statistics.Distribution
+        Statistics.Distribution.Normal
+        Statistics.Function
+        Statistics.Internal
+        Statistics.Math.RootFinding
+        Statistics.Matrix
+        Statistics.Matrix.Algorithms
+        Statistics.Matrix.Mutable
+        Statistics.Matrix.Types
+        Statistics.Quantile
+        Statistics.Regression
+        Statistics.Resampling
+        Statistics.Resampling.Bootstrap
+        Statistics.Sample
+        Statistics.Sample.Histogram
+        Statistics.Sample.Internal
+        Statistics.Sample.KernelDensity
+        Statistics.Transform
+        Statistics.Types
+        Statistics.Types.Internal
+        Numeric.MathFunctions.Comparison
+        Numeric.MathFunctions.Constants
+        Numeric.SpecFunctions
+        Numeric.SpecFunctions.Internal
+        Numeric.Sum
+
+
+  hs-source-dirs: . statistics mwc-random math-functions
+
+  include-Dirs: cbits
+  if !os(ghcjs)
+    c-sources: cbits/cycles.c
+  if os(darwin)
+    c-sources: cbits/time-osx.c
+  else {
+    if os(windows)
+      c-sources: cbits/time-windows.c
+    else
+      c-sources: cbits/time-posix.c
+  }
+
+  other-modules:
+    Paths_gauge
+
+  if impl(ghc < 7.10)
+    buildable: False
+
+  build-depends:
+    base >= 4.7 && < 5,
+    basement >= 0.0.4,
+    deepseq >= 1.1.0.0,
+    vector >= 0.7.1,
+    process,
+    directory
+
+  default-language: Haskell2010
+  ghc-options: -O2 -Wall -funbox-strict-fields
+  if flag(analysis) && !impl(ghcjs)
+      cpp-options: -DHAVE_ANALYSIS
+
+test-suite sanity
+  type:                 exitcode-stdio-1.0
+  hs-source-dirs:       tests
+  main-is:              Sanity.hs
+  default-language:     Haskell2010
+  ghc-options:          -O2 -Wall -rtsopts
+
+  build-depends:
+    base > 0 && < 1000,
+    bytestring,
+    gauge,
+    basement,
+    foundation
+
+test-suite cleanup
+  type:                 exitcode-stdio-1.0
+  hs-source-dirs:       tests
+  default-language:     Haskell2010
+  main-is:              Cleanup.hs
+
+  ghc-options:
+    -Wall -threaded     -O0 -rtsopts
+
+  build-depends:
+    base > 0 && < 1000,
+    bytestring,
+    gauge,
+    deepseq,
+    directory,
+    foundation
+
+benchmark self
+  type:                 exitcode-stdio-1.0
+  hs-source-dirs:       benchs
+  default-language:     Haskell2010
+  main-is:              Main.hs
+  build-depends:
+    base > 0 && < 1000,
+    gauge
+
+source-repository head
+  type:     git
+  location: https://github.com/vincenthz/hs-gauge
