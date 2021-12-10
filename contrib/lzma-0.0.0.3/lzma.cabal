@@ -55,9 +55,11 @@ library
     build-depends:     lzma-clib
   else
     includes:          lzma.h
-    extra-libraries:   lzma
+    if !os(ghcjs)
+      extra-libraries:   lzma
 
-  c-sources:           cbits/lzma_wrapper.c
+  if !os(ghcjs)
+    c-sources:           cbits/lzma_wrapper.c
 
   ghc-options:         -Wall
 
