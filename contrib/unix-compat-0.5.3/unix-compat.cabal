@@ -63,11 +63,12 @@ Library
     other-modules:
       System.PosixCompat.Internal.Time
 
-  else if !os(ghcjs)
-    build-depends: unix >= 2.4 && < 2.9
-    include-dirs: include
-    includes: HsUnixCompat.h
-    install-includes: HsUnixCompat.h
-    c-sources: cbits/HsUnixCompat.c
-    if os(solaris)
-      cc-options: -DSOLARIS
+  else
+    if !os(ghcjs)
+      build-depends: unix >= 2.4 && < 2.9
+      include-dirs: include
+      includes: HsUnixCompat.h
+      install-includes: HsUnixCompat.h
+      c-sources: cbits/HsUnixCompat.c
+      if os(solaris)
+        cc-options: -DSOLARIS
