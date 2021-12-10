@@ -47,7 +47,7 @@ import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (Address, Datum (..), POSIXTime, PubKey, PubKeyHash, Validator, ValidatorHash)
+import Ledger (Address, Datum (..), POSIXTime, PaymentPubKey, PaymentPubKeyHash, Validator, ValidatorHash)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
@@ -92,7 +92,7 @@ data Future =
         , ftUnits         :: Integer
         , ftUnitPrice     :: Value
         , ftInitialMargin :: Value
-        , ftPriceOracle   :: PubKey
+        , ftPriceOracle   :: PaymentPubKey
         , ftMarginPenalty :: Value
         -- ^ How much a participant loses if they fail to make the required
         --   margin payments.
@@ -207,9 +207,9 @@ futureContract ft = do
 -- | The data needed to initialise the futures contract.
 data FutureSetup =
     FutureSetup
-        { shortPK       :: PubKeyHash
+        { shortPK       :: PaymentPubKeyHash
         -- ^ Initial owner of the short token
-        , longPK        :: PubKeyHash
+        , longPK        :: PaymentPubKeyHash
         -- ^ Initial owner of the long token
         , contractStart :: POSIXTime
         -- ^ Start of the futures contract itself. By this time the setup code
@@ -331,7 +331,7 @@ validator :: Future -> FutureAccounts -> Validator
 validator ft fos = Scripts.validatorScript (typedValidator ft fos)
 
 {-# INLINABLE verifyOracle #-}
-verifyOracle :: PlutusTx.FromData a => PubKey -> SignedMessage a -> Maybe (a, TxConstraints Void Void)
+verifyOracle :: PlutusTx.FromData a => PaymentPubKey -> SignedMessage a -> Maybe (a, TxConstraints Void Void)
 verifyOracle pubKey sm =
     either (const Nothing) pure
     $ Oracle.verifySignedMessageConstraints pubKey sm
@@ -565,7 +565,7 @@ setupTokens
     )
     => Contract w s e FutureAccounts
 setupTokens = mapError (review _FutureError) $ do
-    pk <- ownPubKeyHash
+    pk <- ownPaymentPubKeyHash
 
     -- Create the tokens using the currency contract, wrapping any errors in
     -- 'TokenSetupFailed'
@@ -589,8 +589,8 @@ escrowParams client future ftos FutureSetup{longPK, shortPK, contractStart} =
             [ Escrow.payToScriptTarget address
                 dataScript
                 (scale 2 (initialMargin future))
-            , Escrow.payToPubKeyTarget longPK (tokenFor Long ftos)
-            , Escrow.payToPubKeyTarget shortPK (tokenFor Short ftos)
+            , Escrow.payToPaymentPubKeyTarget longPK (tokenFor Long ftos)
+            , Escrow.payToPaymentPubKeyTarget shortPK (tokenFor Short ftos)
             ]
     in EscrowParams
         { escrowDeadline = contractStart

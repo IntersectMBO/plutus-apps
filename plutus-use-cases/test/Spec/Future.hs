@@ -23,7 +23,7 @@ import Spec.TokenAccount (assertAccountBalance)
 
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Crypto (PrivateKey, PubKey (..))
+import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value (Value, scale)
@@ -99,8 +99,8 @@ tests =
 setup :: POSIXTime -> FutureSetup
 setup startTime =
     FutureSetup
-        { shortPK = walletPubKeyHash w1
-        , longPK = walletPubKeyHash w2
+        { shortPK = mockWalletPaymentPubKeyHash w1
+        , longPK = mockWalletPaymentPubKeyHash w2
         , contractStart = startTime + 15000
         }
 
@@ -182,8 +182,8 @@ forwardPrice = Ada.lovelaceValueOf 2_123_000
 units :: Integer
 units = 187
 
-oracleKeys :: (PrivateKey, PubKey)
-oracleKeys = (CW.privateKey wllt, CW.pubKey wllt) where
+oracleKeys :: (PaymentPrivateKey, PaymentPubKey)
+oracleKeys = (CW.paymentPrivateKey wllt, CW.paymentPubKey wllt) where
     wllt = CW.fromWalletNumber $ CW.WalletNumber 10
 
 -- | Increase the margin of the 'Long' role by 100 lovelace

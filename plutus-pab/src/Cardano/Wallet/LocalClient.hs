@@ -40,18 +40,19 @@ import Data.Text (pack)
 import Data.Text.Class (fromText)
 import Ledger (CardanoTx)
 import Ledger.Ada qualified as Ada
+import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError, toCardanoTxBody)
 import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), Value (Value))
 import Plutus.Contract.Wallet (export)
 import Plutus.PAB.Monitoring.PABLogMsg (WalletClientMsg (BalanceTxError, WalletClientError))
-import Plutus.V1.Ledger.Crypto (PubKeyHash (PubKeyHash))
 import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import Prettyprinter (Pretty (pretty))
 import Servant ((:<|>) ((:<|>)), (:>))
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
-import Wallet.Effects (WalletEffect (BalanceTx, OwnPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
+import Wallet.Effects (WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
 import Wallet.Emulator.Error (WalletAPIError (OtherError, ToCardanoError))
 import Wallet.Emulator.Wallet (Wallet (Wallet), WalletId (WalletId))
 
@@ -100,9 +101,9 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
             sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
             void . runClient $ C.postExternalTransaction C.transactionClient (C.ApiBytesT (C.SerialisedTx $ C.serialisedTx sealedTx))
 
-        ownPubKeyHashH :: Eff effs PubKeyHash
-        ownPubKeyHashH =
-            fmap (PubKeyHash . BuiltinByteString . fst . getApiVerificationKey) . runClient $
+        ownPaymentPubKeyHashH :: Eff effs PaymentPubKeyHash
+        ownPaymentPubKeyHashH =
+            fmap (PaymentPubKeyHash . PubKeyHash . BuiltinByteString . fst . getApiVerificationKey) . runClient $
                 getWalletKey (C.ApiT walletId)
                              (C.ApiT C.UtxoExternal)
                              (C.ApiT (C.DerivationIndex 0))
@@ -146,7 +147,7 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
 
     case event of
         SubmitTxn tx          -> submitTxnH tx
-        OwnPubKeyHash         -> ownPubKeyHashH
+        OwnPaymentPubKeyHash  -> ownPaymentPubKeyHashH
         BalanceTx utx         -> balanceTxH utx
         WalletAddSignature tx -> walletAddSignatureH tx
         TotalFunds            -> totalFundsH

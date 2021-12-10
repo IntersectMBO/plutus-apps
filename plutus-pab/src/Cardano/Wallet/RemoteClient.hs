@@ -22,7 +22,7 @@ import Data.Text qualified as Text
 import Plutus.Contract.Wallet (export)
 import Plutus.PAB.Core.ContractInstance.STM (InstancesState)
 import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
-import Wallet.Effects (WalletEffect (BalanceTx, OwnPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
+import Wallet.Effects (WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
 import Wallet.Error (WalletAPIError (RemoteClientFunctionNotYetSupported), throwOtherError)
 import Wallet.Types (ContractInstanceId)
 
@@ -48,8 +48,8 @@ handleWalletClient config cidM event = do
     let NetworkIdWrapper networkId = mscNetworkId config
     protocolParams <- ask @Cardano.Api.ProtocolParameters
     case event of
-        OwnPubKeyHash -> do
-            throwError $ RemoteClientFunctionNotYetSupported "Cardano.Wallet.RemoteClient.OwnPubKeyHash"
+        OwnPaymentPubKeyHash -> do
+            throwError $ RemoteClientFunctionNotYetSupported "Cardano.Wallet.RemoteClient.OwnPaymentPubKeyHash"
 
         WalletAddSignature _ -> do
             throwError $ RemoteClientFunctionNotYetSupported "Cardano.Wallet.RemoteClient.WalletAddSignature"

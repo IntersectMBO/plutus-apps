@@ -33,7 +33,7 @@ import Control.Lens (makeClassyPrisms)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, PubKeyHash, Value)
+import Ledger (POSIXTime, PaymentPubKeyHash, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
@@ -77,7 +77,7 @@ type SellerSchema = Endpoint "payout" ()
 -- | Definition of an auction
 data AuctionParams
     = AuctionParams
-        { apOwner      :: PubKeyHash -- ^ Current owner of the asset. This is where the proceeds of the auction will be sent.
+        { apOwner      :: PaymentPubKeyHash -- ^ Current owner of the asset. This is where the proceeds of the auction will be sent.
         , apAsset      :: Value -- ^ The asset itself. This value is going to be locked by the auction script output.
         , apEndTime    :: POSIXTime -- ^ When the time window for bidding ends.
         , apPayoutTime :: POSIXTime -- ^ When the time window for revealing your bid ends.
@@ -91,7 +91,7 @@ PlutusTx.makeLift ''AuctionParams
 data SealedBid =
     SealedBid
         { sealedBid       :: BuiltinByteString
-        , sealedBidBidder :: PubKeyHash
+        , sealedBidBidder :: PaymentPubKeyHash
         }
     deriving stock (Haskell.Eq, Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -104,7 +104,7 @@ instance Eq SealedBid where
 data RevealedBid =
     RevealedBid
         { revealedBid       :: Integer
-        , revealedBidBidder :: PubKeyHash
+        , revealedBidBidder :: PaymentPubKeyHash
         }
     deriving stock (Haskell.Eq, Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -277,19 +277,19 @@ client auctionParams =
 
 startAuction :: Value -> POSIXTime -> POSIXTime -> Contract () SellerSchema AuctionError ()
 startAuction asset endTime payoutTime = do
-    self <- ownPubKeyHash
+    self <- ownPaymentPubKeyHash
     let params = AuctionParams self asset endTime payoutTime
     void $ SM.runInitialise (client params) (Ongoing []) (apAsset params)
 
 bid :: AuctionParams -> Promise () BidderSchema AuctionError ()
 bid params = endpoint @"bid" $ \ BidArgs{secretBid} -> do
-    self <- ownPubKeyHash
+    self <- ownPaymentPubKeyHash
     let sBid = extractSecret secretBid
     void $ SM.runStep (client params) (PlaceBid $ SealedBid (hashSecretInteger sBid) self)
 
 reveal :: AuctionParams -> Promise () BidderSchema AuctionError ()
 reveal params = endpoint @"reveal" $ \ RevealArgs{publicBid} -> do
-    self <- ownPubKeyHash
+    self <- ownPaymentPubKeyHash
     void $ SM.runStep (client params) (RevealBid $ RevealedBid publicBid self)
 
 payout :: (HasEndpoint "payout" () s) => AuctionParams -> Promise () s AuctionError ()

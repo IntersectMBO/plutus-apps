@@ -88,6 +88,7 @@ import Data.Set qualified as Set
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Ledger.Address qualified as P
 import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Plutus.V1.Ledger.Ada qualified as Ada
@@ -305,7 +306,7 @@ fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
 
 
 toCardanoTxBody ::
-    [Api.PubKeyHash] -- ^ Required signers of the transaction
+    [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
     -> C.NetworkId -- ^ Network ID
     -> P.Tx
@@ -458,14 +459,14 @@ fromCardanoPaymentCredential (C.PaymentCredentialByKey paymentKeyHash) = Credent
 fromCardanoPaymentCredential (C.PaymentCredentialByScript scriptHash) = Credential.ScriptCredential (fromCardanoScriptHash scriptHash)
 
 toCardanoPaymentCredential :: Credential.Credential -> Either ToCardanoError C.PaymentCredential
-toCardanoPaymentCredential (Credential.PubKeyCredential pubKeyHash) = C.PaymentCredentialByKey <$> toCardanoPaymentKeyHash pubKeyHash
+toCardanoPaymentCredential (Credential.PubKeyCredential pubKeyHash) = C.PaymentCredentialByKey <$> toCardanoPaymentKeyHash (P.PaymentPubKeyHash pubKeyHash)
 toCardanoPaymentCredential (Credential.ScriptCredential validatorHash) = C.PaymentCredentialByScript <$> toCardanoScriptHash validatorHash
 
 fromCardanoPaymentKeyHash :: C.Hash C.PaymentKey -> P.PubKeyHash
 fromCardanoPaymentKeyHash paymentKeyHash = P.PubKeyHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes paymentKeyHash
 
-toCardanoPaymentKeyHash :: P.PubKeyHash -> Either ToCardanoError (C.Hash C.PaymentKey)
-toCardanoPaymentKeyHash (P.PubKeyHash bs) =
+toCardanoPaymentKeyHash :: P.PaymentPubKeyHash -> Either ToCardanoError (C.Hash C.PaymentKey)
+toCardanoPaymentKeyHash (P.PaymentPubKeyHash (P.PubKeyHash bs)) =
     let bsx = PlutusTx.fromBuiltin bs
         tg = "toCardanoPaymentKeyHash (" <> show (BS.length bsx) <> " bytes)"
     in tag tg $ deserialiseFromRawBytes (C.AsHash C.AsPaymentKey) bsx

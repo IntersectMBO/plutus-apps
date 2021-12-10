@@ -17,7 +17,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTxStatusChangeReq,
     _AwaitTxOutStatusChangeReq,
     _OwnContractInstanceIdReq,
-    _OwnPublicKeyHashReq,
+    _OwnPaymentPublicKeyHashReq,
     _ChainIndexQueryReq,
     _BalanceTxReq,
     _WriteBalancedTxReq,
@@ -47,7 +47,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTxStatusChangeResp',
     _AwaitTxOutStatusChangeResp,
     _OwnContractInstanceIdResp,
-    _OwnPublicKeyHashResp,
+    _OwnPaymentPublicKeyHashResp,
     _ChainIndexQueryResp,
     _BalanceTxResp,
     _WriteBalancedTxResp,
@@ -82,7 +82,7 @@ import Data.Aeson qualified as JSON
 import Data.List.NonEmpty (NonEmpty)
 import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics (Generic)
-import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, PubKeyHash, Redeemer,
+import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, PaymentPubKeyHash, Redeemer,
                RedeemerHash, StakeValidator, StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Credential (Credential)
@@ -110,7 +110,7 @@ data PABReq =
     | CurrentSlotReq
     | CurrentTimeReq
     | OwnContractInstanceIdReq
-    | OwnPublicKeyHashReq
+    | OwnPaymentPublicKeyHashReq
     | ChainIndexQueryReq ChainIndexQuery
     | BalanceTxReq UnbalancedTx
     | WriteBalancedTxReq CardanoTx
@@ -131,7 +131,7 @@ instance Pretty PABReq where
     AwaitTxStatusChangeReq txid             -> "Await tx status change:" <+> pretty txid
     AwaitTxOutStatusChangeReq ref           -> "Await txout status change:" <+> pretty ref
     OwnContractInstanceIdReq                -> "Own contract instance ID"
-    OwnPublicKeyHashReq                     -> "Own public key"
+    OwnPaymentPublicKeyHashReq              -> "Own public key"
     ChainIndexQueryReq q                    -> "Chain index query:" <+> pretty q
     BalanceTxReq utx                        -> "Balance tx:" <+> pretty utx
     WriteBalancedTxReq tx                   -> "Write balanced tx:" <+> pretty tx
@@ -150,7 +150,7 @@ data PABResp =
     | CurrentSlotResp Slot
     | CurrentTimeResp POSIXTime
     | OwnContractInstanceIdResp ContractInstanceId
-    | OwnPublicKeyHashResp PubKeyHash
+    | OwnPaymentPublicKeyHashResp PaymentPubKeyHash
     | ChainIndexQueryResp ChainIndexResponse
     | BalanceTxResp BalanceTxResponse
     | WriteBalancedTxResp WriteBalancedTxResponse
@@ -171,7 +171,7 @@ instance Pretty PABResp where
     AwaitTxStatusChangeResp txid status      -> "Status of" <+> pretty txid <+> "changed to" <+> pretty status
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
     OwnContractInstanceIdResp i              -> "Own contract instance ID:" <+> pretty i
-    OwnPublicKeyHashResp k                   -> "Own public key:" <+> pretty k
+    OwnPaymentPublicKeyHashResp k            -> "Own public key:" <+> pretty k
     ChainIndexQueryResp rsp                  -> pretty rsp
     BalanceTxResp r                          -> "Balance tx:" <+> pretty r
     WriteBalancedTxResp r                    -> "Write balanced tx:" <+> pretty r
@@ -190,7 +190,7 @@ matches a b = case (a, b) of
   (AwaitTxStatusChangeReq i, AwaitTxStatusChangeResp i' _) -> i == i'
   (AwaitTxOutStatusChangeReq i, AwaitTxOutStatusChangeResp i' _) -> i == i'
   (OwnContractInstanceIdReq, OwnContractInstanceIdResp{})  -> True
-  (OwnPublicKeyHashReq, OwnPublicKeyHashResp{})                    -> True
+  (OwnPaymentPublicKeyHashReq, OwnPaymentPublicKeyHashResp{})                    -> True
   (ChainIndexQueryReq r, ChainIndexQueryResp r')           -> chainIndexMatches r r'
   (BalanceTxReq{}, BalanceTxResp{})                        -> True
   (WriteBalancedTxReq{}, WriteBalancedTxResp{})            -> True

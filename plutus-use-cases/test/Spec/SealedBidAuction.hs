@@ -37,7 +37,7 @@ instance Arbitrary AuctionParams where
     endTime    <- choose (20, 50)
     payoutTime <- choose (endTime+1, 70)
     return $ AuctionParams
-              { apOwner      = walletPubKeyHash w1
+              { apOwner      = mockWalletPaymentPubKeyHash w1
               , apAsset      = theToken
               , apEndTime    = TimeSlot.scSlotZeroTime def + fromInteger (endTime*1000)
               , apPayoutTime = TimeSlot.scSlotZeroTime def + fromInteger (payoutTime*1000)

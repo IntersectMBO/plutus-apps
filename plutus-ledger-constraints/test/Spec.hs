@@ -1,12 +1,26 @@
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
+
 module Main(main) where
 
 import Control.Monad (forM_, guard, replicateM, void)
-import Hedgehog (Property, forAll, property)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Maybe (mapMaybe)
+import Data.Void (Void)
+import Hedgehog (Property, forAll, property, (===))
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.Address (StakePubKeyHash (StakePubKeyHash), addressStakingCredential)
+import Ledger.Constraints as Constraints
 import Ledger.Constraints.OffChain qualified as OC
+import Ledger.Credential (Credential (PubKeyCredential), StakingCredential (StakingHash))
+import Ledger.Crypto (PubKeyHash (PubKeyHash))
+import Ledger.Generators qualified as Gen
+import Ledger.Tx (Tx (txOutputs), TxOut (TxOut, txOutAddress))
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
 import PlutusTx.AssocMap qualified as AMap
@@ -17,8 +31,9 @@ main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "all tests" [
-    testProperty "missing value spent" missingValueSpentProp
+tests = testGroup "all tests"
+    [ testProperty "missing value spent" missingValueSpentProp
+    , testProperty "mustPayToPubKeyAddress should create output addresses with stake pub key hash" mustPayToPubKeyAddressStakePubKeyNotNothingProp
     ]
 
 -- | Reduce one of the elements in a 'Value' by one.
@@ -68,3 +83,25 @@ missingValueSpentProp = property $ do
     smaller <- forAll (reduceByOne missing)
     forM_ smaller $ \smaller' ->
         Hedgehog.assert (not (OC.vbsRequired balances `Value.leq` (actual <> smaller')))
+
+-- | The 'mustPayToPubKeyAddress' should be able to set the stake public key hash to some value.
+mustPayToPubKeyAddressStakePubKeyNotNothingProp :: Property
+mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
+    pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
+    let skh = StakePubKeyHash $ PubKeyHash "00000000000000000000000000000000000000000000000000000000"
+        txE = mkTx @Void mempty (Constraints.mustPayToPubKeyAddress pkh skh (Ada.toValue Ledger.minAdaTxOut))
+    case txE of
+      Left _ ->
+          Hedgehog.assert False
+      Right utx -> do
+          let outputs = txOutputs (OC.unBalancedTxTx utx)
+          let stakingCreds = mapMaybe stakePaymentPubKeyHash outputs
+          Hedgehog.assert $ not $ null stakingCreds
+          forM_ stakingCreds ((===) skh)
+  where
+      stakePaymentPubKeyHash :: TxOut -> Maybe StakePubKeyHash
+      stakePaymentPubKeyHash TxOut { txOutAddress } = do
+          stakeCred <- addressStakingCredential txOutAddress
+          case stakeCred of
+            StakingHash (PubKeyCredential pkh) -> Just $ StakePubKeyHash pkh
+            _                                  -> Nothing

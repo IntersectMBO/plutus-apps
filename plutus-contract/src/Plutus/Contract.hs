@@ -63,7 +63,7 @@ module Plutus.Contract(
     , Request.utxosTxOutTxFromTx
     , Request.getTip
     -- * Wallet's own public key
-    , Request.ownPubKeyHash
+    , Request.ownPaymentPubKeyHash
     -- * Contract instance Id
     , Wallet.Types.ContractInstanceId
     , Request.ownInstanceId
@@ -121,7 +121,6 @@ import Plutus.Contract.Types (AsCheckpointError (..), AsContractError (..), Chec
 import Control.Monad.Freer.Extras.Log qualified as L
 import Control.Monad.Freer.Writer qualified as W
 import Data.Functor.Apply (liftF2)
-import Prelude
 import Wallet.API (WalletAPIError)
 import Wallet.Types qualified
 

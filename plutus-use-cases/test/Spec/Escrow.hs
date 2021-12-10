@@ -80,7 +80,7 @@ instance ContractModel EscrowModel where
     Redeem w -> do
       targets <- viewContractState targets
       contribs <- viewContractState contributions
-      sequence_ [ deposit w v | (w, v) <- Map.toList $ targets ]
+      sequence_ [ deposit w v | (w, v) <- Map.toList targets ]
       let leftoverValue = fold contribs <> inv (fold targets)
       deposit w leftoverValue
       contributions $= Map.empty
@@ -215,8 +215,8 @@ escrowParams startTime =
   EscrowParams
     { escrowDeadline = startTime + 10000
     , escrowTargets  =
-        [ payToPubKeyTarget (walletPubKeyHash w1) (Ada.adaValueOf 10)
-        , payToPubKeyTarget (walletPubKeyHash w2) (Ada.adaValueOf 20)
+        [ payToPaymentPubKeyTarget (mockWalletPaymentPubKeyHash w1) (Ada.adaValueOf 10)
+        , payToPaymentPubKeyTarget (mockWalletPaymentPubKeyHash w2) (Ada.adaValueOf 20)
         ]
     }
 

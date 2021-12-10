@@ -6,7 +6,9 @@ module Ledger.Constraints(
     -- * Defining constraints
     , TC.mustPayToTheScript
     , TC.mustPayToPubKey
+    , TC.mustPayToPubKeyAddress
     , TC.mustPayWithDatumToPubKey
+    , TC.mustPayWithDatumToPubKeyAddress
     , TC.mustMintCurrency
     , TC.mustMintCurrencyWithRedeemer
     , TC.mustMintValue
@@ -35,9 +37,10 @@ module Ledger.Constraints(
     , OC.mintingPolicy
     , OC.otherScript
     , OC.otherData
-    , OC.ownPubKeyHash
+    , OC.ownPaymentPubKeyHash
+    , OC.ownStakePubKeyHash
     , OC.mkTx
-    , OC.pubKey
+    , OC.paymentPubKey
     , OC.adjustUnbalancedTx
     -- ** Combining multiple typed scripts into one transaction
     , OC.SomeLookupsAndConstraints(..)

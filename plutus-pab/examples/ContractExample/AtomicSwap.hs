@@ -25,10 +25,10 @@ import Plutus.Contracts.Escrow (EscrowParams (..))
 import Plutus.Contracts.Escrow qualified as Escrow
 import Schema (ToSchema)
 
-import Ledger (CurrencySymbol, POSIXTime, PubKeyHash, TokenName, Value)
+import Ledger (CurrencySymbol, POSIXTime, PaymentPubKeyHash, TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract
-import Wallet.Emulator.Wallet (Wallet, walletPubKeyHash)
+import Wallet.Emulator.Wallet (Wallet, mockWalletPaymentPubKeyHash)
 
 -- | Describes an exchange of two
 --   'Value' amounts between two parties
@@ -55,15 +55,15 @@ mkValue2 AtomicSwapParams{currencyHash, tokenName, amount} =
 
 mkEscrowParams :: AtomicSwapParams -> EscrowParams t
 mkEscrowParams p@AtomicSwapParams{party1,party2,deadline} =
-    let pubKey1 = walletPubKeyHash party1
-        pubKey2 = walletPubKeyHash party2
+    let pubKey1 = mockWalletPaymentPubKeyHash party1
+        pubKey2 = mockWalletPaymentPubKeyHash party2
         value1 = mkValue1 p
         value2 = mkValue2 p
     in EscrowParams
         { escrowDeadline = deadline
         , escrowTargets =
-                [ Escrow.payToPubKeyTarget pubKey1 value1
-                , Escrow.payToPubKeyTarget pubKey2 value2
+                [ Escrow.payToPaymentPubKeyTarget pubKey1 value1
+                , Escrow.payToPaymentPubKeyTarget pubKey2 value2
                 ]
         }
 
@@ -72,7 +72,7 @@ type AtomicSwapSchema = Endpoint "Atomic swap" AtomicSwapParams
 data AtomicSwapError =
     EscrowError Escrow.EscrowError
     | OtherAtomicSwapError ContractError
-    | NotInvolvedError PubKeyHash AtomicSwapParams -- ^ When the wallet's public key doesn't match either of the two keys specified in the 'AtomicSwapParams'
+    | NotInvolvedError PaymentPubKeyHash AtomicSwapParams -- ^ When the wallet's public key doesn't match either of the two keys specified in the 'AtomicSwapParams'
     deriving (Show, Generic, ToJSON, FromJSON)
 
 makeClassyPrisms ''AtomicSwapError
@@ -88,16 +88,16 @@ atomicSwap = endpoint @"Atomic swap" $ \p -> do
         params = mkEscrowParams p
 
         go pkh
-            | pkh == walletPubKeyHash (party1 p) =
+            | pkh == mockWalletPaymentPubKeyHash (party1 p) =
                 -- there are two paying transactions and one redeeming transaction.
                 -- The redeeming tx is submitted by party 1.
                 -- TODO: Change 'payRedeemRefund' to check before paying into the
                 -- address, so that the last paying transaction can also be the
                 -- redeeming transaction.
                 void $ mapError EscrowError (Escrow.payRedeemRefund params value2)
-            | pkh == walletPubKeyHash (party2 p) =
+            | pkh == mockWalletPaymentPubKeyHash (party2 p) =
                 void $ mapError EscrowError (Escrow.pay (Escrow.typedValidator params) params value1) >>= awaitTxConfirmed
             | otherwise = throwError (NotInvolvedError pkh p)
 
-    ownPubKeyHash >>= go
+    ownPaymentPubKeyHash >>= go
 

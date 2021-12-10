@@ -26,7 +26,7 @@ module Plutus.Contract.Trace
     -- * Handle contract requests
     , handleSlotNotifications
     , handleTimeNotifications
-    , handleOwnPubKeyHashQueries
+    , handleOwnPaymentPubKeyHashQueries
     , handleCurrentSlotQueries
     , handleCurrentTimeQueries
     , handleTimeToSlotConversions
@@ -41,8 +41,8 @@ module Plutus.Contract.Trace
     , defaultDistFor
     -- * Wallets
     , EM.Wallet(..)
-    , EM.walletPubKey
-    , EM.walletPubKeyHash
+    , EM.mockWalletPaymentPubKey
+    , EM.mockWalletPaymentPubKeyHash
     , EM.knownWallets
     , EM.knownWallet
     ) where
@@ -174,13 +174,13 @@ handleChainIndexQueries =
                E.ChainIndexQueryResp
                RequestHandler.handleChainIndexQueries
 
-handleOwnPubKeyHashQueries ::
+handleOwnPaymentPubKeyHashQueries ::
     ( Member (LogObserve (LogMessage Text)) effs
     , Member WalletEffect effs
     )
     => RequestHandler effs PABReq PABResp
-handleOwnPubKeyHashQueries =
-    generalise (preview E._OwnPublicKeyHashReq) E.OwnPublicKeyHashResp RequestHandler.handleOwnPubKeyHash
+handleOwnPaymentPubKeyHashQueries =
+    generalise (preview E._OwnPaymentPublicKeyHashReq) E.OwnPaymentPublicKeyHashResp RequestHandler.handleOwnPaymentPubKeyHash
 
 handleOwnInstanceIdQueries ::
     ( Member (LogObserve (LogMessage Text)) effs

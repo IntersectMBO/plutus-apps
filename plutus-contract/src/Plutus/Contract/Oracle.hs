@@ -32,16 +32,18 @@ module Plutus.Contract.Oracle(
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import PlutusTx
-import PlutusTx.Prelude
+import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData), makeIsDataIndexed, makeLift)
+import PlutusTx.Prelude (Applicative (pure), Either (Left, Right), Eq ((==)), maybe, trace, unless, verifySignature,
+                         ($), (&&), (>>))
 
+import Ledger.Address (PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Crypto (PrivateKey, PubKey (..), Signature (..))
+import Ledger.Crypto (PubKey (PubKey), Signature (Signature))
 import Ledger.Crypto qualified as Crypto
-import Ledger.Scripts (Datum (..), DatumHash (..))
+import Ledger.Scripts (Datum (Datum), DatumHash (DatumHash))
 import Ledger.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Bytes
+import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Time (POSIXTime)
 
@@ -98,7 +100,7 @@ instance Eq a => Eq (SignedMessage a) where
         && osmDatum l == osmDatum r
 
 data SignedMessageCheckError =
-    SignatureMismatch Signature PubKey DatumHash
+    SignatureMismatch Signature PaymentPubKey DatumHash
     -- ^ The signature did not match the public key
     | DatumMissing DatumHash
     -- ^ The datum was missing from the pending transaction
@@ -113,13 +115,13 @@ data SignedMessageCheckError =
 checkSignature
   :: DatumHash
   -- ^ The hash of the message
-  -> PubKey
+  -> PaymentPubKey
   -- ^ The public key of the signatory
   -> Signature
   -- ^ The signed message
   -> Either SignedMessageCheckError ()
 checkSignature datumHash pubKey signature_ =
-    let PubKey (LedgerBytes pk) = pubKey
+    let PaymentPubKey (PubKey (LedgerBytes pk)) = pubKey
         Signature sig = signature_
         DatumHash h = datumHash
     in if verifySignature pk h sig
@@ -147,7 +149,7 @@ checkHashConstraints SignedMessage{osmMessageHash, osmDatum=Datum dt} =
 --   up.
 verifySignedMessageConstraints ::
     ( FromData a)
-    => PubKey
+    => PaymentPubKey
     -> SignedMessage a
     -> Either SignedMessageCheckError (a, TxConstraints i o)
 verifySignedMessageConstraints pk s@SignedMessage{osmSignature, osmMessageHash} =
@@ -162,7 +164,7 @@ verifySignedMessageConstraints pk s@SignedMessage{osmSignature, osmMessageHash} 
 verifySignedMessageOnChain ::
     ( FromData a)
     => ScriptContext
-    -> PubKey
+    -> PaymentPubKey
     -> SignedMessage a
     -> Either SignedMessageCheckError a
 verifySignedMessageOnChain ptx pk s@SignedMessage{osmSignature, osmMessageHash} = do
@@ -187,7 +189,7 @@ checkHashOffChain SignedMessage{osmMessageHash, osmDatum=dt} = do
 --   message.
 verifySignedMessageOffChain ::
     ( FromData a)
-    => PubKey
+    => PaymentPubKey
     -> SignedMessage a
     -> Either SignedMessageCheckError a
 verifySignedMessageOffChain pk s@SignedMessage{osmSignature, osmMessageHash} =
@@ -196,11 +198,11 @@ verifySignedMessageOffChain pk s@SignedMessage{osmSignature, osmMessageHash} =
 
 -- | Encode a message of type @a@ as a @Data@ value and sign the
 --   hash of the datum.
-signMessage :: ToData a => a -> PrivateKey -> SignedMessage a
+signMessage :: ToData a => a -> PaymentPrivateKey -> SignedMessage a
 signMessage msg pk =
   let dt = Datum (toBuiltinData msg)
       DatumHash msgHash = Scripts.datumHash dt
-      sig     = Crypto.sign msgHash pk
+      sig     = Crypto.sign msgHash (unPaymentPrivateKey pk)
   in SignedMessage
         { osmSignature = sig
         , osmMessageHash = DatumHash msgHash
@@ -208,7 +210,7 @@ signMessage msg pk =
         }
 
 -- | Encode an observation of a value of type @a@ that was made at the given time
-signObservation :: ToData a => POSIXTime -> a -> PrivateKey -> SignedMessage (Observation a)
+signObservation :: ToData a => POSIXTime -> a -> PaymentPrivateKey -> SignedMessage (Observation a)
 signObservation time vl = signMessage Observation{obsValue=vl, obsTime=time}
 
 makeLift ''SignedMessage

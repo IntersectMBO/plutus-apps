@@ -52,7 +52,7 @@ module Plutus.Contract.StateMachine(
     , Void
     ) where
 
-import Control.Lens
+import Control.Lens (makeClassyPrisms, review)
 import Control.Monad (unless)
 import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
@@ -67,22 +67,29 @@ import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Ledger (POSIXTime, Slot, TxOutRef, Value, scriptCurrencySymbol)
 import Ledger qualified
-import Ledger.Constraints (ScriptLookups, TxConstraints (..), mintingPolicy, mustMintValueWithRedeemer,
-                           mustPayToTheScript, mustSpendPubKeyOutput)
+import Ledger.Constraints (ScriptLookups, TxConstraints, mintingPolicy, mustMintValueWithRedeemer, mustPayToTheScript,
+                           mustSpendPubKeyOutput)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
-import Ledger.Constraints.TxConstraints (InputConstraint (..), OutputConstraint (..))
+import Ledger.Constraints.TxConstraints (InputConstraint (InputConstraint, icRedeemer, icTxOutRef),
+                                         OutputConstraint (OutputConstraint, ocDatum, ocValue), txOwnInputs,
+                                         txOwnOutputs)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Typed.Tx (TypedScriptTxOut (..))
+import Ledger.Typed.Tx (TypedScriptTxOut (TypedScriptTxOut, tyTxOutData, tyTxOutTxOut))
 import Ledger.Typed.Tx qualified as Typed
 import Ledger.Value qualified as Value
-import Plutus.ChainIndex (ChainIndexTx (..))
-import Plutus.Contract
-import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
-import Plutus.Contract.StateMachine.OnChain (State (..), StateMachine (..), StateMachineInstance (..))
+import Plutus.ChainIndex (ChainIndexTx (_citxInputs))
+import Plutus.Contract (AsContractError (_ConstraintResolutionError, _ContractError), Contract, ContractError, Promise,
+                        awaitPromise, isSlot, isTime, logWarn, mapError, never, ownPaymentPubKeyHash, promiseBind,
+                        select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt, utxosTxOutTxAt,
+                        utxosTxOutTxFromTx)
+import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
+import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue),
+                                             StateMachine (StateMachine, smFinal, smThreadToken, smTransition),
+                                             StateMachineInstance (StateMachineInstance, stateMachine, typedValidator))
 import Plutus.Contract.StateMachine.OnChain qualified as SM
-import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (..), curPolicy, ttOutRef)
+import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (ThreadToken), curPolicy, ttOutRef)
 import Plutus.Contract.Wallet (getUnspentOutput)
 import PlutusTx qualified
 import PlutusTx.Monoid (inv)
@@ -413,8 +420,8 @@ runInitialiseWith ::
     -- ^ The value locked by the contract at the beginning
     -> Contract w schema e state
 runInitialiseWith customLookups customConstraints StateMachineClient{scInstance} initialState initialValue = mapError (review _SMContractError) $ do
-    ownPK <- ownPubKeyHash
-    utxo <- utxosAt (Ledger.pubKeyHashAddress ownPK)
+    ownPK <- ownPaymentPubKeyHash
+    utxo <- utxosAt (Ledger.pubKeyHashAddress ownPK Nothing)
     let StateMachineInstance{stateMachine, typedValidator} = scInstance
         constraints = mustPayToTheScript initialState (initialValue <> SM.threadTokenValueOrZero scInstance)
             <> foldMap ttConstraints (smThreadToken stateMachine)
@@ -473,8 +480,8 @@ runGuardedStepWith ::
     -> Contract w schema e (Either a (TransitionResult state input))
 runGuardedStepWith userLookups userConstraints smc input guard = mapError (review _SMContractError) $ mkStep smc input >>= \case
     Right StateMachineTransition{smtConstraints,smtOldState=State{stateData=os}, smtNewState=State{stateData=ns}, smtLookups} -> do
-        pk <- ownPubKeyHash
-        let lookups = smtLookups { Constraints.slOwnPubkeyHash = Just pk }
+        pk <- ownPaymentPubKeyHash
+        let lookups = smtLookups { Constraints.slOwnPaymentPubKeyHash = Just pk }
         utx <- either (throwing _ConstraintResolutionError)
                       pure
                       (Constraints.mkTx (lookups <> userLookups) (smtConstraints <> userConstraints))

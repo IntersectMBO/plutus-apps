@@ -13,7 +13,7 @@ import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
 import Ledger (ValidatorHash (ValidatorHash))
 import Ledger qualified
-import Ledger.Address (Address (..))
+import Ledger.Address (Address (..), PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKeyHash)
 import Ledger.Bytes (LedgerBytes)
 import Ledger.Bytes qualified as LedgerBytes
 import Ledger.Constraints (MkTxError)
@@ -139,6 +139,22 @@ instance Arbitrary PubKeyHash where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance Arbitrary PaymentPubKey where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary PaymentPubKeyHash where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary StakePubKey where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary StakePubKeyHash where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary Slot where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -204,14 +220,14 @@ instance Arbitrary PABReq where
             , pure CurrentSlotReq
             , pure OwnContractInstanceIdReq
             , ExposeEndpointReq <$> arbitrary
-            , pure OwnPublicKeyHashReq
+            , pure OwnPaymentPublicKeyHashReq
             -- TODO This would need an Arbitrary Tx instance:
             -- , BalanceTxRequest <$> arbitrary
             -- , WriteBalancedTxRequest <$> arbitrary
             ]
 
 instance Arbitrary Address where
-    arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary, Ledger.scriptAddress <$> arbitrary]
+    arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary <*> arbitrary, Ledger.scriptAddress <$> arbitrary]
 
 instance Arbitrary ValidatorHash where
     arbitrary = ValidatorHash <$> arbitrary
@@ -239,7 +255,7 @@ instance Arbitrary ActiveEndpoint where
 -- 'Maybe' because we can't (yet) create a generator for every request
 -- type.
 genResponse :: PABReq -> Maybe (Gen PABResp)
-genResponse (AwaitSlotReq slot)   = Just . pure . AwaitSlotResp $ slot
-genResponse (ExposeEndpointReq _) = Just $ ExposeEndpointResp <$> arbitrary <*> (EndpointValue <$> arbitrary)
-genResponse OwnPublicKeyHashReq   = Just $ OwnPublicKeyHashResp <$> arbitrary
-genResponse _                     = Nothing
+genResponse (AwaitSlotReq slot)        = Just . pure . AwaitSlotResp $ slot
+genResponse (ExposeEndpointReq _)      = Just $ ExposeEndpointResp <$> arbitrary <*> (EndpointValue <$> arbitrary)
+genResponse OwnPaymentPublicKeyHashReq = Just $ OwnPaymentPublicKeyHashResp <$> arbitrary
+genResponse _                          = Nothing

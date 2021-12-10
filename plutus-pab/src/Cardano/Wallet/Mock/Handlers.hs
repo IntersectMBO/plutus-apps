@@ -45,9 +45,9 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Ledger.Ada qualified as Ada
+import Ledger.Address (PaymentPubKeyHash)
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Crypto (PubKeyHash)
 import Ledger.Fee (FeeConfig)
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.Tx (CardanoTx)
@@ -87,9 +87,9 @@ distributeNewWalletFunds :: forall effs.
     , Member (Error WalletAPIError) effs
     , Member (LogMsg Text) effs
     )
-    => PubKeyHash
+    => PaymentPubKeyHash
     -> Eff effs CardanoTx
-distributeNewWalletFunds = WAPI.payToPublicKeyHash WAPI.defaultSlotRange (Ada.adaValueOf 10_000)
+distributeNewWalletFunds = WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange (Ada.adaValueOf 10_000)
 
 newWallet :: forall m effs. (LastMember m effs, MonadIO m) => Eff effs MockWallet
 newWallet = do
@@ -128,17 +128,17 @@ handleMultiWallet feeCfg = \case
         mockWallet <- newWallet
         let walletId = Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId mockWallet
             wallets' = Map.insert walletId (Wallet.fromMockWallet mockWallet) wallets
-            pkh = CW.pubKeyHash mockWallet
+            pkh = CW.paymentPubKeyHash mockWallet
         put wallets'
         -- For some reason this doesn't work with (Wallet 1)/privateKey1,
         -- works just fine with (Wallet 2)/privateKey2
         -- ¯\_(ツ)_/¯
-        let sourceWallet = Wallet.fromMockWallet (CW.knownWallet 2)
+        let sourceWallet = Wallet.fromMockWallet (CW.knownMockWallet 2)
         _ <- evalState sourceWallet $
             interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
             $ interpret (Wallet.handleWallet feeCfg)
             $ distributeNewWalletFunds pkh
-        return $ WalletInfo{wiWallet = walletId, wiPubKeyHash = pkh}
+        return $ WalletInfo{wiWallet = walletId, wiPaymentPubKeyHash = pkh}
     GetWalletInfo wllt -> do
         wallets <- get @Wallets
         return $ fmap fromWalletState $ Map.lookup (Wallet.Wallet wllt) wallets
@@ -208,7 +208,7 @@ runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets feeCfg
 fromWalletAPIError :: WalletAPIError -> ServerError
 fromWalletAPIError (InsufficientFunds text) =
     err401 {errBody = BSL.fromStrict $ encodeUtf8 text}
-fromWalletAPIError e@(PrivateKeyNotFound _) =
+fromWalletAPIError e@(PaymentPrivateKeyNotFound _) =
     err404 {errBody = BSL8.pack $ show e}
 fromWalletAPIError e@(ValidationError _) =
     err500 {errBody = BSL8.pack $ show $ pretty e}

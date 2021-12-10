@@ -44,7 +44,7 @@ vesting startTime =
     VestingParams
         { vestingTranche1 = VestingTranche (startTime + 10000) (Ada.adaValueOf 20)
         , vestingTranche2 = VestingTranche (startTime + 20000) (Ada.adaValueOf 40)
-        , vestingOwner    = walletPubKeyHash w1 }
+        , vestingOwner    = mockWalletPaymentPubKeyHash w1 }
 
 params :: VestingParams
 params = vesting (TimeSlot.scSlotZeroTime def)
@@ -114,7 +114,7 @@ instance ContractModel VestingModel where
     s      <- getContractState
     when ( enoughValueLeft slot s v
          && v `leq` amount
-         && walletPubKeyHash w == vestingOwner params
+         && mockWalletPaymentPubKeyHash w == vestingOwner params
          && Ada.fromValue v >= Ledger.minAdaTxOut
          && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)) $ do
       deposit w v
@@ -127,14 +127,14 @@ instance ContractModel VestingModel where
       waitUntil s
 
   precondition s (Vest w) =  w `notElem` s ^. contractState . vested -- After a wallet has vested the contract shuts down
-                          && walletPubKeyHash w /= vestingOwner params -- The vesting owner shouldn't vest
+                          && mockWalletPaymentPubKeyHash w /= vestingOwner params -- The vesting owner shouldn't vest
                           && slot < t1 -- If you vest after slot 1 it can cause the vesting owner to terminate prematurely
     where
       slot   = s ^. currentSlot
       t1     = s ^. contractState . t1Slot
 
   precondition s (Retrieve w v) = enoughValueLeft slot (s ^. contractState) v
-                                && walletPubKeyHash w == vestingOwner params
+                                && mockWalletPaymentPubKeyHash w == vestingOwner params
                                 && Ada.fromValue v >= Ledger.minAdaTxOut
                                 && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)
     where

@@ -62,14 +62,14 @@ tests =
 -- | A multisig contract that requires 3 out of 5 signatures
 params :: MS.Params
 params = MS.Params keys 3 where
-    keys = EM.walletPubKeyHash . knownWallet <$> [1..5]
+    keys = EM.mockWalletPaymentPubKeyHash . knownWallet <$> [1..5]
 
 -- | A payment of 5 Ada to the public key address of wallet 2
 payment :: POSIXTime -> MS.Payment
 payment startTime =
     MS.Payment
         { MS.paymentAmount    = Ada.adaValueOf 5
-        , MS.paymentRecipient = EM.walletPubKeyHash w2
+        , MS.paymentRecipient = EM.mockWalletPaymentPubKeyHash w2
         , MS.paymentDeadline  = startTime + 20000
         }
 

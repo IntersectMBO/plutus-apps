@@ -18,14 +18,14 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import Schema (ToSchema)
 
-import Ledger (PubKeyHash, Value)
+import Ledger (PaymentPubKeyHash, Value)
 import Ledger.Constraints (adjustUnbalancedTx, mustPayToPubKey)
 import Plutus.Contract (ContractError, Endpoint, Promise, endpoint, mkTxConstraints, yieldUnbalancedTx)
 
 data PayToWalletParams =
     PayToWalletParams
         { amount :: Value
-        , pkh    :: PubKeyHash
+        , pkh    :: PaymentPubKeyHash
         }
         deriving stock (Eq, Show, Generic)
         deriving anyclass (ToJSON, FromJSON, ToSchema)
