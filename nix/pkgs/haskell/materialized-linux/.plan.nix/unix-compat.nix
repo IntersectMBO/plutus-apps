@@ -47,7 +47,7 @@
               (hsPkgs."time" or (errorHandler.buildDepError "time"))
               (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
               ])
-          else (pkgs.lib).optional (!system.isGhcjs) (hsPkgs."unix" or (errorHandler.buildDepError "unix")));
+          else [ (hsPkgs."unix" or (errorHandler.buildDepError "unix")) ]);
         libs = (pkgs.lib).optional (system.isWindows) (pkgs."msvcrt" or (errorHandler.sysDepError "msvcrt"));
         buildable = true;
         modules = [
@@ -64,8 +64,8 @@
           then [ "cbits/HsUname.c" "cbits/mktemp.c" ]
           else (pkgs.lib).optional (!system.isGhcjs) "cbits/HsUnixCompat.c";
         hsSourceDirs = [ "src" ];
-        includeDirs = (pkgs.lib).optionals (!system.isWindows) ((pkgs.lib).optional (!system.isGhcjs) "include");
-        includes = (pkgs.lib).optionals (!system.isWindows) ((pkgs.lib).optional (!system.isGhcjs) "HsUnixCompat.h");
+        includeDirs = (pkgs.lib).optional (!system.isWindows) "include";
+        includes = (pkgs.lib).optional (!system.isWindows) "HsUnixCompat.h";
         };
       };
     } // rec { src = (pkgs.lib).mkDefault ../contrib/unix-compat-0.5.3; }
