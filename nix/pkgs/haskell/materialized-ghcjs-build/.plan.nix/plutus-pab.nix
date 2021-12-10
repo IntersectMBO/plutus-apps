@@ -20,12 +20,8 @@
       url = "";
       synopsis = "";
       description = "Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>";
-      buildType = "Custom";
+      buildType = "Simple";
       isLocal = true;
-      setup-depends = [
-        (hsPkgs.buildPackages.base or (pkgs.buildPackages.base or (errorHandler.setupDepError "base")))
-        (hsPkgs.buildPackages.Cabal or (pkgs.buildPackages.Cabal or (errorHandler.setupDepError "Cabal")))
-        ];
       detailLevel = "FullDetails";
       licenseFiles = [ "LICENSE" "NOTICE" ];
       dataDir = ".";
