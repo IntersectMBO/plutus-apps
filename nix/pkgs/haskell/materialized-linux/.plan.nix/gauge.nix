@@ -93,7 +93,7 @@
           then [ "cbits/time-osx.c" ]
           else if system.isWindows
             then [ "cbits/time-windows.c" ]
-            else [ "cbits/time-posix.c" ]);
+            else (pkgs.lib).optional (!system.isGhcjs) "cbits/time-posix.c");
         hsSourceDirs = [ "." "statistics" "mwc-random" "math-functions" ];
         includeDirs = [ "cbits" ];
         };

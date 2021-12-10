@@ -699,8 +699,6 @@
         "say".revision = (((hackage."say")."0.1.0.1").revisions).default;
         "sqlite-simple".revision = (((hackage."sqlite-simple")."0.4.18.0").revisions).default;
         "http-date".revision = (((hackage."http-date")."0.0.11").revisions).default;
-        "unix-compat".revision = (((hackage."unix-compat")."0.5.3").revisions).default;
-        "unix-compat".flags.old-time = false;
         "case-insensitive".revision = (((hackage."case-insensitive")."1.2.1.0").revisions).default;
         "data-default".revision = (((hackage."data-default")."0.7.1.1").revisions).default;
         "exact-combinatorics".revision = (((hackage."exact-combinatorics")."0.2.0.9").revisions).default;
@@ -778,6 +776,7 @@
         cardano-prelude-test = ./.plan.nix/cardano-prelude-test.nix;
         lobemo-backend-monitoring = ./.plan.nix/lobemo-backend-monitoring.nix;
         io-sim = ./.plan.nix/io-sim.nix;
+        unix-compat = ./.plan.nix/unix-compat.nix;
         plutus-chain-index = ./.plan.nix/plutus-chain-index.nix;
         typed-protocols-examples = ./.plan.nix/typed-protocols-examples.nix;
         byron-spec-ledger = ./.plan.nix/byron-spec-ledger.nix;
@@ -917,6 +916,9 @@
             };
           "lobemo-backend-monitoring" = { flags = {}; };
           "io-sim" = { flags = { "asserts" = lib.mkOverride 900 false; }; };
+          "unix-compat" = {
+            flags = { "old-time" = lib.mkOverride 900 false; };
+            };
           "plutus-chain-index" = { flags = {}; };
           "typed-protocols-examples" = { flags = {}; };
           "byron-spec-ledger" = { flags = {}; };
