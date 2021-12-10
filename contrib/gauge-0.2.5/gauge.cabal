@@ -96,8 +96,10 @@ library
   else {
     if os(windows)
       c-sources: cbits/time-windows.c
-    else
-      c-sources: cbits/time-posix.c
+    else {
+      if !os(ghcjs)
+        c-sources: cbits/time-posix.c
+    }
   }
 
   other-modules:
