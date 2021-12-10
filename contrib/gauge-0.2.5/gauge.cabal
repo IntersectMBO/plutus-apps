@@ -119,36 +119,36 @@ library
   if flag(analysis) && !impl(ghcjs)
       cpp-options: -DHAVE_ANALYSIS
 
-test-suite sanity
-  type:                 exitcode-stdio-1.0
-  hs-source-dirs:       tests
-  main-is:              Sanity.hs
-  default-language:     Haskell2010
-  ghc-options:          -O2 -Wall -rtsopts
+-- test-suite sanity
+--   type:                 exitcode-stdio-1.0
+--   hs-source-dirs:       tests
+--   main-is:              Sanity.hs
+--   default-language:     Haskell2010
+--   ghc-options:          -O2 -Wall -rtsopts
 
-  build-depends:
-    base > 0 && < 1000,
-    bytestring,
-    gauge,
-    basement,
-    foundation
+--   build-depends:
+--     base > 0 && < 1000,
+--     bytestring,
+--     gauge,
+--     basement,
+--     foundation
 
-test-suite cleanup
-  type:                 exitcode-stdio-1.0
-  hs-source-dirs:       tests
-  default-language:     Haskell2010
-  main-is:              Cleanup.hs
+-- test-suite cleanup
+--   type:                 exitcode-stdio-1.0
+--   hs-source-dirs:       tests
+--   default-language:     Haskell2010
+--   main-is:              Cleanup.hs
 
-  ghc-options:
-    -Wall -threaded     -O0 -rtsopts
+--   ghc-options:
+--     -Wall -threaded     -O0 -rtsopts
 
-  build-depends:
-    base > 0 && < 1000,
-    bytestring,
-    gauge,
-    deepseq,
-    directory,
-    foundation
+--   build-depends:
+--     base > 0 && < 1000,
+--     bytestring,
+--     gauge,
+--     deepseq,
+--     directory,
+--     foundation
 
 benchmark self
   type:                 exitcode-stdio-1.0
