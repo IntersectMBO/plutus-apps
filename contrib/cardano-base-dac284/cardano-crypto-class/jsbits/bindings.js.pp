@@ -62,10 +62,9 @@ h$sodium_withOutBuffer = function(d, o, len, cont) {
 function h$sodium_init() {
   _sodium_init();
 }
-var emscriptenHeap = { u8: HEAPU8 };
 
 function h$sodium_malloc(size) {
-  RETURN_UBX_TUP2(emscriptenHeap, _sodium_malloc(size));
+  RETURN_UBX_TUP2({ dv: new DataView(HEAPU8.buffer), u8: HEAPU8 }, _sodium_malloc(size));
 }
 function h$sodium_free(ptr) {
   _sodium_free(ptr);
