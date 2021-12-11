@@ -114,7 +114,3 @@ test-suite test
                       OverloadedStrings
                       DeriveDataTypeable
   ghc-options:        -Wall -threaded -fno-warn-name-shadowing -fno-warn-unused-do-bind
-  if os(ghcjs)
-    js-sources: dist/build/emcc/lib.js
-    -- this is a hack, as js-sources apparently doesn't work.
-    ghc-options: dist/build/emcc/lib.js

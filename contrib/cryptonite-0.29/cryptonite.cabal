@@ -480,10 +480,6 @@ Test-Suite test-cryptonite
                    , cryptonite
   ghc-options:       -Wall -fno-warn-orphans -fno-warn-missing-signatures -rtsopts
   default-language:  Haskell2010
-  if os(ghcjs)
-    js-sources: dist/build/emcc/lib.js
-    -- this is a hack, as js-sources apparently doesn't work.
-    ghc-options: dist/build/emcc/lib.js
 
 Benchmark bench-cryptonite
   type:              exitcode-stdio-1.0
@@ -499,7 +495,3 @@ Benchmark bench-cryptonite
                    , cryptonite
   ghc-options:       -Wall -fno-warn-missing-signatures
   default-language:  Haskell2010
-  if os(ghcjs)
-    js-sources: dist/build/emcc/lib.js
-    -- this is a hack, as js-sources apparently doesn't work.
-    ghc-options: dist/build/emcc/lib.js

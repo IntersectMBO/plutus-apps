@@ -137,10 +137,6 @@ test-suite plutus-chain-index-test
         stm -any,
         tasty -any,
         tasty-hedgehog -any,
-  if os(ghcjs)
-    js-sources: dist/build/emcc/lib.js
-    -- this is a hack, as js-sources apparently doesn't work.
-    ghc-options: dist/build/emcc/lib.js
 
 executable plutus-chain-index
   main-is: Main.hs
@@ -177,8 +173,3 @@ executable plutus-chain-index
     plutus-chain-index -any,
     sqlite-simple -any,
     stm -any
-
-  if os(ghcjs)
-    js-sources: dist/build/emcc/lib.js
-    -- this is a hack, as js-sources apparently doesn't work.
-    ghc-options: dist/build/emcc/lib.js

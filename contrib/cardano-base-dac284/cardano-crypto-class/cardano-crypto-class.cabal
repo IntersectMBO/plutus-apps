@@ -130,7 +130,3 @@ test-suite test-memory-example
 
   if os(linux) || os(osx)
     build-depends:      unix
-  if os(ghcjs)
-    js-sources: dist/build/emcc/lib.js
-    -- this is a hack, as js-sources apparently doesn't work.
-    ghc-options: dist/build/emcc/lib.js
