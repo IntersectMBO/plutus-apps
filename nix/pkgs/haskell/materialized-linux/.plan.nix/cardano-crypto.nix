@@ -91,11 +91,8 @@
             ] ++ (pkgs.lib).optional (flags.golden-tests-exe) (hsPkgs."inspector" or (errorHandler.buildDepError "inspector"));
           buildable = if flags.golden-tests-exe then true else false;
           modules = [ "Test/Orphans" ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
-          mainPath = ([ "GoldenTest.hs" ] ++ [
-            ""
-            ]) ++ (pkgs.lib).optional (system.isGhcjs) "";
+          mainPath = [ "GoldenTest.hs" ] ++ [ "" ];
           };
         };
       tests = {
@@ -120,7 +117,6 @@
             "Test/Cardano/Crypto/Encoding/Seed"
             "Utils"
             ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };
@@ -136,7 +132,6 @@
             ] ++ (pkgs.lib).optional (flags.golden-tests) (hsPkgs."inspector" or (errorHandler.buildDepError "inspector"));
           buildable = if flags.golden-tests then true else false;
           modules = [ "Test/Orphans" ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "GoldenTest.hs" ];
           };
@@ -152,7 +147,6 @@
             (hsPkgs."gauge" or (errorHandler.buildDepError "gauge"))
             ];
           buildable = true;
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "benchs" ];
           };
         };

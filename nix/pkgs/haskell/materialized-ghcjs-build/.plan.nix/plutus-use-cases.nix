@@ -156,9 +156,8 @@
             "Spec/TokenAccount"
             "Spec/Vesting"
             ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "scripts" "test" ];
-          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (system.isGhcjs) "";
+          mainPath = [ "Main.hs" ];
           };
         };
       tests = {
@@ -212,7 +211,6 @@
             "Spec/TokenAccount"
             "Spec/Vesting"
             ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };

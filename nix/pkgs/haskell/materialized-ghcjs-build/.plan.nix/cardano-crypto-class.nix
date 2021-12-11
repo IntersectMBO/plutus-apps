@@ -116,7 +116,6 @@
             (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
             ] ++ (pkgs.lib).optional (system.isLinux || system.isOsx) (hsPkgs."unix" or (errorHandler.buildDepError "unix"));
           buildable = true;
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "memory-example" ];
           mainPath = [ "Main.hs" ];
           };

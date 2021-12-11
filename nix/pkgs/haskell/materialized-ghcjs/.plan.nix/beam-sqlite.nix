@@ -78,7 +78,6 @@
             "Database/Beam/Sqlite/Test/Migrate"
             "Database/Beam/Sqlite/Test/Select"
             ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
           };

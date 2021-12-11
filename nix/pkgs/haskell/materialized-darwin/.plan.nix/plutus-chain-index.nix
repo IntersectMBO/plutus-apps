@@ -137,9 +137,8 @@
             ];
           buildable = true;
           modules = [ "CommandLine" "Config" "Logging" ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "app" ];
-          mainPath = [ "Main.hs" ] ++ (pkgs.lib).optional (system.isGhcjs) "";
+          mainPath = [ "Main.hs" ];
           };
         };
       tests = {
@@ -173,7 +172,6 @@
             "Plutus/ChainIndex/Emulator/HandlersSpec"
             "Plutus/ChainIndex/HandlersSpec"
             ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };

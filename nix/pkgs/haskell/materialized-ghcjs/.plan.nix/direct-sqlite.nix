@@ -81,7 +81,6 @@
             ];
           buildable = true;
           modules = [ "StrictEq" ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
           };

@@ -197,7 +197,6 @@
             "Test/Foundation/Format"
             "Test/Foundation/Format/CSV"
             ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "tests" ];
           mainPath = [ "Checks.hs" ];
           };
@@ -208,7 +207,6 @@
             (hsPkgs."template-haskell" or (errorHandler.buildDepError "template-haskell"))
             ];
           buildable = if flags.linktest then true else false;
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "tests" ];
           mainPath = [ "Scripts/Link.hs" ];
           };
@@ -220,7 +218,6 @@
           buildable = if flags.minimal-deps
             then false
             else if flags.doctest then true else false;
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "tests" ];
           mainPath = [ "DocTest.hs" ];
           };
@@ -250,7 +247,6 @@
             "Fake/Text"
             "Fake/Vector"
             ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "benchs" ];
           };
         };

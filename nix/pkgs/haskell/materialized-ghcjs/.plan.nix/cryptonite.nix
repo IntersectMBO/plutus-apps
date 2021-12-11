@@ -387,7 +387,6 @@
             "Utils"
             "XSalsa"
             ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "tests" ];
           mainPath = [ "Tests.hs" ];
           };
@@ -405,7 +404,6 @@
             ];
           buildable = true;
           modules = [ "Number/F2m" ];
-          jsSources = (pkgs.lib).optional (system.isGhcjs) "dist/build/emcc/lib.js";
           hsSourceDirs = [ "benchs" ];
           };
         };
