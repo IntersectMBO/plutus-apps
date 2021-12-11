@@ -64,7 +64,8 @@ function h$sodium_init() {
 }
 
 function h$sodium_malloc(size) {
-  RETURN_UBX_TUP2({ dv: new DataView(HEAPU8.buffer), u8: HEAPU8 }, _sodium_malloc(size));
+  h$ret1 = _sodium_malloc(size);
+  return { dv: new DataView(HEAPU8.buffer), u8: HEAPU8 };
 }
 function h$sodium_free(ptr) {
   _sodium_free(ptr);
