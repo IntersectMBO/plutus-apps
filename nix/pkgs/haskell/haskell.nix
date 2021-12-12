@@ -74,7 +74,26 @@ let
         tests: False
     '' + lib.optionalString pkgs.stdenv.hostPlatform.isGhcjs ''
       packages:
-        contrib/*
+        contrib/basement-0.0.12
+        contrib/beam-sqlite-0.5.0.0
+        contrib/cardano-base-dac284/cardano-crypto-class
+        contrib/cardano-crypto-07397f
+        contrib/clock-0.8.2
+        contrib/cryptonite-0.29
+        contrib/digest-0.0.1.2
+        contrib/direct-sqlite-2.3.26
+        contrib/double-conversion-2.0.2.0
+        contrib/foundation-0.0.26.1
+        contrib/gauge-0.2.5
+        contrib/ghcjs-c-interop
+        contrib/lzma-0.0.0.3
+        contrib/mersenne-random-pure64-0.2.2.0
+        contrib/network-3.1.2.1
+        contrib/network-info-0.2.0.10
+        contrib/scrypt-0.5.0
+        contrib/terminal-size-0.3.2.1
+        contrib/unix-bytestring-0.3.7.3
+        contrib/unix-compat-0.5.3
       package plutus-tx-plugin
         flags: +use-ghc-stub
       package prettyprinter-configurable
@@ -432,6 +451,26 @@ let
               '';
               CC = "emcc";
             });
+            emzlib = pkgs.zlib.overrideAttrs (attrs: {
+              # makeFlags in nixpks zlib derivation depends on stdenv.cc.targetPrefix, which we don't have :(
+
+              makeFlags = "PREFIX=js-unknown-ghcjs-";
+              # We need the same patching as macOS
+              postPatch = ''
+                substituteInPlace configure \
+                  --replace '/usr/bin/libtool' 'emar' \
+                  --replace 'AR="libtool"' 'AR="emar"' \
+                  --replace 'ARFLAGS="-o"' 'ARFLAGS="-r"'
+              '';
+
+              nativeBuildInputs = (attrs.nativeBuildInputs or [ ]) ++ (with pkgs.buildPackages.buildPackages; [ emscripten python2 ]);
+
+              CC = "emcc";
+              AR = "emar";
+
+              # prevent it from passing `-lc`, which emcc doesn't like.
+              LDSHAREDLIBC = "";
+            });
           in
           {
             cardano-wallet-core.components.library.build-tools = [ pkgs.buildPackages.buildPackages.gitReallyMinimal ];
@@ -439,6 +478,7 @@ let
             lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
             cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
             cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
+            digest.components.library.libs = lib.mkForce [ emzlib ];
             # cardano-crypto-class.components.library.build-tools = with pkgs.buildPackages.buildPackages; [ emscripten python2 ];
             # cardano-crypto-class.components.library.preConfigure = ''
             #   ls -l
