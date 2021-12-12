@@ -698,6 +698,7 @@
         lzma = ./.plan.nix/lzma.nix;
         cardano-prelude = ./.plan.nix/cardano-prelude.nix;
         network = ./.plan.nix/network.nix;
+        js-bindgen = ./.plan.nix/js-bindgen.nix;
         measures = ./.plan.nix/measures.nix;
         ouroboros-network-testing = ./.plan.nix/ouroboros-network-testing.nix;
         cardano-api-stub = ./.plan.nix/cardano-api-stub.nix;
@@ -824,6 +825,7 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "network" = { flags = { "devel" = lib.mkOverride 900 false; }; };
+          "js-bindgen" = { flags = {}; };
           "measures" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
@@ -1124,6 +1126,7 @@
           "bimap".components.library.planned = lib.mkOverride 900 true;
           "tracer-transformers".components.exes."tracer-transfomers-example1".planned = lib.mkOverride 900 true;
           "math-functions".components.library.planned = lib.mkOverride 900 true;
+          "js-bindgen".components.exes."js-bindgen".planned = lib.mkOverride 900 true;
           "servant".components.library.planned = lib.mkOverride 900 true;
           "cardano-crypto-wrapper".components.library.planned = lib.mkOverride 900 true;
           "bin".components.library.planned = lib.mkOverride 900 true;
@@ -1409,6 +1412,7 @@
           "mtl".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-arbitrary-adt".components.library.planned = lib.mkOverride 900 true;
           "dependent-sum".components.library.planned = lib.mkOverride 900 true;
+          "digest".components.exes."trivial".planned = lib.mkOverride 900 true;
           "io-sim".components.library.planned = lib.mkOverride 900 true;
           "pipes".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab".components.tests."plutus-pab-test-full".planned = lib.mkOverride 900 true;
@@ -1541,6 +1545,7 @@
           "network".components.library.planned = lib.mkOverride 900 true;
           "time".components.library.planned = lib.mkOverride 900 true;
           "cardano-slotting".components.library.planned = lib.mkOverride 900 true;
+          "digest".components.tests."test".planned = lib.mkOverride 900 true;
           "blaze-textual".components.library.planned = lib.mkOverride 900 true;
           "integer-logarithms".components.library.planned = lib.mkOverride 900 true;
           "show-combinators".components.library.planned = lib.mkOverride 900 true;

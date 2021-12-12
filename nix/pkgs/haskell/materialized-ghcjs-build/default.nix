@@ -675,8 +675,6 @@
         "safe-exceptions".revision = (((hackage."safe-exceptions")."0.1.7.2").revisions).default;
         "http-client".revision = (((hackage."http-client")."0.7.8").revisions).default;
         "http-client".flags.network-uri = true;
-        "digest".revision = (((hackage."digest")."0.0.1.3").revisions).default;
-        "digest".flags.bytestring-in-base = false;
         "auto-update".revision = (((hackage."auto-update")."0.1.6").revisions).default;
         "indexed-list-literals".revision = (((hackage."indexed-list-literals")."0.2.1.3").revisions).default;
         "cryptohash-sha1".revision = (((hackage."cryptohash-sha1")."0.11.100.1").revisions).default;
@@ -758,8 +756,10 @@
         cardano-ledger-byron = ./.plan.nix/cardano-ledger-byron.nix;
         freer-extras = ./.plan.nix/freer-extras.nix;
         ghcjs = ./.plan.nix/ghcjs.nix;
+        digest = ./.plan.nix/digest.nix;
         lzma = ./.plan.nix/lzma.nix;
         cardano-prelude = ./.plan.nix/cardano-prelude.nix;
+        js-bindgen = ./.plan.nix/js-bindgen.nix;
         measures = ./.plan.nix/measures.nix;
         ouroboros-network-testing = ./.plan.nix/ouroboros-network-testing.nix;
         cardano-api-stub = ./.plan.nix/cardano-api-stub.nix;
@@ -883,10 +883,14 @@
               "terminfo" = lib.mkOverride 900 true;
               };
             };
+          "digest" = {
+            flags = { "bytestring-in-base" = lib.mkOverride 900 false; };
+            };
           "lzma" = { flags = {}; };
           "cardano-prelude" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
+          "js-bindgen" = { flags = {}; };
           "measures" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
@@ -1164,6 +1168,7 @@
           "bimap".components.library.planned = lib.mkOverride 900 true;
           "tracer-transformers".components.exes."tracer-transfomers-example1".planned = lib.mkOverride 900 true;
           "math-functions".components.library.planned = lib.mkOverride 900 true;
+          "js-bindgen".components.exes."js-bindgen".planned = lib.mkOverride 900 true;
           "servant".components.library.planned = lib.mkOverride 900 true;
           "cardano-crypto-wrapper".components.library.planned = lib.mkOverride 900 true;
           "bin".components.library.planned = lib.mkOverride 900 true;
@@ -1466,6 +1471,7 @@
           "mtl".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-arbitrary-adt".components.library.planned = lib.mkOverride 900 true;
           "dependent-sum".components.library.planned = lib.mkOverride 900 true;
+          "digest".components.exes."trivial".planned = lib.mkOverride 900 true;
           "io-sim".components.library.planned = lib.mkOverride 900 true;
           "pipes".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab".components.tests."plutus-pab-test-full".planned = lib.mkOverride 900 true;
@@ -1606,6 +1612,7 @@
           "network".components.library.planned = lib.mkOverride 900 true;
           "time".components.library.planned = lib.mkOverride 900 true;
           "cardano-slotting".components.library.planned = lib.mkOverride 900 true;
+          "digest".components.tests."test".planned = lib.mkOverride 900 true;
           "blaze-textual".components.library.planned = lib.mkOverride 900 true;
           "integer-logarithms".components.library.planned = lib.mkOverride 900 true;
           "show-combinators".components.library.planned = lib.mkOverride 900 true;
