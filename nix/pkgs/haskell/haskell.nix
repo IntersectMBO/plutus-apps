@@ -472,7 +472,14 @@ let
             lzma.patches = [ ../../../contrib/lzma-0.0.0.3.patch ];
             mersenne-random-pure64.patches = [ ../../../contrib/mersenne-random-pure64-0.2.2.0.patch ];
             network.patches = [ ../../../contrib/network-3.1.2.1.patch ];
+            network.postUnpack = ''
+              export patchFlags="--binary -p1"
+            '';
+
             network-info.patches = [ ../../../contrib/network-info-0.2.0.10.patch ];
+            network-info.postUnpack = ''
+              export patchFlags="--binary -p1"
+            '';
             scrypt.patches = [ ../../../contrib/scrypt-0.5.0.patch ];
             terminal-size.patches = [ ../../../contrib/terminal-size-0.3.2.1.patch ];
             unix-bytestring.patches = [ ../../../contrib/unix-bytestring-0.3.7.3.patch ];

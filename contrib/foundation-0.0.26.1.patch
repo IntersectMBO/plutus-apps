@@ -29,7 +29,7 @@ index 224c61308..ef25e37f8 100644
                        BangPatterns
                        DeriveDataTypeable
 
--  if impl(ghc < 8.0) || impl(ghcjs)
+-  if impl(ghc < 8.0)
 +  if impl(ghc < 8.0)
      buildable: False
    else

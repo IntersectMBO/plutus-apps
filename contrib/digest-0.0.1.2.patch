@@ -10,6 +10,7 @@ index 000000000..456818923
 +main = do
 +    print $ crc32 [1,2,3,4,5]
 \ No newline at end of file
+diff --git b/digest.cabal a/digest.cabal
 @@ -45,3 +45,20 @@ library
      extra-libraries: z
    else

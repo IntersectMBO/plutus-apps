@@ -2,15 +2,6 @@ diff --git b/scrypt.cabal a/scrypt.cabal
 index b327d667b..c04d7e77b 100644
 --- b/scrypt.cabal
 +++ a/scrypt.cabal
-@@ -14,7 +14,7 @@ build-type:     Simple
- synopsis:
-     Stronger password hashing via sequential memory-hard functions.
- description:
--    This package provides bindings to Colin Percival's `scrypt`
-+    This package provides bindings to Colin Percival's `scrypt`
-     implementation (<http://www.tarsnap.com/scrypt.html>). Scrypt is a key
-     derivation function designed to be far more secure against hardware
-     brute-force attacks than alternative functions such as PBKDF2 or bcrypt.
 @@ -45,7 +45,8 @@ library
      ghc-options: -Wall
      ghc-prof-options: -auto-all

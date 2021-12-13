@@ -28,7 +28,7 @@ diff --git b/src/System/Posix/Types/Iovec.hsc a/src/System/Posix/Types/Iovec.hsc
 index 2753e3fe4..2ccfb8890 100644
 --- b/src/System/Posix/Types/Iovec.hsc
 +++ a/src/System/Posix/Types/Iovec.hsc
-@@ -64,19 +64,16 @@ data CIovec = CIovec
+@@ -64,8 +64,5 @@ data CIovec = CIovec
      , iov_len  :: {-# UNPACK #-} !CSize       -- size_t
      }
 
@@ -37,26 +37,3 @@ index 2753e3fe4..2ccfb8890 100644
 -
  instance Storable CIovec where
      alignment _ = #{alignment struct iovec}
--
-+
-     sizeOf _    = #{size struct iovec}
--
-+
-     peek ptr = do
-         base <- #{peek struct iovec, iov_base} ptr
-         len  <- #{peek struct iovec, iov_len}  ptr
-         return (CIovec base len)
--
-+
-     poke ptr (CIovec base len) = do
-         #{poke struct iovec, iov_base} ptr base
-         #{poke struct iovec, iov_len}  ptr len
-@@ -144,7 +141,7 @@ useAsCIovec s@(BSI.PS _ _ len) io =
- This definition is essentially verbatim 'BS.useAsCStringLen'. We
- can save two 'FFI.castPtr' and one 'fromIntegral' if we instead do
- an essentially verbatim 'BS.useAsCString':
--
-+
-     useAsCIovec s@(BSI.PS fptr offset len) io = do
-         let lenCSize = fromIntegral len
-         FMA.allocaBytes (len+1) $ \buf ->
