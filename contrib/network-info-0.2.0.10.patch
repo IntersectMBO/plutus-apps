@@ -1,0 +1,13 @@
+diff --git b/contrib/network-info-0.2.0.10/network-info.cabal a/contrib/network-info-0.2.0.10/network-info.cabal
+index f341ba194..bbe244e9a 100644
+--- b/contrib/network-info-0.2.0.10/network-info.cabal
++++ a/contrib/network-info-0.2.0.10/network-info.cabal
+@@ -53,6 +53,7 @@ Library
+     c-sources: cbits/network-windows.c
+     extra-libraries: iphlpapi
+   else
+-    c-sources: cbits/network-unix.c
++    if !os(ghcjs)
++      c-sources: cbits/network-unix.c
+   if os(solaris)
+     extra-libraries: socket, nsl

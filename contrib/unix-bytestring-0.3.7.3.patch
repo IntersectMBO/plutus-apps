@@ -1,0 +1,62 @@
+diff --git b/contrib/unix-bytestring-0.3.7.3/src/System/Posix/IO/ByteString.hsc a/contrib/unix-bytestring-0.3.7.3/src/System/Posix/IO/ByteString.hsc
+index cca0d51de..eac3a24ae 100644
+--- b/contrib/unix-bytestring-0.3.7.3/src/System/Posix/IO/ByteString.hsc
++++ a/contrib/unix-bytestring-0.3.7.3/src/System/Posix/IO/ByteString.hsc
+@@ -773,8 +773,8 @@ mode2Int SeekFromEnd  = (#const SEEK_END)
+ -- /Since: 0.3.5/
+ fdSeek :: Fd -> SeekMode -> FileOffset -> IO FileOffset
+ fdSeek fd mode off =
+-    C.throwErrnoIfMinus1 "fdSeek"
+-        $ Base.c_lseek (fromIntegral fd) off (mode2Int mode)
++    fmap fromIntegral $ C.throwErrnoIfMinus1 "fdSeek"
++        $ Base.c_lseek (fromIntegral fd) (fromIntegral off) (mode2Int mode)
+ 
+ 
+ -- | Repositions the offset of the file descriptor according to the
+@@ -785,8 +785,8 @@ fdSeek fd mode off =
+ -- /Since: 0.3.5/
+ tryFdSeek :: Fd -> SeekMode -> FileOffset -> IO (Either C.Errno FileOffset)
+ tryFdSeek fd mode off =
+-    eitherErrnoIfMinus1
+-        $ Base.c_lseek (fromIntegral fd) off (mode2Int mode)
++    fmap (fmap fromIntegral) $ eitherErrnoIfMinus1
++        $ Base.c_lseek (fromIntegral fd) (fromIntegral off) (mode2Int mode)
+ 
+ ----------------------------------------------------------------
+ ----------------------------------------------------------- fin.
+diff --git b/contrib/unix-bytestring-0.3.7.3/src/System/Posix/Types/Iovec.hsc a/contrib/unix-bytestring-0.3.7.3/src/System/Posix/Types/Iovec.hsc
+index 2753e3fe4..2ccfb8890 100644
+--- b/contrib/unix-bytestring-0.3.7.3/src/System/Posix/Types/Iovec.hsc
++++ a/contrib/unix-bytestring-0.3.7.3/src/System/Posix/Types/Iovec.hsc
+@@ -64,19 +64,16 @@ data CIovec = CIovec
+     , iov_len  :: {-# UNPACK #-} !CSize       -- size_t
+     }
+ 
+-#let alignment t = \
+-    "%lu", (unsigned long) offsetof(struct {char x__; t (y__); }, y__)
+-
+ instance Storable CIovec where
+     alignment _ = #{alignment struct iovec}
+-    
++
+     sizeOf _    = #{size struct iovec}
+-    
++
+     peek ptr = do
+         base <- #{peek struct iovec, iov_base} ptr
+         len  <- #{peek struct iovec, iov_len}  ptr
+         return (CIovec base len)
+-    
++
+     poke ptr (CIovec base len) = do
+         #{poke struct iovec, iov_base} ptr base
+         #{poke struct iovec, iov_len}  ptr len
+@@ -144,7 +141,7 @@ useAsCIovec s@(BSI.PS _ _ len) io =
+ This definition is essentially verbatim 'BS.useAsCStringLen'. We
+ can save two 'FFI.castPtr' and one 'fromIntegral' if we instead do
+ an essentially verbatim 'BS.useAsCString':
+-        
++
+     useAsCIovec s@(BSI.PS fptr offset len) io = do
+         let lenCSize = fromIntegral len
+         FMA.allocaBytes (len+1) $ \buf ->

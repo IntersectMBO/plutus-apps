@@ -1,0 +1,23 @@
+diff --git b/contrib/scrypt-0.5.0/scrypt.cabal a/contrib/scrypt-0.5.0/scrypt.cabal
+index b327d667b..c04d7e77b 100644
+--- b/contrib/scrypt-0.5.0/scrypt.cabal
++++ a/contrib/scrypt-0.5.0/scrypt.cabal
+@@ -14,7 +14,7 @@ build-type:     Simple
+ synopsis:
+     Stronger password hashing via sequential memory-hard functions.
+ description:
+-    This package provides bindings to Colin Percival's `scrypt` 
++    This package provides bindings to Colin Percival's `scrypt`
+     implementation (<http://www.tarsnap.com/scrypt.html>). Scrypt is a key
+     derivation function designed to be far more secure against hardware
+     brute-force attacks than alternative functions such as PBKDF2 or bcrypt.
+@@ -45,7 +45,8 @@ library
+     ghc-options: -Wall
+     ghc-prof-options: -auto-all
+ 
+-    c-sources: cbits/crypto_scrypt-sse.c, cbits/sha256.c
++    if !os(ghcjs)
++        c-sources: cbits/crypto_scrypt-sse.c, cbits/sha256.c
+     cc-options: -msse2
+     include-dirs: cbits
+     includes: crypto_scrypt.h
