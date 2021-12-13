@@ -42,6 +42,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada (lovelaceValueOf)
 import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), defaultManagerSettings, newManager,
                             responseTimeoutNone)
+import Plutus.ChainIndex.Types (Point (..))
 import Plutus.Contracts.PingPong qualified as PingPong
 import Plutus.PAB.App (StorageBackend (BeamSqliteBackend))
 import Plutus.PAB.App qualified as App
@@ -54,7 +55,7 @@ import Plutus.PAB.Monitoring.Util (PrettyObject, convertLog)
 import Plutus.PAB.Run (runWithOpts)
 import Plutus.PAB.Run.Cli (ConfigCommandArgs, runConfigCommand)
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ForkCommands, Migrate), allServices)
-import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, rollbackHistory, runEkgServer, storageBackend))
+import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (psTypes))
 import Plutus.PAB.Types (Config (Config, chainIndexConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig))
 import Plutus.PAB.Types qualified as PAB.Types
@@ -138,6 +139,7 @@ startPab services pabConfig = do
               , configPath = Nothing
               , passphrase = Nothing
               , rollbackHistory = Nothing
+              , resumeFrom = PointAtGenesis
               , runEkgServer = False
               , storageBackend = BeamSqliteBackend
               , cmd = services

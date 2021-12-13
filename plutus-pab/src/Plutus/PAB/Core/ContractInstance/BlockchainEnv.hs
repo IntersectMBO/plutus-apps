@@ -31,14 +31,14 @@ import Control.Lens
 import Control.Monad (forM_, void, when)
 import Control.Tracer (nullTracer)
 import Data.Foldable (foldl')
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, maybeToList)
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
-                          InsertUtxoFailed (..), InsertUtxoSuccess (..), ReduceBlockCountResult (..),
+                          InsertUtxoFailed (..), InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..),
                           RollbackFailed (..), RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..),
                           TxOutBalance, TxValidity (..), UtxoIndex, UtxoState (..), blockId, citxTxId, fromOnChainTx,
                           insert, reduceBlockCount, utxoState)
-import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint)
+import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint, toCardanoPoint)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
@@ -51,16 +51,17 @@ startNodeClient ::
   -> Maybe Int  -- ^ How much history do we remember for rollbacks
   -> SlotConfig -- ^ Slot config used by the node
   -> NetworkId -- ^ Cardano network ID
+  -> Point
   -> InstancesState -- ^ In-memory state of running contract instances
   -> IO BlockchainEnv
-startNodeClient socket mode rollbackHistory slotConfig networkId instancesState = do
+startNodeClient socket mode rollbackHistory slotConfig networkId resumePoint instancesState = do
     env <- STM.atomically $ emptyBlockchainEnv rollbackHistory
     case mode of
       MockNode -> do
         void $ MockClient.runChainSync socket slotConfig
             (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot)
       AlonzoNode -> do
-        let resumePoints = []
+        let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
           (\block -> handleSyncAction $ processChainSyncEvent env block)
     pure env

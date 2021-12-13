@@ -76,8 +76,7 @@ runWithOpts :: forall a.
     -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
     -> AppOpts
     -> IO ()
-runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
-
+runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resumeFrom, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
     -- Parse config files and initialize logging
     logConfig <- maybe defaultConfig loadConfig logConfigPath
     for_ minLogLevel $ \ll -> CM.setMinSeverity logConfig ll
@@ -100,7 +99,9 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, logCo
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
                 , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { mscPassphrase      = passphrase      <|> mscPassphrase nodeServerConfig }
-                                        , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions } }
+                                        , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions
+                                                                                  , pabResumeFrom      = max resumeFrom (pabResumeFrom developmentOptions) }
+                                        }
                 , ccaAvailability = serviceAvailability
                 , ccaStorageBackend = storageBackend
                 }
