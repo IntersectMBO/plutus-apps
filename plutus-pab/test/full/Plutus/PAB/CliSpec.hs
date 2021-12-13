@@ -54,7 +54,7 @@ import Plutus.PAB.Monitoring.Util (PrettyObject, convertLog)
 import Plutus.PAB.Run (runWithOpts)
 import Plutus.PAB.Run.Cli (ConfigCommandArgs, runConfigCommand)
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ForkCommands, Migrate), allServices)
-import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, runEkgServer, storageBackend))
+import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (psTypes))
 import Plutus.PAB.Types (Config (Config, chainIndexConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig))
 import Plutus.PAB.Types qualified as PAB.Types
@@ -137,6 +137,7 @@ startPab services pabConfig = do
               , logConfigPath = Nothing
               , configPath = Nothing
               , passphrase = Nothing
+              , rollbackHistory = Nothing
               , runEkgServer = False
               , storageBackend = BeamSqliteBackend
               , cmd = services

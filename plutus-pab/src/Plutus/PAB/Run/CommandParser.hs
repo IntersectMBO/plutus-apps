@@ -20,13 +20,14 @@ import Wallet.Types (ContractInstanceId (..))
 import Plutus.PAB.App (StorageBackend (..))
 import Plutus.PAB.Run.Command
 
-data AppOpts = AppOpts { minLogLevel    :: Maybe Severity
-                       , logConfigPath  :: Maybe FilePath
-                       , configPath     :: Maybe FilePath
-                       , passphrase     :: Maybe Text
-                       , runEkgServer   :: Bool
-                       , storageBackend :: StorageBackend
-                       , cmd            :: ConfigCommand
+data AppOpts = AppOpts { minLogLevel     :: Maybe Severity
+                       , logConfigPath   :: Maybe FilePath
+                       , configPath      :: Maybe FilePath
+                       , passphrase      :: Maybe Text
+                       , rollbackHistory :: Maybe Integer
+                       , runEkgServer    :: Bool
+                       , storageBackend  :: StorageBackend
+                       , cmd             :: ConfigCommand
                        }
 
 parseOptions :: IO AppOpts
@@ -61,6 +62,7 @@ commandLineParser =
                 <*> logConfigFileParser
                 <*> configFileParser
                 <*> passphraseParser
+                <*> rollbackHistoryParser
                 <*> ekgFlag
                 <*> inMemoryFlag
                 <*> commandParser
@@ -88,6 +90,19 @@ passphraseParser =
         (long "passphrase" <>
          metavar "WALLET_PASSPHRASE" <>
          help "Wallet passphrase." <> value Nothing)
+
+{- Limit the number of blocks that we store for rollbacks. This options helps
+   with the memory usage of the PAB and should be removed when we figure out
+   an alternative to storing the UTXO in memory.
+-}
+rollbackHistoryParser :: Parser (Maybe Integer)
+rollbackHistoryParser =
+    option
+        (Just <$> auto)
+        (long "rollback-history" <>
+         metavar "ROLLBACK_HISTORY" <>
+         help "How many blocks are remembered when rolling back" <>
+         value Nothing)
 
 commandParser :: Parser ConfigCommand
 commandParser =
