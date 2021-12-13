@@ -283,13 +283,6 @@
         "generic-lens-core".revision = (((hackage."generic-lens-core")."2.2.0.0").revisions).default;
         "protolude".revision = (((hackage."protolude")."0.3.0").revisions).default;
         "protolude".flags.dev = false;
-        "foundation".revision = (((hackage."foundation")."0.0.26.1").revisions).default;
-        "foundation".flags.doctest = false;
-        "foundation".flags.minimal-deps = false;
-        "foundation".flags.linktest = false;
-        "foundation".flags.bounds-check = false;
-        "foundation".flags.bench-all = false;
-        "foundation".flags.experimental = false;
         "base-orphans".revision = (((hackage."base-orphans")."0.8.4").revisions).default;
         "appar".revision = (((hackage."appar")."0.1.8").revisions).default;
         "lazysmallcheck".revision = (((hackage."lazysmallcheck")."0.6").revisions).default;
@@ -751,6 +744,7 @@
         plutus-contract = ./.plan.nix/plutus-contract.nix;
         Win32-network = ./.plan.nix/Win32-network.nix;
         iohk-monitoring = ./.plan.nix/iohk-monitoring.nix;
+        foundation = ./.plan.nix/foundation.nix;
         cardano-wallet-core = ./.plan.nix/cardano-wallet-core.nix;
         cardano-prelude-test = ./.plan.nix/cardano-prelude-test.nix;
         lobemo-backend-monitoring = ./.plan.nix/lobemo-backend-monitoring.nix;
@@ -867,6 +861,16 @@
             flags = {
               "disable-observables" = lib.mkOverride 900 false;
               "performance-test-queue" = lib.mkOverride 900 false;
+              };
+            };
+          "foundation" = {
+            flags = {
+              "doctest" = lib.mkOverride 900 false;
+              "minimal-deps" = lib.mkOverride 900 false;
+              "linktest" = lib.mkOverride 900 false;
+              "bounds-check" = lib.mkOverride 900 false;
+              "bench-all" = lib.mkOverride 900 false;
+              "experimental" = lib.mkOverride 900 false;
               };
             };
           "cardano-wallet-core" = {

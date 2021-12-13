@@ -92,11 +92,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "8";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "8";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       };
