@@ -10,26 +10,6 @@ index 000000000..456818923
 +main = do
 +    print $ crc32 [1,2,3,4,5]
 \ No newline at end of file
-diff --git b/digest.cabal a/digest.cabal
-index eaea3739b..69f958c1e 100644
---- b/digest.cabal
-+++ a/digest.cabal
-@@ -7,12 +7,12 @@ author:          Eugene Kirpichov <ekirpichov@gmail.com>
- maintainer:      Eugene Kirpichov <ekirpichov@gmail.com>
- category:        Cryptography
- synopsis:        Various cryptographic hashes for bytestrings; CRC32 and Adler32 for now.
--description:     This package provides efficient cryptographic hash implementations for
--                 strict and lazy bytestrings. For now, CRC32 and Adler32 are supported;
-+description:     This package provides efficient cryptographic hash implementations for
-+                 strict and lazy bytestrings. For now, CRC32 and Adler32 are supported;
-                  they are implemented as FFI bindings to efficient code from zlib.
- stability:       provisional
- build-type:      Simple
--cabal-version:   >= 1.6
-+cabal-version:   >= 1.8
-
- extra-source-files:
-   testing/trivial-reference.c
 @@ -45,3 +45,20 @@ library
      extra-libraries: z
    else
