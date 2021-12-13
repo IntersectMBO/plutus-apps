@@ -10,8 +10,8 @@
   {
     flags = { golden-tests = false; golden-tests-exe = false; };
     package = {
-      specVersion = "2.0";
-      identifier = { name = "cardano-crypto"; version = "1.1.1"; };
+      specVersion = "1.10";
+      identifier = { name = "cardano-crypto"; version = "1.1.0"; };
       license = "MIT";
       copyright = "2016-2021 IOHK";
       maintainer = "contact@typed.io";
@@ -30,12 +30,6 @@
         "README.md"
         "cbits/*.h"
         "cbits/ed25519/*.h"
-        "jsbits/emscripten/build.sh"
-        "jsbits/emscripten/crc32.js"
-        "jsbits/emscripten/crypto-cbits.pre.js"
-        "jsbits/emscripten/crypto-cbits.post.js"
-        "jsbits/emscripten/crypto-wrappers.js"
-        "jsbits/emscripten/extern.js"
         "jsbits/bindings.js"
         ];
       extraTmpFiles = [];
@@ -151,4 +145,14 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault ../contrib/cardano-crypto-07397f; }
+    } // {
+    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
+      url = "3";
+      rev = "minimal";
+      sha256 = "";
+      }) // {
+      url = "3";
+      rev = "minimal";
+      sha256 = "";
+      };
+    }

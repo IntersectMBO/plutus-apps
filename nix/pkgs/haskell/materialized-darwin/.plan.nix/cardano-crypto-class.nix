@@ -29,8 +29,7 @@
       extraSrcFiles = [
         "README.md"
         "jsbits/libsodium.c"
-        "jsbits/libsodium.js"
-        "jsbits/wrappers.js.pp"
+        "jsbits/bindings.js.pp"
         ];
       extraTmpFiles = [];
       extraDocFiles = [];
@@ -104,7 +103,7 @@
           "Cardano/Crypto/Libsodium/UnsafeC"
           "Cardano/Foreign"
           ];
-        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/bindings.js.pp";
+        jsSources = (pkgs.lib).optional (compiler.isGhcjs && true || system.isGhcjs) "jsbits/bindings.js.pp";
         hsSourceDirs = [ "src" ];
         };
       tests = {
@@ -121,6 +120,15 @@
           };
         };
       };
-    } // rec {
-    src = (pkgs.lib).mkDefault ../contrib/cardano-base-dac284/cardano-crypto-class;
+    } // {
+    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
+      url = "4";
+      rev = "minimal";
+      sha256 = "";
+      }) // {
+      url = "4";
+      rev = "minimal";
+      sha256 = "";
+      };
+    postUnpack = "sourceRoot+=/cardano-crypto-class; echo source root reset to \$sourceRoot";
     }
