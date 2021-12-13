@@ -1,9 +1,9 @@
 module Ledger.Extra where
 
+import Data.BigInt.Argonaut as BigInt
 import Data.Lens (Lens', lens, view)
 import Data.Lens.Record (prop)
-import Data.Json.JsonTuple (JsonTuple(..))
-import Data.Symbol (SProxy(..))
+import Type.Proxy (Proxy(..))
 import Data.Tuple (Tuple(..))
 import PlutusTx.AssocMap (unionWith)
 import PlutusTx.AssocMap as AssocMap
@@ -12,7 +12,7 @@ import Plutus.V1.Ledger.Interval (Extended(..), Interval, LowerBound(..), UpperB
 import Plutus.V1.Ledger.Slot (Slot(..))
 import Plutus.V1.Ledger.Time (POSIXTime(..))
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
-import Prelude (show, (+), (<<<), (<>))
+import Prelude ((+), (<<<), (<>))
 
 humaniseSlotInterval :: Interval Slot -> String
 humaniseSlotInterval interval = case from, to of
@@ -28,7 +28,7 @@ humaniseSlot bound = start <> " " <> end
   where
   start = case hasBound bound of
     NegInf -> "the start of time"
-    Finite (Slot slot) -> "Slot " <> show slot.getSlot
+    Finite (Slot slot) -> "Slot " <> BigInt.toString slot.getSlot
     PosInf -> "the end of time"
 
   end = case isInclusive bound of
@@ -49,7 +49,7 @@ humaniseTime bound = start <> " " <> end
   where
   start = case hasBound bound of
     NegInf -> "the start of time"
-    Finite (POSIXTime time) -> "POSIXTime " <> show time.getPOSIXTime
+    Finite (POSIXTime time) -> "POSIXTime " <> BigInt.toString time.getPOSIXTime
     PosInf -> "the end of time"
 
   end = case isInclusive bound of
@@ -71,10 +71,10 @@ instance upperBoundHasBound :: HasBound (UpperBound v) v where
 
 ------------------------------------------------------------
 _ivFrom :: forall a r. Lens' { ivFrom :: a | r } a
-_ivFrom = prop (SProxy :: SProxy "ivFrom")
+_ivFrom = prop (Proxy :: _ "ivFrom")
 
 _ivTo :: forall a r. Lens' { ivTo :: a | r } a
-_ivTo = prop (SProxy :: SProxy "ivTo")
+_ivTo = prop (Proxy :: _ "ivTo")
 
 _LowerBoundExtended :: forall a. Lens' (LowerBound a) (Extended a)
 _LowerBoundExtended = lens get set
@@ -105,7 +105,7 @@ _UpperBoundInclusive = lens get set
   set (UpperBound e _) i = UpperBound e i
 
 _a :: forall a r. Lens' { a :: a | r } a
-_a = prop (SProxy :: SProxy "a")
+_a = prop (Proxy :: _ "a")
 
 ------------------------------------------------------------
 sum :: Value -> Value -> Value
@@ -116,10 +116,8 @@ adaToValue (Lovelace ada) =
   Value
     { getValue:
         AssocMap.Map
-          [ JsonTuple
-              ( Tuple
-                  (CurrencySymbol { unCurrencySymbol: "" })
-                  (AssocMap.Map [ JsonTuple (Tuple (TokenName { unTokenName: "" }) ada.getLovelace) ])
-              )
+          [ Tuple
+              (CurrencySymbol { unCurrencySymbol: "" })
+              (AssocMap.Map [ Tuple (TokenName { unTokenName: "" }) ada.getLovelace ])
           ]
     }

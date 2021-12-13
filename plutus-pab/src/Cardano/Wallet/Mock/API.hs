@@ -5,12 +5,12 @@ module Cardano.Wallet.Mock.API
     ( API
     ) where
 
-import           Cardano.Wallet.Mock.Types   (WalletInfo)
-import           Ledger                      (Value)
-import           Ledger.Constraints.OffChain (UnbalancedTx)
-import           Ledger.Tx                   (Tx)
-import           Servant.API                 (Capture, Get, JSON, NoContent, Post, ReqBody, (:<|>), (:>))
-import           Wallet.Emulator.Error       (WalletAPIError)
+import Cardano.Wallet.Mock.Types (WalletInfo)
+import Ledger (Value)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx (Tx)
+import Servant.API (Capture, Get, JSON, NoContent, Post, ReqBody, (:<|>), (:>))
+import Wallet.Emulator.Error (WalletAPIError)
 
 {- Note [WalletID type in wallet API]
 
@@ -36,7 +36,7 @@ PSGenerator we specialise it to 'Text'.
 type API walletId -- see note [WalletID type in wallet API]
     = "create" :> Post '[JSON] WalletInfo
       :<|> Capture "walletId" walletId :> "submit-txn" :> ReqBody '[JSON] Tx :> Post '[JSON] NoContent
-      :<|> Capture "walletId" walletId :> "own-public-key" :> Get '[JSON] WalletInfo
+      :<|> Capture "walletId" walletId :> "own-payment-public-key" :> Get '[JSON] WalletInfo
       :<|> Capture "walletId" walletId :> "balance-tx" :> ReqBody '[JSON] UnbalancedTx :> Post '[JSON] (Either WalletAPIError Tx)
       :<|> Capture "walletId" walletId :> "total-funds" :> Get '[JSON] Value
       :<|> Capture "walletId" walletId :> "sign" :> ReqBody '[JSON] Tx :> Post '[JSON] Tx

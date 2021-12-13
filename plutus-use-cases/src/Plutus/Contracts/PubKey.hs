@@ -16,23 +16,23 @@
 --   as one.
 module Plutus.Contracts.PubKey(pubKeyContract, typedValidator, PubKeyError(..), AsPubKeyError(..)) where
 
-import           Control.Lens
-import           Control.Monad.Error.Lens
-import           Data.Aeson               (FromJSON, ToJSON)
-import qualified Data.Map                 as Map
-import           GHC.Generics             (Generic)
+import Control.Lens
+import Control.Monad.Error.Lens
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map qualified as Map
+import GHC.Generics (Generic)
 
-import           Ledger                   hiding (initialise, to)
-import           Ledger.Contexts          as V
-import           Ledger.Typed.Scripts     (TypedValidator)
-import qualified Ledger.Typed.Scripts     as Scripts
-import qualified PlutusTx
+import Ledger hiding (initialise, to)
+import Ledger.Contexts as V
+import Ledger.Typed.Scripts (TypedValidator)
+import Ledger.Typed.Scripts qualified as Scripts
+import PlutusTx qualified
 
-import qualified Ledger.Constraints       as Constraints
-import           Plutus.Contract          as Contract
+import Ledger.Constraints qualified as Constraints
+import Plutus.Contract as Contract
 
-mkValidator :: PubKeyHash -> () -> () -> ScriptContext -> Bool
-mkValidator pk' _ _ p = V.txSignedBy (scriptContextTxInfo p) pk'
+mkValidator :: PaymentPubKeyHash -> () -> () -> ScriptContext -> Bool
+mkValidator pk' _ _ p = V.txSignedBy (scriptContextTxInfo p) (unPaymentPubKeyHash pk')
 
 data PubKeyContract
 
@@ -40,7 +40,7 @@ instance Scripts.ValidatorTypes PubKeyContract where
     type instance RedeemerType PubKeyContract = ()
     type instance DatumType PubKeyContract = ()
 
-typedValidator :: PubKeyHash -> Scripts.TypedValidator PubKeyContract
+typedValidator :: PaymentPubKeyHash -> Scripts.TypedValidator PubKeyContract
 typedValidator = Scripts.mkTypedValidatorParam @PubKeyContract
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
@@ -48,8 +48,8 @@ typedValidator = Scripts.mkTypedValidatorParam @PubKeyContract
         wrap = Scripts.wrapValidator
 
 data PubKeyError =
-    ScriptOutputMissing PubKeyHash
-    | MultipleScriptOutputs PubKeyHash
+    ScriptOutputMissing PaymentPubKeyHash
+    | MultipleScriptOutputs PaymentPubKeyHash
     | PKContractError ContractError
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -65,7 +65,7 @@ pubKeyContract
     :: forall w s e.
     ( AsPubKeyError e
     )
-    => PubKeyHash
+    => PaymentPubKeyHash
     -> Value
     -> Contract w s e (TxOutRef, Maybe ChainIndexTxOut, TypedValidator PubKeyContract)
 pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
@@ -73,7 +73,8 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
         address = Scripts.validatorAddress inst
         tx = Constraints.mustPayToTheScript () vl
 
-    ledgerTx <- submitTxConstraints inst tx
+    ledgerTx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
     _ <- awaitTxConfirmed (getCardanoTxId ledgerTx)
     let refs = Map.keys

@@ -1,57 +1,41 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+{-# LANGUAGE NumericUnderscores #-}
 module Main(main) where
 
-import           Control.Lens
-import           Control.Monad               (forM_, guard, replicateM, void)
-import           Control.Monad.Trans.Except  (runExcept)
-import qualified Data.Aeson                  as JSON
-import qualified Data.Aeson.Extras           as JSON
-import qualified Data.Aeson.Internal         as Aeson
-import qualified Data.ByteString             as BSS
-import qualified Data.ByteString.Lazy        as BSL
-import           Data.Default                (Default (def))
-import           Data.Either                 (isLeft, isRight)
-import           Data.Foldable               (fold, foldl', traverse_)
-import           Data.List                   (sort)
-import qualified Data.Map                    as Map
-import           Data.Maybe                  (fromJust)
-import           Data.Monoid                 (Sum (..))
-import qualified Data.Set                    as Set
-import           Data.String                 (IsString (fromString))
-import           Hedgehog                    (Property, forAll, property)
-import qualified Hedgehog
-import qualified Hedgehog.Gen                as Gen
-import qualified Hedgehog.Range              as Range
-import           Ledger
-import qualified Ledger.Ada                  as Ada
-import           Ledger.Bytes                as Bytes
-import qualified Ledger.Constraints.OffChain as OC
-import qualified Ledger.Contexts             as Validation
-import qualified Ledger.Crypto               as Crypto
-import           Ledger.Fee                  (FeeConfig (..), calcFees)
-import qualified Ledger.Generators           as Gen
-import qualified Ledger.Index                as Index
-import qualified Ledger.Interval             as Interval
-import qualified Ledger.Scripts              as Scripts
-import           Ledger.TimeSlot             (SlotConfig (..))
-import qualified Ledger.TimeSlot             as TimeSlot
-import qualified Ledger.Tx                   as Tx
-import           Ledger.Value                (CurrencySymbol, Value (Value))
-import qualified Ledger.Value                as Value
-import qualified PlutusCore.Default          as PLC
-import           PlutusTx                    (CompiledCode, applyCode, liftCode)
-import qualified PlutusTx
-import qualified PlutusTx.AssocMap           as AMap
-import qualified PlutusTx.AssocMap           as AssocMap
-import qualified PlutusTx.Builtins           as Builtins
-import qualified PlutusTx.Prelude            as PlutusTx
-import           Test.Tasty                  hiding (after)
-import           Test.Tasty.HUnit            (testCase)
-import qualified Test.Tasty.HUnit            as HUnit
-import           Test.Tasty.Hedgehog         (testProperty)
+import Control.Monad (forM_)
+import Data.Aeson qualified as JSON
+import Data.Aeson.Extras qualified as JSON
+import Data.Aeson.Internal qualified as Aeson
+import Data.ByteString.Lazy qualified as BSL
+import Data.List (sort)
+import Data.Map qualified as Map
+import Data.Maybe (fromJust)
+import Data.String (IsString (fromString))
+import Hedgehog (Property, forAll, property)
+import Hedgehog qualified
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
+import Ledger (DiffMilliSeconds (DiffMilliSeconds), Interval (Interval), LowerBound (LowerBound), Slot (Slot),
+               UpperBound (UpperBound), fromMilliSeconds, interval)
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.Bytes as Bytes
+import Ledger.Fee (FeeConfig (..), calcFees)
+import Ledger.Generators qualified as Gen
+import Ledger.Interval qualified as Interval
+import Ledger.TimeSlot (SlotConfig (..))
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPISpec qualified
+import Ledger.Value qualified as Value
+import PlutusTx.Prelude qualified as PlutusTx
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.HUnit (testCase)
+import Test.Tasty.HUnit qualified as HUnit
+import Test.Tasty.Hedgehog (testProperty)
 
 main :: IO ()
 main = defaultMain tests
@@ -73,6 +57,7 @@ tests = testGroup "all tests" [
         ],
     testGroup "Etc." [
         testProperty "splitVal" splitVal,
+        testProperty "splitVal should respect min Ada per tx output" splitValMinAda,
         testProperty "encodeByteString" encodeByteStringTest,
         testProperty "encodeSerialise" encodeSerialiseTest
         ],
@@ -94,9 +79,6 @@ tests = testGroup "all tests" [
                     vlJson = "{\"getValue\":[[{\"unCurrencySymbol\":\"\"},[[{\"unTokenName\":\"\"},50]]]]}"
                     vlValue = Ada.lovelaceValueOf 50
                 in byteStringJson vlJson vlValue)),
-    testGroup "Constraints" [
-        testProperty "missing value spent" missingValueSpentProp
-        ],
     testGroup "Tx" [
         testProperty "TxOut fromTxOut/toTxOut" ciTxOutRoundTrip
         ],
@@ -116,7 +98,8 @@ tests = testGroup "all tests" [
         ],
     testGroup "SomeCardanoApiTx" [
         testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
-        ]
+        ],
+    Ledger.Tx.CardanoAPISpec.tests
     ]
 
 initialTxnValid :: Property
@@ -131,6 +114,14 @@ splitVal = property $ do
     vs <- forAll $ Gen.splitVal n i
     Hedgehog.assert $ sum vs == i
     Hedgehog.assert $ length vs <= n
+
+splitValMinAda :: Property
+splitValMinAda = property $ do
+    let minAda = Ada.getLovelace $ Ledger.minAdaTxOut + Ledger.maxFee
+    i <- forAll $ Gen.integral $ Range.linear minAda (100_000_000 :: Integer)
+    n <- forAll $ Gen.integral $ Range.linear 1 100
+    vs <- forAll $ Gen.splitVal n i
+    Hedgehog.assert $ all (\v -> v >= minAda) vs
 
 valueAddIdentity :: Property
 valueAddIdentity = property $ do
@@ -172,7 +163,7 @@ intvlContains :: Property
 intvlContains = property $ do
     -- generate two intervals from a sorted list of ints
     -- the outer interval contains the inner interval
-    ints <- forAll $ traverse (const $ Gen.integral (fromIntegral <$> Range.linearBounded @Int)) [1..4]
+    ints <- forAll $ traverse (const $ Gen.integral (fromIntegral <$> Range.linearBounded @Int)) [(1::Integer)..4]
     let [i1, i2, i3, i4] = Slot <$> sort ints
         outer = Interval.interval i1 i4
         inner = Interval.interval i2 i3
@@ -224,61 +215,12 @@ currencySymbolIsStringShow = property $ do
     let cs' = fromString (show cs)
     Hedgehog.assert $ cs' == cs
 
--- byteStringJson :: (Eq a, JSON.FromJSON a) => BSL.ByteString -> a -> [TestCase]
+byteStringJson :: (Show a, Eq a, JSON.ToJSON a, JSON.FromJSON a) => BSL.ByteString -> a -> [TestTree]
 byteStringJson jsonString value =
     [ testCase "decoding" $
         HUnit.assertEqual "Simple Decode" (Right value) (JSON.eitherDecode jsonString)
     , testCase "encoding" $ HUnit.assertEqual "Simple Encode" jsonString (JSON.encode value)
     ]
-
--- | Check that 'missingValueSpent' is the smallest value needed to
---   meet the requirements.
-missingValueSpentProp :: Property
-missingValueSpentProp = property $ do
-    let valueSpentBalances = Gen.choice
-            [ OC.provided <$> nonNegativeValue
-            , OC.required <$> nonNegativeValue
-            ]
-        empty = OC.ValueSpentBalances mempty mempty
-    balances <- foldl (<>) empty <$> forAll (Gen.list (Range.linear 0 10000) valueSpentBalances)
-    let missing = OC.missingValueSpent balances
-        actual = OC.vbsProvided balances
-    Hedgehog.annotateShow missing
-    Hedgehog.annotateShow actual
-    Hedgehog.assert (OC.vbsRequired balances `Value.leq` (actual <> missing))
-
-    -- To make sure that this is indeed the smallest value meeting
-    -- the requirements, we reduce it by one and check that the property doesn't
-    -- hold anymore.
-    smaller <- forAll (reduceByOne missing)
-    forM_ smaller $ \smaller' ->
-        Hedgehog.assert (not (OC.vbsRequired balances `Value.leq` (actual <> smaller')))
-
-
--- | Reduce one of the elements in a 'Value' by one.
---   Returns 'Nothing' if the value contains no positive
---   elements.
-reduceByOne :: Hedgehog.MonadGen m => Value -> m (Maybe Value)
-reduceByOne (Value.Value value) = do
-    let flat = do
-            (currency, rest) <- AMap.toList value
-            (tokenName, amount) <- AMap.toList rest
-            guard (amount > 0)
-            pure (currency, tokenName, pred amount)
-    if null flat
-        then pure Nothing
-        else (\(cur, tok, amt) -> Just $ Value.singleton cur tok amt) <$> Gen.element flat
-
--- | A 'Value' with non-negative entries taken from a relatively
---   small pool of MPS hashes and token names.
-nonNegativeValue :: Hedgehog.MonadGen m => m Value
-nonNegativeValue =
-    let mpsHashes = ["ffff", "dddd", "cccc", "eeee", "1010"]
-        tokenNames = ["a", "b", "c", "d"]
-    in Value.singleton
-        <$> Gen.element mpsHashes
-        <*> Gen.element tokenNames
-        <*> Gen.integral (Range.linear 0 10000)
 
 -- | Validate inverse property between 'fromTxOut' and 'toTxOut given a 'TxOut'.
 ciTxOutRoundTrip :: Property
@@ -297,7 +239,7 @@ calcFeesTest = property $ do
 initialSlotToTimeProp :: Property
 initialSlotToTimeProp = property $ do
     sc <- forAll Gen.genSlotConfig
-    n <- forAll $ Gen.int (fromInteger <$> Range.linear 0 (fromIntegral $ scSlotLength sc))
+    n <- forAll $ Gen.int (fromInteger <$> Range.linear 0 (scSlotLength sc))
     let diff = DiffMilliSeconds $ toInteger n
     let time = TimeSlot.scSlotZeroTime sc + fromMilliSeconds diff
     if diff >= fromIntegral (scSlotLength sc)
@@ -363,3 +305,4 @@ slotToTimeRangeBoundsInverseProp = property $ do
     let slotRange = PlutusTx.fmap (TimeSlot.posixTimeToEnclosingSlot sc)
                                   (TimeSlot.slotToPOSIXTimeRange sc slot)
     Hedgehog.assert $ interval slot slot == slotRange
+

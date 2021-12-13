@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 {-| Example trace for the uniswap contract
 -}
 module Plutus.Contracts.Uniswap.Trace(
@@ -12,22 +13,23 @@ module Plutus.Contracts.Uniswap.Trace(
     , wallets
     ) where
 
-import           Control.Monad                     (forM_, when)
-import           Control.Monad.Freer.Error         (throwError)
-import qualified Data.Map                          as Map
-import qualified Data.Monoid                       as Monoid
-import qualified Data.Semigroup                    as Semigroup
-import           Ledger
-import           Ledger.Ada                        (adaSymbol, adaToken)
-import           Ledger.Constraints
-import           Ledger.Value                      as Value
-import           Plutus.Contract                   as Contract hiding (throwError)
-import qualified Plutus.Contracts.Currency         as Currency
-import           Plutus.Contracts.Uniswap.OffChain as OffChain
-import           Plutus.Contracts.Uniswap.Types    as Types
-import           Plutus.Trace.Emulator             (EmulatorRuntimeError (GenericError), EmulatorTrace)
-import qualified Plutus.Trace.Emulator             as Emulator
-import           Wallet.Emulator                   (Wallet (..), knownWallet, knownWallets, walletPubKeyHash)
+import Control.Monad (forM_, when)
+import Control.Monad.Freer.Error (throwError)
+import Data.Map qualified as Map
+import Data.Monoid qualified as Monoid
+import Data.Semigroup qualified as Semigroup
+import Data.Void (Void)
+import Ledger
+import Ledger.Ada (adaSymbol, adaToken)
+import Ledger.Constraints
+import Ledger.Value as Value
+import Plutus.Contract as Contract hiding (throwError)
+import Plutus.Contracts.Currency qualified as Currency
+import Plutus.Contracts.Uniswap.OffChain as OffChain
+import Plutus.Contracts.Uniswap.Types as Types
+import Plutus.Trace.Emulator (EmulatorRuntimeError (GenericError), EmulatorTrace)
+import Plutus.Trace.Emulator qualified as Emulator
+import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, mockWalletPaymentPubKeyHash)
 
 -- | Set up a liquidity pool and call the "add" endpoint
 uniswapTrace :: EmulatorTrace ()
@@ -49,7 +51,7 @@ uniswapTrace = do
     cid2 <- Emulator.activateContractWallet (knownWallet 3) (awaitPromise $ userEndpoints us)
     _ <- Emulator.waitNSlots 5
 
-    let cp = OffChain.CreateParams ada (coins Map.! "A") 100000 500000
+    let cp = OffChain.CreateParams ada (coins Map.! "A") 20_000_000 500000
 
     Emulator.callEndpoint @"create" cid1 cp
     _ <- Emulator.waitNSlots 5
@@ -63,16 +65,16 @@ uniswapTrace = do
 --   the emulated wallets
 setupTokens :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
 setupTokens = do
-    ownPK <- Contract.ownPubKeyHash
+    ownPK <- Contract.ownPaymentPubKeyHash
     cur   <- Currency.mintContract ownPK [(tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
     let cs = Currency.currencySymbol cur
         v  = mconcat [Value.singleton cs tn amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
-        let pkh = walletPubKeyHash w
+        let pkh = mockWalletPaymentPubKeyHash w
         when (pkh /= ownPK) $ do
-            tx <- submitTx $ mustPayToPubKey pkh v
-            awaitTxConfirmed $ getCardanoTxId tx
+            mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
+              >>= submitTxConfirmed . adjustUnbalancedTx
 
     tell $ Just $ Semigroup.Last cur
 

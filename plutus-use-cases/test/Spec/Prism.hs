@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -15,26 +16,26 @@
 {-# LANGUAGE UndecidableInstances       #-}
 module Spec.Prism (tests, prismTrace, prop_Prism, prop_NoLock) where
 
-import           Control.Lens
-import           Control.Monad
-import           Data.Map                           (Map)
-import qualified Data.Map                           as Map
-import qualified Ledger.Ada                         as Ada
-import           Ledger.Value                       (TokenName)
-import           Plutus.Contract.Test               hiding (not)
-import           Plutus.Contract.Test.ContractModel as ContractModel
+import Control.Lens
+import Control.Monad
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Ledger.Ada qualified as Ada
+import Ledger.Value (TokenName)
+import Plutus.Contract.Test hiding (not)
+import Plutus.Contract.Test.ContractModel as ContractModel
 
-import           Test.QuickCheck                    as QC hiding ((.&&.))
-import           Test.Tasty
-import           Test.Tasty.QuickCheck              (testProperty)
+import Test.QuickCheck as QC hiding ((.&&.))
+import Test.Tasty
+import Test.Tasty.QuickCheck (testProperty)
 
-import           Plutus.Contracts.Prism             hiding (mirror)
-import qualified Plutus.Contracts.Prism.Credential  as Credential
-import qualified Plutus.Contracts.Prism.Mirror      as C
-import           Plutus.Contracts.Prism.STO         (STOData (..))
-import qualified Plutus.Contracts.Prism.STO         as STO
-import qualified Plutus.Contracts.Prism.Unlock      as C
-import qualified Plutus.Trace.Emulator              as Trace
+import Plutus.Contracts.Prism hiding (mirror)
+import Plutus.Contracts.Prism.Credential qualified as Credential
+import Plutus.Contracts.Prism.Mirror qualified as C
+import Plutus.Contracts.Prism.STO (STOData (..))
+import Plutus.Contracts.Prism.STO qualified as STO
+import Plutus.Contracts.Prism.Unlock qualified as C
+import Plutus.Trace.Emulator qualified as Trace
 
 user, mirror, issuer :: Wallet
 user = w1
@@ -48,20 +49,20 @@ sto :: TokenName
 sto = "STO token"
 
 numTokens :: Integer
-numTokens = 1000
+numTokens = 10_000_000
 
 credential :: Credential
 credential =
     Credential
         { credName = kyc
-        , credAuthority = CredentialAuthority (walletPubKeyHash mirror)
+        , credAuthority = CredentialAuthority (mockWalletPaymentPubKeyHash mirror)
         }
 
 stoSubscriber :: STOSubscriber
 stoSubscriber =
     STOSubscriber
         { wCredential = credential
-        , wSTOIssuer = walletPubKeyHash issuer
+        , wSTOIssuer = mockWalletPaymentPubKeyHash issuer
         , wSTOTokenName = sto
         , wSTOAmount = numTokens
         }
@@ -69,7 +70,7 @@ stoSubscriber =
 stoData :: STOData
 stoData =
     STOData
-        { stoIssuer = walletPubKeyHash issuer
+        { stoIssuer = mockWalletPaymentPubKeyHash issuer
         , stoTokenName = sto
         , stoCredentialToken = Credential.token credential
         }

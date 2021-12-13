@@ -13,42 +13,41 @@
 
 module Control.Monad.Freer.Extras.BeamSpec (tests) where
 
-import           Control.Lens
-import           Control.Monad                            (forM_)
-import           Control.Monad.Freer                      (Eff, Member, interpret, runM)
-import           Control.Monad.Freer.Error                (Error, runError)
-import           Control.Monad.Freer.Extras.Beam          (BeamEffect, BeamError, handleBeam, selectPage)
-import           Control.Monad.Freer.Extras.Pagination    (Page (..), PageQuery (..))
-import           Control.Monad.Freer.Reader               (Reader, runReader)
-import           Control.Tracer                           (nullTracer)
-import           Data.Int                                 (Int16)
-import           Data.Kind                                (Constraint)
-import           Data.List                                (sort)
-import           Data.Semigroup.Generic                   (GenericSemigroupMonoid (..))
-import qualified Data.Set                                 as Set
-import           Database.Beam                            (Beamable, Columnar, Database, DatabaseSettings,
-                                                           FromBackendRow, Generic, MonadIO (liftIO), Q, QBaseScope,
-                                                           QExpr, Table (..), TableEntity, all_, dbModification,
-                                                           insertValues, runInsert, withDbModification)
-import           Database.Beam.Backend.SQL                (HasSqlValueSyntax)
-import           Database.Beam.Backend.SQL.BeamExtensions (BeamHasInsertOnConflict (anyConflict, insertOnConflict, onConflictDoNothing))
-import           Database.Beam.Migrate                    (CheckedDatabaseSettings, defaultMigratableDbSettings,
-                                                           renameCheckedEntity, unCheckDatabase)
-import           Database.Beam.Migrate.Simple             (autoMigrate)
-import           Database.Beam.Query.Internal             (QNested)
-import           Database.Beam.Sqlite                     (Sqlite)
-import qualified Database.Beam.Sqlite                     as Sqlite
-import qualified Database.Beam.Sqlite.Migrate             as Sqlite
-import           Database.Beam.Sqlite.Syntax              (SqliteValueSyntax)
-import qualified Database.SQLite.Simple                   as Sqlite
+import Control.Lens
+import Control.Monad (forM_)
+import Control.Monad.Freer (Eff, Member, interpret, runM)
+import Control.Monad.Freer.Error (Error, runError)
+import Control.Monad.Freer.Extras.Beam (BeamEffect, BeamError, handleBeam, selectPage)
+import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..))
+import Control.Monad.Freer.Reader (Reader, runReader)
+import Control.Tracer (nullTracer)
+import Data.Int (Int16)
+import Data.Kind (Constraint)
+import Data.List (sort)
+import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
+import Data.Set qualified as Set
+import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBackendRow, Generic, MonadIO (liftIO), Q,
+                      QBaseScope, QExpr, Table (..), TableEntity, all_, dbModification, insertValues, runInsert,
+                      withDbModification)
+import Database.Beam.Backend.SQL (HasSqlValueSyntax)
+import Database.Beam.Backend.SQL.BeamExtensions (BeamHasInsertOnConflict (anyConflict, insertOnConflict, onConflictDoNothing))
+import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
+                              unCheckDatabase)
+import Database.Beam.Migrate.Simple (autoMigrate)
+import Database.Beam.Query.Internal (QNested)
+import Database.Beam.Sqlite (Sqlite)
+import Database.Beam.Sqlite qualified as Sqlite
+import Database.Beam.Sqlite.Migrate qualified as Sqlite
+import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
+import Database.SQLite.Simple qualified as Sqlite
 
-import           Data.Maybe                               (listToMaybe)
-import           Data.Set                                 (Set)
-import           Hedgehog                                 (Property, PropertyT, assert, forAll, property, (===))
-import qualified Hedgehog.Gen                             as Gen
-import qualified Hedgehog.Range                           as Gen
-import           Test.Tasty
-import           Test.Tasty.Hedgehog                      (testProperty)
+import Data.Maybe (listToMaybe)
+import Data.Set (Set)
+import Hedgehog (Property, PropertyT, assert, forAll, property, (===))
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Gen
+import Test.Tasty
+import Test.Tasty.Hedgehog (testProperty)
 
 newtype TestRowT f = IntegerRow
     { _testRowInt :: Columnar f Int16

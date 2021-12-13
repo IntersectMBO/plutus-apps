@@ -24,42 +24,46 @@ module Plutus.PAB.Webserver.Handler
     , contractSchema
     ) where
 
-import qualified Cardano.Wallet.Mock.Client              as Wallet.Client
-import           Cardano.Wallet.Mock.Types               (WalletInfo (..))
-import           Control.Lens                            (preview)
-import           Control.Monad                           (join)
-import           Control.Monad.Freer                     (sendM)
-import           Control.Monad.Freer.Error               (throwError)
-import           Control.Monad.IO.Class                  (MonadIO (..))
-import qualified Data.Aeson                              as JSON
-import           Data.Either                             (fromRight)
-import           Data.Foldable                           (traverse_)
-import qualified Data.Map                                as Map
-import           Data.Maybe                              (fromMaybe, mapMaybe)
-import           Data.OpenApi.Schema                     (ToSchema)
-import           Data.Proxy                              (Proxy (..))
-import           Data.Text                               (Text)
-import           Ledger                                  (Value)
-import           Ledger.Constraints.OffChain             (UnbalancedTx)
-import           Ledger.Tx                               (Tx)
-import           Plutus.Contract.Effects                 (PABReq, _ExposeEndpointReq)
-import           Plutus.PAB.Core                         (PABAction)
-import qualified Plutus.PAB.Core                         as Core
-import qualified Plutus.PAB.Effects.Contract             as Contract
-import           Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (..), fromResp)
-import           Plutus.PAB.Types
-import           Plutus.PAB.Webserver.API                (API)
-import           Plutus.PAB.Webserver.Types
-import           Servant                                 (NoContent (NoContent), (:<|>) ((:<|>)))
-import           Servant.Client                          (ClientEnv, ClientM, runClientM)
-import           Servant.OpenApi                         (toOpenApi)
-import qualified Servant.Server                          as Servant
-import           Servant.Swagger.UI                      (SwaggerSchemaUI', swaggerSchemaUIServer)
-import qualified Wallet.Effects
-import           Wallet.Emulator.Error                   (WalletAPIError)
-import           Wallet.Emulator.Wallet                  (Wallet (..), WalletId, knownWallet)
-import           Wallet.Types                            (ContractActivityStatus, ContractInstanceId (..),
-                                                          parseContractActivityStatus)
+import Cardano.Wallet.Mock.Client qualified as Wallet.Client
+import Cardano.Wallet.Mock.Types (WalletInfo (WalletInfo, wiPaymentPubKeyHash, wiWallet))
+import Control.Lens (preview)
+import Control.Monad (join)
+import Control.Monad.Freer (sendM)
+import Control.Monad.Freer.Error (throwError)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Aeson qualified as JSON
+import Data.Either (fromRight)
+import Data.Foldable (traverse_)
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe, mapMaybe)
+import Data.OpenApi.Schema (ToSchema)
+import Data.Proxy (Proxy (Proxy))
+import Data.Text (Text)
+import Ledger (Value)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx (Tx)
+import Plutus.Contract.Effects (PABReq, _ExposeEndpointReq)
+import Plutus.Contract.Wallet (ExportTx)
+import Plutus.PAB.Core (PABAction)
+import Plutus.PAB.Core qualified as Core
+import Plutus.PAB.Effects.Contract qualified as Contract
+import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (hooks), fromResp)
+import Plutus.PAB.Types (PABError (ContractInstanceNotFound, EndpointCallError, WalletClientError))
+import Plutus.PAB.Webserver.API (API)
+import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet),
+                                   ContractInstanceClientState (ContractInstanceClientState, cicContract, cicCurrentState, cicDefinition, cicStatus, cicWallet, cicYieldedExportTxs),
+                                   ContractReport (ContractReport, crActiveContractStates, crAvailableContracts),
+                                   ContractSignatureResponse (ContractSignatureResponse),
+                                   FullReport (FullReport, chainReport, contractReport), emptyChainReport)
+import Servant (NoContent (NoContent), (:<|>) ((:<|>)))
+import Servant.Client (ClientEnv, ClientM, runClientM)
+import Servant.OpenApi (toOpenApi)
+import Servant.Server qualified as Servant
+import Servant.Swagger.UI (SwaggerSchemaUI', swaggerSchemaUIServer)
+import Wallet.Effects qualified
+import Wallet.Emulator.Error (WalletAPIError)
+import Wallet.Emulator.Wallet (Wallet (Wallet), WalletId, knownWallet)
+import Wallet.Types (ContractActivityStatus, ContractInstanceId, parseContractActivityStatus)
 
 healthcheck :: forall t env. PABAction t env ()
 healthcheck = pure ()
@@ -115,22 +119,24 @@ apiHandler =
 swagger :: forall t api dir. (Servant.Server api ~ Servant.Handler JSON.Value, ToSchema (Contract.ContractDef t)) => Servant.Server (SwaggerSchemaUI' dir api)
 swagger = swaggerSchemaUIServer $ toOpenApi (Proxy @(API (Contract.ContractDef t) Integer))
 
-fromInternalState ::
-    t
+fromInternalState
+    :: t
     -> ContractInstanceId
     -> ContractActivityStatus
-    -> Maybe Wallet
+    -> Wallet
+    -> [ExportTx]
     -> PartiallyDecodedResponse PABReq
     -> ContractInstanceClientState t
-fromInternalState t i s wallet resp =
+fromInternalState t i s wallet yieldedExportTxs resp =
     ContractInstanceClientState
         { cicContract = i
         , cicCurrentState =
             let hks' = mapMaybe (traverse (preview _ExposeEndpointReq)) (hooks resp)
             in resp { hooks = hks' }
-        , cicWallet = fromMaybe (knownWallet 1) wallet
+        , cicWallet = wallet
         , cicDefinition = t
         , cicStatus = s
+        , cicYieldedExportTxs = yieldedExportTxs
         }
 
 -- HANDLERS
@@ -139,13 +145,21 @@ activateContract :: forall t env. Contract.PABContract t => ContractActivationAr
 activateContract ContractActivationArgs{caID, caWallet} = do
     Core.activateContract (fromMaybe (knownWallet 1) caWallet) caID
 
-contractInstanceState :: forall t env. Contract.PABContract t => ContractInstanceId -> PABAction t env (ContractInstanceClientState (Contract.ContractDef t))
+contractInstanceState
+    :: forall t env. Contract.PABContract t
+    => ContractInstanceId
+    -> PABAction t env (ContractInstanceClientState (Contract.ContractDef t))
 contractInstanceState i = do
     definition <- Contract.getDefinition @t i
     instWithStatuses <- Core.instancesWithStatuses
     case (definition, Map.lookup i instWithStatuses) of
-        (Just ContractActivationArgs{caWallet, caID}, Just s) ->
-            fromInternalState caID i s caWallet . fromResp . Contract.serialisableState (Proxy @t) <$> Contract.getState @t i
+        (Just ContractActivationArgs{caWallet, caID}, Just s) -> do
+            let wallet = fromMaybe (knownWallet 1) caWallet
+            yieldedExportedTxs <- Core.yieldedExportTxs i
+            fmap ( fromInternalState caID i s wallet yieldedExportedTxs
+                 . fromResp
+                 . Contract.serialisableState (Proxy @t)
+                 ) $ Contract.getState @t i
         _ -> throwError @PABError (ContractInstanceNotFound i)
 
 callEndpoint :: forall t env. ContractInstanceId -> String -> JSON.Value -> PABAction t env ()
@@ -156,13 +170,21 @@ instancesForWallets wallet mStatus = filter ((==) (Wallet wallet) . cicWallet) <
 
 allInstanceStates :: forall t env. Contract.PABContract t => Maybe Text -> PABAction t env [ContractInstanceClientState (Contract.ContractDef t)]
 allInstanceStates mStatus = do
-    let mActivityStatus = join $ parseContractActivityStatus <$> mStatus
-    mp <- Contract.getContracts @t mActivityStatus
     instWithStatuses <- Core.instancesWithStatuses
-    let isInstanceStatusMatch s = maybe True ((==) s) mActivityStatus
-    let getStatus (i, args) = (i, args,) <$> Map.lookup i instWithStatuses
-    let get (i, ContractActivationArgs{caWallet, caID}, s) = fromInternalState caID i s caWallet . fromResp . Contract.serialisableState (Proxy @t) <$> Contract.getState @t i
-    filter (isInstanceStatusMatch . cicStatus) <$> traverse get (mapMaybe getStatus $ Map.toList mp)
+    let mActivityStatus = join $ parseContractActivityStatus <$> mStatus
+        isInstanceStatusMatch s = maybe True ((==) s) mActivityStatus
+        getStatus (i, args) = (i, args,) <$> Map.lookup i instWithStatuses
+        get (i, ContractActivationArgs{caWallet, caID}, s) =
+            let wallet = fromMaybe (knownWallet 1) caWallet
+             in do
+                yieldedExportedTxs <- Core.yieldedExportTxs i
+                fmap ( fromInternalState caID i s wallet yieldedExportedTxs
+                     . fromResp
+                     . Contract.serialisableState (Proxy @t)
+                     ) $ Contract.getState @t i
+    mp <- Contract.getContracts @t mActivityStatus
+    filter (isInstanceStatusMatch . cicStatus)
+        <$> traverse get (mapMaybe getStatus $ Map.toList mp)
 
 availableContracts :: forall t env. Contract.PABContract t => PABAction t env [ContractSignatureResponse (Contract.ContractDef t)]
 availableContracts = do
@@ -207,13 +229,13 @@ walletProxy ::
     :<|> (WalletId -> Tx -> PABAction t env Tx))
 walletProxy createNewWallet =
     createNewWallet
-    :<|> (\w tx -> fmap (const NoContent) (Core.handleAgentThread (Wallet w) $ Wallet.Effects.submitTxn $ Right tx))
-    :<|> (\w -> (\pkh -> WalletInfo{wiWallet=Wallet w, wiPubKeyHash = pkh })
-            <$> Core.handleAgentThread (Wallet w) Wallet.Effects.ownPubKeyHash)
+    :<|> (\w tx -> fmap (const NoContent) (Core.handleAgentThread (Wallet w) Nothing $ Wallet.Effects.submitTxn $ Right tx))
+    :<|> (\w -> (\pkh -> WalletInfo{wiWallet=Wallet w, wiPaymentPubKeyHash = pkh })
+            <$> Core.handleAgentThread (Wallet w) Nothing Wallet.Effects.ownPaymentPubKeyHash)
     :<|> (\w -> fmap (fmap (fromRight (error "Plutus.PAB.Webserver.Handler: Expecting a mock tx, not an Alonzo tx when submitting it.")))
-              . Core.handleAgentThread (Wallet w) . Wallet.Effects.balanceTx)
-    :<|> (\w -> Core.handleAgentThread (Wallet w) Wallet.Effects.totalFunds)
+              . Core.handleAgentThread (Wallet w) Nothing . Wallet.Effects.balanceTx)
+    :<|> (\w -> Core.handleAgentThread (Wallet w) Nothing Wallet.Effects.totalFunds)
     :<|> (\w tx -> fmap (fromRight (error "Plutus.PAB.Webserver.Handler: Expecting a mock tx, not an Alonzo tx when adding a signature."))
-                 $ Core.handleAgentThread (Wallet w)
+                 $ Core.handleAgentThread (Wallet w) Nothing
                  $ Wallet.Effects.walletAddSignature
                  $ Right tx)

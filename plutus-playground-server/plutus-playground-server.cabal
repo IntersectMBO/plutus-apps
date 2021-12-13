@@ -22,7 +22,7 @@ data-files:
 
 source-repository head
     type: git
-    location: https://github.com/iohk/plutus
+    location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
     description:
@@ -51,6 +51,7 @@ library
     hs-source-dirs:   src
                     , usecases
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options: -Wall -Wcompat -Wunused-packages
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wno-missing-import-lists -Wredundant-constraints
@@ -60,8 +61,8 @@ library
         aeson -any,
         base >=4.7 && <5,
         bytestring -any,
-        containers -any,
         data-default -any,
+        containers -any,
         exceptions -any,
         file-embed -any,
         http-client -any,
@@ -74,6 +75,7 @@ library
         playground-common -any,
         plutus-contract -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         plutus-tx -any,
         plutus-tx-plugin -any,
         regex-compat -any,
@@ -107,6 +109,7 @@ library plutus-playground-usecases
         Vesting
         VestingSimulations
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options: -Wall -Wcompat -Wunused-packages
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wredundant-constraints
@@ -127,6 +130,7 @@ library plutus-playground-usecases
         plutus-tx -any,
         plutus-tx-plugin -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         row-types -any,
         text -any,
         transformers -any
@@ -156,6 +160,7 @@ executable plutus-playground-server
         Vesting
         VestingSimulations
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wno-missing-import-lists -Wredundant-constraints -O0
@@ -193,6 +198,7 @@ executable plutus-playground-server
         wai -any,
         plutus-contract -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         row-types -any,
         warp -any,
         web-ghc -any
@@ -207,6 +213,7 @@ test-suite plutus-playground-server-test
         Playground.InterpreterSpec
         Playground.UsecasesSpec
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     -- We don't want "-threaded" and friends here as there are many tests with heavy GHC compilation.
     -- This is a hack as one can fine-tune test cases better (like sequential tests) with in-code tasty dependencies.
     -- See #4085.
@@ -229,6 +236,7 @@ test-suite plutus-playground-server-test
         plutus-tx -any,
         plutus-tx-plugin -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         plutus-playground-usecases -any,
         plutus-contract -any,
         tasty -any,
@@ -236,5 +244,4 @@ test-suite plutus-playground-server-test
         text -any,
         time-units -any,
         transformers -any,
-        plutus-ledger -any,
         web-ghc -any

@@ -10,16 +10,15 @@
 
 module Plutus.PAB.Run.CommandParser (parseOptions, AppOpts(..)) where
 
-import           Cardano.BM.Data.Severity (Severity (..))
-import           Data.Text                (Text)
-import           Options.Applicative      (CommandFields, Mod, Parser, argument, auto, command, customExecParser,
-                                           disambiguate, flag, fullDesc, help, helper, idm, info, long, metavar, option,
-                                           prefs, progDesc, short, showHelpOnEmpty, showHelpOnError, str, subparser,
-                                           value)
-import           Wallet.Types             (ContractInstanceId (..))
+import Cardano.BM.Data.Severity (Severity (..))
+import Data.Text (Text)
+import Options.Applicative (CommandFields, Mod, Parser, argument, auto, command, customExecParser, disambiguate, flag,
+                            fullDesc, help, helper, idm, info, long, metavar, option, prefs, progDesc, short,
+                            showHelpOnEmpty, showHelpOnError, str, subparser, value)
+import Wallet.Types (ContractInstanceId (..))
 
-import           Plutus.PAB.App           (StorageBackend (..))
-import           Plutus.PAB.Run.Command
+import Plutus.PAB.App (StorageBackend (..))
+import Plutus.PAB.Run.Command
 
 data AppOpts = AppOpts { minLogLevel    :: Maybe Severity
                        , logConfigPath  :: Maybe FilePath

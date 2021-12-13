@@ -13,78 +13,82 @@
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 module Wallet.Emulator.Types(
     -- * Wallets
-    Wallet(..),
-    WalletId(..),
+    Wallet.Emulator.Wallet.Wallet(..),
+    Wallet.Emulator.Wallet.WalletId(..),
     Crypto.XPrv,
     Crypto.XPub,
-    walletPubKeyHash,
+    Wallet.Emulator.Wallet.mockWalletPaymentPubKey,
+    Wallet.Emulator.Wallet.mockWalletPaymentPubKeyHash,
     addSignature,
-    knownWallets,
-    knownWallet,
-    WalletNumber(..),
-    toWalletNumber,
-    fromWalletNumber,
-    MockWallet(..),
-    -- fromWalletNumber,
-    TxPool,
+    Wallet.Emulator.Wallet.knownWallets,
+    Wallet.Emulator.Wallet.knownWallet,
+    Ledger.CardanoWallet.WalletNumber(..),
+    Ledger.CardanoWallet.toWalletNumber,
+    Wallet.Emulator.Wallet.fromWalletNumber,
+    Ledger.CardanoWallet.MockWallet(..),
+    Wallet.Emulator.Chain.TxPool,
     -- * Emulator
     EmulatorEffs,
-    Assertion(OwnFundsEqual, IsValidated),
-    assert,
-    assertIsValidated,
-    AssertionError(..),
-    AsAssertionError(..),
-    ChainClientNotification(..),
-    EmulatorEvent,
-    EmulatorEvent',
-    EmulatorTimeEvent(..),
+    Wallet.Emulator.MultiAgent.Assertion(OwnFundsEqual, IsValidated),
+    Wallet.Emulator.MultiAgent.assert,
+    Wallet.Emulator.MultiAgent.assertIsValidated,
+    Wallet.Types.AssertionError(..),
+    Wallet.Types.AsAssertionError(..),
+    Wallet.Emulator.NodeClient.ChainClientNotification(..),
+    Wallet.Emulator.MultiAgent.EmulatorEvent,
+    Wallet.Emulator.MultiAgent.EmulatorEvent',
+    Wallet.Emulator.MultiAgent.EmulatorTimeEvent(..),
     -- ** Wallet state
-    WalletState(..),
-    emptyWalletState,
-    ownPrivateKey,
-    ownAddress,
+    Wallet.Emulator.Wallet.WalletState(..),
+    Wallet.Emulator.Wallet.emptyWalletState,
+    Wallet.Emulator.Wallet.ownPaymentPrivateKey,
+    Wallet.Emulator.Wallet.ownAddress,
     -- ** Traces
-    walletAction,
-    assertion,
-    assertOwnFundsEq,
-    ownFundsEqual,
+    Wallet.Emulator.MultiAgent.walletAction,
+    Wallet.Emulator.MultiAgent.assertion,
+    Wallet.Emulator.MultiAgent.assertOwnFundsEq,
+    Wallet.Emulator.MultiAgent.ownFundsEqual,
     -- * Emulator internals
-    EmulatorState(..),
-    emptyEmulatorState,
-    emulatorState,
-    emulatorStatePool,
-    emulatorStateInitialDist,
-    txPool,
-    walletStates,
-    index,
-    chainState,
-    currentSlot,
+    Wallet.Emulator.MultiAgent.EmulatorState(..),
+    Wallet.Emulator.MultiAgent.emptyEmulatorState,
+    Wallet.Emulator.MultiAgent.emulatorState,
+    Wallet.Emulator.MultiAgent.emulatorStatePool,
+    Wallet.Emulator.MultiAgent.emulatorStateInitialDist,
+    Wallet.Emulator.Chain.txPool,
+    Wallet.Emulator.MultiAgent.walletStates,
+    Wallet.Emulator.Chain.index,
+    Wallet.Emulator.MultiAgent.chainState,
+    Wallet.Emulator.Chain.currentSlot,
     processEmulated,
-    fundsDistribution,
-    emLog,
-    selectCoin
+    Wallet.Emulator.MultiAgent.fundsDistribution,
+    Wallet.Emulator.MultiAgent.emLog,
+    Wallet.Emulator.Wallet.selectCoin
     ) where
 
-import qualified Cardano.Crypto.Wallet          as Crypto
-import           Control.Lens                   hiding (index)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error      (Error)
-import qualified Control.Monad.Freer.Extras     as Eff
-import           Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
-import           Control.Monad.Freer.State      (State)
+import Cardano.Crypto.Wallet qualified as Crypto
+import Control.Lens hiding (index)
+import Control.Monad.Freer (Eff, Member, interpret, reinterpret2, type (~>))
+import Control.Monad.Freer.Error (Error)
+import Control.Monad.Freer.Extras qualified as Eff
+import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
+import Control.Monad.Freer.State (State)
 
-import           Ledger
-import           Plutus.ChainIndex              (ChainIndexError)
-import           Wallet.API                     (WalletAPIError (..))
+import Ledger (addSignature)
+import Plutus.ChainIndex (ChainIndexError)
+import Wallet.API (WalletAPIError)
 
-import           Ledger.CardanoWallet           (MockWallet (..), WalletNumber (..), toWalletNumber)
-import           Ledger.Fee                     (FeeConfig)
-import           Ledger.TimeSlot                (SlotConfig)
-import           Wallet.Emulator.Chain
-import           Wallet.Emulator.MultiAgent
-import           Wallet.Emulator.NodeClient
-import           Wallet.Emulator.Wallet
-import           Wallet.Types                   (AsAssertionError (..), AssertionError (..))
+import Ledger.CardanoWallet qualified
+import Ledger.Fee (FeeConfig)
+import Ledger.TimeSlot (SlotConfig)
+import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent, ChainState, handleChain, handleControlChain)
+import Wallet.Emulator.Chain qualified
+import Wallet.Emulator.MultiAgent (EmulatorEvent', EmulatorState, MultiAgentControlEffect, MultiAgentEffect, chainEvent,
+                                   chainState, handleMultiAgent, handleMultiAgentControl)
+import Wallet.Emulator.MultiAgent qualified
+import Wallet.Emulator.NodeClient qualified
+import Wallet.Emulator.Wallet qualified
+import Wallet.Types (AssertionError)
+import Wallet.Types qualified
 
 type EmulatorEffs = '[MultiAgentEffect, ChainEffect, ChainControlEffect]
 
@@ -106,6 +110,6 @@ processEmulated slotCfg feeCfg act =
         & reinterpret2 @ChainEffect @(State ChainState) @(LogMsg ChainEvent) (handleChain slotCfg)
         & interpret (Eff.handleZoomedState chainState)
         & interpret (mapLog (review chainEvent))
-        & reinterpret2 @ChainControlEffect @(State ChainState) @(LogMsg ChainEvent) handleControlChain
+        & reinterpret2 @ChainControlEffect @(State ChainState) @(LogMsg ChainEvent) (handleControlChain slotCfg)
         & interpret (Eff.handleZoomedState chainState)
         & interpret (mapLog (review chainEvent))

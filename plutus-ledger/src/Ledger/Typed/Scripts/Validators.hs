@@ -23,21 +23,21 @@ module Ledger.Typed.Scripts.Validators
     , forwardingMintingPolicyHash
     ) where
 
-import           Data.Aeson                            (FromJSON, ToJSON)
-import           Data.Kind
-import           Data.Void
-import           GHC.Generics                          (Generic)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Kind
+import Data.Void
+import GHC.Generics (Generic)
 
-import           PlutusCore.Default                    (DefaultUni)
-import           PlutusTx
-import           PlutusTx.Prelude                      (check)
+import PlutusCore.Default (DefaultUni)
+import PlutusTx
+import PlutusTx.Prelude (check)
 
-import qualified Ledger.Scripts                        as Scripts
-import           Plutus.V1.Ledger.Address              (Address (..), scriptHashAddress)
-import qualified Plutus.V1.Ledger.Contexts             as Validation
+import Ledger.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Address (Address (..), scriptHashAddress)
+import Plutus.V1.Ledger.Contexts qualified as Validation
 
-import qualified Ledger.Typed.Scripts.MonetaryPolicies as MPS
-import           Ledger.Typed.TypeUtils                (Any)
+import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
+import Ledger.Typed.TypeUtils (Any)
 
 -- | A class that associates a type standing for a connection type with two types, the type of the redeemer
 -- and the data script for that connection type.

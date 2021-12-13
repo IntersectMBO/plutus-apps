@@ -11,8 +11,8 @@ module Plutus.PAB.Effects.TimeEffect(
     systemTime
     ) where
 
-import           Control.Monad.Freer.TH (makeEffect)
-import           Ledger.Slot            (Slot)
+import Control.Monad.Freer.TH (makeEffect)
+import Ledger.Slot (Slot)
 
 data TimeEffect r where
     SystemTime :: TimeEffect Slot

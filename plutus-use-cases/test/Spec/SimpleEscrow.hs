@@ -6,29 +6,30 @@
 
 module Spec.SimpleEscrow(tests) where
 
-import           Control.Lens
-import           Control.Monad                 (void)
+import Control.Lens
+import Control.Monad (void)
 
-import           Ledger                        (Value)
-import qualified Ledger.Ada                    as Ada
-import           Ledger.Time                   (POSIXTime)
-import qualified Ledger.TimeSlot               as TimeSlot
-import qualified Ledger.Value                  as Value
-import           Plutus.Contract.Test
-import           Plutus.Contracts.SimpleEscrow
-import qualified Plutus.Trace.Emulator         as Trace
+import Ledger (Value)
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.Time (POSIXTime)
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value qualified as Value
+import Plutus.Contract.Test
+import Plutus.Contracts.SimpleEscrow
+import Plutus.Trace.Emulator qualified as Trace
 
-import           Test.Tasty
+import Test.Tasty
 
 tests :: TestTree
 tests = testGroup "simple-escrow"
     [ checkPredicate "can lock some value in the contract"
-        ( walletFundsChange w1 (Ada.lovelaceValueOf (-10))
+        ( walletFundsChange w1 (Ada.adaValueOf (-10))
           .&&. walletFundsChange w2 mempty
         )
         $ do
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
-            let params = mkEscrowParams startTime (Ada.lovelaceValueOf 10) (Ada.lovelaceValueOf 1)
+            let params = mkEscrowParams startTime (Ada.adaValueOf 10) (Ada.adaValueOf 2)
 
             hdl <- Trace.activateContractWallet w1 lockEp
             Trace.callEndpoint @"lock" hdl params
@@ -52,7 +53,7 @@ tests = testGroup "simple-escrow"
         )
         $ do
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
-            let params = mkEscrowParams startTime (Ada.lovelaceValueOf 10) (Ada.lovelaceValueOf 1)
+            let params = mkEscrowParams startTime (Ada.adaValueOf 10) (Ada.adaValueOf 2)
 
             hdl <- Trace.activateContractWallet w1 (lockEp <> void refundEp)
             Trace.callEndpoint @"lock" hdl params
@@ -60,12 +61,12 @@ tests = testGroup "simple-escrow"
             void $ Trace.waitNSlots 100
             void $ Trace.callEndpoint @"refund" hdl params
     , checkPredicate "only locking wallet can request refund"
-        ( walletFundsChange w1 (Ada.lovelaceValueOf (-100))
+        ( walletFundsChange w1 (Ada.adaValueOf (-10))
           .&&. walletFundsChange w2 mempty
         )
         $ do
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
-            let params = mkEscrowParams startTime (Ada.lovelaceValueOf 100) (Ada.lovelaceValueOf 1)
+            let params = mkEscrowParams startTime (Ada.adaValueOf 10) (Ada.adaValueOf 2)
 
             hdl1 <- Trace.activateContractWallet w1 lockEp
             Trace.callEndpoint @"lock" hdl1 params
@@ -74,7 +75,7 @@ tests = testGroup "simple-escrow"
             void $ Trace.waitNSlots 100
             void $ Trace.callEndpoint @"refund" hdl2 params
     , checkPredicateOptions options "can't redeem if you can't pay"
-        ( walletFundsChange w1 (token1 (-10))
+        ( walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> token1 (-10))
           .&&. walletFundsChange w2 mempty
         )
         $ do
@@ -106,7 +107,7 @@ options =
 mkEscrowParams :: POSIXTime -> Value -> Value -> EscrowParams
 mkEscrowParams startTime p e =
   EscrowParams
-    { payee     = walletPubKeyHash w1
+    { payee     = mockWalletPaymentPubKeyHash w1
     , paying    = p
     , expecting = e
     , deadline  = startTime + 100000

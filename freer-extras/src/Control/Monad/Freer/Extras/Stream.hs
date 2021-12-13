@@ -6,11 +6,11 @@ module Control.Monad.Freer.Extras.Stream(
     runStream
     ) where
 
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Coroutine (Status (..), Yield, runC)
-import           Streaming                     (Stream)
-import           Streaming.Prelude             (Of)
-import qualified Streaming.Prelude             as S
+import Control.Monad.Freer
+import Control.Monad.Freer.Coroutine (Status (..), Yield, runC)
+import Streaming (Stream)
+import Streaming.Prelude (Of)
+import Streaming.Prelude qualified as S
 
 -- | Turn the @Yield e ()@ effect into a pull-based stream
 --   of @e@ events.

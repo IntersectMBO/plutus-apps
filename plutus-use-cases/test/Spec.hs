@@ -1,29 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main(main) where
 
-import qualified Spec.Auction
-import qualified Spec.Crowdfunding
-import qualified Spec.Currency
-import qualified Spec.ErrorHandling
-import qualified Spec.Escrow
-import qualified Spec.Future
-import qualified Spec.GameStateMachine
-import qualified Spec.Governance
-import qualified Spec.SealedBidAuction
-import qualified Spec.SimpleEscrow
+import Spec.Auction qualified
+import Spec.Crowdfunding qualified
+import Spec.Currency qualified
+import Spec.ErrorHandling qualified
+import Spec.Escrow qualified
+import Spec.Future qualified
+import Spec.GameStateMachine qualified
+import Spec.Governance qualified
+import Spec.SealedBidAuction qualified
+import Spec.SimpleEscrow qualified
 -- import qualified Spec.MultiSig
-import qualified Spec.MultiSigStateMachine
-import qualified Spec.PingPong
-import qualified Spec.Prism
-import qualified Spec.PubKey
-import qualified Spec.Rollup
-import qualified Spec.Stablecoin
-import qualified Spec.TokenAccount
-import qualified Spec.Uniswap
-import qualified Spec.Vesting
+import Spec.MultiSigStateMachine qualified
+import Spec.PingPong qualified
+import Spec.Prism qualified
+import Spec.PubKey qualified
+import Spec.Rollup qualified
+import Spec.Stablecoin qualified
+import Spec.TokenAccount qualified
+import Spec.Uniswap qualified
+import Spec.Vesting qualified
 
-import           Test.Tasty
-import           Test.Tasty.Hedgehog       (HedgehogTestLimit (..))
+import Test.Tasty
+import Test.Tasty.Hedgehog (HedgehogTestLimit (..))
 
 main :: IO ()
 main = defaultMain tests

@@ -13,35 +13,38 @@ module Plutus.Trace.Effects.EmulatedWalletAPI(
     , handleEmulatedWalletAPI
     ) where
 
-import           Control.Monad.Freer        (Eff, Member, subsume, type (~>))
-import           Control.Monad.Freer.Error  (Error)
-import           Control.Monad.Freer.Extras (raiseEnd)
-import           Control.Monad.Freer.TH     (makeEffect)
-import           Ledger.Tx                  (txId)
-import           Ledger.TxId                (TxId)
-import           Ledger.Value               (Value)
-import           Wallet.API                 (WalletAPIError, defaultSlotRange, payToPublicKeyHash)
-import           Wallet.Effects             (WalletEffect)
-import qualified Wallet.Emulator            as EM
-import           Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
-import           Wallet.Emulator.Wallet     (Wallet)
+import Control.Monad.Freer (Eff, Member, subsume, type (~>))
+import Control.Monad.Freer.Error (Error)
+import Control.Monad.Freer.Extras (raiseEnd)
+import Control.Monad.Freer.Extras.Log (LogMsg)
+import Control.Monad.Freer.TH (makeEffect)
+import Data.Text (Text)
+import Ledger.Tx (txId)
+import Ledger.TxId (TxId)
+import Ledger.Value (Value)
+import Wallet.API (WalletAPIError, defaultSlotRange, payToPaymentPublicKeyHash)
+import Wallet.Effects (WalletEffect)
+import Wallet.Emulator qualified as EM
+import Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
+import Wallet.Emulator.Wallet (Wallet)
 
 data EmulatedWalletAPI r where
-    LiftWallet :: Wallet -> Eff '[WalletEffect, Error WalletAPIError] a -> EmulatedWalletAPI a
+    LiftWallet :: Wallet -> Eff '[WalletEffect, Error WalletAPIError, LogMsg Text] a -> EmulatedWalletAPI a
 
 makeEffect ''EmulatedWalletAPI
 
 -- | Make a payment from one wallet to another
 payToWallet ::
     forall effs.
-    Member EmulatedWalletAPI effs
+    ( Member EmulatedWalletAPI effs
+    )
     => Wallet
     -> Wallet
     -> Value
     -> Eff effs TxId
 payToWallet source target amount = do
     ctx <- liftWallet source
-         $ payToPublicKeyHash defaultSlotRange amount (EM.walletPubKeyHash target)
+         $ payToPaymentPublicKeyHash defaultSlotRange amount (EM.mockWalletPaymentPubKeyHash target)
     case ctx of
       Left _   -> error "Plutus.Trace.EmulatedWalletAPI.payToWallet: Expecting a mock tx, not an Alonzo tx"
       Right tx -> pure $ txId tx
@@ -56,6 +59,7 @@ handleEmulatedWalletAPI ::
 handleEmulatedWalletAPI = \case
     LiftWallet w action ->
         walletAction w
+            $ subsume
             $ subsume
             $ subsume
             $ raiseEnd action

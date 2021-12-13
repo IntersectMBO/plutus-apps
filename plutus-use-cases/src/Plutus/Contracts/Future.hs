@@ -39,50 +39,41 @@ module Plutus.Contracts.Future(
     , initialState
     , typedValidator
     , setupTokens
-    -- * Test data
-    , testAccounts
     , setupTokensTrace
     ) where
 
-import           Control.Lens                     (makeClassyPrisms, prism', review)
-import           Control.Monad                    (void)
-import           Control.Monad.Error.Lens         (throwing)
-import qualified Control.Monad.Freer              as Freer
-import qualified Control.Monad.Freer.Error        as Freer
-import           Data.Aeson                       (FromJSON, ToJSON)
-import           Data.Default                     (Default (..))
-import           GHC.Generics                     (Generic)
-import           Ledger                           (Address, Datum (..), POSIXTime, PubKey, PubKeyHash, Validator,
-                                                   ValidatorHash)
-import qualified Ledger
-import qualified Ledger.Constraints               as Constraints
-import           Ledger.Constraints.TxConstraints (TxConstraints)
-import qualified Ledger.Interval                  as Interval
-import           Ledger.Oracle                    (Observation (..), SignedMessage (..))
-import qualified Ledger.Oracle                    as Oracle
-import           Ledger.Scripts                   (unitDatum)
-import           Ledger.Tokens
-import qualified Ledger.Typed.Scripts             as Scripts
-import           Ledger.Value                     as Value
-import           Plutus.Contract
-import           Plutus.Contract.Util             (loopM)
-import qualified PlutusTx
-import           PlutusTx.Prelude
+import Control.Lens (makeClassyPrisms, prism', review)
+import Control.Monad (void)
+import Control.Monad.Error.Lens (throwing)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger (Address, Datum (..), POSIXTime, PaymentPubKey, PaymentPubKeyHash, Validator, ValidatorHash)
+import Ledger qualified
+import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.TxConstraints (TxConstraints)
+import Ledger.Interval qualified as Interval
+import Ledger.Scripts (unitDatum)
+import Ledger.Tokens
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value as Value
+import Plutus.Contract
+import Plutus.Contract.Oracle (Observation (..), SignedMessage (..))
+import Plutus.Contract.Oracle qualified as Oracle
+import Plutus.Contract.Util (loopM)
+import PlutusTx qualified
+import PlutusTx.Prelude
 
-import           Plutus.Contract.StateMachine     (AsSMContractError, State (..), StateMachine (..), Void)
-import qualified Plutus.Contract.StateMachine     as SM
-import qualified Plutus.Contracts.Currency        as Currency
-import           Plutus.Contracts.Escrow          (AsEscrowError (..), EscrowError, EscrowParams (..), RefundSuccess)
-import qualified Plutus.Contracts.Escrow          as Escrow
-import           Plutus.Contracts.TokenAccount    (Account (..))
-import qualified Plutus.Contracts.TokenAccount    as TokenAccount
-import qualified Plutus.Trace.Emulator            as Trace
-import qualified Streaming.Prelude                as S
-import qualified Wallet.Emulator.Folds            as Folds
-import qualified Wallet.Emulator.Stream           as Stream
-import qualified Wallet.Emulator.Wallet           as Wallet
+import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
+import Plutus.Contract.StateMachine qualified as SM
+import Plutus.Contracts.Currency qualified as Currency
+import Plutus.Contracts.Escrow (AsEscrowError (..), EscrowError, EscrowParams (..), RefundSuccess)
+import Plutus.Contracts.Escrow qualified as Escrow
+import Plutus.Contracts.TokenAccount (Account (..))
+import Plutus.Contracts.TokenAccount qualified as TokenAccount
+import Plutus.Trace.Emulator qualified as Trace
+import Wallet.Emulator.Wallet qualified as Wallet
 
-import qualified Prelude                          as Haskell
+import Prelude qualified as Haskell
 
 -- $future
 -- A futures contract in Plutus. This example illustrates a number of concepts.
@@ -101,7 +92,7 @@ data Future =
         , ftUnits         :: Integer
         , ftUnitPrice     :: Value
         , ftInitialMargin :: Value
-        , ftPriceOracle   :: PubKey
+        , ftPriceOracle   :: PaymentPubKey
         , ftMarginPenalty :: Value
         -- ^ How much a participant loses if they fail to make the required
         --   margin payments.
@@ -216,9 +207,9 @@ futureContract ft = do
 -- | The data needed to initialise the futures contract.
 data FutureSetup =
     FutureSetup
-        { shortPK       :: PubKeyHash
+        { shortPK       :: PaymentPubKeyHash
         -- ^ Initial owner of the short token
-        , longPK        :: PubKeyHash
+        , longPK        :: PaymentPubKeyHash
         -- ^ Initial owner of the long token
         , contractStart :: POSIXTime
         -- ^ Start of the futures contract itself. By this time the setup code
@@ -340,7 +331,7 @@ validator :: Future -> FutureAccounts -> Validator
 validator ft fos = Scripts.validatorScript (typedValidator ft fos)
 
 {-# INLINABLE verifyOracle #-}
-verifyOracle :: PlutusTx.FromData a => PubKey -> SignedMessage a -> Maybe (a, TxConstraints Void Void)
+verifyOracle :: PlutusTx.FromData a => PaymentPubKey -> SignedMessage a -> Maybe (a, TxConstraints Void Void)
 verifyOracle pubKey sm =
     either (const Nothing) pure
     $ Oracle.verifySignedMessageConstraints pubKey sm
@@ -574,7 +565,7 @@ setupTokens
     )
     => Contract w s e FutureAccounts
 setupTokens = mapError (review _FutureError) $ do
-    pk <- ownPubKeyHash
+    pk <- ownPaymentPubKeyHash
 
     -- Create the tokens using the currency contract, wrapping any errors in
     -- 'TokenSetupFailed'
@@ -598,27 +589,13 @@ escrowParams client future ftos FutureSetup{longPK, shortPK, contractStart} =
             [ Escrow.payToScriptTarget address
                 dataScript
                 (scale 2 (initialMargin future))
-            , Escrow.payToPubKeyTarget longPK (tokenFor Long ftos)
-            , Escrow.payToPubKeyTarget shortPK (tokenFor Short ftos)
+            , Escrow.payToPaymentPubKeyTarget longPK (tokenFor Long ftos)
+            , Escrow.payToPaymentPubKeyTarget shortPK (tokenFor Short ftos)
             ]
     in EscrowParams
         { escrowDeadline = contractStart
         , escrowTargets = targets
         }
-
-testAccounts :: FutureAccounts
-testAccounts =
-    let con = setupTokens @() @FutureSchema @FutureError
-        fld = Folds.instanceOutcome con (Trace.walletInstanceTag (Wallet.knownWallet 1))
-        getOutcome (Folds.Done a) = a
-        getOutcome e              = Haskell.error $ "not finished: " <> Haskell.show e
-    in
-    either (Haskell.error . Haskell.show) (getOutcome . S.fst')
-        $ Freer.run
-        $ Freer.runError @Folds.EmulatorFoldErr
-        $ Stream.foldEmulatorStreamM fld
-        $ Stream.takeUntilSlot 10
-        $ Trace.runEmulatorStream def setupTokensTrace
 
 setupTokensTrace :: Trace.EmulatorTrace ()
 setupTokensTrace = do

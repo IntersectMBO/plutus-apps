@@ -4,11 +4,9 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE PatternGuards       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE ViewPatterns        #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
@@ -27,21 +25,21 @@ module Plutus.Contract.StateMachine.OnChain(
     , threadTokenValueOrZero
     ) where
 
-import           Data.Aeson                               (FromJSON, ToJSON)
-import           Data.Void                                (Void)
-import           GHC.Generics                             (Generic)
-import           Ledger                                   (Address, ValidatorHash)
-import           Ledger.Constraints
-import           Ledger.Constraints.TxConstraints         (OutputConstraint (..))
-import           Ledger.Contexts                          (ScriptContext (..), TxInInfo (..), findOwnInput, ownHash)
-import           Ledger.Tx                                (TxOut (..))
-import           Ledger.Typed.Scripts
-import           Ledger.Value                             (Value, isZero)
-import qualified PlutusTx
-import           PlutusTx.Prelude                         hiding (check)
-import qualified Prelude                                  as Haskell
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Void (Void)
+import GHC.Generics (Generic)
+import Ledger (Address, ValidatorHash)
+import Ledger.Constraints
+import Ledger.Constraints.TxConstraints (OutputConstraint (..))
+import Ledger.Contexts (ScriptContext (..), TxInInfo (..), findOwnInput, ownHash)
+import Ledger.Tx (TxOut (..))
+import Ledger.Typed.Scripts
+import Ledger.Value (Value, isZero)
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (check)
+import Prelude qualified as Haskell
 
-import qualified Plutus.Contract.StateMachine.ThreadToken as TT
+import Plutus.Contract.StateMachine.ThreadToken qualified as TT
 
 data State s = State { stateData :: s, stateValue :: Value }
     deriving stock (Haskell.Eq, Haskell.Show, Generic)
@@ -129,7 +127,7 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                 | otherwise ->
                     let txc =
                             newConstraints
-                                { txOwnOutputs=
+                                { txOwnOutputs =
                                     [ OutputConstraint
                                         { ocDatum = newData
                                           -- Check that the thread token value is still there

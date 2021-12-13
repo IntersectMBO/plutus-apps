@@ -1,14 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main(main) where
 
-import qualified Spec.Contract
-import qualified Spec.Emulator
-import qualified Spec.ErrorChecking
-import qualified Spec.Rows
-import qualified Spec.Secrets
-import qualified Spec.State
-import qualified Spec.ThreadToken
-import           Test.Tasty
+import Spec.Contract qualified
+import Spec.Emulator qualified
+import Spec.ErrorChecking qualified
+import Spec.Plutus.Contract.Wallet qualified
+import Spec.Rows qualified
+import Spec.Secrets qualified
+import Spec.State qualified
+import Spec.ThreadToken qualified
+import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
 main = defaultMain tests
@@ -21,5 +22,6 @@ tests = testGroup "plutus-contract" [
     Spec.Rows.tests,
     Spec.ThreadToken.tests,
     Spec.Secrets.tests,
-    Spec.ErrorChecking.tests
+    Spec.ErrorChecking.tests,
+    Spec.Plutus.Contract.Wallet.tests
     ]

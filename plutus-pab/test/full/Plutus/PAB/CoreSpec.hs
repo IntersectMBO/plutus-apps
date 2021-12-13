@@ -18,71 +18,71 @@ module Plutus.PAB.CoreSpec
     , assertEqual
     ) where
 
-import           Control.Concurrent.STM.Extras.Stream     (readN, readOne)
-import           Control.Lens                             ((&), (+~), (^.))
-import           Control.Monad                            (replicateM, replicateM_, unless, void)
-import           Control.Monad.Freer                      (Eff, Member, Members)
-import           Control.Monad.Freer.Error                (Error, throwError)
-import           Control.Monad.Freer.Extras.Log           (LogMsg)
-import qualified Control.Monad.Freer.Extras.Log           as EmulatorLog
-import           Control.Monad.Freer.Extras.State         (use)
-import           Control.Monad.Freer.State                (State)
-import           Control.Monad.IO.Class                   (MonadIO (..))
-import qualified Data.Aeson                               as JSON
-import           Data.Foldable                            (fold, traverse_)
+import Control.Concurrent.STM.Extras.Stream (readN, readOne)
+import Control.Lens ((&), (+~), (^.))
+import Control.Monad (replicateM, replicateM_, unless, void)
+import Control.Monad.Freer (Eff, Member, Members)
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Extras.Log (LogMsg)
+import Control.Monad.Freer.Extras.Log qualified as EmulatorLog
+import Control.Monad.Freer.Extras.State (use)
+import Control.Monad.Freer.State (State)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Aeson qualified as JSON
+import Data.Foldable (fold, traverse_)
 
-import qualified Control.Concurrent.STM                   as STM
-import qualified Data.Aeson.Types                         as JSON
-import           Data.Either                              (isRight)
-import qualified Data.Map                                 as Map
-import           Data.Maybe                               (isJust)
-import qualified Data.Monoid                              as M
-import           Data.Proxy                               (Proxy (..))
-import           Data.Semigroup                           (Last (..))
-import qualified Data.Set                                 as Set
-import           Data.Text                                (Text)
-import qualified Data.Text                                as Text
-import           Data.Text.Extras                         (tshow)
-import           Ledger                                   (PubKeyHash, getCardanoTxId, getCardanoTxOutRefs,
-                                                           pubKeyAddress, pubKeyHash, pubKeyHashAddress, toPubKeyHash,
-                                                           txId, txOutAddress, txOutRefId, txOutRefs, txOutputs)
-import           Ledger.Ada                               (adaSymbol, adaToken, lovelaceValueOf)
-import qualified Ledger.Ada                               as Ada
-import qualified Ledger.AddressMap                        as AM
-import qualified Ledger.CardanoWallet                     as CW
-import           Ledger.Value                             (valueOf)
-import           Plutus.ChainIndex                        (Depth (Depth),
-                                                           RollbackState (Committed, TentativelyConfirmed, Unknown),
-                                                           TxOutState (..), TxValidity (TxValid), chainConstant)
-import           Plutus.Contract.State                    (ContractResponse (..))
-import           Plutus.Contracts.Currency                (OneShotCurrency, SimpleMPS (..))
-import qualified Plutus.Contracts.GameStateMachine        as Contracts.GameStateMachine
-import           Plutus.Contracts.PingPong                (PingPongState (..))
-import           Plutus.PAB.Core                          as Core
-import           Plutus.PAB.Core.ContractInstance         (ContractInstanceMsg)
-import           Plutus.PAB.Core.ContractInstance.STM     (BlockchainEnv (..))
-import qualified Plutus.PAB.Core.ContractInstance.STM     as STM
-import           Plutus.PAB.Effects.Contract              (ContractEffect, serialisableState)
-import           Plutus.PAB.Effects.Contract.Builtin      (Builtin)
-import qualified Plutus.PAB.Effects.Contract.Builtin      as Builtin
-import           Plutus.PAB.Effects.Contract.ContractTest (TestContracts (..))
-import           Plutus.PAB.Events.ContractInstanceState  (PartiallyDecodedResponse)
-import           Plutus.PAB.Simulator                     (Simulation, TxCounts (..))
-import qualified Plutus.PAB.Simulator                     as Simulator
-import qualified Plutus.PAB.Simulator.Test                as Simulator
-import           Plutus.PAB.Types                         (PABError (..), chainOverviewBlockchain, mkChainOverview)
-import qualified Plutus.PAB.Webserver.WebSocket           as WS
-import           PlutusTx.Monoid                          (Group (inv))
-import           Test.QuickCheck.Instances.UUID           ()
-import           Test.Tasty                               (TestTree, defaultMain, testGroup)
-import           Test.Tasty.HUnit                         (testCase)
-import           Wallet.API                               (WalletAPIError, ownPubKeyHash)
-import qualified Wallet.API                               as WAPI
-import qualified Wallet.Emulator.Chain                    as Chain
-import           Wallet.Emulator.Wallet                   (Wallet, knownWallet, knownWallets)
-import           Wallet.Rollup                            (doAnnotateBlockchain)
-import           Wallet.Rollup.Types                      (DereferencedInput, dereferencedInputs, isFound)
-import           Wallet.Types                             (ContractInstanceId)
+import Control.Concurrent.STM qualified as STM
+import Data.Aeson.Types qualified as JSON
+import Data.Either (isRight)
+import Data.Map qualified as Map
+import Data.Maybe (isJust)
+import Data.Monoid qualified as M
+import Data.Proxy (Proxy (Proxy))
+import Data.Semigroup (Last (Last))
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Extras (tshow)
+import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxId, getCardanoTxOutRefs, pubKeyAddress, pubKeyHash,
+               pubKeyHashAddress, toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs, txOutputs)
+import Ledger qualified
+import Ledger.Ada (adaSymbol, adaToken, lovelaceValueOf)
+import Ledger.Ada qualified as Ada
+import Ledger.AddressMap qualified as AM
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Value (valueOf)
+import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown),
+                          TxOutState (Spent, Unspent), TxValidity (TxValid), chainConstant)
+import Plutus.Contract.State (ContractResponse (ContractResponse, hooks))
+import Plutus.Contracts.Currency (OneShotCurrency, SimpleMPS (SimpleMPS, amount, tokenName))
+import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
+import Plutus.Contracts.PingPong (PingPongState (Pinged, Ponged))
+import Plutus.PAB.Core qualified as Core
+import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg)
+import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv)
+import Plutus.PAB.Core.ContractInstance.STM qualified as STM
+import Plutus.PAB.Effects.Contract (ContractEffect, serialisableState)
+import Plutus.PAB.Effects.Contract.Builtin (Builtin)
+import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
+import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (Currency, GameStateMachine, PingPong))
+import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
+import Plutus.PAB.Simulator (Simulation, TxCounts)
+import Plutus.PAB.Simulator qualified as Simulator
+import Plutus.PAB.Simulator.Test qualified as Simulator
+import Plutus.PAB.Types (PABError (OtherError), chainOverviewBlockchain, mkChainOverview)
+import Plutus.PAB.Webserver.WebSocket qualified as WS
+import PlutusTx.Monoid (Group (inv))
+import Test.QuickCheck.Instances.UUID ()
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.HUnit (testCase)
+import Wallet.API (WalletAPIError, ownPaymentPubKeyHash)
+import Wallet.API qualified as WAPI
+import Wallet.Emulator.Chain qualified as Chain
+import Wallet.Emulator.Wallet (Wallet, knownWallet, knownWallets)
+import Wallet.Emulator.Wallet qualified as Wallet
+import Wallet.Rollup (doAnnotateBlockchain)
+import Wallet.Rollup.Types (DereferencedInput, dereferencedInputs, isFound)
+import Wallet.Types (ContractInstanceId)
 
 tests :: TestTree
 tests =
@@ -102,8 +102,8 @@ runScenario sim = do
 defaultWallet :: Wallet
 defaultWallet = knownWallet 1
 
-defaultWalletPubKeyHash :: PubKeyHash
-defaultWalletPubKeyHash = CW.pubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 1)
+defaultWalletPaymentPubKeyHash :: PaymentPubKeyHash
+defaultWalletPaymentPubKeyHash = CW.paymentPubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 1)
 
 activateContractTests :: TestTree
 activateContractTests =
@@ -182,7 +182,7 @@ waitForTxStatusChangeTest = runScenario $ do
   -- for a status change.
   (w1, pk1) <- Simulator.addWallet
   Simulator.waitNSlots 1
-  tx <- Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 100_000_000)
+  tx <- Simulator.payToPaymentPublicKeyHash w1 pk1 (lovelaceValueOf 100_000_000)
   txStatus <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 1"
               (TentativelyConfirmed 1 TxValid ())
@@ -190,7 +190,7 @@ waitForTxStatusChangeTest = runScenario $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  void $ Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 1_000_000)
+  void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
   Simulator.waitNSlots 1
   txStatus' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
   assertEqual "tx should be tentatively confirmed of depth 2"
@@ -200,7 +200,7 @@ waitForTxStatusChangeTest = runScenario $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ (n - 1) $ do
-    void $ Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 1_000_000)
+    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
     Simulator.waitNSlots 1
 
   txStatus'' <- Simulator.waitForTxStatusChange (getCardanoTxId tx)
@@ -218,12 +218,18 @@ waitForTxOutStatusChangeTest = runScenario $ do
   Simulator.waitNSlots 1
   (w2, pk2) <- Simulator.addWallet
   Simulator.waitNSlots 1
-  tx <- Simulator.payToPublicKeyHash w1 pk2 (lovelaceValueOf 100_000_000)
+  tx <- Simulator.payToPaymentPublicKeyHash w1 pk2 (lovelaceValueOf 100_000_000)
   -- We should have 2 UTxOs present.
   -- We find the 'TxOutRef' from wallet 1
-  let txOutRef1 = head $ fmap snd $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just pk1) $ getCardanoTxOutRefs tx
+  let txOutRef1 = head
+                $ fmap snd
+                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk1))
+                $ getCardanoTxOutRefs tx
   -- We find the 'TxOutRef' from wallet 2
-  let txOutRef2 = head $ fmap snd $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just pk2) $ getCardanoTxOutRefs tx
+  let txOutRef2 = head
+                $ fmap snd
+                $ filter (\(txOut, txOutref) -> toPubKeyHash (txOutAddress txOut) == Just (unPaymentPubKeyHash pk2))
+                $ getCardanoTxOutRefs tx
   txOutStatus1 <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
               (TentativelyConfirmed 1 TxValid Unspent)
@@ -235,7 +241,7 @@ waitForTxOutStatusChangeTest = runScenario $ do
 
   -- We create a new transaction to trigger a block creation in order to
   -- increment the block number.
-  tx2 <- Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 1_000_000)
+  tx2 <- Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
   Simulator.waitNSlots 1
   txOutStatus1' <- Simulator.waitForTxOutStatusChange txOutRef1
   assertEqual "tx output 1 should be tentatively confirmed of depth 1"
@@ -249,7 +255,7 @@ waitForTxOutStatusChangeTest = runScenario $ do
   -- We create `n` more blocks to test whether the tx status is committed.
   let (Depth n) = chainConstant
   replicateM_ n $ do
-    void $ Simulator.payToPublicKeyHash w1 pk1 (lovelaceValueOf 1_000_000)
+    void $ Simulator.payToPaymentPublicKeyHash w1 pk1 (Ada.toValue Ledger.minAdaTxOut)
     Simulator.waitNSlots 1
 
   txOutStatus1'' <- Simulator.waitForTxOutStatusChange txOutRef1
@@ -264,15 +270,15 @@ waitForTxOutStatusChangeTest = runScenario $ do
 valueAtTest :: IO ()
 valueAtTest = runScenario $ do
     let initialBalance = lovelaceValueOf 100_000_000_000
-        payment = lovelaceValueOf 50
+        payment = lovelaceValueOf 50_000_000
         fee     = lovelaceValueOf 10 -- TODO: Calculate the fee from the tx
 
     initialValue <- Core.valueAt defaultWallet
 
     let mockWallet = knownWallet 2
-        mockWalletPubKeyHash = CW.pubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 2)
+        mockWalletPubKeyHash = CW.paymentPubKeyHash (CW.fromWalletNumber $ CW.WalletNumber 2)
 
-    tx <- Simulator.payToPublicKeyHash defaultWallet mockWalletPubKeyHash payment
+    tx <- Simulator.payToPaymentPublicKeyHash defaultWallet mockWalletPubKeyHash payment
     -- Waiting for the tx to be confirmed
     void $ Core.waitForTxStatusChange $ getCardanoTxId tx
     finalValue <- Core.valueAt defaultWallet
@@ -324,18 +330,20 @@ guessingGameTest =
     testCase "Guessing Game" $
           runScenario $ do
               let openingBalance = 100_000_000_000
-                  lockAmount = 15
-                  pubKeyHashFundsChange msg delta = do
-                        address <- pubKeyHashAddress <$> Simulator.handleAgentThread defaultWallet ownPubKeyHash
+                  lockAmount = 15_000_000
+                  pubKeyHashFundsChange cid msg delta = do
+                        address <- pubKeyHashAddress <$> Simulator.handleAgentThread defaultWallet (Just cid) ownPaymentPubKeyHash
+                                                     <*> pure Nothing
                         balance <- Simulator.valueAt address
                         fees <- Simulator.walletFees defaultWallet
                         assertEqual msg
                             (openingBalance + delta)
                             (valueOf (balance <> fees) adaSymbol adaToken)
-              initialTxCounts <- Simulator.txCounts
-              pubKeyHashFundsChange "Check our opening balance." 0
-              -- need to add contract address to wallet's watched addresses
+
               instanceId <- Simulator.activateContract defaultWallet GameStateMachine
+
+              initialTxCounts <- Simulator.txCounts
+              pubKeyHashFundsChange instanceId "Check our opening balance." 0
 
               assertTxCounts
                   "Activating the game does not generate transactions."
@@ -350,7 +358,7 @@ guessingGameTest =
               assertTxCounts
                   "Locking the game state machine should produce two transactions"
                   (initialTxCounts & Simulator.txValidated +~ 2)
-              pubKeyHashFundsChange "Locking the game should reduce our balance." (negate lockAmount)
+              pubKeyHashFundsChange instanceId "Locking the game should reduce our balance." (negate lockAmount)
               game1Id <- Simulator.activateContract defaultWallet GameStateMachine
 
               guess
@@ -378,7 +386,7 @@ guessingGameTest =
               assertTxCounts
                 "A correct guess creates a third transaction."
                 (initialTxCounts & Simulator.txValidated +~ 3)
-              pubKeyHashFundsChange "The wallet should now have its money back." 0
+              pubKeyHashFundsChange instanceId "The wallet should now have its money back." 0
               blocks <- Simulator.blockchain
               assertBool
                   "We have some confirmed blocks in this test."

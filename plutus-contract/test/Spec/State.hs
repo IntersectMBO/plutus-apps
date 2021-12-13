@@ -8,19 +8,19 @@
 {-# LANGUAGE TypeOperators       #-}
 module Spec.State where
 
-import           Control.Monad.Freer        (Eff, run)
-import           Control.Monad.Freer.Extras (raiseEnd)
-import           Control.Monad.Freer.State
-import           Data.Foldable              (foldl')
-import qualified Data.Map                   as Map
-import           Data.Maybe                 (isJust)
-import           Test.Tasty
-import qualified Test.Tasty.HUnit           as HUnit
+import Control.Monad.Freer (Eff, run)
+import Control.Monad.Freer.Extras (raiseEnd)
+import Control.Monad.Freer.State
+import Data.Foldable (foldl')
+import Data.Map qualified as Map
+import Data.Maybe (isJust)
+import Test.Tasty
+import Test.Tasty.HUnit qualified as HUnit
 
-import           Plutus.Contract.Resumable  (IterationID (..), MultiRequestContStatus, Request (..), RequestID (..),
-                                             Requests (..), Response (..), Responses (..), Resumable, prompt, select)
-import qualified Plutus.Contract.Resumable  as S
-import           Plutus.Contract.Util       (loopM)
+import Plutus.Contract.Resumable (IterationID (..), MultiRequestContStatus, Request (..), RequestID (..), Requests (..),
+                                  Response (..), Responses (..), Resumable, prompt, select)
+import Plutus.Contract.Resumable qualified as S
+import Plutus.Contract.Util (loopM)
 
 runResumableTest ::
     forall i o a.

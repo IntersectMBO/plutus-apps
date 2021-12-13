@@ -13,7 +13,9 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE ViewPatterns          #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
-{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:debug-context #-}
+{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
+-- You need to use all of these to get coverage
+
 -- | A guessing game that
 --
 --   * Uses a state machine to keep track of the current secret word
@@ -30,30 +32,35 @@ module Plutus.Contracts.GameStateMachine(
     , GuessArgs(..)
     , GameStateMachineSchema, GameError
     , token
+    , covIdx
     ) where
 
-import           Control.Lens                 (makeClassyPrisms)
-import           Control.Monad                (void)
-import           Data.Aeson                   (FromJSON, ToJSON)
-import           GHC.Generics                 (Generic)
-import           Ledger                       hiding (to)
-import           Ledger.Constraints           (TxConstraints)
-import qualified Ledger.Constraints           as Constraints
-import qualified Ledger.Typed.Scripts         as Scripts
-import qualified Ledger.Value                 as V
-import qualified PlutusTx
-import           PlutusTx.Prelude             hiding (Applicative (..), check)
-import           Schema                       (ToArgument, ToSchema)
+import Control.Lens (makeClassyPrisms)
+import Control.Monad (void)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger hiding (to)
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints (TxConstraints)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value qualified as V
+import PlutusTx qualified
+import PlutusTx.Code
+import PlutusTx.Coverage
+import PlutusTx.Prelude hiding (Applicative (..), check)
+import Schema (ToArgument, ToSchema)
 
-import qualified Data.ByteString.Char8        as C
+import Data.ByteString.Char8 qualified as C
 
-import           Plutus.Contract.StateMachine (State (..), Void)
-import qualified Plutus.Contract.StateMachine as SM
+import Plutus.Contract.StateMachine (State (..), Void)
+import Plutus.Contract.StateMachine qualified as SM
 
-import           Plutus.Contract
-import           Plutus.Contract.Secrets
+import Plutus.Contract
+import Plutus.Contract.Secrets
 
-import qualified Prelude                      as Haskell
+import Prelude qualified as Haskell
+
 
 newtype HashedString = HashedString BuiltinByteString
     deriving newtype (Eq, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
@@ -129,6 +136,8 @@ data GameState =
     | Locked MintingPolicyHash TokenName HashedString
     -- ^ Funds have been locked. In this state only the 'Guess' action is
     --   allowed.
+    | Finished
+    -- ^ All funds were unlocked.
     deriving stock (Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -141,7 +150,7 @@ instance Eq GameState where
 -- | Check whether a 'ClearString' is the preimage of a
 --   'HashedString'
 checkGuess :: HashedString -> ClearString -> Bool
-checkGuess (HashedString actual) (ClearString gss) = actual == (sha2_256 gss)
+checkGuess (HashedString actual) (ClearString gss) = actual == sha2_256 gss
 
 -- | Inputs (actions)
 data GameInput =
@@ -166,13 +175,16 @@ transition State{stateData=oldData, stateValue=oldValue} input = case (oldData, 
              )
     (Locked mph tn currentSecret, Guess theGuess nextSecret takenOut)
         | checkGuess currentSecret theGuess ->
-        let constraints = Constraints.mustSpendAtLeast (token mph tn) <> Constraints.mustMintCurrency mph tn 0 in
-        Just ( constraints
-             , State
-                { stateData = Locked mph tn nextSecret
-                , stateValue = oldValue - takenOut
-                }
-             )
+        let constraints = Constraints.mustSpendAtLeast (token mph tn) <> Constraints.mustMintCurrency mph tn 0
+            newValue = oldValue - takenOut
+         in Just ( constraints
+                 , State
+                    { stateData = if V.isZero (Ada.toValue $ Ada.fromValue newValue)
+                                     then Finished
+                                     else Locked mph tn nextSecret
+                    , stateValue = newValue
+                    }
+                 )
     _ -> Nothing
 
 type GameStateMachine = SM.StateMachine GameState GameInput
@@ -180,7 +192,8 @@ type GameStateMachine = SM.StateMachine GameState GameInput
 {-# INLINABLE machine #-}
 machine :: GameStateMachine
 machine = SM.mkStateMachine Nothing transition isFinal where
-    isFinal _ = False
+    isFinal Finished = True
+    isFinal _        = False
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Scripts.ValidatorType GameStateMachine
@@ -192,6 +205,11 @@ typedValidator = Scripts.mkTypedValidator @GameStateMachine
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.wrapValidator
+
+-- TODO: Ideas welcome for how to make this interface suck less.
+-- Doing it this way actually generates coverage locations that we don't care about(!)
+covIdx :: CoverageIndex
+covIdx = getCovIdx $$(PlutusTx.compile [|| mkValidator ||])
 
 mintingPolicy :: Scripts.MintingPolicy
 mintingPolicy = Scripts.forwardingMintingPolicy typedValidator

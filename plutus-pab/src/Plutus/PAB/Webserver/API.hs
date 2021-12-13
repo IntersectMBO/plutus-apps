@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# LANGUAGE TypeOperators      #-}
@@ -11,18 +10,18 @@ module Plutus.PAB.Webserver.API
     , SwaggerAPI
     ) where
 
-import qualified Cardano.Wallet.Mock.API    as Wallet
-import qualified Data.Aeson                 as JSON
-import           Data.Text                  (Text)
-import           Plutus.PAB.Webserver.Types (ContractActivationArgs, ContractInstanceClientState,
-                                             ContractSignatureResponse, FullReport)
-import           Servant.API                (Capture, Description, Get, JSON, Post, Put, QueryParam, ReqBody, (:<|>),
-                                             (:>))
-import           Servant.API.WebSocket      (WebSocketPending)
-import           Servant.Swagger.UI         (SwaggerSchemaUI)
-import           Wallet.Types               (ContractInstanceId)
+import Cardano.Wallet.Mock.API qualified as Wallet
+import Data.Aeson qualified as JSON
+import Data.Text (Text)
+import Plutus.PAB.Webserver.Types (ContractActivationArgs, ContractInstanceClientState, ContractSignatureResponse,
+                                   FullReport)
+import Servant.API (Capture, Description, Get, JSON, Post, Put, QueryParam, ReqBody, (:<|>), (:>))
+import Servant.API.WebSocket (WebSocketPending)
+import Servant.Swagger.UI (SwaggerSchemaUI)
+import Wallet.Types (ContractInstanceId)
 
-type WalletProxy walletId = "wallet" :> (Wallet.API walletId)
+-- TODO: This wallet proxy will be eventually removed. See SCP-3096.
+type WalletProxy walletId = "wallet" :> Wallet.API walletId
 
 type WSAPI =
     "ws" :>

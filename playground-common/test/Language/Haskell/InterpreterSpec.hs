@@ -4,10 +4,10 @@ module Language.Haskell.InterpreterSpec
     ( tests
     ) where
 
-import           Language.Haskell.Interpreter (CompilationError (CompilationError, RawError), column, filename,
-                                               parseErrorText, row, text)
-import           Test.Tasty                   (TestTree, testGroup)
-import           Test.Tasty.HUnit             (assertEqual, testCase)
+import Language.Haskell.Interpreter (CompilationError (CompilationError, RawError), column, filename, parseErrorText,
+                                     row, text)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertEqual, testCase)
 
 tests :: TestTree
 tests = testGroup "Language.Haskell.InterpreterSpec" [parseErrorTextSpec]

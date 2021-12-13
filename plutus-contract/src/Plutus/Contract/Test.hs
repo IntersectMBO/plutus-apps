@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE RankNTypes           #-}
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -58,6 +59,7 @@ module Plutus.Contract.Test(
     , checkPredicateGen
     , checkPredicateGenOptions
     , checkPredicateInner
+    , checkPredicateInnerStream
     , checkEmulatorFails
     , CheckOptions
     , defaultCheckOptions
@@ -67,72 +69,69 @@ module Plutus.Contract.Test(
     , goldenPir
     ) where
 
-import           Control.Applicative                   (liftA2)
-import           Control.Arrow                         ((>>>))
-import           Control.Foldl                         (FoldM)
-import qualified Control.Foldl                         as L
-import           Control.Lens                          (at, makeLenses, preview, to, (&), (.~), (^.))
-import           Control.Monad                         (unless)
-import           Control.Monad.Freer                   (Eff, reinterpret, runM, sendM)
-import           Control.Monad.Freer.Error             (Error, runError)
-import           Control.Monad.Freer.Extras.Log        (LogLevel (..), LogMessage (..))
-import           Control.Monad.Freer.Reader
-import           Control.Monad.Freer.Writer            (Writer (..), tell)
-import           Control.Monad.IO.Class                (MonadIO (liftIO))
-import           Data.Default                          (Default (..))
-import           Data.Foldable                         (fold, traverse_)
-import qualified Data.Map                              as M
-import           Data.Maybe                            (fromJust, mapMaybe)
-import           Data.Proxy                            (Proxy (..))
-import           Data.String                           (IsString (..))
-import qualified Data.Text                             as Text
-import           Data.Text.Prettyprint.Doc
-import           Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
-import           Data.Void
-import           GHC.TypeLits                          (KnownSymbol, Symbol, symbolVal)
-import           Plutus.Contract.Effects               (ActiveEndpoint (..), PABReq, PABResp)
+import Control.Applicative (liftA2)
+import Control.Arrow ((>>>))
+import Control.Foldl (FoldM)
+import Control.Foldl qualified as L
+import Control.Lens (at, makeLenses, preview, to, (&), (.~), (^.))
+import Control.Monad (unless)
+import Control.Monad.Freer (Eff, reinterpret, runM, sendM)
+import Control.Monad.Freer.Error (Error, runError)
+import Control.Monad.Freer.Extras.Log (LogLevel (..), LogMessage (..))
+import Control.Monad.Freer.Reader
+import Control.Monad.Freer.Writer (Writer (..), tell)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Default (Default (..))
+import Data.Foldable (fold, traverse_)
+import Data.Map qualified as M
+import Data.Maybe (fromJust, mapMaybe)
+import Data.Proxy (Proxy (..))
+import Data.String (IsString (..))
+import Data.Text qualified as Text
+import Data.Void
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq, PABResp)
+import Prettyprinter
+import Prettyprinter.Render.Text (renderStrict)
 
 
-import           Hedgehog                              (Property, forAll, property)
-import qualified Hedgehog
-import           Test.Tasty.Golden                     (goldenVsString)
-import qualified Test.Tasty.HUnit                      as HUnit
-import           Test.Tasty.Providers                  (TestTree)
+import Hedgehog (Property, forAll, property)
+import Hedgehog qualified
+import Test.Tasty.Golden (goldenVsString)
+import Test.Tasty.HUnit qualified as HUnit
+import Test.Tasty.Providers (TestTree)
 
-import qualified Ledger.Ada                            as Ada
-import           Ledger.Constraints.OffChain           (UnbalancedTx)
-import           Ledger.Tx                             (Tx)
-import qualified Plutus.Contract.Effects               as Requests
-import qualified Plutus.Contract.Request               as Request
-import           Plutus.Contract.Resumable             (Request (..), Response (..))
-import qualified Plutus.Contract.Resumable             as State
-import           Plutus.Contract.Types                 (Contract (..), IsContract (..), ResumableResult,
-                                                        shrinkResumableResult)
-import           PlutusTx                              (CompiledCode, FromData (..), getPir)
-import qualified PlutusTx.Prelude                      as P
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx (Tx)
+import Plutus.Contract.Effects qualified as Requests
+import Plutus.Contract.Request qualified as Request
+import Plutus.Contract.Resumable (Request (..), Response (..))
+import Plutus.Contract.Resumable qualified as State
+import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, shrinkResumableResult)
+import PlutusTx (CompiledCode, FromData (..), getPir)
+import PlutusTx.Prelude qualified as P
 
-import           Ledger                                (Validator)
-import qualified Ledger
-import           Ledger.Address                        (Address)
-import           Ledger.Generators                     (GeneratorModel, Mockchain (..))
-import qualified Ledger.Generators                     as Gen
-import           Ledger.Index                          (ScriptValidationEvent, ValidationError)
-import           Ledger.Slot                           (Slot)
-import           Ledger.Value                          (Value)
+import Ledger (Validator)
+import Ledger qualified
+import Ledger.Address (Address)
+import Ledger.Generators (GeneratorModel, Mockchain (..))
+import Ledger.Generators qualified as Gen
+import Ledger.Index (ScriptValidationEvent, ValidationError)
+import Ledger.Slot (Slot)
+import Ledger.Value (Value)
 
-import           Plutus.Contract.Trace                 as X
-import           Plutus.Trace.Emulator                 (EmulatorConfig (..), EmulatorTrace, runEmulatorStream)
-import           Plutus.Trace.Emulator.Types           (ContractConstraints, ContractInstanceLog,
-                                                        ContractInstanceState (..), ContractInstanceTag, UserThreadMsg)
-import qualified Streaming                             as S
-import qualified Streaming.Prelude                     as S
-import           Wallet.Emulator                       (EmulatorEvent, EmulatorTimeEvent)
-import           Wallet.Emulator.Chain                 (ChainEvent)
-import           Wallet.Emulator.Folds                 (EmulatorFoldErr (..), Outcome (..), describeError, postMapM)
-import qualified Wallet.Emulator.Folds                 as Folds
-import           Wallet.Emulator.Stream                (filterLogLevel, foldEmulatorStreamM, initialChainState,
-                                                        initialDist)
-
+import Plutus.Contract.Trace as X
+import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, runEmulatorStream)
+import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
+                                    ContractInstanceTag, UserThreadMsg)
+import Streaming qualified as S
+import Streaming.Prelude qualified as S
+import Wallet.Emulator (EmulatorEvent, EmulatorTimeEvent)
+import Wallet.Emulator.Chain (ChainEvent)
+import Wallet.Emulator.Folds (EmulatorFoldErr (..), Outcome (..), describeError, postMapM)
+import Wallet.Emulator.Folds qualified as Folds
+import Wallet.Emulator.Stream (filterLogLevel, foldEmulatorStreamM, initialChainState, initialDist)
 
 type TracePredicate = FoldM (Eff '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void)]) EmulatorEvent Bool
 
@@ -153,7 +152,7 @@ data CheckOptions =
     CheckOptions
         { _minLogLevel    :: LogLevel -- ^ Minimum log level for emulator log messages to be included in the test output (printed if the test fails)
         , _emulatorConfig :: EmulatorConfig
-        } deriving (Eq, Show)
+        }
 
 makeLenses ''CheckOptions
 
@@ -204,19 +203,28 @@ checkPredicateInner :: forall m.
     -> (String -> m ()) -- ^ Print out debug information in case of test failures
     -> (Bool -> m ()) -- ^ assert
     -> m ()
-checkPredicateInner CheckOptions{_minLogLevel, _emulatorConfig} predicate action annot assert = do
+checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action annot assert =
+    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action) annot assert
+
+checkPredicateInnerStream :: forall m.
+    Monad m
+    => CheckOptions
+    -> TracePredicate
+    -> (forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ())
+    -> (String -> m ()) -- ^ Print out debug information in case of test failures
+    -> (Bool -> m ()) -- ^ assert
+    -> m ()
+checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} predicate theStream annot assert = do
     let dist = _emulatorConfig ^. initialChainState . to initialDist
-        theStream :: forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ()
-        theStream = S.void $ runEmulatorStream _emulatorConfig action
-        consumeStream :: forall a. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff TestEffects) a -> Eff TestEffects (S.Of Bool a)
-        consumeStream = foldEmulatorStreamM @TestEffects predicate
+        consumedStream :: Eff TestEffects Bool
+        consumedStream = S.fst' <$> foldEmulatorStreamM @TestEffects predicate theStream
     result <- runM
                 $ reinterpret @(Writer (Doc Void)) @m  (\case { Tell d -> sendM $ annot $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
                 $ runError
                 $ runReader dist
-                $ consumeStream theStream
+                $ consumedStream
 
-    unless (fmap S.fst' result == Right True) $ do
+    unless (result == Right True) $ do
         annot "Test failed."
         annot "Emulator log:"
         S.mapM_ annot
@@ -231,7 +239,7 @@ checkPredicateInner CheckOptions{_minLogLevel, _emulatorConfig} predicate action
                 annot (describeError err)
                 annot (show err)
                 assert False
-            Right r -> assert $ S.fst' r
+            Right r -> assert r
 
 -- | A version of 'checkPredicateGen' with configurable 'CheckOptions'
 checkPredicateGenOptions ::

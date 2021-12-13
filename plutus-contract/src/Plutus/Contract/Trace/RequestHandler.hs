@@ -17,7 +17,7 @@ module Plutus.Contract.Trace.RequestHandler(
     , maybeToHandler
     , generalise
     -- * handlers for common requests
-    , handleOwnPubKeyHash
+    , handleOwnPaymentPubKeyHash
     , handleSlotNotifications
     , handleCurrentSlot
     , handleTimeNotifications
@@ -27,38 +27,40 @@ module Plutus.Contract.Trace.RequestHandler(
     , handlePendingTransactions
     , handleChainIndexQueries
     , handleOwnInstanceIdQueries
+    , handleYieldedUnbalancedTx
     ) where
 
-import           Control.Applicative            (Alternative (empty, (<|>)))
-import           Control.Arrow                  (Arrow, Kleisli (..))
-import           Control.Category               (Category)
-import           Control.Lens
-import           Control.Monad                  (foldM, guard, join)
-import           Control.Monad.Freer
-import qualified Control.Monad.Freer.Error      as Eff
-import           Control.Monad.Freer.NonDet     (NonDet)
-import qualified Control.Monad.Freer.NonDet     as NonDet
-import           Control.Monad.Freer.Reader     (Reader, ask)
-import           Data.Monoid                    (Alt (..), Ap (..))
-import           Data.Text                      (Text)
+import Control.Applicative (Alternative (empty, (<|>)))
+import Control.Arrow (Arrow, Kleisli (Kleisli))
+import Control.Category (Category)
+import Control.Lens (Prism', Profunctor, preview)
+import Control.Monad (foldM, guard, join)
+import Control.Monad.Freer (Eff, Member)
+import Control.Monad.Freer.Error qualified as Eff
+import Control.Monad.Freer.NonDet (NonDet)
+import Control.Monad.Freer.NonDet qualified as NonDet
+import Control.Monad.Freer.Reader (Reader, ask)
+import Data.Monoid (Alt (Alt), Ap (Ap))
+import Data.Text (Text)
 
-import           Plutus.Contract.Resumable      (Request (..), Response (..))
+import Plutus.Contract.Resumable (Request (Request, itID, rqID, rqRequest),
+                                  Response (Response, rspItID, rspResponse, rspRqID))
 
-import           Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
-import           Ledger                         (POSIXTime, POSIXTimeRange, PubKeyHash, Slot, SlotRange)
-import           Ledger.Constraints.OffChain    (UnbalancedTx)
-import qualified Ledger.TimeSlot                as TimeSlot
-import           Ledger.Tx                      (CardanoTx)
-import           Plutus.ChainIndex              (ChainIndexQueryEffect)
-import qualified Plutus.ChainIndex.Effects      as ChainIndexEff
-import           Plutus.Contract.Effects        (ChainIndexQuery (..), ChainIndexResponse (..))
-import qualified Plutus.Contract.Wallet         as Wallet
-import           Wallet.API                     (WalletAPIError)
-import           Wallet.Effects                 (NodeClientEffect, WalletEffect)
-import qualified Wallet.Effects
-import           Wallet.Emulator.LogMessages    (RequestHandlerLogMsg (..))
-import           Wallet.Types                   (ContractInstanceId)
-
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
+import Ledger (POSIXTime, POSIXTimeRange, PaymentPubKeyHash, Slot, SlotRange)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx (CardanoTx)
+import Plutus.ChainIndex (ChainIndexQueryEffect)
+import Plutus.ChainIndex.Effects qualified as ChainIndexEff
+import Plutus.Contract.Effects (ChainIndexQuery (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
+                                ChainIndexResponse (DatumHashResponse, GetTipResponse, MintingPolicyHashResponse, RedeemerHashResponse, StakeValidatorHashResponse, TxIdResponse, TxOutRefResponse, UtxoSetAtResponse, UtxoSetMembershipResponse, UtxoSetWithCurrencyResponse, ValidatorHashResponse))
+import Plutus.Contract.Wallet qualified as Wallet
+import Wallet.API (WalletAPIError)
+import Wallet.Effects (NodeClientEffect, WalletEffect)
+import Wallet.Effects qualified
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg (HandleTxFailed, SlotNoticationTargetVsCurrent))
+import Wallet.Types (ContractInstanceId)
 
 -- | Request handlers that can choose whether to handle an effect (using
 --   'Alternative'). This is useful if 'req' is a sum type.
@@ -110,15 +112,15 @@ maybeToHandler f = RequestHandler $ maybe empty pure . f
 
 -- handlers for common requests
 
-handleOwnPubKeyHash ::
+handleOwnPaymentPubKeyHash ::
     forall a effs.
     ( Member WalletEffect effs
     , Member (LogObserve (LogMessage Text)) effs
     )
-    => RequestHandler effs a PubKeyHash
-handleOwnPubKeyHash =
+    => RequestHandler effs a PaymentPubKeyHash
+handleOwnPaymentPubKeyHash =
     RequestHandler $ \_ ->
-        surroundDebug @Text "handleOwnPubKeyHash" Wallet.Effects.ownPubKeyHash
+        surroundDebug @Text "handleOwnPaymentPubKeyHash" Wallet.Effects.ownPaymentPubKeyHash
 
 handleSlotNotifications ::
     forall effs.
@@ -241,3 +243,14 @@ handleOwnInstanceIdQueries ::
     => RequestHandler effs a ContractInstanceId
 handleOwnInstanceIdQueries = RequestHandler $ \_ ->
     surroundDebug @Text "handleOwnInstanceIdQueries" ask
+
+handleYieldedUnbalancedTx ::
+    forall effs.
+    ( Member WalletEffect effs
+    , Member (LogObserve (LogMessage Text)) effs
+    )
+    => RequestHandler effs UnbalancedTx ()
+handleYieldedUnbalancedTx =
+    RequestHandler $ \utx ->
+        surroundDebug @Text "handleYieldedUnbalancedTx" $ do
+            Wallet.yieldUnbalancedTx utx

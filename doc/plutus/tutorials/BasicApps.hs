@@ -16,27 +16,29 @@ module BasicApps where
 
 -- BLOCK0
 
-import           Control.Monad          (void)
-import           Data.Aeson             (FromJSON, ToJSON)
-import qualified Data.Text              as T
-import           GHC.Generics           (Generic)
-import           Ledger
-import qualified Ledger.Ada             as Ada
-import qualified Ledger.Constraints     as Constraints
-import qualified Ledger.Typed.Scripts   as Scripts
-import           Plutus.Contract
-import qualified PlutusTx               as PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude                as Haskell
-import           Schema
-import           Wallet.Emulator.Wallet
+import Control.Monad (void)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Text qualified as T
+import GHC.Generics (Generic)
+import Ledger (Ada, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (ScriptContext, scriptContextTxInfo),
+               valuePaidTo)
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
+import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Contract (Contract, Endpoint, Promise, collectFromScript, endpoint, logInfo, selectList,
+                        submitTxConstraints, submitTxConstraintsSpending, type (.\/), utxosAt)
+import PlutusTx qualified
+import PlutusTx.Prelude (Bool, Semigroup ((<>)), ($), (&&), (-), (.), (>=))
+import Prelude qualified as Haskell
+import Schema (ToSchema)
+import Wallet.Emulator.Wallet (Wallet, mockWalletPaymentPubKeyHash)
 
 -- BLOCK1
 
 data SplitData =
     SplitData
-        { recipient1 :: PubKeyHash -- ^ First recipient of the funds
-        , recipient2 :: PubKeyHash -- ^ Second recipient of the funds
+        { recipient1 :: PaymentPubKeyHash -- ^ First recipient of the funds
+        , recipient2 :: PaymentPubKeyHash -- ^ Second recipient of the funds
         , amount     :: Ada -- ^ How much Ada we want to lock
         }
     deriving stock (Haskell.Show, Generic)
@@ -50,8 +52,8 @@ PlutusTx.makeLift ''SplitData
 validateSplit :: SplitData -> () -> ScriptContext -> Bool
 validateSplit SplitData{recipient1, recipient2, amount} _ ScriptContext{scriptContextTxInfo} =
     let half = Ada.divide amount 2 in
-    Ada.fromValue (valuePaidTo scriptContextTxInfo recipient1) >= half &&
-    Ada.fromValue (valuePaidTo scriptContextTxInfo recipient2) >= (amount - half)
+    Ada.fromValue (valuePaidTo scriptContextTxInfo (unPaymentPubKeyHash recipient1)) >= half &&
+    Ada.fromValue (valuePaidTo scriptContextTxInfo (unPaymentPubKeyHash recipient2)) >= (amount - half)
 
 -- BLOCK3
 
@@ -94,8 +96,8 @@ unlock = endpoint @"unlock" (unlockFunds . mkSplitData)
 mkSplitData :: LockArgs -> SplitData
 mkSplitData LockArgs{recipient1Wallet, recipient2Wallet, totalAda} =
     SplitData
-        { recipient1 = walletPubKeyHash recipient1Wallet
-        , recipient2 = walletPubKeyHash recipient2Wallet
+        { recipient1 = mockWalletPaymentPubKeyHash recipient1Wallet
+        , recipient2 = mockWalletPaymentPubKeyHash recipient2Wallet
         , amount = totalAda
         }
 

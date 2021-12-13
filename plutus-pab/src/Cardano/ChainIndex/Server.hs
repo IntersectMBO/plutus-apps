@@ -12,23 +12,23 @@ module Cardano.ChainIndex.Server(
     , ChainIndexServerMsg
     ) where
 
-import           Control.Concurrent.STM              (TVar)
-import qualified Control.Concurrent.STM              as STM
-import           Control.Monad.Freer.Extras.Log
-import           Servant.Client                      (BaseUrl (baseUrlPort))
+import Control.Concurrent.STM (TVar)
+import Control.Concurrent.STM qualified as STM
+import Control.Monad.Freer.Extras.Log
+import Servant.Client (BaseUrl (baseUrlPort))
 
-import           Data.Coerce                         (coerce)
-import           Plutus.PAB.Monitoring.Util          (runLogEffects)
+import Data.Coerce (coerce)
+import Plutus.PAB.Monitoring.Util (runLogEffects)
 
-import           Cardano.ChainIndex.ChainIndex       (processChainIndexEffects, syncState)
-import           Control.Monad.IO.Class              (MonadIO (..))
-import           Ledger.Blockchain                   (Block)
-import           Ledger.TimeSlot                     (SlotConfig)
+import Cardano.ChainIndex.ChainIndex (processChainIndexEffects, syncState)
+import Control.Monad.IO.Class (MonadIO (..))
+import Ledger.Blockchain (Block)
+import Ledger.TimeSlot (SlotConfig)
 
-import           Cardano.ChainIndex.Types
-import           Cardano.Protocol.Socket.Mock.Client (runChainSync)
-import           Ledger.Slot                         (Slot (..))
-import           Plutus.ChainIndex.Emulator          (ChainIndexEmulatorState, serveChainIndexQueryServer)
+import Cardano.ChainIndex.Types
+import Cardano.Protocol.Socket.Mock.Client (runChainSync)
+import Ledger.Slot (Slot (..))
+import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, serveChainIndexQueryServer)
 
 -- $chainIndex
 -- The PAB chain index that keeps track of transaction data (UTXO set enriched

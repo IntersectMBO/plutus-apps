@@ -31,6 +31,7 @@ module Plutus.Contracts.Crowdfunding (
     , theCampaign
     -- * Functionality for campaign contributors
     , contribute
+    , Contribution(..)
     -- * Functionality for campaign owners
     , scheduleCollection
     , campaignAddress
@@ -47,36 +48,35 @@ module Plutus.Contracts.Crowdfunding (
     , successfulCampaign
     ) where
 
-import           Control.Applicative                  (Applicative (..))
-import           Control.Monad                        (void)
-import           Data.Aeson                           (FromJSON, ToJSON)
-import           Data.Text                            (Text)
-import qualified Data.Text                            as Text
-import           GHC.Generics                         (Generic)
+import Control.Applicative (Applicative (..))
+import Control.Monad (void)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import GHC.Generics (Generic)
 
-import           Ledger                               (POSIXTime, POSIXTimeRange, PubKeyHash, Validator, getCardanoTxId)
-import qualified Ledger
-import qualified Ledger.Ada                           as Ada
-import qualified Ledger.Constraints                   as Constraints
-import           Ledger.Contexts                      as V
-import qualified Ledger.Interval                      as Interval
-import qualified Ledger.Scripts                       as Scripts
-import qualified Ledger.TimeSlot                      as TimeSlot
-import qualified Ledger.Typed.Scripts                 as Scripts hiding (validatorHash)
-import           Ledger.Value                         (Value)
-import           Plutus.Contract
-import qualified Plutus.Contract.Typed.Tx             as Typed
-import           Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
-import           Plutus.Trace.Emulator                (ContractHandle, EmulatorTrace)
-import qualified Plutus.Trace.Emulator                as Trace
-import qualified PlutusTx
-import           PlutusTx.Prelude                     hiding (Applicative (..), Semigroup (..), return, (<$>), (>>),
-                                                       (>>=))
-import           Prelude                              (Semigroup (..), (<$>))
-import qualified Prelude                              as Haskell
-import           Schema                               (ToArgument, ToSchema)
-import           Wallet.Emulator                      (Wallet (..), knownWallet)
-import qualified Wallet.Emulator                      as Emulator
+import Ledger (POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), Validator, getCardanoTxId)
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts as V
+import Ledger.Interval qualified as Interval
+import Ledger.Scripts qualified as Scripts
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
+import Ledger.Value (Value)
+import Plutus.Contract
+import Plutus.Contract.Typed.Tx qualified as Typed
+import Plutus.Trace.Effects.EmulatorControl (getSlotConfig)
+import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
+import Prelude (Semigroup (..), (<$>), (>>=))
+import Prelude qualified as Haskell
+import Schema (ToArgument, ToSchema)
+import Wallet.Emulator (Wallet (..), knownWallet)
+import Wallet.Emulator qualified as Emulator
 
 -- | A crowdfunding campaign.
 data Campaign = Campaign
@@ -84,10 +84,10 @@ data Campaign = Campaign
     -- ^ The date by which the campaign funds can be contributed.
     , campaignCollectionDeadline :: POSIXTime
     -- ^ The date by which the campaign owner has to collect the funds
-    , campaignOwner              :: PubKeyHash
+    , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
     --   funds if the campaign is successful.
-    } deriving (Generic, ToJSON, FromJSON, ToSchema)
+    } deriving (Generic, ToJSON, FromJSON, ToSchema, Haskell.Show)
 
 PlutusTx.makeLift ''Campaign
 
@@ -117,7 +117,7 @@ mkCampaign ddl collectionDdl ownerWallet =
     Campaign
         { campaignDeadline = ddl
         , campaignCollectionDeadline = collectionDdl
-        , campaignOwner = Emulator.walletPubKeyHash ownerWallet
+        , campaignOwner = Emulator.mockWalletPaymentPubKeyHash ownerWallet
         }
 
 -- | The 'POSIXTimeRange' during which the funds can be collected
@@ -135,7 +135,7 @@ refundRange cmp =
 data Crowdfunding
 instance Scripts.ValidatorTypes Crowdfunding where
     type instance RedeemerType Crowdfunding = CampaignAction
-    type instance DatumType Crowdfunding = PubKeyHash
+    type instance DatumType Crowdfunding = PaymentPubKeyHash
 
 typedValidator :: Campaign -> Scripts.TypedValidator Crowdfunding
 typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
@@ -145,12 +145,12 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
         wrap = Scripts.wrapValidator
 
 {-# INLINABLE validRefund #-}
-validRefund :: Campaign -> PubKeyHash -> TxInfo -> Bool
+validRefund :: Campaign -> PaymentPubKeyHash -> TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
-    refundRange campaign `Interval.contains ` txInfoValidRange txinfo
+    refundRange campaign `Interval.contains` txInfoValidRange txinfo
     -- Check that the transaction is signed by the contributor
-    && (txinfo `V.txSignedBy` contributor)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash contributor)
 
 {-# INLINABLE validCollection #-}
 validCollection :: Campaign -> TxInfo -> Bool
@@ -158,7 +158,7 @@ validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
     (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `V.txSignedBy` campaignOwner campaign)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 {-# INLINABLE mkValidator #-}
 -- | The validator script is of type 'CrowdfundingValidator', and is
@@ -168,7 +168,7 @@ validCollection campaign txinfo =
 -- and different campaigns have different addresses. The Campaign{..} syntax
 -- means that all fields of the 'Campaign' value are in scope
 -- (for example 'campaignDeadline' in l. 70).
-mkValidator :: Campaign -> PubKeyHash -> CampaignAction -> ScriptContext -> Bool
+mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> ScriptContext -> Bool
 mkValidator c con act ScriptContext{scriptContextTxInfo} = case act of
     -- the "refund" branch
     Refund  -> validRefund c con scriptContextTxInfo
@@ -194,7 +194,7 @@ theCampaign :: POSIXTime -> Campaign
 theCampaign startTime = Campaign
     { campaignDeadline = startTime + 20000
     , campaignCollectionDeadline = startTime + 30000
-    , campaignOwner = Emulator.walletPubKeyHash (knownWallet 1)
+    , campaignOwner = Emulator.mockWalletPaymentPubKeyHash (knownWallet 1)
     }
 
 -- | The "contribute" branch of the contract for a specific 'Campaign'. Exposes
@@ -204,11 +204,12 @@ theCampaign startTime = Campaign
 contribute :: Campaign -> Promise () CrowdfundingSchema ContractError ()
 contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
-    contributor <- ownPubKeyHash
+    contributor <- ownPaymentPubKeyHash
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId (submitTxConstraints inst tx)
+    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) $ campaignCollectionDeadline cmp
 
@@ -223,7 +224,9 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     if Constraints.modifiesUtxoSet tx'
     then do
         logInfo @Text "Claiming refund"
-        void (submitTxConstraintsSpending inst utxo tx')
+        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+                             <> Constraints.unspentOutputs utxo) tx'
+            >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
     else pure ()
 
 -- | The campaign owner's branch of the contract for a given 'Campaign'. It
@@ -245,7 +248,9 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
             <> Constraints.mustValidateIn (collectionRange cmp)
 
     logInfo @Text "Collecting funds"
-    void $ submitTxConstraintsSpending inst unspentOutputs tx
+    void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+                         <> Constraints.unspentOutputs unspentOutputs) tx
+        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 -- | Call the "schedule collection" endpoint and instruct the campaign owner's
 --   wallet (wallet 1) to start watching the campaign address.
@@ -267,7 +272,7 @@ makeContribution w v = do
 successfulCampaign :: EmulatorTrace ()
 successfulCampaign = do
     _ <- startCampaign
-    makeContribution (knownWallet 2) (Ada.lovelaceValueOf 100)
-    makeContribution (knownWallet 3) (Ada.lovelaceValueOf 100)
-    makeContribution (knownWallet 4) (Ada.lovelaceValueOf 25)
+    makeContribution (knownWallet 2) (Ada.adaValueOf 10)
+    makeContribution (knownWallet 3) (Ada.adaValueOf 10)
+    makeContribution (knownWallet 4) (Ada.adaValueOf 2.5)
     void $ Trace.waitUntilSlot 21

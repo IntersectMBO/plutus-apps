@@ -46,7 +46,7 @@ module Plutus.PAB.Core
     , activateContract'
     , callEndpointOnInstance
     , callEndpointOnInstance'
-    , payToPublicKey
+    , payToPaymentPublicKey
     -- * Agent threads
     , ContractInstanceEffects
     , handleAgentThread
@@ -60,6 +60,7 @@ module Plutus.PAB.Core
     , waitForTxOutStatusChange
     , activeEndpoints
     , waitForEndpoint
+    , yieldedExportTxs
     , currentSlot
     , waitUntilSlot
     , waitNSlots
@@ -83,59 +84,59 @@ module Plutus.PAB.Core
     , timed
     ) where
 
-import           Control.Applicative                     (Alternative (..))
-import           Control.Concurrent.STM                  (STM)
-import qualified Control.Concurrent.STM                  as STM
-import           Control.Lens                            (view)
-import           Control.Monad                           (forM, guard, void)
-import           Control.Monad.Freer                     (Eff, LastMember, Member, interpret, reinterpret, runM, send,
-                                                          subsume, type (~>))
-import           Control.Monad.Freer.Error               (Error, runError, throwError)
-import           Control.Monad.Freer.Extras.Log          (LogMessage, LogMsg (..), LogObserve, handleObserveLog, mapLog)
-import qualified Control.Monad.Freer.Extras.Modify       as Modify
-import           Control.Monad.Freer.Reader              (Reader (..), ask, asks, runReader)
-import           Control.Monad.IO.Class                  (MonadIO (..))
-import qualified Data.Aeson                              as JSON
-import           Data.Default                            (Default (def))
-import           Data.Foldable                           (traverse_)
-import           Data.Map                                (Map)
-import qualified Data.Map                                as Map
-import           Data.Maybe                              (catMaybes)
-import           Data.Proxy                              (Proxy (..))
-import           Data.Set                                (Set)
-import           Data.Text                               (Text)
-import           Ledger                                  (Address (addressCredential), TxOutRef)
-import           Ledger.Tx                               (CardanoTx, ciTxOutValue)
-import           Ledger.TxId                             (TxId)
-import           Ledger.Value                            (Value)
-import           Plutus.ChainIndex                       (ChainIndexQueryEffect, RollbackState (..), TxOutStatus,
-                                                          TxStatus)
-import qualified Plutus.ChainIndex                       as ChainIndex
-import           Plutus.Contract.Effects                 (ActiveEndpoint (..), PABReq)
-import           Plutus.PAB.Core.ContractInstance        (ContractInstanceMsg, ContractInstanceState)
-import qualified Plutus.PAB.Core.ContractInstance        as ContractInstance
-import           Plutus.PAB.Core.ContractInstance.STM    (Activity (Active), BlockchainEnv, InstancesState,
-                                                          OpenEndpoint (..))
-import qualified Plutus.PAB.Core.ContractInstance.STM    as Instances
-import           Plutus.PAB.Effects.Contract             (ContractDefinition, ContractEffect, ContractStore,
-                                                          PABContract (..), getState)
-import qualified Plutus.PAB.Effects.Contract             as Contract
-import           Plutus.PAB.Effects.TimeEffect           (TimeEffect (..), systemTime)
-import           Plutus.PAB.Effects.UUID                 (UUIDEffect, handleUUIDEffect)
-import           Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse, fromResp)
-import           Plutus.PAB.Monitoring.PABLogMsg         (PABMultiAgentMsg (..))
-import           Plutus.PAB.Timeout                      (Timeout)
-import qualified Plutus.PAB.Timeout                      as Timeout
-import           Plutus.PAB.Types                        (PABError (ContractInstanceNotFound, InstanceAlreadyStopped, WalletError))
-import           Plutus.PAB.Webserver.Types              (ContractActivationArgs (..))
-import           Wallet.API                              (PubKeyHash, Slot)
-import qualified Wallet.API                              as WAPI
-import           Wallet.Effects                          (NodeClientEffect, WalletEffect)
-import           Wallet.Emulator.LogMessages             (RequestHandlerLogMsg, TxBalanceMsg)
-import           Wallet.Emulator.MultiAgent              (EmulatorEvent' (..), EmulatorTimeEvent (..))
-import           Wallet.Emulator.Wallet                  (Wallet, WalletEvent (..), walletAddress)
-import           Wallet.Types                            (ContractActivityStatus, ContractInstanceId,
-                                                          EndpointDescription (..), NotificationError)
+import Control.Applicative (Alternative ((<|>)))
+import Control.Concurrent.STM (STM)
+import Control.Concurrent.STM qualified as STM
+import Control.Lens (view)
+import Control.Monad (forM, guard, void)
+import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, runM, send, subsume, type (~>))
+import Control.Monad.Freer.Error (Error, runError, throwError)
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (LMessage), LogObserve, handleObserveLog, mapLog)
+import Control.Monad.Freer.Extras.Modify qualified as Modify
+import Control.Monad.Freer.Reader (Reader (Ask), ask, asks, runReader)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Aeson qualified as JSON
+import Data.Default (Default (def))
+import Data.Foldable (traverse_)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (catMaybes)
+import Data.Proxy (Proxy (Proxy))
+import Data.Set (Set)
+import Data.Text (Text)
+import Ledger (Address (addressCredential), TxOutRef)
+import Ledger.Address (PaymentPubKeyHash)
+import Ledger.Tx (CardanoTx, ciTxOutValue)
+import Ledger.TxId (TxId)
+import Ledger.Value (Value)
+import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
+import Plutus.ChainIndex qualified as ChainIndex
+import Plutus.ChainIndex.Api (UtxosResponse (page))
+import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription), PABReq)
+import Plutus.Contract.Wallet (ExportTx)
+import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg, ContractInstanceState)
+import Plutus.PAB.Core.ContractInstance qualified as ContractInstance
+import Plutus.PAB.Core.ContractInstance.STM (Activity (Active), BlockchainEnv, InstancesState, OpenEndpoint)
+import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
+import Plutus.PAB.Effects.Contract (ContractDefinition, ContractEffect, ContractStore, PABContract (ContractDef),
+                                    getState)
+import Plutus.PAB.Effects.Contract qualified as Contract
+import Plutus.PAB.Effects.TimeEffect (TimeEffect (SystemTime), systemTime)
+import Plutus.PAB.Effects.UUID (UUIDEffect, handleUUIDEffect)
+import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse, fromResp)
+import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (ContractInstanceLog, EmulatorMsg))
+import Plutus.PAB.Timeout (Timeout)
+import Plutus.PAB.Timeout qualified as Timeout
+import Plutus.PAB.Types (PABError (ContractInstanceNotFound, InstanceAlreadyStopped, WalletError))
+import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
+import Wallet.API (Slot)
+import Wallet.API qualified as WAPI
+import Wallet.Effects (NodeClientEffect, WalletEffect)
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
+import Wallet.Emulator.MultiAgent (EmulatorEvent' (WalletEvent), EmulatorTimeEvent (EmulatorTimeEvent))
+import Wallet.Emulator.Wallet (Wallet, WalletEvent (GenericLog, RequestHandlerLog, TxBalanceLog), mockWalletAddress)
+import Wallet.Types (ContractActivityStatus, ContractInstanceId, EndpointDescription (EndpointDescription),
+                     NotificationError)
 
 -- | Effects that are available in 'PABAction's.
 type PABEffects t env =
@@ -255,11 +256,11 @@ activateContract' ::
 activateContract' state cid w contractDef = do
     PABRunner{runPABAction} <- pabRunner
 
-    let handler :: forall a. Eff (ContractInstanceEffects t env '[IO]) a -> IO a
-        handler x = fmap (either (error . show) id) (runPABAction $ handleAgentThread w x)
+    let handler :: forall a. ContractInstanceId -> Eff (ContractInstanceEffects t env '[IO]) a -> IO a
+        handler _ x = fmap (either (error . show) id) (runPABAction $ handleAgentThread w (Just cid) x)
         args :: ContractActivationArgs (ContractDef t)
         args = ContractActivationArgs{caWallet = Just w, caID = contractDef}
-    handleAgentThread w
+    handleAgentThread w (Just cid)
         $ ContractInstance.startContractInstanceThread' @t @IO @(ContractInstanceEffects t env '[IO]) state cid handler args
 
 -- | Start a new instance of a contract
@@ -267,11 +268,11 @@ activateContract :: forall t env. PABContract t => Wallet -> ContractDef t -> PA
 activateContract w contractDef = do
     PABRunner{runPABAction} <- pabRunner
 
-    let handler :: forall a. Eff (ContractInstanceEffects t env '[IO]) a -> IO a
-        handler x = fmap (either (error . show) id) (runPABAction $ handleAgentThread w x)
+    let handler :: forall a. ContractInstanceId -> Eff (ContractInstanceEffects t env '[IO]) a -> IO a
+        handler cid x = fmap (either (error . show) id) (runPABAction $ handleAgentThread w (Just cid) x)
         args :: ContractActivationArgs (ContractDef t)
         args = ContractActivationArgs{caWallet = Just w, caID = contractDef}
-    handleAgentThread w
+    handleAgentThread w Nothing
         $ ContractInstance.activateContractSTM @t @IO @(ContractInstanceEffects t env '[IO]) handler args
 
 -- | Call a named endpoint on a contract instance. Waits if the endpoint is not
@@ -334,12 +335,12 @@ callEndpointOnInstance' instanceID ep value = do
         $ STM.atomically
         $ Instances.callEndpointOnInstance state (EndpointDescription ep) (JSON.toJSON value) instanceID
 
--- | Make a payment to a public key
-payToPublicKey :: Wallet -> PubKeyHash -> Value -> PABAction t env CardanoTx
-payToPublicKey source target amount =
-    handleAgentThread source
+-- | Make a payment to a payment public key.
+payToPaymentPublicKey :: ContractInstanceId -> Wallet -> PaymentPubKeyHash -> Value -> PABAction t env CardanoTx
+payToPaymentPublicKey cid source target amount =
+    handleAgentThread source (Just cid)
         $ Modify.wrapError WalletError
-        $ WAPI.payToPublicKeyHash WAPI.defaultSlotRange amount target
+        $ WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange amount target
 
 -- | Effects available to contract instances with access to external services.
 type ContractInstanceEffects t env effs =
@@ -366,9 +367,10 @@ type ContractInstanceEffects t env effs =
 handleAgentThread ::
     forall t env a.
     Wallet
+    -> Maybe ContractInstanceId
     -> Eff (ContractInstanceEffects t env '[IO]) a
     -> PABAction t env a
-handleAgentThread wallet action = do
+handleAgentThread wallet cidM action = do
     PABEnvironment{effectHandlers, blockchainEnv, instancesState} <- ask @(PABEnvironment t env)
     let EffectHandlers{handleContractStoreEffect, handleContractEffect, handleServicesEffects} = effectHandlers
     let action' :: Eff (ContractInstanceEffects t env (IO ': PABEffects t env)) a = Modify.raiseEnd action
@@ -386,7 +388,7 @@ handleAgentThread wallet action = do
         $ (interpret (mapLog @_ @(PABMultiAgentMsg t) EmulatorMsg) . reinterpret (timed @EmulatorEvent') . reinterpret (mapLog (WalletEvent wallet)) . reinterpret (mapLog RequestHandlerLog))
         $ (interpret (mapLog @_ @(PABMultiAgentMsg t) EmulatorMsg) . reinterpret (timed @EmulatorEvent') . reinterpret (mapLog (WalletEvent wallet)) . reinterpret (mapLog TxBalanceLog))
         $ handleUUIDEffect
-        $ handleServicesEffects wallet
+        $ handleServicesEffects wallet cidM
         $ handleContractStoreEffect
         $ handleContractEffect action'
 
@@ -454,6 +456,7 @@ data EffectHandlers t env =
             , LastMember IO effs
             )
             => Wallet
+            -> Maybe ContractInstanceId
             -> Eff (WalletEffect ': ChainIndexQueryEffect ': NodeClientEffect ': effs)
             ~> Eff effs
 
@@ -491,7 +494,7 @@ timed = \case
 
 -- | Get the current state of the contract instance.
 instanceState :: forall t env. Wallet -> ContractInstanceId -> PABAction t env (Contract.State t)
-instanceState wallet instanceId = handleAgentThread wallet (Contract.getState @t instanceId)
+instanceState wallet instanceId = handleAgentThread wallet (Just instanceId) (Contract.getState @t instanceId)
 
 -- | An STM transaction that returns the observable state of the contract instance.
 observableState :: forall t env. ContractInstanceId -> PABAction t env (STM JSON.Value)
@@ -535,6 +538,15 @@ waitForEndpoint instanceId endpointName = do
         eps <- tx
         guard $ any (\Instances.OpenEndpoint{Instances.oepName=ActiveEndpoint{aeDescription=EndpointDescription nm}} -> nm == endpointName) eps
 
+-- | Get exported transactions waiting to be balanced, signed and submitted by
+-- an external client.
+yieldedExportTxs :: forall t env. ContractInstanceId -> PABAction t env [ExportTx]
+yieldedExportTxs instanceId = do
+    instancesState <- asks @(PABEnvironment t env) instancesState
+    liftIO $ STM.atomically $ do
+        is <- Instances.instanceState instanceId instancesState
+        Instances.yieldedExportTxs is
+
 currentSlot :: forall t env. PABAction t env (STM Slot)
 currentSlot = do
     Instances.BlockchainEnv{Instances.beCurrentSlot} <- asks @(PABEnvironment t env) blockchainEnv
@@ -570,14 +582,14 @@ finalResult instanceId = do
 -- TODO: Change from 'Wallet' to 'Address' (see SCP-2208).
 valueAt :: Wallet -> PABAction t env Value
 valueAt wallet = do
-  handleAgentThread wallet $ do
+  handleAgentThread wallet Nothing $ do
     utxoRefs <- getAllUtxoRefs def
     txOutsM <- traverse ChainIndex.txOutFromRef utxoRefs
     pure $ foldMap (view ciTxOutValue) $ catMaybes txOutsM
   where
-    cred = addressCredential $ walletAddress wallet
+    cred = addressCredential $ mockWalletAddress wallet
     getAllUtxoRefs pq = do
-      utxoRefsPage <- snd <$> ChainIndex.utxoSetAtAddress pq cred
+      utxoRefsPage <- page <$> ChainIndex.utxoSetAtAddress pq cred
       case ChainIndex.nextPageQuery utxoRefsPage of
         Nothing -> pure $ ChainIndex.pageItems utxoRefsPage
         Just newPageQuery -> do

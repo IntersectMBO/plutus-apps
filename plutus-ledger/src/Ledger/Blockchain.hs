@@ -5,6 +5,8 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
+
 module Ledger.Blockchain (
     OnChainTx(..),
     _Valid,
@@ -30,31 +32,33 @@ module Ledger.Blockchain (
     toOutRefMap
     ) where
 
-import           Codec.Serialise           (Serialise)
-import           Control.DeepSeq           (NFData)
-import           Control.Lens              (makePrisms, view)
-import           Control.Monad             (join)
-import           Data.Aeson                (FromJSON, ToJSON)
-import qualified Data.Aeson                as JSON
-import qualified Data.Aeson.Extras         as JSON
-import qualified Data.ByteString           as BS
-import           Data.Map                  (Map)
-import qualified Data.Map                  as Map
-import           Data.Monoid               (First (..))
-import qualified Data.Set                  as Set
-import qualified Data.Text                 as Text
-import           Data.Text.Encoding        (decodeUtf8')
-import           Data.Text.Prettyprint.Doc (Pretty (..), (<+>))
-import           GHC.Generics              (Generic)
-import           Ledger.Tx                 (TxOutTx (..), spentOutputs, txId, unspentOutputsTx, updateUtxo,
-                                            validValuesTx)
+import Codec.Serialise (Serialise)
+import Control.DeepSeq (NFData)
+import Control.Lens (makePrisms, view)
+import Control.Monad (join)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as JSON
+import Data.Aeson.Extras qualified as JSON
+import Data.ByteString qualified as BS
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Monoid (First (..))
+import Data.Proxy (Proxy (..))
+import Data.Set qualified as Set
+import Data.Text qualified as Text
+import Data.Text.Encoding (decodeUtf8')
+import GHC.Generics (Generic)
+import Ledger.Tx (spentOutputs, txId, unspentOutputsTx, updateUtxo)
+import Prettyprinter (Pretty (..), (<+>))
 
-import           Plutus.V1.Ledger.Crypto
-import           Plutus.V1.Ledger.Scripts
-import           Plutus.V1.Ledger.Tx       (Tx, TxIn, TxOut, TxOutRef (..), collateralInputs, inputs, txOutDatum,
-                                            txOutPubKey, txOutValue, txOutputs, updateUtxoCollateral)
-import           Plutus.V1.Ledger.TxId
-import           Plutus.V1.Ledger.Value    (Value)
+import Data.Either (fromRight)
+import Data.OpenApi qualified as OpenApi
+import Plutus.V1.Ledger.Crypto
+import Plutus.V1.Ledger.Scripts
+import Plutus.V1.Ledger.Tx (Tx, TxIn, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx), collateralInputs,
+                            inputs, txOutDatum, txOutPubKey, txOutValue, txOutputs, updateUtxoCollateral, validValuesTx)
+import Plutus.V1.Ledger.TxId
+import Plutus.V1.Ledger.Value (Value)
 
 -- | Block identifier (usually a hash)
 newtype BlockId = BlockId { getBlockId :: BS.ByteString }
@@ -69,8 +73,11 @@ instance ToJSON BlockId where
 instance FromJSON BlockId where
     parseJSON v = BlockId <$> JSON.decodeByteString v
 
+instance OpenApi.ToSchema BlockId where
+    declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy @String)
+
 instance Pretty BlockId where
-    pretty (BlockId blockId) = "BlockId(" <> pretty (either (const $ JSON.encodeByteString blockId) id $ decodeUtf8' blockId) <> ")"
+    pretty (BlockId blockId) = "BlockId(" <> pretty (fromRight (JSON.encodeByteString blockId) $ decodeUtf8' blockId) <> ")"
 
 -- | A transaction on the blockchain.
 -- Invalid transactions are still put on the chain to be able to collect fees.

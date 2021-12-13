@@ -61,7 +61,7 @@ The original application matches buyers and sellers of currency values, but ther
 Off-chain oracles
 ~~~~~~~~~~~~~~~~~
 
-Imagine a Plutus script that says "If you give me a the current USD/EUR exchange rate signed by a specific private key, then I will pay you 5 ADA (and use the exchange rate to run the rest of my `$BUSINESS_LOGIC`)".
+Imagine a Plutus script that says "If you give me the current USD/EUR exchange rate signed by a specific private key, then I will pay you 5 ADA (and use the exchange rate to run the rest of my `$BUSINESS_LOGIC`)".
 The match maker then builds a transaction that combines the oracle value with the Plutus script.
 Of course this example requires the match maker to be able to obtain the signed value, but it does succeed in decoupling consumers of the information from  producers.
 

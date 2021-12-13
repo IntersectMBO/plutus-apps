@@ -3,10 +3,9 @@
 , packages ? import ./. { inherit system enableHaskellProfiling; }
 }:
 let
-  inherit (packages) pkgs plutus-apps plutus-playground plutus-pab docs webCommon;
+  inherit (packages) pkgs plutus-apps plutus-playground docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cardano-cli cardano-node;
-  inherit (plutus-apps) purty purty-pre-commit purs spargo;
 
   crossSystems =
     with (import ./default.nix { }).pkgs.lib.systems.examples; [ ghcjs ];
@@ -31,7 +30,7 @@ let
       stylish-haskell = stylish-haskell;
       nixpkgs-fmt = nixpkgs-fmt;
       shellcheck = pkgs.shellcheck;
-      purty = purty-pre-commit;
+      purty = plutus-apps.purty-pre-commit;
     };
     hooks = {
       purty.enable = true;
@@ -48,7 +47,7 @@ let
         # While nixpkgs-fmt does exclude patterns specified in `.ignore` this
         # does not appear to work inside the hook. For now we have to thus
         # maintain excludes here *and* in `./.ignore` and *keep them in sync*.
-        excludes = [ ".*nix/pkgs/haskell/materialized.*/.*" ".*/spago-packages.nix$" ".*/packages.nix$" ];
+        excludes = [ ".*nix/pkgs/haskell/materialized.*/.*" ".*/spago-packages.nix$" ];
       };
       shellcheck = {
         enable = true;
@@ -84,7 +83,6 @@ let
     yq
     z3
     zlib
-    nodePackages.purescript-language-server
   ];
 
   # local build inputs ( -> ./nix/pkgs/default.nix )
@@ -100,11 +98,8 @@ let
     hlint
     plutus-playground.generate-purescript
     plutus-playground.start-backend
-    plutus-pab.generate-purescript
-    plutus-pab.migrate
-    plutus-pab.start-backend
-    plutus-pab.start-all-servers
-    plutus-pab.start-all-servers-m
+    psa
+    purescript-language-server
     purs
     purty
     spago
@@ -113,7 +108,6 @@ let
     updateMaterialized
     updateClientDeps
     docs.build-and-serve-docs
-    webCommon.newComponent
   ]);
 
   crossShells = builtins.map (p: p.plutus-apps.haskell.project.shellFor {}) crossPackages;
@@ -137,5 +131,8 @@ haskell.project.shellFor {
   # affinity APIs!
   + lib.optionalString stdenv.isLinux ''
     ${utillinux}/bin/taskset -pc 0-1000 $$
+  ''
+  + ''
+    export WEB_COMMON_SRC=${webCommon}
   '';
 }

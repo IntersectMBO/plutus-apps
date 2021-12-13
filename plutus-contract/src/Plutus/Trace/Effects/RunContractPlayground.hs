@@ -24,30 +24,28 @@ module Plutus.Trace.Effects.RunContractPlayground(
     , handleRunContractPlayground
     ) where
 
-import           Control.Lens
-import           Control.Monad                           (void)
-import           Control.Monad.Freer                     (Eff, Member, type (~>))
-import           Control.Monad.Freer.Coroutine           (Yield (..))
-import           Control.Monad.Freer.Error               (Error, throwError)
-import           Control.Monad.Freer.Extras.Log          (LogMsg (..))
-import           Control.Monad.Freer.Reader              (ask)
-import           Control.Monad.Freer.State               (State, gets, modify)
-import           Control.Monad.Freer.TH                  (makeEffect)
-import qualified Data.Aeson                              as JSON
-import           Data.Map                                (Map)
-import           Plutus.Contract                         (Contract (..), ContractInstanceId, EndpointDescription (..))
-import           Plutus.Contract.Effects                 (PABResp (ExposeEndpointResp))
-import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, nextId)
-import           Plutus.Trace.Effects.RunContract        (startContractThread)
-import           Plutus.Trace.Emulator.ContractInstance  (EmulatorRuntimeError, getThread)
-import           Plutus.Trace.Emulator.Types             (ContractConstraints, ContractHandle (..),
-                                                          EmulatorMessage (..), EmulatorRuntimeError (..),
-                                                          EmulatorThreads, walletInstanceTag)
-import           Plutus.Trace.Scheduler                  (EmSystemCall, MessageCall (Message), Priority (..), ThreadId,
-                                                          fork, mkSysCall)
-import           Wallet.Emulator.MultiAgent              (EmulatorEvent' (..), MultiAgentEffect)
-import           Wallet.Emulator.Wallet                  (Wallet)
-import           Wallet.Types                            (EndpointValue (..))
+import Control.Lens
+import Control.Monad (void)
+import Control.Monad.Freer (Eff, Member, type (~>))
+import Control.Monad.Freer.Coroutine (Yield (..))
+import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Extras.Log (LogMsg (..))
+import Control.Monad.Freer.Reader (ask)
+import Control.Monad.Freer.State (State, gets, modify)
+import Control.Monad.Freer.TH (makeEffect)
+import Data.Aeson qualified as JSON
+import Data.Map (Map)
+import Plutus.Contract (Contract (..), ContractInstanceId, EndpointDescription (..))
+import Plutus.Contract.Effects (PABResp (ExposeEndpointResp))
+import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, nextId)
+import Plutus.Trace.Effects.RunContract (startContractThread)
+import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError, getThread)
+import Plutus.Trace.Emulator.Types (ContractConstraints, ContractHandle (..), EmulatorMessage (..),
+                                    EmulatorRuntimeError (..), EmulatorThreads, walletInstanceTag)
+import Plutus.Trace.Scheduler (EmSystemCall, MessageCall (Message), Priority (..), ThreadId, fork, mkSysCall)
+import Wallet.Emulator.MultiAgent (EmulatorEvent' (..), MultiAgentEffect)
+import Wallet.Emulator.Wallet (Wallet)
+import Wallet.Types (EndpointValue (..))
 
 {- Note [Wallet contract instances]
 

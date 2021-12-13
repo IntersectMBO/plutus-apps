@@ -12,42 +12,43 @@
 module Spec.Emulator(tests) where
 
 
-import           Control.Lens
-import           Control.Monad              (void)
-import qualified Control.Monad.Freer        as Eff
-import qualified Control.Monad.Freer.Error  as E
-import           Control.Monad.Freer.Writer (Writer, runWriter, tell)
-import qualified Data.ByteString.Lazy       as BSL
-import           Data.ByteString.Lazy.Char8 (pack)
-import           Data.Default               (Default (..))
-import           Data.Foldable              (fold)
-import qualified Data.Set                   as Set
-import           Hedgehog                   (Property, forAll, property)
-import qualified Hedgehog
-import qualified Hedgehog.Gen               as Gen
-import qualified Hedgehog.Range             as Range
-import           Ledger
-import qualified Ledger.Ada                 as Ada
-import           Ledger.Generators          (Mockchain (Mockchain))
-import qualified Ledger.Generators          as Gen
-import qualified Ledger.Index               as Index
-import           Ledger.Typed.Scripts       (wrapValidator)
-import qualified Ledger.Value               as Value
-import           Plutus.Contract.Test       hiding (not)
-import           Plutus.Trace               (EmulatorTrace, PrintEffect (..))
-import qualified Plutus.Trace               as Trace
-import qualified PlutusTx
-import qualified PlutusTx.Numeric           as P
-import qualified PlutusTx.Prelude           as PlutusTx
-import           Test.Tasty
-import           Test.Tasty.Golden          (goldenVsString)
-import           Test.Tasty.Hedgehog        (testProperty)
-import           Wallet
-import qualified Wallet.API                 as W
-import qualified Wallet.Emulator.Chain      as Chain
-import           Wallet.Emulator.Types
-import qualified Wallet.Graph
-
+import Control.Lens (element, (%~), (&), (.~))
+import Control.Monad (void)
+import Control.Monad.Freer qualified as Eff
+import Control.Monad.Freer.Error qualified as E
+import Control.Monad.Freer.Writer (Writer, runWriter, tell)
+import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Lazy.Char8 (pack)
+import Data.Default (Default (def))
+import Data.Foldable (fold)
+import Data.Set qualified as Set
+import Hedgehog (Property, forAll, property)
+import Hedgehog qualified
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
+import Ledger (OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, ScriptError (EvaluationError),
+               Tx (txFee, txMint, txOutputs), TxOut (txOutValue), ValidationError (ScriptFailure), Validator, Value,
+               mkValidatorScript, outputs, scriptTxIn, scriptTxOut, txOutRefs, unitDatum, unitRedeemer, unspentOutputs)
+import Ledger.Ada qualified as Ada
+import Ledger.Generators (Mockchain (Mockchain))
+import Ledger.Generators qualified as Gen
+import Ledger.Index qualified as Index
+import Ledger.Typed.Scripts (wrapValidator)
+import Ledger.Value qualified as Value
+import Plutus.Contract.Test hiding (not)
+import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
+import Plutus.Trace qualified as Trace
+import PlutusTx qualified
+import PlutusTx.Numeric qualified as P
+import PlutusTx.Prelude qualified as PlutusTx
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Golden (goldenVsString)
+import Test.Tasty.Hedgehog (testProperty)
+import Wallet (WalletAPIError, payToPaymentPublicKeyHash_, submitTxn)
+import Wallet.API qualified as W
+import Wallet.Emulator.Chain qualified as Chain
+import Wallet.Emulator.Types (selectCoin)
+import Wallet.Graph qualified
 
 tests :: TestTree
 tests = testGroup "all tests" [
@@ -63,8 +64,8 @@ tests = testGroup "all tests" [
         testProperty "reject invalid txn" invalidTrace,
         testProperty "notify wallet" notifyWallet,
         testProperty "log script validation failures" invalidScript,
-        testProperty "payToPubkey" payToPubKeyScript,
-        testProperty "payToPubkey-2" payToPubKeyScript2
+        testProperty "payToPaymentPubkey" payToPaymentPubKeyScript,
+        testProperty "payToPaymentPubkey-2" payToPaymentPubKeyScript2
         ],
     testGroup "trace output" [
         goldenVsString
@@ -109,14 +110,14 @@ wallet1 = knownWallet 1
 wallet2 = knownWallet 2
 wallet3 = knownWallet 3
 
-pubKey1, pubKey2, pubKey3 :: PubKeyHash
-pubKey1 = walletPubKeyHash wallet1
-pubKey2 = walletPubKeyHash wallet2
-pubKey3 = walletPubKeyHash wallet3
+pubKey1, pubKey2, pubKey3 :: PaymentPubKeyHash
+pubKey1 = mockWalletPaymentPubKeyHash wallet1
+pubKey2 = mockWalletPaymentPubKeyHash wallet2
+pubKey3 = mockWalletPaymentPubKeyHash wallet3
 
 utxo :: Property
 utxo = property $ do
-    Mockchain txPool o <- forAll Gen.genMockchain
+    Mockchain txPool o _ <- forAll Gen.genMockchain
     Hedgehog.assert (unspentOutputs [map Valid txPool] == o)
 
 txnValid :: Property
@@ -126,9 +127,9 @@ txnValid = property $ do
 
 txnValidFrom :: Property
 txnValidFrom =
-    let five = Ada.lovelaceValueOf 5
+    let five = Ada.adaValueOf 5
         -- Set the validation interval to (5, 5] for the
-        -- transaction generated by payToPublicKeyHash_
+        -- transaction generated by payToPaymentPublicKeyHash_
         -- so that the transaction can be validated only during slot 5
         range = W.singleton 5
 
@@ -137,7 +138,7 @@ txnValidFrom =
         .&&. walletFundsChange wallet2 five
         )
         $ do
-            Trace.liftWallet wallet1 $ payToPublicKeyHash_ range five pubKey2
+            Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ range five pubKey2
             void $ Trace.waitUntilSlot 6
 
 selectCoinProp :: Property
@@ -153,7 +154,7 @@ selectCoinProp = property $ do
 
 txnUpdateUtxo :: Property
 txnUpdateUtxo = property $ do
-    (Mockchain m _, txn) <- forAll genChainTxn
+    (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
 
         -- submit the same txn twice, so it should be accepted the first time
@@ -173,14 +174,14 @@ txnUpdateUtxo = property $ do
 
 validTrace :: Property
 validTrace = property $ do
-    (Mockchain m _, txn) <- forAll genChainTxn
+    (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = Trace.liftWallet wallet1 (submitTxn $ Right txn)
     checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert
 
 validTrace2 :: Property
 validTrace2 = property $ do
-    (Mockchain m _, txn) <- forAll genChainTxn
+    (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = do
             Trace.liftWallet wallet1 (submitTxn $ Right txn)
@@ -190,7 +191,7 @@ validTrace2 = property $ do
 
 invalidTrace :: Property
 invalidTrace = property $ do
-    (Mockchain m _, txn) <- forAll genChainTxn
+    (Mockchain m _ _, txn) <- forAll genChainTxn
     let invalidTxn = txn { txMint = Ada.adaValueOf 1 }
         options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = Trace.liftWallet wallet1 (submitTxn $ Right invalidTxn)
@@ -205,14 +206,14 @@ invalidTrace = property $ do
 
 invalidScript :: Property
 invalidScript = property $ do
-    (Mockchain m _, txn1) <- forAll genChainTxn
+    (Mockchain m _ _, txn1) <- forAll genChainTxn
 
     -- modify one of the outputs to be a script output
-    index <- forAll $ Gen.int (Range.linear 0 ((length $ txOutputs txn1) -1))
+    index <- forAll $ Gen.int (Range.linear 0 ((length $ txOutputs txn1) - 1))
     let scriptTxn = txn1 & outputs . element index %~ \o -> scriptTxOut (txOutValue o) failValidator unitDatum
     Hedgehog.annotateShow scriptTxn
     let outToSpend = txOutRefs scriptTxn !! index
-    let totalVal = Ada.fromValue $ txOutValue (fst outToSpend)
+    let totalVal = txOutValue (fst outToSpend)
 
     -- try and spend the script output
     invalidTxn <- forAll $ Gen.genValidTransactionSpending (Set.fromList [scriptTxIn (snd outToSpend) failValidator unitRedeemer unitDatum]) totalVal
@@ -262,8 +263,8 @@ notifyWallet =
     (walletFundsChange wallet1 mempty)
     (pure ())
 
-payToPubKeyScript :: Property
-payToPubKeyScript =
+payToPaymentPubKeyScript :: Property
+payToPaymentPubKeyScript =
     let hasInitialBalance w = walletFundsChange w mempty
     in checkPredicateGen Gen.generatorModel
         (hasInitialBalance wallet1
@@ -271,8 +272,8 @@ payToPubKeyScript =
             .&&. hasInitialBalance wallet3)
         pubKeyTransactions
 
-payToPubKeyScript2 :: Property
-payToPubKeyScript2 =
+payToPaymentPubKeyScript2 :: Property
+payToPaymentPubKeyScript2 =
     let hasInitialBalance w = walletFundsChange w mempty
     in checkPredicateGen Gen.generatorModel
         (hasInitialBalance wallet1
@@ -282,25 +283,25 @@ payToPubKeyScript2 =
 
 pubKeyTransactions :: EmulatorTrace ()
 pubKeyTransactions = do
-    let five = Ada.lovelaceValueOf 5
-    Trace.liftWallet wallet1 $ payToPublicKeyHash_ W.always five pubKey2
+    let five = Ada.adaValueOf 5
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always five pubKey2
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet2 $ payToPublicKeyHash_ W.always five pubKey3
+    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ W.always five pubKey3
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet3 $ payToPublicKeyHash_ W.always five pubKey1
+    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ W.always five pubKey1
     void Trace.nextSlot
 
 pubKeyTransactions2 :: EmulatorTrace ()
 pubKeyTransactions2 = do
-    let payment1 = initialBalance P.- Ada.lovelaceValueOf 100
-        payment2 = initialBalance P.+ Ada.lovelaceValueOf 100
-    Trace.liftWallet wallet1 $ payToPublicKeyHash_ W.always payment1 pubKey2
+    let payment1 = initialBalance P.- Ada.adaValueOf 10
+        payment2 = initialBalance P.+ Ada.adaValueOf 10
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always payment1 pubKey2
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet2 $ payToPublicKeyHash_ W.always payment2 pubKey3
+    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ W.always payment2 pubKey3
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet3 $ payToPublicKeyHash_ W.always payment2 pubKey1
+    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ W.always payment2 pubKey1
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet1 $ payToPublicKeyHash_ W.always (Ada.lovelaceValueOf 200) pubKey2
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always (Ada.adaValueOf 20) pubKey2
     void Trace.nextSlot
 
 genChainTxn :: Hedgehog.MonadGen m => m (Mockchain, Tx)
@@ -310,4 +311,4 @@ genChainTxn = do
     pure (m, txn)
 
 initialBalance :: Value
-initialBalance = Ada.lovelaceValueOf 100000
+initialBalance = Ada.adaValueOf 100

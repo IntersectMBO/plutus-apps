@@ -13,27 +13,26 @@ module ContractExample.PayToWallet(
     , PayToWalletSchema
     ) where
 
-import           Data.Aeson            (FromJSON, ToJSON)
-import           GHC.Generics          (Generic)
-import           Schema                (ToSchema)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Void (Void)
+import GHC.Generics (Generic)
+import Schema (ToSchema)
 
-import           Ledger                (Value, getCardanoTxId)
-import           Ledger.Constraints
-import           Plutus.Contract
-import           Wallet.Emulator.Types (Wallet, walletPubKeyHash)
+import Ledger (PaymentPubKeyHash, Value)
+import Ledger.Constraints (adjustUnbalancedTx, mustPayToPubKey)
+import Plutus.Contract (ContractError, Endpoint, Promise, endpoint, mkTxConstraints, yieldUnbalancedTx)
 
 data PayToWalletParams =
     PayToWalletParams
         { amount :: Value
-        , wallet :: Wallet
+        , pkh    :: PaymentPubKeyHash
         }
         deriving stock (Eq, Show, Generic)
         deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type PayToWalletSchema = Endpoint "Pay to wallet" PayToWalletParams
+type PayToWalletSchema = Endpoint "PayToWallet" PayToWalletParams
 
 payToWallet :: Promise () PayToWalletSchema ContractError ()
-payToWallet = endpoint @"Pay to wallet" $ \PayToWalletParams{amount, wallet} -> do
-  let pkh = walletPubKeyHash wallet
-  txid <- submitTx (mustPayToPubKey pkh amount)
-  awaitTxConfirmed (getCardanoTxId txid)
+payToWallet = endpoint @"PayToWallet" $ \PayToWalletParams{amount, pkh} -> do
+  utx <- mkTxConstraints @Void mempty (mustPayToPubKey pkh amount)
+  yieldUnbalancedTx $ adjustUnbalancedTx utx

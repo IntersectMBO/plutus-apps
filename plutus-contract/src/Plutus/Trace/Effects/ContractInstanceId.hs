@@ -19,12 +19,12 @@ module Plutus.Trace.Effects.ContractInstanceId(
     , handleRandomIds
     ) where
 
-import           Control.Monad.Freer
-import           Control.Monad.Freer.State
-import           Control.Monad.Freer.TH
-import           Control.Monad.IO.Class    (MonadIO (..))
-import           Data.Maybe                (fromMaybe, listToMaybe)
-import           Wallet.Types              (ContractInstanceId (..), contractInstanceIDs, randomID)
+import Control.Monad.Freer
+import Control.Monad.Freer.State
+import Control.Monad.Freer.TH
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Maybe (fromMaybe, listToMaybe)
+import Wallet.Types (ContractInstanceId (..), contractInstanceIDs, randomID)
 
 data ContractInstanceIdEff r where
     NextId :: ContractInstanceIdEff ContractInstanceId

@@ -71,7 +71,7 @@ module Plutus.Contract.Request(
     , endpointReq
     , endpointResp
     -- ** Public key hashes
-    , ownPubKeyHash
+    , ownPaymentPubKeyHash
     -- ** Submitting transactions
     , submitUnbalancedTx
     , submitBalancedTx
@@ -82,50 +82,56 @@ module Plutus.Contract.Request(
     , submitTxConstraintsWith
     , submitTxConfirmed
     , mkTxConstraints
+    , yieldUnbalancedTx
     -- * Etc.
     , ContractRow
     , pabReq
     ) where
 
-import           Control.Lens                (Prism', preview, review, view)
-import qualified Control.Monad.Freer.Error   as E
-import           Data.Aeson                  (FromJSON, ToJSON)
-import qualified Data.Aeson                  as JSON
-import qualified Data.Aeson.Types            as JSON
-import           Data.Default                (Default (def))
-import           Data.List.NonEmpty          (NonEmpty)
-import           Data.Map                    (Map)
-import qualified Data.Map                    as Map
-import           Data.Maybe                  (catMaybes, mapMaybe)
-import           Data.Proxy                  (Proxy (..))
-import           Data.Row
-import qualified Data.Text                   as Text
-import           Data.Text.Extras            (tshow)
-import           Data.Void                   (Void)
-import           GHC.Natural                 (Natural)
-import           GHC.TypeLits                (Symbol, symbolVal)
-import           Ledger                      (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy,
-                                              MintingPolicyHash, POSIXTime, PubKeyHash, Redeemer, RedeemerHash, Slot,
-                                              StakeValidator, StakeValidatorHash, TxId, TxOutRef (txOutRefId),
-                                              Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
-import           Ledger.Constraints          (TxConstraints)
-import           Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
-import qualified Ledger.Constraints.OffChain as Constraints
-import           Ledger.Tx                   (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
-import           Ledger.Typed.Scripts        (TypedValidator, ValidatorTypes (..))
-import qualified Ledger.Value                as V
-import           Plutus.Contract.Util        (loopM)
-import qualified PlutusTx
+import Control.Lens (Prism', preview, review, view)
+import Control.Monad.Freer.Error qualified as E
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as JSON
+import Data.Aeson.Types qualified as JSON
+import Data.Default (Default (def))
+import Data.List.NonEmpty (NonEmpty)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (catMaybes, mapMaybe)
+import Data.Proxy (Proxy (Proxy))
+import Data.Row (AllUniqueLabels, HasType, KnownSymbol, type (.==))
+import Data.Text qualified as Text
+import Data.Text.Extras (tshow)
+import Data.Void (Void)
+import GHC.Natural (Natural)
+import GHC.TypeLits (Symbol, symbolVal)
+import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy, MintingPolicyHash, POSIXTime,
+               PaymentPubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId,
+               TxOutRef (txOutRefId), Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
+import Ledger.Constraints (TxConstraints)
+import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
+import Ledger.Constraints.OffChain qualified as Constraints
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
+import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (DatumType, RedeemerType))
+import Ledger.Value qualified as V
+import Plutus.Contract.Util (loopM)
+import PlutusTx qualified
 
-import           Plutus.Contract.Effects     (ActiveEndpoint (..), PABReq (..), PABResp (..))
-import qualified Plutus.Contract.Effects     as E
-import           Plutus.Contract.Schema      (Input, Output)
-import           Wallet.Types                (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
+import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
+                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+                                PABResp (ExposeEndpointResp))
+import Plutus.Contract.Effects qualified as E
+import Plutus.Contract.Schema (Input, Output)
+import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescription),
+                     EndpointValue (EndpointValue, unEndpointValue))
 
-import           Plutus.ChainIndex           (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import           Plutus.ChainIndex.Types     (RollbackState (..), Tip, TxOutStatus, TxStatus)
-import           Plutus.Contract.Resumable
-import           Plutus.Contract.Types
+import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
+import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse (page))
+import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
+import Plutus.Contract.Resumable (prompt)
+import Plutus.Contract.Types (AsContractError (_ConstraintResolutionError, _OtherError, _ResumableError, _WalletError),
+                              Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), runError,
+                              throwError)
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
 --   are unique.
@@ -332,7 +338,7 @@ utxoRefMembership ::
     ( AsContractError e
     )
     => TxOutRef
-    -> Contract w s e (Tip, Bool)
+    -> Contract w s e IsUtxoResponse
 utxoRefMembership ref = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetMembership ref) E._ChainIndexQueryResp
   case cir of
@@ -347,7 +353,7 @@ utxoRefsAt ::
     )
     => PageQuery TxOutRef
     -> Address
-    -> Contract w s e (Tip, Page TxOutRef)
+    -> Contract w s e UtxosResponse
 utxoRefsAt pq addr = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
   case cir of
@@ -362,7 +368,7 @@ utxoRefsWithCurrency ::
     )
     => PageQuery TxOutRef
     -> AssetClass
-    -> Contract w s e (Tip, Page TxOutRef)
+    -> Contract w s e UtxosResponse
 utxoRefsWithCurrency pq assetClass = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetWithCurrency pq assetClass) E._ChainIndexQueryResp
   case cir of
@@ -384,7 +390,7 @@ foldUtxoRefsAt f ini addr = go ini (Just def)
   where
     go acc Nothing = pure acc
     go acc (Just pq) = do
-      page <- snd <$> utxoRefsAt pq addr
+      page <- page <$> utxoRefsAt pq addr
       newAcc <- f acc page
       go newAcc (nextPageQuery page)
 
@@ -689,8 +695,8 @@ endpointDescription = EndpointDescription . symbolVal
 --     'requiredSignatures' field of 'Tx'.
 --   * There is a 1-n relationship between wallets and public keys (although in
 --     the mockchain n=1)
-ownPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PubKeyHash
-ownPubKeyHash = pabReq OwnPublicKeyHashReq E._OwnPublicKeyHashResp
+ownPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
+ownPaymentPubKeyHash = pabReq OwnPaymentPublicKeyHashReq E._OwnPaymentPublicKeyHashResp
 
 -- | Send an unbalanced transaction to be balanced and signed. Returns the ID
 --    of the final transaction when the transaction was submitted. Throws an
@@ -791,3 +797,11 @@ submitTxConstraintsWith sl constraints = mkTxConstraints sl constraints >>= subm
 --   confirmed on the ledger before returning.
 submitTxConfirmed :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e ()
 submitTxConfirmed t = submitUnbalancedTx t >>= awaitTxConfirmed . getCardanoTxId
+
+-- | Take an 'UnbalancedTx' then balance, sign and submit it to the blockchain
+-- without returning any results.
+yieldUnbalancedTx
+    :: forall w s e. (AsContractError e)
+    => UnbalancedTx
+    -> Contract w s e ()
+yieldUnbalancedTx utx = pabReq (YieldUnbalancedTxReq utx) E._YieldUnbalancedTxResp

@@ -9,14 +9,14 @@
 
 module Wallet.Rollup.Types where
 
-import           Control.Lens              (makeLenses, makeLensesFor)
-import           Data.Aeson                (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
-import           Data.Map                  (Map)
-import qualified Data.OpenApi.Schema       as OpenApi
-import           Data.Text.Prettyprint.Doc (Pretty, pretty, viaShow)
-import           GHC.Generics
-import           Ledger
-import           Ledger.Credential         (Credential (..))
+import Control.Lens (makeLenses, makeLensesFor)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Map (Map)
+import Data.OpenApi.Schema qualified as OpenApi
+import GHC.Generics
+import Ledger
+import Ledger.Credential (Credential (..))
+import Prettyprinter (Pretty, pretty, viaShow)
 
 data TxKey =
     TxKey
@@ -57,7 +57,7 @@ isFound DereferencedInput {} = True
 isFound (InputNotFound _)    = False
 
 data BeneficialOwner
-    = OwnedByPubKey PubKeyHash
+    = OwnedByPaymentPubKey PaymentPubKeyHash
     | OwnedByScript ValidatorHash
     deriving (Eq, Show, Ord, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema, FromJSONKey, ToJSONKey)
@@ -65,7 +65,7 @@ data BeneficialOwner
 toBeneficialOwner :: TxOut -> BeneficialOwner
 toBeneficialOwner TxOut {txOutAddress=Address{addressCredential}} =
     case addressCredential of
-        PubKeyCredential pkh -> OwnedByPubKey pkh
+        PubKeyCredential pkh -> OwnedByPaymentPubKey (PaymentPubKeyHash pkh)
         ScriptCredential vh  -> OwnedByScript vh
 
 data AnnotatedTx =

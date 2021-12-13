@@ -3,9 +3,9 @@
 -- | Data type used for minting and burning the thread token value.
 module Plutus.Contract.StateMachine.MintingPolarity where
 
-import qualified PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude          as Haskell
+import PlutusTx qualified
+import PlutusTx.Prelude
+import Prelude qualified as Haskell
 
 data MintingPolarity = Mint | Burn deriving (Haskell.Eq, Haskell.Show)
 

@@ -16,7 +16,7 @@ build-type: Simple
 
 source-repository head
     type: git
-    location: https://github.com/input-output-hk/plutus
+    location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
     description:
@@ -62,7 +62,7 @@ library
     default-extensions: ExplicitForAll ScopedTypeVariables
                         DeriveGeneric StandaloneDeriving DeriveLift
                         GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
-                        DeriveTraversable MultiParamTypeClasses
+                        DeriveTraversable MultiParamTypeClasses ImportQualifiedPost
     ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wredundant-constraints -Widentities
@@ -73,7 +73,6 @@ library
         aeson -any,
         bytestring -any,
         containers -any,
-        data-default -any,
         mtl -any,
         plutus-core -any,
         plutus-tx -any,
@@ -81,6 +80,7 @@ library
         playground-common -any,
         plutus-ledger -any,
         plutus-ledger-api -any,
+        plutus-ledger-constraints -any,
         template-haskell -any,
         lens -any,
         text -any,
@@ -121,6 +121,7 @@ test-suite plutus-use-cases-test
         Spec.TokenAccount
         Spec.Vesting
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options: -Wall -Wnoncanonical-monad-instances
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wredundant-constraints -Widentities -rtsopts
@@ -130,6 +131,7 @@ test-suite plutus-use-cases-test
         plutus-tx -any,
         plutus-contract -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         plutus-use-cases -any
     build-depends:
         base >=4.9 && <5,
@@ -161,6 +163,7 @@ executable plutus-use-cases-scripts
         scripts
         test
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     other-modules:
         Spec.Auction
         Spec.Crowdfunding
@@ -216,8 +219,9 @@ executable plutus-use-cases-scripts
         plutus-tx -any,
         plutus-tx-plugin -any,
         plutus-contract -any,
-        plutus-chain-index -any,
+        plutus-chain-index-core -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         plutus-use-cases -any,
         optparse-applicative -any,
         aeson-pretty -any,

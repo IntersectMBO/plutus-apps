@@ -2,10 +2,10 @@
 
 module Cardano.Api.NetworkId.Extra where
 
-import           Cardano.Api    (NetworkId (..), NetworkMagic (..))
-import           Data.Aeson     (FromJSON, ToJSON, Value (String), parseJSON, toJSON, withText)
-import qualified Data.Text      as Text
-import qualified Data.Text.Read as Text
+import Cardano.Api (NetworkId (..), NetworkMagic (..))
+import Data.Aeson (FromJSON, ToJSON, Value (String), parseJSON, toJSON, withText)
+import Data.Text qualified as Text
+import Data.Text.Read qualified as Text
 
 -- | Wrapper for 'NetworkId' to prevent the creation of orphan instances.
 newtype NetworkIdWrapper = NetworkIdWrapper { unNetworkIdWrapper :: NetworkId }

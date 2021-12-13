@@ -13,10 +13,11 @@ module Wallet.Effects(
     -- * Wallet effect
     WalletEffect(..)
     , submitTxn
-    , ownPubKeyHash
+    , ownPaymentPubKeyHash
     , balanceTx
     , totalFunds
     , walletAddSignature
+    , yieldUnbalancedTx
     -- * Node client
     , NodeClientEffect(..)
     , publishTx
@@ -24,18 +25,20 @@ module Wallet.Effects(
     , getClientSlotConfig
     ) where
 
-import           Control.Monad.Freer.TH      (makeEffect)
-import           Ledger                      (CardanoTx, PubKeyHash, Slot, Tx, Value)
-import           Ledger.Constraints.OffChain (UnbalancedTx)
-import           Ledger.TimeSlot             (SlotConfig)
-import           Wallet.Emulator.Error       (WalletAPIError)
+import Control.Monad.Freer.TH (makeEffect)
+import Ledger (CardanoTx, PaymentPubKeyHash, Slot, Tx, Value)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.TimeSlot (SlotConfig)
+import Wallet.Error (WalletAPIError)
 
 data WalletEffect r where
     SubmitTxn :: CardanoTx -> WalletEffect ()
-    OwnPubKeyHash :: WalletEffect PubKeyHash
+    OwnPaymentPubKeyHash :: WalletEffect PaymentPubKeyHash
     BalanceTx :: UnbalancedTx -> WalletEffect (Either WalletAPIError CardanoTx)
     TotalFunds :: WalletEffect Value -- ^ Total of all funds that are in the wallet (incl. tokens)
     WalletAddSignature :: CardanoTx -> WalletEffect CardanoTx
+    -- | Sends an unbalanced tx to be balanced, signed and submitted.
+    YieldUnbalancedTx :: UnbalancedTx -> WalletEffect ()
 makeEffect ''WalletEffect
 
 data NodeClientEffect r where

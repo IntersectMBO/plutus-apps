@@ -1,33 +1,31 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators     #-}
 
 module TxInject.RandomTx(
     -- $randomTx
     generateTx
     ) where
 
-import           Control.Monad.Primitive (PrimMonad, PrimState)
-import           Data.List.NonEmpty      (NonEmpty (..))
-import qualified Data.Map                as Map
-import           Data.Maybe              (fromMaybe)
-import qualified Data.Set                as Set
-import qualified Hedgehog.Gen            as Gen
-import           System.Random.MWC       as MWC
+import Control.Monad.Primitive (PrimMonad, PrimState)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Set qualified as Set
+import Hedgehog.Gen qualified as Gen
+import System.Random.MWC as MWC
 
-import qualified Ledger.Ada              as Ada
-import qualified Ledger.Address          as Address
-import qualified Ledger.CardanoWallet    as CW
-import           Ledger.Crypto           (PrivateKey, PubKey)
-import qualified Ledger.Generators       as Generators
-import           Ledger.Index            (UtxoIndex (..), runValidation, validateTransaction)
-import           Ledger.Slot             (Slot (..))
-import           Ledger.Tx               (Tx, TxOut (..))
-import qualified Ledger.Tx               as Tx
+import Ledger.Ada qualified as Ada
+import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
+import Ledger.Address qualified as Address
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Generators qualified as Generators
+import Ledger.Index (UtxoIndex (..), ValidationCtx (..), runValidation, validateTransaction)
+import Ledger.Slot (Slot (..))
+import Ledger.Tx (Tx, TxOut (..))
+import Ledger.Tx qualified as Tx
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada
@@ -56,7 +54,7 @@ generateTx
   -> IO Tx
 generateTx gen slot (UtxoIndex utxo) = do
   (_, sourcePubKey) <- pickNEL gen keyPairs
-  let sourceAddress = Address.pubKeyAddress sourcePubKey
+  let sourceAddress = Address.pubKeyAddress sourcePubKey Nothing
   -- outputs at the source address
       sourceOutputs
   -- we restrict ourselves to outputs that contain no currencies other than Ada,
@@ -82,23 +80,24 @@ generateTx gen slot (UtxoIndex utxo) = do
     -- Total Ada amount that we want to spend
     let sourceAda =
           foldMap
-            (Ada.fromValue . txOutValue . snd)
+            (txOutValue . snd)
             inputs
         -- inputs of the transaction
         sourceTxIns = Set.fromList $ fmap (Tx.pubKeyTxIn . fst) inputs
     tx <- Gen.sample $
       Generators.genValidTransactionSpending sourceTxIns sourceAda
+    slotCfg <- Gen.sample Generators.genSlotConfig
     let ((validationResult, _), _) =
-          runValidation (validateTransaction slot tx) (UtxoIndex utxo)
+          runValidation (validateTransaction slot tx) (ValidationCtx (UtxoIndex utxo) slotCfg)
     case validationResult of
       Nothing -> pure tx
       Just  _ -> generateTx gen slot (UtxoIndex utxo)
 
-keyPairs :: NonEmpty (PrivateKey, PubKey)
+keyPairs :: NonEmpty (PaymentPrivateKey, PaymentPubKey)
 keyPairs =
     fmap
-        (\mockWallet -> (CW.privateKey mockWallet, CW.pubKey mockWallet))
-        (CW.knownWallet 1 :| drop 1 CW.knownWallets)
+        (\mockWallet -> (CW.paymentPrivateKey mockWallet, CW.paymentPubKey mockWallet))
+        (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)
 
 -- | Pick a random element from a non-empty list
 pickNEL :: PrimMonad m => Gen (PrimState m) -> NonEmpty a -> m a

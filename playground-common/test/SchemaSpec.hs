@@ -10,19 +10,19 @@ module SchemaSpec
     ( tests
     ) where
 
-import           Data.Functor.Foldable (Fix (Fix))
-import           Data.Text             (Text)
-import           GHC.Generics          (Generic)
-import           Ledger.Ada            (lovelaceValueOf)
-import           Ledger.Value          (Value)
-import           Playground.Types      (PayToWalletParams (PayToWalletParams), payTo, value)
-import           Schema                (FormArgument,
-                                        FormArgumentF (FormArrayF, FormBoolF, FormIntF, FormIntegerF, FormObjectF, FormRadioF, FormStringF, FormValueF),
-                                        FormSchema (FormSchemaArray, FormSchemaBool, FormSchemaInt, FormSchemaInteger, FormSchemaMaybe, FormSchemaObject, FormSchemaRadio, FormSchemaString, FormSchemaTuple),
-                                        ToArgument, ToSchema, toArgument, toSchema)
-import           Test.Tasty            (TestTree, testGroup)
-import           Test.Tasty.HUnit      (assertEqual, testCase)
-import           Wallet.Emulator.Types (WalletNumber (WalletNumber))
+import Data.Functor.Foldable (Fix (Fix))
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import Ledger.Ada (lovelaceValueOf)
+import Ledger.Value (Value)
+import Playground.Types (PayToWalletParams (PayToWalletParams), payTo, value)
+import Schema (FormArgument,
+               FormArgumentF (FormArrayF, FormBoolF, FormIntF, FormIntegerF, FormObjectF, FormRadioF, FormStringF, FormValueF),
+               FormSchema (FormSchemaArray, FormSchemaBool, FormSchemaInt, FormSchemaInteger, FormSchemaMaybe, FormSchemaObject, FormSchemaRadio, FormSchemaString, FormSchemaTuple),
+               ToArgument, ToSchema, toArgument, toSchema)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertEqual, testCase)
+import Wallet.Emulator.Types (WalletNumber (WalletNumber))
 
 tests :: TestTree
 tests = testGroup "Schema" [toSchemaTests, toArgumentTests]

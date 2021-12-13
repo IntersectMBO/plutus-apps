@@ -22,15 +22,15 @@ module Test.QuickCheck.DynamicLogic.Monad
     , module Test.QuickCheck.DynamicLogic.Quantify
     ) where
 
-import           Control.Applicative
-import           Control.Monad
-import           Data.Typeable
+import Control.Applicative
+import Control.Monad
+import Data.Typeable
 
-import qualified Test.QuickCheck.DynamicLogic          as DL
-import           Test.QuickCheck.DynamicLogic.Quantify
-import           Test.QuickCheck.StateModel
+import Test.QuickCheck.DynamicLogic qualified as DL
+import Test.QuickCheck.DynamicLogic.Quantify
+import Test.QuickCheck.StateModel
 
-import           Test.QuickCheck
+import Test.QuickCheck
 
 -- | The `DL` monad provides a nicer interface to dynamic logic formulae than the plain API.
 --   It's a continuation monad producing a `DL.DynLogic` formula, with a state component threaded

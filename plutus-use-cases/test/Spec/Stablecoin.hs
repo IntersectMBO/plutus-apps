@@ -1,8 +1,9 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Spec.Stablecoin(
     tests
@@ -11,47 +12,47 @@ module Spec.Stablecoin(
     ) where
 
 
-import           Control.Lens                (preview)
-import           Control.Monad               (void)
-import           Data.Maybe                  (listToMaybe, mapMaybe)
-import           Prelude                     hiding (negate)
+import Control.Lens (preview)
+import Control.Monad (void)
+import Data.Maybe (listToMaybe, mapMaybe)
+import Prelude hiding (negate)
 
-import           Ledger.Ada                  (adaSymbol, adaToken)
-import qualified Ledger.Ada                  as Ada
-import           Ledger.Address              (Address)
-import qualified Ledger.CardanoWallet        as CW
-import           Ledger.Crypto               (PrivateKey, toPublicKey)
-import           Ledger.Oracle               (Observation, SignedMessage, signObservation)
-import           Ledger.Time                 (POSIXTime)
-import qualified Ledger.TimeSlot             as TimeSlot
-import           Ledger.Typed.Scripts        (validatorAddress)
-import           Ledger.Value                (Value)
-import qualified Ledger.Value                as Value
-import           Plutus.Contract.Test
-import           Plutus.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..), SC (..), SCAction (..),
-                                              Stablecoin (..), StablecoinError, StablecoinSchema)
-import qualified Plutus.Contracts.Stablecoin as Stablecoin
-import           Plutus.Trace.Emulator       (ContractHandle, EmulatorTrace)
-import qualified Plutus.Trace.Emulator       as Trace
-import           Plutus.Trace.Emulator.Types (_ContractLog, cilMessage)
-import           PlutusTx.Numeric            (negate, one, zero)
-import           PlutusTx.Ratio              as Ratio
-import           Wallet.Emulator.MultiAgent  (eteEvent)
+import Ledger.Ada (adaSymbol, adaToken)
+import Ledger.Ada qualified as Ada
+import Ledger.Address (Address, PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Crypto (toPublicKey)
+import Ledger.Time (POSIXTime)
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Typed.Scripts (validatorAddress)
+import Ledger.Value (Value)
+import Ledger.Value qualified as Value
+import Plutus.Contract.Oracle (Observation, SignedMessage, signObservation)
+import Plutus.Contract.Test
+import Plutus.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..), SC (..), SCAction (..),
+                                    Stablecoin (..), StablecoinError, StablecoinSchema)
+import Plutus.Contracts.Stablecoin qualified as Stablecoin
+import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
+import Plutus.Trace.Emulator qualified as Trace
+import Plutus.Trace.Emulator.Types (_ContractLog, cilMessage)
+import PlutusTx.Numeric (negate, one, zero)
+import PlutusTx.Ratio as Ratio
+import Wallet.Emulator.MultiAgent (eteEvent)
 
-import           Test.Tasty
+import Test.Tasty
 
 user :: Wallet
 user = w1
 
-oraclePrivateKey :: PrivateKey
-oraclePrivateKey = CW.privateKey $ CW.fromWalletNumber $ CW.WalletNumber 2
+oraclePrivateKey :: PaymentPrivateKey
+oraclePrivateKey = CW.paymentPrivateKey $ CW.fromWalletNumber $ CW.WalletNumber 2
 
 onePercent :: Ratio Integer
 onePercent = 1 % 100
 
 coin :: Stablecoin
 coin = Stablecoin
-    { scOracle = toPublicKey oraclePrivateKey
+    { scOracle = PaymentPubKey $ toPublicKey (unPaymentPrivateKey oraclePrivateKey)
     , scFee = onePercent
     , scMinReserveRatio = zero
     , scMaxReserveRatio = 4 % 1
@@ -68,41 +69,41 @@ stablecoinAddress :: Address
 stablecoinAddress = validatorAddress $ Stablecoin.typedValidator coin
 
 initialDeposit :: Value
-initialDeposit = Ada.lovelaceValueOf 100
+initialDeposit = Ada.lovelaceValueOf 10_000_000
 
 initialFee :: Value
-initialFee = Ada.lovelaceValueOf 1
+initialFee = Ada.lovelaceValueOf 100_000 -- Defined as 1% of initialDeposit
 
 tests :: TestTree
 tests = testGroup "Stablecoin"
     [ checkPredicate "mint reservecoins"
         (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee))
         .&&. assertNoFailedTransactions
-        .&&. walletFundsChange user (Stablecoin.reserveCoins coin 100 <> negate (initialDeposit <> initialFee))
+        .&&. walletFundsChange user (Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee))
         )
-        $ initialise >>= mintReserveCoins (RC 100) one
+        $ initialise >>= mintReserveCoins (RC 10_000_000) one
 
     , checkPredicate "mint reservecoins and stablecoins"
-        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 50))
+        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
         .&&. assertNoFailedTransactions
-        .&&. walletFundsChange user (Stablecoin.stableCoins coin 50 <> Stablecoin.reserveCoins coin 100 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 50))
+        .&&. walletFundsChange user (Stablecoin.stableCoins coin 5_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
         )
         $ do
             hdl <- initialise
-            mintReserveCoins (RC 100) one hdl
+            mintReserveCoins (RC 10_000_000) one hdl
             -- Mint 50 stablecoins at a rate of 1 Ada: 1 USD
-            void $ mintStableCoins (SC 50) one hdl
+            void $ mintStableCoins (SC 5_000_000) one hdl
 
     , checkPredicate "mint reservecoins, stablecoins and redeem stablecoin at a different price"
-        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 30))
+        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
         .&&. assertNoFailedTransactions
-        .&&. walletFundsChange user (Stablecoin.stableCoins coin 40 <> Stablecoin.reserveCoins coin 100 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 30))
+        .&&. walletFundsChange user (Stablecoin.stableCoins coin 3_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
         )
         stablecoinTrace
 
-    , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = (200 % 1)}, actual = BC {unBC = (201 % 1)}}. The transition is not allowed." in
+    , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = (20000000 % 1)}, actual = BC {unBC = (20173235 % 1)}}. The transition is not allowed." in
       checkPredicate "Cannot exceed the maximum reserve ratio"
-        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 50))
+        (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
         .&&. assertNoFailedTransactions
         .&&. assertInstanceLog (Trace.walletInstanceTag w1) ((==) (Just expectedLogMsg) . listToMaybe . reverse . mapMaybe (preview (eteEvent . cilMessage . _ContractLog)))
         )
@@ -152,10 +153,10 @@ redeemStableCoins sc rate hdl = do
 stablecoinTrace :: EmulatorTrace ()
 stablecoinTrace = do
     hdl <- initialise
-    mintReserveCoins (RC 100) one hdl
-    mintStableCoins (SC 50) one hdl
-    -- redeem 10 stablecoins at an exchange rate of 2 Ada : 1 USD (so we get 20 lovelace from the bank)
-    redeemStableCoins (SC 10) (Ratio.fromInteger 2) hdl
+    mintReserveCoins (RC 10_000_000) one hdl
+    mintStableCoins (SC 5_000_000) one hdl
+    -- redeem 2M stablecoins at an exchange rate of 2 Ada : 1 USD (so we get 4 Ada from the bank)
+    redeemStableCoins (SC 2_000_000) (Ratio.fromInteger 2) hdl
 
 -- | Mint 100 reserve coins, mint 50 stablecoins, then attempt to mint
 --   another 49 reserve coins. This fails because the max. reserve ratio
@@ -163,8 +164,8 @@ stablecoinTrace = do
 maxReservesExceededTrace :: EmulatorTrace ()
 maxReservesExceededTrace = do
     hdl <- initialise
-    mintReserveCoins (RC 100) one hdl
-    mintStableCoins (SC 50) one hdl
+    mintReserveCoins (RC 10_000_000) one hdl
+    mintStableCoins (SC 5_000_000) one hdl
 
     -- At this point we have:
     -- Stablecoins: 50 (equiv. to 50 Lovelace on the 1:1 conversion
@@ -177,4 +178,4 @@ maxReservesExceededTrace = do
 
     -- The next transition is not allowed as it would bring the reserve
     -- ratio above the maximum.
-    mintReserveCoins (RC 49) one hdl
+    mintReserveCoins (RC 4_900_000) one hdl

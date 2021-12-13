@@ -8,50 +8,47 @@ module Playground.UsecasesSpec
     ( tests
     ) where
 
-import           Control.Monad                (unless)
-import           Control.Monad.Except         (runExceptT)
-import           Control.Monad.Except.Extras  (mapError)
-import           Control.Newtype.Generics     (over)
-import           Crowdfunding                 (Contribution (Contribution), contribValue)
-import           Data.Aeson                   (ToJSON)
-import qualified Data.Aeson                   as JSON
-import qualified Data.Aeson.Text              as JSON
-import           Data.Foldable                (traverse_)
-import           Data.List                    (isPrefixOf)
-import           Data.List.NonEmpty           (NonEmpty ((:|)))
-import           Data.Maybe                   (fromMaybe)
-import qualified Data.Text                    as Text
-import qualified Data.Text.IO                 as Text
-import qualified Data.Text.Lazy               as TL
-import           Data.Time.Units              (Minute)
-import           Game                         (GuessParams (GuessParams), LockParams (LockParams), amount, guessWord,
-                                               secretWord)
-import qualified Interpreter                  as Webghc
-import           Language.Haskell.Interpreter (InterpreterError, InterpreterResult (InterpreterResult, result),
-                                               SourceCode (SourceCode))
-import           Ledger.Ada                   (adaValueOf, lovelaceValueOf)
-import           Ledger.Blockchain            (OnChainTx (..))
-import           Ledger.Scripts               (ValidatorHash (ValidatorHash))
-import           Ledger.Value                 (TokenName (TokenName), Value)
-import qualified Playground.Interpreter       as PI
-import           Playground.Types             (CompilationResult (CompilationResult),
-                                               ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet),
-                                               Evaluation (Evaluation), EvaluationResult (EvaluationResult), Expression,
-                                               FunctionSchema (FunctionSchema), KnownCurrency (KnownCurrency),
-                                               PlaygroundError (InterpreterError), SimulatorWallet (SimulatorWallet),
-                                               adaCurrency, argument, argumentValues, caller, emulatorLog,
-                                               endpointDescription, feesDistribution, fundsDistribution, program,
-                                               resultRollup, simulatorWalletBalance, simulatorWalletWallet, sourceCode,
-                                               walletKeys, wallets)
-import           Playground.Usecases          (crowdFunding, errorHandling, game, vesting)
-import           Schema                       (FormSchema (FormSchemaUnit, FormSchemaValue))
-import           System.Environment           (lookupEnv)
-import           Test.Tasty                   (TestTree, testGroup)
-import           Test.Tasty.HUnit             (Assertion, assertBool, assertEqual, assertFailure, testCase)
-import           Wallet.Emulator.Types        (WalletNumber (..), fromWalletNumber)
-import           Wallet.Rollup.Render         (showBlockchain)
-import           Wallet.Rollup.Types          (AnnotatedTx (..))
-import           Wallet.Types                 (EndpointDescription (EndpointDescription))
+import Control.Monad (unless)
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Except.Extras (mapError)
+import Control.Newtype.Generics (over)
+import Crowdfunding (Contribution (Contribution), contribValue)
+import Data.Aeson (ToJSON)
+import Data.Aeson qualified as JSON
+import Data.Aeson.Text qualified as JSON
+import Data.Foldable (traverse_)
+import Data.List (isPrefixOf)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.Maybe (fromMaybe)
+import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
+import Data.Text.Lazy qualified as TL
+import Data.Time.Units (Minute)
+import Game (GuessParams (GuessParams), LockParams (LockParams), amount, guessWord, secretWord)
+import Interpreter qualified as Webghc
+import Language.Haskell.Interpreter (InterpreterError, InterpreterResult (InterpreterResult, result),
+                                     SourceCode (SourceCode))
+import Ledger.Ada (adaValueOf, lovelaceValueOf)
+import Ledger.Blockchain (OnChainTx (..))
+import Ledger.Scripts (ValidatorHash (ValidatorHash))
+import Ledger.Value (TokenName (TokenName), Value)
+import Playground.Interpreter qualified as PI
+import Playground.Types (CompilationResult (CompilationResult),
+                         ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet), Evaluation (Evaluation),
+                         EvaluationResult (EvaluationResult), Expression, FunctionSchema (FunctionSchema),
+                         KnownCurrency (KnownCurrency), PlaygroundError (InterpreterError),
+                         SimulatorWallet (SimulatorWallet), adaCurrency, argument, argumentValues, caller, emulatorLog,
+                         endpointDescription, feesDistribution, fundsDistribution, program, resultRollup,
+                         simulatorWalletBalance, simulatorWalletWallet, sourceCode, walletKeys, wallets)
+import Playground.Usecases (crowdFunding, errorHandling, game, vesting)
+import Schema (FormSchema (FormSchemaUnit, FormSchemaValue))
+import System.Environment (lookupEnv)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (Assertion, assertBool, assertEqual, assertFailure, testCase)
+import Wallet.Emulator.Types (WalletNumber (..), fromWalletNumber)
+import Wallet.Rollup.Render (showBlockchain)
+import Wallet.Rollup.Types (AnnotatedTx (..))
+import Wallet.Types (EndpointDescription (EndpointDescription))
 
 tests :: TestTree
 tests =
@@ -259,10 +256,10 @@ crowdfundingTest =
         , testCase "should run successful campaign" $
           evaluate successfulCampaign >>=
           hasFundsDistribution
-              [ mkSimulatorWallet w1 $ lovelaceValueOf 600000
-              , mkSimulatorWallet w2 $ lovelaceValueOf 190000
-              , mkSimulatorWallet w3 $ lovelaceValueOf 200000
-              , mkSimulatorWallet w4 $ lovelaceValueOf 210000
+              [ mkSimulatorWallet w1 $ lovelaceValueOf 600_000_000
+              , mkSimulatorWallet w2 $ lovelaceValueOf 190_000_000
+              , mkSimulatorWallet w3 $ lovelaceValueOf 200_000_000
+              , mkSimulatorWallet w4 $ lovelaceValueOf 210_000_000
               ]
         ]
   where
@@ -270,17 +267,17 @@ crowdfundingTest =
     successfulCampaign =
         Evaluation
             { wallets =
-                  [ mkSimulatorWallet w1 $ lovelaceValueOf 300000
-                  , mkSimulatorWallet w2 $ lovelaceValueOf 300000
-                  , mkSimulatorWallet w3 $ lovelaceValueOf 300000
-                  , mkSimulatorWallet w4 $ lovelaceValueOf 300000
+                  [ mkSimulatorWallet w1 $ lovelaceValueOf 300_000_000
+                  , mkSimulatorWallet w2 $ lovelaceValueOf 300_000_000
+                  , mkSimulatorWallet w3 $ lovelaceValueOf 300_000_000
+                  , mkSimulatorWallet w4 $ lovelaceValueOf 300_000_000
                   ]
             , program =
                   toJSONString
                       [ scheduleCollection w1
-                      , contribute w2 $ lovelaceValueOf 110000
-                      , contribute w3 $ lovelaceValueOf 100000
-                      , contribute w4 $ lovelaceValueOf 90000
+                      , contribute w2 $ lovelaceValueOf 110_000_000
+                      , contribute w3 $ lovelaceValueOf 100_000_000
+                      , contribute w4 $ lovelaceValueOf 90_000_000
                       , AddBlocks 1
                       , AddBlocksUntil 41
                       , AddBlocks 1

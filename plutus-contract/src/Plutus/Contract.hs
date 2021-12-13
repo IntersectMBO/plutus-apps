@@ -63,7 +63,7 @@ module Plutus.Contract(
     , Request.utxosTxOutTxFromTx
     , Request.getTip
     -- * Wallet's own public key
-    , Request.ownPubKeyHash
+    , Request.ownPaymentPubKeyHash
     -- * Contract instance Id
     , Wallet.Types.ContractInstanceId
     , Request.ownInstanceId
@@ -80,6 +80,7 @@ module Plutus.Contract(
     , Request.submitBalancedTx
     , Request.balanceTx
     , Request.mkTxConstraints
+    , Request.yieldUnbalancedTx
     -- ** Creating transactions
     , module Tx
     -- ** Tx confirmation
@@ -105,24 +106,23 @@ module Plutus.Contract(
     , type Empty
     ) where
 
-import           Data.Aeson                     (ToJSON (toJSON))
-import           Data.Row
+import Data.Aeson (ToJSON (toJSON))
+import Data.Row (Empty, HasType, type (.\/))
 
-import           Plutus.Contract.Request        (ContractRow)
-import qualified Plutus.Contract.Request        as Request
-import qualified Plutus.Contract.Schema         as Schema
-import           Plutus.Contract.Typed.Tx       as Tx
-import           Plutus.Contract.Types          (AsCheckpointError (..), AsContractError (..), CheckpointError (..),
-                                                 Contract (..), ContractError (..), IsContract (..), Promise (..),
-                                                 checkpoint, checkpointLoop, handleError, mapError, never, promiseBind,
-                                                 promiseMap, runError, select, selectEither, selectList, throwError)
+import Plutus.Contract.Request (ContractRow)
+import Plutus.Contract.Request qualified as Request
+import Plutus.Contract.Schema qualified as Schema
+import Plutus.Contract.Typed.Tx as Tx (collectFromScript, collectFromScriptFilter)
+import Plutus.Contract.Types (AsCheckpointError (..), AsContractError (..), CheckpointError (..), Contract (..),
+                              ContractError (..), IsContract (..), Promise (..), checkpoint, checkpointLoop,
+                              handleError, mapError, never, promiseBind, promiseMap, runError, select, selectEither,
+                              selectList, throwError)
 
-import qualified Control.Monad.Freer.Extras.Log as L
-import qualified Control.Monad.Freer.Writer     as W
-import           Data.Functor.Apply             (liftF2)
-import           Prelude
-import           Wallet.API                     (WalletAPIError)
-import qualified Wallet.Types
+import Control.Monad.Freer.Extras.Log qualified as L
+import Control.Monad.Freer.Writer qualified as W
+import Data.Functor.Apply (liftF2)
+import Wallet.API (WalletAPIError)
+import Wallet.Types qualified
 
 -- | Execute both contracts in any order
 both :: Promise w s e a -> Promise w s e b -> Promise w s e (a, b)

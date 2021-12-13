@@ -52,42 +52,47 @@ module Plutus.Contract.StateMachine(
     , Void
     ) where
 
-import           Control.Lens
-import           Control.Monad.Error.Lens
-import           Data.Aeson                                   (FromJSON, ToJSON)
-import           Data.Default                                 (Default (def))
-import           Data.Either                                  (rights)
-import           Data.Map                                     (Map)
-import qualified Data.Map                                     as Map
-import           Data.Maybe                                   (listToMaybe, mapMaybe)
-import qualified Data.Set                                     as Set
-import           Data.Text                                    (Text)
-import qualified Data.Text                                    as Text
-import           Data.Void                                    (Void, absurd)
-import           GHC.Generics                                 (Generic)
-import           Ledger                                       (POSIXTime, Slot, TxOutRef, Value, scriptCurrencySymbol)
-import qualified Ledger
-import           Ledger.Constraints                           (ScriptLookups, TxConstraints (..), mintingPolicy,
-                                                               mustMintValueWithRedeemer, mustPayToTheScript,
-                                                               mustSpendPubKeyOutput)
-import           Ledger.Constraints.OffChain                  (UnbalancedTx)
-import qualified Ledger.Constraints.OffChain                  as Constraints
-import           Ledger.Constraints.TxConstraints             (InputConstraint (..), OutputConstraint (..))
-import qualified Ledger.TimeSlot                              as TimeSlot
-import qualified Ledger.Tx                                    as Tx
-import qualified Ledger.Typed.Scripts                         as Scripts
-import           Ledger.Typed.Tx                              (TypedScriptTxOut (..))
-import qualified Ledger.Typed.Tx                              as Typed
-import qualified Ledger.Value                                 as Value
-import           Plutus.ChainIndex                            (ChainIndexTx (..))
-import           Plutus.Contract
-import           Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
-import           Plutus.Contract.StateMachine.OnChain         (State (..), StateMachine (..), StateMachineInstance (..))
-import qualified Plutus.Contract.StateMachine.OnChain         as SM
-import           Plutus.Contract.StateMachine.ThreadToken     (ThreadToken (..), curPolicy, ttOutRef)
-import           Plutus.Contract.Wallet                       (getUnspentOutput)
-import qualified PlutusTx
-import           PlutusTx.Monoid                              (inv)
+import Control.Lens (makeClassyPrisms, review)
+import Control.Monad (unless)
+import Control.Monad.Error.Lens
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Either (rights)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (listToMaybe, mapMaybe)
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Void (Void, absurd)
+import GHC.Generics (Generic)
+import Ledger (POSIXTime, Slot, TxOutRef, Value, scriptCurrencySymbol)
+import Ledger qualified
+import Ledger.Constraints (ScriptLookups, TxConstraints, mintingPolicy, mustMintValueWithRedeemer, mustPayToTheScript,
+                           mustSpendPubKeyOutput)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Constraints.OffChain qualified as Constraints
+import Ledger.Constraints.TxConstraints (InputConstraint (InputConstraint, icRedeemer, icTxOutRef),
+                                         OutputConstraint (OutputConstraint, ocDatum, ocValue), txOwnInputs,
+                                         txOwnOutputs)
+import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Typed.Tx (TypedScriptTxOut (TypedScriptTxOut, tyTxOutData, tyTxOutTxOut))
+import Ledger.Typed.Tx qualified as Typed
+import Ledger.Value qualified as Value
+import Plutus.ChainIndex (ChainIndexTx (_citxInputs))
+import Plutus.Contract (AsContractError (_ConstraintResolutionError, _ContractError), Contract, ContractError, Promise,
+                        awaitPromise, isSlot, isTime, logWarn, mapError, never, ownPaymentPubKeyHash, promiseBind,
+                        select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt, utxosTxOutTxAt,
+                        utxosTxOutTxFromTx)
+import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
+import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue),
+                                             StateMachine (StateMachine, smFinal, smThreadToken, smTransition),
+                                             StateMachineInstance (StateMachineInstance, stateMachine, typedValidator))
+import Plutus.Contract.StateMachine.OnChain qualified as SM
+import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (ThreadToken), curPolicy, ttOutRef)
+import Plutus.Contract.Wallet (getUnspentOutput)
+import PlutusTx qualified
+import PlutusTx.Monoid (inv)
 
 -- $statemachine
 -- To write your contract as a state machine you need
@@ -266,8 +271,8 @@ waitForUpdateUntilTime ::
     )
     => StateMachineClient state i
     -> POSIXTime
-    -> Contract w schema e (WaitingResult Slot i state)
-waitForUpdateUntilTime sm timeoutTime = waitForUpdateUntilSlot sm (TimeSlot.posixTimeToEnclosingSlot def timeoutTime)
+    -> Contract w schema e (WaitingResult POSIXTime i state)
+waitForUpdateUntilTime client timeoutTime = waitForUpdateTimeout client (isTime timeoutTime) >>= fmap (fmap (tyTxOutData . ocsTxOut)) . awaitPromise
 
 -- | Wait until the on-chain state of the state machine instance has changed,
 --   and return the new state, or return 'Nothing' if the instance has been
@@ -415,8 +420,8 @@ runInitialiseWith ::
     -- ^ The value locked by the contract at the beginning
     -> Contract w schema e state
 runInitialiseWith customLookups customConstraints StateMachineClient{scInstance} initialState initialValue = mapError (review _SMContractError) $ do
-    ownPK <- ownPubKeyHash
-    utxo <- utxosAt (Ledger.pubKeyHashAddress ownPK)
+    ownPK <- ownPaymentPubKeyHash
+    utxo <- utxosAt (Ledger.pubKeyHashAddress ownPK Nothing)
     let StateMachineInstance{stateMachine, typedValidator} = scInstance
         constraints = mustPayToTheScript initialState (initialValue <> SM.threadTokenValueOrZero scInstance)
             <> foldMap ttConstraints (smThreadToken stateMachine)
@@ -430,7 +435,11 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
             <> Constraints.unspentOutputs utxo
             <> customLookups
     utx <- either (throwing _ConstraintResolutionError) pure (Constraints.mkTx lookups constraints)
-    submitTxConfirmed utx
+    let adjustedUtx = Constraints.adjustUnbalancedTx utx
+    unless (utx == adjustedUtx) $
+      logWarn @Text $ "Plutus.Contract.StateMachine.runInitialise: "
+                    <> "Found a transaction output value with less than the minimum amount of Ada. Adjusting ..."
+    submitTxConfirmed adjustedUtx
     pure initialState
 
 -- | Run one step of a state machine, returning the new state. We can supply additional constraints and lookups for transaction.
@@ -470,16 +479,22 @@ runGuardedStepWith ::
     -> (UnbalancedTx -> state -> state -> Maybe a) -- ^ The guard to check before running the step
     -> Contract w schema e (Either a (TransitionResult state input))
 runGuardedStepWith userLookups userConstraints smc input guard = mapError (review _SMContractError) $ mkStep smc input >>= \case
-     Right StateMachineTransition{smtConstraints,smtOldState=State{stateData=os}, smtNewState=State{stateData=ns}, smtLookups} -> do
-         pk <- ownPubKeyHash
-         let lookups = smtLookups { Constraints.slOwnPubkeyHash = Just pk }
-         utx <- either (throwing _ConstraintResolutionError) pure (Constraints.mkTx (lookups <> userLookups) (smtConstraints <> userConstraints))
-         case guard utx os ns of
-             Nothing -> do
-                 submitTxConfirmed utx
-                 pure $ Right $ TransitionSuccess ns
-             Just a  -> pure $ Left a
-     Left e -> pure $ Right $ TransitionFailure e
+    Right StateMachineTransition{smtConstraints,smtOldState=State{stateData=os}, smtNewState=State{stateData=ns}, smtLookups} -> do
+        pk <- ownPaymentPubKeyHash
+        let lookups = smtLookups { Constraints.slOwnPaymentPubKeyHash = Just pk }
+        utx <- either (throwing _ConstraintResolutionError)
+                      pure
+                      (Constraints.mkTx (lookups <> userLookups) (smtConstraints <> userConstraints))
+        let adjustedUtx = Constraints.adjustUnbalancedTx utx
+        unless (utx == adjustedUtx) $
+          logWarn @Text $ "Plutus.Contract.StateMachine.runStep: "
+                       <> "Found a transaction output value with less than the minimum amount of Ada. Adjusting ..."
+        case guard adjustedUtx os ns of
+            Nothing -> do
+                submitTxConfirmed adjustedUtx
+                pure $ Right $ TransitionSuccess ns
+            Just a  -> pure $ Left a
+    Left e -> pure $ Right $ TransitionFailure e
 
 -- | Given a state machine client and an input to apply to
 --   the client's state machine instance, compute the 'StateMachineTransition'

@@ -79,29 +79,30 @@ module Plutus.Contracts.Stablecoin(
   , checkValidState
   ) where
 
-import           Control.Lens                 (makeClassyPrisms)
-import           Control.Monad                (forever, guard)
-import           Data.Aeson                   (FromJSON, ToJSON)
-import           Data.Functor.Identity        (Identity (..))
-import           GHC.Generics                 (Generic)
-import           Ledger.Constraints           (TxConstraints)
-import qualified Ledger.Constraints           as Constraints
-import           Ledger.Crypto                (PubKey)
-import qualified Ledger.Interval              as Interval
-import           Ledger.Oracle
-import           Ledger.Scripts               (MintingPolicyHash)
-import qualified Ledger.Typed.Scripts         as Scripts
-import           Ledger.Typed.Tx              (TypedScriptTxOut (..))
-import           Ledger.Value                 (AssetClass, TokenName, Value)
-import qualified Ledger.Value                 as Value
-import           Plutus.Contract
-import           Plutus.Contract.StateMachine (AsSMContractError, OnChainState (..), SMContractError, State (..),
-                                               StateMachine, StateMachineClient (..), Void)
-import qualified Plutus.Contract.StateMachine as SM
-import qualified PlutusTx
-import           PlutusTx.Prelude
-import           PlutusTx.Ratio               as R
-import qualified Prelude                      as Haskell
+import Control.Lens (makeClassyPrisms)
+import Control.Monad (forever, guard)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Functor.Identity (Identity (..))
+import GHC.Generics (Generic)
+import Ledger.Ada qualified as Ada
+import Ledger.Address (PaymentPubKey)
+import Ledger.Constraints (TxConstraints)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Interval qualified as Interval
+import Ledger.Scripts (MintingPolicyHash)
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Typed.Tx (TypedScriptTxOut (..))
+import Ledger.Value (AssetClass, TokenName, Value)
+import Ledger.Value qualified as Value
+import Plutus.Contract
+import Plutus.Contract.Oracle
+import Plutus.Contract.StateMachine (AsSMContractError, OnChainState (..), SMContractError, State (..), StateMachine,
+                                     StateMachineClient (..), Void)
+import Plutus.Contract.StateMachine qualified as SM
+import PlutusTx qualified
+import PlutusTx.Prelude
+import PlutusTx.Ratio as R
+import Prelude qualified as Haskell
 
 -- | Conversion rate from peg currency (eg. USD) to base currency (eg. Ada)
 type ConversionRate = Ratio Integer
@@ -191,7 +192,7 @@ equity r@BankState{bsReserves=BC reserves} cr =
 -- | Stablecoin parameters.
 data Stablecoin =
     Stablecoin
-        { scOracle                  :: PubKey -- ^ Public key of the oracle that provides exchange rates
+        { scOracle                  :: PaymentPubKey -- ^ Public key of the oracle that provides exchange rates
         , scFee                     :: Ratio Integer -- ^ Fee charged by bank for transactions. Calculated as a fraction of the total transaction volume in base currency.
         , scMinReserveRatio         :: Ratio Integer -- ^ The minimum ratio of reserves to liabilities
         , scMaxReserveRatio         :: Ratio Integer -- ^ The maximum ratio of reserves to liabilities
@@ -402,7 +403,7 @@ instance AsSMContractError StablecoinError where
 contract :: Promise () StablecoinSchema StablecoinError ()
 contract = endpoint @"initialise" $ \sc -> do
     let theClient = machineClient (typedValidator sc) sc
-    _ <- SM.runInitialise theClient (initialState theClient) mempty
+    _ <- SM.runInitialise theClient (initialState theClient) (Ada.lovelaceValueOf 1)
     forever $ awaitPromise $ endpoint @"run step" $ \i -> do
         checkTransition theClient sc i
         SM.runStep theClient i

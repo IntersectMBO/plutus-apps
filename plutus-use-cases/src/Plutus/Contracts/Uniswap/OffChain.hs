@@ -29,27 +29,26 @@ module Plutus.Contracts.Uniswap.OffChain
     , ownerEndpoint, userEndpoints
     ) where
 
-import           Control.Lens                     (view)
-import           Control.Monad                    hiding (fmap)
-import qualified Data.Map                         as Map
-import           Data.Monoid                      (Last (..))
-import           Data.Proxy                       (Proxy (..))
-import           Data.Text                        (Text, pack)
-import           Data.Void                        (Void, absurd)
-import           Ledger                           hiding (singleton)
-import           Ledger.Constraints               as Constraints
-import qualified Ledger.Typed.Scripts             as Scripts
-import           Playground.Contract
-import           Plutus.Contract                  as Contract
-import qualified Plutus.Contracts.Currency        as Currency
-import           Plutus.Contracts.Uniswap.OnChain (mkUniswapValidator, validateLiquidityMinting)
-import           Plutus.Contracts.Uniswap.Pool
-import           Plutus.Contracts.Uniswap.Types
-import qualified PlutusTx
-import           PlutusTx.Prelude                 hiding (Semigroup (..), dropWhile, flip, unless)
-import           Prelude                          as Haskell (Int, Semigroup (..), String, div, dropWhile, flip, show,
-                                                              (^))
-import           Text.Printf                      (printf)
+import Control.Lens (view)
+import Control.Monad hiding (fmap)
+import Data.Map qualified as Map
+import Data.Monoid (Last (..))
+import Data.Proxy (Proxy (..))
+import Data.Text (Text, pack)
+import Data.Void (Void, absurd)
+import Ledger hiding (singleton)
+import Ledger.Constraints as Constraints
+import Ledger.Typed.Scripts qualified as Scripts
+import Playground.Contract
+import Plutus.Contract as Contract
+import Plutus.Contracts.Currency qualified as Currency
+import Plutus.Contracts.Uniswap.OnChain (mkUniswapValidator, validateLiquidityMinting)
+import Plutus.Contracts.Uniswap.Pool
+import Plutus.Contracts.Uniswap.Types
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
+import Prelude as Haskell (Int, Semigroup (..), String, div, dropWhile, flip, show, (^))
+import Text.Printf (printf)
 
 data Uniswapping
 instance Scripts.ValidatorTypes Uniswapping where
@@ -173,7 +172,7 @@ data AddParams = AddParams
 -- for any pair of tokens at any given time.
 start :: forall w s. Contract w s Text Uniswap
 start = do
-    pkh <- Contract.ownPubKeyHash
+    pkh <- Contract.ownPaymentPubKeyHash
     cs  <- fmap Currency.currencySymbol $
            mapError (pack . show @Currency.CurrencyError) $
            Currency.mintContract pkh [(uniswapTokenName, 1)]
@@ -181,8 +180,9 @@ start = do
         us   = uniswap cs
         inst = uniswapInstance us
         tx   = mustPayToTheScript (Factory []) $ unitValue c
-    ledgerTx <- submitTxConstraints inst tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+
+    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+      >>= submitTxConfirmed . adjustUnbalancedTx
     void $ waitNSlots 1
 
     logInfo @String $ printf "started Uniswap %s at address %s" (show us) (show $ uniswapAddress us)
@@ -215,8 +215,7 @@ create us CreateParams{..} = do
                    Constraints.mustMintValue (unitValue psC <> valueOf lC liquidity)              <>
                    Constraints.mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData $ Create lp)
 
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
 
     logInfo $ "created liquidity pool: " ++ show lp
 
@@ -224,7 +223,7 @@ create us CreateParams{..} = do
 close :: forall w s. Uniswap -> CloseParams -> Contract w s Text ()
 close us CloseParams{..} = do
     ((oref1, o1, lps), (oref2, o2, lp, liquidity)) <- findUniswapFactoryAndPool us clpCoinA clpCoinB
-    pkh                                            <- Contract.ownPubKeyHash
+    pkh                                            <- Contract.ownPaymentPubKeyHash
     let usInst   = uniswapInstance us
         usScript = uniswapScript us
         usDat    = Factory $ filter (/= lp) lps
@@ -239,7 +238,7 @@ close us CloseParams{..} = do
         lookups  = Constraints.typedValidatorLookups usInst        <>
                    Constraints.otherScript usScript                <>
                    Constraints.mintingPolicy (liquidityPolicy us) <>
-                   Constraints.ownPubKeyHash pkh                   <>
+                   Constraints.ownPaymentPubKeyHash pkh                   <>
                    Constraints.unspentOutputs (Map.singleton oref1 o1 <> Map.singleton oref2 o2)
 
         tx       = Constraints.mustPayToTheScript usDat usVal          <>
@@ -248,8 +247,7 @@ close us CloseParams{..} = do
                    Constraints.mustSpendScriptOutput oref2 redeemer    <>
                    Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData $ Pool lp liquidity)
 
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
 
     logInfo $ "closed liquidity pool: " ++ show lp
 
@@ -257,7 +255,7 @@ close us CloseParams{..} = do
 remove :: forall w s. Uniswap -> RemoveParams -> Contract w s Text ()
 remove us RemoveParams{..} = do
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us rpCoinA rpCoinB
-    pkh                           <- Contract.ownPubKeyHash
+    pkh                           <- Contract.ownPaymentPubKeyHash
     when (rpDiff < 1 || rpDiff >= liquidity) $ throwError "removed liquidity must be positive and less than total liquidity"
     let usInst       = uniswapInstance us
         usScript     = uniswapScript us
@@ -277,21 +275,20 @@ remove us RemoveParams{..} = do
                    Constraints.otherScript usScript                  <>
                    Constraints.mintingPolicy (liquidityPolicy us)   <>
                    Constraints.unspentOutputs (Map.singleton oref o) <>
-                   Constraints.ownPubKeyHash pkh
+                   Constraints.ownPaymentPubKeyHash pkh
 
         tx       = Constraints.mustPayToTheScript dat val          <>
                    Constraints.mustMintValue (negate lVal)        <>
                    Constraints.mustSpendScriptOutput oref redeemer
 
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
 
     logInfo $ "removed liquidity from pool: " ++ show lp
 
 -- | Adds some liquidity to an existing liquidity pool in exchange for newly minted liquidity tokens.
 add :: forall w s. Uniswap -> AddParams -> Contract w s Text ()
 add us AddParams{..} = do
-    pkh                           <- Contract.ownPubKeyHash
+    pkh                           <- Contract.ownPaymentPubKeyHash
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us apCoinA apCoinB
     when (apAmountA < 0 || apAmountB < 0) $ throwError "amounts must not be negative"
     let outVal = view ciTxOutValue o
@@ -317,7 +314,7 @@ add us AddParams{..} = do
         lookups  = Constraints.typedValidatorLookups usInst             <>
                    Constraints.otherScript usScript                     <>
                    Constraints.mintingPolicy (liquidityPolicy us)       <>
-                   Constraints.ownPubKeyHash pkh                        <>
+                   Constraints.ownPaymentPubKeyHash pkh                        <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
         tx       = Constraints.mustPayToTheScript dat val          <>
@@ -328,8 +325,7 @@ add us AddParams{..} = do
     logInfo $ show lookups
     logInfo $ show tx
 
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
 
     logInfo $ "added liquidity to pool: " ++ show lp
 
@@ -349,7 +345,7 @@ swap us SwapParams{..} = do
         let outA = Amount $ findSwapB oldA oldB spAmountB
         when (outA == 0) $ throwError "no payout"
         return (oldA - outA, oldB + spAmountB)
-    pkh <- Contract.ownPubKeyHash
+    pkh <- Contract.ownPaymentPubKeyHash
 
     logInfo @String $ printf "oldA = %d, oldB = %d, old product = %d, newA = %d, newB = %d, new product = %d" oldA oldB (unAmount oldA * unAmount oldB) newA newB (unAmount newA * unAmount newB)
 
@@ -359,15 +355,13 @@ swap us SwapParams{..} = do
         lookups = Constraints.typedValidatorLookups inst                 <>
                   Constraints.otherScript (Scripts.validatorScript inst) <>
                   Constraints.unspentOutputs (Map.singleton oref o)      <>
-                  Constraints.ownPubKeyHash pkh
+                  Constraints.ownPaymentPubKeyHash pkh
 
         tx      = mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData Swap) <>
                   Constraints.mustPayToTheScript (Pool lp liquidity) val
 
-    logInfo $ show tx
-    ledgerTx <- submitTxConstraintsWith lookups tx
-    logInfo $ show ledgerTx
-    void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+
     logInfo $ "swapped with: " ++ show lp
 
 -- | Finds all liquidity pools and their liquidity belonging to the Uniswap instance.
@@ -403,8 +397,8 @@ pools us = do
 -- | Gets the caller's funds.
 funds :: forall w s. Contract w s Text Value
 funds = do
-    pkh <- Contract.ownPubKeyHash
-    os  <- map snd . Map.toList <$> utxosAt (pubKeyHashAddress pkh)
+    pkh <- Contract.ownPaymentPubKeyHash
+    os  <- map snd . Map.toList <$> utxosAt (pubKeyHashAddress pkh Nothing)
     return $ mconcat [view ciTxOutValue o | o <- os]
 
 getUniswapDatum :: ChainIndexTxOut -> Contract w s Text UniswapDatum

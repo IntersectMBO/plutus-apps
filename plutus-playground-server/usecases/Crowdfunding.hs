@@ -21,27 +21,28 @@ module Crowdfunding where
 -- Note [Transactions in the crowdfunding campaign] explains the structure of
 -- this contract on the blockchain.
 
-import           Control.Applicative         (Applicative (pure))
-import           Control.Monad               (void)
-import           Data.Default                (Default (def))
-import           Ledger                      (POSIXTime, POSIXTimeRange, PubKeyHash, ScriptContext (..), TxInfo (..),
-                                              Validator, getCardanoTxId)
-import qualified Ledger
-import qualified Ledger.Contexts             as V
-import qualified Ledger.Interval             as Interval
-import qualified Ledger.Scripts              as Scripts
-import qualified Ledger.TimeSlot             as TimeSlot
-import qualified Ledger.Typed.Scripts        as Scripts hiding (validatorHash)
-import           Ledger.Value                (Value)
-import           Playground.Contract
-import           Plutus.Contract
-import qualified Plutus.Contract.Constraints as Constraints
-import qualified Plutus.Contract.Typed.Tx    as Typed
-import qualified PlutusTx
-import           PlutusTx.Prelude            hiding (Applicative (..), Semigroup (..))
-import           Prelude                     (Semigroup (..))
-import qualified Prelude                     as Haskell
-import qualified Wallet.Emulator             as Emulator
+import Control.Applicative (Applicative (pure))
+import Control.Monad (void)
+import Data.Default (Default (def))
+import Data.Text (Text)
+import Ledger (POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (..), TxInfo (..),
+               Validator, getCardanoTxId)
+import Ledger qualified
+import Ledger.Contexts qualified as V
+import Ledger.Interval qualified as Interval
+import Ledger.Scripts qualified as Scripts
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
+import Ledger.Value (Value)
+import Playground.Contract
+import Plutus.Contract
+import Plutus.Contract.Constraints qualified as Constraints
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..))
+import Prelude (Semigroup (..))
+import Prelude qualified as Haskell
+import Wallet.Emulator qualified as Emulator
 
 -- | A crowdfunding campaign.
 data Campaign = Campaign
@@ -49,7 +50,7 @@ data Campaign = Campaign
     -- ^ The date by which the campaign funds can be contributed.
     , campaignCollectionDeadline :: POSIXTime
     -- ^ The date by which the campaign owner has to collect the funds
-    , campaignOwner              :: PubKeyHash
+    , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
     --   funds if the campaign is successful.
     } deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -82,7 +83,7 @@ mkCampaign ddl collectionDdl ownerWallet =
     Campaign
         { campaignDeadline = ddl
         , campaignCollectionDeadline = collectionDdl
-        , campaignOwner = Emulator.walletPubKeyHash ownerWallet
+        , campaignOwner = Emulator.mockWalletPaymentPubKeyHash ownerWallet
         }
 
 -- | The 'POSIXTimeRange' during which the funds can be collected
@@ -98,7 +99,7 @@ refundRange cmp =
 data Crowdfunding
 instance Scripts.ValidatorTypes Crowdfunding where
     type instance RedeemerType Crowdfunding = CampaignAction
-    type instance DatumType Crowdfunding = PubKeyHash
+    type instance DatumType Crowdfunding = PaymentPubKeyHash
 
 typedValidator :: Campaign -> Scripts.TypedValidator Crowdfunding
 typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
@@ -108,26 +109,26 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
         wrap = Scripts.wrapValidator
 
 {-# INLINABLE validRefund #-}
-validRefund :: Campaign -> PubKeyHash -> TxInfo -> Bool
+validRefund :: Campaign -> PaymentPubKeyHash -> TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
     (refundRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the contributor
-    && (txinfo `V.txSignedBy` contributor)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash contributor)
 
 validCollection :: Campaign -> TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
     (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `V.txSignedBy` campaignOwner campaign)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 -- | The validator script is of type 'CrowdfundingValidator', and is
 -- additionally parameterized by a 'Campaign' definition. This argument is
 -- provided by the Plutus client, using 'PlutusTx.applyCode'.
 -- As a result, the 'Campaign' definition is part of the script address,
 -- and different campaigns have different addresses.
-mkValidator :: Campaign -> PubKeyHash -> CampaignAction -> ScriptContext -> Bool
+mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> ScriptContext -> Bool
 mkValidator c con act p = case act of
     -- the "refund" branch
     Refund  -> validRefund c con (scriptContextTxInfo p)
@@ -153,7 +154,7 @@ theCampaign :: POSIXTime -> Campaign
 theCampaign startTime = Campaign
     { campaignDeadline = startTime + 40000
     , campaignCollectionDeadline = startTime + 60000
-    , campaignOwner = Emulator.walletPubKeyHash (Emulator.knownWallet 1)
+    , campaignOwner = Emulator.mockWalletPaymentPubKeyHash (Emulator.knownWallet 1)
     }
 
 -- | The "contribute" branch of the contract for a specific 'Campaign'. Exposes
@@ -162,11 +163,12 @@ theCampaign startTime = Campaign
 --   refund if the funding was not collected.
 contribute :: AsContractError e => Campaign -> Promise () CrowdfundingSchema e ()
 contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
-    contributor <- ownPubKeyHash
+    contributor <- ownPaymentPubKeyHash
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
-    txid <- fmap getCardanoTxId (submitTxConstraints inst tx)
+    txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) (campaignCollectionDeadline cmp)
 
@@ -179,7 +181,11 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
                 <> Constraints.mustValidateIn (refundRange cmp)
                 <> Constraints.mustBeSignedBy contributor
     if Constraints.modifiesUtxoSet tx'
-    then void (submitTxConstraintsSpending inst utxo tx')
+    then do
+        logInfo @Text "Claiming refund"
+        void $ mkTxConstraints (Constraints.typedValidatorLookups inst
+                             <> Constraints.unspentOutputs utxo) tx'
+            >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
     else pure ()
 
 -- | The campaign owner's branch of the contract for a given 'Campaign'. It

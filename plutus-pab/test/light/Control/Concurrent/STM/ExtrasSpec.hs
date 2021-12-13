@@ -9,18 +9,18 @@ module Control.Concurrent.STM.ExtrasSpec
     ( tests
     ) where
 
-import           Control.Concurrent            (threadDelay)
-import           Control.Concurrent.Async      (concurrently, forConcurrently)
-import           Control.Concurrent.STM        (atomically)
-import           Control.Concurrent.STM.Extras
-import           Control.Concurrent.STM.TVar   (newTVar, readTVar, writeTVar)
-import           Control.Monad                 (forM_, void)
-import           Control.Monad.IO.Class        (liftIO)
-import           Data.Foldable                 (fold)
-import           Data.Maybe                    (isNothing)
-import           GHC.Conc.Sync                 (STM)
-import           Test.Tasty                    (TestTree, defaultMain, testGroup)
-import           Test.Tasty.HUnit              (HasCallStack, assertBool, assertEqual, testCase)
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (concurrently, forConcurrently)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.Extras
+import Control.Concurrent.STM.TVar (newTVar, readTVar, writeTVar)
+import Control.Monad (forM_, void)
+import Control.Monad.IO.Class (liftIO)
+import Data.Foldable (fold)
+import Data.Maybe (isNothing)
+import GHC.Conc.Sync (STM)
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.HUnit (HasCallStack, assertBool, assertEqual, testCase)
 
 tests :: TestTree
 tests =

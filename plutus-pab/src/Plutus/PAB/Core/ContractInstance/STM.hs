@@ -41,6 +41,7 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , callEndpointOnInstance
     , callEndpointOnInstanceTimeout
     , observableContractState
+    , yieldedExportTxs
     , instanceState
     , instanceIDs
     , instancesWithStatuses
@@ -48,29 +49,30 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , InstanceClientEnv(..)
     ) where
 
-import           Control.Applicative            (Alternative (..))
-import           Control.Concurrent.STM         (STM, TMVar, TVar)
-import qualified Control.Concurrent.STM         as STM
-import           Control.Monad                  (guard, (<=<))
-import           Data.Aeson                     (Value)
-import           Data.Default                   (def)
-import           Data.Foldable                  (fold)
-import           Data.List.NonEmpty             (NonEmpty)
-import           Data.Map                       (Map)
-import qualified Data.Map                       as Map
-import           Data.Set                       (Set)
-import           Ledger                         (Address, Slot, TxId, TxOutRef)
-import           Ledger.Time                    (POSIXTime (..))
-import qualified Ledger.TimeSlot                as TimeSlot
-import           Plutus.ChainIndex              (BlockNumber (..), ChainIndexTx, TxIdState (..), TxOutBalance,
-                                                 TxOutStatus, TxStatus, transactionStatus)
-import           Plutus.ChainIndex.TxOutBalance (transactionOutputStatus)
-import           Plutus.ChainIndex.UtxoState    (UtxoIndex, UtxoState (..), utxoState)
-import           Plutus.Contract.Effects        (ActiveEndpoint (..))
-import           Plutus.Contract.Resumable      (IterationID, Request (..), RequestID)
-import           Wallet.Types                   (ContractInstanceId, EndpointDescription, EndpointValue (..),
-                                                 NotificationError (..))
-import qualified Wallet.Types                   as Wallet (ContractActivityStatus (..))
+import Control.Applicative (Alternative (empty))
+import Control.Concurrent.STM (STM, TMVar, TVar)
+import Control.Concurrent.STM qualified as STM
+import Control.Monad (guard, (<=<))
+import Data.Aeson (Value)
+import Data.Default (def)
+import Data.Foldable (fold)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Set (Set)
+import Ledger (Address, Slot, TxId, TxOutRef)
+import Ledger.Time (POSIXTime)
+import Ledger.TimeSlot qualified as TimeSlot
+import Plutus.ChainIndex (BlockNumber (BlockNumber), ChainIndexTx, TxIdState, TxOutBalance, TxOutStatus, TxStatus,
+                          transactionStatus)
+import Plutus.ChainIndex.TxOutBalance (transactionOutputStatus)
+import Plutus.ChainIndex.UtxoState (UtxoIndex, UtxoState (_usTxUtxoData), utxoState)
+import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription))
+import Plutus.Contract.Resumable (IterationID, Request (Request, itID, rqID, rqRequest), RequestID)
+import Plutus.Contract.Wallet (ExportTx)
+import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue (EndpointValue),
+                     NotificationError (EndpointNotAvailable, InstanceDoesNotExist, MoreThanOneEndpointAvailable))
+import Wallet.Types qualified as Wallet (ContractActivityStatus (Active, Done, Stopped))
 
 {- Note [Contract instance thread model]
 
@@ -196,12 +198,13 @@ data Activity =
 -- | The state of an active contract instance.
 data InstanceState =
     InstanceState
-        { issEndpoints       :: TVar (Map (RequestID, IterationID) OpenEndpoint) -- ^ Open endpoints that can be responded to.
-        , issStatus          :: TVar Activity -- ^ Whether the instance is still running.
-        , issObservableState :: TVar (Maybe Value) -- ^ Serialised observable state of the contract instance (if available)
-        , issStop            :: TMVar () -- ^ Stop the instance if a value is written into the TMVar.
-        , issTxOutRefs       :: TVar (Map (RequestID, IterationID) OpenTxOutSpentRequest)
-        , issAddressRefs     :: TVar (Map (RequestID, IterationID) OpenTxOutProducedRequest)
+        { issEndpoints        :: TVar (Map (RequestID, IterationID) OpenEndpoint) -- ^ Open endpoints that can be responded to.
+        , issStatus           :: TVar Activity -- ^ Whether the instance is still running.
+        , issObservableState  :: TVar (Maybe Value) -- ^ Serialised observable state of the contract instance (if available)
+        , issStop             :: TMVar () -- ^ Stop the instance if a value is written into the TMVar.
+        , issTxOutRefs        :: TVar (Map (RequestID, IterationID) OpenTxOutSpentRequest)
+        , issAddressRefs      :: TVar (Map (RequestID, IterationID) OpenTxOutProducedRequest)
+        , issYieldedExportTxs :: TVar [ExportTx] -- ^ Partial tx that needs to be balanced, signed and submitted by an external agent.
         }
 
 -- | An 'InstanceState' value with empty fields
@@ -212,6 +215,7 @@ emptyInstanceState =
         <*> STM.newTVar Active
         <*> STM.newTVar Nothing
         <*> STM.newEmptyTMVar
+        <*> STM.newTVar mempty
         <*> STM.newTVar mempty
         <*> STM.newTVar mempty
 
@@ -337,6 +341,10 @@ callEndpointOnInstance' notAvailable (InstancesState m) endpointDescription valu
                 []   -> notAvailable
                 [ep] -> callEndpoint ep (EndpointValue value) >> pure Nothing
                 _    -> pure $ Just $ MoreThanOneEndpointAvailable instanceID endpointDescription
+
+-- | The list of all partial txs that need to be balanced on the instance.
+yieldedExportTxs :: InstanceState -> STM [ExportTx]
+yieldedExportTxs = STM.readTVar . issYieldedExportTxs
 
 -- | State of all contract instances that are currently running
 newtype InstancesState = InstancesState { getInstancesState :: TVar (Map ContractInstanceId InstanceState) }

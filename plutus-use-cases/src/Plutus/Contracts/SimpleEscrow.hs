@@ -18,33 +18,33 @@
 module Plutus.Contracts.SimpleEscrow
   where
 
-import           Control.Lens             (makeClassyPrisms, view)
-import           Control.Monad            (void)
-import           Control.Monad.Error.Lens (throwing)
-import           Data.Aeson               (FromJSON, ToJSON)
-import           GHC.Generics             (Generic)
+import Control.Lens (makeClassyPrisms, view)
+import Control.Monad (void)
+import Control.Monad.Error.Lens (throwing)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 
-import           Ledger                   (POSIXTime, PubKeyHash, TxId, getCardanoTxId, txSignedBy, valuePaidTo)
-import qualified Ledger
-import qualified Ledger.Constraints       as Constraints
-import           Ledger.Contexts          (ScriptContext (..), TxInfo (..))
-import           Ledger.Interval          (after, before)
-import qualified Ledger.Interval          as Interval
-import qualified Ledger.Tx                as Tx
-import qualified Ledger.Typed.Scripts     as Scripts
-import           Ledger.Value             (Value, geq)
+import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, txSignedBy, valuePaidTo)
+import Ledger qualified
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Ledger.Interval (after, before)
+import Ledger.Interval qualified as Interval
+import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (Value, geq)
 
-import           Plutus.Contract
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
-import           PlutusTx.Prelude         hiding (Applicative (..), Semigroup (..), check, foldMap)
+import Plutus.Contract
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
-import           Prelude                  (Semigroup (..), foldMap)
-import qualified Prelude                  as Haskell
+import Prelude (Semigroup (..), foldMap)
+import Prelude qualified as Haskell
 
 data EscrowParams =
   EscrowParams
-    { payee     :: PubKeyHash
+    { payee     :: PaymentPubKeyHash
     -- ^ The entity that needs to be paid the 'expecting' 'Value'.
     , paying    :: Value
     -- ^ Value to be paid out to the redeemer.
@@ -110,12 +110,12 @@ validate params action ScriptContext{scriptContextTxInfo=txInfo} =
           -- Can't redeem after the deadline
       let notLapsed = deadline params `after` txInfoValidRange txInfo
           -- Payee has to have been paid
-          paid      = valuePaidTo txInfo (payee params) `geq` expecting params
+          paid      = valuePaidTo txInfo (unPaymentPubKeyHash $ payee params) `geq` expecting params
        in traceIfFalse "escrow-deadline-lapsed" notLapsed
           && traceIfFalse "escrow-not-paid" paid
     Refund ->
           -- Has to be the person that locked value requesting the refund
-      let signed = txInfo `txSignedBy` payee params
+      let signed = txInfo `txSignedBy` unPaymentPubKeyHash (payee params)
           -- And we only refund after the deadline has passed
           lapsed = (deadline params - 1) `before` txInfoValidRange txInfo
        in traceIfFalse "escrow-not-signed" signed
@@ -129,7 +129,8 @@ lockEp = endpoint @"lock" $ \params -> do
   let valRange = Interval.to (Haskell.pred $ deadline params)
       tx = Constraints.mustPayToTheScript params (paying params)
             <> Constraints.mustValidateIn valRange
-  void $ submitTxConstraints escrowInstance tx
+  void $ mkTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
+         >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 -- | Attempts to redeem the 'Value' locked into this script by paying in from
 -- the callers address to the payee.
@@ -138,7 +139,7 @@ redeemEp = endpoint @"redeem" redeem
   where
     redeem params = do
       time <- currentTime
-      pk <- ownPubKeyHash
+      pk <- ownPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
       let value = foldMap (view Tx.ciTxOutValue) unspentOutputs
@@ -151,7 +152,12 @@ redeemEp = endpoint @"redeem" redeem
 
       if time >= deadline params
       then throwing _RedeemFailed DeadlinePassed
-      else RedeemSuccess . getCardanoTxId <$> do submitTxConstraintsSpending escrowInstance unspentOutputs tx
+      else do
+        utx <- Constraints.adjustUnbalancedTx
+           <$> mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+                              <> Constraints.unspentOutputs unspentOutputs
+                               ) tx
+        RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
 
 -- | Refunds the locked amount back to the 'payee'.
 refundEp :: Promise () EscrowSchema EscrowError RefundSuccess
@@ -164,7 +170,12 @@ refundEp = endpoint @"refund" refund
                   <> Constraints.mustValidateIn (Interval.from (deadline params))
 
       if Constraints.modifiesUtxoSet tx
-      then RefundSuccess . getCardanoTxId <$> submitTxConstraintsSpending escrowInstance unspentOutputs tx
+      then do
+        utx <- Constraints.adjustUnbalancedTx
+           <$> mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+                              <> Constraints.unspentOutputs unspentOutputs
+                               ) tx
+        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
       else throwing _RefundFailed ()
 
 PlutusTx.unstableMakeIsData ''EscrowParams

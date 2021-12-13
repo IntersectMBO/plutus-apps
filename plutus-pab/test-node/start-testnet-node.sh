@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cabal exec cardano-node -- run \
+cardano-node run \
     --config testnet/testnet-config.json \
     --topology testnet/testnet-topology.json \
     --database-path testnet/db \

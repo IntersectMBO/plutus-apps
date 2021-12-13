@@ -2,16 +2,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Spec.Currency(tests, currencyTrace) where
 
-import           Control.Monad             (void)
-import qualified Ledger
-import           Plutus.Contract
-import           Plutus.Contract.Test
+import Control.Monad (void)
+import Ledger qualified
+import Plutus.Contract
+import Plutus.Contract.Test
 
-import           Plutus.Contracts.Currency (OneShotCurrency)
-import qualified Plutus.Contracts.Currency as Cur
-import qualified Plutus.Trace.Emulator     as Trace
+import Plutus.Contracts.Currency (OneShotCurrency)
+import Plutus.Contracts.Currency qualified as Cur
+import Plutus.Trace.Emulator qualified as Trace
 
-import           Test.Tasty
+import Test.Tasty
 
 -- | Runs 'Plutus.Contracts.Currency.mintContract' for
 --   a sample currency.
@@ -37,4 +37,4 @@ tests = testGroup "currency"
 theContract :: Contract () EmptySchema Cur.CurrencyError OneShotCurrency
 theContract =
     let amounts = [("my currency", 1000), ("my token", 1)] in
-    Cur.mintContract (walletPubKeyHash w1) amounts
+    Cur.mintContract (mockWalletPaymentPubKeyHash w1) amounts

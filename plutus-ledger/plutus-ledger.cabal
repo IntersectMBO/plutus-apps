@@ -17,7 +17,7 @@ build-type: Simple
 
 source-repository head
     type: git
-    location: https://github.com/input-output-hk/plutus
+    location: https://github.com/input-output-hk/plutus-apps
 
 common lang
     default-language: Haskell2010
@@ -25,6 +25,7 @@ common lang
                         DeriveGeneric StandaloneDeriving DeriveLift
                         GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
                         DeriveTraversable MultiParamTypeClasses FlexibleContexts
+                        ImportQualifiedPost
     ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wredundant-constraints -Widentities
@@ -48,15 +49,10 @@ library
         Ledger.AddressMap
         Ledger.Blockchain
         Ledger.CardanoWallet
-        Ledger.Constraints
-        Ledger.Constraints.OffChain
-        Ledger.Constraints.OnChain
-        Ledger.Constraints.TxConstraints
         Ledger.Contexts
         Ledger.Crypto
         Ledger.Fee
         Ledger.Generators
-        Ledger.Oracle
         Ledger.Orphans
         Ledger.Index
         Ledger.Scripts
@@ -70,6 +66,7 @@ library
         Ledger.Typed.Scripts.Validators
         Ledger.Typed.Tx
         Ledger.Typed.TypeUtils
+        Ledger.Value
     reexported-modules:
         Data.Aeson.Extras,
         Data.Either.Extras,
@@ -81,7 +78,6 @@ library
         Plutus.V1.Ledger.Slot as Ledger.Slot,
         Plutus.V1.Ledger.TxId as Ledger.TxId,
         Plutus.V1.Ledger.Time as Ledger.Time,
-        Plutus.V1.Ledger.Value as Ledger.Value
         -- The rest of the plutus-ledger-api modules are reexported from within
         -- the Haskell modules and not in the current cabal file.
         -- For example: Plutus.V1.Ledger.Address is reexported by Ledger.Address
@@ -140,23 +136,24 @@ library
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 test-suite plutus-ledger-test
+    import: lang
     type: exitcode-stdio-1.0
     main-is: Spec.hs
     hs-source-dirs: test
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
+    other-modules:
+        Ledger.Tx.CardanoAPISpec
     build-depends:
+        aeson -any,
         base >=4.9 && <5,
+        bytestring -any,
+        cardano-api -any,
+        cardano-api:gen -any,
         containers -any,
-        data-default -any,
         hedgehog -any,
+        plutus-ledger -any,
+        plutus-tx -any,
         tasty -any,
         tasty-hedgehog -any,
         tasty-hunit -any,
-        transformers -any,
-        plutus-ledger -any,
-        plutus-tx -any,
-        lens -any,
-        bytestring -any,
-        aeson -any,
-        plutus-core -any,
-        plutus-tx-plugin -any

@@ -14,30 +14,31 @@
 module Vesting where
 -- TRIM TO HERE
 -- Vesting scheme as a PLC contract
-import           Control.Lens             (view)
-import           Control.Monad            (void, when)
-import           Data.Default             (Default (def))
-import qualified Data.Map                 as Map
-import qualified Data.Text                as T
+import Control.Lens (view)
+import Control.Monad (void, when)
+import Data.Default (Default (def))
+import Data.Map qualified as Map
+import Data.Text qualified as T
 
-import           Ledger                   (Address, POSIXTime, POSIXTimeRange, PubKeyHash, Validator)
-import qualified Ledger.Ada               as Ada
-import           Ledger.Constraints       (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
-import           Ledger.Contexts          (ScriptContext (..), TxInfo (..))
-import qualified Ledger.Contexts          as Validation
-import qualified Ledger.Interval          as Interval
-import qualified Ledger.TimeSlot          as TimeSlot
-import qualified Ledger.Tx                as Tx
-import qualified Ledger.Typed.Scripts     as Scripts
-import           Ledger.Value             (Value)
-import qualified Ledger.Value             as Value
-import           Playground.Contract
-import           Plutus.Contract
-import           Plutus.Contract.Test
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
-import           PlutusTx.Prelude         hiding (Semigroup (..), fold)
-import           Prelude                  as Haskell (Semigroup (..), show)
+import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Ledger.Contexts qualified as Validation
+import Ledger.Interval qualified as Interval
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (Value)
+import Ledger.Value qualified as Value
+import Playground.Contract
+import Plutus.Contract
+import Plutus.Contract.Test
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Semigroup (..), fold)
+import Prelude as Haskell (Semigroup (..), show)
 
 {- |
     A simple vesting scheme. Money is locked by a contract and may only be
@@ -74,7 +75,7 @@ PlutusTx.makeLift ''VestingTranche
 data VestingParams = VestingParams {
     vestingTranche1 :: VestingTranche,
     vestingTranche2 :: VestingTranche,
-    vestingOwner    :: PubKeyHash
+    vestingOwner    :: PaymentPubKeyHash
     } deriving Generic
 
 PlutusTx.makeLift ''VestingParams
@@ -123,7 +124,7 @@ validate VestingParams{vestingTranche1, vestingTranche2, vestingOwner} () () ctx
             -- is "vestingOwner can do with the funds what they want" (as opposed
             -- to "the funds must be paid to vestingOwner"). This is enforcey by
             -- the following condition:
-            && Validation.txSignedBy txInfo vestingOwner
+            && Validation.txSignedBy txInfo (unPaymentPubKeyHash vestingOwner)
             -- That way the recipient of the funds can pay them to whatever address they
             -- please, potentially saving one transaction.
 
@@ -163,7 +164,8 @@ vestFundsC
     -> Contract () s T.Text ()
 vestFundsC vesting = do
     let txn = payIntoContract (totalAmount vesting)
-    void $ submitTxConstraints (typedValidator vesting) txn
+    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) txn
+      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 data Liveness = Alive | Dead
 
@@ -205,13 +207,15 @@ retrieveFundsC vesting payment = do
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    void $ submitTxConstraintsSpending inst unspentOutputs txn
+    mkTxConstraints (Constraints.typedValidatorLookups inst
+                  <> Constraints.unspentOutputs unspentOutputs) txn
+      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
     return liveness
 
 endpoints :: Contract () VestingSchema T.Text ()
 endpoints = vestingContract vestingParams
   where
-    vestingOwner = walletPubKeyHash w1
+    vestingOwner = mockWalletPaymentPubKeyHash w1
     vestingParams =
         VestingParams {vestingTranche1, vestingTranche2, vestingOwner}
     vestingTranche1 =

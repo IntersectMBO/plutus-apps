@@ -4,14 +4,13 @@
 
 module StarterSimulations where
 
-import           Ledger.Ada            (lovelaceValueOf)
-import           Ledger.Value          (Value)
-import           Playground.Types      (ContractCall (AddBlocks, PayToWallet), Simulation (Simulation), SimulatorAction,
-                                        amount, recipient, sender, simulationActions, simulationId, simulationName,
-                                        simulationWallets)
-import           SimulationUtils       (callEndpoint, simulatorWallet)
-import           Starter               (registeredKnownCurrencies)
-import           Wallet.Emulator.Types (WalletNumber (..))
+import Ledger.Ada (lovelaceValueOf)
+import Ledger.Value (Value)
+import Playground.Types (ContractCall (AddBlocks, PayToWallet), Simulation (Simulation), SimulatorAction, amount,
+                         recipient, sender, simulationActions, simulationId, simulationName, simulationWallets)
+import SimulationUtils (callEndpoint, simulatorWallet)
+import Starter (registeredKnownCurrencies)
+import Wallet.Emulator.Types (WalletNumber (..))
 
 simulations :: [Simulation]
 simulations = [publishRedeem, payToWallet]

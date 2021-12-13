@@ -6,10 +6,10 @@ module Cardano.Node.API
     , NodeAPI
     ) where
 
-import           Servant.API                    (Get, JSON, NoContent, Post, (:<|>), (:>))
+import Servant.API (Get, JSON, NoContent, Post, (:<|>), (:>))
 
-import           Cardano.Node.Types             (MockServerLogMsg)
-import           Control.Monad.Freer.Extras.Log (LogMessage)
+import Cardano.Node.Types (MockServerLogMsg)
+import Control.Monad.Freer.Extras.Log (LogMessage)
 
 type API
      = "healthcheck" :> Get '[JSON] NoContent

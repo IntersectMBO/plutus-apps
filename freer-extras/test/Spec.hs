@@ -4,10 +4,10 @@
 
 module Main(main) where
 
-import qualified Control.Monad.Freer.Extras.BeamSpec       as BeamSpec
-import qualified Control.Monad.Freer.Extras.PaginationSpec as PaginationSpec
+import Control.Monad.Freer.Extras.BeamSpec qualified as BeamSpec
+import Control.Monad.Freer.Extras.PaginationSpec qualified as PaginationSpec
 
-import           Test.Tasty
+import Test.Tasty
 
 main :: IO ()
 main = defaultMain tests

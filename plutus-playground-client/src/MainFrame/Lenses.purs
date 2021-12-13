@@ -1,94 +1,92 @@
 module MainFrame.Lenses
-  ( _demoFilesMenuVisible
-  , _gistErrorPaneVisible
-  , _currentView
-  , _contractDemos
-  , _currentDemoName
-  , _editorState
-  , _simulations
-  , _actionDrag
-  , _evaluationResult
-  , _successfulEvaluationResult
-  , _lastEvaluatedSimulation
-  , _compilationResult
-  , _successfulCompilationResult
-  , _lastSuccessfulCompilationResult
+  ( _actionDrag
   , _authStatus
-  , _createGistResult
-  , _gistUrl
-  , _blockchainVisualisationState
-  , _editorSlot
   , _balancesChartSlot
+  , _blockchainVisualisationState
+  , _compilationResult
   , _contractDemoEditorContents
-  , _simulationId
-  , _simulationActions
-  , _simulationWallets
-  , _resultRollup
+  , _contractDemos
+  , _createGistResult
+  , _currentDemoName
+  , _currentView
+  , _demoFilesMenuVisible
+  , _editorSlot
+  , _editorState
+  , _evaluationResult
   , _functionSchema
-  , _walletKeys
+  , _gistErrorPaneVisible
+  , _gistUrl
   , _knownCurrencies
+  , _lastSuccessfulCompilationResult
   , _result
+  , _resultRollup
+  , _simulation
+  , _simulationActions
+  , _simulationBlockchainVisualisationState
+  , _simulationEvaluationResult
+  , _simulationId
+  , _simulationWallets
+  , _simulations
+  , _successfulCompilationResult
+  , _successfulEvaluationResult
+  , _walletKeys
   , _warnings
   , getKnownCurrencies
   ) where
 
+import Prologue
 import Auth (AuthStatus)
 import Chain.Types as Chain
 import Control.Monad.State.Class (class MonadState)
-import Cursor (Cursor)
-import Data.Either (Either)
-import Data.Json.JsonTuple (JsonTuple)
-import Data.Lens (Lens', Traversal', _Right, lens, preview)
+import Cursor (Cursor, _current)
+import Data.Lens (Lens', _Right, lens, preview, set)
 import Data.Lens.Extra (peruse)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Symbol (SProxy(..))
+import Data.Lens.Types (AffineTraversal')
+import Data.Maybe (fromMaybe)
 import Editor.Types (State) as Editor
 import Gist (Gist)
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult, SourceCode, _InterpreterResult)
-import MainFrame.Types (State, View, WebData)
-import Network.RemoteData (_Success)
-import Playground.Types (CompilationResult, ContractCall, ContractDemo, EvaluationResult, FunctionSchema, KnownCurrency, PlaygroundError, Simulation, SimulatorWallet)
-import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Prelude ((<$>), (<<<))
+import Ledger.CardanoWallet (WalletNumber)
+import Ledger.Address (PaymentPubKeyHash)
+import MainFrame.Types (FullSimulation, State, View, WebData, WebEvaluationResult)
+import Network.RemoteData (_Success, RemoteData(NotAsked))
+import Playground.Types (CompilationResult, ContractCall, ContractDemo, EvaluationResult, FunctionSchema, KnownCurrency, Simulation, SimulatorWallet)
 import Schema (FormSchema)
 import Schema.Types (FormArgument)
-import Ledger.CardanoWallet (WalletNumber)
+import Type.Proxy (Proxy(..))
 import Wallet.Rollup.Types (AnnotatedTx)
 
 _demoFilesMenuVisible :: Lens' State Boolean
-_demoFilesMenuVisible = _Newtype <<< prop (SProxy :: SProxy "demoFilesMenuVisible")
+_demoFilesMenuVisible = _Newtype <<< prop (Proxy :: _ "demoFilesMenuVisible")
 
 _gistErrorPaneVisible :: Lens' State Boolean
-_gistErrorPaneVisible = _Newtype <<< prop (SProxy :: SProxy "gistErrorPaneVisible")
+_gistErrorPaneVisible = _Newtype <<< prop (Proxy :: _ "gistErrorPaneVisible")
 
 _currentView :: Lens' State View
-_currentView = _Newtype <<< prop (SProxy :: SProxy "currentView")
+_currentView = _Newtype <<< prop (Proxy :: _ "currentView")
 
 _contractDemos :: Lens' State (Array ContractDemo)
-_contractDemos = _Newtype <<< prop (SProxy :: SProxy "contractDemos")
+_contractDemos = _Newtype <<< prop (Proxy :: _ "contractDemos")
 
 _currentDemoName :: Lens' State (Maybe String)
-_currentDemoName = _Newtype <<< prop (SProxy :: SProxy "currentDemoName")
+_currentDemoName = _Newtype <<< prop (Proxy :: _ "currentDemoName")
 
 _editorState :: Lens' State Editor.State
-_editorState = _Newtype <<< prop (SProxy :: SProxy "editorState")
+_editorState = _Newtype <<< prop (Proxy :: _ "editorState")
 
-_simulations :: Lens' State (Cursor Simulation)
-_simulations = _Newtype <<< prop (SProxy :: SProxy "simulations")
+_simulations :: Lens' State (Cursor FullSimulation)
+_simulations = _Newtype <<< prop (Proxy :: _ "simulations")
 
 _actionDrag :: Lens' State (Maybe Int)
-_actionDrag = _Newtype <<< prop (SProxy :: SProxy "actionDrag")
+_actionDrag = _Newtype <<< prop (Proxy :: _ "actionDrag")
 
-_evaluationResult :: Lens' State (WebData (Either PlaygroundError EvaluationResult))
-_evaluationResult = _Newtype <<< prop (SProxy :: SProxy "evaluationResult")
+_evaluationResult :: Lens' State WebEvaluationResult
+_evaluationResult = withDefault NotAsked (_simulations <<< _current <<< _simulationEvaluationResult)
 
-_successfulEvaluationResult :: Traversal' State EvaluationResult
+_successfulEvaluationResult :: AffineTraversal' State EvaluationResult
 _successfulEvaluationResult = _evaluationResult <<< _Success <<< _Right
-
-_lastEvaluatedSimulation :: Lens' State (Maybe Simulation)
-_lastEvaluatedSimulation = _Newtype <<< prop (SProxy :: SProxy "lastEvaluatedSimulation")
 
 _compilationResult :: Lens' State (WebData (Either InterpreterError (InterpreterResult CompilationResult)))
 _compilationResult = _Newtype <<< lens g s
@@ -99,62 +97,79 @@ _compilationResult = _Newtype <<< lens g s
     Just cr -> r { compilationResult = c, lastSuccessfulCompilationResult = Just cr }
     Nothing -> r { compilationResult = c }
 
-_successfulCompilationResult :: Traversal' State CompilationResult
+_successfulCompilationResult :: AffineTraversal' State CompilationResult
 _successfulCompilationResult = _compilationResult <<< _Success <<< _Right <<< _InterpreterResult <<< _result
 
 _lastSuccessfulCompilationResult :: Lens' State (Maybe CompilationResult)
-_lastSuccessfulCompilationResult = _Newtype <<< prop (SProxy :: SProxy "lastSuccessfulCompilationResult")
+_lastSuccessfulCompilationResult = _Newtype <<< prop (Proxy :: _ "lastSuccessfulCompilationResult")
 
 _authStatus :: Lens' State (WebData AuthStatus)
-_authStatus = _Newtype <<< prop (SProxy :: SProxy "authStatus")
+_authStatus = _Newtype <<< prop (Proxy :: _ "authStatus")
 
 _createGistResult :: Lens' State (WebData Gist)
-_createGistResult = _Newtype <<< prop (SProxy :: SProxy "createGistResult")
+_createGistResult = _Newtype <<< prop (Proxy :: _ "createGistResult")
 
 _gistUrl :: Lens' State (Maybe String)
-_gistUrl = _Newtype <<< prop (SProxy :: SProxy "gistUrl")
+_gistUrl = _Newtype <<< prop (Proxy :: _ "gistUrl")
 
 _blockchainVisualisationState :: Lens' State Chain.State
-_blockchainVisualisationState = _Newtype <<< prop (SProxy :: SProxy "blockchainVisualisationState")
+_blockchainVisualisationState = withDefault Chain.initialState (_simulations <<< _current <<< _simulationBlockchainVisualisationState)
+
+_simulation :: Lens' FullSimulation Simulation
+_simulation = prop (Proxy :: _ "simulation")
+
+_simulationEvaluationResult :: Lens' FullSimulation WebEvaluationResult
+_simulationEvaluationResult = prop (Proxy :: _ "evaluationResult")
+
+_simulationBlockchainVisualisationState :: Lens' FullSimulation Chain.State
+_simulationBlockchainVisualisationState = prop (Proxy :: _ "blockchainVisualisationState")
 
 ------------------------------------------------------------
-_editorSlot :: SProxy "editorSlot"
-_editorSlot = SProxy
+withDefault :: forall s a. a -> AffineTraversal' s a -> Lens' s a
+withDefault def l = lens doGet doSet
+  where
+  doGet s = fromMaybe def $ preview l s
 
-_balancesChartSlot :: SProxy "balancesChartSlot"
-_balancesChartSlot = SProxy
+  doSet s a = set l a s
+
+------------------------------------------------------------
+_editorSlot :: Proxy "editorSlot"
+_editorSlot = Proxy
+
+_balancesChartSlot :: Proxy "balancesChartSlot"
+_balancesChartSlot = Proxy
 
 ------------------------------------------------------------
 _contractDemoEditorContents :: Lens' ContractDemo SourceCode
-_contractDemoEditorContents = _Newtype <<< prop (SProxy :: SProxy "contractDemoEditorContents")
+_contractDemoEditorContents = _Newtype <<< prop (Proxy :: _ "contractDemoEditorContents")
 
 _simulationId :: Lens' Simulation Int
-_simulationId = _Newtype <<< prop (SProxy :: SProxy "simulationId")
+_simulationId = _Newtype <<< prop (Proxy :: _ "simulationId")
 
 _simulationActions :: Lens' Simulation (Array (ContractCall FormArgument))
-_simulationActions = _Newtype <<< prop (SProxy :: SProxy "simulationActions")
+_simulationActions = _Newtype <<< prop (Proxy :: _ "simulationActions")
 
 _simulationWallets :: Lens' Simulation (Array SimulatorWallet)
-_simulationWallets = _Newtype <<< prop (SProxy :: SProxy "simulationWallets")
+_simulationWallets = _Newtype <<< prop (Proxy :: _ "simulationWallets")
 
 _resultRollup :: Lens' EvaluationResult (Array (Array AnnotatedTx))
-_resultRollup = _Newtype <<< prop (SProxy :: SProxy "resultRollup")
+_resultRollup = _Newtype <<< prop (Proxy :: _ "resultRollup")
 
 _functionSchema :: Lens' CompilationResult (Array (FunctionSchema FormSchema))
-_functionSchema = _Newtype <<< prop (SProxy :: SProxy "functionSchema")
+_functionSchema = _Newtype <<< prop (Proxy :: _ "functionSchema")
 
-_walletKeys :: Lens' EvaluationResult (Array (JsonTuple PubKeyHash WalletNumber))
-_walletKeys = _Newtype <<< prop (SProxy :: SProxy "walletKeys")
+_walletKeys :: Lens' EvaluationResult (Array (Tuple PaymentPubKeyHash WalletNumber))
+_walletKeys = _Newtype <<< prop (Proxy :: _ "walletKeys")
 
 _knownCurrencies :: Lens' CompilationResult (Array KnownCurrency)
-_knownCurrencies = _Newtype <<< prop (SProxy :: SProxy "knownCurrencies")
+_knownCurrencies = _Newtype <<< prop (Proxy :: _ "knownCurrencies")
 
 --- Language.Haskell.Interpreter ---
 _result :: forall s a. Lens' { result :: a | s } a
-_result = prop (SProxy :: SProxy "result")
+_result = prop (Proxy :: _ "result")
 
 _warnings :: forall s a. Lens' { warnings :: a | s } a
-_warnings = prop (SProxy :: SProxy "warnings")
+_warnings = prop (Proxy :: _ "warnings")
 
 getKnownCurrencies :: forall m. MonadState State m => m (Array KnownCurrency)
 getKnownCurrencies = fromMaybe [] <$> peruse (_successfulCompilationResult <<< _knownCurrencies)

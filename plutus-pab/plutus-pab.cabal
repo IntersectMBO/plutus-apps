@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 name:          plutus-pab
 version:       0.1.0.0
 license:       Apache-2.0
@@ -17,7 +17,7 @@ build-type: Simple
 
 source-repository head
     type:     git
-    location: https://github.com/iohk/plutus
+    location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
     description:
@@ -36,6 +36,7 @@ common lang
         DeriveTraversable
         ExplicitForAll
         GeneralizedNewtypeDeriving
+        ImportQualifiedPost
         ScopedTypeVariables
         StandaloneDeriving
 
@@ -72,7 +73,9 @@ library
         Cardano.Node.Types
         Cardano.Protocol.Socket.Mock.Client
         Cardano.Protocol.Socket.Mock.Server
-        Cardano.Wallet.Client
+        Cardano.Wallet.LocalClient
+        Cardano.Wallet.RemoteClient
+        Cardano.Wallet.Types
         Cardano.Wallet.Mock.API
         Cardano.Wallet.Mock.Client
         Cardano.Wallet.Mock.Handlers
@@ -125,9 +128,10 @@ library
     build-depends:
         , freer-extras
         , playground-common
-        , plutus-chain-index
+        , plutus-chain-index-core
         , plutus-contract
         , plutus-ledger
+        , plutus-ledger-constraints
         , plutus-tx
         , plutus-tx-plugin
 
@@ -205,6 +209,7 @@ executable plutus-pab-setup
         CommandParser
 
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
@@ -249,10 +254,12 @@ executable plutus-pab-examples
     hs-source-dirs:   examples
     other-modules:
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         ContractExample.WaitForTx
         ContractExample
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
@@ -269,6 +276,7 @@ executable plutus-pab-examples
         , playground-common
         , plutus-contract
         , plutus-ledger
+        , plutus-ledger-constraints
         , plutus-pab
         , plutus-use-cases
         , prettyprinter
@@ -283,6 +291,7 @@ executable plutus-uniswap
     hs-source-dirs:   examples/uniswap
     other-modules:
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
@@ -303,8 +312,70 @@ executable plutus-uniswap
         , text
         , openapi3
 
+executable plutus-pab-local-cluster
+    main-is:          Main.hs
+    hs-source-dirs:
+        local-cluster
+        examples
+    other-modules:
+        ContractExample
+        ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
+        ContractExample.PayToWallet
+        ContractExample.WaitForTx
+    default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
+    ghc-options:
+        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+        -Wincomplete-uni-patterns -Wincomplete-record-updates
+        -Wno-missing-import-lists -Wredundant-constraints -O0
+
+    build-depends:
+        , aeson
+        , base              >=4.9 && <5
+        , containers
+        , directory
+        , filepath
+        , text
+        , text-class
+        , beam-sqlite
+        , sqlite-simple
+        , freer-extras
+        , plutus-pab
+        , beam-migrate
+        , plutus-use-cases
+        , cardano-wallet
+        , cardano-wallet-cli
+        , cardano-wallet-launcher
+        , cardano-wallet-core
+        , cardano-wallet-core-integration
+        , iohk-monitoring
+        , lobemo-backend-ekg
+        , contra-tracer
+        , plutus-chain-index-core
+        , plutus-chain-index
+        , cardano-api
+        , lens
+        , prettyprinter
+        , playground-common
+        , plutus-ledger
+        , plutus-ledger-api
+        , plutus-ledger-constraints
+        , plutus-contract
+        , freer-simple
+        , data-default
+        , row-types
+        , purescript-bridge
+        , openapi3
+        , async
+        , servant-client
+        , http-client
+        , servant-client-core
+        , cardano-addresses
+
 executable plutus-pab-test-psgenerator
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     hs-source-dirs:
         test-psgenerator
         test/full
@@ -313,6 +384,7 @@ executable plutus-pab-test-psgenerator
     main-is:          TestPSGenerator.hs
     other-modules:
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.Effects.Contract.ContractTest
         Plutus.PAB.Simulator.Test
@@ -336,6 +408,7 @@ executable plutus-pab-test-psgenerator
         plutus-pab,
         plutus-use-cases -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
@@ -354,11 +427,13 @@ executable plutus-pab-test-psgenerator
 
 test-suite plutus-pab-test-light
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     hs-source-dirs:   test/light
     type:             exitcode-stdio-1.0
     main-is:          Spec.hs
     other-modules:
         Cardano.Api.NetworkId.ExtraSpec
+        Cardano.Wallet.RemoteClientSpec
         Cardano.Wallet.ServerSpec
         Control.Concurrent.STM.ExtrasSpec
 
@@ -369,7 +444,9 @@ test-suite plutus-pab-test-light
         base >=4.9 && <5,
         bytestring -any,
         cardano-api -any,
+        cardano-api:gen -any,
         containers -any,
+        data-default -any,
         freer-extras -any,
         freer-simple -any,
         hedgehog -any,
@@ -381,6 +458,7 @@ test-suite plutus-pab-test-light
         plutus-contract -any,
         plutus-pab,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
@@ -397,6 +475,7 @@ test-suite plutus-pab-test-light
 
 test-suite plutus-pab-test-full
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     hs-source-dirs:
         test/full
         examples
@@ -407,6 +486,7 @@ test-suite plutus-pab-test-full
         ContractExample
         ContractExample.WaitForTx
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.CoreSpec
         Plutus.PAB.CliSpec
@@ -429,11 +509,12 @@ test-suite plutus-pab-test-full
         lens -any,
         monad-logger -any,
         mtl -any,
-        plutus-chain-index -any,
+        plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-pab,
         plutus-use-cases -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
@@ -459,6 +540,7 @@ test-suite plutus-pab-test-full
 
 test-suite plutus-pab-test-full-long-running
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
     hs-source-dirs:
         test/full
         examples
@@ -469,6 +551,7 @@ test-suite plutus-pab-test-full-long-running
         ContractExample
         ContractExample.WaitForTx
         ContractExample.AtomicSwap
+        ContractExample.IntegrationTest
         ContractExample.PayToWallet
         Plutus.PAB.CliSpec
         Plutus.PAB.Effects.Contract.ContractTest
@@ -493,6 +576,7 @@ test-suite plutus-pab-test-full-long-running
         plutus-pab,
         plutus-use-cases -any,
         plutus-ledger -any,
+        plutus-ledger-constraints -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
@@ -554,7 +638,7 @@ executable sync-client
         contra-tracer -any,
         either -any,
         optparse-applicative -any,
-        plutus-chain-index,
+        plutus-chain-index-core,
         plutus-ledger,
         plutus-pab,
         text

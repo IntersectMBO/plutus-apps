@@ -2,10 +2,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Api.ProtocolParameters (ProtocolParameters) where
 
-import           Cardano.Api.Shelley
-import           Data.Default        (Default, def)
-import           Data.Map            (fromList)
-import           Data.Ratio          ((%))
+import Cardano.Api.Shelley
+import Data.Default (Default, def)
+import Data.Map (fromList)
+import Data.Ratio ((%))
 
 instance Default ProtocolParameters where
     def = ProtocolParameters

@@ -23,44 +23,42 @@ module Plutus.Trace.Playground(
     , walletInstanceTag
     ) where
 
-import           Control.Lens
-import           Control.Monad                              (void)
-import           Control.Monad.Freer                        (Eff, Member, interpret, raise, reinterpret, subsume)
-import           Control.Monad.Freer.Coroutine              (Yield)
-import           Control.Monad.Freer.Error                  (Error, handleError, throwError)
-import           Control.Monad.Freer.Extras.Log             (LogMessage, LogMsg (..), mapLog)
-import           Control.Monad.Freer.Extras.Modify          (raiseEnd)
-import           Control.Monad.Freer.Reader                 (Reader)
-import           Control.Monad.Freer.State                  (State, evalState)
-import qualified Data.Aeson                                 as JSON
-import           Data.Foldable                              (traverse_)
-import           Data.Map                                   (Map)
-import qualified Data.Map                                   as Map
-import           Data.Maybe                                 (fromMaybe)
+import Control.Lens
+import Control.Monad (void)
+import Control.Monad.Freer (Eff, Member, interpret, raise, reinterpret, subsume)
+import Control.Monad.Freer.Coroutine (Yield)
+import Control.Monad.Freer.Error (Error, handleError, throwError)
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (..), mapLog)
+import Control.Monad.Freer.Extras.Modify (raiseEnd)
+import Control.Monad.Freer.Reader (Reader)
+import Control.Monad.Freer.State (State, evalState)
+import Data.Aeson qualified as JSON
+import Data.Foldable (traverse_)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 
-import           Plutus.Contract                            (Contract (..))
-import           Plutus.Trace.Effects.ContractInstanceId    (ContractInstanceIdEff, handleDeterministicIds)
-import           Plutus.Trace.Effects.EmulatedWalletAPI     (EmulatedWalletAPI, handleEmulatedWalletAPI)
-import qualified Plutus.Trace.Effects.EmulatedWalletAPI     as EmulatedWalletAPI
-import           Plutus.Trace.Effects.RunContractPlayground (RunContractPlayground, handleRunContractPlayground)
-import qualified Plutus.Trace.Effects.RunContractPlayground as RunContractPlayground
-import           Plutus.Trace.Effects.Waiting               (Waiting, handleWaiting)
-import qualified Plutus.Trace.Effects.Waiting               as Waiting
-import           Plutus.Trace.Emulator.ContractInstance     (EmulatorRuntimeError)
-import           Plutus.Trace.Emulator.System               (launchSystemThreads)
-import           Plutus.Trace.Emulator.Types                (ContractConstraints, EmulatorMessage (..),
-                                                             EmulatorRuntimeError (EmulatedWalletError),
-                                                             EmulatorThreads, walletInstanceTag)
-import           Plutus.Trace.Scheduler                     (EmSystemCall, ThreadId, exit, runThreads)
-import           Streaming                                  (Stream)
-import           Streaming.Prelude                          (Of)
-import           Wallet.Emulator.Chain                      (ChainControlEffect)
-import           Wallet.Emulator.MultiAgent                 (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
-                                                             MultiAgentControlEffect, MultiAgentEffect, schedulerEvent)
-import           Wallet.Emulator.Stream                     (EmulatorConfig (..), EmulatorErr (..), initialChainState,
-                                                             runTraceStream)
-import           Wallet.Emulator.Wallet                     (Wallet (..), knownWallets)
-import           Wallet.Types                               (ContractInstanceId)
+import Plutus.Contract (Contract (..))
+import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
+import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI, handleEmulatedWalletAPI)
+import Plutus.Trace.Effects.EmulatedWalletAPI qualified as EmulatedWalletAPI
+import Plutus.Trace.Effects.RunContractPlayground (RunContractPlayground, handleRunContractPlayground)
+import Plutus.Trace.Effects.RunContractPlayground qualified as RunContractPlayground
+import Plutus.Trace.Effects.Waiting (Waiting, handleWaiting)
+import Plutus.Trace.Effects.Waiting qualified as Waiting
+import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
+import Plutus.Trace.Emulator.System (launchSystemThreads)
+import Plutus.Trace.Emulator.Types (ContractConstraints, EmulatorMessage (..),
+                                    EmulatorRuntimeError (EmulatedWalletError), EmulatorThreads, walletInstanceTag)
+import Plutus.Trace.Scheduler (EmSystemCall, ThreadId, exit, runThreads)
+import Streaming (Stream)
+import Streaming.Prelude (Of)
+import Wallet.Emulator.Chain (ChainControlEffect)
+import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (..), EmulatorState, MultiAgentControlEffect,
+                                   MultiAgentEffect, schedulerEvent)
+import Wallet.Emulator.Stream (EmulatorConfig (..), EmulatorErr (..), initialChainState, runTraceStream)
+import Wallet.Emulator.Wallet (Wallet (..), knownWallets)
+import Wallet.Types (ContractInstanceId)
 
 {- Note [Playground traces]
 
@@ -105,13 +103,14 @@ handlePlaygroundTrace ::
     , Member (State EmulatorThreads) effs
     , Member ContractInstanceIdEff effs
     )
-    => Contract w s e ()
+    => EmulatorConfig
+    -> Contract w s e ()
     -> PlaygroundTrace a
     -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
-handlePlaygroundTrace contract action = do
+handlePlaygroundTrace conf contract action = do
     _ <- flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
-            . interpret (handleWaiting @_ @effs)
+            . interpret (handleWaiting @_ @effs (_slotConfig conf))
             . subsume
             . interpret (handleRunContractPlayground @w @s @e @_ @effs contract)
             $ raiseEnd action
@@ -131,7 +130,7 @@ runPlaygroundStream :: forall w s e effs a.
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
 runPlaygroundStream conf contract =
     let wallets = fromMaybe knownWallets (preview (initialChainState . _Left . to Map.keys) conf)
-    in runTraceStream conf . interpretPlaygroundTrace contract wallets
+    in runTraceStream conf . interpretPlaygroundTrace conf contract wallets
 
 interpretPlaygroundTrace :: forall w s e effs a.
     ( Member MultiAgentEffect effs
@@ -145,11 +144,12 @@ interpretPlaygroundTrace :: forall w s e effs a.
     , JSON.ToJSON w
     , Monoid w
     )
-    => Contract w s e () -- ^ The contract
+    => EmulatorConfig
+    -> Contract w s e () -- ^ The contract
     -> [Wallet] -- ^ Wallets that should be simulated in the emulator
     -> PlaygroundTrace a
     -> Eff effs ()
-interpretPlaygroundTrace contract wallets action =
+interpretPlaygroundTrace conf contract wallets action =
     evalState @EmulatorThreads mempty
         $ evalState @(Map Wallet ContractInstanceId) Map.empty
         $ handleDeterministicIds
@@ -158,7 +158,7 @@ interpretPlaygroundTrace contract wallets action =
         $ do
             raise $ launchSystemThreads wallets
             void
-                $ handlePlaygroundTrace contract
+                $ handlePlaygroundTrace conf contract
                 $ do
                     void Waiting.nextSlot
                     traverse_ RunContractPlayground.launchContract wallets

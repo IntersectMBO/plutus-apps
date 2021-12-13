@@ -23,6 +23,6 @@ actionIsValid simulatorWallets simulatorAction = actionWalletsExist simulatorAct
 
   actionWalletsExist (AddBlocksUntil _) = true -- ditto
 
-  actionWalletsExist (CallEndpoint a@{ caller }) = walletExists caller
+  actionWalletsExist (CallEndpoint { caller }) = walletExists caller
 
-  actionWalletsExist (PayToWallet a@{ sender, recipient }) = walletExists sender && walletExists recipient
+  actionWalletsExist (PayToWallet { sender, recipient }) = walletExists sender && walletExists recipient

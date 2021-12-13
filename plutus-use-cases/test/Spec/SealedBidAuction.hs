@@ -7,36 +7,37 @@
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing -fno-warn-orphans #-}
+{-# LANGUAGE NumericUnderscores #-}
 module Spec.SealedBidAuction where
 
-import           Cardano.Crypto.Hash                as Crypto
-import           Control.Lens                       hiding (elements)
-import           Control.Monad                      (void, when)
-import           Control.Monad.Freer.Extras.Log     (LogLevel (..))
-import           Data.Default                       (Default (def))
+import Cardano.Crypto.Hash as Crypto
+import Control.Lens hiding (elements)
+import Control.Monad (void, when)
+import Control.Monad.Freer.Extras.Log (LogLevel (..))
+import Data.Default (Default (def))
 
-import           Ledger                             (Slot (..), Value)
-import qualified Ledger.Ada                         as Ada
-import           Plutus.Contract.Test               hiding (not)
+import Ledger (Slot (..), Value)
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value qualified as Value
+import Plutus.Contract.Secrets
+import Plutus.Contract.Test hiding (not)
+import Plutus.Contract.Test.ContractModel
+import Plutus.Contracts.SealedBidAuction
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx.Prelude qualified as PlutusTx
 
-import qualified Ledger.TimeSlot                    as TimeSlot
-import qualified Ledger.Value                       as Value
-import           Plutus.Contract.Secrets
-import           Plutus.Contract.Test.ContractModel
-import           Plutus.Contracts.SealedBidAuction
-import qualified Plutus.Trace.Emulator              as Trace
-import qualified PlutusTx.Prelude                   as PlutusTx
-
-import           Test.QuickCheck                    hiding ((.&&.))
-import           Test.Tasty
-import           Test.Tasty.QuickCheck              (testProperty)
+import Test.QuickCheck hiding ((.&&.))
+import Test.Tasty
+import Test.Tasty.QuickCheck (testProperty)
 
 instance Arbitrary AuctionParams where
   arbitrary = do
     endTime    <- choose (20, 50)
     payoutTime <- choose (endTime+1, 70)
     return $ AuctionParams
-              { apOwner      = walletPubKeyHash w1
+              { apOwner      = mockWalletPaymentPubKeyHash w1
               , apAsset      = theToken
               , apEndTime    = TimeSlot.scSlotZeroTime def + fromInteger (endTime*1000)
               , apPayoutTime = TimeSlot.scSlotZeroTime def + fromInteger (payoutTime*1000)
@@ -99,11 +100,11 @@ instance ContractModel AuctionModel where
             frequency [ (1, WaitUntil . step <$> choose (1, 3 :: Integer))
                       , (5, pure (WaitUntil $ s ^. contractState . endBidSlot))
                       , (5, pure (WaitUntil $ s ^. contractState . payoutSlot))
-                      , (40, Bid  <$> elements [w2, w3, w4] <*> choose (1, 20))
+                      , (40, Bid  <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000))
                       -- Random reveal
-                      , (20, Reveal <$> elements [w2, w3, w4] <*> choose (1, 20))
+                      , (20, Reveal <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000))
                       -- Correct reveal
-                      , (20, uncurry Reveal <$> elements [ (w,i) | (i,w) <- (s ^. contractState . currentBids) ])
+                      , (20, uncurry Reveal <$> elements [ (w,i) | (i,w) <- s ^. contractState . currentBids ])
                       , (20, Payout <$> elements [w1, w2, w3, w4]) ]
         | otherwise = Init <$> arbitrary
         where
@@ -117,11 +118,17 @@ instance ContractModel AuctionModel where
 
             WaitUntil slot -> slot > s ^. currentSlot
 
-            Bid w _        -> s ^. contractState . phase == Bidding
-                              && w `notElem` fmap snd (s ^. contractState . currentBids)
+            Bid w v        -> let currentWalletBalance = Ada.adaOf 100 + Ada.fromValue (s ^. balanceChange w)
+                               in s ^. contractState . phase == Bidding
+                                  && w `notElem` fmap snd (s ^. contractState . currentBids)
+                                  && v >= Ada.getLovelace Ledger.minAdaTxOut
+                                  && currentWalletBalance - Ada.lovelaceOf v >= Ledger.minAdaTxOut <> Ledger.maxFee
 
-            Reveal w _     -> s ^. contractState . phase == AwaitingPayout
-                              && w `elem` fmap snd (s ^. contractState . currentBids)
+            Reveal w v     -> let currentWalletBalance = Ada.adaOf 100 + Ada.fromValue (s ^. balanceChange w)
+                               in s ^. contractState . phase == AwaitingPayout
+                                  && w `elem` fmap snd (s ^. contractState . currentBids)
+                                  && v >= Ada.getLovelace Ledger.minAdaTxOut
+                                  && currentWalletBalance - Ada.lovelaceOf v >= Ledger.minAdaTxOut <> Ledger.maxFee
 
             Payout _       -> s ^. contractState . phase == PayoutTime
 
@@ -135,7 +142,7 @@ instance ContractModel AuctionModel where
         delay 1
     perform handle _ (Payout w)
       | w == w1 = do
-        Trace.callEndpoint @"payout" (handle $ SellerH) ()
+        Trace.callEndpoint @"payout" (handle SellerH) ()
         delay 1
       | otherwise = do
         Trace.callEndpoint @"payout" (handle $ BidderH w) ()
@@ -157,7 +164,7 @@ instance ContractModel AuctionModel where
         case cmd of
             Init params -> do
                 phase $= Bidding
-                withdraw w1 theToken
+                withdraw w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
                 endBidSlot $= TimeSlot.posixTimeToEnclosingSlot def (apEndTime params)
                 payoutSlot $= TimeSlot.posixTimeToEnclosingSlot def (apPayoutTime params)
                 wait 3
@@ -190,11 +197,11 @@ instance ContractModel AuctionModel where
                   mwinningBid <- viewContractState currentWinningBid
                   case mwinningBid of
                     Just (bid, winner) -> do
-                      deposit winner theToken
+                      deposit winner $ Ada.toValue Ledger.minAdaTxOut <> theToken
                       deposit w1 $ Ada.lovelaceValueOf bid
 
                     Nothing -> do
-                      deposit w1 theToken
+                      deposit w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
                   wait 1
                   phase $= AuctionOver
 
@@ -219,7 +226,7 @@ prop_Auction :: DL AuctionModel () -> Property
 prop_Auction script =
     forAll arbitrary $ \params ->
       forAllDL (action (Init params) >> script) $ \actions ->
-        propRunActionsWithOptions (set minLogLevel Info options) (spec params)
+        propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions (spec params)
           (\ _ -> pure True)  -- TODO: check termination
           actions
     where

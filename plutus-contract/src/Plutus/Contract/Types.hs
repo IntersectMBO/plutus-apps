@@ -66,41 +66,40 @@ module Plutus.Contract.Types(
     , lastLogs
     ) where
 
-import           Control.Applicative
-import           Control.Lens
-import           Control.Monad
-import           Control.Monad.Except              (MonadError (..))
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error         (Error)
-import qualified Control.Monad.Freer.Error         as E
-import           Control.Monad.Freer.Extras.Log    (LogMessage, LogMsg, handleLogIgnore, handleLogWriter)
-import           Control.Monad.Freer.Extras.Modify (raiseEnd, raiseUnderN, writeIntoState)
-import           Control.Monad.Freer.State
-import           Control.Monad.Freer.Writer        (Writer)
-import qualified Control.Monad.Freer.Writer        as W
-import           Data.Aeson                        (Value)
-import qualified Data.Aeson                        as Aeson
-import           Data.Foldable                     (foldl')
-import           Data.Functor.Apply                (Apply (..))
-import qualified Data.IntervalSet                  as IS
-import qualified Data.Map                          as Map
-import           Data.Maybe                        (fromMaybe)
-import           Data.Row                          (Row)
-import           Data.Sequence                     (Seq)
-import           GHC.Generics                      (Generic)
+import Control.Applicative
+import Control.Lens
+import Control.Monad
+import Control.Monad.Except (MonadError (..))
+import Control.Monad.Freer
+import Control.Monad.Freer.Error (Error)
+import Control.Monad.Freer.Error qualified as E
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, handleLogIgnore, handleLogWriter)
+import Control.Monad.Freer.Extras.Modify (raiseEnd, raiseUnder, writeIntoState)
+import Control.Monad.Freer.State
+import Control.Monad.Freer.Writer (Writer)
+import Control.Monad.Freer.Writer qualified as W
+import Data.Aeson (Value)
+import Data.Aeson qualified as Aeson
+import Data.Foldable (foldl')
+import Data.Functor.Apply (Apply (..))
+import Data.IntervalSet qualified as IS
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Row (Row)
+import Data.Sequence (Seq)
+import GHC.Generics (Generic)
 
-import           Plutus.Contract.Checkpoint        (AsCheckpointError (..), Checkpoint (..), CheckpointError (..),
-                                                    CheckpointKey, CheckpointLogMsg, CheckpointStore,
-                                                    completedIntervals, handleCheckpoint, jsonCheckpoint,
-                                                    jsonCheckpointLoop)
-import           Plutus.Contract.Resumable         hiding (never, responses, select)
-import qualified Plutus.Contract.Resumable         as Resumable
+import Plutus.Contract.Checkpoint (AsCheckpointError (..), Checkpoint (..), CheckpointError (..), CheckpointKey,
+                                   CheckpointLogMsg, CheckpointStore, completedIntervals, handleCheckpoint,
+                                   jsonCheckpoint, jsonCheckpointLoop)
+import Plutus.Contract.Resumable hiding (never, responses, select)
+import Plutus.Contract.Resumable qualified as Resumable
 
-import           Plutus.Contract.Effects           (PABReq, PABResp)
-import qualified PlutusTx.Applicative              as PlutusTx
-import qualified PlutusTx.Functor                  as PlutusTx
-import           Prelude                           as Haskell
-import           Wallet.Types                      (AsContractError (..), ContractError (..), MatchingError (..))
+import Plutus.Contract.Effects (PABReq, PABResp)
+import PlutusTx.Applicative qualified as PlutusTx
+import PlutusTx.Functor qualified as PlutusTx
+import Prelude as Haskell
+import Wallet.Types (AsContractError (..), ContractError (..), MatchingError (..))
 
 -- | Effects that are available to contracts.
 type ContractEffs w e =
@@ -283,7 +282,7 @@ runError ::
   forall w s e e0 a.
   Contract w s e a
   -> Contract w s e0 (Either e a)
-runError (Contract r) = Contract (E.runError $ raiseUnderN @'[E.Error e0] r)
+runError (Contract r) = Contract (E.runError $ raiseUnder r)
 
 -- | Handle errors, potentially throwing new errors.
 handleError ::
@@ -292,7 +291,7 @@ handleError ::
   -> Contract w s e a
   -> Contract w s e' a
 handleError f (Contract c) = Contract c' where
-  c' = E.handleError @e (raiseUnderN @'[E.Error e'] c) (fmap unContract f)
+  c' = E.handleError @e (raiseUnder c) (fmap unContract f)
 
 type SuspendedContractEffects w e =
   Error e

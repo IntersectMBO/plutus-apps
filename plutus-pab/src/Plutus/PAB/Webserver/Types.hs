@@ -10,22 +10,23 @@
 
 module Plutus.PAB.Webserver.Types where
 
-import           Data.Aeson                              (FromJSON, ToJSON)
-import qualified Data.Aeson                              as JSON
-import           Data.Map                                (Map)
-import qualified Data.OpenApi.Schema                     as OpenApi
-import           Data.Text.Prettyprint.Doc               (Pretty, pretty, (<+>))
-import           GHC.Generics                            (Generic)
-import           Ledger                                  (PubKeyHash, Tx, TxId)
-import           Ledger.Index                            (UtxoIndex)
-import           Ledger.Slot                             (Slot)
-import           Playground.Types                        (FunctionSchema)
-import           Plutus.Contract.Effects                 (ActiveEndpoint, PABReq)
-import           Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
-import           Schema                                  (FormSchema)
-import           Wallet.Emulator.Wallet                  (Wallet)
-import           Wallet.Rollup.Types                     (AnnotatedTx)
-import           Wallet.Types                            (ContractActivityStatus, ContractInstanceId)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as JSON
+import Data.Map (Map)
+import Data.OpenApi.Schema qualified as OpenApi
+import GHC.Generics (Generic)
+import Ledger (PubKeyHash, Tx, TxId)
+import Ledger.Index (UtxoIndex)
+import Ledger.Slot (Slot)
+import Playground.Types (FunctionSchema)
+import Plutus.Contract.Effects (ActiveEndpoint, PABReq)
+import Plutus.Contract.Wallet (ExportTx)
+import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
+import Prettyprinter (Pretty, pretty, (<+>))
+import Schema (FormSchema)
+import Wallet.Emulator.Wallet (Wallet)
+import Wallet.Rollup.Types (AnnotatedTx)
+import Wallet.Types (ContractActivityStatus, ContractInstanceId)
 
 data ContractReport t =
     ContractReport
@@ -84,11 +85,12 @@ instance Pretty t => Pretty (ContractActivationArgs t) where
 --   (to be sent to external clients)
 data ContractInstanceClientState t =
     ContractInstanceClientState
-        { cicContract     :: ContractInstanceId
-        , cicCurrentState :: PartiallyDecodedResponse ActiveEndpoint
-        , cicWallet       :: Wallet
-        , cicDefinition   :: t
-        , cicStatus       :: ContractActivityStatus
+        { cicContract         :: ContractInstanceId
+        , cicCurrentState     :: PartiallyDecodedResponse ActiveEndpoint
+        , cicWallet           :: Wallet
+        , cicDefinition       :: t
+        , cicStatus           :: ContractActivityStatus
+        , cicYieldedExportTxs :: [ExportTx]
         }
         deriving stock (Eq, Show, Generic)
         deriving anyclass (ToJSON, FromJSON)
@@ -99,6 +101,7 @@ deriving instance OpenApi.ToSchema t => OpenApi.ToSchema (ContractInstanceClient
 data InstanceStatusToClient
     = NewObservableState JSON.Value -- ^ The observable state of the contract has changed.
     | NewActiveEndpoints [ActiveEndpoint] -- ^ The set of active endpoints has changed.
+    | NewYieldedExportTxs [ExportTx] -- ^ Partial txs that need to be balanced, signed and submitted by an external client.
     | ContractFinished (Maybe JSON.Value) -- ^ Contract instance is done with an optional error message.
     deriving stock (Generic, Eq, Show)
     deriving anyclass (ToJSON, FromJSON)

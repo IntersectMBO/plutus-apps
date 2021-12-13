@@ -28,30 +28,30 @@ module Plutus.Contracts.Currency(
     , mintCurrency
     ) where
 
-import           Control.Lens
-import           PlutusTx.Prelude       hiding (Monoid (..), Semigroup (..))
+import Control.Lens
+import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 
-import           Plutus.Contract        as Contract
-import           Plutus.Contract.Wallet (getUnspentOutput)
+import Plutus.Contract as Contract
+import Plutus.Contract.Wallet (getUnspentOutput)
 
-import           Ledger                 (CurrencySymbol, PubKeyHash, TxId, TxOutRef (..), getCardanoTxId,
-                                         pubKeyHashAddress, scriptCurrencySymbol)
-import qualified Ledger.Constraints     as Constraints
-import qualified Ledger.Contexts        as V
-import           Ledger.Scripts
-import qualified PlutusTx
+import Ledger (CurrencySymbol, PaymentPubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress,
+               scriptCurrencySymbol)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts qualified as V
+import Ledger.Scripts
+import PlutusTx qualified
 
-import qualified Ledger.Typed.Scripts   as Scripts
-import           Ledger.Value           (TokenName, Value)
-import qualified Ledger.Value           as Value
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (TokenName, Value)
+import Ledger.Value qualified as Value
 
-import           Data.Aeson             (FromJSON, ToJSON)
-import           Data.Semigroup         (Last (..))
-import           GHC.Generics           (Generic)
-import qualified PlutusTx.AssocMap      as AssocMap
-import           Prelude                (Semigroup (..))
-import qualified Prelude                as Haskell
-import           Schema                 (ToSchema)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Semigroup (Last (..))
+import GHC.Generics (Generic)
+import PlutusTx.AssocMap qualified as AssocMap
+import Prelude (Semigroup (..))
+import Prelude qualified as Haskell
+import Schema (ToSchema)
 
 {- HLINT ignore "Use uncurry" -}
 
@@ -150,12 +150,12 @@ mintContract
     :: forall w s e.
     ( AsCurrencyError e
     )
-    => PubKeyHash
+    => PaymentPubKeyHash
     -> [(TokenName, Integer)]
     -> Contract w s e OneShotCurrency
 mintContract pk amounts = mapError (review _CurrencyError) $ do
     txOutRef <- getUnspentOutput
-    utxos <- utxosAt (pubKeyHashAddress pk)
+    utxos <- utxosAt (pubKeyHashAddress pk Nothing)
     let theCurrency = mkCurrency txOutRef amounts
         curVali     = curPolicy theCurrency
         lookups     = Constraints.mintingPolicy curVali
@@ -183,7 +183,7 @@ type CurrencySchema =
 mintCurrency
     :: Promise (Maybe (Last OneShotCurrency)) CurrencySchema CurrencyError OneShotCurrency
 mintCurrency = endpoint @"Create native token" $ \SimpleMPS{tokenName, amount} -> do
-    ownPK <- ownPubKeyHash
+    ownPK <- ownPaymentPubKeyHash
     cur <- mintContract ownPK [(tokenName, amount)]
     tell (Just (Last cur))
     pure cur

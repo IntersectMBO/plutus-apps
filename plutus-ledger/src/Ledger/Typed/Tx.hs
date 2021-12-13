@@ -26,24 +26,27 @@
 --   validation time.
 module Ledger.Typed.Tx where
 
-import           Control.Lens              (preview)
-import           Ledger.Scripts
-import           Ledger.Tx
-import           Ledger.Typed.Scripts
-import           Plutus.V1.Ledger.Crypto
-import qualified Plutus.V1.Ledger.Value    as Value
+import Control.Lens (preview)
+import Ledger.Address (PaymentPubKey, StakePubKey)
+import Ledger.Scripts (Datum (Datum), DatumHash, Redeemer (Redeemer), datumHash)
+import Ledger.Tx (Address, ChainIndexTxOut, TxIn (TxIn, txInRef, txInType),
+                  TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress),
+                  TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue), TxOutRef, _ScriptChainIndexTxOut,
+                  pubKeyTxOut)
+import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, validatorAddress, validatorScript)
+import Plutus.V1.Ledger.Value qualified as Value
 
-import           PlutusTx
+import PlutusTx (BuiltinData, FromData, ToData, builtinDataToData, dataToBuiltinData, fromBuiltinData, toBuiltinData)
 
-import           Codec.Serialise           (deserialise, serialise)
-import qualified Data.ByteString.Lazy      as BSL
+import Codec.Serialise (deserialise, serialise)
+import Data.ByteString.Lazy qualified as BSL
 
-import           Data.Aeson                (FromJSON (..), ToJSON (..), Value (Object), object, (.:), (.=))
-import           Data.Aeson.Types          (typeMismatch)
-import           Data.Text.Prettyprint.Doc (Pretty (pretty), viaShow, (<+>))
-import           GHC.Generics              (Generic)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
+import Data.Aeson.Types (typeMismatch)
+import GHC.Generics (Generic)
+import Prettyprinter (Pretty (pretty), viaShow, (<+>))
 
-import           Control.Monad.Except
+import Control.Monad.Except (MonadError, throwError, unless)
 
 -- | A 'TxIn' tagged by two phantom types: a list of the types of the data scripts in the transaction; and the connection type of the input.
 data TypedScriptTxIn a = TypedScriptTxIn { tyTxInTxIn :: TxIn, tyTxInOutRef :: TypedScriptTxOutRef a }
@@ -141,8 +144,8 @@ newtype PubKeyTxOut = PubKeyTxOut { unPubKeyTxOut :: TxOut }
     deriving newtype (FromJSON, ToJSON)
 
 -- | Create a 'PubKeyTxOut'.
-makePubKeyTxOut :: Value.Value -> PubKey -> PubKeyTxOut
-makePubKeyTxOut value pubKey = PubKeyTxOut $ pubKeyTxOut value pubKey
+makePubKeyTxOut :: Value.Value -> PaymentPubKey -> Maybe StakePubKey -> PubKeyTxOut
+makePubKeyTxOut value pk sk = PubKeyTxOut $ pubKeyTxOut value pk sk
 
 data WrongOutTypeError =
     ExpectedScriptGotPubkey

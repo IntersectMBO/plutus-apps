@@ -5,12 +5,12 @@
 
 module ErrorHandlingSimulations where
 
-import           Data.Text             (Text)
-import           ErrorHandling         (registeredKnownCurrencies)
-import           Playground.Types      (Simulation (Simulation), SimulatorAction, simulationActions, simulationId,
-                                        simulationName, simulationWallets)
-import           SimulationUtils       (callEndpoint, simulatorWallet)
-import           Wallet.Emulator.Types (WalletNumber (..))
+import Data.Text (Text)
+import ErrorHandling (registeredKnownCurrencies)
+import Playground.Types (Simulation (Simulation), SimulatorAction, simulationActions, simulationId, simulationName,
+                         simulationWallets)
+import SimulationUtils (callEndpoint, simulatorWallet)
+import Wallet.Emulator.Types (WalletNumber (..))
 
 simulations :: [Simulation]
 simulations = [throwCatch]

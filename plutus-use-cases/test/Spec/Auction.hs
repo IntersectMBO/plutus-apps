@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
@@ -16,35 +17,36 @@ module Spec.Auction
     , prop_NoLockedFunds
     ) where
 
-import           Cardano.Crypto.Hash                as Crypto
-import           Control.Lens                       hiding (elements)
-import           Control.Monad                      (void, when)
-import qualified Control.Monad.Freer                as Freer
-import qualified Control.Monad.Freer.Error          as Freer
-import           Control.Monad.Freer.Extras.Log     (LogLevel (..))
-import           Data.Default                       (Default (def))
-import           Data.Monoid                        (Last (..))
+import Cardano.Crypto.Hash as Crypto
+import Control.Lens hiding (elements)
+import Control.Monad (void, when)
+import Control.Monad.Freer qualified as Freer
+import Control.Monad.Freer.Error qualified as Freer
+import Control.Monad.Freer.Extras.Log (LogLevel (..))
+import Data.Default (Default (def))
+import Data.Monoid (Last (..))
 
-import           Ledger                             (Ada, Slot (..), Value)
-import qualified Ledger.Ada                         as Ada
-import           Plutus.Contract                    hiding (currentSlot)
-import           Plutus.Contract.Test               hiding (not)
-import qualified Streaming.Prelude                  as S
-import qualified Wallet.Emulator.Folds              as Folds
-import qualified Wallet.Emulator.Stream             as Stream
+import Ledger (Ada, Slot (..), Value)
+import Ledger.Ada qualified as Ada
+import Plutus.Contract hiding (currentSlot)
+import Plutus.Contract.Test hiding (not)
+import Streaming.Prelude qualified as S
+import Wallet.Emulator.Folds qualified as Folds
+import Wallet.Emulator.Stream qualified as Stream
 
-import           Ledger.TimeSlot                    (SlotConfig)
-import qualified Ledger.TimeSlot                    as TimeSlot
-import qualified Ledger.Value                       as Value
-import           Plutus.Contract.Test.ContractModel
-import           Plutus.Contracts.Auction           hiding (Bid)
-import qualified Plutus.Trace.Emulator              as Trace
-import           PlutusTx.Monoid                    (inv)
-import qualified PlutusTx.Prelude                   as PlutusTx
+import Ledger qualified
+import Ledger.TimeSlot (SlotConfig)
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Value qualified as Value
+import Plutus.Contract.Test.ContractModel
+import Plutus.Contracts.Auction hiding (Bid)
+import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx.Monoid (inv)
+import PlutusTx.Prelude qualified as PlutusTx
 
-import           Test.QuickCheck                    hiding ((.&&.))
-import           Test.Tasty
-import           Test.Tasty.QuickCheck              (testProperty)
+import Test.QuickCheck hiding ((.&&.))
+import Test.Tasty
+import Test.Tasty.QuickCheck (testProperty)
 
 slotCfg :: SlotConfig
 slotCfg = def
@@ -52,7 +54,7 @@ slotCfg = def
 params :: AuctionParams
 params =
     AuctionParams
-        { apOwner   = walletPubKeyHash w1
+        { apOwner   = mockWalletPaymentPubKeyHash w1
         , apAsset   = theToken
         , apEndTime = TimeSlot.scSlotZeroTime slotCfg + 100000
         }
@@ -83,7 +85,7 @@ buyer :: ThreadToken -> Contract AuctionOutput BuyerSchema AuctionError ()
 buyer cur = auctionBuyer cur params
 
 trace1WinningBid :: Ada
-trace1WinningBid = 50
+trace1WinningBid = Ada.adaOf 50
 
 auctionTrace1 :: Trace.EmulatorTrace ()
 auctionTrace1 = do
@@ -97,7 +99,7 @@ auctionTrace1 = do
     void $ Trace.waitNSlots 1
 
 trace2WinningBid :: Ada
-trace2WinningBid = 70
+trace2WinningBid = Ada.adaOf 70
 
 extractAssetClass :: Trace.ContractHandle AuctionOutput SellerSchema AuctionError -> Trace.EmulatorTrace ThreadToken
 extractAssetClass handle = do
@@ -114,9 +116,9 @@ auctionTrace2 = do
     hdl2 <- Trace.activateContractWallet w2 (buyer currency)
     hdl3 <- Trace.activateContractWallet w3 (buyer currency)
     _ <- Trace.waitNSlots 1
-    Trace.callEndpoint @"bid" hdl2 50
+    Trace.callEndpoint @"bid" hdl2 (Ada.adaOf 50)
     _ <- Trace.waitNSlots 15
-    Trace.callEndpoint @"bid" hdl3 60
+    Trace.callEndpoint @"bid" hdl3 (Ada.adaOf 60)
     _ <- Trace.waitNSlots 35
     Trace.callEndpoint @"bid" hdl2 trace2WinningBid
     void $ Trace.waitUntilTime $ apEndTime params
@@ -127,7 +129,7 @@ trace1FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace1WinningBid
-            , highestBidder = walletPubKeyHash w2
+            , highestBidder = mockWalletPaymentPubKeyHash w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }
@@ -137,7 +139,7 @@ trace2FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace2WinningBid
-            , highestBidder = walletPubKeyHash w2
+            , highestBidder = mockWalletPaymentPubKeyHash w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }
@@ -165,8 +167,8 @@ data AuctionModel = AuctionModel
     { _currentBid :: Integer
     , _winner     :: Wallet
     , _endSlot    :: Slot
-    , _phase      :: Phase }
-    deriving (Show)
+    , _phase      :: Phase
+    } deriving (Show)
 
 data Phase = NotStarted | Bidding | AuctionOver
     deriving (Eq, Show)
@@ -195,7 +197,7 @@ instance ContractModel AuctionModel where
     arbitraryAction s
         | p /= NotStarted =
             oneof [ WaitUntil . step <$> choose (1, 10 :: Integer)
-                  , Bid  <$> elements [w2, w3, w4] <*> choose (1, 1000) ]
+                  , Bid  <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000) ]
         | otherwise = pure Init
         where
             p    = s ^. contractState . phase
@@ -206,7 +208,33 @@ instance ContractModel AuctionModel where
     precondition s cmd  = s ^. contractState . phase /= NotStarted &&
         case cmd of
             WaitUntil slot -> slot > s ^. currentSlot
+
+            -- In order to place a bid, we need to satisfy the constraint where
+            -- each tx output must have at least N Ada.
+            --
+            -- When we bid, we must make sure that we don't bid too high such
+            -- that:
+            --     - we can't pay for fees anymore
+            --     - we have a tx output of less than N Ada.
+            --
+            -- We suppose the initial balance is 100 Ada. Needs to be changed if
+            -- the emulator initialises the wallets with a different value.
+            Bid w bid      -> let currentWalletBalance = Ada.adaOf 100 + Ada.fromValue (s ^. balanceChange w)
+                                  current = s ^. contractState . currentBid
+                               in    bid > current
+                                  && bid >= Ada.getLovelace Ledger.minAdaTxOut
+                                  && currentWalletBalance - Ada.lovelaceOf bid >= (Ledger.minAdaTxOut <> Ledger.maxFee)
             _              -> True
+
+    nextReactiveState slot' = do
+      end  <- viewContractState endSlot
+      p    <- viewContractState phase
+      when (slot' >= end && p == Bidding) $ do
+        w   <- viewContractState winner
+        bid <- viewContractState currentBid
+        phase $= AuctionOver
+        deposit w $ Ada.toValue Ledger.minAdaTxOut <> theToken
+        deposit w1 $ Ada.lovelaceValueOf bid
 
     -- This command is only for setting up the model state with theToken
     nextState cmd = do
@@ -215,26 +243,17 @@ instance ContractModel AuctionModel where
         case cmd of
             Init -> do
                 phase $= Bidding
-                withdraw w1 theToken
+                withdraw w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
                 wait 3
             WaitUntil slot' -> waitUntil slot'
             Bid w bid -> do
                 current <- viewContractState currentBid
                 leader  <- viewContractState winner
-                wait 2
-                when (bid > current && slot <= end) $ do
+                when (slot < end) $ do
                     withdraw w $ Ada.lovelaceValueOf bid
                     deposit leader $ Ada.lovelaceValueOf current
                     currentBid $= bid
                     winner     $= w
-        slot' <- viewModelState currentSlot
-        p     <- viewContractState phase
-        when (slot' > end && p == Bidding) $ do
-            w   <- viewContractState winner
-            bid <- viewContractState currentBid
-            phase $= AuctionOver
-            deposit w theToken
-            deposit w1 $ Ada.lovelaceValueOf bid
 
     perform _ _ Init = delay 3
     perform _ _ (WaitUntil slot) = void $ Trace.waitUntilSlot slot
@@ -261,7 +280,7 @@ delay n = void $ Trace.waitNSlots $ fromIntegral n
 
 prop_Auction :: Actions AuctionModel -> Property
 prop_Auction script =
-    propRunActionsWithOptions (set minLogLevel Info options) handleSpec
+    propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions handleSpec
         (\ _ -> pure True)  -- TODO: check termination
         script
 
@@ -304,8 +323,8 @@ tests =
             (assertDone seller (Trace.walletInstanceTag w1) (const True) "seller should be done"
             .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w2) (const True) "buyer should be done"
             .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w2) ((==) trace1FinalState ) "wallet 2 final state should be OK"
-            .&&. walletFundsChange w1 (Ada.toValue trace1WinningBid <> inv theToken)
-            .&&. walletFundsChange w2 (inv (Ada.toValue trace1WinningBid) <> theToken))
+            .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.toValue trace1WinningBid <> inv theToken)
+            .&&. walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> inv (Ada.toValue trace1WinningBid) <> theToken))
             auctionTrace1
         , checkPredicateOptions options "run an auction with multiple bids"
             (assertDone seller (Trace.walletInstanceTag w1) (const True) "seller should be done"
@@ -313,8 +332,8 @@ tests =
             .&&. assertDone (buyer threadToken) (Trace.walletInstanceTag w3) (const True) "3rd party should be done"
             .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w2) ((==) trace2FinalState) "wallet 2 final state should be OK"
             .&&. assertAccumState (buyer threadToken) (Trace.walletInstanceTag w3) ((==) trace2FinalState) "wallet 3 final state should be OK"
-            .&&. walletFundsChange w1 (Ada.toValue trace2WinningBid <> inv theToken)
-            .&&. walletFundsChange w2 (inv (Ada.toValue trace2WinningBid) <> theToken)
+            .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.toValue trace2WinningBid <> inv theToken)
+            .&&. walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> inv (Ada.toValue trace2WinningBid) <> theToken)
             .&&. walletFundsChange w3 mempty)
             auctionTrace2
         , testProperty "QuickCheck property" $

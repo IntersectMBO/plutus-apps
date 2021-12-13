@@ -21,15 +21,15 @@ module Plutus.Contracts.Uniswap.OnChain
     , validateLiquidityMinting
     ) where
 
-import           Ledger
-import           Ledger.Constraints.OnChain       as Constraints
-import           Ledger.Constraints.TxConstraints as Constraints
-import           Ledger.Value                     (AssetClass (..), symbols)
-import           Plutus.Contracts.Uniswap.Pool    (calculateAdditionalLiquidity, calculateInitialLiquidity,
-                                                   calculateRemoval, checkSwap, lpTicker)
-import           Plutus.Contracts.Uniswap.Types
-import qualified PlutusTx
-import           PlutusTx.Prelude
+import Ledger
+import Ledger.Constraints.OnChain as Constraints
+import Ledger.Constraints.TxConstraints as Constraints
+import Ledger.Value (AssetClass (..), symbols)
+import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateInitialLiquidity, calculateRemoval,
+                                      checkSwap, lpTicker)
+import Plutus.Contracts.Uniswap.Types
+import PlutusTx qualified
+import PlutusTx.Prelude
 
 {-# INLINABLE findOwnInput' #-}
 findOwnInput' :: ScriptContext -> TxInInfo
@@ -290,5 +290,5 @@ validateLiquidityMinting Uniswap{..} tn _ ctx
     [_, _] -> True
     _      -> traceError "pool state minting without Uniswap input"
   where
-    lpC :: Coin Liquidity
+    lpC :: Coin PoolState
     lpC = mkCoin (ownCurrencySymbol ctx) tn

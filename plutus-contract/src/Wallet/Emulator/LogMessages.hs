@@ -12,16 +12,16 @@ module Wallet.Emulator.LogMessages(
   , _BalancingUnbalancedTx
   ) where
 
-import           Control.Lens.TH             (makePrisms)
-import           Data.Aeson                  (FromJSON, ToJSON)
-import           Data.Text.Prettyprint.Doc   (Pretty (..), colon, hang, viaShow, vsep, (<+>))
-import           GHC.Generics                (Generic)
-import           Ledger                      (Address, Tx, TxId, txId)
-import           Ledger.Constraints.OffChain (UnbalancedTx)
-import           Ledger.Index                (ScriptValidationEvent, ValidationError, ValidationPhase)
-import           Ledger.Slot                 (Slot)
-import           Ledger.Value                (Value)
-import           Wallet.Emulator.Error       (WalletAPIError)
+import Control.Lens.TH (makePrisms)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger (Address, Tx, TxId, txId)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase)
+import Ledger.Slot (Slot)
+import Ledger.Value (Value)
+import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
+import Wallet.Emulator.Error (WalletAPIError)
 
 data RequestHandlerLogMsg =
     SlotNoticationTargetVsCurrent Slot Slot

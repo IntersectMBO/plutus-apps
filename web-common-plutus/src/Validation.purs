@@ -1,17 +1,14 @@
 module Validation where
 
-import Prelude
+import Prologue
 import Data.Array (elem, mapWithIndex)
 import Data.Array as Array
 import Data.Foldable (class Foldable)
 import Data.Functor.Foldable (Fix)
 import Data.Generic.Rep (class Generic)
-import Data.Json.JsonTuple (JsonTuple(..))
 import Data.Lens (Lens', view)
 import Data.Lens.Record (prop)
-import Data.Maybe (Maybe(..))
-import Data.Symbol (SProxy(..))
-import Data.Tuple (Tuple(..))
+import Type.Proxy (Proxy(..))
 import Matryoshka (Algebra, cata)
 import Playground.Types (ContractCall(..), _FunctionSchema)
 import Schema (FormArgumentF(..))
@@ -107,9 +104,9 @@ instance formArgumentValidation :: Validation (Fix FormArgumentF) where
 
     algebra (FormArrayF _ xs) = Array.concat $ mapWithIndex (\i values -> addPath (show i) <$> values) xs
 
-    algebra (FormObjectF xs) = Array.concat $ map (\(JsonTuple (Tuple name values)) -> addPath name <$> values) xs
+    algebra (FormObjectF xs) = Array.concat $ map (\(Tuple name values) -> addPath name <$> values) xs
 
-    algebra (FormValueF x) = []
+    algebra (FormValueF _) = []
 
     algebra (FormPOSIXTimeRangeF _) = []
 
@@ -126,7 +123,7 @@ instance simulatorActionValidation :: Validation (ContractCall (Fix FormArgument
     arg = view (_argumentValues <<< _FunctionSchema <<< _argument) call
 
 _argument :: forall r a. Lens' { argument :: a | r } a
-_argument = prop (SProxy :: SProxy "argument")
+_argument = prop (Proxy :: _ "argument")
 
 _argumentValues :: forall r a. Lens' { argumentValues :: a | r } a
-_argumentValues = prop (SProxy :: SProxy "argumentValues")
+_argumentValues = prop (Proxy :: _ "argumentValues")

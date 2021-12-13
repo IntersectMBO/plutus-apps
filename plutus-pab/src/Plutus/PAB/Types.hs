@@ -11,29 +11,30 @@
 
 module Plutus.PAB.Types where
 
-import qualified Cardano.ChainIndex.Types        as ChainIndex
-import           Cardano.Node.Types              (MockServerConfig (..))
-import qualified Cardano.Wallet.Mock.Types       as Wallet
-import           Control.Lens.TH                 (makePrisms)
-import           Control.Monad.Freer.Extras.Beam (BeamError)
-import           Data.Aeson                      (FromJSON, ToJSON (..))
-import           Data.Default                    (Default, def)
-import           Data.Map.Strict                 (Map)
-import qualified Data.Map.Strict                 as Map
-import           Data.Text                       (Text)
-import           Data.Text.Prettyprint.Doc       (Pretty, line, pretty, viaShow, (<+>))
-import           Data.Time.Units                 (Second)
-import           Data.UUID                       (UUID)
-import qualified Data.UUID.Extras                as UUID
-import           GHC.Generics                    (Generic)
-import           Ledger                          (Block, Blockchain, Tx, TxId, eitherTx, txId)
-import           Ledger.Index                    as UtxoIndex
-import           Plutus.Contract.Types           (ContractError)
-import           Plutus.PAB.Instances            ()
-import           Servant.Client                  (BaseUrl (..), ClientError, Scheme (Http))
-import           Wallet.API                      (WalletAPIError)
-import           Wallet.Emulator.Wallet          (Wallet)
-import           Wallet.Types                    (ContractInstanceId (..), NotificationError)
+import Cardano.ChainIndex.Types qualified as ChainIndex
+import Cardano.Node.Types (MockServerConfig)
+import Cardano.Wallet.Types qualified as Wallet
+import Control.Lens.TH (makePrisms)
+import Control.Monad.Freer.Extras.Beam (BeamError)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default, def)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Text (Text)
+import Data.Time.Units (Second)
+import Data.UUID (UUID)
+import Data.UUID.Extras qualified as UUID
+import GHC.Generics (Generic)
+import Ledger (Block, Blockchain, Tx, TxId, eitherTx, txId)
+import Ledger.Index (UtxoIndex (UtxoIndex))
+import Ledger.Index qualified as UtxoIndex
+import Plutus.Contract.Types (ContractError)
+import Plutus.PAB.Instances ()
+import Prettyprinter (Pretty, line, pretty, viaShow, (<+>))
+import Servant.Client (BaseUrl (BaseUrl), ClientError, Scheme (Http))
+import Wallet.API (WalletAPIError)
+import Wallet.Emulator.Wallet (Wallet)
+import Wallet.Types (ContractInstanceId (ContractInstanceId), NotificationError)
 
 data PABError
     = FileNotFound FilePath
@@ -56,6 +57,7 @@ data PABError
     | ContractStateNotFound ContractInstanceId
     | AesonDecodingError Text Text
     | MigrationNotDoneError Text
+    | RemoteWalletWithMockNodeError
     deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -84,6 +86,7 @@ instance Pretty PABError where
                                    <> line
                                    <> "Did you forget to run the 'migrate' command ?"
                                    <+> "(ex. 'plutus-pab-migrate' or 'plutus-pab-examples --config <CONFIG_FILE> migrate')"
+        RemoteWalletWithMockNodeError   -> "The remote wallet can't be used with the mock node."
 
 data DbConfig =
     DbConfig

@@ -9,6 +9,6 @@ module Plutus.PAB.Monitoring.Monitoring(
   , module Plutus.PAB.Monitoring.Util
   ) where
 
-import           Plutus.PAB.Monitoring.Config
-import           Plutus.PAB.Monitoring.PABLogMsg
-import           Plutus.PAB.Monitoring.Util
+import Plutus.PAB.Monitoring.Config
+import Plutus.PAB.Monitoring.PABLogMsg
+import Plutus.PAB.Monitoring.Util

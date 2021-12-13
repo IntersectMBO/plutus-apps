@@ -11,7 +11,6 @@ let
           (type == "directory" && (baseName != "generated"
           && baseName != "output"
           && baseName != "node_modules"
-          && baseName != ".psc-package"
           && baseName != ".spago"))
         );
   };

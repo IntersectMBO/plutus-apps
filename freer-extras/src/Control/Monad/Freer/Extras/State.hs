@@ -6,9 +6,9 @@ module Control.Monad.Freer.Extras.State (
     , assign
     , modifying ) where
 
-import           Control.Lens              (ASetter, Getting, over, set, view)
-import           Control.Monad.Freer       (Eff, Member)
-import           Control.Monad.Freer.State (State, get, gets, put)
+import Control.Lens (ASetter, Getting, over, set, view)
+import Control.Monad.Freer (Eff, Member)
+import Control.Monad.Freer.State (State, get, gets, put)
 
 use :: Member (State s) effs => Getting a s a -> Eff effs a
 use accessor = gets (view accessor)

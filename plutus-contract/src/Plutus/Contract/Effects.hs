@@ -17,12 +17,13 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTxStatusChangeReq,
     _AwaitTxOutStatusChangeReq,
     _OwnContractInstanceIdReq,
-    _OwnPublicKeyHashReq,
+    _OwnPaymentPublicKeyHashReq,
     _ChainIndexQueryReq,
     _BalanceTxReq,
     _WriteBalancedTxReq,
     _ExposeEndpointReq,
     _PosixTimeRangeToContainedSlotRangeReq,
+    _YieldUnbalancedTxReq,
     -- ** Chain index query effect types
     _DatumFromHash,
     _ValidatorFromHash,
@@ -46,12 +47,13 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTxStatusChangeResp',
     _AwaitTxOutStatusChangeResp,
     _OwnContractInstanceIdResp,
-    _OwnPublicKeyHashResp,
+    _OwnPaymentPublicKeyHashResp,
     _ChainIndexQueryResp,
     _BalanceTxResp,
     _WriteBalancedTxResp,
     _ExposeEndpointResp,
     _PosixTimeRangeToContainedSlotRangeResp,
+    _YieldUnbalancedTxResp,
     -- ** Chain index response effect types
     _DatumHashResponse,
     _ValidatorHashResponse,
@@ -74,28 +76,28 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     ActiveEndpoint(..),
     ) where
 
-import           Control.Lens                (Iso', Prism', iso, makePrisms, prism')
-import           Data.Aeson                  (FromJSON, ToJSON)
-import qualified Data.Aeson                  as JSON
-import           Data.List.NonEmpty          (NonEmpty)
-import qualified Data.OpenApi.Schema         as OpenApi
-import           Data.Text.Prettyprint.Doc   (Pretty (..), hsep, indent, viaShow, vsep, (<+>))
-import           GHC.Generics                (Generic)
-import           Ledger                      (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash,
-                                              PubKeyHash, Redeemer, RedeemerHash, StakeValidator, StakeValidatorHash,
-                                              TxId, TxOutRef, ValidatorHash)
-import           Ledger.Constraints.OffChain (UnbalancedTx)
-import           Ledger.Credential           (Credential)
-import           Ledger.Scripts              (Validator)
-import           Ledger.Slot                 (Slot (..), SlotRange)
-import           Ledger.Time                 (POSIXTime (..), POSIXTimeRange)
-import           Ledger.TimeSlot             (SlotConversionError)
-import           Ledger.Tx                   (CardanoTx, ChainIndexTxOut, getCardanoTxId)
-import           Plutus.ChainIndex           (Page (pageItems), PageQuery)
-import           Plutus.ChainIndex.Tx        (ChainIndexTx (_citxTxId))
-import           Plutus.ChainIndex.Types     (Tip (..), TxOutStatus, TxStatus)
-import           Wallet.API                  (WalletAPIError)
-import           Wallet.Types                (ContractInstanceId, EndpointDescription, EndpointValue)
+import Control.Lens (Iso', Prism', iso, makePrisms, prism')
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as JSON
+import Data.List.NonEmpty (NonEmpty)
+import Data.OpenApi.Schema qualified as OpenApi
+import GHC.Generics (Generic)
+import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, PaymentPubKeyHash, Redeemer,
+               RedeemerHash, StakeValidator, StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
+import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Credential (Credential)
+import Ledger.Scripts (Validator)
+import Ledger.Slot (Slot, SlotRange)
+import Ledger.Time (POSIXTime, POSIXTimeRange)
+import Ledger.TimeSlot (SlotConversionError)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut, getCardanoTxId)
+import Plutus.ChainIndex (Page (pageItems), PageQuery)
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
+import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
+import Prettyprinter (Pretty (pretty), hsep, indent, viaShow, vsep, (<+>))
+import Wallet.API (WalletAPIError)
+import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue)
 
 -- | Requests that 'Contract's can make
 data PABReq =
@@ -108,12 +110,13 @@ data PABReq =
     | CurrentSlotReq
     | CurrentTimeReq
     | OwnContractInstanceIdReq
-    | OwnPublicKeyHashReq
+    | OwnPaymentPublicKeyHashReq
     | ChainIndexQueryReq ChainIndexQuery
     | BalanceTxReq UnbalancedTx
     | WriteBalancedTxReq CardanoTx
     | ExposeEndpointReq ActiveEndpoint
     | PosixTimeRangeToContainedSlotRangeReq POSIXTimeRange
+    | YieldUnbalancedTxReq UnbalancedTx
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
@@ -128,12 +131,13 @@ instance Pretty PABReq where
     AwaitTxStatusChangeReq txid             -> "Await tx status change:" <+> pretty txid
     AwaitTxOutStatusChangeReq ref           -> "Await txout status change:" <+> pretty ref
     OwnContractInstanceIdReq                -> "Own contract instance ID"
-    OwnPublicKeyHashReq                     -> "Own public key"
+    OwnPaymentPublicKeyHashReq              -> "Own public key"
     ChainIndexQueryReq q                    -> "Chain index query:" <+> pretty q
     BalanceTxReq utx                        -> "Balance tx:" <+> pretty utx
     WriteBalancedTxReq tx                   -> "Write balanced tx:" <+> pretty tx
     ExposeEndpointReq ep                    -> "Expose endpoint:" <+> pretty ep
     PosixTimeRangeToContainedSlotRangeReq r -> "Posix time range to contained slot range:" <+> pretty r
+    YieldUnbalancedTxReq utx                -> "Yield unbalanced tx:" <+> pretty utx
 
 -- | Responses that 'Contract's receive
 data PABResp =
@@ -146,12 +150,13 @@ data PABResp =
     | CurrentSlotResp Slot
     | CurrentTimeResp POSIXTime
     | OwnContractInstanceIdResp ContractInstanceId
-    | OwnPublicKeyHashResp PubKeyHash
+    | OwnPaymentPublicKeyHashResp PaymentPubKeyHash
     | ChainIndexQueryResp ChainIndexResponse
     | BalanceTxResp BalanceTxResponse
     | WriteBalancedTxResp WriteBalancedTxResponse
     | ExposeEndpointResp EndpointDescription (EndpointValue JSON.Value)
     | PosixTimeRangeToContainedSlotRangeResp (Either SlotConversionError SlotRange)
+    | YieldUnbalancedTxResp ()
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -166,12 +171,13 @@ instance Pretty PABResp where
     AwaitTxStatusChangeResp txid status      -> "Status of" <+> pretty txid <+> "changed to" <+> pretty status
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
     OwnContractInstanceIdResp i              -> "Own contract instance ID:" <+> pretty i
-    OwnPublicKeyHashResp k                   -> "Own public key:" <+> pretty k
+    OwnPaymentPublicKeyHashResp k            -> "Own public key:" <+> pretty k
     ChainIndexQueryResp rsp                  -> pretty rsp
     BalanceTxResp r                          -> "Balance tx:" <+> pretty r
     WriteBalancedTxResp r                    -> "Write balanced tx:" <+> pretty r
     ExposeEndpointResp desc rsp              -> "Call endpoint" <+> pretty desc <+> "with" <+> pretty rsp
     PosixTimeRangeToContainedSlotRangeResp r -> "Slot range:" <+> pretty r
+    YieldUnbalancedTxResp ()                 -> "Yielded unbalanced tx"
 
 matches :: PABReq -> PABResp -> Bool
 matches a b = case (a, b) of
@@ -184,13 +190,14 @@ matches a b = case (a, b) of
   (AwaitTxStatusChangeReq i, AwaitTxStatusChangeResp i' _) -> i == i'
   (AwaitTxOutStatusChangeReq i, AwaitTxOutStatusChangeResp i' _) -> i == i'
   (OwnContractInstanceIdReq, OwnContractInstanceIdResp{})  -> True
-  (OwnPublicKeyHashReq, OwnPublicKeyHashResp{})                    -> True
+  (OwnPaymentPublicKeyHashReq, OwnPaymentPublicKeyHashResp{})                    -> True
   (ChainIndexQueryReq r, ChainIndexQueryResp r')           -> chainIndexMatches r r'
   (BalanceTxReq{}, BalanceTxResp{})                        -> True
   (WriteBalancedTxReq{}, WriteBalancedTxResp{})            -> True
   (ExposeEndpointReq ActiveEndpoint{aeDescription}, ExposeEndpointResp desc _)
     | aeDescription == desc -> True
   (PosixTimeRangeToContainedSlotRangeReq{}, PosixTimeRangeToContainedSlotRangeResp{}) -> True
+  (YieldUnbalancedTxReq{}, YieldUnbalancedTxResp{})        -> True
   _                                                        -> False
 
 chainIndexMatches :: ChainIndexQuery -> ChainIndexResponse -> Bool
@@ -251,9 +258,9 @@ data ChainIndexResponse =
   | TxOutRefResponse (Maybe ChainIndexTxOut)
   | RedeemerHashResponse (Maybe Redeemer)
   | TxIdResponse (Maybe ChainIndexTx)
-  | UtxoSetMembershipResponse (Tip, Bool)
-  | UtxoSetAtResponse (Tip, Page TxOutRef)
-  | UtxoSetWithCurrencyResponse (Tip, Page TxOutRef)
+  | UtxoSetMembershipResponse IsUtxoResponse
+  | UtxoSetAtResponse UtxosResponse
+  | UtxoSetWithCurrencyResponse UtxosResponse
   | GetTipResponse Tip
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -267,18 +274,18 @@ instance Pretty ChainIndexResponse where
         RedeemerHashResponse r -> "Chain index redeemer from hash response:" <+> pretty r
         TxOutRefResponse t -> "Chain index utxo from utxo ref response:" <+> pretty t
         TxIdResponse t -> "Chain index tx from tx id response:" <+> pretty (_citxTxId <$> t)
-        UtxoSetMembershipResponse (tip, b) ->
+        UtxoSetMembershipResponse (IsUtxoResponse tip b) ->
                 "Chain index response whether tx output ref is part of the UTxO set:"
             <+> pretty b
             <+> "with tip"
             <+> pretty tip
-        UtxoSetAtResponse (tip, txOutRefPage) ->
+        UtxoSetAtResponse (UtxosResponse tip txOutRefPage) ->
                 "Chain index UTxO set from address response:"
             <+> "Current tip is"
             <+> pretty tip
             <+> "and utxo refs are"
             <+> hsep (fmap pretty $ pageItems txOutRefPage)
-        UtxoSetWithCurrencyResponse (tip, txOutRefPage) ->
+        UtxoSetWithCurrencyResponse (UtxosResponse tip txOutRefPage) ->
                 "Chain index UTxO with asset class response:"
             <+> "Current tip is"
             <+> pretty tip

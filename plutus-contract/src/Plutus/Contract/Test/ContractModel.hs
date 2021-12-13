@@ -17,12 +17,14 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE QuantifiedConstraints      #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
@@ -95,6 +97,15 @@ module Plutus.Contract.Test.ContractModel
     , SchemaConstraints
     , ContractInstanceSpec(..)
     , HandleFun
+    -- ** Model properties
+    , propSanityCheckModel
+    -- ** Coverage cheking options
+    , CoverageOptions
+    , defaultCoverageOptions
+    , endpointCoverageReq
+    , checkCoverage
+    , coverageIndex
+    , quickCheckWithCoverage
     -- ** Emulator properties
     , propRunActions_
     , propRunActions
@@ -115,54 +126,67 @@ module Plutus.Contract.Test.ContractModel
     , NoLockedFundsProof(..)
     , checkNoLockedFundsProof
     -- $checkNoPartiality
-    , Whitelist(..)
+    , Whitelist
     , whitelistOk
+    , mkWhitelist
+    , errorPrefixes
     , defaultWhitelist
     , checkErrorWhitelist
     , checkErrorWhitelistWithOptions
     ) where
 
-import           Control.Lens
-import           Control.Monad.Cont
-import           Control.Monad.State                   (MonadState, State)
-import qualified Control.Monad.State                   as State
-import qualified Data.Aeson                            as JSON
-import           Data.Foldable
-import           Data.List
-import           Data.Map                              (Map)
-import qualified Data.Map                              as Map
-import           Data.Maybe
-import           Data.Row                              (Row)
-import qualified Data.Text                             as Text
-import           Data.Typeable
+import Control.Lens
+import Control.Monad.Cont
+import Control.Monad.Freer (Eff, run)
+import Control.Monad.Freer.Extras.Log (LogMessage, logMessageContent)
+import Control.Monad.State (MonadState, State)
+import Control.Monad.State qualified as State
+import Data.Aeson qualified as JSON
+import Data.Foldable
+import Data.IORef
+import Data.List
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe
+import Data.Row (Row)
+import Data.Row.Records (labels')
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.Text qualified as Text
+import Data.Typeable
 
-import           Ledger.Index
-import           Ledger.Slot
-import           Ledger.Value                          (Value, isZero, leq)
-import           Plutus.Contract                       (Contract, ContractInstanceId)
-import           Plutus.Contract.Test
-import           Plutus.Trace.Effects.EmulatorControl  (discardWallets)
-import           Plutus.Trace.Emulator                 as Trace (ContractHandle (..), ContractInstanceTag,
-                                                                 EmulatorTrace, activateContract,
-                                                                 freezeContractInstance, walletInstanceTag)
-import           Plutus.V1.Ledger.Scripts
-import qualified PlutusTx.Builtins                     as Builtins
-import           PlutusTx.ErrorCodes
-import           PlutusTx.Monoid                       (inv)
-import qualified Test.QuickCheck.DynamicLogic.Monad    as DL
-import           Test.QuickCheck.DynamicLogic.Quantify (Quantifiable (..), Quantification, arbitraryQ, chooseQ,
-                                                        elementsQ, exactlyQ, frequencyQ, mapQ, oneofQ, whereQ)
-import           Test.QuickCheck.StateModel            hiding (Action, Actions, arbitraryAction, initialState,
-                                                        monitoring, nextState, perform, precondition, shrinkAction,
-                                                        stateAfter)
-import qualified Test.QuickCheck.StateModel            as StateModel
+import Ledger.Index
+import Ledger.Slot
+import Ledger.Value (Value, isZero, leq)
+import Plutus.Contract (Contract, ContractInstanceId)
+import Plutus.Contract.Schema (Input)
+import Plutus.Contract.Test
+import Plutus.Contract.Test.Coverage
+import Plutus.Trace.Effects.EmulatorControl (discardWallets)
+import Plutus.Trace.Emulator as Trace (ContractHandle (..), ContractInstanceTag, EmulatorTrace, activateContract,
+                                       freezeContractInstance, runEmulatorStream, walletInstanceTag)
+import Plutus.Trace.Emulator.Types (UserThreadMsg (UserThreadErr), unContractInstanceTag)
+import Plutus.V1.Ledger.Scripts
+import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.Coverage
+import PlutusTx.ErrorCodes
+import PlutusTx.Monoid (inv)
+import Streaming qualified as S
+import Test.QuickCheck.DynamicLogic.Monad qualified as DL
+import Test.QuickCheck.DynamicLogic.Quantify (Quantifiable (..), Quantification, arbitraryQ, chooseQ, elementsQ,
+                                              exactlyQ, frequencyQ, mapQ, oneofQ, whereQ)
+import Test.QuickCheck.StateModel hiding (Action, Actions, arbitraryAction, initialState, monitoring, nextState,
+                                   perform, precondition, shrinkAction, stateAfter)
+import Test.QuickCheck.StateModel qualified as StateModel
 
-import           Test.QuickCheck                       hiding ((.&&.), (.||.))
-import qualified Test.QuickCheck                       as QC
-import           Test.QuickCheck.Monadic               (PropertyM, monadic)
-import qualified Test.QuickCheck.Monadic               as QC
+import Test.QuickCheck hiding (checkCoverage, (.&&.), (.||.))
+import Test.QuickCheck qualified as QC
+import Test.QuickCheck.Monadic (PropertyM, monadic)
+import Test.QuickCheck.Monadic qualified as QC
 
-import           Wallet.Emulator.Chain                 hiding (_currentSlot, currentSlot)
+import Wallet.Emulator.Chain hiding (_currentSlot, currentSlot)
+import Wallet.Emulator.MultiAgent (EmulatorEvent, eteEvent)
+import Wallet.Emulator.Stream (EmulatorErr)
 
 -- | Key-value map where keys and values have three indices that can vary between different elements
 --   of the map. Used to store `ContractHandle`s, which are indexed over observable state, schema,
@@ -225,7 +249,6 @@ instancesForOtherWallets w (IMCons _ (WalletContractHandle w' h) m)
   | w /= w'   = chInstanceId h : instancesForOtherWallets w m
   | otherwise = instancesForOtherWallets w m
 
-
 -- | A function returning the `ContractHandle` corresponding to a `ContractInstanceKey`. A
 --   `HandleFun` is provided to the `perform` function to enable calling contract endpoints with
 --   `Plutus.Trace.Emulator.callEndpoint`.
@@ -251,7 +274,18 @@ dummyModelState s = ModelState 0 Map.empty mempty s
 -- | The `Spec` monad is a state monad over the `ModelState`. It is used exclusively by the
 --   `nextState` function to model the effects of an action on the blockchain.
 newtype Spec state a = Spec (State (ModelState state) a)
-    deriving (Functor, Applicative, Monad, MonadState (ModelState state))
+    deriving (Functor, Applicative, Monad)
+
+instance MonadState state (Spec state) where
+    state f = Spec $ State.state $ \s -> case f (_contractState s) of
+        (a, cs) -> (a, s { _contractState = cs })
+    {-# INLINE state #-}
+
+    get = Spec $ fmap _contractState State.get
+    {-# INLINE get #-}
+
+    put cs = Spec $ State.modify' $ \s -> s { _contractState = cs }
+    {-# INLINE put #-}
 
 -- $contractModel
 --
@@ -319,6 +353,11 @@ class ( Typeable state
     --   If an explicit `action` in a `DL` scenario violates the precondition an error is raised.
     precondition :: ModelState state -> Action state -> Bool
     precondition _ _ = True
+
+    -- | `nextReactiveState` is run every time the model `wait`s for a slot to be reached. This
+    --   can be used to model reactive components of off-chain code.
+    nextReactiveState :: Slot -> Spec state ()
+    nextReactiveState _ = return ()
 
     -- | This is where the model logic is defined. Given an action, `nextState` specifies the
     --   effects running that action has on the model state. It runs in the `Spec` monad, which is a
@@ -456,12 +495,18 @@ modState :: forall state a. Setter' (ModelState state) a -> (a -> a) -> Spec sta
 modState l f = Spec $ State.modify $ over l f
 
 -- | Wait the given number of slots. Updates the `currentSlot` of the model state.
-wait :: Integer -> Spec state ()
-wait n = modState currentSlotL (+ Slot n)
+wait :: ContractModel state => Integer -> Spec state ()
+wait n = do
+  Slot now <- viewModelState currentSlot
+  nextReactiveState (Slot $ now + n)
+  modState currentSlotL (const (Slot $ now + n))
 
 -- | Wait until the given slot. Has no effect if `currentSlot` is greater than the given slot.
-waitUntil :: Slot -> Spec state ()
-waitUntil n = modState currentSlotL (max n)
+waitUntil :: ContractModel state => Slot -> Spec state ()
+waitUntil (Slot n) = do
+  Slot now <- viewModelState currentSlot
+  when (now < n) $ do
+    wait (n - now)
 
 -- | Mint tokens. Minted tokens start out as `lockedValue` (i.e. owned by the contract) and can be
 --   transferred to wallets using `deposit`.
@@ -495,15 +540,15 @@ modifyContractState f = modState contractState f
 
 -- | Set a specific field of the contract state.
 ($=) :: Setter' state a -> a -> Spec state ()
-l $= x = l $~ const x
+($=) = (.=)
 
 -- | Modify a specific field of the contract state.
 ($~) :: Setter' state a -> (a -> a) -> Spec state ()
-l $~ f = modState (contractState . l) f
+($~) = (%=)
 
 instance GetModelState (Spec state) where
     type StateType (Spec state) = state
-    getModelState = State.get
+    getModelState = Spec State.get
 
 handle :: (ContractModel s) => Handles s -> HandleFun s
 handle handles key =
@@ -969,18 +1014,108 @@ instance GetModelState (DL state) where
 -- actions using `arbitraryAction`, or you can use `forAllDL` to generate a `Actions` from a `DL`
 -- scenario.
 
-finalChecks :: CheckOptions -> TracePredicate -> PropertyM (ContractMonad state) a -> PropertyM (ContractMonad state) a
-finalChecks opts predicate prop = do
+-- | Options for controlling coverage checking requirements
+--
+-- * `checkCoverage` tells you whether or not to run the coverage checks at all.
+-- * `endpointCoverageEq instance endpointName` tells us what percentage of tests are required to include
+-- a call to the endpoint `endpointName` in the contract at `instance`.
+-- * `coverIndex` is the coverage index obtained from the `CompiledCodeIn` of the validator.
+data CoverageOptions = CoverageOptions { _checkCoverage       :: Bool
+                                       , _endpointCoverageReq :: ContractInstanceTag -> String -> Double
+                                       , _coverageIndex       :: CoverageIndex
+                                       , _coverageIORef       :: Maybe (IORef CoverageReport)
+                                       }
+
+makeLenses ''CoverageOptions
+
+-- | Default coverage checking options are:
+-- * not to check coverage
+-- * set the requriements for every endpoint to 20% and
+-- * not to cover any source locations in the validator scripts.
+defaultCoverageOptions :: CoverageOptions
+defaultCoverageOptions = CoverageOptions { _checkCoverage = False
+                                         , _endpointCoverageReq = \ _ _ -> 20
+                                         , _coverageIndex = mempty
+                                         , _coverageIORef = Nothing }
+
+-- | Run QuickCheck on a property that tracks coverage and print its coverage report.
+quickCheckWithCoverage :: QC.Testable prop => CoverageOptions -> (CoverageOptions -> prop) -> IO CoverageReport
+quickCheckWithCoverage copts prop = do
+  copts <- case copts ^. coverageIORef of
+    Nothing -> do
+      ref <- newIORef mempty
+      return $ copts { _coverageIORef = Just ref }
+    _ -> return copts
+  QC.quickCheck $ prop $ copts { _checkCoverage = True }
+  case copts ^. coverageIORef of
+    Nothing -> fail "Unreachable case in quickCheckWithCoverage"
+    Just ref -> do
+      report <- readIORef ref
+      putStrLn ""
+      putStrLn . show $ pprCoverageReport (copts ^. coverageIndex) report
+      return report
+
+finalChecks :: CheckOptions
+            -> CoverageOptions
+            -> [ContractInstanceSpec state]
+            -> TracePredicate
+            -> PropertyM (ContractMonad state) a
+            -> PropertyM (ContractMonad state) a
+finalChecks opts copts handleSpecs predicate prop = do
     x  <- prop
     tr <- QC.run State.get
-    x <$ checkPredicateInner opts predicate (void $ runEmulatorAction tr IMNil)
-                             debugOutput assertResult
+    let action = void $ runEmulatorAction tr IMNil
+        stream :: forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
+        stream = fst <$> runEmulatorStream (opts ^. emulatorConfig) action
+        (result, events) = S.streamFold (,[]) run (\ (msg S.:> es) -> (fst es, (msg ^. logMessageContent) : snd es)) stream
+    case result of
+      Just err -> do
+        QC.monitor $ counterexample (show err)
+        QC.assert False
+      _ -> return ()
+    addEndpointCoverage copts handleSpecs events $
+      x <$ checkPredicateInnerStream opts (noMainThreadDumbdums .&&. predicate) (void stream) debugOutput assertResult
     where
         debugOutput :: Monad m => String -> PropertyM m ()
         debugOutput = QC.monitor . whenFail . putStrLn
 
         assertResult :: Monad m => Bool -> PropertyM m ()
         assertResult = QC.assert
+
+        -- don't accept traces where the main thread crashes
+        noMainThreadDumbdums :: TracePredicate
+        noMainThreadDumbdums = assertUserLog $ \ log -> null [ () | UserThreadErr _ <- view eteEvent <$> log ]
+
+-- | Check endpoint coverage
+addEndpointCoverage :: CoverageOptions
+                    -> [ContractInstanceSpec state]
+                    -> [EmulatorEvent]
+                    -> PropertyM (ContractMonad state) a
+                    -> PropertyM (ContractMonad state) a
+addEndpointCoverage copts specs es pm
+  | copts ^. checkCoverage, Just ref <- copts ^. coverageIORef = do
+    x <- pm
+    let -- Endpoint covereage
+        epsToCover = [(contractInstanceSpecTag s, contractInstanceEndpoints s) | s <- specs]
+        epsCovered = getInvokedEndpoints es
+        endpointCovers = [ QC.cover (view endpointCoverageReq copts t e)
+                                    (e `elem` fold (Map.lookup t epsCovered))
+                                    (Text.unpack (unContractInstanceTag t) ++ " at endpoint " ++ e)
+                         | (t, eps) <- epsToCover
+                         , e <- eps ]
+    QC.monitor . foldr (.) id $ endpointCovers
+    QC.monitor $ \ p -> ioProperty $ do
+      modifyIORef ref (getCoverageReport es <>)
+      return p
+    QC.monitor QC.checkCoverage
+    return x
+  | otherwise = pm
+
+contractInstanceEndpoints :: ContractInstanceSpec state -> [String]
+contractInstanceEndpoints (ContractInstanceSpec _ _ (_ :: Contract w schema err ())) = labels' @(Input schema)
+
+contractInstanceSpecTag :: ContractInstanceSpec state -> ContractInstanceTag
+contractInstanceSpecTag (ContractInstanceSpec _ w _) = walletInstanceTag w
 
 activateWallets :: forall state. ContractModel state => [ContractInstanceSpec state] -> EmulatorTrace (Handles state)
 activateWallets [] = return IMNil
@@ -1015,7 +1150,7 @@ propRunActions ::
     -> (ModelState state -> TracePredicate) -- ^ Predicate to check at the end
     -> Actions state                         -- ^ The actions to run
     -> Property
-propRunActions = propRunActionsWithOptions defaultCheckOptions
+propRunActions = propRunActionsWithOptions defaultCheckOptions defaultCoverageOptions
 
 -- | Run a `Actions` in the emulator and check that the model and the emulator agree on the final
 --   wallet balance changes, that no off-chain contract instance crashed, and that the given
@@ -1049,24 +1184,26 @@ propRunActions = propRunActionsWithOptions defaultCheckOptions
 propRunActionsWithOptions ::
     ContractModel state
     => CheckOptions                          -- ^ Emulator options
+    -> CoverageOptions                       -- ^ Coverage options
     -> [ContractInstanceSpec state]          -- ^ Required wallet contract instances
     -> (ModelState state -> TracePredicate)  -- ^ Predicate to check at the end
     -> Actions state                          -- ^ The actions to run
     -> Property
-propRunActionsWithOptions opts handleSpecs predicate actions' =
-  propRunActionsWithOptions' opts handleSpecs predicate (toStateModelActions actions')
+propRunActionsWithOptions opts copts handleSpecs predicate actions' =
+  propRunActionsWithOptions' opts copts handleSpecs predicate (toStateModelActions actions')
 
 propRunActionsWithOptions' ::
     ContractModel state
     => CheckOptions                          -- ^ Emulator options
+    -> CoverageOptions                       -- ^ Coverage options
     -> [ContractInstanceSpec state]          -- ^ Required wallet contract instances
     -> (ModelState state -> TracePredicate)  -- ^ Predicate to check at the end
     -> StateModel.Actions (ModelState state) -- ^ The actions to run
     -> Property
-propRunActionsWithOptions' opts handleSpecs predicate actions =
-    monadic (flip State.evalState mempty) $ finalChecks opts finalPredicate $ do
-        QC.run $ setHandles $ activateWallets handleSpecs
-        void $ runActionsInState StateModel.initialState actions
+propRunActionsWithOptions' opts copts handleSpecs predicate actions =
+    monadic (flip State.evalState mempty) $ finalChecks opts copts handleSpecs finalPredicate $ do
+            QC.run $ setHandles $ activateWallets handleSpecs
+            void $ runActionsInState StateModel.initialState actions
     where
         finalState     = StateModel.stateAfter actions
         finalPredicate = predicate finalState .&&. checkBalances finalState
@@ -1085,6 +1222,12 @@ checkNoCrashes = foldr (\ (ContractInstanceSpec k w c) -> (assertOutcome c (inst
         notError Failed{}  = False
         notError Done{}    = True
         notError NotDone{} = True
+
+-- | Sanity check a `ContractModel`. Ensures that wallet balances are not always unchanged.
+propSanityCheckModel :: forall state. ContractModel state => Property
+propSanityCheckModel = QC.expectFailure $ noBalanceChanges . stateAfter @state
+  where
+    noBalanceChanges s = all isZero (s ^. balanceChanges)
 
 -- $noLockedFunds
 -- Showing that funds can not be locked in the contract forever.
@@ -1129,7 +1272,7 @@ checkNoLockedFundsProof options spec NoLockedFundsProof{nlfpMainStrategy   = mai
             as'' = toStateModelActions as' in
         foldl (QC..&&.) (counterexample "Main strategy" $ prop as'') [ walletProp as w bal | (w, bal) <- Map.toList (s ^. balanceChanges) ]
     where
-        prop = propRunActionsWithOptions' options spec (\ _ -> pure True)
+        prop = propRunActionsWithOptions' options defaultCoverageOptions spec (\ _ -> pure True)
 
         mainProp as = do
             mapM_ action as
@@ -1152,12 +1295,18 @@ checkNoLockedFundsProof options spec NoLockedFundsProof{nlfpMainStrategy   = mai
 
 -- | A whitelist entry tells you what final log entry prefixes
 -- are acceptable for a given error
-data Whitelist = Whitelist { errorPrefixes :: [Text.Text] }
+data Whitelist = Whitelist { errorPrefixes :: Set Text.Text }
+
+instance Semigroup Whitelist where
+  Whitelist wl <> Whitelist wl' = Whitelist $ wl <> wl'
+
+instance Monoid Whitelist where
+  mempty = defaultWhitelist
 
 -- | Check that the last entry in a log is accepted by a whitelist entry
 isAcceptedBy :: Maybe Text.Text -> Whitelist -> Bool
 isAcceptedBy Nothing _           = False
-isAcceptedBy (Just lastEntry) wl = any (`Text.isPrefixOf` lastEntry) (errorPrefixes wl)
+isAcceptedBy (Just lastEntry) wl = any (`Text.isPrefixOf` lastEntry) (Set.toList $ errorPrefixes wl)
 
 {- Note [Maintaining `whitelistOk` and `checkErrorWhitelist`]
    The intended use case of `checkErrorWhitelist` is to be able to assert that failures of
@@ -1178,8 +1327,11 @@ whitelistOk wl = noPreludePartials
       -- validator that returns a boolean fails correctly.
       all (\ec -> Prelude.not $ (Just $ Builtins.fromBuiltin ec) `isAcceptedBy` wl) (Map.keys allErrorCodes \\ [checkHasFailedError])
 
+mkWhitelist :: [Text.Text] -> Whitelist
+mkWhitelist txs = defaultWhitelist <> Whitelist (Set.fromList txs)
+
 defaultWhitelist :: Whitelist
-defaultWhitelist = Whitelist [Builtins.fromBuiltin checkHasFailedError]
+defaultWhitelist = Whitelist . Set.singleton $ Builtins.fromBuiltin checkHasFailedError
 
 -- | Check that running a contract model does not result in validation
 -- failures that are not accepted by the whitelist.
@@ -1188,17 +1340,18 @@ checkErrorWhitelist :: ContractModel m
                     -> Whitelist
                     -> Actions m
                     -> Property
-checkErrorWhitelist = checkErrorWhitelistWithOptions defaultCheckOptions
+checkErrorWhitelist = checkErrorWhitelistWithOptions defaultCheckOptions defaultCoverageOptions
 
 -- | Check that running a contract model does not result in validation
 -- failures that are not accepted by the whitelist.
 checkErrorWhitelistWithOptions :: forall m. ContractModel m
                                => CheckOptions
+                               -> CoverageOptions
                                -> [ContractInstanceSpec m]
                                -> Whitelist
                                -> Actions m
                                -> Property
-checkErrorWhitelistWithOptions opts handleSpecs whitelist acts = property $ go check acts
+checkErrorWhitelistWithOptions opts copts handleSpecs whitelist acts = property $ go check acts
   where
     check :: TracePredicate
     check = checkOnchain .&&. (assertNoFailedTransactions .||. checkOffchain)
@@ -1218,6 +1371,6 @@ checkErrorWhitelistWithOptions opts handleSpecs whitelist acts = property $ go c
     checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _) <- events ]
 
     go :: TracePredicate -> Actions m -> Property
-    go check actions = monadic (flip State.evalState mempty) $ finalChecks opts check $ do
+    go check actions = monadic (flip State.evalState mempty) $ finalChecks opts copts handleSpecs check $ do
                         QC.run $ setHandles $ activateWallets handleSpecs
                         void $ runActionsInState StateModel.initialState (toStateModelActions actions)

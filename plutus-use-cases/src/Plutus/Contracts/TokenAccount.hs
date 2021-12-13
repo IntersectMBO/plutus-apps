@@ -37,33 +37,33 @@ module Plutus.Contracts.TokenAccount(
   , typedValidator
   ) where
 
-import           Control.Lens
-import           Control.Monad               (void)
-import           Control.Monad.Error.Lens
-import           Data.Aeson                  (FromJSON, ToJSON)
-import qualified Data.Map                    as Map
-import           Data.Text.Prettyprint.Doc
-import           GHC.Generics                (Generic)
+import Control.Lens
+import Control.Monad (void)
+import Control.Monad.Error.Lens
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map qualified as Map
+import GHC.Generics (Generic)
+import Prettyprinter
 
-import           Plutus.Contract
-import           Plutus.Contract.Constraints
-import qualified PlutusTx
+import Plutus.Contract
+import Plutus.Contract.Constraints
+import PlutusTx qualified
 
-import           Ledger                      (Address, PubKeyHash, ValidatorHash)
-import qualified Ledger
-import qualified Ledger.Constraints          as Constraints
-import qualified Ledger.Contexts             as V
-import qualified Ledger.Scripts
-import           Ledger.Tx                   (CardanoTx)
-import           Ledger.Typed.Scripts        (ValidatorTypes (..))
-import qualified Ledger.Typed.Scripts        as Scripts
-import           Ledger.Value                (TokenName, Value)
-import qualified Ledger.Value                as Value
-import qualified Plutus.Contract.Typed.Tx    as TypedTx
+import Ledger (Address, PaymentPubKeyHash, ValidatorHash)
+import Ledger qualified
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts qualified as V
+import Ledger.Scripts qualified
+import Ledger.Tx (CardanoTx)
+import Ledger.Typed.Scripts (ValidatorTypes (..))
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (TokenName, Value)
+import Ledger.Value qualified as Value
+import Plutus.Contract.Typed.Tx qualified as TypedTx
 
-import qualified Plutus.Contracts.Currency   as Currency
+import Plutus.Contracts.Currency qualified as Currency
 
-import           Prettyprinter.Extras        (PrettyShow (..))
+import Prettyprinter.Extras (PrettyShow (..))
 
 newtype Account = Account { accountOwner :: Value.AssetClass }
     deriving stock    (Eq, Show, Generic)
@@ -77,14 +77,14 @@ instance ValidatorTypes TokenAccount where
     type DatumType TokenAccount = ()
 
 type TokenAccountSchema =
-        Endpoint "redeem" (Account, PubKeyHash)
+        Endpoint "redeem" (Account, PaymentPubKeyHash)
         .\/ Endpoint "pay" (Account, Value)
-        .\/ Endpoint "new-account" (TokenName, PubKeyHash)
+        .\/ Endpoint "new-account" (TokenName, PaymentPubKeyHash)
 
 type HasTokenAccountSchema s =
-    ( HasEndpoint "redeem" (Account, PubKeyHash) s
+    ( HasEndpoint "redeem" (Account, PaymentPubKeyHash) s
     , HasEndpoint "pay" (Account, Value) s
-    , HasEndpoint "new-account" (TokenName, PubKeyHash) s
+    , HasEndpoint "new-account" (TokenName, PaymentPubKeyHash) s
     )
 
 data TokenAccountError =
@@ -109,7 +109,7 @@ tokenAccountContract
        )
     => Contract w s e ()
 tokenAccountContract = mapError (review _TokenAccountError) (selectList [redeem_, pay_, newAccount_]) where
-    redeem_ = endpoint @"redeem" @(Account, PubKeyHash) @w @s $ \(accountOwner, destination) -> do
+    redeem_ = endpoint @"redeem" @(Account, PaymentPubKeyHash) @w @s $ \(accountOwner, destination) -> do
         void $ redeem destination accountOwner
         tokenAccountContract
     pay_ = endpoint @"pay" @_ @w @s $ \(accountOwner, value) -> do
@@ -161,16 +161,16 @@ pay account vl = do
         <> show vl
         <> " into "
         <> show account
-    mapError (review _TAContractError)
-        $ submitTxConstraints inst
-        $ payTx vl
+    mapError (review _TAContractError) $
+          mkTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
+      >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 -- | Create a transaction that spends all outputs belonging to the 'Account'.
 redeemTx :: forall w s e.
     ( AsTokenAccountError e
     )
     => Account
-    -> PubKeyHash
+    -> PaymentPubKeyHash
     -> Contract w s e (TxConstraints () (), ScriptLookups TokenAccount)
 redeemTx account pk = mapError (review _TAContractError) $ do
     let inst = typedValidator account
@@ -195,15 +195,17 @@ redeemTx account pk = mapError (review _TAContractError) $ do
 redeem
   :: ( AsTokenAccountError e
      )
-  => PubKeyHash
+  => PaymentPubKeyHash
   -- ^ Where the token should go after the transaction
   -> Account
   -- ^ The token account
   -> Contract w s e CardanoTx
 redeem pk account = mapError (review _TokenAccountError) $ do
     (constraints, lookups) <- redeemTx account pk
-    tx <- either (throwing _ConstraintResolutionError) pure (Constraints.mkTx lookups constraints)
-    submitUnbalancedTx tx
+    utx <- either (throwing _ConstraintResolutionError)
+                  (pure . Constraints.adjustUnbalancedTx)
+                  (Constraints.mkTx lookups constraints)
+    submitUnbalancedTx utx
 
 -- | @balance account@ returns the value of all unspent outputs that can be
 --   unlocked with @accountToken account@
@@ -223,7 +225,7 @@ newAccount
     (AsTokenAccountError e)
     => TokenName
     -- ^ Name of the token
-    -> PubKeyHash
+    -> PaymentPubKeyHash
     -- ^ Public key of the token's initial owner
     -> Contract w s e Account
 newAccount tokenName pk = mapError (review _TokenAccountError) $ do

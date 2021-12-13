@@ -2,17 +2,15 @@
 
 module SimulationUtils where
 
-import           Ledger.Scripts        (ValidatorHash (ValidatorHash))
-import           Ledger.Value          (CurrencySymbol (CurrencySymbol), TokenName, Value)
-import qualified Ledger.Value          as Value
-import           Playground.Types      (ContractCall (CallEndpoint), FunctionSchema (FunctionSchema),
-                                        KnownCurrency (KnownCurrency), SimulatorAction,
-                                        SimulatorWallet (SimulatorWallet), argument, argumentValues, caller,
-                                        endpointDescription, hash, knownTokens, simulatorWalletBalance,
-                                        simulatorWalletWallet)
-import           Schema                (ToArgument, toArgument)
-import           Wallet.Emulator.Types (WalletNumber)
-import           Wallet.Types          (EndpointDescription)
+import Ledger.Scripts (ValidatorHash (ValidatorHash))
+import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName, Value)
+import Ledger.Value qualified as Value
+import Playground.Types (ContractCall (CallEndpoint), FunctionSchema (FunctionSchema), KnownCurrency (KnownCurrency),
+                         SimulatorAction, SimulatorWallet (SimulatorWallet), argument, argumentValues, caller,
+                         endpointDescription, hash, knownTokens, simulatorWalletBalance, simulatorWalletWallet)
+import Schema (ToArgument, toArgument)
+import Wallet.Emulator.Types (WalletNumber)
+import Wallet.Types (EndpointDescription)
 
 callEndpoint :: ToArgument a => WalletNumber -> EndpointDescription -> a -> SimulatorAction
 callEndpoint caller endpointDescription param =

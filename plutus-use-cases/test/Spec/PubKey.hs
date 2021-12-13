@@ -1,34 +1,26 @@
 {-# LANGUAGE TypeApplications #-}
 module Spec.PubKey(tests, pubKeyTrace) where
 
-import           Control.Monad           (void)
-import qualified Data.Map                as Map
+import Control.Monad (void)
+import Data.Map qualified as Map
 
-import qualified Ledger.Ada              as Ada
-import           Ledger.Constraints      (ScriptLookups (..))
-import qualified Ledger.Constraints      as Constraints
-import           Ledger.Scripts          (unitRedeemer)
-import           Ledger.Typed.Scripts    as Scripts
-import           Plutus.Contract
-import           Plutus.Contract.Test
-import qualified Plutus.Trace.Emulator   as Trace
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
+import Ledger.Scripts (unitRedeemer)
+import Ledger.Typed.Scripts as Scripts
+import Plutus.Contract
+import Plutus.Contract.Test
+import Plutus.Trace.Emulator qualified as Trace
 
-import           Plutus.Contracts.PubKey (PubKeyError, pubKeyContract)
+import Plutus.Contracts.PubKey (PubKeyError, pubKeyContract)
 
-import           Test.Tasty
+import Test.Tasty
 
 theContract :: Contract () EmptySchema PubKeyError ()
 theContract = do
-  (txOutRef, ciTxOut, pkInst) <- pubKeyContract (walletPubKeyHash w1) (Ada.lovelaceValueOf 10)
-  let lookups = ScriptLookups
-                  { slMPS = Map.empty
-                  , slTxOutputs = maybe mempty (Map.singleton txOutRef) ciTxOut
-                  , slOtherScripts = Map.singleton (Scripts.validatorHash pkInst) (Scripts.validatorScript pkInst)
-                  , slOtherData = Map.empty
-                  , slPubKeyHashes = Map.empty
-                  , slTypedValidator = Nothing
-                  , slOwnPubkeyHash = Nothing
-                  }
+  (txOutRef, ciTxOut, pkInst) <- pubKeyContract (mockWalletPaymentPubKeyHash w1) (Ada.adaValueOf 10)
+  let lookups = maybe mempty (Constraints.unspentOutputs . Map.singleton txOutRef) ciTxOut
+              <> Constraints.otherScript (Scripts.validatorScript pkInst)
   void $ submitTxConstraintsWith @Scripts.Any lookups (Constraints.mustSpendScriptOutput txOutRef unitRedeemer)
 
 tests :: TestTree

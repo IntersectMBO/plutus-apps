@@ -1,11 +1,12 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeOperators      #-}
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
 
 module Cardano.Wallet.Mock.Handlers
@@ -16,52 +17,53 @@ module Cardano.Wallet.Mock.Handlers
     , distributeNewWalletFunds
     ) where
 
-import           Cardano.BM.Data.Trace               (Trace)
-import qualified Cardano.Node.Client                 as NodeClient
-import qualified Cardano.Protocol.Socket.Mock.Client as MockClient
-import           Cardano.Wallet.Mock.Types           (MultiWalletEffect (..), WalletEffects, WalletInfo (..),
-                                                      WalletMsg (..), Wallets, fromWalletState)
-import           Control.Concurrent                  (MVar)
-import           Control.Concurrent.MVar             (putMVar, takeMVar)
-import           Control.Lens                        (at, (?~))
-import           Control.Monad.Error                 (MonadError)
-import qualified Control.Monad.Except                as MonadError
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error
-import           Control.Monad.Freer.Extras
-import           Control.Monad.Freer.Reader          (runReader)
-import           Control.Monad.Freer.State           (State, evalState, get, put, runState)
-import           Control.Monad.IO.Class              (MonadIO, liftIO)
-import           Crypto.Random                       (getRandomBytes)
-import           Data.Bits                           (shiftL, shiftR)
-import           Data.ByteArray                      (ScrubbedBytes, unpack)
-import qualified Data.ByteString                     as BS
-import qualified Data.ByteString.Lazy                as BSL
-import qualified Data.ByteString.Lazy.Char8          as BSL8
-import qualified Data.ByteString.Lazy.Char8          as Char8
-import           Data.Function                       ((&))
-import qualified Data.Map                            as Map
-import           Data.Text.Encoding                  (encodeUtf8)
-import           Data.Text.Prettyprint.Doc           (pretty)
-import qualified Ledger.Ada                          as Ada
-import           Ledger.CardanoWallet                (MockWallet)
-import qualified Ledger.CardanoWallet                as CW
-import           Ledger.Crypto                       (PubKeyHash)
-import           Ledger.Fee                          (FeeConfig)
-import           Ledger.TimeSlot                     (SlotConfig)
-import           Ledger.Tx                           (CardanoTx)
-import           Plutus.ChainIndex                   (ChainIndexQueryEffect)
-import qualified Plutus.ChainIndex.Client            as ChainIndex
-import           Plutus.PAB.Arbitrary                ()
-import qualified Plutus.PAB.Monitoring.Monitoring    as LM
-import           Servant                             (ServerError (..), err400, err401, err404)
-import           Servant.Client                      (ClientEnv)
-import           Servant.Server                      (err500)
-import           Wallet.API                          (WalletAPIError (..))
-import qualified Wallet.API                          as WAPI
-import           Wallet.Effects                      (NodeClientEffect)
-import           Wallet.Emulator.LogMessages         (TxBalanceMsg)
-import qualified Wallet.Emulator.Wallet              as Wallet
+import Cardano.BM.Data.Trace (Trace)
+import Cardano.Node.Client qualified as NodeClient
+import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
+import Cardano.Wallet.Mock.Types (MultiWalletEffect (..), WalletEffects, WalletInfo (..), WalletMsg (..), Wallets,
+                                  fromWalletState)
+import Control.Concurrent (MVar)
+import Control.Concurrent.MVar (putMVar, takeMVar)
+import Control.Lens (at, (?~))
+import Control.Monad.Error (MonadError)
+import Control.Monad.Except qualified as MonadError
+import Control.Monad.Freer
+import Control.Monad.Freer.Error
+import Control.Monad.Freer.Extras
+import Control.Monad.Freer.Reader (runReader)
+import Control.Monad.Freer.State (State, evalState, get, put, runState)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Crypto.Random (getRandomBytes)
+import Data.Bits (shiftL, shiftR)
+import Data.ByteArray (ScrubbedBytes, unpack)
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Lazy.Char8 qualified as BSL8
+import Data.ByteString.Lazy.Char8 qualified as Char8
+import Data.Function ((&))
+import Data.Map qualified as Map
+import Data.Text (Text)
+import Data.Text.Encoding (encodeUtf8)
+import Ledger.Ada qualified as Ada
+import Ledger.Address (PaymentPubKeyHash)
+import Ledger.CardanoWallet (MockWallet)
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Fee (FeeConfig)
+import Ledger.TimeSlot (SlotConfig)
+import Ledger.Tx (CardanoTx)
+import Plutus.ChainIndex (ChainIndexQueryEffect)
+import Plutus.ChainIndex.Client qualified as ChainIndex
+import Plutus.PAB.Arbitrary ()
+import Plutus.PAB.Monitoring.Monitoring qualified as LM
+import Prettyprinter (pretty)
+import Servant (ServerError (..), err400, err401, err404)
+import Servant.Client (ClientEnv)
+import Servant.Server (err500)
+import Wallet.API (WalletAPIError (..))
+import Wallet.API qualified as WAPI
+import Wallet.Effects (NodeClientEffect)
+import Wallet.Emulator.LogMessages (TxBalanceMsg)
+import Wallet.Emulator.Wallet qualified as Wallet
 
 newtype Seed = Seed ScrubbedBytes
 
@@ -80,8 +82,14 @@ byteString2Integer = BS.foldl' (\i b -> (i `shiftL` 8) + fromIntegral b) 0
 integer2ByteString32 :: Integer -> BS.ByteString
 integer2ByteString32 i = BS.unfoldr (\l' -> if l' < 0 then Nothing else Just (fromIntegral (i `shiftR` l'), l' - 8)) (31*8)
 
-distributeNewWalletFunds :: forall effs. (Member WAPI.WalletEffect effs, Member (Error WalletAPIError) effs) => PubKeyHash -> Eff effs CardanoTx
-distributeNewWalletFunds = WAPI.payToPublicKeyHash WAPI.defaultSlotRange (Ada.adaValueOf 10000)
+distributeNewWalletFunds :: forall effs.
+    ( Member WAPI.WalletEffect effs
+    , Member (Error WalletAPIError) effs
+    , Member (LogMsg Text) effs
+    )
+    => PaymentPubKeyHash
+    -> Eff effs CardanoTx
+distributeNewWalletFunds = WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange (Ada.adaValueOf 10_000)
 
 newWallet :: forall m effs. (LastMember m effs, MonadIO m) => Eff effs MockWallet
 newWallet = do
@@ -96,6 +104,7 @@ handleMultiWallet :: forall m effs.
     , Member (State Wallets) effs
     , Member (Error WAPI.WalletAPIError) effs
     , Member (LogMsg WalletMsg) effs
+    , Member (LogMsg Text) effs
     , LastMember m effs
     , MonadIO m
     )
@@ -119,18 +128,17 @@ handleMultiWallet feeCfg = \case
         mockWallet <- newWallet
         let walletId = Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId mockWallet
             wallets' = Map.insert walletId (Wallet.fromMockWallet mockWallet) wallets
-            pkh = CW.pubKeyHash mockWallet
+            pkh = CW.paymentPubKeyHash mockWallet
         put wallets'
         -- For some reason this doesn't work with (Wallet 1)/privateKey1,
         -- works just fine with (Wallet 2)/privateKey2
         -- ¯\_(ツ)_/¯
-        let sourceWallet = Wallet.fromMockWallet (CW.knownWallet 2)
+        let sourceWallet = Wallet.fromMockWallet (CW.knownMockWallet 2)
         _ <- evalState sourceWallet $
             interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
             $ interpret (Wallet.handleWallet feeCfg)
-            $ distributeNewWalletFunds
-            $ pkh
-        return $ WalletInfo{wiWallet = walletId, wiPubKeyHash = pkh}
+            $ distributeNewWalletFunds pkh
+        return $ WalletInfo{wiWallet = walletId, wiPaymentPubKeyHash = pkh}
     GetWalletInfo wllt -> do
         wallets <- get @Wallets
         return $ fmap fromWalletState $ Map.lookup (Wallet.Wallet wllt) wallets
@@ -200,11 +208,17 @@ runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets feeCfg
 fromWalletAPIError :: WalletAPIError -> ServerError
 fromWalletAPIError (InsufficientFunds text) =
     err401 {errBody = BSL.fromStrict $ encodeUtf8 text}
-fromWalletAPIError e@(PrivateKeyNotFound _) =
+fromWalletAPIError e@(PaymentPrivateKeyNotFound _) =
     err404 {errBody = BSL8.pack $ show e}
 fromWalletAPIError e@(ValidationError _) =
     err500 {errBody = BSL8.pack $ show $ pretty e}
 fromWalletAPIError e@(ToCardanoError _) =
+    err500 {errBody = BSL8.pack $ show $ pretty e}
+fromWalletAPIError e@ChangeHasLessThanNAda {} =
+    err500 {errBody = BSL8.pack $ show $ pretty e}
+fromWalletAPIError e@PaymentMkTxError {} =
+    err500 {errBody = BSL8.pack $ show $ pretty e}
+fromWalletAPIError e@(RemoteClientFunctionNotYetSupported _) =
     err500 {errBody = BSL8.pack $ show $ pretty e}
 fromWalletAPIError (OtherError text) =
     err500 {errBody = BSL.fromStrict $ encodeUtf8 text}

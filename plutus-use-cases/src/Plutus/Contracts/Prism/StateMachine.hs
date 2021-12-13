@@ -16,21 +16,21 @@ module Plutus.Contracts.Prism.StateMachine(
     , mkMachineClient
     ) where
 
-import           Data.Aeson                        (FromJSON, ToJSON)
-import           Data.Hashable                     (Hashable)
-import           GHC.Generics                      (Generic)
-import qualified Ledger.Constraints                as Constraints
-import           Ledger.Constraints.TxConstraints  (TxConstraints)
-import           Ledger.Crypto                     (PubKeyHash)
-import qualified Ledger.Typed.Scripts              as Scripts
-import           Ledger.Value                      (TokenName, Value)
-import           Plutus.Contract.StateMachine      (State (..), StateMachine (..), StateMachineClient (..), Void)
-import qualified Plutus.Contract.StateMachine      as StateMachine
-import           Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
-import qualified Plutus.Contracts.Prism.Credential as Credential
-import qualified PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude                           as Haskell
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Hashable (Hashable)
+import GHC.Generics (Generic)
+import Ledger.Address (PaymentPubKeyHash)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.TxConstraints (TxConstraints)
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (TokenName, Value)
+import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient (..), Void)
+import Plutus.Contract.StateMachine qualified as StateMachine
+import Plutus.Contracts.Prism.Credential (Credential (..), CredentialAuthority (..))
+import Plutus.Contracts.Prism.Credential qualified as Credential
+import PlutusTx qualified
+import PlutusTx.Prelude
+import Prelude qualified as Haskell
 
 data IDState =
     Active -- ^ The credential is active and can be used in transactions
@@ -47,7 +47,7 @@ data IDAction =
 -- | A 'Credential' issued to a user (public key address)
 data UserCredential =
     UserCredential
-        { ucAddress    :: PubKeyHash
+        { ucAddress    :: PaymentPubKeyHash
         -- ^ Address of the credential holder
         , ucCredential ::  Credential
         -- ^ The credential
@@ -100,7 +100,7 @@ machineClient inst credentialData =
     let machine = credentialStateMachine credentialData
     in StateMachine.mkStateMachineClient (StateMachine.StateMachineInstance machine inst)
 
-mkMachineClient :: CredentialAuthority -> PubKeyHash -> TokenName -> StateMachineClient IDState IDAction
+mkMachineClient :: CredentialAuthority -> PaymentPubKeyHash -> TokenName -> StateMachineClient IDState IDAction
 mkMachineClient authority credentialOwner tokenName =
     let credential = Credential{credAuthority=authority,credName=tokenName}
         userCredential =

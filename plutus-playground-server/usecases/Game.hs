@@ -24,22 +24,22 @@ module Game where
 -- Player 2 guesses the word by attempting to spend the transaction
 -- output. If the guess is correct, the validator script releases the funds.
 -- If it isn't, the funds stay locked.
-import           Control.Monad         (void)
-import qualified Data.ByteString.Char8 as C
-import           Data.Map              (Map)
-import qualified Data.Map              as Map
-import           Data.Maybe            (catMaybes)
-import           Ledger                (Address, Datum (Datum), ScriptContext, Validator, Value)
-import qualified Ledger
-import qualified Ledger.Ada            as Ada
-import qualified Ledger.Constraints    as Constraints
-import           Ledger.Tx             (ChainIndexTxOut (..))
-import qualified Ledger.Typed.Scripts  as Scripts
-import           Playground.Contract
-import           Plutus.Contract
-import qualified PlutusTx
-import           PlutusTx.Prelude      hiding (pure, (<$>))
-import qualified Prelude               as Haskell
+import Control.Monad (void)
+import Data.ByteString.Char8 qualified as C
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (catMaybes)
+import Ledger (Address, Datum (Datum), ScriptContext, Validator, Value)
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints qualified as Constraints
+import Ledger.Tx (ChainIndexTxOut (..))
+import Ledger.Typed.Scripts qualified as Scripts
+import Playground.Contract
+import Plutus.Contract
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (pure, (<$>))
+import Prelude qualified as Haskell
 
 ------------------------------------------------------------
 

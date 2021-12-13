@@ -1,7 +1,7 @@
 module Test.QuickCheck.DynamicLogic.CanGenerate (canGenerate) where
 
-import           System.IO.Unsafe
-import           Test.QuickCheck
+import System.IO.Unsafe
+import Test.QuickCheck
 
 -- | @canGenerate prob g p@
 --   returns @False@ if we are sure @Prob(g generates x satisfying p) >= prob@

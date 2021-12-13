@@ -23,9 +23,11 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxInsCollateral
   , fromCardanoTxInWitness
   , fromCardanoTxOut
+  , fromCardanoTxOutDatumHash
   , fromCardanoAddress
   , fromCardanoMintValue
   , fromCardanoValue
+  , fromCardanoPolicyId
   , fromCardanoFee
   , fromCardanoValidityRange
   , fromCardanoScriptInEra
@@ -52,51 +54,52 @@ module Ledger.Tx.CardanoAPI(
   , FromCardanoError(..)
 ) where
 
-import qualified Cardano.Api                     as C
-import qualified Cardano.Api.Byron               as C
-import qualified Cardano.Api.Shelley             as C
-import           Cardano.BM.Data.Tracer          (ToObject (..))
-import           Cardano.Chain.Common            (addrToBase58)
-import qualified Cardano.Ledger.Alonzo.Scripts   as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWitness as C
-import qualified Cardano.Ledger.Core             as Ledger
-import           Codec.Serialise                 (Serialise, deserialiseOrFail)
-import qualified Codec.Serialise                 as Codec
-import           Codec.Serialise.Decoding        (Decoder, decodeBytes, decodeSimple)
-import           Codec.Serialise.Encoding        (Encoding (..), Tokens (..))
-import           Control.Applicative             ((<|>))
-import           Control.Lens                    hiding ((.=))
-import           Control.Monad                   (when)
-import           Data.Aeson                      (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
-import qualified Data.Aeson                      as Aeson
-import           Data.Aeson.Types                (Parser, parseFail, prependFailure, typeMismatch)
-import           Data.Bifunctor                  (first)
-import           Data.ByteString                 (ByteString)
-import qualified Data.ByteString                 as BS
-import qualified Data.ByteString.Lazy            as BSL
-import qualified Data.ByteString.Short           as SBS
-import           Data.Map                        (Map)
-import qualified Data.Map                        as Map
-import           Data.Maybe                      (mapMaybe)
-import           Data.OpenApi                    (NamedSchema (..), OpenApiType (..), byteSchema, declareSchemaRef,
-                                                  properties, required, sketchSchema, type_)
-import qualified Data.OpenApi                    as OpenApi
-import           Data.Proxy                      (Proxy (Proxy))
-import qualified Data.Set                        as Set
-import           Data.Tuple                      (swap)
-import           Data.Typeable                   (Typeable)
-import           GHC.Generics                    (Generic)
-import qualified Ledger.Scripts                  as P
-import           Ledger.Tx.CardanoAPITemp        (makeTransactionBody')
-import qualified Plutus.V1.Ledger.Ada            as Ada
-import qualified Plutus.V1.Ledger.Api            as Api
-import qualified Plutus.V1.Ledger.Api            as P
-import qualified Plutus.V1.Ledger.Credential     as Credential
-import qualified Plutus.V1.Ledger.Slot           as P
-import qualified Plutus.V1.Ledger.Tx             as P
-import qualified Plutus.V1.Ledger.Value          as Value
-import qualified PlutusTx.Prelude                as PlutusTx
-import           Prettyprinter                   (Pretty (..), colon, viaShow, (<+>))
+import Cardano.Api qualified as C
+import Cardano.Api.Byron qualified as C
+import Cardano.Api.Shelley qualified as C
+import Cardano.BM.Data.Tracer (ToObject)
+import Cardano.Chain.Common (addrToBase58)
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Core qualified as Ledger
+import Codec.Serialise (Serialise, deserialiseOrFail)
+import Codec.Serialise qualified as Codec
+import Codec.Serialise.Decoding (Decoder, decodeBytes, decodeSimple)
+import Codec.Serialise.Encoding (Encoding (Encoding), Tokens (TkBytes, TkSimple))
+import Control.Applicative ((<|>))
+import Control.Lens ((&), (.~), (?~))
+import Control.Monad (when)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types (Parser, parseFail, prependFailure, typeMismatch)
+import Data.Bifunctor (first)
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Short qualified as SBS
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.OpenApi (NamedSchema (NamedSchema), OpenApiType (OpenApiObject), byteSchema, declareSchemaRef, properties,
+                     required, sketchSchema, type_)
+import Data.OpenApi qualified as OpenApi
+import Data.Proxy (Proxy (Proxy))
+import Data.Set qualified as Set
+import Data.Tuple (swap)
+import Data.Typeable (Typeable)
+import GHC.Generics (Generic)
+import Ledger.Address qualified as P
+import Ledger.Scripts qualified as P
+import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
+import Plutus.V1.Ledger.Ada qualified as Ada
+import Plutus.V1.Ledger.Api qualified as Api
+import Plutus.V1.Ledger.Api qualified as P
+import Plutus.V1.Ledger.Credential qualified as Credential
+import Plutus.V1.Ledger.Slot qualified as P
+import Plutus.V1.Ledger.Tx qualified as P
+import Plutus.V1.Ledger.Value qualified as Value
+import PlutusTx.Prelude qualified as PlutusTx
+import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
 
 instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where
   declareNamedSchema _ = do
@@ -301,8 +304,9 @@ fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
              $ SBS.fromShort bs
    in either (const Nothing) Just script
 
+
 toCardanoTxBody ::
-    [Api.PubKeyHash] -- ^ Required signers of the transaction
+    [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
     -> C.NetworkId -- ^ Network ID
     -> P.Tx
@@ -310,7 +314,7 @@ toCardanoTxBody ::
 toCardanoTxBody sigs protocolParams networkId P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId) txOutputs
+    txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
@@ -417,11 +421,16 @@ fromCardanoTxOut (C.TxOut addr value datumHash) =
     <*> pure (fromCardanoTxOutValue value)
     <*> pure (fromCardanoTxOutDatumHash datumHash)
 
-toCardanoTxOut :: C.NetworkId -> P.TxOut -> Either ToCardanoError (C.TxOut C.CtxTx C.AlonzoEra)
-toCardanoTxOut networkId (P.TxOut addr value datumHash) =
+toCardanoTxOut :: C.NetworkId -> Map P.DatumHash P.Datum -> P.TxOut -> Either ToCardanoError (C.TxOut C.CtxTx C.AlonzoEra)
+toCardanoTxOut networkId datums (P.TxOut addr value datumHash) =
     C.TxOut <$> toCardanoAddress networkId addr
             <*> toCardanoTxOutValue value
-            <*> toCardanoTxOutDatumHash datumHash
+            <*> cardanoDatumHash
+  where
+    cardanoDatumHash =
+      case flip Map.lookup datums =<< datumHash of
+        Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
+        Nothing    -> toCardanoTxOutDatumHash datumHash
 
 fromCardanoAddress :: C.AddressInEra era -> Either FromCardanoError P.Address
 fromCardanoAddress (C.AddressInEra C.ByronAddressInAnyEra (C.ByronAddress address)) =
@@ -450,14 +459,14 @@ fromCardanoPaymentCredential (C.PaymentCredentialByKey paymentKeyHash) = Credent
 fromCardanoPaymentCredential (C.PaymentCredentialByScript scriptHash) = Credential.ScriptCredential (fromCardanoScriptHash scriptHash)
 
 toCardanoPaymentCredential :: Credential.Credential -> Either ToCardanoError C.PaymentCredential
-toCardanoPaymentCredential (Credential.PubKeyCredential pubKeyHash) = C.PaymentCredentialByKey <$> toCardanoPaymentKeyHash pubKeyHash
+toCardanoPaymentCredential (Credential.PubKeyCredential pubKeyHash) = C.PaymentCredentialByKey <$> toCardanoPaymentKeyHash (P.PaymentPubKeyHash pubKeyHash)
 toCardanoPaymentCredential (Credential.ScriptCredential validatorHash) = C.PaymentCredentialByScript <$> toCardanoScriptHash validatorHash
 
 fromCardanoPaymentKeyHash :: C.Hash C.PaymentKey -> P.PubKeyHash
 fromCardanoPaymentKeyHash paymentKeyHash = P.PubKeyHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes paymentKeyHash
 
-toCardanoPaymentKeyHash :: P.PubKeyHash -> Either ToCardanoError (C.Hash C.PaymentKey)
-toCardanoPaymentKeyHash (P.PubKeyHash bs) =
+toCardanoPaymentKeyHash :: P.PaymentPubKeyHash -> Either ToCardanoError (C.Hash C.PaymentKey)
+toCardanoPaymentKeyHash (P.PaymentPubKeyHash (P.PubKeyHash bs)) =
     let bsx = PlutusTx.fromBuiltin bs
         tg = "toCardanoPaymentKeyHash (" <> show (BS.length bsx) <> " bytes)"
     in tag tg $ deserialiseFromRawBytes (C.AsHash C.AsPaymentKey) bsx
@@ -650,7 +659,6 @@ data ToCardanoError
     | MissingMintingPolicyRedeemer
     | MissingMintingPolicy
     | ScriptPurposeNotSupported P.ScriptTag
-    | PublicKeyInputsNotSupported
     | Tag String ToCardanoError
     deriving stock (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -667,7 +675,6 @@ instance Pretty ToCardanoError where
     pretty MissingMintingPolicyRedeemer       = "Missing minting policy redeemer"
     pretty MissingMintingPolicy               = "Missing minting policy"
     pretty (ScriptPurposeNotSupported p)      = "Script purpose not supported:" <+> viaShow p
-    pretty PublicKeyInputsNotSupported        = "Public key inputs not supported"
     pretty (Tag t err)                        = pretty t <> colon <+> pretty err
 
 zeroExecutionUnits :: C.ExecutionUnits

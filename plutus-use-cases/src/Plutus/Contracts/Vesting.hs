@@ -26,28 +26,29 @@ module Plutus.Contracts.Vesting (
     vestingScript
     ) where
 
-import           Control.Lens
-import           Control.Monad            (void, when)
-import           Data.Aeson               (FromJSON, ToJSON)
-import qualified Data.Map                 as Map
-import           Prelude                  (Semigroup (..))
+import Control.Lens
+import Control.Monad (void, when)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map qualified as Map
+import Prelude (Semigroup (..))
 
-import           GHC.Generics             (Generic)
-import           Ledger                   (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), Validator)
-import           Ledger.Constraints       (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
-import           Ledger.Contexts          (ScriptContext (..), TxInfo (..))
-import qualified Ledger.Contexts          as Validation
-import qualified Ledger.Interval          as Interval
-import qualified Ledger.Tx                as Tx
-import           Ledger.Typed.Scripts     (ValidatorTypes (..))
-import qualified Ledger.Typed.Scripts     as Scripts
-import           Ledger.Value             (Value)
-import qualified Ledger.Value             as Value
-import           Plutus.Contract
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
-import           PlutusTx.Prelude         hiding (Semigroup (..), fold)
-import qualified Prelude                  as Haskell
+import GHC.Generics (Generic)
+import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Ledger.Contexts qualified as Validation
+import Ledger.Interval qualified as Interval
+import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts (ValidatorTypes (..))
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (Value)
+import Ledger.Value qualified as Value
+import Plutus.Contract
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Semigroup (..), fold)
+import Prelude qualified as Haskell
 
 {- |
     A simple vesting scheme. Money is locked by a contract and may only be
@@ -90,7 +91,7 @@ PlutusTx.makeLift ''VestingTranche
 data VestingParams = VestingParams {
     vestingTranche1 :: VestingTranche,
     vestingTranche2 :: VestingTranche,
-    vestingOwner    :: PubKeyHash
+    vestingOwner    :: PaymentPubKeyHash
     } deriving Generic
 
 PlutusTx.makeLift ''VestingParams
@@ -139,7 +140,7 @@ validate VestingParams{vestingTranche1, vestingTranche2, vestingOwner} () () ctx
             -- is "vestingOwner can do with the funds what they want" (as opposed
             -- to "the funds must be paid to vestingOwner"). This is enforcey by
             -- the following condition:
-            && Validation.txSignedBy txInfo vestingOwner
+            && Validation.txSignedBy txInfo (unPaymentPubKeyHash vestingOwner)
             -- That way the recipient of the funds can pay them to whatever address they
             -- please, potentially saving one transaction.
 
@@ -187,7 +188,8 @@ vestFundsC
     -> Contract w s e ()
 vestFundsC vesting = mapError (review _VestingError) $ do
     let tx = payIntoContract (totalAmount vesting)
-    void $ submitTxConstraints (typedValidator vesting) tx
+    mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) tx
+      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 data Liveness = Alive | Dead
 
@@ -223,5 +225,7 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.
-    void $ submitTxConstraintsSpending inst unspentOutputs tx
+    mkTxConstraints (Constraints.typedValidatorLookups inst
+                  <> Constraints.unspentOutputs unspentOutputs) tx
+      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
     return liveness

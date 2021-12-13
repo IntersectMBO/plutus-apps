@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | An index of unspent transaction outputs, and some functions for validating
@@ -12,6 +13,7 @@
 module Ledger.Index(
     -- * Types for transaction validation based on UTXO index
     ValidationMonad,
+    ValidationCtx(..),
     UtxoIndex(..),
     insert,
     insertCollateral,
@@ -27,6 +29,8 @@ module Ledger.Index(
     ValidationPhase(..),
     InOutMatch(..),
     minFee,
+    maxFee,
+    minAdaTxOut,
     mkTxInfo,
     -- * Actual validation
     validateTransaction,
@@ -42,51 +46,52 @@ module Ledger.Index(
     getScript
     ) where
 
-import           Prelude                     hiding (lookup)
+import Prelude hiding (lookup)
 
-
-import           Codec.Serialise             (Serialise)
-import           Control.DeepSeq             (NFData)
-import           Control.Lens                (toListOf, view, (^.))
-import           Control.Lens.Indexed        (iforM_)
-import           Control.Monad
-import           Control.Monad.Except        (ExceptT, MonadError (..), runExcept, runExceptT)
-import           Control.Monad.Reader        (MonadReader (..), ReaderT (..), ask)
-import           Control.Monad.Writer        (MonadWriter, Writer, runWriter, tell)
-import           Data.Aeson                  (FromJSON, ToJSON)
-import           Data.Default                (Default (def))
-import           Data.Foldable               (asum, fold, foldl', traverse_)
-import qualified Data.Map                    as Map
-import qualified Data.OpenApi.Schema         as OpenApi
-import qualified Data.Set                    as Set
-import           Data.Text                   (Text)
-import           Data.Text.Prettyprint.Doc   (Pretty)
-import           GHC.Generics                (Generic)
-import           Ledger.Blockchain
-import           Ledger.Crypto
-import           Ledger.Orphans              ()
-import           Ledger.Scripts
-import qualified Ledger.TimeSlot             as TimeSlot
-import           Ledger.Tx                   (txId)
-import qualified Plutus.V1.Ledger.Ada        as Ada
-import           Plutus.V1.Ledger.Address
-import qualified Plutus.V1.Ledger.Api        as Api
-import           Plutus.V1.Ledger.Contexts   (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
-import qualified Plutus.V1.Ledger.Contexts   as Validation
-import           Plutus.V1.Ledger.Credential (Credential (..))
-import qualified Plutus.V1.Ledger.Interval   as Interval
-import qualified Plutus.V1.Ledger.Scripts    as Scripts
-import qualified Plutus.V1.Ledger.Slot       as Slot
-import           Plutus.V1.Ledger.Tx
-import           Plutus.V1.Ledger.TxId
-import qualified Plutus.V1.Ledger.Value      as V
-import           PlutusTx                    (toBuiltinData)
-import qualified PlutusTx.Numeric            as P
-import           Prettyprinter.Extras        (PrettyShow (..))
+import Codec.Serialise (Serialise)
+import Control.DeepSeq (NFData)
+import Control.Lens (toListOf, view, (^.))
+import Control.Lens.Indexed (iforM_)
+import Control.Monad
+import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
+import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
+import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Foldable (asum, fold, foldl', traverse_)
+import Data.Map qualified as Map
+import Data.OpenApi.Schema qualified as OpenApi
+import Data.Set qualified as Set
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import Ledger.Blockchain
+import Ledger.Crypto
+import Ledger.Orphans ()
+import Ledger.Scripts
+import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx (txId)
+import Plutus.V1.Ledger.Ada (Ada)
+import Plutus.V1.Ledger.Ada qualified as Ada
+import Plutus.V1.Ledger.Address
+import Plutus.V1.Ledger.Api qualified as Api
+import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
+import Plutus.V1.Ledger.Contexts qualified as Validation
+import Plutus.V1.Ledger.Credential (Credential (..))
+import Plutus.V1.Ledger.Interval qualified as Interval
+import Plutus.V1.Ledger.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Slot qualified as Slot
+import Plutus.V1.Ledger.Tx
+import Plutus.V1.Ledger.TxId
+import Plutus.V1.Ledger.Value qualified as V
+import PlutusTx (toBuiltinData)
+import PlutusTx.Numeric qualified as P
+import Prettyprinter (Pretty)
+import Prettyprinter.Extras (PrettyShow (..))
 
 -- | Context for validating transactions. We need access to the unspent
 --   transaction outputs of the blockchain, and we can throw 'ValidationError's.
-type ValidationMonad m = (MonadReader UtxoIndex m, MonadError ValidationError m, MonadWriter [ScriptValidationEvent] m)
+type ValidationMonad m = (MonadReader ValidationCtx m, MonadError ValidationError m, MonadWriter [ScriptValidationEvent] m)
+
+data ValidationCtx = ValidationCtx { vctxIndex :: UtxoIndex, vctxSlotConfig :: TimeSlot.SlotConfig }
 
 -- | The UTxOs of a blockchain indexed by their references.
 newtype UtxoIndex = UtxoIndex { getIndex :: Map.Map TxOutRef TxOut }
@@ -135,6 +140,8 @@ data ValidationError =
     -- ^ The amount spent by the transaction differs from the amount consumed by it.
     | NegativeValue Tx
     -- ^ The transaction produces an output with a negative value.
+    | ValueContainsLessThanMinAda Tx Ada
+    -- ^ The transaction produces an output with a value containing less than one Ada.
     | NonAdaFees Tx
     -- ^ The fee is not denominated entirely in Ada.
     | ScriptFailure ScriptError
@@ -159,12 +166,12 @@ deriving via (PrettyShow ValidationPhase) instance Pretty ValidationPhase
 type ValidationErrorInPhase = (ValidationPhase, ValidationError)
 
 -- | A monad for running transaction validation inside, which is an instance of 'ValidationMonad'.
-newtype Validation a = Validation { _runValidation :: (ReaderT UtxoIndex (ExceptT ValidationError (Writer [ScriptValidationEvent]))) a }
-    deriving newtype (Functor, Applicative, Monad, MonadReader UtxoIndex, MonadError ValidationError, MonadWriter [ScriptValidationEvent])
+newtype Validation a = Validation { _runValidation :: (ReaderT ValidationCtx (ExceptT ValidationError (Writer [ScriptValidationEvent]))) a }
+    deriving newtype (Functor, Applicative, Monad, MonadReader ValidationCtx, MonadError ValidationError, MonadWriter [ScriptValidationEvent])
 
 -- | Run a 'Validation' on a 'UtxoIndex'.
-runValidation :: Validation (Maybe ValidationErrorInPhase, UtxoIndex) -> UtxoIndex -> ((Maybe ValidationErrorInPhase, UtxoIndex), [ScriptValidationEvent])
-runValidation l idx = runWriter $ fmap (either (\e -> (Just (Phase1, e), idx)) id) $ runExceptT $ runReaderT (_runValidation l) idx
+runValidation :: Validation (Maybe ValidationErrorInPhase, UtxoIndex) -> ValidationCtx -> ((Maybe ValidationErrorInPhase, UtxoIndex), [ScriptValidationEvent])
+runValidation l ctx = runWriter $ fmap (either (\e -> (Just (Phase1, e), vctxIndex ctx)) id) $ runExceptT $ runReaderT (_runValidation l) ctx
 
 -- | Determine the unspent value that a ''TxOutRef' refers to.
 lkpValue :: ValidationMonad m => TxOutRef -> m V.Value
@@ -174,7 +181,7 @@ lkpValue = fmap txOutValue . lkpTxOut
 --   output for this reference exists. If you want to handle the lookup error
 --   you can use 'runLookup'.
 lkpTxOut :: ValidationMonad m => TxOutRef -> m TxOut
-lkpTxOut t = lookup t =<< ask
+lkpTxOut t = lookup t . vctxIndex =<< ask
 
 -- | Validate a transaction in a 'ValidationMonad' context.
 validateTransaction :: ValidationMonad m
@@ -187,7 +194,7 @@ validateTransaction h t = do
     _ <- lkpOutputs $ toListOf (inputs . scriptTxIns) t
 
     -- see note [Minting of Ada]
-    emptyUtxoSet <- reader (Map.null . getIndex)
+    emptyUtxoSet <- reader (Map.null . getIndex . vctxIndex)
     unless emptyUtxoSet (checkTransactionFee t)
 
     validateTransactionOffChain t
@@ -198,10 +205,11 @@ validateTransactionOffChain :: ValidationMonad m
 validateTransactionOffChain t = do
     checkValuePreserved t
     checkPositiveValues t
+    checkMinAdaInTxOutputs t minAdaTxOut
     checkFeeIsAda t
 
     -- see note [Minting of Ada]
-    emptyUtxoSet <- reader (Map.null . getIndex)
+    emptyUtxoSet <- reader (Map.null . getIndex . vctxIndex)
     unless emptyUtxoSet (checkMintingAuthorised t)
 
     checkValidInputs (toListOf (inputs . pubKeyTxIns)) t
@@ -212,13 +220,13 @@ validateTransactionOffChain t = do
         checkValidInputs (toListOf (inputs . scriptTxIns)) t
         unless emptyUtxoSet (checkMintingScripts t)
 
-        idx <- ask
+        idx <- vctxIndex <$> ask
         pure (Nothing, insert t idx)
         )
     `catchError` payCollateral
     where
         payCollateral e = do
-            idx <- ask
+            idx <- vctxIndex <$> ask
             pure (Just (Phase2, e), insertCollateral t idx)
 
 -- | Check that a transaction can be validated in the given slot.
@@ -363,6 +371,25 @@ checkPositiveValues t =
     then pure ()
     else throwError $ NegativeValue t
 
+{-# INLINABLE minAdaTxOut #-}
+-- Minimum required Ada for each tx output.
+--
+-- TODO: In the future, make the value configurable.
+minAdaTxOut :: Ada
+minAdaTxOut = Ada.lovelaceOf 2_000_000
+
+-- | Check if each transaction outputs produced at least two Ada (this is a
+-- restriction on the real Cardano network).
+--
+-- Normally, the minimum is 1 Ada, but transaction outputs that have datum are
+-- slightly more expensive than 1 Ada. So, to be on the safe side, we set the
+-- minimum Ada of each transaction output to 2 Ada.
+checkMinAdaInTxOutputs :: ValidationMonad m => Tx -> Ada -> m ()
+checkMinAdaInTxOutputs t@Tx { txOutputs } ada =
+  if all (\txOut -> Ada.fromValue (txOutValue txOut) >= ada) txOutputs
+  then pure ()
+  else throwError $ ValueContainsLessThanMinAda t ada
+
 -- | Check if the fees are paid exclusively in Ada.
 checkFeeIsAda :: ValidationMonad m => Tx -> m ()
 checkFeeIsAda t =
@@ -373,6 +400,11 @@ checkFeeIsAda t =
 -- | Minimum transaction fee.
 minFee :: Tx -> V.Value
 minFee = const (Ada.lovelaceValueOf 10)
+
+-- | TODO Should be calculated based on the maximum script size permitted on
+-- the Cardano blockchain.
+maxFee :: Ada
+maxFee = Ada.lovelaceOf 1_000_000
 
 -- | Check that transaction fee is bigger than the minimum fee.
 --   Skip the check on the first transaction (no inputs).
@@ -385,6 +417,7 @@ checkTransactionFee tx =
 -- | Create the data about the transaction which will be passed to a validator script.
 mkTxInfo :: ValidationMonad m => Tx -> m TxInfo
 mkTxInfo tx = do
+    slotCfg <- vctxSlotConfig <$> ask
     txins <- traverse mkIn $ Set.toList $ view inputs tx
     let ptx = TxInfo
             { txInfoInputs = txins
@@ -393,7 +426,7 @@ mkTxInfo tx = do
             , txInfoFee = txFee tx
             , txInfoDCert = [] -- DCerts not supported in emulator
             , txInfoWdrl = [] -- Withdrawals not supported in emulator
-            , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange def $ txValidRange tx
+            , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange slotCfg $ txValidRange tx
             , txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
             , txInfoData = Map.toList (tx ^. datumWitnesses)
             , txInfoId = txId tx

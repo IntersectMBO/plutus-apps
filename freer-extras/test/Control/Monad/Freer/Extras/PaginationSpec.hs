@@ -5,18 +5,18 @@
 
 module Control.Monad.Freer.Extras.PaginationSpec (tests) where
 
-import           Control.Monad                         (forM_)
-import           Control.Monad.Freer.Extras.Pagination (Page (nextPageQuery, pageItems), PageQuery (PageQuery), pageOf)
-import           Data.List                             (sort)
-import           Data.Maybe                            (listToMaybe)
-import           Data.Set                              (Set)
-import qualified Data.Set                              as Set
-import           Hedgehog                              (Property, forAll, property, (===))
-import qualified Hedgehog
-import           Hedgehog.Gen                          as Gen
-import           Hedgehog.Range                        as Gen
-import           Test.Tasty
-import           Test.Tasty.Hedgehog                   (testProperty)
+import Control.Monad (forM_)
+import Control.Monad.Freer.Extras.Pagination (Page (nextPageQuery, pageItems), PageQuery (PageQuery), pageOf)
+import Data.List (sort)
+import Data.Maybe (listToMaybe)
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Hedgehog (Property, forAll, property, (===))
+import Hedgehog qualified
+import Hedgehog.Gen as Gen
+import Hedgehog.Range as Gen
+import Test.Tasty
+import Test.Tasty.Hedgehog (testProperty)
 
 tests :: TestTree
 tests = do

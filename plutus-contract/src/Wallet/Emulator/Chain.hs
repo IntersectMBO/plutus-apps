@@ -16,26 +16,25 @@
 
 module Wallet.Emulator.Chain where
 
-import           Codec.Serialise                (Serialise)
-import           Control.DeepSeq                (NFData)
-import           Control.Lens                   hiding (index)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
-import           Control.Monad.Freer.State
-import qualified Control.Monad.State            as S
-import           Data.Aeson                     (FromJSON, ToJSON)
-import           Data.Foldable                  (traverse_)
-import           Data.List                      (partition, (\\))
-import           Data.Maybe                     (mapMaybe)
-import           Data.Text.Prettyprint.Doc
-import           Data.Traversable               (for)
-import           GHC.Generics                   (Generic)
-import           Ledger                         (Block, Blockchain, OnChainTx (..), ScriptValidationEvent, Slot (..),
-                                                 Tx (..), TxId, eitherTx, txId)
-import qualified Ledger.Index                   as Index
-import qualified Ledger.Interval                as Interval
-import           Ledger.TimeSlot                (SlotConfig)
-import           Plutus.Contract.Util           (uncurry3)
+import Codec.Serialise (Serialise)
+import Control.DeepSeq (NFData)
+import Control.Lens hiding (index)
+import Control.Monad.Freer
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
+import Control.Monad.Freer.State
+import Control.Monad.State qualified as S
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Foldable (traverse_)
+import Data.List (partition, (\\))
+import Data.Maybe (mapMaybe)
+import Data.Traversable (for)
+import GHC.Generics (Generic)
+import Ledger (Block, Blockchain, OnChainTx (..), ScriptValidationEvent, Slot (..), Tx (..), TxId, eitherTx, txId)
+import Ledger.Index qualified as Index
+import Ledger.Interval qualified as Interval
+import Ledger.TimeSlot (SlotConfig)
+import Plutus.Contract.Util (uncurry3)
+import Prettyprinter
 
 -- | Events produced by the blockchain emulator.
 data ChainEvent =
@@ -96,15 +95,15 @@ getCurrentSlot = send GetCurrentSlot
 
 type ChainEffs = '[State ChainState, LogMsg ChainEvent]
 
-handleControlChain :: Members ChainEffs effs => ChainControlEffect ~> Eff effs
-handleControlChain = \case
+handleControlChain :: Members ChainEffs effs => SlotConfig -> ChainControlEffect ~> Eff effs
+handleControlChain slotCfg = \case
     ProcessBlock -> do
         st <- get
         let pool  = st ^. txPool
             slot  = st ^. currentSlot
             idx   = st ^. index
             ValidatedBlock block events rest =
-                validateBlock slot idx pool
+                validateBlock slotCfg slot idx pool
 
         let st' = st & txPool .~ rest
                      & addBlock block
@@ -141,8 +140,8 @@ data ValidatedBlock = ValidatedBlock
 -- | Validate a block given the current slot and UTxO index, returning the valid
 --   transactions, success/failure events, remaining transactions and the
 --   updated UTxO set.
-validateBlock :: Slot -> Index.UtxoIndex -> [Tx] -> ValidatedBlock
-validateBlock slot@(Slot s) idx txns =
+validateBlock :: SlotConfig -> Slot -> Index.UtxoIndex -> [Tx] -> ValidatedBlock
+validateBlock slotCfg slot@(Slot s) idx txns =
     let
         -- Select those transactions that can be validated in the
         -- current slot
@@ -150,7 +149,7 @@ validateBlock slot@(Slot s) idx txns =
 
         -- Validate eligible transactions, updating the UTXO index each time
         processed =
-            flip S.evalState idx $ for eligibleTxns $ \tx -> do
+            flip S.evalState (Index.ValidationCtx idx slotCfg) $ for eligibleTxns $ \tx -> do
                 (err, events_) <- validateEm slot tx
                 pure (tx, err, events_)
 
@@ -180,11 +179,11 @@ mkValidationEvent t result events =
         Just (phase, err) -> TxnValidationFail phase (txId t) t err events
 
 -- | Validate a transaction in the current emulator state.
-validateEm :: S.MonadState Index.UtxoIndex m => Slot -> Tx -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
+validateEm :: S.MonadState Index.ValidationCtx m => Slot -> Tx -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
 validateEm h txn = do
-    idx <- S.get
-    let ((e, idx'), events) = Index.runValidation (Index.validateTransaction h txn) idx
-    _ <- S.put idx'
+    ctx <- S.get
+    let ((e, idx'), events) = Index.runValidation (Index.validateTransaction h txn) ctx
+    _ <- S.put ctx{Index.vctxIndex=idx'}
     pure (e, events)
 
 -- | Adds a block to ChainState, without validation.

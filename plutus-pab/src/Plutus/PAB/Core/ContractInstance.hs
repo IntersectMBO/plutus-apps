@@ -17,7 +17,7 @@ Start the threads for contract instances
 
 -}
 module Plutus.PAB.Core.ContractInstance(
-    ContractInstanceMsg(..)
+    RequestHandlers.ContractInstanceMsg(..)
     , activateContractSTM
     , activateContractSTM'
     , initContractInstanceState
@@ -32,47 +32,50 @@ module Plutus.PAB.Core.ContractInstance(
     -- * Indexed block
     ) where
 
-import           Control.Applicative                              (Alternative (..))
-import           Control.Arrow                                    ((>>>))
-import           Control.Concurrent                               (forkIO)
-import           Control.Concurrent.STM                           (STM)
-import qualified Control.Concurrent.STM                           as STM
-import           Control.Lens                                     (preview)
-import           Control.Monad                                    (forM_, void)
-import           Control.Monad.Freer
-import           Control.Monad.Freer.Error                        (Error)
-import           Control.Monad.Freer.Extras.Log                   (LogMessage, LogMsg, LogObserve, logDebug, logInfo)
-import           Control.Monad.Freer.Reader                       (Reader, ask, runReader)
-import           Control.Monad.IO.Class                           (MonadIO (liftIO))
-import           Data.Aeson                                       (Value)
-import           Data.Maybe                                       (fromMaybe)
-import           Data.Proxy                                       (Proxy (..))
-import qualified Data.Text                                        as Text
+import Control.Applicative (Alternative (empty, (<|>)))
+import Control.Arrow ((>>>))
+import Control.Concurrent (forkIO)
+import Control.Concurrent.STM (STM)
+import Control.Concurrent.STM qualified as STM
+import Control.Lens (preview)
+import Control.Monad (forM_, void)
+import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
+import Control.Monad.Freer.Error (Error)
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logInfo)
+import Control.Monad.Freer.Reader (Reader, ask, runReader)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Aeson (Value)
+import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (Proxy))
+import Data.Text qualified as Text
 
-import           Plutus.Contract.Effects                          (ActiveEndpoint (..), PABReq (..), PABResp (..))
-import qualified Plutus.Contract.Effects                          as Contract.Effects
-import           Plutus.Contract.Resumable                        (Request (..), Response (..))
-import           Plutus.Contract.State                            (ContractResponse (..), State (..))
-import qualified Plutus.Contract.Trace                            as RequestHandler
-import           Plutus.Contract.Trace.RequestHandler             (RequestHandler (..), RequestHandlerLogMsg, extract,
-                                                                   maybeToHandler, tryHandler', wrapHandler)
-import           Plutus.PAB.Core.ContractInstance.RequestHandlers (ContractInstanceMsg (..))
+import Plutus.Contract.Effects (ActiveEndpoint (aeDescription),
+                                PABReq (AwaitUtxoProducedReq, AwaitUtxoSpentReq, ExposeEndpointReq),
+                                PABResp (AwaitSlotResp, AwaitTimeResp, AwaitTxOutStatusChangeResp, AwaitTxStatusChangeResp, AwaitUtxoProducedResp, AwaitUtxoSpentResp, ExposeEndpointResp))
+import Plutus.Contract.Effects qualified as Contract.Effects
+import Plutus.Contract.Resumable (Request (Request, itID, rqID, rqRequest), Response (Response))
+import Plutus.Contract.State (ContractResponse (ContractResponse, err, hooks, newState), State (State, observableState))
+import Plutus.Contract.Trace qualified as RequestHandler
+import Plutus.Contract.Trace.RequestHandler (RequestHandler (RequestHandler), RequestHandlerLogMsg, extract,
+                                             maybeToHandler, tryHandler', wrapHandler)
+import Plutus.PAB.Core.ContractInstance.RequestHandlers (ContractInstanceMsg (ActivatedContractInstance, HandlingRequests, InitialisingContract))
+import Plutus.PAB.Core.ContractInstance.RequestHandlers qualified as RequestHandlers
 
-import           Wallet.Effects                                   (NodeClientEffect, WalletEffect)
-import           Wallet.Emulator.LogMessages                      (TxBalanceMsg)
-import qualified Wallet.Emulator.Wallet                           as Wallet
+import Wallet.Effects (NodeClientEffect, WalletEffect)
+import Wallet.Emulator.LogMessages (TxBalanceMsg)
+import Wallet.Emulator.Wallet qualified as Wallet
 
-import           Plutus.ChainIndex                                (ChainIndexQueryEffect, RollbackState (Unknown))
-import           Plutus.PAB.Core.ContractInstance.STM             (Activity (Done, Stopped), BlockchainEnv (..),
-                                                                   InstanceState (..), InstancesState,
-                                                                   callEndpointOnInstance, emptyInstanceState)
-import qualified Plutus.PAB.Core.ContractInstance.STM             as InstanceState
-import           Plutus.PAB.Effects.Contract                      (ContractEffect, ContractStore, PABContract (..))
-import qualified Plutus.PAB.Effects.Contract                      as Contract
-import           Plutus.PAB.Effects.UUID                          (UUIDEffect, uuidNextRandom)
-import           Plutus.PAB.Events.Contract                       (ContractInstanceId (..))
-import           Plutus.PAB.Types                                 (PABError (..))
-import           Plutus.PAB.Webserver.Types                       (ContractActivationArgs (..))
+import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown))
+import Plutus.PAB.Core.ContractInstance.STM (Activity (Done, Stopped), BlockchainEnv,
+                                             InstanceState (InstanceState, issStop), InstancesState,
+                                             callEndpointOnInstance, emptyInstanceState)
+import Plutus.PAB.Core.ContractInstance.STM qualified as InstanceState
+import Plutus.PAB.Effects.Contract (ContractEffect, ContractStore, PABContract (ContractDef, serialisableState))
+import Plutus.PAB.Effects.Contract qualified as Contract
+import Plutus.PAB.Effects.UUID (UUIDEffect, uuidNextRandom)
+import Plutus.PAB.Events.Contract (ContractInstanceId (ContractInstanceId))
+import Plutus.PAB.Types (PABError)
+import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
 
 -- | Container for holding a few bits of state related to the contract
 -- instance that we may want to pass in.
@@ -96,7 +99,7 @@ activateContractSTM' ::
     )
     => ContractInstanceState t
     -> ContractInstanceId
-    -> (Eff appBackend ~> IO)
+    -> (ContractInstanceId -> Eff appBackend ~> IO)
     -> ContractActivationArgs (ContractDef t)
     -> Eff effs ContractInstanceId
 activateContractSTM' c@ContractInstanceState{contractState} activeContractInstanceId runAppBackend a@ContractActivationArgs{caID, caWallet} = do
@@ -120,11 +123,12 @@ startContractInstanceThread' ::
     )
     => ContractInstanceState t
     -> ContractInstanceId
-    -> (Eff appBackend ~> IO)
+    -> (ContractInstanceId -> Eff appBackend ~> IO)
     -> ContractActivationArgs (ContractDef t)
     -> Eff effs ContractInstanceId
 startContractInstanceThread' ContractInstanceState{stmState} activeContractInstanceId runAppBackend a = do
-  s <- startSTMInstanceThread' @t @m stmState runAppBackend a activeContractInstanceId
+  s <- startSTMInstanceThread'
+    @t @m stmState runAppBackend a activeContractInstanceId
   ask >>= void . liftIO . STM.atomically . InstanceState.insertInstance activeContractInstanceId s
   pure activeContractInstanceId
 
@@ -141,7 +145,7 @@ activateContractSTM ::
     , LastMember m (Reader ContractInstanceId ': appBackend)
     , LastMember m effs
     )
-    => (Eff appBackend ~> IO)
+    => (ContractInstanceId -> Eff appBackend ~> IO)
     -> ContractActivationArgs (ContractDef t)
     -> Eff effs ContractInstanceId
 activateContractSTM runAppBackend a = do
@@ -257,13 +261,14 @@ stmRequestHandler = fmap sequence (wrapHandler (fmap pure nonBlockingRequests) <
 
     -- requests that can be handled by 'WalletEffect', 'ChainIndexQueryEffect', etc.
     nonBlockingRequests =
-        RequestHandler.handleOwnPubKeyHashQueries @effs
+        RequestHandler.handleOwnPaymentPubKeyHashQueries @effs
         <> RequestHandler.handleChainIndexQueries @effs
         <> RequestHandler.handleUnbalancedTransactions @effs
         <> RequestHandler.handlePendingTransactions @effs
         <> RequestHandler.handleOwnInstanceIdQueries @effs
         <> RequestHandler.handleCurrentSlotQueries @effs
         <> RequestHandler.handleCurrentTimeQueries @effs
+        <> RequestHandler.handleYieldedUnbalancedTx @effs
 
     -- requests that wait for changes to happen
     blockingRequests =
@@ -284,7 +289,7 @@ startSTMInstanceThread' ::
     , LastMember m (Reader InstanceState ': Reader ContractInstanceId ': appBackend)
     )
     => STM InstanceState
-    -> (Eff appBackend ~> IO)
+    -> (ContractInstanceId -> Eff appBackend ~> IO)
     -> ContractActivationArgs (ContractDef t)
     -> ContractInstanceId
     -> Eff effs InstanceState
@@ -292,7 +297,7 @@ startSTMInstanceThread' stmState runAppBackend def instanceID =  do
     state <- liftIO $ STM.atomically stmState
     _ <- liftIO
         $ forkIO
-        $ runAppBackend
+        $ runAppBackend instanceID
         $ runReader instanceID
         $ runReader state
         $ stmInstanceLoop @t @m @(Reader InstanceState ': Reader ContractInstanceId ': appBackend) def instanceID
@@ -306,7 +311,7 @@ startSTMInstanceThread ::
     , AppBackendConstraints t m appBackend
     , LastMember m (Reader InstanceState ': Reader ContractInstanceId ': appBackend)
     )
-    => (Eff appBackend ~> IO)
+    => (ContractInstanceId -> Eff appBackend ~> IO)
     -> ContractActivationArgs (ContractDef t)
     -> ContractInstanceId
     -> Eff effs InstanceState

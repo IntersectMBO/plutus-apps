@@ -10,19 +10,18 @@ module Plutus.PAB.Effects.Contract.BuiltinSpec
     ( tests
     ) where
 
-import           Control.Monad                            (forM_)
-import           Control.Monad.IO.Class                   (liftIO)
-import           Data.UUID.V4                             (nextRandom)
-import qualified Plutus.Contracts.PingPong                as Contracts.PingPong
-import           Plutus.PAB.CoreSpec                      (assertEqual, runScenario)
-import           Plutus.PAB.Effects.Contract.Builtin      (SomeBuiltin (..), SomeBuiltinState (..), fromResponse,
-                                                           getResponse)
-import           Plutus.PAB.Effects.Contract.ContractTest (TestContracts (..))
-import           Plutus.PAB.Events.Contract               (ContractInstanceId (..))
-import           Plutus.Trace.Emulator.Types
-import           Test.Tasty                               (TestTree, defaultMain, testGroup)
-import           Test.Tasty.HUnit                         (testCase)
-import           Wallet.Emulator.Wallet
+import Control.Monad (forM_)
+import Control.Monad.IO.Class (liftIO)
+import Data.UUID.V4 (nextRandom)
+import Plutus.Contracts.PingPong qualified as Contracts.PingPong
+import Plutus.PAB.CoreSpec (assertEqual, runScenario)
+import Plutus.PAB.Effects.Contract.Builtin (SomeBuiltin (..), SomeBuiltinState (..), fromResponse, getResponse)
+import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (..))
+import Plutus.PAB.Events.Contract (ContractInstanceId (..))
+import Plutus.Trace.Emulator.Types
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.HUnit (testCase)
+import Wallet.Emulator.Wallet
 
 tests :: TestTree
 tests = testGroup "Plutus.PAB.Effects.Contract.Builtin" [stateTests]

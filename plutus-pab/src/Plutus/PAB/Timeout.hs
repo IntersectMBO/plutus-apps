@@ -5,12 +5,12 @@ Define timeouts for IO actions
 -}
 module Plutus.PAB.Timeout (Timeout(..), startTimeout) where
 
-import           Control.Concurrent     (forkIO, threadDelay)
-import           Control.Concurrent.STM (TMVar)
-import qualified Control.Concurrent.STM as STM
-import           Control.Monad          (void)
-import           Data.Default           (Default (..))
-import           Data.Time.Units        (Second, toMicroseconds)
+import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent.STM (TMVar)
+import Control.Concurrent.STM qualified as STM
+import Control.Monad (void)
+import Data.Default (Default (..))
+import Data.Time.Units (Second, toMicroseconds)
 
 newtype Timeout = Timeout { unTimeout :: Maybe Second }
 

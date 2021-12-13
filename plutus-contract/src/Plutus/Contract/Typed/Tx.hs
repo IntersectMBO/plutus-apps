@@ -7,14 +7,14 @@
 -- | Functions for working with the contract interface using typed transactions.
 module Plutus.Contract.Typed.Tx where
 
-import           Ledger.Constraints               (TxConstraints)
-import           Ledger.Constraints.TxConstraints (addTxIn)
+import Ledger.Constraints (TxConstraints)
+import Ledger.Constraints.TxConstraints (addTxIn)
 
-import           Data.Foldable                    (foldl')
-import qualified Data.Map                         as Map
+import Data.Foldable (foldl')
+import Data.Map qualified as Map
 
-import           Ledger                           (TxOutRef)
-import           Ledger.Tx                        (ChainIndexTxOut)
+import Ledger (TxOutRef)
+import Ledger.Tx (ChainIndexTxOut)
 
 -- | Given the pay to script address of the 'Validator', collect from it
 --   all the outputs that match a predicate, using the 'RedeemerValue'.

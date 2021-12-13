@@ -13,14 +13,15 @@
 module Plutus.PAB.Effects.ContractTest.Uniswap
   where
 
-import           Control.Monad             (forM_, when)
-import qualified Data.Semigroup            as Semigroup
-import           Ledger
-import           Ledger.Constraints
-import           Ledger.Value              as Value
-import           Plutus.Contract
-import qualified Plutus.Contracts.Currency as Currency
-import           Wallet.Emulator.Types     (Wallet (..), walletPubKey)
+import Control.Monad (forM_, when)
+import Data.Semigroup qualified as Semigroup
+import Data.Void (Void)
+import Ledger
+import Ledger.Constraints
+import Ledger.Value as Value
+import Plutus.Contract
+import Plutus.Contracts.Currency qualified as Currency
+import Wallet.Emulator.Types (Wallet (..), walletPubKey)
 
 initContract :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
 initContract = do
@@ -31,8 +32,8 @@ initContract = do
     forM_ wallets $ \w -> do
         let pkh = pubKeyHash $ walletPubKey w
         when (pkh /= ownPK) $ do
-            tx <- submitTx $ mustPayToPubKey pkh v
-            awaitTxConfirmed $ txId tx
+            mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
+              >>= submitTxConfirmed . adjustUnbalancedTx
     tell $ Just $ Semigroup.Last cur
   where
     amount = 1000000

@@ -75,10 +75,9 @@ pkgs/.stack
 **/yarn-error.log
 **/yarn.lock
 **/.psci_modules/
-**/.psc-package/
-**/.psc-package2nix/
 **/.spago/
 **/.spago2nix/
+**/.psa-stash
 
 # Backend config files
 marlowe-playground-server/playground.yaml
@@ -110,6 +109,7 @@ node.sock
 secrets/*/.gpg-id
 ghcid.txt
 plutus-pab/test-node/testnet/db
+plutus-pab/test-node/testnet/restore-wallet.json
 plutus-pab/test-node/alonzo-purple/db
 # profiling output files
 *.timelog

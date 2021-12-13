@@ -17,8 +17,8 @@ module Plutus.Contracts.Uniswap
   , module Trace
   ) where
 
-import           Plutus.Contracts.Uniswap.OffChain as OffChain
-import           Plutus.Contracts.Uniswap.OnChain  as OnChain
-import           Plutus.Contracts.Uniswap.Pool     as Pool
-import           Plutus.Contracts.Uniswap.Trace    as Trace
-import           Plutus.Contracts.Uniswap.Types    as Types
+import Plutus.Contracts.Uniswap.OffChain as OffChain
+import Plutus.Contracts.Uniswap.OnChain as OnChain
+import Plutus.Contracts.Uniswap.Pool as Pool
+import Plutus.Contracts.Uniswap.Trace as Trace
+import Plutus.Contracts.Uniswap.Types as Types

@@ -1,7 +1,9 @@
+{-# LANGUAGE BlockArguments     #-}
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE MonoLocalBinds     #-}
 {-# LANGUAGE NamedFieldPuns     #-}
@@ -13,43 +15,52 @@
 module Plutus.Contract.Wallet(
       balanceTx
     , handleTx
+    , yieldUnbalancedTx
     , getUnspentOutput
     , WAPI.signTxAndSubmit
     -- * Exporting transactions
     , ExportTx(..)
     , ExportTxInput(..)
+    , ExportTxRedeemer(..)
     , export
     ) where
 
-import qualified Cardano.Api                 as C
-import qualified Cardano.Api.Shelley         as C
-import           Control.Monad               (join, (>=>))
-import           Control.Monad.Error.Lens    (throwing)
-import           Control.Monad.Freer         (Eff, Member)
-import           Control.Monad.Freer.Error   (Error, throwError)
-import           Data.Aeson                  (ToJSON (..), Value (String), object, (.=))
-import qualified Data.Aeson.Extras           as JSON
-import           Data.Map                    (Map)
-import qualified Data.Map                    as Map
-import           Data.Maybe                  (mapMaybe)
-import qualified Data.Set                    as Set
-import           Data.Typeable               (Typeable)
-import           Data.Void                   (Void)
-import           GHC.Generics                (Generic)
-import qualified Ledger                      as Plutus
-import qualified Ledger.Ada                  as Ada
-import           Ledger.Constraints          (mustPayToPubKey)
-import           Ledger.Constraints.OffChain (UnbalancedTx (..), mkTx)
-import           Ledger.Tx                   (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
-import qualified Plutus.Contract.CardanoAPI  as CardanoAPI
-import qualified Plutus.Contract.Request     as Contract
-import           Plutus.Contract.Types       (Contract (..))
-import           Plutus.V1.Ledger.Scripts    (MintingPolicyHash)
-import qualified PlutusTx
-import qualified Wallet.API                  as WAPI
-import           Wallet.Effects              (WalletEffect, balanceTx)
-import           Wallet.Emulator.Error       (WalletAPIError)
-import           Wallet.Types                (AsContractError (_ConstraintResolutionError, _OtherError))
+import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Control.Applicative ((<|>))
+import Control.Monad (join, (>=>))
+import Control.Monad.Error.Lens (throwing)
+import Control.Monad.Freer (Eff, Member)
+import Control.Monad.Freer.Error (Error, throwError)
+import Data.Aeson (FromJSON (parseJSON), Object, ToJSON (toJSON), Value (String), object, withObject, (.:), (.=))
+import Data.Aeson.Extras qualified as JSON
+import Data.Aeson.Types (Parser, parseFail)
+import Data.Bifunctor (first)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.OpenApi qualified as OpenApi
+import Data.Set qualified as Set
+import Data.Typeable (Typeable)
+import Data.Void (Void)
+import GHC.Generics (Generic)
+import Ledger qualified as Plutus
+import Ledger.Ada qualified as Ada
+import Ledger.Constraints (mustPayToPubKey)
+import Ledger.Constraints.OffChain (ScriptOutput (ScriptOutput),
+                                    UnbalancedTx (UnbalancedTx, unBalancedTxRequiredSignatories, unBalancedTxTx, unBalancedTxUtxoIndex),
+                                    adjustUnbalancedTx, mkTx)
+import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
+import Plutus.Contract.CardanoAPI qualified as CardanoAPI
+import Plutus.Contract.Request qualified as Contract
+import Plutus.Contract.Types (Contract)
+import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
+import Plutus.V1.Ledger.TxId (TxId (TxId))
+import PlutusTx qualified
+import Wallet.API qualified as WAPI
+import Wallet.Effects (WalletEffect, balanceTx, yieldUnbalancedTx)
+import Wallet.Emulator.Error (WalletAPIError)
+import Wallet.Types (AsContractError (_ConstraintResolutionError, _OtherError))
 
 {- Note [Submitting transactions from Plutus contracts]
 
@@ -98,10 +109,10 @@ handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
 -- | Get an unspent output belonging to the wallet.
 getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
 getUnspentOutput = do
-    ownPK <- Contract.ownPubKeyHash
-    let constraints = mustPayToPubKey ownPK (Ada.lovelaceValueOf 1)
+    ownPkh <- Contract.ownPaymentPubKeyHash
+    let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
     utx <- either (throwing _ConstraintResolutionError) pure (mkTx @Void mempty constraints)
-    tx <- Contract.balanceTx utx
+    tx <- Contract.balanceTx (adjustUnbalancedTx utx)
     case Set.lookupMin (getCardanoTxInputs tx) of
         Just inp -> pure $ txInRef inp
         Nothing  -> throwing _OtherError "Balanced transaction has no inputs"
@@ -117,7 +128,30 @@ instance ToJSON ExportTxRedeemerPurpose where
 data ExportTxRedeemer =
     SpendingRedeemer{ redeemer:: Plutus.Redeemer, redeemerOutRef :: TxOutRef }
     | MintingRedeemer { redeemer:: Plutus.Redeemer, redeemerPolicyId :: MintingPolicyHash }
-    deriving stock (Generic, Typeable)
+    deriving stock (Eq, Show, Generic, Typeable)
+    deriving anyclass (OpenApi.ToSchema)
+
+instance FromJSON ExportTxRedeemer where
+    parseJSON v = parseSpendingRedeemer v <|> parseMintingRedeemer v
+
+parseSpendingRedeemer :: Value -> Parser ExportTxRedeemer
+parseSpendingRedeemer =
+    withObject "Redeemer" $ \o -> do
+        inputObj <- o .: "input" :: Parser Object
+        let txOutRefParse = Plutus.TxOutRef <$> (TxId <$> (inputObj .: "id"))
+                                            <*> inputObj .: "index"
+        SpendingRedeemer <$> parseRedeemerData o <*> txOutRefParse
+
+parseMintingRedeemer :: Value -> Parser ExportTxRedeemer
+parseMintingRedeemer =
+    withObject "Redeemer" $ \o -> MintingRedeemer
+        <$> parseRedeemerData o
+        <*> o .: "policy_id"
+
+parseRedeemerData :: Object -> Parser Plutus.Redeemer
+parseRedeemerData o =
+    fmap (\(JSON.JSONViaSerialise d) -> Plutus.Redeemer $ PlutusTx.dataToBuiltinData d)
+         (o .: "data")
 
 instance ToJSON ExportTxRedeemer where
     toJSON SpendingRedeemer{redeemer=Plutus.Redeemer dt, redeemerOutRef=Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}} =
@@ -132,7 +166,29 @@ data ExportTx =
             , lookups   :: [ExportTxInput] -- ^ The tx outputs for all inputs spent by the partial tx
             , redeemers :: [ExportTxRedeemer]
             }
-    deriving stock (Generic, Typeable)
+    deriving stock (Eq, Show, Generic, Typeable)
+    deriving anyclass (OpenApi.ToSchema)
+
+instance FromJSON ExportTx where
+  parseJSON = withObject "ExportTx" $ \v -> ExportTx
+      <$> parsePartialTx v
+      <*> v .: "inputs"
+      <*> v .: "redeemers"
+    where
+      parsePartialTx v =
+        v .: "transaction" >>= \t ->
+          either parseFail pure $ JSON.tryDecode t
+                              >>= (first show . C.deserialiseFromCBOR (C.AsTx C.AsAlonzoEra))
+
+-- IMPORTANT: The JSON produced here needs to match the schema expected by
+-- https://input-output-hk.github.io/cardano-wallet/api/edge/#operation/balanceTransaction
+instance ToJSON ExportTx where
+    toJSON ExportTx{partialTx, lookups, redeemers} =
+        object
+            [ "transaction" .= JSON.encodeByteString (C.serialiseToCBOR partialTx)
+            , "inputs"      .= lookups
+            , "redeemers"   .= redeemers
+            ]
 
 data ExportTxInput =
     ExportTxInput
@@ -140,9 +196,31 @@ data ExportTxInput =
         , etxiTxIx             :: C.TxIx
         , etxiAddress          :: C.AddressInEra C.AlonzoEra
         , etxiLovelaceQuantity :: C.Lovelace
-        , etxiDatumHash        :: C.Hash C.ScriptData
+        , etxiDatumHash        :: Maybe (C.Hash C.ScriptData)
         , etxiAssets           :: [(C.PolicyId, C.AssetName, C.Quantity)]
         }
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (OpenApi.ToSchema)
+
+instance FromJSON ExportTxInput where
+    parseJSON = withObject "ExportTxInput" $ \o -> ExportTxInput
+        <$> o .: "id"
+        <*> o .: "index"
+        <*> parseAddress o
+        <*> (o .: "amount" >>= \amountField -> amountField .: "quantity")
+        <*> o .: "datum"
+        <*> (o .: "assets" >>= mapM parseAsset)
+      where
+          parseAddress o = do
+              addressField <- o .: "address"
+              let deserialisedAddr = C.deserialiseAddress (C.AsAddressInEra C.AsAlonzoEra) addressField
+              maybe (parseFail "Failed to deserialise address field") pure deserialisedAddr
+          parseAsset :: Object -> Parser (C.PolicyId, C.AssetName, C.Quantity)
+          parseAsset o = do
+              policyId <- o .: "policy_id"
+              assetName <- o .: "asset_name"
+              qty <- o .: "quantity"
+              pure (policyId, assetName, qty)
 
 instance ToJSON ExportTxInput where
     toJSON ExportTxInput{etxiId, etxiTxIx, etxiLovelaceQuantity, etxiDatumHash, etxiAssets, etxiAddress} =
@@ -155,16 +233,6 @@ instance ToJSON ExportTxInput where
             , "assets" .= fmap (\(p, a, q) -> object ["policy_id" .= p, "asset_name" .= a, "quantity" .= q]) etxiAssets
             ]
 
--- IMPORTANT: The JSON produced here needs to match the schema expected by
--- https://input-output-hk.github.io/cardano-wallet/api/edge/#operation/balanceTransaction
-instance ToJSON ExportTx where
-    toJSON ExportTx{partialTx, lookups, redeemers} =
-        object
-            [ "transaction" .= toJSON (C.serialiseToTextEnvelope Nothing partialTx)
-            , "inputs"      .= toJSON lookups
-            , "redeemers"   .= toJSON redeemers
-            ]
-
 export :: C.ProtocolParameters -> C.NetworkId -> UnbalancedTx -> Either CardanoAPI.ToCardanoError ExportTx
 export params networkId UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBalancedTxRequiredSignatories} =
     let requiredSigners = fst <$> Map.toList unBalancedTxRequiredSignatories in
@@ -173,24 +241,30 @@ export params networkId UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBa
         <*> mkInputs networkId unBalancedTxUtxoIndex
         <*> mkRedeemers unBalancedTxTx
 
-mkPartialTx :: [WAPI.PubKeyHash] -> C.ProtocolParameters -> C.NetworkId -> Plutus.Tx -> Either CardanoAPI.ToCardanoError (C.Tx C.AlonzoEra)
-mkPartialTx requiredSigners params networkId = fmap (C.makeSignedTransaction []) . CardanoAPI.toCardanoTxBody requiredSigners (Just params) networkId
+mkPartialTx
+    :: [Plutus.PaymentPubKeyHash]
+    -> C.ProtocolParameters
+    -> C.NetworkId
+    -> Plutus.Tx
+    -> Either CardanoAPI.ToCardanoError (C.Tx C.AlonzoEra)
+mkPartialTx requiredSigners params networkId =
+      fmap (C.makeSignedTransaction [])
+    . CardanoAPI.toCardanoTxBody requiredSigners (Just params) networkId
 
-mkInputs :: C.NetworkId -> Map Plutus.TxOutRef Plutus.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
+mkInputs :: C.NetworkId -> Map Plutus.TxOutRef ScriptOutput -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList
 
-toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> Plutus.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
-toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} Plutus.TxOut{Plutus.txOutAddress, Plutus.txOutValue, Plutus.txOutDatumHash=Just dh} = do
-    cardanoValue <- CardanoAPI.toCardanoValue txOutValue
+toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> ScriptOutput -> Either CardanoAPI.ToCardanoError ExportTxInput
+toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} (ScriptOutput vh value dh) = do
+    cardanoValue <- CardanoAPI.toCardanoValue value
     let otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList cardanoValue
     ExportTxInput
         <$> CardanoAPI.toCardanoTxId txOutRefId
         <*> pure (C.TxIx $ fromInteger txOutRefIdx)
-        <*> CardanoAPI.toCardanoAddress networkId txOutAddress
+        <*> CardanoAPI.toCardanoAddress networkId (Plutus.scriptHashAddress vh)
         <*> pure (C.selectLovelace cardanoValue)
-        <*> CardanoAPI.toCardanoScriptDataHash dh
+        <*> either (const $ pure Nothing) (pure . Just) (CardanoAPI.toCardanoScriptDataHash dh)
         <*> pure otherQuantities
-toExportTxInput _ _ _ = Left CardanoAPI.PublicKeyInputsNotSupported
 
 mkRedeemers :: Plutus.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
 mkRedeemers tx = (++) <$> mkSpendingRedeemers tx <*> mkMintingRedeemers tx

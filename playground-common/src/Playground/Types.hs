@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveLift                 #-}
 {-# LANGUAGE DeriveTraversable          #-}
@@ -16,27 +15,27 @@
 
 module Playground.Types where
 
-import           Control.Lens                 (makeLenses)
-import           Data.Aeson                   (FromJSON, ToJSON)
-import qualified Data.Aeson                   as JSON
-import           Data.Functor.Foldable        (Fix)
-import           Data.List.NonEmpty           (NonEmpty ((:|)))
-import qualified Data.OpenApi.Schema          as OpenApi
-import           Data.Text                    (Text)
-import           GHC.Generics                 (Generic)
-import           Language.Haskell.Interpreter (CompilationError, SourceCode)
-import qualified Language.Haskell.Interpreter as HI
-import           Ledger                       (PubKeyHash, fromSymbol)
-import qualified Ledger.Ada                   as Ada
-import qualified Ledger.CardanoWallet         as CW
-import           Ledger.Scripts               (ValidatorHash)
-import           Ledger.Slot                  (Slot)
-import           Ledger.Value                 (TokenName)
-import qualified Ledger.Value                 as V
-import           Schema                       (FormArgumentF, FormSchema, ToArgument, ToSchema)
-import           Wallet.Emulator.Types        (EmulatorEvent, WalletNumber)
-import           Wallet.Rollup.Types          (AnnotatedTx)
-import           Wallet.Types                 (EndpointDescription)
+import Control.Lens (makeLenses)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as JSON
+import Data.Functor.Foldable (Fix)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.OpenApi.Schema qualified as OpenApi
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import Language.Haskell.Interpreter (CompilationError, SourceCode)
+import Language.Haskell.Interpreter qualified as HI
+import Ledger (PaymentPubKeyHash, fromSymbol)
+import Ledger.Ada qualified as Ada
+import Ledger.CardanoWallet qualified as CW
+import Ledger.Scripts (ValidatorHash)
+import Ledger.Slot (Slot)
+import Ledger.Value (TokenName)
+import Ledger.Value qualified as V
+import Schema (FormArgumentF, FormSchema, ToArgument, ToSchema)
+import Wallet.Emulator.Types (EmulatorEvent, WalletNumber)
+import Wallet.Rollup.Types (AnnotatedTx)
+import Wallet.Types (EndpointDescription)
 
 data KnownCurrency =
     KnownCurrency
@@ -135,8 +134,8 @@ data Evaluation =
         }
     deriving (Generic, ToJSON, FromJSON)
 
-pubKeys :: Evaluation -> [PubKeyHash]
-pubKeys Evaluation {wallets} = CW.pubKeyHash . CW.fromWalletNumber . simulatorWalletWallet <$> wallets
+pubKeys :: Evaluation -> [PaymentPubKeyHash]
+pubKeys Evaluation {wallets} = CW.paymentPubKeyHash . CW.fromWalletNumber . simulatorWalletWallet <$> wallets
 
 data EvaluationResult =
     EvaluationResult
@@ -145,7 +144,7 @@ data EvaluationResult =
         , emulatorTrace     :: Text
         , fundsDistribution :: [SimulatorWallet]
         , feesDistribution  :: [SimulatorWallet]
-        , walletKeys        :: [(PubKeyHash, WalletNumber)]
+        , walletKeys        :: [(PaymentPubKeyHash, WalletNumber)]
         }
     deriving (Show, Generic, ToJSON, FromJSON)
 

@@ -22,10 +22,10 @@ module Test.QuickCheck.StateModel(
   , runActionsInState
 ) where
 
-import           Data.Typeable
+import Data.Typeable
 
-import           Test.QuickCheck         as QC
-import           Test.QuickCheck.Monadic
+import Test.QuickCheck as QC
+import Test.QuickCheck.Monadic
 
 class (forall a. Show (Action state a),
        Monad (ActionMonad state),

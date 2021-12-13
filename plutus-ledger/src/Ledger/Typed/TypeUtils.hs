@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeOperators         #-}
 module Ledger.Typed.TypeUtils where
 
-import           Data.Kind
+import Data.Kind
 
 data Any
 

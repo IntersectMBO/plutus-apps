@@ -40,27 +40,29 @@ module Ledger.Tx
     , txId
     ) where
 
-import qualified Cardano.Api               as C
-import           Cardano.Crypto.Hash       (SHA256, digest)
-import qualified Codec.CBOR.Write          as Write
-import           Codec.Serialise           (Serialise (..))
-import           Control.Lens              hiding ((.=))
-import           Data.Aeson                (FromJSON, ToJSON)
-import           Data.Map                  (Map)
-import qualified Data.Map                  as Map
-import           Data.Proxy
-import           Data.Set                  (Set)
-import qualified Data.Set                  as Set
-import           Data.Text.Prettyprint.Doc (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
-import           GHC.Generics              (Generic)
-import           Ledger.Address            (pubKeyAddress, scriptAddress)
-import           Ledger.Crypto             (PrivateKey, PubKey, signTx, toPublicKey)
-import           Ledger.Scripts            (datumHash)
-import           Ledger.Tx.CardanoAPI      (SomeCardanoApiTx (SomeTx))
-import qualified Ledger.Tx.CardanoAPI      as CardanoAPI
-import           Plutus.V1.Ledger.Api      (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash,
-                                            TxId (..), Validator, ValidatorHash, Value, addressCredential, toBuiltin)
-import           Plutus.V1.Ledger.Tx       as Export
+import Cardano.Api qualified as C
+import Cardano.Crypto.Hash (SHA256, digest)
+import Codec.CBOR.Write qualified as Write
+import Codec.Serialise (Serialise (encode))
+import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.OpenApi qualified as OpenApi
+import Data.Proxy (Proxy (Proxy))
+import Data.Set (Set)
+import Data.Set qualified as Set
+import GHC.Generics (Generic)
+import Ledger.Address (PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
+import Ledger.Crypto (PrivateKey, signTx, toPublicKey)
+import Ledger.Orphans ()
+import Ledger.Scripts (datumHash)
+import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
+import Ledger.Tx.CardanoAPI qualified as CardanoAPI
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId (TxId), Validator,
+                             ValidatorHash, Value, addressCredential, toBuiltin)
+import Plutus.V1.Ledger.Tx as Export
+import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 
 -- | Transaction output that comes from a chain index query.
 --
@@ -80,7 +82,7 @@ data ChainIndexTxOut =
                           , _ciTxOutDatum     :: Either DatumHash Datum
                           , _ciTxOutValue     :: Value
                           }
-  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Serialise, Generic, ToJSON, FromJSON, OpenApi.ToSchema)
 
 makeLenses ''ChainIndexTxOut
 makePrisms ''ChainIndexTxOut
@@ -178,9 +180,9 @@ scriptTxOut' v a ds = TxOut a v (Just (datumHash ds))
 scriptTxOut :: Value -> Validator -> Datum -> TxOut
 scriptTxOut v vs = scriptTxOut' v (scriptAddress vs)
 
--- | Create a transaction output locked by a public key.
-pubKeyTxOut :: Value -> PubKey -> TxOut
-pubKeyTxOut v pk = TxOut (pubKeyAddress pk) v Nothing
+-- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
+pubKeyTxOut :: Value -> PaymentPubKey -> Maybe StakePubKey -> TxOut
+pubKeyTxOut v pk sk = TxOut (pubKeyAddress pk sk) v Nothing
 
 -- | Sign the transaction with a 'PrivateKey' and add the signature to the
 --   transaction's list of signatures.
@@ -188,4 +190,3 @@ addSignature :: PrivateKey -> Tx -> Tx
 addSignature privK tx = tx & signatures . at pubK ?~ sig where
     sig = signTx (txId tx) privK
     pubK = toPublicKey privK
-

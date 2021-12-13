@@ -11,13 +11,12 @@ import Bootstrap.Extra (clickable)
 import Clipboard (showShortCopyLong)
 import Data.Array ((:))
 import Data.Array as Array
-import Data.BigInteger (BigInteger)
-import Data.BigInteger as BigInteger
+import Data.BigInt.Argonaut (BigInt)
+import Data.BigInt.Argonaut as BigInt
 import Data.Foldable (foldMap, foldr)
 import Data.Foldable.Extra (interleave)
 import Data.FoldableWithIndex (foldMapWithIndex, foldrWithIndex)
 import Data.FunctorWithIndex (mapWithIndex)
-import Data.Json.JsonTuple (JsonTuple(..))
 import Data.Lens (Traversal', _Just, filtered, has, preview, to, view)
 import Data.Lens.Index (ix)
 import Data.Map (Map)
@@ -34,10 +33,11 @@ import Halogen.HTML.Properties (class_, classes, colSpan, rowSpan)
 import PlutusTx.AssocMap as AssocMap
 import Plutus.V1.Ledger.Crypto (PubKey(..), PubKeyHash(..))
 import Ledger.Extra (humaniseSlotInterval)
+import Ledger.Address (PaymentPubKeyHash(..))
 import Plutus.V1.Ledger.Tx (TxOut(..))
 import Plutus.V1.Ledger.TxId (TxId(..))
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
-import Prelude (Ordering(..), const, eq, pure, show, zero, ($), (<$>), (<<<), (<>))
+import Prologue (Ordering(..), Tuple, const, eq, pure, show, zero, ($), (<$>), (<<<), (<>))
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput(..), SequenceId(..))
 import Web.UIEvent.MouseEvent (MouseEvent)
 
@@ -82,14 +82,14 @@ amountClass :: ClassName
 amountClass = ClassName "amount"
 
 chainSlotView :: forall p. State -> Array AnnotatedTx -> HTML p Action
-chainSlotView state [] = empty
+chainSlotView _ [] = empty
 
 chainSlotView state chainSlot =
   div [ classes [ colXs12, colSm6, colMd3, colLg2, slotClass ] ]
     (blockView state <$> chainSlot)
 
 blockView :: forall p. State -> AnnotatedTx -> HTML p Action
-blockView state annotatedTx@(AnnotatedTx { txId, sequenceId }) =
+blockView state (AnnotatedTx { txId, sequenceId }) =
   div
     [ classes ([ card, clickable, ClassName "transaction" ] <> if isActive then [ active ] else [])
     , onClickFocusTx txId
@@ -99,11 +99,11 @@ blockView state annotatedTx@(AnnotatedTx { txId, sequenceId }) =
   isActive = has (_chainFocus <<< _Just <<< filtered (eq txId)) state
 
 detailView :: forall p. NamingFn -> State -> AnnotatedBlockchain -> HTML p Action
-detailView namingFn state@{ chainFocus: Just focussedTxId } annotatedBlockchain = case preview (_findTx focussedTxId) annotatedBlockchain of
+detailView namingFn { chainFocus: Just focussedTxId } annotatedBlockchain = case preview (_findTx focussedTxId) annotatedBlockchain of
   Just annotatedTx -> transactionDetailView namingFn annotatedBlockchain annotatedTx
   Nothing -> empty
 
-detailView _ state@{ chainFocus: Nothing } _ = empty
+detailView _ { chainFocus: Nothing } _ = empty
 
 transactionDetailView :: forall p. NamingFn -> AnnotatedBlockchain -> AnnotatedTx -> HTML p Action
 transactionDetailView namingFn annotatedBlockchain annotatedTx =
@@ -148,7 +148,7 @@ transactionDetailView namingFn annotatedBlockchain annotatedTx =
                           namingFn
                           (view _txIdOf annotatedTx)
                           annotatedBlockchain
-                          (BigInteger.fromInt index)
+                          (BigInt.fromInt index)
                           txout
                     )
                     (view (_tx <<< _txOutputs) annotatedTx)
@@ -253,10 +253,10 @@ balancesTable namingFn sequenceId balances =
                                     foldMap
                                       ( \token ->
                                           let
-                                            _thisBalance :: Traversal' (Map BeneficialOwner Value) BigInteger
+                                            _thisBalance :: Traversal' (Map BeneficialOwner Value) BigInt
                                             _thisBalance = ix owner <<< _value <<< ix currency <<< ix token
 
-                                            amount :: Maybe BigInteger
+                                            amount :: Maybe BigInt
                                             amount = preview _thisBalance balances
                                           in
                                             [ td [ class_ amountClass ]
@@ -285,7 +285,7 @@ collectBalanceTableHeadings balances = foldr collectCurrencies Map.empty $ Map.v
   collectCurrencies :: Value -> Map CurrencySymbol (Set TokenName) -> Map CurrencySymbol (Set TokenName)
   collectCurrencies (Value { getValue: entries }) ownersBalance = foldrWithIndex collectTokenNames ownersBalance entries
 
-  collectTokenNames :: CurrencySymbol -> AssocMap.Map TokenName BigInteger -> Map CurrencySymbol (Set TokenName) -> Map CurrencySymbol (Set TokenName)
+  collectTokenNames :: CurrencySymbol -> AssocMap.Map TokenName BigInt -> Map CurrencySymbol (Set TokenName) -> Map CurrencySymbol (Set TokenName)
   collectTokenNames currency currencyBalances = Map.insertWith Set.union currency $ AssocMap.keys currencyBalances
 
 sequenceIdView :: forall p i. SequenceId -> HTML p i
@@ -331,7 +331,7 @@ dereferencedInputView namingFn annotatedBlockchain (DereferencedInput { original
   originatingTx :: Maybe AnnotatedTx
   originatingTx = preview (_findTx txId) annotatedBlockchain
 
-dereferencedInputView namingFn annotatedBlockchain (InputNotFound txKey) =
+dereferencedInputView _ _ (InputNotFound txKey) =
   div
     [ classes [ card, entryClass, notFoundClass ] ]
     [ div [ classes [ cardHeader, textTruncate ] ]
@@ -339,11 +339,11 @@ dereferencedInputView namingFn annotatedBlockchain (InputNotFound txKey) =
     , cardBody_
         [ txIdView (view _txKeyTxId txKey)
         , br_
-        , text $ "Index: " <> show (view _txKeyTxOutRefIdx txKey)
+        , text $ "Index: " <> BigInt.toString (view _txKeyTxOutRefIdx txKey)
         ]
     ]
 
-outputView :: forall p. NamingFn -> TxId -> AnnotatedBlockchain -> BigInteger -> TxOut -> HTML p Action
+outputView :: forall p. NamingFn -> TxId -> AnnotatedBlockchain -> BigInt -> TxOut -> HTML p Action
 outputView namingFn txId annotatedBlockchain outputIndex txOut =
   txOutOfView namingFn false txOut
     $ case consumedInTx of
@@ -361,7 +361,7 @@ outputView namingFn txId annotatedBlockchain outputIndex txOut =
   consumedInTx = findConsumptionPoint outputIndex txId annotatedBlockchain
 
 txOutOfView :: forall p. NamingFn -> Boolean -> TxOut -> Maybe (HTML p Action) -> HTML p Action
-txOutOfView namingFn showArrow txOut@(TxOut { txOutAddress, txOutValue }) mFooter =
+txOutOfView namingFn showArrow txOut@(TxOut { txOutValue }) mFooter =
   div
     [ classes [ card, entryClass, beneficialOwnerClass beneficialOwner ] ]
     [ div [ classes [ cardHeader, textTruncate ] ]
@@ -378,12 +378,12 @@ txOutOfView namingFn showArrow txOut@(TxOut { txOutAddress, txOutValue }) mFoote
   beneficialOwner = toBeneficialOwner txOut
 
 beneficialOwnerClass :: BeneficialOwner -> ClassName
-beneficialOwnerClass (OwnedByPubKey _) = ClassName "wallet"
+beneficialOwnerClass (OwnedByPaymentPubKey _) = ClassName "wallet"
 
 beneficialOwnerClass (OwnedByScript _) = ClassName "script"
 
 beneficialOwnerView :: forall p. NamingFn -> BeneficialOwner -> HTML p Action
-beneficialOwnerView namingFn (OwnedByPubKey pubKeyHash) = case namingFn pubKeyHash of
+beneficialOwnerView namingFn (OwnedByPaymentPubKey (PaymentPubKeyHash { unPaymentPubKeyHash: pubKeyHash })) = case namingFn pubKeyHash of
   Nothing -> showPubKeyHash pubKeyHash
   Just name ->
     span_
@@ -429,24 +429,24 @@ valueView (Value { getValue: (AssocMap.Map []) }) = empty
 
 valueView (Value { getValue: (AssocMap.Map currencies) }) = div_ (interleave hr_ (currencyView <$> currencies))
   where
-  currencyView :: JsonTuple CurrencySymbol (AssocMap.Map TokenName BigInteger) -> HTML p i
-  currencyView (JsonTuple (currency /\ (AssocMap.Map tokens))) =
+  currencyView :: Tuple CurrencySymbol (AssocMap.Map TokenName BigInt) -> HTML p i
+  currencyView (currency /\ (AssocMap.Map tokens)) =
     div_
       [ div [ class_ Bootstrap.textTruncate ]
           [ strong_ [ text $ showCurrency currency ] ]
       , div_ (tokenView <$> tokens)
       ]
 
-  tokenView :: JsonTuple TokenName BigInteger -> HTML p i
-  tokenView (JsonTuple (token /\ amount)) =
+  tokenView :: Tuple TokenName BigInt -> HTML p i
+  tokenView (token /\ amount) =
     row_
       [ col_ [ showToken token ]
       , div [ classes [ col, amountClass ] ]
           [ text $ formatAmount amount ]
       ]
 
-formatAmount :: BigInteger -> String
-formatAmount = BigInteger.format
+formatAmount :: BigInt -> String
+formatAmount = BigInt.toString
 
 showCurrency :: CurrencySymbol -> String
 showCurrency (CurrencySymbol { unCurrencySymbol: "" }) = "Ada"
@@ -462,6 +462,5 @@ onClickFocusTx :: forall p. TxId -> IProp ( onClick :: MouseEvent | p ) Action
 onClickFocusTx txId =
   onClick
     $ const
-    $ Just
     $ FocusTx
     $ Just txId

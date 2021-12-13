@@ -13,24 +13,24 @@ module Plutus.PAB.Core.ContractInstance.RequestHandlers(
     ContractInstanceMsg(..)
     ) where
 
-import           Cardano.BM.Data.Tracer                  (ToObject (..), TracingVerbosity (..))
-import           Cardano.BM.Data.Tracer.Extras           (Tagged (Tagged), mkObjectStr)
-import           Data.Aeson                              (FromJSON, ToJSON)
-import qualified Data.Aeson                              as JSON
-import qualified Data.Aeson.Encode.Pretty                as JSON
-import qualified Data.ByteString.Lazy.Char8              as BSL8
-import           Data.Text.Prettyprint.Doc               (Pretty, colon, hang, parens, pretty, viaShow, vsep, (<+>))
-import           GHC.Generics                            (Generic)
-import           Ledger.Tx                               (Tx, txId)
-import           Plutus.Contract.Effects                 (PABReq (..), PABResp (..))
-import           Plutus.Contract.Resumable               (IterationID, Request (..), Response (..))
-import           Plutus.Contract.Trace.RequestHandler    (RequestHandlerLogMsg)
-import qualified Plutus.PAB.Effects.Contract             as Contract
-import           Plutus.PAB.Events.Contract              (ContractInstanceId (..))
-import           Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
-import           Wallet.Emulator.LogMessages             (TxBalanceMsg)
-import           Wallet.Emulator.Types                   (Wallet)
-import           Wallet.Types                            (NotificationError)
+import Cardano.BM.Data.Tracer (ToObject (..), TracingVerbosity (..))
+import Cardano.BM.Data.Tracer.Extras (Tagged (Tagged), mkObjectStr)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as JSON
+import Data.Aeson.Encode.Pretty qualified as JSON
+import Data.ByteString.Lazy.Char8 qualified as BSL8
+import GHC.Generics (Generic)
+import Ledger.Tx (Tx, txId)
+import Plutus.Contract.Effects (PABReq (..), PABResp (..))
+import Plutus.Contract.Resumable (IterationID, Request (..), Response (..))
+import Plutus.Contract.Trace.RequestHandler (RequestHandlerLogMsg)
+import Plutus.PAB.Effects.Contract qualified as Contract
+import Plutus.PAB.Events.Contract (ContractInstanceId (..))
+import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
+import Prettyprinter (Pretty, colon, hang, parens, pretty, viaShow, vsep, (<+>))
+import Wallet.Emulator.LogMessages (TxBalanceMsg)
+import Wallet.Emulator.Types (Wallet)
+import Wallet.Types (NotificationError)
 
 -- | Log messages about the contract instance
 data ContractInstanceMsg t =

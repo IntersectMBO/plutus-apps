@@ -17,16 +17,16 @@ module Test.QuickCheck.DynamicLogic
     , propPruningGeneratedScriptIsNoop
     ) where
 
-import           Data.List
-import           Data.Typeable
+import Data.List
+import Data.Typeable
 
-import           Control.Applicative
+import Control.Applicative
 
-import           Test.QuickCheck
+import Test.QuickCheck
 
-import           Test.QuickCheck.DynamicLogic.CanGenerate
-import           Test.QuickCheck.DynamicLogic.Quantify
-import           Test.QuickCheck.StateModel
+import Test.QuickCheck.DynamicLogic.CanGenerate
+import Test.QuickCheck.DynamicLogic.Quantify
+import Test.QuickCheck.StateModel
 
 -- | Dynamic logic formulae.
 data DynLogic s = EmptySpec             -- ^ False

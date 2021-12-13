@@ -4,12 +4,12 @@
 {-# LANGUAGE TypeOperators     #-}
 module Spec.Rows(tests) where
 
-import qualified Data.Aeson              as Aeson
-import           Test.Tasty
-import qualified Test.Tasty.HUnit        as HUnit
+import Data.Aeson qualified as Aeson
+import Test.Tasty
+import Test.Tasty.HUnit qualified as HUnit
 
-import           Plutus.Contract
-import qualified Plutus.Contract.Request as Request
+import Plutus.Contract
+import Plutus.Contract.Request qualified as Request
 
 type TheSchema = Endpoint "endpoint1" Int .\/ Endpoint "endpoint2" String
 

@@ -6,8 +6,8 @@ module Servant.Extra
     , right
     ) where
 
-import           Data.Bifunctor (bimap)
-import           Servant        ((:<|>) ((:<|>)))
+import Data.Bifunctor (bimap)
+import Servant ((:<|>) ((:<|>)))
 
 capture ::
        ((a -> b)

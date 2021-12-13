@@ -28,23 +28,23 @@ module Plutus.Contracts.Prism.STO(
     , coins
     ) where
 
-import           Data.Aeson           (FromJSON, ToJSON)
-import           GHC.Generics         (Generic)
-import           Ledger.Ada           (Ada (..), fromValue)
-import           Ledger.Contexts      (ScriptContext (..), ScriptPurpose (..))
-import qualified Ledger.Contexts      as Validation
-import           Ledger.Crypto        (PubKeyHash)
-import           Ledger.Scripts       (MintingPolicy, mintingPolicyHash, mkMintingPolicyScript)
-import qualified Ledger.Typed.Scripts as Scripts
-import           Ledger.Value         (TokenName, Value)
-import qualified Ledger.Value         as Value
-import qualified PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude              as Haskell
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger.Ada (Ada (Lovelace), fromValue)
+import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger.Contexts (ScriptContext (..), ScriptPurpose (..))
+import Ledger.Contexts qualified as Validation
+import Ledger.Scripts (MintingPolicy, mintingPolicyHash, mkMintingPolicyScript)
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (TokenName, Value)
+import Ledger.Value qualified as Value
+import PlutusTx qualified
+import PlutusTx.Prelude
+import Prelude qualified as Haskell
 
 data STOData =
     STOData
-        { stoIssuer          :: PubKeyHash
+        { stoIssuer          :: PaymentPubKeyHash
         , stoTokenName       :: TokenName
         , stoCredentialToken :: Value
         }
@@ -55,7 +55,7 @@ data STOData =
 validateSTO :: STOData -> () -> ScriptContext -> Bool
 validateSTO STOData{stoIssuer,stoCredentialToken,stoTokenName} _ ScriptContext{scriptContextTxInfo=txInfo,scriptContextPurpose=Minting ownHash} =
     let tokenOK = stoCredentialToken `Value.leq` Validation.valueSpent txInfo
-        Lovelace paidToIssuer = fromValue (Validation.valuePaidTo txInfo stoIssuer)
+        Lovelace paidToIssuer = fromValue (Validation.valuePaidTo txInfo (unPaymentPubKeyHash stoIssuer))
         mintOK =
             -- Note that this doesn't prevent any tokens with a name other than
             -- 'stoTokenName' from being minted

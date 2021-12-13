@@ -15,16 +15,16 @@ module Plutus.Contracts.ErrorHandling(
     , contract
     ) where
 
-import           Control.Lens
-import           Control.Monad            (void)
-import           Control.Monad.Error.Lens
-import           Data.Aeson               (FromJSON, ToJSON)
-import           Data.Text                (Text)
-import           GHC.Generics             (Generic)
+import Control.Lens
+import Control.Monad (void)
+import Control.Monad.Error.Lens
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text)
+import GHC.Generics (Generic)
 
-import           Ledger.TimeSlot          (SlotConfig)
-import qualified Ledger.TimeSlot          as TimeSlot
-import           Plutus.Contract
+import Ledger.TimeSlot (SlotConfig)
+import Ledger.TimeSlot qualified as TimeSlot
+import Plutus.Contract
 
 -- $errorHandling
 -- Demonstrates how to deal with errors in Plutus contracts. We define a custom

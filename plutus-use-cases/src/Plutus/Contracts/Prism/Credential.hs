@@ -16,25 +16,25 @@ module Plutus.Contracts.Prism.Credential(
     , tokenAccount
     ) where
 
-import           Data.Aeson                    (FromJSON, ToJSON)
-import           Data.Hashable                 (Hashable)
-import           GHC.Generics                  (Generic)
-import           Ledger.Contexts               (ScriptContext (..), txSignedBy)
-import           Ledger.Crypto                 (PubKeyHash)
-import           Ledger.Scripts                (MintingPolicy, mintingPolicyHash, mkMintingPolicyScript)
-import qualified Ledger.Typed.Scripts          as Scripts
-import           Ledger.Value                  (TokenName, Value)
-import qualified Ledger.Value                  as Value
-import           Plutus.Contracts.TokenAccount (Account (..))
-import qualified PlutusTx
-import           PlutusTx.Prelude
-import qualified Prelude                       as Haskell
-import           Schema                        (ToSchema)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Hashable (Hashable)
+import GHC.Generics (Generic)
+import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger.Contexts (ScriptContext (..), txSignedBy)
+import Ledger.Scripts (MintingPolicy, mintingPolicyHash, mkMintingPolicyScript)
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (TokenName, Value)
+import Ledger.Value qualified as Value
+import Plutus.Contracts.TokenAccount (Account (..))
+import PlutusTx qualified
+import PlutusTx.Prelude
+import Prelude qualified as Haskell
+import Schema (ToSchema)
 
 -- | Entity that is authorised to mint credential tokens
 newtype CredentialAuthority =
     CredentialAuthority
-        { unCredentialAuthority :: PubKeyHash
+        { unCredentialAuthority :: PaymentPubKeyHash
         }
     deriving stock (Generic, Haskell.Eq, Haskell.Show, Haskell.Ord)
     deriving anyclass (ToJSON, FromJSON, Hashable, ToSchema)
@@ -54,7 +54,7 @@ validateMint :: CredentialAuthority -> () -> ScriptContext -> Bool
 validateMint CredentialAuthority{unCredentialAuthority} _ ScriptContext{scriptContextTxInfo=txinfo} =
     -- the credential authority is allowed to mint or destroy any number of
     -- tokens, so we just need to check the signature
-    txinfo `txSignedBy` unCredentialAuthority
+    txinfo `txSignedBy` unPaymentPubKeyHash unCredentialAuthority
 
 policy :: CredentialAuthority -> MintingPolicy
 policy credential = mkMintingPolicyScript $

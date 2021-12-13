@@ -10,21 +10,21 @@
 
 module Cardano.ChainIndex.Types where
 
-import           Control.Lens                  (makeLenses)
-import           Control.Monad.Freer.State
-import           Data.Aeson                    (FromJSON, ToJSON)
-import           Data.Default                  (Default, def)
-import           Data.Text.Prettyprint.Doc     (Pretty (..), parens, (<+>))
-import           GHC.Generics                  (Generic)
-import           Servant.Client                (BaseUrl (..), Scheme (..))
+import Control.Lens (makeLenses)
+import Control.Monad.Freer.State
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default, def)
+import GHC.Generics (Generic)
+import Prettyprinter (Pretty (..), parens, (<+>))
+import Servant.Client (BaseUrl (..), Scheme (..))
 
-import           Cardano.BM.Data.Trace         (Trace)
-import           Cardano.BM.Data.Tracer        (ToObject (..))
-import           Cardano.BM.Data.Tracer.Extras (Tagged (..), mkObjectStr)
-import           Control.Monad.Freer.Error     (Error)
-import           Control.Monad.Freer.Extras    (LogMsg)
-import           Plutus.ChainIndex.Emulator    (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError,
-                                                ChainIndexLog, ChainIndexQueryEffect)
+import Cardano.BM.Data.Trace (Trace)
+import Cardano.BM.Data.Tracer (ToObject (..))
+import Cardano.BM.Data.Tracer.Extras (Tagged (..), mkObjectStr)
+import Control.Monad.Freer.Error (Error)
+import Control.Monad.Freer.Extras (LogMsg)
+import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
+                                   ChainIndexQueryEffect)
 
 type ChainIndexEffects m
      = '[ ChainIndexControlEffect

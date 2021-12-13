@@ -26,10 +26,10 @@ track changes over time.
 -}
 
 module Plutus.PAB.Db.Schema where
-import           Data.Text             (Text)
-import           Database.Beam
-import           Database.Beam.Migrate
-import           Database.Beam.Sqlite  (Sqlite)
+import Data.Text (Text)
+import Database.Beam
+import Database.Beam.Migrate
+import Database.Beam.Sqlite (Sqlite)
 
 data ContractInstanceT f
   = ContractInstance

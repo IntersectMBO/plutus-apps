@@ -4,13 +4,13 @@
 
 module VestingSimulations where
 
-import           Ledger.Ada            (lovelaceValueOf)
-import           Ledger.Value          (Value)
-import           Playground.Types      (ContractCall (AddBlocks), Simulation (Simulation), SimulatorAction,
-                                        simulationActions, simulationId, simulationName, simulationWallets)
-import           SimulationUtils       (callEndpoint, simulatorWallet)
-import           Vesting               (registeredKnownCurrencies)
-import           Wallet.Emulator.Types (WalletNumber (..))
+import Ledger.Ada (lovelaceValueOf)
+import Ledger.Value (Value)
+import Playground.Types (ContractCall (AddBlocks), Simulation (Simulation), SimulatorAction, simulationActions,
+                         simulationId, simulationName, simulationWallets)
+import SimulationUtils (callEndpoint, simulatorWallet)
+import Vesting (registeredKnownCurrencies)
+import Wallet.Emulator.Types (WalletNumber (..))
 
 simulations :: [Simulation]
 simulations = [vestRetrieve]
