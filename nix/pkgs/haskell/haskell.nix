@@ -47,7 +47,7 @@ let
       "https://github.com/input-output-hk/purescript-bridge.git"."6a92d7853ea514be8b70bab5e72077bf5a510596" = "13j64vv116in3c204qsl1v0ajphac9fqvsjp7x3zzfr7n7g61drb";
       "https://github.com/input-output-hk/servant-purescript.git"."a0c7c7e37c95564061247461aef4be505a853538" = "177na04jf6wf18kandzsah40lw3xswmmccpr3hkb8wb4hypcffnf";
       "https://github.com/input-output-hk/cardano-base"."b3ff8343360b3adb94267e39760b95a6874c8530" = "03ixknhi2rdg51gjwzy0881lvnl4cmsw10ccb8jaz9z1vrm5samw";
-      "https://github.com/input-output-hk/cardano-crypto.git"."07397f0e50da97eaa0575d93bee7ac4b2b2576ec" = "06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3";
+      "https://github.com/input-output-hk/cardano-crypto.git"."1fff72e39e690676d4156a56858c6b72e1f0bff9" = "06kahs46z842xndq3sgcrqyvmgvs05rnflbq76599pfnb2vspy2q";
       "https://github.com/input-output-hk/cardano-ledger-specs"."bf008ce028751cae9fb0b53c3bef20f07c06e333" = "0my3801w1vinc0kf5yh9lxl6saqxgwm6ccg0vvzi104pafcwwcqx";
       "https://github.com/input-output-hk/cardano-prelude"."fd773f7a58412131512b9f694ab95653ac430852" = "02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6";
       "https://github.com/input-output-hk/goblins"."cde90a2b27f79187ca8310b6549331e59595e7ba" = "17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg";
@@ -73,27 +73,6 @@ let
       package prettyprinter-configurable
         tests: False
     '' + lib.optionalString pkgs.stdenv.hostPlatform.isGhcjs ''
-      packages:
-        contrib/basement-0.0.12
-        contrib/beam-sqlite-0.5.0.0
-        contrib/cardano-base-dac284/cardano-crypto-class
-        contrib/cardano-crypto-07397f
-        contrib/clock-0.8.2
-        contrib/cryptonite-0.29
-        contrib/digest-0.0.1.2
-        contrib/direct-sqlite-2.3.26
-        contrib/double-conversion-2.0.2.0
-        contrib/foundation-0.0.26.1
-        contrib/gauge-0.2.5
-        contrib/ghcjs-c-interop
-        contrib/lzma-0.0.0.3
-        contrib/mersenne-random-pure64-0.2.2.0
-        contrib/network-3.1.2.1
-        contrib/network-info-0.2.0.10
-        contrib/scrypt-0.5.0
-        contrib/terminal-size-0.3.2.1
-        contrib/unix-bytestring-0.3.7.3
-        contrib/unix-compat-0.5.3
       package plutus-tx-plugin
         flags: +use-ghc-stub
       package prettyprinter-configurable
@@ -132,10 +111,7 @@ let
     '' + lib.optionalString (topLevelPkgs.stdenv.hostPlatform.isGhcjs && !pkgs.stdenv.hostPlatform.isGhcjs) ''
       packages:
         ${topLevelPkgs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.project.configured-src}
-        contrib/double-conversion-2.0.2.0
-        contrib/lzma-0.0.0.3
-        contrib/cardano-crypto-07397f
-        contrib/cryptonite-0.29
+
 
       allow-newer: ghcjs:base16-bytestring
                  , ghcjs:aeson
@@ -479,20 +455,27 @@ let
             cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
             cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
             digest.components.library.libs = lib.mkForce [ emzlib ];
-            # cardano-crypto-class.components.library.build-tools = with pkgs.buildPackages.buildPackages; [ emscripten python2 ];
-            # cardano-crypto-class.components.library.preConfigure = ''
-            #   ls -l
-            #   emcc $(js-unknown-ghcjs-pkg-config --libs --cflags libsodium) jsbits/libsodium.c -o jsbits/libsodium.js -s WASM=0 \
-            #     -s "EXTRA_EXPORTED_RUNTIME_METHODS=['printErr']" \
-            #     -s "EXPORTED_FUNCTIONS=['_malloc', '_free', '_crypto_generichash_blake2b', '_crypto_generichash_blake2b_final', '_crypto_generichash_blake2b_init', '_crypto_generichash_blake2b_update', '_crypto_hash_sha256', '_crypto_hash_sha256_final', '_crypto_hash_sha256_init', '_crypto_hash_sha256_update', '_crypto_sign_ed25519_detached', '_crypto_sign_ed25519_seed_keypair', '_crypto_sign_ed25519_sk_to_pk', '_crypto_sign_ed25519_sk_to_seed', '_crypto_sign_ed25519_verify_detached', '_sodium_compare', '_sodium_free', '_sodium_init', '_sodium_malloc', '_sodium_memzero']"
-            # '';
             plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
             iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
             plutus-pab.components.tests.psgenerator.buildable = false;
-            # cryptonite.components.library.preConfigure = runEmscripten;
-            # cardano-crypto.components.library.preConfigure = runEmscripten;
-            # direct-sqlite.components.library.preConfigure = runEmscripten;
-            # ghcjs-c-interop.components.library.preConfigure = runEmscripten;
+
+            basement.patches = [ ../../contrib/basement-0.0.12.patch ];
+            beam-sqlite.patches = [ ../../contrib/beam-sqlite-0.5.0.0.patch ];
+            clock.patches = [ ../../contrib/clock-0.8.2.patch ];
+            cryptonite.patches = [ ../../contrib/cryptonite-0.29.patch ];
+            digest.patches = [ ../../contrib/digest-0.0.1.2.patch ];
+            direct-sqlite.patches = [ ../../contrib/direct-sqlite-2.3.26.patch ];
+            double-conversion.patches = [ ../../contrib/double-conversion-2.0.2.0.patch ];
+            foundation.patches = [ ../../contrib/foundation-0.0.26.1.patch ];
+            gauge.patches = [ ../../contrib/gauge-0.2.5.patch ];
+            lzma.patches = [ ../../contrib/lzma-0.0.0.3.patch ];
+            mersenne-random-pure64.patches = [ ../../contrib/mersenne-random-pure64-0.2.2.0.patch ];
+            network.patches = [ ../../contrib/network-3.1.2.1.patch ];
+            network-info.patches = [ ../../contrib/network-info-0.2.0.10.patch ];
+            scrypt.patches = [ ../../contrib/scrypt-0.5.0.patch ];
+            terminal-size.patches = [ ../../contrib/terminal-size-0.3.2.1.patch ];
+            unix-bytestring.patches = [ ../../contrib/unix-bytestring-0.3.7.3.patch ];
+            unix-compat.patches = [ ../../contrib/unix-compat-0.5.3.patch ];
           };
       })
     ] ++ lib.optional enableHaskellProfiling {
