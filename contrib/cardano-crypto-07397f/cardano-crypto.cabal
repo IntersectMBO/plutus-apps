@@ -1,6 +1,5 @@
-cabal-version:       2.0
 name:                cardano-crypto
-version:             1.1.1
+version:             1.1.0
 synopsis:            Cryptography primitives for cardano
 description:
 homepage:            https://github.com/input-output-hk/cardano-crypto#readme
@@ -15,12 +14,8 @@ extra-source-files:  README.md
                      cbits/*.h
                      cbits/ed25519/*.h
                      jsbits/emscripten/build.sh
-                     jsbits/emscripten/crc32.js
-                     jsbits/emscripten/crypto-cbits.pre.js
-                     jsbits/emscripten/crypto-cbits.post.js
-                     jsbits/emscripten/crypto-wrappers.js
-                     jsbits/emscripten/extern.js
                      jsbits/bindings.js
+cabal-version:       >=1.10
 
 flag golden-tests
   description:       compile the golden tests and run them
@@ -70,7 +65,6 @@ library
     default-extensions: NoStarIsType
   if os(ghcjs)
     js-sources: jsbits/bindings.js
-    extra-bundled-libraries: EMCCcardano-crypto EMCCcardano-crypto.exported
 
 test-suite cardano-crypto-test
   type:                exitcode-stdio-1.0
