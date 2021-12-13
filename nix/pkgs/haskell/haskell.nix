@@ -459,23 +459,23 @@ let
             iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
             plutus-pab.components.tests.psgenerator.buildable = false;
 
-            basement.patches = [ ../../contrib/basement-0.0.12.patch ];
-            beam-sqlite.patches = [ ../../contrib/beam-sqlite-0.5.0.0.patch ];
-            clock.patches = [ ../../contrib/clock-0.8.2.patch ];
-            cryptonite.patches = [ ../../contrib/cryptonite-0.29.patch ];
-            digest.patches = [ ../../contrib/digest-0.0.1.2.patch ];
-            direct-sqlite.patches = [ ../../contrib/direct-sqlite-2.3.26.patch ];
-            double-conversion.patches = [ ../../contrib/double-conversion-2.0.2.0.patch ];
-            foundation.patches = [ ../../contrib/foundation-0.0.26.1.patch ];
-            gauge.patches = [ ../../contrib/gauge-0.2.5.patch ];
-            lzma.patches = [ ../../contrib/lzma-0.0.0.3.patch ];
-            mersenne-random-pure64.patches = [ ../../contrib/mersenne-random-pure64-0.2.2.0.patch ];
-            network.patches = [ ../../contrib/network-3.1.2.1.patch ];
-            network-info.patches = [ ../../contrib/network-info-0.2.0.10.patch ];
-            scrypt.patches = [ ../../contrib/scrypt-0.5.0.patch ];
-            terminal-size.patches = [ ../../contrib/terminal-size-0.3.2.1.patch ];
-            unix-bytestring.patches = [ ../../contrib/unix-bytestring-0.3.7.3.patch ];
-            unix-compat.patches = [ ../../contrib/unix-compat-0.5.3.patch ];
+            basement.patches = [ ../../../contrib/basement-0.0.12.patch ];
+            beam-sqlite.patches = [ ../../../contrib/beam-sqlite-0.5.0.0.patch ];
+            clock.patches = [ ../../../contrib/clock-0.8.2.patch ];
+            cryptonite.patches = [ ../../../contrib/cryptonite-0.29.patch ];
+            digest.patches = [ ../../../contrib/digest-0.0.1.2.patch ];
+            direct-sqlite.patches = [ ../../../contrib/direct-sqlite-2.3.26.patch ];
+            double-conversion.patches = [ ../../../contrib/double-conversion-2.0.2.0.patch ];
+            foundation.patches = [ ../../../contrib/foundation-0.0.26.1.patch ];
+            gauge.patches = [ ../../../contrib/gauge-0.2.5.patch ];
+            lzma.patches = [ ../../../contrib/lzma-0.0.0.3.patch ];
+            mersenne-random-pure64.patches = [ ../../../contrib/mersenne-random-pure64-0.2.2.0.patch ];
+            network.patches = [ ../../../contrib/network-3.1.2.1.patch ];
+            network-info.patches = [ ../../../contrib/network-info-0.2.0.10.patch ];
+            scrypt.patches = [ ../../../contrib/scrypt-0.5.0.patch ];
+            terminal-size.patches = [ ../../../contrib/terminal-size-0.3.2.1.patch ];
+            unix-bytestring.patches = [ ../../../contrib/unix-bytestring-0.3.7.3.patch ];
+            unix-compat.patches = [ ../../../contrib/unix-compat-0.5.3.patch ];
           };
       })
     ] ++ lib.optional enableHaskellProfiling {
