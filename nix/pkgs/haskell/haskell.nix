@@ -342,6 +342,12 @@ let
             else __trace "nativePlutus is null" [ ];
 
 
+          # Applying this globally is wrong. we should apply this only to ghcjs, but
+          # it also needs to be applied to the plutus-tx plugin, so we can actually
+          # load it into ghcjs, otherwise we'll choke on the c++ dependency, which
+          # brings in R_X86_64_TLSLD (20) relocation.
+          double-conversion.patches = [ ../../../contrib/double-conversion-2.0.2.0.patch ];
+
           Cabal.patches = [ ../../patches/cabal.patch ];
 
           plutus-contract.doHaddock = deferPluginErrors;
