@@ -33,7 +33,7 @@ Author:              Vincent Hanquez <vincent@snarc.org>
 Maintainer:          vincent@snarc.org
 Category:            Cryptography
 Stability:           experimental
-Build-Type:          Custom
+Build-Type:          Simple
 Homepage:            https://github.com/haskell-crypto/cryptonite
 Bug-reports:         https://github.com/haskell-crypto/cryptonite/issues
 tested-with:         GHC==8.8.2, GHC==8.6.5, GHC==8.4.4, GHC==8.2.2, GHC==8.0.2
@@ -61,10 +61,6 @@ extra-source-files:  cbits/*.h
                      tests/*.hs
                      jsbits/bindings.js
 
-custom-setup
-  setup-depends:
-    base  >= 4.5,
-    Cabal >= 2.4
 
 source-repository head
   type: git
