@@ -15,7 +15,6 @@ packages: doc
 
           contrib/cardano-crypto-07397f
           contrib/cryptonite-0.29
-          contrib/cardano-base-dac284/cardano-crypto-class
           contrib/gauge-0.2.5
           contrib/unix-compat-0.5.3
           contrib/network-info-0.2.0.10
@@ -91,12 +90,12 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: dac2841472c444c6fe867ce39ff00d3f9cdb3623
+  tag: b3ff8343360b3adb94267e39760b95a6874c8530
   subdir:
     base-deriving-via
     binary
     binary/test
-    -- cardano-crypto-class
+    cardano-crypto-class
     cardano-crypto-praos
     cardano-crypto-tests
     measures
