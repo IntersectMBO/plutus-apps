@@ -29,9 +29,9 @@ import Control.Monad (forever)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
+import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints (ScriptLookups, SomeLookupsAndConstraints (..), TxConstraints (..))
 import Ledger.Constraints qualified as Constraints
-import Ledger.Crypto (PubKeyHash)
 import Ledger.Tx (getCardanoTxId)
 import Ledger.Value (TokenName)
 import Plutus.Contract
@@ -51,7 +51,7 @@ import Schema (ToSchema)
 data STOSubscriber =
     STOSubscriber
         { wCredential   :: Credential
-        , wSTOIssuer    :: PubKeyHash
+        , wSTOIssuer    :: PaymentPubKeyHash
         , wSTOTokenName :: TokenName
         , wSTOAmount    :: Integer
         }
@@ -95,7 +95,7 @@ unlockExchange :: forall w s.
     )
     => Contract w s UnlockError ()
 unlockExchange = awaitPromise $ endpoint @"unlock from exchange" $ \credential -> do
-    ownPK <- mapError WithdrawPkError ownPubKeyHash
+    ownPK <- mapError WithdrawPkError ownPaymentPubKeyHash
     (credConstraints, credLookups) <- obtainCredentialTokenData credential
     (accConstraints, accLookups) <-
         mapError UnlockExchangeTokenAccError
@@ -115,7 +115,7 @@ obtainCredentialTokenData credential = do
     -- credentialManager <- mapError WithdrawEndpointError $ endpoint @"credential manager"
     userCredential <- mapError WithdrawPkError $
         UserCredential
-            <$> ownPubKeyHash
+            <$> ownPaymentPubKeyHash
             <*> pure credential
             <*> pure (Credential.token credential)
 

@@ -74,7 +74,7 @@ module Plutus.Contract.Request(
     , endpointReq
     , endpointResp
     -- ** Public key hashes
-    , ownPubKeyHash
+    , ownPaymentPubKeyHash
     -- ** Submitting transactions
     , submitUnbalancedTx
     , submitBalancedTx
@@ -109,7 +109,7 @@ import Data.Void (Void)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy, MintingPolicyHash, POSIXTime,
-               PubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId,
+               PaymentPubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId,
                TxOutRef (txOutRefId), Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
@@ -120,12 +120,13 @@ import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
 import PlutusTx qualified
 
-import Plutus.Contract.Effects (ActiveEndpoint (..),
-                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
+                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
                                 PABResp (ExposeEndpointResp))
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Schema (Input, Output)
-import Wallet.Types (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
+import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescription),
+                     EndpointValue (EndpointValue, unEndpointValue))
 
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse (paget), UtxosResponse (page))
@@ -758,8 +759,8 @@ endpointDescription = EndpointDescription . symbolVal
 --     'requiredSignatures' field of 'Tx'.
 --   * There is a 1-n relationship between wallets and public keys (although in
 --     the mockchain n=1)
-ownPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PubKeyHash
-ownPubKeyHash = pabReq OwnPublicKeyHashReq E._OwnPublicKeyHashResp
+ownPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
+ownPaymentPubKeyHash = pabReq OwnPaymentPublicKeyHashReq E._OwnPaymentPublicKeyHashResp
 
 -- | Send an unbalanced transaction to be balanced and signed. Returns the ID
 --    of the final transaction when the transaction was submitted. Throws an

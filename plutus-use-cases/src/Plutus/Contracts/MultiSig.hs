@@ -39,11 +39,11 @@ import Prelude as Haskell (Semigroup (..), Show, foldMap)
 
 type MultiSigSchema =
         Endpoint "lock" (MultiSig, Value)
-        .\/ Endpoint "unlock" (MultiSig, [PubKeyHash])
+        .\/ Endpoint "unlock" (MultiSig, [PaymentPubKeyHash])
 
 data MultiSig =
         MultiSig
-                { signatories      :: [Ledger.PubKeyHash]
+                { signatories      :: [Ledger.PaymentPubKeyHash]
                 -- ^ List of public keys of people who may sign the transaction
                 , minNumSignatures :: Integer
                 -- ^ Minimum number of signatures required to unlock
@@ -59,7 +59,7 @@ contract = selectList [lock, unlock] >> contract
 {-# INLINABLE validate #-}
 validate :: MultiSig -> () -> () -> ScriptContext -> Bool
 validate MultiSig{signatories, minNumSignatures} _ _ p =
-    let present = length (filter (V.txSignedBy (scriptContextTxInfo p)) signatories)
+    let present = length (filter (V.txSignedBy (scriptContextTxInfo p) . unPaymentPubKeyHash) signatories)
     in traceIfFalse "not enough signatures" (present >= minNumSignatures)
 
 instance Scripts.ValidatorTypes MultiSig where

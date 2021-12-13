@@ -22,7 +22,7 @@ module Plutus.Contracts.Escrow(
     , EscrowParams(..)
     , EscrowTarget(..)
     , payToScriptTarget
-    , payToPubKeyTarget
+    , payToPaymentPubKeyTarget
     , targetTotal
     , escrowContract
     , payRedeemRefund
@@ -46,8 +46,8 @@ import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Ledger (Datum (..), DatumHash, POSIXTime, PubKeyHash, TxId, ValidatorHash, getCardanoTxId, interval,
-               scriptOutputsAt, txSignedBy, valuePaidTo)
+import Ledger (Datum (..), DatumHash, POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, ValidatorHash,
+               getCardanoTxId, interval, scriptOutputsAt, txSignedBy, valuePaidTo)
 import Ledger qualified
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
@@ -113,15 +113,15 @@ instance AsContractError EscrowError where
 --   defining `EscrowTarget` values in off-chain code). Sometimes we have
 --   `d = DatumHash` (when checking the hashes in on-chain code)
 data EscrowTarget d =
-    PubKeyTarget PubKeyHash Value
+    PaymentPubKeyTarget PaymentPubKeyHash Value
     | ScriptTarget ValidatorHash d Value
     deriving (Haskell.Functor)
 
 PlutusTx.makeLift ''EscrowTarget
 
 -- | An 'EscrowTarget' that pays the value to a public key address.
-payToPubKeyTarget :: PubKeyHash -> Value -> EscrowTarget d
-payToPubKeyTarget = PubKeyTarget
+payToPaymentPubKeyTarget :: PaymentPubKeyHash -> Value -> EscrowTarget d
+payToPaymentPubKeyTarget = PaymentPubKeyTarget
 
 -- | An 'EscrowTarget' that pays the value to a script address, with the
 --   given data script.
@@ -149,13 +149,13 @@ targetTotal = foldl (\vl tgt -> vl + targetValue tgt) mempty . escrowTargets
 -- | The 'Value' specified by an 'EscrowTarget'
 targetValue :: EscrowTarget d -> Value
 targetValue = \case
-    PubKeyTarget _ vl   -> vl
-    ScriptTarget _ _ vl -> vl
+    PaymentPubKeyTarget _ vl -> vl
+    ScriptTarget _ _ vl      -> vl
 
 -- | Create a 'Ledger.TxOut' value for the target
-mkTx :: EscrowTarget Datum -> TxConstraints Action PubKeyHash
+mkTx :: EscrowTarget Datum -> TxConstraints Action PaymentPubKeyHash
 mkTx = \case
-    PubKeyTarget pkh vl ->
+    PaymentPubKeyTarget pkh vl ->
         Constraints.mustPayToPubKey pkh vl
     ScriptTarget vs ds vl ->
         Constraints.mustPayToOtherScript vs ds vl
@@ -165,7 +165,7 @@ data Action = Redeem | Refund
 data Escrow
 instance Scripts.ValidatorTypes Escrow where
     type instance RedeemerType Escrow = Action
-    type instance DatumType Escrow = PubKeyHash
+    type instance DatumType Escrow = PaymentPubKeyHash
 
 PlutusTx.unstableMakeIsData ''Action
 PlutusTx.makeLift ''Action
@@ -182,8 +182,8 @@ PlutusTx.makeLift ''Action
 --   poisoning the contract by adding arbitrary outputs to the script address.
 meetsTarget :: TxInfo -> EscrowTarget DatumHash -> Bool
 meetsTarget ptx = \case
-    PubKeyTarget pkh vl ->
-        valuePaidTo ptx pkh `geq` vl
+    PaymentPubKeyTarget pkh vl ->
+        valuePaidTo ptx (unPaymentPubKeyHash pkh) `geq` vl
     ScriptTarget validatorHash dataValue vl ->
         case scriptOutputsAt validatorHash ptx of
             [(dataValue', vl')] ->
@@ -192,7 +192,7 @@ meetsTarget ptx = \case
             _ -> False
 
 {-# INLINABLE validate #-}
-validate :: EscrowParams DatumHash -> PubKeyHash -> Action -> ScriptContext -> Bool
+validate :: EscrowParams DatumHash -> PaymentPubKeyHash -> Action -> ScriptContext -> Bool
 validate EscrowParams{escrowDeadline, escrowTargets} contributor action ScriptContext{scriptContextTxInfo} =
     case action of
         Redeem ->
@@ -200,7 +200,7 @@ validate EscrowParams{escrowDeadline, escrowTargets} contributor action ScriptCo
             && traceIfFalse "meetsTarget" (all (meetsTarget scriptContextTxInfo) escrowTargets)
         Refund ->
             traceIfFalse "escrowDeadline-before" ((escrowDeadline - 1) `before` txInfoValidRange scriptContextTxInfo)
-            && traceIfFalse "txSignedBy" (scriptContextTxInfo `txSignedBy` contributor)
+            && traceIfFalse "txSignedBy" (scriptContextTxInfo `txSignedBy` unPaymentPubKeyHash contributor)
 
 typedValidator :: EscrowParams Datum -> Scripts.TypedValidator Escrow
 typedValidator escrow = go (Haskell.fmap Ledger.datumHash escrow) where
@@ -249,7 +249,7 @@ pay ::
     -- ^ How much money to pay in
     -> Contract w s e TxId
 pay inst escrow vl = do
-    pk <- ownPubKeyHash
+    pk <- ownPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
     utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
@@ -318,7 +318,7 @@ refund ::
     -> EscrowParams Datum
     -> Contract w s EscrowError RefundSuccess
 refund inst escrow = do
-    pk <- ownPubKeyHash
+    pk <- ownPaymentPubKeyHash
     unspentOutputs <- utxosAt (Scripts.validatorAddress inst)
     let flt _ ciTxOut = either id Ledger.datumHash (Tx._ciTxOutDatum ciTxOut) == Ledger.datumHash (Datum (PlutusTx.toBuiltinData pk))
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund

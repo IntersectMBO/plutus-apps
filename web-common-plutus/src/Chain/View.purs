@@ -33,6 +33,7 @@ import Halogen.HTML.Properties (class_, classes, colSpan, rowSpan)
 import PlutusTx.AssocMap as AssocMap
 import Plutus.V1.Ledger.Crypto (PubKey(..), PubKeyHash(..))
 import Ledger.Extra (humaniseSlotInterval)
+import Ledger.Address (PaymentPubKeyHash(..))
 import Plutus.V1.Ledger.Tx (TxOut(..))
 import Plutus.V1.Ledger.TxId (TxId(..))
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
@@ -377,12 +378,12 @@ txOutOfView namingFn showArrow txOut@(TxOut { txOutValue }) mFooter =
   beneficialOwner = toBeneficialOwner txOut
 
 beneficialOwnerClass :: BeneficialOwner -> ClassName
-beneficialOwnerClass (OwnedByPubKey _) = ClassName "wallet"
+beneficialOwnerClass (OwnedByPaymentPubKey _) = ClassName "wallet"
 
 beneficialOwnerClass (OwnedByScript _) = ClassName "script"
 
 beneficialOwnerView :: forall p. NamingFn -> BeneficialOwner -> HTML p Action
-beneficialOwnerView namingFn (OwnedByPubKey pubKeyHash) = case namingFn pubKeyHash of
+beneficialOwnerView namingFn (OwnedByPaymentPubKey (PaymentPubKeyHash { unPaymentPubKeyHash: pubKeyHash })) = case namingFn pubKeyHash of
   Nothing -> showPubKeyHash pubKeyHash
   Just name ->
     span_

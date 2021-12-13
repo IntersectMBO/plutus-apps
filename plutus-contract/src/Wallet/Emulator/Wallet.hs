@@ -42,9 +42,12 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
-import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, PrivateKey, PubKey, PubKeyHash,
-               ScriptValidationEvent (sveScript), Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOut, TxOutRef,
-               UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx), ValidatorHash, Value)
+import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
+               PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
+               PaymentPubKey (PaymentPubKey, unPaymentPubKey),
+               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash,
+               ScriptValidationEvent (sveScript), StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOut,
+               TxOutRef, UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx), ValidatorHash, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -67,7 +70,7 @@ import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect,
-                       WalletEffect (BalanceTx, OwnPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
+                       WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
                        publishTx)
 import Wallet.Emulator.Chain (ChainState (_index))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
@@ -75,7 +78,7 @@ import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
 
 newtype SigningProcess = SigningProcess {
-    unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PubKeyHash] -> Tx -> Eff effs Tx
+    unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> Tx -> Eff effs Tx
 }
 
 instance Show SigningProcess where
@@ -91,7 +94,7 @@ toMockWallet :: MockWallet -> Wallet
 toMockWallet = Wallet . WalletId . CW.mwWalletId
 
 knownWallets :: [Wallet]
-knownWallets = toMockWallet <$> CW.knownWallets
+knownWallets = toMockWallet <$> CW.knownMockWallets
 
 knownWallet :: Integer -> Wallet
 knownWallet = fromWalletNumber . CW.WalletNumber
@@ -131,24 +134,29 @@ fromBase16 :: T.Text -> Either String WalletId
 fromBase16 s = bimap show WalletId (fromText s)
 
 -- | The 'MockWallet' whose ID is the given wallet ID (if it exists)
-walletMockWallet :: Wallet -> Maybe MockWallet
-walletMockWallet (Wallet wid) = find ((==) wid . WalletId . CW.mwWalletId) CW.knownWallets
+walletToMockWallet :: Wallet -> Maybe MockWallet
+walletToMockWallet (Wallet wid) = find ((==) wid . WalletId . CW.mwWalletId) CW.knownMockWallets
 
 -- | The public key of a mock wallet.  (Fails if the wallet is not a mock wallet).
-walletPubKey :: Wallet -> PubKey
-walletPubKey w = CW.pubKey
-                 $ fromMaybe (error $ "Wallet.Emulator.Wallet.walletPubKey: Wallet "
-                                   <> show w
-                                   <> " is not a mock wallet")
-                 $ walletMockWallet w
+mockWalletPaymentPubKey :: Wallet -> PaymentPubKey
+mockWalletPaymentPubKey w =
+    CW.paymentPubKey
+        $ fromMaybe (error $ "Wallet.Emulator.Wallet.walletPubKey: Wallet "
+                          <> show w
+                          <> " is not a mock wallet")
+        $ walletToMockWallet w
 
--- | The public key hash of a mock wallet.  (Fails if the wallet is not a mock wallet).
-walletPubKeyHash :: Wallet -> PubKeyHash
-walletPubKeyHash = Ledger.pubKeyHash . walletPubKey
+-- | The payment public key hash of a mock wallet.  (Fails if the wallet is not a mock wallet).
+mockWalletPaymentPubKeyHash :: Wallet -> PaymentPubKeyHash
+mockWalletPaymentPubKeyHash =
+    PaymentPubKeyHash
+  . Ledger.pubKeyHash
+  . unPaymentPubKey
+  . mockWalletPaymentPubKey
 
 -- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
-walletAddress :: Wallet -> Address
-walletAddress = Ledger.pubKeyHashAddress . walletPubKeyHash
+mockWalletAddress :: Wallet -> Address
+mockWalletAddress w = Ledger.pubKeyHashAddress (mockWalletPaymentPubKeyHash w) Nothing
 
 data WalletEvent =
     GenericLog T.Text
@@ -177,26 +185,30 @@ data WalletState = WalletState {
 
 makeLenses ''WalletState
 
-ownPrivateKey :: WalletState -> PrivateKey
-ownPrivateKey = CW.privateKey . _mockWallet
+ownPaymentPrivateKey :: WalletState -> PaymentPrivateKey
+ownPaymentPrivateKey = CW.paymentPrivateKey . _mockWallet
 
-ownPublicKey :: WalletState -> PubKey
-ownPublicKey = CW.pubKey . _mockWallet
+ownPaymentPublicKey :: WalletState -> PaymentPubKey
+ownPaymentPublicKey = CW.paymentPubKey . _mockWallet
 
--- | Get the user's own public-key address.
+-- | Get the user's own payment public-key address.
 ownAddress :: WalletState -> Address
-ownAddress = Ledger.pubKeyAddress . Ledger.toPublicKey . ownPrivateKey
+ownAddress = flip Ledger.pubKeyAddress Nothing
+           . PaymentPubKey
+           . Ledger.toPublicKey
+           . unPaymentPrivateKey
+           . ownPaymentPrivateKey
 
 -- | An empty wallet using the given private key.
 -- for that wallet as the sole watched address.
 fromMockWallet :: MockWallet -> WalletState
 fromMockWallet mw = WalletState mw emptyNodeClientState mempty sp where
-    sp = signWithPrivateKey (CW.privateKey mw)
+    sp = signWithPrivateKey (CW.paymentPrivateKey mw)
 
 -- | Empty wallet state for an emulator 'Wallet'. Returns 'Nothing' if the wallet
 --   is not known in the emulator.
 emptyWalletState :: Wallet -> Maybe WalletState
-emptyWalletState = fmap fromMockWallet . walletMockWallet
+emptyWalletState = fmap fromMockWallet . walletToMockWallet
 
 handleWallet ::
     ( Member (Error WalletAPIError) effs
@@ -209,7 +221,7 @@ handleWallet ::
     -> WalletEffect ~> Eff effs
 handleWallet feeCfg = \case
     SubmitTxn tx          -> submitTxnH tx
-    OwnPubKeyHash         -> ownPubKeyHashH
+    OwnPaymentPubKeyHash  -> ownPaymentPubKeyHashH
     BalanceTx utx         -> balanceTxH utx
     WalletAddSignature tx -> walletAddSignatureH tx
     TotalFunds            -> totalFundsH
@@ -222,8 +234,8 @@ handleWallet feeCfg = \case
         logInfo $ SubmittingTx tx
         publishTx tx
 
-    ownPubKeyHashH :: (Member (State WalletState) effs) => Eff effs PubKeyHash
-    ownPubKeyHashH = gets (CW.pubKeyHash . _mockWallet)
+    ownPaymentPubKeyHashH :: (Member (State WalletState) effs) => Eff effs PaymentPubKeyHash
+    ownPaymentPubKeyHashH = gets (CW.paymentPubKeyHash . _mockWallet)
 
     balanceTxH ::
         ( Member NodeClientEffect effs
@@ -273,7 +285,7 @@ handleAddSignature ::
     => Tx
     -> Eff effs Tx
 handleAddSignature tx = do
-    privKey <- gets ownPrivateKey
+    (PaymentPrivateKey privKey) <- gets ownPaymentPrivateKey
     pure (Ledger.addSignature privKey tx)
 
 ownOutputs :: forall effs.
@@ -286,7 +298,7 @@ ownOutputs WalletState{_mockWallet} = do
     Map.fromList . catMaybes <$> traverse txOutRefTxOutFromRef refs
   where
     cred :: Credential
-    cred = PubKeyCredential (CW.pubKeyHash _mockWallet)
+    cred = PubKeyCredential (unPaymentPubKeyHash $ CW.paymentPubKeyHash _mockWallet)
 
     -- Accumulate all unspent 'TxOutRef's from the resulting pages.
     allUtxoSet :: Maybe (PageQuery TxOutRef) -> Eff effs [TxOutRef]
@@ -350,7 +362,8 @@ handleBalanceTx ::
 handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
     let filteredUnbalancedTxTx = removeEmptyOutputs unBalancedTxTx
     let txInputs = Set.toList $ Tx.txInputs filteredUnbalancedTxTx
-    ownPubKey <- gets ownPublicKey
+    ownPaymentPubKey <- gets ownPaymentPublicKey
+    let ownStakePubKey = Nothing
     inputValues <- traverse lookupValue (Set.toList $ Tx.txInputs filteredUnbalancedTxTx)
     collateral  <- traverse lookupValue (Set.toList $ Tx.txCollateral filteredUnbalancedTxTx)
     let fees = txFee filteredUnbalancedTxTx
@@ -359,7 +372,7 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
         remainingFees = fees PlutusTx.- fold collateral -- TODO: add collateralPercent
         balance = left PlutusTx.- right
 
-    (neg, pos) <- adjustBalanceWithMissingLovelace utxo ownPubKey filteredUnbalancedTxTx $ Value.split balance
+    (neg, pos) <- adjustBalanceWithMissingLovelace utxo ownPaymentPubKey filteredUnbalancedTxTx $ Value.split balance
 
     tx' <- if Value.isZero pos
            then do
@@ -367,7 +380,7 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
                pure filteredUnbalancedTxTx
            else do
                 logDebug $ AddingPublicKeyOutputFor pos
-                pure $ addOutputs ownPubKey pos filteredUnbalancedTxTx
+                pure $ addOutputs ownPaymentPubKey ownStakePubKey pos filteredUnbalancedTxTx
 
     tx'' <- if Value.isZero neg
             then do
@@ -379,7 +392,7 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
                 let inputsOutRefs = map Tx.txInRef txInputs
                     filteredUtxo = flip Map.filterWithKey utxo $ \txOutRef _ ->
                         txOutRef `notElem` inputsOutRefs
-                addInputs filteredUtxo ownPubKey neg tx'
+                addInputs filteredUtxo ownPaymentPubKey ownStakePubKey neg tx'
 
     if remainingFees `Value.leq` PlutusTx.zero
     then do
@@ -398,16 +411,17 @@ adjustBalanceWithMissingLovelace ::
     , Member (Error WAPI.WalletAPIError) effs
     )
     => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
-    -> PubKey -- ^ Wallet's public key
+    -> PaymentPubKey -- ^ Wallet's public key
     -> Tx -- ^ An unbalanced tx
     -> (Value, Value) -- ^ The unbalanced tx's left and right balance.
     -> Eff effs (Value, Value) -- ^ New left and right balance.
-adjustBalanceWithMissingLovelace utxo ownPubKey unBalancedTx (neg, pos) = do
+adjustBalanceWithMissingLovelace utxo ownPaymentPubKey unBalancedTx (neg, pos) = do
     -- Find the tx's input value which refer to the current wallet's address.
-    let ownTxInputs =
-              filter (\TxIn {txInRef} -> Just (Ledger.pubKeyHash ownPubKey) == ((Ledger.toPubKeyHash . view Ledger.ciTxOutAddress)
-                                     =<< Map.lookup txInRef utxo))
-                     (Set.toList $ Tx.txInputs unBalancedTx)
+    let ownPkh = Ledger.pubKeyHash $ unPaymentPubKey ownPaymentPubKey
+    let pkhOfUnspentTxIn TxIn { txInRef } =
+            (Ledger.toPubKeyHash . view Ledger.ciTxOutAddress) =<< Map.lookup txInRef utxo
+    let ownTxInputs = filter (\txIn -> Just ownPkh == pkhOfUnspentTxIn txIn)
+                             (Set.toList $ Tx.txInputs unBalancedTx)
     ownInputValues <- traverse lookupValue ownTxInputs
 
     -- When minting a token, there will be eventually a transaction output
@@ -438,9 +452,9 @@ adjustBalanceWithMissingLovelace utxo ownPubKey unBalancedTx (neg, pos) = do
 
     pure (newNeg, newPos)
 
-addOutputs :: PubKey -> Value -> Tx -> Tx
-addOutputs pk vl tx = tx & over Tx.outputs (pko :) where
-    pko = Tx.pubKeyTxOut vl pk
+addOutputs :: PaymentPubKey -> Maybe StakePubKey -> Value -> Tx -> Tx
+addOutputs pk sk vl tx = tx & over Tx.outputs (pko :) where
+    pko = Tx.pubKeyTxOut vl pk sk
 
 addCollateral
     :: ( Member (Error WAPI.WalletAPIError) effs
@@ -463,11 +477,12 @@ addInputs
     :: ( Member (Error WAPI.WalletAPIError) effs
        )
     => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
-    -> PubKey
+    -> PaymentPubKey
+    -> Maybe StakePubKey
     -> Value
     -> Tx
     -> Eff effs Tx
-addInputs mp pk vl tx = do
+addInputs mp pk sk vl tx = do
     (spend, change) <- selectCoin (second (view Ledger.ciTxOutValue) <$> Map.toList mp) vl
     let
 
@@ -477,14 +492,14 @@ addInputs mp pk vl tx = do
 
         addTxOuts = if Value.isZero change
                     then id
-                    else addOutputs pk change
+                    else addOutputs pk sk change
 
     pure $ tx & addTxOuts & addTxIns
 
 -- Make a transaction output from a positive value.
-mkChangeOutput :: PubKey -> Value -> Maybe TxOut
-mkChangeOutput pubK v =
-    if Value.isZero v then Nothing else Just (Ledger.pubKeyTxOut v pubK)
+mkChangeOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Maybe TxOut
+mkChangeOutput pubK sk v =
+    if Value.isZero v then Nothing else Just (Ledger.pubKeyTxOut v pubK sk)
 
 -- | Given a set of @a@s with coin values, and a target value, select a number
 -- of @a@ such that their total value is greater than or equal to the target.
@@ -546,7 +561,7 @@ takeUntil p (x:xs)
 defaultSigningProcess :: MockWallet -> SigningProcess
 defaultSigningProcess = signWallet
 
-signWithPrivateKey :: PrivateKey -> SigningProcess
+signWithPrivateKey :: PaymentPrivateKey -> SigningProcess
 signWithPrivateKey pk = SigningProcess $
     \pks tx -> foldM (signTxWithPrivateKey pk) tx pks
 
@@ -558,23 +573,33 @@ signWallet wllt = SigningProcess $
     \pks tx -> foldM (signTxnWithKey wllt) tx pks
 
 -- | Sign the transaction with the private key of the mock wallet.
-signTxnWithKey :: (Member (Error WAPI.WalletAPIError) r) => MockWallet -> Tx -> PubKeyHash -> Eff r Tx
-signTxnWithKey mw = signTxWithPrivateKey (CW.privateKey mw)
+signTxnWithKey
+    :: (Member (Error WAPI.WalletAPIError) r)
+    => MockWallet
+    -> Tx
+    -> PaymentPubKeyHash
+    -> Eff r Tx
+signTxnWithKey mw = signTxWithPrivateKey (CW.paymentPrivateKey mw)
 
 -- | Sign the transaction with the private key, if the hash is that of the
 --   private key.
-signTxWithPrivateKey :: (Member (Error WAPI.WalletAPIError) r) => PrivateKey -> Tx -> PubKeyHash -> Eff r Tx
-signTxWithPrivateKey pk tx pubK = do
-    let ownPubKey = Ledger.toPublicKey pk
-    if Ledger.pubKeyHash ownPubKey == pubK
+signTxWithPrivateKey
+    :: (Member (Error WAPI.WalletAPIError) r)
+    => PaymentPrivateKey
+    -> Tx
+    -> PaymentPubKeyHash
+    -> Eff r Tx
+signTxWithPrivateKey (PaymentPrivateKey pk) tx pkh@(PaymentPubKeyHash pubK) = do
+    let ownPaymentPubKey = Ledger.toPublicKey pk
+    if Ledger.pubKeyHash ownPaymentPubKey == pubK
     then pure (Ledger.addSignature pk tx)
-    else throwError (WAPI.PrivateKeyNotFound pubK)
+    else throwError (WAPI.PaymentPrivateKeyNotFound pkh)
 
 -- | Sign the transaction with the given private keys,
 --   ignoring the list of public keys that the 'SigningProcess' is passed.
-signPrivateKeys :: [PrivateKey] -> SigningProcess
+signPrivateKeys :: [PaymentPrivateKey] -> SigningProcess
 signPrivateKeys signingKeys = SigningProcess $ \_ tx ->
-    pure (foldr Ledger.addSignature tx signingKeys)
+    pure (foldr (Ledger.addSignature . unPaymentPrivateKey) tx signingKeys)
 
 data SigningProcessControlEffect r where
     SetSigningProcess :: SigningProcess -> SigningProcessControlEffect ()
@@ -603,10 +628,10 @@ type WalletSet = Map.Map Wallet WalletState
 
 -- | Pick out all the public keys from the set of wallets and map them back to
 -- their corresponding wallets.
-walletPubKeyHashes :: WalletSet -> Map.Map PubKeyHash Wallet
-walletPubKeyHashes = foldl' f Map.empty . Map.toList
+walletPaymentPubKeyHashes :: WalletSet -> Map.Map PaymentPubKeyHash Wallet
+walletPaymentPubKeyHashes = foldl' f Map.empty . Map.toList
   where
-    f m (w, ws) = Map.insert (CW.pubKeyHash $ _mockWallet ws) w m
+    f m (w, ws) = Map.insert (CW.paymentPubKeyHash $ _mockWallet ws) w m
 
 -- | For a set of wallets, convert them into a map of value: entity,
 -- where entity is one of 'Entity'.
@@ -614,13 +639,15 @@ balances :: ChainState -> WalletSet -> Map.Map Entity Value
 balances state wallets = foldl' f Map.empty . getIndex . _index $ state
   where
     toEntity :: Address -> Entity
-    toEntity a = case addressCredential a of
-                    PubKeyCredential h -> case Map.lookup h ws of
-                        Nothing -> PubKeyHashEntity h
-                        Just w  -> WalletEntity w
-                    ScriptCredential h -> ScriptEntity h
+    toEntity a =
+        case addressCredential a of
+            PubKeyCredential h ->
+                case Map.lookup (PaymentPubKeyHash h) ws of
+                    Nothing -> PubKeyHashEntity h
+                    Just w  -> WalletEntity w
+            ScriptCredential h -> ScriptEntity h
 
-    ws :: Map.Map PubKeyHash Wallet
-    ws = walletPubKeyHashes wallets
+    ws :: Map.Map PaymentPubKeyHash Wallet
+    ws = walletPaymentPubKeyHashes wallets
 
     f m o = Map.insertWith (<>) (toEntity $ Ledger.txOutAddress o) (Ledger.txOutValue o) m

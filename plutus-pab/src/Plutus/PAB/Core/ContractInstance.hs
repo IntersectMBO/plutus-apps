@@ -261,7 +261,7 @@ stmRequestHandler = fmap sequence (wrapHandler (fmap pure nonBlockingRequests) <
 
     -- requests that can be handled by 'WalletEffect', 'ChainIndexQueryEffect', etc.
     nonBlockingRequests =
-        RequestHandler.handleOwnPubKeyHashQueries @effs
+        RequestHandler.handleOwnPaymentPubKeyHashQueries @effs
         <> RequestHandler.handleChainIndexQueries @effs
         <> RequestHandler.handleUnbalancedTransactions @effs
         <> RequestHandler.handlePendingTransactions @effs

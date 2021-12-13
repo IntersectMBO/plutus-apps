@@ -15,10 +15,10 @@ module Ledger.Crypto
     ) where
 
 import Cardano.Crypto.Wallet qualified as Crypto
-import Crypto.Hash as Crypto
+import Crypto.Hash qualified as Crypto
 import Data.ByteArray qualified as BA
 import Data.ByteString qualified as BS
-import Plutus.V1.Ledger.Api
+import Plutus.V1.Ledger.Api (LedgerBytes (LedgerBytes), TxId (TxId), fromBuiltin, toBuiltin)
 import Plutus.V1.Ledger.Bytes qualified as KB
 import Plutus.V1.Ledger.Crypto as Export hiding (PrivateKey)
 import PlutusTx.Prelude qualified as P

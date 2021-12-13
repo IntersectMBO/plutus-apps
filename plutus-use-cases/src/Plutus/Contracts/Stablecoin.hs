@@ -85,9 +85,9 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity (Identity (..))
 import GHC.Generics (Generic)
 import Ledger.Ada qualified as Ada
+import Ledger.Address (PaymentPubKey)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Crypto (PubKey)
 import Ledger.Interval qualified as Interval
 import Ledger.Scripts (MintingPolicyHash)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -192,7 +192,7 @@ equity r@BankState{bsReserves=BC reserves} cr =
 -- | Stablecoin parameters.
 data Stablecoin =
     Stablecoin
-        { scOracle                  :: PubKey -- ^ Public key of the oracle that provides exchange rates
+        { scOracle                  :: PaymentPubKey -- ^ Public key of the oracle that provides exchange rates
         , scFee                     :: Ratio Integer -- ^ Fee charged by bank for transactions. Calculated as a fraction of the total transaction volume in base currency.
         , scMinReserveRatio         :: Ratio Integer -- ^ The minimum ratio of reserves to liabilities
         , scMaxReserveRatio         :: Ratio Integer -- ^ The maximum ratio of reserves to liabilities

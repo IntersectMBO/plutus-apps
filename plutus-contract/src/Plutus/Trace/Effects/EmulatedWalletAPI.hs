@@ -22,7 +22,7 @@ import Data.Text (Text)
 import Ledger.Tx (txId)
 import Ledger.TxId (TxId)
 import Ledger.Value (Value)
-import Wallet.API (WalletAPIError, defaultSlotRange, payToPublicKeyHash)
+import Wallet.API (WalletAPIError, defaultSlotRange, payToPaymentPublicKeyHash)
 import Wallet.Effects (WalletEffect)
 import Wallet.Emulator qualified as EM
 import Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
@@ -44,7 +44,7 @@ payToWallet ::
     -> Eff effs TxId
 payToWallet source target amount = do
     ctx <- liftWallet source
-         $ payToPublicKeyHash defaultSlotRange amount (EM.walletPubKeyHash target)
+         $ payToPaymentPublicKeyHash defaultSlotRange amount (EM.mockWalletPaymentPubKeyHash target)
     case ctx of
       Left _   -> error "Plutus.Trace.EmulatedWalletAPI.payToWallet: Expecting a mock tx, not an Alonzo tx"
       Right tx -> pure $ txId tx

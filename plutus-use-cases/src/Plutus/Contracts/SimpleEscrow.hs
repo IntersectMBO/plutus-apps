@@ -24,7 +24,7 @@ import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Ledger (POSIXTime, PubKeyHash, TxId, getCardanoTxId, txSignedBy, valuePaidTo)
+import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, txSignedBy, valuePaidTo)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts (ScriptContext (..), TxInfo (..))
@@ -44,7 +44,7 @@ import Prelude qualified as Haskell
 
 data EscrowParams =
   EscrowParams
-    { payee     :: PubKeyHash
+    { payee     :: PaymentPubKeyHash
     -- ^ The entity that needs to be paid the 'expecting' 'Value'.
     , paying    :: Value
     -- ^ Value to be paid out to the redeemer.
@@ -110,12 +110,12 @@ validate params action ScriptContext{scriptContextTxInfo=txInfo} =
           -- Can't redeem after the deadline
       let notLapsed = deadline params `after` txInfoValidRange txInfo
           -- Payee has to have been paid
-          paid      = valuePaidTo txInfo (payee params) `geq` expecting params
+          paid      = valuePaidTo txInfo (unPaymentPubKeyHash $ payee params) `geq` expecting params
        in traceIfFalse "escrow-deadline-lapsed" notLapsed
           && traceIfFalse "escrow-not-paid" paid
     Refund ->
           -- Has to be the person that locked value requesting the refund
-      let signed = txInfo `txSignedBy` payee params
+      let signed = txInfo `txSignedBy` unPaymentPubKeyHash (payee params)
           -- And we only refund after the deadline has passed
           lapsed = (deadline params - 1) `before` txInfoValidRange txInfo
        in traceIfFalse "escrow-not-signed" signed
@@ -139,7 +139,7 @@ redeemEp = endpoint @"redeem" redeem
   where
     redeem params = do
       time <- currentTime
-      pk <- ownPubKeyHash
+      pk <- ownPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
       let value = foldMap (view Tx.ciTxOutValue) unspentOutputs

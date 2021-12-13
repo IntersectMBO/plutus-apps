@@ -39,7 +39,7 @@ import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, guard_,
-                      in_, limit_, nub_, select, val_)
+                      in_, limit_, not_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update, (&&.), (<-.), (<.), (==.),
                             (>.))
@@ -201,12 +201,12 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
       tp           -> do
           let query =
                 fmap _addressRowOutRef
-                  $ filter_ (\row -> _addressRowCred row ==. val_ cred)
-                  $ do
-                    utxo <- all_ (unspentOutputRows db)
-                    a <- all_ (addressRows db)
-                    guard_ (_addressRowOutRef a ==. _unspentOutputRowOutRef utxo)
-                    pure a
+                  $ filter_ (\row ->
+                      (_addressRowCred row ==. val_ cred)
+                      &&. exists_ (filter_ (\utxo -> _addressRowOutRef row ==. _unspentOutputRowOutRef utxo) (all_ (unspentOutputRows db)))
+                      &&. not_ (exists_ (filter_ (\utxi -> _addressRowOutRef row ==. _unmatchedInputRowOutRef utxi) (all_ (unmatchedInputRows db))))
+                      )
+                  $ all_ (addressRows db)
 
           outRefs <- selectPage (fmap toDbValue pageQuery) query
           let page = fmap fromDbValue outRefs

@@ -48,7 +48,7 @@ render trace = do
                $ foldEmulatorStreamM (L.generalize (showBlockchainFold knownWallets'))
                $ takeUntilSlot 21
                $ runEmulatorStream def trace
-        knownWallets' = fmap (\w -> (walletPubKeyHash w, w)) knownWallets
+        knownWallets' = fmap (\w -> (mockWalletPaymentPubKeyHash w, w)) knownWallets
     case result of
         Left err       -> assertFailure $ show err
         Right rendered -> pure $ LBS.fromStrict $ encodeUtf8 rendered
