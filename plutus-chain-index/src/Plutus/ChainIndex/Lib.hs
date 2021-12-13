@@ -40,7 +40,7 @@ module Plutus.ChainIndex.Lib (
     , getTipSlot
 ) where
 
-import Control.Concurrent.STM qualified as STM
+import Control.Concurrent.MVar (newMVar)
 import Control.Monad.Freer (Eff)
 import Control.Monad.Freer.Extras.Beam (BeamEffect, BeamLog (SqlLog))
 import Control.Monad.Freer.Extras.Log qualified as Log
@@ -94,8 +94,8 @@ withRunRequirements logConfig config cont = do
         \                                 AND input_row_out_ref = old.output_row_out_ref; \
         \END"
 
-    stateTVar <- STM.newTVarIO mempty
-    cont $ RunRequirements trace stateTVar conn (Config.cicSecurityParam config)
+    stateMVar <- newMVar mempty
+    cont $ RunRequirements trace stateMVar conn (Config.cicSecurityParam config)
 
 -- | Generate the requirements to run the chain index effects given default configurations.
 withDefaultRunRequirements :: (RunRequirements -> IO ()) -> IO ()

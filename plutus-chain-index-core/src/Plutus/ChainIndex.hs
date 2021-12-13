@@ -23,8 +23,7 @@ import Plutus.ChainIndex.Types as Export
 import Plutus.ChainIndex.UtxoState as Export
 
 import Cardano.BM.Trace (Trace)
-import Control.Concurrent.STM (TVar)
-import Control.Concurrent.STM qualified as STM
+import Control.Concurrent.MVar (MVar, putMVar, takeMVar)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret)
 import Control.Monad.Freer.Error (handleError, runError, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect, handleBeam)
@@ -39,7 +38,7 @@ import Plutus.Monitoring.Util (convertLog, runLogEffects)
 -- | The required arguments to run the chain index effects.
 data RunRequirements = RunRequirements
     { trace         :: Trace IO ChainIndexLog
-    , stateTVar     :: TVar ChainIndexState
+    , stateMVar     :: MVar ChainIndexState
     , conn          :: Sqlite.Connection
     , securityParam :: Int
     }
@@ -60,8 +59,8 @@ handleChainIndexEffects
     => RunRequirements
     -> Eff (ChainIndexQueryEffect ': ChainIndexControlEffect ': BeamEffect ': effs) a
     -> Eff effs (Either ChainIndexError a)
-handleChainIndexEffects RunRequirements{trace, stateTVar, conn, securityParam} action = do
-    state <- liftIO $ STM.readTVarIO stateTVar
+handleChainIndexEffects RunRequirements{trace, stateMVar, conn, securityParam} action = do
+    state <- liftIO $ takeMVar stateMVar
     (result, newState) <-
         runState state
         $ runReader conn
@@ -73,5 +72,5 @@ handleChainIndexEffects RunRequirements{trace, stateTVar, conn, securityParam} a
         $ interpret handleQuery
         -- Insert the 5 effects needed by the handlers of the 3 chain index effects between those 3 effects and 'effs'.
         $ raiseMUnderN @[_,_,_,_,_] @[_,_,_] action
-    liftIO $ STM.atomically $ STM.writeTVar stateTVar newState
+    liftIO $ putMVar stateMVar newState
     pure result

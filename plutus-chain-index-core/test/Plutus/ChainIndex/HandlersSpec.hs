@@ -8,7 +8,7 @@
 
 module Plutus.ChainIndex.HandlersSpec (tests) where
 
-import Control.Concurrent.STM (newTVarIO)
+import Control.Concurrent.MVar (newMVar)
 import Control.Lens (view)
 import Control.Monad (forM)
 import Control.Monad.Freer (Eff)
@@ -154,8 +154,8 @@ runChainIndexTest
 runChainIndexTest action = do
   result <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
     Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
-    stateTVar <- newTVarIO mempty
-    runChainIndexEffects (RunRequirements nullTracer stateTVar conn 10) action
+    stateMVar <- newMVar mempty
+    runChainIndexEffects (RunRequirements nullTracer stateMVar conn 10) action
 
   case result of
     Left _  -> Hedgehog.failure
