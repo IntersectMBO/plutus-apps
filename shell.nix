@@ -8,6 +8,10 @@ let
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cardano-cli cardano-node;
   inherit (plutus-apps) purty purty-pre-commit purs spargo;
 
+  crossSystems =
+    with (import ./default.nix { }).pkgs.lib.systems.examples; [ ghcjs ];
+  crossPackages = builtins.map (crossSystem:  import ./. { inherit system crossSystem; }) crossSystems;
+
   # For Sphinx, and ad-hoc usage
   sphinxTools = python3.withPackages (ps: [
     sphinxcontrib-haddock.sphinxcontrib-domaintools
@@ -112,9 +116,13 @@ let
     webCommon.newComponent
   ]);
 
+  crossShells = builtins.map (p: p.plutus-apps.haskell.project.shellFor {}) crossPackages;
+
 in
 haskell.project.shellFor {
   nativeBuildInputs = nixpkgsInputs ++ localInputs ++ [ sphinxTools ];
+  # TODO figure out why this causes `Argument list too long` error
+  # inputsFrom = crossShells;
   # We don't currently use this, and it's a pain to materialize, and otherwise
   # costs a fair bit of eval time.
   withHoogle = false;
