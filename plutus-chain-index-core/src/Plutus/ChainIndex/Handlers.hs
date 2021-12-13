@@ -39,7 +39,7 @@ import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, guard_,
-                      limit_, not_, nub_, select, val_)
+                      in_, limit_, not_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update, (&&.), (<-.), (<.), (==.),
                             (>.))
@@ -47,7 +47,8 @@ import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxId (..), TxOut (..), TxOutRef (..))
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
-import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
+                              UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Compatibility (toCardanoPoint)
@@ -92,6 +93,8 @@ handleQuery = \case
     UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
+    TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
+    TxsFromTxIds txids             -> getTxsFromTxIds txids
     GetTip -> getTip
 
 getTip :: Member BeamEffect effs => Eff effs Tip
@@ -240,6 +243,47 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
           let page = fmap fromDbValue outRefs
 
           pure (UtxosResponse tp page)
+
+getTxsFromTxIds
+  :: forall effs.
+    ( Member BeamEffect effs
+    )
+  => [TxId]
+  -> Eff effs [ChainIndexTx]
+getTxsFromTxIds txIds =
+  do
+    let
+      txIds' = toDbValue <$> txIds
+      query =
+        fmap _txRowTx
+          $ filter_ (\row -> _txRowTxId row `in_` fmap val_ txIds')
+          $ all_ (txRows db)
+    txs <- selectList $ select query
+    pure $ fmap fromDbValue txs
+
+getTxoSetAtAddress
+  :: forall effs.
+    ( Member (State ChainIndexState) effs
+    , Member BeamEffect effs
+    , Member (LogMsg ChainIndexLog) effs
+    )
+  => PageQuery TxOutRef
+  -> Credential
+  -> Eff effs TxosResponse
+getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
+  utxoState <- gets @ChainIndexState UtxoState.utxoState
+  case UtxoState.tip utxoState of
+      TipAtGenesis -> do
+          logWarn TipIsGenesis
+          pure (TxosResponse (Page pageQuery Nothing []))
+      _           -> do
+          let query =
+                fmap _addressRowOutRef
+                  $ filter_ (\row -> _addressRowCred row ==. val_ cred)
+                  $ all_ (addressRows db)
+          txOutRefs' <- selectPage (fmap toDbValue pageQuery) query
+          let page = fmap fromDbValue txOutRefs'
+          pure $ TxosResponse page
 
 handleControl ::
     forall effs.

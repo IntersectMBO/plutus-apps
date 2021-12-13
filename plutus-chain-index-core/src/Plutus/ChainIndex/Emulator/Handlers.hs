@@ -35,7 +35,8 @@ import Ledger (Address (addressCredential), ChainIndexTxOut (..), MintingPolicy 
                StakeValidatorHash (StakeValidatorHash), TxId, TxOut (txOutAddress), TxOutRef (..),
                Validator (Validator), ValidatorHash (ValidatorHash), txOutDatumHash, txOutValue)
 import Ledger.Scripts (ScriptHash (ScriptHash))
-import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
+                              UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
@@ -149,6 +150,18 @@ handleQuery = \case
                 logWarn TipIsGenesis
                 pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
             tp           -> pure (UtxosResponse tp page)
+    TxsFromTxIds is -> catMaybes <$> mapM getTxFromTxId is
+    TxoSetAtAddress pageQuery cred -> do
+        state <- get
+        let outRefs = view (diskState . addressMap . at cred) state
+            txoRefs = fromMaybe mempty outRefs
+            utxo = view (utxoIndex . to utxoState) state
+            page = pageOf pageQuery txoRefs
+        case tip utxo of
+            TipAtGenesis -> do
+                logWarn TipIsGenesis
+                pure $ TxosResponse $ pageOf pageQuery Set.empty
+            _            -> pure $ TxosResponse page
     GetTip ->
         gets (tip . utxoState . view utxoIndex)
 
