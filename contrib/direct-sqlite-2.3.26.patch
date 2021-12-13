@@ -1,7 +1,7 @@
-diff --git b/contrib/direct-sqlite-2.3.26/direct-sqlite.cabal a/contrib/direct-sqlite-2.3.26/direct-sqlite.cabal
+diff --git b/direct-sqlite.cabal a/direct-sqlite.cabal
 index 96f26b79a..bd157a1ea 100644
---- b/contrib/direct-sqlite-2.3.26/direct-sqlite.cabal
-+++ a/contrib/direct-sqlite-2.3.26/direct-sqlite.cabal
+--- b/direct-sqlite.cabal
++++ a/direct-sqlite.cabal
 @@ -1,3 +1,4 @@
 +cabal-version:      2.0
  name:               direct-sqlite
@@ -36,11 +36,11 @@ index 96f26b79a..bd157a1ea 100644
    if flag(systemlib)
      extra-libraries: sqlite3
      cpp-options:     -Ddirect_sqlite_systemlib
-diff --git b/contrib/direct-sqlite-2.3.26/jsbits/bindings.js a/contrib/direct-sqlite-2.3.26/jsbits/bindings.js
+diff --git b/jsbits/bindings.js a/jsbits/bindings.js
 new file mode 100644
 index 000000000..b40b3bb1b
 --- /dev/null
-+++ a/contrib/direct-sqlite-2.3.26/jsbits/bindings.js
++++ a/jsbits/bindings.js
 @@ -0,0 +1,670 @@
 +/*
 +  Pointers in emscripten compiled code are represented as offsets

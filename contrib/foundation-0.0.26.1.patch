@@ -1,7 +1,7 @@
-diff --git b/contrib/foundation-0.0.26.1/foundation.cabal a/contrib/foundation-0.0.26.1/foundation.cabal
+diff --git b/foundation.cabal a/foundation.cabal
 index 224c61308..ef25e37f8 100644
---- b/contrib/foundation-0.0.26.1/foundation.cabal
-+++ a/contrib/foundation-0.0.26.1/foundation.cabal
+--- b/foundation.cabal
++++ a/foundation.cabal
 @@ -1,3 +1,4 @@
 +cabal-version:       2.0
  name:                foundation
@@ -34,11 +34,11 @@ index 224c61308..ef25e37f8 100644
      buildable: False
    else
      build-depends:   base
-diff --git b/contrib/foundation-0.0.26.1/jsbits/bindings.js a/contrib/foundation-0.0.26.1/jsbits/bindings.js
+diff --git b/jsbits/bindings.js a/jsbits/bindings.js
 new file mode 100644
 index 000000000..fc51a85fe
 --- /dev/null
-+++ a/contrib/foundation-0.0.26.1/jsbits/bindings.js
++++ a/jsbits/bindings.js
 @@ -0,0 +1,61 @@
 +
 +// EMCC:EXPORTED_FUNCTIONS _malloc _free

@@ -1,21 +1,21 @@
-diff --git b/contrib/clock-0.8.2/clock.cabal a/contrib/clock-0.8.2/clock.cabal
+diff --git b/clock.cabal a/clock.cabal
 index 253033538..8a73b9640 100644
---- b/contrib/clock-0.8.2/clock.cabal
-+++ a/contrib/clock-0.8.2/clock.cabal
+--- b/clock.cabal
++++ a/clock.cabal
 @@ -84,6 +84,8 @@ library
      if flag(llvm)
        ghc-options:       -fllvm -optlo-O3
- 
+
 +    if os(ghcjs)
 +      js-sources: jsbits/gettime.js
- 
+
  test-suite test
      default-language: Haskell2010
-diff --git b/contrib/clock-0.8.2/jsbits/gettime.js a/contrib/clock-0.8.2/jsbits/gettime.js
+diff --git b/jsbits/gettime.js a/jsbits/gettime.js
 new file mode 100644
 index 000000000..a09f351b9
 --- /dev/null
-+++ a/contrib/clock-0.8.2/jsbits/gettime.js
++++ a/jsbits/gettime.js
 @@ -0,0 +1,23 @@
 +function h$clock_gettime(when, p_d, p_o) {
 +  /* XXX: guess if we have to write 64 bit values:

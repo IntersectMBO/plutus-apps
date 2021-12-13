@@ -1,7 +1,7 @@
-diff --git b/contrib/unix-compat-0.5.3/unix-compat.cabal a/contrib/unix-compat-0.5.3/unix-compat.cabal
+diff --git b/unix-compat.cabal a/unix-compat.cabal
 index 7c59b9fd7..b77275eda 100644
---- b/contrib/unix-compat-0.5.3/unix-compat.cabal
-+++ a/contrib/unix-compat-0.5.3/unix-compat.cabal
+--- b/unix-compat.cabal
++++ a/unix-compat.cabal
 @@ -68,6 +68,7 @@ Library
      include-dirs: include
      includes: HsUnixCompat.h

@@ -1,7 +1,7 @@
-diff --git b/contrib/cryptonite-0.29/cryptonite.cabal a/contrib/cryptonite-0.29/cryptonite.cabal
+diff --git b/cryptonite.cabal a/cryptonite.cabal
 index 83d100b4a..f21284388 100644
---- b/contrib/cryptonite-0.29/cryptonite.cabal
-+++ a/contrib/cryptonite-0.29/cryptonite.cabal
+--- b/cryptonite.cabal
++++ a/cryptonite.cabal
 @@ -59,6 +59,8 @@ extra-source-files:  cbits/*.h
                       cbits/aes/x86ni_impl.c
                       cbits/cryptonite_hash_prefix.c
@@ -21,11 +21,11 @@ index 83d100b4a..f21284388 100644
    if impl(ghc) && flag(integer-gmp)
      Build-depends:   integer-gmp
 
-diff --git b/contrib/cryptonite-0.29/jsbits/bindings.js a/contrib/cryptonite-0.29/jsbits/bindings.js
+diff --git b/jsbits/bindings.js a/jsbits/bindings.js
 new file mode 100644
 index 000000000..01e9c5078
 --- /dev/null
-+++ a/contrib/cryptonite-0.29/jsbits/bindings.js
++++ a/jsbits/bindings.js
 @@ -0,0 +1,525 @@
 +/*
 +  Pointers in emscripten compiled code are represented as offsets
@@ -552,10 +552,10 @@ index 000000000..01e9c5078
 +function h$foundation_sysrandom_linux(buf_d, buf_o, size) {
 +  cryptoObj.getRandomValues(typedArray);
 +}
-diff --git b/contrib/cryptonite-0.29/tests/Number.hs a/contrib/cryptonite-0.29/tests/Number.hs
+diff --git b/tests/Number.hs a/tests/Number.hs
 index 85b5a3dc3..c5681e48e 100644
---- b/contrib/cryptonite-0.29/tests/Number.hs
-+++ a/contrib/cryptonite-0.29/tests/Number.hs
+--- b/tests/Number.hs
++++ a/tests/Number.hs
 @@ -48,11 +48,11 @@ tests = testGroup "number"
              bits  = 5 + baseBits -- generating lower than 5 bits causes an error ..
              prime = withTestDRG testDRG $ generatePrime bits

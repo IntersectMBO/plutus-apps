@@ -1,8 +1,8 @@
-diff --git b/contrib/digest-0.0.1.2/Test.hs a/contrib/digest-0.0.1.2/Test.hs
+diff --git b/Test.hs a/Test.hs
 new file mode 100644
 index 000000000..456818923
 --- /dev/null
-+++ a/contrib/digest-0.0.1.2/Test.hs
++++ a/Test.hs
 @@ -0,0 +1,5 @@
 +import Data.Digest.CRC32
 +
@@ -10,10 +10,10 @@ index 000000000..456818923
 +main = do
 +    print $ crc32 [1,2,3,4,5]
 \ No newline at end of file
-diff --git b/contrib/digest-0.0.1.2/digest.cabal a/contrib/digest-0.0.1.2/digest.cabal
+diff --git b/digest.cabal a/digest.cabal
 index eaea3739b..69f958c1e 100644
---- b/contrib/digest-0.0.1.2/digest.cabal
-+++ a/contrib/digest-0.0.1.2/digest.cabal
+--- b/digest.cabal
++++ a/digest.cabal
 @@ -7,12 +7,12 @@ author:          Eugene Kirpichov <ekirpichov@gmail.com>
  maintainer:      Eugene Kirpichov <ekirpichov@gmail.com>
  category:        Cryptography
@@ -51,11 +51,11 @@ index eaea3739b..69f958c1e 100644
 +  main-is:       Test.hs
 +  build-depends: digest -any
 +               , base
-diff --git b/contrib/digest-0.0.1.2/jsbits/bindings.js a/contrib/digest-0.0.1.2/jsbits/bindings.js
+diff --git b/jsbits/bindings.js a/jsbits/bindings.js
 new file mode 100644
 index 000000000..783592c90
 --- /dev/null
-+++ a/contrib/digest-0.0.1.2/jsbits/bindings.js
++++ a/jsbits/bindings.js
 @@ -0,0 +1,36 @@
 +// EMCC:EXPORTED_FUNCTIONS _malloc _free
 +// EMCC:EXPORTED_FUNCTIONS _adler32 _crc32

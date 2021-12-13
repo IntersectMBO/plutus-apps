@@ -1,7 +1,7 @@
-diff --git b/contrib/lzma-0.0.0.3/lzma.cabal a/contrib/lzma-0.0.0.3/lzma.cabal
+diff --git b/lzma.cabal a/lzma.cabal
 index f53d00f67..e4432b1f1 100644
---- b/contrib/lzma-0.0.0.3/lzma.cabal
-+++ a/contrib/lzma-0.0.0.3/lzma.cabal
+--- b/lzma.cabal
++++ a/lzma.cabal
 @@ -55,9 +55,11 @@ library
      build-depends:     lzma-clib
    else
@@ -9,33 +9,33 @@ index f53d00f67..e4432b1f1 100644
 -    extra-libraries:   lzma
 +    if !os(ghcjs)
 +      extra-libraries:   lzma
- 
+
 -  c-sources:           cbits/lzma_wrapper.c
 +  if !os(ghcjs)
 +    c-sources:           cbits/lzma_wrapper.c
- 
+
    ghc-options:         -Wall
- 
+
 @@ -79,5 +81,6 @@ test-suite lzma-tests
                       , tasty                      >= 0.10     && <1.3
                       , tasty-hunit                >= 0.9      && <0.11
                       , tasty-quickcheck           >= 0.8.3.2  && <0.11
 +                     , time
- 
+
    ghc-options:         -Wall -threaded
-diff --git b/contrib/lzma-0.0.0.3/src/Codec/Compression/Lzma.hs a/contrib/lzma-0.0.0.3/src/Codec/Compression/Lzma.hs
+diff --git b/src/Codec/Compression/Lzma.hs a/src/Codec/Compression/Lzma.hs
 index c0a090783..c59f4c4a5 100644
---- b/contrib/lzma-0.0.0.3/src/Codec/Compression/Lzma.hs
-+++ a/contrib/lzma-0.0.0.3/src/Codec/Compression/Lzma.hs
+--- b/src/Codec/Compression/Lzma.hs
++++ a/src/Codec/Compression/Lzma.hs
 @@ -1,3 +1,4 @@
 +{-# LANGUAGE CPP #-}
  {-# LANGUAGE BangPatterns #-}
- 
+
  -- |
 @@ -20,6 +21,7 @@ module Codec.Compression.Lzma
      , compressWith
      , decompressWith
- 
+
 +#if 0
        -- * Monadic incremental (de)compression API
        --
@@ -45,7 +45,7 @@ index c0a090783..c59f4c4a5 100644
      , decompressST
      , LzmaRet(..)
 +#endif
- 
+
        -- * Parameters
        -- ** Compression parameters
 @@ -81,27 +84,7 @@ decompress = decompressWith defaultDecompressParams
@@ -74,7 +74,7 @@ index c0a090783..c59f4c4a5 100644
 -
 -{-# NOINLINE decompressWith #-}
 +decompressWith _ = id
- 
+
  ----------------------------------------------------------------------------
  ----------------------------------------------------------------------------
 @@ -115,23 +98,9 @@ compress = compressWith defaultCompressParams
@@ -101,7 +101,7 @@ index c0a090783..c59f4c4a5 100644
 +compressWith _ = id
 +
 +#if 0
- 
+
  --------------------------------------------------------------------------------
  --------------------------------------------------------------------------------
 @@ -398,3 +367,5 @@ withChunk emptyChunk nemptyChunk chunk
