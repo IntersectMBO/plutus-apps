@@ -10,7 +10,7 @@ A minimal example that just syncs the chain index:
 @
 `withDefaultRunRequirements` $ \runReq -> do
 
-    syncHandler <- `showingProgress` $ `defaultChainSynHandler` runReq
+    syncHandler <- `showingProgress` $ `defaultChainSyncHandler` runReq
 
     `syncChainIndex` `defaultConfig` runReq syncHandler
 
@@ -32,7 +32,7 @@ module Plutus.ChainIndex.Lib (
     -- ** Synchronisation handlers
     , ChainSyncHandler
     , ChainSyncEvent(..)
-    , defaultChainSynHandler
+    , defaultChainSyncHandler
     , storeFromBlockNo
     , filterTxs
     , showingProgress
@@ -110,8 +110,11 @@ defaultLoggingConfig = Logging.defaultConfig
 -- | Chain synchronisation events.
 data ChainSyncEvent
     = Resume       CI.Point
+    -- ^ Resume from the given point
     | RollForward  CI.ChainSyncBlock CI.Tip
+    -- ^ Append the given block. The tip is the current tip of the node, which is newer than the tip of the block during syncing.
     | RollBackward CI.Point CI.Tip
+    -- ^ Roll back to the given point. The tip is current tip of the node.
 
 toCardanoChainSyncHandler :: RunRequirements -> ChainSyncHandler -> C.ChainSyncEvent -> IO ()
 toCardanoChainSyncHandler runReq handler = \case
@@ -129,8 +132,8 @@ toCardanoChainSyncHandler runReq handler = \case
 type ChainSyncHandler = ChainSyncEvent -> IO ()
 
 -- | The default chain synchronisation event handler. Updates the in-memory state and the database.
-defaultChainSynHandler :: RunRequirements -> ChainSyncHandler
-defaultChainSynHandler runReq evt = void $ runChainIndexDuringSync runReq $ case evt of
+defaultChainSyncHandler :: RunRequirements -> ChainSyncHandler
+defaultChainSyncHandler runReq evt = void $ runChainIndexDuringSync runReq $ case evt of
     (RollForward block _)  -> appendBlock block
     (RollBackward point _) -> rollback point
     (Resume point)         -> resumeSync point
@@ -143,10 +146,14 @@ storeFromBlockNo storeFrom handler (RollForward (CI.Block blockTip txs) chainTip
 storeFromBlockNo _ handler evt = handler evt
 
 -- | Changes the given @ChainSyncHandler@ to only process and store certain transactions.
-filterTxs :: (CI.ChainIndexTx -> Bool) -- ^ Only process transactions for which this function returns @True@.
-  -> (CI.ChainIndexTx -> Bool) -- ^ From those, only store transactions for which this function returns @True@.
-  -> ChainSyncHandler -- ^ The @ChainSyncHandler@ on which the returned @ChainSyncHandler@ is based.
-  -> ChainSyncHandler
+filterTxs
+    :: (CI.ChainIndexTx -> Bool)
+    -- ^ Only process transactions for which this function returns @True@.
+    -> (CI.ChainIndexTx -> Bool)
+    -- ^ From those, only store transactions for which this function returns @True@.
+    -> ChainSyncHandler
+    -- ^ The @ChainSyncHandler@ on which the returned @ChainSyncHandler@ is based.
+    -> ChainSyncHandler
 filterTxs isAccepted isStored handler (RollForward (CI.Block blockTip txs) chainTip) =
     let txs' = map (\(tx, opt) -> (tx, opt { CI.tpoStoreTx = CI.tpoStoreTx opt && isStored tx }))
                 $ filter (isAccepted . fst) txs
@@ -165,12 +172,12 @@ getTipSlot config = do
 
 showProgress :: IORef Integer -> Slot -> Slot -> IO ()
 showProgress lastProgressRef (Slot tipSlot) (Slot blockSlot) = do
-  lastProgress <- readIORef lastProgressRef
-  let pct = (100 * blockSlot) `div` tipSlot
-  if pct > lastProgress then do
-    putStrLn $ "Syncing (" ++ show pct ++ "%)"
-    writeIORef lastProgressRef pct
-  else pure ()
+    lastProgress <- readIORef lastProgressRef
+    let pct = (100 * blockSlot) `div` tipSlot
+    if pct > lastProgress then do
+        putStrLn $ "Syncing (" ++ show pct ++ "%)"
+        writeIORef lastProgressRef pct
+    else pure ()
 
 -- | Changes the given @ChainSyncHandler@ to print out the synchronisation progress percentages.
 showingProgress :: ChainSyncHandler -> IO ChainSyncHandler

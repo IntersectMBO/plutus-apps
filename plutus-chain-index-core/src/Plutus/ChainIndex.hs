@@ -71,6 +71,7 @@ handleChainIndexEffects RunRequirements{trace, stateTVar, conn, securityParam} a
         $ interpret (handleBeam (convertLog BeamLogItem trace))
         $ interpret handleControl
         $ interpret handleQuery
+        -- Insert the 5 effects needed by the handlers of the 3 chain index effects between those 3 effects and 'effs'.
         $ raiseMUnderN @[_,_,_,_,_] @[_,_,_] action
     liftIO $ STM.atomically $ STM.writeTVar stateTVar newState
     pure result
