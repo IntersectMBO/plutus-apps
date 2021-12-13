@@ -35,77 +35,31 @@
         depends = [
           (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
           (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
-          (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
+          (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
           (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
-          (hsPkgs."beam-core" or (errorHandler.buildDepError "beam-core"))
           (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
           (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
           (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
-          (hsPkgs."cardano-ledger-byron" or (errorHandler.buildDepError "cardano-ledger-byron"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
           (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
-          (hsPkgs."cryptonite" or (errorHandler.buildDepError "cryptonite"))
-          (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
-          (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
-          (hsPkgs."fingertree" or (errorHandler.buildDepError "fingertree"))
           (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
-          (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
           (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
           (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
-          (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
-          (hsPkgs."nothunks" or (errorHandler.buildDepError "nothunks"))
           (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
-          (hsPkgs."ouroboros-network-framework" or (errorHandler.buildDepError "ouroboros-network-framework"))
-          (hsPkgs."ouroboros-consensus" or (errorHandler.buildDepError "ouroboros-consensus"))
-          (hsPkgs."ouroboros-consensus-byron" or (errorHandler.buildDepError "ouroboros-consensus-byron"))
-          (hsPkgs."ouroboros-consensus-cardano" or (errorHandler.buildDepError "ouroboros-consensus-cardano"))
-          (hsPkgs."ouroboros-consensus-shelley" or (errorHandler.buildDepError "ouroboros-consensus-shelley"))
           (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
-          (hsPkgs."retry" or (errorHandler.buildDepError "retry"))
-          (hsPkgs."semigroups" or (errorHandler.buildDepError "semigroups"))
-          (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
           (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
-          (hsPkgs."typed-protocols" or (errorHandler.buildDepError "typed-protocols"))
-          (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
-          (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-          (hsPkgs."text" or (errorHandler.buildDepError "text"))
-          (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
-          (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
           (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
-          (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
-          (hsPkgs."warp" or (errorHandler.buildDepError "warp"))
-          (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
-          (hsPkgs."servant-client-core" or (errorHandler.buildDepError "servant-client-core"))
-          (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
+          (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
+          (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
           ];
         buildable = true;
         modules = [
-          "Plutus/ChainIndex"
-          "Plutus/ChainIndex/Api"
-          "Plutus/ChainIndex/ChainIndexError"
-          "Plutus/ChainIndex/ChainIndexLog"
-          "Plutus/ChainIndex/Client"
-          "Plutus/ChainIndex/DbSchema"
-          "Plutus/ChainIndex/Effects"
-          "Plutus/ChainIndex/Emulator"
-          "Plutus/ChainIndex/Emulator/DiskState"
-          "Plutus/ChainIndex/Emulator/Handlers"
-          "Plutus/ChainIndex/Emulator/Server"
-          "Plutus/ChainIndex/Handlers"
-          "Plutus/ChainIndex/Server"
-          "Plutus/ChainIndex/Tx"
-          "Plutus/ChainIndex/TxIdState"
-          "Plutus/ChainIndex/TxOutBalance"
-          "Plutus/ChainIndex/TxUtxoBalance"
-          "Plutus/ChainIndex/Types"
-          "Plutus/ChainIndex/UtxoState"
-          "Plutus/Monitoring/Util"
-          "Cardano/Protocol/Socket/Type"
-          "Cardano/Protocol/Socket/Client"
-          "Plutus/ChainIndex/Compatibility"
-          "Plutus/Contract/CardanoAPI"
+          "Plutus/ChainIndex/App"
+          "Plutus/ChainIndex/CommandLine"
+          "Plutus/ChainIndex/Config"
+          "Plutus/ChainIndex/Logging"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -113,67 +67,11 @@
         "plutus-chain-index" = {
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
-            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
-            (hsPkgs."beam-core" or (errorHandler.buildDepError "beam-core"))
-            (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
-            (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
-            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
-            (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
-            (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
-            (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
-            (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
-            (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
-            (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
-            (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
-            (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
             (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
-            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
-            (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
-            (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
-            (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
-            (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
-            (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
-            (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
             ];
           buildable = true;
-          modules = [ "CommandLine" "Config" "Logging" ];
           hsSourceDirs = [ "app" ];
           mainPath = [ "Main.hs" ];
-          };
-        };
-      tests = {
-        "plutus-chain-index-test" = {
-          depends = [
-            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
-            (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
-            (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
-            (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
-            (hsPkgs."base" or (errorHandler.buildDepError "base"))
-            (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
-            (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
-            (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-            (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
-            (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
-            (hsPkgs."fingertree" or (errorHandler.buildDepError "fingertree"))
-            (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
-            (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
-            (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
-            (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
-            (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
-            (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
-            (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
-            (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
-            (hsPkgs."tasty-hedgehog" or (errorHandler.buildDepError "tasty-hedgehog"))
-            ];
-          buildable = true;
-          modules = [
-            "Generators"
-            "Plutus/ChainIndex/Emulator/DiskStateSpec"
-            "Plutus/ChainIndex/Emulator/HandlersSpec"
-            "Plutus/ChainIndex/HandlersSpec"
-            ];
-          hsSourceDirs = [ "test" ];
-          mainPath = [ "Spec.hs" ];
           };
         };
       };

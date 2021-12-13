@@ -10,7 +10,7 @@
   {
     flags = { defer-plugin-errors = false; };
     package = {
-      specVersion = "2.2";
+      specVersion = "3.0";
       identifier = { name = "plutus-pab"; version = "0.1.0.0"; };
       license = "Apache-2.0";
       copyright = "";
@@ -35,9 +35,10 @@
         depends = [
           (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
           (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
-          (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
+          (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
           (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
           (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+          (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
           (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
           (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
           (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
@@ -123,7 +124,9 @@
           "Cardano/Node/Types"
           "Cardano/Protocol/Socket/Mock/Client"
           "Cardano/Protocol/Socket/Mock/Server"
-          "Cardano/Wallet/Client"
+          "Cardano/Wallet/LocalClient"
+          "Cardano/Wallet/RemoteClient"
+          "Cardano/Wallet/Types"
           "Cardano/Wallet/Mock/API"
           "Cardano/Wallet/Mock/Client"
           "Cardano/Wallet/Mock/Handlers"
@@ -226,6 +229,7 @@
             (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
@@ -238,6 +242,7 @@
           buildable = true;
           modules = [
             "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
             "ContractExample/PayToWallet"
             "ContractExample/WaitForTx"
             "ContractExample"
@@ -265,6 +270,61 @@
           hsSourceDirs = [ "examples/uniswap" ];
           mainPath = [ "Main.hs" ];
           };
+        "plutus-pab-local-cluster" = {
+          depends = [
+            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+            (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
+            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            (hsPkgs."text-class" or (errorHandler.buildDepError "text-class"))
+            (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
+            (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
+            (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
+            (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
+            (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
+            (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
+            (hsPkgs."cardano-wallet" or (errorHandler.buildDepError "cardano-wallet"))
+            (hsPkgs."cardano-wallet-cli" or (errorHandler.buildDepError "cardano-wallet-cli"))
+            (hsPkgs."cardano-wallet-launcher" or (errorHandler.buildDepError "cardano-wallet-launcher"))
+            (hsPkgs."cardano-wallet-core" or (errorHandler.buildDepError "cardano-wallet-core"))
+            (hsPkgs."cardano-wallet-core-integration" or (errorHandler.buildDepError "cardano-wallet-core-integration"))
+            (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
+            (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
+            (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
+            (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
+            (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
+            (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
+            (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
+            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
+            (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
+            (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
+            (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
+            (hsPkgs."row-types" or (errorHandler.buildDepError "row-types"))
+            (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
+            (hsPkgs."openapi3" or (errorHandler.buildDepError "openapi3"))
+            (hsPkgs."async" or (errorHandler.buildDepError "async"))
+            (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
+            (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
+            (hsPkgs."servant-client-core" or (errorHandler.buildDepError "servant-client-core"))
+            (hsPkgs."cardano-addresses" or (errorHandler.buildDepError "cardano-addresses"))
+            ];
+          buildable = true;
+          modules = [
+            "ContractExample"
+            "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
+            "ContractExample/PayToWallet"
+            "ContractExample/WaitForTx"
+            ];
+          hsSourceDirs = [ "local-cluster" "examples" ];
+          mainPath = [ "Main.hs" ];
+          };
         "plutus-pab-test-psgenerator" = {
           depends = [
             (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
@@ -285,6 +345,7 @@
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
             (hsPkgs."quickcheck-instances" or (errorHandler.buildDepError "quickcheck-instances"))
             (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
@@ -304,6 +365,7 @@
           buildable = true;
           modules = [
             "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
             "ContractExample/PayToWallet"
             "Plutus/PAB/Effects/Contract/ContractTest"
             "Plutus/PAB/Simulator/Test"
@@ -347,7 +409,7 @@
             (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
             (hsPkgs."either" or (errorHandler.buildDepError "either"))
             (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
-            (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
+            (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
@@ -368,7 +430,9 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."cardano-api".components.sublibs.gen or (errorHandler.buildDepError "cardano-api:gen"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
@@ -380,6 +444,7 @@
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
             (hsPkgs."quickcheck-instances" or (errorHandler.buildDepError "quickcheck-instances"))
             (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
@@ -397,6 +462,7 @@
           buildable = true;
           modules = [
             "Cardano/Api/NetworkId/ExtraSpec"
+            "Cardano/Wallet/RemoteClientSpec"
             "Cardano/Wallet/ServerSpec"
             "Control/Concurrent/STM/ExtrasSpec"
             ];
@@ -419,11 +485,12 @@
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
             (hsPkgs."monad-logger" or (errorHandler.buildDepError "monad-logger"))
             (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
-            (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
+            (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
             (hsPkgs."quickcheck-instances" or (errorHandler.buildDepError "quickcheck-instances"))
             (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
@@ -452,6 +519,7 @@
             "ContractExample"
             "ContractExample/WaitForTx"
             "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
             "ContractExample/PayToWallet"
             "Plutus/PAB/CoreSpec"
             "Plutus/PAB/CliSpec"
@@ -482,6 +550,7 @@
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
             (hsPkgs."quickcheck-instances" or (errorHandler.buildDepError "quickcheck-instances"))
             (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
@@ -509,6 +578,7 @@
             "ContractExample"
             "ContractExample/WaitForTx"
             "ContractExample/AtomicSwap"
+            "ContractExample/IntegrationTest"
             "ContractExample/PayToWallet"
             "Plutus/PAB/CliSpec"
             "Plutus/PAB/Effects/Contract/ContractTest"

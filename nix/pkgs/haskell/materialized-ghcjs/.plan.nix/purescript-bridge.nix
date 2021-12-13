@@ -11,7 +11,7 @@
     flags = {};
     package = {
       specVersion = "1.10";
-      identifier = { name = "purescript-bridge"; version = "0.13.1.0"; };
+      identifier = { name = "purescript-bridge"; version = "0.14.0.0"; };
       license = "BSD-3-Clause";
       copyright = "";
       maintainer = "robert . klotzner A T gmx . at";
@@ -62,16 +62,23 @@
       tests = {
         "tests" = {
           depends = [
+            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+            (hsPkgs."HUnit" or (errorHandler.buildDepError "HUnit"))
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
-            (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
-            (hsPkgs."text" or (errorHandler.buildDepError "text"))
-            (hsPkgs."wl-pprint-text" or (errorHandler.buildDepError "wl-pprint-text"))
+            (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
             (hsPkgs."hspec" or (errorHandler.buildDepError "hspec"))
             (hsPkgs."hspec-expectations-pretty-diff" or (errorHandler.buildDepError "hspec-expectations-pretty-diff"))
+            (hsPkgs."process" or (errorHandler.buildDepError "process"))
+            (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
+            (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            (hsPkgs."utf8-string" or (errorHandler.buildDepError "utf8-string"))
+            (hsPkgs."wl-pprint-text" or (errorHandler.buildDepError "wl-pprint-text"))
             ];
           buildable = true;
-          modules = [ "TestData" ];
+          modules = [ "TestData" "RoundTrip/Spec" "RoundTrip/Types" ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };

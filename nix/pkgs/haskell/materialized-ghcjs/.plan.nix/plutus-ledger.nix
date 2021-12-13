@@ -86,15 +86,10 @@
           "Ledger/AddressMap"
           "Ledger/Blockchain"
           "Ledger/CardanoWallet"
-          "Ledger/Constraints"
-          "Ledger/Constraints/OffChain"
-          "Ledger/Constraints/OnChain"
-          "Ledger/Constraints/TxConstraints"
           "Ledger/Contexts"
           "Ledger/Crypto"
           "Ledger/Fee"
           "Ledger/Generators"
-          "Ledger/Oracle"
           "Ledger/Orphans"
           "Ledger/Index"
           "Ledger/Scripts"
@@ -108,29 +103,28 @@
           "Ledger/Typed/Scripts/Validators"
           "Ledger/Typed/Tx"
           "Ledger/Typed/TypeUtils"
+          "Ledger/Value"
           ];
         hsSourceDirs = [ "src" ];
         };
       tests = {
         "plutus-ledger-test" = {
           depends = [
+            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."cardano-api".components.sublibs.gen or (errorHandler.buildDepError "cardano-api:gen"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
-            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
+            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
             (hsPkgs."tasty-hedgehog" or (errorHandler.buildDepError "tasty-hedgehog"))
             (hsPkgs."tasty-hunit" or (errorHandler.buildDepError "tasty-hunit"))
-            (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
-            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
-            (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
-            (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
-            (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
-            (hsPkgs."plutus-core" or (errorHandler.buildDepError "plutus-core"))
-            (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
             ];
           buildable = true;
+          modules = [ "Ledger/Tx/CardanoAPISpec" ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };
