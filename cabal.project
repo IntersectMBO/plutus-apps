@@ -13,7 +13,6 @@ packages: doc
           quickcheck-dynamic
           web-ghc
 
-          contrib/cardano-crypto-07397f
           contrib/cryptonite-0.29
           contrib/gauge-0.2.5
           contrib/unix-compat-0.5.3
@@ -85,6 +84,11 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/servant-purescript.git
   tag: a0c7c7e37c95564061247461aef4be505a853538
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-crypto.git
+  tag: 1fff72e39e690676d4156a56858c6b72e1f0bff9
 
 -- Copied from plutus-core
 source-repository-package
