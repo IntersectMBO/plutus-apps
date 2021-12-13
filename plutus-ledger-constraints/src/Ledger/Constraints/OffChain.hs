@@ -372,11 +372,8 @@ mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
 --
 -- TODO: In the future, the minimum Ada value should be configurable.
 adjustUnbalancedTx :: UnbalancedTx -> UnbalancedTx
-adjustUnbalancedTx = over (tx . Tx.outputs) adjustTxOuts
+adjustUnbalancedTx = over (tx . Tx.outputs . traverse) adjustTxOut
   where
-    adjustTxOuts :: [TxOut] -> [TxOut]
-    adjustTxOuts = fmap adjustTxOut . filter (not . Value.isZero . txOutValue)
-
     adjustTxOut :: TxOut -> TxOut
     adjustTxOut txOut =
       let missingLovelace = max 0 (Ledger.minAdaTxOut - Ada.fromValue (txOutValue txOut))
