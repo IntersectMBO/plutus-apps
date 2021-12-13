@@ -13,13 +13,6 @@ packages: doc
           quickcheck-dynamic
           web-ghc
 
-          contrib/cryptonite-0.29
-          contrib/gauge-0.2.5
-          contrib/unix-compat-0.5.3
-          contrib/network-info-0.2.0.10
-          contrib/scrypt-0.5.0
-          contrib/digest-0.0.1.2
-
           js-bindgen
 
 -- We never, ever, want this.
