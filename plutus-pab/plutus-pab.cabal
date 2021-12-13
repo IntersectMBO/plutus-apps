@@ -432,6 +432,7 @@ test-suite plutus-pab-test-light
         Cardano.Wallet.RemoteClientSpec
         Cardano.Wallet.ServerSpec
         Control.Concurrent.STM.ExtrasSpec
+        Plutus.PAB.ArbitrarySpec
 
     build-depends:
         QuickCheck -any,
@@ -455,11 +456,13 @@ test-suite plutus-pab-test-light
         plutus-pab,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
+        plutus-tx -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
         tasty-hunit -any,
         smallcheck -any,
+        hedgehog-quickcheck -any,
         tasty-hedgehog -any,
         tasty-smallcheck -any,
         tasty-quickcheck -any,
