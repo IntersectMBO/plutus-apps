@@ -66,6 +66,7 @@ library
         Ledger.Typed.Tx
         Ledger.Typed.TypeUtils
         Ledger.Value
+        Ledger.Validation
     reexported-modules:
         Data.Aeson.Extras,
         Data.Either.Extras,
