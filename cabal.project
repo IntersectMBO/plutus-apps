@@ -110,7 +110,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 6fcbd8a20dd3f5f009b4363f84e66fae6b1a6c5b
+  tag: 506180d2627994c5d947f92f00aaa345d722776f
   subdir:
     base-deriving-via
     binary
@@ -259,7 +259,7 @@ source-repository-package
 source-repository-package
  type: git
  location: https://github.com/input-output-hk/plutus
- tag: e8a8a9e7f29b80f1f57c18c6040a8f9498457d24
+ tag: 0cfe2309f22b6fb7d748c91d209c862ff6fa9ea4
  subdir:
    plutus-ledger-api
    word-array

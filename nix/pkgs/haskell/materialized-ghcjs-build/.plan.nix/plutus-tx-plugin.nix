@@ -108,7 +108,6 @@
             "Plugin/Errors/Spec"
             "Plugin/Functions/Spec"
             "Plugin/Laziness/Spec"
-            "Plugin/NoTrace/Spec"
             "Plugin/Primitives/Spec"
             "Plugin/Profiling/Spec"
             "Plugin/Typeclasses/Spec"
