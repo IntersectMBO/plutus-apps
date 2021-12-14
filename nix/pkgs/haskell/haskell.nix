@@ -359,7 +359,10 @@ let
           gauge.patches = [ ../../../contrib/gauge-0.2.5.patch ];
           lzma.patches = [ ../../../contrib/lzma-0.0.0.3.patch ];
           mersenne-random-pure64.patches = [ ../../../contrib/mersenne-random-pure64-0.2.2.0.patch ];
-          network.patches = [ ../../../contrib/network-3.1.2.1.patch ];
+          network.patches = [
+            ({ version, revision }: (if version == "3.1.2.1" then ../../../contrib/network-3.1.2.1.patch else null))
+            ({ version, revision }: (if version == "3.1.2.5" then ../../../contrib/network-3.1.2.5.patch else null))
+          ];
           network.postUnpack = ''
             export patchFlags="--binary -p1"
           '';
@@ -517,10 +520,12 @@ let
             # unix-compat.patches = [ ../../../contrib/unix-compat-0.5.3.patch ];
           };
       })
-    ] ++ lib.optional enableHaskellProfiling {
-      enableLibraryProfiling = true;
-      enableExecutableProfiling = true;
-    };
+    ] ++ lib.optional
+      enableHaskellProfiling
+      {
+        enableLibraryProfiling = true;
+        enableExecutableProfiling = true;
+      };
   });
 
 in
