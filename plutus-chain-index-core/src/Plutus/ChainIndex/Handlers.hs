@@ -21,7 +21,6 @@ module Plutus.ChainIndex.Handlers
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
 import Control.Lens (Lens', _Just, ix, view, (^?))
-import Control.Monad (when)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, addRowsInBatches, combined, deleteRows,
@@ -56,8 +55,8 @@ import Plutus.ChainIndex.DbSchema
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Tx
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
-import Plutus.ChainIndex.Types (BlockProcessOption (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
-                                TxUtxoBalance (..), tipAsPoint)
+import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
+                                TxProcessOption (..), TxUtxoBalance (..), tipAsPoint)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Ada qualified as Ada
@@ -296,9 +295,9 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlock tip_ transactions opts -> do
+    AppendBlock (Block tip_ transactions) -> do
         oldIndex <- get @ChainIndexState
-        let newUtxoState = TxUtxoBalance.fromBlock tip_ transactions
+        let newUtxoState = TxUtxoBalance.fromBlock tip_ (map fst transactions)
         case UtxoState.insert newUtxoState oldIndex of
             Left err -> do
                 let reason = InsertionFailed err
@@ -311,7 +310,7 @@ handleControl = \case
                   lbcResult -> do
                     put $ UtxoState.reducedIndex lbcResult
                     reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
-                when (bpoStoreTxs opts) $ insert $ foldMap fromTx transactions
+                insert $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
                 insertUtxoDb newUtxoState
                 logDebug $ InsertionSuccess tip_ insertPosition
     Rollback tip_ -> do
@@ -325,7 +324,10 @@ handleControl = \case
                 put rolledBackIndex
                 rollbackUtxoDb $ tipAsPoint newTip
                 logDebug $ RollbackSuccess newTip
-    ResumeSync tip_ -> restoreStateFromDb tip_
+    ResumeSync tip_ -> do
+        rollbackUtxoDb tip_
+        newState <- restoreStateFromDb
+        put newState
     CollectGarbage -> do
         -- Rebuild the index using only transactions that still have at
         -- least one output in the UTXO set
@@ -401,21 +403,15 @@ rollbackUtxoDb (Point (toDbValue -> slot) _) = do
     deleteRows $ delete (unspentOutputRows db) (\row -> unTipRowId (_unspentOutputRowTip row) >. val_ slot)
     deleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
 
-restoreStateFromDb ::
-    ( Member (State ChainIndexState) effs
-    , Member BeamEffect effs
-    )
-    => Point
-    -> Eff effs ()
-restoreStateFromDb point = do
-    rollbackUtxoDb point
+restoreStateFromDb :: Member BeamEffect effs => Eff effs ChainIndexState
+restoreStateFromDb = do
     uo <- selectList . select $ all_ (unspentOutputRows db)
     ui <- selectList . select $ all_ (unmatchedInputRows db)
     let balances = Map.fromListWith (<>) $ fmap outputToTxUtxoBalance uo ++ fmap inputToTxUtxoBalance ui
     tips <- selectList . select
         . orderBy_ (asc_ . _tipRowSlot)
         $ all_ (tipRows db)
-    put $ FT.fromList . fmap (toUtxoState balances) $ tips
+    pure $ FT.fromList . fmap (toUtxoState balances) $ tips
     where
         outputToTxUtxoBalance :: UnspentOutputRow -> (Word64, TxUtxoBalance)
         outputToTxUtxoBalance (UnspentOutputRow (TipRowId slot) outRef)
