@@ -642,3 +642,57 @@ executable sync-client
         plutus-ledger,
         plutus-pab,
         text
+
+
+-- test JSON transaction processing, intended for JS library
+test-suite pab-mktx
+    type:             exitcode-stdio-1.0
+    main-is: Test.hs
+    hs-source-dirs:
+        mktx
+    default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
+    ghc-options: -Wall -Wnoncanonical-monad-instances
+                 -Wincomplete-uni-patterns -Wincomplete-record-updates
+                 -Wredundant-constraints -Widentities
+    build-depends:
+        base >= 4.9 && <5,
+        aeson -any,
+        bytestring -any,
+        cardano-crypto-class -any,
+        containers -any,
+        data-default -any,
+        flat -any,
+        freer-extras -any,
+        hedgehog -any,
+        prettyprinter -any,
+        QuickCheck -any,
+        tasty -any,
+        tasty-hunit -any,
+        tasty-golden -any,
+        tasty-quickcheck -any,
+        text -any,
+        lens -any,
+        mtl -any,
+        row-types -any,
+        freer-simple -any,
+        foldl -any,
+        streaming -any,
+        directory -any,
+        filepath -any,
+        serialise -any,
+        plutus-core -any,
+        plutus-ledger-api -any,
+        plutus-pab -any,
+        plutus-tx -any,
+        plutus-contract -any,
+        plutus-chain-index-core -any,
+        plutus-ledger -any,
+        plutus-ledger-constraints -any,
+        plutus-use-cases -any,
+        optparse-applicative -any,
+        aeson-pretty -any,
+        cardano-api -any,
+        cardano-binary -any,
+        cborg -any,
+        memory -any
