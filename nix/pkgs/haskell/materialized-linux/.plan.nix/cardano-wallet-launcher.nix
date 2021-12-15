@@ -11,7 +11,10 @@
     flags = { release = false; };
     package = {
       specVersion = "1.10";
-      identifier = { name = "cardano-wallet-launcher"; version = "2021.9.29"; };
+      identifier = {
+        name = "cardano-wallet-launcher";
+        version = "2021.12.15";
+        };
       license = "Apache-2.0";
       copyright = "2018-2020 IOHK";
       maintainer = "operations@iohk.io";

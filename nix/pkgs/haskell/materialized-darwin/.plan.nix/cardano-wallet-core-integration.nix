@@ -13,7 +13,7 @@
       specVersion = "1.10";
       identifier = {
         name = "cardano-wallet-core-integration";
-        version = "2021.9.29";
+        version = "2021.12.15";
         };
       license = "Apache-2.0";
       copyright = "2018-2020 IOHK";
@@ -40,6 +40,7 @@
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."aeson-qq" or (errorHandler.buildDepError "aeson-qq"))
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
+          (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
           (hsPkgs."base58-bytestring" or (errorHandler.buildDepError "base58-bytestring"))
           (hsPkgs."bech32" or (errorHandler.buildDepError "bech32"))
           (hsPkgs."bech32-th" or (errorHandler.buildDepError "bech32-th"))
@@ -65,6 +66,7 @@
           (hsPkgs."either" or (errorHandler.buildDepError "either"))
           (hsPkgs."extra" or (errorHandler.buildDepError "extra"))
           (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
+          (hsPkgs."flat" or (errorHandler.buildDepError "flat"))
           (hsPkgs."fmt" or (errorHandler.buildDepError "fmt"))
           (hsPkgs."generic-lens" or (errorHandler.buildDepError "generic-lens"))
           (hsPkgs."generic-lens-core" or (errorHandler.buildDepError "generic-lens-core"))
@@ -84,6 +86,7 @@
           (hsPkgs."retry" or (errorHandler.buildDepError "retry"))
           (hsPkgs."say" or (errorHandler.buildDepError "say"))
           (hsPkgs."scrypt" or (errorHandler.buildDepError "scrypt"))
+          (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
           (hsPkgs."string-interpolate" or (errorHandler.buildDepError "string-interpolate"))
           (hsPkgs."template-haskell" or (errorHandler.buildDepError "template-haskell"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
