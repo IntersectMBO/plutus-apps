@@ -107,11 +107,11 @@ trimIndex ::
   => Integer
   -> UtxoIndex a
   -> UtxoIndex a
-trimIndex 0          ix = Debug.trace ("Trimming index @0") $ ix
+trimIndex 0          ix = ix
 trimIndex kParameter ix =
-    let (lb, rb) = Debug.trace ("Trimming index @" <> show kParameter) $ bounds ix
-    in  if (rb - lb) > kParameter * 2
-        then FT.dropUntil (\(_, uxst) -> rb - blockNumber (view usTip uxst) <= kParameter) ix
+    let (lb, rb) = bounds ix
+    in  if (rb - lb) > kParameter * 10
+        then Debug.trace "Collecting garbage.." $ FT.dropUntil (\(_, uxst) -> rb - blockNumber (view usTip uxst) <= kParameter) ix
         else ix
     where
         bounds :: Monoid a => UtxoIndex a -> (Integer, Integer)

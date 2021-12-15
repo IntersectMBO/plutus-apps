@@ -8,7 +8,6 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
   startNodeClient
   , processMockBlock
   , processChainSyncEvent
-  , garbageCollect
   ) where
 
 import Cardano.Api (BlockInMode (..), ChainPoint (..), NetworkId)
@@ -31,15 +30,14 @@ import Control.Concurrent.STM qualified as STM
 import Control.Lens
 import Control.Monad (forM_, void, when)
 import Control.Tracer (nullTracer)
-import Data.Foldable (foldl', traverse_)
+import Data.Foldable (foldl')
 import Data.Maybe (catMaybes)
 import Ledger.TimeSlot (SlotConfig)
-import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
-                          InsertUtxoFailed (..), InsertUtxoSuccess (..), RollbackFailed (..), RollbackResult (..),
-                          Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance, TxValidity (..),
-                          UtxoState (..), blockId, citxTxId, dropOlder, fromOnChainTx, insert, trimIndex, utxoState)
+import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), InsertUtxoFailed (..),
+                          InsertUtxoSuccess (..), RollbackFailed (..), RollbackResult (..), Tip (..),
+                          TxConfirmedState (..), TxIdState (..), TxOutBalance, TxValidity (..), UtxoState (..), blockId,
+                          citxTxId, fromOnChainTx, insert, trimIndex, utxoState)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint)
-import Plutus.ChainIndex.TxIdState (chainConstant)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
@@ -98,24 +96,19 @@ blockAndSlot BlockchainEnv{beCurrentBlock, beCurrentSlot} =
 -- | Process a chain sync event that we receive from the alonzo node client
 processChainSyncEvent :: BlockchainEnv -> ChainSyncEvent -> STM (Either SyncActionFailure (Slot, BlockNumber))
 processChainSyncEvent blockchainEnv event = do
-  result <- case event of
-              Resume _ -> Right <$> blockAndSlot blockchainEnv
-              RollForward (BlockInMode (C.Block header transactions) era) _ ->
-                case era of
-                  -- Unfortunately, we need to pattern match again all eras because
-                  -- 'processBlock' has the constraints 'C.IsCardanoEra era', but not
-                  -- 'C.BlockInMode'.
-                  C.ByronEraInCardanoMode   -> processBlock header blockchainEnv transactions era
-                  C.ShelleyEraInCardanoMode -> processBlock header blockchainEnv transactions era
-                  C.AllegraEraInCardanoMode -> processBlock header blockchainEnv transactions era
-                  C.MaryEraInCardanoMode    -> processBlock header blockchainEnv transactions era
-                  C.AlonzoEraInCardanoMode  -> processBlock header blockchainEnv transactions era
-              RollBackward chainPoint _ -> runRollback blockchainEnv chainPoint
-  flip traverse_ result $ \(_, BlockNumber n) -> do
-    if n `mod` 5_000 == 0
-      then garbageCollect blockchainEnv
-      else pure ()
-  pure result
+  case event of
+    Resume _ -> Right <$> blockAndSlot blockchainEnv
+    RollForward (BlockInMode (C.Block header transactions) era) _ ->
+      case era of
+        -- Unfortunately, we need to pattern match again all eras because
+        -- 'processBlock' has the constraints 'C.IsCardanoEra era', but not
+        -- 'C.BlockInMode'.
+        C.ByronEraInCardanoMode   -> processBlock header blockchainEnv transactions era
+        C.ShelleyEraInCardanoMode -> processBlock header blockchainEnv transactions era
+        C.AllegraEraInCardanoMode -> processBlock header blockchainEnv transactions era
+        C.MaryEraInCardanoMode    -> processBlock header blockchainEnv transactions era
+        C.AlonzoEraInCardanoMode  -> processBlock header blockchainEnv transactions era
+    RollBackward chainPoint _ -> runRollback blockchainEnv chainPoint
 
 data SyncActionFailure
   = RollbackFailure RollbackFailed
@@ -148,19 +141,6 @@ txEvent tx =
   let validity = case tx of ChainIndexTx { _citxOutputs = ValidTx _ } -> TxValid
                             ChainIndexTx { _citxOutputs = InvalidTx } -> TxInvalid
    in (view citxTxId tx, TxOutBalance.fromTx tx, validity)
-
--- | Drop all entries in the beTxChanges field that are older than
--- 'chainConstant'.
-garbageCollect :: BlockchainEnv -> STM ()
-garbageCollect BlockchainEnv{beTxChanges, beTxOutChanges, beCurrentBlock} = do
-  txIdStateIndex <- STM.readTVar beTxChanges
-  txOutBalanceStateIndex <- STM.readTVar beTxOutChanges
-  currentBlock   <- STM.readTVar beCurrentBlock
-
-  let targetBlock = BlockNumber $ unBlockNumber currentBlock - fromIntegral (unDepth chainConstant)
-
-  STM.writeTVar beTxChanges $ dropOlder targetBlock txIdStateIndex
-  STM.writeTVar beTxOutChanges $ dropOlder targetBlock txOutBalanceStateIndex
 
 -- | Update the blockchain env. with changes from a new block of cardano
 --   transactions in any era

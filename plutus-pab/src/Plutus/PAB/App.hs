@@ -67,8 +67,7 @@ import Plutus.ChainIndex.Client qualified as ChainIndex
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers), PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance.BlockchainEnv qualified as BlockchainEnv
-import Plutus.PAB.Core.ContractInstance.STM as Instances (BlockchainEnv (beRollbackHistory), InstancesState,
-                                                          emptyInstancesState)
+import Plutus.PAB.Core.ContractInstance.STM as Instances (InstancesState, emptyInstancesState)
 import Plutus.PAB.Db.Beam.ContractStore qualified as BeamEff
 import Plutus.PAB.Db.Memory.ContractStore (InMemInstances, initialInMemInstances)
 import Plutus.PAB.Db.Memory.ContractStore qualified as InMem
@@ -89,8 +88,6 @@ import Wallet.Effects (WalletEffect)
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Error (WalletAPIError)
 import Wallet.Types (ContractInstanceId)
-
-import Debug.Trace qualified as Debug
 
 ------------------------------------------------------------
 
