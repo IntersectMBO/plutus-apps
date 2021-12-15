@@ -27,6 +27,7 @@ module Plutus.ChainIndex.UtxoState(
     , InsertUtxoSuccess(..)
     , InsertUtxoFailed(..)
     , insert
+    , trimIndex
     -- * Rollbacks
     , RollbackFailed(..)
     , RollbackResult(..)

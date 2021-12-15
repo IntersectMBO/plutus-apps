@@ -149,16 +149,17 @@ data OpenTxOutProducedRequest =
 --   may be interested in.
 data BlockchainEnv =
     BlockchainEnv
-        { beCurrentSlot  :: TVar Slot -- ^ Current slot
-        , beTxChanges    :: TVar (UtxoIndex TxIdState) -- ^ Map holding metadata which determines the status of transactions.
-        , beTxOutChanges :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
-        , beCurrentBlock :: TVar BlockNumber -- ^ Current block
+        { beRollbackHistory :: Maybe Integer -- ^ How much history do we retain in the environment.
+        , beCurrentSlot     :: TVar Slot -- ^ Current slot
+        , beTxChanges       :: TVar (UtxoIndex TxIdState) -- ^ Map holding metadata which determines the status of transactions.
+        , beTxOutChanges    :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
+        , beCurrentBlock    :: TVar BlockNumber -- ^ Current block.
         }
 
 -- | Initialise an empty 'BlockchainEnv' value
 emptyBlockchainEnv :: STM BlockchainEnv
 emptyBlockchainEnv =
-    BlockchainEnv
+    BlockchainEnv Nothing
         <$> STM.newTVar 0
         <*> STM.newTVar mempty
         <*> STM.newTVar mempty
