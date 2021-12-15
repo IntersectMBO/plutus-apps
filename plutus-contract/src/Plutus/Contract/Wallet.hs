@@ -36,6 +36,7 @@ import Data.Aeson (FromJSON (parseJSON), Object, ToJSON (toJSON), Value (String)
 import Data.Aeson.Extras qualified as JSON
 import Data.Aeson.Types (Parser, parseFail)
 import Data.Bifunctor (first)
+import Data.ByteString qualified as BS
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
@@ -218,9 +219,12 @@ instance FromJSON ExportTxInput where
           parseAsset :: Object -> Parser (C.PolicyId, C.AssetName, C.Quantity)
           parseAsset o = do
               policyId <- o .: "policy_id"
-              assetName <- o .: "asset_name"
+              -- we specify the type of asset name to decode hex bytecode
+              -- TODO: remove after bumping the cardano-node with
+              -- proper 'AssetName' aeson instances
+              assetName :: BS.ByteString <- o .: "asset_name"
               qty <- o .: "quantity"
-              pure (policyId, assetName, qty)
+              pure (policyId, C.AssetName assetName, qty)
 
 instance ToJSON ExportTxInput where
     toJSON ExportTxInput{etxiId, etxiTxIx, etxiLovelaceQuantity, etxiDatumHash, etxiAssets, etxiAddress} =
@@ -231,6 +235,8 @@ instance ToJSON ExportTxInput where
             , "amount" .= object ["quantity" .= etxiLovelaceQuantity, "unit" .= ("lovelace" :: String)]
             , "datum" .= etxiDatumHash
             , "assets" .= fmap (\(p, a, q) -> object ["policy_id" .= p, "asset_name" .= (C.serialiseToRawBytesHexText a), "quantity" .= q]) etxiAssets
+            -- TODO: remove 'serialiseToRawBytesHexText' after bumping the cardano-node with
+            -- proper 'AssetName' aeson instances
             ]
 
 export :: C.ProtocolParameters -> C.NetworkId -> UnbalancedTx -> Either CardanoAPI.ToCardanoError ExportTx
