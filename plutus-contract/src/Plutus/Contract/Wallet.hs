@@ -230,7 +230,7 @@ instance ToJSON ExportTxInput where
             , "address" .= C.serialiseAddress etxiAddress
             , "amount" .= object ["quantity" .= etxiLovelaceQuantity, "unit" .= ("lovelace" :: String)]
             , "datum" .= etxiDatumHash
-            , "assets" .= fmap (\(p, a, q) -> object ["policy_id" .= p, "asset_name" .= a, "quantity" .= q]) etxiAssets
+            , "assets" .= fmap (\(p, a, q) -> object ["policy_id" .= p, "asset_name" .= (C.serialiseToRawBytesHexText a), "quantity" .= q]) etxiAssets
             ]
 
 export :: C.ProtocolParameters -> C.NetworkId -> UnbalancedTx -> Either CardanoAPI.ToCardanoError ExportTx
