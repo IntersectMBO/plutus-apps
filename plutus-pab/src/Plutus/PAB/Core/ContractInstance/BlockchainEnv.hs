@@ -37,7 +37,7 @@ import Ledger.TimeSlot (SlotConfig)
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
                           InsertUtxoFailed (..), InsertUtxoSuccess (..), RollbackFailed (..), RollbackResult (..),
                           Tip (..), TxConfirmedState (..), TxIdState (..), TxOutBalance, TxValidity (..),
-                          UtxoState (..), blockId, citxTxId, dropOlder, fromOnChainTx, insert, utxoState)
+                          UtxoState (..), blockId, citxTxId, dropOlder, fromOnChainTx, insert, trimIndex, utxoState)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint)
 import Plutus.ChainIndex.TxIdState (chainConstant)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
@@ -49,12 +49,13 @@ import Plutus.Contract.CardanoAPI (fromCardanoTx)
 startNodeClient ::
   FilePath -- ^ Socket to connect to node
   -> NodeMode -- ^ Whether to connect to real node or mock node
+  -> Integer  -- ^ How much history do we remember for rollbacks
   -> SlotConfig -- ^ Slot config used by the node
   -> NetworkId -- ^ Cardano network ID
   -> InstancesState -- ^ In-memory state of running contract instances
   -> IO BlockchainEnv
-startNodeClient socket mode slotConfig networkId instancesState = do
-    env <- STM.atomically emptyBlockchainEnv
+startNodeClient socket mode rollbackHistory slotConfig networkId instancesState = do
+    env <- STM.atomically $ emptyBlockchainEnv rollbackHistory
     case mode of
       MockNode -> do
         void $ MockClient.runChainSync socket slotConfig
@@ -189,7 +190,7 @@ updateTransactionState
   -> BlockchainEnv
   -> t (TxId, TxOutBalance, TxValidity)
   -> STM (Either SyncActionFailure (Slot, BlockNumber))
-updateTransactionState tip env@BlockchainEnv{beTxChanges, beTxOutChanges, beCurrentBlock} xs = do
+updateTransactionState tip env@BlockchainEnv{beRollbackHistory, beTxChanges, beTxOutChanges, beCurrentBlock} xs = do
     txIdStateIndex <- STM.readTVar beTxChanges
     let txIdState = _usTxUtxoData $ utxoState txIdStateIndex
     txUtxoBalanceIndex <- STM.readTVar beTxOutChanges
@@ -202,8 +203,8 @@ updateTransactionState tip env@BlockchainEnv{beTxChanges, beTxOutChanges, beCurr
 
     case (txIdStateInsert, txUtxoBalanceInsert) of
       (Right InsertUtxoSuccess{newIndex=newTxIdState}, Right InsertUtxoSuccess{newIndex=newTxOutBalance}) -> do -- TODO: Get tx out status another way
-        STM.writeTVar beTxChanges newTxIdState
-        STM.writeTVar beTxOutChanges newTxOutBalance
+        STM.writeTVar beTxChanges $ trimIndex beRollbackHistory newTxIdState
+        STM.writeTVar beTxOutChanges $ trimIndex beRollbackHistory newTxOutBalance
         STM.writeTVar beCurrentBlock (succ blockNumber)
         Right <$> blockAndSlot env
       (Left e, _) -> pure $ Left $ InsertUtxoStateFailure e

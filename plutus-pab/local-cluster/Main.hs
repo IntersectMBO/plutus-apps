@@ -206,7 +206,7 @@ launchPAB ::
     -> ChainIndexPort -- ^ Port of the chain index
     -> IO ()
 launchPAB passPhrase dir walletUrl (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
-    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
+    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = 0, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
         networkID = NetworkIdWrapper CAPI.Mainnet
         config =
             PAB.Config.defaultConfig

@@ -6,6 +6,7 @@ pabWebserverConfig:
   baseUrl: http://localhost:9080
   staticDir: .
   permissiveCorsPolicy: False
+  rollbackHistory: 10
 
 walletServerConfig:
   tag: LocalWalletConfig

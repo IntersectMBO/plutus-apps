@@ -35,9 +35,10 @@ import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
 import Plutus.PAB.Monitoring.Util (PrettyObject (..), convertLog)
 import Plutus.PAB.Run.Cli
-import Plutus.PAB.Run.CommandParser
+import Plutus.PAB.Run.CommandParser as Cmd
 import Plutus.PAB.Run.PSGenerator (HasPSTypes)
 import Plutus.PAB.Types (Config (..), PABError (MissingConfigFileOption))
+import Plutus.PAB.Types qualified as Cfg (WebserverConfig (..))
 import Prettyprinter (Pretty (pretty))
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
@@ -76,7 +77,7 @@ runWithOpts :: forall a.
     -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
     -> AppOpts
     -> IO ()
-runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
+runWithOpts userContractHandler mc AppOpts { minLogLevel, Cmd.rollbackHistory, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
 
     -- Parse config files and initialize logging
     logConfig <- maybe defaultConfig loadConfig logConfigPath
@@ -96,10 +97,13 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, passphr
             Nothing -> pure $ Left MissingConfigFileOption
             Just p  -> do Right <$> (liftIO $ decodeFileThrow p)
 
-    let mkArgs config@Config{nodeServerConfig} = ConfigCommandArgs
+    let mkArgs config@Config{nodeServerConfig, pabWebserverConfig} = ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
-                , ccaPABConfig = config { nodeServerConfig = nodeServerConfig { mscPassphrase = passphrase <|> mscPassphrase nodeServerConfig }}
+                , ccaPABConfig = config { nodeServerConfig = nodeServerConfig { mscPassphrase = passphrase <|> mscPassphrase nodeServerConfig }
+                                        , pabWebserverConfig = pabWebserverConfig { Cfg.rollbackHistory = if rollbackHistory /= 0
+                                                                                                          then rollbackHistory
+                                                                                                          else Cfg.rollbackHistory pabWebserverConfig } }
                 , ccaAvailability = serviceAvailability
                 , ccaStorageBackend = storageBackend
                 }

@@ -51,6 +51,8 @@ import Plutus.ChainIndex.ChainIndexLog (InsertUtxoPosition (..))
 import Plutus.ChainIndex.Types (Depth (..), Point (..), Tip (..), blockNumber, pointsToTip)
 import Prettyprinter (Pretty (..))
 
+import Debug.Trace qualified as Debug
+
 -- | UTXO / ledger state, kept in memory. We are only interested in the UTXO set, everything else is stored
 --   on disk. This is OK because we don't need to validate transactions when they come in.
 data UtxoState a =
@@ -105,8 +107,9 @@ trimIndex ::
   => Integer
   -> UtxoIndex a
   -> UtxoIndex a
+trimIndex 0          ix = Debug.trace ("Trimming index @0") $ ix
 trimIndex kParameter ix =
-    let (lb, rb) = bounds ix
+    let (lb, rb) = Debug.trace ("Trimming index @" <> show kParameter) $ bounds ix
     in  if (rb - lb) > kParameter * 2
         then FT.dropUntil (\(_, uxst) -> rb - blockNumber (view usTip uxst) <= kParameter) ix
         else ix
@@ -130,9 +133,8 @@ insert ::
 insert   UtxoState{_usTip=TipAtGenesis} _ = Left InsertUtxoNoTip
 insert s@UtxoState{_usTip= thisTip} ix =
     -- This number will be made into a command line argument in a future PR.
-    let ix'             = trimIndex 500 ix
-        (before, after) = FT.split ((s <=) . snd) ix'
-    in case tip (utxoState after) of
+    let (before, after) = FT.split ((s <=) . snd) ix
+    in case Debug.trace ("Processing : " <> show thisTip) $ tip (utxoState after) of
         TipAtGenesis -> Right $ InsertUtxoSuccess{newIndex = before FT.|> s, insertPosition = InsertAtEnd}
         t | t > thisTip -> Right $ InsertUtxoSuccess{newIndex = (before FT.|> s) <> after, insertPosition = InsertBeforeEnd}
           | otherwise   -> Left  $ DuplicateBlock t

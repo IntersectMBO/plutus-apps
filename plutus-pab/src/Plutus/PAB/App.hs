@@ -67,7 +67,8 @@ import Plutus.ChainIndex.Client qualified as ChainIndex
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers), PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance.BlockchainEnv qualified as BlockchainEnv
-import Plutus.PAB.Core.ContractInstance.STM as Instances (InstancesState, emptyInstancesState)
+import Plutus.PAB.Core.ContractInstance.STM as Instances (BlockchainEnv (beRollbackHistory), InstancesState,
+                                                          emptyInstancesState)
 import Plutus.PAB.Db.Beam.ContractStore qualified as BeamEff
 import Plutus.PAB.Db.Memory.ContractStore (InMemInstances, initialInMemInstances)
 import Plutus.PAB.Db.Memory.ContractStore qualified as InMem
@@ -81,13 +82,15 @@ import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (SMultiAgent), PABMultiAgentMs
 import Plutus.PAB.Timeout (Timeout (Timeout))
 import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
                          PABError (BeamEffectError, ChainIndexError, NodeClientError, RemoteWalletWithMockNodeError, WalletClientError, WalletError),
-                         WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, endpointTimeout,
-                         nodeServerConfig, pabWebserverConfig, walletServerConfig)
+                         WebserverConfig (WebserverConfig, rollbackHistory), chainIndexConfig, dbConfig,
+                         endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
 import Servant.Client (ClientEnv, ClientError, mkClientEnv)
 import Wallet.Effects (WalletEffect)
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Error (WalletAPIError)
 import Wallet.Types (ContractInstanceId)
+
+import Debug.Trace qualified as Debug
 
 ------------------------------------------------------------
 
@@ -122,9 +125,10 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
     EffectHandlers
         { initialiseEnvironment = do
             env <- liftIO $ mkEnv trace config
-            let Config{nodeServerConfig=MockServerConfig{mscSocketPath, mscSlotConfig, mscNodeMode, mscNetworkId=NetworkIdWrapper networkId}} = config
+            let Config { nodeServerConfig = MockServerConfig{mscSocketPath, mscSlotConfig, mscNodeMode, mscNetworkId = NetworkIdWrapper networkId}
+                       , pabWebserverConfig = WebserverConfig{rollbackHistory} } = config
             instancesState <- liftIO $ STM.atomically Instances.emptyInstancesState
-            blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient mscSocketPath mscNodeMode mscSlotConfig networkId instancesState
+            blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient mscSocketPath mscNodeMode rollbackHistory mscSlotConfig networkId instancesState
             pure (instancesState, blockchainEnv, env)
 
         , handleLogMessages =
