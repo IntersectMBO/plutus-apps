@@ -286,7 +286,7 @@ handleAddSignature ::
     -> Eff effs Tx
 handleAddSignature tx = do
     (PaymentPrivateKey privKey) <- gets ownPaymentPrivateKey
-    pure (Ledger.addSignature privKey tx)
+    pure (Ledger.addSignature' privKey tx)
 
 ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
@@ -592,14 +592,14 @@ signTxWithPrivateKey
 signTxWithPrivateKey (PaymentPrivateKey pk) tx pkh@(PaymentPubKeyHash pubK) = do
     let ownPaymentPubKey = Ledger.toPublicKey pk
     if Ledger.pubKeyHash ownPaymentPubKey == pubK
-    then pure (Ledger.addSignature pk tx)
+    then pure (Ledger.addSignature' pk tx)
     else throwError (WAPI.PaymentPrivateKeyNotFound pkh)
 
 -- | Sign the transaction with the given private keys,
 --   ignoring the list of public keys that the 'SigningProcess' is passed.
 signPrivateKeys :: [PaymentPrivateKey] -> SigningProcess
 signPrivateKeys signingKeys = SigningProcess $ \_ tx ->
-    pure (foldr (Ledger.addSignature . unPaymentPrivateKey) tx signingKeys)
+    pure (foldr (Ledger.addSignature' . unPaymentPrivateKey) tx signingKeys)
 
 data SigningProcessControlEffect r where
     SetSigningProcess :: SigningProcess -> SigningProcessControlEffect ()

@@ -7,6 +7,7 @@
 , checkMaterialization ? false
 , sourcesOverride ? { }
 , sources ? import ./nix/sources.nix { system = builtins.currentSystem; } // sourcesOverride
+, plutus-apps-commit ? { outPath = ./.; rev = "abcdef"; }
 }:
 let
   inherit (import (sources.plutus-core + "/nix/lib/ci.nix")) dimension platformFilterGeneric filterAttrsOnlyRecursive filterSystems;
@@ -72,11 +73,26 @@ let
               # When cross compiling only include haskell for now
               inherit (x) haskell;
             };
+          forceNewEval = pkgs.runCommand "forceNewEval"
+            {
+              text = plutus-apps-commit.rev;
+              meta.platforms = [ "x86_64-linux" ];
+              preferLocalBuild = true;
+              allowSubstitutes = false;
+            } ''
+            n=$out
+            mkdir -p "$(dirname "$n")"
+            echo -n "$text" > "$n"
+          '';
         in
         filterAttrsOnlyRecursive (_: drv: isBuildable drv) ({
           # The haskell.nix IFD roots for the Haskell project. We include these so they won't be GCd and will be in the
           # cache for users
           inherit (plutus-apps.haskell.project) roots;
+
+          # forceNewEval will generate at least one new job based off the commit hash.
+          # This ensures no eval failures because hydra has nothing new to build.
+          inherit forceNewEval;
         } // pkgs.lib.optionalAttrs (!rootsOnly) (filterCross {
           # build relevant top level attributes from default.nix
           inherit (packages) docs tests plutus-playground plutus-use-cases;
