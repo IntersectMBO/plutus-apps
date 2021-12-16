@@ -403,7 +403,12 @@ let
 
           # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
           playground-common.ghcOptions = [ "-Werror" ];
-          plutus-chain-index.ghcOptions = [ "-Werror" ];
+          plutus-chain-index.ghcOptions =
+            # "-Wno-deprecations" works around
+            #    Module ‘Data.Yaml’:
+            #      GHCJS is not supported yet (will break at runtime once called).
+            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
+            + [ "-Werror" ];
           plutus-chain-index-core.ghcOptions = [ "-Werror" ];
           # plutus-contract.ghcOptions = [ "-Werror" ];
           # plutus-ledger.ghcOptions = [ "-Werror" ];
