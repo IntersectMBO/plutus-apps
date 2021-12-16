@@ -59,7 +59,7 @@ let
       "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" = "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
       "https://github.com/input-output-hk/cardano-wallet"."ae7569293e94241ef6829139ec02bd91abd069df" = "1mv1dhpkdj9ridm1fvq6jc85qs6zvbp172228rq72gyawjwrgvi6";
       "https://github.com/input-output-hk/cardano-addresses"."35f9c49dcd953b45da6dfbcb84b39c3f448ced58" = "1cv2frbxc6ic9n5xi5bxvxdgbh1nkl0ymqidq90qis0x3ln6b53n";
-      "https://github.com/input-output-hk/plutus"."bc717a8e060ffb8adafed902c6166fb03b5efb65" = "17bbvlj38gaqd4kfbxm3i3m2qnm86h2iqklws7hclh9k37jzza84";
+      "https://github.com/input-output-hk/plutus"."7be610b93a4c1c5e60196f94e2db9038ed1aa301" = "1jvl5k9hskcz2lhafb135rmqd0fz8pcidbhjj12l6bxz3qz54q5m";
       "https://github.com/j-mueller/cardano-wallet"."6be73ab852c0592713dfe78218856d4a8a0ee69e" = "0rx5hvmbdv5dwb4qq39vyhisj0v75j21jbiivn3s3q9za6m6x1p4";
       "https://github.com/hamishmack/foundation.git"."656db6d6f5d860fab6895247da42cf8895ab9c6c" = "1q12mhjj47bpaj9zy8c85qa0sj58q0kz776pqj8nfzx7bi7b7ngx";
     };
