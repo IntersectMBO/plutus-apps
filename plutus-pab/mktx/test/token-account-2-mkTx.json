@@ -114,8 +114,9 @@
     },
     "mkTxLogLookups": {
         "slOtherScripts": [],
-        "slOwnPubkeyHash": null,
-        "slPubKeyHashes": [],
+        "slPaymentPubKeyHashes": [],
+        "slOwnPaymentPubKeyHash": null,
+        "slOwnStakePubKeyHash": null,
         "slOtherData": [],
         "slTypedValidator": {
             "tvForwardingMPSHash": "e2799eb112f598ded801354ac03e27494f582559c19c62b3c8d36019",

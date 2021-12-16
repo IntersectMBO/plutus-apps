@@ -165,8 +165,9 @@
     },
     "mkTxLogLookups": {
         "slOtherScripts": [],
-        "slOwnPubkeyHash": null,
-        "slPubKeyHashes": [],
+        "slPaymentPubKeyHashes": [],
+        "slOwnPaymentPubKeyHash": null,
+        "slOwnStakePubKeyHash": null,
         "slOtherData": [],
         "slTypedValidator": null,
         "slTxOutputs": [

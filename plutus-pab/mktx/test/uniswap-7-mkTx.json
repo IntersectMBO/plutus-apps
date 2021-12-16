@@ -360,8 +360,9 @@
                 }
             ]
         ],
-        "slOwnPubkeyHash": null,
-        "slPubKeyHashes": [],
+        "slPaymentPubKeyHashes": [],
+        "slOwnPaymentPubKeyHash": null,
+        "slOwnStakePubKeyHash": null,
         "slOtherData": [],
         "slTypedValidator": {
             "tvForwardingMPSHash": "8475d4a8f53ab2d17454f1ab1d618e8250cb5f52974d3615b878869a",

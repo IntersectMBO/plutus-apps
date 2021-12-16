@@ -103,8 +103,11 @@
             {
                 "contents": [
                     {
-                        "getPubKeyHash": "2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c"
+                        "unPaymentPubKeyHash": {
+                            "getPubKeyHash": "2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c"
+                        }
                     },
+                    null,
                     null,
                     {
                         "getValue": [
@@ -142,14 +145,15 @@
                         ]
                     }
                 ],
-                "tag": "MustPayToPubKey"
+                "tag": "MustPayToPubKeyAddress"
             }
         ]
     },
     "mkTxLogLookups": {
         "slOtherScripts": [],
-        "slOwnPubkeyHash": null,
-        "slPubKeyHashes": [],
+        "slPaymentPubKeyHashes": [],
+        "slOwnPaymentPubKeyHash": null,
+        "slOwnStakePubKeyHash": null,
         "slOtherData": [],
         "slTypedValidator": null,
         "slTxOutputs": [],

@@ -301,10 +301,13 @@
                 }
             ]
         ],
-        "slOwnPubkeyHash": {
-            "getPubKeyHash": "2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c"
+        "slPaymentPubKeyHashes": [],
+        "slOwnPaymentPubKeyHash": {
+            "unPaymentPubKeyHash": {
+                "getPubKeyHash": "2e0ad60c3207248cecd47dbde3d752e0aad141d6b8f81ac2c6eca27c"
+            }
         },
-        "slPubKeyHashes": [],
+        "slOwnStakePubKeyHash": null,
         "slOtherData": [],
         "slTypedValidator": {
             "tvForwardingMPSHash": "8475d4a8f53ab2d17454f1ab1d618e8250cb5f52974d3615b878869a",

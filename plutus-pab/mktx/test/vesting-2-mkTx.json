@@ -85,7 +85,9 @@
             "unBalancedTxRequiredSignatories": [
                 [
                     {
-                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                        "unPaymentPubKeyHash": {
+                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                        }
                     },
                     null
                 ]
@@ -197,7 +199,9 @@
             },
             {
                 "contents": {
-                    "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                    "unPaymentPubKeyHash": {
+                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                    }
                 },
                 "tag": "MustBeSignedBy"
             }
@@ -205,8 +209,9 @@
     },
     "mkTxLogLookups": {
         "slOtherScripts": [],
-        "slOwnPubkeyHash": null,
-        "slPubKeyHashes": [],
+        "slPaymentPubKeyHashes": [],
+        "slOwnPaymentPubKeyHash": null,
+        "slOwnStakePubKeyHash": null,
         "slOtherData": [],
         "slTypedValidator": {
             "tvForwardingMPSHash": "ab9ac0f611abc54fa0c767f04e31227dd364cf01a28f2c83b4c568ef",
