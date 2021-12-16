@@ -11,7 +11,7 @@
     flags = { unexpected_thunks = false; systemd = true; };
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-node"; version = "1.30.0"; };
+      identifier = { name = "cardano-node"; version = "1.32.1"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
@@ -103,6 +103,7 @@
           "Cardano/Node/Configuration/Logging"
           "Cardano/Node/Configuration/POM"
           "Cardano/Node/Configuration/Topology"
+          "Cardano/Node/Configuration/TopologyP2P"
           "Cardano/Node/Handlers/Shutdown"
           "Cardano/Node/Handlers/TopLevel"
           "Cardano/Node/Orphans"
@@ -113,17 +114,17 @@
           "Cardano/Node/Protocol/Shelley"
           "Cardano/Node/Protocol/Types"
           "Cardano/Node/Parsers"
+          "Cardano/Node/Queries"
           "Cardano/Node/Run"
           "Cardano/Node/STM"
           "Cardano/Node/Types"
           "Cardano/Tracing/Config"
           "Cardano/Tracing/Constraints"
-          "Cardano/Tracing/ConvertTxId"
           "Cardano/Tracing/Kernel"
           "Cardano/Tracing/Metrics"
           "Cardano/Tracing/Peer"
-          "Cardano/Tracing/Queries"
           "Cardano/Tracing/Render"
+          "Cardano/Tracing/Startup"
           "Cardano/Tracing/Tracers"
           "Cardano/Tracing/OrphanInstances/Byron"
           "Cardano/Tracing/OrphanInstances/Common"
