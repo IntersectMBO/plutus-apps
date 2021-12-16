@@ -39,6 +39,7 @@ library
         Plutus.Contracts.Future
         Plutus.Contracts.Game
         Plutus.Contracts.GameStateMachine
+        Plutus.Contracts.GameStateMachine.Coverage
         Plutus.Contracts.Governance
         Plutus.Contracts.MultiSig
         Plutus.Contracts.MultiSigStateMachine
