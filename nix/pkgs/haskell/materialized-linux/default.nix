@@ -50,6 +50,7 @@
         "monad-par".flags.newgeneric = false;
         "cryptohash-sha1".revision = (((hackage."cryptohash-sha1")."0.11.100.1").revisions).default;
         "socks".revision = (((hackage."socks")."0.6.1").revisions).default;
+        "wide-word".revision = (((hackage."wide-word")."0.1.1.2").revisions).default;
         "Stream".revision = (((hackage."Stream")."0.4.7.2").revisions).default;
         "string-conv".revision = (((hackage."string-conv")."0.1.2").revisions).default;
         "string-conv".flags.lib-werror = false;
@@ -823,6 +824,7 @@
         ouroboros-consensus-byron = ./.plan.nix/ouroboros-consensus-byron.nix;
         contra-tracer = ./.plan.nix/contra-tracer.nix;
         orphans-deriving-via = ./.plan.nix/orphans-deriving-via.nix;
+        dbvar = ./.plan.nix/dbvar.nix;
         plutus-ledger = ./.plan.nix/plutus-ledger.nix;
         cardano-ledger-alonzo = ./.plan.nix/cardano-ledger-alonzo.nix;
         small-steps-test = ./.plan.nix/small-steps-test.nix;
@@ -1021,6 +1023,7 @@
           "orphans-deriving-via" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
+          "dbvar" = { flags = { "release" = lib.mkOverride 900 false; }; };
           "plutus-ledger" = {
             flags = { "defer-plugin-errors" = lib.mkOverride 900 false; };
             };
@@ -1295,6 +1298,7 @@
           "random".components.library.planned = lib.mkOverride 900 true;
           "code-page".components.library.planned = lib.mkOverride 900 true;
           "plutus-use-cases".components.exes."plutus-use-cases-scripts".planned = lib.mkOverride 900 true;
+          "dbvar".components.library.planned = lib.mkOverride 900 true;
           "int-cast".components.library.planned = lib.mkOverride 900 true;
           "auto-update".components.library.planned = lib.mkOverride 900 true;
           "http-conduit".components.library.planned = lib.mkOverride 900 true;
@@ -1387,6 +1391,7 @@
           "ansi-terminal".components.library.planned = lib.mkOverride 900 true;
           "typed-protocols".components.library.planned = lib.mkOverride 900 true;
           "plutus-core".components.exes."pir".planned = lib.mkOverride 900 true;
+          "wide-word".components.library.planned = lib.mkOverride 900 true;
           "Stream".components.library.planned = lib.mkOverride 900 true;
           "wai-websockets".components.library.planned = lib.mkOverride 900 true;
           "cardano-api".components.sublibs."gen".planned = lib.mkOverride 900 true;
@@ -1488,6 +1493,7 @@
           "logict".components.library.planned = lib.mkOverride 900 true;
           "unliftio".components.library.planned = lib.mkOverride 900 true;
           "wcwidth".components.library.planned = lib.mkOverride 900 true;
+          "ouroboros-network-framework".components.exes."demo-connection-manager".planned = lib.mkOverride 900 true;
           "http-client-tls".components.library.planned = lib.mkOverride 900 true;
           "extensible-effects".components.library.planned = lib.mkOverride 900 true;
           "constraints-extras".components.exes."readme".planned = lib.mkOverride 900 true;

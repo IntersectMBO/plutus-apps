@@ -11,14 +11,14 @@
     flags = { release = false; };
     package = {
       specVersion = "1.10";
-      identifier = { name = "text-class"; version = "2021.12.15"; };
+      identifier = { name = "dbvar"; version = "2021.8.23"; };
       license = "Apache-2.0";
-      copyright = "2018-2020 IOHK";
+      copyright = "2021 IOHK";
       maintainer = "operations@iohk.io";
       author = "IOHK Engineering Team";
       homepage = "https://github.com/input-output-hk/cardano-wallet";
       url = "";
-      synopsis = "Extra helpers to convert data-types to and from Text";
+      synopsis = "Mutable variables that are written to disk using delta encodings.";
       description = "";
       buildType = "Simple";
       isLocal = true;
@@ -34,36 +34,48 @@
       "library" = {
         depends = [
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
-          (hsPkgs."casing" or (errorHandler.buildDepError "casing"))
-          (hsPkgs."extra" or (errorHandler.buildDepError "extra"))
-          (hsPkgs."formatting" or (errorHandler.buildDepError "formatting"))
+          (hsPkgs."conduit" or (errorHandler.buildDepError "conduit"))
+          (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+          (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
+          (hsPkgs."generic-lens" or (errorHandler.buildDepError "generic-lens"))
+          (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
+          (hsPkgs."monad-logger" or (errorHandler.buildDepError "monad-logger"))
+          (hsPkgs."persistent" or (errorHandler.buildDepError "persistent"))
+          (hsPkgs."persistent-sqlite" or (errorHandler.buildDepError "persistent-sqlite"))
+          (hsPkgs."safe" or (errorHandler.buildDepError "safe"))
+          (hsPkgs."say" or (errorHandler.buildDepError "say"))
+          (hsPkgs."semigroupoids" or (errorHandler.buildDepError "semigroupoids"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
-          (hsPkgs."time" or (errorHandler.buildDepError "time"))
-          (hsPkgs."hspec" or (errorHandler.buildDepError "hspec"))
-          (hsPkgs."OddWord" or (errorHandler.buildDepError "OddWord"))
-          (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
+          (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
           ];
         buildable = true;
-        modules = [ "Data/Text/Class" "Test/Text/Roundtrip" ];
+        modules = [
+          "Demo/Database"
+          "Data/Chain"
+          "Data/DBVar"
+          "Data/Delta"
+          "Data/Table"
+          "Database/Persist/Delta"
+          "Database/Schema"
+          ];
         hsSourceDirs = [ "src" ];
         };
       tests = {
         "unit" = {
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
+            (hsPkgs."io-sim" or (errorHandler.buildDepError "io-sim"))
             (hsPkgs."hspec" or (errorHandler.buildDepError "hspec"))
             (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
-            (hsPkgs."text" or (errorHandler.buildDepError "text"))
-            (hsPkgs."text-class" or (errorHandler.buildDepError "text-class"))
-            (hsPkgs."time" or (errorHandler.buildDepError "time"))
             ];
           build-tools = [
             (hsPkgs.buildPackages.hspec-discover.components.exes.hspec-discover or (pkgs.buildPackages.hspec-discover or (errorHandler.buildToolDepError "hspec-discover:hspec-discover")))
             ];
           buildable = true;
-          modules = [ "Data/Text/ClassSpec" ];
+          modules = [ "Data/DeltaSpec" ];
           hsSourceDirs = [ "test/unit" ];
-          mainPath = [ "text-class-unit-test.hs" ];
+          mainPath = [ "Main.hs" ];
           };
         };
       };
@@ -77,5 +89,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/lib/text-class; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/lib/dbvar; echo source root reset to \$sourceRoot";
     }
