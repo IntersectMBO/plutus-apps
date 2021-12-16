@@ -46,7 +46,7 @@ let
       "https://github.com/Quid2/flat.git"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
       "https://github.com/input-output-hk/purescript-bridge.git"."366fc70b341e2633f3ad0158a577d52e1cd2b138" = "18j0rysfccbmfpbw2d1rsjkpd5h84alpsn6b5rwzdxw9h5vqi9m5";
       "https://github.com/input-output-hk/servant-purescript.git"."ebea59c7bdfc0338d83fca772b9a57e28560bcde" = "0gjcq4y61kwb4w70pnswn5dp23wd13dac8d9hz84j374cm1kshsn";
-      "https://github.com/input-output-hk/cardano-base"."506180d2627994c5d947f92f00aaa345d722776f" = "0z9s2mvhsjz2h2fk8mzpqyy7f7y68njw64zc29hzrgfrm0mj7nzj";
+      "https://github.com/input-output-hk/cardano-base"."81ea3220f3810131ee0b95449f2e86daf2a68ef1" = "0v9l47yv7s2wvgqnsq29q6qxkxbpv9cdjaisvcfripd9cy4nmkv9";
       "https://github.com/input-output-hk/cardano-crypto.git"."1fff72e39e690676d4156a56858c6b72e1f0bff9" = "06kahs46z842xndq3sgcrqyvmgvs05rnflbq76599pfnb2vspy2q";
       "https://github.com/input-output-hk/cardano-ledger-specs"."bf008ce028751cae9fb0b53c3bef20f07c06e333" = "0my3801w1vinc0kf5yh9lxl6saqxgwm6ccg0vvzi104pafcwwcqx";
       "https://github.com/input-output-hk/cardano-prelude"."fd773f7a58412131512b9f694ab95653ac430852" = "02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6";
@@ -408,7 +408,7 @@ let
             #    Module ‘Data.Yaml’:
             #      GHCJS is not supported yet (will break at runtime once called).
             lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
-            ++ [ "-Werror" ];
+              ++ [ "-Werror" ];
           plutus-chain-index-core.ghcOptions = [ "-Werror" ];
           # plutus-contract.ghcOptions = [ "-Werror" ];
           # plutus-ledger.ghcOptions = [ "-Werror" ];
