@@ -408,7 +408,7 @@ let
             #    Module ‘Data.Yaml’:
             #      GHCJS is not supported yet (will break at runtime once called).
             lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
-            + [ "-Werror" ];
+            ++ [ "-Werror" ];
           plutus-chain-index-core.ghcOptions = [ "-Werror" ];
           # plutus-contract.ghcOptions = [ "-Werror" ];
           # plutus-ledger.ghcOptions = [ "-Werror" ];
