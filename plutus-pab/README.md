@@ -101,7 +101,7 @@ Generates the purescript bridge code.
 ### migrate
 
 ```
-$ cabal exec plutus-pab-examples -- migrate --config plutus-pab/plutus-pab.yaml.sample
+$ cabal exec plutus-pab-examples -- migrate --config plutus-pab.yaml.sample
 ```
 
 #### Description
