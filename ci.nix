@@ -15,7 +15,7 @@ let
   systems = builtins.listToAttrs (builtins.map (name: { inherit name; value = name; }) supportedSystems);
   crossSystems =
     let pkgs = (import ./default.nix { }).pkgs;
-    in { inherit (pkgs.lib.systems.examples) ghcjs mingwW64; };
+    in { inherit (pkgs.lib.systems.examples) ghcjs; }; # mingwW64; }; # we can't support windows right now, as cross compilation of plugins doesn't work.
 
   # Collects haskell derivations and builds an attrset:
   #
