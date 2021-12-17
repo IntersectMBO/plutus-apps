@@ -1,6 +1,13 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+#if defined(__GHCJS__)
+{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE JavaScriptFFI #-}
+#endif
 
 import Plutus.Contract.Wallet (ExportTx, export)
 import qualified Data.ByteString.Lazy as BSL
@@ -22,6 +29,11 @@ import System.Environment (getArgs)
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Ledger (unitRedeemer)
 
+-- hopefully the correct imports
+import GHCJS.Types
+import GHCJS.Marshal
+import GHCJS.Foreign.Callback
+
 {-
    How to get some input data?
      protocol-parameters: protocol-parameters.json in the plutus-use-cases/scripts directory
@@ -31,13 +43,92 @@ import Ledger (unitRedeemer)
 
  -}
 
+#if defined(__GHCJS__)
+
+{-
+   If we are in GHCJS, make a synchronous callback and assign it to
+   some global variable that we can access from the library.
+
+   The default way of starting main is with the line from runmain.js:
+
+       h$main(h$mainZCZCMainzimain);
+
+   If we want to make the exports immediately available, we can try to
+   remove the default main startup line, and stick the following at the
+   end of the file
+
+       h$runSync(h$mainZCZCMainzimain);
+
+   The following seems to work in a standalone test, if we add it to
+   the all.js file instead of the standard 'h$main(h$mainZCZCMainzimain)':
+
+       h$runSync(h$mainZCZCMainzimain);
+       console.log(plutus_mkTx({ thisValueIs: "invalid" }));
+
+   The correct input is a JSON object with protocolParameters, networkId,
+   scriptLookups and constraints keys.
+
+   I forgot if NetworkId had a FromJSON instance, otherwise we can
+   make the networkId field a 'Maybe Word32' and convert accordingly, like
+   in the non-GHCJS main:
+
+               let nwid' = if nwid == "mainnet"
+                        then C.Mainnet
+                        else C.Testnet . C.NetworkMagic . read $ nwid
+ -}
+main :: IO ()
+main = do
+  export <- syncCallback1' makeTransaction'
+  js_exportAPI (jsval export)
+
+
+data MakeTransaction = MakeTransaction
+                     { protocolParameters :: C.ProtocolParameters
+                     , networkId          :: C.NetworkId
+                     , scriptLookups      :: ScriptLookups Any
+                     , constraints        :: UntypedConstraints
+                     }
+        deriving stock (Show, Generic)
+        deriving anyclass (ToJSON, FromJSON)
+
+-- our wrapped makeTransaction function takes a JSON value and returns one
+makeTransaction' :: JSVal -> IO JSVal
+makeTransaction' x = do
+  mbVal <- fromJSVal x
+  let r = case mbVal of
+            Just val ->
+              case Aeson.fromJSON val of
+                    Aeson.Success mt -> makeTransaction (protocolParameters mt)
+                                                        (networkId mt)
+                                                        (scriptLookups mt)
+                                                        (constraints mt)
+                    Aeson.Error e    -> Left (toJSON e)
+            Nothing -> Left (toJSON ("invalid argument"::String))
+  toJSVal (Aeson.toJSON r)
+
+{-
+  export the API to a global variable here, 'window' in case of
+  browser, 'global' in case of nodejs. we can also link a js file
+  with js-sources and have a function for this.
+
+  If we want our library to work with 'require' in nodejs we should
+  modify the 'exports' object instead.
+
+  And we might want to wrap the whole script into its own scope later
+
+ -}
+foreign import javascript unsafe
+  "(typeof window !== 'undefined' ? window : global).plutus_mkTx = $1;"
+  js_exportAPI :: JSVal -> IO ()
+#else
+
 main :: IO ()
 main = do
     -- minimal command line parser to avoid pulling in more than the JS lib would use
     args <- getArgs
     case args of
         [pparams, nwid, lookups, constraints] -> do
-            let nwid' = if nwid == "mainnet" 
+            let nwid' = if nwid == "mainnet"
                         then C.Mainnet
                         else C.Testnet . C.NetworkMagic . read $ nwid
                 readJSONFile file = do
@@ -52,10 +143,11 @@ main = do
             BSL.putStrLn (Aeson.encode $ fmap Aeson.toJSON result)
         _ -> do
             die "usage: pab-mktx protocol-parameters.json network-id scriptlookups.json txconstraints.json"
+#endif
 
 {-
   The function we intend to expose to JavaScript
-  
+
     - All parameters can be supplied as a JSON value based on their
       Aeson FromJSON/ToJSON instances.
     - The result/error is also returned as a JSON value, based on the
@@ -70,8 +162,9 @@ main = do
       other BuiltinData related types?
     - How do we query the chain index in JS, do we need to make more Haskell
       functionality available for this?
-                 
+
  -}
+
 makeTransaction :: C.ProtocolParameters
                 -> C.NetworkId
                 -> ScriptLookups Any
