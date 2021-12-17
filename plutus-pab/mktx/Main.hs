@@ -1,38 +1,46 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE CPP                      #-}
+{-# LANGUAGE DeriveAnyClass           #-}
+{-# LANGUAGE DeriveGeneric            #-}
+{-# LANGUAGE DerivingStrategies       #-}
+{-# LANGUAGE FlexibleInstances        #-}
+{-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE StandaloneDeriving       #-}
 #if defined(__GHCJS__)
+{-# OPTIONS_GHC -Wno-orphans -Wno-unused-imports #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE JavaScriptFFI #-}
+{-# LANGUAGE JavaScriptFFI            #-}
 #endif
 
-import Plutus.Contract.Wallet (ExportTx, export)
-import qualified Data.ByteString.Lazy as BSL
-import Data.Aeson as Aeson
-import GHC.Generics
-import Ledger.Constraints.OffChain (ScriptLookups (..), mkTx)
-import Ledger.Constraints.TxConstraints (UntypedConstraints
-                                        , TxConstraints(..)
-                                        , TxConstraint(..)
-                                        , InputConstraint(..)
-                                        , OutputConstraint(..))
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Data.Aeson as Aeson
+import Data.ByteString.Lazy qualified as BSL
 import Data.Word (Word32)
+import GHC.Generics
+import Ledger.Constraints.OffChain (ScriptLookups (..), mkTx)
+import Ledger.Constraints.TxConstraints (InputConstraint (..), OutputConstraint (..), TxConstraint (..),
+                                         TxConstraints (..), UntypedConstraints)
 import Ledger.Typed.TypeUtils (Any)
-import System.Exit (die)
+import Plutus.Contract.Wallet (ExportTx, export)
 import System.Environment (getArgs)
+import System.Exit (die)
 
-import Plutus.V1.Ledger.Ada qualified as Ada
 import Ledger (unitRedeemer)
+import Plutus.V1.Ledger.Ada qualified as Ada
 
+#if defined(__GHCJS__)
 -- hopefully the correct imports
-import GHCJS.Types
-import GHCJS.Marshal
 import GHCJS.Foreign.Callback
+import GHCJS.Marshal
+import GHCJS.Types
+#endif
+
+deriving instance Generic C.NetworkId
+deriving instance ToJSON C.NetworkMagic
+deriving instance FromJSON C.NetworkMagic
+
+deriving instance ToJSON C.NetworkId
+deriving instance FromJSON C.NetworkId
 
 {-
    How to get some input data?
@@ -78,8 +86,8 @@ import GHCJS.Foreign.Callback
  -}
 main :: IO ()
 main = do
-  export <- syncCallback1' makeTransaction'
-  js_exportAPI (jsval export)
+  exportCallback <- syncCallback1' makeTransaction'
+  js_exportAPI (jsval exportCallback)
 
 
 data MakeTransaction = MakeTransaction
@@ -135,7 +143,7 @@ main = do
                     bs <- BSL.readFile file
                     case Aeson.eitherDecode bs of
                         Left err -> die ("error decoding JSON file " ++ file ++ " " ++ show err)
-                        Right x -> pure x
+                        Right x  -> pure x
             pparams'     <- readJSONFile pparams
             lookups'     <- readJSONFile lookups
             constraints' <- readJSONFile constraints
@@ -170,9 +178,7 @@ makeTransaction :: C.ProtocolParameters
                 -> ScriptLookups Any
                 -> UntypedConstraints
                 -> Either Aeson.Value ExportTx
-makeTransaction params nwid lookups constraints =
-    case mkTx lookups constraints of
+makeTransaction params nwid lookups tx_constraints =
+    case mkTx lookups tx_constraints of
         Left err   -> Left (Aeson.toJSON err)
         Right ubtx -> either (Left . Aeson.toJSON) Right (export params nwid ubtx)
-
-
