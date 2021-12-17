@@ -115,7 +115,7 @@ Migrates the database in `pab-core.db` to the current schema.  The database cont
 ### all-servers
 
 ```
-$ cabal exec plutus-pab-examples -- all-servers --config plutus-pab/plutus-pab.yaml.sample
+$ cabal exec plutus-pab-examples -- all-servers --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -140,7 +140,7 @@ Combines the execution of all services in the appropriate order:
 ### client-services
 
 ```
-$ cabal exec plutus-pab-examples -- client-services --config plutus-pab/plutus-pab.yaml.sample
+$ cabal exec plutus-pab-examples -- client-services --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -164,7 +164,7 @@ Starts all services *except for* the node service:
 ### wallet-server
 
 ```
-$ cabal exec plutus-pab-examples -- wallet-server --config plutus-pab/plutus-pab.yaml.sample
+$ cabal exec plutus-pab-examples -- wallet-server --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -196,7 +196,7 @@ Remote wallet:
 ### webserver
 
 ```
-$ cabal exec plutus-pab-examples -- webserver --config plutus-pab/plutus-pab.yaml.sample
+$ cabal exec plutus-pab-examples -- webserver --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -217,7 +217,7 @@ Serves the PAB user interface
 ### node-server
 
 ```
-$ cabal exec plutus-pab-examples -- node-server --config plutus-pab/plutus-pab.yaml.sample
+$ cabal exec plutus-pab-examples -- node-server --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -240,7 +240,7 @@ Mock or real implementation of a Goguen node. Clients to this service are:
 ### chain-index
 
 ```
-$ cabal exec plutus-pab-examples -- chain-index --config plutus-pab/plutus-pab.yaml.sample
+$ cabal exec plutus-pab-examples -- chain-index --config plutus-pab.yaml.sample
 ```
 
 #### Description
