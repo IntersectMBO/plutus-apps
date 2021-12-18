@@ -1,5 +1,5 @@
 { system ? builtins.currentSystem
-, enableHaskellProfiling ? false
+, enableHaskellProfiling ? true
 , packages ? import ./. { inherit system enableHaskellProfiling; }
 }:
 let

@@ -42,8 +42,6 @@ import Prettyprinter (Pretty (pretty))
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
 
-import Debug.Trace qualified as Debug
-
 -- | PAB entry point for a contract type `a`.
 runWith :: forall a.
     ( Show a
@@ -81,7 +79,7 @@ runWithOpts :: forall a.
 runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
 
     -- Parse config files and initialize logging
-    logConfig <- Debug.trace ("Rollback: " <> show rollbackHistory) $ maybe defaultConfig loadConfig logConfigPath
+    logConfig <- maybe defaultConfig loadConfig logConfigPath
     for_ minLogLevel $ \ll -> CM.setMinSeverity logConfig ll
     (trace :: Trace IO (PrettyObject (AppMsg (Builtin a))), switchboard) <- setupTrace_ logConfig "pab"
 
@@ -101,7 +99,7 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, logCo
     let mkArgs config@Config{nodeServerConfig, developmentOptions} = ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
-                , ccaPABConfig = config { nodeServerConfig = nodeServerConfig { mscPassphrase = passphrase <|> mscPassphrase nodeServerConfig }
+                , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { mscPassphrase      = passphrase      <|> mscPassphrase nodeServerConfig }
                                         , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions } }
                 , ccaAvailability = serviceAvailability
                 , ccaStorageBackend = storageBackend
