@@ -1,28 +1,27 @@
 {-# LANGUAGE LambdaCase #-}
-import           Control.Monad                           (filterM, forM, forM_)
-import           Data.List                               (intercalate, isPrefixOf, isSuffixOf)
-import           Distribution.Simple
-import           Distribution.Simple.BuildTarget         (BuildTarget (..), readBuildTargets)
-import           Distribution.Simple.PackageIndex
-import           Distribution.Simple.Program             (Program, arProgram, gccProgram, ghcProgram, runDbProgram,
-                                                          simpleProgram)
-import           Distribution.Simple.Program.Db          (knownPrograms, lookupKnownProgram, lookupProgram)
-import           Distribution.Simple.Program.Types       (programPath)
-import           Distribution.Simple.Setup
-import           Distribution.Simple.Utils               (createDirectoryIfMissingVerbose)
-import           Distribution.Types.BuildInfo            (cSources, emptyBuildInfo, includeDirs, jsSources)
-import           Distribution.Types.ComponentName
-import           Distribution.Types.HookedBuildInfo
-import           Distribution.Types.InstalledPackageInfo hiding (includeDirs)
-import qualified Distribution.Types.InstalledPackageInfo as IPI
-import           Distribution.Types.Library              (libBuildInfo)
-import           Distribution.Types.LocalBuildInfo
-import           Distribution.Types.PackageDescription
-import           Distribution.Types.PackageName
-import           Distribution.Verbosity                  (silent, verbose)
-import           System.Directory                        (doesFileExist)
-import           System.Environment                      (getArgs, getProgName)
-import           System.FilePath
+import Control.Monad (filterM, forM, forM_)
+import Data.List (intercalate, isPrefixOf, isSuffixOf)
+import Distribution.Simple
+import Distribution.Simple.BuildTarget (BuildTarget (..), readBuildTargets)
+import Distribution.Simple.PackageIndex
+import Distribution.Simple.Program (Program, arProgram, gccProgram, ghcProgram, runDbProgram, simpleProgram)
+import Distribution.Simple.Program.Db (knownPrograms, lookupKnownProgram, lookupProgram)
+import Distribution.Simple.Program.Types (programPath)
+import Distribution.Simple.Setup
+import Distribution.Simple.Utils (createDirectoryIfMissingVerbose)
+import Distribution.Types.BuildInfo (cSources, emptyBuildInfo, includeDirs, jsSources)
+import Distribution.Types.ComponentName
+import Distribution.Types.HookedBuildInfo
+import Distribution.Types.InstalledPackageInfo hiding (includeDirs)
+import Distribution.Types.InstalledPackageInfo qualified as IPI
+import Distribution.Types.Library (libBuildInfo)
+import Distribution.Types.LocalBuildInfo
+import Distribution.Types.PackageDescription
+import Distribution.Types.PackageName
+import Distribution.Verbosity (silent, verbose)
+import System.Directory (doesFileExist)
+import System.Environment (getArgs, getProgName)
+import System.FilePath
 
 
 emarProgram :: Program

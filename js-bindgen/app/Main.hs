@@ -1,13 +1,13 @@
 module Main where
 
-import           Data.List            (intercalate)
+import Data.List (intercalate)
 
 
-import           Control.Applicative  hiding (many, some)
-import           Control.Monad
-import           Data.Void
-import           Text.Megaparsec
-import           Text.Megaparsec.Char
+import Control.Applicative hiding (many, some)
+import Control.Monad
+import Data.Void
+import Text.Megaparsec
+import Text.Megaparsec.Char
 
 {- What do we want?
 

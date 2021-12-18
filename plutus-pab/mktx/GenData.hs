@@ -3,34 +3,31 @@
   steps
  -}
 
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Main where
 
-import Plutus.Contract.Wallet (ExportTx, export)
-import qualified Data.ByteString.Lazy as BSL
-import Data.Aeson as Aeson
-import Ledger.Constraints.OffChain (ScriptLookups (..), mkTx)
-import Ledger.Constraints.TxConstraints (UntypedConstraints
-                                        , TxConstraints(..)
-                                        , TxConstraint(..)
-                                        , InputConstraint(..)
-                                        , OutputConstraint(..))
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Data.Aeson as Aeson
+import Data.ByteString.Lazy qualified as BSL
 import Data.Word (Word32)
+import Ledger.Constraints.OffChain (ScriptLookups (..), mkTx)
+import Ledger.Constraints.TxConstraints (InputConstraint (..), OutputConstraint (..), TxConstraint (..),
+                                         TxConstraints (..), UntypedConstraints)
 import Ledger.Typed.TypeUtils (Any)
-import System.Exit (die)
-import System.Environment (getArgs)
+import Plutus.Contract.Wallet (ExportTx, export)
 import Plutus.V1.Ledger.Ada qualified as Ada
+import System.Environment (getArgs)
+import System.Exit (die)
 
 import Control.Concurrent.STM.Extras.Stream (readN, readOne)
 import Control.Lens ((&), (+~), (^.))
@@ -121,7 +118,7 @@ import Plutus.PAB.Core (EffectHandlers)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler (contractHandler), handleBuiltin)
 import Plutus.PAB.Simulator (Simulation, SimulatorContractHandler, SimulatorState, mkSimulatorHandlers,
                              runSimulationWith)
-import Plutus.PAB.Types ( PABError(OtherError), chainOverviewBlockchain, mkChainOverview, PABError(..), PABError )
+import Plutus.PAB.Types (PABError (..), chainOverviewBlockchain, mkChainOverview)
 import PlutusTx qualified
 
 
@@ -225,7 +222,7 @@ writeTestOutput = runScenario $ do
                                               , icTxOutRef = txOutRef1
                                               }
                             , InputConstraint { icRedeemer = PlutusTx.toBuiltinData ()
-                                              , icTxOutRef = txOutRef2 
+                                              , icTxOutRef = txOutRef2
                                               }
                             ]
           , txOwnOutputs =  [ OutputConstraint { ocDatum = PlutusTx.toBuiltinData ()
@@ -243,13 +240,13 @@ writeTestOutput = runScenario $ do
                                         , slTxOutputs      = mempty
                                         , slOtherScripts   = mempty
                                         , slOtherData      = mempty
-                                        , slPubKeyHashes   = mempty 
+                                        , slPubKeyHashes   = mempty
                                         , slTypedValidator = Nothing
                                         , slOwnPubkeyHash  = Just pk1
                                         }
 
-  liftIO $ BSL.writeFile "scriptlookups.json" (Aeson.encode $ Aeson.toJSON testScriptLookups) 
-  liftIO $ BSL.writeFile "txconstraints.json" (Aeson.encode $ Aeson.toJSON testTxConstraints) 
+  liftIO $ BSL.writeFile "scriptlookups.json" (Aeson.encode $ Aeson.toJSON testScriptLookups)
+  liftIO $ BSL.writeFile "txconstraints.json" (Aeson.encode $ Aeson.toJSON testTxConstraints)
 
 
 
