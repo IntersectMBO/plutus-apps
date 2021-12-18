@@ -9,7 +9,7 @@ let
 
   crossSystems =
     with (import ./default.nix { }).pkgs.lib.systems.examples; [ ghcjs ];
-  crossPackages = builtins.map (crossSystem:  import ./. { inherit system crossSystem; }) crossSystems;
+  crossPackages = builtins.map (crossSystem: import ./. { inherit system crossSystem; }) crossSystems;
 
   # For Sphinx, and ad-hoc usage
   sphinxTools = python3.withPackages (ps: [
@@ -110,7 +110,7 @@ let
     docs.build-and-serve-docs
   ]);
 
-  crossShells = builtins.map (p: p.plutus-apps.haskell.project.shellFor {}) crossPackages;
+  crossShells = builtins.map (p: p.plutus-apps.haskell.project.shellFor { }) crossPackages;
 
 in
 haskell.project.shellFor {
