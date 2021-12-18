@@ -80,8 +80,9 @@ import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (SMultiAgent), PABMultiAgentMs
                                         WalletClientMsg)
 import Plutus.PAB.Timeout (Timeout (Timeout))
 import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
+                         DevelopmentOptions (DevelopmentOptions, pabRollbackHistory),
                          PABError (BeamEffectError, ChainIndexError, NodeClientError, RemoteWalletWithMockNodeError, WalletClientError, WalletError),
-                         WebserverConfig (WebserverConfig, rollbackHistory), chainIndexConfig, dbConfig,
+                         WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, developmentOptions,
                          endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
 import Servant.Client (ClientEnv, ClientError, mkClientEnv)
 import Wallet.Effects (WalletEffect)
@@ -123,9 +124,9 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
         { initialiseEnvironment = do
             env <- liftIO $ mkEnv trace config
             let Config { nodeServerConfig = MockServerConfig{mscSocketPath, mscSlotConfig, mscNodeMode, mscNetworkId = NetworkIdWrapper networkId}
-                       , pabWebserverConfig = WebserverConfig{rollbackHistory} } = config
+                       , developmentOptions = DevelopmentOptions{pabRollbackHistory} } = config
             instancesState <- liftIO $ STM.atomically Instances.emptyInstancesState
-            blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient mscSocketPath mscNodeMode rollbackHistory mscSlotConfig networkId instancesState
+            blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient mscSocketPath mscNodeMode pabRollbackHistory mscSlotConfig networkId instancesState
             pure (instancesState, blockchainEnv, env)
 
         , handleLogMessages =

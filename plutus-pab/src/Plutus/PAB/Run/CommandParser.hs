@@ -24,7 +24,7 @@ data AppOpts = AppOpts { minLogLevel     :: Maybe Severity
                        , logConfigPath   :: Maybe FilePath
                        , configPath      :: Maybe FilePath
                        , passphrase      :: Maybe Text
-                       , rollbackHistory :: Integer
+                       , rollbackHistory :: Maybe Int
                        , runEkgServer    :: Bool
                        , storageBackend  :: StorageBackend
                        , cmd             :: ConfigCommand
@@ -95,14 +95,14 @@ passphraseParser =
    with the memory usage of the PAB and should be removed when we figure out
    an alternative to storing the UTXO in memory.
 -}
-rollbackHistoryParser :: Parser Integer
+rollbackHistoryParser :: Parser (Maybe Int)
 rollbackHistoryParser =
     option
-        auto
+        (Just <$> auto)
         (long "rollback-history" <>
          metavar "ROLLBACK_HISTORY" <>
          help "How many blocks are remembered when rolling back" <>
-         value 0)
+         value Nothing)
 
 commandParser :: Parser ConfigCommand
 commandParser =

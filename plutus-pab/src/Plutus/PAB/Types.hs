@@ -118,6 +118,7 @@ data Config =
         , pabWebserverConfig      :: WebserverConfig
         , chainIndexConfig        :: ChainIndex.ChainIndexConfig
         , requestProcessingConfig :: RequestProcessingConfig
+        , developmentOptions      :: DevelopmentOptions
         }
     deriving (Show, Eq, Generic, FromJSON)
 
@@ -130,6 +131,7 @@ defaultConfig =
     , pabWebserverConfig = def
     , chainIndexConfig = def
     , requestProcessingConfig = def
+    , developmentOptions = def
     }
 
 instance Default Config where
@@ -157,7 +159,6 @@ data WebserverConfig =
         , staticDir            :: Maybe FilePath
         , permissiveCorsPolicy :: Bool -- ^ If true; use a very permissive CORS policy (any website can interact.)
         , endpointTimeout      :: Maybe Second
-        , rollbackHistory      :: Integer
         }
     deriving (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -171,11 +172,25 @@ defaultWebServerConfig =
     , staticDir            = Nothing
     , permissiveCorsPolicy = False
     , endpointTimeout      = Nothing
-    , rollbackHistory      = 0
     }
 
 instance Default WebserverConfig where
   def = defaultWebServerConfig
+
+newtype DevelopmentOptions =
+    DevelopmentOptions
+        { pabRollbackHistory :: Maybe Int
+        }
+    deriving (Show, Eq, Generic)
+    deriving anyclass (FromJSON, ToJSON)
+
+defaultDevelopmentOptions :: DevelopmentOptions
+defaultDevelopmentOptions =
+    DevelopmentOptions
+        { pabRollbackHistory = Nothing }
+
+instance Default DevelopmentOptions where
+    def = defaultDevelopmentOptions
 
 -- | The source of a PAB event, used for sharding of the event stream
 data Source

@@ -35,13 +35,14 @@ import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
 import Plutus.PAB.Monitoring.Util (PrettyObject (..), convertLog)
 import Plutus.PAB.Run.Cli
-import Plutus.PAB.Run.CommandParser as Cmd
+import Plutus.PAB.Run.CommandParser
 import Plutus.PAB.Run.PSGenerator (HasPSTypes)
-import Plutus.PAB.Types (Config (..), PABError (MissingConfigFileOption))
-import Plutus.PAB.Types qualified as Cfg (WebserverConfig (..))
+import Plutus.PAB.Types (Config (..), DevelopmentOptions (..), PABError (MissingConfigFileOption))
 import Prettyprinter (Pretty (pretty))
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
+
+import Debug.Trace qualified as Debug
 
 -- | PAB entry point for a contract type `a`.
 runWith :: forall a.
@@ -77,10 +78,10 @@ runWithOpts :: forall a.
     -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
     -> AppOpts
     -> IO ()
-runWithOpts userContractHandler mc AppOpts { minLogLevel, Cmd.rollbackHistory, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
+runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
 
     -- Parse config files and initialize logging
-    logConfig <- maybe defaultConfig loadConfig logConfigPath
+    logConfig <- Debug.trace ("Rollback: " <> show rollbackHistory) $ maybe defaultConfig loadConfig logConfigPath
     for_ minLogLevel $ \ll -> CM.setMinSeverity logConfig ll
     (trace :: Trace IO (PrettyObject (AppMsg (Builtin a))), switchboard) <- setupTrace_ logConfig "pab"
 
@@ -97,13 +98,11 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, Cmd.rollbackHistory, l
             Nothing -> pure $ Left MissingConfigFileOption
             Just p  -> do Right <$> (liftIO $ decodeFileThrow p)
 
-    let mkArgs config@Config{nodeServerConfig, pabWebserverConfig} = ConfigCommandArgs
+    let mkArgs config@Config{nodeServerConfig, developmentOptions} = ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
                 , ccaPABConfig = config { nodeServerConfig = nodeServerConfig { mscPassphrase = passphrase <|> mscPassphrase nodeServerConfig }
-                                        , pabWebserverConfig = pabWebserverConfig { Cfg.rollbackHistory = if rollbackHistory /= 0
-                                                                                                          then rollbackHistory
-                                                                                                          else Cfg.rollbackHistory pabWebserverConfig } }
+                                        , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions } }
                 , ccaAvailability = serviceAvailability
                 , ccaStorageBackend = storageBackend
                 }

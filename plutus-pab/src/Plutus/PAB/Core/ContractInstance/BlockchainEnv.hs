@@ -48,7 +48,7 @@ import Plutus.Contract.CardanoAPI (fromCardanoTx)
 startNodeClient ::
   FilePath -- ^ Socket to connect to node
   -> NodeMode -- ^ Whether to connect to real node or mock node
-  -> Integer  -- ^ How much history do we remember for rollbacks
+  -> Maybe Int  -- ^ How much history do we remember for rollbacks
   -> SlotConfig -- ^ Slot config used by the node
   -> NetworkId -- ^ Cardano network ID
   -> InstancesState -- ^ In-memory state of running contract instances
@@ -184,16 +184,17 @@ updateTransactionState tip env@BlockchainEnv{beRollbackHistory, beTxChanges, beT
 
     case (txIdStateInsert, txUtxoBalanceInsert) of
       (Right InsertUtxoSuccess{newIndex=newTxIdState}, Right InsertUtxoSuccess{newIndex=newTxOutBalance}) -> do -- TODO: Get tx out status another way
-        STM.writeTVar beTxChanges $ trimIx newTxIdState
-        STM.writeTVar beTxOutChanges $ trimIx newTxOutBalance
+        STM.writeTVar beTxChanges    $ trimIx beRollbackHistory newTxIdState
+        STM.writeTVar beTxOutChanges $ trimIx beRollbackHistory newTxOutBalance
         STM.writeTVar beCurrentBlock (succ blockNumber)
         Right <$> blockAndSlot env
       (Left e, _) -> pure $ Left $ InsertUtxoStateFailure e
       (_, Left e) -> pure $ Left $ InsertUtxoStateFailure e
     where
-      trimIx :: Monoid a => UtxoIndex a -> UtxoIndex a
-      trimIx uix =
-        case reduceBlockCount (Depth (fromIntegral beRollbackHistory)) uix of
+      trimIx :: Monoid a => Maybe Int -> UtxoIndex a -> UtxoIndex a
+      trimIx Nothing                uix = uix
+      trimIx (Just rollbackHistory) uix =
+        case reduceBlockCount (Depth rollbackHistory) uix of
           BlockCountNotReduced          -> uix
           ReduceBlockCountResult uix' _ -> uix'
 

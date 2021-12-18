@@ -214,7 +214,7 @@ mkSimulatorHandlers feeCfg slotCfg handleContractEffect =
         { initialiseEnvironment =
             (,,)
                 <$> liftIO (STM.atomically   Instances.emptyInstancesState )
-                <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv 0)
+                <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv Nothing)
                 <*> liftIO (initialState @t)
         , handleContractStoreEffect =
             interpret handleContractStore

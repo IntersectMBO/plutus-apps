@@ -149,7 +149,7 @@ data OpenTxOutProducedRequest =
 --   may be interested in.
 data BlockchainEnv =
     BlockchainEnv
-        { beRollbackHistory :: Integer -- ^ How much history do we retain in the environment. Zero signifies no trimming is done.
+        { beRollbackHistory :: Maybe Int -- ^ How much history do we retain in the environment. Zero signifies no trimming is done.
         , beCurrentSlot     :: TVar Slot -- ^ Current slot
         , beTxChanges       :: TVar (UtxoIndex TxIdState) -- ^ Map holding metadata which determines the status of transactions.
         , beTxOutChanges    :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
@@ -157,7 +157,7 @@ data BlockchainEnv =
         }
 
 -- | Initialise an empty 'BlockchainEnv' value
-emptyBlockchainEnv :: Integer -> STM BlockchainEnv
+emptyBlockchainEnv :: Maybe Int -> STM BlockchainEnv
 emptyBlockchainEnv rollbackHistory =
     BlockchainEnv rollbackHistory
         <$> STM.newTVar 0

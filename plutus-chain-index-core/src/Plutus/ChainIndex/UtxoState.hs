@@ -50,6 +50,8 @@ import Plutus.ChainIndex.ChainIndexLog (InsertUtxoPosition (..))
 import Plutus.ChainIndex.Types (Depth (..), Point (..), Tip (..), pointsToTip)
 import Prettyprinter (Pretty (..))
 
+import Debug.Trace qualified as Debug
+
 -- | UTXO / ledger state, kept in memory. We are only interested in the UTXO set, everything else is stored
 --   on disk. This is OK because we don't need to validate transactions when they come in.
 data UtxoState a =
@@ -111,7 +113,7 @@ insert   UtxoState{_usTip=TipAtGenesis} _ = Left InsertUtxoNoTip
 insert s@UtxoState{_usTip= thisTip} ix =
     -- This number will be made into a command line argument in a future PR.
     let (before, after) = FT.split ((s <=) . snd) ix
-    in case tip (utxoState after) of
+    in case Debug.trace ("Processing: " <> show thisTip) $ tip (utxoState after) of
         TipAtGenesis -> Right $ InsertUtxoSuccess{newIndex = before FT.|> s, insertPosition = InsertAtEnd}
         t | t > thisTip -> Right $ InsertUtxoSuccess{newIndex = (before FT.|> s) <> after, insertPosition = InsertBeforeEnd}
           | otherwise   -> Left  $ DuplicateBlock t

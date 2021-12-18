@@ -6,7 +6,6 @@ pabWebserverConfig:
   baseUrl: http://localhost:9080
   staticDir: .
   permissiveCorsPolicy: False
-  rollbackHistory: 10
 
 walletServerConfig:
   tag: LocalWalletConfig
@@ -116,3 +115,5 @@ signingProcessConfig:
 metadataServerConfig:
   mdBaseUrl: http://localhost:9085
 
+developmentOptions:
+  pabRollbackHistory: null
