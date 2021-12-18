@@ -33,10 +33,11 @@ import Control.Tracer (nullTracer)
 import Data.Foldable (foldl')
 import Data.Maybe (catMaybes)
 import Ledger.TimeSlot (SlotConfig)
-import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), InsertUtxoFailed (..),
-                          InsertUtxoSuccess (..), RollbackFailed (..), RollbackResult (..), Tip (..),
-                          TxConfirmedState (..), TxIdState (..), TxOutBalance, TxValidity (..), UtxoState (..), blockId,
-                          citxTxId, fromOnChainTx, insert, trimIndex, utxoState)
+import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
+                          InsertUtxoFailed (..), InsertUtxoSuccess (..), ReduceBlockCountResult (..),
+                          RollbackFailed (..), RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..),
+                          TxOutBalance, TxValidity (..), UtxoIndex, UtxoState (..), blockId, citxTxId, fromOnChainTx,
+                          insert, reduceBlockCount, utxoState)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
@@ -183,12 +184,18 @@ updateTransactionState tip env@BlockchainEnv{beRollbackHistory, beTxChanges, beT
 
     case (txIdStateInsert, txUtxoBalanceInsert) of
       (Right InsertUtxoSuccess{newIndex=newTxIdState}, Right InsertUtxoSuccess{newIndex=newTxOutBalance}) -> do -- TODO: Get tx out status another way
-        STM.writeTVar beTxChanges $ trimIndex beRollbackHistory newTxIdState
-        STM.writeTVar beTxOutChanges $ trimIndex beRollbackHistory newTxOutBalance
+        STM.writeTVar beTxChanges $ trimIx newTxIdState
+        STM.writeTVar beTxOutChanges $ trimIx newTxOutBalance
         STM.writeTVar beCurrentBlock (succ blockNumber)
         Right <$> blockAndSlot env
       (Left e, _) -> pure $ Left $ InsertUtxoStateFailure e
       (_, Left e) -> pure $ Left $ InsertUtxoStateFailure e
+    where
+      trimIx :: Monoid a => UtxoIndex a -> UtxoIndex a
+      trimIx uix =
+        case reduceBlockCount (Depth (fromIntegral beRollbackHistory)) uix of
+          BlockCountNotReduced          -> uix
+          ReduceBlockCountResult uix' _ -> uix'
 
 insertNewTx :: BlockNumber -> TxIdState -> (TxId, TxOutBalance, TxValidity) -> TxIdState
 insertNewTx blockNumber TxIdState{txnsConfirmed, txnsDeleted} (txi, _, txValidity) =

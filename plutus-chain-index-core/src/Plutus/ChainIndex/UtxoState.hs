@@ -27,7 +27,6 @@ module Plutus.ChainIndex.UtxoState(
     , InsertUtxoSuccess(..)
     , InsertUtxoFailed(..)
     , insert
-    , trimIndex
     -- * Rollbacks
     , RollbackFailed(..)
     , RollbackResult(..)
@@ -48,7 +47,7 @@ import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import GHC.Generics (Generic)
 import Plutus.ChainIndex.ChainIndexError (InsertUtxoFailed (..), RollbackFailed (..))
 import Plutus.ChainIndex.ChainIndexLog (InsertUtxoPosition (..))
-import Plutus.ChainIndex.Types (Depth (..), Point (..), Tip (..), blockNumber, pointsToTip)
+import Plutus.ChainIndex.Types (Depth (..), Point (..), Tip (..), pointsToTip)
 import Prettyprinter (Pretty (..))
 
 -- | UTXO / ledger state, kept in memory. We are only interested in the UTXO set, everything else is stored
@@ -99,26 +98,6 @@ data InsertUtxoSuccess a =
 instance Pretty (InsertUtxoSuccess a) where
   pretty = \case
     InsertUtxoSuccess _ insertPosition -> pretty insertPosition
-
-trimIndex ::
-   ( Monoid a )
-  => Integer
-  -> UtxoIndex a
-  -> UtxoIndex a
-trimIndex 0          ix = ix
-trimIndex kParameter ix =
-    let (lb, rb) = bounds ix
-    in  if (rb - lb) > kParameter * 10
-        then FT.dropUntil (\(_, uxst) -> rb - blockNumber (view usTip uxst) <= kParameter) ix
-        else ix
-    where
-        bounds :: Monoid a => UtxoIndex a -> (Integer, Integer)
-        bounds ix' =
-            case (FT.viewl ix', FT.viewr ix') of
-              (FT.EmptyL, _) -> (0, 0)
-              (_, FT.EmptyR) -> (0, 0)
-              (l FT.:< _ , _ FT.:> r) -> ( blockNumber $ view usTip l
-                                         , blockNumber $ view usTip r )
 
 -- | Insert a 'UtxoState' into the index
 insert ::
