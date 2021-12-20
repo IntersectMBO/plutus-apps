@@ -1,5 +1,6 @@
 [
   { "name" : "staging",     "url" : "https://plutus-playground-plutus-apps-staging.plutus.aws.iohkdev.io/" },
   { "name" : "production",  "url" : "http://playground.plutus.iohkdev.io/" },
-  { "name" : "staging_old", "url" : "https://staging.plutus.iohkdev.io/" }
+  { "name" : "staging_old", "url" : "https://staging.plutus.iohkdev.io/" },
+  { "name" : "local",       "url" : "http://localhist:8009/" }
 ]

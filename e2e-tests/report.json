@@ -1,0 +1,125 @@
+{
+  "config": {
+    "forbidOnly": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/dev/plutus-apps/e2e-tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "name": "chromium",
+        "testDir": "/home/dev/plutus-apps/e2e-tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/?(*.)@(spec|test).@(ts|js|mjs)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "reporter": [
+      [
+        "json",
+        {
+          "outputFile": "./report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 15000
+    },
+    "rootDir": "/home/dev/plutus-apps/e2e-tests",
+    "quiet": false,
+    "shard": null,
+    "updateSnapshots": "missing",
+    "version": "1.17.1",
+    "workers": 2,
+    "webServer": null,
+    "__testGroupsCount": 1
+  },
+  "suites": [
+    {
+      "title": "src/plutus-playground/tests/sanity.spec.ts",
+      "file": "src/plutus-playground/tests/sanity.spec.ts",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "sanity - https://localhost:8009/",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip"
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "skipped",
+                  "duration": 705,
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "file": "src/plutus-playground/tests/sanity.spec.ts",
+          "line": 15,
+          "column": 3
+        },
+        {
+          "title": "hello world - https://localhost:8009/",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 296,
+                  "error": {
+                    "message": "page.goto: net::ERR_CERT_AUTHORITY_INVALID at https://localhost:8009/\n=========================== logs ===========================\nnavigating to \"https://localhost:8009/\", waiting until \"load\"\n============================================================",
+                    "stack": "page.goto: net::ERR_CERT_AUTHORITY_INVALID at https://localhost:8009/\n=========================== logs ===========================\nnavigating to \"https://localhost:8009/\", waiting until \"load\"\n============================================================\n    at EditorPage.navigate (/home/dev/plutus-apps/e2e-tests/src/plutus-playground/pageobject/editor.ts:26:21)\n    at /home/dev/plutus-apps/e2e-tests/src/plutus-playground/tests/sanity.spec.ts:26:22"
+                  },
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "attachments": [],
+                  "errorLocation": {
+                    "column": 22,
+                    "line": 26
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "file": "src/plutus-playground/tests/sanity.spec.ts",
+          "line": 21,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": []
+}
