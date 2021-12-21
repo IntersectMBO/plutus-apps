@@ -46,6 +46,9 @@ signingProcessConfig:
 metadataServerConfig:
   mdBaseUrl: http://localhost:9085
 
+developmentOptions:
+  pabRollbackHistory: null
+
 # Optional EKG Server Config
 # ----
 # monitoringConfig:

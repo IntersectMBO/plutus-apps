@@ -51,7 +51,7 @@ Can be used to run end-to-end tests using a private local testnet.
 1. Build necessary components:
 
 ```
-> cabal build plutus-pab-local-cluster cardano-node cardano-wallet
+> cabal build plutus-pab-local-cluster
 ```
 
 2. Get config data:

@@ -51,12 +51,8 @@ common lang
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 library
-    import:             lang
-    build-tool-depends:
-        cardano-node:cardano-node -any, cardano-cli:cardano-cli -any
-    ghc-options:
-        -Wunused-packages
-
+    import: lang
+    ghc-options: -Wunused-packages
     exposed-modules:
         Cardano.Api.NetworkId.Extra
         Cardano.Api.ProtocolParameters
