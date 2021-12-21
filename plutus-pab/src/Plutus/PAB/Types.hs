@@ -28,6 +28,7 @@ import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, Tx, TxId, eitherTx, txId)
 import Ledger.Index (UtxoIndex (UtxoIndex))
 import Ledger.Index qualified as UtxoIndex
+import Plutus.ChainIndex.Types (Point (..))
 import Plutus.Contract.Types (ContractError)
 import Plutus.PAB.Instances ()
 import Prettyprinter (Pretty, line, pretty, viaShow, (<+>))
@@ -177,9 +178,10 @@ defaultWebServerConfig =
 instance Default WebserverConfig where
   def = defaultWebServerConfig
 
-newtype DevelopmentOptions =
+data DevelopmentOptions =
     DevelopmentOptions
         { pabRollbackHistory :: Maybe Int
+        , pabResumeFrom      :: Point
         }
     deriving (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -187,7 +189,9 @@ newtype DevelopmentOptions =
 defaultDevelopmentOptions :: DevelopmentOptions
 defaultDevelopmentOptions =
     DevelopmentOptions
-        { pabRollbackHistory = Nothing }
+        { pabRollbackHistory = Nothing
+        , pabResumeFrom      = PointAtGenesis
+        }
 
 instance Default DevelopmentOptions where
     def = defaultDevelopmentOptions

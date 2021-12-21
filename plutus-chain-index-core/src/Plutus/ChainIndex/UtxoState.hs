@@ -129,8 +129,14 @@ rollbackWith
     -> Point
     -> UtxoIndex a
     -> Either RollbackFailed (RollbackResult a)
-rollbackWith f PointAtGenesis after = Right (RollbackResult TipAtGenesis (f mempty after))
-rollbackWith _ _ (viewTip -> TipAtGenesis) = Left RollbackNoTip
+-- Forcing a re-synchronisation of the chain starting from genesis.
+rollbackWith f PointAtGenesis after =
+    Right (RollbackResult TipAtGenesis (f mempty after))
+-- Partial synchronisation, starting from a given block id.
+-- TODO: After we implement persistent storage this should return
+--       Left RollbackNoTip.
+rollbackWith f _ after@(viewTip -> TipAtGenesis) =
+    Right (RollbackResult TipAtGenesis (f mempty after))
 rollbackWith f targetPoint idx@(viewTip -> currentTip)
     -- Already at the target point
     |  targetPoint `pointsToTip` currentTip =

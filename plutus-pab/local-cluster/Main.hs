@@ -61,11 +61,12 @@ import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Plutus.ChainIndex.App qualified as ChainIndex
 import Plutus.ChainIndex.Config qualified as CI
 import Plutus.ChainIndex.Logging qualified as ChainIndex.Logging
+import Plutus.ChainIndex.Types (Point (..))
 import Plutus.PAB.App (StorageBackend (BeamSqliteBackend))
 import Plutus.PAB.Effects.Contract.Builtin (handleBuiltin)
 import Plutus.PAB.Run qualified as PAB.Run
 import Plutus.PAB.Run.Command (ConfigCommand (Migrate, PABWebserver))
-import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, rollbackHistory, runEkgServer, storageBackend))
+import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.CommandParser qualified as PAB.Command
 import Plutus.PAB.Types (Config (chainIndexConfig, dbConfig, nodeServerConfig, walletServerConfig),
                          DbConfig (dbConfigFile))
@@ -206,7 +207,7 @@ launchPAB ::
     -> ChainIndexPort -- ^ Port of the chain index
     -> IO ()
 launchPAB passPhrase dir walletUrl (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
-    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
+    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = Nothing, resumeFrom = PointAtGenesis, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
         networkID = NetworkIdWrapper CAPI.Mainnet
         config =
             PAB.Config.defaultConfig
