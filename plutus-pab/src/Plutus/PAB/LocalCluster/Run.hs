@@ -23,7 +23,7 @@ import Cardano.CLI (LogOutput (LogToFile, LogToStdStreams), Port, ekgEnabled, ge
 import Cardano.ChainIndex.Types qualified as PAB.CI
 import Cardano.Launcher.Node (nodeSocketFile)
 import Cardano.Mnemonic (SomeMnemonic (SomeMnemonic))
-import Cardano.Node.Types (MockServerConfig (mscNetworkId, mscNodeMode, mscSocketPath), NodeMode (AlonzoNode))
+import Cardano.Node.Types (NodeMode (AlonzoNode), PABServerConfig (pscNetworkId, pscNodeMode, pscSocketPath))
 import Cardano.Startup (installSignalHandlers, setDefaultFilePermissions, withUtf8Encoding)
 import Cardano.Wallet.Api.Client qualified as WalletClient
 import Cardano.Wallet.Api.Server (Listen (ListenOnPort))
@@ -248,7 +248,7 @@ launchPAB userContractHandler passPhrase dir walletUrl (RunningNode socketPath _
         networkID = NetworkIdWrapper CAPI.Mainnet
         config =
             PAB.Config.defaultConfig
-                { nodeServerConfig = def{mscSocketPath=nodeSocketFile socketPath,mscNodeMode=AlonzoNode,mscNetworkId=networkID}
+                { nodeServerConfig = def{pscSocketPath=nodeSocketFile socketPath,pscNodeMode=AlonzoNode,pscNetworkId=networkID}
                 , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
                 , chainIndexConfig = def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
                 , walletServerConfig = set (Wallet.Config.walletSettingsL . Wallet.Config.baseUrlL) (WalletUrl walletUrl) def

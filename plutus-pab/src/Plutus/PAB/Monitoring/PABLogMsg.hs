@@ -13,7 +13,7 @@ module Plutus.PAB.Monitoring.PABLogMsg(
     PABLogMsg(..),
     ChainIndexServerMsg,
     WalletMsg,
-    MockServerLogMsg,
+    PABServerLogMsg,
     AppMsg(..),
     CoreMsg(..),
     PABMultiAgentMsg(..),
@@ -24,7 +24,7 @@ module Plutus.PAB.Monitoring.PABLogMsg(
 import Cardano.BM.Data.Tracer (ToObject (..), TracingVerbosity (..))
 import Cardano.BM.Data.Tracer.Extras (StructuredLog, Tagged (..), mkObjectStr)
 import Cardano.ChainIndex.Types (ChainIndexServerMsg)
-import Cardano.Node.Types (MockServerLogMsg)
+import Cardano.Node.Types (PABServerLogMsg)
 import Cardano.Wallet.Mock.Types (WalletMsg)
 import Control.Monad.Freer.Extras.Beam (BeamLog)
 import Data.Aeson (FromJSON, ToJSON, Value)
@@ -82,7 +82,7 @@ data PABLogMsg t =
     SCoreMsg (CoreMsg t)
     | SChainIndexServerMsg ChainIndexServerMsg
     | SWalletMsg WalletMsg
-    | SMockserverLogMsg MockServerLogMsg
+    | SMockserverLogMsg PABServerLogMsg
     | SMultiAgent (PABMultiAgentMsg t)
     deriving stock (Generic)
 
@@ -179,7 +179,7 @@ instance Pretty (ContractDef t) => Pretty (PABMultiAgentMsg t) where
         UserLog m             -> pretty m
         BeamLogItem b         -> pretty b
         RestoringPABState     -> "Restoring PAB state ..."
-        PABStateRestored 0    -> "No constract instance were restored in the PAB state."
+        PABStateRestored 0    -> "No contract instance were restored in the PAB state."
         PABStateRestored 1    -> "PAB state restored with 1 contract instance."
         PABStateRestored n    -> "PAB state restored with"
                               <+> pretty n
