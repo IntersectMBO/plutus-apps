@@ -13,7 +13,6 @@ module Plutus.ChainIndex.Types(
     , Tip(..)
     , Point(..)
     , pointsToTip
-    , blockNumber
     , tipAsPoint
     , TxValidity(..)
     , TxStatus
@@ -110,10 +109,6 @@ instance Pretty Point where
         <>  ", blockId="
         <+> pretty pointBlockId
         <>  ")"
-
-blockNumber :: Tip -> Integer
-blockNumber TipAtGenesis = 0
-blockNumber (Tip _ _ bn) = toInteger bn
 
 tipAsPoint :: Tip -> Point
 tipAsPoint TipAtGenesis = PointAtGenesis

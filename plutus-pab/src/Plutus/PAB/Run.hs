@@ -37,7 +37,7 @@ import Plutus.PAB.Monitoring.Util (PrettyObject (..), convertLog)
 import Plutus.PAB.Run.Cli
 import Plutus.PAB.Run.CommandParser
 import Plutus.PAB.Run.PSGenerator (HasPSTypes)
-import Plutus.PAB.Types (Config (..), PABError (MissingConfigFileOption))
+import Plutus.PAB.Types (Config (..), DevelopmentOptions (..), PABError (MissingConfigFileOption))
 import Prettyprinter (Pretty (pretty))
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
@@ -76,7 +76,7 @@ runWithOpts :: forall a.
     -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
     -> AppOpts
     -> IO ()
-runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
+runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
 
     -- Parse config files and initialize logging
     logConfig <- maybe defaultConfig loadConfig logConfigPath
@@ -96,10 +96,11 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, passphr
             Nothing -> pure $ Left MissingConfigFileOption
             Just p  -> do Right <$> (liftIO $ decodeFileThrow p)
 
-    let mkArgs config@Config{nodeServerConfig} = ConfigCommandArgs
+    let mkArgs config@Config{nodeServerConfig, developmentOptions} = ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
-                , ccaPABConfig = config { nodeServerConfig = nodeServerConfig { mscPassphrase = passphrase <|> mscPassphrase nodeServerConfig }}
+                , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { mscPassphrase      = passphrase      <|> mscPassphrase nodeServerConfig }
+                                        , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions } }
                 , ccaAvailability = serviceAvailability
                 , ccaStorageBackend = storageBackend
                 }

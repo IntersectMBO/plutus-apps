@@ -118,6 +118,7 @@ data Config =
         , pabWebserverConfig      :: WebserverConfig
         , chainIndexConfig        :: ChainIndex.ChainIndexConfig
         , requestProcessingConfig :: RequestProcessingConfig
+        , developmentOptions      :: DevelopmentOptions
         }
     deriving (Show, Eq, Generic, FromJSON)
 
@@ -130,6 +131,7 @@ defaultConfig =
     , pabWebserverConfig = def
     , chainIndexConfig = def
     , requestProcessingConfig = def
+    , developmentOptions = def
     }
 
 instance Default Config where
@@ -174,6 +176,21 @@ defaultWebServerConfig =
 
 instance Default WebserverConfig where
   def = defaultWebServerConfig
+
+newtype DevelopmentOptions =
+    DevelopmentOptions
+        { pabRollbackHistory :: Maybe Int
+        }
+    deriving (Show, Eq, Generic)
+    deriving anyclass (FromJSON, ToJSON)
+
+defaultDevelopmentOptions :: DevelopmentOptions
+defaultDevelopmentOptions =
+    DevelopmentOptions
+        { pabRollbackHistory = Nothing }
+
+instance Default DevelopmentOptions where
+    def = defaultDevelopmentOptions
 
 -- | The source of a PAB event, used for sharding of the event stream
 data Source
