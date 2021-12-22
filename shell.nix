@@ -5,7 +5,17 @@
 let
   inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
-  inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cardano-cli cardano-node;
+  inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks;
+  inherit (haskell.project.hsPkgs.cardano-wallet.components.exes) cardano-wallet;
+
+  # A standard release to feed cardano-cli & cardano-node to our shell
+  cardano-node = import
+    (pkgs.fetchgit {
+      url = "https://github.com/input-output-hk/cardano-node";
+      rev = "1.32.1";
+      sha256 = "00k9fqrm0gphjji23x0nc9z6bqh8bqrncgivn3mi3csacjzicrrx";
+    })
+    { };
 
   # For Sphinx, and ad-hoc usage
   sphinxTools = python3.withPackages (ps: [
@@ -74,6 +84,9 @@ let
   # local build inputs ( -> ./nix/pkgs/default.nix )
   localInputs = (with plutus-apps; [
     cabal-install
+    cardano-node.cardano-cli
+    cardano-node.cardano-node
+    cardano-wallet
     cardano-repo-tool
     fixPngOptimization
     fixPurty

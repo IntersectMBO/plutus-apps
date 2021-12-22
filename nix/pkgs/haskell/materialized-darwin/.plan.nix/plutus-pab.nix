@@ -104,10 +104,6 @@
           (hsPkgs."Win32-network" or (errorHandler.buildDepError "Win32-network"))
           (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
           ];
-        build-tools = [
-          (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
-          (hsPkgs.buildPackages.cardano-cli.components.exes.cardano-cli or (pkgs.buildPackages.cardano-cli or (errorHandler.buildToolDepError "cardano-cli:cardano-cli")))
-          ];
         buildable = true;
         modules = [
           "Servant/Extra"
