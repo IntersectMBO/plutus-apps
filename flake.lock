@@ -165,10 +165,10 @@
       "flake": false,
       "locked": {
         "lastModified": 1640168705,
-        "narHash": "sha256-0l8kWR9R0XkkJInbKP/1l8e5jCVhZQ7fVo7IRaXepQ8=",
+        "narHash": "sha256-Pl3M9rMEoiEKRsTdDr4JwNnRo5Xs4uN66uVpOfaMCfE=",
         "owner": "input-output-hk",
         "repo": "plutus",
-        "rev": "65bad0fd53e432974c3c203b1b1999161b6c2dce",
+        "rev": "cc72a56eafb02333c96f662581b57504f8f8992f",
         "type": "github"
       },
       "original": {
