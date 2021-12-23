@@ -10,6 +10,7 @@ packages: doc
           plutus-ledger
           plutus-ledger-constraints
           plutus-pab
+          plutus-pab-executables
           plutus-playground-server
           plutus-use-cases
           quickcheck-dynamic

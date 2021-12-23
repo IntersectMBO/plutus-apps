@@ -63,10 +63,8 @@ import Plutus.PAB.Db.Beam qualified as Beam
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltinState, getResponse)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
-import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, PSApiGenerator, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartMockNode, psApiGenOutputDir),
-                               NoConfigCommand (PSGenerator, WriteDefaultConfig, outputFile, psGenOutputDir))
-import Plutus.PAB.Run.PSGenerator (HasPSTypes)
-import Plutus.PAB.Run.PSGenerator qualified as PSGenerator
+import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartMockNode),
+                               NoConfigCommand (WriteDefaultConfig, outputFile))
 import Plutus.PAB.Types (Config (Config, dbConfig, pabWebserverConfig), chainIndexConfig, nodeServerConfig,
                          walletServerConfig)
 import Plutus.PAB.Webserver.Server qualified as PABServer
@@ -82,10 +80,6 @@ runNoConfigCommand ::
     NoConfigCommand
     -> IO ()
 runNoConfigCommand = \case
-
-    -- Generate PureScript bridge code
-    PSGenerator {psGenOutputDir} -> do
-        PSGenerator.generateDefault psGenOutputDir
 
     -- Get default logging configuration
     WriteDefaultConfig{outputFile} -> LM.defaultConfig >>= flip CM.exportConfiguration outputFile
@@ -109,7 +103,6 @@ runConfigCommand :: forall a.
     , Pretty a
     , Servant.MimeUnrender Servant.JSON a
     , HasDefinitions a
-    , HasPSTypes a
     , OpenApi.ToSchema a
     )
     => BuiltinHandler a
@@ -272,10 +265,6 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (R
   where
       logStep response = logInfo @(LM.AppMsg (Builtin a)) $
           LM.ContractHistoryItem contractInstanceId (snd <$> response)
-
-runConfigCommand _ _ PSApiGenerator {psApiGenOutputDir} = do
-    PSGenerator.generateAPIModule (Proxy @a) psApiGenOutputDir
-    PSGenerator.generateWith @a psApiGenOutputDir
 
 toPABMsg :: Trace m (LM.AppMsg (Builtin a)) -> Trace m (LM.PABLogMsg (Builtin a))
 toPABMsg = LM.convertLog LM.PABMsg

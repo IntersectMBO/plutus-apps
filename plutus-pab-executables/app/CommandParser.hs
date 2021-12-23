@@ -1,5 +1,7 @@
 {-# LANGUAGE ApplicativeDo         #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DerivingVia           #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -8,13 +10,24 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
-module CommandParser (parseOptions, AppOpts(..)) where
+module CommandParser (parseOptions, AppOpts(..), NoConfigCommand(..)) where
 
 import Cardano.BM.Data.Severity (Severity (..))
+import Data.Aeson qualified as JSON
+import GHC.Generics (Generic)
 import Options.Applicative (CommandFields, Mod, Parser, argument, command, customExecParser, disambiguate, flag,
                             fullDesc, help, helper, idm, info, long, metavar, option, prefs, progDesc, short,
                             showHelpOnEmpty, showHelpOnError, str, subparser, value)
-import Plutus.PAB.Run.Command (NoConfigCommand (..))
+
+data NoConfigCommand =
+    PSGenerator -- ^ Generate purescript bridge code
+          { psGenOutputDir :: !FilePath -- ^ Path to write generated code to
+          }
+    | WriteDefaultConfig -- ^ Write default logging configuration
+          { outputFile :: !FilePath -- ^ Path to write configuration to
+          }
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass JSON.ToJSON
 
 data AppOpts = AppOpts { minLogLevel   :: Maybe Severity
                        , logConfigPath :: Maybe FilePath

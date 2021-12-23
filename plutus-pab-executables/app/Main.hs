@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia           #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -12,13 +13,28 @@ module Main
     ( main
     ) where
 
-import CommandParser (AppOpts (..), parseOptions)
-import Plutus.PAB.Run.Cli (runNoConfigCommand)
+import CommandParser (AppOpts (..), NoConfigCommand (..), parseOptions)
 
+import Cardano.BM.Configuration.Model qualified as CM
 import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
 import Data.Text.Extras (tshow)
+import Plutus.PAB.Monitoring.Monitoring qualified as LM
+import Plutus.PAB.Run.PSGenerator qualified as PSGenerator
 import Plutus.PAB.Types (PABError)
+
 import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
+
+runNoConfigCommand ::
+    NoConfigCommand
+    -> IO ()
+runNoConfigCommand = \case
+
+    -- Generate PureScript bridge code
+    PSGenerator {psGenOutputDir} -> do
+        PSGenerator.generateDefault psGenOutputDir
+
+    -- Get default logging configuration
+    WriteDefaultConfig{outputFile} -> LM.defaultConfig >>= flip CM.exportConfiguration outputFile
 
 main :: IO ()
 main = do

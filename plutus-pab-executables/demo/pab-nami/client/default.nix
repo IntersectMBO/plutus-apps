@@ -1,8 +1,8 @@
 { pkgs, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
 let
-  pab-nami-demo-invoker = haskell.packages.plutus-pab.components.exes.plutus-pab-nami-demo;
+  pab-nami-demo-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-nami-demo;
 
-  pab-setup-invoker = haskell.packages.plutus-pab.components.exes.plutus-pab-setup;
+  pab-setup-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-setup;
 
   # TODO: Use the PS generator in the demo app
   generated-purescript = pkgs.runCommand "pab-nami-demo-purescript" { } ''
