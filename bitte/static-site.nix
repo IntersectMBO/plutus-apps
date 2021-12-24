@@ -1,10 +1,14 @@
-{ writeShellScriptBin, symlinkJoin, lib, writeText, lighttpd }: { root }:
+# Needed variables:
+#  NOMAD_PORT_${port-name}
+#  NOMAD_IP_${port-name}
+{ writeShellScriptBin, symlinkJoin, lib, writeText, lighttpd }: { root, port-name }:
 
 let
   config = writeText "lighttpd.conf" ''
     server.modules = ("mod_deflate")
     server.document-root = "${root}"
-    server.port = env.PORT
+    server.port = env.NOMAD_PORT_${port-name}
+    server.bind = env.NOMAD_IP_${port-name}
     index-file.names = ("index.html")
     mimetype.assign = (
       ".css" => "text/css",
@@ -18,12 +22,7 @@ let
     deflate.mimetypes    = ("text/plain", "text/html", "text/css")
     server.upload-dirs = ("/tmp")
   '';
-  entrypoint = writeShellScriptBin "entrypoint" ''
-    export PATH=${lib.makeBinPath [ lighttpd ]}
-    lighttpd -f ${config} -D
-  '';
 in
-symlinkJoin {
-  name = "entrypoint";
-  paths = [ entrypoint ];
-}
+writeShellScriptBin "entrypoint" ''
+  exec -a lighttpd ${lighttpd}/bin/lighttpd -f ${config} -D
+''

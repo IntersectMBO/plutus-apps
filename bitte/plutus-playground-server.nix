@@ -1,14 +1,8 @@
+# Needed variables:
+#  NOMAD_PORT_${variant}_playground_server
 { writeShellScriptBin, pkg, variant, symlinkJoin, lib, cacert, z3 }:
-
-let
-  deps = [ pkg z3 ];
-  entrypoint = writeShellScriptBin "entrypoint" ''
-    export PATH=${lib.makeBinPath deps}
-    export SYSTEM_CERTIFICATE_PATH=${cacert}/etc/ssl/certs/ca-bundle.crt
-    ${variant}-playground-server webserver -p $PORT
-  '';
-in
-symlinkJoin {
-  name = "entrypoint";
-  paths = [ entrypoint ];
-}
+writeShellScriptBin "entrypoint" ''
+  export PATH=${lib.makeBinPath [ pkg z3 ]}
+  export SYSTEM_CERTIFICATE_PATH=${cacert}/etc/ssl/certs/ca-bundle.crt
+  exec ${variant}-playground-server webserver -p $NOMAD_PORT_${variant}_playground_server
+''
