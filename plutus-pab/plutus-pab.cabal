@@ -102,7 +102,6 @@ library
         Plutus.PAB.Monitoring.Config
         Plutus.PAB.Monitoring.Monitoring
         Plutus.PAB.Monitoring.PABLogMsg
-        Plutus.PAB.Monitoring.Util
         Plutus.PAB.Run
         Plutus.PAB.Run.Cli
         Plutus.PAB.Run.Command

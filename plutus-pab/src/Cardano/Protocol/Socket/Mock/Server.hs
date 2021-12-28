@@ -32,7 +32,7 @@ import Ouroboros.Network.Protocol.ChainSync.Server (ChainSyncServer (..), Server
 import Ouroboros.Network.Protocol.ChainSync.Server qualified as ChainSync
 import Ouroboros.Network.Protocol.LocalTxSubmission.Server qualified as TxSubmission
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as TxSubmission
-import Plutus.PAB.Monitoring.Util qualified as LM
+import Plutus.Monitoring.Util qualified as LM
 
 import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
 import Ouroboros.Network.Block (Point (..), pointSlot)
