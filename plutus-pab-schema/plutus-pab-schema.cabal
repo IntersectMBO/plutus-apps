@@ -1,0 +1,75 @@
+cabal-version: 3.0
+name:          plutus-pab-schema
+version:       0.1.0.0
+license:       Apache-2.0
+license-files:
+    LICENSE
+    NOTICE
+
+maintainer:    jann.mueller@iohk.io
+author:        Jann Müller
+homepage:      https://github.com/iohk/plutus#readme
+bug-reports:   https://github.com/iohk/plutus/issues
+description:
+    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+
+build-type:    Simple
+
+source-repository head
+    type:     git
+    location: https://github.com/input-output-hk/plutus-apps
+
+flag defer-plugin-errors
+    description:
+        Defer errors from the plugin, useful for things like Haddock that can't handle it.
+
+    default:     False
+    manual:      True
+
+common lang
+    default-language:   Haskell2010
+    default-extensions:
+        DeriveFoldable
+        DeriveFunctor
+        DeriveGeneric
+        DeriveLift
+        DeriveTraversable
+        ExplicitForAll
+        GeneralizedNewtypeDeriving
+        ImportQualifiedPost
+        ScopedTypeVariables
+        StandaloneDeriving
+
+    ghc-options:
+        -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+        -Wincomplete-record-updates -Wredundant-constraints -Widentities
+        -fobject-code -fno-ignore-interface-pragmas
+        -fno-omit-interface-pragmas
+
+    -- See Plutus Tx readme
+    if flag(defer-plugin-errors)
+        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+
+library
+    import: lang
+    ghc-options: -Wunused-packages
+    exposed-modules:
+        Plutus.PAB.Webserver.API.Schema
+        Plutus.PAB.Webserver.Types.Schema
+        Plutus.PAB.Webserver.Handler.Schema
+    hs-source-dirs:     src
+    build-depends:
+        , plutus-contract
+        , plutus-ledger
+        , plutus-pab
+        , playground-common
+
+    build-depends:
+        aeson -any,
+        base >=4.7 && <5,
+        containers -any,
+        freer-simple -any,
+        openapi3 -any,
+        plutus-ledger-api -any,
+        prettyprinter >=1.1.0.1,
+        servant -any,

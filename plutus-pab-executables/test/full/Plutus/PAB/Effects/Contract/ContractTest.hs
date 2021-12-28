@@ -30,6 +30,7 @@ import Prettyprinter
 import ContractExample.AtomicSwap qualified as Contracts.AtomicSwap
 import ContractExample.PayToWallet qualified as Contracts.PayToWallet
 import Data.Text.Extras (tshow)
+import Playground.Schema (endpointsToSchemas)
 import Playground.Types (FunctionSchema)
 import Plutus.Contract (awaitPromise)
 import Plutus.Contracts.Currency qualified as Contracts.Currency
@@ -40,6 +41,7 @@ import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefiniti
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg)
 import Plutus.PAB.Types (PABError (..))
+import Plutus.PAB.Webserver.Types.Schema
 import Schema (FormSchema)
 
 data TestContracts = GameStateMachine | Currency | AtomicSwap | PayToWallet | PingPong
@@ -52,15 +54,17 @@ instance Pretty TestContracts where
 instance HasDefinitions TestContracts where
     getDefinitions = [ GameStateMachine, Currency, AtomicSwap, PayToWallet, PingPong ]
     getContract = getTestContracts
+
+instance HasSchema TestContracts where
     getSchema = getTestContractsSchema
 
 getTestContractsSchema :: TestContracts -> [FunctionSchema FormSchema]
 getTestContractsSchema = \case
-    GameStateMachine -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
-    Currency         -> Builtin.endpointsToSchemas @Contracts.Currency.CurrencySchema
-    AtomicSwap       -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
-    PayToWallet      -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
-    PingPong         -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
+    GameStateMachine -> endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
+    Currency         -> endpointsToSchemas @Contracts.Currency.CurrencySchema
+    AtomicSwap       -> endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
+    PayToWallet      -> endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
+    PingPong         -> endpointsToSchemas @Contracts.PingPong.PingPongSchema
 
 getTestContracts :: TestContracts -> SomeBuiltin
 getTestContracts = \case

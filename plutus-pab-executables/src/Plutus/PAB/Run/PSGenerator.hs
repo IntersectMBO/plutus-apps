@@ -41,6 +41,8 @@ import Plutus.PAB.Webserver.API qualified as API
 import Plutus.PAB.Webserver.Types (ChainReport, CombinedWSStreamToClient, CombinedWSStreamToServer,
                                    ContractActivationArgs, ContractInstanceClientState, ContractReport,
                                    ContractSignatureResponse, FullReport, InstanceStatusToClient)
+import Plutus.PAB.Webserver.Types.Schema
+import Servant ((:<|>))
 import Servant.PureScript (HasBridge, Settings, apiModuleName, defaultBridge, defaultSettings, languageBridge,
                            writeAPIModuleWithSettings)
 
@@ -82,6 +84,7 @@ pabTypes =
     , equal . genericShow . argonaut $ mkSumType @ChainReport
     , equal . genericShow . argonaut $ mkSumType @(ContractReport A)
     , equal . genericShow . argonaut $ mkSumType @(ContractSignatureResponse A)
+    , equal . genericShow . argonaut $ mkSumType @(ContractSchemaResponse A)
     , equal . genericShow . argonaut $ mkSumType @(PartiallyDecodedResponse A)
 
     -- Contract request / response types

@@ -33,7 +33,6 @@ type API t walletId -- see note [WalletID type in wallet API]
             :<|> "instance" :>
                     (Capture "contract-instance-id" ContractInstanceId :>
                         (    "status"   :> Description "Current status of contract instance." :> Get '[JSON] (ContractInstanceClientState t)
-                        :<|> "schema"   :> Description "Endpoints' schema of contract instance." :> Get '[JSON] (ContractSignatureResponse t)
                         :<|> "endpoint" :> Capture "endpoint-name" String :> ReqBody '[JSON] JSON.Value :> Description "Call an endpoint." :> Post '[JSON] ()
                         :<|> "stop"     :> Description "Terminate the instance." :> Put '[JSON] ()
                         )

@@ -63,6 +63,7 @@ library
         , playground-common
         , plutus-contract
         , plutus-pab
+        , plutus-pab-schema
 
     build-depends:
         base >=4.7 && <5,
@@ -154,6 +155,7 @@ executable plutus-pab-examples
         , plutus-ledger-constraints
         , plutus-pab
         , plutus-pab-executables
+        , plutus-pab-schema
         , plutus-use-cases
         , prettyprinter
         , purescript-bridge
@@ -234,6 +236,8 @@ executable plutus-pab-local-cluster
         , sqlite-simple
         , freer-extras
         , beam-migrate
+        , plutus-pab-schema
+        , plutus-use-cases
         , cardano-wallet
         , cardano-wallet-cli
         , cardano-wallet-launcher
@@ -291,6 +295,7 @@ executable plutus-pab-test-psgenerator
         plutus-contract -any,
         plutus-pab,
         plutus-pab-executables -any,
+        plutus-pab-schema -any,
         plutus-use-cases -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
@@ -351,6 +356,7 @@ test-suite plutus-pab-test-full
         plutus-contract -any,
         plutus-pab,
         plutus-pab-executables,
+        plutus-pab-schema,
         plutus-use-cases -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
@@ -416,6 +422,7 @@ test-suite plutus-pab-test-full-long-running
         plutus-chain-index-core -any,
         plutus-pab,
         plutus-pab-executables -any,
+        plutus-pab-schema -any,
         plutus-use-cases -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
@@ -507,6 +514,7 @@ executable plutus-pab-nami-demo
     plutus-contract -any,
     plutus-pab -any,
     plutus-pab-executables -any,
+    plutus-pab-schema -any,
     playground-common -any,
     prettyprinter -any,
     purescript-bridge -any,
@@ -538,6 +546,7 @@ executable plutus-pab-nami-demo-generator
     plutus-contract -any,
     plutus-pab -any,
     plutus-pab-executables -any,
+    plutus-pab-schema -any,
     playground-common -any,
     prettyprinter -any,
     purescript-bridge -any,

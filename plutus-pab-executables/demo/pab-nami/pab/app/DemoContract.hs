@@ -22,11 +22,13 @@ import GHC.Generics (Generic)
 import Language.PureScript.Bridge (argonaut, equal, genericShow, mkSumType)
 import Ledger (PaymentPubKeyHash, StakePubKeyHash, Value)
 import Ledger.Constraints (adjustUnbalancedTx, mustPayToPubKeyAddress)
+import Playground.Schema (endpointsToSchemas)
 import Playground.Types (FunctionSchema)
 import Plutus.Contract (ContractError, Endpoint, Promise, endpoint, logInfo, mkTxConstraints, yieldUnbalancedTx)
 import Plutus.PAB.Effects.Contract.Builtin (HasDefinitions, SomeBuiltin (SomeBuiltin))
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
+import Plutus.PAB.Webserver.Types.Schema
 import Prettyprinter (Pretty, pretty, viaShow)
 import Schema (FormSchema, ToSchema)
 
@@ -47,11 +49,13 @@ instance HasDefinitions DemoContract where
     getDefinitions = [ DemoContract
                      ]
     getContract = getDemoContract
+
+instance HasSchema DemoContract where
     getSchema = getDemoContractSchema
 
 getDemoContractSchema :: DemoContract -> [FunctionSchema FormSchema]
 getDemoContractSchema = \case
-    DemoContract -> Builtin.endpointsToSchemas @PayToWalletSchema
+    DemoContract -> endpointsToSchemas @PayToWalletSchema
 
 getDemoContract :: DemoContract -> SomeBuiltin
 getDemoContract = \case

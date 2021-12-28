@@ -41,8 +41,6 @@ data PabClient t walletId = PabClient
 data InstanceClient t = InstanceClient
   { getInstanceStatus    :: ClientM (ContractInstanceClientState t)
       -- ^ get instance status
-  , getInstanceSchema    :: ClientM (ContractSignatureResponse t)
-      -- ^ get instance schema
   , callInstanceEndpoint :: String -> JSON.Value -> ClientM ()
       -- ^ call instance endpoint
   , stopInstance         :: ClientM ()
@@ -65,7 +63,6 @@ pabClient = PabClient{..}
     instanceClient cid = InstanceClient{..}
         where
           (getInstanceStatus
-            :<|> getInstanceSchema
             :<|> callInstanceEndpoint
             :<|> stopInstance
             ) = toInstanceClient cid

@@ -30,6 +30,7 @@ import Data.Row
 import Language.PureScript.Bridge (argonaut, equal, genericShow, mkSumType, order)
 import Language.PureScript.Bridge.TypeParameters (A)
 import Ledger (TxId)
+import Playground.Schema (endpointsToSchemas)
 import Playground.Types (FunctionSchema)
 import Plutus.Contracts.Currency qualified as Contracts.Currency
 import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
@@ -44,6 +45,7 @@ import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
 import Plutus.PAB.Simulator (SimulatorEffectHandlers)
 import Plutus.PAB.Simulator qualified as Simulator
+import Plutus.PAB.Webserver.Types.Schema
 import Schema (FormSchema)
 
 data ContractExample = UniswapInit
@@ -90,24 +92,26 @@ instance HasDefinitions ContractExample where
                      , IntegrationTest
                      ]
     getContract = getContractExample
-    getSchema = getContractExampleSchema
 
 getContractExampleSchema :: ContractExample -> [FunctionSchema FormSchema]
 getContractExampleSchema = \case
-    UniswapInit         -> Builtin.endpointsToSchemas @Empty
-    UniswapUser _       -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapUserSchema
-    UniswapOwner        -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapOwnerSchema
-    GameStateMachine    -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
-    PayToWallet         -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
-    AtomicSwap          -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
-    Currency            -> Builtin.endpointsToSchemas @Contracts.Currency.CurrencySchema
-    PrismMirror         -> Builtin.endpointsToSchemas @Contracts.Prism.MirrorSchema
-    PrismUnlockExchange -> Builtin.endpointsToSchemas @Contracts.Prism.UnlockExchangeSchema
-    PrismUnlockSto      -> Builtin.endpointsToSchemas @Contracts.Prism.STOSubscriberSchema
-    PingPong            -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
-    PingPongAuto        -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
-    WaitForTx{}         -> Builtin.endpointsToSchemas @Empty
-    IntegrationTest{}   -> Builtin.endpointsToSchemas @Empty
+    UniswapInit         -> endpointsToSchemas @Empty
+    UniswapUser _       -> endpointsToSchemas @Contracts.Uniswap.UniswapUserSchema
+    UniswapOwner        -> endpointsToSchemas @Contracts.Uniswap.UniswapOwnerSchema
+    GameStateMachine    -> endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
+    PayToWallet         -> endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
+    AtomicSwap          -> endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
+    Currency            -> endpointsToSchemas @Contracts.Currency.CurrencySchema
+    PrismMirror         -> endpointsToSchemas @Contracts.Prism.MirrorSchema
+    PrismUnlockExchange -> endpointsToSchemas @Contracts.Prism.UnlockExchangeSchema
+    PrismUnlockSto      -> endpointsToSchemas @Contracts.Prism.STOSubscriberSchema
+    PingPong            -> endpointsToSchemas @Contracts.PingPong.PingPongSchema
+    PingPongAuto        -> endpointsToSchemas @Contracts.PingPong.PingPongSchema
+    WaitForTx{}         -> endpointsToSchemas @Empty
+    IntegrationTest{}   -> endpointsToSchemas @Empty
+
+instance HasSchema ContractExample where
+    getSchema = getContractExampleSchema
 
 getContractExample :: ContractExample -> SomeBuiltin
 getContractExample = \case

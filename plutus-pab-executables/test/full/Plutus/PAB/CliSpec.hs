@@ -42,6 +42,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada (lovelaceValueOf)
 import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), defaultManagerSettings, newManager,
                             responseTimeoutNone)
+import Playground.Schema (endpointsToSchemas)
 import Plutus.ChainIndex.Types (Point (..))
 import Plutus.Contracts.PingPong qualified as PingPong
 import Plutus.Monitoring.Util (PrettyObject, convertLog)
@@ -63,6 +64,7 @@ import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Client (InstanceClient (callInstanceEndpoint),
                                     PabClient (PabClient, activateContract, instanceClient), pabClient)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
+import Plutus.PAB.Webserver.Types.Schema
 import Prettyprinter (Pretty (pretty), viaShow)
 import Servant ((:<|>))
 import Servant qualified
@@ -84,8 +86,10 @@ data TestingContracts = PingPong
 
 instance HasDefinitions TestingContracts where
   getDefinitions = [ PingPong ]
-  getSchema _    = Builtin.endpointsToSchemas @PingPong.PingPongSchema
   getContract _  = SomeBuiltin PingPong.simplePingPong
+
+instance HasSchema TestingContracts where
+  getSchema _ = endpointsToSchemas @PingPong.PingPongSchema
 
 instance HasPSTypes TestingContracts where
   psTypes = undefined

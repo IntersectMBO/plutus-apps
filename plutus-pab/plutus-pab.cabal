@@ -121,7 +121,6 @@ library
     hs-source-dirs:     src
     build-depends:
         , freer-extras
-        , playground-common
         , plutus-chain-index
         , plutus-chain-index-core
         , plutus-contract

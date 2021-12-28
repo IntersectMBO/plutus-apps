@@ -784,6 +784,7 @@
         cardano-ledger-byron = ./.plan.nix/cardano-ledger-byron.nix;
         shelley-spec-ledger-test = ./.plan.nix/shelley-spec-ledger-test.nix;
         cardano-api = ./.plan.nix/cardano-api.nix;
+        plutus-pab-schema = ./.plan.nix/plutus-pab-schema.nix;
         ouroboros-consensus = ./.plan.nix/ouroboros-consensus.nix;
         cardano-binary = ./.plan.nix/cardano-binary.nix;
         cardano-prelude = ./.plan.nix/cardano-prelude.nix;
@@ -952,6 +953,9 @@
             };
           "shelley-spec-ledger-test" = { flags = {}; };
           "cardano-api" = { flags = {}; };
+          "plutus-pab-schema" = {
+            flags = { "defer-plugin-errors" = lib.mkOverride 900 false; };
+            };
           "ouroboros-consensus" = {
             flags = { "asserts" = lib.mkOverride 900 false; };
             };
@@ -1308,6 +1312,7 @@
           "template-haskell".components.library.planned = lib.mkOverride 900 true;
           "http-date".components.library.planned = lib.mkOverride 900 true;
           "concurrent-output".components.library.planned = lib.mkOverride 900 true;
+          "plutus-pab-schema".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-network-framework".components.exes."demo-ping-pong".planned = lib.mkOverride 900 true;
           "path-pieces".components.library.planned = lib.mkOverride 900 true;
           "mono-traversable".components.library.planned = lib.mkOverride 900 true;
