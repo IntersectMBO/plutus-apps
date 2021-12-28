@@ -30,10 +30,10 @@ import Data.Foldable (for_)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text.Extras (tshow)
 import Data.Yaml (decodeFileThrow)
+import Plutus.Monitoring.Util (PrettyObject (..), convertLog)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions)
 import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
-import Plutus.PAB.Monitoring.Util (PrettyObject (..), convertLog)
 import Plutus.PAB.Run.Cli
 import Plutus.PAB.Run.CommandParser
 import Plutus.PAB.Run.PSGenerator (HasPSTypes)
