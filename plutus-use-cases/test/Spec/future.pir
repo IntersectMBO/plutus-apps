@@ -1,97 +1,8 @@
 (program
   (let
     (nonrec)
-    (termbind (strict) (vardecl void (all a (type) a)) (abs e (type) (error e)))
-    (datatypebind
-      (datatype
-        (tyvardecl TxOutRef (type))
-
-        TxOutRef_match
-        (vardecl TxOutRef (fun (con bytestring) (fun (con integer) TxOutRef)))
-      )
-    )
-    (datatypebind
-      (datatype
-        (tyvardecl ThreadToken (type))
-
-        ThreadToken_match
-        (vardecl ThreadToken (fun TxOutRef (fun (con bytestring) ThreadToken)))
-      )
-    )
-    (datatypebind
-      (datatype
-        (tyvardecl Credential (type))
-
-        Credential_match
-        (vardecl PubKeyCredential (fun (con bytestring) Credential))
-        (vardecl ScriptCredential (fun (con bytestring) Credential))
-      )
-    )
-    (datatypebind
-      (datatype
-        (tyvardecl StakingCredential (type))
-
-        StakingCredential_match
-        (vardecl StakingHash (fun Credential StakingCredential))
-        (vardecl
-          StakingPtr
-          (fun
-            (con integer)
-            (fun (con integer) (fun (con integer) StakingCredential))
-          )
-        )
-      )
-    )
-    (datatypebind
-      (datatype
-        (tyvardecl DCert (type))
-
-        DCert_match
-        (vardecl DCertDelegDeRegKey (fun StakingCredential DCert))
-        (vardecl
-          DCertDelegDelegate
-          (fun StakingCredential (fun (con bytestring) DCert))
-        )
-        (vardecl DCertDelegRegKey (fun StakingCredential DCert))
-        (vardecl DCertGenesis DCert)
-        (vardecl DCertMir DCert)
-        (vardecl
-          DCertPoolRegister (fun (con bytestring) (fun (con bytestring) DCert))
-        )
-        (vardecl
-          DCertPoolRetire (fun (con bytestring) (fun (con integer) DCert))
-        )
-      )
-    )
-    (datatypebind
-      (datatype
-        (tyvardecl ScriptPurpose (type))
-
-        ScriptPurpose_match
-        (vardecl Certifying (fun DCert ScriptPurpose))
-        (vardecl Minting (fun (con bytestring) ScriptPurpose))
-        (vardecl Rewarding (fun StakingCredential ScriptPurpose))
-        (vardecl Spending (fun TxOutRef ScriptPurpose))
-      )
-    )
-    (datatypebind
-      (datatype
-        (tyvardecl Maybe (fun (type) (type)))
-        (tyvardecl a (type))
-        Maybe_match
-        (vardecl Just (fun a [ Maybe a ])) (vardecl Nothing [ Maybe a ])
-      )
-    )
-    (datatypebind
-      (datatype
-        (tyvardecl Address (type))
-
-        Address_match
-        (vardecl
-          Address (fun Credential (fun [ Maybe StakingCredential ] Address))
-        )
-      )
-    )
+    (typebind (tyvardecl ThreadToken (type)) (all a (type) (fun a a)))
+    (typebind (tyvardecl ScriptContext (type)) (all a (type) (fun a a)))
     (datatypebind
       (datatype
         (tyvardecl Tuple2 (fun (type) (fun (type) (type))))
@@ -115,13 +26,13 @@
         (nonrec)
         (datatypebind
           (datatype
-            (tyvardecl TxOut (type))
-
-            TxOut_match
+            (tyvardecl State (fun (type) (type)))
+            (tyvardecl s (type))
+            State_match
             (vardecl
-              TxOut
+              State
               (fun
-                Address
+                s
                 (fun
                   [
                     [
@@ -138,19 +49,19 @@
                       (con integer)
                     ]
                   ]
-                  (fun [ Maybe (con bytestring) ] TxOut)
+                  [ State s ]
                 )
               )
             )
           )
         )
-        (datatypebind
-          (datatype
-            (tyvardecl TxInInfo (type))
-
-            TxInInfo_match
-            (vardecl TxInInfo (fun TxOutRef (fun TxOut TxInInfo)))
-          )
+        (typebind
+          (tyvardecl InputConstraint (fun (type) (type)))
+          (lam a (type) (all a (type) (fun a a)))
+        )
+        (typebind
+          (tyvardecl OutputConstraint (fun (type) (type)))
+          (lam a (type) (all a (type) (fun a a)))
         )
         (datatypebind
           (datatype
@@ -203,163 +114,13 @@
         )
         (datatypebind
           (datatype
-            (tyvardecl TxInfo (type))
-
-            TxInfo_match
-            (vardecl
-              TxInfo
-              (fun
-                [ List TxInInfo ]
-                (fun
-                  [ List TxOut ]
-                  (fun
-                    [
-                      [
-                        (lam
-                          k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                        )
-                        (con bytestring)
-                      ]
-                      [
-                        [
-                          (lam
-                            k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                          )
-                          (con bytestring)
-                        ]
-                        (con integer)
-                      ]
-                    ]
-                    (fun
-                      [
-                        [
-                          (lam
-                            k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                          )
-                          (con bytestring)
-                        ]
-                        [
-                          [
-                            (lam
-                              k
-                              (type)
-                              (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                            )
-                            (con bytestring)
-                          ]
-                          (con integer)
-                        ]
-                      ]
-                      (fun
-                        [ List DCert ]
-                        (fun
-                          [
-                            List [ [ Tuple2 StakingCredential ] (con integer) ]
-                          ]
-                          (fun
-                            [ Interval (con integer) ]
-                            (fun
-                              [ List (con bytestring) ]
-                              (fun
-                                [
-                                  List
-                                  [ [ Tuple2 (con bytestring) ] (con data) ]
-                                ]
-                                (fun (con bytestring) TxInfo)
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-        (datatypebind
-          (datatype
-            (tyvardecl ScriptContext (type))
-
-            ScriptContext_match
-            (vardecl
-              ScriptContext (fun TxInfo (fun ScriptPurpose ScriptContext))
-            )
-          )
-        )
-        (datatypebind
-          (datatype
-            (tyvardecl State (fun (type) (type)))
-            (tyvardecl s (type))
-            State_match
-            (vardecl
-              State
-              (fun
-                s
-                (fun
-                  [
-                    [
-                      (lam k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ]))
-                      (con bytestring)
-                    ]
-                    [
-                      [
-                        (lam
-                          k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                        )
-                        (con bytestring)
-                      ]
-                      (con integer)
-                    ]
-                  ]
-                  [ State s ]
-                )
-              )
-            )
-          )
-        )
-        (datatypebind
-          (datatype
-            (tyvardecl InputConstraint (fun (type) (type)))
+            (tyvardecl Maybe (fun (type) (type)))
             (tyvardecl a (type))
-            InputConstraint_match
-            (vardecl
-              InputConstraint (fun a (fun TxOutRef [ InputConstraint a ]))
-            )
+            Maybe_match
+            (vardecl Just (fun a [ Maybe a ])) (vardecl Nothing [ Maybe a ])
           )
         )
-        (datatypebind
-          (datatype
-            (tyvardecl OutputConstraint (fun (type) (type)))
-            (tyvardecl a (type))
-            OutputConstraint_match
-            (vardecl
-              OutputConstraint
-              (fun
-                a
-                (fun
-                  [
-                    [
-                      (lam k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ]))
-                      (con bytestring)
-                    ]
-                    [
-                      [
-                        (lam
-                          k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                        )
-                        (con bytestring)
-                      ]
-                      (con integer)
-                    ]
-                  ]
-                  [ OutputConstraint a ]
-                )
-              )
-            )
-          )
-        )
+        (typebind (tyvardecl TxOutRef (type)) (all a (type) (fun a a)))
         (let
           (rec)
           (datatypebind
@@ -528,7 +289,7 @@
                 )
               )
             )
-            (datatypebind (datatype (tyvardecl Void (type))  Void_match ))
+            (typebind (tyvardecl Void (type)) (all a (type) (fun a a)))
             (datatypebind
               (datatype
                 (tyvardecl StateMachine (fun (type) (fun (type) (type))))

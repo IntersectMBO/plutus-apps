@@ -1,6 +1,9 @@
 (program
   (let
     (nonrec)
+    (datatypebind
+      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+    )
     (termbind
       (strict)
       (vardecl error (all a (type) (fun (con unit) a)))
@@ -14,18 +17,14 @@
         (vardecl Tuple2 (fun a (fun b [ [ Tuple2 a ] b ])))
       )
     )
-    (datatypebind
-      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
-    )
     (termbind
       (strict)
       (vardecl
-        fail
-        (fun (all a (type) a) [ [ Tuple2 (con bytestring) ] (con bytestring) ])
+        fail (fun (con unit) [ [ Tuple2 (con bytestring) ] (con bytestring) ])
       )
       (lam
         ds
-        (all a (type) a)
+        (con unit)
         [
           { error [ [ Tuple2 (con bytestring) ] (con bytestring) ] }
           [
@@ -41,7 +40,6 @@
         ]
       )
     )
-    (termbind (strict) (vardecl void (all a (type) a)) (abs e (type) (error e)))
     (datatypebind
       (datatype
         (tyvardecl Bool (type))
@@ -575,8 +573,8 @@
     )
     (termbind
       (strict)
-      (vardecl fail (fun (all a (type) a) Ordering))
-      (lam ds (all a (type) a) (error Ordering))
+      (vardecl fail (fun (con unit) Ordering))
+      (lam ds (con unit) (error Ordering))
     )
     (datatypebind
       (datatype
@@ -683,10 +681,10 @@
                 (nonrec)
                 (termbind
                   (strict)
-                  (vardecl fail (fun (all a (type) a) Ordering))
+                  (vardecl fail (fun (con unit) Ordering))
                   (lam
                     ds
-                    (all a (type) a)
+                    (con unit)
                     {
                       [
                         [
@@ -746,19 +744,13 @@
                                                   (abs
                                                     dead
                                                     (type)
-                                                    [
-                                                      fail
-                                                      (abs e (type) (error e))
-                                                    ]
+                                                    [ fail (con unit ()) ]
                                                   )
                                                 ]
                                                 (abs
                                                   dead
                                                   (type)
-                                                  [
-                                                    fail
-                                                    (abs e (type) (error e))
-                                                  ]
+                                                  [ fail (con unit ()) ]
                                                 )
                                               ]
                                               (all dead (type) dead)
@@ -766,11 +758,7 @@
                                           )
                                         )
                                       ]
-                                      (abs
-                                        dead
-                                        (type)
-                                        [ fail (abs e (type) (error e)) ]
-                                      )
+                                      (abs dead (type) [ fail (con unit ()) ])
                                     ]
                                     (abs dead (type) GT)
                                   ]
@@ -822,15 +810,11 @@
                                               (abs
                                                 dead
                                                 (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
+                                                [ fail (con unit ()) ]
                                               )
                                             ]
                                             (abs
-                                              dead
-                                              (type)
-                                              [ fail (abs e (type) (error e)) ]
+                                              dead (type) [ fail (con unit ()) ]
                                             )
                                           ]
                                           (all dead (type) dead)
@@ -838,11 +822,7 @@
                                       )
                                     )
                                   ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    [ fail (abs e (type) (error e)) ]
-                                  )
+                                  (abs dead (type) [ fail (con unit ()) ])
                                 ]
                                 (abs dead (type) GT)
                               ]
@@ -858,10 +838,10 @@
                 )
                 (termbind
                   (strict)
-                  (vardecl fail (fun (all a (type) a) Ordering))
+                  (vardecl fail (fun (con unit) Ordering))
                   (lam
                     ds
-                    (all a (type) a)
+                    (con unit)
                     {
                       [
                         [
@@ -921,19 +901,13 @@
                                                   (abs
                                                     dead
                                                     (type)
-                                                    [
-                                                      fail
-                                                      (abs e (type) (error e))
-                                                    ]
+                                                    [ fail (con unit ()) ]
                                                   )
                                                 ]
                                                 (abs
                                                   dead
                                                   (type)
-                                                  [
-                                                    fail
-                                                    (abs e (type) (error e))
-                                                  ]
+                                                  [ fail (con unit ()) ]
                                                 )
                                               ]
                                               (all dead (type) dead)
@@ -941,11 +915,7 @@
                                           )
                                         )
                                       ]
-                                      (abs
-                                        dead
-                                        (type)
-                                        [ fail (abs e (type) (error e)) ]
-                                      )
+                                      (abs dead (type) [ fail (con unit ()) ])
                                     ]
                                     (abs dead (type) GT)
                                   ]
@@ -997,15 +967,11 @@
                                               (abs
                                                 dead
                                                 (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
+                                                [ fail (con unit ()) ]
                                               )
                                             ]
                                             (abs
-                                              dead
-                                              (type)
-                                              [ fail (abs e (type) (error e)) ]
+                                              dead (type) [ fail (con unit ()) ]
                                             )
                                           ]
                                           (all dead (type) dead)
@@ -1013,11 +979,7 @@
                                       )
                                     )
                                   ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    [ fail (abs e (type) (error e)) ]
-                                  )
+                                  (abs dead (type) [ fail (con unit ()) ])
                                 ]
                                 (abs dead (type) GT)
                               ]
@@ -1033,10 +995,10 @@
                 )
                 (termbind
                   (strict)
-                  (vardecl fail (fun (all a (type) a) Ordering))
+                  (vardecl fail (fun (con unit) Ordering))
                   (lam
                     ds
-                    (all a (type) a)
+                    (con unit)
                     {
                       [
                         [
@@ -1096,19 +1058,13 @@
                                                   (abs
                                                     dead
                                                     (type)
-                                                    [
-                                                      fail
-                                                      (abs e (type) (error e))
-                                                    ]
+                                                    [ fail (con unit ()) ]
                                                   )
                                                 ]
                                                 (abs
                                                   dead
                                                   (type)
-                                                  [
-                                                    fail
-                                                    (abs e (type) (error e))
-                                                  ]
+                                                  [ fail (con unit ()) ]
                                                 )
                                               ]
                                               (all dead (type) dead)
@@ -1116,11 +1072,7 @@
                                           )
                                         )
                                       ]
-                                      (abs
-                                        dead
-                                        (type)
-                                        [ fail (abs e (type) (error e)) ]
-                                      )
+                                      (abs dead (type) [ fail (con unit ()) ])
                                     ]
                                     (abs dead (type) GT)
                                   ]
@@ -1172,15 +1124,11 @@
                                               (abs
                                                 dead
                                                 (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
+                                                [ fail (con unit ()) ]
                                               )
                                             ]
                                             (abs
-                                              dead
-                                              (type)
-                                              [ fail (abs e (type) (error e)) ]
+                                              dead (type) [ fail (con unit ()) ]
                                             )
                                           ]
                                           (all dead (type) dead)
@@ -1188,11 +1136,7 @@
                                       )
                                     )
                                   ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    [ fail (abs e (type) (error e)) ]
-                                  )
+                                  (abs dead (type) [ fail (con unit ()) ])
                                 ]
                                 (abs dead (type) GT)
                               ]
@@ -1208,10 +1152,10 @@
                 )
                 (termbind
                   (strict)
-                  (vardecl fail (fun (all a (type) a) Ordering))
+                  (vardecl fail (fun (con unit) Ordering))
                   (lam
                     ds
-                    (all a (type) a)
+                    (con unit)
                     {
                       [
                         [
@@ -1271,19 +1215,13 @@
                                                   (abs
                                                     dead
                                                     (type)
-                                                    [
-                                                      fail
-                                                      (abs e (type) (error e))
-                                                    ]
+                                                    [ fail (con unit ()) ]
                                                   )
                                                 ]
                                                 (abs
                                                   dead
                                                   (type)
-                                                  [
-                                                    fail
-                                                    (abs e (type) (error e))
-                                                  ]
+                                                  [ fail (con unit ()) ]
                                                 )
                                               ]
                                               (all dead (type) dead)
@@ -1291,11 +1229,7 @@
                                           )
                                         )
                                       ]
-                                      (abs
-                                        dead
-                                        (type)
-                                        [ fail (abs e (type) (error e)) ]
-                                      )
+                                      (abs dead (type) [ fail (con unit ()) ])
                                     ]
                                     (abs dead (type) GT)
                                   ]
@@ -1347,15 +1281,11 @@
                                               (abs
                                                 dead
                                                 (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
+                                                [ fail (con unit ()) ]
                                               )
                                             ]
                                             (abs
-                                              dead
-                                              (type)
-                                              [ fail (abs e (type) (error e)) ]
+                                              dead (type) [ fail (con unit ()) ]
                                             )
                                           ]
                                           (all dead (type) dead)
@@ -1363,11 +1293,7 @@
                                       )
                                     )
                                   ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    [ fail (abs e (type) (error e)) ]
-                                  )
+                                  (abs dead (type) [ fail (con unit ()) ])
                                 ]
                                 (abs dead (type) GT)
                               ]
@@ -1422,19 +1348,14 @@
                                                   (abs
                                                     dead
                                                     (type)
-                                                    [
-                                                      fail
-                                                      (abs e (type) (error e))
-                                                    ]
+                                                    [ fail (con unit ()) ]
                                                   )
                                                 )
                                               ]
                                               (abs
                                                 dead
                                                 (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
+                                                [ fail (con unit ()) ]
                                               )
                                             ]
                                             (abs
@@ -1459,22 +1380,14 @@
                                                         (abs
                                                           dead
                                                           (type)
-                                                          [
-                                                            fail
-                                                            (abs
-                                                              e (type) (error e)
-                                                            )
-                                                          ]
+                                                          [ fail (con unit ()) ]
                                                         )
                                                       )
                                                     ]
                                                     (abs
                                                       dead
                                                       (type)
-                                                      [
-                                                        fail
-                                                        (abs e (type) (error e))
-                                                      ]
+                                                      [ fail (con unit ()) ]
                                                     )
                                                   ]
                                                   (abs dead (type) EQ)
@@ -1505,17 +1418,11 @@
                                             default_arg0
                                             a
                                             (abs
-                                              dead
-                                              (type)
-                                              [ fail (abs e (type) (error e)) ]
+                                              dead (type) [ fail (con unit ()) ]
                                             )
                                           )
                                         ]
-                                        (abs
-                                          dead
-                                          (type)
-                                          [ fail (abs e (type) (error e)) ]
-                                        )
+                                        (abs dead (type) [ fail (con unit ()) ])
                                       ]
                                       (abs
                                         dead
@@ -1534,19 +1441,14 @@
                                                   (abs
                                                     dead
                                                     (type)
-                                                    [
-                                                      fail
-                                                      (abs e (type) (error e))
-                                                    ]
+                                                    [ fail (con unit ()) ]
                                                   )
                                                 )
                                               ]
                                               (abs
                                                 dead
                                                 (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
+                                                [ fail (con unit ()) ]
                                               )
                                             ]
                                             (abs dead (type) EQ)
@@ -1614,17 +1516,11 @@
                                             default_arg0
                                             a
                                             (abs
-                                              dead
-                                              (type)
-                                              [ fail (abs e (type) (error e)) ]
+                                              dead (type) [ fail (con unit ()) ]
                                             )
                                           )
                                         ]
-                                        (abs
-                                          dead
-                                          (type)
-                                          [ fail (abs e (type) (error e)) ]
-                                        )
+                                        (abs dead (type) [ fail (con unit ()) ])
                                       ]
                                       (abs
                                         dead
@@ -1643,19 +1539,14 @@
                                                   (abs
                                                     dead
                                                     (type)
-                                                    [
-                                                      fail
-                                                      (abs e (type) (error e))
-                                                    ]
+                                                    [ fail (con unit ()) ]
                                                   )
                                                 )
                                               ]
                                               (abs
                                                 dead
                                                 (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
+                                                [ fail (con unit ()) ]
                                               )
                                             ]
                                             (abs dead (type) EQ)
@@ -1685,18 +1576,10 @@
                                     (lam
                                       default_arg0
                                       a
-                                      (abs
-                                        dead
-                                        (type)
-                                        [ fail (abs e (type) (error e)) ]
-                                      )
+                                      (abs dead (type) [ fail (con unit ()) ])
                                     )
                                   ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    [ fail (abs e (type) (error e)) ]
-                                  )
+                                  (abs dead (type) [ fail (con unit ()) ])
                                 ]
                                 (abs
                                   dead
@@ -1713,17 +1596,11 @@
                                             default_arg0
                                             a
                                             (abs
-                                              dead
-                                              (type)
-                                              [ fail (abs e (type) (error e)) ]
+                                              dead (type) [ fail (con unit ()) ]
                                             )
                                           )
                                         ]
-                                        (abs
-                                          dead
-                                          (type)
-                                          [ fail (abs e (type) (error e)) ]
-                                        )
+                                        (abs dead (type) [ fail (con unit ()) ])
                                       ]
                                       (abs dead (type) EQ)
                                     ]
@@ -5835,32 +5712,8 @@
                           }
                         ]
                       )
-                      (datatypebind
-                        (datatype
-                          (tyvardecl DCert (type))
-
-                          DCert_match
-                          (vardecl
-                            DCertDelegDeRegKey (fun StakingCredential DCert)
-                          )
-                          (vardecl
-                            DCertDelegDelegate
-                            (fun StakingCredential (fun (con bytestring) DCert))
-                          )
-                          (vardecl
-                            DCertDelegRegKey (fun StakingCredential DCert)
-                          )
-                          (vardecl DCertGenesis DCert)
-                          (vardecl DCertMir DCert)
-                          (vardecl
-                            DCertPoolRegister
-                            (fun (con bytestring) (fun (con bytestring) DCert))
-                          )
-                          (vardecl
-                            DCertPoolRetire
-                            (fun (con bytestring) (fun (con integer) DCert))
-                          )
-                        )
+                      (typebind
+                        (tyvardecl DCert (type)) (all a (type) (fun a a))
                       )
                       (datatypebind
                         (datatype
@@ -13090,119 +12943,104 @@
                               (lam
                                 ww
                                 ScriptPurpose
-                                {
+                                [
                                   [
                                     [
                                       [
-                                        [
-                                          {
-                                            [ ScriptPurpose_match ww ]
-                                            (all dead (type) [ Maybe TxInInfo ])
-                                          }
-                                          (lam
-                                            default_arg0
-                                            DCert
-                                            (abs
-                                              dead (type) { Nothing TxInInfo }
-                                            )
-                                          )
-                                        ]
+                                        {
+                                          [ ScriptPurpose_match ww ]
+                                          [ Maybe TxInInfo ]
+                                        }
                                         (lam
                                           default_arg0
-                                          (con bytestring)
-                                          (abs dead (type) { Nothing TxInInfo })
+                                          DCert
+                                          { Nothing TxInInfo }
                                         )
                                       ]
                                       (lam
                                         default_arg0
-                                        StakingCredential
-                                        (abs dead (type) { Nothing TxInInfo })
+                                        (con bytestring)
+                                        { Nothing TxInInfo }
                                       )
                                     ]
                                     (lam
-                                      txOutRef
-                                      TxOutRef
-                                      (abs
-                                        dead
-                                        (type)
-                                        [
-                                          [
-                                            [
-                                              {
-                                                {
-                                                  fFoldableNil_cfoldMap
-                                                  [
-                                                    (lam a (type) [ Maybe a ])
-                                                    TxInInfo
-                                                  ]
-                                                }
-                                                TxInInfo
-                                              }
-                                              { fMonoidFirst TxInInfo }
-                                            ]
-                                            (lam
-                                              x
-                                              TxInInfo
-                                              [
-                                                {
-                                                  [ TxInInfo_match x ]
-                                                  [ Maybe TxInInfo ]
-                                                }
-                                                (lam
-                                                  ds
-                                                  TxOutRef
-                                                  (lam
-                                                    ds
-                                                    TxOut
-                                                    {
-                                                      [
-                                                        [
-                                                          {
-                                                            [
-                                                              Bool_match
-                                                              [
-                                                                [
-                                                                  fEqTxOutRef_c
-                                                                  ds
-                                                                ]
-                                                                txOutRef
-                                                              ]
-                                                            ]
-                                                            (all
-                                                              dead
-                                                              (type)
-                                                              [ Maybe TxInInfo ]
-                                                            )
-                                                          }
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            [
-                                                              { Just TxInInfo }
-                                                              x
-                                                            ]
-                                                          )
-                                                        ]
-                                                        (abs
-                                                          dead
-                                                          (type)
-                                                          { Nothing TxInInfo }
-                                                        )
-                                                      ]
-                                                      (all dead (type) dead)
-                                                    }
-                                                  )
-                                                )
-                                              ]
-                                            )
-                                          ]
-                                          ww
-                                        ]
-                                      )
+                                      default_arg0
+                                      StakingCredential
+                                      { Nothing TxInInfo }
                                     )
                                   ]
-                                  (all dead (type) dead)
-                                }
+                                  (lam
+                                    txOutRef
+                                    TxOutRef
+                                    [
+                                      [
+                                        [
+                                          {
+                                            {
+                                              fFoldableNil_cfoldMap
+                                              [
+                                                (lam a (type) [ Maybe a ])
+                                                TxInInfo
+                                              ]
+                                            }
+                                            TxInInfo
+                                          }
+                                          { fMonoidFirst TxInInfo }
+                                        ]
+                                        (lam
+                                          x
+                                          TxInInfo
+                                          [
+                                            {
+                                              [ TxInInfo_match x ]
+                                              [ Maybe TxInInfo ]
+                                            }
+                                            (lam
+                                              ds
+                                              TxOutRef
+                                              (lam
+                                                ds
+                                                TxOut
+                                                {
+                                                  [
+                                                    [
+                                                      {
+                                                        [
+                                                          Bool_match
+                                                          [
+                                                            [ fEqTxOutRef_c ds ]
+                                                            txOutRef
+                                                          ]
+                                                        ]
+                                                        (all
+                                                          dead
+                                                          (type)
+                                                          [ Maybe TxInInfo ]
+                                                        )
+                                                      }
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        [ { Just TxInInfo } x ]
+                                                      )
+                                                    ]
+                                                    (abs
+                                                      dead
+                                                      (type)
+                                                      { Nothing TxInInfo }
+                                                    )
+                                                  ]
+                                                  (all dead (type) dead)
+                                                }
+                                              )
+                                            )
+                                          ]
+                                        )
+                                      ]
+                                      ww
+                                    ]
+                                  )
+                                ]
                               )
                             )
                           )
@@ -15560,12 +15398,9 @@
                                                                                                     )
                                                                                                     [
                                                                                                       fail
-                                                                                                      (abs
-                                                                                                        e
-                                                                                                        (type)
-                                                                                                        (error
-                                                                                                          e
-                                                                                                        )
+                                                                                                      (con
+                                                                                                        unit
+                                                                                                        ()
                                                                                                       )
                                                                                                     ]
                                                                                                   )
@@ -15637,12 +15472,9 @@
                                                                                                         (type)
                                                                                                         [
                                                                                                           fail
-                                                                                                          (abs
-                                                                                                            e
-                                                                                                            (type)
-                                                                                                            (error
-                                                                                                              e
-                                                                                                            )
+                                                                                                          (con
+                                                                                                            unit
+                                                                                                            ()
                                                                                                           )
                                                                                                         ]
                                                                                                       )
@@ -15673,12 +15505,9 @@
                                                                       (type)
                                                                       [
                                                                         fail
-                                                                        (abs
-                                                                          e
-                                                                          (type)
-                                                                          (error
-                                                                            e
-                                                                          )
+                                                                        (con
+                                                                          unit
+                                                                          ()
                                                                         )
                                                                       ]
                                                                     )

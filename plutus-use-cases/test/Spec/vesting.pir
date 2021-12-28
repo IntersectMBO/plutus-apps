@@ -2,6 +2,9 @@
   (let
     (nonrec)
     (datatypebind
+      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+    )
+    (datatypebind
       (datatype
         (tyvardecl Tuple2 (fun (type) (fun (type) (type))))
         (tyvardecl a (type)) (tyvardecl b (type))
@@ -9,18 +12,14 @@
         (vardecl Tuple2 (fun a (fun b [ [ Tuple2 a ] b ])))
       )
     )
-    (datatypebind
-      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
-    )
     (termbind
       (strict)
       (vardecl
-        fail
-        (fun (all a (type) a) [ [ Tuple2 (con bytestring) ] (con bytestring) ])
+        fail (fun (con unit) [ [ Tuple2 (con bytestring) ] (con bytestring) ])
       )
       (lam
         ds
-        (all a (type) a)
+        (con unit)
         (let
           (nonrec)
           (termbind
@@ -51,8 +50,8 @@
     )
     (termbind
       (strict)
-      (vardecl fail (fun (all a (type) a) Ordering))
-      (lam ds (all a (type) a) (error Ordering))
+      (vardecl fail (fun (con unit) Ordering))
+      (lam ds (con unit) (error Ordering))
     )
     (datatypebind
       (datatype
@@ -3487,21 +3486,15 @@
                                                                     (vardecl
                                                                       fail
                                                                       (fun
-                                                                        (all
-                                                                          a
-                                                                          (type)
-                                                                          a
+                                                                        (con
+                                                                          unit
                                                                         )
                                                                         Ordering
                                                                       )
                                                                     )
                                                                     (lam
                                                                       ds
-                                                                      (all
-                                                                        a
-                                                                        (type)
-                                                                        a
-                                                                      )
+                                                                      (con unit)
                                                                       {
                                                                         [
                                                                           [
@@ -3609,12 +3602,9 @@
                                                                                                       (type)
                                                                                                       [
                                                                                                         fail
-                                                                                                        (abs
-                                                                                                          e
-                                                                                                          (type)
-                                                                                                          (error
-                                                                                                            e
-                                                                                                          )
+                                                                                                        (con
+                                                                                                          unit
+                                                                                                          ()
                                                                                                         )
                                                                                                       ]
                                                                                                     )
@@ -3624,12 +3614,9 @@
                                                                                                     (type)
                                                                                                     [
                                                                                                       fail
-                                                                                                      (abs
-                                                                                                        e
-                                                                                                        (type)
-                                                                                                        (error
-                                                                                                          e
-                                                                                                        )
+                                                                                                      (con
+                                                                                                        unit
+                                                                                                        ()
                                                                                                       )
                                                                                                     ]
                                                                                                   )
@@ -3648,12 +3635,9 @@
                                                                                           (type)
                                                                                           [
                                                                                             fail
-                                                                                            (abs
-                                                                                              e
-                                                                                              (type)
-                                                                                              (error
-                                                                                                e
-                                                                                              )
+                                                                                            (con
+                                                                                              unit
+                                                                                              ()
                                                                                             )
                                                                                           ]
                                                                                         )
@@ -3755,12 +3739,9 @@
                                                                                                   (type)
                                                                                                   [
                                                                                                     fail
-                                                                                                    (abs
-                                                                                                      e
-                                                                                                      (type)
-                                                                                                      (error
-                                                                                                        e
-                                                                                                      )
+                                                                                                    (con
+                                                                                                      unit
+                                                                                                      ()
                                                                                                     )
                                                                                                   ]
                                                                                                 )
@@ -3770,12 +3751,9 @@
                                                                                                 (type)
                                                                                                 [
                                                                                                   fail
-                                                                                                  (abs
-                                                                                                    e
-                                                                                                    (type)
-                                                                                                    (error
-                                                                                                      e
-                                                                                                    )
+                                                                                                  (con
+                                                                                                    unit
+                                                                                                    ()
                                                                                                   )
                                                                                                 ]
                                                                                               )
@@ -3794,12 +3772,9 @@
                                                                                       (type)
                                                                                       [
                                                                                         fail
-                                                                                        (abs
-                                                                                          e
-                                                                                          (type)
-                                                                                          (error
-                                                                                            e
-                                                                                          )
+                                                                                        (con
+                                                                                          unit
+                                                                                          ()
                                                                                         )
                                                                                       ]
                                                                                     )
@@ -3837,21 +3812,15 @@
                                                                     (vardecl
                                                                       fail
                                                                       (fun
-                                                                        (all
-                                                                          a
-                                                                          (type)
-                                                                          a
+                                                                        (con
+                                                                          unit
                                                                         )
                                                                         Ordering
                                                                       )
                                                                     )
                                                                     (lam
                                                                       ds
-                                                                      (all
-                                                                        a
-                                                                        (type)
-                                                                        a
-                                                                      )
+                                                                      (con unit)
                                                                       {
                                                                         [
                                                                           [
@@ -3959,12 +3928,9 @@
                                                                                                       (type)
                                                                                                       [
                                                                                                         fail
-                                                                                                        (abs
-                                                                                                          e
-                                                                                                          (type)
-                                                                                                          (error
-                                                                                                            e
-                                                                                                          )
+                                                                                                        (con
+                                                                                                          unit
+                                                                                                          ()
                                                                                                         )
                                                                                                       ]
                                                                                                     )
@@ -3974,12 +3940,9 @@
                                                                                                     (type)
                                                                                                     [
                                                                                                       fail
-                                                                                                      (abs
-                                                                                                        e
-                                                                                                        (type)
-                                                                                                        (error
-                                                                                                          e
-                                                                                                        )
+                                                                                                      (con
+                                                                                                        unit
+                                                                                                        ()
                                                                                                       )
                                                                                                     ]
                                                                                                   )
@@ -3998,12 +3961,9 @@
                                                                                           (type)
                                                                                           [
                                                                                             fail
-                                                                                            (abs
-                                                                                              e
-                                                                                              (type)
-                                                                                              (error
-                                                                                                e
-                                                                                              )
+                                                                                            (con
+                                                                                              unit
+                                                                                              ()
                                                                                             )
                                                                                           ]
                                                                                         )
@@ -4105,12 +4065,9 @@
                                                                                                   (type)
                                                                                                   [
                                                                                                     fail
-                                                                                                    (abs
-                                                                                                      e
-                                                                                                      (type)
-                                                                                                      (error
-                                                                                                        e
-                                                                                                      )
+                                                                                                    (con
+                                                                                                      unit
+                                                                                                      ()
                                                                                                     )
                                                                                                   ]
                                                                                                 )
@@ -4120,12 +4077,9 @@
                                                                                                 (type)
                                                                                                 [
                                                                                                   fail
-                                                                                                  (abs
-                                                                                                    e
-                                                                                                    (type)
-                                                                                                    (error
-                                                                                                      e
-                                                                                                    )
+                                                                                                  (con
+                                                                                                    unit
+                                                                                                    ()
                                                                                                   )
                                                                                                 ]
                                                                                               )
@@ -4144,12 +4098,9 @@
                                                                                       (type)
                                                                                       [
                                                                                         fail
-                                                                                        (abs
-                                                                                          e
-                                                                                          (type)
-                                                                                          (error
-                                                                                            e
-                                                                                          )
+                                                                                        (con
+                                                                                          unit
+                                                                                          ()
                                                                                         )
                                                                                       ]
                                                                                     )
@@ -4187,21 +4138,15 @@
                                                                     (vardecl
                                                                       fail
                                                                       (fun
-                                                                        (all
-                                                                          a
-                                                                          (type)
-                                                                          a
+                                                                        (con
+                                                                          unit
                                                                         )
                                                                         Ordering
                                                                       )
                                                                     )
                                                                     (lam
                                                                       ds
-                                                                      (all
-                                                                        a
-                                                                        (type)
-                                                                        a
-                                                                      )
+                                                                      (con unit)
                                                                       {
                                                                         [
                                                                           [
@@ -4309,12 +4254,9 @@
                                                                                                       (type)
                                                                                                       [
                                                                                                         fail
-                                                                                                        (abs
-                                                                                                          e
-                                                                                                          (type)
-                                                                                                          (error
-                                                                                                            e
-                                                                                                          )
+                                                                                                        (con
+                                                                                                          unit
+                                                                                                          ()
                                                                                                         )
                                                                                                       ]
                                                                                                     )
@@ -4324,12 +4266,9 @@
                                                                                                     (type)
                                                                                                     [
                                                                                                       fail
-                                                                                                      (abs
-                                                                                                        e
-                                                                                                        (type)
-                                                                                                        (error
-                                                                                                          e
-                                                                                                        )
+                                                                                                      (con
+                                                                                                        unit
+                                                                                                        ()
                                                                                                       )
                                                                                                     ]
                                                                                                   )
@@ -4348,12 +4287,9 @@
                                                                                           (type)
                                                                                           [
                                                                                             fail
-                                                                                            (abs
-                                                                                              e
-                                                                                              (type)
-                                                                                              (error
-                                                                                                e
-                                                                                              )
+                                                                                            (con
+                                                                                              unit
+                                                                                              ()
                                                                                             )
                                                                                           ]
                                                                                         )
@@ -4455,12 +4391,9 @@
                                                                                                   (type)
                                                                                                   [
                                                                                                     fail
-                                                                                                    (abs
-                                                                                                      e
-                                                                                                      (type)
-                                                                                                      (error
-                                                                                                        e
-                                                                                                      )
+                                                                                                    (con
+                                                                                                      unit
+                                                                                                      ()
                                                                                                     )
                                                                                                   ]
                                                                                                 )
@@ -4470,12 +4403,9 @@
                                                                                                 (type)
                                                                                                 [
                                                                                                   fail
-                                                                                                  (abs
-                                                                                                    e
-                                                                                                    (type)
-                                                                                                    (error
-                                                                                                      e
-                                                                                                    )
+                                                                                                  (con
+                                                                                                    unit
+                                                                                                    ()
                                                                                                   )
                                                                                                 ]
                                                                                               )
@@ -4494,12 +4424,9 @@
                                                                                       (type)
                                                                                       [
                                                                                         fail
-                                                                                        (abs
-                                                                                          e
-                                                                                          (type)
-                                                                                          (error
-                                                                                            e
-                                                                                          )
+                                                                                        (con
+                                                                                          unit
+                                                                                          ()
                                                                                         )
                                                                                       ]
                                                                                     )
@@ -4537,21 +4464,15 @@
                                                                     (vardecl
                                                                       fail
                                                                       (fun
-                                                                        (all
-                                                                          a
-                                                                          (type)
-                                                                          a
+                                                                        (con
+                                                                          unit
                                                                         )
                                                                         Ordering
                                                                       )
                                                                     )
                                                                     (lam
                                                                       ds
-                                                                      (all
-                                                                        a
-                                                                        (type)
-                                                                        a
-                                                                      )
+                                                                      (con unit)
                                                                       {
                                                                         [
                                                                           [
@@ -4659,12 +4580,9 @@
                                                                                                       (type)
                                                                                                       [
                                                                                                         fail
-                                                                                                        (abs
-                                                                                                          e
-                                                                                                          (type)
-                                                                                                          (error
-                                                                                                            e
-                                                                                                          )
+                                                                                                        (con
+                                                                                                          unit
+                                                                                                          ()
                                                                                                         )
                                                                                                       ]
                                                                                                     )
@@ -4674,12 +4592,9 @@
                                                                                                     (type)
                                                                                                     [
                                                                                                       fail
-                                                                                                      (abs
-                                                                                                        e
-                                                                                                        (type)
-                                                                                                        (error
-                                                                                                          e
-                                                                                                        )
+                                                                                                      (con
+                                                                                                        unit
+                                                                                                        ()
                                                                                                       )
                                                                                                     ]
                                                                                                   )
@@ -4698,12 +4613,9 @@
                                                                                           (type)
                                                                                           [
                                                                                             fail
-                                                                                            (abs
-                                                                                              e
-                                                                                              (type)
-                                                                                              (error
-                                                                                                e
-                                                                                              )
+                                                                                            (con
+                                                                                              unit
+                                                                                              ()
                                                                                             )
                                                                                           ]
                                                                                         )
@@ -4805,12 +4717,9 @@
                                                                                                   (type)
                                                                                                   [
                                                                                                     fail
-                                                                                                    (abs
-                                                                                                      e
-                                                                                                      (type)
-                                                                                                      (error
-                                                                                                        e
-                                                                                                      )
+                                                                                                    (con
+                                                                                                      unit
+                                                                                                      ()
                                                                                                     )
                                                                                                   ]
                                                                                                 )
@@ -4820,12 +4729,9 @@
                                                                                                 (type)
                                                                                                 [
                                                                                                   fail
-                                                                                                  (abs
-                                                                                                    e
-                                                                                                    (type)
-                                                                                                    (error
-                                                                                                      e
-                                                                                                    )
+                                                                                                  (con
+                                                                                                    unit
+                                                                                                    ()
                                                                                                   )
                                                                                                 ]
                                                                                               )
@@ -4844,12 +4750,9 @@
                                                                                       (type)
                                                                                       [
                                                                                         fail
-                                                                                        (abs
-                                                                                          e
-                                                                                          (type)
-                                                                                          (error
-                                                                                            e
-                                                                                          )
+                                                                                        (con
+                                                                                          unit
+                                                                                          ()
                                                                                         )
                                                                                       ]
                                                                                     )
@@ -4968,12 +4871,9 @@
                                                                                                       (type)
                                                                                                       [
                                                                                                         fail
-                                                                                                        (abs
-                                                                                                          e
-                                                                                                          (type)
-                                                                                                          (error
-                                                                                                            e
-                                                                                                          )
+                                                                                                        (con
+                                                                                                          unit
+                                                                                                          ()
                                                                                                         )
                                                                                                       ]
                                                                                                     )
@@ -4984,12 +4884,9 @@
                                                                                                   (type)
                                                                                                   [
                                                                                                     fail
-                                                                                                    (abs
-                                                                                                      e
-                                                                                                      (type)
-                                                                                                      (error
-                                                                                                        e
-                                                                                                      )
+                                                                                                    (con
+                                                                                                      unit
+                                                                                                      ()
                                                                                                     )
                                                                                                   ]
                                                                                                 )
@@ -5027,12 +4924,9 @@
                                                                                                             (type)
                                                                                                             [
                                                                                                               fail
-                                                                                                              (abs
-                                                                                                                e
-                                                                                                                (type)
-                                                                                                                (error
-                                                                                                                  e
-                                                                                                                )
+                                                                                                              (con
+                                                                                                                unit
+                                                                                                                ()
                                                                                                               )
                                                                                                             ]
                                                                                                           )
@@ -5043,12 +4937,9 @@
                                                                                                         (type)
                                                                                                         [
                                                                                                           fail
-                                                                                                          (abs
-                                                                                                            e
-                                                                                                            (type)
-                                                                                                            (error
-                                                                                                              e
-                                                                                                            )
+                                                                                                          (con
+                                                                                                            unit
+                                                                                                            ()
                                                                                                           )
                                                                                                         ]
                                                                                                       )
@@ -5115,12 +5006,9 @@
                                                                                                 (type)
                                                                                                 [
                                                                                                   fail
-                                                                                                  (abs
-                                                                                                    e
-                                                                                                    (type)
-                                                                                                    (error
-                                                                                                      e
-                                                                                                    )
+                                                                                                  (con
+                                                                                                    unit
+                                                                                                    ()
                                                                                                   )
                                                                                                 ]
                                                                                               )
@@ -5131,12 +5019,9 @@
                                                                                             (type)
                                                                                             [
                                                                                               fail
-                                                                                              (abs
-                                                                                                e
-                                                                                                (type)
-                                                                                                (error
-                                                                                                  e
-                                                                                                )
+                                                                                              (con
+                                                                                                unit
+                                                                                                ()
                                                                                               )
                                                                                             ]
                                                                                           )
@@ -5174,12 +5059,9 @@
                                                                                                       (type)
                                                                                                       [
                                                                                                         fail
-                                                                                                        (abs
-                                                                                                          e
-                                                                                                          (type)
-                                                                                                          (error
-                                                                                                            e
-                                                                                                          )
+                                                                                                        (con
+                                                                                                          unit
+                                                                                                          ()
                                                                                                         )
                                                                                                       ]
                                                                                                     )
@@ -5190,12 +5072,9 @@
                                                                                                   (type)
                                                                                                   [
                                                                                                     fail
-                                                                                                    (abs
-                                                                                                      e
-                                                                                                      (type)
-                                                                                                      (error
-                                                                                                        e
-                                                                                                      )
+                                                                                                    (con
+                                                                                                      unit
+                                                                                                      ()
                                                                                                     )
                                                                                                   ]
                                                                                                 )
@@ -5347,12 +5226,9 @@
                                                                                                 (type)
                                                                                                 [
                                                                                                   fail
-                                                                                                  (abs
-                                                                                                    e
-                                                                                                    (type)
-                                                                                                    (error
-                                                                                                      e
-                                                                                                    )
+                                                                                                  (con
+                                                                                                    unit
+                                                                                                    ()
                                                                                                   )
                                                                                                 ]
                                                                                               )
@@ -5363,12 +5239,9 @@
                                                                                             (type)
                                                                                             [
                                                                                               fail
-                                                                                              (abs
-                                                                                                e
-                                                                                                (type)
-                                                                                                (error
-                                                                                                  e
-                                                                                                )
+                                                                                              (con
+                                                                                                unit
+                                                                                                ()
                                                                                               )
                                                                                             ]
                                                                                           )
@@ -5406,12 +5279,9 @@
                                                                                                       (type)
                                                                                                       [
                                                                                                         fail
-                                                                                                        (abs
-                                                                                                          e
-                                                                                                          (type)
-                                                                                                          (error
-                                                                                                            e
-                                                                                                          )
+                                                                                                        (con
+                                                                                                          unit
+                                                                                                          ()
                                                                                                         )
                                                                                                       ]
                                                                                                     )
@@ -5422,12 +5292,9 @@
                                                                                                   (type)
                                                                                                   [
                                                                                                     fail
-                                                                                                    (abs
-                                                                                                      e
-                                                                                                      (type)
-                                                                                                      (error
-                                                                                                        e
-                                                                                                      )
+                                                                                                    (con
+                                                                                                      unit
+                                                                                                      ()
                                                                                                     )
                                                                                                   ]
                                                                                                 )
@@ -5494,12 +5361,9 @@
                                                                                           (type)
                                                                                           [
                                                                                             fail
-                                                                                            (abs
-                                                                                              e
-                                                                                              (type)
-                                                                                              (error
-                                                                                                e
-                                                                                              )
+                                                                                            (con
+                                                                                              unit
+                                                                                              ()
                                                                                             )
                                                                                           ]
                                                                                         )
@@ -5510,12 +5374,9 @@
                                                                                       (type)
                                                                                       [
                                                                                         fail
-                                                                                        (abs
-                                                                                          e
-                                                                                          (type)
-                                                                                          (error
-                                                                                            e
-                                                                                          )
+                                                                                        (con
+                                                                                          unit
+                                                                                          ()
                                                                                         )
                                                                                       ]
                                                                                     )
@@ -5553,12 +5414,9 @@
                                                                                                 (type)
                                                                                                 [
                                                                                                   fail
-                                                                                                  (abs
-                                                                                                    e
-                                                                                                    (type)
-                                                                                                    (error
-                                                                                                      e
-                                                                                                    )
+                                                                                                  (con
+                                                                                                    unit
+                                                                                                    ()
                                                                                                   )
                                                                                                 ]
                                                                                               )
@@ -5569,12 +5427,9 @@
                                                                                             (type)
                                                                                             [
                                                                                               fail
-                                                                                              (abs
-                                                                                                e
-                                                                                                (type)
-                                                                                                (error
-                                                                                                  e
-                                                                                                )
+                                                                                              (con
+                                                                                                unit
+                                                                                                ()
                                                                                               )
                                                                                             ]
                                                                                           )
@@ -7110,62 +6965,7 @@
                         )
                       )
                     )
-                    (datatypebind
-                      (datatype
-                        (tyvardecl Credential (type))
-
-                        Credential_match
-                        (vardecl
-                          PubKeyCredential (fun (con bytestring) Credential)
-                        )
-                        (vardecl
-                          ScriptCredential (fun (con bytestring) Credential)
-                        )
-                      )
-                    )
-                    (datatypebind
-                      (datatype
-                        (tyvardecl StakingCredential (type))
-
-                        StakingCredential_match
-                        (vardecl StakingHash (fun Credential StakingCredential))
-                        (vardecl
-                          StakingPtr
-                          (fun
-                            (con integer)
-                            (fun
-                              (con integer)
-                              (fun (con integer) StakingCredential)
-                            )
-                          )
-                        )
-                      )
-                    )
-                    (datatypebind
-                      (datatype
-                        (tyvardecl DCert (type))
-
-                        DCert_match
-                        (vardecl
-                          DCertDelegDeRegKey (fun StakingCredential DCert)
-                        )
-                        (vardecl
-                          DCertDelegDelegate
-                          (fun StakingCredential (fun (con bytestring) DCert))
-                        )
-                        (vardecl DCertDelegRegKey (fun StakingCredential DCert))
-                        (vardecl DCertGenesis DCert)
-                        (vardecl DCertMir DCert)
-                        (vardecl
-                          DCertPoolRegister
-                          (fun (con bytestring) (fun (con bytestring) DCert))
-                        )
-                        (vardecl
-                          DCertPoolRetire
-                          (fun (con bytestring) (fun (con integer) DCert))
-                        )
-                      )
-                    )
+                    (typebind (tyvardecl DCert (type)) (all a (type) (fun a a)))
                     (datatypebind
                       (datatype
                         (tyvardecl TxOutRef (type))
@@ -7176,6 +6976,10 @@
                           (fun (con bytestring) (fun (con integer) TxOutRef))
                         )
                       )
+                    )
+                    (typebind
+                      (tyvardecl StakingCredential (type))
+                      (all a (type) (fun a a))
                     )
                     (datatypebind
                       (datatype
@@ -7188,6 +6992,19 @@
                           Rewarding (fun StakingCredential ScriptPurpose)
                         )
                         (vardecl Spending (fun TxOutRef ScriptPurpose))
+                      )
+                    )
+                    (datatypebind
+                      (datatype
+                        (tyvardecl Credential (type))
+
+                        Credential_match
+                        (vardecl
+                          PubKeyCredential (fun (con bytestring) Credential)
+                        )
+                        (vardecl
+                          ScriptCredential (fun (con bytestring) Credential)
+                        )
                       )
                     )
                     (datatypebind
@@ -8072,255 +7889,131 @@
                                                                                                                     Maybe_match
                                                                                                                     TxInInfo
                                                                                                                   }
-                                                                                                                  {
+                                                                                                                  [
                                                                                                                     [
                                                                                                                       [
                                                                                                                         [
-                                                                                                                          [
-                                                                                                                            {
-                                                                                                                              [
-                                                                                                                                ScriptPurpose_match
-                                                                                                                                ww
-                                                                                                                              ]
-                                                                                                                              (all
-                                                                                                                                dead
-                                                                                                                                (type)
-                                                                                                                                [
-                                                                                                                                  Maybe
-                                                                                                                                  TxInInfo
-                                                                                                                                ]
-                                                                                                                              )
-                                                                                                                            }
-                                                                                                                            (lam
-                                                                                                                              default_arg0
-                                                                                                                              DCert
-                                                                                                                              (abs
-                                                                                                                                dead
-                                                                                                                                (type)
-                                                                                                                                {
-                                                                                                                                  Nothing
-                                                                                                                                  TxInInfo
-                                                                                                                                }
-                                                                                                                              )
-                                                                                                                            )
-                                                                                                                          ]
+                                                                                                                          {
+                                                                                                                            [
+                                                                                                                              ScriptPurpose_match
+                                                                                                                              ww
+                                                                                                                            ]
+                                                                                                                            [
+                                                                                                                              Maybe
+                                                                                                                              TxInInfo
+                                                                                                                            ]
+                                                                                                                          }
                                                                                                                           (lam
                                                                                                                             default_arg0
-                                                                                                                            (con
-                                                                                                                              bytestring
-                                                                                                                            )
-                                                                                                                            (abs
-                                                                                                                              dead
-                                                                                                                              (type)
-                                                                                                                              {
-                                                                                                                                Nothing
-                                                                                                                                TxInInfo
-                                                                                                                              }
-                                                                                                                            )
-                                                                                                                          )
-                                                                                                                        ]
-                                                                                                                        (lam
-                                                                                                                          default_arg0
-                                                                                                                          StakingCredential
-                                                                                                                          (abs
-                                                                                                                            dead
-                                                                                                                            (type)
+                                                                                                                            DCert
                                                                                                                             {
                                                                                                                               Nothing
                                                                                                                               TxInInfo
                                                                                                                             }
                                                                                                                           )
+                                                                                                                        ]
+                                                                                                                        (lam
+                                                                                                                          default_arg0
+                                                                                                                          (con
+                                                                                                                            bytestring
+                                                                                                                          )
+                                                                                                                          {
+                                                                                                                            Nothing
+                                                                                                                            TxInInfo
+                                                                                                                          }
                                                                                                                         )
                                                                                                                       ]
                                                                                                                       (lam
-                                                                                                                        txOutRef
-                                                                                                                        TxOutRef
-                                                                                                                        (abs
-                                                                                                                          dead
-                                                                                                                          (type)
+                                                                                                                        default_arg0
+                                                                                                                        StakingCredential
+                                                                                                                        {
+                                                                                                                          Nothing
+                                                                                                                          TxInInfo
+                                                                                                                        }
+                                                                                                                      )
+                                                                                                                    ]
+                                                                                                                    (lam
+                                                                                                                      txOutRef
+                                                                                                                      TxOutRef
+                                                                                                                      [
+                                                                                                                        [
                                                                                                                           [
-                                                                                                                            [
-                                                                                                                              [
-                                                                                                                                {
-                                                                                                                                  {
-                                                                                                                                    fFoldableNil_cfoldMap
-                                                                                                                                    [
-                                                                                                                                      (lam
-                                                                                                                                        a
-                                                                                                                                        (type)
-                                                                                                                                        [
-                                                                                                                                          Maybe
-                                                                                                                                          a
-                                                                                                                                        ]
-                                                                                                                                      )
-                                                                                                                                      TxInInfo
-                                                                                                                                    ]
-                                                                                                                                  }
-                                                                                                                                  TxInInfo
-                                                                                                                                }
-                                                                                                                                {
-                                                                                                                                  fMonoidFirst
-                                                                                                                                  TxInInfo
-                                                                                                                                }
-                                                                                                                              ]
-                                                                                                                              (lam
-                                                                                                                                x
-                                                                                                                                TxInInfo
+                                                                                                                            {
+                                                                                                                              {
+                                                                                                                                fFoldableNil_cfoldMap
                                                                                                                                 [
-                                                                                                                                  {
-                                                                                                                                    [
-                                                                                                                                      TxInInfo_match
-                                                                                                                                      x
-                                                                                                                                    ]
+                                                                                                                                  (lam
+                                                                                                                                    a
+                                                                                                                                    (type)
                                                                                                                                     [
                                                                                                                                       Maybe
-                                                                                                                                      TxInInfo
+                                                                                                                                      a
                                                                                                                                     ]
-                                                                                                                                  }
-                                                                                                                                  (lam
-                                                                                                                                    ds
-                                                                                                                                    TxOutRef
-                                                                                                                                    (lam
-                                                                                                                                      ds
-                                                                                                                                      TxOut
-                                                                                                                                      {
-                                                                                                                                        [
+                                                                                                                                  )
+                                                                                                                                  TxInInfo
+                                                                                                                                ]
+                                                                                                                              }
+                                                                                                                              TxInInfo
+                                                                                                                            }
+                                                                                                                            {
+                                                                                                                              fMonoidFirst
+                                                                                                                              TxInInfo
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                          (lam
+                                                                                                                            x
+                                                                                                                            TxInInfo
+                                                                                                                            [
+                                                                                                                              {
+                                                                                                                                [
+                                                                                                                                  TxInInfo_match
+                                                                                                                                  x
+                                                                                                                                ]
+                                                                                                                                [
+                                                                                                                                  Maybe
+                                                                                                                                  TxInInfo
+                                                                                                                                ]
+                                                                                                                              }
+                                                                                                                              (lam
+                                                                                                                                ds
+                                                                                                                                TxOutRef
+                                                                                                                                (lam
+                                                                                                                                  ds
+                                                                                                                                  TxOut
+                                                                                                                                  {
+                                                                                                                                    [
+                                                                                                                                      [
+                                                                                                                                        {
                                                                                                                                           [
+                                                                                                                                            Bool_match
                                                                                                                                             {
                                                                                                                                               [
-                                                                                                                                                Bool_match
-                                                                                                                                                {
-                                                                                                                                                  [
+                                                                                                                                                [
+                                                                                                                                                  {
                                                                                                                                                     [
-                                                                                                                                                      {
+                                                                                                                                                      Bool_match
+                                                                                                                                                      [
                                                                                                                                                         [
-                                                                                                                                                          Bool_match
                                                                                                                                                           [
+                                                                                                                                                            {
+                                                                                                                                                              (builtin
+                                                                                                                                                                ifThenElse
+                                                                                                                                                              )
+                                                                                                                                                              Bool
+                                                                                                                                                            }
                                                                                                                                                             [
                                                                                                                                                               [
-                                                                                                                                                                {
-                                                                                                                                                                  (builtin
-                                                                                                                                                                    ifThenElse
-                                                                                                                                                                  )
-                                                                                                                                                                  Bool
-                                                                                                                                                                }
-                                                                                                                                                                [
-                                                                                                                                                                  [
-                                                                                                                                                                    (builtin
-                                                                                                                                                                      equalsByteString
-                                                                                                                                                                    )
-                                                                                                                                                                    [
-                                                                                                                                                                      {
-                                                                                                                                                                        [
-                                                                                                                                                                          TxOutRef_match
-                                                                                                                                                                          ds
-                                                                                                                                                                        ]
-                                                                                                                                                                        (con
-                                                                                                                                                                          bytestring
-                                                                                                                                                                        )
-                                                                                                                                                                      }
-                                                                                                                                                                      (lam
-                                                                                                                                                                        ds
-                                                                                                                                                                        (con
-                                                                                                                                                                          bytestring
-                                                                                                                                                                        )
-                                                                                                                                                                        (lam
-                                                                                                                                                                          ds
-                                                                                                                                                                          (con
-                                                                                                                                                                            integer
-                                                                                                                                                                          )
-                                                                                                                                                                          ds
-                                                                                                                                                                        )
-                                                                                                                                                                      )
-                                                                                                                                                                    ]
-                                                                                                                                                                  ]
-                                                                                                                                                                  [
-                                                                                                                                                                    {
-                                                                                                                                                                      [
-                                                                                                                                                                        TxOutRef_match
-                                                                                                                                                                        txOutRef
-                                                                                                                                                                      ]
-                                                                                                                                                                      (con
-                                                                                                                                                                        bytestring
-                                                                                                                                                                      )
-                                                                                                                                                                    }
-                                                                                                                                                                    (lam
-                                                                                                                                                                      ds
-                                                                                                                                                                      (con
-                                                                                                                                                                        bytestring
-                                                                                                                                                                      )
-                                                                                                                                                                      (lam
-                                                                                                                                                                        ds
-                                                                                                                                                                        (con
-                                                                                                                                                                          integer
-                                                                                                                                                                        )
-                                                                                                                                                                        ds
-                                                                                                                                                                      )
-                                                                                                                                                                    )
-                                                                                                                                                                  ]
-                                                                                                                                                                ]
-                                                                                                                                                              ]
-                                                                                                                                                              True
-                                                                                                                                                            ]
-                                                                                                                                                            False
-                                                                                                                                                          ]
-                                                                                                                                                        ]
-                                                                                                                                                        (all
-                                                                                                                                                          dead
-                                                                                                                                                          (type)
-                                                                                                                                                          Bool
-                                                                                                                                                        )
-                                                                                                                                                      }
-                                                                                                                                                      (abs
-                                                                                                                                                        dead
-                                                                                                                                                        (type)
-                                                                                                                                                        [
-                                                                                                                                                          [
-                                                                                                                                                            [
-                                                                                                                                                              {
                                                                                                                                                                 (builtin
-                                                                                                                                                                  ifThenElse
+                                                                                                                                                                  equalsByteString
                                                                                                                                                                 )
-                                                                                                                                                                Bool
-                                                                                                                                                              }
-                                                                                                                                                              [
-                                                                                                                                                                [
-                                                                                                                                                                  (builtin
-                                                                                                                                                                    equalsInteger
-                                                                                                                                                                  )
-                                                                                                                                                                  [
-                                                                                                                                                                    {
-                                                                                                                                                                      [
-                                                                                                                                                                        TxOutRef_match
-                                                                                                                                                                        ds
-                                                                                                                                                                      ]
-                                                                                                                                                                      (con
-                                                                                                                                                                        integer
-                                                                                                                                                                      )
-                                                                                                                                                                    }
-                                                                                                                                                                    (lam
-                                                                                                                                                                      ds
-                                                                                                                                                                      (con
-                                                                                                                                                                        bytestring
-                                                                                                                                                                      )
-                                                                                                                                                                      (lam
-                                                                                                                                                                        ds
-                                                                                                                                                                        (con
-                                                                                                                                                                          integer
-                                                                                                                                                                        )
-                                                                                                                                                                        ds
-                                                                                                                                                                      )
-                                                                                                                                                                    )
-                                                                                                                                                                  ]
-                                                                                                                                                                ]
                                                                                                                                                                 [
                                                                                                                                                                   {
                                                                                                                                                                     [
                                                                                                                                                                       TxOutRef_match
-                                                                                                                                                                      txOutRef
+                                                                                                                                                                      ds
                                                                                                                                                                     ]
                                                                                                                                                                     (con
-                                                                                                                                                                      integer
+                                                                                                                                                                      bytestring
                                                                                                                                                                     )
                                                                                                                                                                   }
                                                                                                                                                                   (lam
@@ -8338,78 +8031,175 @@
                                                                                                                                                                   )
                                                                                                                                                                 ]
                                                                                                                                                               ]
+                                                                                                                                                              [
+                                                                                                                                                                {
+                                                                                                                                                                  [
+                                                                                                                                                                    TxOutRef_match
+                                                                                                                                                                    txOutRef
+                                                                                                                                                                  ]
+                                                                                                                                                                  (con
+                                                                                                                                                                    bytestring
+                                                                                                                                                                  )
+                                                                                                                                                                }
+                                                                                                                                                                (lam
+                                                                                                                                                                  ds
+                                                                                                                                                                  (con
+                                                                                                                                                                    bytestring
+                                                                                                                                                                  )
+                                                                                                                                                                  (lam
+                                                                                                                                                                    ds
+                                                                                                                                                                    (con
+                                                                                                                                                                      integer
+                                                                                                                                                                    )
+                                                                                                                                                                    ds
+                                                                                                                                                                  )
+                                                                                                                                                                )
+                                                                                                                                                              ]
                                                                                                                                                             ]
-                                                                                                                                                            True
                                                                                                                                                           ]
-                                                                                                                                                          False
+                                                                                                                                                          True
                                                                                                                                                         ]
-                                                                                                                                                      )
+                                                                                                                                                        False
+                                                                                                                                                      ]
                                                                                                                                                     ]
-                                                                                                                                                    (abs
+                                                                                                                                                    (all
                                                                                                                                                       dead
                                                                                                                                                       (type)
-                                                                                                                                                      False
+                                                                                                                                                      Bool
                                                                                                                                                     )
-                                                                                                                                                  ]
-                                                                                                                                                  (all
+                                                                                                                                                  }
+                                                                                                                                                  (abs
                                                                                                                                                     dead
                                                                                                                                                     (type)
-                                                                                                                                                    dead
+                                                                                                                                                    [
+                                                                                                                                                      [
+                                                                                                                                                        [
+                                                                                                                                                          {
+                                                                                                                                                            (builtin
+                                                                                                                                                              ifThenElse
+                                                                                                                                                            )
+                                                                                                                                                            Bool
+                                                                                                                                                          }
+                                                                                                                                                          [
+                                                                                                                                                            [
+                                                                                                                                                              (builtin
+                                                                                                                                                                equalsInteger
+                                                                                                                                                              )
+                                                                                                                                                              [
+                                                                                                                                                                {
+                                                                                                                                                                  [
+                                                                                                                                                                    TxOutRef_match
+                                                                                                                                                                    ds
+                                                                                                                                                                  ]
+                                                                                                                                                                  (con
+                                                                                                                                                                    integer
+                                                                                                                                                                  )
+                                                                                                                                                                }
+                                                                                                                                                                (lam
+                                                                                                                                                                  ds
+                                                                                                                                                                  (con
+                                                                                                                                                                    bytestring
+                                                                                                                                                                  )
+                                                                                                                                                                  (lam
+                                                                                                                                                                    ds
+                                                                                                                                                                    (con
+                                                                                                                                                                      integer
+                                                                                                                                                                    )
+                                                                                                                                                                    ds
+                                                                                                                                                                  )
+                                                                                                                                                                )
+                                                                                                                                                              ]
+                                                                                                                                                            ]
+                                                                                                                                                            [
+                                                                                                                                                              {
+                                                                                                                                                                [
+                                                                                                                                                                  TxOutRef_match
+                                                                                                                                                                  txOutRef
+                                                                                                                                                                ]
+                                                                                                                                                                (con
+                                                                                                                                                                  integer
+                                                                                                                                                                )
+                                                                                                                                                              }
+                                                                                                                                                              (lam
+                                                                                                                                                                ds
+                                                                                                                                                                (con
+                                                                                                                                                                  bytestring
+                                                                                                                                                                )
+                                                                                                                                                                (lam
+                                                                                                                                                                  ds
+                                                                                                                                                                  (con
+                                                                                                                                                                    integer
+                                                                                                                                                                  )
+                                                                                                                                                                  ds
+                                                                                                                                                                )
+                                                                                                                                                              )
+                                                                                                                                                            ]
+                                                                                                                                                          ]
+                                                                                                                                                        ]
+                                                                                                                                                        True
+                                                                                                                                                      ]
+                                                                                                                                                      False
+                                                                                                                                                    ]
                                                                                                                                                   )
-                                                                                                                                                }
+                                                                                                                                                ]
+                                                                                                                                                (abs
+                                                                                                                                                  dead
+                                                                                                                                                  (type)
+                                                                                                                                                  False
+                                                                                                                                                )
                                                                                                                                               ]
                                                                                                                                               (all
                                                                                                                                                 dead
                                                                                                                                                 (type)
-                                                                                                                                                [
-                                                                                                                                                  Maybe
-                                                                                                                                                  TxInInfo
-                                                                                                                                                ]
+                                                                                                                                                dead
                                                                                                                                               )
                                                                                                                                             }
-                                                                                                                                            (abs
-                                                                                                                                              dead
-                                                                                                                                              (type)
-                                                                                                                                              [
-                                                                                                                                                {
-                                                                                                                                                  Just
-                                                                                                                                                  TxInInfo
-                                                                                                                                                }
-                                                                                                                                                x
-                                                                                                                                              ]
-                                                                                                                                            )
                                                                                                                                           ]
-                                                                                                                                          (abs
+                                                                                                                                          (all
                                                                                                                                             dead
                                                                                                                                             (type)
-                                                                                                                                            {
-                                                                                                                                              Nothing
+                                                                                                                                            [
+                                                                                                                                              Maybe
                                                                                                                                               TxInInfo
-                                                                                                                                            }
+                                                                                                                                            ]
                                                                                                                                           )
-                                                                                                                                        ]
-                                                                                                                                        (all
+                                                                                                                                        }
+                                                                                                                                        (abs
                                                                                                                                           dead
                                                                                                                                           (type)
-                                                                                                                                          dead
+                                                                                                                                          [
+                                                                                                                                            {
+                                                                                                                                              Just
+                                                                                                                                              TxInInfo
+                                                                                                                                            }
+                                                                                                                                            x
+                                                                                                                                          ]
                                                                                                                                         )
-                                                                                                                                      }
+                                                                                                                                      ]
+                                                                                                                                      (abs
+                                                                                                                                        dead
+                                                                                                                                        (type)
+                                                                                                                                        {
+                                                                                                                                          Nothing
+                                                                                                                                          TxInInfo
+                                                                                                                                        }
+                                                                                                                                      )
+                                                                                                                                    ]
+                                                                                                                                    (all
+                                                                                                                                      dead
+                                                                                                                                      (type)
+                                                                                                                                      dead
                                                                                                                                     )
-                                                                                                                                  )
-                                                                                                                                ]
+                                                                                                                                  }
+                                                                                                                                )
                                                                                                                               )
                                                                                                                             ]
-                                                                                                                            ww
-                                                                                                                          ]
-                                                                                                                        )
-                                                                                                                      )
-                                                                                                                    ]
-                                                                                                                    (all
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      dead
+                                                                                                                          )
+                                                                                                                        ]
+                                                                                                                        ww
+                                                                                                                      ]
                                                                                                                     )
-                                                                                                                  }
+                                                                                                                  ]
                                                                                                                 ]
                                                                                                                 (all
                                                                                                                   dead
@@ -8594,12 +8384,9 @@
                                                                                                                                             )
                                                                                                                                             [
                                                                                                                                               fail
-                                                                                                                                              (abs
-                                                                                                                                                e
-                                                                                                                                                (type)
-                                                                                                                                                (error
-                                                                                                                                                  e
-                                                                                                                                                )
+                                                                                                                                              (con
+                                                                                                                                                unit
+                                                                                                                                                ()
                                                                                                                                               )
                                                                                                                                             ]
                                                                                                                                           )
@@ -8671,12 +8458,9 @@
                                                                                                                                                 (type)
                                                                                                                                                 [
                                                                                                                                                   fail
-                                                                                                                                                  (abs
-                                                                                                                                                    e
-                                                                                                                                                    (type)
-                                                                                                                                                    (error
-                                                                                                                                                      e
-                                                                                                                                                    )
+                                                                                                                                                  (con
+                                                                                                                                                    unit
+                                                                                                                                                    ()
                                                                                                                                                   )
                                                                                                                                                 ]
                                                                                                                                               )
@@ -8707,12 +8491,9 @@
                                                                                                               (type)
                                                                                                               [
                                                                                                                 fail
-                                                                                                                (abs
-                                                                                                                  e
-                                                                                                                  (type)
-                                                                                                                  (error
-                                                                                                                    e
-                                                                                                                  )
+                                                                                                                (con
+                                                                                                                  unit
+                                                                                                                  ()
                                                                                                                 )
                                                                                                               ]
                                                                                                             )
