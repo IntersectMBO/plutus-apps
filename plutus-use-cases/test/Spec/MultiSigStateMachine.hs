@@ -8,6 +8,7 @@
 
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:debug-context #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:remove-trace #-}
 
 module Spec.MultiSigStateMachine(tests, lockProposeSignPay) where
 

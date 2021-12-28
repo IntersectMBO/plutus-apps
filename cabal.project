@@ -240,8 +240,8 @@ source-repository-package
 -- are also updated
 source-repository-package
  type: git
- location: https://github.com/input-output-hk/plutus
- tag: c8c5183f7facd967d48fe07b3b14465b8dd48fe7
+ location: https://github.com/HachiSecurity/plutus
+ tag: c8accb12d87de646544fd4200fa240835046a995
  subdir:
    plutus-ledger-api
    word-array

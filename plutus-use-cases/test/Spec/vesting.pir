@@ -25,16 +25,7 @@
           (termbind
             (strict)
             (vardecl thunk (con unit))
-            [
-              {
-                [
-                  Unit_match
-                  [ [ { (builtin trace) Unit } (con string "Lg") ] Unit ]
-                ]
-                (con unit)
-              }
-              (con unit ())
-            ]
+            [ { [ Unit_match Unit ] (con unit) } (con unit ()) ]
           )
           (error [ [ Tuple2 (con bytestring) ] (con bytestring) ])
         )

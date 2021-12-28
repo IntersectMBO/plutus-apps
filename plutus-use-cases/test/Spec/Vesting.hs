@@ -11,6 +11,8 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns -fno-warn-unused-do-bind -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:remove-trace #-}
+
 module Spec.Vesting (tests, prop_Vesting, prop_CheckNoLockedFundsProof, retrieveFundsTrace) where
 
 import Control.Lens hiding (elements)

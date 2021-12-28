@@ -165,14 +165,14 @@
       "flake": false,
       "locked": {
         "lastModified": 1636924888,
-        "narHash": "sha256-80ReuqPGaZrg6GnvyaG/f2Qn6GheCK9RvYQ63+i/6Ak=",
-        "owner": "input-output-hk",
+        "narHash": "sha256-9G5IXKMrMkDhlLwVEoVYskqFIqjO29Bag8pJQHtv1Cc=",
+        "owner": "HachiSecurity",
         "repo": "plutus",
-        "rev": "c8c5183f7facd967d48fe07b3b14465b8dd48fe7",
+        "rev": "c8accb12d87de646544fd4200fa240835046a995",
         "type": "github"
       },
       "original": {
-        "owner": "input-output-hk",
+        "owner": "HachiSecurity",
         "repo": "plutus",
         "type": "github"
       }

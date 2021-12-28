@@ -54,7 +54,7 @@ let
       "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" = "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
       "https://github.com/input-output-hk/cardano-wallet"."760140e238a5fbca61d1b286d7a80ece058dc729" = "014njpddrlqm9bbab636h2gf58zkm0bx04i1jsn07vh5j3k0gri6";
       "https://github.com/input-output-hk/cardano-addresses"."d2f86caa085402a953920c6714a0de6a50b655ec" = "0p6jbnd7ky2yf7bwb1350k8880py8dgqg39k49q02a6ij4ld01ay";
-      "https://github.com/input-output-hk/plutus"."c8c5183f7facd967d48fe07b3b14465b8dd48fe7" = "01fmakdp589h9nllc31s3mkys6gic6ba38s9r3ycfb9r1j5n1cja";
+      "https://github.com/HachiSecurity/plutus"."c8accb12d87de646544fd4200fa240835046a995" = "09yldxxl0jfahddd1nyfm0i8ajmjb22i45dwjkhl0cibldf4hvpl";
     };
     # Configuration settings needed for cabal configure to work when cross compiling
     # for windows. We can't use `modules` for these as `modules` are only applied

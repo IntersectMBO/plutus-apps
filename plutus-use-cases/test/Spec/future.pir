@@ -1471,10 +1471,12 @@
                                                   (abs
                                                     dead
                                                     (type)
-                                                    [
-                                                      [
-                                                        {
-                                                          (builtin trace)
+                                                    (let
+                                                      (nonrec)
+                                                      (termbind
+                                                        (strict)
+                                                        (vardecl
+                                                          a
                                                           [
                                                             [
                                                               Either
@@ -1491,28 +1493,29 @@
                                                               ]
                                                             ]
                                                           ]
-                                                        }
-                                                        (con string "Li")
-                                                      ]
-                                                      [
-                                                        {
+                                                        )
+                                                        [
                                                           {
-                                                            Left
-                                                            SignedMessageCheckError
-                                                          }
-                                                          [
-                                                            [ Tuple2 a ]
+                                                            {
+                                                              Left
+                                                              SignedMessageCheckError
+                                                            }
                                                             [
+                                                              [ Tuple2 a ]
                                                               [
-                                                                TxConstraints i
+                                                                [
+                                                                  TxConstraints
+                                                                  i
+                                                                ]
+                                                                o
                                                               ]
-                                                              o
                                                             ]
-                                                          ]
-                                                        }
-                                                        DecodingError
-                                                      ]
-                                                    ]
+                                                          }
+                                                          DecodingError
+                                                        ]
+                                                      )
+                                                      a
+                                                    )
                                                   )
                                                 ]
                                                 (all dead (type) dead)

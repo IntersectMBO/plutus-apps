@@ -9,6 +9,8 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:remove-trace #-}
+
 module Spec.Future(tests, testAccounts, theFuture, increaseMarginTrace, settleEarlyTrace, payOutTrace) where
 
 import Control.Lens

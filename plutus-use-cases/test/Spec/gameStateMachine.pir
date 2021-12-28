@@ -27,16 +27,7 @@
         (con unit)
         [
           { error [ [ Tuple2 (con bytestring) ] (con bytestring) ] }
-          [
-            {
-              [
-                Unit_match
-                [ [ { (builtin trace) Unit } (con string "Lg") ] Unit ]
-              ]
-              (con unit)
-            }
-            (con unit ())
-          ]
+          [ { [ Unit_match Unit ] (con unit) } (con unit ()) ]
         ]
       )
     )
@@ -47,26 +38,6 @@
         Bool_match
         (vardecl True Bool) (vardecl False Bool)
       )
-    )
-    (termbind
-      (nonstrict)
-      (vardecl j Bool)
-      [ [ { (builtin trace) Bool } (con string "Ld") ] False ]
-    )
-    (termbind
-      (nonstrict)
-      (vardecl j Bool)
-      [ [ { (builtin trace) Bool } (con string "L7") ] False ]
-    )
-    (termbind
-      (nonstrict)
-      (vardecl j Bool)
-      [ [ { (builtin trace) Bool } (con string "La") ] False ]
-    )
-    (termbind
-      (nonstrict)
-      (vardecl j Bool)
-      [ [ { (builtin trace) Bool } (con string "Lc") ] False ]
     )
     (termbind
       (strict)
@@ -6262,21 +6233,7 @@
                                                                                   (abs
                                                                                     dead
                                                                                     (type)
-                                                                                    [
-                                                                                      [
-                                                                                        {
-                                                                                          (builtin
-                                                                                            trace
-                                                                                          )
-                                                                                          Bool
-                                                                                        }
-                                                                                        (con
-                                                                                          string
-                                                                                          "L4"
-                                                                                        )
-                                                                                      ]
-                                                                                      False
-                                                                                    ]
+                                                                                    False
                                                                                   )
                                                                                 ]
                                                                                 (all
@@ -6873,7 +6830,7 @@
                                                                                             (abs
                                                                                               dead
                                                                                               (type)
-                                                                                              j
+                                                                                              False
                                                                                             )
                                                                                           ]
                                                                                           (all
@@ -6888,7 +6845,7 @@
                                                                                   (abs
                                                                                     dead
                                                                                     (type)
-                                                                                    j
+                                                                                    False
                                                                                   )
                                                                                 ]
                                                                                 (all
@@ -7234,21 +7191,7 @@
                                                                               (abs
                                                                                 dead
                                                                                 (type)
-                                                                                [
-                                                                                  [
-                                                                                    {
-                                                                                      (builtin
-                                                                                        trace
-                                                                                      )
-                                                                                      Bool
-                                                                                    }
-                                                                                    (con
-                                                                                      string
-                                                                                      "L2"
-                                                                                    )
-                                                                                  ]
-                                                                                  False
-                                                                                ]
+                                                                                False
                                                                               )
                                                                             ]
                                                                             (all
@@ -7532,22 +7475,7 @@
                                                               )
                                                             ]
                                                             (abs
-                                                              dead
-                                                              (type)
-                                                              [
-                                                                [
-                                                                  {
-                                                                    (builtin
-                                                                      trace
-                                                                    )
-                                                                    Bool
-                                                                  }
-                                                                  (con
-                                                                    string "L9"
-                                                                  )
-                                                                ]
-                                                                False
-                                                              ]
+                                                              dead (type) False
                                                             )
                                                           ]
                                                           (all dead (type) dead)
@@ -8510,21 +8438,7 @@
                                                                               (abs
                                                                                 dead
                                                                                 (type)
-                                                                                [
-                                                                                  [
-                                                                                    {
-                                                                                      (builtin
-                                                                                        trace
-                                                                                      )
-                                                                                      Bool
-                                                                                    }
-                                                                                    (con
-                                                                                      string
-                                                                                      "Lb"
-                                                                                    )
-                                                                                  ]
-                                                                                  False
-                                                                                ]
+                                                                                False
                                                                               )
                                                                             ]
                                                                             (all
@@ -10128,7 +10042,7 @@
                                                                                       (abs
                                                                                         dead
                                                                                         (type)
-                                                                                        j
+                                                                                        False
                                                                                       )
                                                                                     ]
                                                                                     (all
@@ -10150,7 +10064,7 @@
                                                             ]
                                                           )
                                                         ]
-                                                        (abs dead (type) j)
+                                                        (abs dead (type) False)
                                                       ]
                                                       (all dead (type) dead)
                                                     }
@@ -10650,17 +10564,7 @@
                                                   }
                                                   (abs dead (type) True)
                                                 ]
-                                                (abs
-                                                  dead
-                                                  (type)
-                                                  [
-                                                    [
-                                                      { (builtin trace) Bool }
-                                                      (con string "L6")
-                                                    ]
-                                                    False
-                                                  ]
-                                                )
+                                                (abs dead (type) False)
                                               ]
                                               (all dead (type) dead)
                                             }
@@ -10737,17 +10641,7 @@
                                                 }
                                                 (abs dead (type) True)
                                               ]
-                                              (abs
-                                                dead
-                                                (type)
-                                                [
-                                                  [
-                                                    { (builtin trace) Bool }
-                                                    (con string "Ld")
-                                                  ]
-                                                  False
-                                                ]
-                                              )
+                                              (abs dead (type) False)
                                             ]
                                             (all dead (type) dead)
                                           }
@@ -11297,17 +11191,7 @@
                                               }
                                               (abs dead (type) True)
                                             ]
-                                            (abs
-                                              dead
-                                              (type)
-                                              [
-                                                [
-                                                  { (builtin trace) Bool }
-                                                  (con string "L5")
-                                                ]
-                                                False
-                                              ]
-                                            )
+                                            (abs dead (type) False)
                                           ]
                                           (all dead (type) dead)
                                         }
@@ -11674,7 +11558,7 @@
                                                                                             (abs
                                                                                               dead
                                                                                               (type)
-                                                                                              j
+                                                                                              False
                                                                                             )
                                                                                           )
                                                                                         ]
@@ -11701,7 +11585,9 @@
                                                                   )
                                                                 ]
                                                                 (abs
-                                                                  dead (type) j
+                                                                  dead
+                                                                  (type)
+                                                                  False
                                                                 )
                                                               ]
                                                               (all
@@ -11977,21 +11863,7 @@
                                                                 (abs
                                                                   dead
                                                                   (type)
-                                                                  [
-                                                                    [
-                                                                      {
-                                                                        (builtin
-                                                                          trace
-                                                                        )
-                                                                        Bool
-                                                                      }
-                                                                      (con
-                                                                        string
-                                                                        "L8"
-                                                                      )
-                                                                    ]
-                                                                    False
-                                                                  ]
+                                                                  False
                                                                 )
                                                               ]
                                                               (all
@@ -12860,21 +12732,7 @@
                                                                                     (abs
                                                                                       dead
                                                                                       (type)
-                                                                                      [
-                                                                                        [
-                                                                                          {
-                                                                                            (builtin
-                                                                                              trace
-                                                                                            )
-                                                                                            Bool
-                                                                                          }
-                                                                                          (con
-                                                                                            string
-                                                                                            "L3"
-                                                                                          )
-                                                                                        ]
-                                                                                        False
-                                                                                      ]
+                                                                                      False
                                                                                     )
                                                                                   ]
                                                                                   (all
@@ -13556,21 +13414,7 @@
                                                                                                         (abs
                                                                                                           dead
                                                                                                           (type)
-                                                                                                          [
-                                                                                                            [
-                                                                                                              {
-                                                                                                                (builtin
-                                                                                                                  trace
-                                                                                                                )
-                                                                                                                Bool
-                                                                                                              }
-                                                                                                              (con
-                                                                                                                string
-                                                                                                                "L0"
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            False
-                                                                                                          ]
+                                                                                                          False
                                                                                                         )
                                                                                                       ]
                                                                                                       (all
@@ -14775,21 +14619,7 @@
                                                                                                                                       {
                                                                                                                                         [
                                                                                                                                           Unit_match
-                                                                                                                                          [
-                                                                                                                                            [
-                                                                                                                                              {
-                                                                                                                                                (builtin
-                                                                                                                                                  trace
-                                                                                                                                                )
-                                                                                                                                                Unit
-                                                                                                                                              }
-                                                                                                                                              (con
-                                                                                                                                                string
-                                                                                                                                                "Lf"
-                                                                                                                                              )
-                                                                                                                                            ]
-                                                                                                                                            Unit
-                                                                                                                                          ]
+                                                                                                                                          Unit
                                                                                                                                         ]
                                                                                                                                         (con
                                                                                                                                           unit
@@ -14826,21 +14656,7 @@
                                                                                                                     (abs
                                                                                                                       dead
                                                                                                                       (type)
-                                                                                                                      [
-                                                                                                                        [
-                                                                                                                          {
-                                                                                                                            (builtin
-                                                                                                                              trace
-                                                                                                                            )
-                                                                                                                            Bool
-                                                                                                                          }
-                                                                                                                          (con
-                                                                                                                            string
-                                                                                                                            "L1"
-                                                                                                                          )
-                                                                                                                        ]
-                                                                                                                        False
-                                                                                                                      ]
+                                                                                                                      False
                                                                                                                     )
                                                                                                                   ]
                                                                                                                   (all
@@ -14887,7 +14703,9 @@
                                                                 )
                                                               ]
                                                               (abs
-                                                                dead (type) j
+                                                                dead
+                                                                (type)
+                                                                False
                                                               )
                                                             ]
                                                             (all
@@ -14896,13 +14714,13 @@
                                                           }
                                                         )
                                                       ]
-                                                      (abs dead (type) j)
+                                                      (abs dead (type) False)
                                                     ]
                                                     (all dead (type) dead)
                                                   }
                                                 )
                                               ]
-                                              (abs dead (type) j)
+                                              (abs dead (type) False)
                                             ]
                                             (all dead (type) dead)
                                           }
@@ -18358,21 +18176,7 @@
                                                                                                 {
                                                                                                   [
                                                                                                     Unit_match
-                                                                                                    [
-                                                                                                      [
-                                                                                                        {
-                                                                                                          (builtin
-                                                                                                            trace
-                                                                                                          )
-                                                                                                          Unit
-                                                                                                        }
-                                                                                                        (con
-                                                                                                          string
-                                                                                                          "S0"
-                                                                                                        )
-                                                                                                      ]
-                                                                                                      Unit
-                                                                                                    ]
+                                                                                                    Unit
                                                                                                   ]
                                                                                                   (con
                                                                                                     unit
@@ -18639,21 +18443,7 @@
                                                                                         (abs
                                                                                           dead
                                                                                           (type)
-                                                                                          [
-                                                                                            [
-                                                                                              {
-                                                                                                (builtin
-                                                                                                  trace
-                                                                                                )
-                                                                                                Bool
-                                                                                              }
-                                                                                              (con
-                                                                                                string
-                                                                                                "S4"
-                                                                                              )
-                                                                                            ]
-                                                                                            False
-                                                                                          ]
+                                                                                          False
                                                                                         )
                                                                                       ]
                                                                                       (all
@@ -18794,21 +18584,7 @@
                                                                                                       {
                                                                                                         [
                                                                                                           Bool_match
-                                                                                                          [
-                                                                                                            [
-                                                                                                              {
-                                                                                                                (builtin
-                                                                                                                  trace
-                                                                                                                )
-                                                                                                                Bool
-                                                                                                              }
-                                                                                                              (con
-                                                                                                                string
-                                                                                                                "S3"
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            False
-                                                                                                          ]
+                                                                                                          False
                                                                                                         ]
                                                                                                         (all
                                                                                                           dead
@@ -19237,21 +19013,7 @@
                                                                                                     (abs
                                                                                                       dead
                                                                                                       (type)
-                                                                                                      [
-                                                                                                        [
-                                                                                                          {
-                                                                                                            (builtin
-                                                                                                              trace
-                                                                                                            )
-                                                                                                            Bool
-                                                                                                          }
-                                                                                                          (con
-                                                                                                            string
-                                                                                                            "S5"
-                                                                                                          )
-                                                                                                        ]
-                                                                                                        False
-                                                                                                      ]
+                                                                                                      False
                                                                                                     )
                                                                                                   ]
                                                                                                   (all
@@ -19285,21 +19047,7 @@
                                                               (abs
                                                                 dead
                                                                 (type)
-                                                                [
-                                                                  [
-                                                                    {
-                                                                      (builtin
-                                                                        trace
-                                                                      )
-                                                                      Bool
-                                                                    }
-                                                                    (con
-                                                                      string
-                                                                      "S6"
-                                                                    )
-                                                                  ]
-                                                                  False
-                                                                ]
+                                                                False
                                                               )
                                                             ]
                                                             (all
@@ -19420,21 +19168,7 @@
                                                                                 {
                                                                                   [
                                                                                     Bool_match
-                                                                                    [
-                                                                                      [
-                                                                                        {
-                                                                                          (builtin
-                                                                                            trace
-                                                                                          )
-                                                                                          Bool
-                                                                                        }
-                                                                                        (con
-                                                                                          string
-                                                                                          "S2"
-                                                                                        )
-                                                                                      ]
-                                                                                      False
-                                                                                    ]
+                                                                                    False
                                                                                   ]
                                                                                   (all
                                                                                     dead
@@ -19512,21 +19246,7 @@
                                                                     {
                                                                       [
                                                                         Bool_match
-                                                                        [
-                                                                          [
-                                                                            {
-                                                                              (builtin
-                                                                                trace
-                                                                              )
-                                                                              Bool
-                                                                            }
-                                                                            (con
-                                                                              string
-                                                                              "S1"
-                                                                            )
-                                                                          ]
-                                                                          False
-                                                                        ]
+                                                                        False
                                                                       ]
                                                                       (all
                                                                         dead

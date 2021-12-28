@@ -14,6 +14,8 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:remove-trace #-}
+
 module Spec.GameStateMachine
   ( tests, successTrace, successTrace2, traceLeaveOneAdaInScript, failTrace
   , prop_Game, propGame', prop_GameWhitelist
