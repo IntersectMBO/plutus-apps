@@ -47,8 +47,6 @@ import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import Data.Row
 import GHC.Generics (Generic)
-import Playground.Schema (endpointsToSchemas)
-import Playground.Types (FunctionSchema)
 import Plutus.Contract (ContractInstanceId, EmptySchema, IsContract (..))
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Resumable (Response, responses)
@@ -62,7 +60,6 @@ import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (..))
 import Plutus.PAB.Types (PABError (..))
 import Plutus.Trace.Emulator.Types (ContractInstanceStateInternal (..))
 import Plutus.Trace.Emulator.Types qualified as Emulator
-import Schema (FormSchema)
 
 -- | Contracts that are built into the PAB (ie. compiled with it) and receive
 --   an initial value of type 'a'.

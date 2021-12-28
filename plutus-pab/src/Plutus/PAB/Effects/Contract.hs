@@ -15,7 +15,6 @@ module Plutus.PAB.Effects.Contract(
     PABContract(..)
     , requests
     , ContractEffect(..)
-    , exportSchema
     , initialState
     , updateContract
     -- * Storing and retrieving contract state
@@ -38,13 +37,11 @@ import Data.Aeson (Value)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Proxy (Proxy (..))
-import Playground.Types (FunctionSchema)
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Resumable (Request, Response)
 import Plutus.Contract.State (ContractResponse)
 import Plutus.Contract.State qualified as C
 import Plutus.PAB.Webserver.Types (ContractActivationArgs)
-import Schema (FormSchema)
 import Wallet.Types (ContractActivityStatus (..), ContractInstanceId)
 
 -- | A class of contracts running in the PAB. The purpose of the type
@@ -72,21 +69,8 @@ requests = C.hooks . serialisableState (Proxy @contract)
 
 -- | An effect for sending updates to contracts that implement @PABContract@
 data ContractEffect t r where
-    ExportSchema   :: PABContract t => ContractDef t -> ContractEffect t [FunctionSchema FormSchema] -- ^ The schema of the contract
     InitialState   :: PABContract t => ContractInstanceId -> ContractDef t -> ContractEffect t (State t) -- ^ The initial state of the contract's instance
     UpdateContract :: PABContract t => ContractInstanceId -> ContractDef t -> State t -> Response PABResp -> ContractEffect t (State t) -- ^ Send an update to the contract and return the new state.
-
--- | Get the schema of a contract given its definition.
-exportSchema ::
-    forall t effs.
-    ( Member (ContractEffect t) effs
-    , PABContract t
-    )
-    => ContractDef t
-    -> Eff effs [FunctionSchema FormSchema]
-exportSchema def =
-    let command :: ContractEffect t [FunctionSchema FormSchema] = ExportSchema def
-    in send command
 
 -- | Get the initial state of a contract
 initialState ::

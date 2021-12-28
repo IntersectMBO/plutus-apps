@@ -122,7 +122,6 @@ library
     hs-source-dirs:     src
     build-depends:
         , freer-extras
-        , playground-common
         , plutus-chain-index-core
         , plutus-contract
         , plutus-ledger
@@ -164,7 +163,6 @@ library
         optparse-applicative -any,
         ouroboros-network -any,
         ouroboros-network-framework -any,
-        playground-common -any,
         plutus-ledger-api -any,
         prettyprinter >=1.1.0.1,
         purescript-bridge -any,
