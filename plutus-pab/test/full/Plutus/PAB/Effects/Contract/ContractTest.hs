@@ -52,15 +52,15 @@ instance Pretty TestContracts where
 instance HasDefinitions TestContracts where
     getDefinitions = [ GameStateMachine, Currency, AtomicSwap, PayToWallet, PingPong ]
     getContract = getTestContracts
-    getSchema = getTestContractsSchema
+    -- getSchema = getTestContractsSchema
 
-getTestContractsSchema :: TestContracts -> [FunctionSchema FormSchema]
-getTestContractsSchema = \case
-    GameStateMachine -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
-    Currency         -> Builtin.endpointsToSchemas @Contracts.Currency.CurrencySchema
-    AtomicSwap       -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
-    PayToWallet      -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
-    PingPong         -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
+-- getTestContractsSchema :: TestContracts -> [FunctionSchema FormSchema]
+-- getTestContractsSchema = \case
+--     GameStateMachine -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
+--     Currency         -> Builtin.endpointsToSchemas @Contracts.Currency.CurrencySchema
+--     AtomicSwap       -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
+--     PayToWallet      -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
+--     PingPong         -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
 
 getTestContracts :: TestContracts -> SomeBuiltin
 getTestContracts = \case

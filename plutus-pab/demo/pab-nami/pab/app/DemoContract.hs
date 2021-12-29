@@ -47,11 +47,11 @@ instance HasDefinitions DemoContract where
     getDefinitions = [ DemoContract
                      ]
     getContract = getDemoContract
-    getSchema = getDemoContractSchema
+    -- getSchema = getDemoContractSchema
 
-getDemoContractSchema :: DemoContract -> [FunctionSchema FormSchema]
-getDemoContractSchema = \case
-    DemoContract -> Builtin.endpointsToSchemas @PayToWalletSchema
+-- getDemoContractSchema :: DemoContract -> [FunctionSchema FormSchema]
+-- getDemoContractSchema = \case
+--     DemoContract -> Builtin.endpointsToSchemas @PayToWalletSchema
 
 getDemoContract :: DemoContract -> SomeBuiltin
 getDemoContract = \case

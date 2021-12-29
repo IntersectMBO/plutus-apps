@@ -33,16 +33,12 @@ data PabClient t walletId = PabClient
       -- ^ get wallet instances
   , getInstances     :: Maybe Text -> ClientM [ContractInstanceClientState t]
       -- ^ get instances
-  , getDefinitions   :: ClientM [ContractSignatureResponse t]
-      -- ^ get definitions
   }
 
 -- | Contract instance endpoints
 data InstanceClient t = InstanceClient
   { getInstanceStatus    :: ClientM (ContractInstanceClientState t)
       -- ^ get instance status
-  , getInstanceSchema    :: ClientM (ContractSignatureResponse t)
-      -- ^ get instance schema
   , callInstanceEndpoint :: String -> JSON.Value -> ClientM ()
       -- ^ call instance endpoint
   , stopInstance         :: ClientM ()
@@ -59,13 +55,11 @@ pabClient = PabClient{..}
       :<|> toInstanceClient
       :<|> getWallet
       :<|> getInstances
-      :<|> getDefinitions
       ) = client (Proxy @(API t walletId))
 
     instanceClient cid = InstanceClient{..}
         where
           (getInstanceStatus
-            :<|> getInstanceSchema
             :<|> callInstanceEndpoint
             :<|> stopInstance
             ) = toInstanceClient cid

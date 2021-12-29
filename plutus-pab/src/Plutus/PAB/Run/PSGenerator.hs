@@ -29,7 +29,7 @@ import Data.Typeable (Typeable)
 import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, argonaut, buildBridge, equal, genericShow,
                                    mkSumType, order, writePSTypes)
 import Language.PureScript.Bridge.TypeParameters (A, B)
-import PSGenerator.Common qualified
+-- import PSGenerator.Common qualified
 import Plutus.Contract.Checkpoint (CheckpointKey, CheckpointStore, CheckpointStoreItem)
 import Plutus.Contract.Resumable (Responses)
 import Plutus.Contract.StateMachine (InvalidTransition, SMContractError)
@@ -39,8 +39,8 @@ import Plutus.PAB.Effects.Contract.Builtin (Builtin)
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse)
 import Plutus.PAB.Webserver.API qualified as API
 import Plutus.PAB.Webserver.Types (ChainReport, CombinedWSStreamToClient, CombinedWSStreamToServer,
-                                   ContractActivationArgs, ContractInstanceClientState, ContractReport,
-                                   ContractSignatureResponse, FullReport, InstanceStatusToClient)
+                                   ContractActivationArgs, ContractInstanceClientState, ContractReport, FullReport,
+                                   InstanceStatusToClient)
 import Servant ((:<|>))
 import Servant.PureScript (HasBridge, Settings, apiModuleName, defaultBridge, defaultSettings, languageBridge,
                            writeAPIModuleWithSettings)
@@ -54,12 +54,12 @@ class HasPSTypes a where
 -- | PAB's main bridge that includes common bridges
 pabBridge :: BridgePart
 pabBridge =
-    PSGenerator.Common.aesonBridge <|>
-    PSGenerator.Common.containersBridge <|>
-    PSGenerator.Common.languageBridge <|>
-    PSGenerator.Common.ledgerBridge <|>
-    PSGenerator.Common.servantBridge <|>
-    PSGenerator.Common.miscBridge <|>
+    -- PSGenerator.Common.aesonBridge <|>
+    -- PSGenerator.Common.containersBridge <|>
+    -- PSGenerator.Common.languageBridge <|>
+    -- PSGenerator.Common.ledgerBridge <|>
+    -- PSGenerator.Common.servantBridge <|>
+    -- PSGenerator.Common.miscBridge <|>
     defaultBridge
 
 data PabBridge
@@ -73,16 +73,16 @@ instance HasBridge PabBridge where
 -- | PAB's list of types that includes common types.
 pabTypes :: [SumType 'Haskell]
 pabTypes =
-    PSGenerator.Common.ledgerTypes <>
-    PSGenerator.Common.playgroundTypes <>
-    PSGenerator.Common.walletTypes <>
+    -- PSGenerator.Common.ledgerTypes <>
+    -- PSGenerator.Common.playgroundTypes <>
+    -- PSGenerator.Common.walletTypes <>
     -- This type has been handwritten in the frontend. See note there, or try
     -- generating it yourself to see why it's problematic.
     -- [ order . equal . genericShow . argonaut $ mkSumType @(Builtin A)
     [ equal . genericShow . argonaut $ mkSumType @(FullReport A)
     , equal . genericShow . argonaut $ mkSumType @ChainReport
     , equal . genericShow . argonaut $ mkSumType @(ContractReport A)
-    , equal . genericShow . argonaut $ mkSumType @(ContractSignatureResponse A)
+    -- , equal . genericShow . argonaut $ mkSumType @(ContractSignatureResponse A)
     , equal . genericShow . argonaut $ mkSumType @(PartiallyDecodedResponse A)
 
     -- Contract request / response types

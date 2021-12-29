@@ -24,7 +24,7 @@ import Plutus.PAB.Effects.Contract.ContractTest (TestContracts (Currency, GameSt
 import Plutus.PAB.Simulator qualified as Simulator
 import Plutus.PAB.Simulator.Test qualified as Simulator
 import Plutus.PAB.Webserver.Handler qualified as Webserver
-import Plutus.PAB.Webserver.Types (ContractSignatureResponse, FullReport)
+import Plutus.PAB.Webserver.Types (FullReport)
 import Servant.PureScript (HasBridge (..))
 import System.Environment (getArgs)
 import System.FilePath ((</>))
@@ -65,7 +65,7 @@ defaultWallet = knownWallet 1
 
 writeTestData :: FilePath -> IO ()
 writeTestData outputDir = do
-    (fullReport, currencySchema) <-
+    fullReport <-
         fmap (either (error . show) id) $ Simulator.runSimulation $ do
             currencyInstance1 <- Simulator.activateContract defaultWallet Currency
             void $ Simulator.activateContract defaultWallet Currency
@@ -74,12 +74,12 @@ writeTestData outputDir = do
             void $ Simulator.callEndpointOnInstance currencyInstance1 "Create native token" SimpleMPS {tokenName = "TestCurrency", amount = 10000000000}
             void $ Simulator.waitUntilFinished currencyInstance1
             report :: FullReport TestContracts <- Webserver.getFullReport
-            schema :: ContractSignatureResponse TestContracts <- Webserver.contractSchema currencyInstance1
-            pure (report, schema)
+            -- schema :: ContractSignatureResponse TestContracts <- Webserver.contractSchema currencyInstance1
+            pure report
     BSL.writeFile
         (outputDir </> "full_report_response.json")
         (JSON.encodePretty fullReport)
-    BSL.writeFile
-        (outputDir </> "contract_schema_response.json")
-        (JSON.encodePretty currencySchema)
+    -- BSL.writeFile
+    --     (outputDir </> "contract_schema_response.json")
+    --     (JSON.encodePretty currencySchema)
 

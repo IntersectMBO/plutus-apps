@@ -90,24 +90,24 @@ instance HasDefinitions ExampleContracts where
                      , IntegrationTest
                      ]
     getContract = getExampleContracts
-    getSchema = getExampleContractsSchema
+    -- getSchema = getExampleContractsSchema
 
-getExampleContractsSchema :: ExampleContracts -> [FunctionSchema FormSchema]
-getExampleContractsSchema = \case
-    UniswapInit         -> Builtin.endpointsToSchemas @Empty
-    UniswapUser _       -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapUserSchema
-    UniswapOwner        -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapOwnerSchema
-    GameStateMachine    -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
-    PayToWallet         -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
-    AtomicSwap          -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
-    Currency            -> Builtin.endpointsToSchemas @Contracts.Currency.CurrencySchema
-    PrismMirror         -> Builtin.endpointsToSchemas @Contracts.Prism.MirrorSchema
-    PrismUnlockExchange -> Builtin.endpointsToSchemas @Contracts.Prism.UnlockExchangeSchema
-    PrismUnlockSto      -> Builtin.endpointsToSchemas @Contracts.Prism.STOSubscriberSchema
-    PingPong            -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
-    PingPongAuto        -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
-    WaitForTx{}         -> Builtin.endpointsToSchemas @Empty
-    IntegrationTest{}   -> Builtin.endpointsToSchemas @Empty
+-- getExampleContractsSchema :: ExampleContracts -> [FunctionSchema FormSchema]
+-- getExampleContractsSchema = \case
+--     UniswapInit         -> Builtin.endpointsToSchemas @Empty
+--     UniswapUser _       -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapUserSchema
+--     UniswapOwner        -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapOwnerSchema
+--     GameStateMachine    -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
+--     PayToWallet         -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
+--     AtomicSwap          -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
+--     Currency            -> Builtin.endpointsToSchemas @Contracts.Currency.CurrencySchema
+--     PrismMirror         -> Builtin.endpointsToSchemas @Contracts.Prism.MirrorSchema
+--     PrismUnlockExchange -> Builtin.endpointsToSchemas @Contracts.Prism.UnlockExchangeSchema
+--     PrismUnlockSto      -> Builtin.endpointsToSchemas @Contracts.Prism.STOSubscriberSchema
+--     PingPong            -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
+--     PingPongAuto        -> Builtin.endpointsToSchemas @Contracts.PingPong.PingPongSchema
+--     WaitForTx{}         -> Builtin.endpointsToSchemas @Empty
+--     IntegrationTest{}   -> Builtin.endpointsToSchemas @Empty
 
 getExampleContracts :: ExampleContracts -> SomeBuiltin
 getExampleContracts = \case

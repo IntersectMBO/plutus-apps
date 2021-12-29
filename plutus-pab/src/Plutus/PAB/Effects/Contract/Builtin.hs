@@ -29,7 +29,6 @@ module Plutus.PAB.Effects.Contract.Builtin(
     , type (.\/)
     , EmptySchema
     , Empty
-    , endpointsToSchemas
     , getResponse
     , fromResponse
     , HasDefinitions(..)
@@ -108,7 +107,6 @@ instance PABContract (Builtin a) where
 class HasDefinitions a where
     getDefinitions :: [a] -- ^ Available contract definitions for a contract type `a`
     getContract :: a -> SomeBuiltin -- ^ The actual contract function of contract type `a`
-    getSchema :: a -> [FunctionSchema FormSchema] -- List of schemas for contract type `a`
 
 -- | Defined in order to prevent type errors like: "Couldn't match type 'effs'
 -- with 'effs1'".
@@ -126,7 +124,6 @@ handleBuiltin :: HasDefinitions a => BuiltinHandler a
 handleBuiltin = BuiltinHandler $ \case
     InitialState i c           -> case getContract c of SomeBuiltin c' -> initBuiltin i c'
     UpdateContract i _ state p -> case state of SomeBuiltinState s w -> updateBuiltin i s w p
-    ExportSchema a             -> pure $ getSchema a
 
 getResponse :: forall a. SomeBuiltinState a -> ContractResponse Value Value PABResp PABReq
 getResponse (SomeBuiltinState s w) =

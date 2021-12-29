@@ -21,7 +21,6 @@ module Plutus.PAB.Webserver.Handler
     , walletProxyClientEnv
     -- * Reports
     , getFullReport
-    , contractSchema
     ) where
 
 import Cardano.Wallet.Mock.Client qualified as Wallet.Client
@@ -52,8 +51,7 @@ import Plutus.PAB.Types (PABError (ContractInstanceNotFound, EndpointCallError, 
 import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet),
                                    ContractInstanceClientState (ContractInstanceClientState, cicContract, cicCurrentState, cicDefinition, cicStatus, cicWallet, cicYieldedExportTxs),
-                                   ContractReport (ContractReport, crActiveContractStates, crAvailableContracts),
-                                   ContractSignatureResponse (ContractSignatureResponse),
+                                   ContractReport (ContractReport, crActiveContractStates),
                                    FullReport (FullReport, chainReport, contractReport), emptyChainReport)
 import Servant (NoContent (NoContent), (:<|>) ((:<|>)))
 import Servant.Client (ClientEnv, ClientM, runClientM)
@@ -70,26 +68,14 @@ healthcheck = pure ()
 
 getContractReport :: forall t env. Contract.PABContract t => PABAction t env (ContractReport (Contract.ContractDef t))
 getContractReport = do
-    contracts <- Contract.getDefinitions @t
     activeContractIDs <- fmap fst . Map.toList <$> Contract.getActiveContracts @t
-    crAvailableContracts <-
-        traverse
-            (\t -> ContractSignatureResponse t <$> Contract.exportSchema @t t)
-            contracts
     crActiveContractStates <- traverse (\i -> Contract.getState @t i >>= \s -> pure (i, fromResp $ Contract.serialisableState (Proxy @t) s)) activeContractIDs
-    pure ContractReport {crAvailableContracts, crActiveContractStates}
+    pure ContractReport {crActiveContractStates}
 
 getFullReport :: forall t env. Contract.PABContract t => PABAction t env (FullReport (Contract.ContractDef t))
 getFullReport = do
     contractReport <- getContractReport @t
     pure FullReport {contractReport, chainReport = emptyChainReport}
-
-contractSchema :: forall t env. Contract.PABContract t => ContractInstanceId -> PABAction t env (ContractSignatureResponse (Contract.ContractDef t))
-contractSchema contractId = do
-    def <- Contract.getDefinition @t contractId
-    case def of
-        Just ContractActivationArgs{caID} -> ContractSignatureResponse caID <$> Contract.exportSchema @t caID
-        Nothing                           -> throwError (ContractInstanceNotFound contractId)
 
 -- | Handler for the API
 apiHandler ::
@@ -99,22 +85,19 @@ apiHandler ::
        :<|> PABAction t env (FullReport (Contract.ContractDef t))
        :<|> (ContractActivationArgs (Contract.ContractDef t) -> PABAction t env ContractInstanceId)
               :<|> (ContractInstanceId -> PABAction t env (ContractInstanceClientState (Contract.ContractDef t))
-                                          :<|> PABAction t env (ContractSignatureResponse (Contract.ContractDef t))
                                           :<|> (String -> JSON.Value -> PABAction t env ())
                                           :<|> PABAction t env ()
                                           )
               :<|> (WalletId -> Maybe Text -> PABAction t env [ContractInstanceClientState (Contract.ContractDef t)])
               :<|> (Maybe Text -> PABAction t env [ContractInstanceClientState (Contract.ContractDef t)])
-              :<|> PABAction t env [ContractSignatureResponse (Contract.ContractDef t)]
 
 apiHandler =
         healthcheck
         :<|> getFullReport
         :<|> activateContract
-              :<|> (\cid -> contractInstanceState cid :<|> contractSchema cid :<|> (\y z -> callEndpoint cid y z) :<|> shutdown cid)
+              :<|> (\cid -> contractInstanceState cid :<|> (\y z -> callEndpoint cid y z) :<|> shutdown cid)
               :<|> instancesForWallets
               :<|> allInstanceStates
-              :<|> availableContracts
 
 swagger :: forall t api dir. (Servant.Server api ~ Servant.Handler JSON.Value, ToSchema (Contract.ContractDef t)) => Servant.Server (SwaggerSchemaUI' dir api)
 swagger = swaggerSchemaUIServer $ toOpenApi (Proxy @(API (Contract.ContractDef t) Integer))
@@ -185,12 +168,6 @@ allInstanceStates mStatus = do
     mp <- Contract.getContracts @t mActivityStatus
     filter (isInstanceStatusMatch . cicStatus)
         <$> traverse get (mapMaybe getStatus $ Map.toList mp)
-
-availableContracts :: forall t env. Contract.PABContract t => PABAction t env [ContractSignatureResponse (Contract.ContractDef t)]
-availableContracts = do
-    def <- Contract.getDefinitions @t
-    let mkSchema s = ContractSignatureResponse s <$> Contract.exportSchema @t s
-    traverse mkSchema def
 
 shutdown :: forall t env. ContractInstanceId -> PABAction t env ()
 shutdown = Core.stopInstance
