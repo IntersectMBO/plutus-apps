@@ -34,6 +34,7 @@ module Plutus.ChainIndex.Lib (
     , ChainSyncEvent(..)
     , defaultChainSyncHandler
     , storeFromBlockNo
+    , storeScriptTxsOnly
     , filterTxs
     , showingProgress
     -- * Utils
@@ -47,6 +48,7 @@ import Control.Monad.Freer.Extras.Log qualified as Log
 import Data.Default (def)
 import Data.Functor (void)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.Map qualified as M
 import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
 import Database.Beam.Sqlite.Migrate qualified as Sqlite
@@ -138,12 +140,21 @@ defaultChainSyncHandler runReq evt = void $ runChainIndexDuringSync runReq $ cas
     (RollBackward point _) -> rollback point
     (Resume point)         -> resumeSync point
 
+-- | Set which transaction to store in a forward block.
+addStoreTxConstraint :: CI.ChainSyncBlock -> (CI.ChainIndexTx -> Bool) -> CI.ChainSyncBlock
+addStoreTxConstraint b f = b { CI.blockTxs = map (\(tx, opt) -> (tx, opt { CI.tpoStoreTx = CI.tpoStoreTx opt && f tx })) (CI.blockTxs b) }
+
 -- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
 storeFromBlockNo :: CI.BlockNumber -> ChainSyncHandler -> ChainSyncHandler
-storeFromBlockNo storeFrom handler (RollForward (CI.Block blockTip txs) chainTip) =
-    handler (RollForward (CI.Block blockTip (map (\(tx, opt) -> (tx, opt { CI.tpoStoreTx = CI.tpoStoreTx opt && store })) txs)) chainTip)
-        where store = tipBlockNo blockTip >= storeFrom
+storeFromBlockNo storeFrom handler (RollForward block chainTip) =
+    handler (RollForward (addStoreTxConstraint block (const (tipBlockNo (CI.blockTip block) >= storeFrom))) chainTip)
 storeFromBlockNo _ handler evt = handler evt
+
+-- | Changes the given @ChainSyncHandler@ to only store transactions that interact with scripts.
+storeScriptTxsOnly :: ChainSyncHandler -> ChainSyncHandler
+storeScriptTxsOnly handler (RollForward block chainTip) =
+    handler (RollForward (addStoreTxConstraint block (not . M.null . CI._citxScripts)) chainTip)
+storeScriptTxsOnly handler evt = handler evt
 
 -- | Changes the given @ChainSyncHandler@ to only process and store certain transactions.
 filterTxs

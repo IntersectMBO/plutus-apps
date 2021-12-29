@@ -26,8 +26,8 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Plutus.ChainIndex.CommandLine (AppConfig (..), Command (..), applyOverrides, cmdWithHelpParser)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
-import Plutus.ChainIndex.Lib (defaultChainSyncHandler, getTipSlot, showingProgress, storeFromBlockNo, syncChainIndex,
-                              withRunRequirements)
+import Plutus.ChainIndex.Lib (defaultChainSyncHandler, getTipSlot, showingProgress, storeFromBlockNo,
+                              storeScriptTxsOnly, syncChainIndex, withRunRequirements)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
 
@@ -76,6 +76,7 @@ runMain logConfig config = do
     syncHandler
       <- defaultChainSyncHandler runReq
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)
+        & (if Config.cicStoreNonScriptTxs config then id else storeScriptTxsOnly)
         & showingProgress
 
     putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config

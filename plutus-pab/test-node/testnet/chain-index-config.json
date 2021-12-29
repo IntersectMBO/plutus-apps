@@ -15,5 +15,6 @@
   },
   "cicStoreFrom": {
     "unBlockNo": 0
-  }
+  },
+  "cicStoreNonScriptTxs": false
 }

@@ -138,6 +138,19 @@ You will need ~6 terminals to run all the different components.
   On my computer, the wallet takes about 1 hour, and the chain index takes
   about 3 hours.
 
+  You can modify a few configs in
+  `$PLUTUS/plutus-pab/test-node/testnet/chain-index-config.json`
+  to make the chain index sync faster and store less unused data on disk:
+  - `cicStoreFrom`: from which block to store transactions. You may want to set this to `2877844`
+    for Alonzo on the public testnet, or the specific block that you deploy your dApp.
+  - `cicStoreNonScriptTxs`: you may want to set this to `false` to not store transactions that do
+    not reference a script. Many dApps do not care about these non-script transactions and can save
+    a lot of time and space ignoring them.
+
+  Note that the UTxO set is still maintained correctly regardless of the storage of these transactions.
+  Not storing some shouldn't break any part of the PAB, unless you accidentially ignore transactions
+  that your dApp actually needs.
+
   You can check what slot it needs to get up to by checking [the testnet
   explorer](https://explorer.cardano-testnet.iohkdev.io/en); and you can query
   the status of the chain index like so:
