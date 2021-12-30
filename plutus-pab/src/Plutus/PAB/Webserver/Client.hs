@@ -33,6 +33,8 @@ data PabClient t walletId = PabClient
       -- ^ get wallet instances
   , getInstances     :: Maybe Text -> ClientM [ContractInstanceClientState t]
       -- ^ get instances
+  , getDefinitions   :: ClientM [ContractSignatureResponse t]
+      -- ^ get definitions
   }
 
 -- | Contract instance endpoints
@@ -55,6 +57,7 @@ pabClient = PabClient{..}
       :<|> toInstanceClient
       :<|> getWallet
       :<|> getInstances
+      :<|> getDefinitions
       ) = client (Proxy @(API t walletId))
 
     instanceClient cid = InstanceClient{..}

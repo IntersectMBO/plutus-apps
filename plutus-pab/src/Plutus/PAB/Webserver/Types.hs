@@ -28,8 +28,8 @@ import Wallet.Types (ContractActivityStatus, ContractInstanceId)
 
 data ContractReport t =
     ContractReport
-        { -- crAvailableContracts   :: [ContractSignatureResponse t]
-        crActiveContractStates :: [(ContractInstanceId, PartiallyDecodedResponse PABReq)]
+        { crAvailableContracts   :: [ContractSignatureResponse t]
+        , crActiveContractStates :: [(ContractInstanceId, PartiallyDecodedResponse PABReq)]
         }
     deriving stock (Generic, Eq, Show)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
@@ -54,14 +54,14 @@ data FullReport t =
     deriving stock (Generic, Eq, Show)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
--- data ContractSignatureResponse t =
---     ContractSignatureResponse
---         { csrDefinition :: t
---         }
---     deriving stock (Generic, Eq, Show)
---     deriving anyclass (ToJSON, FromJSON)
+data ContractSignatureResponse t =
+    ContractSignatureResponse
+        { csrDefinition :: t
+        }
+    deriving stock (Generic, Eq, Show)
+    deriving anyclass (ToJSON, FromJSON)
 
--- deriving instance OpenApi.ToSchema t => OpenApi.ToSchema (ContractSignatureResponse t)
+deriving instance OpenApi.ToSchema t => OpenApi.ToSchema (ContractSignatureResponse t)
 
 -- | Data needed to start a new instance of a contract.
 data ContractActivationArgs t =

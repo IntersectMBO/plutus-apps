@@ -58,16 +58,19 @@ import Plutus.PAB.Types (PABError (OtherError))
 import Plutus.PAB.Webserver.API ()
 import Plutus.PAB.Webserver.Types (CombinedWSStreamToClient (InstanceUpdate, SlotChange),
                                    CombinedWSStreamToServer (Subscribe, Unsubscribe),
-                                   ContractReport (ContractReport, crActiveContractStates),
+                                   ContractReport (ContractReport, crActiveContractStates, crAvailableContracts),
+                                   ContractSignatureResponse (ContractSignatureResponse),
                                    InstanceStatusToClient (ContractFinished, NewActiveEndpoints, NewObservableState, NewYieldedExportTxs))
 import Servant ((:<|>) ((:<|>)))
 import Wallet.Types (ContractInstanceId)
 
 getContractReport :: forall t env. Contract.PABContract t => PABAction t env (ContractReport (Contract.ContractDef t))
 getContractReport = do
+    contracts <- Contract.getDefinitions @t
     activeContractIDs <- fmap fst . Map.toList <$> Contract.getActiveContracts @t
+    let crAvailableContracts = ContractSignatureResponse <$> contracts
     crActiveContractStates <- traverse (\i -> Contract.getState @t i >>= \s -> pure (i, fromResp $ Contract.serialisableState (Proxy @t) s)) activeContractIDs
-    pure ContractReport {crActiveContractStates}
+    pure ContractReport {crAvailableContracts, crActiveContractStates}
 
 combinedUpdates :: forall t env. WSState -> PABAction t env (STMStream CombinedWSStreamToClient)
 combinedUpdates wsState =

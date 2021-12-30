@@ -13,7 +13,8 @@ module Plutus.PAB.Webserver.API
 import Cardano.Wallet.Mock.API qualified as Wallet
 import Data.Aeson qualified as JSON
 import Data.Text (Text)
-import Plutus.PAB.Webserver.Types (ContractActivationArgs, ContractInstanceClientState, FullReport)
+import Plutus.PAB.Webserver.Types (ContractActivationArgs, ContractInstanceClientState, ContractSignatureResponse,
+                                   FullReport)
 import Servant.API (Capture, Description, Get, JSON, Post, Put, QueryParam, ReqBody, (:<|>), (:>))
 import Servant.API.WebSocket (WebSocketPending)
 import Servant.Swagger.UI (SwaggerSchemaUI)
@@ -44,7 +45,7 @@ type API t walletId -- see note [WalletID type in wallet API]
                     )
             :<|> "instances" :> "wallet" :> Capture "wallet-id" walletId :> QueryParam "status" Text :> Description "List of contract instances for the wallet filtered by status (active, stopped, done). All by default." :>  Get '[JSON] [ContractInstanceClientState t]
             :<|> "instances" :> QueryParam "status" Text :> Description "List of contract instances filtered by status (active, stopped, done). All by default." :> Get '[JSON] [ContractInstanceClientState t]
-            -- :<|> "definitions" :> Description "list of available contracts." :> Get '[JSON] [ContractSignatureResponse t]
+            :<|> "definitions" :> Description "list of available contracts." :> Get '[JSON] [ContractSignatureResponse t]
         )
       )
 
