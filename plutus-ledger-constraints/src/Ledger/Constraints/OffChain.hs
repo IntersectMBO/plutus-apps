@@ -19,6 +19,7 @@ module Ledger.Constraints.OffChain(
     -- * Lookups
     ScriptLookups(..)
     , typedValidatorLookups
+    , generalise
     , unspentOutputs
     , mintingPolicy
     , otherScript
@@ -84,7 +85,7 @@ import Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHas
 import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
-import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (DatumType, RedeemerType))
+import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError)
 import Ledger.Typed.Tx qualified as Typed
@@ -113,6 +114,11 @@ data ScriptLookups a =
         -- ^ The contract's stake public key hash (optional)
         } deriving stock (Show, Generic)
           deriving anyclass (ToJSON, FromJSON)
+
+generalise :: ScriptLookups a -> ScriptLookups Any
+generalise sl =
+    let validator = fmap Scripts.generalise (slTypedValidator sl)
+    in sl{slTypedValidator = validator}
 
 instance Semigroup (ScriptLookups a) where
     l <> r =

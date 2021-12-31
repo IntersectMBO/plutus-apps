@@ -94,6 +94,7 @@
           "Plutus/Contract/Request"
           "Plutus/Contract/Checkpoint"
           "Plutus/Contract/Constraints"
+          "Plutus/Contract/Logging"
           "Plutus/Contract/Oracle"
           "Plutus/Contract/State"
           "Plutus/Contract/Schema"
