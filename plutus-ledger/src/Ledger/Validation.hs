@@ -25,25 +25,24 @@ module Ledger.Validation(
   emulatorGlobals
   ) where
 
+import Cardano.Api.Shelley (alonzoGenesisDefaults, shelleyGenesisDefaults)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (PParams (..))
+import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure, constructValidated)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx)
-import Cardano.Ledger.BaseTypes (Globals (..), Network (..))
+import Cardano.Ledger.BaseTypes (Globals (..), Network (..), boundRational, mkActiveSlotCoeff)
 import Cardano.Ledger.Core (Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.API (ApplyTxError (..), Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, UtxoEnv (..),
-                                   Validated)
-import Cardano.Ledger.Shelley.API.Mempool qualified as Shelley.API
-import Cardano.Slotting.Slot (SlotNo (..))
-import Cardano.Slotting.Time (SystemStart (..))
+import Cardano.Ledger.Shelley.API (Addr, ApplyTxError (..), Coin (..), LedgerEnv (..), MempoolEnv, MempoolState,
+                                   NewEpochState, ShelleyGenesis (..), UtxoEnv (..), Validated)
+import Cardano.Ledger.Shelley.API qualified as Shelley.API
+import Cardano.Slotting.EpochInfo (fixedEpochInfo)
+import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
+import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.Lens (makeLenses, over, view, (&), (.~), (^.))
 import Data.Bifunctor (Bifunctor (..))
-import Data.Time.Calendar (fromGregorian)
-import Data.Time.Clock (UTCTime (..))
+import Data.Map qualified as Map
 import Data.Time.Format.ISO8601 qualified as F
-import Ledger (PubKey)
 
 type EmulatorEra = AlonzoEra StandardCrypto
 
@@ -120,14 +119,25 @@ makeBlock state =
 
 {-| Initial ledger state for a distribution
 -}
-initialState :: [(PubKey, Coin)] -> EmulatedLedgerState
-initialState initialDistribution = undefined
+initialState :: [(Addr StandardCrypto, Coin)] -> EmulatedLedgerState
+initialState initialDistribution = EmulatedLedgerState
+  { _ledgerEnv = Shelley.API.mkMempoolEnv nes 0
+  , _memPoolState = Shelley.API.mkMempoolState nes
+  , _currentBlock = []
+  , _previousBlocks = []
+  }
+  where
+    nes :: NewEpochState EmulatorEra
+    nes = Shelley.API.initialState sg alonzoGenesisDefaults
+    sg :: ShelleyGenesis EmulatorEra
+    sg = shelleyGenesisDefaults { sgInitialFunds = Map.fromList initialDistribution }
 
 {-| Reason for failing to add a transaction to the ledger
 -}
 data EmApplyTxFailure =
   ApplyTxFailed (ApplyTxError EmulatorEra)
   | UtxosPredicateFailures [UtxosPredicateFailure EmulatorEra]
+  | EmulatorGlobalsFailure
 
 {-| Make a 'UtxoEnv' from the emulated ledger state, using an empty set of delegations.
 -}
@@ -141,26 +151,28 @@ applyTx ::
   Tx EmulatorEra ->
   Either EmApplyTxFailure (EmulatedLedgerState, Validated (Tx EmulatorEra))
 applyTx oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
-  tx' <- first UtxosPredicateFailures (constructValidated emulatorGlobals (utxoEnv oldState) (fst _memPoolState) tx)
-  (newMempool, tx) <- first ApplyTxFailed (Shelley.API.applyTx emulatorGlobals _ledgerEnv _memPoolState tx')
-  return (oldState & memPoolState .~ newMempool & over currentBlock ((:) tx), tx)
+  emulatorGlobals' <- maybe (Left EmulatorGlobalsFailure) pure emulatorGlobals
+  tx' <- first UtxosPredicateFailures (constructValidated emulatorGlobals' (utxoEnv oldState) (fst _memPoolState) tx)
+  (newMempool, vtx) <- first ApplyTxFailed (Shelley.API.applyTx emulatorGlobals' _ledgerEnv _memPoolState tx')
+  return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 {-| A sensible default 'Globals' value for the emulator
 -}
-emulatorGlobals :: Globals
-emulatorGlobals =
-  let Just start = F.iso8601ParseM "2017-09-23T21:44:51Z" in
-  Globals
-    { epochInfoWithErr = undefined
+emulatorGlobals :: Maybe Globals
+emulatorGlobals = do
+  start <- F.iso8601ParseM "2017-09-23T21:44:51Z"
+  asc <- boundRational 0.05
+  pure $ Globals
+    { epochInfoWithErr = fixedEpochInfo (EpochSize 432000) (mkSlotLength 8) -- ?
     , slotsPerKESPeriod = 129600
-    , stabilityWindow = undefined -- ?
-    , randomnessStabilisationWindow = undefined -- ?
-    , securityParameter = 2160
+    , stabilityWindow = 129600 -- 3k/f
+    , randomnessStabilisationWindow = 172800 -- 4k/f
+    , securityParameter = 2160 -- k
     , maxKESEvo = 62
     , quorum = 5
     , maxMajorPV = 2
     , maxLovelaceSupply = 45000000000000000
-    , activeSlotCoeff = undefined -- 0.05
+    , activeSlotCoeff = mkActiveSlotCoeff asc -- f = 0.05
     , networkId = Testnet
     , systemStart = SystemStart start
     }
