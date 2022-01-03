@@ -36,7 +36,7 @@ PSGenerator we specialise it to 'Text'.
 type API walletId -- see note [WalletID type in wallet API]
     = "create" :> Post '[JSON] WalletInfo
       :<|> Capture "walletId" walletId :> "submit-txn" :> ReqBody '[JSON] Tx :> Post '[JSON] NoContent
-      :<|> Capture "walletId" walletId :> "own-public-key" :> Get '[JSON] WalletInfo
+      :<|> Capture "walletId" walletId :> "own-payment-public-key" :> Get '[JSON] WalletInfo
       :<|> Capture "walletId" walletId :> "balance-tx" :> ReqBody '[JSON] UnbalancedTx :> Post '[JSON] (Either WalletAPIError Tx)
       :<|> Capture "walletId" walletId :> "total-funds" :> Get '[JSON] Value
       :<|> Capture "walletId" walletId :> "sign" :> ReqBody '[JSON] Tx :> Post '[JSON] Tx

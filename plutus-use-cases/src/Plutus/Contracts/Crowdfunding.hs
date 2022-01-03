@@ -55,7 +55,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
-import Ledger (POSIXTime, POSIXTimeRange, PubKeyHash, Validator, getCardanoTxId)
+import Ledger (POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), Validator, getCardanoTxId)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
@@ -84,7 +84,7 @@ data Campaign = Campaign
     -- ^ The date by which the campaign funds can be contributed.
     , campaignCollectionDeadline :: POSIXTime
     -- ^ The date by which the campaign owner has to collect the funds
-    , campaignOwner              :: PubKeyHash
+    , campaignOwner              :: PaymentPubKeyHash
     -- ^ Public key of the campaign owner. This key is entitled to retrieve the
     --   funds if the campaign is successful.
     } deriving (Generic, ToJSON, FromJSON, ToSchema, Haskell.Show)
@@ -117,7 +117,7 @@ mkCampaign ddl collectionDdl ownerWallet =
     Campaign
         { campaignDeadline = ddl
         , campaignCollectionDeadline = collectionDdl
-        , campaignOwner = Emulator.walletPubKeyHash ownerWallet
+        , campaignOwner = Emulator.mockWalletPaymentPubKeyHash ownerWallet
         }
 
 -- | The 'POSIXTimeRange' during which the funds can be collected
@@ -135,7 +135,7 @@ refundRange cmp =
 data Crowdfunding
 instance Scripts.ValidatorTypes Crowdfunding where
     type instance RedeemerType Crowdfunding = CampaignAction
-    type instance DatumType Crowdfunding = PubKeyHash
+    type instance DatumType Crowdfunding = PaymentPubKeyHash
 
 typedValidator :: Campaign -> Scripts.TypedValidator Crowdfunding
 typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
@@ -145,12 +145,12 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
         wrap = Scripts.wrapValidator
 
 {-# INLINABLE validRefund #-}
-validRefund :: Campaign -> PubKeyHash -> TxInfo -> Bool
+validRefund :: Campaign -> PaymentPubKeyHash -> TxInfo -> Bool
 validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
     refundRange campaign `Interval.contains` txInfoValidRange txinfo
     -- Check that the transaction is signed by the contributor
-    && (txinfo `V.txSignedBy` contributor)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash contributor)
 
 {-# INLINABLE validCollection #-}
 validCollection :: Campaign -> TxInfo -> Bool
@@ -158,7 +158,7 @@ validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
     (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `V.txSignedBy` campaignOwner campaign)
+    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 {-# INLINABLE mkValidator #-}
 -- | The validator script is of type 'CrowdfundingValidator', and is
@@ -168,7 +168,7 @@ validCollection campaign txinfo =
 -- and different campaigns have different addresses. The Campaign{..} syntax
 -- means that all fields of the 'Campaign' value are in scope
 -- (for example 'campaignDeadline' in l. 70).
-mkValidator :: Campaign -> PubKeyHash -> CampaignAction -> ScriptContext -> Bool
+mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> ScriptContext -> Bool
 mkValidator c con act ScriptContext{scriptContextTxInfo} = case act of
     -- the "refund" branch
     Refund  -> validRefund c con scriptContextTxInfo
@@ -194,7 +194,7 @@ theCampaign :: POSIXTime -> Campaign
 theCampaign startTime = Campaign
     { campaignDeadline = startTime + 20000
     , campaignCollectionDeadline = startTime + 30000
-    , campaignOwner = Emulator.walletPubKeyHash (knownWallet 1)
+    , campaignOwner = Emulator.mockWalletPaymentPubKeyHash (knownWallet 1)
     }
 
 -- | The "contribute" branch of the contract for a specific 'Campaign'. Exposes
@@ -204,7 +204,7 @@ theCampaign startTime = Campaign
 contribute :: Campaign -> Promise () CrowdfundingSchema ContractError ()
 contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
-    contributor <- ownPubKeyHash
+    contributor <- ownPaymentPubKeyHash
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))

@@ -29,7 +29,7 @@ import Plutus.Contracts.Uniswap.OffChain as OffChain
 import Plutus.Contracts.Uniswap.Types as Types
 import Plutus.Trace.Emulator (EmulatorRuntimeError (GenericError), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Emulator
-import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, walletPubKeyHash)
+import Wallet.Emulator (Wallet (..), knownWallet, knownWallets, mockWalletPaymentPubKeyHash)
 
 -- | Set up a liquidity pool and call the "add" endpoint
 uniswapTrace :: EmulatorTrace ()
@@ -65,13 +65,13 @@ uniswapTrace = do
 --   the emulated wallets
 setupTokens :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
 setupTokens = do
-    ownPK <- Contract.ownPubKeyHash
+    ownPK <- Contract.ownPaymentPubKeyHash
     cur   <- Currency.mintContract ownPK [(tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
     let cs = Currency.currencySymbol cur
         v  = mconcat [Value.singleton cs tn amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
-        let pkh = walletPubKeyHash w
+        let pkh = mockWalletPaymentPubKeyHash w
         when (pkh /= ownPK) $ do
             mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
               >>= submitTxConfirmed . adjustUnbalancedTx

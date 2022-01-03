@@ -34,7 +34,8 @@ import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 import Plutus.Contract as Contract
 import Plutus.Contract.Wallet (getUnspentOutput)
 
-import Ledger (CurrencySymbol, PubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress, scriptCurrencySymbol)
+import Ledger (CurrencySymbol, PaymentPubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress,
+               scriptCurrencySymbol)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts qualified as V
 import Ledger.Scripts
@@ -149,12 +150,12 @@ mintContract
     :: forall w s e.
     ( AsCurrencyError e
     )
-    => PubKeyHash
+    => PaymentPubKeyHash
     -> [(TokenName, Integer)]
     -> Contract w s e OneShotCurrency
 mintContract pk amounts = mapError (review _CurrencyError) $ do
     txOutRef <- getUnspentOutput
-    utxos <- utxosAt (pubKeyHashAddress pk)
+    utxos <- utxosAt (pubKeyHashAddress pk Nothing)
     let theCurrency = mkCurrency txOutRef amounts
         curVali     = curPolicy theCurrency
         lookups     = Constraints.mintingPolicy curVali
@@ -182,7 +183,7 @@ type CurrencySchema =
 mintCurrency
     :: Promise (Maybe (Last OneShotCurrency)) CurrencySchema CurrencyError OneShotCurrency
 mintCurrency = endpoint @"Create native token" $ \SimpleMPS{tokenName, amount} -> do
-    ownPK <- ownPubKeyHash
+    ownPK <- ownPaymentPubKeyHash
     cur <- mintContract ownPK [(tokenName, amount)]
     tell (Just (Last cur))
     pure cur

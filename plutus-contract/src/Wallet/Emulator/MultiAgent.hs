@@ -17,13 +17,14 @@
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 module Wallet.Emulator.MultiAgent where
 
-import Control.Lens
-import Control.Monad
-import Control.Monad.Freer
-import Control.Monad.Freer.Error
+import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, unto,
+                     view, (&), (.~), (^.), (^..))
+import Control.Monad (join)
+import Control.Monad.Freer (Eff, Member, Members, interpret, send, subsume, type (~>))
+import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, handleObserveLog, mapLog)
 import Control.Monad.Freer.Extras.Modify (handleZoomedState, raiseEnd, writeIntoState)
-import Control.Monad.Freer.State
+import Control.Monad.Freer.State (State, get)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -32,7 +33,7 @@ import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
 import Ledger.Fee (FeeConfig)
-import Prettyprinter
+import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import Ledger hiding (to, value)
 import Ledger.AddressMap qualified as AM
@@ -44,9 +45,9 @@ import Wallet.API qualified as WAPI
 import Wallet.Emulator.Chain qualified as Chain
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.NodeClient qualified as NC
-import Wallet.Emulator.Wallet (Wallet (..))
+import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Emulator.Wallet qualified as Wallet
-import Wallet.Types (AssertionError (..))
+import Wallet.Types (AssertionError (GenericAssertion))
 
 -- | Assertions which will be checked during execution of the emulator.
 data Assertion
@@ -251,7 +252,7 @@ fundsDistribution st =
     let fullState = view chainUtxo st
         wallets = st ^.. walletStates . to Map.keys . folded
         walletFunds = flip fmap wallets $ \w ->
-            (w, foldMap (txOutValue . txOutTxOut) $ view (AM.fundsAt (Wallet.walletAddress w)) fullState)
+            (w, foldMap (txOutValue . txOutTxOut) $ view (AM.fundsAt (Wallet.mockWalletAddress w)) fullState)
     in Map.fromList walletFunds
 
 -- | Get the emulator log.
@@ -278,12 +279,12 @@ emulatorStatePool tp = emptyEmulatorState
 
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
-emulatorStateInitialDist :: Map PubKeyHash Value -> EmulatorState
+emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
 emulatorStateInitialDist mp = emulatorStatePool [tx] where
     tx = Tx
             { txInputs = mempty
             , txCollateral = mempty
-            , txOutputs = uncurry (flip pubKeyHashTxOut) <$> Map.toList mp
+            , txOutputs = uncurry (flip pubKeyHashTxOut . unPaymentPubKeyHash) <$> Map.toList mp
             , txMint = foldMap snd $ Map.toList mp
             , txFee = mempty
             , txValidRange = WAPI.defaultSlotRange
@@ -382,7 +383,7 @@ assert (OwnFundsEqual wallet value) = ownFundsEqual wallet value
 ownFundsEqual :: (Members MultiAgentEffs effs) => Wallet -> Value -> Eff effs ()
 ownFundsEqual wallet value = do
     es <- get
-    let total = foldMap (txOutValue . txOutTxOut) $ es ^. chainUtxo . AM.fundsAt (Wallet.walletAddress wallet)
+    let total = foldMap (txOutValue . txOutTxOut) $ es ^. chainUtxo . AM.fundsAt (Wallet.mockWalletAddress wallet)
     if value == total
     then pure ()
     else throwError $ GenericAssertion $ T.unwords ["Funds in wallet", tshow wallet, "were", tshow total, ". Expected:", tshow value]

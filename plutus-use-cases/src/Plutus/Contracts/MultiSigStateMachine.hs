@@ -33,7 +33,7 @@ import Control.Lens (makeClassyPrisms)
 import Control.Monad (forever, void)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, PubKeyHash)
+import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
@@ -70,7 +70,7 @@ import Prelude qualified as Haskell
 data Payment = Payment
     { paymentAmount    :: Value
     -- ^ How much to pay out
-    , paymentRecipient :: PubKeyHash
+    , paymentRecipient :: PaymentPubKeyHash
     -- ^ Address to pay the value to
     , paymentDeadline  :: POSIXTime
     -- ^ Time until the required amount of signatures has to be collected.
@@ -84,7 +84,7 @@ instance Eq Payment where
 
 
 data Params = Params
-    { mspSignatories  :: [PubKeyHash]
+    { mspSignatories  :: [PaymentPubKeyHash]
     -- ^ Public keys that are allowed to authorise payments
     , mspRequiredSigs :: Integer
     -- ^ How many signatures are required for a payment
@@ -96,7 +96,7 @@ data MSState =
     -- ^ Money is locked, anyone can make a proposal for a payment. If there is
     -- no value here then this is a final state and the machine will terminate.
 
-    | CollectingSignatures Payment [PubKeyHash]
+    | CollectingSignatures Payment [PaymentPubKeyHash]
     -- ^ A payment has been proposed and is awaiting signatures.
     | Finished
     -- ^ The payment was made
@@ -115,7 +115,7 @@ data Input =
     -- ^ Propose a payment. The payment can be made as soon as enough
     --   signatures have been collected.
 
-    | AddSignature PubKeyHash
+    | AddSignature PaymentPubKeyHash
     -- ^ Add a signature to the sigs. that have been collected for the
     --   current proposal.
 
@@ -149,12 +149,12 @@ type MultiSigSchema =
 
 {-# INLINABLE isSignatory #-}
 -- | Check if a public key is one of the signatories of the multisig contract.
-isSignatory :: PubKeyHash -> Params -> Bool
+isSignatory :: PaymentPubKeyHash -> Params -> Bool
 isSignatory pkh (Params sigs _) = any (\pkh' -> pkh == pkh') sigs
 
 {-# INLINABLE containsPk #-}
 -- | Check whether a list of public keys contains a given key.
-containsPk :: PubKeyHash -> [PubKeyHash] -> Bool
+containsPk :: PaymentPubKeyHash -> [PaymentPubKeyHash] -> Bool
 containsPk pk = any (\pk' -> pk' == pk)
 
 {-# INLINABLE isValidProposal #-}
@@ -172,7 +172,7 @@ proposalExpired TxInfo{txInfoValidRange} Payment{paymentDeadline} =
 {-# INLINABLE proposalAccepted #-}
 -- | Check whether enough signatories (represented as a list of public keys)
 --   have signed a proposed payment.
-proposalAccepted :: Params -> [PubKeyHash] -> Bool
+proposalAccepted :: Params -> [PaymentPubKeyHash] -> Bool
 proposalAccepted (Params signatories numReq) pks =
     let numSigned = length (filter (\pk -> containsPk pk pks) signatories)
     in numSigned >= numReq
@@ -188,7 +188,7 @@ valuePreserved vl ctx = vl == Validation.valueLockedBy (scriptContextTxInfo ctx)
 -- | @valuePaid pm ptx@ is true if the pending transaction @ptx@ pays
 --   the amount specified in @pm@ to the public key address specified in @pm@
 valuePaid :: Payment -> TxInfo -> Bool
-valuePaid (Payment vl pk _) txinfo = vl == Validation.valuePaidTo txinfo pk
+valuePaid (Payment vl pk _) txinfo = vl == Validation.valuePaidTo txinfo (unPaymentPubKeyHash pk)
 
 {-# INLINABLE transition #-}
 transition :: Params -> State MSState -> Input -> Maybe (TxConstraints Void Void, State MSState)
@@ -268,7 +268,7 @@ contract params = forever endpoints where
     endpoints = selectList [lock, propose, cancel, addSignature, pay]
     propose = endpoint @"propose-payment" $ void . SM.runStep theClient . ProposePayment
     cancel  = endpoint @"cancel-payment" $ \() -> void $ SM.runStep theClient Cancel
-    addSignature = endpoint @"add-signature" $ \() -> ownPubKeyHash >>= void . SM.runStep theClient . AddSignature
+    addSignature = endpoint @"add-signature" $ \() -> ownPaymentPubKeyHash >>= void . SM.runStep theClient . AddSignature
     lock = endpoint @"lock" $ void . SM.runInitialise theClient Holding
     pay = endpoint @"pay" $ \() -> void $ SM.runStep theClient Pay
 

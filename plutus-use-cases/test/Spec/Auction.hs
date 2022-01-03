@@ -54,7 +54,7 @@ slotCfg = def
 params :: AuctionParams
 params =
     AuctionParams
-        { apOwner   = walletPubKeyHash w1
+        { apOwner   = mockWalletPaymentPubKeyHash w1
         , apAsset   = theToken
         , apEndTime = TimeSlot.scSlotZeroTime slotCfg + 100000
         }
@@ -129,7 +129,7 @@ trace1FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace1WinningBid
-            , highestBidder = walletPubKeyHash w2
+            , highestBidder = mockWalletPaymentPubKeyHash w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }
@@ -139,7 +139,7 @@ trace2FinalState =
     AuctionOutput
         { auctionState = Last $ Just $ Finished $ HighestBid
             { highestBid = trace2WinningBid
-            , highestBidder = walletPubKeyHash w2
+            , highestBidder = mockWalletPaymentPubKeyHash w2
             }
         , auctionThreadToken = Last $ Just threadToken
         }
@@ -193,6 +193,8 @@ instance ContractModel AuctionModel where
         , _endSlot    = TimeSlot.posixTimeToEnclosingSlot def $ apEndTime params
         , _phase      = NotStarted
         }
+
+    initialHandleSpecs = ContractInstanceSpec SellerH w1 seller : [ ContractInstanceSpec (BuyerH w) w (buyer threadToken) | w <- [w2, w3, w4] ]
 
     arbitraryAction s
         | p /= NotStarted =
@@ -275,18 +277,14 @@ instance ContractModel AuctionModel where
 
     monitoring _ _ = id
 
-delay :: Integer -> Trace.EmulatorTrace ()
+delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
 delay n = void $ Trace.waitNSlots $ fromIntegral n
 
 prop_Auction :: Actions AuctionModel -> Property
 prop_Auction script =
-    propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions handleSpec
+    propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions
         (\ _ -> pure True)  -- TODO: check termination
         script
-
-handleSpec :: [ContractInstanceSpec AuctionModel]
-handleSpec = ContractInstanceSpec SellerH w1 seller :
-             [ ContractInstanceSpec (BuyerH w) w (buyer threadToken) | w <- [w2, w3, w4] ]
 
 finishAuction :: DL AuctionModel ()
 finishAuction = do
@@ -314,7 +312,7 @@ noLockProof = NoLockedFundsProof
       when (slot < 101) $ action $ WaitUntil 101
 
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = checkNoLockedFundsProof options handleSpec noLockProof
+prop_NoLockedFunds = checkNoLockedFundsProof options noLockProof
 
 tests :: TestTree
 tests =

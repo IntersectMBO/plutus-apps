@@ -415,19 +415,14 @@
                 )
               )
               (vardecl
-                MustPayToPubKey
+                MustPayToPubKeyAddress
                 (fun
                   (con bytestring)
                   (fun
-                    [ Maybe (con data) ]
+                    [ Maybe (con bytestring) ]
                     (fun
-                      [
-                        [
-                          (lam
-                            k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                          )
-                          (con bytestring)
-                        ]
+                      [ Maybe (con data) ]
+                      (fun
                         [
                           [
                             (lam
@@ -437,10 +432,20 @@
                             )
                             (con bytestring)
                           ]
-                          (con integer)
+                          [
+                            [
+                              (lam
+                                k
+                                (type)
+                                (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                              )
+                              (con bytestring)
+                            ]
+                            (con integer)
+                          ]
                         ]
-                      ]
-                      TxConstraint
+                        TxConstraint
+                      )
                     )
                   )
                 )
@@ -467,7 +472,8 @@
                 )
               )
               (vardecl
-                MustSatisfyAnyOf (fun [ List TxConstraint ] TxConstraint)
+                MustSatisfyAnyOf
+                (fun [ List [ List TxConstraint ] ] TxConstraint)
               )
               (vardecl
                 MustSpendAtLeast

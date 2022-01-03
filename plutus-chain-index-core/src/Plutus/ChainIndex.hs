@@ -1,8 +1,12 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds   #-}
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators    #-}
 module Plutus.ChainIndex(
     runChainIndexEffects
+    , handleChainIndexEffects
     , RunRequirements(..)
     , module Export
     ) where
@@ -19,42 +23,46 @@ import Plutus.ChainIndex.Types as Export
 import Plutus.ChainIndex.UtxoState as Export
 
 import Cardano.BM.Trace (Trace)
-import Control.Concurrent.STM (TVar)
-import Control.Concurrent.STM qualified as STM
-import Control.Lens (unto)
-import Control.Monad.Freer (Eff, interpret, reinterpret, runM)
+import Control.Concurrent.MVar (MVar, putMVar, takeMVar)
+import Control.Monad.Freer (Eff, LastMember, Member, interpret)
 import Control.Monad.Freer.Error (handleError, runError, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect, handleBeam)
-import Control.Monad.Freer.Extras.Log (LogMessage (..), handleLogWriter)
-import Control.Monad.Freer.Extras.Modify (raiseEnd)
+import Control.Monad.Freer.Extras.Log (LogMsg)
+import Control.Monad.Freer.Extras.Modify (raiseEnd, raiseMUnderN)
 import Control.Monad.Freer.Reader (runReader)
 import Control.Monad.Freer.State (runState)
-import Control.Monad.Freer.Writer (runWriter)
-import Data.Sequence (Seq)
+import Control.Monad.IO.Class (liftIO)
 import Database.SQLite.Simple qualified as Sqlite
-import Plutus.Monitoring.Util (convertLog)
+import Plutus.Monitoring.Util (convertLog, runLogEffects)
 
--- | The required arguments to run the chain-index effects.
+-- | The required arguments to run the chain index effects.
 data RunRequirements = RunRequirements
     { trace         :: Trace IO ChainIndexLog
-    , stateTVar     :: TVar ChainIndexState
+    , stateMVar     :: MVar ChainIndexState
     , conn          :: Sqlite.Connection
     , securityParam :: Int
     }
 
--- | Run the chain-index effects.
+-- | Run the chain index effects.
 runChainIndexEffects
     :: RunRequirements
     -> Eff '[ChainIndexQueryEffect, ChainIndexControlEffect, BeamEffect] a
-    -> IO (Either ChainIndexError a, Seq (LogMessage ChainIndexLog))
-runChainIndexEffects RunRequirements{trace, stateTVar, conn, securityParam} action = do
-    state <- STM.readTVarIO stateTVar
-    ((result, newState), logs) <- runM
-        $ runWriter @(Seq (LogMessage ChainIndexLog))
-        $ reinterpret
-            (handleLogWriter @ChainIndexLog
-                             @(Seq (LogMessage ChainIndexLog)) $ unto pure)
-        $ runState state
+    -> IO (Either ChainIndexError a)
+runChainIndexEffects runReq action =
+    runLogEffects (trace runReq)
+        $ handleChainIndexEffects runReq
+        $ raiseEnd action
+
+-- | Handle the chain index effects from the set of all effects.
+handleChainIndexEffects
+    :: (LastMember IO effs, Member (LogMsg ChainIndexLog) effs)
+    => RunRequirements
+    -> Eff (ChainIndexQueryEffect ': ChainIndexControlEffect ': BeamEffect ': effs) a
+    -> Eff effs (Either ChainIndexError a)
+handleChainIndexEffects RunRequirements{trace, stateMVar, conn, securityParam} action = do
+    state <- liftIO $ takeMVar stateMVar
+    (result, newState) <-
+        runState state
         $ runReader conn
         $ runReader (Depth securityParam)
         $ runError @ChainIndexError
@@ -62,6 +70,7 @@ runChainIndexEffects RunRequirements{trace, stateTVar, conn, securityParam} acti
         $ interpret (handleBeam (convertLog BeamLogItem trace))
         $ interpret handleControl
         $ interpret handleQuery
-        $ raiseEnd action
-    STM.atomically $ STM.writeTVar stateTVar newState
-    pure (result, logs)
+        -- Insert the 5 effects needed by the handlers of the 3 chain index effects between those 3 effects and 'effs'.
+        $ raiseMUnderN @[_,_,_,_,_] @[_,_,_] action
+    liftIO $ putMVar stateMVar newState
+    pure result

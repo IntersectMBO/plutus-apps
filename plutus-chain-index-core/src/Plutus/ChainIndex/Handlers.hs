@@ -21,7 +21,6 @@ module Plutus.ChainIndex.Handlers
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
 import Control.Lens (Lens', _Just, ix, view, (^?))
-import Control.Monad (when)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, addRowsInBatches, combined, deleteRows,
@@ -39,7 +38,7 @@ import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, guard_,
-                      limit_, nub_, select, val_)
+                      in_, limit_, not_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update, (&&.), (<-.), (<.), (==.),
                             (>.))
@@ -47,7 +46,8 @@ import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxId (..), TxOut (..), TxOutRef (..))
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
-import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
+                              UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Compatibility (toCardanoPoint)
@@ -55,8 +55,8 @@ import Plutus.ChainIndex.DbSchema
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Tx
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
-import Plutus.ChainIndex.Types (BlockProcessOption (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
-                                TxUtxoBalance (..), tipAsPoint)
+import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
+                                TxProcessOption (..), TxUtxoBalance (..), tipAsPoint)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Ada qualified as Ada
@@ -92,6 +92,8 @@ handleQuery = \case
     UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
+    TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
+    TxsFromTxIds txids             -> getTxsFromTxIds txids
     GetTip -> getTip
 
 getTip :: Member BeamEffect effs => Eff effs Tip
@@ -198,12 +200,12 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
       tp           -> do
           let query =
                 fmap _addressRowOutRef
-                  $ filter_ (\row -> _addressRowCred row ==. val_ cred)
-                  $ do
-                    utxo <- all_ (unspentOutputRows db)
-                    a <- all_ (addressRows db)
-                    guard_ (_addressRowOutRef a ==. _unspentOutputRowOutRef utxo)
-                    pure a
+                  $ filter_ (\row ->
+                      (_addressRowCred row ==. val_ cred)
+                      &&. exists_ (filter_ (\utxo -> _addressRowOutRef row ==. _unspentOutputRowOutRef utxo) (all_ (unspentOutputRows db)))
+                      &&. not_ (exists_ (filter_ (\utxi -> _addressRowOutRef row ==. _unmatchedInputRowOutRef utxi) (all_ (unmatchedInputRows db))))
+                      )
+                  $ all_ (addressRows db)
 
           outRefs <- selectPage (fmap toDbValue pageQuery) query
           let page = fmap fromDbValue outRefs
@@ -241,6 +243,47 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
 
           pure (UtxosResponse tp page)
 
+getTxsFromTxIds
+  :: forall effs.
+    ( Member BeamEffect effs
+    )
+  => [TxId]
+  -> Eff effs [ChainIndexTx]
+getTxsFromTxIds txIds =
+  do
+    let
+      txIds' = toDbValue <$> txIds
+      query =
+        fmap _txRowTx
+          $ filter_ (\row -> _txRowTxId row `in_` fmap val_ txIds')
+          $ all_ (txRows db)
+    txs <- selectList $ select query
+    pure $ fmap fromDbValue txs
+
+getTxoSetAtAddress
+  :: forall effs.
+    ( Member (State ChainIndexState) effs
+    , Member BeamEffect effs
+    , Member (LogMsg ChainIndexLog) effs
+    )
+  => PageQuery TxOutRef
+  -> Credential
+  -> Eff effs TxosResponse
+getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
+  utxoState <- gets @ChainIndexState UtxoState.utxoState
+  case UtxoState.tip utxoState of
+      TipAtGenesis -> do
+          logWarn TipIsGenesis
+          pure (TxosResponse (Page pageQuery Nothing []))
+      _           -> do
+          let query =
+                fmap _addressRowOutRef
+                  $ filter_ (\row -> _addressRowCred row ==. val_ cred)
+                  $ all_ (addressRows db)
+          txOutRefs' <- selectPage (fmap toDbValue pageQuery) query
+          let page = fmap fromDbValue txOutRefs'
+          pure $ TxosResponse page
+
 handleControl ::
     forall effs.
     ( Member (State ChainIndexState) effs
@@ -252,9 +295,9 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlock tip_ transactions opts -> do
+    AppendBlock (Block tip_ transactions) -> do
         oldIndex <- get @ChainIndexState
-        let newUtxoState = TxUtxoBalance.fromBlock tip_ transactions
+        let newUtxoState = TxUtxoBalance.fromBlock tip_ (map fst transactions)
         case UtxoState.insert newUtxoState oldIndex of
             Left err -> do
                 let reason = InsertionFailed err
@@ -267,7 +310,7 @@ handleControl = \case
                   lbcResult -> do
                     put $ UtxoState.reducedIndex lbcResult
                     reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
-                when (bpoStoreTxs opts) $ insert $ foldMap fromTx transactions
+                insert $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
                 insertUtxoDb newUtxoState
                 logDebug $ InsertionSuccess tip_ insertPosition
     Rollback tip_ -> do
@@ -281,7 +324,10 @@ handleControl = \case
                 put rolledBackIndex
                 rollbackUtxoDb $ tipAsPoint newTip
                 logDebug $ RollbackSuccess newTip
-    ResumeSync tip_ -> restoreStateFromDb tip_
+    ResumeSync tip_ -> do
+        rollbackUtxoDb tip_
+        newState <- restoreStateFromDb
+        put newState
     CollectGarbage -> do
         -- Rebuild the index using only transactions that still have at
         -- least one output in the UTXO set
@@ -357,21 +403,15 @@ rollbackUtxoDb (Point (toDbValue -> slot) _) = do
     deleteRows $ delete (unspentOutputRows db) (\row -> unTipRowId (_unspentOutputRowTip row) >. val_ slot)
     deleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
 
-restoreStateFromDb ::
-    ( Member (State ChainIndexState) effs
-    , Member BeamEffect effs
-    )
-    => Point
-    -> Eff effs ()
-restoreStateFromDb point = do
-    rollbackUtxoDb point
+restoreStateFromDb :: Member BeamEffect effs => Eff effs ChainIndexState
+restoreStateFromDb = do
     uo <- selectList . select $ all_ (unspentOutputRows db)
     ui <- selectList . select $ all_ (unmatchedInputRows db)
     let balances = Map.fromListWith (<>) $ fmap outputToTxUtxoBalance uo ++ fmap inputToTxUtxoBalance ui
     tips <- selectList . select
         . orderBy_ (asc_ . _tipRowSlot)
         $ all_ (tipRows db)
-    put $ FT.fromList . fmap (toUtxoState balances) $ tips
+    pure $ FT.fromList . fmap (toUtxoState balances) $ tips
     where
         outputToTxUtxoBalance :: UnspentOutputRow -> (Word64, TxUtxoBalance)
         outputToTxUtxoBalance (UnspentOutputRow (TipRowId slot) outRef)

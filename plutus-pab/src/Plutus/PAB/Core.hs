@@ -46,7 +46,7 @@ module Plutus.PAB.Core
     , activateContract'
     , callEndpointOnInstance
     , callEndpointOnInstance'
-    , payToPublicKey
+    , payToPaymentPublicKey
     -- * Agent threads
     , ContractInstanceEffects
     , handleAgentThread
@@ -105,6 +105,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
 import Ledger (Address (addressCredential), TxOutRef)
+import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Tx (CardanoTx, ciTxOutValue)
 import Ledger.TxId (TxId)
 import Ledger.Value (Value)
@@ -128,12 +129,12 @@ import Plutus.PAB.Timeout (Timeout)
 import Plutus.PAB.Timeout qualified as Timeout
 import Plutus.PAB.Types (PABError (ContractInstanceNotFound, InstanceAlreadyStopped, WalletError))
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
-import Wallet.API (PubKeyHash, Slot)
+import Wallet.API (Slot)
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.MultiAgent (EmulatorEvent' (WalletEvent), EmulatorTimeEvent (EmulatorTimeEvent))
-import Wallet.Emulator.Wallet (Wallet, WalletEvent (GenericLog, RequestHandlerLog, TxBalanceLog), walletAddress)
+import Wallet.Emulator.Wallet (Wallet, WalletEvent (GenericLog, RequestHandlerLog, TxBalanceLog), mockWalletAddress)
 import Wallet.Types (ContractActivityStatus, ContractInstanceId, EndpointDescription (EndpointDescription),
                      NotificationError)
 
@@ -334,12 +335,12 @@ callEndpointOnInstance' instanceID ep value = do
         $ STM.atomically
         $ Instances.callEndpointOnInstance state (EndpointDescription ep) (JSON.toJSON value) instanceID
 
--- | Make a payment to a public key.
-payToPublicKey :: ContractInstanceId -> Wallet -> PubKeyHash -> Value -> PABAction t env CardanoTx
-payToPublicKey cid source target amount =
+-- | Make a payment to a payment public key.
+payToPaymentPublicKey :: ContractInstanceId -> Wallet -> PaymentPubKeyHash -> Value -> PABAction t env CardanoTx
+payToPaymentPublicKey cid source target amount =
     handleAgentThread source (Just cid)
         $ Modify.wrapError WalletError
-        $ WAPI.payToPublicKeyHash WAPI.defaultSlotRange amount target
+        $ WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange amount target
 
 -- | Effects available to contract instances with access to external services.
 type ContractInstanceEffects t env effs =
@@ -586,7 +587,7 @@ valueAt wallet = do
     txOutsM <- traverse ChainIndex.txOutFromRef utxoRefs
     pure $ foldMap (view ciTxOutValue) $ catMaybes txOutsM
   where
-    cred = addressCredential $ walletAddress wallet
+    cred = addressCredential $ mockWalletAddress wallet
     getAllUtxoRefs pq = do
       utxoRefsPage <- page <$> ChainIndex.utxoSetAtAddress pq cred
       case ChainIndex.nextPageQuery utxoRefsPage of

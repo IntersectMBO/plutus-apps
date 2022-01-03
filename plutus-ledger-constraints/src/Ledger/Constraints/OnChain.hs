@@ -15,9 +15,10 @@ import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)),
                          Ord ((<=), (>=)), all, any, elem, isJust, isNothing, maybe, snd, traceIfFalse, ($), (&&), (.))
 
 import Ledger qualified
+import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (InputConstraint (InputConstraint, icTxOutRef),
                                          OutputConstraint (OutputConstraint, ocDatum, ocValue),
-                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKey, MustProduceAtLeast, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
+                                         TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
                                          TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Ada qualified as Ada
@@ -64,9 +65,9 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustValidateIn interval ->
         traceIfFalse "L3" -- "Wrong validation interval"
         $ interval `contains` txInfoValidRange scriptContextTxInfo
-    MustBeSignedBy pubKey ->
+    MustBeSignedBy pkh ->
         traceIfFalse "L4" -- "Missing signature"
-        $ scriptContextTxInfo `V.txSignedBy` pubKey
+        $ scriptContextTxInfo `V.txSignedBy` unPaymentPubKeyHash pkh
     MustSpendAtLeast vl ->
         traceIfFalse "L5" -- "Spent value not OK"
         $ vl `leq` V.valueSpent scriptContextTxInfo
@@ -85,7 +86,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustMintValue mps _ tn v ->
         traceIfFalse "L9" -- "Value minted not OK"
         $ Value.valueOf (txInfoMint scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
-    MustPayToPubKey pk mdv vl ->
+    MustPayToPubKeyAddress (PaymentPubKeyHash pk) _ mdv vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh dv = V.findDatumHash dv scriptContextTxInfo
             checkOutput (Just dv) TxOut{txOutDatumHash=Just svh} = hsh dv == Just svh
@@ -113,7 +114,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         $ V.findDatum dvh scriptContextTxInfo == Just dv
     MustSatisfyAnyOf xs ->
         traceIfFalse "Ld" -- "MustSatisfyAnyOf"
-        $ any (checkTxConstraint ctx) xs
+        $ any (all (checkTxConstraint ctx)) xs
 
 {-# INLINABLE checkScriptContext #-}
 -- | Does the 'ScriptContext' satisfy the constraints?

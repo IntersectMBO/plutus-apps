@@ -33,8 +33,9 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Ledger (Address, Blockchain, Tx (Tx), TxId, TxIn (TxIn), TxInType (..), TxOut (TxOut),
-               TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txFee, txMint, txOutValue, txOutputs, txSignatures)
+import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, Tx (Tx), TxId, TxIn (TxIn), TxInType (..),
+               TxOut (TxOut), TxOutRef (TxOutRef, txOutRefId, txOutRefIdx), Value, txFee, txMint, txOutValue, txOutputs,
+               txSignatures)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Ada qualified as Ada
 import Ledger.Scripts (Datum (getDatum), Script, Validator, ValidatorHash (ValidatorHash), unValidatorScript)
@@ -51,26 +52,26 @@ import Wallet.Emulator.Folds (EmulatorEventFold)
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Types (Wallet (Wallet))
 import Wallet.Rollup (doAnnotateBlockchain)
-import Wallet.Rollup.Types (AnnotatedTx (AnnotatedTx), BeneficialOwner (OwnedByPubKey, OwnedByScript),
+import Wallet.Rollup.Types (AnnotatedTx (AnnotatedTx), BeneficialOwner (OwnedByPaymentPubKey, OwnedByScript),
                             DereferencedInput (DereferencedInput, InputNotFound, originalInput, refersTo),
                             SequenceId (SequenceId, slotIndex, txIndex), balances, dereferencedInputs,
                             toBeneficialOwner, tx, txId, valid)
 
-showBlockchainFold :: [(PubKeyHash, Wallet)] -> EmulatorEventFold (Either Text Text)
+showBlockchainFold :: [(PaymentPubKeyHash, Wallet)] -> EmulatorEventFold (Either Text Text)
 showBlockchainFold walletKeys =
     let r txns =
             renderStrict . layoutPretty defaultLayoutOptions
             <$> runReaderT (render txns) (Map.fromList walletKeys)
     in fmap r Folds.annotatedBlockchain
 
-showBlockchain :: [(PubKeyHash, Wallet)] -> Blockchain -> Either Text Text
+showBlockchain :: [(PaymentPubKeyHash, Wallet)] -> Blockchain -> Either Text Text
 showBlockchain walletKeys blockchain =
     flip runReaderT (Map.fromList walletKeys) $ do
         annotatedBlockchain <- doAnnotateBlockchain blockchain
         doc <- render $ reverse annotatedBlockchain
         pure . renderStrict . layoutPretty defaultLayoutOptions $ doc
 
-type RenderM = ReaderT (Map PubKeyHash Wallet) (Either Text)
+type RenderM = ReaderT (Map PaymentPubKeyHash Wallet) (Either Text)
 
 class Render a where
     render :: a -> RenderM (Doc ann)
@@ -126,7 +127,7 @@ instance Render AnnotatedTx where
             , heading "Fee:" txFee
             ]
 
-heading :: Render a => Doc ann -> a -> ReaderT (Map PubKeyHash Wallet) (Either Text) (Doc ann)
+heading :: Render a => Doc ann -> a -> ReaderT (Map PaymentPubKeyHash Wallet) (Either Text) (Doc ann)
 heading t x = do
     r <- indented x
     pure $ fill 10 t <> r
@@ -206,7 +207,7 @@ instance Render Wallet where
 
 instance Render BeneficialOwner where
     render (OwnedByScript address) = ("Script:" <+>) <$> render address
-    render (OwnedByPubKey pkh) = do
+    render (OwnedByPaymentPubKey pkh) = do
         walletKeys <- ask
         wallet <- lookupWallet pkh walletKeys
         w <- render wallet
@@ -234,6 +235,18 @@ instance Render PubKeyHash where
         pure $
         let v = Text.pack (show (pretty pkh))
          in "PubKeyHash:" <+> pretty (abbreviate 40 v)
+
+instance Render PaymentPubKey where
+    render pubKey =
+        pure $
+        let v = Text.pack (show (pretty pubKey))
+         in "PaymentPubKey:" <+> pretty (abbreviate 40 v)
+
+instance Render PaymentPubKeyHash where
+    render pkh =
+        pure $
+        let v = Text.pack (show (pretty pkh))
+         in "PaymentPubKeyHash:" <+> pretty (abbreviate 40 v)
 
 instance Render Signature where
     render sig =
@@ -308,7 +321,7 @@ numbered separator title xs =
 
 ------------------------------------------------------------
 lookupWallet ::
-       MonadError Text m => PubKeyHash -> Map PubKeyHash Wallet -> m Wallet
+       MonadError Text m => PaymentPubKeyHash -> Map PaymentPubKeyHash Wallet -> m Wallet
 lookupWallet pkh (Map.lookup pkh -> Just wallet) = pure wallet
 lookupWallet pkh _ =
     throwError $

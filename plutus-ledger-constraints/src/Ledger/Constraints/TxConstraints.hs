@@ -25,10 +25,10 @@ import Prettyprinter (Pretty (pretty, prettyList), hang, viaShow, vsep, (<+>))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude (Bool (False, True), Foldable (foldMap), Functor (fmap), Integer, JoinSemiLattice ((\/)),
-                         Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concatMap, foldl, mapMaybe, not,
-                         null, ($), (.), (>>=), (||))
+                         Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concat, foldl, map, mapMaybe,
+                         not, null, ($), (.), (>>=), (||))
 
-import Plutus.V1.Ledger.Crypto (PubKeyHash)
+import Ledger.Address (PaymentPubKeyHash, StakePubKeyHash)
 import Plutus.V1.Ledger.Interval qualified as I
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicyHash, Redeemer, ValidatorHash, unitRedeemer)
 import Plutus.V1.Ledger.Time (POSIXTimeRange)
@@ -42,16 +42,16 @@ import Prelude qualified as Haskell
 data TxConstraint =
     MustIncludeDatum Datum
     | MustValidateIn POSIXTimeRange
-    | MustBeSignedBy PubKeyHash
+    | MustBeSignedBy PaymentPubKeyHash
     | MustSpendAtLeast Value
     | MustProduceAtLeast Value
     | MustSpendPubKeyOutput TxOutRef
     | MustSpendScriptOutput TxOutRef Redeemer
     | MustMintValue MintingPolicyHash Redeemer TokenName Integer
-    | MustPayToPubKey PubKeyHash (Maybe Datum) Value
+    | MustPayToPubKeyAddress PaymentPubKeyHash (Maybe StakePubKeyHash) (Maybe Datum) Value
     | MustPayToOtherScript ValidatorHash Datum Value
     | MustHashDatum DatumHash Datum
-    | MustSatisfyAnyOf [TxConstraint]
+    | MustSatisfyAnyOf [[TxConstraint]]
     deriving stock (Haskell.Show, Generic, Haskell.Eq)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -73,8 +73,8 @@ instance Pretty TxConstraint where
             hang 2 $ vsep ["must spend script output:", pretty ref, pretty red]
         MustMintValue mps red tn i ->
             hang 2 $ vsep ["must mint value:", pretty mps, pretty red, pretty tn <+> pretty i]
-        MustPayToPubKey pk datum v ->
-            hang 2 $ vsep ["must pay to pubkey:", pretty pk, pretty datum, pretty v]
+        MustPayToPubKeyAddress pkh skh datum v ->
+            hang 2 $ vsep ["must pay to pubkey address:", pretty pkh, pretty skh, pretty datum, pretty v]
         MustPayToOtherScript vlh dv vl ->
             hang 2 $ vsep ["must pay to script:", pretty vlh, pretty dv, pretty vl]
         MustHashDatum dvh dv ->
@@ -173,7 +173,7 @@ mustValidateIn = singleton . MustValidateIn
 
 {-# INLINABLE mustBeSignedBy #-}
 -- | Require the transaction to be signed by the public key.
-mustBeSignedBy :: forall i o. PubKeyHash -> TxConstraints i o
+mustBeSignedBy :: forall i o. PaymentPubKeyHash -> TxConstraints i o
 mustBeSignedBy = singleton . MustBeSignedBy
 
 {-# INLINABLE mustIncludeDatum #-}
@@ -193,13 +193,41 @@ mustPayToTheScript dt vl =
 
 {-# INLINABLE mustPayToPubKey #-}
 -- | Lock the value with a public key
-mustPayToPubKey :: forall i o. PubKeyHash -> Value -> TxConstraints i o
-mustPayToPubKey pk = singleton . MustPayToPubKey pk Nothing
+mustPayToPubKey :: forall i o. PaymentPubKeyHash -> Value -> TxConstraints i o
+mustPayToPubKey pk = singleton . MustPayToPubKeyAddress pk Nothing Nothing
+
+{-# INLINABLE mustPayToPubKeyAddress #-}
+-- | Lock the value with a payment public key hash and (optionally) a stake
+-- public key hash.
+mustPayToPubKeyAddress
+    :: forall i o. PaymentPubKeyHash
+    -> StakePubKeyHash
+    -> Value
+    -> TxConstraints i o
+mustPayToPubKeyAddress pkh skh =
+     singleton . MustPayToPubKeyAddress pkh (Just skh) Nothing
 
 {-# INLINABLE mustPayWithDatumToPubKey #-}
--- | Lock the value and datum with a public key
-mustPayWithDatumToPubKey :: forall i o. PubKeyHash -> Datum -> Value -> TxConstraints i o
-mustPayWithDatumToPubKey pk datum = singleton . MustPayToPubKey pk (Just datum)
+-- | Lock the value and datum with a payment public key hash
+mustPayWithDatumToPubKey
+    :: forall i o. PaymentPubKeyHash
+    -> Datum
+    -> Value
+    -> TxConstraints i o
+mustPayWithDatumToPubKey pk datum =
+    singleton . MustPayToPubKeyAddress pk Nothing (Just datum)
+
+{-# INLINABLE mustPayWithDatumToPubKeyAddress #-}
+-- | Lock the value and datum with a payment public key hash and (optionally) a
+-- stake public key hash.
+mustPayWithDatumToPubKeyAddress
+    :: forall i o. PaymentPubKeyHash
+    -> StakePubKeyHash
+    -> Datum
+    -> Value
+    -> TxConstraints i o
+mustPayWithDatumToPubKeyAddress pkh skh datum =
+    singleton . MustPayToPubKeyAddress pkh (Just skh) (Just datum)
 
 {-# INLINABLE mustPayToOtherScript #-}
 -- | Lock the value with a public key
@@ -255,7 +283,7 @@ mustHashDatum dvh = singleton . MustHashDatum dvh
 
 {-# INLINABLE mustSatisfyAnyOf #-}
 mustSatisfyAnyOf :: forall i o. [TxConstraints i o] -> TxConstraints i o
-mustSatisfyAnyOf = singleton . MustSatisfyAnyOf . concatMap txConstraints
+mustSatisfyAnyOf = singleton . MustSatisfyAnyOf . map txConstraints
 
 {-# INLINABLE isSatisfiable #-}
 -- | Are the constraints satisfiable?
@@ -266,11 +294,11 @@ isSatisfiable TxConstraints{txConstraints} =
     in not (I.isEmpty itvl)
 
 {-# INLINABLE pubKeyPayments #-}
-pubKeyPayments :: forall i o. TxConstraints i o -> [(PubKeyHash, Value)]
+pubKeyPayments :: forall i o. TxConstraints i o -> [(PaymentPubKeyHash, Value)]
 pubKeyPayments TxConstraints{txConstraints} =
     Map.toList
     $ Map.fromListWith (<>)
-      (txConstraints >>= \case { MustPayToPubKey pk _ vl -> [(pk, vl)]; _ -> [] })
+      (txConstraints >>= \case { MustPayToPubKeyAddress pk _ _ vl -> [(pk, vl)]; _ -> [] })
 
 -- | The minimum 'Value' that satisfies all 'MustSpendAtLeast' constraints
 {-# INLINABLE mustSpendAtLeastTotal #-}
@@ -287,7 +315,7 @@ mustProduceAtLeastTotal = foldl (\/) mempty . fmap f . txConstraints where
     f _                      = mempty
 
 {-# INLINABLE requiredSignatories #-}
-requiredSignatories :: forall i o. TxConstraints i o -> [PubKeyHash]
+requiredSignatories :: forall i o. TxConstraints i o -> [PaymentPubKeyHash]
 requiredSignatories = foldMap f . txConstraints where
     f (MustBeSignedBy pk) = [pk]
     f _                   = []
@@ -310,15 +338,15 @@ requiredDatums = foldMap f . txConstraints where
 modifiesUtxoSet :: forall i o. TxConstraints i o -> Bool
 modifiesUtxoSet TxConstraints{txConstraints, txOwnOutputs, txOwnInputs} =
     let requiresInputOutput = \case
-            MustSpendAtLeast{}          -> True
-            MustProduceAtLeast{}        -> True
-            MustSpendPubKeyOutput{}     -> True
-            MustSpendScriptOutput{}     -> True
-            MustMintValue{}             -> True
-            MustPayToPubKey _ _ vl      -> not (isZero vl)
-            MustPayToOtherScript _ _ vl -> not (isZero vl)
-            MustSatisfyAnyOf xs         -> any requiresInputOutput xs
-            _                           -> False
+            MustSpendAtLeast{}              -> True
+            MustProduceAtLeast{}            -> True
+            MustSpendPubKeyOutput{}         -> True
+            MustSpendScriptOutput{}         -> True
+            MustMintValue{}                 -> True
+            MustPayToPubKeyAddress _ _ _ vl -> not (isZero vl)
+            MustPayToOtherScript _ _ vl     -> not (isZero vl)
+            MustSatisfyAnyOf xs             -> any requiresInputOutput $ concat xs
+            _                               -> False
     in any requiresInputOutput txConstraints
         || not (null txOwnOutputs)
         || not (null txOwnInputs)

@@ -31,8 +31,8 @@ import PlutusTx qualified
 import Ledger.Constraints qualified as Constraints
 import Plutus.Contract as Contract
 
-mkValidator :: PubKeyHash -> () -> () -> ScriptContext -> Bool
-mkValidator pk' _ _ p = V.txSignedBy (scriptContextTxInfo p) pk'
+mkValidator :: PaymentPubKeyHash -> () -> () -> ScriptContext -> Bool
+mkValidator pk' _ _ p = V.txSignedBy (scriptContextTxInfo p) (unPaymentPubKeyHash pk')
 
 data PubKeyContract
 
@@ -40,7 +40,7 @@ instance Scripts.ValidatorTypes PubKeyContract where
     type instance RedeemerType PubKeyContract = ()
     type instance DatumType PubKeyContract = ()
 
-typedValidator :: PubKeyHash -> Scripts.TypedValidator PubKeyContract
+typedValidator :: PaymentPubKeyHash -> Scripts.TypedValidator PubKeyContract
 typedValidator = Scripts.mkTypedValidatorParam @PubKeyContract
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
@@ -48,8 +48,8 @@ typedValidator = Scripts.mkTypedValidatorParam @PubKeyContract
         wrap = Scripts.wrapValidator
 
 data PubKeyError =
-    ScriptOutputMissing PubKeyHash
-    | MultipleScriptOutputs PubKeyHash
+    ScriptOutputMissing PaymentPubKeyHash
+    | MultipleScriptOutputs PaymentPubKeyHash
     | PKContractError ContractError
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -65,7 +65,7 @@ pubKeyContract
     :: forall w s e.
     ( AsPubKeyError e
     )
-    => PubKeyHash
+    => PaymentPubKeyHash
     -> Value
     -> Contract w s e (TxOutRef, Maybe ChainIndexTxOut, TypedValidator PubKeyContract)
 pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do

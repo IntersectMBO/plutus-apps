@@ -74,7 +74,7 @@ runChainSync'
   -> [ChainPoint]
   -> IO (ChainSyncHandle ChainSyncEvent)
 runChainSync' socketPath slotConfig networkId resumePoints =
-  runChainSync socketPath nullTracer slotConfig networkId resumePoints (\_ _ -> pure ())
+  runChainSync socketPath nullTracer slotConfig networkId resumePoints (\_ -> pure ())
 
 runChainSync
   :: FilePath
@@ -82,9 +82,9 @@ runChainSync
   -> SlotConfig
   -> NetworkId
   -> [ChainPoint]
-  -> ChainSyncCallback
+  -> (ChainSyncEvent -> IO ())
   -> IO (ChainSyncHandle ChainSyncEvent)
-runChainSync socketPath trace slotConfig networkId resumePoints chainSyncEventHandler = do
+runChainSync socketPath trace slotConfig networkId resumePoints onChainSyncEvent = do
     let handle = ChainSyncHandle {
           cshCurrentSlot = currentSlot slotConfig,
           cshHandler = chainSyncEventHandler }
@@ -102,6 +102,7 @@ runChainSync socketPath trace slotConfig networkId resumePoints chainSyncEventHa
 
     pure handle
     where
+      chainSyncEventHandler evt _ = onChainSyncEvent evt
       localNodeConnectInfo = LocalNodeConnectInfo {
         localConsensusModeParams = CardanoModeParams epochSlots,
         localNodeNetworkId = networkId,

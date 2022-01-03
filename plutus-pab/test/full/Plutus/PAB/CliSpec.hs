@@ -42,7 +42,9 @@ import GHC.Generics (Generic)
 import Ledger.Ada (lovelaceValueOf)
 import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), defaultManagerSettings, newManager,
                             responseTimeoutNone)
+import Plutus.ChainIndex.Types (Point (..))
 import Plutus.Contracts.PingPong qualified as PingPong
+import Plutus.Monitoring.Util (PrettyObject, convertLog)
 import Plutus.PAB.App (StorageBackend (BeamSqliteBackend))
 import Plutus.PAB.App qualified as App
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltin (SomeBuiltin))
@@ -50,11 +52,10 @@ import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Monitoring.Config (defaultConfig)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg)
-import Plutus.PAB.Monitoring.Util (PrettyObject, convertLog)
 import Plutus.PAB.Run (runWithOpts)
 import Plutus.PAB.Run.Cli (ConfigCommandArgs, runConfigCommand)
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ForkCommands, Migrate), allServices)
-import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, runEkgServer, storageBackend))
+import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (psTypes))
 import Plutus.PAB.Types (Config (Config, chainIndexConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig))
 import Plutus.PAB.Types qualified as PAB.Types
@@ -137,6 +138,8 @@ startPab services pabConfig = do
               , logConfigPath = Nothing
               , configPath = Nothing
               , passphrase = Nothing
+              , rollbackHistory = Nothing
+              , resumeFrom = PointAtGenesis
               , runEkgServer = False
               , storageBackend = BeamSqliteBackend
               , cmd = services

@@ -16,8 +16,6 @@ import Cardano.BM.Backend.EKGView qualified as EKG
 import Cardano.BM.Data.Severity (Severity (Notice))
 import Cardano.BM.Data.Tracer (HasPrivacyAnnotation, HasSeverityAnnotation)
 import Cardano.BM.Plugin (loadPlugin)
-import Cardano.BM.Setup (setupTrace_)
-import Cardano.BM.Trace (Trace)
 import Cardano.BM.Tracing (HasSeverityAnnotation (getSeverityAnnotation), Severity (Debug, Info))
 import Cardano.CLI (LogOutput (LogToFile, LogToStdStreams), Port, ekgEnabled, getEKGURL, getPrometheusURL,
                     withLoggingNamed)
@@ -61,14 +59,14 @@ import Data.Text qualified as T
 import Data.Text.Class (ToText (toText))
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Plutus.ChainIndex.App qualified as ChainIndex
-import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog)
 import Plutus.ChainIndex.Config qualified as CI
 import Plutus.ChainIndex.Logging qualified as ChainIndex.Logging
+import Plutus.ChainIndex.Types (Point (..))
 import Plutus.PAB.App (StorageBackend (BeamSqliteBackend))
 import Plutus.PAB.Effects.Contract.Builtin (handleBuiltin)
 import Plutus.PAB.Run qualified as PAB.Run
 import Plutus.PAB.Run.Command (ConfigCommand (Migrate, PABWebserver))
-import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, runEkgServer, storageBackend))
+import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.CommandParser qualified as PAB.Command
 import Plutus.PAB.Types (Config (chainIndexConfig, dbConfig, nodeServerConfig, walletServerConfig),
                          DbConfig (dbConfigFile))
@@ -191,13 +189,12 @@ setupPABServices walletHost walletPort dir rn = void $ async $ do -- TODO: bette
 launchChainIndex :: FilePath -> RunningNode -> IO ChainIndexPort
 launchChainIndex dir (RunningNode socketPath _block0 (_gp, _vData)) = do
     config <- ChainIndex.Logging.defaultConfig
-    (trace :: Trace IO ChainIndexLog, _) <- setupTrace_ config "chain-index"
     let dbPath = dir </> "chain-index.db"
         chainIndexConfig = CI.defaultConfig
                     & CI.socketPath .~ nodeSocketFile socketPath
                     & CI.dbPath .~ dbPath
                     & CI.networkId .~ CAPI.Mainnet
-    void . async $ void $ ChainIndex.runMain trace chainIndexConfig
+    void . async $ void $ ChainIndex.runMain config chainIndexConfig
     return $ ChainIndexPort $ chainIndexConfig ^. CI.port
 
 {-| Launch the PAB in a separate thread.
@@ -210,7 +207,7 @@ launchPAB ::
     -> ChainIndexPort -- ^ Port of the chain index
     -> IO ()
 launchPAB passPhrase dir walletUrl (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
-    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
+    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = Nothing, resumeFrom = PointAtGenesis, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
         networkID = NetworkIdWrapper CAPI.Mainnet
         config =
             PAB.Config.defaultConfig

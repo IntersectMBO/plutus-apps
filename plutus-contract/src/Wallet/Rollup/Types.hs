@@ -57,7 +57,7 @@ isFound DereferencedInput {} = True
 isFound (InputNotFound _)    = False
 
 data BeneficialOwner
-    = OwnedByPubKey PubKeyHash
+    = OwnedByPaymentPubKey PaymentPubKeyHash
     | OwnedByScript ValidatorHash
     deriving (Eq, Show, Ord, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema, FromJSONKey, ToJSONKey)
@@ -65,7 +65,7 @@ data BeneficialOwner
 toBeneficialOwner :: TxOut -> BeneficialOwner
 toBeneficialOwner TxOut {txOutAddress=Address{addressCredential}} =
     case addressCredential of
-        PubKeyCredential pkh -> OwnedByPubKey pkh
+        PubKeyCredential pkh -> OwnedByPaymentPubKey (PaymentPubKeyHash pkh)
         ScriptCredential vh  -> OwnedByScript vh
 
 data AnnotatedTx =

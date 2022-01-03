@@ -44,7 +44,7 @@ vesting startTime =
     VestingParams
         { vestingTranche1 = VestingTranche (startTime + 10000) (Ada.adaValueOf 20)
         , vestingTranche2 = VestingTranche (startTime + 20000) (Ada.adaValueOf 40)
-        , vestingOwner    = walletPubKeyHash w1 }
+        , vestingOwner    = mockWalletPaymentPubKeyHash w1 }
 
 params :: VestingParams
 params = vesting (TimeSlot.scSlotZeroTime def)
@@ -85,6 +85,8 @@ instance ContractModel VestingModel where
     , _t1Amount     = vestingTrancheAmount (vestingTranche1 params)
     , _t2Amount     = vestingTrancheAmount (vestingTranche2 params) }
 
+  initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w (vestingContract params) | w <- [w1, w2, w3] ]
+
   perform handle _ cmd = case cmd of
     Vest w -> do
       callEndpoint @"vest funds" (handle $ WalletKey w) ()
@@ -114,7 +116,7 @@ instance ContractModel VestingModel where
     s      <- getContractState
     when ( enoughValueLeft slot s v
          && v `leq` amount
-         && walletPubKeyHash w == vestingOwner params
+         && mockWalletPaymentPubKeyHash w == vestingOwner params
          && Ada.fromValue v >= Ledger.minAdaTxOut
          && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)) $ do
       deposit w v
@@ -127,14 +129,14 @@ instance ContractModel VestingModel where
       waitUntil s
 
   precondition s (Vest w) =  w `notElem` s ^. contractState . vested -- After a wallet has vested the contract shuts down
-                          && walletPubKeyHash w /= vestingOwner params -- The vesting owner shouldn't vest
+                          && mockWalletPaymentPubKeyHash w /= vestingOwner params -- The vesting owner shouldn't vest
                           && slot < t1 -- If you vest after slot 1 it can cause the vesting owner to terminate prematurely
     where
       slot   = s ^. currentSlot
       t1     = s ^. contractState . t1Slot
 
   precondition s (Retrieve w v) = enoughValueLeft slot (s ^. contractState) v
-                                && walletPubKeyHash w == vestingOwner params
+                                && mockWalletPaymentPubKeyHash w == vestingOwner params
                                 && Ada.fromValue v >= Ledger.minAdaTxOut
                                 && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)
     where
@@ -187,11 +189,8 @@ genWallet = elements wallets
 shrinkValue :: Value -> [Value]
 shrinkValue v = Ada.lovelaceValueOf <$> filter (\val -> val >= Ada.getLovelace Ledger.minAdaTxOut) (shrink (valueOf v Ada.adaSymbol Ada.adaToken))
 
-handleSpec :: [ContractInstanceSpec VestingModel]
-handleSpec = [ ContractInstanceSpec (WalletKey w) w (vestingContract params) | w <- [w1, w2, w3] ]
-
 prop_Vesting :: Actions VestingModel -> Property
-prop_Vesting = propRunActions_ handleSpec
+prop_Vesting = propRunActions_
 
 noLockProof :: NoLockedFundsProof VestingModel
 noLockProof = NoLockedFundsProof{
@@ -214,7 +213,7 @@ noLockProof = NoLockedFundsProof{
                       | otherwise = return ()
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptions handleSpec noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptions noLockProof
 
 -- Tests
 
@@ -287,5 +286,5 @@ expectedError =
 
 
 -- Util
-delay :: Integer -> Trace.EmulatorTrace ()
+delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
 delay n = void $ Trace.waitNSlots $ fromIntegral n

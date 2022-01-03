@@ -107,7 +107,7 @@ options =
 mkEscrowParams :: POSIXTime -> Value -> Value -> EscrowParams
 mkEscrowParams startTime p e =
   EscrowParams
-    { payee     = walletPubKeyHash w1
+    { payee     = mockWalletPaymentPubKeyHash w1
     , paying    = p
     , expecting = e
     , deadline  = startTime + 100000

@@ -18,9 +18,9 @@ import Language.PureScript.Bridge (BridgePart, Language (Haskell), PSType, SumTy
 import Language.PureScript.Bridge.Builder (BridgeData)
 import Language.PureScript.Bridge.PSTypes (psInt, psNumber, psString)
 import Language.PureScript.Bridge.TypeParameters (A)
-import Ledger (Address, BlockId, ChainIndexTxOut, DatumHash, MintingPolicy, OnChainTx, PubKey, PubKeyHash, RedeemerPtr,
-               ScriptTag, Signature, StakeValidator, Tx, TxId, TxIn, TxInType, TxOut, TxOutRef, TxOutTx, UtxoIndex,
-               ValidationPhase, Validator)
+import Ledger (Address, BlockId, ChainIndexTxOut, DatumHash, MintingPolicy, OnChainTx, PaymentPubKey, PaymentPubKeyHash,
+               PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash, StakeValidator, Tx,
+               TxId, TxIn, TxInType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Validator)
 import Ledger.Ada (Ada)
 import Ledger.Constraints.OffChain (MkTxError, ScriptOutput, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
@@ -34,7 +34,7 @@ import Ledger.Tx.CardanoAPI (FromCardanoError, ToCardanoError)
 import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
 import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value)
 import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
-import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse)
+import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog)
 import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOutputs)
@@ -322,6 +322,10 @@ ledgerTypes =
     , order . genericShow . argonaut $ mkSumType @DatumHash
     , order . genericShow . argonaut $ mkSumType @PubKey
     , order . genericShow . argonaut $ mkSumType @PubKeyHash
+    , order . genericShow . argonaut $ mkSumType @PaymentPubKey
+    , order . genericShow . argonaut $ mkSumType @PaymentPubKeyHash
+    , order . genericShow . argonaut $ mkSumType @StakePubKey
+    , order . genericShow . argonaut $ mkSumType @StakePubKeyHash
     , order . genericShow . argonaut $ mkSumType @Credential
     , order . genericShow . argonaut $ mkSumType @StakingCredential
     , order . genericShow . argonaut $ mkSumType @DCert
@@ -360,6 +364,7 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @ChainIndexQuery
     , equal . genericShow . argonaut $ mkSumType @ChainIndexResponse
     , equal . genericShow . argonaut $ mkSumType @IsUtxoResponse
+    , equal . genericShow . argonaut $ mkSumType @TxosResponse
     , equal . genericShow . argonaut $ mkSumType @UtxosResponse
     , equal . genericShow . argonaut $ mkSumType @ChainIndexTx
     , equal . genericShow . argonaut $ mkSumType @ChainIndexTxOutputs

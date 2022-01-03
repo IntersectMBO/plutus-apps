@@ -51,12 +51,8 @@ common lang
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 library
-    import:             lang
-    build-tool-depends:
-        cardano-node:cardano-node -any, cardano-cli:cardano-cli -any
-    ghc-options:
-        -Wunused-packages
-
+    import: lang
+    ghc-options: -Wunused-packages
     exposed-modules:
         Cardano.Api.NetworkId.Extra
         Cardano.Api.ProtocolParameters
@@ -106,7 +102,6 @@ library
         Plutus.PAB.Monitoring.Config
         Plutus.PAB.Monitoring.Monitoring
         Plutus.PAB.Monitoring.PABLogMsg
-        Plutus.PAB.Monitoring.Util
         Plutus.PAB.Run
         Plutus.PAB.Run.Cli
         Plutus.PAB.Run.Command
@@ -151,6 +146,7 @@ library
         contra-tracer -any,
         cryptonite -any,
         data-default -any,
+        either -any,
         exceptions -any,
         freer-simple -any,
         generic-arbitrary -any,
@@ -432,6 +428,7 @@ test-suite plutus-pab-test-light
         Cardano.Wallet.RemoteClientSpec
         Cardano.Wallet.ServerSpec
         Control.Concurrent.STM.ExtrasSpec
+        Plutus.PAB.ArbitrarySpec
 
     build-depends:
         QuickCheck -any,
@@ -451,15 +448,18 @@ test-suite plutus-pab-test-light
         lens -any,
         monad-logger -any,
         mtl -any,
+        plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-pab,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
+        plutus-tx -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
         tasty-hunit -any,
         smallcheck -any,
+        hedgehog-quickcheck -any,
         tasty-hedgehog -any,
         tasty-smallcheck -any,
         tasty-quickcheck -any,
@@ -496,6 +496,7 @@ test-suite plutus-pab-test-full
         aeson-pretty -any,
         base >=4.9 && <5,
         bytestring -any,
+        cardano-api -any,
         containers -any,
         data-default -any,
         freer-extras -any,
@@ -559,6 +560,7 @@ test-suite plutus-pab-test-full-long-running
         aeson-pretty -any,
         base >=4.9 && <5,
         bytestring -any,
+        cardano-api -any,
         containers -any,
         data-default -any,
         freer-extras -any,
@@ -568,6 +570,7 @@ test-suite plutus-pab-test-full-long-running
         lens -any,
         monad-logger -any,
         mtl -any,
+        plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-pab,
         plutus-use-cases -any,
@@ -638,3 +641,32 @@ executable sync-client
         plutus-ledger,
         plutus-pab,
         text
+
+executable plutus-pab-nami-demo
+  import: lang
+  main-is: Main.hs
+  hs-source-dirs: demo/pab-nami/pab/app
+  other-modules:
+    DemoContract
+  ghc-options:
+    -threaded
+  build-depends:
+    aeson -any,
+    async -any,
+    base >= 4.9 && < 5,
+    cardano-api -any,
+    data-default -any,
+    filepath -any,
+    freer-extras -any,
+    freer-simple -any,
+    openapi3 -any,
+    plutus-chain-index -any,
+    plutus-contract -any,
+    plutus-pab -any,
+    playground-common -any,
+    prettyprinter -any,
+    purescript-bridge -any,
+    plutus-ledger -any,
+    plutus-ledger-constraints -any,
+    row-types -any,
+    text -any,

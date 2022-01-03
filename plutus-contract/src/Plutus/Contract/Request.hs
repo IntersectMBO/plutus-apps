@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -39,6 +41,9 @@ module Plutus.Contract.Request(
     , utxosAt
     , utxosTxOutTxAt
     , utxosTxOutTxFromTx
+    , txsFromTxIds
+    , txoRefsAt
+    , txsAt
     , getTip
     -- ** Waiting for changes to the UTXO set
     , fundsAtAddressGt
@@ -71,7 +76,7 @@ module Plutus.Contract.Request(
     , endpointReq
     , endpointResp
     -- ** Public key hashes
-    , ownPubKeyHash
+    , ownPaymentPubKeyHash
     -- ** Submitting transactions
     , submitUnbalancedTx
     , submitBalancedTx
@@ -86,6 +91,8 @@ module Plutus.Contract.Request(
     -- * Etc.
     , ContractRow
     , pabReq
+    , mkTxContract
+    , MkTxLog(..)
     ) where
 
 import Control.Lens (Prism', preview, review, view)
@@ -93,6 +100,7 @@ import Control.Monad.Freer.Error qualified as E
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
 import Data.Aeson.Types qualified as JSON
+import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default (def))
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
@@ -103,34 +111,37 @@ import Data.Row (AllUniqueLabels, HasType, KnownSymbol, type (.==))
 import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
 import Data.Void (Void)
+import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy, MintingPolicyHash, POSIXTime,
-               PubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId,
+               PaymentPubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId,
                TxOutRef (txOutRefId), Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
-import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (DatumType, RedeemerType))
+import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
 import PlutusTx qualified
 
-import Plutus.Contract.Effects (ActiveEndpoint (..),
-                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
+                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
                                 PABResp (ExposeEndpointResp))
 import Plutus.Contract.Effects qualified as E
+import Plutus.Contract.Logging (logDebug)
 import Plutus.Contract.Schema (Input, Output)
-import Wallet.Types (ContractInstanceId, EndpointDescription (..), EndpointValue (..))
+import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescription),
+                     EndpointValue (EndpointValue, unEndpointValue))
 
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse (page))
+import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse (paget), UtxosResponse (page))
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
 import Plutus.Contract.Resumable (prompt)
 import Plutus.Contract.Types (AsContractError (_ConstraintResolutionError, _OtherError, _ResumableError, _WalletError),
-                              Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), runError,
-                              throwError)
+                              Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
+                              runError, throwError)
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
 --   are unique.
@@ -462,6 +473,67 @@ utxosTxOutTxFromTx tx =
       ciTxOutM <- txOutFromRef txOutRef
       pure $ ciTxOutM >>= \ciTxOut -> pure (txOutRef, (ciTxOut, tx))
 
+foldTxoRefsAt ::
+    forall w s e a.
+    ( AsContractError e
+    )
+    => (a -> Page TxOutRef -> Contract w s e a)
+    -> a
+    -> Address
+    -> Contract w s e a
+foldTxoRefsAt f ini addr = go ini (Just def)
+  where
+    go acc Nothing = pure acc
+    go acc (Just pq) = do
+      page <- paget <$> txoRefsAt pq addr
+      newAcc <- f acc page
+      go newAcc (nextPageQuery page)
+
+-- | Get the transactions at an address.
+txsAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Address
+    -> Contract w s e [ChainIndexTx]
+txsAt addr = do
+  foldTxoRefsAt f [] addr
+  where
+    f acc page = do
+      let txoRefs = pageItems page
+      let txIds = txOutRefId <$> txoRefs
+      txs <- txsFromTxIds txIds
+      pure $ acc <> txs
+
+-- | Get the transaction outputs at an address.
+txoRefsAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => PageQuery TxOutRef
+    -> Address
+    -> Contract w s e TxosResponse
+txoRefsAt pq addr = do
+  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  case cir of
+    E.TxoSetAtResponse r -> pure r
+    _ -> throwError $ review _OtherError
+                    $ Text.pack "Could not request TxoSetAtAddress from the chain index"
+
+-- | Get the transactions for a list of transaction ids.
+txsFromTxIds ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => [TxId]
+    -> Contract w s e [ChainIndexTx]
+txsFromTxIds txid = do
+  cir <- pabReq (ChainIndexQueryReq $ E.TxsFromTxIds txid) E._ChainIndexQueryResp
+  case cir of
+    E.TxIdsResponse r -> pure r
+    _ -> throwError $ review _OtherError
+                    $ Text.pack "Could not request TxsFromTxIds from the chain index"
+
 getTip ::
     forall w s e.
     ( AsContractError e
@@ -694,8 +766,8 @@ endpointDescription = EndpointDescription . symbolVal
 --     'requiredSignatures' field of 'Tx'.
 --   * There is a 1-n relationship between wallets and public keys (although in
 --     the mockchain n=1)
-ownPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PubKeyHash
-ownPubKeyHash = pabReq OwnPublicKeyHashReq E._OwnPublicKeyHashResp
+ownPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
+ownPaymentPubKeyHash = pabReq OwnPaymentPublicKeyHashReq E._OwnPaymentPublicKeyHashResp
 
 -- | Send an unbalanced transaction to be balanced and signed. Returns the ID
 --    of the final transaction when the transaction was submitted. Throws an
@@ -765,6 +837,37 @@ submitTxConstraintsSpending inst utxo =
   let lookups = Constraints.typedValidatorLookups inst <> Constraints.unspentOutputs utxo
   in submitTxConstraintsWith lookups
 
+{-| A variant of 'mkTx' that runs in the 'Contract' monad, throwing errors and
+logging its inputs and outputs.
+-}
+mkTxContract ::
+    forall w s a.
+    ( PlutusTx.FromData (DatumType a)
+    , PlutusTx.ToData (DatumType a)
+    , PlutusTx.ToData (RedeemerType a)
+    )
+    => ScriptLookups a
+    -> TxConstraints (RedeemerType a) (DatumType a)
+    -> Contract w s Constraints.MkTxError UnbalancedTx
+mkTxContract lookups txc = do
+    let result = Constraints.mkTx lookups txc
+        logData = MkTxLog{mkTxLogLookups=Constraints.generalise lookups, mkTxLogTxConstraints=bimap PlutusTx.toBuiltinData PlutusTx.toBuiltinData txc, mkTxLogResult = result}
+    logDebug logData
+    case result of
+        Left err -> throwError err
+        Right r' -> return r'
+
+{-| Arguments and result of a call to 'mkTx'
+-}
+data MkTxLog =
+    MkTxLog
+        { mkTxLogLookups       :: ScriptLookups Any
+        , mkTxLogTxConstraints :: TxConstraints PlutusTx.BuiltinData PlutusTx.BuiltinData
+        , mkTxLogResult        :: Either Constraints.MkTxError UnbalancedTx
+        }
+        deriving stock (Show, Generic)
+        deriving anyclass (ToJSON, FromJSON)
+
 -- | Build a transaction that satisfies the constraints
 mkTxConstraints :: forall a w s e.
   ( PlutusTx.ToData (RedeemerType a)
@@ -776,7 +879,7 @@ mkTxConstraints :: forall a w s e.
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e UnbalancedTx
 mkTxConstraints sl constraints =
-  either (throwError . review _ConstraintResolutionError) pure (Constraints.mkTx sl constraints)
+  mapError (review _ConstraintResolutionError) (mkTxContract sl constraints)
 
 -- | Build a transaction that satisfies the constraints, then submit it to the
 --   network. Using the given constraints.

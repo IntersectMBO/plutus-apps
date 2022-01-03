@@ -57,6 +57,7 @@
           (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
           (hsPkgs."cryptonite" or (errorHandler.buildDepError "cryptonite"))
           (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
+          (hsPkgs."either" or (errorHandler.buildDepError "either"))
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
           (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
           (hsPkgs."generic-arbitrary" or (errorHandler.buildDepError "generic-arbitrary"))
@@ -102,10 +103,6 @@
           (hsPkgs."websockets" or (errorHandler.buildDepError "websockets"))
           (hsPkgs."Win32-network" or (errorHandler.buildDepError "Win32-network"))
           (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
-          ];
-        build-tools = [
-          (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
-          (hsPkgs.buildPackages.cardano-cli.components.exes.cardano-cli or (pkgs.buildPackages.cardano-cli or (errorHandler.buildToolDepError "cardano-cli:cardano-cli")))
           ];
         buildable = true;
         modules = [
@@ -158,7 +155,6 @@
           "Plutus/PAB/Monitoring/Config"
           "Plutus/PAB/Monitoring/Monitoring"
           "Plutus/PAB/Monitoring/PABLogMsg"
-          "Plutus/PAB/Monitoring/Util"
           "Plutus/PAB/Run"
           "Plutus/PAB/Run/Cli"
           "Plutus/PAB/Run/Command"
@@ -420,6 +416,35 @@
             "Main.hs"
             ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
           };
+        "plutus-pab-nami-demo" = {
+          depends = [
+            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."async" or (errorHandler.buildDepError "async"))
+            (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
+            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
+            (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
+            (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
+            (hsPkgs."openapi3" or (errorHandler.buildDepError "openapi3"))
+            (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
+            (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
+            (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
+            (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
+            (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
+            (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
+            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
+            (hsPkgs."row-types" or (errorHandler.buildDepError "row-types"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            ];
+          buildable = true;
+          modules = [ "DemoContract" ];
+          hsSourceDirs = [ "demo/pab-nami/pab/app" ];
+          mainPath = [
+            "Main.hs"
+            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
+          };
         };
       tests = {
         "plutus-pab-test-light" = {
@@ -441,15 +466,18 @@
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
             (hsPkgs."monad-logger" or (errorHandler.buildDepError "monad-logger"))
             (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+            (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
+            (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
             (hsPkgs."quickcheck-instances" or (errorHandler.buildDepError "quickcheck-instances"))
             (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
             (hsPkgs."tasty-hunit" or (errorHandler.buildDepError "tasty-hunit"))
             (hsPkgs."smallcheck" or (errorHandler.buildDepError "smallcheck"))
+            (hsPkgs."hedgehog-quickcheck" or (errorHandler.buildDepError "hedgehog-quickcheck"))
             (hsPkgs."tasty-hedgehog" or (errorHandler.buildDepError "tasty-hedgehog"))
             (hsPkgs."tasty-smallcheck" or (errorHandler.buildDepError "tasty-smallcheck"))
             (hsPkgs."tasty-quickcheck" or (errorHandler.buildDepError "tasty-quickcheck"))
@@ -465,6 +493,7 @@
             "Cardano/Wallet/RemoteClientSpec"
             "Cardano/Wallet/ServerSpec"
             "Control/Concurrent/STM/ExtrasSpec"
+            "Plutus/PAB/ArbitrarySpec"
             ];
           hsSourceDirs = [ "test/light" ];
           mainPath = [ "Spec.hs" ];
@@ -476,6 +505,7 @@
             (hsPkgs."aeson-pretty" or (errorHandler.buildDepError "aeson-pretty"))
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
@@ -537,6 +567,7 @@
             (hsPkgs."aeson-pretty" or (errorHandler.buildDepError "aeson-pretty"))
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
@@ -546,6 +577,7 @@
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
             (hsPkgs."monad-logger" or (errorHandler.buildDepError "monad-logger"))
             (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+            (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))

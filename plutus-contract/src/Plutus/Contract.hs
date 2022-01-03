@@ -63,7 +63,7 @@ module Plutus.Contract(
     , Request.utxosTxOutTxFromTx
     , Request.getTip
     -- * Wallet's own public key
-    , Request.ownPubKeyHash
+    , Request.ownPaymentPubKeyHash
     -- * Contract instance Id
     , Wallet.Types.ContractInstanceId
     , Request.ownInstanceId
@@ -95,10 +95,7 @@ module Plutus.Contract(
     , AsCheckpointError(..)
     , CheckpointError(..)
     -- * Logging
-    , logDebug
-    , logInfo
-    , logWarn
-    , logError
+    , module Logging
     -- * Row-related things
     , HasType
     , ContractRow
@@ -106,9 +103,9 @@ module Plutus.Contract(
     , type Empty
     ) where
 
-import Data.Aeson (ToJSON (toJSON))
 import Data.Row (Empty, HasType, type (.\/))
 
+import Plutus.Contract.Logging as Logging
 import Plutus.Contract.Request (ContractRow)
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Schema qualified as Schema
@@ -118,32 +115,14 @@ import Plutus.Contract.Types (AsCheckpointError (..), AsContractError (..), Chec
                               handleError, mapError, never, promiseBind, promiseMap, runError, select, selectEither,
                               selectList, throwError)
 
-import Control.Monad.Freer.Extras.Log qualified as L
 import Control.Monad.Freer.Writer qualified as W
 import Data.Functor.Apply (liftF2)
-import Prelude
 import Wallet.API (WalletAPIError)
 import Wallet.Types qualified
 
 -- | Execute both contracts in any order
 both :: Promise w s e a -> Promise w s e b -> Promise w s e (a, b)
 both a b = liftF2 (,) a b `select` liftF2 (flip (,)) b a
-
--- | Log a message at the 'Debug' level
-logDebug :: ToJSON a => a -> Contract w s e ()
-logDebug = Contract . L.logDebug . toJSON
-
--- | Log a message at the 'Info' level
-logInfo :: ToJSON a => a -> Contract w s e ()
-logInfo = Contract . L.logInfo . toJSON
-
--- | Log a message at the 'Warning' level
-logWarn :: ToJSON a => a -> Contract w s e ()
-logWarn = Contract . L.logWarn . toJSON
-
--- | Log a message at the 'Error' level
-logError :: ToJSON a => a -> Contract w s e ()
-logError = Contract . L.logError . toJSON
 
 -- | Update the contract's accumulating state @w@
 tell :: w -> Contract w s e ()

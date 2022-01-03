@@ -46,6 +46,7 @@ library
         Plutus.Contract.Request
         Plutus.Contract.Checkpoint
         Plutus.Contract.Constraints
+        Plutus.Contract.Logging
         Plutus.Contract.Oracle
         Plutus.Contract.State
         Plutus.Contract.Schema
@@ -157,8 +158,10 @@ library
     if !(impl(ghcjs) || os(ghcjs) || os(windows))
         exposed-modules:
             Plutus.Contract.Test
-            Plutus.Contract.Test.ContractModel
             Plutus.Contract.Test.Coverage
+            Plutus.Contract.Test.ContractModel
+            Plutus.Contract.Test.ContractModel.Internal
+            Plutus.Contract.Test.ContractModel.CrashTolerance
         build-depends:
             tasty -any,
             tasty-hunit -any,
@@ -186,6 +189,7 @@ test-suite plutus-contract-test
         Spec.ThreadToken
         Spec.Secrets
         Spec.Plutus.Contract.Wallet
+        Spec.Plutus.Contract.Oracle
     build-depends:
         base >=4.9 && <5,
         bytestring -any,

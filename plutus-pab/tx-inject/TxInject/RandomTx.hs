@@ -1,10 +1,8 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators     #-}
 
 module TxInject.RandomTx(
     -- $randomTx
@@ -20,9 +18,9 @@ import Hedgehog.Gen qualified as Gen
 import System.Random.MWC as MWC
 
 import Ledger.Ada qualified as Ada
+import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
 import Ledger.Address qualified as Address
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Crypto (PrivateKey, PubKey)
 import Ledger.Generators qualified as Generators
 import Ledger.Index (UtxoIndex (..), ValidationCtx (..), runValidation, validateTransaction)
 import Ledger.Slot (Slot (..))
@@ -56,7 +54,7 @@ generateTx
   -> IO Tx
 generateTx gen slot (UtxoIndex utxo) = do
   (_, sourcePubKey) <- pickNEL gen keyPairs
-  let sourceAddress = Address.pubKeyAddress sourcePubKey
+  let sourceAddress = Address.pubKeyAddress sourcePubKey Nothing
   -- outputs at the source address
       sourceOutputs
   -- we restrict ourselves to outputs that contain no currencies other than Ada,
@@ -95,11 +93,11 @@ generateTx gen slot (UtxoIndex utxo) = do
       Nothing -> pure tx
       Just  _ -> generateTx gen slot (UtxoIndex utxo)
 
-keyPairs :: NonEmpty (PrivateKey, PubKey)
+keyPairs :: NonEmpty (PaymentPrivateKey, PaymentPubKey)
 keyPairs =
     fmap
-        (\mockWallet -> (CW.privateKey mockWallet, CW.pubKey mockWallet))
-        (CW.knownWallet 1 :| drop 1 CW.knownWallets)
+        (\mockWallet -> (CW.paymentPrivateKey mockWallet, CW.paymentPubKey mockWallet))
+        (CW.knownMockWallet 1 :| drop 1 CW.knownMockWallets)
 
 -- | Pick a random element from a non-empty list
 pickNEL :: PrimMonad m => Gen (PrimState m) -> NonEmpty a -> m a

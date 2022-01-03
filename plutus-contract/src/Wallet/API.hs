@@ -23,7 +23,7 @@ Mock wallet implementation
 module Wallet.API(
     WalletEffect,
     submitTxn,
-    ownPubKeyHash,
+    ownPaymentPubKeyHash,
     balanceTx,
     yieldUnbalancedTx,
     NodeClientEffect,
@@ -34,8 +34,8 @@ module Wallet.API(
     PubKeyHash(..),
     signTxAndSubmit,
     signTxAndSubmit_,
-    payToPublicKeyHash,
-    payToPublicKeyHash_,
+    payToPaymentPublicKeyHash,
+    payToPaymentPublicKeyHash_,
     -- * Slot ranges
     Interval(..),
     Slot,
@@ -63,13 +63,13 @@ import Control.Monad.Freer.Extras.Log (LogMsg, logWarn)
 import Data.Default (Default (def))
 import Data.Text (Text)
 import Data.Void (Void)
-import Ledger (CardanoTx, Interval (Interval, ivFrom, ivTo), PubKey (PubKey, getPubKey),
+import Ledger (CardanoTx, Interval (Interval, ivFrom, ivTo), PaymentPubKeyHash, PubKey (PubKey, getPubKey),
                PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after, always, before, contains,
                interval, isEmpty, member, singleton, width)
 import Ledger.Constraints qualified as Constraints
 import Ledger.TimeSlot qualified as TimeSlot
-import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientSlot, getClientSlotConfig, ownPubKeyHash,
-                       publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
+import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientSlot, getClientSlotConfig,
+                       ownPaymentPubKeyHash, publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
 import Wallet.Error (WalletAPIError (PaymentMkTxError))
 import Wallet.Error qualified
 
@@ -79,13 +79,13 @@ import Wallet.Error qualified
 --  Note: Due to a constraint in the Cardano ledger, each tx output must have a
 --  minimum amount of Ada. Therefore, the funds to transfer will be adjusted
 --  to satisfy that constraint. See 'Ledger.Constraints.OffChain.adjustUnbalancedTx.
-payToPublicKeyHash ::
+payToPaymentPublicKeyHash ::
     ( Member WalletEffect effs
     , Member (Error WalletAPIError) effs
     , Member (LogMsg Text) effs
     )
-    => SlotRange -> Value -> PubKeyHash -> Eff effs CardanoTx
-payToPublicKeyHash range v pk = do
+    => SlotRange -> Value -> PaymentPubKeyHash -> Eff effs CardanoTx
+payToPaymentPublicKeyHash range v pk = do
     let constraints = Constraints.mustPayToPubKey pk v
                    <> Constraints.mustValidateIn (TimeSlot.slotRangeToPOSIXTimeRange def range)
     utx <- either (throwError . PaymentMkTxError)
@@ -99,13 +99,13 @@ payToPublicKeyHash range v pk = do
     either throwError signTxAndSubmit balancedTx
 
 -- | Transfer some funds to an address locked by a public key.
-payToPublicKeyHash_ ::
+payToPaymentPublicKeyHash_ ::
     ( Member WalletEffect effs
     , Member (Error WalletAPIError) effs
     , Member (LogMsg Text) effs
     )
-    => SlotRange -> Value -> PubKeyHash -> Eff effs ()
-payToPublicKeyHash_ r v = void . payToPublicKeyHash r v
+    => SlotRange -> Value -> PaymentPubKeyHash -> Eff effs ()
+payToPaymentPublicKeyHash_ r v = void . payToPaymentPublicKeyHash r v
 
 -- | Add the wallet's signature to the transaction and submit it. Returns
 --   the transaction with the wallet's signature.

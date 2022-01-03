@@ -15,16 +15,18 @@ Steps:
 
 You will need ~6 terminals to run all the different components.
 
-1. Install cardano-node using the instructions found [here](https://github.com/input-output-hk/cardano-node/blob/master/README.rst)
+1. Install `cardano-node` & `cardano-wallet`:
+
+  The easiest way of doing this is to enter this repository's `nix-shell`, where the executables are already there. Other alternatives include downloading pre-built binaries, running Docker, running a Nix shell or building from source. See [the node's repository](https://github.com/input-output-hk/cardano-node) and [the wallet's repository](https://github.com/input-output-hk/cardano-wallet) for more information.
 
   Please make sure that the binary that you are executing is indeed that one that
-  you installed by using the command: `which cardano-node`.
+  you installed by using the command: `which cardano-node && which cardano-wallet`.
 
 2. Build all the necessary components:
 
   ```
   > cd $PLUTUS
-  > cabal build plutus-pab-examples plutus-chain-index cardano-node cardano-wallet
+  > cabal build plutus-pab-examples plutus-chain-index
   ```
 
 3. Start the testnet node locally:
@@ -41,7 +43,7 @@ You will need ~6 terminals to run all the different components.
 
   ```
   > cd $PLUTUS/plutus-pab/test-node/
-  > cabal exec -- cardano-wallet serve \
+  > cardano-wallet serve \
       --testnet testnet/testnet-byron-genesis.json \
       --node-socket testnet/node.sock
   ```
@@ -56,7 +58,7 @@ You will need ~6 terminals to run all the different components.
   - Generate a recovery phrase:
 
   ```
-  > cabal exec -- cardano-wallet recovery-phrase generate
+  > cardano-wallet recovery-phrase generate
   ```
 
   - Save this in a file named `restore-wallet.json` in the `testnet` folder:

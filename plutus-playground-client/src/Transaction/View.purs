@@ -35,6 +35,7 @@ import MainFrame.Types (ChildSlots, HAction(..), View(..))
 import Playground.Lenses (_tokenName, _contractInstanceTag)
 import Playground.Types (EvaluationResult(EvaluationResult), SimulatorWallet)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog(..))
+import Ledger.Address (PaymentPubKeyHash(..))
 import Plutus.V1.Ledger.Slot (Slot(..))
 import Plutus.V1.Ledger.TxId (TxId(TxId))
 import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName)
@@ -85,7 +86,13 @@ evaluationPane state (EvaluationResult { emulatorLog, emulatorTrace, fundsDistri
         ]
     ]
   where
-  namingFn pubKeyHash = preview (ix pubKeyHash <<< _walletId <<< to (\n -> "Wallet " <> BigInt.toString n)) (AssocMap.Map walletKeys)
+  namingFn pkh =
+    preview
+      ( ix (PaymentPubKeyHash { unPaymentPubKeyHash: pkh })
+          <<< _walletId
+          <<< to (\n -> "Wallet " <> BigInt.toString n)
+      )
+      (AssocMap.Map walletKeys)
 
 eveEvent :: forall a. MultiAgent.EmulatorTimeEvent a -> a
 eveEvent (MultiAgent.EmulatorTimeEvent { _eteEvent }) = _eteEvent

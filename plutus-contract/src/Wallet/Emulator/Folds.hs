@@ -46,44 +46,46 @@ module Wallet.Emulator.Folds (
     , preMapMaybeM
     , preMapMaybe
     , postMapM
+    , mkTxLogs
     ) where
 
 import Control.Applicative ((<|>))
-import Control.Foldl (Fold (..), FoldM (..))
+import Control.Foldl (Fold (Fold), FoldM (FoldM))
 import Control.Foldl qualified as L
 import Control.Lens hiding (Empty, Fold)
 import Control.Monad ((>=>))
-import Control.Monad.Freer
-import Control.Monad.Freer.Error
+import Control.Monad.Freer (Eff, Member)
+import Control.Monad.Freer.Error (Error, throwError)
 import Data.Aeson qualified as JSON
 import Data.Foldable (fold, toList)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
-import Ledger (Block, OnChainTx (..), TxId)
+import Ledger (Block, OnChainTx (Invalid, Valid), TxId)
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase (..))
-import Ledger.Tx (Address, Tx, TxOut (..), TxOutTx (..))
+import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase (Phase1, Phase2))
+import Ledger.Tx (Address, Tx, TxOut (txOutValue), TxOutTx (txOutTxOut))
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
+import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Resumable (Request, Response)
 import Plutus.Contract.Resumable qualified as State
-import Plutus.Contract.Types (ResumableResult (..))
+import Plutus.Contract.Types (ResumableResult (_finalState, _observableState, _requests))
 import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventInstanceState, emptyInstanceState,
                                                instContractState, instEvents, instHandlersHistory)
-import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceTag, UserThreadMsg, _HandledRequest,
-                                    cilMessage, cilTag, toInstanceState)
+import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (ContractLog), ContractInstanceTag,
+                                    UserThreadMsg, _HandledRequest, cilMessage, cilTag, toInstanceState)
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
-import Wallet.Emulator.Chain (ChainEvent (..), _TxnValidate, _TxnValidationFail)
+import Wallet.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate, _TxnValidationFail)
 import Wallet.Emulator.LogMessages (_BalancingUnbalancedTx, _ValidationFailed)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorTimeEvent, chainEvent, eteEvent, instanceEvent,
                                    userThreadEvent, walletClientEvent, walletEvent')
 import Wallet.Emulator.NodeClient (_TxSubmit)
-import Wallet.Emulator.Wallet (Wallet, _TxBalanceLog, walletAddress)
+import Wallet.Emulator.Wallet (Wallet, _TxBalanceLog, mockWalletAddress)
 import Wallet.Rollup qualified as Rollup
 import Wallet.Rollup.Types (AnnotatedTx)
 
@@ -117,6 +119,18 @@ scriptEvents = preMapMaybe (preview (eteEvent . chainEvent) >=> getEvent) (conca
 -- | Unbalanced transactions that are sent to the wallet for balancing
 walletTxBalanceEvents :: EmulatorEventFold [UnbalancedTx]
 walletTxBalanceEvents = preMapMaybe (preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _BalancingUnbalancedTx)) L.list
+
+mkTxLogs :: EmulatorEventFold [MkTxLog]
+mkTxLogs =
+    let getTxLogEvent :: ContractInstanceMsg -> Maybe MkTxLog
+        getTxLogEvent (ContractLog vl) = case JSON.fromJSON vl of
+            JSON.Error _   -> Nothing
+            JSON.Success a -> Just a
+        getTxLogEvent _ = Nothing
+
+        flt :: EmulatorEvent -> Maybe MkTxLog
+        flt = fmap (view (eteEvent . cilMessage)) . traverse (preview instanceEvent) >=> getTxLogEvent
+    in preMapMaybe flt L.list
 
 -- | The state of a contract instance, recovered from the emulator log.
 instanceState ::
@@ -244,7 +258,7 @@ valueAtAddress = fmap (foldMap (txOutValue . txOutTxOut)) . utxoAtAddress
 
 -- | The funds belonging to a wallet
 walletFunds :: Wallet -> EmulatorEventFold Value
-walletFunds = valueAtAddress . walletAddress
+walletFunds = valueAtAddress . mockWalletAddress
 
 -- | The fees paid by a wallet
 walletFees :: Wallet -> EmulatorEventFold Value

@@ -32,7 +32,7 @@ module Plutus.PAB.Simulator(
     , logString
     -- ** Agent actions
     , payToWallet
-    , payToPublicKeyHash
+    , payToPaymentPublicKeyHash
     , activateContract
     , callEndpointOnInstance
     , handleAgentThread
@@ -97,8 +97,8 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
-import Ledger (Address, Blockchain, CardanoTx, PubKeyHash, TxId, TxOut (TxOut, txOutAddress, txOutValue), eitherTx,
-               txFee, txId)
+import Ledger (Address, Blockchain, CardanoTx, PaymentPubKeyHash, TxId, TxOut (TxOut, txOutAddress, txOutValue),
+               eitherTx, txFee, txId)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
@@ -107,7 +107,7 @@ import Ledger.Index qualified as UtxoIndex
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Ledger.Value (Value, flattenValue)
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
-                                   ChainIndexQueryEffect (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
+                                   ChainIndexQueryEffect (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, TxoSetAtAddress, TxsFromTxIds, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
                                    TxOutStatus, TxStatus, getTip)
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers, handleContractDefinitionEffect, handleContractEffect, handleContractStoreEffect, handleLogMessages, handleServicesEffects, initialiseEnvironment, onShutdown, onStartup))
@@ -178,7 +178,7 @@ initialState :: forall t. IO (SimulatorState t)
 initialState = do
     let initialDistribution = Map.fromList $ fmap (, Ada.adaValueOf 100_000) knownWallets
         Emulator.EmulatorState{Emulator._chainState} = Emulator.initialState (def & Emulator.initialChainState .~ Left initialDistribution)
-        initialWallets = Map.fromList $ fmap (\w -> (Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId w, initialAgentState w)) CW.knownWallets
+        initialWallets = Map.fromList $ fmap (\w -> (Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId w, initialAgentState w)) CW.knownMockWallets
     STM.atomically $
         SimulatorState
             <$> STM.newTQueue
@@ -213,8 +213,8 @@ mkSimulatorHandlers feeCfg slotCfg handleContractEffect =
     EffectHandlers
         { initialiseEnvironment =
             (,,)
-                <$> liftIO (STM.atomically Instances.emptyInstancesState)
-                <*> liftIO (STM.atomically Instances.emptyBlockchainEnv)
+                <$> liftIO (STM.atomically   Instances.emptyInstancesState )
+                <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv Nothing)
                 <*> liftIO (initialState @t)
         , handleContractStoreEffect =
             interpret handleContractStore
@@ -584,6 +584,8 @@ handleChainIndexEffect = runChainIndexEffects @t . \case
     UtxoSetMembership ref     -> ChainIndex.utxoSetMembership ref
     UtxoSetAtAddress pq addr  -> ChainIndex.utxoSetAtAddress pq addr
     UtxoSetWithCurrency pq ac -> ChainIndex.utxoSetWithCurrency pq ac
+    TxsFromTxIds txids        -> ChainIndex.txsFromTxIds txids
+    TxoSetAtAddress pq addr   -> ChainIndex.txoSetAtAddress pq addr
     GetTip                    -> ChainIndex.getTip
 
 -- | Start a thread that prints log messages to the terminal when they come in.
@@ -736,7 +738,7 @@ instanceActivity = Core.instanceActivity
 
 -- | Create a new wallet with a random key, give it some funds
 --   and add it to the list of simulated wallets.
-addWallet :: forall t. Simulation t (Wallet,PubKeyHash)
+addWallet :: forall t. Simulation t (Wallet, PaymentPubKeyHash)
 addWallet = do
     SimulatorState{_agentStates} <- Core.askUserEnv @t @(SimulatorState t)
     mockWallet <- MockWallet.newWallet
@@ -746,8 +748,8 @@ addWallet = do
         STM.writeTVar _agentStates newWallets
     _ <- handleAgentThread (knownWallet 2) Nothing
             $ Modify.wrapError WalletError
-            $ MockWallet.distributeNewWalletFunds (CW.pubKeyHash mockWallet)
-    pure (Wallet.toMockWallet mockWallet, CW.pubKeyHash mockWallet)
+            $ MockWallet.distributeNewWalletFunds (CW.paymentPubKeyHash mockWallet)
+    pure (Wallet.toMockWallet mockWallet, CW.paymentPubKeyHash mockWallet)
 
 
 -- | Retrieve the balances of all the entities in the simulator.
@@ -775,11 +777,11 @@ logString = logInfo @(PABMultiAgentMsg t) . UserLog . Text.pack
 
 -- | Make a payment from one wallet to another
 payToWallet :: forall t. Wallet -> Wallet -> Value -> Simulation t CardanoTx
-payToWallet source target = payToPublicKeyHash source (Emulator.walletPubKeyHash target)
+payToWallet source target = payToPaymentPublicKeyHash source (Emulator.mockWalletPaymentPubKeyHash target)
 
 -- | Make a payment from one wallet to a public key address
-payToPublicKeyHash :: forall t. Wallet -> PubKeyHash -> Value -> Simulation t CardanoTx
-payToPublicKeyHash source target amount =
+payToPaymentPublicKeyHash :: forall t. Wallet -> PaymentPubKeyHash -> Value -> Simulation t CardanoTx
+payToPaymentPublicKeyHash source target amount =
     handleAgentThread source Nothing
         $ flip (handleError @WAPI.WalletAPIError) (throwError . WalletError)
-        $ WAPI.payToPublicKeyHash WAPI.defaultSlotRange amount target
+        $ WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange amount target

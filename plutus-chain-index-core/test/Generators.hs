@@ -47,19 +47,20 @@ import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger.Ada qualified as Ada
-import Ledger.Address (pubKeyAddress)
+import Ledger.Address (PaymentPubKey (PaymentPubKey), pubKeyAddress)
 import Ledger.Generators qualified as Gen
 import Ledger.Interval qualified as Interval
-import Ledger.Slot (Slot (..))
-import Ledger.Tx (Address, TxIn (..), TxOut (..), TxOutRef (..))
-import Ledger.TxId (TxId (..))
+import Ledger.Slot (Slot (Slot))
+import Ledger.Tx (Address, TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef))
+import Ledger.TxId (TxId (TxId))
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
-import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOutputs (..), txOutRefs)
+import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOutputs (ValidTx), txOutRefs)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
-import Plutus.ChainIndex.Types (BlockId (..), BlockNumber (..), Tip (..), TxIdState, TxOutBalance, TxUtxoBalance (..))
+import Plutus.ChainIndex.Types (BlockId (BlockId), BlockNumber (BlockNumber),
+                                Tip (Tip, tipBlockId, tipBlockNo, tipSlot), TxIdState, TxOutBalance, TxUtxoBalance)
 import PlutusTx.Prelude qualified as PlutusTx
 
 -- | Generate a random tx id
@@ -90,7 +91,9 @@ genSlot = Slot <$> Gen.integral (Range.linear 0 100000000)
 
 -- | Generate a public key address
 genAddress :: MonadGen m => m Address
-genAddress = Gen.element $ pubKeyAddress <$> ["000fff", "aabbcc", "123123"]
+genAddress = Gen.element
+           $ pubKeyAddress <$> (PaymentPubKey <$> ["000fff", "aabbcc", "123123"])
+                           <*> pure Nothing
 
 -- | Generate random Value (possibly containing Ada) with a positive Ada value.
 genNonZeroAdaValue :: MonadGen m => m Value

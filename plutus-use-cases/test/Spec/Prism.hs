@@ -55,14 +55,14 @@ credential :: Credential
 credential =
     Credential
         { credName = kyc
-        , credAuthority = CredentialAuthority (walletPubKeyHash mirror)
+        , credAuthority = CredentialAuthority (mockWalletPaymentPubKeyHash mirror)
         }
 
 stoSubscriber :: STOSubscriber
 stoSubscriber =
     STOSubscriber
         { wCredential = credential
-        , wSTOIssuer = walletPubKeyHash issuer
+        , wSTOIssuer = mockWalletPaymentPubKeyHash issuer
         , wSTOTokenName = sto
         , wSTOAmount = numTokens
         }
@@ -70,7 +70,7 @@ stoSubscriber =
 stoData :: STOData
 stoData =
     STOData
-        { stoIssuer = walletPubKeyHash issuer
+        { stoIssuer = mockWalletPaymentPubKeyHash issuer
         , stoTokenName = sto
         , stoCredentialToken = Credential.token credential
         }
@@ -146,6 +146,8 @@ instance ContractModel PrismModel where
 
     initialState = PrismModel { _walletState = Map.empty }
 
+    initialHandleSpecs = [ ContractInstanceSpec (UserH w) w C.subscribeSTO | w <- users ] ++ [ ContractInstanceSpec MirrorH mirror C.mirror ]
+
     precondition s (Issue w) = (s ^. contractState . isIssued w) /= Issued  -- Multiple Issue (without Revoke) breaks the contract
     precondition _ _         = True
 
@@ -177,7 +179,7 @@ instance ContractModel PrismModel where
 
     monitoring (_, s) _ = counterexample (show s)
 
-delay :: Integer -> Trace.EmulatorTrace ()
+delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
 delay n = void $ Trace.waitNSlots $ fromIntegral n
 
 finalPredicate :: ModelState PrismModel -> TracePredicate
@@ -185,12 +187,10 @@ finalPredicate _ =
     assertNotDone @_ @() @C.STOSubscriberSchema     C.subscribeSTO      (Trace.walletInstanceTag user)              "User stopped"               .&&.
     assertNotDone @_ @() @C.MirrorSchema            C.mirror            (Trace.walletInstanceTag mirror)            "Mirror stopped"
 
-handleSpec :: [ContractInstanceSpec PrismModel]
-handleSpec = [ ContractInstanceSpec (UserH w) w                 C.subscribeSTO | w <- users ] ++
-             [ ContractInstanceSpec MirrorH   mirror            C.mirror ]
+
 
 prop_Prism :: Actions PrismModel -> Property
-prop_Prism = propRunActions @PrismModel handleSpec finalPredicate
+prop_Prism = propRunActions @PrismModel finalPredicate
 
 -- | The Prism contract does not lock any funds.
 noLockProof :: NoLockedFundsProof PrismModel
@@ -200,7 +200,7 @@ noLockProof = NoLockedFundsProof
   }
 
 prop_NoLock :: Property
-prop_NoLock = checkNoLockedFundsProof defaultCheckOptions handleSpec noLockProof
+prop_NoLock = checkNoLockedFundsProof defaultCheckOptions noLockProof
 
 tests :: TestTree
 tests = testGroup "PRISM"

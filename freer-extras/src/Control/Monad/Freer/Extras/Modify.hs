@@ -13,16 +13,26 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Control.Monad.Freer.Extras.Modify (
+    -- * change the list of effects
+    mapEffs
+
+    -- * under functions
+    , UnderN(..)
+    , under
+
     -- * weaken functions
-    CanWeakenEnd(..)
+    , CanWeakenEnd(..)
     , weakenUnder
-    , weakenUnderN
+    , weakenNUnder
+    , weakenMUnderN
 
     -- * raise functions
     , raiseEnd
     , raiseUnder
     , raiseUnder2
-    , raiseUnderN
+    , raise2Under
+    , raiseNUnder
+    , raiseMUnderN
 
     -- * zoom functions
     , handleZoomedState
@@ -38,7 +48,7 @@ module Control.Monad.Freer.Extras.Modify (
     , wrapError
     ) where
 
-import Control.Lens
+import Control.Lens hiding (under)
 import Control.Monad.Except qualified as MTL
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
@@ -47,6 +57,26 @@ import Control.Monad.Freer.Reader
 import Control.Monad.Freer.State
 import Control.Monad.Freer.Writer
 import Control.Monad.State qualified as MTL
+
+mapEffs :: (Union effs ~> Union effs') -> Eff effs ~> Eff effs'
+mapEffs f = loop where
+    loop = \case
+        Val a -> pure a
+        E u q -> E (f u) (tsingleton $ qComp q loop)
+
+
+under :: (Union effs ~> Union effs') -> Union (a ': effs) ~> Union (a ': effs')
+under f u = case decomp u of
+    Left u' -> weaken (f u')
+    Right t -> inj t
+
+class UnderN as where
+    underN :: (Union effs ~> Union effs') -> Union (as :++: effs) ~> Union (as :++: effs')
+instance UnderN '[] where
+    underN f = f
+instance UnderN as => UnderN (a ': as) where
+    underN f = under (underN @as f)
+
 
 {- Note [Various raising helpers]
 These are all to help with the issue where you have something of type
@@ -69,43 +99,38 @@ class CanWeakenEnd as effs where
 instance effs ~ (a ': effs') => CanWeakenEnd '[a] effs where
     weakenEnd u = inj (extract u)
 instance (effs ~ (a ': effs'), CanWeakenEnd (b ': as) effs') => CanWeakenEnd (a ': b ': as) effs where
-    weakenEnd u = case decomp u of
-        Left u' -> weaken $ weakenEnd u'
-        Right t -> inj t
+    weakenEnd = under weakenEnd
 
 weakenUnder :: forall effs a b . Union (a ': effs) ~> Union (a ': b ': effs)
-weakenUnder u = case decomp u of
-    Left u' -> weaken $ weaken u'
-    Right t -> inj t
+weakenUnder = under weaken
 
-weakenUnderN :: forall effs' effs a . Weakens effs' => Union (a ': effs) ~> Union (a ': (effs' :++: effs))
-weakenUnderN u = case decomp u of
-    Left u' -> weaken $ weakens @effs' @effs u'
-    Right t -> inj t
+weakenNUnder :: forall effs' effs a . Weakens effs' => Union (a ': effs) ~> Union (a ': (effs' :++: effs))
+weakenNUnder = under (weakens @effs' @effs)
+
+-- basically applies `under` n times to `weaken` composed m times, n = length as, m = length effs'
+weakenMUnderN :: forall effs' as effs . (UnderN as, Weakens effs') => Union (as :++: effs) ~> Union (as :++: (effs' :++: effs))
+weakenMUnderN = underN @as (weakens @effs' @effs)
+
 
 raiseEnd :: forall effs as. CanWeakenEnd as effs => Eff as ~> Eff effs
-raiseEnd = loop where
-    loop = \case
-        Val a -> pure a
-        E u q -> E (weakenEnd u) (tsingleton $ qComp q loop)
+raiseEnd = mapEffs weakenEnd
 
 raiseUnder :: forall effs a b . Eff (a ': effs) ~> Eff (a ': b ': effs)
-raiseUnder = loop where
-    loop = \case
-        Val a -> pure a
-        E u q -> E (weakenUnder u) (tsingleton $ qComp q loop)
+raiseUnder = mapEffs weakenUnder
 
-raiseUnder2 :: forall effs a b c . Eff (a ': effs) ~> Eff (a ': b ': c ': effs)
-raiseUnder2 = loop where
-    loop = \case
-        Val a -> pure a
-        E u q -> E (weakenUnder $ weakenUnder u) (tsingleton $ qComp q loop)
+raiseUnder2 :: forall effs a b c . Eff (a ': b ': effs) ~> Eff (a ': b ': c ': effs)
+raiseUnder2 = mapEffs (under $ under weaken)
 
-raiseUnderN :: forall effs' effs a . Weakens effs' => Eff (a ': effs) ~> Eff (a ': (effs' :++: effs))
-raiseUnderN = loop where
-    loop = \case
-        Val a -> pure a
-        E u q -> E (weakenUnderN @effs' @effs @a u) (tsingleton $ qComp q loop)
+raise2Under :: forall effs a b c . Eff (a ': effs) ~> Eff (a ': b ': c ': effs)
+raise2Under = mapEffs (under $ weaken . weaken)
+
+raiseNUnder :: forall effs' effs a . Weakens effs' => Eff (a ': effs) ~> Eff (a ': (effs' :++: effs))
+raiseNUnder = mapEffs (weakenNUnder @effs' @effs @a)
+
+-- | Raise m effects under the top n effects
+raiseMUnderN :: forall effs' as effs . (UnderN as, Weakens effs') => Eff (as :++: effs) ~> Eff (as :++: (effs' :++: effs))
+raiseMUnderN = mapEffs (weakenMUnderN @effs' @as @effs)
+
 
 -- | Handle a 'State' effect in terms of a "larger" 'State' effect from which we have a lens.
 handleZoomedState :: Member (State s2) effs => Lens' s2 s1 -> (State s1 ~> Eff effs)

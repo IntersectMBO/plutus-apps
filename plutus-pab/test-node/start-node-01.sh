@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cabal exec cardano-node -- run \
+cardano-node -- run \
     --config configuration.yaml \
     --topology node1/topology.json \
     --database-path node1/db \

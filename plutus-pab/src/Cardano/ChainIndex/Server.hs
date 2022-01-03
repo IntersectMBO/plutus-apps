@@ -18,7 +18,7 @@ import Control.Monad.Freer.Extras.Log
 import Servant.Client (BaseUrl (baseUrlPort))
 
 import Data.Coerce (coerce)
-import Plutus.PAB.Monitoring.Util (runLogEffects)
+import Plutus.Monitoring.Util (runLogEffects)
 
 import Cardano.ChainIndex.ChainIndex (processChainIndexEffects, syncState)
 import Control.Monad.IO.Class (MonadIO (..))

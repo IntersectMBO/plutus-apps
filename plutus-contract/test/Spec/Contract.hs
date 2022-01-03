@@ -16,16 +16,16 @@ module Spec.Contract(tests, loopCheckpointContract, initial, upd) where
 
 import Control.Lens hiding ((.>))
 import Control.Monad (forever, replicateM_, void)
-import Control.Monad.Error.Lens
+import Control.Monad.Error.Lens (throwing)
 import Control.Monad.Except (catchError)
-import Control.Monad.Freer.Extras.Log (LogLevel (..))
+import Control.Monad.Freer.Extras.Log (LogLevel (Debug))
 import Control.Monad.Freer.Extras.Log qualified as Log
 import Data.Functor.Apply ((.>))
 import Data.Map qualified as Map
-import Data.Void
-import Test.Tasty
+import Data.Void (Void)
+import Test.Tasty (TestTree, testGroup)
 
-import Ledger (Address, PubKeyHash)
+import Ledger (Address, PaymentPubKeyHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
@@ -33,22 +33,29 @@ import Ledger.Scripts (datumHash)
 import Ledger.Tx (getCardanoTxId)
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
-import Plutus.Contract.Test
-import Plutus.Contract.Types (ResumableResult (..), responses)
+import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
+                             assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
+                             assertUserLog, checkEmulatorFails, checkPredicateOptions, defaultCheckOptions,
+                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, waitingForSlot,
+                             walletFundsChange, (.&&.))
+import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
-import Plutus.Trace.Emulator.Types (ContractInstanceLog (..), ContractInstanceMsg (..), ContractInstanceState (..),
-                                    UserThreadMsg (..))
-import Plutus.V1.Ledger.Scripts (Datum (..), DatumHash)
-import Plutus.V1.Ledger.Tx (TxOut (..))
+import Plutus.Trace.Emulator.Types (ContractInstanceLog (_cilMessage),
+                                    ContractInstanceMsg (ContractLog, CurrentRequests, HandledRequest, ReceiveEndpointCall, Started, StoppedNoError),
+                                    ContractInstanceState (ContractInstanceState, instContractState),
+                                    UserThreadMsg (UserLog))
+import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash)
+import Plutus.V1.Ledger.Tx (TxOut (txOutDatumHash))
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
-import Wallet.Emulator.Wallet (walletAddress)
+import Wallet.Emulator.Wallet (mockWalletAddress)
 
-import Plutus.ChainIndex.Types
-import Plutus.Contract.Effects (ActiveEndpoint (..))
+import Plutus.ChainIndex.Types (RollbackState (Committed), TxOutState (Spent, Unspent), TxOutStatus, TxStatus,
+                                TxValidity (TxValid))
+import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata))
 
 tests :: TestTree
 tests =
@@ -128,7 +135,7 @@ tests =
                 (waitingForSlot theContract tag 20)
                 (void $ activateContract w1 theContract tag)
 
-        , let smallTx = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.adaValueOf 10)
+        , let smallTx = Constraints.mustPayToPubKey (mockWalletPaymentPubKeyHash w2) (Ada.adaValueOf 10)
               theContract :: Contract () Schema ContractError () = submitTx smallTx >>= awaitTxConfirmed . getCardanoTxId >> submitTx smallTx >>= awaitTxConfirmed . getCardanoTxId
           in run "handle several blockchain events"
                 (walletFundsChange w1 (Ada.adaValueOf (-20))
@@ -159,7 +166,7 @@ tests =
                 .&&. assertNoFailedTransactions)
             (void $ Trace.payToWallet w1 w2 (Ada.adaValueOf 20))
 
-        , let theContract :: Contract () Schema ContractError () = void $ awaitUtxoProduced (walletAddress w2)
+        , let theContract :: Contract () Schema ContractError () = void $ awaitUtxoProduced (mockWalletAddress w2)
           in run "await utxo produced"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -168,7 +175,7 @@ tests =
                 Trace.waitNSlots 1
             )
 
-        , let theContract :: Contract () Schema ContractError () = void (utxosAt (walletAddress w1) >>= awaitUtxoSpent . fst . head . Map.toList)
+        , let theContract :: Contract () Schema ContractError () = void (utxosAt (mockWalletAddress w1) >>= awaitUtxoSpent . fst . head . Map.toList)
           in run "await txout spent"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -177,18 +184,18 @@ tests =
                 Trace.waitNSlots 1
             )
 
-        , let theContract :: Contract () Schema ContractError PubKeyHash = ownPubKeyHash
+        , let theContract :: Contract () Schema ContractError PaymentPubKeyHash = ownPaymentPubKeyHash
           in run "own public key"
-                (assertDone theContract tag (== walletPubKeyHash w2) "should return the wallet's public key")
+                (assertDone theContract tag (== mockWalletPaymentPubKeyHash w2) "should return the wallet's public key")
                 (void $ activateContract w2 (void theContract) tag)
 
-        , let payment = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.adaValueOf 10)
+        , let payment = Constraints.mustPayToPubKey (mockWalletPaymentPubKeyHash w2) (Ada.adaValueOf 10)
               theContract :: Contract () Schema ContractError () = submitTx payment >>= awaitTxConfirmed . Ledger.getCardanoTxId
           in run "await tx confirmed"
             (assertDone theContract tag (const True) "should be done")
             (activateContract w1 theContract tag >> void (Trace.waitNSlots 1))
 
-        , let payment = Constraints.mustPayToPubKey (walletPubKeyHash w2) (Ada.adaValueOf 10)
+        , let payment = Constraints.mustPayToPubKey (mockWalletPaymentPubKeyHash w2) (Ada.adaValueOf 10)
               theContract :: Contract () Schema ContractError TxStatus =
                 submitTx payment >>= awaitTxStatusChange . Ledger.getCardanoTxId
           in run "await change in tx status"
@@ -196,7 +203,7 @@ tests =
             (activateContract w1 theContract tag >> void (Trace.waitNSlots 1))
 
         , let c :: Contract [Maybe DatumHash] Schema ContractError () = do
-                let w2PubKeyHash = walletPubKeyHash w2
+                let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
                 let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash datum (Ada.adaValueOf 10)
                 tx <- submitTx payment
                 let txOuts = fmap fst $ Ledger.getCardanoTxOutRefs tx
@@ -215,7 +222,7 @@ tests =
 
         , let c :: Contract [TxOutStatus] Schema ContractError () = do
                 -- Submit a payment tx of 10 lovelace to W2.
-                let w2PubKeyHash = walletPubKeyHash w2
+                let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
                 let payment = Constraints.mustPayToPubKey w2PubKeyHash
                                                           (Ada.adaValueOf 10)
                 tx <- submitTx payment
@@ -230,7 +237,7 @@ tests =
                 -- We submit another tx which spends the utxo belonging to the
                 -- contract's caller. It's status should be changed eventually
                 -- to confirmed spent.
-                pubKeyHash <- ownPubKeyHash
+                pubKeyHash <- ownPaymentPubKeyHash
                 ciTxOutM <- txOutFromRef utxo
                 let lookups = Constraints.unspentOutputs (maybe mempty (Map.singleton utxo) ciTxOutM)
                 submitTxConstraintsWith @Void lookups $ Constraints.mustSpendPubKeyOutput utxo
@@ -300,6 +307,13 @@ tests =
                 void $ Trace.assert "Always fails" $ const False
                 void $ Trace.waitNSlots 10
           in checkEmulatorFails "assert throws error" (defaultCheckOptions & minLogLevel .~ Debug) (waitingForSlot theContract tag 10) emTrace
+
+        , let c :: Contract () Schema ContractError () = do
+                let payment = Constraints.mustSatisfyAnyOf [mempty]
+                void $ submitTx payment
+          in run "mustSatisfyAnyOf [mempty] works"
+            ( assertDone c tag (const True) "should be done"
+            ) (void $ activateContract w1 c tag)
         ]
 
 checkpointContract :: Contract () Schema ContractError ()
