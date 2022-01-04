@@ -10,7 +10,6 @@
 
 module Plutus.PAB.Run.Command
     ( ConfigCommand(..)
-    , NoConfigCommand(..)
     , allServices
     ) where
 
@@ -43,11 +42,3 @@ allServices =
     , PABWebserver
     , ChainIndex
     ]
-
-
-data NoConfigCommand =
-    WriteDefaultConfig -- ^ Write default logging configuration
-          { outputFile :: !FilePath -- ^ Path to write configuration to
-          }
-    deriving stock (Show, Eq, Generic)
-    deriving anyclass JSON.ToJSON

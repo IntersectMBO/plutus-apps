@@ -15,14 +15,13 @@
 {-# LANGUAGE StrictData            #-}
 {-# LANGUAGE TypeApplications      #-}
 
-module Plutus.PAB.Run.Cli (ConfigCommandArgs(..), runConfigCommand, runNoConfigCommand) where
+module Plutus.PAB.Run.Cli (ConfigCommandArgs(..), runConfigCommand) where
 
 -----------------------------------------------------------------------------------------------------------------------
 -- Command interpretation
 -----------------------------------------------------------------------------------------------------------------------
 
 import Cardano.BM.Configuration (Configuration)
-import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
 import Cardano.Node.Server qualified as NodeServer
@@ -63,8 +62,7 @@ import Plutus.PAB.Db.Beam qualified as Beam
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltinState, getResponse)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
-import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartMockNode),
-                               NoConfigCommand (WriteDefaultConfig, outputFile))
+import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartMockNode))
 import Plutus.PAB.Types (Config (Config, dbConfig, pabWebserverConfig), chainIndexConfig, nodeServerConfig,
                          walletServerConfig)
 import Plutus.PAB.Webserver.Server qualified as PABServer
@@ -75,14 +73,6 @@ import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitWith)
 import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Types qualified as Wallet
-
-runNoConfigCommand ::
-    NoConfigCommand
-    -> IO ()
-runNoConfigCommand = \case
-
-    -- Get default logging configuration
-    WriteDefaultConfig{outputFile} -> LM.defaultConfig >>= flip CM.exportConfiguration outputFile
 
 data ConfigCommandArgs a =
     ConfigCommandArgs
