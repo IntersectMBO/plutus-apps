@@ -99,16 +99,16 @@
     "haskell-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1639641491,
-        "narHash": "sha256-jldqMYiOefq/qthLyoTc6rV2VWsGSKnpkgqPGG6Ni/o=",
+        "lastModified": 1641182117,
+        "narHash": "sha256-R1iAtFMe6F9Vo8xxjnmGeMRhbZLK6vrggadPfts93OE=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "e52331f7f7b0b1545e29a2f023ce15f5239eacb8",
+        "rev": "0ef71cf3dd3eae5d5026c1ee840e8a78f5d8b5c0",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "angerman/fix-ghcjs",
+        "ref": "hkm/emscripten-update",
         "repo": "haskell.nix",
         "type": "github"
       }

@@ -20,7 +20,7 @@
       flake = false;
     };
     haskell-nix = {
-      url = "github:input-output-hk/haskell.nix/angerman/fix-ghcjs/";
+      url = "github:input-output-hk/haskell.nix/hkm/emscripten-update/";
       flake = false;
     };
 
