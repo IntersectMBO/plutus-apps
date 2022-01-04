@@ -99,6 +99,7 @@ library
         Plutus.PAB.Events.Contract
         Plutus.PAB.Events.ContractInstanceState
         Plutus.PAB.Instances
+        Plutus.PAB.LocalCluster.Run
         Plutus.PAB.Monitoring.Config
         Plutus.PAB.Monitoring.Monitoring
         Plutus.PAB.Monitoring.PABLogMsg
@@ -122,9 +123,11 @@ library
     build-depends:
         , freer-extras
         , playground-common
+        , plutus-chain-index
         , plutus-chain-index-core
         , plutus-contract
         , plutus-ledger
+        , plutus-ledger-api
         , plutus-ledger-constraints
         , plutus-tx
         , plutus-tx-plugin
@@ -139,15 +142,22 @@ library
         beam-migrate -any,
         beam-sqlite -any,
         bytestring -any,
+        cardano-addresses -any,
         cardano-api -any,
         cardano-slotting -any,
+        cardano-wallet -any,
+        cardano-wallet-cli -any,
         cardano-wallet-core -any,
+        cardano-wallet-core-integration -any,
+        cardano-wallet-launcher -any,
         containers -any,
         contra-tracer -any,
         cryptonite -any,
         data-default -any,
         either -any,
+        directory -any,
         exceptions -any,
+        filepath -any,
         freer-simple -any,
         generic-arbitrary -any,
         http-client -any,
@@ -163,8 +173,6 @@ library
         optparse-applicative -any,
         ouroboros-network -any,
         ouroboros-network-framework -any,
-        playground-common -any,
-        plutus-ledger-api -any,
         prettyprinter >=1.1.0.1,
         purescript-bridge -any,
         quickcheck-instances -any,
@@ -228,7 +236,6 @@ executable plutus-pab-setup
         plutus-contract -any,
         plutus-ledger -any,
         plutus-pab -any,
-        plutus-use-cases -any,
         prettyprinter         >=1.1.0.1,
         purescript-bridge -any,
         row-types -any,
@@ -241,6 +248,8 @@ executable plutus-pab-setup
         uuid -any,
         yaml -any,
 
+-- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
+-- depend on plutus-use-cases anymore.
 executable plutus-pab-examples
     main-is:          Main.hs
     hs-source-dirs:   examples
@@ -278,6 +287,8 @@ executable plutus-pab-examples
         , text
         , openapi3
 
+-- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
+-- depend on plutus-use-cases anymore.
 executable plutus-uniswap
     main-is:          Main.hs
     hs-source-dirs:   examples/uniswap
@@ -304,6 +315,8 @@ executable plutus-uniswap
         , text
         , openapi3
 
+-- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
+-- depend on plutus-use-cases anymore.
 executable plutus-pab-local-cluster
     main-is:          Main.hs
     hs-source-dirs:
@@ -323,6 +336,17 @@ executable plutus-pab-local-cluster
         -Wno-missing-import-lists -Wredundant-constraints -O0
 
     build-depends:
+        , playground-common
+        , plutus-chain-index
+        , plutus-chain-index-core
+        , plutus-contract
+        , plutus-ledger
+        , plutus-ledger-api
+        , plutus-ledger-constraints
+        , plutus-pab
+        , plutus-use-cases
+
+    build-depends:
         , aeson
         , base              >=4.9 && <5
         , containers
@@ -333,9 +357,7 @@ executable plutus-pab-local-cluster
         , beam-sqlite
         , sqlite-simple
         , freer-extras
-        , plutus-pab
         , beam-migrate
-        , plutus-use-cases
         , cardano-wallet
         , cardano-wallet-cli
         , cardano-wallet-launcher
@@ -344,16 +366,9 @@ executable plutus-pab-local-cluster
         , iohk-monitoring
         , lobemo-backend-ekg
         , contra-tracer
-        , plutus-chain-index-core
-        , plutus-chain-index
         , cardano-api
         , lens
         , prettyprinter
-        , playground-common
-        , plutus-ledger
-        , plutus-ledger-api
-        , plutus-ledger-constraints
-        , plutus-contract
         , freer-simple
         , data-default
         , row-types
@@ -381,6 +396,7 @@ executable plutus-pab-test-psgenerator
         Plutus.PAB.Effects.Contract.ContractTest
         Plutus.PAB.Simulator.Test
 
+    -- TODO plutus-use-cases dep needs to be removed
     build-depends:
         QuickCheck -any,
         aeson -any,
@@ -490,6 +506,7 @@ test-suite plutus-pab-test-full
         Plutus.PAB.Effects.Contract.ContractTest
         Plutus.PAB.Simulator.Test
 
+    -- TODO plutus-use-cases dep needs to be removed
     build-depends:
         QuickCheck -any,
         aeson -any,
@@ -554,6 +571,7 @@ test-suite plutus-pab-test-full-long-running
         Plutus.PAB.Effects.Contract.ContractTest
         Plutus.PAB.Simulator.Test
 
+    -- TODO plutus-use-cases dep needs to be removed
     build-depends:
         QuickCheck -any,
         aeson -any,
