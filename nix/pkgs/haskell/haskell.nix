@@ -538,7 +538,7 @@ let
       })
       ({ pkgs, ... }: {
         packages.plutus-pab.components.exes.pab-mktx-lib.postInstall = ''
-          ${pkgs.tree}/bin/tree $out
+          ${pkgs.buildPackages.tree}/bin/tree $out
           mkdir -p $out/_pkg
           # copy over includes, we might want those, but maybe not.
           cp -r $out/lib/*/*/include $out/_pkg/
@@ -546,8 +546,8 @@ let
           # rolled up one with all dependencies included.
           find ./dist -name "libHS*-ghc*.a" -exec cp {} $out/_pkg \;
 
-          ${pkgs.tree}/bin/tree $out/_pkg
-          (cd $out/_pkg; ${pkgs.zip}/bin/zip -r -9 $out/pkg.zip *)
+          ${pkgs.buildPackages.tree}/bin/tree $out/_pkg
+          (cd $out/_pkg; ${pkgs.buildPackages.zip}/bin/zip -r -9 $out/pkg.zip *)
           rm -fR $out/_pkg
 
           mkdir -p $out/nix-support
