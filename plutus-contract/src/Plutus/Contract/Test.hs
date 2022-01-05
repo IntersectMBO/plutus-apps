@@ -51,7 +51,7 @@ module Plutus.Contract.Test(
     , waitingForSlot
     , valueAtAddress
     , dataAtAddress
-    , outputsAtAddress
+    , checkOutputsWithDatumAtAddress
     , reasonable
     , reasonable'
     -- * Checking predicates
@@ -357,19 +357,19 @@ dataAtAddress address check =
               <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxo)
       pure result
 
--- | Get a pair of a given type 'd' datum and the corresponding value out of a Transaction Output.
-getTxOuts :: forall d. (FromData d) => Ledger.TxOutTx -> Maybe (Either Ledger.DatumHash d, Value)
-getTxOuts (Ledger.TxOutTx _ (Ledger.TxOut _ _ Nothing)) = Nothing
-getTxOuts (Ledger.TxOutTx tx' (Ledger.TxOut _ vl (Just datumHash))) = Just $
-    case Ledger.lookupDatum tx' datumHash >>= (Ledger.getDatum >>> fromBuiltinData @d) of
-        Just dt -> (Right dt, vl)
-        _       -> (Left datumHash, vl)
+-- | Get a pair of a given type 'd' datum/datum-hash and the corresponding value out of a Transaction Output.
+getOutputWithDatum :: forall d. FromData d => Ledger.TxOutTx -> Maybe (Either Ledger.DatumHash d, Value)
+getOutputWithDatum (Ledger.TxOutTx tx' (Ledger.TxOut _ v (Just dh))) = Just $ maybe
+  (Left dh, v)
+  (\dt -> (Right dt, v))
+  (Ledger.lookupDatum tx' dh >>= (Ledger.getDatum >>> fromBuiltinData @d))
+getOutputWithDatum _ = Nothing
 
--- | Check the list of outputs at an address meet some conditions.
-outputsAtAddress :: forall d. FromData d => Address -> ([(Either Ledger.DatumHash d, Value)] -> Bool) -> TracePredicate
-outputsAtAddress address check =
+-- | Check the list of outputs which include datum/datum-hash at an address meet some given conditions.
+checkOutputsWithDatumAtAddress :: forall d. FromData d => Address -> ([(Either Ledger.DatumHash d, Value)] -> Bool) -> TracePredicate
+checkOutputsWithDatumAtAddress address check =
   flip postMapM (L.generalize $ Folds.utxoAtAddress address) $ \utxo -> do
-    let outputs = mapMaybe (getTxOuts @d) (snd <$> M.toList utxo)
+    let outputs = mapMaybe (getOutputWithDatum @d) (snd <$> M.toList utxo)
         result = check outputs
     unless result $ do
       tell @(Doc Void)
