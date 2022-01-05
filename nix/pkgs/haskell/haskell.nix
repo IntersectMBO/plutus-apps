@@ -540,11 +540,8 @@ let
         packages.plutus-pab.components.exes.pab-mktx-lib.postInstall = ''
           ${pkgs.buildPackages.tree}/bin/tree $out
           mkdir -p $out/_pkg
-          # copy over includes, we might want those, but maybe not.
-          cp -r $out/lib/*/*/include $out/_pkg/
-          # find the libHS...ghc-X.Y.Z.a static library; this is the
-          # rolled up one with all dependencies included.
-          find ./dist -name "libHS*-ghc*.a" -exec cp {} $out/_pkg \;
+          # copy over all executables
+          cp -r $out/bin/* $out/_pkg/
 
           ${pkgs.buildPackages.tree}/bin/tree $out/_pkg
           (cd $out/_pkg; ${pkgs.buildPackages.zip}/bin/zip -r -9 $out/pkg.zip *)
