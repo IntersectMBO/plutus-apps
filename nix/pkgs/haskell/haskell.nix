@@ -83,6 +83,7 @@ let
           plutus-ledger.package.buildable = false;
           plutus-ledger-constraints.package.buildable = false;
           plutus-pab.package.buildable = false;
+          plutus-pab-executables.package.buildable = false;
           plutus-playground-server.package.buildable = false; # Would also require libpq
           plutus-tx-plugin.package.buildable = false;
           plutus-use-cases.package.buildable = false;
@@ -140,7 +141,7 @@ let
           # Relies on cabal-doctest, just turn it off in the Nix build
           prettyprinter-configurable.components.tests.prettyprinter-configurable-doctest.buildable = lib.mkForce false;
 
-          plutus-pab.components.tests.plutus-pab-test-full-long-running = {
+          plutus-pab-executables.components.tests.plutus-pab-test-full-long-running = {
             platforms = lib.platforms.linux;
           };
 
@@ -156,6 +157,7 @@ let
           plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
           plutus-playground-server.ghcOptions = [ "-Werror" ];
           plutus-pab.ghcOptions = [ "-Werror" ];
+          plutus-pab-executables.ghcOptions = [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
           plutus-use-cases.ghcOptions = [ "-Werror" ];
 

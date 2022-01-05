@@ -36,7 +36,6 @@ import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
 import Plutus.PAB.Run.Cli
 import Plutus.PAB.Run.CommandParser
-import Plutus.PAB.Run.PSGenerator (HasPSTypes)
 import Plutus.PAB.Types (Config (..), DevelopmentOptions (..), PABError (MissingConfigFileOption))
 import Prettyprinter (Pretty (pretty))
 import Servant qualified
@@ -51,7 +50,6 @@ runWith :: forall a.
     , Pretty a
     , Servant.MimeUnrender Servant.JSON a
     , HasDefinitions a
-    , HasPSTypes a
     , OpenApi.ToSchema a
     )
     => BuiltinHandler a -- ^ Builtin contract handler. Can be created with 'Plutus.PAB.Effects.Contract.Builtin.handleBuiltin'.
@@ -69,7 +67,6 @@ runWithOpts :: forall a.
     , Pretty a
     , Servant.MimeUnrender Servant.JSON a
     , HasDefinitions a
-    , HasPSTypes a
     , OpenApi.ToSchema a
     )
     => BuiltinHandler a

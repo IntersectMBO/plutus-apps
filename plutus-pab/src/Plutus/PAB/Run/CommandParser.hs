@@ -159,7 +159,6 @@ commandParser =
                              , reportAvailableContractsParser
                              ]))
                    (fullDesc <> progDesc "Manage your smart contracts."))
-        , psGeneratorCommandParser
         ]
 
 migrationParser :: Mod CommandFields ConfigCommand
@@ -167,17 +166,6 @@ migrationParser =
     command "migrate" $
     flip info (fullDesc <> progDesc "Update the database with the latest schema.") $
         pure Migrate
-
-psGeneratorCommandParser :: Mod CommandFields ConfigCommand
-psGeneratorCommandParser =
-    command "psapigenerator" $
-    flip info (fullDesc <> progDesc "Generate the frontend's PureScript files for the webserver API.") $ do
-        psApiGenOutputDir <-
-            argument
-                str
-                (metavar "OUTPUT_DIR" <>
-                 help "Output directory to write PureScript files to.")
-        pure $ PSApiGenerator {psApiGenOutputDir}
 
 mockNodeParser :: Mod CommandFields ConfigCommand
 mockNodeParser =

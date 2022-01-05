@@ -33,7 +33,7 @@ rec {
 
   inherit (plutus-apps) web-ghc;
 
-  inherit (haskell.packages.plutus-pab.components.exes)
+  inherit (haskell.packages.plutus-pab-executables.components.exes)
     plutus-pab-examples
     plutus-uniswap;
 
@@ -51,9 +51,9 @@ rec {
   };
 
   # TODO: Fails for now because of webpack can't include `nami-wallet` lib in it's bundle.
-  # To reproduce the error, run `npm run build:webpack:prod` in `plutus-pab/demo/pab-nami/client`
+  # To reproduce the error, run `npm run build:webpack:prod` in `plutus-pab-executables/demo/pab-nami/client`
   pab-nami-demo = pkgs.recurseIntoAttrs rec {
-    inherit (pkgs.callPackage ./plutus-pab/demo/pab-nami/client {
+    inherit (pkgs.callPackage ./plutus-pab-executables/demo/pab-nami/client {
       inherit pkgs haskell webCommon;
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
     }) client pab-setup-invoker pab-nami-demo-invoker generate-purescript generated-purescript start-backend;
