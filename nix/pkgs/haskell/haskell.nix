@@ -474,6 +474,10 @@ let
             emzlib = pkgs.zlib.overrideAttrs (attrs: {
               # makeFlags in nixpks zlib derivation depends on stdenv.cc.targetPrefix, which we don't have :(
 
+              prePatch = ''
+                export HOME=$(mktemp -d)
+                export PYTHON=${pkgs.buildPackages.buildPackages.python2}/bin/python
+              '' + attrs.prePatch or "";
               makeFlags = "PREFIX=js-unknown-ghcjs-";
               # We need the same patching as macOS
               postPatch = ''
@@ -481,6 +485,9 @@ let
                   --replace '/usr/bin/libtool' 'emar' \
                   --replace 'AR="libtool"' 'AR="emar"' \
                   --replace 'ARFLAGS="-o"' 'ARFLAGS="-r"'
+              '';
+              configurePhase = ''
+                emconfigure ./configure --prefix=$out --static
               '';
 
               nativeBuildInputs = (attrs.nativeBuildInputs or [ ]) ++ (with pkgs.buildPackages.buildPackages; [ emscripten python2 ]);
@@ -498,7 +505,7 @@ let
             lzma.components.library.libs = lib.mkForce [ pkgs.buildPackages.lzma ];
             cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
             cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
-            digest.components.library.libs = lib.mkForce [ emzlib ];
+            digest.components.library.libs = lib.mkForce [ emzlib.static emzlib ];
             plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
             iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
             plutus-pab.components.tests.psgenerator.buildable = false;
