@@ -35,6 +35,7 @@ writeWhat :: Command -> String
 writeWhat (Scripts FullyAppliedValidators) = "scripts (fully applied)"
 writeWhat (Scripts UnappliedValidators)    = "scripts (unapplied)"
 writeWhat Transactions{}                   = "transactions"
+writeWhat MkTxLogs                         = "mkTx logs"
 
 pathParser :: Parser FilePath
 pathParser = strArgument (metavar "SCRIPT_PATH" <> help "output path")
@@ -48,7 +49,7 @@ networkIdParser =
     in p <|> pure C.Mainnet
 
 commandParser :: Parser Command
-commandParser = hsubparser $ mconcat [scriptsParser, transactionsParser]
+commandParser = hsubparser $ mconcat [scriptsParser, transactionsParser, mkTxParser]
 
 scriptsParser :: Mod CommandFields Command
 scriptsParser =
@@ -63,6 +64,13 @@ transactionsParser =
     info
         (Transactions <$> networkIdParser <*> protocolParamsParser)
         (fullDesc <> progDesc "Write partial transactions")
+
+mkTxParser :: Mod CommandFields Command
+mkTxParser =
+    command "mktx" $
+    info
+        (pure MkTxLogs)
+        (fullDesc <> progDesc "Write logs for 'mkTx' calls")
 
 progParser :: ParserInfo ScriptsConfig
 progParser =

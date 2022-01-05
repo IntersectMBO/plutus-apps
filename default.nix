@@ -50,6 +50,15 @@ rec {
     }) client server generate-purescript start-backend;
   };
 
+  # TODO: Fails for now because of webpack can't include `nami-wallet` lib in it's bundle.
+  # To reproduce the error, run `npm run build:webpack:prod` in `plutus-pab/demo/pab-nami/client`
+  pab-nami-demo = pkgs.recurseIntoAttrs rec {
+    inherit (pkgs.callPackage ./plutus-pab/demo/pab-nami/client {
+      inherit pkgs haskell webCommon;
+      inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
+    }) client pab-setup-invoker pab-nami-demo-invoker generate-purescript generated-purescript start-backend;
+  };
+
   plutus-use-cases = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-use-cases {
     inherit haskell;
   });

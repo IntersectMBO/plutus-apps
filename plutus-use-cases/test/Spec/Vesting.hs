@@ -85,6 +85,8 @@ instance ContractModel VestingModel where
     , _t1Amount     = vestingTrancheAmount (vestingTranche1 params)
     , _t2Amount     = vestingTrancheAmount (vestingTranche2 params) }
 
+  initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w (vestingContract params) | w <- [w1, w2, w3] ]
+
   perform handle _ cmd = case cmd of
     Vest w -> do
       callEndpoint @"vest funds" (handle $ WalletKey w) ()
@@ -187,11 +189,8 @@ genWallet = elements wallets
 shrinkValue :: Value -> [Value]
 shrinkValue v = Ada.lovelaceValueOf <$> filter (\val -> val >= Ada.getLovelace Ledger.minAdaTxOut) (shrink (valueOf v Ada.adaSymbol Ada.adaToken))
 
-handleSpec :: [ContractInstanceSpec VestingModel]
-handleSpec = [ ContractInstanceSpec (WalletKey w) w (vestingContract params) | w <- [w1, w2, w3] ]
-
 prop_Vesting :: Actions VestingModel -> Property
-prop_Vesting = propRunActions_ handleSpec
+prop_Vesting = propRunActions_
 
 noLockProof :: NoLockedFundsProof VestingModel
 noLockProof = NoLockedFundsProof{
@@ -214,7 +213,7 @@ noLockProof = NoLockedFundsProof{
                       | otherwise = return ()
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptions handleSpec noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptions noLockProof
 
 -- Tests
 
@@ -287,5 +286,5 @@ expectedError =
 
 
 -- Util
-delay :: Integer -> Trace.EmulatorTrace ()
+delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
 delay n = void $ Trace.waitNSlots $ fromIntegral n

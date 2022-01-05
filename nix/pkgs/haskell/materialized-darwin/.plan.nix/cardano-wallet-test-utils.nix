@@ -13,7 +13,7 @@
       specVersion = "1.10";
       identifier = {
         name = "cardano-wallet-test-utils";
-        version = "2021.9.29";
+        version = "2021.12.15";
         };
       license = "Apache-2.0";
       copyright = "2018-2020 IOHK";
@@ -47,6 +47,7 @@
           (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
           (hsPkgs."either" or (errorHandler.buildDepError "either"))
           (hsPkgs."fmt" or (errorHandler.buildDepError "fmt"))
+          (hsPkgs."generics-sop" or (errorHandler.buildDepError "generics-sop"))
           (hsPkgs."hspec-core" or (errorHandler.buildDepError "hspec-core"))
           (hsPkgs."hspec-expectations" or (errorHandler.buildDepError "hspec-expectations"))
           (hsPkgs."hspec-golden-aeson" or (errorHandler.buildDepError "hspec-golden-aeson"))
@@ -95,10 +96,15 @@
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."cardano-wallet-test-utils" or (errorHandler.buildDepError "cardano-wallet-test-utils"))
+            (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+            (hsPkgs."extra" or (errorHandler.buildDepError "extra"))
             (hsPkgs."fmt" or (errorHandler.buildDepError "fmt"))
             (hsPkgs."hspec" or (errorHandler.buildDepError "hspec"))
             (hsPkgs."hspec-core" or (errorHandler.buildDepError "hspec-core"))
             (hsPkgs."hspec-expectations-lifted" or (errorHandler.buildDepError "hspec-expectations-lifted"))
+            (hsPkgs."generic-lens" or (errorHandler.buildDepError "generic-lens"))
+            (hsPkgs."generics-sop" or (errorHandler.buildDepError "generics-sop"))
+            (hsPkgs."lattices" or (errorHandler.buildDepError "lattices"))
             (hsPkgs."silently" or (errorHandler.buildDepError "silently"))
             (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
             (hsPkgs."unliftio" or (errorHandler.buildDepError "unliftio"))
@@ -108,7 +114,7 @@
             (hsPkgs.buildPackages.hspec-discover.components.exes.hspec-discover or (pkgs.buildPackages.hspec-discover or (errorHandler.buildToolDepError "hspec-discover:hspec-discover")))
             ];
           buildable = true;
-          modules = [ "Test/Hspec/ExtraSpec" ];
+          modules = [ "Test/Hspec/ExtraSpec" "Test/QuickCheck/ExtraSpec" ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "test-utils-unit-test.hs" ];
           };

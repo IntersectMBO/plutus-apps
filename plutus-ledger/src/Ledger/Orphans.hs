@@ -19,6 +19,7 @@ import Crypto.Hash qualified as Crypto
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
 import Data.Bifunctor (bimap)
+import Data.ByteArray qualified as BA
 import Data.OpenApi qualified as OpenApi
 import Data.Text qualified as Text
 import Data.Typeable (Proxy (Proxy), Typeable)
@@ -54,6 +55,10 @@ instance ToHttpApiData LedgerBytes where
 instance FromHttpApiData LedgerBytes where
     parseUrlPiece = bimap Text.pack fromBytes . JSON.tryDecode
 
+-- | ByteArrayAccess instance for signing support
+instance BA.ByteArrayAccess TxId where
+  length (TxId bis) = BA.length bis
+  withByteArray (TxId bis) = BA.withByteArray bis
 
 -- | OpenApi instances for swagger support
 

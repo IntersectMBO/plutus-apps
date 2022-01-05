@@ -16,9 +16,7 @@ nodeServerConfig:
   mscBaseUrl: http://localhost:9082
   mscSocketPath: /tmp/node-server.sock
   mscKeptBlocks: 100000
-  # mscNetworkId: "8"
-  # mscNetworkId: "1097911063"
-  mscNetworkId: "3"
+  mscNetworkId: "1097911063"
   mscSlotConfig:
     scSlotZeroTime: 1596059091000 # Wednesday, July 29, 2020 21:44:51 - shelley launch time in milliseconds
     scSlotLength: 1000 # In milliseconds
@@ -115,3 +113,11 @@ signingProcessConfig:
 metadataServerConfig:
   mdBaseUrl: http://localhost:9085
 
+developmentOptions:
+  pabRollbackHistory: null
+  pabResumeFrom:
+    { "tag" : "PointAtGenesis" }
+    # { "tag" : "Point"
+    # , "pointBlockId" : "613d23b8df670e3692f4e4ab59b179778519de15999ee1a51077fcc02a48abaa"
+    # , "pointSlot" : { "getSlot" : 45656608 }
+    # }

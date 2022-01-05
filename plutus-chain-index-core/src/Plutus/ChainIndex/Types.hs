@@ -13,7 +13,6 @@ module Plutus.ChainIndex.Types(
     , Tip(..)
     , Point(..)
     , pointsToTip
-    , blockNumber
     , tipAsPoint
     , TxValidity(..)
     , TxStatus
@@ -34,7 +33,8 @@ module Plutus.ChainIndex.Types(
     , TxOutBalance(..)
     , tobUnspentOutputs
     , tobSpentOutputs
-    , BlockProcessOption(..)
+    , ChainSyncBlock(..)
+    , TxProcessOption(..)
     ) where
 
 import Codec.Serialise (Serialise)
@@ -56,15 +56,18 @@ import Data.Set qualified as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Ledger (TxOutRef (..))
-import Ledger.Blockchain (Block, BlockId (..))
+import Ledger.Blockchain (BlockId (..))
+import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
 import Ledger.TxId (TxId)
 import PlutusTx.Lattice (MeetSemiLattice (..))
 import Prettyprinter (Pretty (..), (<+>))
 import Prettyprinter.Extras (PrettyShow (..))
 
+import Plutus.ChainIndex.Tx (ChainIndexTx)
+
 -- | Compute a hash of the block's contents.
-blockId :: Block -> BlockId
+blockId :: Ledger.Block -> BlockId
 blockId = BlockId
         . BA.convert
         . hash @_ @SHA256
@@ -106,10 +109,6 @@ instance Pretty Point where
         <>  ", blockId="
         <+> pretty pointBlockId
         <>  ")"
-
-blockNumber :: Tip -> Integer
-blockNumber TipAtGenesis = 0
-blockNumber (Tip _ _ bn) = toInteger bn
 
 tipAsPoint :: Tip -> Point
 tipAsPoint TipAtGenesis = PointAtGenesis
@@ -358,17 +357,23 @@ instance Monoid TxUtxoBalance where
     mappend = (<>)
     mempty = TxUtxoBalance mempty mempty
 
--- | User-customizable options to process a block.
+
+-- | User-customizable options to process a transaction.
 -- See #73 for more motivations.
-newtype BlockProcessOption =
-  BlockProcessOption
-    { bpoStoreTxs :: Bool
-    -- ^ Should the chain index store this batch of transactions or not.
-    -- If not, only handle the tip and UTXOs.
+newtype TxProcessOption = TxProcessOption
+    { tpoStoreTx :: Bool
+    -- ^ Should the chain index store this transaction or not.
+    -- If not, only handle the UTXOs.
     -- This, for example, allows applications to skip unwanted pre-Alonzo transactions.
     }
 
 -- We should think twice when setting the default option.
 -- For now, it should store all data to avoid weird non-backward-compatible bugs in the future.
-instance Default BlockProcessOption where
-  def = BlockProcessOption True
+instance Default TxProcessOption where
+    def = TxProcessOption { tpoStoreTx = True }
+
+-- | A block of transactions to be synced.
+data ChainSyncBlock = Block
+    { blockTip :: Tip
+    , blockTxs :: [(ChainIndexTx, TxProcessOption)]
+    }

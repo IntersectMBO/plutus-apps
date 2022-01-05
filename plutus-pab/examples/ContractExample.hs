@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 
 module ContractExample(
-    ExampleContracts(..)
+    ContractExample(..)
     , handlers
     ) where
 
@@ -46,36 +46,36 @@ import Plutus.PAB.Simulator (SimulatorEffectHandlers)
 import Plutus.PAB.Simulator qualified as Simulator
 import Schema (FormSchema)
 
-data ExampleContracts = UniswapInit
-                      | UniswapOwner
-                      | UniswapUser Contracts.Uniswap.Uniswap
-                      | GameStateMachine
-                      | PayToWallet
-                      | AtomicSwap
-                      | Currency
-                      | PrismMirror
-                      | PrismUnlockExchange
-                      | PrismUnlockSto
-                      | PingPong
-                      | PingPongAuto -- ^ Variant of 'PingPong' that starts the initialise phase automatically
-                      | WaitForTx TxId
-                      | IntegrationTest -- ^ Contract that runs a number of transactions (no user input)
+data ContractExample = UniswapInit
+                     | UniswapOwner
+                     | UniswapUser Contracts.Uniswap.Uniswap
+                     | GameStateMachine
+                     | PayToWallet
+                     | AtomicSwap
+                     | Currency
+                     | PrismMirror
+                     | PrismUnlockExchange
+                     | PrismUnlockSto
+                     | PingPong
+                     | PingPongAuto -- ^ Variant of 'PingPong' that starts the initialise phase automatically
+                     | WaitForTx TxId
+                     | IntegrationTest -- ^ Contract that runs a number of transactions (no user input)
     deriving (Eq, Ord, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
-instance Pretty ExampleContracts where
+instance Pretty ContractExample where
     pretty = viaShow
 
-instance HasPSTypes ExampleContracts where
+instance HasPSTypes ContractExample where
     psTypes =
-        [ equal . genericShow . argonaut $ mkSumType @ExampleContracts
+        [ equal . genericShow . argonaut $ mkSumType @ContractExample
         -- These types come from the Uniswap contract and need to be available in PS
         , equal . genericShow . argonaut $ mkSumType @Uniswap
         , equal . genericShow . argonaut $ mkSumType @(Coin A)
         , order . equal . genericShow $ argonaut $ mkSumType @U
         ]
 
-instance HasDefinitions ExampleContracts where
+instance HasDefinitions ContractExample where
     getDefinitions = [ UniswapInit
                      , UniswapOwner
                      , GameStateMachine
@@ -89,11 +89,11 @@ instance HasDefinitions ExampleContracts where
                      , PingPongAuto
                      , IntegrationTest
                      ]
-    getContract = getExampleContracts
-    getSchema = getExampleContractsSchema
+    getContract = getContractExample
+    getSchema = getContractExampleSchema
 
-getExampleContractsSchema :: ExampleContracts -> [FunctionSchema FormSchema]
-getExampleContractsSchema = \case
+getContractExampleSchema :: ContractExample -> [FunctionSchema FormSchema]
+getContractExampleSchema = \case
     UniswapInit         -> Builtin.endpointsToSchemas @Empty
     UniswapUser _       -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapUserSchema
     UniswapOwner        -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapOwnerSchema
@@ -109,8 +109,8 @@ getExampleContractsSchema = \case
     WaitForTx{}         -> Builtin.endpointsToSchemas @Empty
     IntegrationTest{}   -> Builtin.endpointsToSchemas @Empty
 
-getExampleContracts :: ExampleContracts -> SomeBuiltin
-getExampleContracts = \case
+getContractExample :: ContractExample -> SomeBuiltin
+getContractExample = \case
     UniswapInit         -> SomeBuiltin Contracts.Uniswap.setupTokens
     UniswapUser us      -> SomeBuiltin $ Contracts.Uniswap.userEndpoints us
     UniswapOwner        -> SomeBuiltin Contracts.Uniswap.ownerEndpoint
@@ -126,7 +126,7 @@ getExampleContracts = \case
     WaitForTx txi       -> SomeBuiltin (Contracts.WaitForTx.waitForTx txi)
     IntegrationTest     -> SomeBuiltin Contracts.IntegrationTest.run
 
-handlers :: SimulatorEffectHandlers (Builtin ExampleContracts)
+handlers :: SimulatorEffectHandlers (Builtin ContractExample)
 handlers =
     Simulator.mkSimulatorHandlers def def
     $ interpret (contractHandler Builtin.handleBuiltin)

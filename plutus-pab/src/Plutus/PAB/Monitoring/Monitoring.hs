@@ -6,9 +6,9 @@ module Plutus.PAB.Monitoring.Monitoring(
   , module Plutus.PAB.Monitoring.PABLogMsg
 
    -- * Utility functions for running tracers
-  , module Plutus.PAB.Monitoring.Util
+  , module Plutus.Monitoring.Util
   ) where
 
+import Plutus.Monitoring.Util
 import Plutus.PAB.Monitoring.Config
 import Plutus.PAB.Monitoring.PABLogMsg
-import Plutus.PAB.Monitoring.Util

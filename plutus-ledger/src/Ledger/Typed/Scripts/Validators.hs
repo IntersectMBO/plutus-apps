@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE TypeFamilies       #-}
 
 {-# OPTIONS_GHC -fno-specialise #-}
@@ -21,6 +22,7 @@ module Ledger.Typed.Scripts.Validators
     , unsafeMkTypedValidator
     , forwardingMintingPolicy
     , forwardingMintingPolicyHash
+    , generalise
     ) where
 
 import Data.Aeson (FromJSON, ToJSON)
@@ -99,6 +101,16 @@ data TypedValidator (a :: Type) =
         }
     deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
+
+{-| Generalise the typed validator to one that works with the 'Data' type.
+-}
+generalise :: forall a. TypedValidator a -> TypedValidator Any
+generalise TypedValidator{tvValidator, tvValidatorHash, tvForwardingMPS, tvForwardingMPSHash} =
+    -- we can do this safely because the on-chain validators are untyped, so they always
+    -- take 'BuiltinData' arguments. The validator script stays the same, so the conversion
+    -- from 'BuiltinData' to 'a' still takes place, even if it's not reflected in the type
+    -- signature anymore.
+    TypedValidator{tvValidator, tvValidatorHash, tvForwardingMPS, tvForwardingMPSHash}
 
 -- | Make a 'TypedValidator' from the 'CompiledCode' of a validator script and its wrapper.
 mkTypedValidator ::

@@ -1,0 +1,42 @@
+dbConfig:
+    dbConfigFile: pab-core.db
+    dbConfigPoolSize: 20
+
+pabWebserverConfig:
+  baseUrl: http://localhost:9080
+  staticDir: plutus-pab-client/dist
+  permissiveCorsPolicy: False
+  # Optional timeout (in seconds) for calls to endpoints that are not currently
+  # available. If this is not set, calls to unavailable endpoints fail
+  # immediately.
+  endpointTimeout: 5
+
+walletServerConfig:
+  tag: RemoteWalletConfig
+
+# Unfortunately, the 'nodeServerConfig' is mandatory in the PAB, even though we don't use it
+nodeServerConfig:
+  mscBaseUrl: http://localhost:9082
+  mscSocketPath: ./node-server.sock
+  mscKeptBlocks: 100
+  mscNetworkId: "1097911063" # Testnet network ID (main net = empty string)
+  mscSlotConfig:
+    scSlotZeroTime: 1596059091000 # Wednesday, July 29, 2020 21:44:51 - shelley launch time in milliseconds
+    scSlotLength: 1000 # In milliseconds
+  mscFeeConfig:
+    fcConstantFee:
+      getLovelace: 10 # Constant fee per transaction in lovelace
+    fcScriptsFeeFactor: 1.0 # Factor by which to multiply size-dependent scripts fee in lovelace
+  mscInitialTxWallets:
+    - getWallet: 1
+    - getWallet: 2
+    - getWallet: 3
+  mscNodeMode: AlonzoNode
+
+# Unfortunately, the 'chainIndexConfig' is mandatory in the PAB, even though we don't use it
+chainIndexConfig:
+  ciBaseUrl: http://localhost:9083
+
+# Unfortunately, the 'requestProcessingConfig' is mandatory in the PAB, even though we don't use it
+requestProcessingConfig:
+  requestProcessingInterval: 1

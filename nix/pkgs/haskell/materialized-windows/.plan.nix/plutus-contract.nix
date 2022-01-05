@@ -94,6 +94,7 @@
           "Plutus/Contract/Request"
           "Plutus/Contract/Checkpoint"
           "Plutus/Contract/Constraints"
+          "Plutus/Contract/Logging"
           "Plutus/Contract/Oracle"
           "Plutus/Contract/State"
           "Plutus/Contract/Schema"
@@ -147,8 +148,10 @@
           "Plutus/Trace/Tag"
           ] ++ (pkgs.lib).optionals (!(compiler.isGhcjs && true || system.isGhcjs || system.isWindows)) [
           "Plutus/Contract/Test"
-          "Plutus/Contract/Test/ContractModel"
           "Plutus/Contract/Test/Coverage"
+          "Plutus/Contract/Test/ContractModel"
+          "Plutus/Contract/Test/ContractModel/Internal"
+          "Plutus/Contract/Test/ContractModel/CrashTolerance"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -196,6 +199,7 @@
             "Spec/ThreadToken"
             "Spec/Secrets"
             "Spec/Plutus/Contract/Wallet"
+            "Spec/Plutus/Contract/Oracle"
             ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];

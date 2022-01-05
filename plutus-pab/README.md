@@ -51,7 +51,7 @@ Can be used to run end-to-end tests using a private local testnet.
 1. Build necessary components:
 
 ```
-> cabal build plutus-pab-local-cluster cardano-node cardano-wallet
+> cabal build plutus-pab-local-cluster
 ```
 
 2. Get config data:
@@ -87,7 +87,7 @@ confirmed. Integration test complete."
 ### psgenerator
 
 ```
-$ cabal run plutus-pab -- psgenerator
+$ cabal exec plutus-pab-setup -- psgenerator generated
 ```
 
 #### Description
@@ -101,7 +101,7 @@ Generates the purescript bridge code.
 ### migrate
 
 ```
-$ cabal run plutus-pab -- migrate
+$ cabal exec plutus-pab-examples -- migrate --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -115,25 +115,22 @@ Migrates the database in `pab-core.db` to the current schema.  The database cont
 ### all-servers
 
 ```
-$ cabal run plutus-pab -- all-servers
+$ cabal exec plutus-pab-examples -- all-servers --config plutus-pab.yaml.sample
 ```
 
 #### Description
 
-Combines the execution of all core services and mocks in the appropriate order:
+Combines the execution of all services in the appropriate order:
 
-* mocks
-    - mock node
-    - mock wallet
-* core services
-    - PAB webserver
-    - chain index
+* node (mock or real)
+* wallet (mock, local or remote)
+* PAB webserver
+* chain index
 
 #### Dependencies
 
 - plutus-pab.yaml
 - sqlite database
-- pab-client
 
 
 #### Source
@@ -143,24 +140,21 @@ Combines the execution of all core services and mocks in the appropriate order:
 ### client-services
 
 ```
-$ cabal run plutus-pab -- client-services
+$ cabal exec plutus-pab-examples -- client-services --config plutus-pab.yaml.sample
 ```
 
 #### Description
 
-Starts all mocks and core services *except for* the mock node service:
+Starts all services *except for* the node service:
 
-* mocks
-    - mock wallet
-* core services
-    - PAB webserver
-    - chain index
+* wallet (mock, local or remote)
+* PAB webserver
+* chain index
 
 #### Dependencies
 
 - plutus-pab.yaml
 - sqlite database
-- pab-client
 
 
 #### Source
@@ -170,7 +164,7 @@ Starts all mocks and core services *except for* the mock node service:
 ### wallet-server
 
 ```
-$ cabal run plutus-pab -- wallet-server
+$ cabal exec plutus-pab-examples -- wallet-server --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -183,18 +177,26 @@ Plutus specific wallet implementation for managing user funds on the blockchain.
 #### Dependencies
 
 - plutus-pab.yaml
-- mock node
+- node
 
 #### Source
 
+- [Cardano.Wallet.Types.WalletConfig](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/Types.hs)
+
+Mock wallet:
 - [Cardano.Wallet.Mock.API](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/Mock/API.hs)
-- [Cardano.Wallet.Mock.Server.main](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/Mock/Server.hs#L70)
-- [Cardano.Wallet.Mock.Types.WalletConfig](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/Mock/Types.hs#L110)
+- [Cardano.Wallet.Mock.Server.main](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/Mock/Server.hs)
+
+Local wallet:
+- [Cardano.Wallet.LocalClient](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/LocalClient.hs)
+
+Remote wallet:
+- [Cardano.Wallet.RemoteClient](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Cardano/Wallet/RemoteClient.hs)
 
 ### webserver
 
 ```
-$ cabal run plutus-pab -- webserver
+$ cabal exec plutus-pab-examples -- webserver --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -215,16 +217,16 @@ Serves the PAB user interface
 ### node-server
 
 ```
-$ cabal run plutus-pab -- node-server
+$ cabal exec plutus-pab-examples -- node-server --config plutus-pab.yaml.sample
 ```
 
 #### Description
 
-Mock-implementation of a Goguen node. Clients to this service are:
+Mock or real implementation of a Goguen node. Clients to this service are:
 
 - chain-index
 - webserver
-- mock wallet
+- wallet
 
 #### Dependencies
 
@@ -238,7 +240,7 @@ Mock-implementation of a Goguen node. Clients to this service are:
 ### chain-index
 
 ```
-$ cabal run plutus-pab -- chain-index
+$ cabal exec plutus-pab-examples -- chain-index --config plutus-pab.yaml.sample
 ```
 
 #### Description
@@ -251,7 +253,7 @@ for datum and script hashes. Clients to this service are:
 #### Dependencies
 
 - plutus-pab.yaml
-- mock node
+- node
 
 #### Source
 
@@ -261,7 +263,7 @@ for datum and script hashes. Clients to this service are:
 ### default-logging-config
 
 ```
-$ cabal run plutus-pab -- default-logging-config
+$ cabal exec plutus-pab-setup -- default-logging-config
 ```
 
 #### Description
