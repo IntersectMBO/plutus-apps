@@ -25,19 +25,20 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Ledger (Address, PaymentPubKeyHash)
+import Ledger (Address, PaymentPubKeyHash, Validator, validatorHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Scripts (datumHash)
+import Ledger.Scripts (datumHash, unitDatum, unitRedeemer)
 import Ledger.Tx (getCardanoTxId)
+import Ledger.Value qualified as Value
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
                              assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
-                             assertUserLog, checkEmulatorFails, checkPredicateOptions, defaultCheckOptions,
-                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, waitingForSlot,
-                             walletFundsChange, (.&&.))
+                             assertUserLog, changeInitialWalletValue, checkEmulatorFails, checkPredicateOptions,
+                             defaultCheckOptions, endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1,
+                             w2, waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Trace qualified as Trace
@@ -314,7 +315,36 @@ tests =
           in run "mustSatisfyAnyOf [mempty] works"
             ( assertDone c tag (const True) "should be done"
             ) (void $ activateContract w1 c tag)
+
+        , balanceTxnMinAda
         ]
+
+balanceTxnMinAda :: TestTree
+balanceTxnMinAda =
+    let ee = Value.singleton "ee" "ee" 1
+        ff = Value.singleton "ff" "ff" 1
+        options = defaultCheckOptions
+            & changeInitialWalletValue w1 (const $ Value.scale 1000 (Ada.adaValueOf 1 <> ee <> ff))
+        vHash = validatorHash someValidator
+
+        contract :: Contract () EmptySchema ContractError ()
+        contract = do
+            let constraints1 = Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 100 ff <> Ada.adaValueOf 2)
+                utx1 = either (error . show) id $ Constraints.mkTx @Void mempty constraints1
+            submitTxConfirmed utx1
+            utxo <- utxosAt someAddress
+            let txOutRef = head (Map.keys utxo)
+                constraints2 = Constraints.mustSpendScriptOutput txOutRef unitRedeemer
+                    <> Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 200 ee)
+                lookups2 = Constraints.unspentOutputs utxo <> Constraints.otherScript someValidator
+                utx2 = Constraints.adjustUnbalancedTx $ either (error . show) id $ Constraints.mkTx @Void lookups2 constraints2
+            submitTxConfirmed utx2
+
+        trace = do
+            Trace.activateContractWallet w1 contract
+            Trace.waitNSlots 2
+
+    in checkPredicateOptions options "balancing doesn't create outputs with no Ada" (assertDone contract "The contract" (const True) "should be done") (void trace)
 
 checkpointContract :: Contract () Schema ContractError ()
 checkpointContract = void $ do
@@ -340,8 +370,10 @@ errorContract = do
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
 someAddress :: Address
-someAddress = Ledger.scriptAddress $
-    Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
+someAddress = Ledger.scriptAddress someValidator
+
+someValidator :: Validator
+someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
 
 type Schema =
     Endpoint "1" Int
