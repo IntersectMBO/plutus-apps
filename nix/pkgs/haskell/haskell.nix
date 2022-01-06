@@ -74,6 +74,10 @@ let
       -- cross compilation and `cabal` will not be able to make a plan.
       package prettyprinter-configurable
         tests: False
+
+      allow-newer:
+             ouroboros-consensus:Win32
+
     '' + lib.optionalString pkgs.stdenv.hostPlatform.isGhcjs ''
       package plutus-tx-plugin
         flags: +use-ghc-stub
