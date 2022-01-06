@@ -7,6 +7,7 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
@@ -14,8 +15,10 @@
 module Plutus.PAB.Webserver.Server
     ( startServer
     , startServer'
+    , startServerWithExtra
     , startServerDebug
     , startServerDebug'
+    , startServerDebugWithExtra
     ) where
 
 import Control.Concurrent (MVar, forkFinally, forkIO, newEmptyMVar, putMVar)
@@ -46,7 +49,7 @@ import Plutus.PAB.Types (PABError, WebserverConfig (WebserverConfig, endpointTim
 import Plutus.PAB.Webserver.API (API, SwaggerAPI, WSAPI)
 import Plutus.PAB.Webserver.Handler (apiHandler, swagger)
 import Plutus.PAB.Webserver.WebSocket qualified as WS
-import Servant (Application, Handler (Handler), Raw, ServerT, err500, errBody, hoistServer, serve,
+import Servant (Application, Handler (Handler), Raw, ServerT, emptyServer, err500, errBody, hoistServer, serve,
                 serveDirectoryFileServer, (:<|>) ((:<|>)))
 import Servant qualified
 import Servant.Client (BaseUrl (baseUrlPort))
@@ -57,39 +60,42 @@ asHandler PABRunner{runPABAction} = Servant.Handler . ExceptT . fmap (first mapE
     mapError :: PABError -> Servant.ServerError
     mapError e = Servant.err500 { Servant.errBody = LBS.pack $ show e }
 
-type CombinedAPI t = BaseCombinedAPI t :<|> SwaggerAPI
+type CombinedAPI t extraApi = BaseCombinedAPI t :<|> extraApi :<|> SwaggerAPI
 
 type BaseCombinedAPI t =
     API (Contract.ContractDef t) WalletId
     :<|> WSAPI
 
-app ::
-    forall t env.
+appWith ::
+    forall t env extraApi.
     ( FromJSON (Contract.ContractDef t)
     , ToJSON (Contract.ContractDef t)
     , Contract.PABContract t
     , Servant.MimeUnrender Servant.JSON (Contract.ContractDef t)
     , OpenApi.ToSchema (Contract.ContractDef t)
+    , Servant.HasServer extraApi '[]
     ) =>
-    Maybe FilePath
+    Servant.Server extraApi
+    -> Proxy extraApi
+    -> Maybe FilePath
     -> PABRunner t env
     -> Application
-app fp pabRunner = do
-    let apiServer :: ServerT (CombinedAPI t) Handler
+appWith extraServer _ fp pabRunner = do
+    let apiServer :: ServerT (CombinedAPI t extraApi) Handler
         apiServer =
             Servant.hoistServer
                 (Proxy @(BaseCombinedAPI t))
                 (asHandler pabRunner)
-                (apiHandler :<|> WS.wsHandler) :<|> (swagger @t)
+                (apiHandler :<|> WS.wsHandler) :<|> extraServer :<|> (swagger @t)
 
     case fp of
         Nothing -> do
-            Servant.serve (Proxy @(CombinedAPI t)) apiServer
+            Servant.serve (Proxy @(CombinedAPI t extraApi)) apiServer
         Just filePath -> do
             let
                 fileServer :: ServerT Raw Handler
                 fileServer = serveDirectoryFileServer filePath
-            Servant.serve (Proxy @(CombinedAPI t :<|> Raw)) (apiServer :<|> fileServer)
+            Servant.serve (Proxy @(CombinedAPI t extraApi :<|> Raw)) (apiServer :<|> fileServer)
 
 -- | Start the server using the config. Returns an action that shuts it down
 --   again, and an MVar that is filled when the webserver
@@ -105,10 +111,29 @@ startServer ::
     => WebserverConfig -- ^ Optional file path for static assets
     -> Availability
     -> PABAction t env (MVar (), PABAction t env ())
-startServer WebserverConfig{baseUrl, staticDir, permissiveCorsPolicy, endpointTimeout} availability = do
+startServer = startServer' emptyServer (Proxy @Servant.EmptyAPI)
+
+-- | Start the server with extra api using the config. Returns an action that shuts it down
+--   again, and an MVar that is filled when the webserver
+--   thread exits.
+startServer' ::
+    forall t env extraApi.
+    ( FromJSON (Contract.ContractDef t)
+    , ToJSON (Contract.ContractDef t)
+    , Contract.PABContract t
+    , Servant.MimeUnrender Servant.JSON (Contract.ContractDef t)
+    , OpenApi.ToSchema (Contract.ContractDef t)
+    , Servant.HasServer extraApi '[]
+    )
+    => Servant.Server extraApi -- ^ 'extraApi' server
+    -> Proxy extraApi -- ^ Proxy with extraApi
+    -> WebserverConfig -- ^ Optional file path for static assets
+    -> Availability
+    -> PABAction t env (MVar (), PABAction t env ())
+startServer' extraServer extraServerProxy WebserverConfig{baseUrl, staticDir, permissiveCorsPolicy, endpointTimeout} availability = do
     when permissiveCorsPolicy $
       logWarn @(LM.PABMultiAgentMsg t) (LM.UserLog "Warning: Using a very permissive CORS policy! *Any* website serving JavaScript can interact with these endpoints.")
-    startServer' middlewares (baseUrlPort baseUrl) staticDir availability (timeout endpointTimeout)
+    startServerWithExtra extraServer extraServerProxy middlewares (baseUrlPort baseUrl) staticDir availability (timeout endpointTimeout)
       where
         middlewares = if permissiveCorsPolicy then corsMiddlewares else []
         corsMiddlewares =
@@ -124,24 +149,27 @@ startServer WebserverConfig{baseUrl, staticDir, permissiveCorsPolicy, endpointTi
         timeout Nothing  = 30
         timeout (Just s) = fromIntegral $ max s 30
 
--- | Start the server. Returns an action that shuts it down
+-- | Start the server with extra api. Returns an action that shuts it down
 --   again, and an MVar that is filled when the webserver
 --   thread exits.
-startServer' ::
-    forall t env.
+startServerWithExtra ::
+    forall t env extraApi.
     ( FromJSON (Contract.ContractDef t)
     , ToJSON (Contract.ContractDef t)
     , Contract.PABContract t
     , Servant.MimeUnrender Servant.JSON (Contract.ContractDef t)
     , OpenApi.ToSchema (Contract.ContractDef t)
+    , Servant.HasServer extraApi '[]
     )
-    => [Middleware] -- ^ Optional wai middleware
+    => Servant.Server extraApi -- ^ 'extraApi' server
+    -> Proxy extraApi -- ^ Proxy with extraApi
+    -> [Middleware] -- ^ Optional wai middleware
     -> Int -- ^ Port
     -> Maybe FilePath -- ^ Optional file path for static assets
     -> Availability
     -> Int
     -> PABAction t env (MVar (), PABAction t env ())
-startServer' waiMiddlewares port staticPath availability timeout = do
+startServerWithExtra extraServer extraServerProxy waiMiddlewares port staticPath availability timeout = do
     simRunner <- Core.pabRunner
     shutdownVar <- liftIO $ STM.atomically $ STM.newEmptyTMVar @()
     mvar <- liftIO newEmptyMVar
@@ -163,7 +191,7 @@ startServer' waiMiddlewares port staticPath availability timeout = do
     void $ liftIO $
         forkFinally
             (Warp.runSettings warpSettings $ middleware
-               $ app staticPath simRunner)
+               $ appWith extraServer extraServerProxy staticPath simRunner)
             (\_ -> putMVar mvar ())
 
     pure (mvar, liftIO $ STM.atomically $ STM.putTMVar shutdownVar ())
@@ -193,3 +221,19 @@ startServerDebug' ::
 startServerDebug' conf = do
     tk <- newToken
     snd <$> startServer conf tk
+
+-- | Start the server using a default configuration for debugging.
+startServerDebugWithExtra ::
+    ( FromJSON (Contract.ContractDef t)
+    , ToJSON (Contract.ContractDef t)
+    , Contract.PABContract t
+    , Servant.MimeUnrender Servant.JSON (Contract.ContractDef t)
+    , OpenApi.ToSchema (Contract.ContractDef t)
+    , Servant.HasServer extraApi '[]
+    )
+    => Servant.Server extraApi -- ^ 'extraApi' server
+    -> Proxy extraApi -- ^ Proxy with extraApi
+    -> Simulation t (Simulation t ())
+startServerDebugWithExtra extraServer extraServerProxy = do
+    tk <- newToken
+    snd <$> startServer' extraServer extraServerProxy defaultWebServerConfig tk

@@ -32,5 +32,5 @@ contractSchema contractId = do
         Nothing                           -> throwError (ContractInstanceNotFound contractId)
 
 -- | Handler for the API
-apiHandler :: forall t env. HasSchema (Contract.ContractDef t) => ContractInstanceId -> PABAction t env (ContractSchemaResponse (Contract.ContractDef t))
-apiHandler cid = contractSchema cid
+schemaApiHandler :: forall t env. HasSchema (Contract.ContractDef t) => ContractInstanceId -> PABAction t env (ContractSchemaResponse (Contract.ContractDef t))
+schemaApiHandler cid = contractSchema cid
