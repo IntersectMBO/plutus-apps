@@ -24,6 +24,7 @@ import Data.Semigroup qualified as Semigroup
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger.Ada (adaSymbol, adaToken)
+import Playground.Schema (endpointsToSchemas)
 import Plutus.Contract
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap qualified as Uniswap
@@ -33,6 +34,7 @@ import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Simulator (SimulatorEffectHandlers, logString)
 import Plutus.PAB.Simulator qualified as Simulator
 import Plutus.PAB.Webserver.Server qualified as PAB.Server
+import Plutus.PAB.Webserver.Types.Schema
 import Prelude hiding (init)
 import Prettyprinter (Pretty (..), viaShow)
 import Wallet.Emulator.Types (knownWallet)
@@ -99,6 +101,12 @@ instance HasDefinitions UniswapContracts where
         UniswapUser us -> SomeBuiltin . awaitPromise $ Uniswap.userEndpoints us
         UniswapStart   -> SomeBuiltin Uniswap.ownerEndpoint
         Init           -> SomeBuiltin US.setupTokens
+
+instance HasSchema UniswapContracts where
+    getSchema = \case
+        UniswapUser _ -> endpointsToSchemas @Uniswap.UniswapUserSchema
+        UniswapStart  -> endpointsToSchemas @Uniswap.UniswapOwnerSchema
+        Init          -> endpointsToSchemas @Empty
 
 handlers :: SimulatorEffectHandlers (Builtin UniswapContracts)
 handlers =

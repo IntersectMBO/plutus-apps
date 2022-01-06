@@ -66,9 +66,9 @@ import Wallet.Types (ContractInstanceId)
 
 getContractReport :: forall t env. Contract.PABContract t => PABAction t env (ContractReport (Contract.ContractDef t))
 getContractReport = do
-    contracts <- Contract.getDefinitions @t
+    availableContracts <- Contract.getDefinitions @t
     activeContractIDs <- fmap fst . Map.toList <$> Contract.getActiveContracts @t
-    let crAvailableContracts = ContractSignatureResponse <$> contracts
+    let crAvailableContracts = ContractSignatureResponse <$> availableContracts
     crActiveContractStates <- traverse (\i -> Contract.getState @t i >>= \s -> pure (i, fromResp $ Contract.serialisableState (Proxy @t) s)) activeContractIDs
     pure ContractReport {crAvailableContracts, crActiveContractStates}
 

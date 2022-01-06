@@ -60,16 +60,12 @@ library
     hs-source-dirs:     src
     build-depends:
         , plutus-contract
-        , plutus-ledger
         , plutus-pab
         , playground-common
 
     build-depends:
         aeson -any,
         base >=4.7 && <5,
-        containers -any,
         freer-simple -any,
         openapi3 -any,
-        plutus-ledger-api -any,
-        prettyprinter >=1.1.0.1,
         servant -any,

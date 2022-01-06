@@ -184,9 +184,11 @@ executable plutus-uniswap
         , data-default -any
         , freer-extras
         , freer-simple
+        , playground-common
         , plutus-contract
         , plutus-ledger
         , plutus-pab
+        , plutus-pab-schema
         , plutus-use-cases
         , prettyprinter
         , text
