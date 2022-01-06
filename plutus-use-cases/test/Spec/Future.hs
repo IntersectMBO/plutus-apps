@@ -43,14 +43,11 @@ import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream qualified as Stream
 import Wallet.Emulator.Wallet qualified as Wallet
 
-futureEmulatorCfg :: Trace.EmulatorConfig
-futureEmulatorCfg =
-    let initialDistribution = fmap (const $ Ada.lovelaceValueOf 1_000_000_000) defaultDist
-    in def & Trace.initialChainState .~ Left initialDistribution
-
--- | 'CheckOptions' that includes our own 'auctionEmulatorCfg'.
+-- | 'CheckOptions' that assigns 1000 Ada to Wallets 1 and 2.
 options :: CheckOptions
-options = set emulatorConfig futureEmulatorCfg defaultCheckOptions
+options = defaultCheckOptions
+    & changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000)
+    & changeInitialWalletValue w2 (const $ Ada.adaValueOf 1000)
 
 tests :: TestTree
 tests =
@@ -217,5 +214,5 @@ testAccounts =
         $ Freer.runError @Folds.EmulatorFoldErr
         $ Stream.foldEmulatorStreamM fld
         $ Stream.takeUntilSlot 10
-        $ Trace.runEmulatorStream futureEmulatorCfg F.setupTokensTrace
+        $ Trace.runEmulatorStream (view emulatorConfig options) F.setupTokensTrace
 
