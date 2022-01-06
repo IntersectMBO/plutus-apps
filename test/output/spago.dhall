@@ -2,7 +2,9 @@
 , dependencies =
   [ "aff"
   , "affjax"
+  , "argonaut"
   , "argonaut-codecs"
+  , "argonaut-core"
   , "arrays"
   , "control"
   , "either"

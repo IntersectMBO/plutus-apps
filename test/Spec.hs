@@ -50,12 +50,12 @@ type MyAPI =
   Header "TestHeader" TestHeader
     :> ( ( "hello"
              :> ( ( QueryFlag "myFlag"
-                      :> QueryParam "myParam" Hello
+                      :> QueryParam "myParam" Text
                       :> QueryParams "myParams" Hello
-                      :> ReqBody '[JSON] Hello
+                      :> ReqBody '[JSON] (Either (Int, String) Hello)
                       :> Get '[JSON] Hello
                   )
-                    :<|> Capture "name" Text :> Get '[JSON] Hello
+                    :<|> Capture "name" Text :> Get '[JSON] (Maybe Hello)
                 )
          )
            :<|> "testHeader" :> Get '[JSON] TestHeader

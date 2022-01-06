@@ -80,11 +80,11 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
 
     writeModule :: Text -> IO ()
     writeModule mName =
-      let baseFileName = joinPath . map T.unpack . T.splitOn "." $ mName
+      let baseFileName = root </> joinPath (map T.unpack $ T.splitOn "." mName)
           pursModuleFile = baseFileName <> ".purs"
           jsModuleFile = baseFileName <> ".js"
-          pursModulePath = root </> pursModuleFile
-          jsModulePath = root </> jsModuleFile
+          pursModulePath = pursModuleFile
+          jsModulePath = jsModuleFile
           mDir = takeDirectory baseFileName
           contents = genModule opts apiList
        in do
