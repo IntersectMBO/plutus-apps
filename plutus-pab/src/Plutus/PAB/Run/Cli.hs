@@ -170,8 +170,7 @@ runConfigCommand contractHandler ConfigCommandArgs{ccaTrace, ccaPABConfig=config
                     logInfo @(LM.PABMultiAgentMsg (Builtin a)) (LM.PABStateRestored $ length ts)
 
               -- then, actually start the server.
-              let walletClientEnv = App.walletClientEnv (Core.appEnv env)
-              (mvar, _) <- PABServer.startServer pabWebserverConfig (Left walletClientEnv) ccaAvailability
+              (mvar, _) <- PABServer.startServer pabWebserverConfig ccaAvailability
               liftIO $ takeMVar mvar
         either handleError return result
   where

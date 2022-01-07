@@ -41,7 +41,6 @@ import Plutus.PAB.Webserver.API qualified as API
 import Plutus.PAB.Webserver.Types (ChainReport, CombinedWSStreamToClient, CombinedWSStreamToServer,
                                    ContractActivationArgs, ContractInstanceClientState, ContractReport,
                                    ContractSignatureResponse, FullReport, InstanceStatusToClient)
-import Servant ((:<|>))
 import Servant.PureScript (HasBridge, Settings, apiModuleName, defaultBridge, defaultSettings, languageBridge,
                            writeAPIModuleWithSettings)
 
@@ -126,8 +125,7 @@ generateAPIModule _ outputDir = do
         mySettings
         outputDir
         pabBridgeProxy
-        (    Proxy @(API.API (Contract.ContractDef (Builtin a)) Text.Text
-        :<|> API.WalletProxy Text.Text)
+        (    Proxy @(API.API (Contract.ContractDef (Builtin a)) Text.Text)
         )
 
 -- | Generate PS modules in 'outputDir' which includes common types for the PAB.
