@@ -69,3 +69,4 @@ library
         freer-simple -any,
         openapi3 -any,
         servant -any,
+        servant-server -any

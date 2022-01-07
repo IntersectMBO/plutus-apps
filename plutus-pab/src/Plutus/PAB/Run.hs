@@ -8,9 +8,11 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
 
 module Plutus.PAB.Run
 ( runWith
+, runWithExtra
 , runWithOpts
 ) where
 
@@ -28,9 +30,11 @@ import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (for_)
 import Data.OpenApi.Schema qualified as OpenApi
+import Data.Proxy (Proxy (Proxy))
 import Data.Text.Extras (tshow)
 import Data.Yaml (decodeFileThrow)
 import Plutus.Monitoring.Util (PrettyObject (..), convertLog)
+import Plutus.PAB.Core (PABRunner)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions)
 import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
@@ -56,6 +60,24 @@ runWith :: forall a.
     -> IO ()
 runWith h = parseOptions >>= runWithOpts h Nothing
 
+-- | PAB entry point for a contract type `a`.
+runWithExtra :: forall a extraApi.
+    ( Show a
+    , Ord a
+    , FromJSON a
+    , ToJSON a
+    , Pretty a
+    , Servant.MimeUnrender Servant.JSON a
+    , HasDefinitions a
+    , OpenApi.ToSchema a
+    , Servant.HasServer extraApi '[]
+    )
+    => (forall t env. PABRunner t env -> Servant.Server extraApi) -- ^ 'extraApi' server
+    -> Proxy extraApi -- ^ Proxy with extraApi
+    -> BuiltinHandler a -- ^ Builtin contract handler. Can be created with 'Plutus.PAB.Effects.Contract.Builtin.handleBuiltin'.
+    -> IO ()
+runWithExtra extraServer extraServerProxy h = parseOptions >>= runWithOptsExtra extraServer extraServerProxy h Nothing
+
 -- | Helper function to launch a complete PAB (all the necessary services)
 -- that can be interacted over the API endpoints defined in
 -- 'PAB.Webserver.Server'.
@@ -73,7 +95,29 @@ runWithOpts :: forall a.
     -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
     -> AppOpts
     -> IO ()
-runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resumeFrom, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
+runWithOpts = runWithOptsExtra (const Servant.emptyServer) (Proxy @Servant.EmptyAPI)
+
+-- | Helper function to launch a complete PAB (all the necessary services)
+-- that can be interacted over the API endpoints defined in
+-- 'PAB.Webserver.Server'.
+runWithOptsExtra :: forall a extraApi.
+    ( Show a
+    , Ord a
+    , FromJSON a
+    , ToJSON a
+    , Pretty a
+    , Servant.MimeUnrender Servant.JSON a
+    , HasDefinitions a
+    , OpenApi.ToSchema a
+    , Servant.HasServer extraApi '[]
+    )
+    => (forall t env. PABRunner t env -> Servant.Server extraApi) -- ^ 'extraApi' server
+    -> Proxy extraApi -- ^ Proxy with extraApi
+    -> BuiltinHandler a
+    -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
+    -> AppOpts
+    -> IO ()
+runWithOptsExtra extraServer extraServerProxy userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resumeFrom, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
     -- Parse config files and initialize logging
     logConfig <- maybe defaultConfig loadConfig logConfigPath
     for_ minLogLevel $ \ll -> CM.setMinSeverity logConfig ll
@@ -103,7 +147,7 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resum
                 , ccaStorageBackend = storageBackend
                 }
 
-    let run config = runConfigCommand userContractHandler (mkArgs config) cmd
+    let run config = runConfigCommand extraServer extraServerProxy userContractHandler (mkArgs config) cmd
 
     -- execute parsed pab command and handle errors on faliure
     result <- sequence (run <$> pabConfig)

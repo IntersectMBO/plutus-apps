@@ -19,6 +19,7 @@ module Plutus.PAB.Webserver.Server
     , startServerDebug
     , startServerDebug'
     , startServerDebugWithExtra
+    , asHandler
     ) where
 
 import Control.Concurrent (MVar, forkFinally, forkIO, newEmptyMVar, putMVar)
@@ -75,7 +76,7 @@ appWith ::
     , OpenApi.ToSchema (Contract.ContractDef t)
     , Servant.HasServer extraApi '[]
     ) =>
-    Servant.Server extraApi
+    (PABRunner t env -> Servant.Server extraApi)
     -> Proxy extraApi
     -> Maybe FilePath
     -> PABRunner t env
@@ -86,7 +87,7 @@ appWith extraServer _ fp pabRunner = do
             Servant.hoistServer
                 (Proxy @(BaseCombinedAPI t))
                 (asHandler pabRunner)
-                (apiHandler :<|> WS.wsHandler) :<|> extraServer :<|> (swagger @t)
+                (apiHandler :<|> WS.wsHandler) :<|> (extraServer pabRunner) :<|> (swagger @t)
 
     case fp of
         Nothing -> do
@@ -111,7 +112,7 @@ startServer ::
     => WebserverConfig -- ^ Optional file path for static assets
     -> Availability
     -> PABAction t env (MVar (), PABAction t env ())
-startServer = startServer' emptyServer (Proxy @Servant.EmptyAPI)
+startServer = startServer' (const emptyServer) (Proxy @Servant.EmptyAPI)
 
 -- | Start the server with extra api using the config. Returns an action that shuts it down
 --   again, and an MVar that is filled when the webserver
@@ -125,7 +126,7 @@ startServer' ::
     , OpenApi.ToSchema (Contract.ContractDef t)
     , Servant.HasServer extraApi '[]
     )
-    => Servant.Server extraApi -- ^ 'extraApi' server
+    => (PABRunner t env -> Servant.Server extraApi) -- ^ 'extraApi' server
     -> Proxy extraApi -- ^ Proxy with extraApi
     -> WebserverConfig -- ^ Optional file path for static assets
     -> Availability
@@ -161,7 +162,7 @@ startServerWithExtra ::
     , OpenApi.ToSchema (Contract.ContractDef t)
     , Servant.HasServer extraApi '[]
     )
-    => Servant.Server extraApi -- ^ 'extraApi' server
+    => (PABRunner t env -> Servant.Server extraApi) -- ^ 'extraApi' server
     -> Proxy extraApi -- ^ Proxy with extraApi
     -> [Middleware] -- ^ Optional wai middleware
     -> Int -- ^ Port
@@ -231,7 +232,7 @@ startServerDebugWithExtra ::
     , OpenApi.ToSchema (Contract.ContractDef t)
     , Servant.HasServer extraApi '[]
     )
-    => Servant.Server extraApi -- ^ 'extraApi' server
+    => (forall t env. PABRunner t env -> Servant.Server extraApi) -- ^ 'extraApi' server
     -> Proxy extraApi -- ^ Proxy with extraApi
     -> Simulation t (Simulation t ())
 startServerDebugWithExtra extraServer extraServerProxy = do

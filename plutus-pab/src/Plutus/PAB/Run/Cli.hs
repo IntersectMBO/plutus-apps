@@ -84,7 +84,7 @@ data ConfigCommandArgs a =
 
 -- | Interpret a 'Command' in 'Eff' using the provided tracer and configurations
 --
-runConfigCommand :: forall a.
+runConfigCommand :: forall a extraApi.
     ( Ord a
     , Show a
     , ToJSON a
@@ -93,18 +93,21 @@ runConfigCommand :: forall a.
     , Servant.MimeUnrender Servant.JSON a
     , HasDefinitions a
     , OpenApi.ToSchema a
+    , Servant.HasServer extraApi '[]
     )
-    => BuiltinHandler a
+    => (forall t env. Core.PABRunner t env -> Servant.Server extraApi) -- ^ 'extraApi' server
+    -> Proxy extraApi -- ^ Proxy with extraApi
+    -> BuiltinHandler a
     -> ConfigCommandArgs a
     -> ConfigCommand
     -> IO ()
 
 -- Run the database migration
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Migrate =
+runConfigCommand _ _ _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Migrate =
     App.migrate (toPABMsg ccaTrace) dbConfig
 
 -- Run mock wallet service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet =
+runConfigCommand _ _ _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet =
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
         ws
@@ -115,11 +118,11 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServer
         ccaAvailability
 
 -- Run mock wallet service
-runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {walletServerConfig = RemoteWalletConfig}} MockWallet =
+runConfigCommand _ _ _ ConfigCommandArgs{ccaPABConfig = Config {walletServerConfig = RemoteWalletConfig}} MockWallet =
     error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run mock wallet in remote wallet config."
 
 -- Run mock node server
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartNode =
+runConfigCommand _ _ _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartNode =
     case pscNodeMode nodeServerConfig of
         MockNode -> do
             liftIO $ NodeServer.main
@@ -136,7 +139,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServer
             pure () -- TODO: Log message that we're connecting to the real Alonzo node
 
 -- Run PAB webserver
-runConfigCommand contractHandler ConfigCommandArgs{ccaTrace, ccaPABConfig=config@Config{pabWebserverConfig, dbConfig}, ccaAvailability, ccaStorageBackend} PABWebserver =
+runConfigCommand extraServer extraServerProxy contractHandler ConfigCommandArgs{ccaTrace, ccaPABConfig=config@Config{pabWebserverConfig, dbConfig}, ccaAvailability, ccaStorageBackend} PABWebserver =
     do
         connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
         -- Restore the running contracts by first collecting up enough details about the
@@ -169,7 +172,7 @@ runConfigCommand contractHandler ConfigCommandArgs{ccaTrace, ccaPABConfig=config
                     logInfo @(LM.PABMultiAgentMsg (Builtin a)) (LM.PABStateRestored $ length ts)
 
               -- then, actually start the server.
-              (mvar, _) <- PABServer.startServer pabWebserverConfig ccaAvailability
+              (mvar, _) <- PABServer.startServer' extraServer extraServerProxy pabWebserverConfig ccaAvailability
               liftIO $ takeMVar mvar
         either handleError return result
   where
@@ -178,7 +181,7 @@ runConfigCommand contractHandler ConfigCommandArgs{ccaTrace, ccaPABConfig=config
         exitWith (ExitFailure 2)
 
 -- Fork a list of commands
-runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConfig=Config {nodeServerConfig} } (ForkCommands commands) =
+runConfigCommand extraServer extraServerProxy contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConfig=Config {nodeServerConfig} } (ForkCommands commands) =
     let shouldStartMocks = case pscNodeMode nodeServerConfig of
                              MockNode   -> True
                              AlonzoNode -> False
@@ -195,13 +198,13 @@ runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConf
     forkCommand :: ConfigCommand -> IO (Async ())
     forkCommand subcommand = do
       putStrLn $ "Starting: " <> show subcommand
-      asyncId <- async . void . runConfigCommand contractHandler c $ subcommand
+      asyncId <- async . void . runConfigCommand extraServer extraServerProxy contractHandler c $ subcommand
       putStrLn $ "Started: " <> show subcommand
       starting ccaAvailability
       pure asyncId
 
 -- Run the chain-index service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainIndexConfig }} ChainIndex =
+runConfigCommand _ _ _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainIndexConfig }} ChainIndex =
     ChainIndex.main
         (toChainIndexLog ccaTrace)
         chainIndexConfig
@@ -209,7 +212,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config { nodeServerC
         (pscSlotConfig nodeServerConfig)
 
 -- Get the state of a contract
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ContractState contractInstanceId) = do
+runConfigCommand _ _ _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ContractState contractInstanceId) = do
     connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
     fmap (either (error . show) id)
         $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
@@ -221,7 +224,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (C
             drainLog
 
 -- Get all available contracts
-runConfigCommand _ ConfigCommandArgs{ccaTrace} ReportAvailableContracts = do
+runConfigCommand _ _ _ ConfigCommandArgs{ccaTrace} ReportAvailableContracts = do
     runM
         $ interpret (App.handleContractDefinition @a)
         $ interpret (LM.handleLogMsgTrace ccaTrace)
@@ -234,7 +237,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace} ReportAvailableContracts = do
                     render = renderStrict . layoutPretty defaultLayoutOptions
 
 -- Get all active contracts
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} ReportActiveContracts = do
+runConfigCommand _ _ _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} ReportActiveContracts = do
     connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
     fmap (either (error . show) id)
         $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
@@ -247,7 +250,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Re
             drainLog
 
 -- Get history of a specific contract
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ReportContractHistory contractInstanceId) = do
+runConfigCommand _ _ _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ReportContractHistory contractInstanceId) = do
     connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
     fmap (either (error . show) id)
         $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
