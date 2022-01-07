@@ -17,12 +17,12 @@ In this demo, we want to showcase a very minimal example of how to integrate the
 
 The instructions were tested inside the `plutus-apps`'s `nix-shell`.
 
-The demo contains two parts: the PAB application in `plutus-pab/demo/pab-nami/pab` and the frontend application in `plutus-pab/demo/pab-nami/client` which interacts with the PAB and the Nami wallet.
+The demo contains two parts: the PAB application in `plutus-pab-executables/demo/pab-nami/pab` and the frontend application in `plutus-pab-executables/demo/pab-nami/client` which interacts with the PAB and the Nami wallet.
 
 The first thing to do is to go to the frontend application's directory:
 
 ```
-$ cd plutus-pab/demo/pab-nami/client
+$ cd plutus-pab-executables/demo/pab-nami/client
 ```
 
 ### Setup Nami wallet
@@ -44,10 +44,10 @@ You have two options:
 # Go to the root folder of the `plutus-apps` repository
 
 # 'Migrate' command to initialise the PAB database.
-$ cabal run plutus-pab:exe:plutus-pab-nami-demo -- migrate --config plutus-pab/demo/pab-nami/pab/plutus-pab.yaml
+$ cabal run plutus-pab-executables:exe:plutus-pab-nami-demo -- migrate --config plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml
 
 # Run the PAB webserver
-$ cabal run plutus-pab:exe:plutus-pab-nami-demo -- webserver --config plutus-pab/demo/pab-nami/pab/plutus-pab.yaml
+$ cabal run plutus-pab-executables:exe:plutus-pab-nami-demo -- webserver --config plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml
 ```
 
 
@@ -64,7 +64,7 @@ From a command line interface, make sure you're in the root folder of the `plutu
 From another command line interface, run the following command to launch the frontend application:
 
 ```
-# Go the frontend application's directory (plutus-pab/demo/pab-nami/client)
+# Go the frontend application's directory (plutus-pab-executables/demo/pab-nami/client)
 
 # This is a temporary measure for using function in Nami's non-public api.
 # This will be removed in the next iterations.
