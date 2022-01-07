@@ -50,7 +50,7 @@ common lang
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
-library plutus-pab-psgenerator
+library
     import:             lang
     ghc-options:
         -Wunused-packages
@@ -108,7 +108,7 @@ executable plutus-pab-setup
         plutus-contract -any,
         plutus-ledger -any,
         plutus-pab -any,
-        plutus-pab-psgenerator -any,
+        plutus-pab-executables -any,
         plutus-use-cases -any,
         prettyprinter         >=1.1.0.1,
         purescript-bridge -any,
@@ -153,7 +153,7 @@ executable plutus-pab-examples
         , plutus-ledger
         , plutus-ledger-constraints
         , plutus-pab
-        , plutus-pab-psgenerator
+        , plutus-pab-executables
         , plutus-use-cases
         , prettyprinter
         , purescript-bridge
@@ -219,7 +219,7 @@ executable plutus-pab-local-cluster
         , plutus-ledger-api
         , plutus-ledger-constraints
         , plutus-pab
-        , plutus-pab-psgenerator
+        , plutus-pab-executables
         , plutus-use-cases
 
     build-depends:
@@ -290,7 +290,7 @@ executable plutus-pab-test-psgenerator
         mtl -any,
         plutus-contract -any,
         plutus-pab,
-        plutus-pab-psgenerator -any,
+        plutus-pab-executables -any,
         plutus-use-cases -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
@@ -350,7 +350,7 @@ test-suite plutus-pab-test-full
         plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-pab,
-        plutus-pab-psgenerator,
+        plutus-pab-executables,
         plutus-use-cases -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
@@ -415,7 +415,7 @@ test-suite plutus-pab-test-full-long-running
         plutus-contract -any,
         plutus-chain-index-core -any,
         plutus-pab,
-        plutus-pab-psgenerator -any,
+        plutus-pab-executables -any,
         plutus-use-cases -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
@@ -506,7 +506,7 @@ executable plutus-pab-nami-demo
     plutus-chain-index -any,
     plutus-contract -any,
     plutus-pab -any,
-    plutus-pab-psgenerator -any,
+    plutus-pab-executables -any,
     playground-common -any,
     prettyprinter -any,
     purescript-bridge -any,

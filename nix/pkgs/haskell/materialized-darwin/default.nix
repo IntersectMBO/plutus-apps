@@ -1256,6 +1256,7 @@
           "parallel".components.library.planned = lib.mkOverride 900 true;
           "uuid-types".components.library.planned = lib.mkOverride 900 true;
           "QuickCheck".components.library.planned = lib.mkOverride 900 true;
+          "plutus-pab-executables".components.library.planned = lib.mkOverride 900 true;
           "haskell-src-meta".components.library.planned = lib.mkOverride 900 true;
           "cborg".components.library.planned = lib.mkOverride 900 true;
           "time-manager".components.library.planned = lib.mkOverride 900 true;
@@ -1435,7 +1436,6 @@
           "ghc-paths".components.library.planned = lib.mkOverride 900 true;
           "plutus-playground-server".components.library.planned = lib.mkOverride 900 true;
           "witherable".components.library.planned = lib.mkOverride 900 true;
-          "plutus-pab-executables".components.sublibs."plutus-pab-psgenerator".planned = lib.mkOverride 900 true;
           "snap-core".components.library.planned = lib.mkOverride 900 true;
           "servant-websockets".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab-executables".components.exes."sync-client".planned = lib.mkOverride 900 true;
