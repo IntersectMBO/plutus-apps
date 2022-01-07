@@ -344,7 +344,7 @@ balanceTxnMinAda =
             Trace.activateContractWallet w1 contract
             Trace.waitNSlots 2
 
-    in checkPredicateOptions options "balancing doesn't create outputs with no Ada" (assertDone contract "The contract" (const True) "should be done") (void trace)
+    in checkPredicateOptions options "balancing doesn't create outputs with no Ada" assertNoFailedTransactions (void trace)
 
 checkpointContract :: Contract () Schema ContractError ()
 checkpointContract = void $ do
