@@ -236,7 +236,12 @@ source-repository-package
     cardano-api
     cardano-node
     cardano-cli
-    cardano-config
+
+-- User newer cardano-config to work around spwan issues in RevFromGit
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-config.git
+  tag: fe7855e981072d392513f9cf3994e0b6eba40d7d
 
 source-repository-package
   type: git
