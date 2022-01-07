@@ -1,8 +1,14 @@
 diff --git a/lib/core/src/Cardano/Wallet/Version/TH.hs b/lib/core/src/Cardano/Wallet/Version/TH.hs
-index 7d6607a721..516fa5bfa0 100644
+index 7d6607a721..e94e371251 100644
 --- a/lib/core/src/Cardano/Wallet/Version/TH.hs
 +++ b/lib/core/src/Cardano/Wallet/Version/TH.hs
-@@ -15,8 +15,10 @@ import Language.Haskell.TH
+@@ -11,14 +11,16 @@ module Cardano.Wallet.Version.TH
+
+ import Prelude
+
++import Control.Exception
++    ( catch )
+ import Language.Haskell.TH
      ( Exp (..), Lit (..), Q, runIO )
  import System.Exit
      ( ExitCode (..) )
@@ -10,10 +16,12 @@ index 7d6607a721..516fa5bfa0 100644
 +    ( hPutStrLn, stderr )
  import System.IO.Error
 -    ( ioeGetErrorType, isDoesNotExistErrorType )
+-import UnliftIO.Exception
+-    ( handleJust )
 +    ( isDoesNotExistError )
- import UnliftIO.Exception
-     ( handleJust )
  import UnliftIO.Process
+     ( readProcessWithExitCode )
+
 @@ -26,15 +28,19 @@ import UnliftIO.Process
  -- executed, then this will be an empty string.
  gitRevFromGit :: Q Exp
