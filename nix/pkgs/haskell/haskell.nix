@@ -384,7 +384,6 @@ let
 
           Cabal.patches = [ ../../patches/cabal.patch ];
 
-          cardano-wallet.patches = [ ../../patches/cardano-wallet-pr-3074.patch ];
           cardano-wallet-core.patches = [ ../../patches/cardano-wallet-pr-3074.patch ];
 
           plutus-contract.doHaddock = deferPluginErrors;
