@@ -1,14 +1,3 @@
-From 13b76a9c8adcbc4e8a9610615a4bac7b10949e85 Mon Sep 17 00:00:00 2001
-From: Moritz Angermann <moritz.angermann@gmail.com>
-Date: Fri, 7 Jan 2022 17:21:29 +0800
-Subject: [PATCH] Fix gitRevFromGit with newer process libraries
-
-This code was initially lifted likely from cardano-node, and now lives in cardano-config, but is replicated here...
-It was fixed in cardano config recently by @newhoggy in cardano-config#4. Now we need to fix it here as well.
----
- lib/core/src/Cardano/Wallet/Version/TH.hs | 32 ++++++++++++++---------
- 1 file changed, 19 insertions(+), 13 deletions(-)
-
 diff --git a/lib/core/src/Cardano/Wallet/Version/TH.hs b/lib/core/src/Cardano/Wallet/Version/TH.hs
 index 7d6607a721..516fa5bfa0 100644
 --- a/lib/core/src/Cardano/Wallet/Version/TH.hs
