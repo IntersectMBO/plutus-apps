@@ -17,7 +17,7 @@
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
-import Data.Aeson as Aeson hiding ((.=)) -- why is this hiding needed?
+import Data.Aeson as Aeson hiding ((.=))
 import Data.ByteString.Lazy qualified as BSL
 import Data.Word (Word32)
 import GHC.Generics
@@ -34,15 +34,15 @@ import Plutus.V1.Ledger.Ada qualified as Ada
 
 #if defined(ghcjs_HOST_OS)
 -- hopefully the correct imports
+import Data.ByteString (ByteString)
+import Data.JSString
+import Data.Maybe
 import GHCJS.Foreign.Callback
 import GHCJS.Marshal
 import GHCJS.Types
-import Data.JSString
-import Data.ByteString (ByteString)
 import PlutusTx.Builtins (BuiltinData)
-import Data.Maybe
 
-import qualified Ledger.Constraints as Constraints
+import Ledger.Constraints qualified as Constraints
 
 #endif
 
@@ -463,7 +463,7 @@ taggedAesonJSData name = JSData
       pure $ case mbVal of
             -- XXX we should move the actual value to val.__val, and check that val.__tag == name
             -- XXX we should be able to report mismatched tags here, so Maybe is probably not a good result value
-            Just val -> 
+            Just val ->
               case Aeson.fromJSON val of
                     Aeson.Success v -> Just v
                     Aeson.Error e   -> Nothing
@@ -482,7 +482,7 @@ mkApi1 f in1 out = pure $ \js_x -> do
   mb_x <- fromJust (convertIn in1) js_x
   case mb_x of
     Nothing -> undefined -- should be able to raise JS exception
-    Just x -> fromJust (convertOut out) (f x)
+    Just x  -> fromJust (convertOut out) (f x)
 
 mkApi2 :: (a -> b -> r)
        -> JSData a
@@ -547,7 +547,7 @@ api =
     , -- ownPaymentPubKeyHash :: PaymentPubKeyHash -> ScriptLookups a
       "ownPaymentPubKeyHash"            .= jsid -- undefined
     , -- ownStakePubKeyHash :: StakePubKeyHash -> ScriptLookups a
-      "ownStakePubKeyHash"              .= jsid -- undefined 
+      "ownStakePubKeyHash"              .= jsid -- undefined
     , -- makeTransaction :: C.ProtocolParameters -> C.NetworkId -> ScriptLookups Any -> UntypedConstraints -> Either Aeson.Value ExportTx
       "mkTx"                            .= jsid -- undefined
     , -- paymentPubKey :: PaymentPubKey -> ScriptLookups a
@@ -606,7 +606,7 @@ instance ApiExport [Pair] where
     exportApi pairs = do
         obj <- js_newObj
         mapM_ (addApi obj) pairs
-        pure obj 
+        pure obj
       where
           addApi :: JSVal -> Pair -> IO ()
           addApi obj (Pair key val) = js_setProp obj key =<< val
