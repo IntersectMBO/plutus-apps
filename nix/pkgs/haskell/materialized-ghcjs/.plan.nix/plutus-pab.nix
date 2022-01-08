@@ -463,11 +463,11 @@
             (hsPkgs."cborg" or (errorHandler.buildDepError "cborg"))
             (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
             ] ++ (pkgs.lib).optional (compiler.isGhcjs && true) (hsPkgs."ghcjs-base" or (errorHandler.buildDepError "ghcjs-base"));
-          buildable = true;
+          buildable = if !system.isGhcjs then false else true;
           hsSourceDirs = [ "mktx" ];
-          mainPath = [
+          mainPath = ([
             "Main.hs"
-            ] ++ (pkgs.lib).optional (compiler.isGhcjs && true) "";
+            ] ++ (pkgs.lib).optional (compiler.isGhcjs && true) "") ++ (pkgs.lib).optional (!system.isGhcjs) "";
           };
         };
       tests = {

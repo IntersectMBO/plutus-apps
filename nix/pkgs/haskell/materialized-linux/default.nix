@@ -1486,7 +1486,6 @@
           "parsers".components.library.planned = lib.mkOverride 900 true;
           "random-shuffle".components.library.planned = lib.mkOverride 900 true;
           "regex-base".components.library.planned = lib.mkOverride 900 true;
-          "plutus-pab".components.exes."pab-mktx-lib".planned = lib.mkOverride 900 true;
           "Win32-network".components.library.planned = lib.mkOverride 900 true;
           "statistics".components.library.planned = lib.mkOverride 900 true;
           "int-cast".components.library.planned = lib.mkOverride 900 true;
