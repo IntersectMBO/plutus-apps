@@ -695,9 +695,12 @@ executable pab-mktx-lib
         cardano-binary -any,
         cborg -any,
         memory -any
-    if(impl(ghcjs))
+    if impl(ghcjs)
         build-depends:
             ghcjs-base -any
+
+    if !os(ghcjs)
+        buildable: False
 
 
 -- test JSON transaction processing, intended for JS library
