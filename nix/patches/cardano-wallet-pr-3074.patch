@@ -1,7 +1,7 @@
-diff --git a/lib/core/src/Cardano/Wallet/Version/TH.hs b/lib/core/src/Cardano/Wallet/Version/TH.hs
+diff --git a/src/Cardano/Wallet/Version/TH.hs b/src/Cardano/Wallet/Version/TH.hs
 index 7d6607a721..e94e371251 100644
---- a/lib/core/src/Cardano/Wallet/Version/TH.hs
-+++ b/lib/core/src/Cardano/Wallet/Version/TH.hs
+--- a/src/Cardano/Wallet/Version/TH.hs
++++ b/src/Cardano/Wallet/Version/TH.hs
 @@ -11,14 +11,16 @@ module Cardano.Wallet.Version.TH
 
  import Prelude
