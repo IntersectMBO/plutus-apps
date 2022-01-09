@@ -156,6 +156,12 @@ someCardanoApiTxBridge = do
     typeModule ^== "Ledger.Tx.CardanoAPI"
     pure psJson
 
+exportTxBridge :: BridgePart
+exportTxBridge = do
+    typeName ^== "ExportTx"
+    typeModule ^== "Plutus.Contract.Wallet"
+    pure psJson
+
 miscBridge :: BridgePart
 miscBridge =
         bultinByteStringBridge
@@ -168,6 +174,7 @@ miscBridge =
     <|> satIntBridge
     <|> exBudgetBridge
     <|> someCardanoApiTxBridge
+    <|> exportTxBridge
 
 ------------------------------------------------------------
 
