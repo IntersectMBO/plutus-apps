@@ -99,16 +99,15 @@
     "haskell-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1641182117,
-        "narHash": "sha256-R1iAtFMe6F9Vo8xxjnmGeMRhbZLK6vrggadPfts93OE=",
+        "lastModified": 1641681413,
+        "narHash": "sha256-6ewRmCSjfiVqy4Aga749/qChnEjENqNoFy4y/H5HtLA=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "0ef71cf3dd3eae5d5026c1ee840e8a78f5d8b5c0",
+        "rev": "eb7e669d63c8a83a85ca38e7af1f8a545ffe17f3",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "hkm/emscripten-update",
         "repo": "haskell.nix",
         "type": "github"
       }

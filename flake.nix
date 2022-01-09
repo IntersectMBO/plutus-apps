@@ -20,7 +20,7 @@
       flake = false;
     };
     haskell-nix = {
-      url = "github:input-output-hk/haskell.nix/hkm/emscripten-update/";
+      url = "github:input-output-hk/haskell.nix";
       flake = false;
     };
 
