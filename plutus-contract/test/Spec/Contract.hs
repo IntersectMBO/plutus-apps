@@ -324,12 +324,12 @@ balanceTxnMinAda =
     let ee = Value.singleton "ee" "ee" 1
         ff = Value.singleton "ff" "ff" 1
         options = defaultCheckOptions
-            & changeInitialWalletValue w1 (const $ Value.scale 1000 (Ada.adaValueOf 1 <> ee <> ff))
+            & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
         vHash = validatorHash someValidator
 
         contract :: Contract () EmptySchema ContractError ()
         contract = do
-            let constraints1 = Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 100 ff <> Ada.adaValueOf 2)
+            let constraints1 = Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
                 utx1 = either (error . show) id $ Constraints.mkTx @Void mempty constraints1
             submitTxConfirmed utx1
             utxo <- utxosAt someAddress
