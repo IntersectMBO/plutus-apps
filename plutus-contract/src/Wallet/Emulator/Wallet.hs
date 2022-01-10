@@ -380,7 +380,7 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
                pure filteredUnbalancedTxTx
            else do
                 logDebug $ AddingPublicKeyOutputFor pos
-                pure $ addOutputs ownPaymentPubKey ownStakePubKey pos filteredUnbalancedTxTx
+                pure $ addOutput ownPaymentPubKey ownStakePubKey pos filteredUnbalancedTxTx
 
     tx'' <- if Value.isZero neg
             then do
@@ -443,7 +443,7 @@ adjustBalanceWithMissingLovelace utxo ownPaymentPubKey unBalancedTx (neg, pos) =
         -- minted, and if the positive balance is > 0 and < 'Ledger.minAdaTxOut',
         -- then we adjust it to the minimum Ada.
         missingLovelaceFromPosValue =
-          if Ada.isZero (Ada.fromValue posWithMintAda) || Ada.fromValue posWithMintAda >= Ledger.minAdaTxOut
+          if Value.isZero posWithMintAda || Ada.fromValue posWithMintAda >= Ledger.minAdaTxOut
             then 0
             else max 0 (Ledger.minAdaTxOut - Ada.fromValue posWithMintAda)
         -- We calculate the final negative and positive balances
@@ -452,8 +452,8 @@ adjustBalanceWithMissingLovelace utxo ownPaymentPubKey unBalancedTx (neg, pos) =
 
     pure (newNeg, newPos)
 
-addOutputs :: PaymentPubKey -> Maybe StakePubKey -> Value -> Tx -> Tx
-addOutputs pk sk vl tx = tx & over Tx.outputs (pko :) where
+addOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Tx -> Tx
+addOutput pk sk vl tx = tx & over Tx.outputs (pko :) where
     pko = Tx.pubKeyTxOut vl pk sk
 
 addCollateral
@@ -486,15 +486,16 @@ addInputs mp pk sk vl tx = do
     (spend, change) <- selectCoin (second (view Ledger.ciTxOutValue) <$> Map.toList mp) vl
     let
 
-        addTxIns  =
+        addTxIns =
             let ins = Set.fromList (Tx.pubKeyTxIn . fst <$> spend)
             in over Tx.inputs (Set.union ins)
 
-        addTxOuts = if Value.isZero change
-                    then id
-                    else addOutputs pk sk change
+        addTxOut =
+            if Value.isZero change
+                then id
+                else addOutput pk sk change
 
-    pure $ tx & addTxOuts & addTxIns
+    pure $ tx & addTxOut & addTxIns
 
 -- Make a transaction output from a positive value.
 mkChangeOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Maybe TxOut

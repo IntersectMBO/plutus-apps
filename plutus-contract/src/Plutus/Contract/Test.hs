@@ -65,6 +65,7 @@ module Plutus.Contract.Test(
     , defaultCheckOptions
     , minLogLevel
     , emulatorConfig
+    , changeInitialWalletValue
     -- * Etc
     , goldenPir
     ) where
@@ -73,7 +74,7 @@ import Control.Applicative (liftA2)
 import Control.Arrow ((>>>))
 import Control.Foldl (FoldM)
 import Control.Foldl qualified as L
-import Control.Lens (at, makeLenses, preview, to, (&), (.~), (^.))
+import Control.Lens (_Left, at, ix, makeLenses, over, preview, to, (&), (.~), (^.))
 import Control.Monad (unless)
 import Control.Monad.Freer (Eff, reinterpret, runM, sendM)
 import Control.Monad.Freer.Error (Error, runError)
@@ -162,6 +163,10 @@ defaultCheckOptions =
         { _minLogLevel = Info
         , _emulatorConfig = def
         }
+
+-- | Modify the value assigned to the given wallet in the initial distribution.
+changeInitialWalletValue :: Wallet -> (Value -> Value) -> CheckOptions -> CheckOptions
+changeInitialWalletValue wallet = over (emulatorConfig . initialChainState . _Left . ix wallet)
 
 type TestEffects = '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void)]
 
