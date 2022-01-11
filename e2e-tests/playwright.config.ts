@@ -1,8 +1,9 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test';
 
 const config: PlaywrightTestConfig = {
+  timeout: 60000,
   expect: {
-    timeout: 20000,
+    timeout: 30000,
     toMatchSnapshot: {
       threshold: 0.3,
     },
@@ -14,6 +15,7 @@ const config: PlaywrightTestConfig = {
   retries: process.env.CI ? 2 : 0,
   use: {
     trace: 'on-first-retry',
+    ignoreHTTPSErrors: true
   },
   projects: [
     {

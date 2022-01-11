@@ -34,13 +34,19 @@ export class EditorPage {
     await this.page.keyboard.type(text);
   }
 
-  async compileHelloWorld(): string {
+  async compileHelloWorld(): Promise<string> {
     const textToInsert = this.wonderfulText;
     await this.helloWorld.click();
     await this.modifyHelloWorldText(textToInsert);
     await expect(this.helloWorldText).toBeVisible();
     await this.compile();
     return textToInsert;
+  }
+
+  async compileCrowdFunding() {
+    const textToInsert = this.wonderfulText;
+    await this.crowdFunding.click();
+    await this.compile();
   }
 
   async compile() {
