@@ -12,7 +12,7 @@ module Cardano.Wallet.RemoteClient
 
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
 import Cardano.Api.Shelley qualified as Cardano.Api
-import Cardano.Node.Types (MockServerConfig (mscNetworkId))
+import Cardano.Node.Types (PABServerConfig (pscNetworkId))
 import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
@@ -40,12 +40,12 @@ handleWalletClient
     , Member (Reader Cardano.Api.ProtocolParameters) effs
     , Member (Reader InstancesState) effs
     )
-    => MockServerConfig
+    => PABServerConfig
     -> Maybe ContractInstanceId
     -> WalletEffect
     ~> Eff effs
 handleWalletClient config cidM event = do
-    let NetworkIdWrapper networkId = mscNetworkId config
+    let NetworkIdWrapper networkId = pscNetworkId config
     protocolParams <- ask @Cardano.Api.ProtocolParameters
     case event of
         OwnPaymentPubKeyHash -> do

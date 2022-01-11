@@ -12,7 +12,7 @@
 module Plutus.PAB.Types where
 
 import Cardano.ChainIndex.Types qualified as ChainIndex
-import Cardano.Node.Types (MockServerConfig)
+import Cardano.Node.Types (PABServerConfig)
 import Cardano.Wallet.Types qualified as Wallet
 import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
@@ -115,7 +115,7 @@ data Config =
     Config
         { dbConfig                :: DbConfig
         , walletServerConfig      :: Wallet.WalletConfig
-        , nodeServerConfig        :: MockServerConfig
+        , nodeServerConfig        :: PABServerConfig
         , pabWebserverConfig      :: WebserverConfig
         , chainIndexConfig        :: ChainIndex.ChainIndexConfig
         , requestProcessingConfig :: RequestProcessingConfig

@@ -12,7 +12,7 @@ module Cardano.Wallet.LocalClient where
 import Cardano.Api qualified
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
 import Cardano.Api.Shelley qualified as Cardano.Api
-import Cardano.Node.Types (MockServerConfig (mscNetworkId, mscPassphrase))
+import Cardano.Node.Types (PABServerConfig (pscNetworkId, pscPassphrase))
 import Cardano.Wallet.Api qualified as C
 import Cardano.Wallet.Api.Client qualified as C
 import Cardano.Wallet.Api.Types (ApiVerificationKeyShelley (getApiVerificationKey), ApiWallet (assets, balance))
@@ -69,13 +69,13 @@ handleWalletClient
     , Member (Reader Cardano.Api.ProtocolParameters) effs
     , Member (LogMsg WalletClientMsg) effs
     )
-    => MockServerConfig -- TODO: Rename. Not mock
+    => PABServerConfig -- TODO: Rename. Not mock
     -> Wallet
     -> WalletEffect
     ~> Eff effs
 handleWalletClient config (Wallet (WalletId walletId)) event = do
-    let NetworkIdWrapper networkId = mscNetworkId config
-    let mpassphrase = mscPassphrase config
+    let NetworkIdWrapper networkId = pscNetworkId config
+    let mpassphrase = pscPassphrase config
     clientEnv <- ask @ClientEnv
     protocolParams <- ask @Cardano.Api.ProtocolParameters
     let

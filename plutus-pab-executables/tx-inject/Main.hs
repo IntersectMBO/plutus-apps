@@ -32,7 +32,7 @@ import System.Random.MWC (GenIO, createSystemRandom)
 import System.Signal (installHandler, sigINT)
 import Text.Pretty.Simple (pPrint)
 
-import Cardano.Node.Types (MockServerConfig (..))
+import Cardano.Node.Types (PABServerConfig (..))
 import Cardano.Protocol.Socket.Mock.Client (TxSendHandle (..), queueTx, runTxSender)
 import Ledger.Ada qualified as Ada
 import Ledger.Blockchain (OnChainTx (..))
@@ -70,7 +70,7 @@ data AppEnv = AppEnv
 initialUtxoIndex :: Config -> UtxoIndex
 initialUtxoIndex config =
   let dist = Map.fromList $
-               zip (config & nodeServerConfig & mscInitialTxWallets & fmap fromWalletNumber)
+               zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
                    (repeat (Ada.adaValueOf 1000_000_000))
       initialTxs =
         view (chainState . txPool) $
@@ -191,7 +191,7 @@ initializeInterruptHandler stats = do
 -- | Build a client environment for servant.
 initializeClient :: Config -> IO TxSendHandle
 initializeClient cfg = do
-    let serverSocket = mscSocketPath $ nodeServerConfig cfg
+    let serverSocket = pscSocketPath $ nodeServerConfig cfg
     runTxSender serverSocket
 
 main :: IO ()

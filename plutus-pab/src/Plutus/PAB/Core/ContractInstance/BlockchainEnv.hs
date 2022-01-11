@@ -46,7 +46,7 @@ import Plutus.Contract.CardanoAPI (fromCardanoTx)
 -- | Connect to the node and write node updates to the blockchain
 --   env.
 startNodeClient ::
-  FilePath -- ^ Socket to connect to node
+     FilePath -- ^ Socket to connect to node
   -> NodeMode -- ^ Whether to connect to real node or mock node
   -> Maybe Int  -- ^ How much history do we remember for rollbacks
   -> SlotConfig -- ^ Slot config used by the node

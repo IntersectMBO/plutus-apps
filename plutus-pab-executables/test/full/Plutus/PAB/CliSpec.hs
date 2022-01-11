@@ -104,7 +104,7 @@ defaultPabConfig
       -- TODO: Note: If it exceeds 900, Hydra assumes the CI is unresponsive
       -- (not unreasonably...)
       { pabWebserverConfig = def { PAB.Types.endpointTimeout = Just 60 }
-      , nodeServerConfig = def { Node.Types.mscSocketPath = "/tmp/node-server.sock" }
+      , nodeServerConfig = def { Node.Types.pscSocketPath = "/tmp/node-server.sock" }
       }
 
 -- | Bump all the default ports, and any other needed things so that we
@@ -116,7 +116,7 @@ bumpConfig
   -> Config    -- ^ Bumped config!
 bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverConfig{PAB.Types.baseUrl=p_u}
                                , walletServerConfig
-                               , nodeServerConfig     = n@Node.Types.MockServerConfig{Node.Types.mscBaseUrl=n_u,Node.Types.mscSocketPath=soc}
+                               , nodeServerConfig     = n@Node.Types.PABServerConfig{Node.Types.pscBaseUrl=n_u,Node.Types.pscSocketPath=soc}
                                , chainIndexConfig     = c@ChainIndex.Types.ChainIndexConfig{ChainIndex.Types.ciBaseUrl=c_u}
                                , dbConfig             = db@PAB.Types.DbConfig{PAB.Types.dbConfigFile=dbFile}
                                } = newConf
@@ -125,7 +125,7 @@ bumpConfig x dbName conf@Config{ pabWebserverConfig   = p@PAB.Types.WebserverCon
     newConf
       = conf { pabWebserverConfig   = p { PAB.Types.baseUrl          = bump p_u }
              , walletServerConfig   = over (Wallet.Types.walletSettingsL . Wallet.Types.baseUrlL) (coerce . bump . coerce) walletServerConfig
-             , nodeServerConfig     = n { Node.Types.mscBaseUrl      = bump n_u, Node.Types.mscSocketPath = soc ++ "." ++ show x }
+             , nodeServerConfig     = n { Node.Types.pscBaseUrl      = bump n_u, Node.Types.pscSocketPath = soc ++ "." ++ show x }
              , chainIndexConfig     = c { ChainIndex.Types.ciBaseUrl = coerce $ bump $ coerce c_u }
              , dbConfig             = db { PAB.Types.dbConfigFile    = "file::" <> dbName <> "?mode=memory&cache=shared" }
              }

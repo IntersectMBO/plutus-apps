@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -25,8 +24,8 @@ import Cardano.BM.Configuration (Configuration)
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
 import Cardano.Node.Server qualified as NodeServer
-import Cardano.Node.Types (MockServerConfig (mscFeeConfig, mscNodeMode, mscSlotConfig, mscSocketPath),
-                           NodeMode (AlonzoNode, MockNode))
+import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
+                           PABServerConfig (pscFeeConfig, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Cardano.Wallet.Mock.Server qualified as WalletServer
 import Cardano.Wallet.Mock.Types (WalletMsg)
 import Cardano.Wallet.Types (WalletConfig (LocalWalletConfig, RemoteWalletConfig))
@@ -62,7 +61,7 @@ import Plutus.PAB.Db.Beam qualified as Beam
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltinState, getResponse)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
-import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartMockNode))
+import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartNode))
 import Plutus.PAB.Types (Config (Config, dbConfig, pabWebserverConfig), chainIndexConfig, nodeServerConfig,
                          walletServerConfig)
 import Plutus.PAB.Webserver.Server qualified as PABServer
@@ -109,9 +108,9 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServer
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
         ws
-        (mscFeeConfig nodeServerConfig)
-        (mscSocketPath nodeServerConfig)
-        (mscSlotConfig nodeServerConfig)
+        (pscFeeConfig nodeServerConfig)
+        (pscSocketPath nodeServerConfig)
+        (pscSlotConfig nodeServerConfig)
         (ChainIndex.ciBaseUrl chainIndexConfig)
         ccaAvailability
 
@@ -120,8 +119,8 @@ runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {walletServerConfig =
     error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run mock wallet in remote wallet config."
 
 -- Run mock node server
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartMockNode =
-    case mscNodeMode nodeServerConfig of
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartNode =
+    case pscNodeMode nodeServerConfig of
         MockNode -> do
             liftIO $ NodeServer.main
                 (toMockNodeServerLog ccaTrace)
@@ -179,12 +178,20 @@ runConfigCommand contractHandler ConfigCommandArgs{ccaTrace, ccaPABConfig=config
         exitWith (ExitFailure 2)
 
 -- Fork a list of commands
-runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability} (ForkCommands commands) =
-    void $ do
-        threads <- traverse forkCommand commands
-        putStrLn "Started all commands."
-        waitAny threads
+runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConfig=Config {nodeServerConfig} } (ForkCommands commands) =
+    let shouldStartMocks = case pscNodeMode nodeServerConfig of
+                             MockNode   -> True
+                             AlonzoNode -> False
+     in void $ do
+          threads <- traverse forkCommand
+                   $ filter (mockedServices shouldStartMocks) commands
+          putStrLn "Started all commands."
+          waitAny threads
   where
+    mockedServices :: Bool -> ConfigCommand -> Bool
+    mockedServices shouldStartMocks ChainIndex = shouldStartMocks
+    mockedServices shouldStartMocks MockWallet = shouldStartMocks
+    mockedServices _ _                         = True
     forkCommand :: ConfigCommand -> IO (Async ())
     forkCommand subcommand = do
       putStrLn $ "Starting: " <> show subcommand
@@ -198,8 +205,8 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config { nodeServerC
     ChainIndex.main
         (toChainIndexLog ccaTrace)
         chainIndexConfig
-        (mscSocketPath nodeServerConfig)
-        (mscSlotConfig nodeServerConfig)
+        (pscSocketPath nodeServerConfig)
+        (pscSlotConfig nodeServerConfig)
 
 -- Get the state of a contract
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ContractState contractInstanceId) = do
@@ -264,7 +271,7 @@ toChainIndexLog = LM.convertLog $ LM.PABMsg . LM.SChainIndexServerMsg
 toWalletLog :: Trace m (LM.AppMsg (Builtin a)) -> Trace m WalletMsg
 toWalletLog = LM.convertLog $ LM.PABMsg . LM.SWalletMsg
 
-toMockNodeServerLog :: Trace m (LM.AppMsg (Builtin a)) -> Trace m LM.MockServerLogMsg
+toMockNodeServerLog :: Trace m (LM.AppMsg (Builtin a)) -> Trace m LM.PABServerLogMsg
 toMockNodeServerLog = LM.convertLog $ LM.PABMsg . LM.SMockserverLogMsg
 
 -- | Wait for some time to allow all log messages to be printed to

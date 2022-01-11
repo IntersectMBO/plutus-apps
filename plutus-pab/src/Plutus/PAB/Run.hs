@@ -19,7 +19,7 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.BM.Plugin (loadPlugin)
 import Cardano.BM.Setup (setupTrace_)
-import Cardano.Node.Types (mscPassphrase)
+import Cardano.Node.Types (pscPassphrase)
 import Control.Applicative (Alternative ((<|>)))
 import Control.Concurrent.Availability (newToken)
 import Control.Monad (when)
@@ -95,7 +95,7 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resum
     let mkArgs config@Config{nodeServerConfig, developmentOptions} = ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
-                , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { mscPassphrase      = passphrase      <|> mscPassphrase nodeServerConfig }
+                , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { pscPassphrase      = passphrase      <|> pscPassphrase nodeServerConfig }
                                         , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions
                                                                                   , pabResumeFrom      = max resumeFrom (pabResumeFrom developmentOptions) }
                                         }
