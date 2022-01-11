@@ -95,7 +95,7 @@ newWallet :: forall m effs. (LastMember m effs, MonadIO m) => Eff effs MockWalle
 newWallet = do
     Seed seed <- generateSeed
     let secretKeyBytes = BS.pack . unpack $ seed
-    return $ CW.fromSeed secretKeyBytes
+    return $ CW.fromSeed' secretKeyBytes
 
 -- | Handle multiple wallets using existing @Wallet.handleWallet@ handler
 handleMultiWallet :: forall m effs.

@@ -1,8 +1,8 @@
 # How to connect to a testnet
 
-## Get `[cardano-node](https://github.com/input-output-hk/cardano-node)` onto the path
+## Get `cardano-node` onto the path
 
-The easiest way of doing this is to enter a `nix-shell` then build the node and use `cabal exec` to run it. If you need the latest version of the cardano node you can run this in the `[cardano-node](https://github.com/input-output-hk/cardano-node)` repository, or you *should* get a slightly older version of the node in the `[plutus](https://github.com/input-output-hk/plutus.git)` repository.
+The easiest way of doing this is to enter this repository's `nix-shell`, where one is already there by default. Other alternatives include downloading pre-built binaries, running Docker, running a Nix shell or building from source. See [the node's repository](https://github.com/input-output-hk/cardano-node) for more information.
 
 ## Download the node configurations
 
@@ -16,7 +16,7 @@ I am using a shell script to start the node that I will paste here:
 ```shell
 #!/bin/bash
 
-cabal exec cardano-node -- run \
+cardano-node -- run \
     --config ./alonzo-purple-config.json \
     --topology ./alonzo-purple-topology.json \
     --database-path testnet/db \

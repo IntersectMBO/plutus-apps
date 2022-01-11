@@ -30,14 +30,13 @@ import Data.Foldable (for_)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text.Extras (tshow)
 import Data.Yaml (decodeFileThrow)
+import Plutus.Monitoring.Util (PrettyObject (..), convertLog)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions)
 import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
-import Plutus.PAB.Monitoring.Util (PrettyObject (..), convertLog)
 import Plutus.PAB.Run.Cli
 import Plutus.PAB.Run.CommandParser
-import Plutus.PAB.Run.PSGenerator (HasPSTypes)
-import Plutus.PAB.Types (Config (..), PABError (MissingConfigFileOption))
+import Plutus.PAB.Types (Config (..), DevelopmentOptions (..), PABError (MissingConfigFileOption))
 import Prettyprinter (Pretty (pretty))
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
@@ -51,7 +50,6 @@ runWith :: forall a.
     , Pretty a
     , Servant.MimeUnrender Servant.JSON a
     , HasDefinitions a
-    , HasPSTypes a
     , OpenApi.ToSchema a
     )
     => BuiltinHandler a -- ^ Builtin contract handler. Can be created with 'Plutus.PAB.Effects.Contract.Builtin.handleBuiltin'.
@@ -69,15 +67,13 @@ runWithOpts :: forall a.
     , Pretty a
     , Servant.MimeUnrender Servant.JSON a
     , HasDefinitions a
-    , HasPSTypes a
     , OpenApi.ToSchema a
     )
     => BuiltinHandler a
     -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
     -> AppOpts
     -> IO ()
-runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
-
+runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resumeFrom, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
     -- Parse config files and initialize logging
     logConfig <- maybe defaultConfig loadConfig logConfigPath
     for_ minLogLevel $ \ll -> CM.setMinSeverity logConfig ll
@@ -96,10 +92,13 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, logConfigPath, passphr
             Nothing -> pure $ Left MissingConfigFileOption
             Just p  -> do Right <$> (liftIO $ decodeFileThrow p)
 
-    let mkArgs config@Config{nodeServerConfig} = ConfigCommandArgs
+    let mkArgs config@Config{nodeServerConfig, developmentOptions} = ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
-                , ccaPABConfig = config { nodeServerConfig = nodeServerConfig { mscPassphrase = passphrase <|> mscPassphrase nodeServerConfig }}
+                , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { mscPassphrase      = passphrase      <|> mscPassphrase nodeServerConfig }
+                                        , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions
+                                                                                  , pabResumeFrom      = max resumeFrom (pabResumeFrom developmentOptions) }
+                                        }
                 , ccaAvailability = serviceAvailability
                 , ccaStorageBackend = storageBackend
                 }

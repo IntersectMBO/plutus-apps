@@ -10,6 +10,7 @@ packages: doc
           plutus-ledger
           plutus-ledger-constraints
           plutus-pab
+          plutus-pab-executables
           plutus-playground-server
           plutus-use-cases
           quickcheck-dynamic
@@ -104,13 +105,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-crypto.git
-  tag: 1fff72e39e690676d4156a56858c6b72e1f0bff9
+  tag: f73079303f663e028288f9f4a9e08bcca39a923e
+  --sha256: 1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q
 
 -- Copied from plutus-core
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 0192ba6ce710226a81894de2f1b56fe9dd160801
+  tag: 654f5b7c76f7cc57900b4ddc664a82fc3b925fb0
+  --sha256: 0j4x9zbx5dkww82sqi086h39p456iq5xr476ylmrnpwcpfb4xai4
   subdir:
     base-deriving-via
     binary
@@ -127,7 +130,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: fd773f7a58412131512b9f694ab95653ac430852
+  tag: bb4ed71ba8e587f672d06edf9d2e376f4b055555
+  --sha256: 00h10l5mmiza9819p9v5q5749nb9pzgi20vpzpy1d34zmh6gf1cj
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -143,9 +147,11 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/j-mueller/cardano-wallet
-  tag: 6be73ab852c0592713dfe78218856d4a8a0ee69e
+  location: https://github.com/input-output-hk/cardano-wallet
+  tag: 760140e238a5fbca61d1b286d7a80ece058dc729
+  --sha256: 014njpddrlqm9bbab636h2gf58zkm0bx04i1jsn07vh5j3k0gri6
   subdir:
+    lib/dbvar
     lib/text-class
     lib/strict-non-empty-containers
     lib/core
@@ -159,7 +165,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 1f4973f36f689d6da75b5d351fb124d66ef1057d
+  tag: d613de3d872ec8b4a5da0c98afb443f322dc4dab
+  --sha256: 0lfbipfdrzay8v1pcazx0qgkda3d1j0505yig9jrml9j7991rmhl
   subdir:
     monoidal-synchronisation
     typed-protocols
@@ -203,8 +210,9 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-ledger-specs
+  location: https://github.com/input-output-hk/cardano-ledger
   tag: bf008ce028751cae9fb0b53c3bef20f07c06e333
+  --sha256: 0my3801w1vinc0kf5yh9lxl6saqxgwm6ccg0vvzi104pafcwwcqx
   subdir:
     byron/ledger/impl
     cardano-ledger-core
@@ -225,28 +233,13 @@ source-repository-package
     libs/cardano-ledger-pretty
     semantics/small-steps-test
 
--- A lot of plutus-apps dependencies have to be synchronized with the dependencies of
--- cardano-node. If you update cardano-node, please make sure that all dependencies
--- of cardano-node are also updated.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node.git
-  tag: b6ca519f97a0e795611a63174687e6bb70c9f752
+  tag: 4f65fb9a27aa7e3a1873ab4211e412af780a3648
+  --sha256: 00k9fqrm0gphjji23x0nc9z6bqh8bqrncgivn3mi3csacjzicrrx
   subdir:
     cardano-api
-    cardano-node
-    cardano-cli
-
--- User newer cardano-config to work around spwan issues in RevFromGit
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-config.git
-  tag: fe7855e981072d392513f9cf3994e0b6eba40d7d
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/optparse-applicative
-  tag: 7497a29cb998721a9068d5725d49461f2bba0e7a
 
 source-repository-package
   type: git

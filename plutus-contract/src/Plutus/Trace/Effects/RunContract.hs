@@ -20,6 +20,7 @@ An effect for starting contract instances and calling endpoints on them.
 -}
 module Plutus.Trace.Effects.RunContract(
     RunContract(..)
+    , StartContract(..)
     , ContractConstraints
     , ContractInstanceTag
     , activateContract
@@ -30,6 +31,7 @@ module Plutus.Trace.Effects.RunContract(
     , observableState
     , walletInstanceTag
     , handleRunContract
+    , handleStartContract
     , startContractThread
     ) where
 
@@ -77,9 +79,14 @@ type ContractConstraints s =
     , V.Forall (Output s) JSON.ToJSON
     )
 
+-- | Start a Plutus contract (client side)
+data StartContract r where
+    ActivateContract :: (IsContract contract, ContractConstraints s, Show e, JSON.FromJSON e, JSON.ToJSON e, JSON.ToJSON w, Monoid w, JSON.FromJSON w) => Wallet -> contract w s e a -> ContractInstanceTag -> StartContract (ContractHandle w s e)
+
+makeEffect ''StartContract
+
 -- | Run a Plutus contract (client side)
 data RunContract r where
-    ActivateContract :: (IsContract contract, ContractConstraints s, Show e, JSON.FromJSON e, JSON.ToJSON e, JSON.ToJSON w, Monoid w, JSON.FromJSON w) => Wallet -> contract w s e a -> ContractInstanceTag -> RunContract (ContractHandle w s e)
     CallEndpointP :: forall l ep w s e. (ContractConstraints s, HasEndpoint l ep s, JSON.ToJSON ep) => Proxy l -> ContractHandle w s e -> ep -> RunContract ()
     GetContractState :: forall w s e. (ContractConstraints s, JSON.FromJSON e, JSON.FromJSON w, JSON.ToJSON w) => ContractHandle w s e -> RunContract (ContractInstanceState w s e ())
 
@@ -101,7 +108,7 @@ activateContractWallet
     , JSON.FromJSON e
     , JSON.ToJSON w
     , JSON.FromJSON w
-    , Member RunContract effs
+    , Member StartContract effs
     , Monoid w
     )
     => Wallet
@@ -115,10 +122,7 @@ handleRunContract :: forall effs effs2.
     ( Member (State EmulatorThreads) effs2
     , Member (Error EmulatorRuntimeError) effs2
     , Member (Error EmulatorRuntimeError) effs
-    , Member MultiAgentEffect effs2
-    , Member (LogMsg EmulatorEvent') effs2
     , Member (LogMsg EmulatorEvent') effs
-    , Member ContractInstanceIdEff effs
     , Member (State EmulatorThreads) effs
     , Member (Reader ThreadId) effs
     , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
@@ -126,11 +130,25 @@ handleRunContract :: forall effs effs2.
     => RunContract
     ~> Eff effs
 handleRunContract = \case
-    ActivateContract w c t -> handleActivate @_ @_ @_ @effs @effs2 w t (void (toContract c))
     CallEndpointP p h v -> handleCallEndpoint @_ @_ @_ @_ @_ @effs @effs2 p h v
     GetContractState hdl ->
         interpret (mapLog UserThreadEvent)
             $ handleGetContractState @_ @_ @_ @(LogMsg UserThreadMsg ': effs) @effs2 hdl
+
+-- | Handle the 'StartContract' effect by starting each contract instance in an
+--   emulator thread.
+handleStartContract :: forall effs effs2.
+    ( Member (State EmulatorThreads) effs2
+    , Member (Error EmulatorRuntimeError) effs2
+    , Member MultiAgentEffect effs2
+    , Member (LogMsg EmulatorEvent') effs2
+    , Member ContractInstanceIdEff effs
+    , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
+    )
+    => StartContract
+    ~> Eff effs
+handleStartContract = \case
+    ActivateContract w c t -> handleActivate @_ @_ @_ @effs @effs2 w t (void (toContract c))
 
 handleGetContractState ::
     forall w s e effs effs2.

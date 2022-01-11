@@ -35,7 +35,8 @@ import Ledger (Address (addressCredential), ChainIndexTxOut (..), MintingPolicy 
                StakeValidatorHash (StakeValidatorHash), TxId, TxOut (txOutAddress), TxOutRef (..),
                Validator (Validator), ValidatorHash (ValidatorHash), txOutDatumHash, txOutValue)
 import Ledger.Scripts (ScriptHash (ScriptHash))
-import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
+                              UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError (..))
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog (..))
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
@@ -44,8 +45,8 @@ import Plutus.ChainIndex.Emulator.DiskState (DiskState, addressMap, assetClassMa
 import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
 import Plutus.ChainIndex.Tx (ChainIndexTx, _ValidTx, citxOutputs)
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
-import Plutus.ChainIndex.Types (BlockProcessOption (..), Diagnostics (..), Point (PointAtGenesis), Tip (..),
-                                TxUtxoBalance (..))
+import Plutus.ChainIndex.Types (ChainSyncBlock (..), Diagnostics (..), Point (PointAtGenesis), Tip (..),
+                                TxProcessOption (..), TxUtxoBalance (..))
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
@@ -149,6 +150,18 @@ handleQuery = \case
                 logWarn TipIsGenesis
                 pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
             tp           -> pure (UtxosResponse tp page)
+    TxsFromTxIds is -> catMaybes <$> mapM getTxFromTxId is
+    TxoSetAtAddress pageQuery cred -> do
+        state <- get
+        let outRefs = view (diskState . addressMap . at cred) state
+            txoRefs = fromMaybe mempty outRefs
+            utxo = view (utxoIndex . to utxoState) state
+            page = pageOf pageQuery txoRefs
+        case tip utxo of
+            TipAtGenesis -> do
+                logWarn TipIsGenesis
+                pure $ TxosResponse $ pageOf pageQuery Set.empty
+            _            -> pure $ TxosResponse page
     GetTip ->
         gets (tip . utxoState . view utxoIndex)
 
@@ -161,9 +174,9 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlock tip_ transactions opts -> do
+    AppendBlock (Block tip_ transactions) -> do
         oldState <- get @ChainIndexEmulatorState
-        case UtxoState.insert (TxUtxoBalance.fromBlock tip_ transactions) (view utxoIndex oldState) of
+        case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) (view utxoIndex oldState) of
             Left err -> do
                 let reason = InsertionFailed err
                 logError $ Err reason
@@ -172,7 +185,7 @@ handleControl = \case
                 put $ oldState
                         & set utxoIndex newIndex
                         & over diskState
-                            (mappend $ foldMap DiskState.fromTx (if bpoStoreTxs opts then transactions else []))
+                            (mappend $ foldMap (\(tx, opt) -> if tpoStoreTx opt then DiskState.fromTx tx else mempty) transactions)
                 logDebug $ InsertionSuccess tip_ insertPosition
     Rollback tip_ -> do
         oldState <- get @ChainIndexEmulatorState

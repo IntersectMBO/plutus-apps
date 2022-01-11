@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies       #-}
 module Spec.Auction
     ( tests
-    , auctionEmulatorCfg
+    , options
     , auctionTrace1
     , auctionTrace2
     , prop_Auction
@@ -68,15 +68,10 @@ theToken =
     -- This currency is created by the initial transaction.
     Value.singleton mpsHash "token" 1
 
--- | 'EmulatorConfig' that includes 'theToken' in the initial distribution of Wallet 1.
-auctionEmulatorCfg :: Trace.EmulatorConfig
-auctionEmulatorCfg =
-    let initialDistribution = defaultDist & over (ix w1) ((<>) theToken)
-    in (def & Trace.initialChainState .~ Left initialDistribution) & Trace.slotConfig .~ slotCfg
-
--- | 'CheckOptions' that includes our own 'auctionEmulatorCfg'.
+-- | 'CheckOptions' that includes 'theToken' in the initial distribution of Wallet 1.
 options :: CheckOptions
-options = set emulatorConfig auctionEmulatorCfg defaultCheckOptions
+options = defaultCheckOptions
+    & changeInitialWalletValue w1 ((<>) theToken)
 
 seller :: Contract AuctionOutput SellerSchema AuctionError ()
 seller = auctionSeller (apAsset params) (apEndTime params)
@@ -194,6 +189,8 @@ instance ContractModel AuctionModel where
         , _phase      = NotStarted
         }
 
+    initialHandleSpecs = ContractInstanceSpec SellerH w1 seller : [ ContractInstanceSpec (BuyerH w) w (buyer threadToken) | w <- [w2, w3, w4] ]
+
     arbitraryAction s
         | p /= NotStarted =
             oneof [ WaitUntil . step <$> choose (1, 10 :: Integer)
@@ -275,18 +272,14 @@ instance ContractModel AuctionModel where
 
     monitoring _ _ = id
 
-delay :: Integer -> Trace.EmulatorTrace ()
+delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
 delay n = void $ Trace.waitNSlots $ fromIntegral n
 
 prop_Auction :: Actions AuctionModel -> Property
 prop_Auction script =
-    propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions handleSpec
+    propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions
         (\ _ -> pure True)  -- TODO: check termination
         script
-
-handleSpec :: [ContractInstanceSpec AuctionModel]
-handleSpec = ContractInstanceSpec SellerH w1 seller :
-             [ ContractInstanceSpec (BuyerH w) w (buyer threadToken) | w <- [w2, w3, w4] ]
 
 finishAuction :: DL AuctionModel ()
 finishAuction = do
@@ -314,7 +307,7 @@ noLockProof = NoLockedFundsProof
       when (slot < 101) $ action $ WaitUntil 101
 
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = checkNoLockedFundsProof options handleSpec noLockProof
+prop_NoLockedFunds = checkNoLockedFundsProof options noLockProof
 
 tests :: TestTree
 tests =

@@ -7,4 +7,5 @@ in
     name = "${variant}-playground-client-and-docs";
     paths = [ client shiftedDocs ];
   });
+  port-name = "${variant}_playground_client";
 }

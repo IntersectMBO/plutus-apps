@@ -23,6 +23,7 @@ import Data.Monoid (Sum (..))
 import Flat (flat)
 import Ledger.Constraints.OffChain (UnbalancedTx (..))
 import Ledger.Index (ScriptValidationEvent (..), ValidatorMode (..), getScript)
+import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Wallet (export)
 import Plutus.Trace.Emulator (EmulatorConfig, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
@@ -52,6 +53,7 @@ data Command =
         { networkId          :: C.NetworkId -- ^ Network ID to use when creating addresses
         , protocolParamsJSON :: FilePath -- ^ Location of a JSON file with protocol parameters
         }
+    | MkTxLogs -- ^ Write out the arguments and results of 'mkTx' calls
     deriving stock (Show, Eq)
 
 {-| Run an emulator trace and write the applied scripts to a file in Flat format
@@ -79,6 +81,11 @@ writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
                     traverse_
                         (uncurry $ writeTransaction params networkId scPath prefix)
                         (zip [1::Int ..] $ getEvents Folds.walletTxBalanceEvents)
+            pure mempty
+        MkTxLogs -> do
+            traverse_
+                (uncurry $ writeMkTxLog scPath prefix)
+                (zip [1::Int ..] $ getEvents Folds.mkTxLogs)
             pure mempty
 
 {- There's an instance of Codec.Serialise for
@@ -110,6 +117,12 @@ writeTransaction params networkId fp prefix idx tx = do
         Right exportTx -> do
             putStrLn $ "Writing partial transaction JSON: " <> filename1
             BSL.writeFile filename1 $ encodePretty exportTx
+
+writeMkTxLog :: FilePath -> String -> Int -> MkTxLog -> IO ()
+writeMkTxLog fp prefix idx event = do
+    let filename1 = fp </> prefix <> "-" <> show idx <> "-mkTx.json"
+    putStrLn $ "Writing mkTxLog transaction JSON: " <> filename1
+    BSL.writeFile filename1 $ encodePretty event
 
 filenameSuffix :: ValidatorMode -> String
 filenameSuffix FullyAppliedValidators = ""

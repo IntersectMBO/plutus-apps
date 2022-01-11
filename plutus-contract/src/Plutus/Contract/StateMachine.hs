@@ -84,6 +84,7 @@ import Plutus.Contract (AsContractError (_ConstraintResolutionError, _ContractEr
                         awaitPromise, isSlot, isTime, logWarn, mapError, never, ownPaymentPubKeyHash, promiseBind,
                         select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt, utxosTxOutTxAt,
                         utxosTxOutTxFromTx)
+import Plutus.Contract.Request (mkTxContract)
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
 import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue),
                                              StateMachine (StateMachine, smFinal, smThreadToken, smTransition),
@@ -434,7 +435,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
             <> foldMap (mintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
             <> Constraints.unspentOutputs utxo
             <> customLookups
-    utx <- either (throwing _ConstraintResolutionError) pure (Constraints.mkTx lookups constraints)
+    utx <- mapError (review _ConstraintResolutionError) (mkTxContract lookups constraints)
     let adjustedUtx = Constraints.adjustUnbalancedTx utx
     unless (utx == adjustedUtx) $
       logWarn @Text $ "Plutus.Contract.StateMachine.runInitialise: "

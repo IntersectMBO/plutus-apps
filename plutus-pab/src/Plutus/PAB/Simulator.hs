@@ -107,7 +107,7 @@ import Ledger.Index qualified as UtxoIndex
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Ledger.Value (Value, flattenValue)
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
-                                   ChainIndexQueryEffect (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
+                                   ChainIndexQueryEffect (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, TxoSetAtAddress, TxsFromTxIds, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
                                    TxOutStatus, TxStatus, getTip)
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers, handleContractDefinitionEffect, handleContractEffect, handleContractStoreEffect, handleLogMessages, handleServicesEffects, initialiseEnvironment, onShutdown, onStartup))
@@ -213,8 +213,8 @@ mkSimulatorHandlers feeCfg slotCfg handleContractEffect =
     EffectHandlers
         { initialiseEnvironment =
             (,,)
-                <$> liftIO (STM.atomically Instances.emptyInstancesState)
-                <*> liftIO (STM.atomically Instances.emptyBlockchainEnv)
+                <$> liftIO (STM.atomically   Instances.emptyInstancesState )
+                <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv Nothing)
                 <*> liftIO (initialState @t)
         , handleContractStoreEffect =
             interpret handleContractStore
@@ -584,6 +584,8 @@ handleChainIndexEffect = runChainIndexEffects @t . \case
     UtxoSetMembership ref     -> ChainIndex.utxoSetMembership ref
     UtxoSetAtAddress pq addr  -> ChainIndex.utxoSetAtAddress pq addr
     UtxoSetWithCurrency pq ac -> ChainIndex.utxoSetWithCurrency pq ac
+    TxsFromTxIds txids        -> ChainIndex.txsFromTxIds txids
+    TxoSetAtAddress pq addr   -> ChainIndex.txoSetAtAddress pq addr
     GetTip                    -> ChainIndex.getTip
 
 -- | Start a thread that prints log messages to the terminal when they come in.

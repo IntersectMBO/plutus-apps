@@ -1,0 +1,47 @@
+{
+  "name": "pab-nami",
+  "version": "0.0.1",
+  "scripts": {
+    "build:spago": "spago build --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\"",
+    "build:spago:watch": "spago build --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen",
+    "build:webpack": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development",
+    "build:webpack:prod": "webpack --progress --bail --mode=production --node-env=production",
+    "build:webpack:dev": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development",
+    "install:spago": "spago install",
+    "repl": "spago repl",
+    "start": "npm install && npm run install:spago && npm run build:webpack:dev",
+    "test": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\"",
+    "test:watch": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen"
+  },
+  "dependencies": {
+    "@cardano-foundation/ledgerjs-hw-app-cardano": "^4.0.0",
+    "@dicebear/avatars": "^4.10.1",
+    "@dicebear/avatars-bottts-sprites": "^4.10.1",
+    "@emurgo/cardano-serialization-lib-browser": "^9.1.2",
+    "@emurgo/cip14-js": "^3.0.1",
+    "@ledgerhq/hw-transport-webusb": "^6.11.2",
+    "big-integer": "^1.6.50",
+    "bignumber": "^1.1.0",
+    "bip39": "^3.0.4",
+    "blake2b": "^2.1.4",
+    "buffer": "^6.0.3",
+    "crypto-random-string": "^4.0.0",
+    "json-bigint": "^1.0.0",
+    "secrets": "^1.1.5",
+    "xhr2": "^0.2.1"
+  },
+  "devDependencies": {
+    "@babel/plugin-transform-runtime": "^7.16.4",
+    "@babel/preset-env": "^7.16.4",
+    "css-loader": "^6.5.1",
+    "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.4.5",
+    "node-polyfill-webpack-plugin": "^1.1.4",
+    "purs-loader": "^3.7.2",
+    "style-loader": "^3.3.1",
+    "webpack": "^5.36.4",
+    "webpack-cli": "^4.6.0",
+    "webpack-dev-server": "^3.11.2",
+    "whatwg-fetch": "^3.6.2"
+  }
+}

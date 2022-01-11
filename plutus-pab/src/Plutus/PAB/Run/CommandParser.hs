@@ -10,23 +10,34 @@
 
 module Plutus.PAB.Run.CommandParser (parseOptions, AppOpts(..)) where
 
+import Cardano.Api (ChainPoint (..), deserialiseFromRawBytesHex, proxyToAsType)
 import Cardano.BM.Data.Severity (Severity (..))
-import Data.Text (Text)
-import Options.Applicative (CommandFields, Mod, Parser, argument, auto, command, customExecParser, disambiguate, flag,
-                            fullDesc, help, helper, idm, info, long, metavar, option, prefs, progDesc, short,
-                            showHelpOnEmpty, showHelpOnError, str, subparser, value)
+import Cardano.Slotting.Slot (SlotNo (..))
+import Data.Either.Combinators (maybeToRight)
+import Data.List (elemIndex)
+import Data.Proxy (Proxy (Proxy))
+import Data.Text (Text, pack)
+import Data.Text.Encoding (encodeUtf8)
+import Options.Applicative (CommandFields, Mod, Parser, ReadM, argument, auto, command, customExecParser, disambiguate,
+                            eitherReader, flag, fullDesc, help, helper, idm, info, long, metavar, option, prefs,
+                            progDesc, short, showHelpOnEmpty, showHelpOnError, str, subparser, value)
+import Text.Read (readEither)
 import Wallet.Types (ContractInstanceId (..))
 
+import Plutus.ChainIndex.Compatibility (fromCardanoPoint)
+import Plutus.ChainIndex.Types (Point (..))
 import Plutus.PAB.App (StorageBackend (..))
 import Plutus.PAB.Run.Command
 
-data AppOpts = AppOpts { minLogLevel    :: Maybe Severity
-                       , logConfigPath  :: Maybe FilePath
-                       , configPath     :: Maybe FilePath
-                       , passphrase     :: Maybe Text
-                       , runEkgServer   :: Bool
-                       , storageBackend :: StorageBackend
-                       , cmd            :: ConfigCommand
+data AppOpts = AppOpts { minLogLevel     :: Maybe Severity
+                       , logConfigPath   :: Maybe FilePath
+                       , configPath      :: Maybe FilePath
+                       , passphrase      :: Maybe Text
+                       , rollbackHistory :: Maybe Int
+                       , resumeFrom      :: Point
+                       , runEkgServer    :: Bool
+                       , storageBackend  :: StorageBackend
+                       , cmd             :: ConfigCommand
                        }
 
 parseOptions :: IO AppOpts
@@ -61,6 +72,8 @@ commandLineParser =
                 <*> logConfigFileParser
                 <*> configFileParser
                 <*> passphraseParser
+                <*> rollbackHistoryParser
+                <*> chainPointParser
                 <*> ekgFlag
                 <*> inMemoryFlag
                 <*> commandParser
@@ -81,6 +94,28 @@ logConfigFileParser =
          metavar "LOG_CONFIG_FILE" <>
          help "Logging config file location." <> value Nothing)
 
+chainPointReader :: ReadM Point
+chainPointReader = eitherReader $
+  \chainPoint -> do
+    idx <- maybeToRight ("Failed to parse chain point specification. The format" <>
+                         "should be HASH,SLOT") $
+                        elemIndex ',' chainPoint
+    let (hash, slot') = splitAt idx chainPoint
+    slot <- readEither (drop 1 slot')
+    hsh  <- maybeToRight ("Failed to parse hash " <> hash) $
+                         deserialiseFromRawBytesHex
+                           (proxyToAsType Proxy)
+                           (encodeUtf8 $ pack hash)
+    pure $ fromCardanoPoint $ ChainPoint (SlotNo slot) hsh
+
+chainPointParser :: Parser Point
+chainPointParser =
+    option chainPointReader
+        (  metavar "HASH,SLOT"
+        <> long "resume-from"
+        <> help "Specify the hash and the slot where to start synchronisation"
+        <> value PointAtGenesis )
+
 passphraseParser :: Parser (Maybe Text)
 passphraseParser =
     option
@@ -88,6 +123,19 @@ passphraseParser =
         (long "passphrase" <>
          metavar "WALLET_PASSPHRASE" <>
          help "Wallet passphrase." <> value Nothing)
+
+{- Limit the number of blocks that we store for rollbacks. This options helps
+   with the memory usage of the PAB and should be removed when we figure out
+   an alternative to storing the UTXO in memory.
+-}
+rollbackHistoryParser :: Parser (Maybe Int)
+rollbackHistoryParser =
+    option
+        (Just <$> auto)
+        (long "rollback-history" <>
+         metavar "ROLLBACK_HISTORY" <>
+         help "How many blocks are remembered when rolling back" <>
+         value Nothing)
 
 commandParser :: Parser ConfigCommand
 commandParser =
@@ -111,7 +159,6 @@ commandParser =
                              , reportAvailableContractsParser
                              ]))
                    (fullDesc <> progDesc "Manage your smart contracts."))
-        , psGeneratorCommandParser
         ]
 
 migrationParser :: Mod CommandFields ConfigCommand
@@ -119,17 +166,6 @@ migrationParser =
     command "migrate" $
     flip info (fullDesc <> progDesc "Update the database with the latest schema.") $
         pure Migrate
-
-psGeneratorCommandParser :: Mod CommandFields ConfigCommand
-psGeneratorCommandParser =
-    command "psapigenerator" $
-    flip info (fullDesc <> progDesc "Generate the frontend's PureScript files for the webserver API.") $ do
-        psApiGenOutputDir <-
-            argument
-                str
-                (metavar "OUTPUT_DIR" <>
-                 help "Output directory to write PureScript files to.")
-        pure $ PSApiGenerator {psApiGenOutputDir}
 
 mockNodeParser :: Mod CommandFields ConfigCommand
 mockNodeParser =

@@ -99,7 +99,10 @@ tests = testGroup "all tests" [
     testGroup "SomeCardanoApiTx" [
         testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
         ],
-    Ledger.Tx.CardanoAPISpec.tests
+    Ledger.Tx.CardanoAPISpec.tests,
+    testGroup "Signing" [
+        testProperty "signed payload verifies with public key" signAndVerifyTest
+        ]
     ]
 
 initialTxnValid :: Property
@@ -306,3 +309,12 @@ slotToTimeRangeBoundsInverseProp = property $ do
                                   (TimeSlot.slotToPOSIXTimeRange sc slot)
     Hedgehog.assert $ interval slot slot == slotRange
 
+signAndVerifyTest :: Property
+signAndVerifyTest = property $ do
+  seed <- forAll Gen.genSeed
+  pass <- forAll Gen.genPassphrase
+  let
+    privKey = Ledger.generateFromSeed seed pass
+    pubKey = Ledger.toPublicKey privKey
+  payload <- forAll $ Gen.bytes $ Range.singleton 128
+  Hedgehog.assert $ (\x -> Ledger.signedBy x pubKey payload) $ Ledger.sign payload privKey pass

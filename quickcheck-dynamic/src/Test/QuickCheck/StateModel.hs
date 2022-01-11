@@ -101,6 +101,12 @@ instance Eq (Step state) where
 newtype Actions state = Actions [Step state]
   deriving Eq
 
+instance Semigroup (Actions state) where
+  Actions as <> Actions as' = Actions (as <> as')
+
+instance Monoid (Actions state) where
+  mempty = Actions []
+
 instance (forall a. Show (Action state a)) => Show (Actions state) where
   showsPrec d (Actions as)
     | d>10      = ("("++).showsPrec 0 (Actions as).(")"++)

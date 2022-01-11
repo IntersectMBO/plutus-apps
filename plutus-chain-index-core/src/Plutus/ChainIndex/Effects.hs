@@ -16,6 +16,8 @@ module Plutus.ChainIndex.Effects(
     , utxoSetMembership
     , utxoSetAtAddress
     , utxoSetWithCurrency
+    , txsFromTxIds
+    , txoSetAtAddress
     , getTip
     -- * Control effect
     , ChainIndexControlEffect(..)
@@ -32,9 +34,9 @@ import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, R
                StakeValidatorHash, TxId, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
-import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse)
+import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
-import Plutus.ChainIndex.Types (BlockProcessOption, Diagnostics, Point, Tip)
+import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
 
 data ChainIndexQueryEffect r where
 
@@ -71,6 +73,12 @@ data ChainIndexQueryEffect r where
     -- anything, as this request will always return all unspent outputs.
     UtxoSetWithCurrency :: PageQuery TxOutRef -> AssetClass -> ChainIndexQueryEffect UtxosResponse
 
+    -- | Get the transactions for a list of tx IDs.
+    TxsFromTxIds :: [TxId] -> ChainIndexQueryEffect [ChainIndexTx]
+
+    -- | Outputs located at addresses with the given credential.
+    TxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect TxosResponse
+
     -- | Get the tip of the chain index
     GetTip :: ChainIndexQueryEffect Tip
 
@@ -79,7 +87,7 @@ makeEffect ''ChainIndexQueryEffect
 data ChainIndexControlEffect r where
 
     -- | Add a new block to the chain index by giving a new tip and list of tx.
-    AppendBlock :: Tip -> [ChainIndexTx] -> BlockProcessOption -> ChainIndexControlEffect ()
+    AppendBlock :: ChainSyncBlock -> ChainIndexControlEffect ()
 
     -- | Roll back to a previous state (previous tip)
     Rollback    :: Point -> ChainIndexControlEffect ()

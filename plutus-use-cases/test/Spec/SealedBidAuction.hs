@@ -13,8 +13,8 @@ module Spec.SealedBidAuction where
 import Cardano.Crypto.Hash as Crypto
 import Control.Lens hiding (elements)
 import Control.Monad (void, when)
-import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.Default (Default (def))
+import Data.Maybe
 
 import Ledger (Slot (..), Value)
 import Ledger qualified
@@ -50,15 +50,10 @@ theToken = Value.singleton mpsHash "token" 1
 mpsHash :: Value.CurrencySymbol
 mpsHash = Value.CurrencySymbol $ PlutusTx.toBuiltin $ Crypto.hashToBytes $ Crypto.hashWith @Crypto.Blake2b_256 id "ffff"
 
--- | 'EmulatorConfig' that includes 'theToken' in the initial distribution of Wallet 1.
-auctionEmulatorCfg :: Trace.EmulatorConfig
-auctionEmulatorCfg =
-    let initialDistribution = defaultDist & over (ix w1) ((<>) theToken)
-    in (def & Trace.initialChainState .~ Left initialDistribution) & Trace.slotConfig .~ def
-
--- | 'CheckOptions' that includes our own 'auctionEmulatorCfg'.
+-- | 'CheckOptions' that includes 'theToken' in the initial distribution of Wallet 1.
 options :: CheckOptions
-options = set emulatorConfig auctionEmulatorCfg defaultCheckOptions
+options = defaultCheckOptions
+    & changeInitialWalletValue w1 ((<>) theToken)
 
 -- * QuickCheck model
 
@@ -67,7 +62,8 @@ data AuctionModel = AuctionModel
     , _currentWinningBid :: Maybe (Integer, Wallet)
     , _endBidSlot        :: Slot
     , _payoutSlot        :: Slot
-    , _phase             :: Phase }
+    , _phase             :: Phase
+    , _parameters        :: Maybe AuctionParams }
     deriving (Show)
 
 data Phase = NotStarted | Bidding | AwaitingPayout | PayoutTime | AuctionOver
@@ -84,7 +80,7 @@ instance ContractModel AuctionModel where
         SellerH :: ContractInstanceKey AuctionModel () SellerSchema AuctionError
         BidderH :: Wallet -> ContractInstanceKey AuctionModel () BidderSchema AuctionError
 
-    data Action AuctionModel = Init AuctionParams | Bid Wallet Integer | WaitUntil Slot | Reveal Wallet Integer | Payout Wallet
+    data Action AuctionModel = Init AuctionParams | StartContracts | Bid Wallet Integer | WaitUntil Slot | Reveal Wallet Integer | Payout Wallet
         deriving (Eq, Show)
 
     initialState = AuctionModel
@@ -93,7 +89,14 @@ instance ContractModel AuctionModel where
         , _endBidSlot        = TimeSlot.posixTimeToEnclosingSlot def (TimeSlot.scSlotZeroTime def)
         , _payoutSlot        = TimeSlot.posixTimeToEnclosingSlot def (TimeSlot.scSlotZeroTime def)
         , _phase             = NotStarted
+        , _parameters        = Nothing
         }
+
+    initialHandleSpecs = []
+
+    startInstances s StartContracts = ContractInstanceSpec SellerH w1 (sellerContract . fromJust $ s ^. contractState . parameters)
+                                    : [ ContractInstanceSpec (BidderH w) w (bidderContract . fromJust $ s ^. contractState . parameters) | w <- [w2, w3, w4] ]
+    startInstances _ _              = []
 
     arbitraryAction s
         | p /= NotStarted =
@@ -115,6 +118,10 @@ instance ContractModel AuctionModel where
     precondition s cmd  =
         case cmd of
             Init _         -> s ^. contractState . phase == NotStarted
+                           && isNothing (s ^. contractState . parameters)
+
+            StartContracts -> s ^. contractState . phase == NotStarted
+                           && isJust (s ^. contractState . parameters)
 
             WaitUntil slot -> slot > s ^. currentSlot
 
@@ -132,7 +139,9 @@ instance ContractModel AuctionModel where
 
             Payout _       -> s ^. contractState . phase == PayoutTime
 
+
     perform _ _ (Init _)            = delay 3
+    perform _ _ StartContracts      = delay 3
     perform _ _ (WaitUntil slot)    = void $ Trace.waitUntilSlot slot
     perform handle _ (Bid w bid)    = do
         Trace.callEndpoint @"bid" (handle $ BidderH w) (BidArgs (secretArg bid))
@@ -163,10 +172,14 @@ instance ContractModel AuctionModel where
         currentPhase <- viewContractState phase
         case cmd of
             Init params -> do
-                phase $= Bidding
+                endBidSlot .= TimeSlot.posixTimeToEnclosingSlot def (apEndTime params)
+                payoutSlot .= TimeSlot.posixTimeToEnclosingSlot def (apPayoutTime params)
+                parameters .= Just params
+                wait 3
+
+            StartContracts -> do
+                phase .= Bidding
                 withdraw w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
-                endBidSlot $= TimeSlot.posixTimeToEnclosingSlot def (apEndTime params)
-                payoutSlot $= TimeSlot.posixTimeToEnclosingSlot def (apPayoutTime params)
                 wait 3
 
             WaitUntil slot' -> do
@@ -210,7 +223,7 @@ instance ContractModel AuctionModel where
       where
         updatePhase = do
           currentPhase <- viewContractState phase
-          when (currentPhase /= AuctionOver) $ do
+          when (currentPhase `notElem` [NotStarted, AuctionOver]) $ do
             slot       <- viewModelState currentSlot
             eSlot      <- viewContractState endBidSlot
             pSlot <- viewContractState payoutSlot
@@ -219,26 +232,17 @@ instance ContractModel AuctionModel where
             when (slot >= pSlot) $ do
               phase $= PayoutTime
 
-delay :: Integer -> Trace.EmulatorTrace ()
+delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
 delay n = void $ Trace.waitNSlots $ fromIntegral n
 
-prop_Auction :: DL AuctionModel () -> Property
-prop_Auction script =
-    forAll arbitrary $ \params ->
-      forAllDL (action (Init params) >> script) $ \actions ->
-        propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions (spec params)
-          (\ _ -> pure True)  -- TODO: check termination
-          actions
-    where
-        spec params = ContractInstanceSpec SellerH w1 (sellerContract params) :
-                      [ ContractInstanceSpec (BidderH w) w (bidderContract params) | w <- [w2, w3, w4] ]
+prop_Auction :: Actions AuctionModel -> Property
+prop_Auction = propRunActionsWithOptions options defaultCoverageOptions
+               (\ _ -> pure True)  -- TODO: check termination
 
-prop_AuctionModelCorrect :: Property
-prop_AuctionModelCorrect = prop_Auction anyActions_
 
 tests :: TestTree
 tests =
   testGroup "sealed bid auction"
     [ testProperty "packInteger is injective" $ \x y -> x /= y ==> packInteger x /= packInteger y
-    , testProperty "prop_AuctionModelCorrect" $ withMaxSuccess 20 prop_AuctionModelCorrect
+    , testProperty "prop_AuctionModelCorrect" $ withMaxSuccess 20 prop_Auction
     ]

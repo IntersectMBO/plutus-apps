@@ -52,12 +52,8 @@ common lang
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 library
-    import:             lang
-    build-tool-depends:
-        cardano-node:cardano-node -any, cardano-cli:cardano-cli -any
-    ghc-options:
-        -Wno-unused-packages
-
+    import: lang
+    ghc-options: -Wunused-packages
     exposed-modules:
         Cardano.Api.NetworkId.Extra
         Cardano.Api.ProtocolParameters
@@ -104,15 +100,14 @@ library
         Plutus.PAB.Events.Contract
         Plutus.PAB.Events.ContractInstanceState
         Plutus.PAB.Instances
+        Plutus.PAB.LocalCluster.Run
         Plutus.PAB.Monitoring.Config
         Plutus.PAB.Monitoring.Monitoring
         Plutus.PAB.Monitoring.PABLogMsg
-        Plutus.PAB.Monitoring.Util
         Plutus.PAB.Run
         Plutus.PAB.Run.Cli
         Plutus.PAB.Run.Command
         Plutus.PAB.Run.CommandParser
-        Plutus.PAB.Run.PSGenerator
         Plutus.PAB.Simulator
         Plutus.PAB.Timeout
         Plutus.PAB.Types
@@ -128,9 +123,11 @@ library
     build-depends:
         , freer-extras
         , playground-common
+        , plutus-chain-index
         , plutus-chain-index-core
         , plutus-contract
         , plutus-ledger
+        , plutus-ledger-api
         , plutus-ledger-constraints
         , plutus-tx
         , plutus-tx-plugin
@@ -145,14 +142,22 @@ library
         beam-migrate -any,
         beam-sqlite -any,
         bytestring -any,
+        cardano-addresses -any,
         cardano-api -any,
         cardano-slotting -any,
+        cardano-wallet -any,
+        cardano-wallet-cli -any,
         cardano-wallet-core -any,
+        cardano-wallet-core-integration -any,
+        cardano-wallet-launcher -any,
         containers -any,
         contra-tracer -any,
         cryptonite -any,
         data-default -any,
+        either -any,
+        directory -any,
         exceptions -any,
+        filepath -any,
         freer-simple -any,
         generic-arbitrary -any,
         http-client -any,
@@ -168,17 +173,13 @@ library
         optparse-applicative -any,
         ouroboros-network -any,
         ouroboros-network-framework -any,
-        playground-common -any,
-        plutus-ledger-api -any,
         prettyprinter >=1.1.0.1,
-        purescript-bridge -any,
         quickcheck-instances -any,
         row-types -any,
         servant -any,
         servant-client -any,
         servant-openapi3,
         servant-options -any,
-        servant-purescript -any,
         servant-server -any,
         servant-swagger-ui,
         servant-websockets -any,
@@ -202,229 +203,6 @@ library
         build-depends:
                        lobemo-backend-ekg -any
 
-executable plutus-pab-setup
-    main-is:          Main.hs
-    hs-source-dirs:   app
-    other-modules:
-        CommandParser
-
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-
-    build-depends:
-        aeson -any,
-        aeson-pretty -any,
-        async -any,
-        base                  >=4.9     && <5,
-        bytestring -any,
-        containers -any,
-        contra-tracer -any,
-        filepath -any,
-        freer-extras -any,
-        freer-simple -any,
-        lens -any,
-        lobemo-backend-ekg -any,
-        monad-logger -any,
-        mtl -any,
-        optparse-applicative -any,
-        playground-common -any,
-        plutus-contract -any,
-        plutus-ledger -any,
-        plutus-pab -any,
-        plutus-use-cases -any,
-        prettyprinter         >=1.1.0.1,
-        purescript-bridge -any,
-        row-types -any,
-        servant-client -any,
-        servant-purescript -any,
-        servant-server -any,
-        text -any,
-        time-units -any,
-        unliftio-core -any,
-        uuid -any,
-        yaml -any,
-        iohk-monitoring -any
-
-executable plutus-pab-examples
-    main-is:          Main.hs
-    hs-source-dirs:   examples
-    other-modules:
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        ContractExample.WaitForTx
-        ContractExample
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-
-    build-depends:
-        , aeson
-        , base              >=4.9 && <5
-        , containers
-        , data-default
-        , freer-extras
-        , freer-simple
-        , lens
-        , playground-common
-        , plutus-contract
-        , plutus-ledger
-        , plutus-ledger-constraints
-        , plutus-pab
-        , plutus-use-cases
-        , prettyprinter
-        , purescript-bridge
-        , row-types
-        , servant-purescript
-        , text
-        , openapi3
-
-executable plutus-uniswap
-    main-is:          Main.hs
-    hs-source-dirs:   examples/uniswap
-    other-modules:
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-
-    build-depends:
-        , aeson
-        , base              >=4.9 && <5
-        , containers
-        , data-default -any
-        , freer-extras
-        , freer-simple
-        , plutus-contract
-        , plutus-ledger
-        , plutus-pab
-        , plutus-use-cases
-        , prettyprinter
-        , text
-        , openapi3
-
-executable plutus-pab-local-cluster
-    main-is:          Main.hs
-    hs-source-dirs:
-        local-cluster
-        examples
-    other-modules:
-        ContractExample
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        ContractExample.WaitForTx
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-
-    build-depends:
-        , aeson
-        , base              >=4.9 && <5
-        , containers
-        , directory
-        , filepath
-        , text
-        , text-class
-        , beam-sqlite
-        , sqlite-simple
-        , freer-extras
-        , plutus-pab
-        , beam-migrate
-        , plutus-use-cases
-        , cardano-wallet
-        , cardano-wallet-cli
-        , cardano-wallet-launcher
-        , cardano-wallet-core
-        , cardano-wallet-core-integration
-        , iohk-monitoring
-        , lobemo-backend-ekg
-        , contra-tracer
-        , plutus-chain-index-core
-        , plutus-chain-index
-        , cardano-api
-        , lens
-        , prettyprinter
-        , playground-common
-        , plutus-ledger
-        , plutus-ledger-api
-        , plutus-ledger-constraints
-        , plutus-contract
-        , freer-simple
-        , data-default
-        , row-types
-        , purescript-bridge
-        , openapi3
-        , async
-        , servant-client
-        , http-client
-        , servant-client-core
-        , cardano-addresses
-
-executable plutus-pab-test-psgenerator
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    hs-source-dirs:
-        test-psgenerator
-        test/full
-        examples
-
-    main-is:          TestPSGenerator.hs
-    other-modules:
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        Plutus.PAB.Effects.Contract.ContractTest
-        Plutus.PAB.Simulator.Test
-
-    build-depends:
-        QuickCheck -any,
-        aeson -any,
-        aeson-pretty -any,
-        base >=4.9 && <5,
-        bytestring -any,
-        containers -any,
-        data-default -any,
-        freer-extras -any,
-        freer-simple -any,
-        http-client -any,
-        http-client-tls -any,
-        lens -any,
-        monad-logger -any,
-        mtl -any,
-        plutus-contract -any,
-        plutus-pab,
-        plutus-use-cases -any,
-        plutus-ledger -any,
-        plutus-ledger-constraints -any,
-        quickcheck-instances -any,
-        servant-client -any,
-        tasty -any,
-        smallcheck -any,
-        tasty-smallcheck -any,
-        tasty-quickcheck -any,
-        text -any,
-        transformers -any,
-        prettyprinter -any,
-        row-types -any,
-        plutus-tx -any,
-        playground-common -any,
-        servant-purescript -any,
-        purescript-bridge -any,
-        filepath -any
-
 test-suite plutus-pab-test-light
     default-language: Haskell2010
     default-extensions: ImportQualifiedPost
@@ -436,6 +214,7 @@ test-suite plutus-pab-test-light
         Cardano.Wallet.RemoteClientSpec
         Cardano.Wallet.ServerSpec
         Control.Concurrent.STM.ExtrasSpec
+        Plutus.PAB.ArbitrarySpec
 
     build-depends:
         QuickCheck -any,
@@ -459,11 +238,13 @@ test-suite plutus-pab-test-light
         plutus-pab,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
+        plutus-tx -any,
         quickcheck-instances -any,
         servant-client -any,
         tasty -any,
         tasty-hunit -any,
         smallcheck -any,
+        hedgehog-quickcheck -any,
         tasty-hedgehog -any,
         tasty-smallcheck -any,
         tasty-quickcheck -any,
@@ -472,177 +253,6 @@ test-suite plutus-pab-test-light
         prettyprinter -any,
         stm -any,
         async -any,
-
-test-suite plutus-pab-test-full
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    hs-source-dirs:
-        test/full
-        examples
-
-    type:             exitcode-stdio-1.0
-    main-is:          Spec.hs
-    other-modules:
-        ContractExample
-        ContractExample.WaitForTx
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        Plutus.PAB.CoreSpec
-        Plutus.PAB.CliSpec
-        Plutus.PAB.Effects.Contract.BuiltinSpec
-        Plutus.PAB.Effects.Contract.ContractTest
-        Plutus.PAB.Simulator.Test
-
-    build-depends:
-        QuickCheck -any,
-        aeson -any,
-        aeson-pretty -any,
-        base >=4.9 && <5,
-        bytestring -any,
-        containers -any,
-        data-default -any,
-        freer-extras -any,
-        freer-simple -any,
-        http-client -any,
-        http-client-tls -any,
-        lens -any,
-        monad-logger -any,
-        mtl -any,
-        plutus-chain-index-core -any,
-        plutus-contract -any,
-        plutus-pab,
-        plutus-use-cases -any,
-        plutus-ledger -any,
-        plutus-ledger-constraints -any,
-        quickcheck-instances -any,
-        servant-client -any,
-        tasty -any,
-        tasty-hunit -any,
-        smallcheck -any,
-        stm -any,
-        tasty-smallcheck -any,
-        tasty-quickcheck -any,
-        text -any,
-        transformers -any,
-        prettyprinter -any,
-        row-types -any,
-        plutus-tx -any,
-        playground-common -any,
-        yaml -any,
-        iohk-monitoring -any,
-        servant-server -any,
-        purescript-bridge -any,
-        async -any,
-        servant-client -any,
-        uuid -any,
-        openapi3,
-
-test-suite plutus-pab-test-full-long-running
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    hs-source-dirs:
-        test/full
-        examples
-
-    type:             exitcode-stdio-1.0
-    main-is:          SpecLongRunning.hs
-    other-modules:
-        ContractExample
-        ContractExample.WaitForTx
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        Plutus.PAB.CliSpec
-        Plutus.PAB.Effects.Contract.ContractTest
-        Plutus.PAB.Simulator.Test
-
-    build-depends:
-        QuickCheck -any,
-        aeson -any,
-        aeson-pretty -any,
-        base >=4.9 && <5,
-        bytestring -any,
-        containers -any,
-        data-default -any,
-        freer-extras -any,
-        freer-simple -any,
-        http-client -any,
-        http-client-tls -any,
-        lens -any,
-        monad-logger -any,
-        mtl -any,
-        plutus-contract -any,
-        plutus-pab,
-        plutus-use-cases -any,
-        plutus-ledger -any,
-        plutus-ledger-constraints -any,
-        quickcheck-instances -any,
-        servant-client -any,
-        tasty -any,
-        tasty-hunit -any,
-        smallcheck -any,
-        tasty-smallcheck -any,
-        tasty-quickcheck -any,
-        text -any,
-        transformers -any,
-        prettyprinter -any,
-        row-types -any,
-        plutus-tx -any,
-        playground-common -any,
-        yaml -any,
-        iohk-monitoring -any,
-        servant-server -any,
-        purescript-bridge -any,
-        async -any,
-        servant-client -any,
-        uuid -any,
-        openapi3 -any,
-
-executable tx-inject
-    import:           lang
-    main-is:          Main.hs
-    hs-source-dirs:   tx-inject
-    other-modules:
-        TxInject.RandomTx
-    default-language: Haskell2010
-    build-depends:
-        base >=4.9 && <5,
-        plutus-pab,
-        containers -any,
-        clock -any,
-        lens -any,
-        mwc-random -any,
-        optparse-applicative -any,
-        plutus-contract -any,
-        plutus-ledger -any,
-        pretty-simple -any,
-        rate-limit -any,
-        signal -any,
-        stm -any,
-        text -any,
-        time-units -any,
-        yaml -any,
-        hedgehog -any,
-        primitive -any
-
-executable sync-client
-    import: lang
-    main-is: Main.hs
-    hs-source-dirs: sync-client
-    default-language: Haskell2010
-    build-depends:
-        base >=4.9 && <5,
-        cardano-api -any,
-        cardano-slotting -any,
-        contra-tracer -any,
-        either -any,
-        optparse-applicative -any,
-        plutus-chain-index-core,
-        plutus-ledger,
-        plutus-pab,
-        text
-
 
 -- transaction processing library
 executable pab-mktx-lib

@@ -1,11 +1,7 @@
+# Needed variables:
+#  NOMAD_PORT_web_ghc_server
+#  NOMAD_IP_web_ghc_server
 { writeShellScriptBin, web-ghc-server, symlinkJoin }:
-
-let
-  entrypoint = writeShellScriptBin "entrypoint" ''
-    ${web-ghc-server}/bin/web-ghc-server webserver -p $PORT --bind 0.0.0.0
-  '';
-in
-symlinkJoin {
-  name = "entrypoint";
-  paths = [ entrypoint ];
-}
+writeShellScriptBin "entrypoint" ''
+  exec -a web-ghc-server ${web-ghc-server}/bin/web-ghc-server webserver --port "$NOMAD_PORT_web_ghc_server" --bind "$NOMAD_IP_web_ghc_server"
+''

@@ -53,8 +53,8 @@ import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as ChainIndexEff
-import Plutus.Contract.Effects (ChainIndexQuery (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
-                                ChainIndexResponse (DatumHashResponse, GetTipResponse, MintingPolicyHashResponse, RedeemerHashResponse, StakeValidatorHashResponse, TxIdResponse, TxOutRefResponse, UtxoSetAtResponse, UtxoSetMembershipResponse, UtxoSetWithCurrencyResponse, ValidatorHashResponse))
+import Plutus.Contract.Effects (ChainIndexQuery (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, TxoSetAtAddress, TxsFromTxIds, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
+                                ChainIndexResponse (DatumHashResponse, GetTipResponse, MintingPolicyHashResponse, RedeemerHashResponse, StakeValidatorHashResponse, TxIdResponse, TxIdsResponse, TxOutRefResponse, TxoSetAtResponse, UtxoSetAtResponse, UtxoSetMembershipResponse, UtxoSetWithCurrencyResponse, ValidatorHashResponse))
 import Plutus.Contract.Wallet qualified as Wallet
 import Wallet.API (WalletAPIError)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
@@ -233,6 +233,8 @@ handleChainIndexQueries = RequestHandler $ \chainIndexQuery ->
         UtxoSetMembership txOutRef -> UtxoSetMembershipResponse <$> ChainIndexEff.utxoSetMembership txOutRef
         UtxoSetAtAddress pq c      -> UtxoSetAtResponse <$> ChainIndexEff.utxoSetAtAddress pq c
         UtxoSetWithCurrency pq ac  -> UtxoSetWithCurrencyResponse <$> ChainIndexEff.utxoSetWithCurrency pq ac
+        TxsFromTxIds txids         -> TxIdsResponse <$> ChainIndexEff.txsFromTxIds txids
+        TxoSetAtAddress pq c       -> TxoSetAtResponse <$> ChainIndexEff.txoSetAtAddress pq c
         GetTip                     -> GetTipResponse <$> ChainIndexEff.getTip
 
 handleOwnInstanceIdQueries ::

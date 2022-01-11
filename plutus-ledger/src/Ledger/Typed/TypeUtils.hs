@@ -1,5 +1,8 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE EmptyDataDeriving     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds             #-}
@@ -7,11 +10,19 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
-module Ledger.Typed.TypeUtils where
+module Ledger.Typed.TypeUtils(
+    Any
+    , HListF(..)
+    , hfOut
+    ) where
 
+import Data.Aeson (ToJSON)
 import Data.Kind
+import GHC.Generics (Generic)
 
 data Any
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON)
 
 -- | A heterogeneous list where every element is wrapped with the given functor.
 data HListF (f :: Type -> Type) (l :: [Type]) where

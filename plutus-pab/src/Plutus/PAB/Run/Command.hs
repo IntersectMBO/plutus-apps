@@ -10,7 +10,6 @@
 
 module Plutus.PAB.Run.Command
     ( ConfigCommand(..)
-    , NoConfigCommand(..)
     , allServices
     ) where
 
@@ -30,9 +29,6 @@ data ConfigCommand =
     | ReportAvailableContracts -- ^ Get all available contracts
     | ReportActiveContracts -- ^ Get active contracts
     | PABWebserver -- ^ Run the PAB webserver
-    | PSApiGenerator -- ^ Generate purescript bridge code
-          { psApiGenOutputDir :: !FilePath -- ^ Path to write generated code to
-          }
     deriving stock (Show, Eq, Generic)
     deriving anyclass JSON.ToJSON
 
@@ -46,14 +42,3 @@ allServices =
     , PABWebserver
     , ChainIndex
     ]
-
-
-data NoConfigCommand =
-    PSGenerator -- ^ Generate purescript bridge code
-          { psGenOutputDir :: !FilePath -- ^ Path to write generated code to
-          }
-    | WriteDefaultConfig -- ^ Write default logging configuration
-          { outputFile :: !FilePath -- ^ Path to write configuration to
-          }
-    deriving stock (Show, Eq, Generic)
-    deriving anyclass JSON.ToJSON

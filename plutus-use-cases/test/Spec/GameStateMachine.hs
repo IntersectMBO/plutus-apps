@@ -21,6 +21,7 @@ module Spec.GameStateMachine
   , prop_NoLockedFunds
   , prop_CheckNoLockedFundsProof
   , prop_SanityCheckModel
+  , prop_GameCrashTolerance
   ) where
 
 import Control.Lens
@@ -39,6 +40,7 @@ import Ledger.Value (Value, isZero)
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
+import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contracts.GameStateMachine as G
 import Plutus.Trace.Emulator as Trace
 import PlutusTx qualified
@@ -55,6 +57,7 @@ data GameModel = GameModel
 makeLenses 'GameModel
 
 deriving instance Eq (ContractInstanceKey GameModel w schema err)
+deriving instance Ord (ContractInstanceKey GameModel w schema err)
 deriving instance Show (ContractInstanceKey GameModel w schema err)
 
 instance ContractModel GameModel where
@@ -73,6 +76,8 @@ instance ContractModel GameModel where
         , _hasToken      = Nothing
         , _currentSecret = ""
         }
+
+    initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w G.contract | w <- wallets ]
 
     -- 'perform' gets a state, which includes the GameModel state, but also contract handles for the
     -- wallets and what the model thinks the current balances are.
@@ -165,15 +170,17 @@ instance ContractModel GameModel where
 
     monitoring _ _ = id
 
-handleSpec :: [ContractInstanceSpec GameModel]
-handleSpec = [ ContractInstanceSpec (WalletKey w) w G.contract | w <- wallets ]
+instance CrashTolerance GameModel where
+  available (Lock w _ _) specs    = ContractInstanceSpec (WalletKey w) w G.contract `elem` specs
+  available (Guess w _ _ _) specs = ContractInstanceSpec (WalletKey w) w G.contract `elem` specs
+  available _ _                   = True
 
 -- | The main property. 'propRunActions_' checks that balances match the model after each test.
 prop_Game :: Actions GameModel -> Property
-prop_Game = propRunActions_ handleSpec
+prop_Game = propRunActions_
 
 prop_GameWhitelist :: Actions GameModel -> Property
-prop_GameWhitelist = checkErrorWhitelist handleSpec defaultWhitelist
+prop_GameWhitelist = checkErrorWhitelist defaultWhitelist
 
 prop_SanityCheckModel :: Property
 prop_SanityCheckModel = propSanityCheckModel @GameModel
@@ -181,17 +188,18 @@ prop_SanityCheckModel = propSanityCheckModel @GameModel
 check_prop_Game_with_coverage :: IO CoverageReport
 check_prop_Game_with_coverage =
   quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
-    propRunActionsWithOptions defaultCheckOptions
-                              covopts
-                              handleSpec
-                              (const (pure True))
+    propRunActionsWithOptions @GameModel defaultCheckOptions
+                                         covopts
+                                         (const (pure True))
 
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions
-                  (set minLogLevel l defaultCheckOptions)
-                  defaultCoverageOptions
-                  handleSpec
-                  (\ _ -> pure True)
+                (set minLogLevel l defaultCheckOptions)
+                defaultCoverageOptions
+                (\ _ -> pure True)
+
+prop_GameCrashTolerance :: Actions (WithCrashTolerance GameModel) -> Property
+prop_GameCrashTolerance = propRunActions_
 
 wallets :: [Wallet]
 wallets = [w1, w2, w3]
@@ -208,7 +216,7 @@ genGuess = QC.elements ["hello", "secret", "hunter2", "*******"]
 genValue :: Gen Integer
 genValue = choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000)
 
-delay :: Int -> EmulatorTrace ()
+delay :: Int -> EmulatorTraceNoStartContract ()
 delay n = void $ Trace.waitNSlots (fromIntegral n)
 
 -- Dynamic Logic ----------------------------------------------------------
@@ -271,7 +279,7 @@ noLockProof = NoLockedFundsProof{
             when hasTok $ action (Guess w secret "" val)
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptions handleSpec noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptions noLockProof
 
 -- * Unit tests
 
