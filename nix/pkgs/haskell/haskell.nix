@@ -63,6 +63,8 @@ let
       "https://github.com/input-output-hk/cardano-wallet"."760140e238a5fbca61d1b286d7a80ece058dc729" = "014njpddrlqm9bbab636h2gf58zkm0bx04i1jsn07vh5j3k0gri6";
       "https://github.com/input-output-hk/cardano-addresses"."d2f86caa085402a953920c6714a0de6a50b655ec" = "0p6jbnd7ky2yf7bwb1350k8880py8dgqg39k49q02a6ij4ld01ay";
       "https://github.com/input-output-hk/plutus"."2721c59fd2302b75c4138456c29fd5b509e8340a" = "02g8pzldyfl4pm8sy22yd3l2fr3zpyhwkvv9x3h9lsf6lfx5wi7k";
+      "https://github.com/input-output-hk/cardano-addresses"."35f9c49dcd953b45da6dfbcb84b39c3f448ced58" = "1cv2frbxc6ic9n5xi5bxvxdgbh1nkl0ymqidq90qis0x3ln6b53n";
+      "https://github.com/input-output-hk/plutus"."7be610b93a4c1c5e60196f94e2db9038ed1aa301" = "1jvl5k9hskcz2lhafb135rmqd0fz8pcidbhjj12l6bxz3qz54q5m";
     };
     # Configuration settings needed for cabal configure to work when cross compiling
     # for windows. We can't use `modules` for these as `modules` are only applied
@@ -165,8 +167,6 @@ let
     modules = [
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
         packages = {
-          plutus-playground-server.package.buildable = false;
-
           # Things that need plutus-tx-plugin
           playground-common.package.buildable = false;
           plutus-benchmark.package.buildable = false;
@@ -438,7 +438,7 @@ let
           # plutus-pab.ghcOptions = [ "-Werror" ];
           plutus-tx.ghcOptions = [ "-Werror" ];
           # plutus-tx-plugin.ghcOptions = [ "-Werror" ];
-          plutus-pab.ghcOptions = [ "-Werror" ];
+          # plutus-pab.ghcOptions = [ "-Werror" ];
           plutus-pab-executables.ghcOptions = [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
           # plutus-use-cases.ghcOptions = [ "-Werror" ];
