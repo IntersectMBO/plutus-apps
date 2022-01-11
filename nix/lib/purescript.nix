@@ -43,7 +43,7 @@ stdenv.mkDerivation {
 
     install-spago-style
     echo building project...
-    psa compile --strict --censor-lib --stash --is-lib=generated --is-lib=.spago ${spagoSources} ${extraPSPaths} "src/**/*.purs" "test/**/*.purs"
+    psa --strict --censor-lib --stash --is-lib=$src/generated --is-lib=.spago ${spagoSources} ${extraPSPaths} "$src/**/*.purs"
     echo done.
     npm run build:webpack:prod
   '';
