@@ -4,6 +4,7 @@
 , fixPurty
 , fixPngOptimization
 , src
+, play-generated
 , plutus-playground
 , web-ghc
 , docs
@@ -19,6 +20,11 @@ pkgs.recurseIntoAttrs {
   stylishHaskell = pkgs.callPackage ./stylish-haskell.nix {
     src = cleanSrc;
     inherit fixStylishHaskell;
+  };
+
+  generated = pkgs.callPackage ./generated.nix {
+    src = cleanSrc;
+    inherit play-generated;
   };
 
   purty = pkgs.callPackage ./purty.nix {

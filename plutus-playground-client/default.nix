@@ -18,8 +18,9 @@ let
       PATH=${ghcWithPlutus}/bin:$PATH
       mkdir $out
       ${playground-exe}/bin/plutus-playground-server psgenerator $out
-      ${purty}/bin/purty $out/**/*.purs
-      ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purty}/bin/purty --write
+      ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purty}/bin/purty format --write
+      # believe it or not, purty is not idempotent!
+      ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purty}/bin/purty format --write
     '';
 
   # generate-purescript: script to create purescript bridge code
@@ -36,7 +37,9 @@ let
     rm -rf ./generated
     ${build-playground-exe}/bin/plutus-playground-server psgenerator generated
     echo Formatting files...
-    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purty}/bin/purty --write
+    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purty}/bin/purty format --write
+    # believe it or not, purty is not idempotent!
+    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purty}/bin/purty format --write
     echo Done: formatted
   '';
 
@@ -87,6 +90,6 @@ let
     });
 in
 {
-  inherit client generate-purescript start-backend;
+  inherit client generate-purescript generated-purescript start-backend;
   server = playground-exe;
 }
