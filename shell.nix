@@ -105,6 +105,7 @@ let
     haskell-language-server-wrapper
     hie-bios
     hlint
+    pab-nami-demo.generate-purescript
     pab-nami-demo.start-backend
     plutus-playground.generate-purescript
     plutus-playground.start-backend
