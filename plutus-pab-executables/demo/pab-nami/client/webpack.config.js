@@ -75,18 +75,14 @@ module.exports = {
     resolve: {
         modules: [
             "node_modules",
-            // We need this entry for node to be able to locate `node_modules` from
-            // client directory when modules are referenced from inside `web-common`.
-            path.resolve(__dirname, "./node_modules"),
+            "lib"
         ],
-        alias: {
-            static: path.resolve(__dirname, "./static"),
-            src: path.resolve(__dirname, "./src"),
-            NamiWallet$: path.resolve(__dirname, "./lib/nami-wallet/src/"),
-            namiWalletExtension: path.resolve(__dirname, "./lib/nami-wallet/src/api/extension/wallet.js"),
-            namiWalletLoader: path.resolve(__dirname, "./lib/nami-wallet/src/api/loader.js"),
+        extensions: [".js", ".ts", ".tsx"],
+        // Used to prevent the error:
+        // Module not found: Error: Can't resolve 'fs' in '/home/kolam/git/iog/plutus-starter/demo/pab-nami/client/node_modules/secrets/src'
+        fallback: {
+            "fs": false
         },
-        extensions: [".purs", ".js", ".ts", ".tsx"],
     },
     resolveLoader: {
         modules: [
@@ -109,11 +105,4 @@ module.exports = {
         new NodePolyfillPlugin(),
 
     ],
-    // Used to prevent the error:
-    // Module not found: Error: Can't resolve 'fs' in '/home/kolam/git/iog/plutus-starter/demo/pab-nami/client/node_modules/secrets/src'
-    resolve: {
-        fallback: {
-            "fs": false
-        },
-    }
 };

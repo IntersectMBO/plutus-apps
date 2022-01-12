@@ -2,19 +2,20 @@
   "name": "pab-nami",
   "version": "0.0.1",
   "scripts": {
-    "build:spago": "spago build --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\"",
-    "build:spago:watch": "spago build --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen",
+    "build:spago": "spago build --purs-args \"--strict --censor-lib --stash --is-lib=.spago\"",
+    "build:spago:watch": "spago build --purs-args \"--strict --censor-lib --stash --is-lib=.spago\" --watch --clear-screen",
     "build:webpack": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development",
     "build:webpack:prod": "webpack --progress --bail --mode=production --node-env=production",
     "build:webpack:dev": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development",
     "install:spago": "spago install",
     "repl": "spago repl",
     "start": "npm install && npm run install:spago && npm run build:spago && npm run build:webpack:dev",
-    "test": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\"",
-    "test:watch": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen"
+    "test": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=.spago\"",
+    "test:watch": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=.spago\" --watch --clear-screen"
   },
   "dependencies": {
     "@cardano-foundation/ledgerjs-hw-app-cardano": "^4.0.0",
+    "@dcspark/milkomeda-constants": "^0.4.0",
     "@dicebear/avatars": "^4.10.1",
     "@dicebear/avatars-bottts-sprites": "^4.10.1",
     "@emurgo/cardano-serialization-lib-browser": "^9.1.2",
@@ -28,6 +29,7 @@
     "crypto-random-string": "^4.0.0",
     "json-bigint": "^1.0.0",
     "secrets": "^1.1.5",
+    "web3-utils": "^1.6.1",
     "xhr2": "^0.2.1"
   },
   "devDependencies": {

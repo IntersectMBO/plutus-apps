@@ -10,7 +10,7 @@
     "install:spago": "spago install",
     "docs": "spago docs",
     "repl": "spago repl",
-    "start": "plutus-playground-generate-purs && npm install && npm run install:spago && npm run build:spago && npm run build:webpack:dev",
+    "start": "npm install && npm run install:spago && npm run build:spago && npm run build:webpack:dev",
     "test": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\"",
     "test:watch": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen"
   },
