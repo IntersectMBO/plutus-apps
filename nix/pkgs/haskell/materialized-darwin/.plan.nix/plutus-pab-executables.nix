@@ -31,25 +31,23 @@
       extraDocFiles = [];
       };
     components = {
-      sublibs = {
-        "plutus-pab-psgenerator" = {
-          depends = [
-            (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
-            (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
-            (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
-            (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."base" or (errorHandler.buildDepError "base"))
-            (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
-            (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
-            (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
-            (hsPkgs."servant-purescript" or (errorHandler.buildDepError "servant-purescript"))
-            (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
-            (hsPkgs."text" or (errorHandler.buildDepError "text"))
-            ];
-          buildable = true;
-          modules = [ "Plutus/PAB/Run/PSGenerator" ];
-          hsSourceDirs = [ "src" ];
-          };
+      "library" = {
+        depends = [
+          (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
+          (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
+          (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
+          (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
+          (hsPkgs."base" or (errorHandler.buildDepError "base"))
+          (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
+          (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
+          (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
+          (hsPkgs."servant-purescript" or (errorHandler.buildDepError "servant-purescript"))
+          (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
+          (hsPkgs."text" or (errorHandler.buildDepError "text"))
+          ];
+        buildable = true;
+        modules = [ "Plutus/PAB/Run/PSGenerator" ];
+        hsSourceDirs = [ "src" ];
         };
       exes = {
         "plutus-pab-setup" = {
@@ -74,7 +72,7 @@
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."plutus-pab-executables".components.sublibs.plutus-pab-psgenerator or (errorHandler.buildDepError "plutus-pab-executables:plutus-pab-psgenerator"))
+            (hsPkgs."plutus-pab-executables" or (errorHandler.buildDepError "plutus-pab-executables"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
             (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
@@ -107,7 +105,7 @@
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."plutus-pab-executables".components.sublibs.plutus-pab-psgenerator or (errorHandler.buildDepError "plutus-pab-executables:plutus-pab-psgenerator"))
+            (hsPkgs."plutus-pab-executables" or (errorHandler.buildDepError "plutus-pab-executables"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
             (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
@@ -157,7 +155,7 @@
             (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
             (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."plutus-pab-executables".components.sublibs.plutus-pab-psgenerator or (errorHandler.buildDepError "plutus-pab-executables:plutus-pab-psgenerator"))
+            (hsPkgs."plutus-pab-executables" or (errorHandler.buildDepError "plutus-pab-executables"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
@@ -221,7 +219,7 @@
             (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."plutus-pab-executables".components.sublibs.plutus-pab-psgenerator or (errorHandler.buildDepError "plutus-pab-executables:plutus-pab-psgenerator"))
+            (hsPkgs."plutus-pab-executables" or (errorHandler.buildDepError "plutus-pab-executables"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
@@ -313,7 +311,7 @@
             (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."plutus-pab-executables".components.sublibs.plutus-pab-psgenerator or (errorHandler.buildDepError "plutus-pab-executables:plutus-pab-psgenerator"))
+            (hsPkgs."plutus-pab-executables" or (errorHandler.buildDepError "plutus-pab-executables"))
             (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
             (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
             (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
@@ -350,7 +348,7 @@
             (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."plutus-pab-executables".components.sublibs.plutus-pab-psgenerator or (errorHandler.buildDepError "plutus-pab-executables:plutus-pab-psgenerator"))
+            (hsPkgs."plutus-pab-executables" or (errorHandler.buildDepError "plutus-pab-executables"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
@@ -412,7 +410,7 @@
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."plutus-pab-executables".components.sublibs.plutus-pab-psgenerator or (errorHandler.buildDepError "plutus-pab-executables:plutus-pab-psgenerator"))
+            (hsPkgs."plutus-pab-executables" or (errorHandler.buildDepError "plutus-pab-executables"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
