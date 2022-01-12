@@ -5,6 +5,7 @@
 , fixPngOptimization
 , src
 , play-generated
+, nami-generated
 , plutus-playground
 , web-ghc
 , docs
@@ -24,7 +25,7 @@ pkgs.recurseIntoAttrs {
 
   generated = pkgs.callPackage ./generated.nix {
     src = cleanSrc;
-    inherit play-generated;
+    inherit play-generated nami-generated;
   };
 
   purty = pkgs.callPackage ./purty.nix {
