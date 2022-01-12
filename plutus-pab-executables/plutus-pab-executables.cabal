@@ -514,3 +514,34 @@ executable plutus-pab-nami-demo
     plutus-ledger-constraints -any,
     row-types -any,
     text -any,
+
+executable plutus-pab-nami-demo-generator
+  import: lang
+  main-is: Generator.hs
+  hs-source-dirs: demo/pab-nami/pab/app
+  other-modules:
+    DemoContract
+  ghc-options:
+    -threaded
+  build-depends:
+    aeson -any,
+    async -any,
+    base >= 4.9 && < 5,
+    cardano-api -any,
+    data-default -any,
+    filepath -any,
+    freer-extras -any,
+    freer-simple -any,
+    openapi3 -any,
+    optparse-applicative -any,
+    plutus-chain-index -any,
+    plutus-contract -any,
+    plutus-pab -any,
+    plutus-pab-psgenerator -any,
+    playground-common -any,
+    prettyprinter -any,
+    purescript-bridge -any,
+    plutus-ledger -any,
+    plutus-ledger-constraints -any,
+    row-types -any,
+    text -any,

@@ -1,6 +1,7 @@
 { pkgs, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
 let
   pab-nami-demo-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-nami-demo;
+  pab-nami-demo-generator = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-nami-demo-generator;
 
   pab-setup-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-setup;
 
@@ -8,15 +9,14 @@ let
   generated-purescript = pkgs.runCommand "pab-nami-demo-purescript" { } ''
     mkdir $out
     ${pab-setup-invoker}/bin/plutus-pab-setup psgenerator $out
-    ln -s ${../pab/plutus-pab.yaml} plutus-pab.yaml
-    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml psapigenerator $out
+    ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $out
   '';
 
   generate-purescript = pkgs.writeShellScriptBin "pab-nami-demo-generate-purs" ''
     generatedDir=./generated
     rm -rf $generatedDir
     $(nix-build ../../../../default.nix -A pab-nami-demo.pab-setup-invoker)/bin/plutus-pab-setup psgenerator $generatedDir
-    $(nix-build ../../../../default.nix -A pab-nami-demo.pab-nami-demo-invoker)/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml psapigenerator $generatedDir
+    $(nix-build ../../../../default.nix -A pab-nami-demo.pab-nami-demo-generator)/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
   '';
 
   start-backend = pkgs.writeShellScriptBin "pab-nami-demo-server" ''
@@ -53,5 +53,5 @@ let
     });
 in
 {
-  inherit client pab-nami-demo-invoker pab-setup-invoker generate-purescript generated-purescript start-backend;
+  inherit client pab-nami-demo-invoker pab-nami-demo-generator pab-setup-invoker generate-purescript generated-purescript start-backend;
 }
