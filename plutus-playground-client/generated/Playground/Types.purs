@@ -2,11 +2,12 @@
 module Playground.Types where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.BigInt.Argonaut (BigInt)
 import Data.Functor.Foldable (Fix)
@@ -35,93 +36,39 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype FunctionSchema a
-  = FunctionSchema
-  { endpointDescription :: EndpointDescription
-  , argument :: a
+newtype CompilationResult = CompilationResult
+  { functionSchema :: Array (FunctionSchema FormSchema)
+  , knownCurrencies :: Array KnownCurrency
   }
 
-derive instance functorFunctionSchema :: Functor FunctionSchema
-
-instance showFunctionSchema :: (Show a) => Show (FunctionSchema a) where
+instance Show CompilationResult where
   show a = genericShow a
 
-derive instance eqFunctionSchema :: (Eq a) => Eq (FunctionSchema a)
+derive instance Eq CompilationResult
 
-instance encodeJsonFunctionSchema :: (EncodeJson a) => EncodeJson (FunctionSchema a) where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { endpointDescription: E.value :: _ EndpointDescription
-              , argument: E.value :: _ a
-              }
-          )
+instance EncodeJson CompilationResult where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { functionSchema: E.value :: _ (Array (FunctionSchema FormSchema))
+                                                   , knownCurrencies: E.value :: _ (Array KnownCurrency)
+                                                   })
 
-instance decodeJsonFunctionSchema :: (DecodeJson a) => DecodeJson (FunctionSchema a) where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ ( FunctionSchema
-              <$> D.record "FunctionSchema"
-                  { endpointDescription: D.value :: _ EndpointDescription
-                  , argument: D.value :: _ a
-                  }
-          )
+instance DecodeJson CompilationResult where
+  decodeJson = defer \_ -> D.decode $ (CompilationResult <$> D.record "CompilationResult"
+      { functionSchema: D.value :: _ (Array (FunctionSchema FormSchema))
+      , knownCurrencies: D.value :: _ (Array KnownCurrency)
+      })
 
-derive instance genericFunctionSchema :: Generic (FunctionSchema a) _
+derive instance Generic CompilationResult _
 
-derive instance newtypeFunctionSchema :: Newtype (FunctionSchema a) _
+derive instance Newtype CompilationResult _
 
 --------------------------------------------------------------------------------
-_FunctionSchema :: forall a. Iso' (FunctionSchema a) { endpointDescription :: EndpointDescription, argument :: a }
-_FunctionSchema = _Newtype
+
+_CompilationResult :: Iso' CompilationResult {functionSchema :: Array (FunctionSchema FormSchema), knownCurrencies :: Array KnownCurrency}
+_CompilationResult = _Newtype
 
 --------------------------------------------------------------------------------
-newtype KnownCurrency
-  = KnownCurrency
-  { hash :: String
-  , friendlyName :: String
-  , knownTokens :: NonEmptyList TokenName
-  }
 
-instance showKnownCurrency :: Show KnownCurrency where
-  show a = genericShow a
-
-derive instance eqKnownCurrency :: Eq KnownCurrency
-
-instance encodeJsonKnownCurrency :: EncodeJson KnownCurrency where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { hash: E.value :: _ String
-              , friendlyName: E.value :: _ String
-              , knownTokens: E.value :: _ (NonEmptyList TokenName)
-              }
-          )
-
-instance decodeJsonKnownCurrency :: DecodeJson KnownCurrency where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ ( KnownCurrency
-              <$> D.record "KnownCurrency"
-                  { hash: D.value :: _ String
-                  , friendlyName: D.value :: _ String
-                  , knownTokens: D.value :: _ (NonEmptyList TokenName)
-                  }
-          )
-
-derive instance genericKnownCurrency :: Generic KnownCurrency _
-
-derive instance newtypeKnownCurrency :: Newtype KnownCurrency _
-
---------------------------------------------------------------------------------
-_KnownCurrency :: Iso' KnownCurrency { hash :: String, friendlyName :: String, knownTokens :: NonEmptyList TokenName }
-_KnownCurrency = _Newtype
-
---------------------------------------------------------------------------------
 data ContractCall a
   = CallEndpoint
     { caller :: WalletNumber
@@ -135,311 +82,149 @@ data ContractCall a
     , amount :: Value
     }
 
-instance showContractCall :: (Show a) => Show (ContractCall a) where
+instance (Show a) => Show (ContractCall a) where
   show a = genericShow a
 
-derive instance eqContractCall :: (Eq a) => Eq (ContractCall a)
+derive instance (Eq a) => Eq (ContractCall a)
 
-instance encodeJsonContractCall :: (EncodeJson a) => EncodeJson (ContractCall a) where
-  encodeJson =
-    defer \_ -> case _ of
-      CallEndpoint { caller, argumentValues } ->
-        encodeJson
-          { tag: "CallEndpoint"
-          , caller: flip E.encode caller E.value
-          , argumentValues: flip E.encode argumentValues E.value
-          }
-      AddBlocks { blocks } ->
-        encodeJson
-          { tag: "AddBlocks"
-          , blocks: flip E.encode blocks E.value
-          }
-      AddBlocksUntil { slot } ->
-        encodeJson
-          { tag: "AddBlocksUntil"
-          , slot: flip E.encode slot E.value
-          }
-      PayToWallet { sender, recipient, amount } ->
-        encodeJson
-          { tag: "PayToWallet"
-          , sender: flip E.encode sender E.value
-          , recipient: flip E.encode recipient E.value
-          , amount: flip E.encode amount E.value
-          }
+instance (EncodeJson a) => EncodeJson (ContractCall a) where
+  encodeJson = defer \_ -> case _ of
+    CallEndpoint {caller, argumentValues} -> encodeJson
+      { tag: "CallEndpoint"
+      , caller: flip E.encode caller E.value
+      , argumentValues: flip E.encode argumentValues E.value
+      }
+    AddBlocks {blocks} -> encodeJson
+      { tag: "AddBlocks"
+      , blocks: flip E.encode blocks E.value
+      }
+    AddBlocksUntil {slot} -> encodeJson
+      { tag: "AddBlocksUntil"
+      , slot: flip E.encode slot E.value
+      }
+    PayToWallet {sender, recipient, amount} -> encodeJson
+      { tag: "PayToWallet"
+      , sender: flip E.encode sender E.value
+      , recipient: flip E.encode recipient E.value
+      , amount: flip E.encode amount E.value
+      }
 
-instance decodeJsonContractCall :: (DecodeJson a) => DecodeJson (ContractCall a) where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ D.sumType "ContractCall"
-        $ Map.fromFoldable
-            [ "CallEndpoint"
-                /\ ( CallEndpoint
-                      <$> D.object "CallEndpoint"
-                          { caller: D.value :: _ WalletNumber
-                          , argumentValues: D.value :: _ (FunctionSchema a)
-                          }
-                  )
-            , "AddBlocks" /\ (AddBlocks <$> D.object "AddBlocks" { blocks: D.value :: _ BigInt })
-            , "AddBlocksUntil" /\ (AddBlocksUntil <$> D.object "AddBlocksUntil" { slot: D.value :: _ Slot })
-            , "PayToWallet"
-                /\ ( PayToWallet
-                      <$> D.object "PayToWallet"
-                          { sender: D.value :: _ WalletNumber
-                          , recipient: D.value :: _ WalletNumber
-                          , amount: D.value :: _ Value
-                          }
-                  )
-            ]
+instance (DecodeJson a) => DecodeJson (ContractCall a) where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "ContractCall" $ Map.fromFoldable
+      [ "CallEndpoint" /\ (CallEndpoint <$> D.object "CallEndpoint"
+        { caller: D.value :: _ WalletNumber
+        , argumentValues: D.value :: _ (FunctionSchema a)
+        })
+      , "AddBlocks" /\ (AddBlocks <$> D.object "AddBlocks" { blocks: D.value :: _ BigInt })
+      , "AddBlocksUntil" /\ (AddBlocksUntil <$> D.object "AddBlocksUntil" { slot: D.value :: _ Slot })
+      , "PayToWallet" /\ (PayToWallet <$> D.object "PayToWallet"
+        { sender: D.value :: _ WalletNumber
+        , recipient: D.value :: _ WalletNumber
+        , amount: D.value :: _ Value
+        })
+      ]
 
-derive instance genericContractCall :: Generic (ContractCall a) _
+derive instance Generic (ContractCall a) _
 
 --------------------------------------------------------------------------------
-_CallEndpoint :: forall a. Prism' (ContractCall a) { caller :: WalletNumber, argumentValues :: FunctionSchema a }
-_CallEndpoint =
-  prism' CallEndpoint case _ of
-    (CallEndpoint a) -> Just a
-    _ -> Nothing
 
-_AddBlocks :: forall a. Prism' (ContractCall a) { blocks :: BigInt }
-_AddBlocks =
-  prism' AddBlocks case _ of
-    (AddBlocks a) -> Just a
-    _ -> Nothing
+_CallEndpoint :: forall a. Prism' (ContractCall a) {caller :: WalletNumber, argumentValues :: FunctionSchema a}
+_CallEndpoint = prism' CallEndpoint case _ of
+  (CallEndpoint a) -> Just a
+  _ -> Nothing
 
-_AddBlocksUntil :: forall a. Prism' (ContractCall a) { slot :: Slot }
-_AddBlocksUntil =
-  prism' AddBlocksUntil case _ of
-    (AddBlocksUntil a) -> Just a
-    _ -> Nothing
+_AddBlocks :: forall a. Prism' (ContractCall a) {blocks :: BigInt}
+_AddBlocks = prism' AddBlocks case _ of
+  (AddBlocks a) -> Just a
+  _ -> Nothing
 
-_PayToWallet :: forall a. Prism' (ContractCall a) { sender :: WalletNumber, recipient :: WalletNumber, amount :: Value }
-_PayToWallet =
-  prism' PayToWallet case _ of
-    (PayToWallet a) -> Just a
-    _ -> Nothing
+_AddBlocksUntil :: forall a. Prism' (ContractCall a) {slot :: Slot}
+_AddBlocksUntil = prism' AddBlocksUntil case _ of
+  (AddBlocksUntil a) -> Just a
+  _ -> Nothing
+
+_PayToWallet :: forall a. Prism' (ContractCall a) {sender :: WalletNumber, recipient :: WalletNumber, amount :: Value}
+_PayToWallet = prism' PayToWallet case _ of
+  (PayToWallet a) -> Just a
+  _ -> Nothing
 
 --------------------------------------------------------------------------------
-newtype CompilationResult
-  = CompilationResult
-  { functionSchema :: Array (FunctionSchema FormSchema)
-  , knownCurrencies :: Array KnownCurrency
-  }
 
-instance showCompilationResult :: Show CompilationResult where
-  show a = genericShow a
-
-derive instance eqCompilationResult :: Eq CompilationResult
-
-instance encodeJsonCompilationResult :: EncodeJson CompilationResult where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { functionSchema: E.value :: _ (Array (FunctionSchema FormSchema))
-              , knownCurrencies: E.value :: _ (Array KnownCurrency)
-              }
-          )
-
-instance decodeJsonCompilationResult :: DecodeJson CompilationResult where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ ( CompilationResult
-              <$> D.record "CompilationResult"
-                  { functionSchema: D.value :: _ (Array (FunctionSchema FormSchema))
-                  , knownCurrencies: D.value :: _ (Array KnownCurrency)
-                  }
-          )
-
-derive instance genericCompilationResult :: Generic CompilationResult _
-
-derive instance newtypeCompilationResult :: Newtype CompilationResult _
-
---------------------------------------------------------------------------------
-_CompilationResult :: Iso' CompilationResult { functionSchema :: Array (FunctionSchema FormSchema), knownCurrencies :: Array KnownCurrency }
-_CompilationResult = _Newtype
-
---------------------------------------------------------------------------------
-newtype Simulation
-  = Simulation
-  { simulationName :: String
-  , simulationId :: Int
-  , simulationActions :: Array (ContractCall (Fix FormArgumentF))
-  , simulationWallets :: Array SimulatorWallet
-  }
-
-instance showSimulation :: Show Simulation where
-  show a = genericShow a
-
-derive instance eqSimulation :: Eq Simulation
-
-instance encodeJsonSimulation :: EncodeJson Simulation where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { simulationName: E.value :: _ String
-              , simulationId: E.value :: _ Int
-              , simulationActions: E.value :: _ (Array (ContractCall (Fix FormArgumentF)))
-              , simulationWallets: E.value :: _ (Array SimulatorWallet)
-              }
-          )
-
-instance decodeJsonSimulation :: DecodeJson Simulation where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ ( Simulation
-              <$> D.record "Simulation"
-                  { simulationName: D.value :: _ String
-                  , simulationId: D.value :: _ Int
-                  , simulationActions: D.value :: _ (Array (ContractCall (Fix FormArgumentF)))
-                  , simulationWallets: D.value :: _ (Array SimulatorWallet)
-                  }
-          )
-
-derive instance genericSimulation :: Generic Simulation _
-
-derive instance newtypeSimulation :: Newtype Simulation _
-
---------------------------------------------------------------------------------
-_Simulation :: Iso' Simulation { simulationName :: String, simulationId :: Int, simulationActions :: Array (ContractCall (Fix FormArgumentF)), simulationWallets :: Array SimulatorWallet }
-_Simulation = _Newtype
-
---------------------------------------------------------------------------------
-newtype ContractDemo
-  = ContractDemo
+newtype ContractDemo = ContractDemo
   { contractDemoName :: String
   , contractDemoEditorContents :: SourceCode
   , contractDemoSimulations :: Array Simulation
   , contractDemoContext :: InterpreterResult CompilationResult
   }
 
-instance showContractDemo :: Show ContractDemo where
+instance Show ContractDemo where
   show a = genericShow a
 
-derive instance eqContractDemo :: Eq ContractDemo
+derive instance Eq ContractDemo
 
-instance encodeJsonContractDemo :: EncodeJson ContractDemo where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { contractDemoName: E.value :: _ String
-              , contractDemoEditorContents: E.value :: _ SourceCode
-              , contractDemoSimulations: E.value :: _ (Array Simulation)
-              , contractDemoContext: E.value :: _ (InterpreterResult CompilationResult)
-              }
-          )
+instance EncodeJson ContractDemo where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { contractDemoName: E.value :: _ String
+                                                   , contractDemoEditorContents: E.value :: _ SourceCode
+                                                   , contractDemoSimulations: E.value :: _ (Array Simulation)
+                                                   , contractDemoContext: E.value :: _ (InterpreterResult CompilationResult)
+                                                   })
 
-instance decodeJsonContractDemo :: DecodeJson ContractDemo where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ ( ContractDemo
-              <$> D.record "ContractDemo"
-                  { contractDemoName: D.value :: _ String
-                  , contractDemoEditorContents: D.value :: _ SourceCode
-                  , contractDemoSimulations: D.value :: _ (Array Simulation)
-                  , contractDemoContext: D.value :: _ (InterpreterResult CompilationResult)
-                  }
-          )
+instance DecodeJson ContractDemo where
+  decodeJson = defer \_ -> D.decode $ (ContractDemo <$> D.record "ContractDemo"
+      { contractDemoName: D.value :: _ String
+      , contractDemoEditorContents: D.value :: _ SourceCode
+      , contractDemoSimulations: D.value :: _ (Array Simulation)
+      , contractDemoContext: D.value :: _ (InterpreterResult CompilationResult)
+      })
 
-derive instance genericContractDemo :: Generic ContractDemo _
+derive instance Generic ContractDemo _
 
-derive instance newtypeContractDemo :: Newtype ContractDemo _
+derive instance Newtype ContractDemo _
 
 --------------------------------------------------------------------------------
-_ContractDemo :: Iso' ContractDemo { contractDemoName :: String, contractDemoEditorContents :: SourceCode, contractDemoSimulations :: Array Simulation, contractDemoContext :: InterpreterResult CompilationResult }
+
+_ContractDemo :: Iso' ContractDemo {contractDemoName :: String, contractDemoEditorContents :: SourceCode, contractDemoSimulations :: Array Simulation, contractDemoContext :: InterpreterResult CompilationResult}
 _ContractDemo = _Newtype
 
 --------------------------------------------------------------------------------
-newtype SimulatorWallet
-  = SimulatorWallet
-  { simulatorWalletWallet :: WalletNumber
-  , simulatorWalletBalance :: Value
-  }
 
-instance showSimulatorWallet :: Show SimulatorWallet where
-  show a = genericShow a
-
-derive instance eqSimulatorWallet :: Eq SimulatorWallet
-
-instance encodeJsonSimulatorWallet :: EncodeJson SimulatorWallet where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { simulatorWalletWallet: E.value :: _ WalletNumber
-              , simulatorWalletBalance: E.value :: _ Value
-              }
-          )
-
-instance decodeJsonSimulatorWallet :: DecodeJson SimulatorWallet where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ ( SimulatorWallet
-              <$> D.record "SimulatorWallet"
-                  { simulatorWalletWallet: D.value :: _ WalletNumber
-                  , simulatorWalletBalance: D.value :: _ Value
-                  }
-          )
-
-derive instance genericSimulatorWallet :: Generic SimulatorWallet _
-
-derive instance newtypeSimulatorWallet :: Newtype SimulatorWallet _
-
---------------------------------------------------------------------------------
-_SimulatorWallet :: Iso' SimulatorWallet { simulatorWalletWallet :: WalletNumber, simulatorWalletBalance :: Value }
-_SimulatorWallet = _Newtype
-
---------------------------------------------------------------------------------
-newtype Evaluation
-  = Evaluation
+newtype Evaluation = Evaluation
   { wallets :: Array SimulatorWallet
   , sourceCode :: SourceCode
   , program :: RawJson
   }
 
-instance showEvaluation :: Show Evaluation where
+instance Show Evaluation where
   show a = genericShow a
 
-instance encodeJsonEvaluation :: EncodeJson Evaluation where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { wallets: E.value :: _ (Array SimulatorWallet)
-              , sourceCode: E.value :: _ SourceCode
-              , program: E.value :: _ RawJson
-              }
-          )
+instance EncodeJson Evaluation where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { wallets: E.value :: _ (Array SimulatorWallet)
+                                                   , sourceCode: E.value :: _ SourceCode
+                                                   , program: E.value :: _ RawJson
+                                                   })
 
-instance decodeJsonEvaluation :: DecodeJson Evaluation where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ ( Evaluation
-              <$> D.record "Evaluation"
-                  { wallets: D.value :: _ (Array SimulatorWallet)
-                  , sourceCode: D.value :: _ SourceCode
-                  , program: D.value :: _ RawJson
-                  }
-          )
+instance DecodeJson Evaluation where
+  decodeJson = defer \_ -> D.decode $ (Evaluation <$> D.record "Evaluation"
+      { wallets: D.value :: _ (Array SimulatorWallet)
+      , sourceCode: D.value :: _ SourceCode
+      , program: D.value :: _ RawJson
+      })
 
-derive instance genericEvaluation :: Generic Evaluation _
+derive instance Generic Evaluation _
 
-derive instance newtypeEvaluation :: Newtype Evaluation _
+derive instance Newtype Evaluation _
 
 --------------------------------------------------------------------------------
-_Evaluation :: Iso' Evaluation { wallets :: Array SimulatorWallet, sourceCode :: SourceCode, program :: RawJson }
+
+_Evaluation :: Iso' Evaluation {wallets :: Array SimulatorWallet, sourceCode :: SourceCode, program :: RawJson}
 _Evaluation = _Newtype
 
 --------------------------------------------------------------------------------
-newtype EvaluationResult
-  = EvaluationResult
+
+newtype EvaluationResult = EvaluationResult
   { resultRollup :: Array (Array AnnotatedTx)
   , emulatorLog :: Array (EmulatorTimeEvent EmulatorEvent')
   , emulatorTrace :: String
@@ -448,47 +233,111 @@ newtype EvaluationResult
   , walletKeys :: Array (Tuple PaymentPubKeyHash WalletNumber)
   }
 
-instance showEvaluationResult :: Show EvaluationResult where
+instance Show EvaluationResult where
   show a = genericShow a
 
-instance encodeJsonEvaluationResult :: EncodeJson EvaluationResult where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { resultRollup: E.value :: _ (Array (Array AnnotatedTx))
-              , emulatorLog: E.value :: _ (Array (EmulatorTimeEvent EmulatorEvent'))
-              , emulatorTrace: E.value :: _ String
-              , fundsDistribution: E.value :: _ (Array SimulatorWallet)
-              , feesDistribution: E.value :: _ (Array SimulatorWallet)
-              , walletKeys: E.value :: _ (Array (Tuple PaymentPubKeyHash WalletNumber))
-              }
-          )
+instance EncodeJson EvaluationResult where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { resultRollup: E.value :: _ (Array (Array AnnotatedTx))
+                                                   , emulatorLog: E.value :: _ (Array (EmulatorTimeEvent EmulatorEvent'))
+                                                   , emulatorTrace: E.value :: _ String
+                                                   , fundsDistribution: E.value :: _ (Array SimulatorWallet)
+                                                   , feesDistribution: E.value :: _ (Array SimulatorWallet)
+                                                   , walletKeys: E.value :: _ (Array (Tuple PaymentPubKeyHash WalletNumber))
+                                                   })
 
-instance decodeJsonEvaluationResult :: DecodeJson EvaluationResult where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ ( EvaluationResult
-              <$> D.record "EvaluationResult"
-                  { resultRollup: D.value :: _ (Array (Array AnnotatedTx))
-                  , emulatorLog: D.value :: _ (Array (EmulatorTimeEvent EmulatorEvent'))
-                  , emulatorTrace: D.value :: _ String
-                  , fundsDistribution: D.value :: _ (Array SimulatorWallet)
-                  , feesDistribution: D.value :: _ (Array SimulatorWallet)
-                  , walletKeys: D.value :: _ (Array (Tuple PaymentPubKeyHash WalletNumber))
-                  }
-          )
+instance DecodeJson EvaluationResult where
+  decodeJson = defer \_ -> D.decode $ (EvaluationResult <$> D.record "EvaluationResult"
+      { resultRollup: D.value :: _ (Array (Array AnnotatedTx))
+      , emulatorLog: D.value :: _ (Array (EmulatorTimeEvent EmulatorEvent'))
+      , emulatorTrace: D.value :: _ String
+      , fundsDistribution: D.value :: _ (Array SimulatorWallet)
+      , feesDistribution: D.value :: _ (Array SimulatorWallet)
+      , walletKeys: D.value :: _ (Array (Tuple PaymentPubKeyHash WalletNumber))
+      })
 
-derive instance genericEvaluationResult :: Generic EvaluationResult _
+derive instance Generic EvaluationResult _
 
-derive instance newtypeEvaluationResult :: Newtype EvaluationResult _
+derive instance Newtype EvaluationResult _
 
 --------------------------------------------------------------------------------
-_EvaluationResult :: Iso' EvaluationResult { resultRollup :: Array (Array AnnotatedTx), emulatorLog :: Array (EmulatorTimeEvent EmulatorEvent'), emulatorTrace :: String, fundsDistribution :: Array SimulatorWallet, feesDistribution :: Array SimulatorWallet, walletKeys :: Array (Tuple PaymentPubKeyHash WalletNumber) }
+
+_EvaluationResult :: Iso' EvaluationResult {resultRollup :: Array (Array AnnotatedTx), emulatorLog :: Array (EmulatorTimeEvent EmulatorEvent'), emulatorTrace :: String, fundsDistribution :: Array SimulatorWallet, feesDistribution :: Array SimulatorWallet, walletKeys :: Array (Tuple PaymentPubKeyHash WalletNumber)}
 _EvaluationResult = _Newtype
 
 --------------------------------------------------------------------------------
+
+newtype FunctionSchema a = FunctionSchema
+  { endpointDescription :: EndpointDescription
+  , argument :: a
+  }
+
+derive instance Functor FunctionSchema
+
+instance (Show a) => Show (FunctionSchema a) where
+  show a = genericShow a
+
+derive instance (Eq a) => Eq (FunctionSchema a)
+
+instance (EncodeJson a) => EncodeJson (FunctionSchema a) where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { endpointDescription: E.value :: _ EndpointDescription
+                                                   , argument: E.value :: _ a
+                                                   })
+
+instance (DecodeJson a) => DecodeJson (FunctionSchema a) where
+  decodeJson = defer \_ -> D.decode $ (FunctionSchema <$> D.record "FunctionSchema"
+      { endpointDescription: D.value :: _ EndpointDescription
+      , argument: D.value :: _ a
+      })
+
+derive instance Generic (FunctionSchema a) _
+
+derive instance Newtype (FunctionSchema a) _
+
+--------------------------------------------------------------------------------
+
+_FunctionSchema :: forall a. Iso' (FunctionSchema a) {endpointDescription :: EndpointDescription, argument :: a}
+_FunctionSchema = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype KnownCurrency = KnownCurrency
+  { hash :: String
+  , friendlyName :: String
+  , knownTokens :: NonEmptyList TokenName
+  }
+
+instance Show KnownCurrency where
+  show a = genericShow a
+
+derive instance Eq KnownCurrency
+
+instance EncodeJson KnownCurrency where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { hash: E.value :: _ String
+                                                   , friendlyName: E.value :: _ String
+                                                   , knownTokens: E.value :: _ (NonEmptyList TokenName)
+                                                   })
+
+instance DecodeJson KnownCurrency where
+  decodeJson = defer \_ -> D.decode $ (KnownCurrency <$> D.record "KnownCurrency"
+      { hash: D.value :: _ String
+      , friendlyName: D.value :: _ String
+      , knownTokens: D.value :: _ (NonEmptyList TokenName)
+      })
+
+derive instance Generic KnownCurrency _
+
+derive instance Newtype KnownCurrency _
+
+--------------------------------------------------------------------------------
+
+_KnownCurrency :: Iso' KnownCurrency {hash :: String, friendlyName :: String, knownTokens :: NonEmptyList TokenName}
+_KnownCurrency = _Newtype
+
+--------------------------------------------------------------------------------
+
 data PlaygroundError
   = CompilationErrors (Array CompilationError)
   | InterpreterError InterpreterError
@@ -500,73 +349,133 @@ data PlaygroundError
     , input :: String
     }
 
-instance showPlaygroundError :: Show PlaygroundError where
+instance Show PlaygroundError where
   show a = genericShow a
 
-instance encodeJsonPlaygroundError :: EncodeJson PlaygroundError where
-  encodeJson =
-    defer \_ -> case _ of
-      CompilationErrors a -> E.encodeTagged "CompilationErrors" a E.value
-      InterpreterError a -> E.encodeTagged "InterpreterError" a E.value
-      RollupError a -> E.encodeTagged "RollupError" a E.value
-      OtherError a -> E.encodeTagged "OtherError" a E.value
-      JsonDecodingError { expected, decodingError, input } ->
-        encodeJson
-          { tag: "JsonDecodingError"
-          , expected: flip E.encode expected E.value
-          , decodingError: flip E.encode decodingError E.value
-          , input: flip E.encode input E.value
-          }
+instance EncodeJson PlaygroundError where
+  encodeJson = defer \_ -> case _ of
+    CompilationErrors a -> E.encodeTagged "CompilationErrors" a E.value
+    InterpreterError a -> E.encodeTagged "InterpreterError" a E.value
+    RollupError a -> E.encodeTagged "RollupError" a E.value
+    OtherError a -> E.encodeTagged "OtherError" a E.value
+    JsonDecodingError {expected, decodingError, input} -> encodeJson
+      { tag: "JsonDecodingError"
+      , expected: flip E.encode expected E.value
+      , decodingError: flip E.encode decodingError E.value
+      , input: flip E.encode input E.value
+      }
 
-instance decodeJsonPlaygroundError :: DecodeJson PlaygroundError where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ D.sumType "PlaygroundError"
-        $ Map.fromFoldable
-            [ "CompilationErrors" /\ D.content (CompilationErrors <$> D.value)
-            , "InterpreterError" /\ D.content (InterpreterError <$> D.value)
-            , "RollupError" /\ D.content (RollupError <$> D.value)
-            , "OtherError" /\ D.content (OtherError <$> D.value)
-            , "JsonDecodingError"
-                /\ ( JsonDecodingError
-                      <$> D.object "JsonDecodingError"
-                          { expected: D.value :: _ String
-                          , decodingError: D.value :: _ String
-                          , input: D.value :: _ String
-                          }
-                  )
-            ]
+instance DecodeJson PlaygroundError where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "PlaygroundError" $ Map.fromFoldable
+      [ "CompilationErrors" /\ D.content (CompilationErrors <$> D.value)
+      , "InterpreterError" /\ D.content (InterpreterError <$> D.value)
+      , "RollupError" /\ D.content (RollupError <$> D.value)
+      , "OtherError" /\ D.content (OtherError <$> D.value)
+      , "JsonDecodingError" /\ (JsonDecodingError <$> D.object "JsonDecodingError"
+        { expected: D.value :: _ String
+        , decodingError: D.value :: _ String
+        , input: D.value :: _ String
+        })
+      ]
 
-derive instance genericPlaygroundError :: Generic PlaygroundError _
+derive instance Generic PlaygroundError _
 
 --------------------------------------------------------------------------------
+
 _CompilationErrors :: Prism' PlaygroundError (Array CompilationError)
-_CompilationErrors =
-  prism' CompilationErrors case _ of
-    (CompilationErrors a) -> Just a
-    _ -> Nothing
+_CompilationErrors = prism' CompilationErrors case _ of
+  (CompilationErrors a) -> Just a
+  _ -> Nothing
 
 _InterpreterError :: Prism' PlaygroundError InterpreterError
-_InterpreterError =
-  prism' InterpreterError case _ of
-    (InterpreterError a) -> Just a
-    _ -> Nothing
+_InterpreterError = prism' InterpreterError case _ of
+  (InterpreterError a) -> Just a
+  _ -> Nothing
 
 _RollupError :: Prism' PlaygroundError String
-_RollupError =
-  prism' RollupError case _ of
-    (RollupError a) -> Just a
-    _ -> Nothing
+_RollupError = prism' RollupError case _ of
+  (RollupError a) -> Just a
+  _ -> Nothing
 
 _OtherError :: Prism' PlaygroundError String
-_OtherError =
-  prism' OtherError case _ of
-    (OtherError a) -> Just a
-    _ -> Nothing
+_OtherError = prism' OtherError case _ of
+  (OtherError a) -> Just a
+  _ -> Nothing
 
-_JsonDecodingError :: Prism' PlaygroundError { expected :: String, decodingError :: String, input :: String }
-_JsonDecodingError =
-  prism' JsonDecodingError case _ of
-    (JsonDecodingError a) -> Just a
-    _ -> Nothing
+_JsonDecodingError :: Prism' PlaygroundError {expected :: String, decodingError :: String, input :: String}
+_JsonDecodingError = prism' JsonDecodingError case _ of
+  (JsonDecodingError a) -> Just a
+  _ -> Nothing
+
+--------------------------------------------------------------------------------
+
+newtype Simulation = Simulation
+  { simulationName :: String
+  , simulationId :: Int
+  , simulationActions :: Array (ContractCall (Fix FormArgumentF))
+  , simulationWallets :: Array SimulatorWallet
+  }
+
+instance Show Simulation where
+  show a = genericShow a
+
+derive instance Eq Simulation
+
+instance EncodeJson Simulation where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { simulationName: E.value :: _ String
+                                                   , simulationId: E.value :: _ Int
+                                                   , simulationActions: E.value :: _ (Array (ContractCall (Fix FormArgumentF)))
+                                                   , simulationWallets: E.value :: _ (Array SimulatorWallet)
+                                                   })
+
+instance DecodeJson Simulation where
+  decodeJson = defer \_ -> D.decode $ (Simulation <$> D.record "Simulation"
+      { simulationName: D.value :: _ String
+      , simulationId: D.value :: _ Int
+      , simulationActions: D.value :: _ (Array (ContractCall (Fix FormArgumentF)))
+      , simulationWallets: D.value :: _ (Array SimulatorWallet)
+      })
+
+derive instance Generic Simulation _
+
+derive instance Newtype Simulation _
+
+--------------------------------------------------------------------------------
+
+_Simulation :: Iso' Simulation {simulationName :: String, simulationId :: Int, simulationActions :: Array (ContractCall (Fix FormArgumentF)), simulationWallets :: Array SimulatorWallet}
+_Simulation = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype SimulatorWallet = SimulatorWallet
+  { simulatorWalletWallet :: WalletNumber
+  , simulatorWalletBalance :: Value
+  }
+
+instance Show SimulatorWallet where
+  show a = genericShow a
+
+derive instance Eq SimulatorWallet
+
+instance EncodeJson SimulatorWallet where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                   { simulatorWalletWallet: E.value :: _ WalletNumber
+                                                   , simulatorWalletBalance: E.value :: _ Value
+                                                   })
+
+instance DecodeJson SimulatorWallet where
+  decodeJson = defer \_ -> D.decode $ (SimulatorWallet <$> D.record "SimulatorWallet"
+      { simulatorWalletWallet: D.value :: _ WalletNumber
+      , simulatorWalletBalance: D.value :: _ Value
+      })
+
+derive instance Generic SimulatorWallet _
+
+derive instance Newtype SimulatorWallet _
+
+--------------------------------------------------------------------------------
+
+_SimulatorWallet :: Iso' SimulatorWallet {simulatorWalletWallet :: WalletNumber, simulatorWalletBalance :: Value}
+_SimulatorWallet = _Newtype

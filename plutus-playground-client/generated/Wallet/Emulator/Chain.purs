@@ -2,11 +2,12 @@
 module Wallet.Emulator.Chain where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -30,44 +31,38 @@ data ChainEvent
   | TxnValidationFail ValidationPhase TxId Tx ValidationError (Array ScriptValidationEvent)
   | SlotAdd Slot
 
-instance showChainEvent :: Show ChainEvent where
+instance Show ChainEvent where
   show a = genericShow a
 
-instance encodeJsonChainEvent :: EncodeJson ChainEvent where
-  encodeJson =
-    defer \_ -> case _ of
-      TxnValidate a b c -> E.encodeTagged "TxnValidate" (a /\ b /\ c) (E.tuple (E.value >/\< E.value >/\< E.value))
-      TxnValidationFail a b c d e -> E.encodeTagged "TxnValidationFail" (a /\ b /\ c /\ d /\ e) (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value >/\< E.value))
-      SlotAdd a -> E.encodeTagged "SlotAdd" a E.value
+instance EncodeJson ChainEvent where
+  encodeJson = defer \_ -> case _ of
+    TxnValidate a b c -> E.encodeTagged "TxnValidate" (a /\ b /\ c) (E.tuple (E.value >/\< E.value >/\< E.value))
+    TxnValidationFail a b c d e -> E.encodeTagged "TxnValidationFail" (a /\ b /\ c /\ d /\ e) (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value >/\< E.value))
+    SlotAdd a -> E.encodeTagged "SlotAdd" a E.value
 
-instance decodeJsonChainEvent :: DecodeJson ChainEvent where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ D.sumType "ChainEvent"
-        $ Map.fromFoldable
-            [ "TxnValidate" /\ D.content (D.tuple $ TxnValidate </$\> D.value </*\> D.value </*\> D.value)
-            , "TxnValidationFail" /\ D.content (D.tuple $ TxnValidationFail </$\> D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
-            , "SlotAdd" /\ D.content (SlotAdd <$> D.value)
-            ]
+instance DecodeJson ChainEvent where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "ChainEvent" $ Map.fromFoldable
+      [ "TxnValidate" /\ D.content (D.tuple $ TxnValidate </$\>D.value </*\> D.value </*\> D.value)
+      , "TxnValidationFail" /\ D.content (D.tuple $ TxnValidationFail </$\>D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
+      , "SlotAdd" /\ D.content (SlotAdd <$> D.value)
+      ]
 
-derive instance genericChainEvent :: Generic ChainEvent _
+derive instance Generic ChainEvent _
 
 --------------------------------------------------------------------------------
-_TxnValidate :: Prism' ChainEvent { a :: TxId, b :: Tx, c :: Array ScriptValidationEvent }
-_TxnValidate =
-  prism' (\{ a, b, c } -> (TxnValidate a b c)) case _ of
-    (TxnValidate a b c) -> Just { a, b, c }
-    _ -> Nothing
 
-_TxnValidationFail :: Prism' ChainEvent { a :: ValidationPhase, b :: TxId, c :: Tx, d :: ValidationError, e :: Array ScriptValidationEvent }
-_TxnValidationFail =
-  prism' (\{ a, b, c, d, e } -> (TxnValidationFail a b c d e)) case _ of
-    (TxnValidationFail a b c d e) -> Just { a, b, c, d, e }
-    _ -> Nothing
+_TxnValidate :: Prism' ChainEvent {a :: TxId, b :: Tx, c :: Array ScriptValidationEvent}
+_TxnValidate = prism' (\{a, b, c} -> (TxnValidate a b c)) case _ of
+  (TxnValidate a b c) -> Just {a, b, c}
+  _ -> Nothing
+
+_TxnValidationFail :: Prism' ChainEvent {a :: ValidationPhase, b :: TxId, c :: Tx, d :: ValidationError, e :: Array ScriptValidationEvent}
+_TxnValidationFail = prism' (\{a, b, c, d, e} -> (TxnValidationFail a b c d e)) case _ of
+  (TxnValidationFail a b c d e) -> Just {a, b, c, d, e}
+  _ -> Nothing
 
 _SlotAdd :: Prism' ChainEvent Slot
-_SlotAdd =
-  prism' SlotAdd case _ of
-    (SlotAdd a) -> Just a
-    _ -> Nothing
+_SlotAdd = prism' SlotAdd case _ of
+  (SlotAdd a) -> Just a
+  _ -> Nothing

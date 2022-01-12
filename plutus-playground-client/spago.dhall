@@ -6,6 +6,7 @@ You can edit this file as you like.
 , dependencies =
   [ "aff"
   , "affjax"
+  , "argonaut"
   , "argonaut-codecs"
   , "argonaut-core"
   , "arrays"
@@ -46,6 +47,7 @@ You can edit this file as you like.
   , "tailrec"
   , "transformers"
   , "tuples"
+  , "uri"
   , "web-common"
   , "web-events"
   , "web-html"

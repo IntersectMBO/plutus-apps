@@ -2,11 +2,12 @@
 module Plutus.V1.Ledger.Scripts where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -21,166 +22,152 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype MintingPolicy
-  = MintingPolicy { getMintingPolicy :: String }
+newtype DatumHash = DatumHash String
 
-instance showMintingPolicy :: Show MintingPolicy where
+derive instance Eq DatumHash
+
+derive instance Ord DatumHash
+
+instance Show DatumHash where
   show a = genericShow a
 
-derive instance eqMintingPolicy :: Eq MintingPolicy
+instance EncodeJson DatumHash where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
 
-derive instance ordMintingPolicy :: Ord MintingPolicy
+instance DecodeJson DatumHash where
+  decodeJson = defer \_ -> D.decode $ (DatumHash <$> D.value)
 
-instance encodeJsonMintingPolicy :: EncodeJson MintingPolicy where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getMintingPolicy: E.value :: _ String }
-          )
+derive instance Generic DatumHash _
 
-instance decodeJsonMintingPolicy :: DecodeJson MintingPolicy where
-  decodeJson = defer \_ -> D.decode $ (MintingPolicy <$> D.record "MintingPolicy" { getMintingPolicy: D.value :: _ String })
-
-derive instance genericMintingPolicy :: Generic MintingPolicy _
-
-derive instance newtypeMintingPolicy :: Newtype MintingPolicy _
+derive instance Newtype DatumHash _
 
 --------------------------------------------------------------------------------
-_MintingPolicy :: Iso' MintingPolicy { getMintingPolicy :: String }
+
+_DatumHash :: Iso' DatumHash String
+_DatumHash = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype MintingPolicy = MintingPolicy { getMintingPolicy :: String }
+
+instance Show MintingPolicy where
+  show a = genericShow a
+
+derive instance Eq MintingPolicy
+
+derive instance Ord MintingPolicy
+
+instance EncodeJson MintingPolicy where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getMintingPolicy: E.value :: _ String })
+
+instance DecodeJson MintingPolicy where
+  decodeJson = defer \_ -> D.decode $ (MintingPolicy <$> D.record "MintingPolicy" { getMintingPolicy: D.value :: _ String })
+
+derive instance Generic MintingPolicy _
+
+derive instance Newtype MintingPolicy _
+
+--------------------------------------------------------------------------------
+
+_MintingPolicy :: Iso' MintingPolicy {getMintingPolicy :: String}
 _MintingPolicy = _Newtype
 
 --------------------------------------------------------------------------------
-newtype StakeValidator
-  = StakeValidator { getStakeValidator :: String }
 
-instance showStakeValidator :: Show StakeValidator where
-  show a = genericShow a
-
-derive instance eqStakeValidator :: Eq StakeValidator
-
-derive instance ordStakeValidator :: Ord StakeValidator
-
-instance encodeJsonStakeValidator :: EncodeJson StakeValidator where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getStakeValidator: E.value :: _ String }
-          )
-
-instance decodeJsonStakeValidator :: DecodeJson StakeValidator where
-  decodeJson = defer \_ -> D.decode $ (StakeValidator <$> D.record "StakeValidator" { getStakeValidator: D.value :: _ String })
-
-derive instance genericStakeValidator :: Generic StakeValidator _
-
-derive instance newtypeStakeValidator :: Newtype StakeValidator _
-
---------------------------------------------------------------------------------
-_StakeValidator :: Iso' StakeValidator { getStakeValidator :: String }
-_StakeValidator = _Newtype
-
---------------------------------------------------------------------------------
-newtype Validator
-  = Validator { getValidator :: String }
-
-instance showValidator :: Show Validator where
-  show a = genericShow a
-
-derive instance eqValidator :: Eq Validator
-
-derive instance ordValidator :: Ord Validator
-
-instance encodeJsonValidator :: EncodeJson Validator where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getValidator: E.value :: _ String }
-          )
-
-instance decodeJsonValidator :: DecodeJson Validator where
-  decodeJson = defer \_ -> D.decode $ (Validator <$> D.record "Validator" { getValidator: D.value :: _ String })
-
-derive instance genericValidator :: Generic Validator _
-
-derive instance newtypeValidator :: Newtype Validator _
-
---------------------------------------------------------------------------------
-_Validator :: Iso' Validator { getValidator :: String }
-_Validator = _Newtype
-
---------------------------------------------------------------------------------
 data ScriptError
   = EvaluationError (Array String) String
   | EvaluationException String String
   | MalformedScript String
 
-derive instance eqScriptError :: Eq ScriptError
+derive instance Eq ScriptError
 
-instance showScriptError :: Show ScriptError where
+instance Show ScriptError where
   show a = genericShow a
 
-instance encodeJsonScriptError :: EncodeJson ScriptError where
-  encodeJson =
-    defer \_ -> case _ of
-      EvaluationError a b -> E.encodeTagged "EvaluationError" (a /\ b) (E.tuple (E.value >/\< E.value))
-      EvaluationException a b -> E.encodeTagged "EvaluationException" (a /\ b) (E.tuple (E.value >/\< E.value))
-      MalformedScript a -> E.encodeTagged "MalformedScript" a E.value
+instance EncodeJson ScriptError where
+  encodeJson = defer \_ -> case _ of
+    EvaluationError a b -> E.encodeTagged "EvaluationError" (a /\ b) (E.tuple (E.value >/\< E.value))
+    EvaluationException a b -> E.encodeTagged "EvaluationException" (a /\ b) (E.tuple (E.value >/\< E.value))
+    MalformedScript a -> E.encodeTagged "MalformedScript" a E.value
 
-instance decodeJsonScriptError :: DecodeJson ScriptError where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ D.sumType "ScriptError"
-        $ Map.fromFoldable
-            [ "EvaluationError" /\ D.content (D.tuple $ EvaluationError </$\> D.value </*\> D.value)
-            , "EvaluationException" /\ D.content (D.tuple $ EvaluationException </$\> D.value </*\> D.value)
-            , "MalformedScript" /\ D.content (MalformedScript <$> D.value)
-            ]
+instance DecodeJson ScriptError where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "ScriptError" $ Map.fromFoldable
+      [ "EvaluationError" /\ D.content (D.tuple $ EvaluationError </$\>D.value </*\> D.value)
+      , "EvaluationException" /\ D.content (D.tuple $ EvaluationException </$\>D.value </*\> D.value)
+      , "MalformedScript" /\ D.content (MalformedScript <$> D.value)
+      ]
 
-derive instance genericScriptError :: Generic ScriptError _
+derive instance Generic ScriptError _
 
 --------------------------------------------------------------------------------
-_EvaluationError :: Prism' ScriptError { a :: Array String, b :: String }
-_EvaluationError =
-  prism' (\{ a, b } -> (EvaluationError a b)) case _ of
-    (EvaluationError a b) -> Just { a, b }
-    _ -> Nothing
 
-_EvaluationException :: Prism' ScriptError { a :: String, b :: String }
-_EvaluationException =
-  prism' (\{ a, b } -> (EvaluationException a b)) case _ of
-    (EvaluationException a b) -> Just { a, b }
-    _ -> Nothing
+_EvaluationError :: Prism' ScriptError {a :: Array String, b :: String}
+_EvaluationError = prism' (\{a, b} -> (EvaluationError a b)) case _ of
+  (EvaluationError a b) -> Just {a, b}
+  _ -> Nothing
+
+_EvaluationException :: Prism' ScriptError {a :: String, b :: String}
+_EvaluationException = prism' (\{a, b} -> (EvaluationException a b)) case _ of
+  (EvaluationException a b) -> Just {a, b}
+  _ -> Nothing
 
 _MalformedScript :: Prism' ScriptError String
-_MalformedScript =
-  prism' MalformedScript case _ of
-    (MalformedScript a) -> Just a
-    _ -> Nothing
+_MalformedScript = prism' MalformedScript case _ of
+  (MalformedScript a) -> Just a
+  _ -> Nothing
 
 --------------------------------------------------------------------------------
-newtype DatumHash
-  = DatumHash String
 
-derive instance eqDatumHash :: Eq DatumHash
+newtype StakeValidator = StakeValidator { getStakeValidator :: String }
 
-derive instance ordDatumHash :: Ord DatumHash
-
-instance showDatumHash :: Show DatumHash where
+instance Show StakeValidator where
   show a = genericShow a
 
-instance encodeJsonDatumHash :: EncodeJson DatumHash where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
+derive instance Eq StakeValidator
 
-instance decodeJsonDatumHash :: DecodeJson DatumHash where
-  decodeJson = defer \_ -> D.decode $ (DatumHash <$> D.value)
+derive instance Ord StakeValidator
 
-derive instance genericDatumHash :: Generic DatumHash _
+instance EncodeJson StakeValidator where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getStakeValidator: E.value :: _ String })
 
-derive instance newtypeDatumHash :: Newtype DatumHash _
+instance DecodeJson StakeValidator where
+  decodeJson = defer \_ -> D.decode $ (StakeValidator <$> D.record "StakeValidator" { getStakeValidator: D.value :: _ String })
+
+derive instance Generic StakeValidator _
+
+derive instance Newtype StakeValidator _
 
 --------------------------------------------------------------------------------
-_DatumHash :: Iso' DatumHash String
-_DatumHash = _Newtype
+
+_StakeValidator :: Iso' StakeValidator {getStakeValidator :: String}
+_StakeValidator = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype Validator = Validator { getValidator :: String }
+
+instance Show Validator where
+  show a = genericShow a
+
+derive instance Eq Validator
+
+derive instance Ord Validator
+
+instance EncodeJson Validator where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getValidator: E.value :: _ String })
+
+instance DecodeJson Validator where
+  decodeJson = defer \_ -> D.decode $ (Validator <$> D.record "Validator" { getValidator: D.value :: _ String })
+
+derive instance Generic Validator _
+
+derive instance Newtype Validator _
+
+--------------------------------------------------------------------------------
+
+_Validator :: Iso' Validator {getValidator :: String}
+_Validator = _Newtype

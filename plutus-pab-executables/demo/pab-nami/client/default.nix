@@ -7,14 +7,12 @@ let
   # TODO: Use the PS generator in the demo app
   generated-purescript = pkgs.runCommand "pab-nami-demo-purescript" { } ''
     mkdir $out
-    ${pab-setup-invoker}/bin/plutus-pab-setup psgenerator $out
     ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $out
   '';
 
   generate-purescript = pkgs.writeShellScriptBin "pab-nami-demo-generate-purs" ''
     generatedDir=./generated
     rm -rf $generatedDir
-    $(nix-build ../../../../default.nix -A pab-nami-demo.pab-setup-invoker)/bin/plutus-pab-setup psgenerator $generatedDir
     $(nix-build ../../../../default.nix -A pab-nami-demo.pab-nami-demo-generator)/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
   '';
 
@@ -48,5 +46,5 @@ let
     });
 in
 {
-  inherit client pab-nami-demo-invoker pab-nami-demo-generator pab-setup-invoker generate-purescript generated-purescript start-backend;
+  inherit client pab-nami-demo-invoker pab-nami-demo-generator generate-purescript generated-purescript start-backend;
 }

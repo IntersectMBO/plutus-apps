@@ -24,7 +24,6 @@ $ nix-build ../default.nix -A plutus-apps.haskell.packages.plutus-pab
 PAB contains several commands and services, which are outlined below.
 
 - [pab-local-cluster](#pab-local-cluster)
-- [psgenerator](#psgenerator)
 - [migrate](#migrate)
 - [all-servers](#all-servers)
 - [client-services](#client-services)
@@ -78,22 +77,6 @@ curl -H "Content-Type: application/json" -v \
 A couple of log messages appear, the last one should say something like "Tx
 confirmed. Integration test complete."
 
-
-### psgenerator
-
-```
-$ cabal exec plutus-pab-setup -- psgenerator generated
-```
-
-#### Description
-
-Generates the purescript bridge code.
-
-`psgenerator` generates only default types. If you want to generate types for your contracts you have to write your own small generator. Take a look at `plutus-pab-nami-demo-generator` for an example. It's a small executable that calls `PSGenerator.generateAPIModule` and `PSGenerator.generateWith` with a custom contract type.
-
-#### Source
-
-- [src/Plutus/PAB/Run/PSGenerator.hs](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Plutus/PAB/Run/PSGenerator.hs)
 
 ### migrate
 

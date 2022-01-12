@@ -2,11 +2,12 @@
 module PlutusCore.Evaluation.Machine.ExMemory where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -21,47 +22,48 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype ExCPU
-  = ExCPU Int
+newtype ExCPU = ExCPU Int
 
-derive instance eqExCPU :: Eq ExCPU
+derive instance Eq ExCPU
 
-instance showExCPU :: Show ExCPU where
+instance Show ExCPU where
   show a = genericShow a
 
-instance encodeJsonExCPU :: EncodeJson ExCPU where
+instance EncodeJson ExCPU where
   encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
 
-instance decodeJsonExCPU :: DecodeJson ExCPU where
+instance DecodeJson ExCPU where
   decodeJson = defer \_ -> D.decode $ (ExCPU <$> D.value)
 
-derive instance genericExCPU :: Generic ExCPU _
+derive instance Generic ExCPU _
 
-derive instance newtypeExCPU :: Newtype ExCPU _
+derive instance Newtype ExCPU _
 
 --------------------------------------------------------------------------------
+
 _ExCPU :: Iso' ExCPU Int
 _ExCPU = _Newtype
 
 --------------------------------------------------------------------------------
-newtype ExMemory
-  = ExMemory Int
 
-derive instance eqExMemory :: Eq ExMemory
+newtype ExMemory = ExMemory Int
 
-instance showExMemory :: Show ExMemory where
+derive instance Eq ExMemory
+
+instance Show ExMemory where
   show a = genericShow a
 
-instance encodeJsonExMemory :: EncodeJson ExMemory where
+instance EncodeJson ExMemory where
   encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
 
-instance decodeJsonExMemory :: DecodeJson ExMemory where
+instance DecodeJson ExMemory where
   decodeJson = defer \_ -> D.decode $ (ExMemory <$> D.value)
 
-derive instance genericExMemory :: Generic ExMemory _
+derive instance Generic ExMemory _
 
-derive instance newtypeExMemory :: Newtype ExMemory _
+derive instance Newtype ExMemory _
 
 --------------------------------------------------------------------------------
+
 _ExMemory :: Iso' ExMemory Int
 _ExMemory = _Newtype

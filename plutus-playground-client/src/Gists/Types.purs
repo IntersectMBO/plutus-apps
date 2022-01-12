@@ -3,7 +3,7 @@ module Gists.Types
   , parseGistUrl
   ) where
 
-import AjaxUtils (AjaxErrorPaneAction)
+import Component.ErrorPane (ErrorPaneAction)
 import Data.Array.NonEmpty as NonEmptyArray
 import Data.Either (Either, note)
 import Data.String.Regex (Regex, match, regex)
@@ -15,7 +15,7 @@ data GistAction
   = PublishOrUpdateGist
   | SetGistUrl String
   | LoadGist
-  | AjaxErrorPaneAction AjaxErrorPaneAction
+  | ErrorPaneAction ErrorPaneAction
 
 gistIdInLinkRegex :: Either String Regex
 gistIdInLinkRegex = regex "^(.*/)?([0-9a-f]{32})$" ignoreCase

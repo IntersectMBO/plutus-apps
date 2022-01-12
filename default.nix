@@ -47,7 +47,7 @@ rec {
     inherit (pkgs.callPackage ./plutus-playground-client {
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
       inherit haskell webCommon webCommonPlutus webCommonPlayground;
-    }) client server start-backend;
+    }) client server start-backend generate-purescript;
   };
 
   # TODO: Fails for now because of webpack can't include `nami-wallet` lib in it's bundle.

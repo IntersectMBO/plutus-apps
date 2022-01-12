@@ -1,38 +1,43 @@
 module MainFrame.MonadApp
   ( class MonadApp
+  , HalogenApp(..)
   , editorGetContents
-  , editorSetContents
   , editorHandleAction
   , editorSetAnnotations
-  , saveBuffer
-  , setDropEffect
-  , setDataTransferData
-  , readFileFromDragEvent
-  , getOauthStatus
+  , editorSetContents
   , getGistByGistId
+  , getOauthStatus
+  , postContract
   , postEvaluation
   , postGist
   , postGistByGistId
-  , postContract
-  , resizeEditor
-  , resizeBalancesChart
   , preventDefault
-  , scrollIntoView
-  , HalogenApp(..)
+  , readFileFromDragEvent
+  , resizeBalancesChart
+  , resizeEditor
   , runHalogenApp
+  , saveBuffer
+  , scrollIntoView
+  , setDataTransferData
+  , setDropEffect
   ) where
+
+import Prologue
 
 import Animation (class MonadAnimate, animate)
 import Auth (AuthStatus)
 import Clipboard (class MonadClipboard, copy)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
-import Control.Monad.Except.Trans (ExceptT, runExceptT)
+import Control.Monad.Except (mapExceptT, withExceptT)
+import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Reader.Class (class MonadAsk)
 import Control.Monad.State.Class (class MonadState)
 import Control.Monad.State.Trans (StateT)
 import Control.Monad.Trans.Class (class MonadTrans, lift)
-import Data.Either (Either)
-import Data.Maybe (Maybe)
+import Data.Argonaut (Json, JsonDecodeError, printJsonDecodeError, stringify)
+import Data.Array (cons)
+import Data.Lens (over)
+import Data.Maybe (maybe)
 import Data.MediaType (MediaType)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Editor.State (handleAction, saveBuffer) as Editor
@@ -47,23 +52,21 @@ import Halogen.Extra as HE
 import Halogen.Monaco as Monaco
 import Language.Haskell.Interpreter (InterpreterError, SourceCode(SourceCode), InterpreterResult)
 import MainFrame.Lenses (_balancesChartSlot, _editorSlot, _editorState)
-import MainFrame.Types (ChildSlots, HAction, State, WebData)
+import MainFrame.Types (ChildSlots, HAction, State)
 import Monaco (IMarkerData)
-import Network.RemoteData as RemoteData
-import Playground.Server (class HasSPSettings)
 import Playground.Server as Server
 import Playground.Types (CompilationResult, Evaluation, EvaluationResult, PlaygroundError)
-import Prelude (class Applicative, class Apply, class Bind, class Functor, class Monad, Unit, Void, bind, identity, map, pure, unit, void, ($), (<$>), (<<<))
-import Servant.PureScript (AjaxError)
+import Servant.PureScript (class MonadAjax, AjaxError, printAjaxError, request)
 import StaticData (bufferLocalStorageKey)
+import URI.RelativePart (_relPath)
+import URI.RelativeRef (_relPart)
 import Web.Event.Extra (class IsEvent)
 import Web.Event.Extra as WebEvent
 import Web.HTML.Event.DataTransfer (DropEffect)
 import Web.HTML.Event.DataTransfer as DataTransfer
 import Web.HTML.Event.DragEvent (DragEvent, dataTransfer)
 
-class
-  Monad m <= MonadApp m where
+class Monad m <= MonadApp m where
   editorGetContents :: m (Maybe SourceCode)
   editorSetContents :: SourceCode -> Maybe Int -> m Unit
   editorHandleAction :: Editor.Action -> m Unit
@@ -74,12 +77,12 @@ class
   setDataTransferData :: DragEvent -> MediaType -> String -> m Unit
   readFileFromDragEvent :: DragEvent -> m String
   --
-  getOauthStatus :: m (WebData AuthStatus)
-  getGistByGistId :: GistId -> m (WebData Gist)
-  postEvaluation :: Evaluation -> m (WebData (Either PlaygroundError EvaluationResult))
-  postGist :: NewGist -> m (WebData Gist)
-  postGistByGistId :: NewGist -> GistId -> m (WebData Gist)
-  postContract :: SourceCode -> m (WebData (Either InterpreterError (InterpreterResult CompilationResult)))
+  getOauthStatus :: ExceptT String m AuthStatus
+  getGistByGistId :: GistId -> ExceptT String m Gist
+  postEvaluation :: Evaluation -> ExceptT String m (Either PlaygroundError EvaluationResult)
+  postGist :: NewGist -> ExceptT String m Gist
+  postGistByGistId :: NewGist -> GistId -> ExceptT String m Gist
+  postContract :: SourceCode -> ExceptT String m (Either InterpreterError (InterpreterResult CompilationResult))
   resizeEditor :: m Unit
   resizeBalancesChart :: m Unit
   --
@@ -120,16 +123,24 @@ instance monadClipboardHalogenApp :: MonadEffect m => MonadClipboard (HalogenApp
 instance monadThrowHalogenApp :: MonadThrow e m => MonadThrow e (HalogenApp m) where
   throwError e = lift (throwError e)
 
+instance
+  MonadAjax JsonDecodeError Json (AjaxError JsonDecodeError Json) m =>
+  MonadAjax JsonDecodeError Json String (HalogenApp m) where
+  request r = withExceptT (printAjaxError stringify printJsonDecodeError)
+    $ mapExceptT (HalogenApp <<< lift)
+    $ request
+    $ r
+      { uri = over
+          (_relPart <<< _relPath) (Just <<< maybe ["api"] (cons "api"))
+          r.uri
+      }
+
 ------------------------------------------------------------
 runHalogenApp :: forall m a. HalogenApp m a -> HalogenM State HAction ChildSlots Void m a
 runHalogenApp = unwrap
 
-instance monadAppHalogenApp ::
-  ( HasSPSettings env
-  , MonadAsk env m
-  , MonadEffect m
-  , MonadAff m
-  ) =>
+instance
+  (MonadAjax JsonDecodeError Json (AjaxError JsonDecodeError Json) m, MonadAff m) =>
   MonadApp (HalogenApp m) where
   editorGetContents = do
     mText <- wrap $ query _editorSlot unit $ Monaco.GetText identity
@@ -141,24 +152,18 @@ instance monadAppHalogenApp ::
   setDataTransferData event mimeType value = wrap $ liftEffect $ DataTransfer.setData mimeType value $ dataTransfer event
   readFileFromDragEvent event = wrap $ liftAff $ WebEvent.readFileFromDragEvent event
   saveBuffer text = wrap $ Editor.saveBuffer bufferLocalStorageKey text
-  getOauthStatus = runAjax Server.getOauthStatus
-  getGistByGistId gistId = runAjax $ Server.getGistsByGistId gistId
-  postEvaluation evaluation = runAjax $ Server.postEvaluate evaluation
-  postGist newGist = runAjax $ Server.postGists newGist
-  postGistByGistId newGist gistId = runAjax $ Server.postGistsByGistId newGist gistId
-  postContract source = runAjax $ Server.postContract source
+  getOauthStatus = Server.getOauthStatus
+  getGistByGistId = Server.getGistsByGistId
+  postEvaluation = Server.postEvaluate
+  postGist = Server.postGists
+  postGistByGistId = Server.postGistsByGistId
+  postContract = Server.postContract
   resizeEditor = wrap $ void $ H.query _editorSlot unit (Monaco.Resize unit)
   resizeBalancesChart = wrap $ void $ H.query _balancesChartSlot unit (Chartist.Resize unit)
   preventDefault event = wrap $ liftEffect $ WebEvent.preventDefault event
   scrollIntoView ref = wrap $ HE.scrollIntoView ref
 
-runAjax ::
-  forall m a.
-  ExceptT AjaxError (HalogenM State HAction ChildSlots Void m) a ->
-  HalogenApp m (WebData a)
-runAjax action = wrap $ RemoteData.fromEither <$> runExceptT action
-
-instance monadAppState :: MonadApp m => MonadApp (StateT s m) where
+instance MonadApp m => MonadApp (StateT s m) where
   editorGetContents = lift editorGetContents
   editorSetContents contents cursor = lift $ editorSetContents contents cursor
   editorHandleAction action = lift $ editorHandleAction action
@@ -167,12 +172,12 @@ instance monadAppState :: MonadApp m => MonadApp (StateT s m) where
   setDataTransferData event mimeType value = lift $ setDataTransferData event mimeType value
   readFileFromDragEvent event = lift $ readFileFromDragEvent event
   saveBuffer text = lift $ saveBuffer text
-  getOauthStatus = lift getOauthStatus
-  getGistByGistId gistId = lift $ getGistByGistId gistId
-  postEvaluation evaluation = lift $ postEvaluation evaluation
-  postGist newGist = lift $ postGist newGist
-  postGistByGistId newGist gistId = lift $ postGistByGistId newGist gistId
-  postContract source = lift $ postContract source
+  getOauthStatus = mapExceptT lift getOauthStatus
+  getGistByGistId gistId = mapExceptT lift $ getGistByGistId gistId
+  postEvaluation evaluation = mapExceptT lift $ postEvaluation evaluation
+  postGist newGist = mapExceptT lift $ postGist newGist
+  postGistByGistId newGist gistId = mapExceptT lift $ postGistByGistId newGist gistId
+  postContract source = mapExceptT lift $ postContract source
   resizeEditor = lift resizeEditor
   resizeBalancesChart = lift resizeBalancesChart
   preventDefault event = lift $ preventDefault event

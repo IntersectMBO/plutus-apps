@@ -2,11 +2,12 @@
 module Plutus.V1.Ledger.Crypto where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -21,91 +22,81 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype Signature
-  = Signature { getSignature :: String }
+newtype PubKey = PubKey { getPubKey :: String }
 
-instance showSignature :: Show Signature where
+derive instance Eq PubKey
+
+derive instance Ord PubKey
+
+instance Show PubKey where
   show a = genericShow a
 
-derive instance eqSignature :: Eq Signature
+instance EncodeJson PubKey where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getPubKey: E.value :: _ String })
 
-derive instance ordSignature :: Ord Signature
-
-instance encodeJsonSignature :: EncodeJson Signature where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getSignature: E.value :: _ String }
-          )
-
-instance decodeJsonSignature :: DecodeJson Signature where
-  decodeJson = defer \_ -> D.decode $ (Signature <$> D.record "Signature" { getSignature: D.value :: _ String })
-
-derive instance genericSignature :: Generic Signature _
-
-derive instance newtypeSignature :: Newtype Signature _
-
---------------------------------------------------------------------------------
-_Signature :: Iso' Signature { getSignature :: String }
-_Signature = _Newtype
-
---------------------------------------------------------------------------------
-newtype PubKey
-  = PubKey { getPubKey :: String }
-
-derive instance eqPubKey :: Eq PubKey
-
-derive instance ordPubKey :: Ord PubKey
-
-instance showPubKey :: Show PubKey where
-  show a = genericShow a
-
-instance encodeJsonPubKey :: EncodeJson PubKey where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getPubKey: E.value :: _ String }
-          )
-
-instance decodeJsonPubKey :: DecodeJson PubKey where
+instance DecodeJson PubKey where
   decodeJson = defer \_ -> D.decode $ (PubKey <$> D.record "PubKey" { getPubKey: D.value :: _ String })
 
-derive instance genericPubKey :: Generic PubKey _
+derive instance Generic PubKey _
 
-derive instance newtypePubKey :: Newtype PubKey _
+derive instance Newtype PubKey _
 
 --------------------------------------------------------------------------------
-_PubKey :: Iso' PubKey { getPubKey :: String }
+
+_PubKey :: Iso' PubKey {getPubKey :: String}
 _PubKey = _Newtype
 
 --------------------------------------------------------------------------------
-newtype PubKeyHash
-  = PubKeyHash { getPubKeyHash :: String }
 
-derive instance eqPubKeyHash :: Eq PubKeyHash
+newtype PubKeyHash = PubKeyHash { getPubKeyHash :: String }
 
-derive instance ordPubKeyHash :: Ord PubKeyHash
+derive instance Eq PubKeyHash
 
-instance showPubKeyHash :: Show PubKeyHash where
+derive instance Ord PubKeyHash
+
+instance Show PubKeyHash where
   show a = genericShow a
 
-instance encodeJsonPubKeyHash :: EncodeJson PubKeyHash where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getPubKeyHash: E.value :: _ String }
-          )
+instance EncodeJson PubKeyHash where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getPubKeyHash: E.value :: _ String })
 
-instance decodeJsonPubKeyHash :: DecodeJson PubKeyHash where
+instance DecodeJson PubKeyHash where
   decodeJson = defer \_ -> D.decode $ (PubKeyHash <$> D.record "PubKeyHash" { getPubKeyHash: D.value :: _ String })
 
-derive instance genericPubKeyHash :: Generic PubKeyHash _
+derive instance Generic PubKeyHash _
 
-derive instance newtypePubKeyHash :: Newtype PubKeyHash _
+derive instance Newtype PubKeyHash _
 
 --------------------------------------------------------------------------------
-_PubKeyHash :: Iso' PubKeyHash { getPubKeyHash :: String }
+
+_PubKeyHash :: Iso' PubKeyHash {getPubKeyHash :: String}
 _PubKeyHash = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype Signature = Signature { getSignature :: String }
+
+instance Show Signature where
+  show a = genericShow a
+
+derive instance Eq Signature
+
+derive instance Ord Signature
+
+instance EncodeJson Signature where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getSignature: E.value :: _ String })
+
+instance DecodeJson Signature where
+  decodeJson = defer \_ -> D.decode $ (Signature <$> D.record "Signature" { getSignature: D.value :: _ String })
+
+derive instance Generic Signature _
+
+derive instance Newtype Signature _
+
+--------------------------------------------------------------------------------
+
+_Signature :: Iso' Signature {getSignature :: String}
+_Signature = _Newtype

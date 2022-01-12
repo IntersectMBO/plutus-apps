@@ -5,20 +5,21 @@ module Gists.View
   ) where
 
 import Prologue hiding (div)
-import Gists.Types (GistAction(..), parseGistUrl)
-import AjaxUtils (closeableAjaxErrorPane)
+
 import Auth (AuthRole(..), AuthStatus, authStatusAuthRole)
 import Bootstrap (btn, btnDanger, btnSecondary, btnSmall, empty, formControl, formGroup, isInvalid, isValid, nbsp)
+import Component.ErrorPane (closeableErrorPane)
 import DOM.HTML.Indexed.InputType (InputType(..))
 import Data.Lens (view)
 import Data.Maybe (fromMaybe)
 import Gist (Gist, GistId, gistHtmlUrl)
+import Gists.Types (GistAction(..), parseGistUrl)
 import Halogen.HTML (ClassName(ClassName), HTML, IProp, a, button, div, input, label, text)
 import Halogen.HTML.Events (onClick, onValueInput)
 import Halogen.HTML.Properties (class_, classes, disabled, for, href, id, target, type_, value)
 import Icons (Icon(..), icon)
+import MainFrame.Types (WebData)
 import Network.RemoteData (RemoteData(NotAsked, Loading, Failure, Success))
-import Servant.PureScript (AjaxError)
 
 idPublishGist :: forall r i. IProp ( id :: String | r ) i
 idPublishGist = id "publish-gist"
@@ -28,8 +29,8 @@ idLoadGist = id "load-gist"
 
 gistControls ::
   forall a p.
-  { authStatus :: RemoteData AjaxError AuthStatus
-  , createGistResult :: RemoteData AjaxError Gist
+  { authStatus :: WebData AuthStatus
+  , createGistResult :: WebData Gist
   , gistErrorPaneVisible :: Boolean
   , gistUrl :: Maybe String
   | a
@@ -65,7 +66,7 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
             ]
         , case createGistResult, gistErrorPaneVisible of
             Success gist, _ -> gistPane gist
-            Failure err, true -> AjaxErrorPaneAction <$> closeableAjaxErrorPane err
+            Failure err, true -> ErrorPaneAction <$> closeableErrorPane err
             Failure _, false -> empty
             _, _ -> empty
         ]

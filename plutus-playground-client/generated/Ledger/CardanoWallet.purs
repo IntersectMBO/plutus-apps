@@ -2,11 +2,12 @@
 module Ledger.CardanoWallet where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.BigInt.Argonaut (BigInt)
 import Data.Generic.Rep (class Generic)
@@ -22,29 +23,25 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype WalletNumber
-  = WalletNumber { getWallet :: BigInt }
+newtype WalletNumber = WalletNumber { getWallet :: BigInt }
 
-derive instance eqWalletNumber :: Eq WalletNumber
+derive instance Eq WalletNumber
 
-instance showWalletNumber :: Show WalletNumber where
+instance Show WalletNumber where
   show a = genericShow a
 
-instance encodeJsonWalletNumber :: EncodeJson WalletNumber where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getWallet: E.value :: _ BigInt }
-          )
+instance EncodeJson WalletNumber where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getWallet: E.value :: _ BigInt })
 
-instance decodeJsonWalletNumber :: DecodeJson WalletNumber where
+instance DecodeJson WalletNumber where
   decodeJson = defer \_ -> D.decode $ (WalletNumber <$> D.record "WalletNumber" { getWallet: D.value :: _ BigInt })
 
-derive instance genericWalletNumber :: Generic WalletNumber _
+derive instance Generic WalletNumber _
 
-derive instance newtypeWalletNumber :: Newtype WalletNumber _
+derive instance Newtype WalletNumber _
 
 --------------------------------------------------------------------------------
-_WalletNumber :: Iso' WalletNumber { getWallet :: BigInt }
+
+_WalletNumber :: Iso' WalletNumber {getWallet :: BigInt}
 _WalletNumber = _Newtype

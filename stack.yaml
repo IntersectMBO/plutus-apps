@@ -58,7 +58,7 @@ extra-deps:
 - git: https://github.com/input-output-hk/purescript-bridge.git
   commit: 6a92d7853ea514be8b70bab5e72077bf5a510596
 - git: https://github.com/input-output-hk/servant-purescript.git
-  commit: ebea59c7bdfc0338d83fca772b9a57e28560bcde
+  commit: 6746a0bd441e90978669cc6a229cbeb1220d4a1c
 - git: https://github.com/input-output-hk/cardano-crypto.git
   commit: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
 - git: https://github.com/input-output-hk/cardano-base

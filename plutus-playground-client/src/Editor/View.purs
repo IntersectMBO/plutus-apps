@@ -7,7 +7,7 @@ module Editor.View
   ) where
 
 import Prologue hiding (div)
-import AjaxUtils (ajaxErrorPane)
+import Component.ErrorPane (errorPane)
 import Bootstrap (btn, card, cardHeader, cardHeader_, cardBody_, customSelect, empty, listGroupItem_, listGroup_, nbsp)
 import Data.Array as Array
 import Data.Lens (_Right, preview, to, view)
@@ -168,7 +168,7 @@ editorFeedback (State { currentCodeIsCompiled, feedbackPaneExtend, feedbackPaneM
 
   errorList = case compilationResult of
     Success (Left error) -> listGroup_ (interpreterErrorPane error)
-    Failure error -> ajaxErrorPane error
+    Failure error -> errorPane error
     _ -> empty
 
   warningList =

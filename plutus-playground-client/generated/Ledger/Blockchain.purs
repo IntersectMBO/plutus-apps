@@ -2,11 +2,12 @@
 module Ledger.Blockchain where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -22,72 +23,64 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
+newtype BlockId = BlockId { getBlockId :: String }
+
+derive instance Eq BlockId
+
+derive instance Ord BlockId
+
+instance Show BlockId where
+  show a = genericShow a
+
+instance EncodeJson BlockId where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getBlockId: E.value :: _ String })
+
+instance DecodeJson BlockId where
+  decodeJson = defer \_ -> D.decode $ (BlockId <$> D.record "BlockId" { getBlockId: D.value :: _ String })
+
+derive instance Generic BlockId _
+
+derive instance Newtype BlockId _
+
+--------------------------------------------------------------------------------
+
+_BlockId :: Iso' BlockId {getBlockId :: String}
+_BlockId = _Newtype
+
+--------------------------------------------------------------------------------
+
 data OnChainTx
   = Invalid Tx
   | Valid Tx
 
-derive instance eqOnChainTx :: Eq OnChainTx
+derive instance Eq OnChainTx
 
-instance showOnChainTx :: Show OnChainTx where
+instance Show OnChainTx where
   show a = genericShow a
 
-instance encodeJsonOnChainTx :: EncodeJson OnChainTx where
-  encodeJson =
-    defer \_ -> case _ of
-      Invalid a -> E.encodeTagged "Invalid" a E.value
-      Valid a -> E.encodeTagged "Valid" a E.value
+instance EncodeJson OnChainTx where
+  encodeJson = defer \_ -> case _ of
+    Invalid a -> E.encodeTagged "Invalid" a E.value
+    Valid a -> E.encodeTagged "Valid" a E.value
 
-instance decodeJsonOnChainTx :: DecodeJson OnChainTx where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ D.sumType "OnChainTx"
-        $ Map.fromFoldable
-            [ "Invalid" /\ D.content (Invalid <$> D.value)
-            , "Valid" /\ D.content (Valid <$> D.value)
-            ]
+instance DecodeJson OnChainTx where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "OnChainTx" $ Map.fromFoldable
+      [ "Invalid" /\ D.content (Invalid <$> D.value)
+      , "Valid" /\ D.content (Valid <$> D.value)
+      ]
 
-derive instance genericOnChainTx :: Generic OnChainTx _
+derive instance Generic OnChainTx _
 
 --------------------------------------------------------------------------------
+
 _Invalid :: Prism' OnChainTx Tx
-_Invalid =
-  prism' Invalid case _ of
-    (Invalid a) -> Just a
-    _ -> Nothing
+_Invalid = prism' Invalid case _ of
+  (Invalid a) -> Just a
+  _ -> Nothing
 
 _Valid :: Prism' OnChainTx Tx
-_Valid =
-  prism' Valid case _ of
-    (Valid a) -> Just a
-    _ -> Nothing
-
---------------------------------------------------------------------------------
-newtype BlockId
-  = BlockId { getBlockId :: String }
-
-derive instance eqBlockId :: Eq BlockId
-
-derive instance ordBlockId :: Ord BlockId
-
-instance showBlockId :: Show BlockId where
-  show a = genericShow a
-
-instance encodeJsonBlockId :: EncodeJson BlockId where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getBlockId: E.value :: _ String }
-          )
-
-instance decodeJsonBlockId :: DecodeJson BlockId where
-  decodeJson = defer \_ -> D.decode $ (BlockId <$> D.record "BlockId" { getBlockId: D.value :: _ String })
-
-derive instance genericBlockId :: Generic BlockId _
-
-derive instance newtypeBlockId :: Newtype BlockId _
-
---------------------------------------------------------------------------------
-_BlockId :: Iso' BlockId { getBlockId :: String }
-_BlockId = _Newtype
+_Valid = prism' Valid case _ of
+  (Valid a) -> Just a
+  _ -> Nothing

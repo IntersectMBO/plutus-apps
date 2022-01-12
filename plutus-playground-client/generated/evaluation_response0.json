@@ -375,7 +375,33 @@
                                         "txSignatures": []
                                     },
                                     {
-                                        "getLovelace": 2000000
+                                        "txOutValue": {
+                                            "getValue": [
+                                                [
+                                                    {
+                                                        "unCurrencySymbol": ""
+                                                    },
+                                                    [
+                                                        [
+                                                            {
+                                                                "unTokenName": ""
+                                                            },
+                                                            100
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        },
+                                        "txOutAddress": {
+                                            "addressStakingCredential": null,
+                                            "addressCredential": {
+                                                "contents": {
+                                                    "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                },
+                                                "tag": "PubKeyCredential"
+                                            }
+                                        },
+                                        "txOutDatumHash": null
                                     }
                                 ],
                                 "tag": "ValueContainsLessThanMinAda"

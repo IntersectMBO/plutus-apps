@@ -2,11 +2,12 @@
 module Wallet.Emulator.Wallet where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -23,86 +24,76 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype Wallet
-  = Wallet { getWalletId :: String }
+newtype Wallet = Wallet { getWalletId :: String }
 
-derive instance eqWallet :: Eq Wallet
+derive instance Eq Wallet
 
-instance showWallet :: Show Wallet where
+instance Show Wallet where
   show a = genericShow a
 
-instance encodeJsonWallet :: EncodeJson Wallet where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$< ( E.record
-              { getWalletId: E.value :: _ String }
-          )
+instance EncodeJson Wallet where
+  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
+                                                 { getWalletId: E.value :: _ String })
 
-instance decodeJsonWallet :: DecodeJson Wallet where
+instance DecodeJson Wallet where
   decodeJson = defer \_ -> D.decode $ (Wallet <$> D.record "Wallet" { getWalletId: D.value :: _ String })
 
-derive instance genericWallet :: Generic Wallet _
+derive instance Generic Wallet _
 
-derive instance newtypeWallet :: Newtype Wallet _
+derive instance Newtype Wallet _
 
 --------------------------------------------------------------------------------
-_Wallet :: Iso' Wallet { getWalletId :: String }
+
+_Wallet :: Iso' Wallet {getWalletId :: String}
 _Wallet = _Newtype
 
 --------------------------------------------------------------------------------
+
 data WalletEvent
   = GenericLog String
   | CheckpointLog CheckpointLogMsg
   | RequestHandlerLog RequestHandlerLogMsg
   | TxBalanceLog TxBalanceMsg
 
-instance showWalletEvent :: Show WalletEvent where
+instance Show WalletEvent where
   show a = genericShow a
 
-instance encodeJsonWalletEvent :: EncodeJson WalletEvent where
-  encodeJson =
-    defer \_ -> case _ of
-      GenericLog a -> E.encodeTagged "GenericLog" a E.value
-      CheckpointLog a -> E.encodeTagged "CheckpointLog" a E.value
-      RequestHandlerLog a -> E.encodeTagged "RequestHandlerLog" a E.value
-      TxBalanceLog a -> E.encodeTagged "TxBalanceLog" a E.value
+instance EncodeJson WalletEvent where
+  encodeJson = defer \_ -> case _ of
+    GenericLog a -> E.encodeTagged "GenericLog" a E.value
+    CheckpointLog a -> E.encodeTagged "CheckpointLog" a E.value
+    RequestHandlerLog a -> E.encodeTagged "RequestHandlerLog" a E.value
+    TxBalanceLog a -> E.encodeTagged "TxBalanceLog" a E.value
 
-instance decodeJsonWalletEvent :: DecodeJson WalletEvent where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ D.sumType "WalletEvent"
-        $ Map.fromFoldable
-            [ "GenericLog" /\ D.content (GenericLog <$> D.value)
-            , "CheckpointLog" /\ D.content (CheckpointLog <$> D.value)
-            , "RequestHandlerLog" /\ D.content (RequestHandlerLog <$> D.value)
-            , "TxBalanceLog" /\ D.content (TxBalanceLog <$> D.value)
-            ]
+instance DecodeJson WalletEvent where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "WalletEvent" $ Map.fromFoldable
+      [ "GenericLog" /\ D.content (GenericLog <$> D.value)
+      , "CheckpointLog" /\ D.content (CheckpointLog <$> D.value)
+      , "RequestHandlerLog" /\ D.content (RequestHandlerLog <$> D.value)
+      , "TxBalanceLog" /\ D.content (TxBalanceLog <$> D.value)
+      ]
 
-derive instance genericWalletEvent :: Generic WalletEvent _
+derive instance Generic WalletEvent _
 
 --------------------------------------------------------------------------------
+
 _GenericLog :: Prism' WalletEvent String
-_GenericLog =
-  prism' GenericLog case _ of
-    (GenericLog a) -> Just a
-    _ -> Nothing
+_GenericLog = prism' GenericLog case _ of
+  (GenericLog a) -> Just a
+  _ -> Nothing
 
 _CheckpointLog :: Prism' WalletEvent CheckpointLogMsg
-_CheckpointLog =
-  prism' CheckpointLog case _ of
-    (CheckpointLog a) -> Just a
-    _ -> Nothing
+_CheckpointLog = prism' CheckpointLog case _ of
+  (CheckpointLog a) -> Just a
+  _ -> Nothing
 
 _RequestHandlerLog :: Prism' WalletEvent RequestHandlerLogMsg
-_RequestHandlerLog =
-  prism' RequestHandlerLog case _ of
-    (RequestHandlerLog a) -> Just a
-    _ -> Nothing
+_RequestHandlerLog = prism' RequestHandlerLog case _ of
+  (RequestHandlerLog a) -> Just a
+  _ -> Nothing
 
 _TxBalanceLog :: Prism' WalletEvent TxBalanceMsg
-_TxBalanceLog =
-  prism' TxBalanceLog case _ of
-    (TxBalanceLog a) -> Just a
-    _ -> Nothing
+_TxBalanceLog = prism' TxBalanceLog case _ of
+  (TxBalanceLog a) -> Just a
+  _ -> Nothing
