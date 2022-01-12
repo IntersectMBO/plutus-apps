@@ -55,33 +55,6 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.purs$/,
-                use: [
-                    {
-                        loader: 'purs-loader',
-                        options: {
-                            bundle: !isDevelopment,
-                            psc: "psa",
-                            pscArgs: {
-                                strict: !isDevelopment,
-                                censorLib: true,
-                                stash: isDevelopment,
-                                isLib: ["generated", ".spago"],
-                            },
-                            spago: isDevelopment,
-                            watch: isDevelopment,
-                            src: isDevelopment
-                                ? []
-                                : [
-                                    '.spago/*/*/src/**/*.purs',
-                                    'src/**/*.purs',
-                                    'test/**/*.purs',
-                                    'generated/**/*.purs',
-                                ],
-                        }
-                    }
-                ]
-            }, {
                 test: /\.tsx?$/,
                 loader: "ts-loader",
             },

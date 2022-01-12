@@ -9,7 +9,7 @@
     "build:webpack:dev": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development",
     "install:spago": "spago install",
     "repl": "spago repl",
-    "start": "npm install && npm run install:spago && npm run build:webpack:dev",
+    "start": "npm install && npm run install:spago && npm run build:spago && npm run build:webpack:dev",
     "test": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\"",
     "test:watch": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen"
   },
@@ -37,7 +37,6 @@
     "html-webpack-plugin": "^5.5.0",
     "mini-css-extract-plugin": "^2.4.5",
     "node-polyfill-webpack-plugin": "^1.1.4",
-    "purs-loader": "^3.7.2",
     "style-loader": "^3.3.1",
     "webpack": "^5.36.4",
     "webpack-cli": "^4.6.0",

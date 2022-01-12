@@ -10,7 +10,7 @@
     "install:spago": "spago install",
     "docs": "spago docs",
     "repl": "spago repl",
-    "start": "plutus-playground-generate-purs && npm install && npm run install:spago && npm run build:webpack:dev",
+    "start": "plutus-playground-generate-purs && npm install && npm run install:spago && npm run build:spago && npm run build:webpack:dev",
     "test": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\"",
     "test:watch": "spago test --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen"
   },
@@ -40,7 +40,6 @@
     "html-webpack-plugin": "^5.3.1",
     "mini-css-extract-plugin": "^1.5.1",
     "node-sass": "^5.0.0",
-    "purs-loader": "^3.7.2",
     "sass-loader": "^11.0.1",
     "style-loader": "^2.0.0",
     "url-loader": "^4.1.1",
