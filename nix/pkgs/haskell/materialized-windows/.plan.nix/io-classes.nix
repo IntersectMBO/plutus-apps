@@ -48,7 +48,6 @@
           "Control/Monad/Class/MonadSay"
           "Control/Monad/Class/MonadST"
           "Control/Monad/Class/MonadSTM"
-          "Control/Monad/Class/MonadSTM/Strict"
           "Control/Monad/Class/MonadThrow"
           "Control/Monad/Class/MonadTime"
           "Control/Monad/Class/MonadTimer"
@@ -73,11 +72,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "8";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "8";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       };

@@ -63,6 +63,7 @@
           (hsPkgs."small-steps" or (errorHandler.buildDepError "small-steps"))
           (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
           (hsPkgs."ouroboros-consensus" or (errorHandler.buildDepError "ouroboros-consensus"))
+          (hsPkgs."ouroboros-consensus-protocol" or (errorHandler.buildDepError "ouroboros-consensus-protocol"))
           ];
         buildable = true;
         modules = [
@@ -81,9 +82,6 @@
           "Ouroboros/Consensus/Shelley/Ledger/TPraos"
           "Ouroboros/Consensus/Shelley/Node"
           "Ouroboros/Consensus/Shelley/Node/Serialisation"
-          "Ouroboros/Consensus/Shelley/Protocol"
-          "Ouroboros/Consensus/Shelley/Protocol/HotKey"
-          "Ouroboros/Consensus/Shelley/Protocol/Util"
           "Ouroboros/Consensus/Shelley/ShelleyBased"
           "Ouroboros/Consensus/Shelley/ShelleyHFC"
           ];
@@ -92,11 +90,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "8";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "8";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       };
