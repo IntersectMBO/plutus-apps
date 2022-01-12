@@ -61,8 +61,10 @@ extra-deps:
   commit: ebea59c7bdfc0338d83fca772b9a57e28560bcde
 - git: https://github.com/input-output-hk/cardano-crypto.git
   commit: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
+- git: https://github.com/input-output-hk/cardano-config
+  commit: e9de7a2cf70796f6ff26eac9f9540184ded0e4e6
 - git: https://github.com/input-output-hk/cardano-base
-  commit: 4ea7e2d927c9a7f78ddc69738409a5827ab66b98
+  commit: 41545ba3ac6b3095966316a99883d678b5ab8da8
   subdirs:
     - base-deriving-via
     - binary
@@ -84,30 +86,37 @@ extra-deps:
   subdirs:
     - core
 - git: https://github.com/input-output-hk/cardano-wallet
-  commit: ae7569293e94241ef6829139ec02bd91abd069df
+  commit: 25ef435c6e6a30d9d8ce3e454ee20845bdc4ae10
   subdirs:
+    - lib/dbvar
     - lib/text-class
     - lib/strict-non-empty-containers
     - lib/core
     - lib/test-utils
     - lib/numeric
+    - lib/launcher
+    - lib/core-integration
+    - lib/cli
+    - lib/shelley
 - git: https://github.com/input-output-hk/ouroboros-network
-  commit: 1f4973f36f689d6da75b5d351fb124d66ef1057d
+  commit: d2d219a86cda42787325bb8c20539a75c2667132
   subdirs:
+    - io-sim
+    - io-classes
     - monoidal-synchronisation
-    - typed-protocols
-    - typed-protocols-cborg
-    - typed-protocols-examples
-    - ouroboros-network
-    - ouroboros-network-testing
-    - ouroboros-network-framework
+    - network-mux
     - ouroboros-consensus
     - ouroboros-consensus-byron
     - ouroboros-consensus-cardano
+    - ouroboros-consensus-protocol
     - ouroboros-consensus-shelley
-    - io-sim
-    - io-classes
-    - network-mux
+    - ouroboros-network
+    - ouroboros-network-framework
+    - ouroboros-network-testing
+    - strict-stm
+    - typed-protocols
+    - typed-protocols-cborg
+    - typed-protocols-examples
     - ntp-client
 - git: https://github.com/input-output-hk/iohk-monitoring-framework
   commit: 46f994e216a1f8b36fe4669b47b2a7011b0e153c
@@ -120,30 +129,42 @@ extra-deps:
     - plugins/backend-monitoring
     - plugins/backend-trace-forwarder
     - plugins/scribe-systemd
-- git: https://github.com/input-output-hk/cardano-ledger-specs
-  commit: bf008ce028751cae9fb0b53c3bef20f07c06e333
+- git: https://github.com/input-output-hk/cardano-ledger
+  commit: 1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5
   subdirs:
-    - byron/ledger/impl
-    - cardano-ledger-core
-    - cardano-protocol-tpraos
-    - eras/alonzo/impl
-    - eras/byron/chain/executable-spec
-    - eras/byron/crypto
-    - eras/byron/crypto/test
-    - eras/byron/ledger/executable-spec
-    - eras/byron/ledger/impl/test
-    - eras/shelley/impl
-    - eras/shelley-ma/impl
-    - libs/non-integral
-    - libs/small-steps
-    - semantics/small-steps-test
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/ledger/impl/test
+    eras/byron/crypto
+    eras/byron/crypto/test
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/impl
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-core
+    libs/cardano-ledger-example-shelley
+    libs/cardano-ledger-pretty
+    libs/cardano-ledger-test
+    libs/cardano-protocol-tpraos
+    libs/plutus-preprocessor
+    libs/ledger-state
+    libs/non-integral
+    libs/small-steps
+    libs/small-steps-test
+    libs/cardano-data
+    libs/set-algebra
+    libs/compact-map
 - git: https://github.com/input-output-hk/cardano-node.git
-  commit: b6ca519f97a0e795611a63174687e6bb70c9f752
+  commit: 814df2c146f5d56f8c35a681fe75e85b905aed5d
   subdirs:
     - cardano-api
-    - cardano-node
     - cardano-cli
-    - cardano-config
+    - cardano-node
+    - cardano-node-chairman
+  # Using a fork until our patches can be merged upstream
 - git: https://github.com/input-output-hk/optparse-applicative
   commit: 7497a29cb998721a9068d5725d49461f2bba0e7a
 - git: https://github.com/input-output-hk/Win32-network

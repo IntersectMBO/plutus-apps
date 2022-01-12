@@ -94,12 +94,18 @@ source-repository-package
   tag: f73079303f663e028288f9f4a9e08bcca39a923e
   --sha256: 1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-config
+  tag: e9de7a2cf70796f6ff26eac9f9540184ded0e4e6
+  --sha256: 1wm1c99r5zvz22pdl8nhkp13falvqmj8dgkm8fxskwa9ydqz01ld
+
 -- Copied from plutus-core
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 654f5b7c76f7cc57900b4ddc664a82fc3b925fb0
-  --sha256: 0j4x9zbx5dkww82sqi086h39p456iq5xr476ylmrnpwcpfb4xai4
+  tag: 41545ba3ac6b3095966316a99883d678b5ab8da8
+  --sha256: 0icq9y3nnl42fz536da84414av36g37894qnyw4rk3qkalksqwir
   subdir:
     base-deriving-via
     binary
@@ -133,8 +139,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-wallet
-  tag: 760140e238a5fbca61d1b286d7a80ece058dc729
-  --sha256: 014njpddrlqm9bbab636h2gf58zkm0bx04i1jsn07vh5j3k0gri6
+  tag: 25ef435c6e6a30d9d8ce3e454ee20845bdc4ae10
+  --sha256: 1qfy4j5ghg18wfjyri0f813627c0d1j2f3yxviqz1gblhffymm4l
   subdir:
     lib/dbvar
     lib/text-class
@@ -150,23 +156,25 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d613de3d872ec8b4a5da0c98afb443f322dc4dab
-  --sha256: 0lfbipfdrzay8v1pcazx0qgkda3d1j0505yig9jrml9j7991rmhl
+  tag: d2d219a86cda42787325bb8c20539a75c2667132
+  --sha256: 18xk7r0h2pxrbx76d6flsxifh0a9rz1cj1rjqs1pbs5kdmy8b7kx
   subdir:
+    io-sim
+    io-classes
     monoidal-synchronisation
-    typed-protocols
-    typed-protocols-cborg
-    typed-protocols-examples
-    ouroboros-network
-    ouroboros-network-testing
-    ouroboros-network-framework
+    network-mux
     ouroboros-consensus
     ouroboros-consensus-byron
     ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
     ouroboros-consensus-shelley
-    io-sim
-    io-classes
-    network-mux
+    ouroboros-network
+    ouroboros-network-framework
+    ouroboros-network-testing
+    strict-stm
+    typed-protocols
+    typed-protocols-cborg
+    typed-protocols-examples
     ntp-client
 
 source-repository-package
@@ -196,35 +204,51 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: bf008ce028751cae9fb0b53c3bef20f07c06e333
-  --sha256: 0my3801w1vinc0kf5yh9lxl6saqxgwm6ccg0vvzi104pafcwwcqx
+  tag: 1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5
+  --sha256: 0avzyiqq0m8njd41ck9kpn992yq676b1az9xs77977h7cf85y4wm
   subdir:
-    byron/ledger/impl
-    cardano-ledger-core
-    cardano-protocol-tpraos
     eras/alonzo/impl
+    eras/alonzo/test-suite
     eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/ledger/impl/test
     eras/byron/crypto
     eras/byron/crypto/test
-    eras/byron/ledger/executable-spec
-    eras/byron/ledger/impl/test
     eras/shelley/impl
-    eras/shelley-ma/impl
-    eras/shelley/chain-and-ledger/executable-spec
     eras/shelley/test-suite
-    shelley/chain-and-ledger/shelley-spec-ledger-test
+    eras/shelley-ma/impl
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-core
+    libs/cardano-ledger-example-shelley
+    libs/cardano-ledger-pretty
+    libs/cardano-ledger-test
+    libs/cardano-protocol-tpraos
+    libs/plutus-preprocessor
+    libs/ledger-state
     libs/non-integral
     libs/small-steps
-    libs/cardano-ledger-pretty
-    semantics/small-steps-test
+    libs/small-steps-test
+    libs/cardano-data
+    libs/set-algebra
+    libs/compact-map
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node.git
-  tag: 4f65fb9a27aa7e3a1873ab4211e412af780a3648
-  --sha256: 00k9fqrm0gphjji23x0nc9z6bqh8bqrncgivn3mi3csacjzicrrx
+  tag: 814df2c146f5d56f8c35a681fe75e85b905aed5d
+  --sha256: 1hr00wqzmcyc3x0kp2hyw78rfmimf6z4zd4vv85b9zv3nqbjgrik
   subdir:
     cardano-api
+    cardano-cli
+    cardano-node
+    cardano-node-chairman
+
+-- Using a fork until our patches can be merged upstream
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/optparse-applicative
+  tag: 7497a29cb998721a9068d5725d49461f2bba0e7a
 
 source-repository-package
   type: git
