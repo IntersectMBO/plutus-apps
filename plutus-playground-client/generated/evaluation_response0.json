@@ -1,0 +1,484 @@
+{
+    "warnings": [],
+    "result": {
+        "feesDistribution": [
+            {
+                "simulatorWalletBalance": {
+                    "getValue": []
+                },
+                "simulatorWalletWallet": {
+                    "getWallet": 1
+                }
+            },
+            {
+                "simulatorWalletBalance": {
+                    "getValue": []
+                },
+                "simulatorWalletWallet": {
+                    "getWallet": 2
+                }
+            }
+        ],
+        "resultRollup": [
+            [
+                {
+                    "tx": {
+                        "txData": [],
+                        "txInputs": [],
+                        "txRedeemers": [],
+                        "txOutputs": [
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    100
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                },
+                                "txOutDatumHash": null
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    100
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                },
+                                "txOutDatumHash": null
+                            }
+                        ],
+                        "txValidRange": {
+                            "ivTo": [
+                                {
+                                    "tag": "PosInf"
+                                },
+                                true
+                            ],
+                            "ivFrom": [
+                                {
+                                    "tag": "NegInf"
+                                },
+                                true
+                            ]
+                        },
+                        "txMint": {
+                            "getValue": [
+                                [
+                                    {
+                                        "unCurrencySymbol": ""
+                                    },
+                                    [
+                                        [
+                                            {
+                                                "unTokenName": ""
+                                            },
+                                            200
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        },
+                        "txFee": {
+                            "getValue": []
+                        },
+                        "txCollateral": [],
+                        "txMintScripts": [],
+                        "txSignatures": []
+                    },
+                    "dereferencedInputs": [],
+                    "sequenceId": {
+                        "slotIndex": 0,
+                        "txIndex": 0
+                    },
+                    "txId": {
+                        "getTxId": "7423953d56c71e969089b20764496c924ee6b20afff93637bf34b1140a33d0ad"
+                    },
+                    "valid": false,
+                    "balances": []
+                }
+            ]
+        ],
+        "emulatorTrace": "[ Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract instance stopped (no errors) ]\n[ Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract instance stopped (no errors) ]",
+        "fundsDistribution": [
+            {
+                "simulatorWalletBalance": {
+                    "getValue": []
+                },
+                "simulatorWalletWallet": {
+                    "getWallet": 1
+                }
+            },
+            {
+                "simulatorWalletBalance": {
+                    "getValue": []
+                },
+                "simulatorWalletWallet": {
+                    "getWallet": 2
+                }
+            }
+        ],
+        "emulatorLog": [
+            {
+                "_eteEmulatorTime": {
+                    "getSlot": 0
+                },
+                "_eteEvent": {
+                    "contents": {
+                        "contents": [
+                            "Phase2",
+                            {
+                                "getTxId": "7423953d56c71e969089b20764496c924ee6b20afff93637bf34b1140a33d0ad"
+                            },
+                            {
+                                "txData": [],
+                                "txInputs": [],
+                                "txRedeemers": [],
+                                "txOutputs": [
+                                    {
+                                        "txOutValue": {
+                                            "getValue": [
+                                                [
+                                                    {
+                                                        "unCurrencySymbol": ""
+                                                    },
+                                                    [
+                                                        [
+                                                            {
+                                                                "unTokenName": ""
+                                                            },
+                                                            100
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        },
+                                        "txOutAddress": {
+                                            "addressStakingCredential": null,
+                                            "addressCredential": {
+                                                "contents": {
+                                                    "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                },
+                                                "tag": "PubKeyCredential"
+                                            }
+                                        },
+                                        "txOutDatumHash": null
+                                    },
+                                    {
+                                        "txOutValue": {
+                                            "getValue": [
+                                                [
+                                                    {
+                                                        "unCurrencySymbol": ""
+                                                    },
+                                                    [
+                                                        [
+                                                            {
+                                                                "unTokenName": ""
+                                                            },
+                                                            100
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        },
+                                        "txOutAddress": {
+                                            "addressStakingCredential": null,
+                                            "addressCredential": {
+                                                "contents": {
+                                                    "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                },
+                                                "tag": "PubKeyCredential"
+                                            }
+                                        },
+                                        "txOutDatumHash": null
+                                    }
+                                ],
+                                "txValidRange": {
+                                    "ivTo": [
+                                        {
+                                            "tag": "PosInf"
+                                        },
+                                        true
+                                    ],
+                                    "ivFrom": [
+                                        {
+                                            "tag": "NegInf"
+                                        },
+                                        true
+                                    ]
+                                },
+                                "txMint": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    200
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txFee": {
+                                    "getValue": []
+                                },
+                                "txCollateral": [],
+                                "txMintScripts": [],
+                                "txSignatures": []
+                            },
+                            {
+                                "contents": [
+                                    {
+                                        "txData": [],
+                                        "txInputs": [],
+                                        "txRedeemers": [],
+                                        "txOutputs": [
+                                            {
+                                                "txOutValue": {
+                                                    "getValue": [
+                                                        [
+                                                            {
+                                                                "unCurrencySymbol": ""
+                                                            },
+                                                            [
+                                                                [
+                                                                    {
+                                                                        "unTokenName": ""
+                                                                    },
+                                                                    100
+                                                                ]
+                                                            ]
+                                                        ]
+                                                    ]
+                                                },
+                                                "txOutAddress": {
+                                                    "addressStakingCredential": null,
+                                                    "addressCredential": {
+                                                        "contents": {
+                                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                        },
+                                                        "tag": "PubKeyCredential"
+                                                    }
+                                                },
+                                                "txOutDatumHash": null
+                                            },
+                                            {
+                                                "txOutValue": {
+                                                    "getValue": [
+                                                        [
+                                                            {
+                                                                "unCurrencySymbol": ""
+                                                            },
+                                                            [
+                                                                [
+                                                                    {
+                                                                        "unTokenName": ""
+                                                                    },
+                                                                    100
+                                                                ]
+                                                            ]
+                                                        ]
+                                                    ]
+                                                },
+                                                "txOutAddress": {
+                                                    "addressStakingCredential": null,
+                                                    "addressCredential": {
+                                                        "contents": {
+                                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                        },
+                                                        "tag": "PubKeyCredential"
+                                                    }
+                                                },
+                                                "txOutDatumHash": null
+                                            }
+                                        ],
+                                        "txValidRange": {
+                                            "ivTo": [
+                                                {
+                                                    "tag": "PosInf"
+                                                },
+                                                true
+                                            ],
+                                            "ivFrom": [
+                                                {
+                                                    "tag": "NegInf"
+                                                },
+                                                true
+                                            ]
+                                        },
+                                        "txMint": {
+                                            "getValue": [
+                                                [
+                                                    {
+                                                        "unCurrencySymbol": ""
+                                                    },
+                                                    [
+                                                        [
+                                                            {
+                                                                "unTokenName": ""
+                                                            },
+                                                            200
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        },
+                                        "txFee": {
+                                            "getValue": []
+                                        },
+                                        "txCollateral": [],
+                                        "txMintScripts": [],
+                                        "txSignatures": []
+                                    },
+                                    {
+                                        "getLovelace": 2000000
+                                    }
+                                ],
+                                "tag": "ValueContainsLessThanMinAda"
+                            },
+                            []
+                        ],
+                        "tag": "TxnValidationFail"
+                    },
+                    "tag": "ChainEvent"
+                }
+            },
+            {
+                "_eteEmulatorTime": {
+                    "getSlot": 0
+                },
+                "_eteEvent": {
+                    "contents": {
+                        "contents": {
+                            "getSlot": 1
+                        },
+                        "tag": "SlotAdd"
+                    },
+                    "tag": "ChainEvent"
+                }
+            },
+            {
+                "_eteEmulatorTime": {
+                    "getSlot": 1
+                },
+                "_eteEvent": {
+                    "contents": {
+                        "_cilId": {
+                            "unContractInstanceId": "00000000-0000-4000-8000-000000000000"
+                        },
+                        "_cilMessage": {
+                            "contents": "Hello, world",
+                            "tag": "ContractLog"
+                        },
+                        "_cilTag": {
+                            "shortContractInstanceTag": "Wallet W7ce8",
+                            "unContractInstanceTag": "Contract instance for W7ce812d"
+                        }
+                    },
+                    "tag": "InstanceEvent"
+                }
+            },
+            {
+                "_eteEmulatorTime": {
+                    "getSlot": 1
+                },
+                "_eteEvent": {
+                    "contents": {
+                        "_cilId": {
+                            "unContractInstanceId": "00000000-0000-4000-8000-000000000001"
+                        },
+                        "_cilMessage": {
+                            "contents": "Hello, world",
+                            "tag": "ContractLog"
+                        },
+                        "_cilTag": {
+                            "shortContractInstanceTag": "Wallet W872c",
+                            "unContractInstanceTag": "Contract instance for W872cb83"
+                        }
+                    },
+                    "tag": "InstanceEvent"
+                }
+            },
+            {
+                "_eteEmulatorTime": {
+                    "getSlot": 1
+                },
+                "_eteEvent": {
+                    "contents": {
+                        "contents": {
+                            "getSlot": 2
+                        },
+                        "tag": "SlotAdd"
+                    },
+                    "tag": "ChainEvent"
+                }
+            }
+        ],
+        "walletKeys": [
+            [
+                {
+                    "unPaymentPubKeyHash": {
+                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                    }
+                },
+                {
+                    "getWallet": 1
+                }
+            ],
+            [
+                {
+                    "unPaymentPubKeyHash": {
+                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                    }
+                },
+                {
+                    "getWallet": 2
+                }
+            ]
+        ]
+    }
+}
