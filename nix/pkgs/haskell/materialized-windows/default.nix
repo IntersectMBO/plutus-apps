@@ -1420,6 +1420,7 @@
           "aeson-casing".components.library.planned = lib.mkOverride 900 true;
           "cardano-crypto-tests".components.library.planned = lib.mkOverride 900 true;
           "cardano-wallet".components.exes."cardano-wallet".planned = lib.mkOverride 900 true;
+          "plutus-pab-executables".components.exes."plutus-pab-nami-demo-generator".planned = lib.mkOverride 900 true;
           "servant-foreign".components.library.planned = lib.mkOverride 900 true;
           "contravariant".components.library.planned = lib.mkOverride 900 true;
           "optparse-generic".components.library.planned = lib.mkOverride 900 true;

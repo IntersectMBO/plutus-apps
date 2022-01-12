@@ -56,7 +56,7 @@ rec {
     inherit (pkgs.callPackage ./plutus-pab-executables/demo/pab-nami/client {
       inherit pkgs haskell webCommon;
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
-    }) client pab-setup-invoker pab-nami-demo-invoker generate-purescript generated-purescript start-backend;
+    }) client pab-setup-invoker pab-nami-demo-invoker pab-nami-demo-generator generate-purescript generated-purescript start-backend;
   };
 
   plutus-use-cases = pkgs.recurseIntoAttrs (pkgs.callPackage ./plutus-use-cases {
