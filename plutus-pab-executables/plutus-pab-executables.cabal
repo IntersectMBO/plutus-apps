@@ -537,7 +537,7 @@ executable plutus-pab-nami-demo-generator
     plutus-chain-index -any,
     plutus-contract -any,
     plutus-pab -any,
-    plutus-pab-psgenerator -any,
+    plutus-pab-executables -any,
     playground-common -any,
     prettyprinter -any,
     purescript-bridge -any,

@@ -342,7 +342,7 @@
             (hsPkgs."plutus-chain-index" or (errorHandler.buildDepError "plutus-chain-index"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
-            (hsPkgs."plutus-pab-executables".components.sublibs.plutus-pab-psgenerator or (errorHandler.buildDepError "plutus-pab-executables:plutus-pab-psgenerator"))
+            (hsPkgs."plutus-pab-executables" or (errorHandler.buildDepError "plutus-pab-executables"))
             (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
             (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
             (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
