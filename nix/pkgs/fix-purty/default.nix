@@ -8,6 +8,5 @@ writeShellScriptBin "fix-purty" ''
     --extension purs \
     --exclude '*/.spago/*' \
     --exclude '*/node_modules/*' \
-    --exclude '*/generated/*' \
     --exec bash -c "${purty}/bin/purty --write {} || true"
 ''

@@ -1,4 +1,4 @@
-{ pkgs, lib, gitignore-nix, haskell, webCommon, webCommonPlutus, webCommonPlayground, buildPursPackage, buildNodeModules, filterNpm }:
+{ purty, pkgs, lib, gitignore-nix, haskell, webCommon, webCommonPlutus, webCommonPlayground, buildPursPackage, buildNodeModules, filterNpm }:
 let
   playground-exe = haskell.packages.plutus-playground-server.components.exes.plutus-playground-server;
 
@@ -18,6 +18,8 @@ let
       PATH=${ghcWithPlutus}/bin:$PATH
       mkdir $out
       ${playground-exe}/bin/plutus-playground-server psgenerator $out
+      ${purty}/bin/purty $out/**/*.purs
+      ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purty}/bin/purty --write
     '';
 
   # generate-purescript: script to create purescript bridge code
@@ -33,6 +35,9 @@ let
 
     rm -rf ./generated
     ${build-playground-exe}/bin/plutus-playground-server psgenerator generated
+    echo Formatting files...
+    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purty}/bin/purty --write
+    echo Done: formatted
   '';
 
   # start-backend: script to start the plutus-playground-server
@@ -74,7 +79,6 @@ let
       extraSrcs = {
         web-common-plutus = webCommonPlutus;
         web-common-playground = webCommonPlayground;
-        generated = generated-purescript;
       };
       spagoPackages = pkgs.callPackage ./spago-packages.nix { };
     })
