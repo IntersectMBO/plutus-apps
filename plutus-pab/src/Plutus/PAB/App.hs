@@ -33,7 +33,7 @@ import Cardano.Api.ProtocolParameters ()
 import Cardano.Api.Shelley (ProtocolParameters)
 import Cardano.BM.Trace (Trace, logDebug)
 import Cardano.ChainIndex.Types qualified as ChainIndex
-import Cardano.Node.Client (handleNodeClientClient)
+import Cardano.Node.Client (handleNodeClientClient, runChainSyncWithCfg)
 import Cardano.Node.Types (ChainSyncHandle, NodeMode (AlonzoNode, MockNode),
                            PABServerConfig (PABServerConfig, pscBaseUrl, pscNetworkId, pscNodeMode, pscProtocolParametersJsonPath, pscSlotConfig, pscSocketPath))
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
@@ -250,7 +250,7 @@ data StorageBackend = BeamSqliteBackend | InMemoryBackend
 
 mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
 mkEnv appTrace appConfig@Config { dbConfig
-             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscSlotConfig, pscProtocolParametersJsonPath}
+             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscProtocolParametersJsonPath}
              , walletServerConfig
              , chainIndexConfig
              } = do
@@ -260,7 +260,7 @@ mkEnv appTrace appConfig@Config { dbConfig
     dbConnection <- dbConnect appTrace dbConfig
     txSendHandle <- liftIO $ MockClient.runTxSender pscSocketPath
     -- This is for access to the slot number in the interpreter
-    chainSyncHandle <- Left <$> (liftIO $ MockClient.runChainSync' pscSocketPath pscSlotConfig)
+    chainSyncHandle <- runChainSyncWithCfg $ nodeServerConfig appConfig
     appInMemContractStore <- liftIO initialInMemInstances
     protocolParameters <- maybe (pure def) readPP pscProtocolParametersJsonPath
     pure AppEnv {..}
