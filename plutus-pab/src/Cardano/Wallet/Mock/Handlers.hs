@@ -19,6 +19,7 @@ module Cardano.Wallet.Mock.Handlers
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.Client qualified as NodeClient
+import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.Types (MultiWalletEffect (..), WalletEffects, WalletInfo (..), WalletMsg (..), Wallets,
                                   fromWalletState)
@@ -149,7 +150,7 @@ processWalletEffects ::
     (MonadIO m, MonadError ServerError m)
     => Trace IO WalletMsg -- ^ trace for logging
     -> MockClient.TxSendHandle -- ^ node client
-    -> NodeClient.ChainSyncHandle -- ^ node client
+    -> ChainSyncHandle -- ^ node client
     -> ClientEnv          -- ^ chain index client
     -> MVar Wallets   -- ^ wallets state
     -> FeeConfig
@@ -178,7 +179,7 @@ processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState 
 runWalletEffects ::
     Trace IO WalletMsg -- ^ trace for logging
     -> MockClient.TxSendHandle -- ^ node client
-    -> NodeClient.ChainSyncHandle -- ^ node client
+    -> ChainSyncHandle -- ^ node client
     -> ClientEnv -- ^ chain index client
     -> Wallets -- ^ current state
     -> FeeConfig

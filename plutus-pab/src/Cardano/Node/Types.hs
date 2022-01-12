@@ -23,6 +23,7 @@ module Cardano.Node.Types
 
      -- * Effects
     , NodeServerEffects
+    , ChainSyncHandle
 
      -- *  State types
     , AppState (..)
@@ -45,6 +46,7 @@ module Cardano.Node.Types
 import Cardano.BM.Data.Tracer (ToObject (..))
 import Cardano.BM.Data.Tracer.Extras (Tagged (..), mkObjectStr)
 import Cardano.Chain (MockNodeServerChainState, fromEmulatorChainState)
+import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Control.Lens (makeLenses, view)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (..))
@@ -60,7 +62,7 @@ import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
-import Ledger (Tx, txId)
+import Ledger (Block, Tx, txId)
 import Ledger.CardanoWallet (WalletNumber (..))
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Trace qualified as Trace
@@ -156,6 +158,10 @@ defaultPABServerConfig =
 
 instance Default PABServerConfig where
   def = defaultPABServerConfig
+
+-- | The types of handles varies based on the type of clients (mocked or
+-- real nodes) and we need a generic way of handling either type of response.
+type ChainSyncHandle = Either (Client.ChainSyncHandle Block) (Client.ChainSyncHandle Client.ChainSyncEvent)
 
 -- Logging ------------------------------------------------------------------------------------------------------------
 

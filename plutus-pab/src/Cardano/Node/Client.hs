@@ -11,13 +11,12 @@ import Control.Monad.Freer
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class
 import Data.Proxy (Proxy (Proxy))
-import Ledger (Block)
 import Ledger.TimeSlot (SlotConfig)
 import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientM, client)
 
 import Cardano.Node.API (API)
-import Cardano.Node.Types (PABServerLogMsg)
+import Cardano.Node.Types (ChainSyncHandle, PABServerConfig, PABServerLogMsg)
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Monad.Freer.Extras.Log (LogMessage)
@@ -52,4 +51,8 @@ handleNodeClientClient slotCfg e = do
             either (liftIO . MockClient.getCurrentSlot) (liftIO . Client.getCurrentSlot) chainSyncHandle
         GetClientSlotConfig -> pure slotCfg
 
-type ChainSyncHandle = Either (Client.ChainSyncHandle Block) (Client.ChainSyncHandle Client.ChainSyncEvent)
+runChainSyncWithCfg ::
+     PABServerConfig
+  -> IO ChainSyncHandle
+runChainSyncWithCfg = undefined
+

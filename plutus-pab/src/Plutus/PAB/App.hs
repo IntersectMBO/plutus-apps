@@ -34,8 +34,7 @@ import Cardano.Api.Shelley (ProtocolParameters)
 import Cardano.BM.Trace (Trace, logDebug)
 import Cardano.ChainIndex.Types qualified as ChainIndex
 import Cardano.Node.Client (handleNodeClientClient)
-import Cardano.Node.Client qualified as NodeClient
-import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
+import Cardano.Node.Types (ChainSyncHandle, NodeMode (AlonzoNode, MockNode),
                            PABServerConfig (PABServerConfig, pscBaseUrl, pscNetworkId, pscNodeMode, pscProtocolParametersJsonPath, pscSlotConfig, pscSocketPath))
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.LocalClient qualified as LocalWalletClient
@@ -100,7 +99,7 @@ data AppEnv a =
         , nodeClientEnv         :: ClientEnv
         , chainIndexEnv         :: ClientEnv
         , txSendHandle          :: MockClient.TxSendHandle
-        , chainSyncHandle       :: NodeClient.ChainSyncHandle
+        , chainSyncHandle       :: ChainSyncHandle
         , appConfig             :: Config
         , appTrace              :: Trace IO (PABLogMsg (Builtin a))
         , appInMemContractStore :: InMemInstances (Builtin a)
@@ -166,7 +165,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             -- handle 'NodeClientEffect'
             flip handleError (throwError . NodeClientError)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . reinterpret (Core.handleMappedReader @(AppEnv a) @NodeClient.ChainSyncHandle chainSyncHandle)
+            . reinterpret (Core.handleMappedReader @(AppEnv a) @ChainSyncHandle chainSyncHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @MockClient.TxSendHandle txSendHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
