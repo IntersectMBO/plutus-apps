@@ -89,6 +89,8 @@ $ cabal exec plutus-pab-setup -- psgenerator generated
 
 Generates the purescript bridge code.
 
+`psgenerator` generates only default types. If you want to generate types for your contracts you have to write your own small generator. Take a look at `plutus-pab-nami-demo-generator` for an example. It's a small executable that calls `PSGenerator.generateAPIModule` and `PSGenerator.generateWith` with a custom contract type.
+
 #### Source
 
 - [src/Plutus/PAB/Run/PSGenerator.hs](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-pab/src/Plutus/PAB/Run/PSGenerator.hs)
