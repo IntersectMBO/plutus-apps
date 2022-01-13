@@ -93,7 +93,7 @@
       in
       {
         packages = {
-          inherit (topLevel) plutus-apps;
+          inherit (topLevel) plutus-apps plutus-playground docs;
         } // topLevel.bitte-packages;
       }));
 }
