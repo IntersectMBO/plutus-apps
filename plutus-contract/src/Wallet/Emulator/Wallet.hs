@@ -46,8 +46,8 @@ import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash,
-               ScriptValidationEvent (sveScript), StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOut,
-               TxOutRef, UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx), ValidatorHash, Value)
+               ScriptValidationEvent (sveScript), StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef,
+               UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx), ValidatorHash, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -443,7 +443,7 @@ adjustBalanceWithMissingLovelace utxo ownPaymentPubKey unBalancedTx (neg, pos) =
         -- minted, and if the positive balance is > 0 and < 'Ledger.minAdaTxOut',
         -- then we adjust it to the minimum Ada.
         missingLovelaceFromPosValue =
-          if Value.isZero posWithMintAda || Ada.fromValue posWithMintAda >= Ledger.minAdaTxOut
+          if valueIsZeroOrHasMinAda posWithMintAda
             then 0
             else max 0 (Ledger.minAdaTxOut - Ada.fromValue posWithMintAda)
         -- We calculate the final negative and positive balances
@@ -497,11 +497,6 @@ addInputs mp pk sk vl tx = do
 
     pure $ tx & addTxOut & addTxIns
 
--- Make a transaction output from a positive value.
-mkChangeOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Maybe TxOut
-mkChangeOutput pubK sk v =
-    if Value.isZero v then Nothing else Just (Ledger.pubKeyTxOut v pubK sk)
-
 -- | Given a set of @a@s with coin values, and a target value, select a number
 -- of @a@ such that their total value is greater than or equal to the target.
 selectCoin ::
@@ -530,18 +525,20 @@ selectCoin fnds vl =
                 -- that it's geq the target value, and if the resulting change
                 -- is not between 0 and the minimum Ada per tx output.
                 isTotalValueEnough totalVal =
-                  let adaChange = Ada.fromValue totalVal PlutusTx.- Ada.fromValue vl
-                   in vl `Value.leq` totalVal && (adaChange == 0 || adaChange >= Ledger.minAdaTxOut)
+                    vl `Value.leq` totalVal && valueIsZeroOrHasMinAda (totalVal PlutusTx.- vl)
                 fundsWithTotal = zip fnds (drop 1 $ scanl (<>) mempty $ fmap snd fnds)
                 fundsToSpend   = takeUntil (isTotalValueEnough . snd) fundsWithTotal
                 totalSpent     = maybe PlutusTx.zero snd $ listToMaybe $ reverse fundsToSpend
                 change         = totalSpent PlutusTx.- vl
-                changeAda      = Ada.fromValue change
              -- Make sure that the change is not less than the minimum amount
              -- of lovelace per tx output.
-             in if changeAda > 0 && changeAda < Ledger.minAdaTxOut
-                   then throwError $ WAPI.ChangeHasLessThanNAda change Ledger.minAdaTxOut
-                   else pure (fst <$> fundsToSpend, change)
+             in if valueIsZeroOrHasMinAda change
+                   then pure (fst <$> fundsToSpend, change)
+                   else throwError $ WAPI.ChangeHasLessThanNAda change Ledger.minAdaTxOut
+
+-- | Check that a value is a proper TxOut value or is zero (i.e. the absence of a TxOut)
+valueIsZeroOrHasMinAda :: Value -> Bool
+valueIsZeroOrHasMinAda v = Value.isZero v || Ada.fromValue v >= Ledger.minAdaTxOut
 
 -- | Removes transaction outputs with empty datum and empty value.
 removeEmptyOutputs :: Tx -> Tx

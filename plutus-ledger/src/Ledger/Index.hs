@@ -57,7 +57,7 @@ import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Foldable (asum, fold, foldl', traverse_)
+import Data.Foldable (asum, fold, foldl', for_, traverse_)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Set qualified as Set
@@ -140,8 +140,8 @@ data ValidationError =
     -- ^ The amount spent by the transaction differs from the amount consumed by it.
     | NegativeValue Tx
     -- ^ The transaction produces an output with a negative value.
-    | ValueContainsLessThanMinAda Tx Ada
-    -- ^ The transaction produces an output with a value containing less than one Ada.
+    | ValueContainsLessThanMinAda Tx TxOut
+    -- ^ The transaction produces an output with a value containing less than the minimum required Ada.
     | NonAdaFees Tx
     -- ^ The fee is not denominated entirely in Ada.
     | ScriptFailure ScriptError
@@ -205,7 +205,7 @@ validateTransactionOffChain :: ValidationMonad m
 validateTransactionOffChain t = do
     checkValuePreserved t
     checkPositiveValues t
-    checkMinAdaInTxOutputs t minAdaTxOut
+    checkMinAdaInTxOutputs t
     checkFeeIsAda t
 
     -- see note [Minting of Ada]
@@ -384,11 +384,12 @@ minAdaTxOut = Ada.lovelaceOf 2_000_000
 -- Normally, the minimum is 1 Ada, but transaction outputs that have datum are
 -- slightly more expensive than 1 Ada. So, to be on the safe side, we set the
 -- minimum Ada of each transaction output to 2 Ada.
-checkMinAdaInTxOutputs :: ValidationMonad m => Tx -> Ada -> m ()
-checkMinAdaInTxOutputs t@Tx { txOutputs } ada =
-  if all (\txOut -> Ada.fromValue (txOutValue txOut) >= ada) txOutputs
-  then pure ()
-  else throwError $ ValueContainsLessThanMinAda t ada
+checkMinAdaInTxOutputs :: ValidationMonad m => Tx -> m ()
+checkMinAdaInTxOutputs t@Tx { txOutputs } =
+    for_ txOutputs $ \txOut ->
+        if Ada.fromValue (txOutValue txOut) >= minAdaTxOut
+            then pure ()
+            else throwError $ ValueContainsLessThanMinAda t txOut
 
 -- | Check if the fees are paid exclusively in Ada.
 checkFeeIsAda :: ValidationMonad m => Tx -> m ()
