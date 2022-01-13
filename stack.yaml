@@ -56,7 +56,7 @@ extra-deps:
 - git: https://github.com/Quid2/flat.git
   commit: ee59880f47ab835dbd73bea0847dab7869fc20d8
 - git: https://github.com/input-output-hk/purescript-bridge.git
-  commit: 6a92d7853ea514be8b70bab5e72077bf5a510596
+  commit: 366fc70b341e2633f3ad0158a577d52e1cd2b138
 - git: https://github.com/input-output-hk/servant-purescript.git
   commit: ebea59c7bdfc0338d83fca772b9a57e28560bcde
 - git: https://github.com/input-output-hk/cardano-crypto.git
