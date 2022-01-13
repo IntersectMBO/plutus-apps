@@ -80,7 +80,11 @@
   };
 
   outputs = { self, flake-utils, ... }@inputs:
-    (flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
+    let
+      supportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
+
+    in
+    (flake-utils.lib.eachSystem supportedSystems (system:
       let
         topLevel = import ./. {
           inherit system;
@@ -88,6 +92,8 @@
         };
       in
       {
-        packages = topLevel.bitte-packages;
+        packages = {
+          inherit (topLevel) plutus-apps;
+        } // topLevel.bitte-packages;
       }));
 }
