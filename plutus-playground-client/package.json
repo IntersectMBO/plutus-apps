@@ -6,7 +6,7 @@
     "build:spago:watch": "spago build --purs-args \"--strict --censor-lib --stash --is-lib=generated --is-lib=.spago\" --watch --clear-screen",
     "build:webpack": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development",
     "build:webpack:prod": "webpack --progress --bail --mode=production --node-env=production",
-    "build:webpack:dev": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development",
+    "build:webpack:dev": "webpack-cli serve --progress --inline --hot --mode=development --node-env=development --host 0.0.0.0",
     "install:spago": "spago install",
     "docs": "spago docs",
     "repl": "spago repl",
