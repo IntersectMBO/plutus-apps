@@ -18,6 +18,7 @@ module ContractExample(
 import Control.Monad.Freer
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import Prettyprinter
 
@@ -32,6 +33,7 @@ import Language.PureScript.Bridge.TypeParameters (A)
 import Ledger (TxId)
 import Playground.Types (FunctionSchema)
 import Plutus.Contracts.Currency qualified as Contracts.Currency
+import Plutus.Contracts.Game qualified as Contracts.Game
 import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
 import Plutus.Contracts.PingPong qualified as Contracts.PingPong
 import Plutus.Contracts.Prism.Mirror qualified as Contracts.Prism
@@ -49,6 +51,7 @@ import Schema (FormSchema)
 data ContractExample = UniswapInit
                      | UniswapOwner
                      | UniswapUser Contracts.Uniswap.Uniswap
+                     | Game
                      | GameStateMachine
                      | PayToWallet
                      | AtomicSwap
@@ -78,6 +81,7 @@ instance HasPSTypes ContractExample where
 instance HasDefinitions ContractExample where
     getDefinitions = [ UniswapInit
                      , UniswapOwner
+                     , Game
                      , GameStateMachine
                      , PayToWallet
                      , AtomicSwap
@@ -97,6 +101,7 @@ getContractExampleSchema = \case
     UniswapInit         -> Builtin.endpointsToSchemas @Empty
     UniswapUser _       -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapUserSchema
     UniswapOwner        -> Builtin.endpointsToSchemas @Contracts.Uniswap.UniswapOwnerSchema
+    Game                -> Builtin.endpointsToSchemas @Contracts.Game.GameSchema
     GameStateMachine    -> Builtin.endpointsToSchemas @Contracts.GameStateMachine.GameStateMachineSchema
     PayToWallet         -> Builtin.endpointsToSchemas @Contracts.PayToWallet.PayToWalletSchema
     AtomicSwap          -> Builtin.endpointsToSchemas @Contracts.AtomicSwap.AtomicSwapSchema
@@ -114,6 +119,7 @@ getContractExample = \case
     UniswapInit         -> SomeBuiltin Contracts.Uniswap.setupTokens
     UniswapUser us      -> SomeBuiltin $ Contracts.Uniswap.userEndpoints us
     UniswapOwner        -> SomeBuiltin Contracts.Uniswap.ownerEndpoint
+    Game                -> SomeBuiltin (Contracts.Game.contract @Text)
     GameStateMachine    -> SomeBuiltin Contracts.GameStateMachine.contract
     PayToWallet         -> SomeBuiltin Contracts.PayToWallet.payToWallet
     AtomicSwap          -> SomeBuiltin Contracts.AtomicSwap.atomicSwap

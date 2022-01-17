@@ -61,6 +61,7 @@ executable doc-doctests
       template-haskell >=2.13.0.0,
       bytestring -any,
       cardano-api -any,
+      data-default -any,
       flat -any,
       plutus-core -any,
       plutus-chain-index-core -any,

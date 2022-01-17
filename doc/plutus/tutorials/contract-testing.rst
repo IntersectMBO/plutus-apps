@@ -92,23 +92,33 @@ we can define it as follows, applying a minting policy defined in the code under
 .. literalinclude:: GameModel.hs
    :start-after: START import Game
    :end-before: END import Game
+.. literalinclude:: GameModel.hs
+   :start-after: START import TimeSlot
+   :end-before: END import TimeSlot
+.. literalinclude:: GameModel.hs
+   :start-after: START import Data.Default
+   :end-before: END import Data.Default
 
 .. literalinclude:: GameModel.hs
-   :start-after: START gameTokenVal
-   :end-before: END gameTokenVal
+   :start-after: START gameParam
+   :end-before: END gameParam
+
+.. literalinclude:: GameModel.hs
+   :start-after: START guessTokenVal
+   :end-before: END guessTokenVal
 
 The value of the :term:`token` is (with long hash values abbreviated):
 
 .. code-block:: text
 
-  > gameTokenVal
+  > guessTokenVal
   Value (Map [(f687...,Map [(guess,1)])])
 
 We can even construct a ``Value`` containing an Ada and a game :term:`token`:
 
 .. code-block:: text
 
-  > Ada.lovelaceValueOf 1 <> gameTokenVal
+  > Ada.lovelaceValueOf 1 <> guessTokenVal
   Value (Map [(,Map [(,1)]),(f687...,Map [(guess,1)])])
 
 If you inspect the output closely, you will see that a ``Value``
@@ -514,6 +524,9 @@ transfer the game :term:`token` from one wallet to another as specified by
 ``GiveToken`` actions.
 
 .. literalinclude:: GameModel.hs
+   :start-after: START gameParam
+   :end-before: END gameParam
+.. literalinclude:: GameModel.hs
    :start-after: START perform v1
    :end-before: END perform v1
 
@@ -675,6 +688,10 @@ actions. (If the delays we insert are too short, we will discover this
 later via failed tests).
 
 We add a call to ``delay`` in each branch of :hsobj:`Plutus.Contract.Test.ContractModel.perform`:
+
+.. literalinclude:: GameModel.hs
+   :start-after: START gameParam
+   :end-before: END gameParam
 
 .. literalinclude:: GameModel.hs
    :start-after: START perform

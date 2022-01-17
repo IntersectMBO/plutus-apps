@@ -58,6 +58,18 @@ import Plutus.Trace.Emulator as Trace
 import Plutus.Contract.Secrets
 -- END import Contract.Security
 
+-- START import TimeSlot
+import Ledger.TimeSlot qualified as TimeSlot
+-- END import TimeSlot
+
+-- START import Data.Default
+import Data.Default (Default (def))
+-- END import Data.Default
+
+-- START gameParam
+gameParam :: G.GameParam
+gameParam = G.GameParam (mockWalletPaymentPubKeyHash w1) (TimeSlot.scSlotZeroTime def)
+-- END gameParam
 
 -- * QuickCheck model
 
@@ -108,18 +120,21 @@ instance ContractModel GameModel where
     perform handle _ s cmd = case cmd of
         Lock w new val -> do
             callEndpoint @"lock" (handle $ WalletKey w)
-                         LockArgs{ lockArgsSecret = secretArg new
-                                 , lockArgsValue = Ada.lovelaceValueOf val }
+                LockArgs { lockArgsGameParam = gameParam
+                         , lockArgsSecret    = secretArg new
+                         , lockArgsValue     = Ada.lovelaceValueOf val
+                         }
             delay 2
         Guess w old new val -> do
             callEndpoint @"guess" (handle $ WalletKey w)
-                GuessArgs{ guessArgsOldSecret     = old
+                GuessArgs{ guessArgsGameParam     = gameParam
+                         , guessArgsOldSecret     = old
                          , guessArgsNewSecret     = secretArg new
                          , guessArgsValueTakenOut = Ada.lovelaceValueOf val }
             delay 1
         GiveToken w' -> do
             let w = fromJust (s ^. contractState . hasToken)
-            payToWallet w w' gameTokenVal
+            payToWallet w w' guessTokenVal
             delay 1
 -- END perform
 
@@ -130,8 +145,8 @@ instance ContractModel GameModel where
           hasToken      $= Just w
           currentSecret $= secret
           gameValue     $= val
-          mint gameTokenVal
-          deposit  w gameTokenVal
+          mint guessTokenVal
+          deposit  w guessTokenVal
         withdraw w $ Ada.lovelaceValueOf val
         wait 2
 
@@ -149,7 +164,7 @@ instance ContractModel GameModel where
 
     nextState (GiveToken w) = do
         w0 <- fromJust <$> viewContractState hasToken
-        transfer w0 w gameTokenVal
+        transfer w0 w guessTokenVal
         hasToken $= Just w
         wait 1
 
@@ -168,9 +183,9 @@ instance ContractModel GameModel where
 
 -- START precondition
     precondition s cmd = case cmd of
-            Lock _ _ v    -> tok == Nothing
+            Lock _ _ v    -> isNothing tok
             Guess w _ _ v -> tok == Just w && v <= val
-            GiveToken w   -> tok /= Nothing
+            GiveToken w   -> isJust tok
         where
             tok = s ^. contractState . hasToken
             val = s ^. contractState . gameValue
@@ -296,12 +311,12 @@ wallets :: [Wallet]
 wallets = [w1, w2, w3]
 -- END wallets
 
--- START gameTokenVal
-gameTokenVal :: Value
-gameTokenVal =
-    let sym = Scripts.forwardingMintingPolicyHash G.typedValidator
+-- START guessTokenVal
+guessTokenVal :: Value
+guessTokenVal =
+    let sym = Scripts.forwardingMintingPolicyHash $ G.typedValidator gameParam
     in G.token sym "guess"
--- END gameTokenVal
+-- END guessTokenVal
 
 -- START testLock v1
 testLock :: Property
@@ -353,8 +368,8 @@ v1_model = ()
         hasToken      $= Just w
         currentSecret $= secret
         gameValue     $= val
-        mint gameTokenVal
-        deposit  w gameTokenVal
+        mint guessTokenVal
+        deposit  w guessTokenVal
         withdraw w $ Ada.lovelaceValueOf val
 -- END nextState Lock v1
 -- START nextState Guess v1
@@ -370,13 +385,13 @@ v1_model = ()
 -- START nextState GiveToken v1
     nextState (GiveToken w) = do
         w0 <- fromJust <$> viewContractState hasToken
-        transfer w0 w gameTokenVal
+        transfer w0 w guessTokenVal
         hasToken $= Just w
 -- END nextState GiveToken v1
 
     precondition :: ModelState GameModel -> Action GameModel -> Bool
 -- START precondition v1
-    precondition s (GiveToken _) = tok /= Nothing
+    precondition s (GiveToken _) = isJust tok
         where
             tok = s ^. contractState . hasToken
     precondition s _             = True
@@ -387,16 +402,18 @@ v1_model = ()
     perform handle _ s cmd = case cmd of
         Lock w new val -> do
             callEndpoint @"lock" (handle $ WalletKey w)
-                         LockArgs{ lockArgsSecret = secretArg new
+                         LockArgs{ lockArgsGameParam = gameParam
+                                 , lockArgsSecret = secretArg new
                                  , lockArgsValue = Ada.lovelaceValueOf val}
         Guess w old new val -> do
             callEndpoint @"guess" (handle $ WalletKey w)
-                GuessArgs{ guessArgsOldSecret = old
+                GuessArgs{ guessArgsGameParam = gameParam
+                         , guessArgsOldSecret = old
                          , guessArgsNewSecret = secretArg new
                          , guessArgsValueTakenOut = Ada.lovelaceValueOf val}
         GiveToken w' -> do
             let w = fromJust (s ^. contractState . hasToken)
-            payToWallet w w' gameTokenVal
+            payToWallet w w' guessTokenVal
             return ()
 -- END perform v1
 
@@ -409,8 +426,8 @@ v2_model = ()
         hasToken      $= Just w
         currentSecret $= secret
         gameValue     $= val
-        mint gameTokenVal
-        deposit  w gameTokenVal
+        mint guessTokenVal
+        deposit  w guessTokenVal
         withdraw w $ Ada.lovelaceValueOf val
         wait 2
 -- END nextState Lock v2
@@ -425,9 +442,9 @@ v2_model = ()
     precondition :: ModelState GameModel -> Action GameModel -> Bool
 -- START precondition v2
     precondition s cmd = case cmd of
-            Lock _ _ _    -> tok == Nothing
-            Guess _ _ _ _ -> True
-            GiveToken _   -> tok /= Nothing
+            Lock {}     -> isNothing tok
+            Guess {}    -> True
+            GiveToken _ -> isJust tok
         where
             tok = s ^. contractState . hasToken
 -- END precondition v2
@@ -450,9 +467,9 @@ v3_model = ()
     precondition :: ModelState GameModel -> Action GameModel -> Bool
 -- START precondition v3
     precondition s cmd = case cmd of
-            Lock _ _ _    -> tok == Nothing
+            Lock {}       -> isNothing tok
             Guess w _ _ _ -> tok == Just w
-            GiveToken _   -> tok /= Nothing
+            GiveToken _   -> isJust tok
         where
             tok = s ^. contractState . hasToken
 -- END precondition v3
