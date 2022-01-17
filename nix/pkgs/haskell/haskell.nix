@@ -176,7 +176,6 @@ let
           plutus-errors.package.buildable = false;
           plutus-ledger.package.buildable = false;
           plutus-ledger-constraints.package.buildable = false;
-          plutus-pab.package.buildable = false;
           plutus-pab-executables.package.buildable = false;
           plutus-playground-server.package.buildable = false; # Would also require libpq
           plutus-tx-plugin.package.buildable = false;
