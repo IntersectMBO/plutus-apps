@@ -106,9 +106,9 @@ let
           # FIXME: this should simply be set on the main shell derivation, but this breaks
           # lorri: https://github.com/target/lorri/issues/489. In the mean time, we set it
           # only on the CI version, so that we still catch it, but lorri doesn't see it.
-          shell = (import ./shell.nix { inherit packages; }).overrideAttrs (attrs: attrs // {
-            disallowedRequisites = [ plutus-apps.haskell.packages.plutus-ledger.components.library ];
-          });
+          # shell = (import ./shell.nix { inherit packages; }).overrideAttrs (attrs: attrs // {
+          #   disallowedRequisites = [ plutus-apps.haskell.packages.plutus-ledger.components.library ];
+          # });
 
           # build all haskell packages and tests
           haskell = pkgs.recurseIntoAttrs (mkHaskellDimension pkgs plutus-apps.haskell.projectPackages);
