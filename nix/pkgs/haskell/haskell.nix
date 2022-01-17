@@ -165,7 +165,7 @@ let
         tests: False
     '';
     modules = [
-      ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
+      ({ pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isGhcjs && pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
         packages = {
           # Things that need plutus-tx-plugin
           playground-common.package.buildable = false;
@@ -176,6 +176,7 @@ let
           plutus-errors.package.buildable = false;
           plutus-ledger.package.buildable = false;
           plutus-ledger-constraints.package.buildable = false;
+          plutus-pab.package.buildable = false;
           plutus-pab-executables.package.buildable = false;
           plutus-playground-server.package.buildable = false; # Would also require libpq
           plutus-tx-plugin.package.buildable = false;
