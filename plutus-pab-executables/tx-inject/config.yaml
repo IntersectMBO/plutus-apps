@@ -16,7 +16,8 @@ nodeServerConfig:
   pscBaseUrl: http://localhost:9082
   pscSocketPath: /tmp/node-server.sock
   pscKeptBlocks: 100000
-  pscNetworkId: "1097911063"
+  # pscNetworkId: "1097911063"
+  pscNetworkId: "3"
   pscSlotConfig:
     scSlotZeroTime: 1596059091000 # Wednesday, July 29, 2020 21:44:51 - shelley launch time in milliseconds
     scSlotLength: 1000 # In milliseconds
