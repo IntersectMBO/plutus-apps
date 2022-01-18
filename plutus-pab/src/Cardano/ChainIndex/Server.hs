@@ -12,6 +12,7 @@ module Cardano.ChainIndex.Server(
     , ChainIndexServerMsg
     ) where
 
+import Control.Concurrent.Availability (Availability, available)
 import Control.Concurrent.STM (TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer.Extras.Log
@@ -34,14 +35,15 @@ import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, serveChainIndexQuery
 -- The PAB chain index that keeps track of transaction data (UTXO set enriched
 -- with datums)
 
-main :: ChainIndexTrace -> ChainIndexConfig -> FilePath -> SlotConfig -> IO ()
-main trace ChainIndexConfig{ciBaseUrl} socketPath slotConfig = runLogEffects trace $ do
+main :: ChainIndexTrace -> ChainIndexConfig -> FilePath -> SlotConfig -> Availability -> IO ()
+main trace ChainIndexConfig{ciBaseUrl} socketPath slotConfig ccaAvailability = runLogEffects trace $ do
     tVarState <- liftIO $ STM.atomically $ STM.newTVar mempty
 
     logInfo StartingNodeClientThread
     _ <- liftIO $ runChainSync socketPath slotConfig $ updateChainState tVarState
 
     logInfo $ StartingChainIndex servicePort
+    available ccaAvailability
     liftIO $ serveChainIndexQueryServer servicePort tVarState
     where
         servicePort = baseUrlPort (coerce ciBaseUrl)
