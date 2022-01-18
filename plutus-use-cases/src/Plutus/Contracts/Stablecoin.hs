@@ -101,11 +101,11 @@ import Plutus.Contract.StateMachine (AsSMContractError, OnChainState (..), SMCon
 import Plutus.Contract.StateMachine qualified as SM
 import PlutusTx qualified
 import PlutusTx.Prelude
-import PlutusTx.Ratio as R
+import PlutusTx.Ratio qualified as R
 import Prelude qualified as Haskell
 
 -- | Conversion rate from peg currency (eg. USD) to base currency (eg. Ada)
-type ConversionRate = Ratio Integer
+type ConversionRate = Rational
 
 -- Amounts of stablecoins and reservecoins (used for bookkeeping)
 -- SC, RC and BC are values that can be represented on-chain with the 'Value'
@@ -164,7 +164,7 @@ initialState StateMachineClient{scInstance=SM.StateMachineInstance{SM.typedValid
 {-# INLINEABLE convert #-}
 -- | Convert peg currency units to base currency units using the
 --   observed conversion rate
-convert :: ConversionRate -> PC (Ratio Integer) -> BC (Ratio Integer)
+convert :: ConversionRate -> PC Rational -> BC Rational
 convert rate (PC pc) =
     BC $ rate * pc
 
@@ -173,7 +173,7 @@ convert rate (PC pc) =
 liabilities ::
     BankState
     -> ConversionRate
-    -> BC (Ratio Integer)
+    -> BC Rational
 liabilities BankState{bsReserves=BC reserves,bsStablecoins=SC stablecoins} cr =
     let BC stableCoinLiabilities = convert cr (PC $ fromInteger stablecoins)
     in BC (min (fromInteger reserves) stableCoinLiabilities)
@@ -184,7 +184,7 @@ liabilities BankState{bsReserves=BC reserves,bsStablecoins=SC stablecoins} cr =
 equity ::
     BankState
     -> ConversionRate
-    -> BC (Ratio Integer)
+    -> BC Rational
 equity r@BankState{bsReserves=BC reserves} cr =
     let BC l = liabilities r cr
     in BC (fromInteger reserves - l)
@@ -193,9 +193,9 @@ equity r@BankState{bsReserves=BC reserves} cr =
 data Stablecoin =
     Stablecoin
         { scOracle                  :: PaymentPubKey -- ^ Public key of the oracle that provides exchange rates
-        , scFee                     :: Ratio Integer -- ^ Fee charged by bank for transactions. Calculated as a fraction of the total transaction volume in base currency.
-        , scMinReserveRatio         :: Ratio Integer -- ^ The minimum ratio of reserves to liabilities
-        , scMaxReserveRatio         :: Ratio Integer -- ^ The maximum ratio of reserves to liabilities
+        , scFee                     :: Rational -- ^ Fee charged by bank for transactions. Calculated as a fraction of the total transaction volume in base currency.
+        , scMinReserveRatio         :: Rational -- ^ The minimum ratio of reserves to liabilities
+        , scMaxReserveRatio         :: Rational -- ^ The maximum ratio of reserves to liabilities
         , scReservecoinDefaultPrice :: BC Integer -- ^ The price of a single reservecoin if no reservecoins have been issued
         , scBaseCurrency            :: AssetClass -- ^ The asset class of the base currency. Value of this currency will be locked by the stablecoin state machine instance
         , scStablecoinTokenName     :: TokenName -- ^ 'TokenName' of the stablecoin
@@ -207,7 +207,7 @@ data Stablecoin =
 {-# INLINEABLE minReserve #-}
 -- | Minimum number of base currency coins held by the bank.
 --   Returns 'Nothing' if no stablecoins have been minted.
-minReserve :: Stablecoin -> ConversionRate -> BankState -> Maybe (BC (Ratio Integer))
+minReserve :: Stablecoin -> ConversionRate -> BankState -> Maybe (BC Rational)
 minReserve Stablecoin{scMinReserveRatio} cr BankState{bsStablecoins=SC sc}
     | sc == zero = Nothing
     | otherwise =
@@ -217,7 +217,7 @@ minReserve Stablecoin{scMinReserveRatio} cr BankState{bsStablecoins=SC sc}
 -- | Maximum number of base currency coins held by the bank.
 --   Returns 'Nothing' if no stablecoins have been minted.
 {-# INLINEABLE maxReserve #-}
-maxReserve :: Stablecoin -> ConversionRate -> BankState -> Maybe (BC (Ratio Integer))
+maxReserve :: Stablecoin -> ConversionRate -> BankState -> Maybe (BC Rational)
 maxReserve Stablecoin{scMaxReserveRatio} cr BankState{bsStablecoins=SC sc}
     | sc == zero = Nothing
     | otherwise =
@@ -226,7 +226,7 @@ maxReserve Stablecoin{scMaxReserveRatio} cr BankState{bsStablecoins=SC sc}
 
 {-# INLINEABLE reservecoinNominalPrice #-}
 -- | Price of a single reservecoin in base currency
-reservecoinNominalPrice :: Stablecoin -> BankState -> ConversionRate -> BC (Ratio Integer)
+reservecoinNominalPrice :: Stablecoin -> BankState -> ConversionRate -> BC Rational
 reservecoinNominalPrice Stablecoin{scReservecoinDefaultPrice} bankState@BankState{bsReservecoins=RC rc} cr
     | rc /= 0 = let BC e = equity bankState cr in BC (e * R.recip (fromInteger rc))
     | otherwise = fmap fromInteger scReservecoinDefaultPrice
@@ -234,7 +234,7 @@ reservecoinNominalPrice Stablecoin{scReservecoinDefaultPrice} bankState@BankStat
 {-# INLINEABLE stablecoinNominalPrice #-}
 -- | Price of a single stablecoin in base currency. If the banks' liabilities
 --   exceed its reserves then 'stablecoinNominalPrice' is zero.
-stablecoinNominalPrice :: BankState -> ConversionRate -> BC (Ratio Integer)
+stablecoinNominalPrice :: BankState -> ConversionRate -> BC Rational
 stablecoinNominalPrice bankState@BankState{bsStablecoins=SC sc} cr
     | sc == zero = BC p
     | otherwise  = BC $ min p l
@@ -252,7 +252,7 @@ data SCAction
 {-# INLINEABLE calcFees #-}
 -- | Calculate transaction fees (paid in base currency to the bank) as a
 --   fraction of the transaction's volume
-calcFees :: Stablecoin -> BankState -> ConversionRate -> SCAction -> BC (Ratio Integer)
+calcFees :: Stablecoin -> BankState -> ConversionRate -> SCAction -> BC Rational
 calcFees sc@Stablecoin{scFee} bs conversionRate = \case
     MintStablecoin (SC i) ->
         stablecoinNominalPrice bs conversionRate * BC scFee * (BC $ abs $ fromInteger i)
@@ -352,8 +352,8 @@ data InvalidStateReason
     = NegativeReserveCoins
     | NegativeReserves
     | NegativeStablecoins
-    | MinReserves { allowed :: BC (Ratio Integer), actual :: BC (Ratio Integer)  }
-    | MaxReserves { allowed :: BC (Ratio Integer), actual :: BC (Ratio Integer)  }
+    | MinReserves { allowed :: BC Rational, actual :: BC Rational  }
+    | MaxReserves { allowed :: BC Rational, actual :: BC Rational  }
     | NegativeLiabilities
     | NegativeEquity
     deriving (Haskell.Show)
