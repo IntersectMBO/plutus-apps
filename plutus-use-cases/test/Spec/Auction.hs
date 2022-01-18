@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies       #-}
 module Spec.Auction
     ( tests
-    , auctionEmulatorCfg
+    , options
     , auctionTrace1
     , auctionTrace2
     , prop_Auction
@@ -68,15 +68,10 @@ theToken =
     -- This currency is created by the initial transaction.
     Value.singleton mpsHash "token" 1
 
--- | 'EmulatorConfig' that includes 'theToken' in the initial distribution of Wallet 1.
-auctionEmulatorCfg :: Trace.EmulatorConfig
-auctionEmulatorCfg =
-    let initialDistribution = defaultDist & over (ix w1) ((<>) theToken)
-    in (def & Trace.initialChainState .~ Left initialDistribution) & Trace.slotConfig .~ slotCfg
-
--- | 'CheckOptions' that includes our own 'auctionEmulatorCfg'.
+-- | 'CheckOptions' that includes 'theToken' in the initial distribution of Wallet 1.
 options :: CheckOptions
-options = set emulatorConfig auctionEmulatorCfg defaultCheckOptions
+options = defaultCheckOptions
+    & changeInitialWalletValue w1 ((<>) theToken)
 
 seller :: Contract AuctionOutput SellerSchema AuctionError ()
 seller = auctionSeller (apAsset params) (apEndTime params)

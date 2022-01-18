@@ -19,7 +19,7 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.BM.Plugin (loadPlugin)
 import Cardano.BM.Setup (setupTrace_)
-import Cardano.Node.Types (mscPassphrase)
+import Cardano.Node.Types (pscPassphrase)
 import Control.Applicative (Alternative ((<|>)))
 import Control.Concurrent.Availability (newToken)
 import Control.Monad (when)
@@ -36,7 +36,6 @@ import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
 import Plutus.PAB.Run.Cli
 import Plutus.PAB.Run.CommandParser
-import Plutus.PAB.Run.PSGenerator (HasPSTypes)
 import Plutus.PAB.Types (Config (..), DevelopmentOptions (..), PABError (MissingConfigFileOption))
 import Prettyprinter (Pretty (pretty))
 import Servant qualified
@@ -51,7 +50,6 @@ runWith :: forall a.
     , Pretty a
     , Servant.MimeUnrender Servant.JSON a
     , HasDefinitions a
-    , HasPSTypes a
     , OpenApi.ToSchema a
     )
     => BuiltinHandler a -- ^ Builtin contract handler. Can be created with 'Plutus.PAB.Effects.Contract.Builtin.handleBuiltin'.
@@ -69,7 +67,6 @@ runWithOpts :: forall a.
     , Pretty a
     , Servant.MimeUnrender Servant.JSON a
     , HasDefinitions a
-    , HasPSTypes a
     , OpenApi.ToSchema a
     )
     => BuiltinHandler a
@@ -98,7 +95,7 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resum
     let mkArgs config@Config{nodeServerConfig, developmentOptions} = ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
-                , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { mscPassphrase      = passphrase      <|> mscPassphrase nodeServerConfig }
+                , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { pscPassphrase      = passphrase      <|> pscPassphrase nodeServerConfig }
                                         , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions
                                                                                   , pabResumeFrom      = max resumeFrom (pabResumeFrom developmentOptions) }
                                         }

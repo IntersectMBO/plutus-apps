@@ -6,11 +6,9 @@
 module Plutus.PAB.Webserver.API
     ( API
     , WSAPI
-    , WalletProxy
     , SwaggerAPI
     ) where
 
-import Cardano.Wallet.Mock.API qualified as Wallet
 import Data.Aeson qualified as JSON
 import Data.Text (Text)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs, ContractInstanceClientState, ContractSignatureResponse,
@@ -19,9 +17,6 @@ import Servant.API (Capture, Description, Get, JSON, Post, Put, QueryParam, ReqB
 import Servant.API.WebSocket (WebSocketPending)
 import Servant.Swagger.UI (SwaggerSchemaUI)
 import Wallet.Types (ContractInstanceId)
-
--- TODO: This wallet proxy will be eventually removed. See SCP-3096.
-type WalletProxy walletId = "wallet" :> Wallet.API walletId
 
 type WSAPI =
     "ws" :>

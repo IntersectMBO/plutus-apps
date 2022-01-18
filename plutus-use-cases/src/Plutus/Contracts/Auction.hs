@@ -126,7 +126,7 @@ auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=old
     case (oldStateData, input) of
 
         (Ongoing HighestBid{highestBid, highestBidder}, Bid{newBid, newBidder}) | newBid > highestBid -> -- if the new bid is higher,
-            let constraints =
+            let constraints = if highestBid == 0 then mempty else
                     Constraints.mustPayToPubKey highestBidder (Ada.toValue highestBid) -- we pay back the previous highest bid
                     <> Constraints.mustValidateIn (Interval.to $ apEndTime - 1) -- but only if we haven't gone past 'apEndTime'
                 newState =

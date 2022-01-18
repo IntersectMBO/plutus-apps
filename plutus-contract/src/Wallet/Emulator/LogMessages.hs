@@ -62,7 +62,7 @@ instance Pretty TxBalanceMsg where
         AddingInputsFor vl           -> "Adding inputs for" <+> pretty vl
         NoCollateralInputsAdded      -> "No collateral inputs added"
         AddingCollateralInputsFor vl -> "Adding collateral inputs for" <+> pretty vl
-        FinishedBalancing tx         -> "Finished balancing." <+> pretty (txId tx)
+        FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", pretty tx]
         SubmittingTx tx              -> "Submitting tx:" <+> pretty (txId tx)
         ValidationFailed p i _ e _   -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
 

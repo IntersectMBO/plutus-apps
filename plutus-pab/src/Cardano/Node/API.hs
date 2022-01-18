@@ -8,7 +8,7 @@ module Cardano.Node.API
 
 import Servant.API (Get, JSON, NoContent, Post, (:<|>), (:>))
 
-import Cardano.Node.Types (MockServerLogMsg)
+import Cardano.Node.Types (PABServerLogMsg)
 import Control.Monad.Freer.Extras.Log (LogMessage)
 
 type API
@@ -17,4 +17,4 @@ type API
 
 -- Routes that are not guaranteed to exist on the real node
 type NodeAPI
-     = "consume-event-history" :> Post '[JSON] [LogMessage MockServerLogMsg]
+     = "consume-event-history" :> Post '[JSON] [LogMessage PABServerLogMsg]

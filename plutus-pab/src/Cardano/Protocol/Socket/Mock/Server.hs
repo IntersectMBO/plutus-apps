@@ -11,7 +11,7 @@
 module Cardano.Protocol.Socket.Mock.Server where
 
 import Cardano.BM.Data.Trace (Trace)
-import Cardano.Node.Types (MockServerLogMsg (..))
+import Cardano.Node.Types (PABServerLogMsg (..))
 import Data.ByteString.Lazy qualified as LBS
 import Data.List (intersect)
 import Data.Maybe (listToMaybe)
@@ -144,7 +144,7 @@ pruneChain k original = do
 
 handleCommand ::
     MonadIO m
- => Trace IO MockServerLogMsg
+ => Trace IO PABServerLogMsg
  -> CommandChannel
  -> MVar MockNodeServerChainState
  -> SlotConfig
@@ -178,7 +178,7 @@ handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState slotCfg 
      used to control the server -}
 runServerNode ::
     MonadIO m
- => Trace IO MockServerLogMsg
+ => Trace IO PABServerLogMsg
  -> FilePath
  -> Integer
  -> MockNodeServerChainState

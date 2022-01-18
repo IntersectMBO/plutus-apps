@@ -10,7 +10,6 @@
 
 module Plutus.PAB.Run.Command
     ( ConfigCommand(..)
-    , NoConfigCommand(..)
     , allServices
     ) where
 
@@ -21,7 +20,7 @@ import Wallet.Types (ContractInstanceId)
 -- | A command for which a config.yaml file is required
 data ConfigCommand =
     Migrate
-    | StartMockNode -- ^ Run the mock node service
+    | StartNode -- ^ Run the mock node service
     | MockWallet -- ^ Run the mock wallet service
     | ChainIndex -- ^ Run the chain index service
     | ForkCommands [ConfigCommand] -- ^ Fork a list of commands
@@ -30,9 +29,6 @@ data ConfigCommand =
     | ReportAvailableContracts -- ^ Get all available contracts
     | ReportActiveContracts -- ^ Get active contracts
     | PABWebserver -- ^ Run the PAB webserver
-    | PSApiGenerator -- ^ Generate purescript bridge code
-          { psApiGenOutputDir :: !FilePath -- ^ Path to write generated code to
-          }
     deriving stock (Show, Eq, Generic)
     deriving anyclass JSON.ToJSON
 
@@ -41,19 +37,8 @@ data ConfigCommand =
 allServices :: ConfigCommand
 allServices =
   ForkCommands
-    [ StartMockNode
+    [ StartNode
     , MockWallet
     , PABWebserver
     , ChainIndex
     ]
-
-
-data NoConfigCommand =
-    PSGenerator -- ^ Generate purescript bridge code
-          { psGenOutputDir :: !FilePath -- ^ Path to write generated code to
-          }
-    | WriteDefaultConfig -- ^ Write default logging configuration
-          { outputFile :: !FilePath -- ^ Path to write configuration to
-          }
-    deriving stock (Show, Eq, Generic)
-    deriving anyclass JSON.ToJSON

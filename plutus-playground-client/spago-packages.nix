@@ -619,11 +619,11 @@ let
 
     "json-helpers" = pkgs.stdenv.mkDerivation {
         name = "json-helpers";
-        version = "895db00f2fe97ee56b866bf1582b303d029c216a";
+        version = "60615c36abaee16d8dbe09cdd0e772e6d523d024";
         src = pkgs.fetchgit {
           url = "https://github.com/input-output-hk/purescript-bridge-json-helpers.git";
-          rev = "895db00f2fe97ee56b866bf1582b303d029c216a";
-          sha256 = "0jwhv9a4xhc65hxas8d00g6ax10q3w4xvlm8bp3dl1p6vav98988";
+          rev = "60615c36abaee16d8dbe09cdd0e772e6d523d024";
+          sha256 = "0b5wpdgy2pgk5r97ln3sql4h2c2v45h3jl2262gzqchhgvi3n4kb";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";
@@ -1279,11 +1279,11 @@ let
 
     "web-common" = pkgs.stdenv.mkDerivation {
         name = "web-common";
-        version = "v1.0.0";
+        version = "v1.1.3";
         src = pkgs.fetchgit {
           url = "https://github.com/input-output-hk/purescript-web-common";
-          rev = "91d74fcb5eafd13237f07320a3f7e142b5a9dc2b";
-          sha256 = "1xxr2q95w42l1d1fqindn16flxfx53bwaga538sh7a0ajs2ff69m";
+          rev = "f6ba33c8543e5c830592f86e94b3e89ca117e602";
+          sha256 = "10hsvndlvag0c89gwn6hmiiar45cifl1416b0psbvqjdjqbmhvv0";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";

@@ -92,8 +92,8 @@ writeScripts config = do
         [ -- TODO: The revert of input-output-hk/cardano-node#3206 prevents us from using traces
           --       for the auction contract for now. Uncomment the following code whenever we
           --       have a proper implementation.
-          --  ("auction_1", Auction.auctionTrace1, Auction.auctionEmulatorCfg)
-          --, ("auction_2", Auction.auctionTrace2, Auction.auctionEmulatorCfg)
+          --  ("auction_1", Auction.auctionTrace1, view emulatorConfig Auction.options)
+          --, ("auction_2", Auction.auctionTrace2, view emulatorConfig Auction.options)
           ("crowdfunding-success", Crowdfunding.successfulCampaign, def)
         , ("currency", Currency.currencyTrace, def)
         , ("escrow-redeem_1", Escrow.redeemTrace, def)

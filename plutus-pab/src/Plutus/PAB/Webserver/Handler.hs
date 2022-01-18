@@ -17,51 +17,38 @@
 module Plutus.PAB.Webserver.Handler
     ( apiHandler
     , swagger
-    , walletProxy
-    , walletProxyClientEnv
     -- * Reports
     , getFullReport
     , contractSchema
     ) where
 
-import Cardano.Wallet.Mock.Client qualified as Wallet.Client
-import Cardano.Wallet.Mock.Types (WalletInfo (WalletInfo, wiPaymentPubKeyHash, wiWallet))
 import Control.Lens (preview)
 import Control.Monad (join)
-import Control.Monad.Freer (sendM)
 import Control.Monad.Freer.Error (throwError)
-import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
-import Data.Either (fromRight)
 import Data.Foldable (traverse_)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.OpenApi.Schema (ToSchema)
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
-import Ledger (Value)
-import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Tx (Tx)
 import Plutus.Contract.Effects (PABReq, _ExposeEndpointReq)
 import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core (PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (hooks), fromResp)
-import Plutus.PAB.Types (PABError (ContractInstanceNotFound, EndpointCallError, WalletClientError))
+import Plutus.PAB.Types (PABError (ContractInstanceNotFound, EndpointCallError))
 import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet),
                                    ContractInstanceClientState (ContractInstanceClientState, cicContract, cicCurrentState, cicDefinition, cicStatus, cicWallet, cicYieldedExportTxs),
                                    ContractReport (ContractReport, crActiveContractStates, crAvailableContracts),
                                    ContractSignatureResponse (ContractSignatureResponse),
                                    FullReport (FullReport, chainReport, contractReport), emptyChainReport)
-import Servant (NoContent (NoContent), (:<|>) ((:<|>)))
-import Servant.Client (ClientEnv, ClientM, runClientM)
+import Servant ((:<|>) ((:<|>)))
 import Servant.OpenApi (toOpenApi)
 import Servant.Server qualified as Servant
 import Servant.Swagger.UI (SwaggerSchemaUI', swaggerSchemaUIServer)
-import Wallet.Effects qualified
-import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Wallet (Wallet (Wallet), WalletId, knownWallet)
 import Wallet.Types (ContractActivityStatus, ContractInstanceId, parseContractActivityStatus)
 
@@ -194,48 +181,3 @@ availableContracts = do
 
 shutdown :: forall t env. ContractInstanceId -> PABAction t env ()
 shutdown = Core.stopInstance
-
--- | Proxy for the wallet API
-walletProxyClientEnv ::
-    forall t env.
-    ClientEnv ->
-    (PABAction t env WalletInfo -- Create new wallet
-    :<|> (WalletId -> Tx -> PABAction t env NoContent) -- Submit txn
-    :<|> (WalletId -> PABAction t env WalletInfo)
-    :<|> (WalletId -> UnbalancedTx -> PABAction t env (Either WalletAPIError Tx))
-    :<|> (WalletId -> PABAction t env Value)
-    :<|> (WalletId -> Tx -> PABAction t env Tx))
-walletProxyClientEnv clientEnv =
-    let createWallet = runWalletClientM clientEnv Wallet.Client.createWallet
-    in walletProxy createWallet
-
--- | Run a 'ClientM' action against a remote host using the given 'ClientEnv'.
-runWalletClientM :: forall t env a. ClientEnv -> ClientM a -> PABAction t env a
-runWalletClientM clientEnv action = do
-    x <- sendM $ liftIO $ runClientM action clientEnv
-    case x of
-        Left err     -> throwError @PABError (WalletClientError err)
-        Right result -> pure result
-
--- | Proxy for the wallet API
-walletProxy ::
-    forall t env.
-    PABAction t env WalletInfo -> -- default action for creating a new wallet
-    (PABAction t env WalletInfo -- Create new wallet
-    :<|> (WalletId -> Tx -> PABAction t env NoContent) -- Submit txn
-    :<|> (WalletId -> PABAction t env WalletInfo)
-    :<|> (WalletId -> UnbalancedTx -> PABAction t env (Either WalletAPIError Tx))
-    :<|> (WalletId -> PABAction t env Value)
-    :<|> (WalletId -> Tx -> PABAction t env Tx))
-walletProxy createNewWallet =
-    createNewWallet
-    :<|> (\w tx -> fmap (const NoContent) (Core.handleAgentThread (Wallet w) Nothing $ Wallet.Effects.submitTxn $ Right tx))
-    :<|> (\w -> (\pkh -> WalletInfo{wiWallet=Wallet w, wiPaymentPubKeyHash = pkh })
-            <$> Core.handleAgentThread (Wallet w) Nothing Wallet.Effects.ownPaymentPubKeyHash)
-    :<|> (\w -> fmap (fmap (fromRight (error "Plutus.PAB.Webserver.Handler: Expecting a mock tx, not an Alonzo tx when submitting it.")))
-              . Core.handleAgentThread (Wallet w) Nothing . Wallet.Effects.balanceTx)
-    :<|> (\w -> Core.handleAgentThread (Wallet w) Nothing Wallet.Effects.totalFunds)
-    :<|> (\w tx -> fmap (fromRight (error "Plutus.PAB.Webserver.Handler: Expecting a mock tx, not an Alonzo tx when adding a signature."))
-                 $ Core.handleAgentThread (Wallet w) Nothing
-                 $ Wallet.Effects.walletAddSignature
-                 $ Right tx)

@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
-{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
@@ -18,14 +17,14 @@ import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientM, client)
 
 import Cardano.Node.API (API)
-import Cardano.Node.Types (MockServerLogMsg)
+import Cardano.Node.Types (PABServerLogMsg)
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Monad.Freer.Extras.Log (LogMessage)
 import Wallet.Effects (NodeClientEffect (..))
 
 healthcheck :: ClientM NoContent
-consumeEventHistory :: ClientM [LogMessage MockServerLogMsg]
+consumeEventHistory :: ClientM [LogMessage PABServerLogMsg]
 (healthcheck, consumeEventHistory) =
     ( healthcheck_
     , consumeEventHistory_

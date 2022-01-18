@@ -159,7 +159,6 @@ commandParser =
                              , reportAvailableContractsParser
                              ]))
                    (fullDesc <> progDesc "Manage your smart contracts."))
-        , psGeneratorCommandParser
         ]
 
 migrationParser :: Mod CommandFields ConfigCommand
@@ -168,22 +167,11 @@ migrationParser =
     flip info (fullDesc <> progDesc "Update the database with the latest schema.") $
         pure Migrate
 
-psGeneratorCommandParser :: Mod CommandFields ConfigCommand
-psGeneratorCommandParser =
-    command "psapigenerator" $
-    flip info (fullDesc <> progDesc "Generate the frontend's PureScript files for the webserver API.") $ do
-        psApiGenOutputDir <-
-            argument
-                str
-                (metavar "OUTPUT_DIR" <>
-                 help "Output directory to write PureScript files to.")
-        pure $ PSApiGenerator {psApiGenOutputDir}
-
 mockNodeParser :: Mod CommandFields ConfigCommand
 mockNodeParser =
     command "node-server" $
         info
-            (pure StartMockNode)
+            (pure StartNode)
             (fullDesc <> progDesc "Run a mock version of the Cardano node API server.")
 
 mockWalletParser :: Mod CommandFields ConfigCommand
@@ -204,7 +192,7 @@ allServersParser =
     command "all-servers" $
     flip info (fullDesc <> progDesc "Run all the mock servers needed.") $ do
         pure  (ForkCommands
-                   [ StartMockNode
+                   [ StartNode
                    , MockWallet
                    , PABWebserver
                    , ChainIndex
