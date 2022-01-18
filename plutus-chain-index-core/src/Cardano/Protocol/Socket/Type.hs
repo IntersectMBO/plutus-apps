@@ -37,8 +37,8 @@ import Ouroboros.Consensus.Byron.Ledger qualified as Byron
 import Ouroboros.Consensus.Cardano.Block (CardanoBlock, CodecConfig (..))
 import Ouroboros.Consensus.Network.NodeToClient (ClientCodecs, clientCodecs)
 import Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion, supportedNodeToClientVersions)
+import Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
-import Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 import Ouroboros.Network.Block (HeaderHash, Point, StandardHash)
 import Ouroboros.Network.Magic (NetworkMagic (..))
 import Ouroboros.Network.Mux
