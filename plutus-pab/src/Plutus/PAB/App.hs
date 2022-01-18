@@ -98,7 +98,7 @@ data AppEnv a =
         , walletClientEnv       :: Maybe ClientEnv -- ^ No 'ClientEnv' when in the remote client setting.
         , nodeClientEnv         :: ClientEnv
         , chainIndexEnv         :: ClientEnv
-        , txSendHandle          :: MockClient.TxSendHandle
+        , txSendHandle          :: Maybe MockClient.TxSendHandle -- No 'TxSendHandle' required when connecting to the real node.
         , chainSyncHandle       :: ChainSyncHandle
         , appConfig             :: Config
         , appTrace              :: Trace IO (PABLogMsg (Builtin a))
@@ -167,7 +167,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ChainSyncHandle chainSyncHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . reinterpret (Core.handleMappedReader @(AppEnv a) @MockClient.TxSendHandle txSendHandle)
+            . reinterpret (Core.handleMappedReader @(AppEnv a) @(Maybe MockClient.TxSendHandle) txSendHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv nodeClientEnv)
             . reinterpretN @'[_, _, _, _] (handleNodeClientClient @IO $ pscSlotConfig $ nodeServerConfig config)
@@ -250,7 +250,7 @@ data StorageBackend = BeamSqliteBackend | InMemoryBackend
 
 mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
 mkEnv appTrace appConfig@Config { dbConfig
-             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscProtocolParametersJsonPath}
+             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscProtocolParametersJsonPath, pscNodeMode}
              , walletServerConfig
              , chainIndexConfig
              } = do
@@ -258,7 +258,11 @@ mkEnv appTrace appConfig@Config { dbConfig
     nodeClientEnv <- clientEnv pscBaseUrl
     chainIndexEnv <- clientEnv (ChainIndex.ciBaseUrl chainIndexConfig)
     dbConnection <- dbConnect appTrace dbConfig
-    txSendHandle <- liftIO $ MockClient.runTxSender pscSocketPath
+    txSendHandle <-
+      case pscNodeMode of
+        AlonzoNode -> pure Nothing
+        MockNode   ->
+          liftIO $ Just <$> MockClient.runTxSender pscSocketPath
     -- This is for access to the slot number in the interpreter
     chainSyncHandle <- runChainSyncWithCfg $ nodeServerConfig appConfig
     appInMemContractStore <- liftIO initialInMemInstances

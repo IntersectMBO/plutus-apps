@@ -38,17 +38,24 @@ handleNodeClientClient ::
     forall m effs.
     ( LastMember m effs
     , MonadIO m
-    , Member (Reader MockClient.TxSendHandle) effs
+    , Member (Reader (Maybe MockClient.TxSendHandle)) effs
     , Member (Reader ChainSyncHandle) effs
     )
     => SlotConfig
     -> NodeClientEffect
     ~> Eff effs
 handleNodeClientClient slotCfg e = do
-    txSendHandle <- ask @MockClient.TxSendHandle
+    txSendHandle <- ask @(Maybe MockClient.TxSendHandle)
     chainSyncHandle <- ask @ChainSyncHandle
     case e of
-        PublishTx tx  -> liftIO $ MockClient.queueTx txSendHandle tx
+        PublishTx tx  ->
+            case txSendHandle of
+              Nothing ->
+                  -- If the PAB is started with the real node working transactions
+                  -- need to be sent via the wallet, not the mocked server node
+                  -- (which is not actually running).
+                  liftIO $ putStrLn "Cannot send a transaction when connected to the real node."
+              Just handle -> liftIO $ MockClient.queueTx handle tx
         GetClientSlot ->
             either (liftIO . MockClient.getCurrentSlot) (liftIO . Client.getCurrentSlot) chainSyncHandle
         GetClientSlotConfig -> pure slotCfg

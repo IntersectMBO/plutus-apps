@@ -177,6 +177,7 @@ data PABServerLogMsg =
     | ProcessingChainEvent ChainEvent
     | BlockOperation BlockEvent
     | CreatingRandomTransaction
+    | TxSendCalledWithoutMock
     deriving (Generic, Show, ToJSON, FromJSON)
 
 instance Pretty PABServerLogMsg where
@@ -193,6 +194,7 @@ instance Pretty PABServerLogMsg where
         ProcessingChainEvent e    -> "Processing chain event" <+> pretty e
         BlockOperation e          -> "Block operation" <+> pretty e
         CreatingRandomTransaction -> "Generating a random transaction"
+        TxSendCalledWithoutMock   -> "Cannot send transaction without a mocked environment."
 
 instance ToObject PABServerLogMsg where
     toObject _ = \case
@@ -205,6 +207,7 @@ instance ToObject PABServerLogMsg where
         ProcessingChainEvent e    ->  mkObjectStr "Processing chain event" (Tagged @"event" e)
         BlockOperation e          ->  mkObjectStr "Block operation" (Tagged @"event" e)
         CreatingRandomTransaction ->  mkObjectStr "Creating random transaction" ()
+        TxSendCalledWithoutMock   ->  mkObjectStr "Cannot send transaction without a mocked environment." ()
 
 data BlockEvent = NewSlot
     | NewTransaction Tx
@@ -251,7 +254,7 @@ type NodeServerEffects m
         , ChainEffect
         , State MockNodeServerChainState
         , LogMsg PABServerLogMsg
-        , Reader Client.TxSendHandle
+        , Reader (Maybe Client.TxSendHandle)
         , State AppState
         , LogMsg PABServerLogMsg
         , m]
