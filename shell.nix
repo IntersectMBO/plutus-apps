@@ -119,6 +119,7 @@ let
     updateMaterialized
     updateClientDeps
     docs.build-and-serve-docs
+    start-testnet-node
   ]);
 
 in

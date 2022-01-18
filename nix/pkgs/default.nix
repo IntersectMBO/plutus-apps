@@ -126,6 +126,32 @@ let
     });
   };
 
+  start-testnet-node = pkgs.writeShellScriptBin "start-testnet-node" ''
+    #!/usr/bin/env bash
+
+    NETWORK="testnet"
+    FILES=("config.json" "byron-genesis.json" "shelley-genesis.json" "alonzo-genesis.json" "topology.json")
+    OUTPUT_DIR="/tmp/cardano-testnet"
+
+    mkdir -p $OUTPUT_DIR
+
+    for file in "''${FILES[@]}";
+    do
+      FNAME=$NETWORK"-"$file
+      if [ ! -f $OUTPUT_DIR/"$FNAME" ]
+      then
+        curl -s https://hydra.iohk.io/build/7654130/download/1/"$FNAME" > $OUTPUT_DIR/"$FNAME"
+      fi
+    done
+
+    cardano-node run \
+        --config $OUTPUT_DIR/$NETWORK-config.json \
+        --topology $OUTPUT_DIR/$NETWORK-topology.json \
+        --database-path $OUTPUT_DIR/db \
+        --socket-path $OUTPUT_DIR/node.sock \
+        --port 3003
+  '';
+
 in
 {
   inherit sphinx-markdown-tables sphinxemoji sphinxcontrib-haddock;
@@ -136,4 +162,5 @@ in
   inherit web-ghc;
   inherit easyPS plutus-haddock-combined;
   inherit lib;
+  inherit start-testnet-node;
 }
