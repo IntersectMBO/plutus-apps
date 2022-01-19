@@ -8,6 +8,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Servant.PureScript.Internal where
 
@@ -21,7 +22,6 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Typeable
 import Language.PureScript.Bridge
-import Language.PureScript.Bridge.PSTypes
 import Servant.Foreign
 import Servant.Foreign.Internal
 
@@ -66,65 +66,49 @@ type PSParam = Param PSType
 
 makeLenses ''Param
 
-data Settings = Settings
+data Settings bridge = Settings
   { _apiModuleName :: Text,
-    -- | This function parameters should instead be put in a Reader monad.
-    --
-    --   'baseUrl' will be put there by default, you can add additional parameters.
-    --
-    --   If your API uses a given parameter name multiple times with different types,
-    --   only the ones matching the type of the first occurrence
-    --   will be put in the Reader monad, all others will still be passed as function parameter.
-    _readerParams :: Set ParamName,
+    _globalParams :: Set (Param HaskellType),
     _standardImports :: ImportLines
   }
 
 makeLenses ''Settings
 
-defaultSettings :: Settings
+defaultSettings :: HasBridge bridge => Settings bridge
 defaultSettings =
   Settings
     { _apiModuleName = "ServerAPI",
-      _readerParams = Set.singleton baseURLId,
+      _globalParams = Set.empty,
       _standardImports =
         importsFromList
-          [ ImportLine "Affjax" (Set.fromList ["defaultRequest", "request"]),
-            ImportLine "Affjax.RequestHeader" (Set.fromList ["RequestHeader(..)"]),
-            ImportLine "Control.Monad.Error.Class" (Set.fromList ["class MonadError", "throwError"]),
-            ImportLine "Control.Monad.Reader.Class" (Set.fromList ["asks", "class MonadAsk"]),
-            ImportLine "Data.Argonaut.Decode" (Set.fromList ["decodeJson"]),
-            ImportLine "Data.Argonaut.Encode" (Set.fromList ["encodeJson"]),
+          [ ImportLine "Affjax.RequestHeader" (Set.fromList ["RequestHeader(..)"]),
+            ImportLine "Data.Argonaut" (Set.fromList ["Json", "JsonDecodeError"]),
             ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"],
             ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"],
-            ImportLine "Data.Array" (Set.fromList ["fromFoldable", "null"]),
+            ImportLine "Data.Array" (Set.fromList ["catMaybes"]),
             ImportLine "Data.Either" (Set.fromList ["Either(..)"]),
+            ImportLine "Data.Foldable" (Set.fromList ["fold"]),
             ImportLine "Data.HTTP.Method" (Set.fromList ["Method(..)"]),
-            ImportLine "Data.Maybe" (Set.fromList ["Maybe", "Maybe(..)"]),
-            ImportLine "Data.Newtype" (Set.fromList ["unwrap"]),
-            ImportLine "Data.String" (Set.fromList ["joinWith"]),
-            ImportLine "Effect.Aff.Class" (Set.fromList ["class MonadAff", "liftAff"]),
-            ImportLine
-              "Servant.PureScript"
-              (Set.fromList ["class ToURLPiece", "AjaxError", "ErrorDescription(..)", "toURLPiece"])
+            ImportLine "Data.Maybe" (Set.fromList ["Maybe(..)"]),
+            ImportLine "Data.Tuple" (Set.fromList ["Tuple(..)"]),
+            ImportLine "Servant.PureScript" (Set.fromList ["class MonadAjax", "ResponseT", "flagQueryPairs", "paramListQueryPairs", "paramQueryPairs", "request", "toHeader"]),
+            ImportLine "URI" (Set.fromList ["PathAbsolute(..)", "RelativePart(..)", "RelativeRef(..)"]),
+            ImportLine "URI.Path.Segment" (Set.fromList ["segmentNZFromString"])
           ]
     }
 
--- | Add a parameter name to be us put in the Reader monad instead of being passed to the
---   generated functions.
-addReaderParam :: ParamName -> Settings -> Settings
-addReaderParam n opts = opts & over readerParams (Set.insert n)
-
-baseURLId :: ParamName
-baseURLId = "baseURL"
-
-baseURLParam :: PSParam
-baseURLParam = Param baseURLId psString
-
-subscriberToUserId :: ParamName
-subscriberToUserId = "spToUser_"
-
-makeTypedToUserParam :: PSType -> PSParam
-makeTypedToUserParam response = Param subscriberToUserId (psTypedToUser response)
+-- | Add a parameter that will not be added to any client function signatures.
+--   You are responsible for configuring this parameter manually in your
+--   MonadAjax instance.
+addGlobalParam
+  :: forall a bridge
+   . ( HasBridge bridge
+     , Typeable  a
+     )
+  => ParamName
+  -> Settings bridge
+  -> Settings bridge
+addGlobalParam n = over globalParams (Set.insert $ Param n $ mkTypeInfo @a)
 
 apiToList ::
   forall bridgeSelector api.

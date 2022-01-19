@@ -16,10 +16,8 @@ module Servant.PureScript
     writeAPIModuleWithSettings,
     Settings (..),
     apiModuleName,
-    readerParams,
     standardImports,
     defaultSettings,
-    addReaderParam,
     jsonParseUrlPiece,
     jsonToUrlPiece,
     jsonParseHeader,
@@ -66,7 +64,7 @@ writeAPIModuleWithSettings ::
     GenerateList PSType (Foreign PSType api),
     HasBridge bridgeSelector
   ) =>
-  Settings ->
+  Settings bridgeSelector ->
   FilePath ->
   Proxy bridgeSelector ->
   Proxy api ->

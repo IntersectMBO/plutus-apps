@@ -1,47 +1,45 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Servant.PureScript.CodeGen where
 
 import Control.Lens hiding (List, op)
-import Data.List (intersperse)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, mapMaybe, maybeToList)
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, toUpper)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Language.PureScript.Bridge (ImportLine (importModule), ImportLines, PSType, TypeInfo (TypeInfo), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typeToEncode, typesToImportLines, flattenTypeInfo)
-import Language.PureScript.Bridge.PSTypes (psString, psUnit)
+import Language.PureScript.Bridge (ImportLine (..), ImportLines, PSType, TypeInfo (..), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typeToEncode, typesToImportLines, flattenTypeInfo)
+import Language.PureScript.Bridge.PSTypes (psUnit)
 import Network.HTTP.Types.URI (urlEncode)
 import Servant.Foreign
 import Servant.PureScript.Internal
 import Text.PrettyPrint.Mainland
+import Data.Proxy (Proxy(..))
 
 typeInfoToText :: PSType -> Text
 typeInfoToText = renderText . typeInfoToDecl
 
-genModule :: Settings -> [Req PSType] -> Doc
+genModule :: forall bridge. HasBridge bridge => Settings bridge -> [Req PSType] -> Doc
 genModule opts reqs =
-  let allParams = concatMap reqToParams reqs
-      rParams = getReaderParams opts allParams
+  let gParams = opts
+        ^. globalParams
+        . to (Set.map $ over pType $ languageBridge $ Proxy @bridge)
       apiImports = reqsToImportLines reqs
       imports = mergeImportLines (_standardImports opts) apiImports
    in docIntercalate
         (line <> line)
         [ genModuleHeader (_apiModuleName opts) imports,
-          "foreign import encodeURIComponent :: String -> String",
-          genType "SPSettings_" $ genRecord rParams,
-          genClass
-            (mkPsType "HasSPSettings" [mkPsType "a" []])
-            [ Param "spSettings" $ mkPsType "a -> SPSettings_" []
-            ],
-          docIntercalate (line <> line) (map (genFunction rParams) reqs)
+          docIntercalate (line <> line) (map (genFunction gParams) reqs)
         ]
 
 genModuleHeader :: Text -> ImportLines -> Doc
@@ -59,100 +57,24 @@ genModuleHeader moduleName imports =
         </> "import Affjax.ResponseFormat (json) as Response"
         </> "import Data.Argonaut.Decode.Aeson as D"
         </> "import Data.Argonaut.Encode.Aeson as E"
+        </> "import Data.String.NonEmpty as NES"
+        </> "import URI.Extra.QueryPairs as QP"
+        </> "import URI.Host as Host"
   where
     exclude m = (/= m) . importModule
 
-getReaderParams :: Settings -> [PSParam] -> [PSParam]
-getReaderParams opts allParams =
-  let isReaderParam = (`Set.member` _readerParams opts) . _pName
-      rParamsDirty = filter isReaderParam allParams
-      rParamsMap = Map.fromListWith useOld . map toPair $ rParamsDirty
-      rParams = map fromPair . Map.toList $ rParamsMap
-      -- Helpers
-      toPair (Param n t) = (n, t)
-      fromPair (n, t) = Param n t
-      useOld = const id
-   in rParams
-
-genType :: Text -> Doc -> Doc
-genType name def =
-  hang 2 ("type" <+> strictText name </> hang 2 ("=" <+> def))
-
-genNewtype :: Text -> Doc -> Doc
-genNewtype name def =
-  hang 2 ("newtype" <+> strictText name </> hang 2 ("=" <+> strictText name </> def))
-
-genDecl :: Param PSType -> Doc
-genDecl param =
-  param ^. (pName . to psVar) <+> "::" <+> param ^. pType . to (strictText . typeInfoToText)
-
-genRecord :: [PSParam] -> Doc
-genRecord params = lbrace <+> docIntercalate (line <> ", ") (genDecl <$> params) </> rbrace
-
-genData :: Text -> [PSType] -> Doc
-genData name ctors =
-  hang 2 $
-    "data"
-      <+> strictText name </> "="
-      <+> docIntercalate (line <> "| ") (map (strictText . typeInfoToText) ctors)
-
-genClass :: PSType -> [Param PSType] -> Doc
-genClass classType methods =
-  hang 2 $
-    "class"
-      <+> strictText (typeInfoToText classType)
-      <+> "where"
-      </> docIntercalate line (map genDecl methods)
-
-genInstance :: Text -> [PSType] -> PSType -> [Param ([Text], Doc)] -> Doc
-genInstance name constraints instanceType implementations =
-  "instance"
-    <+> strictText name
-    <+> "::"
-    <+> ( if null constraints
-            then mempty
-            else
-              lparen
-                <> docIntercalate ", " (map (strictText . typeInfoToText) constraints)
-                <> rparen
-                <+> "=> "
-        )
-    <> strictText (typeInfoToText instanceType)
-    <+> "where"
-    </> "  "
-    <> docIntercalate line (map genImplementation implementations)
-  where
-    genImplementation impl =
-      let fName = impl ^. pName
-          args = impl ^. pType . to fst
-          body = impl ^. pType . to snd
-       in strictText fName <+> docIntercalate space (map strictText args) <+> "=" <+> body
-
-genFunction :: [PSParam] -> Req PSType -> Doc
-genFunction allRParams req =
-  let rParamsSet = Set.fromList allRParams
-      fnName = req ^. reqFuncName . jsCamelCaseL
-      allParamsList = baseURLParam : reqToParams req
-      allParams = Set.fromList allParamsList
-      fnParams = filter (not . flip Set.member rParamsSet) allParamsList -- Use list not set, as we don't want to change order of parameters
-      rParams = Set.toList $ rParamsSet `Set.intersection` allParams
-
-      pTypes = map _pType fnParams
-      pNames = map _pName fnParams
-      constraints =
-        [ mkPsType "HasSPSettings" [mkPsType "env" []],
-          mkPsType "MonadAsk" [mkPsType "env" [], mkPsType "m" []],
-          mkPsType "MonadError" [mkPsType "AjaxError" [], mkPsType "m" []],
-          mkPsType "MonadAff" [mkPsType "m" []]
-        ]
-      signature = genSignature fnName ["env", "m"] constraints pTypes (req ^. reqReturnType)
-      body = genFnHead fnName pNames <+> genFnBody rParams req
+genFunction :: Set PSParam -> Req PSType -> Doc
+genFunction gParams req =
+  let fnName = req ^. reqFuncName . jsCamelCaseL
+      allParamsList = reqToParams req
+      -- Use list not set, as we don't want to change order of parameters
+      params = filter (not . flip Set.member gParams) allParamsList
+      pTypes = map _pType params
+      pNames = map _pName params
+      constraints = [ mkPsType "MonadAjax" [mkPsType "m" []] ]
+      signature = genSignature fnName ["m"] constraints pTypes (req ^. reqReturnType)
+      body = indent 2 $ genFnHead fnName pNames </> genFnBody req
    in signature </> body
-
-genGetReaderParams :: [PSParam] -> Doc
-genGetReaderParams = stack . map (genGetReaderParam . psVar . _pName)
-  where
-    genGetReaderParam pName' = "let" <+> pName' <+> "= spSettings." <> pName'
 
 genSignature :: Text -> [Text] -> [PSType] -> [PSType] -> Maybe PSType -> Doc
 genSignature fnName variables constraints params mRet =
@@ -173,7 +95,10 @@ genSignature fnName variables constraints params mRet =
          )
       </> docIntercalate (" ->" <> line) (strictText . typeInfoToText <$> (params <> [retType]))
   where
-    retType = maybe psUnit (mkPsType "m" . pure) mRet
+    retType =
+      mkPsType
+        "ResponseT"
+        [psJson, mkPsType "m" [], psJsonDecodeError, fromMaybe psUnit mRet]
 
 genFnHead :: Text -> [Text] -> Doc
 genFnHead fnName params = fName <+> align (docIntercalate softline docParams <+> "=")
@@ -181,171 +106,67 @@ genFnHead fnName params = fName <+> align (docIntercalate softline docParams <+>
     docParams = map psVar params
     fName = strictText fnName
 
-genFnBody :: [PSParam] -> Req PSType -> Doc
-genFnBody rParams req =
-  "do"
-    </> indent
-      2
-      ( "spSettings <- asks spSettings"
-          </> genGetReaderParams rParams
-          </> "let httpMethod = Left"
-          <+> (req ^. reqMethod . to T.decodeUtf8 . to toUpper . to strictText)
-          </> hang
-            4
-            ( "let"
-                </> "encodeQueryItem :: forall a. ToURLPiece a => String -> a -> String"
-                </> "encodeQueryItem name val = name <> \"=\" <> toURLPiece val"
-            )
-          </> hang
-            4
-            ( "let"
-                </> "queryArgs :: Array String"
-                </> hang
-                  2
-                  ( "queryArgs ="
-                      </> hang
-                        2
-                        ( docIntercalate (line <> "<> ") $
-                            "[]" : req ^. reqUrl . queryStr . to (map genBuildQueryArg)
-                        )
-                  )
-            )
-          </> "let queryString = if null queryArgs then \"\" else \"?\" <> (joinWith \"&\" queryArgs)"
-          </> hang
-            4
-            ( "let"
-                </> hang
-                  2
-                  ( "reqURL ="
-                      </> genBuildURL (req ^. reqUrl)
-                  )
-            )
-          </> hang
-            4
-            ( "let"
-                </> hang
-                  2
-                  ( "reqHeaders ="
-                      </> req ^. reqHeaders . to genBuildHeaders
-                  )
-            )
-          </> hang
-            4
-            ( "let"
-                </> hang
-                  2
-                  ( "affReq ="
-                      </> hang
-                        2
-                        ( "defaultRequest"
-                            </> "{ method =" <+> "httpMethod"
-                            </> ", url =" <+> "reqURL"
-                            </> ", headers =" <+> "defaultRequest.headers <> reqHeaders"
-                            </> ", responseFormat =" <+> "Response.json"
-                            <> ( case req ^. reqBody of
-                                   Nothing -> mempty
-                                   Just body ->
-                                     line
-                                       <> hang
-                                         4
-                                         ( ", content = Just"
-                                             </> "$ Request.json"
-                                             </> "$ flip E.encode reqBody"
-                                             </> ( "$"
-                                                     <+> hang
-                                                       4
-                                                       ( docIntercalate line $
-                                                           fmap strictText $
-                                                             T.lines $
-                                                               renderText $
-                                                                 typeToEncode body
-                                                       )
-                                                 )
-                                         )
-                               )
-                            </> "}"
-                        )
-                  )
-            )
-          </> hang
-            4
-            ( "let"
-                </> hang
-                  2
-                  ( "decoder ="
-                      </> hang
-                        2
-                        ( docIntercalate line $
-                            fmap strictText $
-                              T.lines $
-                                renderText $
-                                  typeToDecode $
-                                    fromMaybe psUnit $
-                                      req ^. reqReturnType
-                        )
-                  )
-            )
-          </> "result <- liftAff $ request affReq"
-          </> hang
-            2
-            ( "response <- case result of"
-                </> "Left err -> throwError $ { request: affReq, description: ConnectingError err }"
-                </> "Right r -> pure r"
-            )
-          </> hang
-            2
-            ( "when (unwrap response.status < 200 || unwrap response.status >= 299) $"
-                </> "throwError $ { request: affReq, description: UnexpectedHTTPStatus response }"
-            )
-          </> case req ^. reqReturnType of
-            Nothing -> "pure unit"
-            Just _ ->
-              hang
-                2
-                ( "case D.decode decoder response.body of"
-                    </> "Left err -> throwError $ { request: affReq, description: DecodingError err }"
-                    </> "Right body -> pure body"
-                )
-      )
+genFnBody :: Req PSType -> Doc
+genFnBody req = docIntercalate line
+  [ strictText "request req"
+  , strictText "where"
+  , strictText "req = { method, uri, uriPrintOptions, headers, content, encode, decode, responseFormat }"
+  , strictText "method = Left" <+> (req ^. reqMethod . to T.decodeUtf8 . to toUpper . to strictText)
+  , strictText "uri = RelativeRef relativePart query Nothing"
+  , strictText "uriPrintOptions = { printUserInfo, printHosts, printPath, printRelPath, printQuery, printFragment }"
+  , indent 2 $ strictText "headers = catMaybes" </> list (genHeaders req)
+  , strictText case req ^. reqBody of
+      Nothing -> "content = Nothing"
+      Just _ -> "content = Just reqBody"
+  , strictText "encode = Request.json <<< E.encode encoder"
+  , case req ^. reqBody of
+      Nothing -> strictText "encoder = E.value"
+      Just body ->
+        indent 2
+          ( strictText "encoder = " <+> docIntercalate
+              line
+              (fmap strictText $ T.lines $ renderText $ typeToEncode body)
+          )
+  , case req ^. reqReturnType of
+      Nothing -> strictText "decoder = D.decode D.null"
+      Just retType ->
+        indent 2
+          ( strictText "decoder = " <+> docIntercalate
+              line
+              (fmap strictText $ T.lines $ renderText $ typeToDecode retType)
+          )
+  , strictText "responseFormat = Response.json"
+  , strictText "relativePart = RelativePartNoAuth $ Just $ PathAbsolute $ Tuple <$> segmentNZ <*> pure segments"
+  , strictText "query =" <+> genQuery req
+  , strictText "responseFormat = Response.json"
+  , strictText "printUserInfo = identity"
+  , strictText "printHosts = Host.print"
+  , strictText "printPath = identity"
+  , strictText "printRelPath = Left"
+  , strictText "printQuery = QP.print identity identity <<< queryPairs"
+  , strictText "query =" <+> genQueryPairs req
+  , strictText "printFragment = absurd"
+  , strictText "segmentNZ =" <+> genSegmentNZ req
+  , strictText "segments =" <+> genSegments req
+  ]
 
-genBuildURL :: Url PSType -> Doc
-genBuildURL url =
-  hang 2 $
-    docIntercalate (line <> "<> ") $
-      psVar baseURLId : genBuildPath (url ^. path) <> [strictText "queryString"]
+genHeaders :: Req PSType -> [Doc]
+genHeaders = error "not implemented"
 
-----------
-genBuildPath :: Path PSType -> [Doc]
-genBuildPath = intersperse (dquotes "/") . map (genBuildSegment . unSegment)
+genQuery :: Req PSType -> Doc
+genQuery = error "not implemented"
 
-genBuildSegment :: SegmentType PSType -> Doc
-genBuildSegment (Static (PathSegment seg)) = dquotes $ strictText (textURLEncode False seg)
-genBuildSegment (Cap arg) =
-  "encodeURIComponent (toURLPiece "
-    <+> arg ^. argName . to unPathSegment . to psVar
-    <+> ")"
+genQueryPairs :: Req PSType -> Doc
+genQueryPairs = error "not implemented"
 
-----------
-genBuildQueryArg :: QueryArg PSType -> Doc
-genBuildQueryArg arg = case arg ^. queryArgType of
-  Normal -> "fromFoldable (encodeQueryItem" <+> argString <+> "<$>" <+> psVar argText <> ")"
-  Flag -> lbracket <+> "encodeQueryItem" <+> argString <+> psVar argText <+> rbracket
-  List -> lparen <+> "encodeQueryItem" <+> argString <+> "<$>" <+> psVar argText <+> rparen
-  where
-    argText = arg ^. queryArgName . argName . to unPathSegment
-    argString = dquotes . strictText . textURLEncode True $ argText
+genSegmentNZ :: Req PSType -> Doc
+genSegmentNZ = error "not implemented"
+
+genSegments :: Req PSType -> Doc
+genSegments = error "not implemented"
+
 
 -----------
-
-genBuildHeaders :: [HeaderArg PSType] -> Doc
-genBuildHeaders headers = lbracket <+> docIntercalate ", " (genBuildHeader <$> headers) </> "]"
-
-genBuildHeader :: HeaderArg PSType -> Doc
-genBuildHeader (HeaderArg arg) =
-  let argText = arg ^. argName . to unPathSegment
-      encodedArgName = strictText . textURLEncode True $ argText
-   in "RequestHeader" <+> dquotes encodedArgName <+> "$" <+> "toURLPiece" <+> psVar argText
-genBuildHeader (ReplaceHeaderArg _ _) = error "ReplaceHeaderArg - not yet implemented!"
 
 reqsToImportLines :: [Req PSType] -> ImportLines
 reqsToImportLines =
@@ -361,7 +182,6 @@ reqToPSTypes req = map _pType (reqToParams req) ++ maybeToList (req ^. reqReturn
 -- | Extract all function parameters from a given Req.
 reqToParams :: Req PSType -> [Param PSType]
 reqToParams req =
-  Param baseURLId psString :
   fmap headerArgToParam (req ^. reqHeaders)
     ++ maybeToList (reqBodyToParam (req ^. reqBody))
     ++ urlToParams (req ^. reqUrl)
@@ -383,6 +203,9 @@ mkPsType = TypeInfo "" ""
 
 mkPsMaybe :: PSType -> PSType
 mkPsMaybe = mkPsType "Maybe" . pure
+
+psJsonDecodeError :: PSType
+psJsonDecodeError = mkPsType "JsonDecodeError" []
 
 psJson :: PSType
 psJson = mkPsType "Json" []

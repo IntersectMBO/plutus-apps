@@ -66,7 +66,7 @@ reqs = apiToList (Proxy :: Proxy MyAPI) (Proxy :: Proxy DefaultBridge)
 
 req = head reqs
 
-mySettings = addReaderParam "TestHeader" defaultSettings
+mySettings = addGlobalParam @TestHeader "TestHeader" defaultSettings
 
 myTypes :: [SumType 'Haskell]
 myTypes =
