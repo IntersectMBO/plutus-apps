@@ -63,7 +63,7 @@ startNodeClient socket mode rollbackHistory slotConfig networkId resumePoint ins
       AlonzoNode -> do
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
-          (\block -> handleSyncAction $ processChainSyncEvent env block)
+          (\block -> handleSyncAction $ processChainSyncEvent instancesState env block)
     pure env
 
 -- | Deal with sync action failures from running this STM action. For now, we
@@ -96,8 +96,12 @@ blockAndSlot BlockchainEnv{beCurrentBlock, beCurrentSlot} =
   (,) <$> STM.readTVar beCurrentSlot <*> STM.readTVar beCurrentBlock
 
 -- | Process a chain sync event that we receive from the alonzo node client
-processChainSyncEvent :: BlockchainEnv -> ChainSyncEvent -> STM (Either SyncActionFailure (Slot, BlockNumber))
-processChainSyncEvent blockchainEnv event = do
+processChainSyncEvent
+  :: InstancesState
+  -> BlockchainEnv
+  -> ChainSyncEvent
+  -> STM (Either SyncActionFailure (Slot, BlockNumber))
+processChainSyncEvent instancesState blockchainEnv event = do
   case event of
     Resume _ -> Right <$> blockAndSlot blockchainEnv
     RollForward (BlockInMode (C.Block header transactions) era) _ ->
@@ -105,11 +109,11 @@ processChainSyncEvent blockchainEnv event = do
         -- Unfortunately, we need to pattern match again all eras because
         -- 'processBlock' has the constraints 'C.IsCardanoEra era', but not
         -- 'C.BlockInMode'.
-        C.ByronEraInCardanoMode   -> processBlock header blockchainEnv transactions era
-        C.ShelleyEraInCardanoMode -> processBlock header blockchainEnv transactions era
-        C.AllegraEraInCardanoMode -> processBlock header blockchainEnv transactions era
-        C.MaryEraInCardanoMode    -> processBlock header blockchainEnv transactions era
-        C.AlonzoEraInCardanoMode  -> processBlock header blockchainEnv transactions era
+        C.ByronEraInCardanoMode   -> processBlock instancesState header blockchainEnv transactions era
+        C.ShelleyEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
+        C.AllegraEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
+        C.MaryEraInCardanoMode    -> processBlock instancesState header blockchainEnv transactions era
+        C.AlonzoEraInCardanoMode  -> processBlock instancesState header blockchainEnv transactions era
     RollBackward chainPoint _ -> runRollback blockchainEnv chainPoint
 
 data SyncActionFailure
@@ -147,12 +151,13 @@ txEvent tx =
 -- | Update the blockchain env. with changes from a new block of cardano
 --   transactions in any era
 processBlock :: forall era. C.IsCardanoEra era
-             => C.BlockHeader
+             => InstancesState
+             -> C.BlockHeader
              -> BlockchainEnv
              -> [C.Tx era]
              -> C.EraInMode era C.CardanoMode
              -> STM (Either SyncActionFailure (Slot, BlockNumber))
-processBlock header env transactions era = do
+processBlock instancesState header env transactions era = do
   let C.BlockHeader (C.SlotNo slot) _ _ = header
   STM.writeTVar (beCurrentSlot env) (fromIntegral slot)
   if null transactions
@@ -162,6 +167,10 @@ processBlock header env transactions era = do
             -- We ignore cardano transactions that we couldn't convert to
             -- our 'ChainIndexTx'.
             ciTxs = catMaybes (either (const Nothing) Just . fromCardanoTx era <$> transactions)
+
+        instEnv <- S.instancesClientEnv instancesState
+        updateInstances (indexBlock ciTxs) instEnv
+
         updateTransactionState tip env (txEvent <$> ciTxs)
 
 -- | For the given transactions, perform the updates in the 'TxIdState', and
