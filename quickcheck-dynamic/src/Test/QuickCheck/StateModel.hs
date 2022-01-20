@@ -4,12 +4,14 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE PatternSynonyms       #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module Test.QuickCheck.StateModel(
     StateModel(..)
@@ -17,14 +19,20 @@ module Test.QuickCheck.StateModel(
   , Step(..)
   , LookUp, Var(..) -- we export the constructors so that users can construct test cases
   , Actions(..)
+  , pattern Actions
+  , ShrinkState
+  , initialShrinkState
+  , EnvEntry(..)
+  , Env
   , stateAfter
   , runActions
   , runActionsInState
+  , lookUpVar
 ) where
 
 import Data.Typeable
 
-import Test.QuickCheck as QC
+import Test.QuickCheck as QC hiding (ShrinkState)
 import Test.QuickCheck.Monadic
 
 class (forall a. Show (Action state a),
@@ -98,14 +106,18 @@ instance Eq (Step state) where
   (Var i := act) == (Var j := act') =
     (i==j) && Some act == Some act'
 
-newtype Actions state = Actions [Step state]
+data Actions state = ActionsWithShrinkState ShrinkState [Step state]
   deriving Eq
 
-instance Semigroup (Actions state) where
-  Actions as <> Actions as' = Actions (as <> as')
+data ShrinkState = ShrinkState { lastShrinkIndex :: Int } deriving Eq
 
-instance Monoid (Actions state) where
-  mempty = Actions []
+initialShrinkState :: ShrinkState
+initialShrinkState = ShrinkState 0
+
+{-# COMPLETE Actions #-}
+pattern Actions :: [Step state] -> Actions state
+pattern Actions as <- ActionsWithShrinkState _ as where
+  Actions as = ActionsWithShrinkState initialShrinkState as
 
 instance (forall a. Show (Action state a)) => Show (Actions state) where
   showsPrec d (Actions as)
@@ -134,9 +146,11 @@ instance (Typeable state, StateModel state) => Arbitrary (Actions state) where
                               Nothing ->
                                 return [])]
 
-  shrink (Actions as) =
-    map (Actions . prune . map fst) (shrinkList shrinker (withStates as))
+  shrink (ActionsWithShrinkState s as) =
+    rotate (lastShrinkIndex s) $ zipWith mkActions [0..] (map fst <$> shrinkList shrinker (withStates as))
     where shrinker ((Var i := act),s) = [((Var i := act'),s) | Some act' <- shrinkAction s act]
+          mkActions i as = ActionsWithShrinkState (ShrinkState i) (prune as)
+          rotate i as = let (hds, tls) = splitAt (max 0 (i-1)) as in tls ++ hds
 
 prune :: StateModel state => [Step state] -> [Step state]
 prune = loop initialState

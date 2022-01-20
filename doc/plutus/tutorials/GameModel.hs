@@ -35,6 +35,7 @@ import Plutus.Contract.Test.ContractModel
 -- END import ContractModel
 
 import Plutus.Contract.Test.ContractModel as ContractModel
+import Test.QuickCheck.StateModel hiding (Action, Actions)
 
 -- START import Game
 import Plutus.Contracts.GameStateMachine as G
@@ -96,11 +97,15 @@ instance ContractModel GameModel where
 -- END initialState
 
 -- START initialHandleSpecs
-    initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w G.contract | w <- wallets ]
+    initialInstances = Key . WalletKey <$> wallets
+
+    instanceContract _ _ WalletKey{} = G.contract
+
+    instanceWallet (WalletKey w) = w
 -- END initialHandleSpecs
 
 -- START perform
-    perform handle s cmd = case cmd of
+    perform handle _ s cmd = case cmd of
         Lock w new val -> do
             callEndpoint @"lock" (handle $ WalletKey w)
                          LockArgs{ lockArgsSecret = secretArg new
@@ -197,7 +202,7 @@ prop_Game actions = propRunActions_ actions
 -- START propGame'
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l s = propRunActionsWithOptions
-                    (set minLogLevel l defaultCheckOptions)
+                    (set minLogLevel l defaultCheckOptionsContractModel)
                     defaultCoverageOptions
                     (\ _ -> pure True)
                     s
@@ -221,11 +226,6 @@ shrinkWallet w = [w' | w' <- wallets, w' < w]
 
 guesses :: [String]
 guesses = ["hello", "secret", "hunter2", "*******"]
-
--- START delay
-delay :: Int -> EmulatorTraceNoStartContract ()
-delay n = void $ waitNSlots (fromIntegral n)
--- END delay
 
 -- Dynamic Logic ----------------------------------------------------------
 
@@ -251,9 +251,9 @@ badUnitTest :: DLTest GameModel
 badUnitTest =
     BadPrecondition
       [Witness (1 :: Integer),
-       Do $ Lock w1 "hello" 1,
-       Do $ GiveToken w2]
-      [Action (Guess w2 "hello" "new secret" 3)]
+       Do $ NoBind (Var 1) $ Lock w1 "hello" 1,
+       Do $ NoBind (Var 2) $ GiveToken w2]
+      [Action (NoBind (Var 3) (Guess w2 "hello" "new secret" 3))]
       (GameModel {_gameValue = 1, _hasToken = Just w2, _currentSecret = "hello"})
 -- END badUnitTest
 
@@ -282,7 +282,7 @@ noLockedFunds = do
         monitor $ label "Unlocking funds"
         action $ GiveToken w
         action $ Guess w secret "" val
-    assertModel "Locked funds should be zero" $ isZero . lockedValue
+    assertModel "Locked funds should be zero" $ symIsZero . lockedValue
 -- END noLockedFunds
 
 -- | Check that we can always get the money out of the guessing game (by guessing correctly).
@@ -305,7 +305,7 @@ gameTokenVal =
 
 -- START testLock v1
 testLock :: Property
-testLock = prop_Game $ Actions [Lock w1 "hunter2" 0]
+testLock = prop_Game $ actionsFromList [Lock w1 "hunter2" 0]
 -- END testLock v1
 
 testLockWithMaxSuccess :: ()
@@ -313,13 +313,13 @@ testLockWithMaxSuccess = ()
  where
 -- START testLock withMaxSuccess
  testLock :: Property
- testLock = withMaxSuccess 1 . prop_Game $ Actions [Lock w1 "hunter2" 0]
+ testLock = withMaxSuccess 1 . prop_Game $ actionsFromList [Lock w1 "hunter2" 0]
 -- END testLock withMaxSuccess
 
 -- START testDoubleLock
 testDoubleLock :: Property
 testDoubleLock = prop_Game $
-  Actions
+  actionsFromList
     [Lock w1 "*******" 0,
      Lock w1 "secret" 0]
 -- END testDoubleLock
@@ -382,9 +382,9 @@ v1_model = ()
     precondition s _             = True
 -- END precondition v1
 
-    perform :: HandleFun GameModel -> ModelState GameModel -> Action GameModel -> EmulatorTraceNoStartContract ()
+    perform :: HandleFun GameModel -> (SymToken -> AssetClass) -> ModelState GameModel -> Action GameModel -> SpecificationEmulatorTrace ()
 -- START perform v1
-    perform handle s cmd = case cmd of
+    perform handle _ s cmd = case cmd of
         Lock w new val -> do
             callEndpoint @"lock" (handle $ WalletKey w)
                          LockArgs{ lockArgsSecret = secretArg new
@@ -487,7 +487,7 @@ noLockedFunds_v1 = ()
  noLockedFunds :: DL GameModel ()
  noLockedFunds = do
      anyActions_
-     assertModel "Locked funds should be zero" $ isZero . lockedValue
+     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
 -- END noLockedFunds v1
 
 noLockedFunds_v2 :: ()
@@ -501,7 +501,7 @@ noLockedFunds_v2 = ()
      secret <- viewContractState currentSecret
      val    <- viewContractState gameValue
      action $ Guess w "" secret val
-     assertModel "Locked funds should be zero" $ isZero . lockedValue
+     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
 -- END noLockedFunds v2
 
 noLockedFunds_v3 :: ()
@@ -516,7 +516,7 @@ noLockedFunds_v3 = ()
      val    <- viewContractState gameValue
      when (val > 0) $ do
          action $ Guess w "" secret val
-     assertModel "Locked funds should be zero" $ isZero . lockedValue
+     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
 -- END noLockedFunds v3
 
 noLockedFunds_v4 :: ()
@@ -532,7 +532,7 @@ noLockedFunds_v4 = ()
      when (val > 0) $ do
          action $ GiveToken w
          action $ Guess w "" secret val
-     assertModel "Locked funds should be zero" $ isZero . lockedValue
+     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
 -- END noLockedFunds v4
 
 noLockedFunds_v5 :: ()
@@ -549,7 +549,7 @@ noLockedFunds_v5 = ()
          monitor $ label "Unlocking funds"
          action $ GiveToken w
          action $ Guess w secret "" val
-     assertModel "Locked funds should be zero" $ isZero . lockedValue
+     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
 -- END noLockedFunds v5
 
 typeSignatures :: forall state. ContractModel state => state -> state
@@ -564,7 +564,7 @@ typeSignatures = id
 -- END precondition type
  precondition = ContractModel.precondition
 -- START perform type
- perform :: HandleFun state -> ModelState state -> Action state -> EmulatorTraceNoStartContract ()
+ perform :: HandleFun state -> (SymToken -> AssetClass) -> ModelState state -> Action state -> SpecificationEmulatorTrace ()
 -- END perform type
  perform = ContractModel.perform
 -- START shrinkAction type

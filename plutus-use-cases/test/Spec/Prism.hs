@@ -146,7 +146,13 @@ instance ContractModel PrismModel where
 
     initialState = PrismModel { _walletState = Map.empty }
 
-    initialHandleSpecs = [ ContractInstanceSpec (UserH w) w C.subscribeSTO | w <- users ] ++ [ ContractInstanceSpec MirrorH mirror C.mirror ]
+    initialInstances = Key MirrorH : (Key . UserH <$> users)
+
+    instanceWallet MirrorH   = mirror
+    instanceWallet (UserH w) = w
+
+    instanceContract _ _ MirrorH = C.mirror
+    instanceContract _ _ UserH{} = C.subscribeSTO
 
     precondition s (Issue w) = (s ^. contractState . isIssued w) /= Issued  -- Multiple Issue (without Revoke) breaks the contract
     precondition _ _         = True
@@ -155,8 +161,8 @@ instance ContractModel PrismModel where
         wait waitSlots
         case cmd of
             Delay     -> wait 1
-            Revoke w  -> isIssued w $~ doRevoke
-            Issue w   -> isIssued w $= Issued
+            Revoke w  -> isIssued w %= doRevoke
+            Issue w   -> isIssued w .= Issued
             Call w    -> do
               iss  <- (== Issued)   <$> viewContractState (isIssued w)
               pend <- (== STOReady) <$> viewContractState (stoState w)
@@ -166,21 +172,18 @@ instance ContractModel PrismModel where
                 mint stoValue
                 deposit w stoValue
 
-    perform handle _ cmd = case cmd of
+    perform handle _ _ cmd = case cmd of
         Delay     -> wrap $ delay 1
         Issue w   -> wrap $ delay 1 >> Trace.callEndpoint @"issue"   (handle MirrorH) CredentialOwnerReference{coTokenName=kyc, coOwner=w}
         Revoke w  -> wrap $ Trace.callEndpoint @"revoke"             (handle MirrorH) CredentialOwnerReference{coTokenName=kyc, coOwner=w}
         Call w    -> wrap $ Trace.callEndpoint @"sto"                (handle $ UserH w) stoSubscriber
         where                     -- v Wait a generous amount of blocks between calls
-            wrap m   = m *> delay waitSlots
+            wrap m   = () <$ m <* delay waitSlots
 
     shrinkAction _ Delay = []
     shrinkAction _ _     = [Delay]
 
     monitoring (_, s) _ = counterexample (show s)
-
-delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
-delay n = void $ Trace.waitNSlots $ fromIntegral n
 
 finalPredicate :: ModelState PrismModel -> TracePredicate
 finalPredicate _ =
@@ -200,7 +203,7 @@ noLockProof = NoLockedFundsProof
   }
 
 prop_NoLock :: Property
-prop_NoLock = checkNoLockedFundsProof defaultCheckOptions noLockProof
+prop_NoLock = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
 
 tests :: TestTree
 tests = testGroup "PRISM"

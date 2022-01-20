@@ -211,17 +211,19 @@ we simply distinguish contract instance keys by the wallet they are running in:
    :start-after: START ContractInstanceKey
    :end-before: END ContractInstanceKey
 
-Once this type is defined, we can construct our :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceSpec` by filling
-in the :hsobj:`Plutus.Contract.Test.ContractModel.initialHandleSpecs` field of the ``ContractModel`` class:
+Once this type is defined, we can tell QuickCheck what code to run for a given
+contract by filling in the
+:hsobj:`Plutus.Contract.Test.ContractModel.initialInstances`,
+:hsobj:`Plutus.Contract.Test.ContractModel.instanceWallet`, and
+:hsobj:`Plutus.Contract.Test.ContractModel.instanceContract` fields of the
+``ContractModel`` class:
 
 .. literalinclude:: GameModel.hs
    :start-after: START initialHandleSpecs
    :end-before: END initialHandleSpecs
 
-This specifies (reading from right to left) that we should create one
-contract instance per wallet, running ``G.contract``, the contract
-under test, in emulated wallet ``w``, and distinguished by a
-:hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey` of the form ``WalletKey w``.
+This specifies (reading top to bottom) that we should create one
+contract instance per wallet ``w``, that will run ``G.contract``, in wallet ``w``.
 
 Now we can run tests, although of course they will not yet succeed:
 
@@ -516,7 +518,7 @@ transfer the game :term:`token` from one wallet to another as specified by
    :end-before: END perform v1
 
 Every call to an end-point must be associated with one of the contract
-instances defined in our ``initialHandleSpecs``; the ``handle`` argument to
+instances defined in our ``initialInstances``; the ``handle`` argument to
 :hsobj:`Plutus.Contract.Test.ContractModel.perform` lets us find the contract handle associated with each
 :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey`.
 
@@ -671,12 +673,6 @@ a ``Lock`` call, we need to delay by two slots. Why two?  Because the
 blockchain. Likewise, we delay one slot after each of the other
 actions. (If the delays we insert are too short, we will discover this
 later via failed tests).
-
-We can cause the emulator to delay a number of slots like this:
-
-.. literalinclude:: GameModel.hs
-   :start-after: START delay
-   :end-before: END delay
 
 We add a call to ``delay`` in each branch of :hsobj:`Plutus.Contract.Test.ContractModel.perform`:
 

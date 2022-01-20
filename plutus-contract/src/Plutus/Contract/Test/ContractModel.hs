@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 module Plutus.Contract.Test.ContractModel
     ( -- * Contract models
       --
@@ -11,12 +12,15 @@ module Plutus.Contract.Test.ContractModel
     , balanceChange
     , minted
     , lockedValue
+    , symIsZero
     , GetModelState(..)
     , getContractState
     , askModelState
     , askContractState
     , viewModelState
     , viewContractState
+    , SymToken
+    , symAssetClassValue
     -- ** The Spec monad
     --
     -- $specMonad
@@ -29,8 +33,13 @@ module Plutus.Contract.Test.ContractModel
     , withdraw
     , transfer
     , modifyContractState
+    , createToken
     , ($=)
     , ($~)
+    -- * Helper functions for writing perform functions
+    , SpecificationEmulatorTrace
+    , registerToken
+    , delay
     -- * Test scenarios
     --
     -- $dynamicLogic
@@ -63,11 +72,15 @@ module Plutus.Contract.Test.ContractModel
     --
     -- $runningProperties
     , Actions(..)
+    , Act(..)
+    , pattern Actions
+    , actionsFromList
     -- ** Wallet contract handles
     --
     -- $walletHandles
     , SchemaConstraints
     , ContractInstanceSpec(..)
+    , SomeContractInstanceKey(..)
     , HandleFun
     -- ** Model properties
     , propSanityCheckModel
@@ -82,6 +95,7 @@ module Plutus.Contract.Test.ContractModel
     , propRunActions_
     , propRunActions
     , propRunActionsWithOptions
+    , defaultCheckOptionsContractModel
     -- ** DL properties
     , forAllDL
     -- ** Test cases
@@ -97,6 +111,9 @@ module Plutus.Contract.Test.ContractModel
     -- $noLockedFunds
     , NoLockedFundsProof(..)
     , checkNoLockedFundsProof
+    , checkNoLockedFundsProofFast
+    , checkNoLockedFundsProofWithWiggleRoom
+    , checkNoLockedFundsProofWithWiggleRoomFast
     -- $checkNoPartiality
     , Whitelist
     , whitelistOk

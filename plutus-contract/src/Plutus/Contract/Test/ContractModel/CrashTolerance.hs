@@ -29,82 +29,85 @@ import Data.Functor.Compose
 import Data.Typeable
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Trace.Effects.EmulatorControl
-import Plutus.Trace.Emulator qualified as Trace
 import Plutus.Trace.Emulator.Types
 import Test.QuickCheck as QC
 
 -- | This derived state is used to derive a new `ContractModel` on top of the `state` contract model
 -- that also specifies how the contract(s) behave when contract instances crash and restart.
 data WithCrashTolerance state = WithCrashTolerance { _underlyingModelState   :: state
-                                                   , _aliveContractInstances :: [ContractInstanceSpec state]
-                                                   , _deadContractInstances  :: [ContractInstanceSpec state] }
+                                                   , _aliveContractInstances :: [SomeContractInstanceKey state]
+                                                   , _deadContractInstances  :: [SomeContractInstanceKey state] }
 makeLenses ''WithCrashTolerance
 
-deriving instance (Show state, Show (ContractInstanceSpec state)) => Show (WithCrashTolerance state)
-deriving instance (Eq state, Eq (ContractInstanceSpec state)) => Eq (WithCrashTolerance state)
+deriving instance ContractModel state => Show (WithCrashTolerance state)
+deriving instance (Eq state, ContractModel state) => Eq (WithCrashTolerance state)
 
 class ContractModel state => CrashTolerance state where
   -- | Specifiy what happens when a contract instance crashes
-  crash :: ContractInstanceSpec state -> Spec state ()
+  crash :: SomeContractInstanceKey state -> Spec state ()
   crash _ = return ()
   -- | Specify what happens when a contract instance is restarted
-  restart :: ContractInstanceSpec state -> Spec state ()
+  restart :: SomeContractInstanceKey state -> Spec state ()
   restart _ = return ()
   -- | Check if an action is available given a list of alive
   -- contract instances.
-  available :: Action state -> [ContractInstanceSpec state] -> Bool
+  available :: Action state -> [SomeContractInstanceKey state] -> Bool
 
-instance (Show (ContractInstanceSpec state), Show (Action state)) => Show (Action (WithCrashTolerance state)) where
+instance ContractModel state => Show (Action (WithCrashTolerance state)) where
   showsPrec p (Crash cis)          = showParen (p >= 11) $ showString "Crash " . showsPrec 11 cis
   showsPrec p (Restart cis)        = showParen (p >= 11) $ showString "Restart " . showsPrec 11 cis
   showsPrec p (UnderlyingAction a) = showsPrec p a
-deriving instance (Typeable state, forall w s e. Eq (ContractInstanceKey state w s e), Eq (Action state)) => Eq (Action (WithCrashTolerance state))
+deriving instance ContractModel state => Eq (Action (WithCrashTolerance state))
 
 deriving instance Show (ContractInstanceKey state w s e) => Show (ContractInstanceKey (WithCrashTolerance state) w s e)
 deriving instance Eq (ContractInstanceKey state w s e) => Eq (ContractInstanceKey (WithCrashTolerance state) w s e)
 
-liftContractInstance :: ContractInstanceSpec state -> ContractInstanceSpec (WithCrashTolerance state)
-liftContractInstance (ContractInstanceSpec k w c) = ContractInstanceSpec (UnderlyingContractInstanceKey k) w c
+liftSomeContractInstanceKey :: SomeContractInstanceKey state -> SomeContractInstanceKey (WithCrashTolerance state)
+liftSomeContractInstanceKey (Key k) = Key (UnderlyingContractInstanceKey k)
 
-lowerContractInstance :: ContractInstanceSpec (WithCrashTolerance state) -> ContractInstanceSpec state
-lowerContractInstance (ContractInstanceSpec (UnderlyingContractInstanceKey k) w c) = ContractInstanceSpec k w c
+lowerSomeContractInstanceKey :: SomeContractInstanceKey (WithCrashTolerance state) -> SomeContractInstanceKey state
+lowerSomeContractInstanceKey (Key (UnderlyingContractInstanceKey k)) = Key k
 
 instance ( Typeable state
          , Show (ContractInstanceSpec state)
          , Eq (ContractInstanceSpec state)
          , CrashTolerance state) => ContractModel (WithCrashTolerance state) where
 
-  data Action (WithCrashTolerance state) = Crash (ContractInstanceSpec state)
-                                         | Restart (ContractInstanceSpec state)
+  data Action (WithCrashTolerance state) = Crash (SomeContractInstanceKey state)
+                                         | Restart (SomeContractInstanceKey state)
                                          | UnderlyingAction (Action state)
 
   data ContractInstanceKey (WithCrashTolerance state) w s e where
     UnderlyingContractInstanceKey :: ContractInstanceKey state w s e -> ContractInstanceKey (WithCrashTolerance state) w s e
 
-  initialState = WithCrashTolerance initialState initialHandleSpecs []
+  initialState = WithCrashTolerance initialState initialInstances []
 
-  initialHandleSpecs = liftContractInstance <$> initialHandleSpecs
+  initialInstances = liftSomeContractInstanceKey <$> initialInstances
+
+  instanceWallet (UnderlyingContractInstanceKey k) = instanceWallet k
+
+  instanceContract s sa (UnderlyingContractInstanceKey k) = instanceContract (_underlyingModelState <$> s) sa k
 
   -- We piggy-back on the underlying mechanism for starting contract instances that we
   -- get from
-  startInstances _ (Restart cis)        = [liftContractInstance cis]
-  startInstances s (UnderlyingAction a) = liftContractInstance <$> startInstances (_underlyingModelState <$> s) a
+  startInstances _ (Restart cis)        = [liftSomeContractInstanceKey cis]
+  startInstances s (UnderlyingAction a) = liftSomeContractInstanceKey <$> startInstances (_underlyingModelState <$> s) a
   startInstances _ _                    = []
 
-  perform h s a = case a of
-    Crash (ContractInstanceSpec key _ _) -> do
+  perform h t s a = case a of
+    Crash (Key key) -> do
       -- I'm not sure why this has to take two slots but if you don't make it take
       -- two slots the crash doesn't happen if its the first action
-      Trace.waitNSlots 1
+      delay 1
       -- This turns out to be enough. Restarting a contract instance overrides the handle
       -- for the contract instance and the existing instance becomes garbage. This does
       -- leak memory, but only relatively little and only during a test.
       freezeContractInstance . chInstanceId $ h (UnderlyingContractInstanceKey key)
-      void $ Trace.waitNSlots 1
+      delay 1
     Restart _ -> do
-      void $ Trace.waitNSlots 1
+      delay 1
     UnderlyingAction a -> do
-      perform (h . UnderlyingContractInstanceKey) (_underlyingModelState <$> s) a
+      perform (h . UnderlyingContractInstanceKey) t (_underlyingModelState <$> s) a
 
   precondition s a = case a of
     -- Only crash alive contract instances
@@ -130,7 +133,7 @@ instance ( Typeable state
       embed $ nextState a
       s <- Spec get
       -- An action may start its own contract instances and we need to keep track of them
-      aliveContractInstances %= ((lowerContractInstance <$> startInstances s (UnderlyingAction a)) ++)
+      aliveContractInstances %= ((lowerSomeContractInstanceKey <$> startInstances s (UnderlyingAction a)) ++)
     where
       embed :: Spec state a -> Spec (WithCrashTolerance state) a
       embed (Spec comp) = Spec (zoom (liftL _contractState underlyingModelState) comp)

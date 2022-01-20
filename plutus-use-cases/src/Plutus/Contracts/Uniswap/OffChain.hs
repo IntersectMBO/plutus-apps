@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
+{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
 
 module Plutus.Contracts.Uniswap.OffChain
     ( poolStateCoinFromUniswapCurrency, liquidityCoin
@@ -27,6 +28,7 @@ module Plutus.Contracts.Uniswap.OffChain
     , UniswapOwnerSchema
     , start, create, add, remove, close, swap, pools
     , ownerEndpoint, userEndpoints
+    , findSwapA, findSwapB, covIdx
     ) where
 
 import Control.Lens (view)
@@ -46,6 +48,8 @@ import Plutus.Contracts.Uniswap.OnChain (mkUniswapValidator, validateLiquidityMi
 import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
 import PlutusTx qualified
+import PlutusTx.Code
+import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
 import Prelude as Haskell (Int, Semigroup (..), String, div, dropWhile, flip, show, (^))
 import Text.Printf (printf)
@@ -111,6 +115,10 @@ liquidityPolicy us = mkMintingPolicyScript $
     $$(PlutusTx.compile [|| \u t -> Scripts.wrapMintingPolicy (validateLiquidityMinting u t) ||])
         `PlutusTx.applyCode` PlutusTx.liftCode us
         `PlutusTx.applyCode` PlutusTx.liftCode poolStateTokenName
+
+covIdx :: CoverageIndex
+covIdx = getCovIdx $$(PlutusTx.compile [|| \u t -> Scripts.wrapMintingPolicy (validateLiquidityMinting u t) ||]) <>
+         getCovIdx $$(PlutusTx.compile [|| mkUniswapValidator ||])
 
 liquidityCurrency :: Uniswap -> CurrencySymbol
 liquidityCurrency = scriptCurrencySymbol . liquidityPolicy

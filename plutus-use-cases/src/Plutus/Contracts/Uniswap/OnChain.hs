@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# options_ghc -fno-specialise         #-}
+{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
 
 module Plutus.Contracts.Uniswap.OnChain
     ( mkUniswapValidator

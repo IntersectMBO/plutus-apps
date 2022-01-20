@@ -85,9 +85,13 @@ instance ContractModel VestingModel where
     , _t1Amount     = vestingTrancheAmount (vestingTranche1 params)
     , _t2Amount     = vestingTrancheAmount (vestingTranche2 params) }
 
-  initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w (vestingContract params) | w <- [w1, w2, w3] ]
+  initialInstances = Key . WalletKey <$> [w1, w2, w3]
 
-  perform handle _ cmd = case cmd of
+  instanceWallet (WalletKey w) = w
+
+  instanceContract _ _ WalletKey{} = vestingContract params
+
+  perform handle _ _ cmd = case cmd of
     Vest w -> do
       callEndpoint @"vest funds" (handle $ WalletKey w) ()
       delay 1
@@ -103,8 +107,8 @@ instance ContractModel VestingModel where
     let amount =  vestingTrancheAmount (vestingTranche1 params)
                <> vestingTrancheAmount (vestingTranche2 params)
     withdraw w amount
-    vestedAmount $~ (<> amount)
-    vested       $~ (w:)
+    vestedAmount %= (<> amount)
+    vested       %= (w:)
     wait 1
 
   -- Retrieve `v` value as long as that leaves enough value to satisfy
@@ -120,7 +124,7 @@ instance ContractModel VestingModel where
          && Ada.fromValue v >= Ledger.minAdaTxOut
          && (Ada.fromValue newAmount == 0 || Ada.fromValue newAmount >= Ledger.minAdaTxOut)) $ do
       deposit w v
-      vestedAmount $= newAmount
+      vestedAmount .= newAmount
     wait 2
 
   nextState (WaitUntil s) = do
@@ -213,7 +217,7 @@ noLockProof = NoLockedFundsProof{
                       | otherwise = return ()
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptions noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
 
 -- Tests
 
@@ -283,8 +287,3 @@ expectedError =
         maxPayment = Ada.adaValueOf 20
         mustRemainLocked = Ada.adaValueOf 40
     in InsufficientFundsError payment maxPayment mustRemainLocked
-
-
--- Util
-delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
-delay n = void $ Trace.waitNSlots $ fromIntegral n

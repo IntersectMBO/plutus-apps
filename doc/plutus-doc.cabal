@@ -71,6 +71,7 @@ executable doc-doctests
       plutus-contract -any,
       playground-common -any,
       plutus-use-cases -any,
+      quickcheck-dynamic -any,
       prettyprinter -any,
       containers -any,
       freer-extras -any,

@@ -36,7 +36,7 @@ import Test.Tasty.QuickCheck (testProperty)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (Value, isZero)
+import Ledger.Value (Value)
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
@@ -77,11 +77,15 @@ instance ContractModel GameModel where
         , _currentSecret = ""
         }
 
-    initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w G.contract | w <- wallets ]
+    initialInstances = Key . WalletKey <$> wallets
+
+    instanceWallet (WalletKey w) = w
+
+    instanceContract _ _ WalletKey{} = G.contract
 
     -- 'perform' gets a state, which includes the GameModel state, but also contract handles for the
     -- wallets and what the model thinks the current balances are.
-    perform handle s cmd = case cmd of
+    perform handle _ s cmd = case cmd of
         Lock w new val -> do
             Trace.callEndpoint @"lock" (handle $ WalletKey w)
                          LockArgs{lockArgsSecret = secretArg new, lockArgsValue = Ada.lovelaceValueOf val}
@@ -100,9 +104,9 @@ instance ContractModel GameModel where
     -- 'nextState' descibes how each command affects the state of the model
 
     nextState (Lock w secret val) = do
-        hasToken      $= Just w
-        currentSecret $= secret
-        gameValue     $= val
+        hasToken      .= Just w
+        currentSecret .= secret
+        gameValue     .= val
         mint gameTokenVal
         deposit w gameTokenVal
         withdraw w $ Ada.lovelaceValueOf val
@@ -111,8 +115,8 @@ instance ContractModel GameModel where
     nextState (Guess w old new val) = do
         correct <- (old ==) <$> viewContractState currentSecret
         when correct $ do
-            currentSecret $= new
-            gameValue     $~ subtract val
+            currentSecret .= new
+            gameValue     %= subtract val
             deposit w $ Ada.lovelaceValueOf val
         wait 1
 
@@ -121,7 +125,7 @@ instance ContractModel GameModel where
         withdraw w0 $ Ada.toValue Ledger.minAdaTxOut
         deposit w $ Ada.toValue Ledger.minAdaTxOut
         transfer w0 w gameTokenVal
-        hasToken $= Just w
+        hasToken .= Just w
         wait 1
 
     -- To generate a random test case we need to know how to generate a random
@@ -137,22 +141,14 @@ instance ContractModel GameModel where
             genLockAction :: Gen (Action GameModel)
             genLockAction = do
               w <- genWallet
-              let currentWalletBalance = Ada.getLovelace $ Ada.adaOf 100 + Ada.fromValue (s ^. balanceChange w)
-              pure (Lock w) <*> genGuess <*> choose (Ada.getLovelace Ledger.minAdaTxOut, currentWalletBalance)
+              pure (Lock w) <*> genGuess <*> choose (Ada.getLovelace Ledger.minAdaTxOut, Ada.getLovelace (Ada.adaOf 100))
 
     -- The 'precondition' says when a particular command is allowed.
     precondition s cmd = case cmd of
             -- In order to lock funds, we need to satifsy the constraint where
             -- each tx out must have at least N Ada.
-            -- When we lock a value, we must make sure that we don't lock too
-            -- much funds, such that we can't pay to fees anymore and have a tx
-            -- out of less than N Ada.
-            -- We must also leave enough funds in order to transfer the game
-            -- token (along with 2 Ada) to another wallet.
-            Lock w _ v    -> let currentWalletBalance = Ada.adaOf 100 + Ada.fromValue (s ^. balanceChange w)
-                              in currentWalletBalance - Ada.lovelaceOf v - Ledger.minAdaTxOut >= Ledger.minAdaTxOut + Ledger.maxFee
-                                 && v >= Ada.getLovelace Ledger.minAdaTxOut
-                                 && isNothing tok
+            Lock _ _ v    -> v >= Ada.getLovelace Ledger.minAdaTxOut
+                          && isNothing tok
             Guess w _ _ v -> (val == v || Ada.Lovelace (val - v) >= Ledger.minAdaTxOut) && tok == Just w
             GiveToken _   -> isJust tok
         where
@@ -171,8 +167,8 @@ instance ContractModel GameModel where
     monitoring _ _ = id
 
 instance CrashTolerance GameModel where
-  available (Lock w _ _) specs    = ContractInstanceSpec (WalletKey w) w G.contract `elem` specs
-  available (Guess w _ _ _) specs = ContractInstanceSpec (WalletKey w) w G.contract `elem` specs
+  available (Lock w _ _) alive    = (Key $ WalletKey w) `elem` alive
+  available (Guess w _ _ _) alive = (Key $ WalletKey w) `elem` alive
   available _ _                   = True
 
 -- | The main property. 'propRunActions_' checks that balances match the model after each test.
@@ -188,13 +184,13 @@ prop_SanityCheckModel = propSanityCheckModel @GameModel
 check_prop_Game_with_coverage :: IO CoverageReport
 check_prop_Game_with_coverage =
   quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
-    propRunActionsWithOptions @GameModel defaultCheckOptions
+    propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))
 
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions
-                (set minLogLevel l defaultCheckOptions)
+                (set minLogLevel l defaultCheckOptionsContractModel)
                 defaultCoverageOptions
                 (\ _ -> pure True)
 
@@ -215,9 +211,6 @@ genGuess = QC.elements ["hello", "secret", "hunter2", "*******"]
 
 genValue :: Gen Integer
 genValue = choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000)
-
-delay :: Int -> EmulatorTraceNoStartContract ()
-delay n = void $ Trace.waitNSlots (fromIntegral n)
 
 -- Dynamic Logic ----------------------------------------------------------
 
@@ -253,7 +246,7 @@ noLockedFunds = do
         monitor $ label "Unlocking funds"
         action $ GiveToken w
         action $ Guess w secret "" val
-    assertModel "Locked funds should be zero" $ isZero . lockedValue
+    assertModel "Locked funds should be zero" $ symIsZero . lockedValue
 
 -- | Check that we can always get the money out of the guessing game (by guessing correctly).
 prop_NoLockedFunds :: Property
@@ -279,7 +272,7 @@ noLockProof = NoLockedFundsProof{
             when hasTok $ action (Guess w secret "" val)
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptions noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
 
 -- * Unit tests
 
