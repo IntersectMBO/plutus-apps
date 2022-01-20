@@ -26,6 +26,7 @@ import Test.QuickCheck hiding (generate)
 
 import Test.QuickCheck.DynamicLogic.CanGenerate
 import Test.QuickCheck.DynamicLogic.Quantify
+import Test.QuickCheck.DynamicLogic.SmartShrinking
 import Test.QuickCheck.StateModel
 
 -- | Dynamic logic formulae.
@@ -150,9 +151,7 @@ forAllUniqueScripts n s d k = case generate chooseUniqueNextStep d n s 500 [] of
 
 forAllScripts :: (DynLogicModel s, Testable a) =>
                    DynLogic s -> (Actions s -> a) -> Property
-forAllScripts d k =
-    forAllShrink (sized $ generateDLTest d) (shrinkDLTest d) $
-        withDLScript d k
+forAllScripts d k = forAllMappedScripts id id d k
 
 forAllScripts_ :: (DynLogicModel s, Testable a) =>
                    DynLogic s -> (Actions s -> a) -> Property
@@ -164,8 +163,9 @@ forAllMappedScripts ::
   (DynLogicModel s, Testable a, Show rep) =>
     (rep -> DynLogicTest s) -> (DynLogicTest s -> rep) -> DynLogic s -> (Actions s -> a) -> Property
 forAllMappedScripts to from d k =
-    forAllShrink (sized $ (from<$>) . generateDLTest d) ((from<$>) . shrinkDLTest d . to) $
-        withDLScript d k . to
+    forAllShrink (Smart 0 <$> (sized $ (from<$>) . generateDLTest d))
+                 (shrinkSmart ((from<$>) . shrinkDLTest d . to)) $ \(Smart _ script) ->
+        withDLScript d k (to script)
 
 forAllMappedScripts_ ::
   (DynLogicModel s, Testable a, Show rep) =>

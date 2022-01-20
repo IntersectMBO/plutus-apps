@@ -43,6 +43,7 @@
           "Test/QuickCheck/DynamicLogic/CanGenerate"
           "Test/QuickCheck/DynamicLogic/Monad"
           "Test/QuickCheck/DynamicLogic/Quantify"
+          "Test/QuickCheck/DynamicLogic/SmartShrinking"
           "Test/QuickCheck/StateModel"
           ];
         hsSourceDirs = [ "src" ];

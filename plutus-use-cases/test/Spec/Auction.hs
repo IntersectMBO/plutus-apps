@@ -199,8 +199,8 @@ instance ContractModel AuctionModel where
 
     arbitraryAction s
         | p /= NotStarted =
-            oneof [ WaitUntil . step <$> choose (1, 10 :: Integer)
-                  , Bid  <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000) ]
+            frequency [ (1, WaitUntil . step <$> choose (1, 10 :: Integer))
+                      , (10, Bid  <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000)) ]
         | otherwise = pure Init
         where
             p    = s ^. contractState . phase
@@ -247,6 +247,7 @@ instance ContractModel AuctionModel where
                     deposit leader $ Ada.lovelaceValueOf current
                     currentBid .= bid
                     winner     .= w
+                wait 2
 
     perform _ _ _ Init = delay 3
     perform _ _ _ (WaitUntil slot) = void $ Trace.waitUntilSlot slot
