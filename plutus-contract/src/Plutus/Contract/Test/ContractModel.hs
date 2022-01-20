@@ -93,6 +93,7 @@ module Plutus.Contract.Test.ContractModel
     , SchemaConstraints
     , ContractInstanceSpec(..)
     , SomeContractInstanceKey(..)
+    , StartContract(..)
     , HandleFun
     -- ** Model properties
     , propSanityCheckModel

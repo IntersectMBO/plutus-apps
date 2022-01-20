@@ -85,8 +85,8 @@ prop_Uniswap = propRunActions_
 
 deriving instance Eq (Action UniswapModel)
 deriving instance Show (Action UniswapModel)
-deriving instance Eq (ContractInstanceKey UniswapModel w s e)
-deriving instance Show (ContractInstanceKey UniswapModel w s e)
+deriving instance Eq (ContractInstanceKey UniswapModel w s e params)
+deriving instance Show (ContractInstanceKey UniswapModel w s e params)
 
 walletOf :: Action UniswapModel -> Wallet
 walletOf a = case a of
@@ -165,10 +165,10 @@ instance ContractModel UniswapModel where
                            | ClosePool Wallet SymToken SymToken
                            -- ^ Close a liquidity pool
 
-  data ContractInstanceKey UniswapModel w s e where
-    OwnerKey :: ContractInstanceKey UniswapModel (Last (Either Text.Text Uniswap)) EmptySchema ContractError
-    SetupKey :: ContractInstanceKey UniswapModel (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError
-    WalletKey :: Wallet -> ContractInstanceKey UniswapModel (Last (Either Text.Text UserContractState)) UniswapUserSchema Void
+  data ContractInstanceKey UniswapModel w s e params where
+    OwnerKey :: ContractInstanceKey UniswapModel (Last (Either Text.Text Uniswap)) EmptySchema ContractError ()
+    SetupKey :: ContractInstanceKey UniswapModel (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
+    WalletKey :: Wallet -> ContractInstanceKey UniswapModel (Last (Either Text.Text UserContractState)) UniswapUserSchema Void SymToken
 
   initialInstances = []
 
@@ -176,10 +176,10 @@ instance ContractModel UniswapModel where
   instanceWallet SetupKey      = w1
   instanceWallet (WalletKey w) = w
 
-  instanceContract s tokenSem key = case key of
-    OwnerKey -> ownerEndpoint
-    SetupKey -> setupTokens
-    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . tokenSem . fromJust . view (contractState . uniswapToken) $ s
+  instanceContract tokenSem key token = case key of
+    OwnerKey    -> ownerEndpoint
+    SetupKey    -> setupTokens
+    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . tokenSem  $ token
 
   initialState = UniswapModel Nothing mempty mempty mempty
 
@@ -225,9 +225,9 @@ instance ContractModel UniswapModel where
         return $ ClosePool w (getAToken t1 t2) (getBToken t1 t2)
 
   startInstances s act = case act of
-    Start       -> [ Key OwnerKey ]
-    SetupTokens -> [ Key SetupKey ]
-    _           -> [ Key . WalletKey . walletOf $ act
+    Start       -> [ StartContract OwnerKey () ]
+    SetupTokens -> [ StartContract SetupKey () ]
+    _           -> [ StartContract (WalletKey $ walletOf act) (fromJust $ s ^. contractState . uniswapToken)
                    | walletOf act `notElem` s ^. contractState . startedUserCode ]
 
   precondition s Start                        = not $ hasUniswapToken s

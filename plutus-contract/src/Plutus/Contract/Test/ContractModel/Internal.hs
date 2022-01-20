@@ -103,6 +103,7 @@ module Plutus.Contract.Test.ContractModel.Internal
     , SchemaConstraints
     , ContractInstanceSpec(..)
     , SomeContractInstanceKey(..)
+    , StartContract(..)
     , HandleFun
     -- ** Model properties
     , propSanityCheckModel
@@ -227,9 +228,9 @@ import Prettyprinter
 -- | Key-value map where keys and values have three indices that can vary between different elements
 --   of the map. Used to store `ContractHandle`s, which are indexed over observable state, schema,
 --   and error type.
-data IMap (key :: i -> j -> k -> *) (val :: i -> j -> k -> *) where
+data IMap (key :: i -> j -> k -> l -> *) (val :: i -> j -> k -> *) where
     IMNil  :: IMap key val
-    IMCons :: (Typeable i, Typeable j, Typeable k) => key i j k -> val i j k -> IMap key val -> IMap key val
+    IMCons :: (Typeable i, Typeable j, Typeable k, Typeable l) => key i j k l -> val i j k -> IMap key val -> IMap key val
 
 -- TODO: Should this make sure we don't duplicate keys?
 imAppend :: IMap key val -> IMap key val -> IMap key val
@@ -238,7 +239,7 @@ imAppend (IMCons k v m) m' = IMCons k v (imAppend m m')
 
 -- | Look up a value in an indexed map. First checks that the indices agree, using `cast`. Once the
 --   type checker is convinced that the indices match we can check the key for equality.
-imLookup :: (Typeable i, Typeable j, Typeable k, Typeable key, Typeable val, Eq (key i j k)) => key i j k -> IMap key val -> Maybe (val i j k)
+imLookup :: (Typeable i, Typeable j, Typeable k, Typeable l, Typeable key, Typeable val, Eq (key i j k l)) => key i j k l -> IMap key val -> Maybe (val i j k)
 imLookup _ IMNil = Nothing
 imLookup k (IMCons key val m) =
     case cast (key, val) of
@@ -273,22 +274,22 @@ type SchemaConstraints w schema err =
 -- | A `ContractInstanceSpec` associates a `ContractInstanceKey` with a concrete `Wallet` and
 --   `Contract`. The contract type parameters are hidden from the outside.
 data ContractInstanceSpec state where
-    ContractInstanceSpec :: SchemaConstraints w schema err
-                  => ContractInstanceKey state w schema err -- ^ The key used when looking up contract instance handles in `perform`
-                  -> Wallet                                 -- ^ The wallet who owns the contract instance
-                  -> Contract w schema err ()               -- ^ The contract that is running in the instance
+    ContractInstanceSpec :: (SchemaConstraints w schema err, Typeable params)
+                  => ContractInstanceKey state w schema err params -- ^ The key used when looking up contract instance handles in `perform`
+                  -> Wallet                                        -- ^ The wallet who owns the contract instance
+                  -> Contract w schema err ()                      -- ^ The contract that is running in the instance
                   -> ContractInstanceSpec state
 
 -- TODO: Here be ugly hacks to make the CrashTolerance stuff less ugly. The crash tolerance stuff can be done without this
 -- but then I have to write crap myself and I'm not paid enough to suffer that much!
-instance (forall w s e. Show (ContractInstanceKey state w s e)) => Show (ContractInstanceSpec state) where
+instance (forall w s e p. Show (ContractInstanceKey state w s e p)) => Show (ContractInstanceSpec state) where
   showsPrec p (ContractInstanceSpec key w _) = showParen (p >= 11) $ showString "ConstractInstanceSpec "
                                                                    . showsPrec 11 key
                                                                    . showString " "
                                                                    . showsPrec 11 w
                                                                    . showString " <Contract>"
 
-instance (Typeable state, forall w s e. Eq (ContractInstanceKey state w s e)) => Eq (ContractInstanceSpec state) where
+instance (Typeable state, forall w s e p. Eq (ContractInstanceKey state w s e p)) => Eq (ContractInstanceSpec state) where
   ContractInstanceSpec key w _ == ContractInstanceSpec key' w' _ = w == w' && cast key == Just key'
 
 data WalletContractHandle w s e = WalletContractHandle Wallet (ContractHandle w s e)
@@ -305,18 +306,18 @@ instancesForOtherWallets w (IMCons _ (WalletContractHandle w' h) m)
   | w /= w'   = chInstanceId h : instancesForOtherWallets w m
   | otherwise = instancesForOtherWallets w m
 
-activateWallets :: forall state. ContractModel state => ModelState state -> (SymToken -> AssetClass) -> [SomeContractInstanceKey state] -> EmulatorTrace (Handles state)
-activateWallets _ _ [] = return IMNil
-activateWallets st sa (Key key : keys) = do
+activateWallets :: forall state. ContractModel state => (SymToken -> AssetClass) -> [StartContract state] -> EmulatorTrace (Handles state)
+activateWallets _ [] = return IMNil
+activateWallets sa (StartContract key params : starts) = do
     let wallet = instanceWallet key
-    h <- activateContract wallet (instanceContract st sa key) (instanceTag key)
-    m <- activateWallets st sa keys
+    h <- activateContract wallet (instanceContract sa key params) (instanceTag key)
+    m <- activateWallets sa starts
     return $ IMCons key (WalletContractHandle wallet h) m
 
 -- | A function returning the `ContractHandle` corresponding to a `ContractInstanceKey`. A
 --   `HandleFun` is provided to the `perform` function to enable calling contract endpoints with
 --   `Plutus.Trace.Emulator.callEndpoint`.
-type HandleFun state = forall w schema err. (Typeable w, Typeable schema, Typeable err) => ContractInstanceKey state w schema err -> ContractHandle w schema err
+type HandleFun state = forall w schema err params. (Typeable w, Typeable schema, Typeable err, Typeable params) => ContractInstanceKey state w schema err params -> ContractHandle w schema err
 
 -- | The `ModelState` models the state of the blockchain. It contains,
 --
@@ -356,7 +357,10 @@ instance MonadState state (Spec state) where
     {-# INLINE put #-}
 
 data SomeContractInstanceKey state where
-  Key :: SchemaConstraints w s e => ContractInstanceKey state w s e -> SomeContractInstanceKey state
+  Key :: (SchemaConstraints w s e, Typeable p) => ContractInstanceKey state w s e p -> SomeContractInstanceKey state
+
+data StartContract state where
+  StartContract :: (SchemaConstraints w s e, Typeable p) => ContractInstanceKey state w s e p -> p -> StartContract state
 
 instance ContractModel state => Eq (SomeContractInstanceKey state) where
   Key k == Key k' = Just k == cast k'
@@ -396,8 +400,8 @@ class ( Typeable state
       , Show state
       , Show (Action state)
       , Eq (Action state)
-      , (forall w s e. Eq (ContractInstanceKey state w s e))
-      , (forall w s e. Show (ContractInstanceKey state w s e))
+      , (forall w s e p. Eq (ContractInstanceKey state w s e p))
+      , (forall w s e p. Show (ContractInstanceKey state w s e p))
       ) => ContractModel state where
 
     -- | The type of actions that are supported by the contract. An action usually represents a single
@@ -415,17 +419,17 @@ class ( Typeable state
     --   one seller and multiple buyers could look like this.
     --
     --   >  data ContractInstanceKey MyModel w s e where
-    --   >      Buyer  :: Wallet -> ContractInstanceKey MyModel MyObsState MySchema MyError
-    --   >      Seller :: ContractInstanceKey MyModel MyObsState MySchema MyError
-    data ContractInstanceKey state :: * -> Row * -> * -> *
+    --   >      Buyer  :: Wallet -> ContractInstanceKey MyModel MyObsState MySchema MyError MyParams
+    --   >      Seller :: ContractInstanceKey MyModel MyObsState MySchema MyError MyParams
+    data ContractInstanceKey state :: * -> Row * -> * -> * -> *
 
     -- | Get the wallet that the contract running at a specific `ContractInstanceKey` should run
     -- in
-    instanceWallet :: ContractInstanceKey state w s e -> Wallet
+    instanceWallet :: ContractInstanceKey state w s e p -> Wallet
 
     -- | The 'ContractInstanceTag' of an instance key for a wallet. Defaults to 'walletInstanceTag'.
     --   You must override this if you have multiple instances per wallet.
-    instanceTag :: forall w s e. SchemaConstraints w s e => ContractInstanceKey state w s e -> ContractInstanceTag
+    instanceTag :: forall w s e p. SchemaConstraints w s e => ContractInstanceKey state w s e p -> ContractInstanceTag
     instanceTag = walletInstanceTag . instanceWallet
 
     -- | Given the current model state, provide a QuickCheck generator for a random next action.
@@ -437,7 +441,7 @@ class ( Typeable state
     initialState :: state
 
     -- | The initial handles
-    initialInstances :: [SomeContractInstanceKey state]
+    initialInstances :: [StartContract state]
 
     -- | The `precondition` function decides if a given action is valid in a given state. Typically
     --   actions generated by `arbitraryAction` will satisfy the precondition, but if they don't
@@ -462,14 +466,14 @@ class ( Typeable state
     -- | Start new contract instances
     startInstances :: ModelState state
                    -> Action state
-                   -> [SomeContractInstanceKey state]
+                   -> [StartContract state]
     startInstances _ _ = []
 
     -- | Map a `ContractInstanceKey` `k` to the `Contract` that is started when we start
     -- `k` in a given `ModelState` with a given semantics of `SymToken`s
-    instanceContract :: ModelState state
-                     -> (SymToken -> AssetClass)
-                     -> ContractInstanceKey state w s e
+    instanceContract :: (SymToken -> AssetClass)
+                     -> ContractInstanceKey state w s e p
+                     -> p
                      -> Contract w s e ()
 
     -- | While `nextState` models the behaviour of the actions, `perform` contains the code for
@@ -688,7 +692,7 @@ instance GetModelState (Spec state) where
     type StateType (Spec state) = state
     getModelState = Spec State.get
 
-handle :: (ContractModel s) => Handles s -> HandleFun s
+handle :: ContractModel s => Handles s -> HandleFun s
 handle handles key =
     case imLookup key handles of
         Just (WalletContractHandle _ h) -> h
@@ -735,8 +739,8 @@ runEmulator_ a = cmsEmulatorAction %= (<> EmulatorAction (\ h -> h <$ a h))
 runEmulator :: (Handles state -> EmulatorMonad (Handles state)) -> ContractMonad state ()
 runEmulator a = cmsEmulatorAction %= (<> EmulatorAction (\ h -> a h))
 
-addInstances :: [SomeContractInstanceKey state] -> ContractMonad state ()
-addInstances keys = cmsContractInstances <>= keys
+addInstances :: [StartContract state] -> ContractMonad state ()
+addInstances starts = cmsContractInstances <>= [Key key | StartContract key _ <- starts]
 
 setHandles :: EmulatorMonad (Handles state) -> ContractMonad state ()
 setHandles a = cmsEmulatorAction %= (<> EmulatorAction (const a))
@@ -796,7 +800,7 @@ instance ContractModel state => StateModel (ModelState state) where
         let lookup (SymToken outerVar idx) = case Map.lookup idx $ fold (Map.lookup (envOuter outerVar) envInner) of
               Just tok -> tok
               Nothing  -> error $ "Missing registerToken call for token: " ++ show idx
-        newHandles <- lift $ activateWallets s lookup newKeys
+        newHandles <- lift $ activateWallets lookup newKeys
         let h' = handlesAppend newHandles h
         (_, result) <- lift . raise . runWriter $ perform (handle h') lookup s cmd
         -- Ensure that each call to `createToken` in the spec corresponds to a call to
@@ -1348,7 +1352,7 @@ addEndpointCoverage copts keys es pm
     return x
   | otherwise = pm
 
-contractInstanceEndpoints :: forall state w s e. SchemaConstraints w s e => ContractInstanceKey state w s e -> [String]
+contractInstanceEndpoints :: forall state w s e p. SchemaConstraints w s e => ContractInstanceKey state w s e p -> [String]
 contractInstanceEndpoints _ = labels' @(Input s)
 
 -- | Run a `Actions` in the emulator and check that the model and the emulator agree on the final
@@ -1420,7 +1424,7 @@ propRunActionsWithOptions opts copts predicate actions' =
 initiateWallets :: ContractModel state => ContractMonad state ()
 initiateWallets = do
   addInstances initialInstances
-  setHandles $ lift (activateWallets StateModel.initialState (\ _ -> error "activateWallets: no sym tokens should have been created yet") initialInstances)
+  setHandles $ lift (activateWallets (\ _ -> error "activateWallets: no sym tokens should have been created yet") initialInstances)
   return ()
 
 propRunActionsWithOptions' :: forall state.

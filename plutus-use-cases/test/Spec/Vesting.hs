@@ -62,15 +62,15 @@ data VestingModel =
 
 makeLenses 'VestingModel
 
-deriving instance Eq (ContractInstanceKey VestingModel w schema err)
-deriving instance Show (ContractInstanceKey VestingModel w schema err)
+deriving instance Eq (ContractInstanceKey VestingModel w schema err params)
+deriving instance Show (ContractInstanceKey VestingModel w schema err params)
 
 -- This instance models the behaviour of the vesting contract. There are some peculiarities
 -- that stem from the implementation of the contract that are apparent in the precondition
 -- to the `Vest` endpoint.
 instance ContractModel VestingModel where
-  data ContractInstanceKey VestingModel w schema err where
-    WalletKey :: Wallet -> ContractInstanceKey VestingModel () VestingSchema VestingError
+  data ContractInstanceKey VestingModel w schema err params where
+    WalletKey :: Wallet -> ContractInstanceKey VestingModel () VestingSchema VestingError ()
 
   data Action VestingModel = Vest Wallet
                            | Retrieve Wallet Value
@@ -85,11 +85,11 @@ instance ContractModel VestingModel where
     , _t1Amount     = vestingTrancheAmount (vestingTranche1 params)
     , _t2Amount     = vestingTrancheAmount (vestingTranche2 params) }
 
-  initialInstances = Key . WalletKey <$> [w1, w2, w3]
+  initialInstances = (`StartContract` ()) . WalletKey <$> [w1, w2, w3]
 
   instanceWallet (WalletKey w) = w
 
-  instanceContract _ _ WalletKey{} = vestingContract params
+  instanceContract _ WalletKey{} _ = vestingContract params
 
   perform handle _ _ cmd = case cmd of
     Vest w -> do

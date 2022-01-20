@@ -128,17 +128,17 @@ waitSlots = 10
 users :: [Wallet]
 users = [user, w4]
 
-deriving instance Eq   (ContractInstanceKey PrismModel w s e)
-deriving instance Show (ContractInstanceKey PrismModel w s e)
+deriving instance Eq   (ContractInstanceKey PrismModel w s e params)
+deriving instance Show (ContractInstanceKey PrismModel w s e params)
 
 instance ContractModel PrismModel where
 
     data Action PrismModel = Delay | Issue Wallet | Revoke Wallet | Call Wallet
         deriving (Eq, Show)
 
-    data ContractInstanceKey PrismModel w s e where
-        MirrorH  ::           ContractInstanceKey PrismModel () C.MirrorSchema            C.MirrorError
-        UserH    :: Wallet -> ContractInstanceKey PrismModel () C.STOSubscriberSchema     C.UnlockError
+    data ContractInstanceKey PrismModel w s e params where
+        MirrorH  ::           ContractInstanceKey PrismModel () C.MirrorSchema            C.MirrorError ()
+        UserH    :: Wallet -> ContractInstanceKey PrismModel () C.STOSubscriberSchema     C.UnlockError ()
 
     arbitraryAction _ = QC.oneof [pure Delay, genUser Revoke, genUser Issue,
                                   genUser Call]
@@ -146,13 +146,13 @@ instance ContractModel PrismModel where
 
     initialState = PrismModel { _walletState = Map.empty }
 
-    initialInstances = Key MirrorH : (Key . UserH <$> users)
+    initialInstances = StartContract MirrorH () : ((`StartContract` ()) . UserH <$> users)
 
     instanceWallet MirrorH   = mirror
     instanceWallet (UserH w) = w
 
-    instanceContract _ _ MirrorH = C.mirror
-    instanceContract _ _ UserH{} = C.subscribeSTO
+    instanceContract _ MirrorH _ = C.mirror
+    instanceContract _ UserH{} _ = C.subscribeSTO
 
     precondition s (Issue w) = (s ^. contractState . isIssued w) /= Issued  -- Multiple Issue (without Revoke) breaks the contract
     precondition _ _         = True
