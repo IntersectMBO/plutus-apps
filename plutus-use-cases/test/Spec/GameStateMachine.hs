@@ -33,8 +33,10 @@ import Test.Tasty hiding (after)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.QuickCheck (testProperty)
 
+import Data.Default (Default (def))
 import Ledger qualified
 import Ledger.Ada qualified as Ada
+import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Plutus.Contract.Secrets
@@ -45,13 +47,18 @@ import Plutus.Contracts.GameStateMachine as G
 import Plutus.Trace.Emulator as Trace
 import PlutusTx qualified
 import PlutusTx.Coverage
+
+gameParam :: G.GameParam
+gameParam = G.GameParam (mockWalletPaymentPubKeyHash w1) (TimeSlot.scSlotZeroTime def)
+
 --
 -- * QuickCheck model
 
 data GameModel = GameModel
     { _gameValue     :: Integer
     , _hasToken      :: Maybe Wallet
-    , _currentSecret :: String }
+    , _currentSecret :: String
+    }
     deriving (Show)
 
 makeLenses 'GameModel
@@ -88,17 +95,22 @@ instance ContractModel GameModel where
     perform handle _ s cmd = case cmd of
         Lock w new val -> do
             Trace.callEndpoint @"lock" (handle $ WalletKey w)
-                         LockArgs{lockArgsSecret = secretArg new, lockArgsValue = Ada.lovelaceValueOf val}
+                LockArgs { lockArgsGameParam = gameParam
+                         , lockArgsSecret = secretArg new
+                         , lockArgsValue = Ada.lovelaceValueOf val
+                         }
             delay 2
         Guess w old new val -> do
             Trace.callEndpoint @"guess" (handle $ WalletKey w)
-                GuessArgs{ guessArgsOldSecret = old
-                         , guessArgsNewSecret = secretArg new
-                         , guessArgsValueTakenOut = Ada.lovelaceValueOf val}
+                GuessArgs { guessArgsGameParam = gameParam
+                          , guessArgsOldSecret = old
+                          , guessArgsNewSecret = secretArg new
+                          , guessArgsValueTakenOut = Ada.lovelaceValueOf val
+                          }
             delay 1
         GiveToken w' -> do
             let w = fromJust (s ^. contractState . hasToken)
-            _ <- Trace.payToWallet w w' gameTokenVal
+            _ <- Trace.payToWallet w w' guessTokenVal
             delay 1
 
     -- 'nextState' descibes how each command affects the state of the model
@@ -107,8 +119,8 @@ instance ContractModel GameModel where
         hasToken      .= Just w
         currentSecret .= secret
         gameValue     .= val
-        mint gameTokenVal
-        deposit w gameTokenVal
+        mint guessTokenVal
+        deposit w guessTokenVal
         withdraw w $ Ada.lovelaceValueOf val
         wait 2
 
@@ -124,7 +136,7 @@ instance ContractModel GameModel where
         w0 <- fromJust <$> viewContractState hasToken
         withdraw w0 $ Ada.toValue Ledger.minAdaTxOut
         deposit w $ Ada.toValue Ledger.minAdaTxOut
-        transfer w0 w gameTokenVal
+        transfer w0 w guessTokenVal
         hasToken .= Just w
         wait 1
 
@@ -183,7 +195,7 @@ prop_SanityCheckModel = propSanityCheckModel @GameModel
 
 check_prop_Game_with_coverage :: IO CoverageReport
 check_prop_Game_with_coverage =
-  quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+  quickCheckWithCoverage (set coverageIndex (covIdx gameParam) defaultCoverageOptions) $ \covopts ->
     propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))
@@ -280,39 +292,38 @@ tests :: TestTree
 tests =
     testGroup "game state machine with secret arguments tests"
     [ checkPredicate "run a successful game trace"
-        (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 3 <> gameTokenVal)
-        .&&. valueAtAddress (Scripts.validatorAddress G.typedValidator) (Ada.adaValueOf 5 ==)
+        (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 3 <> guessTokenVal)
+        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))
         successTrace
 
     , checkPredicate "run a 2nd successful game trace"
         (walletFundsChange w2 (Ada.adaValueOf 3)
-        .&&. valueAtAddress (Scripts.validatorAddress G.typedValidator) (Ada.adaValueOf 0 ==)
+        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 0 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8))
-        .&&. walletFundsChange w3 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 5 <> gameTokenVal))
+        .&&. walletFundsChange w3 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 5 <> guessTokenVal))
         successTrace2
 
     , checkPredicate "run a successful game trace where we try to leave 1 Ada in the script address"
-        (walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> gameTokenVal)
-        .&&. valueAtAddress (Scripts.validatorAddress G.typedValidator) (Ada.toValue Ledger.minAdaTxOut ==))
+        (walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> guessTokenVal)
+        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.toValue Ledger.minAdaTxOut ==))
         traceLeaveOneAdaInScript
 
     , checkPredicate "run a failed trace"
-        (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> gameTokenVal)
-        .&&. valueAtAddress (Scripts.validatorAddress G.typedValidator) (Ada.adaValueOf 8 ==)
+        (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> guessTokenVal)
+        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 8 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))
         failTrace
 
     , goldenPir "test/Spec/gameStateMachine.pir" $$(PlutusTx.compile [|| mkValidator ||])
 
     , HUnit.testCaseSteps "script size is reasonable" $ \step ->
-        reasonable' step (Scripts.validatorScript G.typedValidator) 49000
+        reasonable' step (Scripts.validatorScript $ G.typedValidator gameParam) 49000
 
     , testProperty "can always get the funds out" $
         withMaxSuccess 10 prop_NoLockedFunds
 
-    , testProperty "sanity check the contract model" $
-        prop_SanityCheckModel
+    , testProperty "sanity check the contract model" prop_SanityCheckModel
     ]
 
 initialVal :: Value
@@ -324,14 +335,21 @@ initialVal = Ada.adaValueOf 10
 successTrace :: EmulatorTrace ()
 successTrace = do
     hdl <- Trace.activateContractWallet w1 G.contract
-    Trace.callEndpoint @"lock" hdl LockArgs{lockArgsSecret=secretArg "hello", lockArgsValue= Ada.adaValueOf 8}
+    Trace.callEndpoint @"lock" hdl LockArgs { lockArgsGameParam = gameParam
+                                            , lockArgsSecret = secretArg "hello"
+                                            , lockArgsValue = Ada.adaValueOf 8
+                                            }
     -- One slot for sending the Ada to the script and one slot for minting the
     -- guess token
     _ <- Trace.waitNSlots 2
-    _ <- Trace.payToWallet w1 w2 gameTokenVal
+    _ <- Trace.payToWallet w1 w2 guessTokenVal
     _ <- Trace.waitNSlots 1
     hdl2 <- Trace.activateContractWallet w2 G.contract
-    Trace.callEndpoint @"guess" hdl2 GuessArgs{guessArgsOldSecret="hello", guessArgsNewSecret=secretArg "new secret", guessArgsValueTakenOut=Ada.adaValueOf 3}
+    Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
+                                               , guessArgsOldSecret = "hello"
+                                               , guessArgsNewSecret = secretArg "new secret"
+                                               , guessArgsValueTakenOut = Ada.adaValueOf 3
+                                               }
     void $ Trace.waitNSlots 1
 
 -- | Run 'successTrace', then wallet 2 transfers the token to wallet 3, which
@@ -339,10 +357,14 @@ successTrace = do
 successTrace2 :: EmulatorTrace ()
 successTrace2 = do
     successTrace
-    _ <- Trace.payToWallet w2 w3 gameTokenVal
+    _ <- Trace.payToWallet w2 w3 guessTokenVal
     _ <- Trace.waitNSlots 1
     hdl3 <- Trace.activateContractWallet w3 G.contract
-    Trace.callEndpoint @"guess" hdl3 GuessArgs{guessArgsOldSecret="new secret", guessArgsNewSecret=secretArg "hello", guessArgsValueTakenOut=Ada.adaValueOf 5}
+    Trace.callEndpoint @"guess" hdl3 GuessArgs { guessArgsGameParam = gameParam
+                                               , guessArgsOldSecret = "new secret"
+                                               , guessArgsNewSecret = secretArg "hello"
+                                               , guessArgsValueTakenOut = Ada.adaValueOf 5
+                                               }
     void $ Trace.waitNSlots 1
 
 -- | Tests whether the contract correctly handles the case where we leave less
@@ -350,9 +372,16 @@ successTrace2 = do
 traceLeaveOneAdaInScript :: EmulatorTrace ()
 traceLeaveOneAdaInScript = do
     hdl <- Trace.activateContractWallet w1 G.contract
-    Trace.callEndpoint @"lock" hdl LockArgs{lockArgsSecret=secretArg "hello", lockArgsValue= Ada.adaValueOf 8}
+    Trace.callEndpoint @"lock" hdl LockArgs { lockArgsGameParam = gameParam
+                                            , lockArgsSecret = secretArg "hello"
+                                            , lockArgsValue = Ada.adaValueOf 8
+                                            }
     _ <- Trace.waitNSlots 2
-    _ <- Trace.callEndpoint @"guess" hdl GuessArgs{guessArgsOldSecret="hello", guessArgsNewSecret=secretArg "new secret", guessArgsValueTakenOut=Ada.adaValueOf 7}
+    _ <- Trace.callEndpoint @"guess" hdl GuessArgs { guessArgsGameParam = gameParam
+                                                   , guessArgsOldSecret = "hello"
+                                                   , guessArgsNewSecret = secretArg "new secret"
+                                                   , guessArgsValueTakenOut = Ada.adaValueOf 7
+                                                   }
     void $ Trace.waitNSlots 1
 
 -- | Wallet 1 locks some funds, transfers the token to wallet 2
@@ -360,15 +389,22 @@ traceLeaveOneAdaInScript = do
 failTrace :: EmulatorTrace ()
 failTrace = do
     hdl <- Trace.activateContractWallet w1 G.contract
-    Trace.callEndpoint @"lock" hdl LockArgs{lockArgsSecret=secretArg "hello", lockArgsValue= Ada.adaValueOf 8}
+    Trace.callEndpoint @"lock" hdl LockArgs { lockArgsGameParam = gameParam
+                                            , lockArgsSecret = secretArg "hello"
+                                            , lockArgsValue = Ada.adaValueOf 8
+                                            }
     _ <- Trace.waitNSlots 2
-    _ <- Trace.payToWallet w1 w2 gameTokenVal
+    _ <- Trace.payToWallet w1 w2 guessTokenVal
     _ <- Trace.waitNSlots 1
     hdl2 <- Trace.activateContractWallet w2 G.contract
-    _ <- Trace.callEndpoint @"guess" hdl2 GuessArgs{guessArgsOldSecret="hola", guessArgsNewSecret=secretArg "new secret", guessArgsValueTakenOut=Ada.adaValueOf 3}
+    _ <- Trace.callEndpoint @"guess" hdl2 GuessArgs { guessArgsGameParam = gameParam
+                                                    , guessArgsOldSecret = "hola"
+                                                    , guessArgsNewSecret = secretArg "new secret"
+                                                    , guessArgsValueTakenOut = Ada.adaValueOf 3
+                                                    }
     void $ Trace.waitNSlots 1
 
-gameTokenVal :: Value
-gameTokenVal =
-    let sym = Scripts.forwardingMintingPolicyHash G.typedValidator
+guessTokenVal :: Value
+guessTokenVal =
+    let sym = Scripts.forwardingMintingPolicyHash $ G.typedValidator gameParam
     in G.token sym "guess"

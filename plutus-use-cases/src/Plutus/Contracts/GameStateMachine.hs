@@ -25,12 +25,14 @@
 module Plutus.Contracts.GameStateMachine(
     contract
     , typedValidator
-    , GameToken
+    , GameParam(..)
+    , GuessToken
     , mkValidator
     , mintingPolicy
     , LockArgs(..)
     , GuessArgs(..)
-    , GameStateMachineSchema, GameError
+    , GameStateMachineSchema
+    , GameError
     , token
     , covIdx
     ) where
@@ -38,29 +40,38 @@ module Plutus.Contracts.GameStateMachine(
 import Control.Lens (makeClassyPrisms)
 import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.ByteString.Char8 qualified as C
 import GHC.Generics (Generic)
-import Ledger hiding (to)
+import Ledger (MintingPolicyHash, POSIXTime, PaymentPubKeyHash, TokenName, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as V
-import PlutusTx qualified
-import PlutusTx.Code
-import PlutusTx.Coverage
-import PlutusTx.Prelude hiding (Applicative (..), check)
-import Schema (ToArgument, ToSchema)
-
-import Data.ByteString.Char8 qualified as C
-
-import Plutus.Contract.StateMachine (State (..), Void)
+import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, Promise, endpoint,
+                        selectList, type (.\/))
+import Plutus.Contract.Secrets (SecretArgument, escape_sha2_256, extractSecret)
+import Plutus.Contract.StateMachine (State (State, stateData, stateValue), Void)
 import Plutus.Contract.StateMachine qualified as SM
-
-import Plutus.Contract
-import Plutus.Contract.Secrets
+import PlutusTx qualified
+import PlutusTx.Code (getCovIdx)
+import PlutusTx.Coverage (CoverageIndex)
+import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), sha2_256, toBuiltin,
+                         traceIfFalse, ($), (&&), (-), (.), (<$>), (<>), (==), (>>))
+import Schema (ToSchema)
 
 import Prelude qualified as Haskell
 
+-- | Datatype for creating a parameterized validator.
+data GameParam = GameParam
+    { gameParamPayeePkh  :: PaymentPubKeyHash
+    -- ^ Payment public key hash of the wallet locking some funds
+    , gameParamStartTime :: POSIXTime
+    -- ^ Starting time of the game
+    } deriving (Haskell.Show, Generic)
+      deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+PlutusTx.makeLift ''GameParam
 
 newtype HashedString = HashedString BuiltinByteString
     deriving newtype (Eq, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
@@ -79,24 +90,28 @@ PlutusTx.makeLift ''ClearString
 -- | Arguments for the @"lock"@ endpoint
 data LockArgs =
     LockArgs
-        { lockArgsSecret :: SecretArgument Haskell.String
+        { lockArgsGameParam :: GameParam
+        -- ^ The parameters for parameterizing the validator.
+        , lockArgsSecret    :: SecretArgument Haskell.String
         -- ^ The secret
-        , lockArgsValue  :: Value
+        , lockArgsValue     :: Value
         -- ^ Value that is locked by the contract initially
         } deriving stock (Haskell.Show, Generic)
-          deriving anyclass (ToJSON, FromJSON, ToSchema, ToArgument)
+          deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 -- | Arguments for the @"guess"@ endpoint
 data GuessArgs =
     GuessArgs
-        { guessArgsOldSecret     :: Haskell.String
+        { guessArgsGameParam     :: GameParam
+        -- ^ The parameters for parameterizing the validator.
+        , guessArgsOldSecret     :: Haskell.String
         -- ^ The guess
         , guessArgsNewSecret     :: SecretArgument Haskell.String
         -- ^ The new secret
         , guessArgsValueTakenOut :: Value
         -- ^ How much to extract from the contract
         } deriving stock (Haskell.Show, Generic)
-          deriving anyclass (ToJSON, FromJSON, ToSchema, ToArgument)
+          deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 -- | The schema of the contract. It consists of the two endpoints @"lock"@
 --   and @"guess"@ with their respective argument types.
@@ -123,7 +138,7 @@ contract :: Contract () GameStateMachineSchema GameError ()
 contract = selectList [lock, guess] >> contract
 
 -- | The token that represents the right to make a guess
-newtype GameToken = GameToken { unGameToken :: Value }
+newtype GuessToken = GuessToken { unGuessToken :: Value }
     deriving newtype (Eq, Haskell.Show)
 
 token :: MintingPolicyHash -> TokenName -> Value
@@ -145,6 +160,7 @@ instance Eq GameState where
     {-# INLINABLE (==) #-}
     (Initialised sym tn s) == (Initialised sym' tn' s') = sym == sym' && s == s' && tn == tn'
     (Locked sym tn s) == (Locked sym' tn' s')           = sym == sym' && s == s' && tn == tn'
+    Finished == Finished                                = True
     _ == _                                              = traceIfFalse "states not equal" False
 
 -- | Check whether a 'ClearString' is the preimage of a
@@ -162,9 +178,15 @@ data GameInput =
     deriving stock (Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
+-- The 'GameParam' parameter is not used in the validation. It is meant to
+-- parameterize the script address depending based on the value of 'GaramParam'.
 {-# INLINABLE transition #-}
-transition :: State GameState -> GameInput -> Maybe (TxConstraints Void Void, State GameState)
-transition State{stateData=oldData, stateValue=oldValue} input = case (oldData, input) of
+transition
+    :: GameParam
+    -> State GameState
+    -> GameInput
+    -> Maybe (TxConstraints Void Void, State GameState)
+transition _ State{stateData=oldData, stateValue=oldValue} input = case (oldData, input) of
     (Initialised mph tn s, MintToken) ->
         let constraints = Constraints.mustMintCurrency mph tn 1 in
         Just ( constraints
@@ -175,7 +197,8 @@ transition State{stateData=oldData, stateValue=oldValue} input = case (oldData, 
              )
     (Locked mph tn currentSecret, Guess theGuess nextSecret takenOut)
         | checkGuess currentSecret theGuess ->
-        let constraints = Constraints.mustSpendAtLeast (token mph tn) <> Constraints.mustMintCurrency mph tn 0
+        let constraints = Constraints.mustSpendAtLeast (token mph tn)
+                       <> Constraints.mustMintCurrency mph tn 0
             newValue = oldValue - takenOut
          in Just ( constraints
                  , State
@@ -190,17 +213,17 @@ transition State{stateData=oldData, stateValue=oldValue} input = case (oldData, 
 type GameStateMachine = SM.StateMachine GameState GameInput
 
 {-# INLINABLE machine #-}
-machine :: GameStateMachine
-machine = SM.mkStateMachine Nothing transition isFinal where
+machine :: GameParam -> GameStateMachine
+machine gameParam = SM.mkStateMachine Nothing (transition gameParam) isFinal where
     isFinal Finished = True
     isFinal _        = False
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: Scripts.ValidatorType GameStateMachine
-mkValidator = SM.mkValidator machine
+mkValidator :: GameParam -> Scripts.ValidatorType GameStateMachine
+mkValidator gameParam = SM.mkValidator (machine gameParam)
 
-typedValidator :: Scripts.TypedValidator GameStateMachine
-typedValidator = Scripts.mkTypedValidator @GameStateMachine
+typedValidator :: GameParam -> Scripts.TypedValidator GameStateMachine
+typedValidator = Scripts.mkTypedValidatorParam @GameStateMachine
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
@@ -208,36 +231,37 @@ typedValidator = Scripts.mkTypedValidator @GameStateMachine
 
 -- TODO: Ideas welcome for how to make this interface suck less.
 -- Doing it this way actually generates coverage locations that we don't care about(!)
-covIdx :: CoverageIndex
-covIdx = getCovIdx $$(PlutusTx.compile [|| mkValidator ||])
+covIdx :: GameParam -> CoverageIndex
+covIdx gp = getCovIdx ($$(PlutusTx.compile [|| mkValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode gp)
 
-mintingPolicy :: Scripts.MintingPolicy
-mintingPolicy = Scripts.forwardingMintingPolicy typedValidator
+mintingPolicy :: GameParam -> Scripts.MintingPolicy
+mintingPolicy gp = Scripts.forwardingMintingPolicy $ typedValidator gp
 
-client :: SM.StateMachineClient GameState GameInput
-client = SM.mkStateMachineClient $ SM.StateMachineInstance machine typedValidator
+client :: GameParam -> SM.StateMachineClient GameState GameInput
+client gp = SM.mkStateMachineClient $ SM.StateMachineInstance (machine gp) $ typedValidator gp
+
+-- | The @"lock"@ endpoint.
+lock :: Promise () GameStateMachineSchema GameError ()
+lock = endpoint @"lock" $ \LockArgs{lockArgsGameParam, lockArgsSecret, lockArgsValue} -> do
+    let secret = HashedString (escape_sha2_256 (toBuiltin . C.pack <$> extractSecret lockArgsSecret))
+        sym = Scripts.forwardingMintingPolicyHash $ typedValidator lockArgsGameParam
+    _ <- SM.runInitialise (client lockArgsGameParam) (Initialised sym "guess" secret) lockArgsValue
+    void $ SM.runStep (client lockArgsGameParam) MintToken
 
 -- | The @"guess"@ endpoint.
 guess :: Promise () GameStateMachineSchema GameError ()
-guess = endpoint @"guess" $ \GuessArgs{guessArgsOldSecret,guessArgsNewSecret, guessArgsValueTakenOut} -> do
+guess = endpoint @"guess" $ \GuessArgs{guessArgsGameParam, guessArgsOldSecret, guessArgsNewSecret, guessArgsValueTakenOut} -> do
 
     let guessedSecret = ClearString (toBuiltin (C.pack guessArgsOldSecret))
         newSecret     = HashedString (escape_sha2_256 (toBuiltin . C.pack <$> extractSecret guessArgsNewSecret))
 
     void
-        $ SM.runStep client
+        $ SM.runStep (client guessArgsGameParam)
             (Guess guessedSecret newSecret guessArgsValueTakenOut)
-
-lock :: Promise () GameStateMachineSchema GameError ()
-lock = endpoint @"lock" $ \LockArgs{lockArgsSecret, lockArgsValue} -> do
-    let secret = HashedString (escape_sha2_256 (toBuiltin . C.pack <$> extractSecret lockArgsSecret))
-        sym = Scripts.forwardingMintingPolicyHash typedValidator
-    _ <- SM.runInitialise client (Initialised sym "guess" secret) lockArgsValue
-    void $ SM.runStep client MintToken
 
 PlutusTx.unstableMakeIsData ''GameState
 PlutusTx.makeLift ''GameState
 PlutusTx.unstableMakeIsData ''GameInput
 PlutusTx.makeLift ''GameInput
-PlutusTx.makeLift ''GameToken
-PlutusTx.unstableMakeIsData ''GameToken
+PlutusTx.makeLift ''GuessToken
+PlutusTx.unstableMakeIsData ''GuessToken

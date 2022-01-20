@@ -7,6 +7,7 @@ import Spec.Currency qualified
 import Spec.ErrorHandling qualified
 import Spec.Escrow qualified
 import Spec.Future qualified
+import Spec.Game qualified
 import Spec.GameStateMachine qualified
 import Spec.Governance qualified
 import Spec.SealedBidAuction qualified
@@ -48,6 +49,7 @@ tests = localOption limit $ testGroup "use cases" [
     Spec.PubKey.tests,
     Spec.Escrow.tests,
     Spec.SimpleEscrow.tests,
+    Spec.Game.tests,
     Spec.GameStateMachine.tests,
     Spec.Rollup.tests,
     Spec.TokenAccount.tests,
