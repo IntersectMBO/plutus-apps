@@ -69,6 +69,7 @@
           (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
           (hsPkgs."network-mux" or (errorHandler.buildDepError "network-mux"))
           (hsPkgs."ouroboros-network-framework" or (errorHandler.buildDepError "ouroboros-network-framework"))
+          (hsPkgs."strict-stm" or (errorHandler.buildDepError "strict-stm"))
           (hsPkgs."typed-protocols" or (errorHandler.buildDepError "typed-protocols"))
           (hsPkgs."typed-protocols-cborg" or (errorHandler.buildDepError "typed-protocols-cborg"))
           (hsPkgs."hashable" or (errorHandler.buildDepError "hashable"))
@@ -94,7 +95,6 @@
           "Ouroboros/Network/BlockFetch/Decision"
           "Ouroboros/Network/BlockFetch/DeltaQ"
           "Ouroboros/Network/BlockFetch/State"
-          "Ouroboros/Network/Counter"
           "Ouroboros/Network/DeltaQ"
           "Ouroboros/Network/Diffusion"
           "Ouroboros/Network/Diffusion/P2P"
@@ -191,6 +191,8 @@
             (hsPkgs."network-mux" or (errorHandler.buildDepError "network-mux"))
             (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
             (hsPkgs."ouroboros-network-framework" or (errorHandler.buildDepError "ouroboros-network-framework"))
+            (hsPkgs."ouroboros-network-testing" or (errorHandler.buildDepError "ouroboros-network-testing"))
+            (hsPkgs."strict-stm" or (errorHandler.buildDepError "strict-stm"))
             (hsPkgs."typed-protocols" or (errorHandler.buildDepError "typed-protocols"))
             ];
           buildable = true;
@@ -286,6 +288,7 @@
             (hsPkgs."ouroboros-network-framework" or (errorHandler.buildDepError "ouroboros-network-framework"))
             (hsPkgs."ouroboros-network-testing" or (errorHandler.buildDepError "ouroboros-network-testing"))
             (hsPkgs."ouroboros-network".components.sublibs.ouroboros-protocol-tests or (errorHandler.buildDepError "ouroboros-network:ouroboros-protocol-tests"))
+            (hsPkgs."strict-stm" or (errorHandler.buildDepError "strict-stm"))
             (hsPkgs."typed-protocols" or (errorHandler.buildDepError "typed-protocols"))
             (hsPkgs."typed-protocols-examples" or (errorHandler.buildDepError "typed-protocols-examples"))
             ] ++ (pkgs.lib).optionals (system.isWindows) [
@@ -296,7 +299,6 @@
           modules = [
             "Ouroboros/Network/BlockFetch/Examples"
             "Ouroboros/Network/MockNode"
-            "Data/Signal"
             "Test/AnchoredFragment"
             "Test/Chain"
             "Test/LedgerPeers"
@@ -315,7 +317,6 @@
             "Test/Ouroboros/Network/PeerSelection/Json"
             "Test/Ouroboros/Network/PeerSelection/MockEnvironment"
             "Test/Ouroboros/Network/PeerSelection/PeerGraph"
-            "Test/Ouroboros/Network/PeerSelection/Script"
             "Test/Ouroboros/Network/NodeToNode/Version"
             "Test/Ouroboros/Network/NodeToClient/Version"
             "Test/Mux"
@@ -323,8 +324,6 @@
             "Test/Socket"
             "Test/PeerState"
             "Test/Version"
-            "Test/QuickCheck/Signal"
-            "Test/QuickCheck/Utils"
             ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
