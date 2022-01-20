@@ -48,6 +48,7 @@ instance ToJSON TestHeader
 
 type MyAPI =
   Header "TestHeader" TestHeader
+    :> QueryParam "globalParam" Int
     :> ( ( "hello"
              :> ( ( QueryFlag "myFlag"
                       :> QueryParam "myParam" Text
@@ -58,7 +59,7 @@ type MyAPI =
                     :<|> Capture "name" Text :> Get '[JSON] (Maybe Hello)
                 )
          )
-           :<|> "testHeader" :> Get '[JSON] TestHeader
+           :<|> Header "LocalHeader" TestHeader :> "testHeader" :> Get '[JSON] TestHeader
            :<|> "by" :> Get '[JSON] Int
        )
 
@@ -66,7 +67,7 @@ reqs = apiToList (Proxy :: Proxy MyAPI) (Proxy :: Proxy DefaultBridge)
 
 req = head reqs
 
-mySettings = addGlobalParam @TestHeader "TestHeader" defaultSettings
+mySettings = addGlobalQueryParam "globalParam" . addGlobalHeader "TestHeader" $ defaultSettings
 
 myTypes :: [SumType 'Haskell]
 myTypes =

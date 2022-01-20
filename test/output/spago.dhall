@@ -1,13 +1,13 @@
 { name = "output"
 , dependencies =
-  [ "aff"
-  , "affjax"
+  [ "affjax"
   , "argonaut"
   , "argonaut-codecs"
   , "argonaut-core"
   , "arrays"
   , "control"
   , "either"
+  , "foldable-traversable"
   , "http-methods"
   , "json-helpers"
   , "maybe"
@@ -20,6 +20,7 @@
   , "strings"
   , "transformers"
   , "tuples"
+  , "uri"
   ]
 , packages = ./packages.dhall
 , sources = [ "./ServerAPI.purs", "./ServerTypes.purs" ]

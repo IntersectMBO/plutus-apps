@@ -56,32 +56,25 @@ defaultBridgeProxy = Proxy
 
 type ParamName = Text
 
-data Param f = Param
-  { _pName :: ParamName,
-    _pType :: f
-  }
-  deriving (Eq, Ord, Show)
-
-type PSParam = Param PSType
-
-makeLenses ''Param
-
-data Settings bridge = Settings
+data Settings = Settings
   { _apiModuleName :: Text,
-    _globalParams :: Set (Param HaskellType),
+    _globalHeaders :: Set ParamName,
+    _globalQueryParams :: Set ParamName,
     _standardImports :: ImportLines
   }
 
 makeLenses ''Settings
 
-defaultSettings :: HasBridge bridge => Settings bridge
+defaultSettings :: Settings
 defaultSettings =
   Settings
     { _apiModuleName = "ServerAPI",
-      _globalParams = Set.empty,
+      _globalHeaders = Set.empty,
+      _globalQueryParams = Set.empty,
       _standardImports =
         importsFromList
           [ ImportLine "Affjax.RequestHeader" (Set.fromList ["RequestHeader(..)"]),
+            ImportLine "Control.Monad.Except" (Set.fromList ["ExceptT"]),
             ImportLine "Data.Argonaut" (Set.fromList ["Json", "JsonDecodeError"]),
             ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"],
             ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"],
@@ -91,24 +84,23 @@ defaultSettings =
             ImportLine "Data.HTTP.Method" (Set.fromList ["Method(..)"]),
             ImportLine "Data.Maybe" (Set.fromList ["Maybe(..)"]),
             ImportLine "Data.Tuple" (Set.fromList ["Tuple(..)"]),
-            ImportLine "Servant.PureScript" (Set.fromList ["class MonadAjax", "ResponseT", "flagQueryPairs", "paramListQueryPairs", "paramQueryPairs", "request", "toHeader"]),
+            ImportLine "Servant.PureScript" (Set.fromList ["class MonadAjax", "flagQueryPairs", "paramListQueryPairs", "paramQueryPairs", "request", "toHeader", "toPathSegment"]),
             ImportLine "URI" (Set.fromList ["PathAbsolute(..)", "RelativePart(..)", "RelativeRef(..)"]),
             ImportLine "URI.Path.Segment" (Set.fromList ["segmentNZFromString"])
           ]
     }
 
--- | Add a parameter that will not be added to any client function signatures.
---   You are responsible for configuring this parameter manually in your
+-- | Add a header that will not be added to any client function signatures.
+--   You are responsible for configuring this header manually in your
 --   MonadAjax instance.
-addGlobalParam
-  :: forall a bridge
-   . ( HasBridge bridge
-     , Typeable  a
-     )
-  => ParamName
-  -> Settings bridge
-  -> Settings bridge
-addGlobalParam n = over globalParams (Set.insert $ Param n $ mkTypeInfo @a)
+addGlobalHeader :: ParamName -> Settings -> Settings
+addGlobalHeader name = over globalHeaders (Set.insert name)
+
+-- | Add a query parameter that will not be added to any client function signatures.
+--   You are responsible for configuring this query parameter manually in your
+--   MonadAjax instance.
+addGlobalQueryParam :: ParamName -> Settings -> Settings
+addGlobalQueryParam name = over globalQueryParams (Set.insert name)
 
 apiToList ::
   forall bridgeSelector api.

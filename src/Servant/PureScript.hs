@@ -64,7 +64,7 @@ writeAPIModuleWithSettings ::
     GenerateList PSType (Foreign PSType api),
     HasBridge bridgeSelector
   ) =>
-  Settings bridgeSelector ->
+  Settings ->
   FilePath ->
   Proxy bridgeSelector ->
   Proxy api ->
@@ -80,19 +80,12 @@ writeAPIModuleWithSettings opts root pBr pAPI = do
     writeModule mName =
       let baseFileName = root </> joinPath (map T.unpack $ T.splitOn "." mName)
           pursModuleFile = baseFileName <> ".purs"
-          jsModuleFile = baseFileName <> ".js"
           pursModulePath = pursModuleFile
-          jsModulePath = jsModuleFile
           mDir = takeDirectory baseFileName
           contents = genModule opts apiList
        in do
             unlessM (doesDirectoryExist mDir) $ createDirectoryIfMissing True mDir
             withFile pursModulePath WriteMode $ flip hPutDocLn contents
-            withFile jsModulePath WriteMode $ \h -> do
-              hPutDocLn h "'use strict';"
-              hPutDocLn h ""
-              hPutDocLn h "exports.encodeURIComponent = encodeURIComponent"
-              hPutDocLn h ""
 
 -- | Use this function for implementing 'parseUrlPiece' in your FromHttpApiData instances
 --   in order to be compatible with the generated PS code.

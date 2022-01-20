@@ -4,65 +4,124 @@ module ServerAPI where
 import Prelude
 
 import Affjax.RequestHeader (RequestHeader(..))
+import Control.Monad.Except (ExceptT)
 import Data.Argonaut (Json, JsonDecodeError)
-import Data.Argonaut.Encode.Aeson ((>/\<))
+import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
+import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Array (catMaybes)
 import Data.Either (Either(..))
 import Data.Foldable (fold)
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Servant.PureScript (class MonadAjax, ResponseT, flagQueryPairs, paramListQueryPairs, paramQueryPairs, request, toHeader)
+import Servant.PureScript (class MonadAjax, flagQueryPairs, paramListQueryPairs, paramQueryPairs, request, toHeader, toPathSegment)
 import ServerTypes (Hello, TestHeader)
 import URI (PathAbsolute(..), RelativePart(..), RelativeRef(..))
 import URI.Path.Segment (segmentNZFromString)
 import Affjax.RequestBody (json) as Request
-import Affjax.ResponseFormat (json) as Response
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.String.NonEmpty as NES
-import URI.Extra.QueryPairs as QP
-import URI.Host as Host
 
 getHello ::
-  forall m.
-  MonadAjax m =>
-  Maybe TestHeader ->
+  forall e m.
+  MonadAjax JsonDecodeError Json e m =>
   Either (Tuple Int String) Hello ->
   Boolean ->
   Maybe String ->
   Array Hello ->
-  ResponseT Json m JsonDecodeError Hello
-getHello testHeader reqBody myFlag myParam myParams =
+  ExceptT e m Hello
+getHello reqBody myFlag myParam myParams =
   request req
   where
-  req = { method, uri, uriPrintOptions, headers, content, encode, decode, responseFormat }
+  req = { method, uri, headers, content, encode, decode }
   method = Left GET
   uri = RelativeRef relativePart query Nothing
-  uriPrintOptions = { printUserInfo, printHosts, printPath, printRelPath, printQuery, printFragment }
   headers = catMaybes
-    [ RequestHeader "TestHeader" <<< toHeader <$> testHeader
+    [
     ]
   content = Just reqBody
-  encode = Request.json <<< E.encode encoder
-  encoder = E.either (E.tuple (E.value >/\< E.value)) E.value
-  decode = D.decode D.value
-  responseFormat = Response.json
-  relativePart = RelativePartNoAuth
-    $ Just
-    $ PathAbsolute
-    $ Tuple <$> segmentNZ <*> pure segments 
-  query = Just { myFlag, myParam, myParams }
-  printUserInfo = identity
-  printHosts = Host.print
-  printPath = identity
-  printRelPath = Left
-  printQuery = QP.print identity identity <<< queryPairs
-  queryPairs q = fold
-    [ flagQueryPairs "myFlag" q.myFlag
-    , paramQueryPairs "myParam" q.myParam 
-    , paramListQueryPairs "myParams" q.myParams
+  encode = E.encode encoder
+  decode = D.decode decoder
+  encoder = (E.either (E.tuple (E.value >/\< E.value)) E.value)
+  decoder = D.value
+  relativePart = RelativePartNoAuth $ Just
+    [ "hello"
     ]
-  printFragment = absurd
-  segmentNZ = segmentNZFromString <$> NES.fromString "hello"
-  segments = []
+  query = Just $ fold
+    [ flagQueryPairs "myFlag" myFlag
+    , paramQueryPairs "myParam" myParam
+    , paramListQueryPairs "myParams" myParams
+    ]
+
+getHelloByName ::
+  forall e m.
+  MonadAjax JsonDecodeError Json e m =>
+  String ->
+  ExceptT e m (Maybe Hello)
+getHelloByName name =
+  request req
+  where
+  req = { method, uri, headers, content, encode, decode }
+  method = Left GET
+  uri = RelativeRef relativePart query Nothing
+  headers = catMaybes
+    [
+    ]
+  content = Nothing
+  encode = E.encode encoder
+  decode = D.decode decoder
+  encoder = E.null
+  decoder = (D.maybe D.value)
+  relativePart = RelativePartNoAuth $ Just
+    [ "hello"
+    , toPathSegment name
+    ]
+  query = Nothing
+
+getTestHeader ::
+  forall e m.
+  MonadAjax JsonDecodeError Json e m =>
+  Maybe TestHeader ->
+  ExceptT e m TestHeader
+getTestHeader localHeader =
+  request req
+  where
+  req = { method, uri, headers, content, encode, decode }
+  method = Left GET
+  uri = RelativeRef relativePart query Nothing
+  headers = catMaybes
+    [ RequestHeader "LocalHeader" <<< toHeader <$> localHeader
+    ]
+  content = Nothing
+  encode = E.encode encoder
+  decode = D.decode decoder
+  encoder = E.null
+  decoder = D.value
+  relativePart = RelativePartNoAuth $ Just
+    [ "testHeader"
+    ]
+  query = Nothing
+
+getBy ::
+  forall e m.
+  MonadAjax JsonDecodeError Json e m =>
+  ExceptT e m Int
+getBy =
+  request req
+  where
+  req = { method, uri, headers, content, encode, decode }
+  method = Left GET
+  uri = RelativeRef relativePart query Nothing
+  headers = catMaybes
+    [
+    ]
+  content = Nothing
+  encode = E.encode encoder
+  decode = D.decode decoder
+  encoder = E.null
+  decoder = D.value
+  relativePart = RelativePartNoAuth $ Just
+    [ "by"
+    ]
+  query = Nothing

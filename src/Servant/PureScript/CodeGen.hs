@@ -7,39 +7,38 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Servant.PureScript.CodeGen where
 
 import Control.Lens hiding (List, op)
 import qualified Data.Map as Map
-import Data.Maybe (fromMaybe, mapMaybe, maybeToList)
-import Data.Set (Set)
+import Data.Maybe (fromMaybe, maybeToList, listToMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text, toUpper)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Language.PureScript.Bridge (ImportLine (..), ImportLines, PSType, TypeInfo (..), importLineToText, mergeImportLines, renderText, typeInfoToDecl, typeModule, typeToDecode, typeToEncode, typesToImportLines, flattenTypeInfo)
 import Language.PureScript.Bridge.PSTypes (psUnit)
-import Network.HTTP.Types.URI (urlEncode)
 import Servant.Foreign
 import Servant.PureScript.Internal
 import Text.PrettyPrint.Mainland
-import Data.Proxy (Proxy(..))
+import Data.Functor (($>))
+import Network.HTTP.Types
 
 typeInfoToText :: PSType -> Text
 typeInfoToText = renderText . typeInfoToDecl
 
-genModule :: forall bridge. HasBridge bridge => Settings bridge -> [Req PSType] -> Doc
-genModule opts reqs =
-  let gParams = opts
-        ^. globalParams
-        . to (Set.map $ over pType $ languageBridge $ Proxy @bridge)
-      apiImports = reqsToImportLines reqs
-      imports = mergeImportLines (_standardImports opts) apiImports
+genModule :: Settings -> [Req PSType] -> Doc
+genModule settings@Settings{..} reqs =
+  let apiImports = reqsToImportLines settings reqs
+      imports = mergeImportLines _standardImports apiImports
    in docIntercalate
         (line <> line)
-        [ genModuleHeader (_apiModuleName opts) imports,
-          docIntercalate (line <> line) (map (genFunction gParams) reqs)
+        [ genModuleHeader _apiModuleName imports,
+          docIntercalate
+            (line <> line)
+            (map (genFunction settings) reqs)
         ]
 
 genModuleHeader :: Text -> ImportLines -> Doc
@@ -54,27 +53,47 @@ genModuleHeader moduleName imports =
         </> "import Prelude" <> line
         </> docIntercalate line importLines
         </> "import Affjax.RequestBody (json) as Request"
-        </> "import Affjax.ResponseFormat (json) as Response"
         </> "import Data.Argonaut.Decode.Aeson as D"
         </> "import Data.Argonaut.Encode.Aeson as E"
         </> "import Data.String.NonEmpty as NES"
-        </> "import URI.Extra.QueryPairs as QP"
-        </> "import URI.Host as Host"
   where
     exclude m = (/= m) . importModule
 
-genFunction :: Set PSParam -> Req PSType -> Doc
-genFunction gParams req =
+reqParams
+  :: Settings
+  -> Req PSType
+  -> ([Arg PSType], Maybe PSType, [Segment PSType], [QueryArg PSType], Maybe PSType)
+reqParams Settings{..} req =
+  let notGlobalHeader = (`Set.notMember` _globalHeaders) . unPathSegment . _argName
+      notGlobalQueryParam =
+        (`Set.notMember` _globalQueryParams) . unPathSegment . _argName . _queryArgName
+      headers = req ^.. reqHeaders . traversed . _HeaderArg . filtered notGlobalHeader
+      body = req ^.. reqBody . _Just
+      pathSegments = req ^.. reqUrl . path . traversed
+      queryString = req ^.. reqUrl . queryStr . traversed . filtered notGlobalQueryParam
+      returnType = req ^. reqReturnType
+   in (headers, listToMaybe body, pathSegments, queryString, returnType)
+
+genFunction :: Settings -> Req PSType -> Doc
+genFunction settings req =
   let fnName = req ^. reqFuncName . jsCamelCaseL
-      allParamsList = reqToParams req
-      -- Use list not set, as we don't want to change order of parameters
-      params = filter (not . flip Set.member gParams) allParamsList
-      pTypes = map _pType params
-      pNames = map _pName params
-      constraints = [ mkPsType "MonadAjax" [mkPsType "m" []] ]
-      signature = genSignature fnName ["m"] constraints pTypes (req ^. reqReturnType)
-      body = indent 2 $ genFnHead fnName pNames </> genFnBody req
-   in signature </> body
+      method = req ^. reqMethod
+      (headers, body, pathSegments, queryString, returnType) = reqParams settings req
+      args = pathSegments ^.. traversed . to unSegment . _Cap
+      pTypes = map _argType headers
+        <> maybeToList body
+        <> map _argType args
+        <> map (_argType . _queryArgName) queryString
+      pNames = map (unPathSegment . _argName) headers
+        <> maybeToList (body $> "reqBody")
+        <> map (unPathSegment . _argName) args
+        <> map (unPathSegment . _argName . _queryArgName) queryString
+      constraints =
+        [ mkPsType "MonadAjax" [psJsonDecodeError, psJson, mkPsType "e" [], mkPsType "m" []] ]
+      signature = genSignature fnName ["e", "m"] constraints pTypes returnType
+      fbody = hang 2
+        $ genFnHead fnName pNames </> genFnBody method headers body pathSegments queryString returnType
+   in signature </> fbody
 
 genSignature :: Text -> [Text] -> [PSType] -> [PSType] -> Maybe PSType -> Doc
 genSignature fnName variables constraints params mRet =
@@ -95,10 +114,9 @@ genSignature fnName variables constraints params mRet =
          )
       </> docIntercalate (" ->" <> line) (strictText . typeInfoToText <$> (params <> [retType]))
   where
-    retType =
-      mkPsType
-        "ResponseT"
-        [psJson, mkPsType "m" [], psJsonDecodeError, fromMaybe psUnit mRet]
+    retType = mkPsType
+      "ExceptT"
+      [mkPsType "e" [], mkPsType "m" [], fromMaybe psUnit mRet]
 
 genFnHead :: Text -> [Text] -> Doc
 genFnHead fnName params = fName <+> align (docIntercalate softline docParams <+> "=")
@@ -106,97 +124,80 @@ genFnHead fnName params = fName <+> align (docIntercalate softline docParams <+>
     docParams = map psVar params
     fName = strictText fnName
 
-genFnBody :: Req PSType -> Doc
-genFnBody req = docIntercalate line
+genFnBody :: Method -> [Arg PSType] -> Maybe PSType -> [Segment PSType] -> [QueryArg PSType] -> Maybe PSType -> Doc
+genFnBody method headers body args queryString returnType = docIntercalate line $ hang 2 <$>
   [ strictText "request req"
   , strictText "where"
-  , strictText "req = { method, uri, uriPrintOptions, headers, content, encode, decode, responseFormat }"
-  , strictText "method = Left" <+> (req ^. reqMethod . to T.decodeUtf8 . to toUpper . to strictText)
+  , strictText "req = { method, uri, headers, content, encode, decode }"
+  , strictText "method = Left" <+> methodDoc
   , strictText "uri = RelativeRef relativePart query Nothing"
-  , strictText "uriPrintOptions = { printUserInfo, printHosts, printPath, printRelPath, printQuery, printFragment }"
-  , indent 2 $ strictText "headers = catMaybes" </> list (genHeaders req)
-  , strictText case req ^. reqBody of
+  , strictText "headers = catMaybes" </> niceList headersDoc
+  , strictText case body of
       Nothing -> "content = Nothing"
       Just _ -> "content = Just reqBody"
-  , strictText "encode = Request.json <<< E.encode encoder"
-  , case req ^. reqBody of
-      Nothing -> strictText "encoder = E.value"
-      Just body ->
-        indent 2
-          ( strictText "encoder = " <+> docIntercalate
-              line
-              (fmap strictText $ T.lines $ renderText $ typeToEncode body)
-          )
-  , case req ^. reqReturnType of
-      Nothing -> strictText "decoder = D.decode D.null"
-      Just retType ->
-        indent 2
-          ( strictText "decoder = " <+> docIntercalate
-              line
-              (fmap strictText $ T.lines $ renderText $ typeToDecode retType)
-          )
-  , strictText "responseFormat = Response.json"
-  , strictText "relativePart = RelativePartNoAuth $ Just $ PathAbsolute $ Tuple <$> segmentNZ <*> pure segments"
-  , strictText "query =" <+> genQuery req
-  , strictText "responseFormat = Response.json"
-  , strictText "printUserInfo = identity"
-  , strictText "printHosts = Host.print"
-  , strictText "printPath = identity"
-  , strictText "printRelPath = Left"
-  , strictText "printQuery = QP.print identity identity <<< queryPairs"
-  , strictText "query =" <+> genQueryPairs req
-  , strictText "printFragment = absurd"
-  , strictText "segmentNZ =" <+> genSegmentNZ req
-  , strictText "segments =" <+> genSegments req
+  , strictText "encode = E.encode encoder"
+  , strictText "decode = D.decode decoder"
+  , strictText "encoder =" <+> encoder
+  , strictText "decoder =" <+> decoder
+  , strictText "relativePart = RelativePartNoAuth $ Just" </> niceList segments
+  , strictText "query =" <+> query
   ]
+  where
+    methodDoc = method ^. to T.decodeUtf8 . to toUpper . to strictText
+    headersDoc = header <$> headers
+    header arg = docIntercalate space
+      [ strictText "RequestHeader"
+      , dquotes $ strictText $ unPathSegment $ arg ^. argName
+      , strictText "<<< toHeader <$>"
+      , psVar $ unPathSegment $ arg ^. argName
+      ]
+    encoder = case body of
+      Nothing -> strictText "E.null"
+      Just t ->
+        docIntercalate line (fmap strictText $ T.lines $ renderText $ typeToEncode t)
+    decoder = case returnType of
+      Nothing -> strictText "D.null"
+      Just t ->
+        docIntercalate line (fmap strictText $ T.lines $ renderText $ typeToDecode t)
+    segments = segment . unSegment <$> args
+    segment (Static (PathSegment seg)) = dquotes $ strictText seg
+    segment (Cap arg) = "toPathSegment" <+> arg ^. argName . to unPathSegment . to psVar
+    query = case queryString of
+      [] -> strictText "Nothing"
+      q -> strictText "Just $ fold" </> niceList (queryArg <$> q)
+    queryArg arg = queryFn (arg ^. queryArgType) <+> dquotes name <+> name
+      where
+        name = arg ^. queryArgName . argName . to unPathSegment . to strictText
+    queryFn Normal = "paramQueryPairs"
+    queryFn Flag = "flagQueryPairs"
+    queryFn List = "paramListQueryPairs"
 
-genHeaders :: Req PSType -> [Doc]
-genHeaders = error "not implemented"
+niceList :: [Doc] -> Doc
+niceList docs= lbracket <+> docIntercalate (line <> comma <> space) docs </> rbracket
 
-genQuery :: Req PSType -> Doc
-genQuery = error "not implemented"
-
-genQueryPairs :: Req PSType -> Doc
-genQueryPairs = error "not implemented"
-
-genSegmentNZ :: Req PSType -> Doc
-genSegmentNZ = error "not implemented"
-
-genSegments :: Req PSType -> Doc
-genSegments = error "not implemented"
-
+unMaybe :: PSType -> PSType
+unMaybe (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [a]) = a
+unMaybe a = a
 
 -----------
 
-reqsToImportLines :: [Req PSType] -> ImportLines
-reqsToImportLines =
+reqsToImportLines :: Settings -> [Req PSType] -> ImportLines
+reqsToImportLines settings =
   typesToImportLines
     . Set.fromList
     . filter (("Prim" /=) . view typeModule)
     . concatMap flattenTypeInfo
-    . concatMap reqToPSTypes
+    . concatMap (reqToPSTypes settings)
 
-reqToPSTypes :: Req PSType -> [PSType]
-reqToPSTypes req = map _pType (reqToParams req) ++ maybeToList (req ^. reqReturnType)
-
--- | Extract all function parameters from a given Req.
-reqToParams :: Req PSType -> [Param PSType]
-reqToParams req =
-  fmap headerArgToParam (req ^. reqHeaders)
-    ++ maybeToList (reqBodyToParam (req ^. reqBody))
-    ++ urlToParams (req ^. reqUrl)
-
-urlToParams :: Url PSType -> [Param PSType]
-urlToParams url = mapMaybe (segmentToParam . unSegment) (url ^. path) ++ map queryArgToParam (url ^. queryStr)
-
-segmentToParam :: SegmentType f -> Maybe (Param f)
-segmentToParam (Static _) = Nothing
-segmentToParam (Cap arg) =
-  Just
-    Param
-      { _pType = arg ^. argType,
-        _pName = arg ^. argName . to unPathSegment
-      }
+reqToPSTypes :: Settings -> Req PSType -> [PSType]
+reqToPSTypes settings req =
+  let (headers, body, pathSegments, queryString, returnType) = reqParams settings req
+      args = pathSegments ^.. traversed . to unSegment . _Cap
+  in map _argType headers
+      <> maybeToList body
+      <> map _argType args
+      <> map (_argType . _queryArgName) queryString
+      <> maybeToList returnType
 
 mkPsType :: Text -> [PSType] -> PSType
 mkPsType = TypeInfo "" ""
@@ -209,24 +210,6 @@ psJsonDecodeError = mkPsType "JsonDecodeError" []
 
 psJson :: PSType
 psJson = mkPsType "Json" []
-
-queryArgToParam :: QueryArg PSType -> Param PSType
-queryArgToParam arg =
-  Param
-    { _pType = arg ^. queryArgName . argType,
-      _pName = arg ^. queryArgName . argName . to unPathSegment
-    }
-
-headerArgToParam :: HeaderArg f -> Param f
-headerArgToParam (HeaderArg arg) =
-  Param
-    { _pName = arg ^. argName . to unPathSegment,
-      _pType = arg ^. argType
-    }
-headerArgToParam _ = error "We do not support ReplaceHeaderArg - as I have no idea what this is all about."
-
-reqBodyToParam :: Maybe f -> Maybe (Param f)
-reqBodyToParam = fmap (Param "reqBody")
 
 docIntercalate :: Doc -> [Doc] -> Doc
 docIntercalate i = mconcat . punctuate i
