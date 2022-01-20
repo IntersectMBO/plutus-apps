@@ -59,6 +59,7 @@ data PABError
     | AesonDecodingError Text Text
     | MigrationNotDoneError Text
     | RemoteWalletWithMockNodeError
+    | TxSenderNotAvailable
     deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -88,6 +89,7 @@ instance Pretty PABError where
                                    <> "Did you forget to run the 'migrate' command ?"
                                    <+> "(ex. 'plutus-pab-migrate' or 'plutus-pab-examples --config <CONFIG_FILE> migrate')"
         RemoteWalletWithMockNodeError   -> "The remote wallet can't be used with the mock node."
+        TxSenderNotAvailable         -> "Cannot send a transaction when connected to the real node."
 
 data DbConfig =
     DbConfig

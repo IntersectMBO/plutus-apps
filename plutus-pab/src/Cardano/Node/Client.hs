@@ -9,6 +9,7 @@
 module Cardano.Node.Client where
 
 import Control.Monad.Freer
+import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class
 import Data.Proxy (Proxy (Proxy))
@@ -22,6 +23,7 @@ import Cardano.Node.Types (ChainSyncHandle, NodeMode (..), PABServerConfig (..),
 import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Control.Monad.Freer.Extras.Log (LogMessage)
+import Plutus.PAB.Types (PABError (..))
 import Wallet.Effects (NodeClientEffect (..))
 
 healthcheck :: ClientM NoContent
@@ -38,6 +40,7 @@ handleNodeClientClient ::
     forall m effs.
     ( LastMember m effs
     , MonadIO m
+    , Member (Error PABError) effs
     , Member (Reader (Maybe MockClient.TxSendHandle)) effs
     , Member (Reader ChainSyncHandle) effs
     )
@@ -54,7 +57,7 @@ handleNodeClientClient slotCfg e = do
                   -- If the PAB is started with the real node working transactions
                   -- need to be sent via the wallet, not the mocked server node
                   -- (which is not actually running).
-                  liftIO $ putStrLn "Cannot send a transaction when connected to the real node."
+                  throwError TxSenderNotAvailable
               Just handle -> liftIO $ MockClient.queueTx handle tx
         GetClientSlot ->
             either (liftIO . MockClient.getCurrentSlot) (liftIO . Client.getCurrentSlot) chainSyncHandle

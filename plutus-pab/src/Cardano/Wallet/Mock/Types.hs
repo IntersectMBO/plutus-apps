@@ -49,6 +49,7 @@ import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.PAB.Arbitrary ()
+import Plutus.PAB.Types (PABError)
 import Prettyprinter (Pretty (pretty), (<+>))
 import Servant (ServerError)
 import Servant.Client (ClientError)
@@ -85,6 +86,7 @@ type WalletEffects m = '[ MultiWalletEffect
                         , NodeClientEffect
                         , ChainIndexQueryEffect
                         , State Wallets
+                        , Error PABError
                         , LogMsg Text
                         , Error WalletAPIError
                         , Error ClientError
