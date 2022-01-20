@@ -1,29 +1,32 @@
-{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Language.PureScript.Bridge
-  ( bridgeSumType
-  , defaultBridge
-  , module Bridge
-  , writePSTypes
-  , writePSTypesWith
-  , defaultSwitch
-  , noLenses
-  , genLenses
-  ) where
+  ( bridgeSumType,
+    defaultBridge,
+    module Bridge,
+    writePSTypes,
+    writePSTypesWith,
+    defaultSwitch,
+    noLenses,
+    genLenses,
+  )
+where
 
-import           Control.Applicative
-import qualified Data.Map                                   as M
-import qualified Data.Set                                   as Set
-import qualified Data.Text.IO                               as T
-
-import           Language.PureScript.Bridge.Builder         as Bridge
-import           Language.PureScript.Bridge.CodeGenSwitches as Switches
-import           Language.PureScript.Bridge.Primitives      as Bridge
-import           Language.PureScript.Bridge.Printer         as Bridge
-import           Language.PureScript.Bridge.SumType         as Bridge
-import           Language.PureScript.Bridge.Tuple           as Bridge
-import           Language.PureScript.Bridge.TypeInfo        as Bridge
+import Control.Applicative
+import Control.Lens (over, traversed)
+import qualified Data.Map as M
+import qualified Data.Set as Set
+import qualified Data.Text.IO as T
+import Language.PureScript.Bridge.Builder as Bridge
+import Language.PureScript.Bridge.CodeGenSwitches as Switches
+import Language.PureScript.Bridge.Primitives as Bridge
+import Language.PureScript.Bridge.Printer as Bridge
+import Language.PureScript.Bridge.SumType as Bridge
+import Language.PureScript.Bridge.Tuple as Bridge
+import Language.PureScript.Bridge.TypeInfo as Bridge
 
 -- | Your entry point to this library and quite likely all you will need.
 --   Make sure all your types derive `Generic` and `Typeable`.
@@ -89,7 +92,7 @@ writePSTypes = writePSTypesWith Switches.defaultSwitch
 --  == /WARNING/:
 --   This function overwrites files - make backups or use version control!
 writePSTypesWith ::
-     Switches.Switch -> FilePath -> FullBridge -> [SumType 'Haskell] -> IO ()
+  Switches.Switch -> FilePath -> FullBridge -> [SumType 'Haskell] -> IO ()
 writePSTypesWith switch root bridge sts = do
   mapM_ (printModule settings root) modules
   T.putStrLn
@@ -103,8 +106,8 @@ writePSTypesWith switch root bridge sts = do
     packages =
       sumTypesToNeededPackages bridged
         <> Set.filter
-            (const $ Switches.generateLenses settings)
-            (Set.singleton "purescript-profunctor-lenses")
+          (const $ Switches.generateLenses settings)
+          (Set.singleton "purescript-profunctor-lenses")
 
 -- | Translate all 'TypeInfo' values in a 'SumType' to PureScript types.
 --
@@ -115,14 +118,32 @@ writePSTypesWith switch root bridge sts = do
 -- > bridgeSumType (buildBridge defaultBridge) (mkSumType @Foo)
 bridgeSumType :: FullBridge -> SumType 'Haskell -> SumType 'PureScript
 bridgeSumType br (SumType t cs is) =
-  SumType (br t) (map (bridgeConstructor br) cs) $ is <> extraInstances
-    where
-      extraInstances
-        | not (null cs) && all isNullary cs = [Enum, Bounded]
-        | otherwise = []
-      isNullary (DataConstructor _ args) = args == Nullary
-
-
+  SumType (br t) (map (bridgeConstructor br) cs) $ bridgeInstance <$> (is <> extraInstances)
+  where
+    bridgeInstance (Custom CustomInstance {..}) =
+      Custom $
+        CustomInstance
+          (br <$> _customConstraints)
+          (br _customHead)
+          case _customImplementation of
+            Derive -> Derive
+            DeriveNewtype -> DeriveNewtype
+            Explicit members -> Explicit $ bridgeMember <$> members
+    bridgeInstance Bounded = Bounded
+    bridgeInstance Enum = Enum
+    bridgeInstance Json = Json
+    bridgeInstance GenericShow = GenericShow
+    bridgeInstance Functor = Functor
+    bridgeInstance Eq = Eq
+    bridgeInstance Eq1 = Eq1
+    bridgeInstance Ord = Ord
+    bridgeInstance Generic = Generic
+    bridgeInstance Newtype = Newtype
+    bridgeMember = over (memberDependencies . traversed) br
+    extraInstances
+      | not (null cs) && all isNullary cs = [Enum, Bounded]
+      | otherwise = []
+    isNullary (DataConstructor _ args) = args == Nullary
 
 -- | Default bridge for mapping primitive/common types:
 --   You can append your own bridges like this:
@@ -133,23 +154,23 @@ bridgeSumType br (SumType t cs is) =
 --   "Language.PureScript.Bridge.Tuple".
 defaultBridge :: BridgePart
 defaultBridge =
-  textBridge <|>
-  stringBridge <|>
-  listBridge <|>
-  maybeBridge <|>
-  eitherBridge <|>
-  boolBridge <|>
-  intBridge <|>
-  doubleBridge <|>
-  tupleBridge <|>
-  unitBridge <|>
-  mapBridge <|>
-  setBridge <|>
-  noContentBridge
+  textBridge
+    <|> stringBridge
+    <|> listBridge
+    <|> maybeBridge
+    <|> eitherBridge
+    <|> boolBridge
+    <|> intBridge
+    <|> doubleBridge
+    <|> tupleBridge
+    <|> unitBridge
+    <|> mapBridge
+    <|> setBridge
+    <|> noContentBridge
 
 -- | Translate types in a constructor.
 bridgeConstructor ::
-     FullBridge -> DataConstructor 'Haskell -> DataConstructor 'PureScript
+  FullBridge -> DataConstructor 'Haskell -> DataConstructor 'PureScript
 bridgeConstructor _ (DataConstructor name Nullary) =
   DataConstructor name Nullary
 bridgeConstructor br (DataConstructor name (Normal infos)) =
@@ -159,5 +180,5 @@ bridgeConstructor br (DataConstructor name (Record record)) =
 
 -- | Translate types in a record entry.
 bridgeRecordEntry ::
-     FullBridge -> RecordEntry 'Haskell -> RecordEntry 'PureScript
+  FullBridge -> RecordEntry 'Haskell -> RecordEntry 'PureScript
 bridgeRecordEntry br (RecordEntry label value) = RecordEntry label $ br value

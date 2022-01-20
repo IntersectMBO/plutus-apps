@@ -1,80 +1,113 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE KindSignatures    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Language.PureScript.Bridge.Printer where
 
-import           Control.Lens                               (to,(^.), (%~), (<>~))
-import           Control.Monad                              (unless)
-import           Data.Map.Strict                            (Map)
-import qualified Data.Map.Strict                            as Map
-import           Data.Maybe                                 (isJust, catMaybes, fromMaybe)
-import           Data.Set                                   (Set)
-import qualified Data.Set                                   as Set
-import           Data.Text                                  (Text)
-import qualified Data.Text                                  as T
-import qualified Data.Text.IO                               as T
-import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
-import           Language.PureScript.Bridge.SumType         (DataConstructor (..),
-                                                             Instance (..),
-                                                             RecordEntry (..),
-                                                             DataConstructorArgs (..),
-                                                             SumType (SumType),
-                                                             getUsedTypes,
-                                                             nootype, recLabel,
-                                                             recValue,
-                                                             _recLabel, sigConstructor)
-import           Language.PureScript.Bridge.TypeInfo        (Language (PureScript),
-                                                             PSType, TypeInfo (TypeInfo),
-                                                             _typeModule,
-                                                             _typeName,
-                                                             _typePackage,
-                                                             _typeParameters, typeName, flattenTypeInfo)
-
-import           System.Directory                           (createDirectoryIfMissing,
-                                                             doesDirectoryExist)
-import           System.FilePath                            (joinPath,
-                                                             takeDirectory,
-                                                             (</>))
-import           Text.PrettyPrint.Leijen.Text               (Doc,
-                                                             comma,
-                                                             displayTStrict,
-                                                             hsep, indent,
-                                                             line, lparen,
-                                                             parens, punctuate,
-                                                             renderPretty,
-                                                             rparen,
-                                                             textStrict, vsep,
-                                                             (<+>), hang, dquotes, char, backslash, nest, linebreak, lbrace, rbrace, softline, lbracket, rbracket, colon)
-import qualified Data.List.NonEmpty as NE
-import Data.List.NonEmpty (NonEmpty((:|)))
-import Data.Char (isLower, toLower)
-import Language.PureScript.Bridge.PSTypes (psUnit)
 import Control.Arrow ((&&&))
-import Data.Function ((&), on)
-import Data.List (nubBy, sortBy, groupBy)
+import Control.Lens (to, (%~), (<>~), (^.))
+import Control.Monad (unless)
+import Data.Char (isLower)
+import Data.Function (on, (&))
+import Data.List (groupBy, nubBy, sortBy)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NE
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (catMaybes, fromMaybe, isJust)
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
+import Language.PureScript.Bridge.PSTypes (psUnit)
+import Language.PureScript.Bridge.SumType
+  ( CustomInstance (..),
+    DataConstructor (..),
+    DataConstructorArgs (..),
+    Instance (..),
+    InstanceImplementation (..),
+    InstanceMember (..),
+    PSInstance,
+    RecordEntry (..),
+    SumType (SumType),
+    getUsedTypes,
+    nootype,
+    recLabel,
+    recValue,
+    sigConstructor,
+    _recLabel,
+  )
+import Language.PureScript.Bridge.TypeInfo
+  ( Language (PureScript),
+    PSType,
+    TypeInfo (TypeInfo),
+    flattenTypeInfo,
+    typeName,
+    _typeModule,
+    _typeName,
+    _typePackage,
+    _typeParameters,
+  )
+import System.Directory
+  ( createDirectoryIfMissing,
+    doesDirectoryExist,
+  )
+import System.FilePath
+  ( joinPath,
+    takeDirectory,
+    (</>),
+  )
+import Text.PrettyPrint.Leijen.Text
+  ( Doc,
+    backslash,
+    char,
+    colon,
+    comma,
+    displayTStrict,
+    dquotes,
+    hang,
+    hsep,
+    indent,
+    lbrace,
+    lbracket,
+    line,
+    linebreak,
+    lparen,
+    nest,
+    parens,
+    punctuate,
+    rbrace,
+    rbracket,
+    renderPretty,
+    rparen,
+    softline,
+    textStrict,
+    vsep,
+    (<+>),
+  )
 
 renderText :: Doc -> Text
 renderText = T.replace " \n" "\n" . displayTStrict . renderPretty 0.4 200
 
-data Module (lang :: Language) =
-  PSModule
-    { psModuleName  :: !Text
-    , psImportLines :: !ImportLines
-    , psQualifiedImports :: !(Map Text Text)
-    , psTypes       :: ![SumType lang]
-    }
+data Module (lang :: Language) = PSModule
+  { psModuleName :: !Text,
+    psImportLines :: !ImportLines,
+    psQualifiedImports :: !(Map Text Text),
+    psTypes :: ![SumType lang]
+  }
   deriving (Show)
 
 type PSModule = Module 'PureScript
 
-data ImportLine =
-  ImportLine
-    { importModule :: !Text
-    , importTypes  :: !(Set Text)
-    }
+data ImportLine = ImportLine
+  { importModule :: !Text,
+    importTypes :: !(Set Text)
+  }
   deriving (Show)
 
 type Modules = Map Text PSModule
@@ -86,27 +119,27 @@ sumTypesToModules = foldr (Map.unionWith unionModules) Map.empty . fmap sumTypeT
 
 unionModules :: PSModule -> PSModule -> PSModule
 unionModules m1 m2 =
-    m1
-      { psImportLines = unionImportLines (psImportLines m1) (psImportLines m2)
-      , psTypes = psTypes m1 <> psTypes m2
-      }
+  m1
+    { psImportLines = unionImportLines (psImportLines m1) (psImportLines m2),
+      psTypes = psTypes m1 <> psTypes m2
+    }
 
 sumTypeToModule :: SumType 'PureScript -> Modules
 sumTypeToModule st@(SumType t _ is) =
   Map.singleton
     (_typeModule t)
     $ PSModule
-      { psModuleName = _typeModule t
-      , psImportLines =
+      { psModuleName = _typeModule t,
+        psImportLines =
           dropEmpty $
             dropPrelude $
               dropPrim $
                 dropSelf $
                   unionImportLines
                     (typesToImportLines (getUsedTypes st))
-                    (instancesToImportLines is)
-      , psQualifiedImports = instancesToQualifiedImports is
-      , psTypes = [st]
+                    (instancesToImportLines is),
+        psQualifiedImports = instancesToQualifiedImports is,
+        psTypes = [st]
       }
   where
     dropEmpty = Map.delete ""
@@ -122,7 +155,7 @@ unionImportLines = Map.unionWith unionImportLine
 
 unionImportLine :: ImportLine -> ImportLine -> ImportLine
 unionImportLine l1 l2 =
-    l1 { importTypes = Set.union (importTypes l1) (importTypes l2) }
+  l1 {importTypes = Set.union (importTypes l1) (importTypes l2)}
 
 typesToImportLines :: Set PSType -> ImportLines
 typesToImportLines =
@@ -133,26 +166,25 @@ typeToImportLines t =
   unionImportLines (typesToImportLines $ Set.fromList (_typeParameters t)) $
     importsFromList [ImportLine (_typeModule t) (Set.singleton (_typeName t))]
 
-instancesToQualifiedImports :: [Instance] -> Map Text Text
+instancesToQualifiedImports :: [PSInstance] -> Map Text Text
 instancesToQualifiedImports =
   foldr unionQualifiedImports Map.empty . fmap instanceToQualifiedImports
 
-instancesToImportLines :: [Instance] -> ImportLines
+instancesToImportLines :: [PSInstance] -> ImportLines
 instancesToImportLines =
   foldr unionImportLines Map.empty . fmap instanceToImportLines
 
-instanceToImportLines :: Instance -> ImportLines
+instanceToImportLines :: PSInstance -> ImportLines
 instanceToImportLines GenericShow =
-  importsFromList [ ImportLine "Data.Show.Generic" $ Set.singleton "genericShow" ]
+  importsFromList [ImportLine "Data.Show.Generic" $ Set.singleton "genericShow"]
 instanceToImportLines Json =
   importsFromList
-    [ ImportLine "Control.Lazy" $ Set.singleton "defer"
-    , ImportLine "Data.Argonaut.Core" $ Set.singleton "jsonNull"
-    , ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"]
-    , ImportLine "Data.Argonaut.Encode" $ Set.singleton "encodeJson"
-    , ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"]
-    , ImportLine "Data.Newtype" $ Set.singleton "unwrap"
-    , ImportLine "Data.Tuple.Nested" $ Set.singleton "(/\\)"
+    [ ImportLine "Control.Lazy" $ Set.singleton "defer",
+      ImportLine "Data.Argonaut" $ Set.fromList ["encodeJson", "jsonNull"],
+      ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"],
+      ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"],
+      ImportLine "Data.Newtype" $ Set.singleton "unwrap",
+      ImportLine "Data.Tuple.Nested" $ Set.singleton "(/\\)"
     ]
 instanceToImportLines Enum =
   importsFromList
@@ -164,12 +196,12 @@ instanceToImportLines Bounded =
     ]
 instanceToImportLines _ = Map.empty
 
-instanceToQualifiedImports :: Instance -> Map Text Text
+instanceToQualifiedImports :: PSInstance -> Map Text Text
 instanceToQualifiedImports Json =
   Map.fromList
-    [ ("Data.Argonaut.Decode.Aeson", "D")
-    , ("Data.Argonaut.Encode.Aeson", "E")
-    , ("Data.Map", "Map")
+    [ ("Data.Argonaut.Decode.Aeson", "D"),
+      ("Data.Argonaut.Encode.Aeson", "E"),
+      ("Data.Map", "Map")
     ]
 instanceToQualifiedImports _ = Map.empty
 
@@ -205,17 +237,18 @@ sumTypeToNeededPackages st =
 
 moduleToText :: Switches.Settings -> Module 'PureScript -> Text
 moduleToText settings m =
-  renderText $ vsep $
-    [ "-- File auto generated by purescript-bridge! --"
-    , "module" <+> textStrict (psModuleName m) <+> "where" <> linebreak
-    , "import Prelude" <> linebreak
-    , vsep
-        ( (importLineToText <$> allImports)
-            <> (uncurry qualifiedImportToText <$> Map.toList (psQualifiedImports m))
-        )
+  renderText $
+    vsep $
+      [ "-- File auto generated by purescript-bridge! --",
+        "module" <+> textStrict (psModuleName m) <+> "where" <> linebreak,
+        "import Prelude" <> linebreak,
+        vsep
+          ( (importLineToText <$> allImports)
+              <> (uncurry qualifiedImportToText <$> Map.toList (psQualifiedImports m))
+          )
           <> linebreak
-    ]
-    <> punctuate (line <> line <> dashes <> line) (sumTypeToDocs settings =<< psTypes m)
+      ]
+        <> punctuate (line <> line <> dashes <> line) (sumTypeToDocs settings =<< psTypes m)
   where
     otherImports =
       importsFromList
@@ -225,20 +258,20 @@ moduleToText settings m =
 
 genericsImports :: [ImportLine]
 genericsImports =
-    [ ImportLine "Data.Generic.Rep" $ Set.singleton "class Generic" ]
+  [ImportLine "Data.Generic.Rep" $ Set.singleton "class Generic"]
 
 lensImports :: Switches.Settings -> [ImportLine]
 lensImports settings
   | Switches.generateLenses settings =
-    [ ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]
-    , ImportLine "Data.Lens" $
-      Set.fromList ["Iso'", "Prism'", "Lens'", "iso", "prism'"]
-    , ImportLine "Data.Lens.Record" $ Set.fromList ["prop"]
-    , ImportLine "Data.Lens.Iso.Newtype" $ Set.fromList ["_Newtype"]
-    , ImportLine "Type.Proxy" $ Set.fromList ["Proxy(Proxy)"]
+    [ ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"],
+      ImportLine "Data.Lens" $
+        Set.fromList ["Iso'", "Prism'", "Lens'", "iso", "prism'"],
+      ImportLine "Data.Lens.Record" $ Set.fromList ["prop"],
+      ImportLine "Data.Lens.Iso.Newtype" $ Set.fromList ["_Newtype"],
+      ImportLine "Type.Proxy" $ Set.fromList ["Proxy(Proxy)"]
     ]
   | otherwise =
-    [ ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"] ]
+    [ImportLine "Data.Maybe" $ Set.fromList ["Maybe(..)"]]
 
 qualifiedImportToText :: Text -> Text -> Doc
 qualifiedImportToText m q = hsep ["import", textStrict m, "as", textStrict q]
@@ -246,17 +279,17 @@ qualifiedImportToText m q = hsep ["import", textStrict m, "as", textStrict q]
 importLineToText :: ImportLine -> Doc
 importLineToText l =
   hsep ["import", textStrict $ importModule l, encloseHsep lparen rparen comma typeList]
-    where
-      typeList =
-        map (textStrict . last)
+  where
+    typeList =
+      map (textStrict . last)
         . groupBy ((==) `on` importedType)
         . sortBy importOrder
         . Set.toList
         $ importTypes l
-      importOrder imp1 imp2
-        | T.isPrefixOf "class" imp1 = if T.isPrefixOf "class" imp2 then compare imp1 imp2 else LT
-        | otherwise = compare imp1 imp2
-      importedType imp = fromMaybe imp $ T.stripSuffix "(..)" imp
+    importOrder imp1 imp2
+      | T.isPrefixOf "class" imp1 = if T.isPrefixOf "class" imp2 then compare imp1 imp2 else LT
+      | otherwise = compare imp1 imp2
+    importedType imp = fromMaybe imp $ T.stripSuffix "(..)" imp
 
 sumTypeToDocs :: Switches.Settings -> SumType 'PureScript -> [Doc]
 sumTypeToDocs settings st
@@ -274,19 +307,20 @@ sumTypeToTypeDecls st@(SumType t cs _) =
       keyword <+> typeInfoToDecl t <+> encloseVsep "=" mempty "|" (constructorToDoc <$> cs)
 
 typeInfoToDecl :: PSType -> Doc
-typeInfoToDecl (TypeInfo  _ _ name params) =
+typeInfoToDecl (TypeInfo _ _ name params) =
   hsep $ textStrict name : (typeInfoToDoc <$> params)
 
 typeInfoToDoc :: PSType -> Doc
-typeInfoToDoc t@(TypeInfo  _ _ _ params) =
+typeInfoToDoc t@(TypeInfo _ _ _ params) =
   (if null params then id else parens) $ typeInfoToDecl t
 
 constructorToDoc :: DataConstructor 'PureScript -> Doc
 constructorToDoc (DataConstructor n args) =
-  hsep $ textStrict n : case args of
-    Nullary -> []
-    Normal ts -> NE.toList $ typeInfoToDoc <$> ts
-    Record rs -> [vrecord $ fieldSignatures rs]
+  hsep $
+    textStrict n : case args of
+      Nullary -> []
+      Normal ts -> NE.toList $ typeInfoToDoc <$> ts
+      Record rs -> [vrecord $ fieldSignatures rs]
 
 -- | Given a Purescript type, generate instances for typeclass
 -- instances it claims to have.
@@ -297,49 +331,74 @@ instances st@(SumType t _ is) = go <$> is
     mkConstraints getConstraints = case getConstraints t of
       [] -> []
       constraints -> [encloseHsep lparen rparen comma (typeInfoToDecl <$> constraints), "=>"]
-    mkInstance name getConstraints ty methods =
+    mkInstance instanceHead getConstraints methods =
       vsep
         [ hsep
-            [ "instance"
-            , textStrict $ T.cons (toLower $ T.head name) (T.tail name) <> _typeName ty
-            , "::"
-            , hsep $ mkConstraints getConstraints <> [typeInfoToDecl $ mkType name [ty]]
-            , "where"
-            ]
-        , indent 2 $ vsep methods
+            [ "instance",
+              hsep $ mkConstraints getConstraints <> [typeInfoToDecl instanceHead],
+              "where"
+            ],
+          indent 2 $ vsep methods
         ]
-    mkDerivedInstance name getConstraints params ty =
-      hsep $
-        [ "derive instance"
-        , textStrict $ T.cons (toLower $ T.head name) (T.tail name) <> _typeName ty
-        , "::"
-        , hsep $ mkConstraints getConstraints <> [typeInfoToDecl $ mkType name [ty]]
+    mkDerivedInstance instanceHead getConstraints =
+      hsep
+        [ "derive instance",
+          hsep $ mkConstraints getConstraints <> [typeInfoToDecl instanceHead]
         ]
-        <> params
+    mkDerivedNewtypeInstance instanceHead getConstraints =
+      hsep
+        [ "derive newtype instance",
+          hsep $ mkConstraints getConstraints <> [typeInfoToDecl instanceHead]
+        ]
     toKind1 (TypeInfo p m n []) = TypeInfo p m n []
     toKind1 (TypeInfo p m n ps) = TypeInfo p m n $ init ps
-    go :: Instance -> Doc
-    go Bounded = mkInstance "Bounded" (const []) t
-      [ "bottom = genericBottom"
-      , "top = genericTop"
+    go :: PSInstance -> Doc
+    go (Custom CustomInstance {..}) = case _customImplementation of
+      Derive -> mkDerivedInstance _customHead (const _customConstraints)
+      DeriveNewtype -> mkDerivedNewtypeInstance _customHead (const _customConstraints)
+      Explicit members -> mkInstance _customHead (const _customConstraints) $ memberToMethod <$> members
+    go Bounded =
+      mkInstance
+        (mkType "Bounded" [t])
+        (const [])
+        [ "bottom = genericBottom",
+          "top = genericTop"
+        ]
+    go Enum =
+      mkInstance
+        (mkType "Enum" [t])
+        (const [])
+        [ "succ = genericSucc",
+          "pred = genericPred"
+        ]
+    go Json =
+      vsep $
+        punctuate
+          line
+          [ mkInstance
+              (mkType "EncodeJson" [t])
+              encodeJsonConstraints
+              ["encodeJson = defer \\_ ->" <+> sumTypeToEncode st],
+            mkInstance
+              (mkType "DecodeJson" [t])
+              decodeJsonConstraints
+              [hang 2 $ "decodeJson = defer \\_ -> D.decode" <+> sumTypeToDecode st]
+          ]
+    go GenericShow = mkInstance (mkType "Show" [t]) showConstraints ["show a = genericShow a"]
+    go Functor = mkDerivedInstance (mkType "Functor" [toKind1 t]) (const [])
+    go Eq = mkDerivedInstance (mkType "Eq" [t]) eqConstraints
+    go Eq1 = mkDerivedInstance (mkType "Eq1" [toKind1 t]) (const [])
+    go Ord = mkDerivedInstance (mkType "Ord" [t]) ordConstraints
+    go Generic = mkDerivedInstance (mkType "Generic" [t, mkType "_" []]) (const [])
+    go Newtype = mkDerivedInstance (mkType "Newtype" [t, mkType "_" []]) (const [])
+
+memberToMethod :: InstanceMember 'PureScript -> Doc
+memberToMethod InstanceMember {..} =
+  hang 2 $
+    hsep
+      [ hsep $ textStrict <$> _memberName : _memberBindings <> ["="],
+        vsep $ textStrict <$> T.lines _memberBody
       ]
-    go Enum = mkInstance "Enum" (const []) t
-      [ "succ = genericSucc"
-      , "pred = genericPred"
-      ]
-    go Json = vsep $ punctuate line
-      [ mkInstance "EncodeJson" encodeJsonConstraints t
-        [ "encodeJson = defer \\_ ->" <+> sumTypeToEncode st ]
-      , mkInstance "DecodeJson" decodeJsonConstraints t
-        [ hang 2 $ "decodeJson = defer \\_ -> D.decode" <+> sumTypeToDecode st ]
-      ]
-    go GenericShow = mkInstance "Show" showConstraints t [ "show a = genericShow a" ]
-    go Functor = mkDerivedInstance "Functor" (const []) [] $ toKind1 t
-    go Eq = mkDerivedInstance "Eq" eqConstraints [] t
-    go Eq1 = mkDerivedInstance "Eq1" (const []) [] $ toKind1 t
-    go Ord = mkDerivedInstance "Ord" ordConstraints [] t
-    go Generic = mkDerivedInstance "Generic" (const []) ["_"] t
-    go Newtype = mkDerivedInstance "Newtype" (const []) ["_"] t
 
 constrainWith :: Text -> PSType -> [PSType]
 constrainWith name = map (mkType name . pure) . typeParams
@@ -369,33 +428,36 @@ sumTypeToEncode (SumType _ cs _)
     case cs of
       [dc@(DataConstructor _ args)] ->
         hsep
-        ["E.encode $"
-        , if isJust (nootype [dc])
-            then "unwrap"
-            else parens $ case_of [(constructorPattern dc, constructor args)]
-        , hang 2 $ ">$<" <+> nest 2 (argsToEncode args)
-        ]
+          [ "E.encode $",
+            if isJust (nootype [dc])
+              then "unwrap"
+              else parens $ case_of [(constructorPattern dc, constructor args)],
+            hang 2 $ ">$<" <+> nest 2 (argsToEncode args)
+          ]
       _ -> case_of (constructorToEncode <$> cs)
   where
     constructorToEncode c@(DataConstructor name args) =
-      ( constructorPattern c
-      , case args of
+      ( constructorPattern c,
+        case args of
           Nullary -> "encodeJson { tag:" <+> dquotes (textStrict name) <> ", contents: jsonNull }"
-          Normal as -> "E.encodeTagged"
+          Normal as ->
+            "E.encodeTagged"
               <+> dquotes (textStrict name)
               <+> normalExpr as
               <+> argsToEncode args
           Record rs
-            | any ((== "tag") . _recLabel) rs -> "E.encodeTagged"
-              <+> dquotes (textStrict name)
-              <+> hrecord (fields rs)
-              <+> argsToEncode args
-            | otherwise -> hsep
-              [ "encodeJson"
-              , vrecord
-                  $ ("tag:" <+> dquotes (textStrict name))
-                  : (recordFieldToJson <$> NE.toList rs)
-              ]
+            | any ((== "tag") . _recLabel) rs ->
+              "E.encodeTagged"
+                <+> dquotes (textStrict name)
+                <+> hrecord (fields rs)
+                <+> argsToEncode args
+            | otherwise ->
+              hsep
+                [ "encodeJson",
+                  vrecord $
+                    ("tag:" <+> dquotes (textStrict name)) :
+                    (recordFieldToJson <$> NE.toList rs)
+                ]
       )
     recordFieldToJson (RecordEntry name t) =
       textStrict name
@@ -409,11 +471,11 @@ sumTypeToEncode (SumType _ cs _)
       parens $ "E.tuple" <+> encloseHsep lparen rparen " >/\\<" (typeToEncode <$> NE.toList ts)
     argsToEncode (Record rs) =
       parens $ "E.record" <> softline <> vrecord (fieldSignatures $ fieldEncoder <$> rs)
-        where
-          fieldEncoder r =
-            r
-              & recValue %~ mkType "_" . pure
-              & recLabel <>~ renderText (":" <+> typeToEncode (_recValue r))
+      where
+        fieldEncoder r =
+          r
+            & recValue %~ mkType "_" . pure
+            & recLabel <>~ renderText (":" <+> typeToEncode (_recValue r))
 
 flattenTuple :: [PSType] -> [PSType]
 flattenTuple [] = []
@@ -423,37 +485,42 @@ flattenTuple (h : t) = h : flattenTuple t
 
 typeToEncode :: PSType -> Doc
 typeToEncode (TypeInfo "purescript-prelude" "Prelude" "Unit" []) = "E.unit"
-typeToEncode (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [t]) = parens $
-  "E.maybe" <+> typeToEncode t
-typeToEncode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) = parens $
-  "E.either" <+> typeToEncode l <+> typeToEncode r
-typeToEncode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) = parens $
-  "E.tuple" <+> parens (hsep $ punctuate " >/\\<" $ typeToEncode <$> flattenTuple ts)
-typeToEncode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) = parens $
-  "E.tuple" <+> parens (hsep $ punctuate " >/\\<" $ typeToEncode <$> flattenTuple ts)
-typeToEncode (TypeInfo "purescript-ordered-collections" "Data.Map" "Map" [k, v]) = parens $
-  "E.dictionary" <+> typeToEncode k <+> typeToEncode v
+typeToEncode (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [t]) =
+  parens $
+    "E.maybe" <+> typeToEncode t
+typeToEncode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) =
+  parens $
+    "E.either" <+> typeToEncode l <+> typeToEncode r
+typeToEncode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) =
+  parens $
+    "E.tuple" <+> parens (hsep $ punctuate " >/\\<" $ typeToEncode <$> flattenTuple ts)
+typeToEncode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) =
+  parens $
+    "E.tuple" <+> parens (hsep $ punctuate " >/\\<" $ typeToEncode <$> flattenTuple ts)
+typeToEncode (TypeInfo "purescript-ordered-collections" "Data.Map" "Map" [k, v]) =
+  parens $
+    "E.dictionary" <+> typeToEncode k <+> typeToEncode v
 typeToEncode _ = "E.value"
-
 
 sumTypeToDecode :: SumType 'PureScript -> Doc
 sumTypeToDecode (SumType _ cs _)
   | isEnum cs = "D.enum"
 sumTypeToDecode (SumType _ [c] _) = "$" <+> constructorToDecode False c
-sumTypeToDecode (SumType t cs _) = line <>
-  hsep
-    [ "$ D.sumType"
-    , t ^. typeName . to textStrict . to dquotes
-    , "$ Map.fromFoldable"
-    , encloseVsep lbracket rbracket comma (constructorToTagged <$> cs)
-    ]
-  where
-    constructorToTagged dc = hsep
-      [ dc ^. sigConstructor . to textStrict . to dquotes
-      , "/\\"
-      , constructorToDecode True dc
+sumTypeToDecode (SumType t cs _) =
+  line
+    <> hsep
+      [ "$ D.sumType",
+        t ^. typeName . to textStrict . to dquotes,
+        "$ Map.fromFoldable",
+        encloseVsep lbracket rbracket comma (constructorToTagged <$> cs)
       ]
-
+  where
+    constructorToTagged dc =
+      hsep
+        [ dc ^. sigConstructor . to textStrict . to dquotes,
+          "/\\",
+          constructorToDecode True dc
+        ]
 
 constructorToDecode :: Bool -> DataConstructor 'PureScript -> Doc
 constructorToDecode True (DataConstructor name Nullary) =
@@ -465,45 +532,52 @@ constructorToDecode True dc@(DataConstructor _ (Normal _)) =
 constructorToDecode False (DataConstructor name (Normal (a :| []))) =
   parens $ textStrict name <+> "<$>" <+> typeToDecode a
 constructorToDecode False (DataConstructor name (Normal as)) =
-  parens $ "D.tuple"
-    <+> "$"
-    <+> textStrict name
-    <+> encloseHsep "</$\\>" mempty " </*\\>" (typeToDecode <$> NE.toList as)
+  parens $
+    "D.tuple"
+      <+> "$"
+      <+> textStrict name
+      <+> encloseHsep "</$\\>" mempty " </*\\>" (typeToDecode <$> NE.toList as)
 constructorToDecode True dc@(DataConstructor name (Record rs))
   | any ((== "tag") . _recLabel) rs =
     "D.content" <+> constructorToDecode False dc
-  | otherwise = parens $ textStrict name
-    <+> "<$> D.object"
-    <+> dquotes (textStrict name)
-    <+> vrecord (fieldSignatures $ fieldDecoder <$> rs)
-    where
-      fieldDecoder r =
-        r
-          & recValue %~ mkType "_" . pure
-          & recLabel <>~ renderText (":" <+> typeToDecode (_recValue r))
+  | otherwise =
+    parens $
+      textStrict name
+        <+> "<$> D.object"
+        <+> dquotes (textStrict name)
+        <+> vrecord (fieldSignatures $ fieldDecoder <$> rs)
+  where
+    fieldDecoder r =
+      r
+        & recValue %~ mkType "_" . pure
+        & recLabel <>~ renderText (":" <+> typeToDecode (_recValue r))
 constructorToDecode False (DataConstructor name (Record rs)) =
-  parens $ textStrict name
-    <+> "<$> D.record"
-    <+> dquotes (textStrict name)
-    <+> vrecord (fieldSignatures $ fieldDecoder <$> rs)
-    where
-      fieldDecoder r =
-        r
-          & recValue %~ mkType "_" . pure
-          & recLabel <>~ renderText (":" <+> typeToDecode (_recValue r))
+  parens $
+    textStrict name
+      <+> "<$> D.record"
+      <+> dquotes (textStrict name)
+      <+> vrecord (fieldSignatures $ fieldDecoder <$> rs)
+  where
+    fieldDecoder r =
+      r
+        & recValue %~ mkType "_" . pure
+        & recLabel <>~ renderText (":" <+> typeToDecode (_recValue r))
 
 typeToDecode :: PSType -> Doc
 typeToDecode (TypeInfo "purescript-prelude" "Prelude" "Unit" []) = "D.unit"
-typeToDecode (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [t]) = parens $
-  "D.maybe" <+> typeToDecode t
-typeToDecode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) = parens $
-  "D.either" <+> typeToDecode l <+> typeToDecode r
-typeToDecode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) = parens $
-  "D.tuple" <+> encloseHsep lparen rparen " </\\>" (typeToDecode <$> flattenTuple ts)
-typeToDecode (TypeInfo "purescript-ordered-collections" "Data.Map" "Map" [k, v]) = parens $
-  "D.dictionary" <+> typeToDecode k <+> typeToDecode v
+typeToDecode (TypeInfo "purescript-maybe" "Data.Maybe" "Maybe" [t]) =
+  parens $
+    "D.maybe" <+> typeToDecode t
+typeToDecode (TypeInfo "purescript-either" "Data.Either" "Either" [l, r]) =
+  parens $
+    "D.either" <+> typeToDecode l <+> typeToDecode r
+typeToDecode (TypeInfo "purescript-tuples" "Data.Tuple" "Tuple" ts) =
+  parens $
+    "D.tuple" <+> encloseHsep lparen rparen " </\\>" (typeToDecode <$> flattenTuple ts)
+typeToDecode (TypeInfo "purescript-ordered-collections" "Data.Map" "Map" [k, v]) =
+  parens $
+    "D.dictionary" <+> typeToDecode k <+> typeToDecode v
 typeToDecode _ = "D.value"
-
 
 sumTypeToOptics :: SumType 'PureScript -> Doc
 sumTypeToOptics st =
@@ -521,7 +595,7 @@ hasUnderscore :: RecordEntry lang -> Bool
 hasUnderscore (RecordEntry name _) = "_" `T.isPrefixOf` name
 
 constructorToOptic ::
-     Bool -> TypeInfo 'PureScript -> DataConstructor 'PureScript -> Doc
+  Bool -> TypeInfo 'PureScript -> DataConstructor 'PureScript -> Doc
 constructorToOptic hasOtherConstructors typeInfo (DataConstructor n args) =
   case (args, hasOtherConstructors) of
     (Nullary, False) -> iso pName typeInfo psUnit "(const unit)" $ parens ("const" <+> cName)
@@ -541,16 +615,16 @@ constructorToOptic hasOtherConstructors typeInfo (DataConstructor n args) =
     (Record rs, False) -> newtypeIso pName typeInfo $ recordType rs
     (Record rs, True) ->
       prism pName typeInfo (recordType rs) fromExpr toExpr cName
-        where
-          fromExpr = parens $ pattern n toExpr
-          toExpr = "a"
+      where
+        fromExpr = parens $ pattern n toExpr
+        toExpr = "a"
   where
     cName = textStrict n
     pName = "_" <> textStrict n
     recordType = (`mkType` []) . renderText . hrecord . fieldSignatures
 
 typesToRecord :: NonEmpty PSType -> NonEmpty (RecordEntry 'PureScript)
-typesToRecord = fmap (uncurry RecordEntry) . NE.zip (T.singleton <$> ['a'..])
+typesToRecord = fmap (uncurry RecordEntry) . NE.zip (T.singleton <$> ['a' ..])
 
 iso :: Doc -> PSType -> PSType -> Doc -> Doc -> Doc
 iso name fromType toType fromMorph toMorph =
@@ -568,10 +642,11 @@ prism name fromType toType previewPattern previewExpr inject =
     []
     []
     (mkType "Prism'" [fromType, toType])
-    ( "prism'" <+> inject <+> case_of
-        [ (previewPattern, "Just" <+> previewExpr)
-        , ("_", "Nothing")
-        ]
+    ( "prism'" <+> inject
+        <+> case_of
+          [ (previewPattern, "Just" <+> previewExpr),
+            ("_", "Nothing")
+          ]
     )
 
 newtypeIso :: Doc -> PSType -> PSType -> Doc
@@ -586,10 +661,11 @@ newtypeIso name fromType toType =
 recordEntryToLens :: SumType 'PureScript -> RecordEntry 'PureScript -> Doc
 recordEntryToLens (SumType t _ _) e =
   if hasUnderscore e
-    then vsep
-      [ signature True lensName [] [] $ mkType "Lens'" [t, e ^. recValue]
-      , lensName <+> "= _Newtype <<< prop" <+> parens ("Proxy :: _" <> dquotes recName)
-      ]
+    then
+      vsep
+        [ signature True lensName [] [] $ mkType "Lens'" [t, e ^. recValue],
+          lensName <+> "= _Newtype <<< prop" <+> parens ("Proxy :: _" <> dquotes recName)
+        ]
     else mempty
   where
     recName = e ^. recLabel . to textStrict
@@ -622,7 +698,7 @@ normalExpr (_ :| []) = "a"
 normalExpr ts = parens . hsep . punctuate " /\\" $ normalLabels ts
 
 normalLabels :: NonEmpty PSType -> [Doc]
-normalLabels = fmap char . zipWith const ['a'..] . NE.toList
+normalLabels = fmap char . zipWith const ['a' ..] . NE.toList
 
 recordPattern :: Text -> NonEmpty (RecordEntry 'PureScript) -> Doc
 recordPattern name = pattern name . hrecord . fields
@@ -663,30 +739,31 @@ branch p body = hsep [p, "->", body]
 lambda :: Doc -> Doc -> Doc
 lambda variables body = backslash <> branch variables body
 
-signature' :: Doc -> PSType-> Doc
+signature' :: Doc -> PSType -> Doc
 signature' name = signature False name [] []
 
-signature :: Bool -> Doc -> [PSType] -> [PSType] -> PSType-> Doc
+signature :: Bool -> Doc -> [PSType] -> [PSType] -> PSType -> Doc
 signature topLevel name constraints params ret =
   hsep $ catMaybes [Just name, Just "::", forAll, constraintsDoc, paramsDoc, Just $ typeInfoToDecl ret]
-    where
-      forAll = case (topLevel, allTypes >>= typeParams) of
-        (False, _) -> Nothing
-        (_, []) -> Nothing
-        (_, ps) -> Just $ "forall" <+> hsep (typeInfoToDoc <$> nubBy (on (==) _typeName) ps) <> "."
-      allTypes = ret : constraints <> params
-      constraintsDoc = case constraints of
-        [] -> Nothing
-        cs -> Just $ hsep ((<+> "=>") . typeInfoToDecl  <$> cs)
-      paramsDoc = case params of
-        [] -> Nothing
-        ps -> Just $ hsep ((<+> "->") . typeInfoToDecl  <$> ps)
+  where
+    forAll = case (topLevel, allTypes >>= typeParams) of
+      (False, _) -> Nothing
+      (_, []) -> Nothing
+      (_, ps) -> Just $ "forall" <+> hsep (typeInfoToDoc <$> nubBy (on (==) _typeName) ps) <> "."
+    allTypes = ret : constraints <> params
+    constraintsDoc = case constraints of
+      [] -> Nothing
+      cs -> Just $ hsep ((<+> "=>") . typeInfoToDecl <$> cs)
+    paramsDoc = case params of
+      [] -> Nothing
+      ps -> Just $ hsep ((<+> "->") . typeInfoToDecl <$> ps)
 
 def :: Doc -> [PSType] -> [(Doc, PSType)] -> PSType -> Doc -> Doc
-def name constraints params ret body = vsep
-  [ signature True name constraints (snd <$> params) ret
-  , hsep $ name : (fst <$> params) <> ["=", body]
-  ]
+def name constraints params ret body =
+  vsep
+    [ signature True name constraints (snd <$> params) ret,
+      hsep $ name : (fst <$> params) <> ["=", body]
+    ]
 
 mkType :: Text -> [PSType] -> PSType
 mkType = TypeInfo "" ""
@@ -697,13 +774,12 @@ typeParams = filter (isLower . T.head . _typeName) . flattenTypeInfo
 encloseHsep :: Doc -> Doc -> Doc -> [Doc] -> Doc
 encloseHsep left right sp ds =
   case ds of
-    []  -> left <> right
-    _   -> left <> hsep (punctuate sp ds) <> right
+    [] -> left <> right
+    _ -> left <> hsep (punctuate sp ds) <> right
 
 encloseVsep :: Doc -> Doc -> Doc -> [Doc] -> Doc
 encloseVsep left right sp ds =
   case ds of
-    []  -> left <> right
+    [] -> left <> right
     [d] -> left <+> d <+> right
-    _   -> nest 2 $ linebreak <> vsep (zipWith (<+>) (left : repeat (hang 2 sp)) ds <> [right])
-
+    _ -> nest 2 $ linebreak <> vsep (zipWith (<+>) (left : repeat (hang 2 sp)) ds <> [right])

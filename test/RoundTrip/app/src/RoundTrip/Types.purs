@@ -33,26 +33,26 @@ data TestData
   = Maybe (Maybe TestSum)
   | Either (Either (Maybe Int) (Maybe Boolean))
 
-derive instance eqTestData :: Eq TestData
+derive instance Eq TestData
 
-instance showTestData :: Show TestData where
+instance Show TestData where
   show a = genericShow a
 
-derive instance ordTestData :: Ord TestData
+derive instance Ord TestData
 
-instance encodeJsonTestData :: EncodeJson TestData where
+instance EncodeJson TestData where
   encodeJson = defer \_ -> case _ of
     Maybe a -> E.encodeTagged "Maybe" a (E.maybe E.value)
     Either a -> E.encodeTagged "Either" a (E.either (E.maybe E.value) (E.maybe E.value))
 
-instance decodeJsonTestData :: DecodeJson TestData where
+instance DecodeJson TestData where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "TestData" $ Map.fromFoldable
       [ "Maybe" /\ D.content (Maybe <$> (D.maybe D.value))
       , "Either" /\ D.content (Either <$> (D.either (D.maybe D.value) (D.maybe D.value)))
       ]
 
-derive instance genericTestData :: Generic TestData _
+derive instance Generic TestData _
 
 --------------------------------------------------------------------------------
 
@@ -96,14 +96,14 @@ data TestSum
   | Recursive TestRecursiveA
   | Enum TestEnum
 
-derive instance eqTestSum :: Eq TestSum
+derive instance Eq TestSum
 
-instance showTestSum :: Show TestSum where
+instance Show TestSum where
   show a = genericShow a
 
-derive instance ordTestSum :: Ord TestSum
+derive instance Ord TestSum
 
-instance encodeJsonTestSum :: EncodeJson TestSum where
+instance EncodeJson TestSum where
   encodeJson = defer \_ -> case _ of
     Nullary -> encodeJson { tag: "Nullary", contents: jsonNull }
     Bool a -> E.encodeTagged "Bool" a E.value
@@ -133,7 +133,7 @@ instance encodeJsonTestSum :: EncodeJson TestSum where
     Recursive a -> E.encodeTagged "Recursive" a E.value
     Enum a -> E.encodeTagged "Enum" a E.value
 
-instance decodeJsonTestSum :: DecodeJson TestSum where
+instance DecodeJson TestSum where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "TestSum" $ Map.fromFoldable
       [ "Nullary" /\ pure Nullary
@@ -164,7 +164,7 @@ instance decodeJsonTestSum :: DecodeJson TestSum where
       , "Enum" /\ D.content (Enum <$> D.value)
       ]
 
-derive instance genericTestSum :: Generic TestSum _
+derive instance Generic TestSum _
 
 --------------------------------------------------------------------------------
 
@@ -289,26 +289,26 @@ data TestRecursiveA
   = Nil
   | Recurse TestRecursiveB
 
-derive instance eqTestRecursiveA :: Eq TestRecursiveA
+derive instance Eq TestRecursiveA
 
-instance showTestRecursiveA :: Show TestRecursiveA where
+instance Show TestRecursiveA where
   show a = genericShow a
 
-derive instance ordTestRecursiveA :: Ord TestRecursiveA
+derive instance Ord TestRecursiveA
 
-instance encodeJsonTestRecursiveA :: EncodeJson TestRecursiveA where
+instance EncodeJson TestRecursiveA where
   encodeJson = defer \_ -> case _ of
     Nil -> encodeJson { tag: "Nil", contents: jsonNull }
     Recurse a -> E.encodeTagged "Recurse" a E.value
 
-instance decodeJsonTestRecursiveA :: DecodeJson TestRecursiveA where
+instance DecodeJson TestRecursiveA where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "TestRecursiveA" $ Map.fromFoldable
       [ "Nil" /\ pure Nil
       , "Recurse" /\ D.content (Recurse <$> D.value)
       ]
 
-derive instance genericTestRecursiveA :: Generic TestRecursiveA _
+derive instance Generic TestRecursiveA _
 
 --------------------------------------------------------------------------------
 
@@ -326,22 +326,22 @@ _Recurse = prism' Recurse case _ of
 
 newtype TestRecursiveB = RecurseB TestRecursiveB
 
-derive instance eqTestRecursiveB :: Eq TestRecursiveB
+derive instance Eq TestRecursiveB
 
-instance showTestRecursiveB :: Show TestRecursiveB where
+instance Show TestRecursiveB where
   show a = genericShow a
 
-derive instance ordTestRecursiveB :: Ord TestRecursiveB
+derive instance Ord TestRecursiveB
 
-instance encodeJsonTestRecursiveB :: EncodeJson TestRecursiveB where
+instance EncodeJson TestRecursiveB where
   encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
 
-instance decodeJsonTestRecursiveB :: DecodeJson TestRecursiveB where
+instance DecodeJson TestRecursiveB where
   decodeJson = defer \_ -> D.decode $ (RecurseB <$> D.value)
 
-derive instance genericTestRecursiveB :: Generic TestRecursiveB _
+derive instance Generic TestRecursiveB _
 
-derive instance newtypeTestRecursiveB :: Newtype TestRecursiveB _
+derive instance Newtype TestRecursiveB _
 
 --------------------------------------------------------------------------------
 
@@ -355,30 +355,30 @@ newtype TestRecord a = TestRecord
   , _field2 :: a
   }
 
-derive instance functorTestRecord :: Functor TestRecord
+derive instance Functor TestRecord
 
-derive instance eqTestRecord :: (Eq a) => Eq (TestRecord a)
+derive instance (Eq a) => Eq (TestRecord a)
 
-instance showTestRecord :: (Show a) => Show (TestRecord a) where
+instance (Show a) => Show (TestRecord a) where
   show a = genericShow a
 
-derive instance ordTestRecord :: (Ord a) => Ord (TestRecord a)
+derive instance (Ord a) => Ord (TestRecord a)
 
-instance encodeJsonTestRecord :: (EncodeJson a) => EncodeJson (TestRecord a) where
+instance (EncodeJson a) => EncodeJson (TestRecord a) where
   encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
                                                    { _field1: (E.maybe E.value) :: _ (Maybe Int)
                                                    , _field2: E.value :: _ a
                                                    })
 
-instance decodeJsonTestRecord :: (DecodeJson a) => DecodeJson (TestRecord a) where
+instance (DecodeJson a) => DecodeJson (TestRecord a) where
   decodeJson = defer \_ -> D.decode $ (TestRecord <$> D.record "TestRecord"
       { _field1: (D.maybe D.value) :: _ (Maybe Int)
       , _field2: D.value :: _ a
       })
 
-derive instance genericTestRecord :: Generic (TestRecord a) _
+derive instance Generic (TestRecord a) _
 
-derive instance newtypeTestRecord :: Newtype (TestRecord a) _
+derive instance Newtype (TestRecord a) _
 
 --------------------------------------------------------------------------------
 
@@ -395,22 +395,22 @@ field2 = _Newtype <<< prop (Proxy :: _"_field2")
 
 newtype TestNewtype = TestNewtype (TestRecord Boolean)
 
-derive instance eqTestNewtype :: Eq TestNewtype
+derive instance Eq TestNewtype
 
-instance showTestNewtype :: Show TestNewtype where
+instance Show TestNewtype where
   show a = genericShow a
 
-derive instance ordTestNewtype :: Ord TestNewtype
+derive instance Ord TestNewtype
 
-instance encodeJsonTestNewtype :: EncodeJson TestNewtype where
+instance EncodeJson TestNewtype where
   encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
 
-instance decodeJsonTestNewtype :: DecodeJson TestNewtype where
+instance DecodeJson TestNewtype where
   decodeJson = defer \_ -> D.decode $ (TestNewtype <$> D.value)
 
-derive instance genericTestNewtype :: Generic TestNewtype _
+derive instance Generic TestNewtype _
 
-derive instance newtypeTestNewtype :: Newtype TestNewtype _
+derive instance Newtype TestNewtype _
 
 --------------------------------------------------------------------------------
 
@@ -421,23 +421,23 @@ _TestNewtype = _Newtype
 
 newtype TestNewtypeRecord = TestNewtypeRecord { unTestNewtypeRecord :: TestNewtype }
 
-derive instance eqTestNewtypeRecord :: Eq TestNewtypeRecord
+derive instance Eq TestNewtypeRecord
 
-instance showTestNewtypeRecord :: Show TestNewtypeRecord where
+instance Show TestNewtypeRecord where
   show a = genericShow a
 
-derive instance ordTestNewtypeRecord :: Ord TestNewtypeRecord
+derive instance Ord TestNewtypeRecord
 
-instance encodeJsonTestNewtypeRecord :: EncodeJson TestNewtypeRecord where
+instance EncodeJson TestNewtypeRecord where
   encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
                                                  { unTestNewtypeRecord: E.value :: _ TestNewtype })
 
-instance decodeJsonTestNewtypeRecord :: DecodeJson TestNewtypeRecord where
+instance DecodeJson TestNewtypeRecord where
   decodeJson = defer \_ -> D.decode $ (TestNewtypeRecord <$> D.record "TestNewtypeRecord" { unTestNewtypeRecord: D.value :: _ TestNewtype })
 
-derive instance genericTestNewtypeRecord :: Generic TestNewtypeRecord _
+derive instance Generic TestNewtypeRecord _
 
-derive instance newtypeTestNewtypeRecord :: Newtype TestNewtypeRecord _
+derive instance Newtype TestNewtypeRecord _
 
 --------------------------------------------------------------------------------
 
@@ -507,20 +507,20 @@ _Bar = prism' Bar case _ of
 
 data TestTwoFields = TestTwoFields Boolean Int
 
-derive instance eqTestTwoFields :: Eq TestTwoFields
+derive instance Eq TestTwoFields
 
-instance showTestTwoFields :: Show TestTwoFields where
+instance Show TestTwoFields where
   show a = genericShow a
 
-derive instance ordTestTwoFields :: Ord TestTwoFields
+derive instance Ord TestTwoFields
 
-instance encodeJsonTestTwoFields :: EncodeJson TestTwoFields where
+instance EncodeJson TestTwoFields where
   encodeJson = defer \_ -> E.encode $ (case _ of TestTwoFields a b -> (a /\ b)) >$< (E.tuple (E.value >/\< E.value))
 
-instance decodeJsonTestTwoFields :: DecodeJson TestTwoFields where
+instance DecodeJson TestTwoFields where
   decodeJson = defer \_ -> D.decode $ (D.tuple $ TestTwoFields </$\>D.value </*\> D.value)
 
-derive instance genericTestTwoFields :: Generic TestTwoFields _
+derive instance Generic TestTwoFields _
 
 --------------------------------------------------------------------------------
 
@@ -538,26 +538,26 @@ data TestEnum
   | Sat
   | Sun
 
-derive instance eqTestEnum :: Eq TestEnum
+derive instance Eq TestEnum
 
-instance showTestEnum :: Show TestEnum where
+instance Show TestEnum where
   show a = genericShow a
 
-derive instance ordTestEnum :: Ord TestEnum
+derive instance Ord TestEnum
 
-instance encodeJsonTestEnum :: EncodeJson TestEnum where
+instance EncodeJson TestEnum where
   encodeJson = defer \_ -> E.encode E.enum
 
-instance decodeJsonTestEnum :: DecodeJson TestEnum where
+instance DecodeJson TestEnum where
   decodeJson = defer \_ -> D.decode D.enum
 
-derive instance genericTestEnum :: Generic TestEnum _
+derive instance Generic TestEnum _
 
-instance enumTestEnum :: Enum TestEnum where
+instance Enum TestEnum where
   succ = genericSucc
   pred = genericPred
 
-instance boundedTestEnum :: Bounded TestEnum where
+instance Bounded TestEnum where
   bottom = genericBottom
   top = genericTop
 
@@ -602,26 +602,26 @@ _Sun = prism' (const Sun) case _ of
 
 data MyUnit = U
 
-derive instance eqMyUnit :: Eq MyUnit
+derive instance Eq MyUnit
 
-instance showMyUnit :: Show MyUnit where
+instance Show MyUnit where
   show a = genericShow a
 
-derive instance ordMyUnit :: Ord MyUnit
+derive instance Ord MyUnit
 
-instance encodeJsonMyUnit :: EncodeJson MyUnit where
+instance EncodeJson MyUnit where
   encodeJson = defer \_ -> E.encode E.enum
 
-instance decodeJsonMyUnit :: DecodeJson MyUnit where
+instance DecodeJson MyUnit where
   decodeJson = defer \_ -> D.decode D.enum
 
-derive instance genericMyUnit :: Generic MyUnit _
+derive instance Generic MyUnit _
 
-instance enumMyUnit :: Enum MyUnit where
+instance Enum MyUnit where
   succ = genericSucc
   pred = genericPred
 
-instance boundedMyUnit :: Bounded MyUnit where
+instance Bounded MyUnit where
   bottom = genericBottom
   top = genericTop
 
