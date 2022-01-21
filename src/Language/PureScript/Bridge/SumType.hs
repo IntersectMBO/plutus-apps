@@ -204,48 +204,42 @@ instance (Selector a, Typeable t) => GDataConstructorArgs (S1 a (K1 R t)) where
 --   This includes all types found at the right hand side of a sum type
 --   definition, not the type parameters of the sum type itself
 getUsedTypes :: SumType lang -> Set (TypeInfo lang)
-getUsedTypes (SumType _ cs is) = foldMap constructorToTypes cs <> foldMap instanceToTypes is
+getUsedTypes (SumType _ cs is) =
+  Set.fromList . concatMap flattenTypeInfo $
+    concatMap constructorToTypes cs <> concatMap instanceToTypes is
 
-constructorToTypes ::
-  DataConstructor lang -> Set (TypeInfo lang)
-constructorToTypes (DataConstructor _ Nullary) = Set.empty
-constructorToTypes (DataConstructor _ (Normal [ts])) =
-  Set.fromList $ flattenTypeInfo ts
-constructorToTypes (DataConstructor _ (Record [rs])) =
-  Set.fromList . flattenTypeInfo $ _recValue rs
-constructorToTypes (DataConstructor _ (Normal ts)) =
-  Set.fromList . concatMap flattenTypeInfo $ NE.toList ts
-constructorToTypes (DataConstructor _ (Record rs)) =
-  Set.fromList . concatMap (flattenTypeInfo . _recValue) $ NE.toList rs
+constructorToTypes :: DataConstructor lang -> [TypeInfo lang]
+constructorToTypes (DataConstructor _ Nullary) = []
+constructorToTypes (DataConstructor _ (Normal ts)) = NE.toList ts
+constructorToTypes (DataConstructor _ (Record rs)) = _recValue <$> NE.toList rs
 
-instanceToTypes :: Instance lang -> Set (TypeInfo lang)
-instanceToTypes Generic =
-  Set.singleton $ TypeInfo "purescript-prelude" "Data.Generic.Rep" "class Generic" []
-instanceToTypes GenericShow =
-  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Show" []
+instanceToTypes :: Instance lang -> [TypeInfo lang]
+instanceToTypes Generic = pure $ constraintToType $ TypeInfo "purescript-prelude" "Data.Generic.Rep" "Generic" []
+instanceToTypes GenericShow = pure $ constraintToType $ TypeInfo "purescript-prelude" "Prelude" "Show" []
 instanceToTypes Json =
-  Set.fromList
-    [ TypeInfo "purescript-argonaut-codecs" "Data.Argonaut.Decode" "class DecodeJson" [],
-      TypeInfo "purescript-argonaut-codecs" "Data.Argonaut.Encode" "class EncodeJson" []
-    ]
+  constraintToType
+    <$> [ TypeInfo "purescript-argonaut-codecs" "Data.Argonaut.Decode" "DecodeJson" [],
+          TypeInfo "purescript-argonaut-codecs" "Data.Argonaut.Encode" "EncodeJson" []
+        ]
 instanceToTypes Newtype =
-  Set.singleton $ TypeInfo "purescript-newtype" "Data.Newtype" "class Newtype" []
+  pure $ constraintToType $ TypeInfo "purescript-newtype" "Data.Newtype" "Newtype" []
 instanceToTypes Functor =
-  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Functor" []
+  pure $ constraintToType $ TypeInfo "purescript-prelude" "Prelude" "Functor" []
 instanceToTypes Eq =
-  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Eq" []
+  pure $ constraintToType $ TypeInfo "purescript-prelude" "Prelude" "Eq" []
 instanceToTypes Eq1 =
-  Set.singleton $ TypeInfo "purescript-prelude" "Data.Eq" "class Eq1" []
+  pure $ constraintToType $ TypeInfo "purescript-prelude" "Data.Eq" "Eq1" []
 instanceToTypes Ord =
-  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Ord" []
+  pure $ constraintToType $ TypeInfo "purescript-prelude" "Prelude" "Ord" []
 instanceToTypes Enum =
-  Set.singleton $ TypeInfo "purescript-enums" "Data.Enum" "class Enum" []
+  pure $ constraintToType $ TypeInfo "purescript-enums" "Data.Enum" "Enum" []
 instanceToTypes Bounded =
-  Set.singleton $ TypeInfo "purescript-prelude" "Prelude" "class Bounded" []
+  pure $ constraintToType $ TypeInfo "purescript-prelude" "Prelude" "Bounded" []
 instanceToTypes (Custom CustomInstance {..}) =
-  Set.fromList $
-    concatMap flattenTypeInfo $
-      _customHead : (_customConstraints <> implementationToTypes _customImplementation)
+  constraintToType _customHead : (fmap constraintToType _customConstraints <> implementationToTypes _customImplementation)
+
+constraintToType :: TypeInfo lang -> TypeInfo lang
+constraintToType = over typeName ("class " <>)
 
 implementationToTypes :: InstanceImplementation lang -> [TypeInfo lang]
 implementationToTypes (Explicit members) = concatMap _memberDependencies members
