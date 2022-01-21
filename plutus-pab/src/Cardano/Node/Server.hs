@@ -44,7 +44,7 @@ app trace slotCfg clientHandler stateVar =
     serve (Proxy @API) $
     hoistServer
         (Proxy @API)
-        (liftIO . processChainEffects trace slotCfg clientHandler stateVar)
+        (liftIO . processChainEffects trace slotCfg (Just clientHandler) stateVar)
         (healthcheck :<|> consumeEventHistory stateVar)
 
 data Ctx = Ctx { serverHandler :: Server.ServerHandler
