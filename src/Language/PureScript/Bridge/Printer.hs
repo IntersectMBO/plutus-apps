@@ -29,6 +29,8 @@ import Language.PureScript.Bridge.SumType
   ( CustomInstance (..),
     DataConstructor (..),
     DataConstructorArgs (..),
+    ImportLine (..),
+    ImportLines,
     Instance (..),
     InstanceImplementation (..),
     InstanceMember (..),
@@ -36,6 +38,8 @@ import Language.PureScript.Bridge.SumType
     RecordEntry (..),
     SumType (SumType),
     getUsedTypes,
+    importsFromList,
+    instanceToImportLines,
     nootype,
     recLabel,
     recValue,
@@ -104,15 +108,7 @@ data Module (lang :: Language) = PSModule
 
 type PSModule = Module 'PureScript
 
-data ImportLine = ImportLine
-  { importModule :: !Text,
-    importTypes :: !(Set Text)
-  }
-  deriving (Show)
-
 type Modules = Map Text PSModule
-
-type ImportLines = Map Text ImportLine
 
 sumTypesToModules :: [SumType 'PureScript] -> Modules
 sumTypesToModules = foldr (Map.unionWith unionModules) Map.empty . fmap sumTypeToModule
@@ -174,28 +170,6 @@ instancesToImportLines :: [PSInstance] -> ImportLines
 instancesToImportLines =
   foldr unionImportLines Map.empty . fmap instanceToImportLines
 
-instanceToImportLines :: PSInstance -> ImportLines
-instanceToImportLines GenericShow =
-  importsFromList [ImportLine "Data.Show.Generic" $ Set.singleton "genericShow"]
-instanceToImportLines Json =
-  importsFromList
-    [ ImportLine "Control.Lazy" $ Set.singleton "defer",
-      ImportLine "Data.Argonaut" $ Set.fromList ["encodeJson", "jsonNull"],
-      ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"],
-      ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"],
-      ImportLine "Data.Newtype" $ Set.singleton "unwrap",
-      ImportLine "Data.Tuple.Nested" $ Set.singleton "(/\\)"
-    ]
-instanceToImportLines Enum =
-  importsFromList
-    [ ImportLine "Data.Enum.Generic" $ Set.fromList ["genericPred", "genericSucc"]
-    ]
-instanceToImportLines Bounded =
-  importsFromList
-    [ ImportLine "Data.Bounded.Generic" $ Set.fromList ["genericBottom", "genericTop"]
-    ]
-instanceToImportLines _ = Map.empty
-
 instanceToQualifiedImports :: PSInstance -> Map Text Text
 instanceToQualifiedImports Json =
   Map.fromList
@@ -204,13 +178,6 @@ instanceToQualifiedImports Json =
       ("Data.Map", "Map")
     ]
 instanceToQualifiedImports _ = Map.empty
-
-importsFromList :: [ImportLine] -> Map Text ImportLine
-importsFromList ls =
-  let pairs = zip (importModule <$> ls) ls
-      merge a b =
-        ImportLine (importModule a) (importTypes a `Set.union` importTypes b)
-   in Map.fromListWith merge pairs
 
 mergeImportLines :: ImportLines -> ImportLines -> ImportLines
 mergeImportLines = Map.unionWith mergeLines

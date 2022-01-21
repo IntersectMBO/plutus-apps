@@ -20,6 +20,8 @@ import Control.Lens hiding (from, to)
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Maybe (maybeToList)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -28,6 +30,14 @@ import qualified Data.Text as T
 import Data.Typeable
 import Generics.Deriving
 import Language.PureScript.Bridge.TypeInfo
+
+data ImportLine = ImportLine
+  { importModule :: !Text,
+    importTypes :: !(Set Text)
+  }
+  deriving (Eq, Ord, Show)
+
+type ImportLines = Map Text ImportLine
 
 -- | Generic representation of your Haskell types.
 data SumType (lang :: Language)
@@ -87,7 +97,8 @@ data InstanceMember (lang :: Language) = InstanceMember
   { _memberName :: Text,
     _memberBindings :: [Text],
     _memberBody :: Text,
-    _memberDependencies :: [TypeInfo lang]
+    _memberDependencies :: [TypeInfo lang],
+    _memberImportLines :: ImportLines
   }
   deriving (Eq, Ord, Show)
 
@@ -244,6 +255,37 @@ constraintToType = over typeName ("class " <>)
 implementationToTypes :: InstanceImplementation lang -> [TypeInfo lang]
 implementationToTypes (Explicit members) = concatMap _memberDependencies members
 implementationToTypes _ = []
+
+instanceToImportLines :: PSInstance -> ImportLines
+instanceToImportLines GenericShow =
+  importsFromList [ImportLine "Data.Show.Generic" $ Set.singleton "genericShow"]
+instanceToImportLines Json =
+  importsFromList
+    [ ImportLine "Control.Lazy" $ Set.singleton "defer",
+      ImportLine "Data.Argonaut" $ Set.fromList ["encodeJson", "jsonNull"],
+      ImportLine "Data.Argonaut.Decode.Aeson" $ Set.fromList ["(</$\\>)", "(</*\\>)", "(</\\>)"],
+      ImportLine "Data.Argonaut.Encode.Aeson" $ Set.fromList ["(>$<)", "(>/\\<)"],
+      ImportLine "Data.Newtype" $ Set.singleton "unwrap",
+      ImportLine "Data.Tuple.Nested" $ Set.singleton "(/\\)"
+    ]
+instanceToImportLines Enum =
+  importsFromList
+    [ ImportLine "Data.Enum.Generic" $ Set.fromList ["genericPred", "genericSucc"]
+    ]
+instanceToImportLines Bounded =
+  importsFromList
+    [ ImportLine "Data.Bounded.Generic" $ Set.fromList ["genericBottom", "genericTop"]
+    ]
+instanceToImportLines (Custom CustomInstance {_customImplementation = Explicit members}) =
+  importsFromList $ concatMap (Map.elems . _memberImportLines) members
+instanceToImportLines _ = Map.empty
+
+importsFromList :: [ImportLine] -> Map Text ImportLine
+importsFromList ls =
+  let pairs = zip (importModule <$> ls) ls
+      merge a b =
+        ImportLine (importModule a) (importTypes a `Set.union` importTypes b)
+   in Map.fromListWith merge pairs
 
 -- Lenses:
 makeLenses ''DataConstructor
