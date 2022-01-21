@@ -18,34 +18,35 @@
 --
 --   Find usage examples in "Language.PureScript.Bridge.Primitives" and "Language.PureScript.Bridge.PSTypes"
 module Language.PureScript.Bridge.Builder
-  ( BridgeBuilder
-  , BridgePart
-  , FixUpBuilder
-  , FixUpBridge
-  , BridgeData
-  , fullBridge
-  , (^==)
-  , doCheck
-  , (<|>)
-  , psTypeParameters
-  , FullBridge
-  , buildBridge
-  , clearPackageFixUp
-  , errorFixUp
-  , buildBridgeWithCustomFixUp
-  ) where
+  ( BridgeBuilder,
+    BridgePart,
+    FixUpBuilder,
+    FixUpBridge,
+    BridgeData,
+    fullBridge,
+    (^==),
+    doCheck,
+    (<|>),
+    psTypeParameters,
+    FullBridge,
+    buildBridge,
+    clearPackageFixUp,
+    errorFixUp,
+    buildBridgeWithCustomFixUp,
+  )
+where
 
 import Control.Applicative
 import Control.Lens
 import Control.Monad (MonadPlus, guard, mplus, mzero)
 import Control.Monad.Reader.Class
-import Control.Monad.Trans.Reader (Reader, ReaderT(..), runReader)
+import Control.Monad.Trans.Reader (Reader, ReaderT (..), runReader)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Language.PureScript.Bridge.TypeInfo
 
-newtype BridgeBuilder a =
-  BridgeBuilder (ReaderT BridgeData Maybe a)
+newtype BridgeBuilder a
+  = BridgeBuilder (ReaderT BridgeData Maybe a)
   deriving (Functor, Applicative, Monad, MonadReader BridgeData)
 
 type BridgePart = BridgeBuilder PSType
@@ -75,20 +76,20 @@ type BridgePart = BridgeBuilder PSType
 --
 -- > psEither :: FixUpBridge
 -- > psEither = ....
---
-newtype FixUpBuilder a =
-  FixUpBuilder (Reader BridgeData a)
+newtype FixUpBuilder a
+  = FixUpBuilder (Reader BridgeData a)
   deriving (Functor, Applicative, Monad, MonadReader BridgeData)
 
 type FixUpBridge = FixUpBuilder PSType
 
 type FullBridge = HaskellType -> PSType
 
-data BridgeData =
-  BridgeData
-    { _haskType :: HaskellType -- ^ The Haskell type to translate.
-    , _fullBridge :: FullBridge -- ^ Reference to the bridge itself, needed for translation of type constructors.
-    }
+data BridgeData = BridgeData
+  { -- | The Haskell type to translate.
+    _haskType :: HaskellType,
+    -- | Reference to the bridge itself, needed for translation of type constructors.
+    _fullBridge :: FullBridge
+  }
 
 -- | By implementing the 'haskType' lens in the HasHaskType class, we are able
 --   to use it for both 'BridgeData' and a plain 'HaskellType', therefore
@@ -133,10 +134,10 @@ clearPackageFixUp = do
   psArgs <- psTypeParameters
   return
     TypeInfo
-      { _typePackage = ""
-      , _typeModule = input ^. typeModule
-      , _typeName = input ^. typeName
-      , _typeParameters = psArgs
+      { _typePackage = "",
+        _typeModule = input ^. typeModule,
+        _typeName = input ^. typeName,
+        _typeParameters = psArgs
       }
 
 -- | A 'FixUpBridge' which calles 'error' when used.
@@ -147,14 +148,14 @@ errorFixUp :: MonadReader BridgeData m => m PSType
 errorFixUp = do
   inType <- view haskType
   let message =
-        "No translation supplied for Haskell type: '" <> inType ^. typeName <>
-        "', from module: '" <>
-        inType ^.
-        typeModule <>
-        "', from package: '" <>
-        inType ^.
-        typePackage <>
-        "'!"
+        "No translation supplied for Haskell type: '" <> inType ^. typeName
+          <> "', from module: '"
+          <> inType
+          ^. typeModule
+          <> "', from package: '"
+          <> inType
+          ^. typePackage
+          <> "'!"
   return $ error $ T.unpack message
 
 -- | Build a bridge.
@@ -187,11 +188,12 @@ buildBridgeWithCustomFixUp (FixUpBuilder fixUp) (BridgeBuilder bridgePart) =
 fixTypeParameters :: TypeInfo lang -> TypeInfo lang
 fixTypeParameters t =
   if "TypeParameters" `T.isSuffixOf` _typeModule t
-    then t
-           { _typePackage = "" -- Don't suggest any packages
-           , _typeModule = "" -- Don't import any modules
-           , _typeName = t ^. typeName . to (stripNum . T.toLower)
-           }
+    then
+      t
+        { _typePackage = "", -- Don't suggest any packages
+          _typeModule = "", -- Don't import any modules
+          _typeName = t ^. typeName . to (stripNum . T.toLower)
+        }
     else t
   where
     stripNum v = fromMaybe v (T.stripSuffix "1" v)

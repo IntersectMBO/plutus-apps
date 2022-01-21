@@ -1,4 +1,5 @@
 {-# LANGUAGE EmptyDataDeriving #-}
+
 -- | As we translate types and not type constructors, we have to pass dummy types
 --   to any type constructor.
 --

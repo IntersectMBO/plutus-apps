@@ -1,6 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Language.PureScript.Bridge.Primitives where
@@ -51,8 +51,8 @@ stringBridge =
 textBridge :: BridgePart
 textBridge = do
   typeName ^== "Text"
-  typeModule ^== "Data.Text.Internal" <|>
-    typeModule ^== "Data.Text.Internal.Lazy"
+  typeModule ^== "Data.Text.Internal"
+    <|> typeModule ^== "Data.Text.Internal.Lazy"
   return psString
 
 unitBridge :: BridgePart

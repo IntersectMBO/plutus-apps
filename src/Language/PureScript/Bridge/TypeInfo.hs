@@ -4,26 +4,27 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.PureScript.Bridge.TypeInfo
-  ( TypeInfo(..)
-  , PSType
-  , HaskellType
-  , mkTypeInfo
-  , mkTypeInfo'
-  , Language(..)
-  , typePackage
-  , typeModule
-  , typeName
-  , typeParameters
-  , HasHaskType
-  , haskType
-  , flattenTypeInfo
-  ) where
+  ( TypeInfo (..),
+    PSType,
+    HaskellType,
+    mkTypeInfo,
+    mkTypeInfo',
+    Language (..),
+    typePackage,
+    typeModule,
+    typeName,
+    typeParameters,
+    HasHaskType,
+    haskType,
+    flattenTypeInfo,
+  )
+where
 
 import Control.Lens
 import Data.Proxy
@@ -36,13 +37,14 @@ data Language
   | PureScript
 
 -- | Basic info about a data type:
-data TypeInfo (lang :: Language) =
-  TypeInfo
-    { _typePackage :: !Text  -- ^ Hackage package
-    , _typeModule :: !Text  -- ^ Full Module path
-    , _typeName :: !Text
-    , _typeParameters :: ![TypeInfo lang]
-    }
+data TypeInfo (lang :: Language) = TypeInfo
+  { -- | Hackage package
+    _typePackage :: !Text,
+    -- | Full Module path
+    _typeModule :: !Text,
+    _typeName :: !Text,
+    _typeParameters :: ![TypeInfo lang]
+  }
   deriving (Eq, Ord, Show)
 
 makeLenses ''TypeInfo
@@ -68,10 +70,10 @@ mkTypeInfo' :: TypeRep -> HaskellType
 mkTypeInfo' rep =
   let con = typeRepTyCon rep
    in TypeInfo
-        { _typePackage = T.pack $ tyConPackage con
-        , _typeModule = T.pack $ tyConModule con
-        , _typeName = T.pack $ tyConName con
-        , _typeParameters = map mkTypeInfo' (typeRepArgs rep)
+        { _typePackage = T.pack $ tyConPackage con,
+          _typeModule = T.pack $ tyConModule con,
+          _typeName = T.pack $ tyConName con,
+          _typeParameters = map mkTypeInfo' (typeRepArgs rep)
         }
 
 -- | Put the TypeInfo in a list together with all its '_typeParameters' (recursively)
