@@ -196,14 +196,11 @@ executable plutus-use-cases-scripts
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     build-depends:
         base >= 4.9 && <5,
-        aeson -any,
         bytestring -any,
         cardano-crypto-class -any,
         containers -any,
         data-default -any,
-        flat -any,
         freer-extras -any,
-        hedgehog -any,
         prettyprinter -any,
         QuickCheck -any,
         tasty -any,
@@ -213,27 +210,17 @@ executable plutus-use-cases-scripts
         text -any,
         lens -any,
         mtl -any,
-        row-types -any,
         freer-simple -any,
         foldl -any,
         streaming -any,
-        directory -any,
-        filepath -any,
-        serialise -any,
-        plutus-core -any,
         plutus-ledger-api -any,
         plutus-tx -any,
         plutus-contract -any,
-        plutus-chain-index-core -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
         plutus-use-cases -any,
         optparse-applicative -any,
-        aeson-pretty -any,
-        cardano-api -any,
-        cardano-binary -any,
-        cborg -any,
-        memory -any
+        cardano-api -any
 
     if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any

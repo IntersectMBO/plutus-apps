@@ -210,7 +210,6 @@ test-suite plutus-contract-test
         aeson -any,
         lens -any,
         transformers -any,
-        extensible-effects -any,
         plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-ledger -any,

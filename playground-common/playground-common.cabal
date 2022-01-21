@@ -107,13 +107,11 @@ test-suite playground-common-test
     ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
                  -Wmissing-import-lists -Wredundant-constraints
-                 -fprint-potential-instances
+                 -fprint-potential-instances -Wunused-packages
     build-depends:
         aeson -any,
         base >=4.7 && <5,
         bytestring -any,
-        containers -any,
-        cryptonite -any,
         tasty -any,
         tasty-hunit -any,
         freer-simple -any,
