@@ -9,23 +9,31 @@
 
 module Servant.PureScript
   ( HasBridge,
-    languageBridge,
+    DefaultBridge,
+    Settings (..),
+    addGlobalHeader,
+    addGlobalQueryParam,
+    addSwitch,
+    addTypes,
+    apiModuleName,
     defaultBridge,
     defaultBridgeProxy,
-    DefaultBridge,
+    defaultSettings,
     generate,
     generateWithSettings,
-    Settings (..),
-    apiModuleName,
-    standardImports,
-    defaultSettings,
-    jsonParseUrlPiece,
-    jsonToUrlPiece,
+    globalHeaders,
+    globalQueryParams,
     jsonParseHeader,
+    jsonParseUrlPiece,
     jsonToHeader,
+    jsonToUrlPiece,
+    languageBridge,
+    psBridgeSwitches,
+    psTypes,
+    standardImports,
     toHeader,
-    toQueryValue,
     toPathSegment,
+    toQueryValue,
   )
 where
 
@@ -38,7 +46,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
-import Language.PureScript.Bridge
+import Language.PureScript.Bridge hiding (psTypes)
 import Servant.Foreign hiding (Normal, toHeader)
 import Servant.PureScript.CodeGen
 import Servant.PureScript.Internal
