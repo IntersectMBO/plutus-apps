@@ -165,7 +165,8 @@ allTests = do
                   "  | Bar3 a",
                   "  | Bar4 { myMonadicResult :: m b }",
                   "",
-                  "derive instance Generic (Bar a b m c) _"
+                  "derive instance Generic (Bar a b m c) _",
+                  ""
                 ]
        in m `shouldBe` txt
     it "tests generation of newtypes for record data type" $
