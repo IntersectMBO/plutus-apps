@@ -89,8 +89,8 @@ generateWithSettings ::
   IO ()
 generateWithSettings opts@Settings {..} root pBr pAPI = do
   T.putStrLn "\nCreating your PureScript Types..."
-  writePSTypesWith _psBridgeSwitches root (languageBridge pBr)
-    $ getSumTypeByTypeInfo
+  writePSTypesWith _psBridgeSwitches root bridge
+    $ interceptType . getSumTypeByTypeInfo
     <$> Set.toList _psTypes
   T.putStrLn "\nSuccessfully created your PureScript types!"
   T.putStrLn "\nCreating your API client module..."
@@ -98,7 +98,23 @@ generateWithSettings opts@Settings {..} root pBr pAPI = do
   T.putStrLn "\nSuccessfully created your client module!"
   T.putStrLn "Please make sure you have purescript-servant-support and purescript-bridge-json-helpers installed\n"
   where
+    bridge = languageBridge pBr
+    interceptType = interceptHeader . interceptQueryParam . interceptPathSegment
+    interceptHeader sumType
+      | Set.member (sumType ^. sumTypeInfo . to bridge) headerTypes = toHeader sumType
+      | otherwise = sumType
+    interceptQueryParam sumType
+      | Set.member (sumType ^. sumTypeInfo . to bridge) queryTypes = toQueryValue sumType
+      | otherwise = sumType
+    interceptPathSegment sumType
+      | Set.member (sumType ^. sumTypeInfo . to bridge) pathTypes = toPathSegment sumType
+      | otherwise = sumType
+
     apiList = apiToList pAPI pBr
+    flatArgTypes = argType . to flattenTypeInfo . traversed
+    headerTypes = Set.fromList $ apiList ^.. traversed . reqHeaders . traversed . headerArg . flatArgTypes
+    queryTypes = Set.fromList $ apiList ^.. traversed . reqUrl . queryStr . traversed . queryArgName . flatArgTypes
+    pathTypes = Set.fromList $ apiList ^.. traversed . reqUrl . path . traversed . to unSegment . _Cap . flatArgTypes
 
     writeModule :: Text -> IO ()
     writeModule mName =

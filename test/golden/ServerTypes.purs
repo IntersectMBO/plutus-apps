@@ -17,7 +17,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Servant.PureScript (class ToHeader, class ToPathSegment, class ToQueryValue, toPathSegment, toQueryValue)
+import Servant.PureScript (class ToHeader, class ToQueryValue, toQueryValue)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
@@ -27,9 +27,6 @@ newtype Hello = Hello { message :: String }
 
 instance ToQueryValue Hello where
   toQueryValue = toQueryValue <<< encodeJson
-
-instance ToPathSegment Hello where
-  toPathSegment = toPathSegment <<< encodeJson
 
 derive instance Eq Hello
 

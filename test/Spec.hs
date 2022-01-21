@@ -22,8 +22,8 @@ import Data.Typeable
 import GHC.Generics
 import Language.PureScript.Bridge
 import Language.PureScript.Bridge.PSTypes
-import Servant.API hiding (toHeader)
-import Servant.Foreign hiding (toHeader)
+import Servant.API
+import Servant.Foreign
 import Servant.PureScript
 import Servant.PureScript.CodeGen
 import Servant.PureScript.Internal
@@ -72,8 +72,8 @@ mySettings = defaultSettings
   & addGlobalQueryParam "globalParam"
   & addGlobalHeader "TestHeader"
   & addTypes 
-    [ toQueryValue . toPathSegment . equal . order . genericShow . argonaut $ mkSumType @Hello,
-      toHeader . argonaut $ mkSumType @TestHeader
+    [ equal . order . genericShow . argonaut $ mkSumType @Hello,
+      argonaut $ mkSumType @TestHeader
     ]
 
 moduleTranslator :: BridgePart
