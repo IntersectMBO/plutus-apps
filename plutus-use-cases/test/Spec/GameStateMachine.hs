@@ -26,6 +26,7 @@ module Spec.GameStateMachine
   , prop_SanityCheckModel
   , prop_SanityCheckAssertions
   , prop_GameCrashTolerance
+  , certification
   ) where
 
 import Control.Exception hiding (handle)
@@ -47,6 +48,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
+import Plutus.Contract.Test.Certification
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.Coverage
@@ -208,7 +210,7 @@ prop_SanityCheckAssertions = propSanityCheckAssertions
 
 check_prop_Game_with_coverage :: IO CoverageReport
 check_prop_Game_with_coverage =
-  quickCheckWithCoverage (set coverageIndex (covIdx gameParam) defaultCoverageOptions) $ \covopts ->
+  quickCheckWithCoverage stdArgs (set coverageIndex (covIdx gameParam) defaultCoverageOptions) $ \covopts ->
     propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))
@@ -449,3 +451,20 @@ guessTokenVal :: Value
 guessTokenVal =
     let sym = Scripts.forwardingMintingPolicyHash $ G.typedValidator gameParam
     in G.token sym "guess"
+
+-- | Certification.
+certification :: Certification GameModel
+certification = defaultCertification {
+    certNoLockedFunds      = Just noLockProof,
+    certUnitTests          = Just unitTest,
+    certCoverageIndex      = covIdx gameParam,
+    certCrashTolerance     = Just Instance,
+    certWhitelist          = Just defaultWhitelist
+  }
+  where
+    unitTest =
+      checkPredicate "run a successful game trace"
+        (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 3 <> guessTokenVal)
+        .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
+        .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))
+        successTrace

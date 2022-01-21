@@ -134,6 +134,7 @@ test-suite plutus-use-cases-test
     build-depends:
         plutus-tx -any,
         plutus-contract -any,
+        plutus-contract-certification -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
         plutus-use-cases -any
