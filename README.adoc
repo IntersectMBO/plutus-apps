@@ -160,6 +160,7 @@ trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
 ====
 If you don't have an `/etc/nix/nix.conf` or don't want to edit it, you may add the `nix.conf` lines to `~/.config/nix/nix.conf` instead.
 You must be a https://nixos.org/nix/manual/#ssec-multi-user[trusted user] to do this.
+If you want to add your macOS's user as a trusted user to not run `nix-shell` as `root` you can follow xref:nix-macos-trusted-non-root-user[Nix macOs Trusted Non Root section].
 ====
 . On NixOS, set the following NixOS options:
 +
@@ -181,6 +182,32 @@ These days it should be safe to turn on sandboxing on macOS with a few exception
 sandbox = true
 extra-sandbox-paths = /System/Library/Frameworks /System/Library/PrivateFrameworks /usr/lib /private/tmp /private/var/tmp /usr/bin/env
 ----
+
+[[nix-macos-trusted-non-root-user]]
+=== Nix macOS Trusted Non Root
+Nix daemon runs under `root` user as it is explained in https://nixos.org/nix/manual/#ssec-multi-user[trusted user]. This would not allow us to run `nix-shell` as a non `root` user, using binary caches
+as it is explained in xref:iohk-binary-cache[binary cache section], even when we configure the substituters in both global `/etc/nix/nix.conf` and `~/.config/nix/nix.conf`.
+
+There is a configuration that would allow you to run `nix-shell` using IOHK binary cache without being `root`. For that you need to configure only substituters in `~/.config/nix/nix.conf`
+and the following line in `/etc/nix/nix.conf`:
+
+----
+trusted-users = root user_name
+----
+
+[NOTE]
+====
+`user_name` is your non `root` user.
+====
+
+After configuring that you need to restart your `nix-daemon`. To restart `nix-daemon` in macOS you can do the following:
+
+
+----
+> sudo launchctl stop org.nixos.nix-daemon
+----
+
+This will automatically start a new `nix-daemon` after the old process is stopped.
 
 
 [[nix-build-attributes]]
