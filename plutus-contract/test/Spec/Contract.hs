@@ -37,9 +37,9 @@ import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
                              assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
-                             assertUserLog, changeInitialWalletValue, checkEmulatorFails, checkPredicateOptions,
-                             defaultCheckOptions, endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1,
-                             w2, waitingForSlot, walletFundsChange, (.&&.))
+                             assertUserLog, changeInitialWalletValue, checkEmulatorFails, checkPredicate,
+                             checkPredicateOptions, defaultCheckOptions, endpointAvailable, minLogLevel,
+                             mockWalletPaymentPubKeyHash, not, w1, w2, waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Trace qualified as Trace
@@ -319,6 +319,7 @@ tests =
 
         , balanceTxnMinAda
         , balanceTxnMinAda2
+        , balanceTxnMinAda3
         ]
 
 balanceTxnMinAda :: TestTree
@@ -390,6 +391,30 @@ balanceTxnMinAda2 =
 
     in checkPredicateOptions options "balancing doesn't create outputs with no Ada (2)" assertNoFailedTransactions (void trace)
 
+balanceTxnMinAda3 :: TestTree
+balanceTxnMinAda3 =
+    let vL n = Value.singleton (Ledger.scriptCurrencySymbol coinMintingPolicy) "coinToken" n
+        mkTx lookups constraints = either (error . show) id $ Constraints.mkTx @Void lookups constraints
+
+        mintingOperation :: Contract [Int] EmptySchema ContractError ()
+        mintingOperation = do
+            pkh <- Con.ownPaymentPubKeyHash
+
+            let val = vL 200
+                lookups = Constraints.mintingPolicy coinMintingPolicy
+                constraints = Constraints.mustMintValue val
+                    <> Constraints.mustPayToPubKey pkh (val <> Ada.toValue Ledger.minAdaTxOut)
+
+            tx <- submitUnbalancedTx $ mkTx lookups constraints
+            tell [length $ Ledger.getCardanoTxOutRefs tx]
+
+        trace = do
+            Trace.activateContract w1 mintingOperation "instance 1"
+            Trace.waitNSlots 2
+        pred = assertAccumState mintingOperation "instance 1" (== [2]) "has 2 outputs"
+
+    in checkPredicate "balancing doesn't create extra output" pred (void trace)
+
 checkpointContract :: Contract () Schema ContractError ()
 checkpointContract = void $ do
     checkpoint $ awaitPromise $ endpoint @"1" @Int pure .> endpoint @"2" @Int pure
@@ -418,6 +443,14 @@ someAddress = Ledger.scriptAddress someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
+
+{-# INLINABLE mkPolicy #-}
+mkPolicy :: () -> Ledger.ScriptContext -> Bool
+mkPolicy _ _ = True
+
+coinMintingPolicy :: Ledger.MintingPolicy
+coinMintingPolicy = Ledger.mkMintingPolicyScript
+    $$(PlutusTx.compile [|| MPS.wrapMintingPolicy mkPolicy ||])
 
 type Schema =
     Endpoint "1" Int
