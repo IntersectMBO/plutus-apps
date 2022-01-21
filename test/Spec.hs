@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE BlockArguments #-}
 
 module Main where
 
@@ -26,12 +27,13 @@ import Servant.Foreign
 import Servant.PureScript
 import Servant.PureScript.CodeGen
 import Servant.PureScript.Internal
-import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory)
+import System.Directory (removeDirectoryRecursive, removeFile, withCurrentDirectory, doesFileExist, doesDirectoryExist)
 import System.Exit (ExitCode (ExitSuccess))
 import System.Process (readProcessWithExitCode)
 import Test.HUnit (assertEqual)
 import Test.Hspec (aroundAll_, describe, hspec, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
+import Control.Monad (when)
 
 newtype Hello = Hello
   { message :: Text
@@ -63,17 +65,16 @@ type MyAPI =
            :<|> "by" :> Get '[JSON] Int
        )
 
-reqs = apiToList (Proxy :: Proxy MyAPI) (Proxy :: Proxy DefaultBridge)
+myApiProxy :: Proxy MyAPI
+myApiProxy = Proxy
 
-req = head reqs
-
-mySettings = addGlobalQueryParam "globalParam" . addGlobalHeader "TestHeader" $ defaultSettings
-
-myTypes :: [SumType 'Haskell]
-myTypes =
-  [ equal . order . genericShow . argonaut $ mkSumType @Hello,
-    argonaut $ mkSumType @TestHeader
-  ]
+mySettings = defaultSettings 
+  & addGlobalQueryParam "globalParam"
+  & addGlobalHeader "TestHeader"
+  & addTypes 
+    [ equal . order . genericShow . argonaut $ mkSumType @Hello,
+      argonaut $ mkSumType @TestHeader
+    ]
 
 moduleTranslator :: BridgePart
 moduleTranslator = do
@@ -96,17 +97,15 @@ main :: IO ()
 main = hspec $
   aroundAll_ withOutput $
     describe "output" $ do
-      it "should match the golden tests for API" $ do
-        expected <- T.readFile "../golden/ServerAPI.purs"
-        actual <- T.readFile "ServerAPI.purs"
-        actual `shouldBe` expected
+      it "should match the golden output" $ do
+        (exitCode, stdout, stderr) <-
+          readProcessWithExitCode "diff" ["--color", "--recursive", "../golden", "./src"] ""
+        assertEqual stdout exitCode ExitSuccess
       it "should be buildable" $ do
         (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
         assertEqual (stdout <> stderr) exitCode ExitSuccess
   where
-    withOutput runSpec =
-      withCurrentDirectory "test/output" $ generate *> runSpec
-
-    generate = do
-      writeAPIModuleWithSettings mySettings "." myBridgeProxy (Proxy :: Proxy MyAPI)
-      writePSTypes "." (buildBridge myBridge) myTypes
+    withOutput runSpec = withCurrentDirectory "test/output" do
+      exists <- doesDirectoryExist "src"
+      when exists $ removeDirectoryRecursive "src"
+      generateWithSettings mySettings "src" myBridgeProxy myApiProxy *> runSpec

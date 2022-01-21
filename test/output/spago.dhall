@@ -23,5 +23,5 @@
   , "uri"
   ]
 , packages = ./packages.dhall
-, sources = [ "./ServerAPI.purs", "./ServerTypes.purs" ]
+, sources = ["./src/**/*.purs"]
 }

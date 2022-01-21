@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Servant.PureScript
   ( HasBridge,
@@ -12,8 +13,8 @@ module Servant.PureScript
     defaultBridge,
     defaultBridgeProxy,
     DefaultBridge,
-    writeAPIModule,
-    writeAPIModuleWithSettings,
+    generate,
+    generateWithSettings,
     Settings (..),
     apiModuleName,
     standardImports,
@@ -25,7 +26,6 @@ module Servant.PureScript
   )
 where
 
-import Control.Lens
 import Data.Aeson
 import Data.Bifunctor
 import Data.ByteString (ByteString)
@@ -43,10 +43,11 @@ import System.Directory
 import System.FilePath
 import System.IO (IOMode (..), withFile)
 import Text.PrettyPrint.Mainland (hPutDocLn)
+import qualified Data.Set as Set
 
 -- | Standard entry point - just create a purescript module with default settings
 --   for accessing the servant API.
-writeAPIModule ::
+generate ::
   forall bridgeSelector api.
   ( HasForeign (PureScript bridgeSelector) PSType api,
     GenerateList PSType (Foreign PSType api),
@@ -56,9 +57,9 @@ writeAPIModule ::
   Proxy bridgeSelector ->
   Proxy api ->
   IO ()
-writeAPIModule = writeAPIModuleWithSettings defaultSettings
+generate = generateWithSettings defaultSettings
 
-writeAPIModuleWithSettings ::
+generateWithSettings ::
   forall bridgeSelector api.
   ( HasForeign (PureScript bridgeSelector) PSType api,
     GenerateList PSType (Foreign PSType api),
@@ -69,9 +70,15 @@ writeAPIModuleWithSettings ::
   Proxy bridgeSelector ->
   Proxy api ->
   IO ()
-writeAPIModuleWithSettings opts root pBr pAPI = do
-  writeModule (opts ^. apiModuleName)
-  T.putStrLn "\nSuccessfully created your servant API purescript functions!"
+generateWithSettings opts@Settings {..} root pBr pAPI = do
+  T.putStrLn "\nCreating your PureScript Types..."
+  writePSTypesWith _psBridgeSwitches root (languageBridge pBr)
+    $ getSumTypeByTypeInfo
+    <$> Set.toList _psTypes
+  T.putStrLn "\nSuccessfully created your PureScript types!"
+  T.putStrLn "\nCreating your API client module..."
+  writeModule _apiModuleName
+  T.putStrLn "\nSuccessfully created your client module!"
   T.putStrLn "Please make sure you have purescript-servant-support and purescript-bridge-json-helpers installed\n"
   where
     apiList = apiToList pAPI pBr

@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE KindSignatures #-}
 
 module Servant.PureScript.Internal where
 
@@ -21,7 +22,8 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Typeable
-import Language.PureScript.Bridge
+import Language.PureScript.Bridge hiding (psTypes)
+import qualified Language.PureScript.Bridge.CodeGenSwitches as Switches
 import Servant.Foreign
 import Servant.Foreign.Internal
 
@@ -56,10 +58,23 @@ defaultBridgeProxy = Proxy
 
 type ParamName = Text
 
+newtype SumTypeByTypeInfo (lang :: Language) = SumTypeByTypeInfo
+  { getSumTypeByTypeInfo :: SumType lang }
+  deriving (Show)
+
+instance Eq (SumTypeByTypeInfo lang) where
+  SumTypeByTypeInfo (SumType ty1 _  _) == SumTypeByTypeInfo (SumType ty2 _ _) = ty1 == ty2
+
+instance Ord (SumTypeByTypeInfo lang) where
+  compare (SumTypeByTypeInfo (SumType ty1 _ _)) (SumTypeByTypeInfo (SumType ty2 _ _)) =
+    compare ty1 ty2
+
 data Settings = Settings
   { _apiModuleName :: Text,
     _globalHeaders :: Set ParamName,
     _globalQueryParams :: Set ParamName,
+    _psBridgeSwitches :: Switches.Switch,
+    _psTypes :: Set (SumTypeByTypeInfo 'Haskell),
     _standardImports :: ImportLines
   }
 
@@ -71,6 +86,8 @@ defaultSettings =
     { _apiModuleName = "ServerAPI",
       _globalHeaders = Set.empty,
       _globalQueryParams = Set.empty,
+      _psBridgeSwitches = mempty,
+      _psTypes = mempty,
       _standardImports =
         importsFromList
           [ ImportLine "Affjax.RequestHeader" (Set.fromList ["RequestHeader(..)"]),
@@ -101,6 +118,16 @@ addGlobalHeader name = over globalHeaders (Set.insert name)
 --   MonadAjax instance.
 addGlobalQueryParam :: ParamName -> Settings -> Settings
 addGlobalQueryParam name = over globalQueryParams (Set.insert name)
+
+-- | Add types to generate. Types will automatically be generated for your
+-- APIs, but any additional types need to be manually generated.
+addTypes :: [SumType 'Haskell] -> Settings -> Settings
+addTypes = over psTypes . flip Set.union . Set.fromList . fmap SumTypeByTypeInfo
+
+-- | Add types to generate. Types will automatically be generated for your
+-- APIs, but any additional types need to be manually generated.
+addSwitch :: Switches.Switch -> Settings -> Settings
+addSwitch = over psBridgeSwitches . flip mappend
 
 apiToList ::
   forall bridgeSelector api.
