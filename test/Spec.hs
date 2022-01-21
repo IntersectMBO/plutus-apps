@@ -22,8 +22,8 @@ import Data.Typeable
 import GHC.Generics
 import Language.PureScript.Bridge
 import Language.PureScript.Bridge.PSTypes
-import Servant.API
-import Servant.Foreign
+import Servant.API hiding (toHeader)
+import Servant.Foreign hiding (toHeader)
 import Servant.PureScript
 import Servant.PureScript.CodeGen
 import Servant.PureScript.Internal
@@ -72,8 +72,8 @@ mySettings = defaultSettings
   & addGlobalQueryParam "globalParam"
   & addGlobalHeader "TestHeader"
   & addTypes 
-    [ equal . order . genericShow . argonaut $ mkSumType @Hello,
-      argonaut $ mkSumType @TestHeader
+    [ toQueryValue . toPathSegment . equal . order . genericShow . argonaut $ mkSumType @Hello,
+      toHeader . argonaut $ mkSumType @TestHeader
     ]
 
 moduleTranslator :: BridgePart
@@ -99,7 +99,7 @@ main = hspec $
     describe "output" $ do
       it "should match the golden output" $ do
         (exitCode, stdout, stderr) <-
-          readProcessWithExitCode "diff" ["--color", "--recursive", "../golden", "./src"] ""
+          readProcessWithExitCode "diff" ["--color", "--unified", "--recursive", "../golden", "./src"] ""
         assertEqual stdout exitCode ExitSuccess
       it "should be buildable" $ do
         (exitCode, stdout, stderr) <- readProcessWithExitCode "spago" ["build"] ""
