@@ -30,9 +30,11 @@ import Control.Monad.Freer.State (State)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as JSON
 import Data.Foldable (fold, traverse_)
+import Ledger.TimeSlot qualified as TimeSlot
 
 import Control.Concurrent.STM qualified as STM
 import Data.Aeson.Types qualified as JSON
+import Data.Default (def)
 import Data.Either (isRight)
 import Data.Map qualified as Map
 import Data.Maybe (isJust)
@@ -54,6 +56,7 @@ import Ledger.Value (valueOf)
 import Plutus.ChainIndex (Depth (Depth), RollbackState (Committed, TentativelyConfirmed, Unknown),
                           TxOutState (Spent, Unspent), TxValidity (TxValid), chainConstant)
 import Plutus.Contract.State (ContractResponse (ContractResponse, hooks))
+import Plutus.Contract.Test (mockWalletPaymentPubKeyHash, w1)
 import Plutus.Contracts.Currency (OneShotCurrency, SimpleMPS (SimpleMPS, amount, tokenName))
 import Plutus.Contracts.GameStateMachine qualified as Contracts.GameStateMachine
 import Plutus.Contracts.PingPong (PingPongState (Pinged, Ponged))
@@ -341,6 +344,7 @@ guessingGameTest =
                             (valueOf (balance <> fees) adaSymbol adaToken)
 
               instanceId <- Simulator.activateContract defaultWallet GameStateMachine
+              let gameParam = Contracts.GameStateMachine.GameParam (mockWalletPaymentPubKeyHash defaultWallet) (TimeSlot.scSlotZeroTime def)
 
               initialTxCounts <- Simulator.txCounts
               pubKeyHashFundsChange instanceId "Check our opening balance." 0
@@ -351,7 +355,8 @@ guessingGameTest =
               lock
                   instanceId
                   Contracts.GameStateMachine.LockArgs
-                      { Contracts.GameStateMachine.lockArgsValue = lovelaceValueOf lockAmount
+                      { Contracts.GameStateMachine.lockArgsGameParam = gameParam
+                      , Contracts.GameStateMachine.lockArgsValue = lovelaceValueOf lockAmount
                       , Contracts.GameStateMachine.lockArgsSecret = "password"
                       }
 
@@ -364,7 +369,8 @@ guessingGameTest =
               guess
                   game1Id
                   Contracts.GameStateMachine.GuessArgs
-                      { Contracts.GameStateMachine.guessArgsNewSecret = "wrong"
+                      { Contracts.GameStateMachine.guessArgsGameParam = gameParam
+                      , Contracts.GameStateMachine.guessArgsNewSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "wrong"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount
                       }
@@ -378,7 +384,8 @@ guessingGameTest =
               guess
                   game2Id
                   Contracts.GameStateMachine.GuessArgs
-                      { Contracts.GameStateMachine.guessArgsNewSecret = "password"
+                      { Contracts.GameStateMachine.guessArgsGameParam = gameParam
+                      , Contracts.GameStateMachine.guessArgsNewSecret = "password"
                       , Contracts.GameStateMachine.guessArgsOldSecret = "password"
                       , Contracts.GameStateMachine.guessArgsValueTakenOut = lovelaceValueOf lockAmount
                       }

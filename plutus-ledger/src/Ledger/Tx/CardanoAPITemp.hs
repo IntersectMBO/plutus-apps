@@ -20,7 +20,6 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo)
 
 import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Shelley.Constraints qualified as Ledger
 
 import Cardano.Ledger.Alonzo.Data qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
@@ -133,8 +132,7 @@ toShelleyWithdrawal withdrawals =
         | (stakeAddr, value, _) <- withdrawals ]
 
 toShelleyTxOut :: forall era ledgerera.
-                 (ShelleyLedgerEra era ~ ledgerera,
-                  IsShelleyBasedEra era, Ledger.ShelleyBased ledgerera)
+                 (ShelleyLedgerEra era ~ ledgerera, IsShelleyBasedEra era)
                => TxOut CtxTx era -> Ledger.TxOut ledgerera
 toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}

@@ -37,6 +37,10 @@ If you find yourself building GHC, STOP and fix the cache.
 
 The main documentation is located https://plutus-apps.readthedocs.io/en/latest/[here].
 
+The generated Haskell API documentation (haddocks) are here:
+<https://playground.plutus.iohkdev.io/doc/haddock>.
+
+
 === Talks
 
 - https://www.youtube.com/watch?v=MpWeg6Fg0t8[Functional Smart Contracts on Cardano]

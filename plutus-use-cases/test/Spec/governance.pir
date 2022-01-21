@@ -1,6 +1,7 @@
 (program
   (let
     (nonrec)
+    (termbind (strict) (vardecl unitval (con unit)) (con unit ()))
     (datatypebind
       (datatype
         (tyvardecl Tuple2 (fun (type) (fun (type) (type))))
@@ -55,7 +56,7 @@
                         [ (con list) [ [ (con pair) (con data) ] (con data) ] ]
                       )
                     }
-                    (abs dead (type) [ (builtin mkNilPairData) (con unit ()) ])
+                    (abs dead (type) [ (builtin mkNilPairData) unitval ])
                   ]
                   (lam
                     ds
@@ -105,10 +106,7 @@
                                                 (builtin constrData)
                                                 (con integer 1)
                                               ]
-                                              [
-                                                (builtin mkNilData)
-                                                (con unit ())
-                                              ]
+                                              [ (builtin mkNilData) unitval ]
                                             ]
                                           )
                                         ]
@@ -120,9 +118,7 @@
                                               (builtin constrData)
                                               (con integer 0)
                                             ]
-                                            [
-                                              (builtin mkNilData) (con unit ())
-                                            ]
+                                            [ (builtin mkNilData) unitval ]
                                           ]
                                         )
                                       ]
@@ -145,14 +141,31 @@
           )
           (let
             (nonrec)
-            (termbind
-              (strict) (vardecl void (all a (type) a)) (abs e (type) (error e))
-            )
-            (termbind
-              (strict)
-              (vardecl error (all a (type) (fun (con unit) a)))
-              (abs a (type) (lam thunk (con unit) (error a)))
-            )
+            (termbind (strict) (vardecl void (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
+            (termbind (strict) (vardecl ds (con unit)) (con unit ()))
             (datatypebind
               (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
             )
@@ -161,26 +174,32 @@
               (vardecl
                 fail
                 (fun
-                  (all a (type) a)
-                  [ [ Tuple2 (con bytestring) ] (con bytestring) ]
+                  (con unit) [ [ Tuple2 (con bytestring) ] (con bytestring) ]
                 )
               )
               (lam
                 ds
-                (all a (type) a)
-                [
-                  { error [ [ Tuple2 (con bytestring) ] (con bytestring) ] }
-                  [
-                    {
-                      [
-                        Unit_match
-                        [ [ { (builtin trace) Unit } (con string "Lg") ] Unit ]
-                      ]
-                      (con unit)
-                    }
-                    (con unit ())
-                  ]
-                ]
+                (con unit)
+                (let
+                  (nonrec)
+                  (termbind
+                    (strict)
+                    (vardecl thunk (con unit))
+                    [
+                      {
+                        [
+                          Unit_match
+                          [
+                            [ { (builtin trace) Unit } (con string "Lg") ] Unit
+                          ]
+                        ]
+                        (con unit)
+                      }
+                      unitval
+                    ]
+                  )
+                  (error [ [ Tuple2 (con bytestring) ] (con bytestring) ])
+                )
               )
             )
             (termbind
@@ -765,11 +784,6 @@
                 (vardecl LT Ordering)
               )
             )
-            (termbind
-              (strict)
-              (vardecl fail (fun (all a (type) a) Ordering))
-              (lam ds (all a (type) a) (error Ordering))
-            )
             (datatypebind
               (datatype
                 (tyvardecl Ord (fun (type) (type)))
@@ -886,10 +900,10 @@
                         (nonrec)
                         (termbind
                           (strict)
-                          (vardecl fail (fun (all a (type) a) Ordering))
+                          (vardecl fail (fun (con unit) Ordering))
                           (lam
                             ds
-                            (all a (type) a)
+                            (con unit)
                             {
                               [
                                 [
@@ -961,25 +975,13 @@
                                                           (abs
                                                             dead
                                                             (type)
-                                                            [
-                                                              fail
-                                                              (abs
-                                                                e
-                                                                (type)
-                                                                (error e)
-                                                              )
-                                                            ]
+                                                            (error Ordering)
                                                           )
                                                         ]
                                                         (abs
                                                           dead
                                                           (type)
-                                                          [
-                                                            fail
-                                                            (abs
-                                                              e (type) (error e)
-                                                            )
-                                                          ]
+                                                          (error Ordering)
                                                         )
                                                       ]
                                                       (all dead (type) dead)
@@ -987,13 +989,7 @@
                                                   )
                                                 )
                                               ]
-                                              (abs
-                                                dead
-                                                (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
-                                              )
+                                              (abs dead (type) (error Ordering))
                                             ]
                                             (abs dead (type) GT)
                                           ]
@@ -1054,21 +1050,13 @@
                                                       (abs
                                                         dead
                                                         (type)
-                                                        [
-                                                          fail
-                                                          (abs
-                                                            e (type) (error e)
-                                                          )
-                                                        ]
+                                                        (error Ordering)
                                                       )
                                                     ]
                                                     (abs
                                                       dead
                                                       (type)
-                                                      [
-                                                        fail
-                                                        (abs e (type) (error e))
-                                                      ]
+                                                      (error Ordering)
                                                     )
                                                   ]
                                                   (all dead (type) dead)
@@ -1076,11 +1064,7 @@
                                               )
                                             )
                                           ]
-                                          (abs
-                                            dead
-                                            (type)
-                                            [ fail (abs e (type) (error e)) ]
-                                          )
+                                          (abs dead (type) (error Ordering))
                                         ]
                                         (abs dead (type) GT)
                                       ]
@@ -1096,10 +1080,10 @@
                         )
                         (termbind
                           (strict)
-                          (vardecl fail (fun (all a (type) a) Ordering))
+                          (vardecl fail (fun (con unit) Ordering))
                           (lam
                             ds
-                            (all a (type) a)
+                            (con unit)
                             {
                               [
                                 [
@@ -1171,25 +1155,13 @@
                                                           (abs
                                                             dead
                                                             (type)
-                                                            [
-                                                              fail
-                                                              (abs
-                                                                e
-                                                                (type)
-                                                                (error e)
-                                                              )
-                                                            ]
+                                                            (error Ordering)
                                                           )
                                                         ]
                                                         (abs
                                                           dead
                                                           (type)
-                                                          [
-                                                            fail
-                                                            (abs
-                                                              e (type) (error e)
-                                                            )
-                                                          ]
+                                                          (error Ordering)
                                                         )
                                                       ]
                                                       (all dead (type) dead)
@@ -1197,13 +1169,7 @@
                                                   )
                                                 )
                                               ]
-                                              (abs
-                                                dead
-                                                (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
-                                              )
+                                              (abs dead (type) (error Ordering))
                                             ]
                                             (abs dead (type) GT)
                                           ]
@@ -1264,21 +1230,13 @@
                                                       (abs
                                                         dead
                                                         (type)
-                                                        [
-                                                          fail
-                                                          (abs
-                                                            e (type) (error e)
-                                                          )
-                                                        ]
+                                                        (error Ordering)
                                                       )
                                                     ]
                                                     (abs
                                                       dead
                                                       (type)
-                                                      [
-                                                        fail
-                                                        (abs e (type) (error e))
-                                                      ]
+                                                      (error Ordering)
                                                     )
                                                   ]
                                                   (all dead (type) dead)
@@ -1286,11 +1244,7 @@
                                               )
                                             )
                                           ]
-                                          (abs
-                                            dead
-                                            (type)
-                                            [ fail (abs e (type) (error e)) ]
-                                          )
+                                          (abs dead (type) (error Ordering))
                                         ]
                                         (abs dead (type) GT)
                                       ]
@@ -1306,10 +1260,10 @@
                         )
                         (termbind
                           (strict)
-                          (vardecl fail (fun (all a (type) a) Ordering))
+                          (vardecl fail (fun (con unit) Ordering))
                           (lam
                             ds
-                            (all a (type) a)
+                            (con unit)
                             {
                               [
                                 [
@@ -1381,25 +1335,13 @@
                                                           (abs
                                                             dead
                                                             (type)
-                                                            [
-                                                              fail
-                                                              (abs
-                                                                e
-                                                                (type)
-                                                                (error e)
-                                                              )
-                                                            ]
+                                                            (error Ordering)
                                                           )
                                                         ]
                                                         (abs
                                                           dead
                                                           (type)
-                                                          [
-                                                            fail
-                                                            (abs
-                                                              e (type) (error e)
-                                                            )
-                                                          ]
+                                                          (error Ordering)
                                                         )
                                                       ]
                                                       (all dead (type) dead)
@@ -1407,13 +1349,7 @@
                                                   )
                                                 )
                                               ]
-                                              (abs
-                                                dead
-                                                (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
-                                              )
+                                              (abs dead (type) (error Ordering))
                                             ]
                                             (abs dead (type) GT)
                                           ]
@@ -1474,21 +1410,13 @@
                                                       (abs
                                                         dead
                                                         (type)
-                                                        [
-                                                          fail
-                                                          (abs
-                                                            e (type) (error e)
-                                                          )
-                                                        ]
+                                                        (error Ordering)
                                                       )
                                                     ]
                                                     (abs
                                                       dead
                                                       (type)
-                                                      [
-                                                        fail
-                                                        (abs e (type) (error e))
-                                                      ]
+                                                      (error Ordering)
                                                     )
                                                   ]
                                                   (all dead (type) dead)
@@ -1496,11 +1424,7 @@
                                               )
                                             )
                                           ]
-                                          (abs
-                                            dead
-                                            (type)
-                                            [ fail (abs e (type) (error e)) ]
-                                          )
+                                          (abs dead (type) (error Ordering))
                                         ]
                                         (abs dead (type) GT)
                                       ]
@@ -1516,10 +1440,10 @@
                         )
                         (termbind
                           (strict)
-                          (vardecl fail (fun (all a (type) a) Ordering))
+                          (vardecl fail (fun (con unit) Ordering))
                           (lam
                             ds
-                            (all a (type) a)
+                            (con unit)
                             {
                               [
                                 [
@@ -1591,25 +1515,13 @@
                                                           (abs
                                                             dead
                                                             (type)
-                                                            [
-                                                              fail
-                                                              (abs
-                                                                e
-                                                                (type)
-                                                                (error e)
-                                                              )
-                                                            ]
+                                                            (error Ordering)
                                                           )
                                                         ]
                                                         (abs
                                                           dead
                                                           (type)
-                                                          [
-                                                            fail
-                                                            (abs
-                                                              e (type) (error e)
-                                                            )
-                                                          ]
+                                                          (error Ordering)
                                                         )
                                                       ]
                                                       (all dead (type) dead)
@@ -1617,13 +1529,7 @@
                                                   )
                                                 )
                                               ]
-                                              (abs
-                                                dead
-                                                (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
-                                              )
+                                              (abs dead (type) (error Ordering))
                                             ]
                                             (abs dead (type) GT)
                                           ]
@@ -1684,21 +1590,13 @@
                                                       (abs
                                                         dead
                                                         (type)
-                                                        [
-                                                          fail
-                                                          (abs
-                                                            e (type) (error e)
-                                                          )
-                                                        ]
+                                                        (error Ordering)
                                                       )
                                                     ]
                                                     (abs
                                                       dead
                                                       (type)
-                                                      [
-                                                        fail
-                                                        (abs e (type) (error e))
-                                                      ]
+                                                      (error Ordering)
                                                     )
                                                   ]
                                                   (all dead (type) dead)
@@ -1706,11 +1604,7 @@
                                               )
                                             )
                                           ]
-                                          (abs
-                                            dead
-                                            (type)
-                                            [ fail (abs e (type) (error e)) ]
-                                          )
+                                          (abs dead (type) (error Ordering))
                                         ]
                                         (abs dead (type) GT)
                                       ]
@@ -1772,12 +1666,7 @@
                                                             dead
                                                             (type)
                                                             [
-                                                              fail
-                                                              (abs
-                                                                e
-                                                                (type)
-                                                                (error e)
-                                                              )
+                                                              fail (con unit ())
                                                             ]
                                                           )
                                                         )
@@ -1785,12 +1674,7 @@
                                                       (abs
                                                         dead
                                                         (type)
-                                                        [
-                                                          fail
-                                                          (abs
-                                                            e (type) (error e)
-                                                          )
-                                                        ]
+                                                        [ fail (con unit ()) ]
                                                       )
                                                     ]
                                                     (abs
@@ -1822,10 +1706,8 @@
                                                                   (type)
                                                                   [
                                                                     fail
-                                                                    (abs
-                                                                      e
-                                                                      (type)
-                                                                      (error e)
+                                                                    (con
+                                                                      unit ()
                                                                     )
                                                                   ]
                                                                 )
@@ -1836,11 +1718,7 @@
                                                               (type)
                                                               [
                                                                 fail
-                                                                (abs
-                                                                  e
-                                                                  (type)
-                                                                  (error e)
-                                                                )
+                                                                (con unit ())
                                                               ]
                                                             )
                                                           ]
@@ -1874,20 +1752,14 @@
                                                     (abs
                                                       dead
                                                       (type)
-                                                      [
-                                                        fail
-                                                        (abs e (type) (error e))
-                                                      ]
+                                                      [ fail (con unit ()) ]
                                                     )
                                                   )
                                                 ]
                                                 (abs
                                                   dead
                                                   (type)
-                                                  [
-                                                    fail
-                                                    (abs e (type) (error e))
-                                                  ]
+                                                  [ fail (con unit ()) ]
                                                 )
                                               ]
                                               (abs
@@ -1913,12 +1785,7 @@
                                                             dead
                                                             (type)
                                                             [
-                                                              fail
-                                                              (abs
-                                                                e
-                                                                (type)
-                                                                (error e)
-                                                              )
+                                                              fail (con unit ())
                                                             ]
                                                           )
                                                         )
@@ -1926,12 +1793,7 @@
                                                       (abs
                                                         dead
                                                         (type)
-                                                        [
-                                                          fail
-                                                          (abs
-                                                            e (type) (error e)
-                                                          )
-                                                        ]
+                                                        [ fail (con unit ()) ]
                                                       )
                                                     ]
                                                     (abs dead (type) EQ)
@@ -2003,20 +1865,14 @@
                                                     (abs
                                                       dead
                                                       (type)
-                                                      [
-                                                        fail
-                                                        (abs e (type) (error e))
-                                                      ]
+                                                      [ fail (con unit ()) ]
                                                     )
                                                   )
                                                 ]
                                                 (abs
                                                   dead
                                                   (type)
-                                                  [
-                                                    fail
-                                                    (abs e (type) (error e))
-                                                  ]
+                                                  [ fail (con unit ()) ]
                                                 )
                                               ]
                                               (abs
@@ -2042,12 +1898,7 @@
                                                             dead
                                                             (type)
                                                             [
-                                                              fail
-                                                              (abs
-                                                                e
-                                                                (type)
-                                                                (error e)
-                                                              )
+                                                              fail (con unit ())
                                                             ]
                                                           )
                                                         )
@@ -2055,12 +1906,7 @@
                                                       (abs
                                                         dead
                                                         (type)
-                                                        [
-                                                          fail
-                                                          (abs
-                                                            e (type) (error e)
-                                                          )
-                                                        ]
+                                                        [ fail (con unit ()) ]
                                                       )
                                                     ]
                                                     (abs dead (type) EQ)
@@ -2093,16 +1939,12 @@
                                               (abs
                                                 dead
                                                 (type)
-                                                [
-                                                  fail (abs e (type) (error e))
-                                                ]
+                                                [ fail (con unit ()) ]
                                               )
                                             )
                                           ]
                                           (abs
-                                            dead
-                                            (type)
-                                            [ fail (abs e (type) (error e)) ]
+                                            dead (type) [ fail (con unit ()) ]
                                           )
                                         ]
                                         (abs
@@ -2122,20 +1964,14 @@
                                                     (abs
                                                       dead
                                                       (type)
-                                                      [
-                                                        fail
-                                                        (abs e (type) (error e))
-                                                      ]
+                                                      [ fail (con unit ()) ]
                                                     )
                                                   )
                                                 ]
                                                 (abs
                                                   dead
                                                   (type)
-                                                  [
-                                                    fail
-                                                    (abs e (type) (error e))
-                                                  ]
+                                                  [ fail (con unit ()) ]
                                                 )
                                               ]
                                               (abs dead (type) EQ)
@@ -4779,6 +4615,11 @@
                         )
                         (termbind
                           (strict)
+                          (vardecl minAdaTxOut (con integer))
+                          (con integer 2000000)
+                        )
+                        (termbind
+                          (strict)
                           (vardecl
                             fAdditiveGroupValue_cscale
                             (fun
@@ -5096,6 +4937,11 @@
                               ]
                             )
                           )
+                        )
+                        (termbind
+                          (strict)
+                          (vardecl emptyByteString (con bytestring))
+                          (con bytestring #)
                         )
                         (termbind
                           (strict)
@@ -6153,7 +5999,7 @@
                                             (con integer)
                                           ]
                                         }
-                                        (con bytestring #)
+                                        emptyByteString
                                       ]
                                       [
                                         [
@@ -6170,13 +6016,11 @@
                                                 { Tuple2 (con bytestring) }
                                                 (con integer)
                                               }
-                                              (con bytestring #)
+                                              emptyByteString
                                             ]
                                             [
-                                              [
-                                                [ valueOf v ] (con bytestring #)
-                                              ]
-                                              (con bytestring #)
+                                              [ [ valueOf v ] emptyByteString ]
+                                              emptyByteString
                                             ]
                                           ]
                                         ]
@@ -6738,41 +6582,8 @@
                                 }
                               ]
                             )
-                            (datatypebind
-                              (datatype
-                                (tyvardecl DCert (type))
-
-                                DCert_match
-                                (vardecl
-                                  DCertDelegDeRegKey
-                                  (fun StakingCredential DCert)
-                                )
-                                (vardecl
-                                  DCertDelegDelegate
-                                  (fun
-                                    StakingCredential
-                                    (fun (con bytestring) DCert)
-                                  )
-                                )
-                                (vardecl
-                                  DCertDelegRegKey (fun StakingCredential DCert)
-                                )
-                                (vardecl DCertGenesis DCert)
-                                (vardecl DCertMir DCert)
-                                (vardecl
-                                  DCertPoolRegister
-                                  (fun
-                                    (con bytestring)
-                                    (fun (con bytestring) DCert)
-                                  )
-                                )
-                                (vardecl
-                                  DCertPoolRetire
-                                  (fun
-                                    (con bytestring) (fun (con integer) DCert)
-                                  )
-                                )
-                              )
+                            (typebind
+                              (tyvardecl DCert (type)) (all a (type) (fun a a))
                             )
                             (datatypebind
                               (datatype
@@ -9070,15 +8881,9 @@
                                                                                                                                             valueOf
                                                                                                                                             ds
                                                                                                                                           ]
-                                                                                                                                          (con
-                                                                                                                                            bytestring
-                                                                                                                                            #
-                                                                                                                                          )
+                                                                                                                                          emptyByteString
                                                                                                                                         ]
-                                                                                                                                        (con
-                                                                                                                                          bytestring
-                                                                                                                                          #
-                                                                                                                                        )
+                                                                                                                                        emptyByteString
                                                                                                                                       ]
                                                                                                                                     ]
                                                                                                                                     [
@@ -9087,15 +8892,9 @@
                                                                                                                                           valueOf
                                                                                                                                           vl
                                                                                                                                         ]
-                                                                                                                                        (con
-                                                                                                                                          bytestring
-                                                                                                                                          #
-                                                                                                                                        )
+                                                                                                                                        emptyByteString
                                                                                                                                       ]
-                                                                                                                                      (con
-                                                                                                                                        bytestring
-                                                                                                                                        #
-                                                                                                                                      )
+                                                                                                                                      emptyByteString
                                                                                                                                     ]
                                                                                                                                   ]
                                                                                                                                 ]
@@ -9139,15 +8938,9 @@
                                                                                                                                                     valueOf
                                                                                                                                                     ds
                                                                                                                                                   ]
-                                                                                                                                                  (con
-                                                                                                                                                    bytestring
-                                                                                                                                                    #
-                                                                                                                                                  )
+                                                                                                                                                  emptyByteString
                                                                                                                                                 ]
-                                                                                                                                                (con
-                                                                                                                                                  bytestring
-                                                                                                                                                  #
-                                                                                                                                                )
+                                                                                                                                                emptyByteString
                                                                                                                                               ]
                                                                                                                                             ]
                                                                                                                                             [
@@ -9161,21 +8954,12 @@
                                                                                                                                                       valueOf
                                                                                                                                                       vl
                                                                                                                                                     ]
-                                                                                                                                                    (con
-                                                                                                                                                      bytestring
-                                                                                                                                                      #
-                                                                                                                                                    )
+                                                                                                                                                    emptyByteString
                                                                                                                                                   ]
-                                                                                                                                                  (con
-                                                                                                                                                    bytestring
-                                                                                                                                                    #
-                                                                                                                                                  )
+                                                                                                                                                  emptyByteString
                                                                                                                                                 ]
                                                                                                                                               ]
-                                                                                                                                              (con
-                                                                                                                                                integer
-                                                                                                                                                2000000
-                                                                                                                                              )
+                                                                                                                                              minAdaTxOut
                                                                                                                                             ]
                                                                                                                                           ]
                                                                                                                                         ]
@@ -14227,144 +14011,114 @@
                                     (lam
                                       ww
                                       ScriptPurpose
-                                      {
+                                      [
                                         [
                                           [
                                             [
-                                              [
-                                                {
-                                                  [ ScriptPurpose_match ww ]
-                                                  (all
-                                                    dead
-                                                    (type)
-                                                    [ Maybe TxInInfo ]
-                                                  )
-                                                }
-                                                (lam
-                                                  default_arg0
-                                                  DCert
-                                                  (abs
-                                                    dead
-                                                    (type)
-                                                    { Nothing TxInInfo }
-                                                  )
-                                                )
-                                              ]
+                                              {
+                                                [ ScriptPurpose_match ww ]
+                                                [ Maybe TxInInfo ]
+                                              }
                                               (lam
                                                 default_arg0
-                                                (con bytestring)
-                                                (abs
-                                                  dead
-                                                  (type)
-                                                  { Nothing TxInInfo }
-                                                )
+                                                DCert
+                                                { Nothing TxInInfo }
                                               )
                                             ]
                                             (lam
                                               default_arg0
-                                              StakingCredential
-                                              (abs
-                                                dead (type) { Nothing TxInInfo }
-                                              )
+                                              (con bytestring)
+                                              { Nothing TxInInfo }
                                             )
                                           ]
                                           (lam
-                                            txOutRef
-                                            TxOutRef
-                                            (abs
-                                              dead
-                                              (type)
-                                              [
-                                                [
-                                                  [
-                                                    {
-                                                      {
-                                                        fFoldableNil_cfoldMap
-                                                        [
-                                                          (lam
-                                                            a (type) [ Maybe a ]
-                                                          )
-                                                          TxInInfo
-                                                        ]
-                                                      }
-                                                      TxInInfo
-                                                    }
-                                                    { fMonoidFirst TxInInfo }
-                                                  ]
-                                                  (lam
-                                                    x
-                                                    TxInInfo
-                                                    [
-                                                      {
-                                                        [ TxInInfo_match x ]
-                                                        [ Maybe TxInInfo ]
-                                                      }
-                                                      (lam
-                                                        ds
-                                                        TxOutRef
-                                                        (lam
-                                                          ds
-                                                          TxOut
-                                                          {
-                                                            [
-                                                              [
-                                                                {
-                                                                  [
-                                                                    Bool_match
-                                                                    [
-                                                                      [
-                                                                        fEqTxOutRef_c
-                                                                        ds
-                                                                      ]
-                                                                      txOutRef
-                                                                    ]
-                                                                  ]
-                                                                  (all
-                                                                    dead
-                                                                    (type)
-                                                                    [
-                                                                      Maybe
-                                                                      TxInInfo
-                                                                    ]
-                                                                  )
-                                                                }
-                                                                (abs
-                                                                  dead
-                                                                  (type)
-                                                                  [
-                                                                    {
-                                                                      Just
-                                                                      TxInInfo
-                                                                    }
-                                                                    x
-                                                                  ]
-                                                                )
-                                                              ]
-                                                              (abs
-                                                                dead
-                                                                (type)
-                                                                {
-                                                                  Nothing
-                                                                  TxInInfo
-                                                                }
-                                                              )
-                                                            ]
-                                                            (all
-                                                              dead (type) dead
-                                                            )
-                                                          }
-                                                        )
-                                                      )
-                                                    ]
-                                                  )
-                                                ]
-                                                ww
-                                              ]
-                                            )
+                                            default_arg0
+                                            StakingCredential
+                                            { Nothing TxInInfo }
                                           )
                                         ]
-                                        (all dead (type) dead)
-                                      }
+                                        (lam
+                                          txOutRef
+                                          TxOutRef
+                                          [
+                                            [
+                                              [
+                                                {
+                                                  {
+                                                    fFoldableNil_cfoldMap
+                                                    [
+                                                      (lam a (type) [ Maybe a ])
+                                                      TxInInfo
+                                                    ]
+                                                  }
+                                                  TxInInfo
+                                                }
+                                                { fMonoidFirst TxInInfo }
+                                              ]
+                                              (lam
+                                                x
+                                                TxInInfo
+                                                [
+                                                  {
+                                                    [ TxInInfo_match x ]
+                                                    [ Maybe TxInInfo ]
+                                                  }
+                                                  (lam
+                                                    ds
+                                                    TxOutRef
+                                                    (lam
+                                                      ds
+                                                      TxOut
+                                                      {
+                                                        [
+                                                          [
+                                                            {
+                                                              [
+                                                                Bool_match
+                                                                [
+                                                                  [
+                                                                    fEqTxOutRef_c
+                                                                    ds
+                                                                  ]
+                                                                  txOutRef
+                                                                ]
+                                                              ]
+                                                              (all
+                                                                dead
+                                                                (type)
+                                                                [
+                                                                  Maybe TxInInfo
+                                                                ]
+                                                              )
+                                                            }
+                                                            (abs
+                                                              dead
+                                                              (type)
+                                                              [
+                                                                {
+                                                                  Just TxInInfo
+                                                                }
+                                                                x
+                                                              ]
+                                                            )
+                                                          ]
+                                                          (abs
+                                                            dead
+                                                            (type)
+                                                            { Nothing TxInInfo }
+                                                          )
+                                                        ]
+                                                        (all dead (type) dead)
+                                                      }
+                                                    )
+                                                  )
+                                                ]
+                                              )
+                                            ]
+                                            ww
+                                          ]
+                                        )
+                                      ]
                                     )
                                   )
                                 )
@@ -15477,15 +15231,9 @@
                                                                                                                                                                                   valueOf
                                                                                                                                                                                   ds
                                                                                                                                                                                 ]
-                                                                                                                                                                                (con
-                                                                                                                                                                                  bytestring
-                                                                                                                                                                                  #
-                                                                                                                                                                                )
+                                                                                                                                                                                emptyByteString
                                                                                                                                                                               ]
-                                                                                                                                                                              (con
-                                                                                                                                                                                bytestring
-                                                                                                                                                                                #
-                                                                                                                                                                              )
+                                                                                                                                                                              emptyByteString
                                                                                                                                                                             ]
                                                                                                                                                                           ]
                                                                                                                                                                           [
@@ -15494,15 +15242,9 @@
                                                                                                                                                                                 valueOf
                                                                                                                                                                                 ww
                                                                                                                                                                               ]
-                                                                                                                                                                              (con
-                                                                                                                                                                                bytestring
-                                                                                                                                                                                #
-                                                                                                                                                                              )
+                                                                                                                                                                              emptyByteString
                                                                                                                                                                             ]
-                                                                                                                                                                            (con
-                                                                                                                                                                              bytestring
-                                                                                                                                                                              #
-                                                                                                                                                                            )
+                                                                                                                                                                            emptyByteString
                                                                                                                                                                           ]
                                                                                                                                                                         ]
                                                                                                                                                                       ]
@@ -15546,15 +15288,9 @@
                                                                                                                                                                                           valueOf
                                                                                                                                                                                           ds
                                                                                                                                                                                         ]
-                                                                                                                                                                                        (con
-                                                                                                                                                                                          bytestring
-                                                                                                                                                                                          #
-                                                                                                                                                                                        )
+                                                                                                                                                                                        emptyByteString
                                                                                                                                                                                       ]
-                                                                                                                                                                                      (con
-                                                                                                                                                                                        bytestring
-                                                                                                                                                                                        #
-                                                                                                                                                                                      )
+                                                                                                                                                                                      emptyByteString
                                                                                                                                                                                     ]
                                                                                                                                                                                   ]
                                                                                                                                                                                   [
@@ -15568,21 +15304,12 @@
                                                                                                                                                                                             valueOf
                                                                                                                                                                                             ww
                                                                                                                                                                                           ]
-                                                                                                                                                                                          (con
-                                                                                                                                                                                            bytestring
-                                                                                                                                                                                            #
-                                                                                                                                                                                          )
+                                                                                                                                                                                          emptyByteString
                                                                                                                                                                                         ]
-                                                                                                                                                                                        (con
-                                                                                                                                                                                          bytestring
-                                                                                                                                                                                          #
-                                                                                                                                                                                        )
+                                                                                                                                                                                        emptyByteString
                                                                                                                                                                                       ]
                                                                                                                                                                                     ]
-                                                                                                                                                                                    (con
-                                                                                                                                                                                      integer
-                                                                                                                                                                                      2000000
-                                                                                                                                                                                    )
+                                                                                                                                                                                    minAdaTxOut
                                                                                                                                                                                   ]
                                                                                                                                                                                 ]
                                                                                                                                                                               ]
@@ -16107,44 +15834,50 @@
                                                                                                                                       (abs
                                                                                                                                         dead
                                                                                                                                         (type)
-                                                                                                                                        [
-                                                                                                                                          {
-                                                                                                                                            error
+                                                                                                                                        (let
+                                                                                                                                          (nonrec)
+                                                                                                                                          (termbind
+                                                                                                                                            (strict)
+                                                                                                                                            (vardecl
+                                                                                                                                              thunk
+                                                                                                                                              (con
+                                                                                                                                                unit
+                                                                                                                                              )
+                                                                                                                                            )
+                                                                                                                                            [
+                                                                                                                                              {
+                                                                                                                                                [
+                                                                                                                                                  Unit_match
+                                                                                                                                                  [
+                                                                                                                                                    [
+                                                                                                                                                      {
+                                                                                                                                                        (builtin
+                                                                                                                                                          trace
+                                                                                                                                                        )
+                                                                                                                                                        Unit
+                                                                                                                                                      }
+                                                                                                                                                      (con
+                                                                                                                                                        string
+                                                                                                                                                        "Lf"
+                                                                                                                                                      )
+                                                                                                                                                    ]
+                                                                                                                                                    Unit
+                                                                                                                                                  ]
+                                                                                                                                                ]
+                                                                                                                                                (con
+                                                                                                                                                  unit
+                                                                                                                                                )
+                                                                                                                                              }
+                                                                                                                                              unitval
+                                                                                                                                            ]
+                                                                                                                                          )
+                                                                                                                                          (error
                                                                                                                                             [
                                                                                                                                               List
                                                                                                                                               TxOut
                                                                                                                                             ]
-                                                                                                                                          }
-                                                                                                                                          [
-                                                                                                                                            {
-                                                                                                                                              [
-                                                                                                                                                Unit_match
-                                                                                                                                                [
-                                                                                                                                                  [
-                                                                                                                                                    {
-                                                                                                                                                      (builtin
-                                                                                                                                                        trace
-                                                                                                                                                      )
-                                                                                                                                                      Unit
-                                                                                                                                                    }
-                                                                                                                                                    (con
-                                                                                                                                                      string
-                                                                                                                                                      "Lf"
-                                                                                                                                                    )
-                                                                                                                                                  ]
-                                                                                                                                                  Unit
-                                                                                                                                                ]
-                                                                                                                                              ]
-                                                                                                                                              (con
-                                                                                                                                                unit
-                                                                                                                                              )
-                                                                                                                                            }
-                                                                                                                                            (con
-                                                                                                                                              unit
-                                                                                                                                              ()
-                                                                                                                                            )
-                                                                                                                                          ]
-                                                                                                                                        ]
+                                                                                                                                          )
+                                                                                                                                        )
                                                                                                                                       )
                                                                                                                                     ]
                                                                                                                                     (all
@@ -16782,12 +16515,9 @@
                                                                                                           )
                                                                                                           [
                                                                                                             fail
-                                                                                                            (abs
-                                                                                                              e
-                                                                                                              (type)
-                                                                                                              (error
-                                                                                                                e
-                                                                                                              )
+                                                                                                            (con
+                                                                                                              unit
+                                                                                                              ()
                                                                                                             )
                                                                                                           ]
                                                                                                         )
@@ -16859,12 +16589,9 @@
                                                                                                               (type)
                                                                                                               [
                                                                                                                 fail
-                                                                                                                (abs
-                                                                                                                  e
-                                                                                                                  (type)
-                                                                                                                  (error
-                                                                                                                    e
-                                                                                                                  )
+                                                                                                                (con
+                                                                                                                  unit
+                                                                                                                  ()
                                                                                                                 )
                                                                                                               ]
                                                                                                             )
@@ -16895,12 +16622,9 @@
                                                                             (type)
                                                                             [
                                                                               fail
-                                                                              (abs
-                                                                                e
-                                                                                (type)
-                                                                                (error
-                                                                                  e
-                                                                                )
+                                                                              (con
+                                                                                unit
+                                                                                ()
                                                                               )
                                                                             ]
                                                                           )
@@ -22635,10 +22359,7 @@
                                                                                                       (builtin
                                                                                                         mkNilData
                                                                                                       )
-                                                                                                      (con
-                                                                                                        unit
-                                                                                                        ()
-                                                                                                      )
+                                                                                                      unitval
                                                                                                     ]
                                                                                                   ]
                                                                                                 )
@@ -26055,9 +25776,44 @@
                                                                                                       (abs
                                                                                                         dead
                                                                                                         (type)
-                                                                                                        [
-                                                                                                          {
-                                                                                                            error
+                                                                                                        (let
+                                                                                                          (nonrec)
+                                                                                                          (termbind
+                                                                                                            (strict)
+                                                                                                            (vardecl
+                                                                                                              thunk
+                                                                                                              (con
+                                                                                                                unit
+                                                                                                              )
+                                                                                                            )
+                                                                                                            [
+                                                                                                              {
+                                                                                                                [
+                                                                                                                  Unit_match
+                                                                                                                  [
+                                                                                                                    [
+                                                                                                                      {
+                                                                                                                        (builtin
+                                                                                                                          trace
+                                                                                                                        )
+                                                                                                                        Unit
+                                                                                                                      }
+                                                                                                                      (con
+                                                                                                                        string
+                                                                                                                        "S0"
+                                                                                                                      )
+                                                                                                                    ]
+                                                                                                                    Unit
+                                                                                                                  ]
+                                                                                                                ]
+                                                                                                                (con
+                                                                                                                  unit
+                                                                                                                )
+                                                                                                              }
+                                                                                                              unitval
+                                                                                                            ]
+                                                                                                          )
+                                                                                                          (error
                                                                                                             [
                                                                                                               [
                                                                                                                 (lam
@@ -26111,37 +25867,8 @@
                                                                                                                 )
                                                                                                               ]
                                                                                                             ]
-                                                                                                          }
-                                                                                                          [
-                                                                                                            {
-                                                                                                              [
-                                                                                                                Unit_match
-                                                                                                                [
-                                                                                                                  [
-                                                                                                                    {
-                                                                                                                      (builtin
-                                                                                                                        trace
-                                                                                                                      )
-                                                                                                                      Unit
-                                                                                                                    }
-                                                                                                                    (con
-                                                                                                                      string
-                                                                                                                      "S0"
-                                                                                                                    )
-                                                                                                                  ]
-                                                                                                                  Unit
-                                                                                                                ]
-                                                                                                              ]
-                                                                                                              (con
-                                                                                                                unit
-                                                                                                              )
-                                                                                                            }
-                                                                                                            (con
-                                                                                                              unit
-                                                                                                              ()
-                                                                                                            )
-                                                                                                          ]
-                                                                                                        ]
+                                                                                                          )
+                                                                                                        )
                                                                                                       )
                                                                                                     ]
                                                                                                     (all
@@ -27244,10 +26971,7 @@
                                                                                                                                                                                                   (builtin
                                                                                                                                                                                                     mkNilData
                                                                                                                                                                                                   )
-                                                                                                                                                                                                  (con
-                                                                                                                                                                                                    unit
-                                                                                                                                                                                                    ()
-                                                                                                                                                                                                  )
+                                                                                                                                                                                                  unitval
                                                                                                                                                                                                 ]
                                                                                                                                                                                               ]
                                                                                                                                                                                             ]
@@ -27282,10 +27006,7 @@
                                                                                                                                                                                   (builtin
                                                                                                                                                                                     mkNilData
                                                                                                                                                                                   )
-                                                                                                                                                                                  (con
-                                                                                                                                                                                    unit
-                                                                                                                                                                                    ()
-                                                                                                                                                                                  )
+                                                                                                                                                                                  unitval
                                                                                                                                                                                 ]
                                                                                                                                                                               ]
                                                                                                                                                                             ]
@@ -27298,10 +27019,7 @@
                                                                                                                                                                     (builtin
                                                                                                                                                                       mkNilData
                                                                                                                                                                     )
-                                                                                                                                                                    (con
-                                                                                                                                                                      unit
-                                                                                                                                                                      ()
-                                                                                                                                                                    )
+                                                                                                                                                                    unitval
                                                                                                                                                                   ]
                                                                                                                                                                 ]
                                                                                                                                                               ]
@@ -27325,10 +27043,7 @@
                                                                                                                                                               (builtin
                                                                                                                                                                 mkNilData
                                                                                                                                                               )
-                                                                                                                                                              (con
-                                                                                                                                                                unit
-                                                                                                                                                                ()
-                                                                                                                                                              )
+                                                                                                                                                              unitval
                                                                                                                                                             ]
                                                                                                                                                           ]
                                                                                                                                                         )
@@ -27344,10 +27059,7 @@
                                                                                                                                                     (builtin
                                                                                                                                                       mkNilData
                                                                                                                                                     )
-                                                                                                                                                    (con
-                                                                                                                                                      unit
-                                                                                                                                                      ()
-                                                                                                                                                    )
+                                                                                                                                                    unitval
                                                                                                                                                   ]
                                                                                                                                                 ]
                                                                                                                                               ]

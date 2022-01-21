@@ -151,6 +151,7 @@
           "Plutus/Contract/Test/Coverage"
           "Plutus/Contract/Test/ContractModel"
           "Plutus/Contract/Test/ContractModel/Internal"
+          "Plutus/Contract/Test/ContractModel/Symbolics"
           "Plutus/Contract/Test/ContractModel/CrashTolerance"
           ];
         hsSourceDirs = [ "src" ];

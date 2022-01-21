@@ -106,6 +106,7 @@
             "Plugin/Errors/Spec"
             "Plugin/Functions/Spec"
             "Plugin/Laziness/Spec"
+            "Plugin/NoTrace/Spec"
             "Plugin/Primitives/Spec"
             "Plugin/Profiling/Spec"
             "Plugin/Typeclasses/Spec"
@@ -124,11 +125,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "14";
+      url = "1";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "14";
+      url = "1";
       rev = "minimal";
       sha256 = "";
       };

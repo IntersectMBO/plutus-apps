@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
 
 module Plutus.Contracts.Uniswap.Pool
   ( calculateAdditionalLiquidity
@@ -12,7 +13,7 @@ module Plutus.Contracts.Uniswap.Pool
 
 import Ledger.Value (TokenName (..), unAssetClass, unCurrencySymbol)
 import Plutus.Contracts.Uniswap.Types
-import PlutusTx.Prelude
+import PlutusTx.Prelude hiding (ratio)
 import PlutusTx.Sqrt
 
 {-# INLINABLE calculateInitialLiquidity #-}
@@ -34,7 +35,7 @@ calculateAdditionalLiquidity oldA' oldB' liquidity delA' delB' =
     Exactly x       -> Amount x - liquidity
     Approximately x -> Amount x - liquidity
   where
-    ratio = (unAmount (liquidity * liquidity * newProd)) % unAmount oldProd
+    ratio = unsafeRatio (unAmount (liquidity * liquidity * newProd)) (unAmount oldProd)
 
     -- Unwrap, as we're combining terms
     oldA = unAmount oldA'

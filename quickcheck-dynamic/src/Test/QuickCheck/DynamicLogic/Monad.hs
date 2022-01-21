@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Test.QuickCheck.DynamicLogic.Monad
     ( DL
     , action
@@ -13,7 +14,10 @@ module Test.QuickCheck.DynamicLogic.Monad
     , monitorDL
     , forAllQ
     , forAllDL
+    , forAllDL_
     , forAllMappedDL
+    , forAllMappedDL_
+    , forAllUniqueDL
     , withDLTest
     , DL.DynLogic
     , DL.DynLogicModel(..)
@@ -102,9 +106,17 @@ instance MonadFail (DL s) where
 runDL :: s -> DL s () -> DL.DynLogic s
 runDL s dl = unDL dl s $ \ _ _ -> DL.passTest
 
+forAllUniqueDL :: (DL.DynLogicModel s, Testable a) =>
+            Int -> s -> DL s () -> (Actions s -> a) -> Property
+forAllUniqueDL nextVar initialState d prop = DL.forAllUniqueScripts nextVar initialState (runDL initialState d) prop
+
 forAllDL :: (DL.DynLogicModel s, Testable a) =>
             DL s () -> (Actions s -> a) -> Property
 forAllDL d prop = DL.forAllScripts (runDL initialState d) prop
+
+forAllDL_ :: (DL.DynLogicModel s, Testable a) =>
+            DL s () -> (Actions s -> a) -> Property
+forAllDL_ d prop = DL.forAllScripts_ (runDL initialState d) prop
 
 forAllMappedDL ::
   (DL.DynLogicModel s, Testable a, Show rep) =>
@@ -112,6 +124,13 @@ forAllMappedDL ::
       -> DL s () -> (srep -> a) -> Property
 forAllMappedDL to from fromScript d prop =
   DL.forAllMappedScripts to from (runDL initialState d) (prop . fromScript)
+
+forAllMappedDL_ ::
+  (DL.DynLogicModel s, Testable a, Show rep) =>
+    (rep -> DL.DynLogicTest s) -> (DL.DynLogicTest s -> rep) -> (Actions s -> srep)
+      -> DL s () -> (srep -> a) -> Property
+forAllMappedDL_ to from fromScript d prop =
+  DL.forAllMappedScripts_ to from (runDL initialState d) (prop . fromScript)
 
 withDLTest :: (DL.DynLogicModel s, Testable a) => DL s () -> (Actions s -> a) -> DL.DynLogicTest s -> Property
 withDLTest d prop test = DL.withDLScriptPrefix (runDL initialState d) prop test
