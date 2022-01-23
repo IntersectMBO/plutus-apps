@@ -1,10 +1,10 @@
 import           Test.Tasty
 import qualified Test.Tasty.QuickCheck as QC
 
-import           Data.Maybe            (isNothing)
+import           Data.Maybe            (isNothing, isJust)
 
 import           Test.QuickCheck       (Blind (Blind), Fun (Fun), pattern Fn2,
-                                        NonPositive (NonPositive))
+                                        NonPositive (NonPositive), Positive(Positive))
 
 import           Model                 (new)
 
@@ -14,6 +14,7 @@ tests = testGroup "Utxo index" [hfProperties]
 hfProperties :: TestTree
 hfProperties = testGroup "Historical fold"
   [ QC.testProperty "Negative or zero depth" $ prop_hfNewReturnsNothing @Int @Int
+  , QC.testProperty "Positive depth" $ prop_hfNewReturnsSomething @Int @Int
   ]
 
 prop_hfNewReturnsNothing
@@ -25,6 +26,16 @@ prop_hfNewReturnsNothing
   (Fn2 fn)
   (NonPositive depth)
   acc = isNothing $ new fn depth acc
+
+prop_hfNewReturnsSomething
+  :: Fun (a, b) a
+  -> Positive Int
+  -> a
+  -> Bool
+prop_hfNewReturnsSomething
+  (Fn2 fn)
+  (Positive depth)
+  acc = isJust $ new fn depth acc
 
 main :: IO ()
 main = defaultMain tests
