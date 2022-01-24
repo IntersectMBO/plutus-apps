@@ -177,7 +177,6 @@
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
             (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
-            (hsPkgs."extensible-effects" or (errorHandler.buildDepError "extensible-effects"))
             (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))

@@ -45,6 +45,7 @@ common lang
         -Wincomplete-record-updates -Wredundant-constraints -Widentities
         -fobject-code -fno-ignore-interface-pragmas
         -fno-omit-interface-pragmas
+        -Wunused-packages
 
     -- See Plutus Tx readme
     if flag(defer-plugin-errors)
@@ -52,9 +53,6 @@ common lang
 
 library
     import:             lang
-    ghc-options:
-        -Wunused-packages
-
     exposed-modules:
         Plutus.PAB.Run.PSGenerator
     hs-source-dirs:     src
@@ -86,41 +84,17 @@ executable plutus-pab-setup
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
         -Wno-missing-import-lists -Wredundant-constraints -O0
+        -Wunused-packages
 
     build-depends:
         aeson -any,
-        aeson-pretty -any,
-        async -any,
         base                  >=4.9     && <5,
-        bytestring -any,
-        containers -any,
-        contra-tracer -any,
-        filepath -any,
-        freer-extras -any,
-        freer-simple -any,
         iohk-monitoring -any,
-        lens -any,
-        lobemo-backend-ekg -any,
         monad-logger -any,
-        mtl -any,
         optparse-applicative -any,
-        playground-common -any,
         plutus-contract -any,
-        plutus-ledger -any,
         plutus-pab -any,
         plutus-pab-executables -any,
-        plutus-use-cases -any,
-        prettyprinter         >=1.1.0.1,
-        purescript-bridge -any,
-        row-types -any,
-        servant-client -any,
-        servant-purescript -any,
-        servant-server -any,
-        text -any,
-        time-units -any,
-        unliftio-core -any,
-        uuid -any,
-        yaml -any,
 
 -- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
 -- depend on plutus-use-cases anymore.
@@ -139,13 +113,13 @@ executable plutus-pab-examples
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
         -Wno-missing-import-lists -Wredundant-constraints -O0
+        -Wunused-packages
 
     build-depends:
         , aeson
         , base              >=4.9 && <5
         , containers
         , data-default
-        , freer-extras
         , freer-simple
         , lens
         , playground-common
@@ -158,7 +132,6 @@ executable plutus-pab-examples
         , prettyprinter
         , purescript-bridge
         , row-types
-        , servant-purescript
         , text
         , openapi3
 
@@ -174,16 +147,16 @@ executable plutus-uniswap
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
         -Wno-missing-import-lists -Wredundant-constraints -O0
+        -Wunused-packages
 
     build-depends:
         , aeson
         , base              >=4.9 && <5
         , containers
         , data-default -any
-        , freer-extras
         , freer-simple
         , plutus-contract
-        , plutus-ledger
+        , plutus-ledger-api
         , plutus-pab
         , plutus-use-cases
         , prettyprinter
@@ -209,11 +182,10 @@ executable plutus-pab-local-cluster
         -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
         -Wincomplete-uni-patterns -Wincomplete-record-updates
         -Wno-missing-import-lists -Wredundant-constraints -O0
+        -Wunused-packages
 
     build-depends:
         , playground-common
-        , plutus-chain-index
-        , plutus-chain-index-core
         , plutus-contract
         , plutus-ledger
         , plutus-ledger-api
@@ -226,23 +198,7 @@ executable plutus-pab-local-cluster
         , aeson
         , base              >=4.9 && <5
         , containers
-        , directory
-        , filepath
         , text
-        , text-class
-        , beam-sqlite
-        , sqlite-simple
-        , freer-extras
-        , beam-migrate
-        , cardano-wallet
-        , cardano-wallet-cli
-        , cardano-wallet-launcher
-        , cardano-wallet-core
-        , cardano-wallet-core-integration
-        , iohk-monitoring
-        , lobemo-backend-ekg
-        , contra-tracer
-        , cardano-api
         , lens
         , prettyprinter
         , freer-simple
@@ -250,15 +206,12 @@ executable plutus-pab-local-cluster
         , row-types
         , purescript-bridge
         , openapi3
-        , async
-        , servant-client
-        , http-client
-        , servant-client-core
-        , cardano-addresses
 
 executable plutus-pab-test-psgenerator
     default-language: Haskell2010
     default-extensions: ImportQualifiedPost
+    ghc-options:
+        -Wunused-packages
     hs-source-dirs:
         test-psgenerator
         test/full
@@ -274,7 +227,6 @@ executable plutus-pab-test-psgenerator
 
     -- TODO plutus-use-cases dep needs to be removed
     build-depends:
-        QuickCheck -any,
         aeson -any,
         aeson-pretty -any,
         base >=4.9 && <5,
@@ -283,28 +235,16 @@ executable plutus-pab-test-psgenerator
         data-default -any,
         freer-extras -any,
         freer-simple -any,
-        http-client -any,
-        http-client-tls -any,
         lens -any,
-        monad-logger -any,
         mtl -any,
         plutus-contract -any,
         plutus-pab,
-        plutus-pab-executables -any,
         plutus-use-cases -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
-        quickcheck-instances -any,
-        servant-client -any,
-        tasty -any,
-        smallcheck -any,
-        tasty-smallcheck -any,
-        tasty-quickcheck -any,
         text -any,
-        transformers -any,
         prettyprinter -any,
         row-types -any,
-        plutus-tx -any,
         playground-common -any,
         servant-purescript -any,
         purescript-bridge -any,
@@ -313,6 +253,8 @@ executable plutus-pab-test-psgenerator
 test-suite plutus-pab-test-full
     default-language: Haskell2010
     default-extensions: ImportQualifiedPost
+    ghc-options:
+        -Wunused-packages
     hs-source-dirs:
         test/full
         examples
@@ -333,19 +275,14 @@ test-suite plutus-pab-test-full
 
     -- TODO plutus-use-cases dep needs to be removed
     build-depends:
-        QuickCheck -any,
         aeson -any,
-        aeson-pretty -any,
         base >=4.9 && <5,
-        bytestring -any,
         containers -any,
         data-default -any,
         freer-extras -any,
         freer-simple -any,
         http-client -any,
-        http-client-tls -any,
         lens -any,
-        monad-logger -any,
         mtl -any,
         plutus-chain-index-core -any,
         plutus-contract -any,
@@ -358,12 +295,8 @@ test-suite plutus-pab-test-full
         servant-client -any,
         tasty -any,
         tasty-hunit -any,
-        smallcheck -any,
         stm -any,
-        tasty-smallcheck -any,
-        tasty-quickcheck -any,
         text -any,
-        transformers -any,
         prettyprinter -any,
         row-types -any,
         plutus-tx -any,
@@ -380,6 +313,8 @@ test-suite plutus-pab-test-full
 test-suite plutus-pab-test-full-long-running
     default-language: Haskell2010
     default-extensions: ImportQualifiedPost
+    ghc-options:
+        -Wunused-packages
     hs-source-dirs:
         test/full
         examples
@@ -398,19 +333,14 @@ test-suite plutus-pab-test-full-long-running
 
     -- TODO plutus-use-cases dep needs to be removed
     build-depends:
-        QuickCheck -any,
         aeson -any,
-        aeson-pretty -any,
         base >=4.9 && <5,
-        bytestring -any,
         containers -any,
         data-default -any,
         freer-extras -any,
         freer-simple -any,
         http-client -any,
-        http-client-tls -any,
         lens -any,
-        monad-logger -any,
         mtl -any,
         plutus-contract -any,
         plutus-chain-index-core -any,
@@ -419,18 +349,12 @@ test-suite plutus-pab-test-full-long-running
         plutus-use-cases -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
-        quickcheck-instances -any,
         servant-client -any,
         tasty -any,
         tasty-hunit -any,
-        smallcheck -any,
-        tasty-smallcheck -any,
-        tasty-quickcheck -any,
         text -any,
-        transformers -any,
         prettyprinter -any,
         row-types -any,
-        plutus-tx -any,
         playground-common -any,
         yaml -any,
         iohk-monitoring -any,
@@ -438,7 +362,6 @@ test-suite plutus-pab-test-full-long-running
         purescript-bridge -any,
         async -any,
         servant-client -any,
-        uuid -any,
         openapi3 -any,
 
 executable tx-inject
@@ -482,7 +405,6 @@ executable sync-client
         optparse-applicative -any,
         plutus-chain-index-core,
         plutus-ledger,
-        plutus-pab,
         text
 
 executable plutus-pab-nami-demo
@@ -495,15 +417,8 @@ executable plutus-pab-nami-demo
     -threaded
   build-depends:
     aeson -any,
-    async -any,
     base >= 4.9 && < 5,
-    cardano-api -any,
-    data-default -any,
-    filepath -any,
-    freer-extras -any,
-    freer-simple -any,
     openapi3 -any,
-    plutus-chain-index -any,
     plutus-contract -any,
     plutus-pab -any,
     plutus-pab-executables -any,
@@ -512,8 +427,6 @@ executable plutus-pab-nami-demo
     purescript-bridge -any,
     plutus-ledger -any,
     plutus-ledger-constraints -any,
-    row-types -any,
-    text -any,
 
 executable plutus-pab-nami-demo-generator
   import: lang
@@ -525,16 +438,9 @@ executable plutus-pab-nami-demo-generator
     -threaded
   build-depends:
     aeson -any,
-    async -any,
     base >= 4.9 && < 5,
-    cardano-api -any,
-    data-default -any,
-    filepath -any,
-    freer-extras -any,
-    freer-simple -any,
     openapi3 -any,
     optparse-applicative -any,
-    plutus-chain-index -any,
     plutus-contract -any,
     plutus-pab -any,
     plutus-pab-executables -any,
@@ -543,5 +449,3 @@ executable plutus-pab-nami-demo-generator
     purescript-bridge -any,
     plutus-ledger -any,
     plutus-ledger-constraints -any,
-    row-types -any,
-    text -any,
