@@ -325,4 +325,6 @@ tests =
             auctionTrace2
         , testProperty "QuickCheck property" $
             withMaxSuccess 10 prop_FinishAuction
+        , testProperty "NLFP fails" $
+            expectFailure $ noShrinking prop_NoLockedFunds
         ]
