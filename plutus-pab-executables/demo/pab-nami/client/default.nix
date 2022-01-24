@@ -9,7 +9,6 @@ let
   generated-purescript = pkgs.runCommand "pab-nami-demo-purescript" { } ''
     mkdir $out
     ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $out
-    ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
     cp ${builtins.path { name = "tidyrc.json"; path = ../../../../.tidyrc.json; } } $out/.tidyrc.json
     cp ${builtins.path { name = "tidyoperators"; path = ../../../../.tidyoperators; } } $out/.tidyoperators
     cd $out
