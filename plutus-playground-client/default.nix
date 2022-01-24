@@ -1,4 +1,4 @@
-{ purty, pkgs, lib, gitignore-nix, haskell, webCommon, webCommonPlutus, buildPursPackage, buildNodeModules, filterNpm }:
+{ purty, pkgs, lib, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
 let
   playground-exe = haskell.packages.plutus-playground-server.components.exes.plutus-playground-server;
 
@@ -79,9 +79,6 @@ let
       checkPhase = ''
         node -e 'require("./output/Test.Main").main()'
       '';
-      extraSrcs = {
-        web-common-plutus = webCommonPlutus;
-      };
       spagoPackages = pkgs.callPackage ./spago-packages.nix { };
     })
     (_: {

@@ -38,7 +38,6 @@ rec {
     plutus-uniswap;
 
   webCommon = pkgs.callPackage sources.web-common { inherit (plutus-apps.lib) gitignore-nix; };
-  webCommonPlutus = pkgs.callPackage ./web-common-plutus { inherit (plutus-apps.lib) gitignore-nix; };
 
   plutus-playground = pkgs.recurseIntoAttrs rec {
     haddock = plutus-apps.plutus-haddock-combined;
@@ -46,7 +45,7 @@ rec {
     inherit (pkgs.callPackage ./plutus-playground-client {
       inherit (plutus-apps) purty;
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
-      inherit haskell webCommon webCommonPlutus;
+      inherit haskell webCommon;
     }) client server start-backend generate-purescript generated-purescript;
   };
 
