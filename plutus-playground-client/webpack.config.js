@@ -45,35 +45,6 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.purs$/,
-                use: [
-                    {
-                        loader: 'purs-loader',
-                        options: {
-                            bundle: !isDevelopment,
-                            psc: "psa",
-                            pscArgs: {
-                                strict: true,
-                                censorLib: true,
-                                stash: isDevelopment,
-                                isLib: ["generated", ".spago"],
-                            },
-                            spago: isDevelopment,
-                            watch: isDevelopment,
-                            src: isDevelopment
-                                ? []
-                                : [
-                                    '.spago/*/*/src/**/*.purs',
-                                    'src/**/*.purs',
-                                    'test/**/*.purs',
-                                    'generated/**/*.purs',
-                                    "web-common-plutus/src/**/*.purs",
-                                    "web-common-playground/src/**/*.purs",
-                                ],
-                        }
-                    }
-                ]
-            }, {
                 test: /\.tsx?$/,
                 loader: "ts-loader",
             },
@@ -106,7 +77,7 @@ module.exports = {
             static: path.resolve(__dirname, "./static"),
             src: path.resolve(__dirname, "./src"),
         },
-        extensions: [".purs", ".js", ".ts", ".tsx"],
+        extensions: [".js", ".ts", ".tsx"],
     },
     resolveLoader: {
         modules: [

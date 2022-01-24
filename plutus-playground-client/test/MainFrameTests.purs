@@ -3,20 +3,24 @@ module MainFrameTests
   ) where
 
 import Prologue
+
 import Animation (class MonadAnimate)
-import Auth (AuthRole(..), AuthStatus(..))
 import Clipboard (class MonadClipboard)
+import Control.Monad.Except (except)
 import Control.Monad.Except.Trans (class MonadThrow, throwError)
-import Control.Monad.RWS.Trans (RWSResult(..), RWST(..), runRWST)
-import Control.Monad.Reader.Class (class MonadAsk)
 import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
+import Control.Monad.State (StateT(..), execStateT, state)
 import Control.Monad.State.Class (class MonadState, get)
+import Control.Monad.State.Extra (zoomStateT)
+import Control.Monad.Trans.Class (lift)
 import Cursor as Cursor
+import Data.Argonaut (Json, JsonDecodeError, encodeJson)
 import Data.Argonaut.Decode (printJsonDecodeError)
 import Data.Argonaut.Extra (parseDecodeJson)
 import Data.Bifunctor (lmap)
 import Data.Either (either)
-import Data.Lens (Lens', _1, assign, preview, set, to, use, view, (^.))
+import Data.HTTP.Method (Method(..))
+import Data.Lens (Lens', _1, _2, _Just, _Left, assign, preview, set, use, view, (^.))
 import Data.Lens.At (at)
 import Data.Lens.Index (ix)
 import Data.Lens.Record (prop)
@@ -27,27 +31,32 @@ import Data.Traversable (traverse_)
 import Editor.Types (State(..)) as Editor
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Exception (Error, error)
-import Gist (Gist, GistId, gistId)
+import Gist (Gist, GistId(..), gistId)
 import Gists.Types (GistAction(..))
 import Halogen.Monaco (KeyBindings(..)) as Editor
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult, SourceCode(..))
 import MainFrame.Lenses (_authStatus, _contractDemoEditorContents, _createGistResult, _currentView, _simulations)
 import MainFrame.MonadApp (class MonadApp)
-import MainFrame.State (Env(..), handleAction, mkInitialState)
-import MainFrame.Types (HAction(..), State, View(Editor, Simulations), WebData)
-import Network.RemoteData (RemoteData(..), isNotAsked, isSuccess)
-import Network.RemoteData as RemoteData
+import MainFrame.State (handleAction, mkInitialState)
+import MainFrame.Types (HAction(..), State, View(Editor, Simulations))
+import Network.RemoteData (isFailure, isNotAsked, isSuccess)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync as FS
 import Playground.Gists (playgroundGistFile)
+import Playground.Server as Server
 import Playground.Types (CompilationResult, ContractDemo, EvaluationResult)
-import Servant.PureScript (printAjaxError)
+import Servant.PureScript (class MonadAjax, segmentsToPathAbsolute)
 import StaticData (bufferLocalStorageKey, lookupContractDemo, mkContractDemos)
 import Test.QuickCheck ((<?>))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual, shouldSatisfy)
 import Test.Spec.QuickCheck (quickCheck)
 import Type.Proxy (Proxy(..))
+import URI.Extra.QueryPairs as QueryPairs
+import URI.Host as Host
+import URI.RelativePart (_relPath)
+import URI.RelativeRef (_relPart)
+import URI.RelativeRef as RelativeRef
 
 all :: Spec Unit
 all =
@@ -56,12 +65,13 @@ all =
 
 ------------------------------------------------------------
 type World
-  = { gists :: Map GistId Gist
-    , editorContents :: Maybe SourceCode
-    , localStorage :: Map String String
-    , evaluationResult :: WebData EvaluationResult
-    , compilationResult :: (WebData (Either InterpreterError (InterpreterResult CompilationResult)))
-    }
+  =
+  { gists :: Map GistId Gist
+  , editorContents :: Maybe SourceCode
+  , localStorage :: Map String String
+  , evaluationResult :: Either String EvaluationResult
+  , compilationResult :: (Either String (Either InterpreterError (InterpreterResult CompilationResult)))
+  }
 
 _gists :: forall r a. Lens' { gists :: a | r } a
 _gists = prop (Proxy :: _ "gists")
@@ -74,7 +84,7 @@ _localStorage = prop (Proxy :: _ "localStorage")
 
 -- | A dummy implementation of `MonadApp`, for testing the main handleAction loop.
 newtype MockApp m a
-  = MockApp (RWST Env Unit (Tuple World State) m a)
+  = MockApp (StateT (Tuple World State) m a)
 
 derive instance newtypeMockApp :: Newtype (MockApp m a) _
 
@@ -82,19 +92,44 @@ derive newtype instance functorMockApp :: Functor m => Functor (MockApp m)
 
 derive newtype instance applicativeMockApp :: Monad m => Applicative (MockApp m)
 
-derive newtype instance applyMockApp :: Bind m => Apply (MockApp m)
+derive newtype instance applyMockApp :: Monad m => Apply (MockApp m)
 
-derive newtype instance bindMockApp :: Bind m => Bind (MockApp m)
+derive newtype instance bindMockApp :: Monad m => Bind (MockApp m)
 
 derive newtype instance monadMockApp :: Monad m => Monad (MockApp m)
 
-derive newtype instance monadAskMockApp :: Monad m => MonadAsk Env (MockApp m)
-
 instance monadStateMockApp :: Monad m => MonadState State (MockApp m) where
-  state f =
-    MockApp
-      $ RWST \_ (Tuple world appState) -> case f appState of
-          (Tuple a appState') -> pure $ RWSResult (Tuple world appState') a unit
+  state = MockApp <<< zoomStateT _2 <<< state
+
+instance Monad m => MonadAjax JsonDecodeError Json String (MockApp m) where
+  request req = do
+    let mMethod = preview _Left req.method
+    let mUri = preview (_relPart <<< _relPath <<< _Just) req.uri
+    jsonResult <- case mMethod, mUri of
+      Just GET, Just [ "oauth", "status" ] ->
+        pure $ encodeJson { _authStatusAuthRole: "GithubUser" }
+      Just GET, Just [ "gists", gistId ] -> do
+        Tuple { gists } _ <- lift $ MockApp $ get
+        case Map.lookup (GistId gistId) gists of
+          Nothing -> throwError $ "Not found: " <> gistId
+          Just gist -> pure $ encodeJson gist
+      Just POST, Just [ "contract" ] -> do
+        Tuple { compilationResult } _ <- lift $ MockApp $ get
+        except $ map encodeJson $ compilationResult
+      _, _ -> throwError
+        $ "Resource not mocked: "
+            <> show mMethod
+            <> " "
+            <> RelativeRef.print
+              { printUserInfo: identity
+              , printHosts: Host.print
+              , printPath: identity
+              , printRelPath: Left <<< segmentsToPathAbsolute
+              , printQuery: QueryPairs.print identity identity
+              , printFragment: identity
+              }
+              req.uri
+    except $ lmap printJsonDecodeError $ req.decode jsonResult
 
 instance monadAppMockApp :: Monad m => MonadApp (MockApp m) where
   editorGetContents =
@@ -115,18 +150,12 @@ instance monadAppMockApp :: Monad m => MonadApp (MockApp m) where
   setDataTransferData _ _ _ = pure unit
   readFileFromDragEvent _ = pure "TEST"
   --
-  getOauthStatus = pure $ Success $ AuthStatus { _authStatusAuthRole: GithubUser }
-  getGistByGistId gistId =
-    MockApp do
-      Tuple { gists } _ <- get
-      pure $ RemoteData.fromMaybe $ Map.lookup gistId gists
-  postEvaluation _ = pure NotAsked
-  postGist _ = pure NotAsked
-  postGistByGistId _ _ = pure NotAsked
-  postContract _ =
-    MockApp do
-      Tuple { compilationResult } _ <- get
-      pure compilationResult
+  getOauthStatus = Server.getOauthStatus
+  getGistByGistId = Server.getGistsByGistId
+  postEvaluation = Server.postEvaluate
+  postGist = Server.postGists
+  postGistByGistId = Server.postGistsByGistId
+  postContract = Server.postContract
   resizeEditor = pure unit
   resizeBalancesChart = pure unit
   scrollIntoView _ = pure unit
@@ -159,10 +188,9 @@ execMockApp world queries = do
           , feedbackPanePreviousExtend: 0
           }
       )
-  RWSResult state _ _ <-
-    runRWST
+  state <-
+    execStateT
       (unwrap (traverse_ handleAction queries :: MockApp m Unit))
-      (Env { spSettings: { baseURL: "/" } })
       (Tuple world initialState)
   pure state
 
@@ -172,8 +200,8 @@ mockWorld =
   { gists: Map.empty
   , editorContents: Nothing
   , localStorage: Map.empty
-  , compilationResult: NotAsked
-  , evaluationResult: NotAsked
+  , compilationResult: Left "Not mocked"
+  , evaluationResult: Left "Not mocked"
   }
 
 evalTests :: Spec Unit
@@ -181,9 +209,7 @@ evalTests =
   describe "handleAction" do
     it "CheckAuthStatus" do
       Tuple _ finalState <- execMockApp mockWorld [ CheckAuthStatus ]
-      (finalState ^. _authStatus <<< to (lmap printAjaxError))
-        `shouldSatisfy`
-          isSuccess
+      (finalState ^. _authStatus) `shouldSatisfy` isSuccess
     it "ChangeView" do
       quickCheck \aView -> do
         let
@@ -198,18 +224,14 @@ evalTests =
             [ GistAction $ SetGistUrl "9cfe"
             , GistAction LoadGist
             ]
-        (finalState ^. _createGistResult <<< to (lmap printAjaxError))
-          `shouldSatisfy`
-            isNotAsked
+        (finalState ^. _createGistResult) `shouldSatisfy` isNotAsked
       it "Invalid URL" do
         Tuple _ finalState <-
           execMockApp mockWorld
             [ GistAction $ SetGistUrl "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             , GistAction LoadGist
             ]
-        (finalState ^. _createGistResult <<< to (lmap printAjaxError))
-          `shouldSatisfy`
-            isNotAsked
+        (finalState ^. _createGistResult) `shouldSatisfy` isFailure
       it "Gist loaded successfully" do
         contents <- liftEffect $ FS.readTextFile UTF8 "test/gist1.json"
         case parseDecodeJson contents of
@@ -221,9 +243,7 @@ evalTests =
                 [ GistAction $ SetGistUrl (unwrap (view gistId gist))
                 , GistAction LoadGist
                 ]
-            (finalState ^. _createGistResult <<< to (lmap printAjaxError))
-              `shouldSatisfy`
-                isSuccess
+            (finalState ^. _createGistResult) `shouldSatisfy` isSuccess
             Cursor.length (view _simulations finalState) `shouldEqual` 2
             case view playgroundGistFile gist of
               Nothing -> fail "Could not read gist content. Sample it data may be incorrect."
@@ -247,22 +267,21 @@ evalTests =
           (view _contractDemoEditorContents <$> lookupContractDemo "Game" contractDemos)
     it "Loading a script switches back to the editor." do
       loadCompilationResponse1
-        >>= case _ of
-            Left err -> fail err
-            Right compilationResult -> do
-              Tuple _ finalState <-
-                execMockApp (mockWorld { compilationResult = compilationResult })
-                  [ ChangeView Simulations
-                  , LoadScript "Game"
-                  ]
-              view _currentView finalState `shouldEqual` Editor
+        >>= \compilationResult -> do
+          Tuple _ finalState <-
+            execMockApp (mockWorld { compilationResult = Right $ Right compilationResult })
+              [ ChangeView Simulations
+              , LoadScript "Game"
+              ]
+          view _currentView finalState `shouldEqual` Editor
 
-loadCompilationResponse1 ::
-  forall m.
-  MonadEffect m =>
-  m (Either String (WebData (Either InterpreterError (InterpreterResult CompilationResult))))
+loadCompilationResponse1
+  :: forall m
+   . MonadEffect m
+  => MonadThrow Error m
+  => m (InterpreterResult CompilationResult)
 loadCompilationResponse1 = do
   contents <- liftEffect $ FS.readTextFile UTF8 "generated/compilation_response.json"
   case parseDecodeJson contents of
-    Left err -> pure $ Left $ show err
-    Right value -> pure $ Right $ Success $ Right value
+    Left err -> throwError $ error $ printJsonDecodeError err
+    Right value -> pure value

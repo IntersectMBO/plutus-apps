@@ -64,6 +64,11 @@ psNonEmpty =
     TypeInfo "purescript-lists" "Data.List.Types" "NonEmptyList" <$>
     psTypeParameters
 
+psSet :: MonadReader BridgeData m => m PSType
+psSet =
+    TypeInfo "purescript-ordered-collections" "Data.Set" "Set" <$>
+    psTypeParameters
+
 psUUID :: PSType
 psUUID = TypeInfo "web-common" "Data.UUID.Argonaut" "UUID" []
 
@@ -90,8 +95,14 @@ nonEmptyBridge = do
     typeModule ^== "GHC.Base"
     psNonEmpty
 
+setBridge :: BridgePart
+setBridge = do
+    typeName ^== "Set"
+    typeModule ^== "Data.Set.Internal"
+    psSet
+
 containersBridge :: BridgePart
-containersBridge = nonEmptyBridge
+containersBridge = nonEmptyBridge <|> setBridge
 
 ------------------------------------------------------------
 psBigInteger :: PSType

@@ -26,9 +26,10 @@ data Action
   = HandleSubmit Event
 
 type Payment
-  = { recipientBech32Addr :: Address
-    , lovelaceAmount :: Int
-    }
+  =
+  { recipientBech32Addr :: Address
+  , lovelaceAmount :: Int
+  }
 
 data AddressError
   = RecipientAddrNotInBech32
@@ -48,7 +49,7 @@ newtype PaymentForm (r :: Row Type -> Type) f
 derive instance newtypePaymentForm :: Newtype (PaymentForm r f) _
 
 type ChildSlots
-  = ( formless :: F.Slot' PaymentForm Payment Unit )
+  = (formless :: F.Slot' PaymentForm Payment Unit)
 
 component :: CardanoWasm -> F.Component PaymentForm (Const Void) () Unit Payment AppM
 component cardanoWasm = F.component (const $ input cardanoWasm) spec

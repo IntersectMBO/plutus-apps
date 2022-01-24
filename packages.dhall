@@ -1,5 +1,5 @@
 let upstream =
-      https://github.com/input-output-hk/purescript-web-common/releases/download/v1.1.4/packages.dhall sha256:ab905184ee034c35867e73ace0475ce29d1a0b975581d355af6f35e680449749
+      https://github.com/input-output-hk/purescript-web-common/releases/download/v2.0.1/packages.dhall sha256:5b49e522293790f08e07e5ed4b59a5e91d213521e68e20148eabf81164c38664
 
 let overrides = {=}
 

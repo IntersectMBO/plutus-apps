@@ -68,9 +68,9 @@ values =
           AssocMap.Map
             [ currencies
                 /\ AssocMap.Map
-                    [ usdToken /\ BigInt.fromInt 10
-                    , eurToken /\ BigInt.fromInt 20
-                    ]
+                  [ usdToken /\ BigInt.fromInt 10
+                  , eurToken /\ BigInt.fromInt 20
+                  ]
             ]
       }
   , Value
@@ -79,9 +79,9 @@ values =
             [ ada /\ AssocMap.Map [ adaToken /\ BigInt.fromInt 30 ]
             , currencies
                 /\ AssocMap.Map
-                    [ usdToken /\ BigInt.fromInt 40
-                    , eurToken /\ BigInt.fromInt 50
-                    ]
+                  [ usdToken /\ BigInt.fromInt 40
+                  , eurToken /\ BigInt.fromInt 50
+                  ]
             ]
       }
   , Value
@@ -90,8 +90,8 @@ values =
             [ ada /\ AssocMap.Map [ adaToken /\ BigInt.fromInt 60 ]
             , currencies
                 /\ AssocMap.Map
-                    [ usdToken /\ BigInt.fromInt 70
-                    ]
+                  [ usdToken /\ BigInt.fromInt 70
+                  ]
             ]
       }
   ]

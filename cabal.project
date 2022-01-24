@@ -101,13 +101,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/servant-purescript
-  tag: ebea59c7bdfc0338d83fca772b9a57e28560bcde
+  tag: 44e7cacf109f84984cd99cd3faf185d161826963
 
 -- Direct dependency.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/purescript-bridge
-  tag: 366fc70b341e2633f3ad0158a577d52e1cd2b138
+  tag: 47a1f11825a0f9445e0f98792f79172efef66c00
 
 -- Direct dependency.
 -- Compared to others, cardano-wallet doesn't bump dependencies very often.

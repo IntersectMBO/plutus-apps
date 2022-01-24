@@ -1,0 +1,26 @@
+{
+    "warnings": [],
+    "result": {
+        "functionSchema": [
+            {
+                "argument": {
+                    "tag": "FormSchemaUnit"
+                },
+                "endpointDescription": {
+                    "getEndpointDescription": "dummy"
+                }
+            }
+        ],
+        "knownCurrencies": [
+            {
+                "friendlyName": "Ada",
+                "hash": "",
+                "knownTokens": [
+                    {
+                        "unTokenName": ""
+                    }
+                ]
+            }
+        ]
+    }
+}

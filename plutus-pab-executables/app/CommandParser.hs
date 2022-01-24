@@ -19,11 +19,7 @@ import Options.Applicative (CommandFields, Mod, Parser, argument, command, custo
                             fullDesc, help, helper, idm, info, long, metavar, option, prefs, progDesc, short,
                             showHelpOnEmpty, showHelpOnError, str, subparser, value)
 
-data NoConfigCommand =
-    PSGenerator -- ^ Generate purescript bridge code
-          { psGenOutputDir :: !FilePath -- ^ Path to write generated code to
-          }
-    | WriteDefaultConfig -- ^ Write default logging configuration
+data NoConfigCommand = WriteDefaultConfig -- ^ Write default logging configuration
           { outputFile :: !FilePath -- ^ Path to write configuration to
           }
     deriving stock (Show, Eq, Generic)
@@ -64,8 +60,7 @@ commandParser :: Parser NoConfigCommand
 commandParser =
     subparser $
     mconcat
-        [ psGeneratorCommandParser
-        , defaultConfigParser
+        [ defaultConfigParser
         ]
 
 defaultConfigParser :: Mod CommandFields NoConfigCommand
@@ -78,14 +73,3 @@ defaultConfigParser =
                 (metavar "OUTPUT_FILE" <>
                  help "Output file to write logging config YAML to.")
         pure $ WriteDefaultConfig {outputFile}
-
-psGeneratorCommandParser :: Mod CommandFields NoConfigCommand
-psGeneratorCommandParser =
-    command "psgenerator" $
-    flip info (fullDesc <> progDesc "Generate the frontend's PureScript files.") $ do
-        psGenOutputDir <-
-            argument
-                str
-                (metavar "OUTPUT_DIR" <>
-                 help "Output directory to write PureScript files to.")
-        pure $ PSGenerator {psGenOutputDir}

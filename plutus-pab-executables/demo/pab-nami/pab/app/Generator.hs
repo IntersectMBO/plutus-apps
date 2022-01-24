@@ -25,4 +25,3 @@ main :: IO ()
 main = do
     psGenOutputDir <- parseOptions
     PSGenerator.generateAPIModule (Proxy :: Proxy DemoContract) psGenOutputDir
-    PSGenerator.generateWith @DemoContract psGenOutputDir

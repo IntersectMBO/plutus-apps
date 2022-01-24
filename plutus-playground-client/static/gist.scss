@@ -25,7 +25,7 @@
     }
 
     .gist-link,
-    .ajax-error {
+    .error-pane {
         position: absolute;
         z-index: 10;
         top: 44px;
@@ -60,7 +60,7 @@
         }
     }
 
-    .ajax-error {
+    .error-pane {
         z-index: 20;
         border-color: $red;
         background: lighten($red, 50%);

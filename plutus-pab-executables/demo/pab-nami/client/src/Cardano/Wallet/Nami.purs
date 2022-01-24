@@ -30,9 +30,9 @@ type WalletId
 
 data Pagination
   = Pagination
-    { paginationPage :: Int
-    , paginationLimit :: Int
-    }
+  { paginationPage :: Int
+  , paginationLimit :: Int
+  }
 
 foreign import enableImpl :: Effect (Promise Boolean)
 

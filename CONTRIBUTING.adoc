@@ -30,7 +30,7 @@ NOTE: You may want to consider using https://github.com/target/lorri[lorri] as a
 The shell comes with some tools for fixing various simple problems that the CI will complain about. Specifically:
 
 - `fix-stylish-haskell` will re-format all the Haskell sources correctly.
-- `fix-purty` will re-format all the Purescript sources correctly.
+- `fix-purs-tidy` will re-format all the Purescript sources correctly.
 - `fix-png-optimization` will optimize all PNGs in the repository.
 - `updateMaterialized` will update the materialized Nix files (see xref:update-generated[later]).
 
@@ -276,12 +276,13 @@ you could write a Note describing the trick (and justifying its usage!), and the
 
 === Code formatting
 
-We use `stylish-haskell` for Haskell code formatting, and `purty` for Purescript.
+We use `stylish-haskell` for Haskell code formatting, and `purs-tidy` for Purescript.
 CI checks that running these is a no-op, so if you don’t apply it them your PR will not go green.
 To avoid annoyance, set up your editor to run them automatically.
-The `nix-shell` environment provides `stylish-haskell` and `purty` binaries of the correct versions.
+The `nix-shell` environment provides `stylish-haskell` and `purs-tidy` binaries of the correct versions.
 
-You can run `stylish-haskell` or `purty` over your tree using the `fix-stylish-haskell` or `fix-purty` script provided by the `nix-shell` environment.
+You can run `stylish-haskell` or `purs-tidy` over your tree using the
+`fix-stylish-haskell` or `fix-purs-tidy` script provided by the `nix-shell` environment.
 
 === Compiler warnings
 
