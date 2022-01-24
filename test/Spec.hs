@@ -12,14 +12,14 @@ tests = testGroup "Utxo index" [hfProperties]
 
 hfProperties :: TestTree
 hfProperties = testGroup "Historical fold"
-  [ testProperty "New: Positive or non-positive depth" $ 
+  [ testProperty "New: Positive or non-positive depth" $
       withMaxSuccess 10000 $ prop_hfNewReturn @Int @Int
   , testProperty "History length is always smaller than the max depth" $
       withMaxSuccess 10000 $ prop_historyLengthLEDepth @Int @Int
   , testProperty "Rewind: Connection with `hfDepth`" $
       withMaxSuccess 10000 $ prop_rewindWithDepth @Int @Int
-  -- , testProperty "Relationship between Insert/Rewind" $
-  --     prop_InsertRewindInverse @Int @Int
+  , testProperty "Relationship between Insert/Rewind" $
+      withMaxSuccess 10000 $ prop_InsertRewindInverse @Int @Int
   ]
 
 -- | Properties of the `new` operation.
@@ -68,16 +68,20 @@ prop_historyLengthLEDepth hf =
   property $ historyLength hf <= hfDepth hf
 
 prop_InsertRewindInverse
-  :: (Show a, Eq a)
+  :: (Show a, Show b, Arbitrary b, Eq a)
   => HistoricalFold a b
-  -> [b]
   -> Property
-prop_InsertRewindInverse hf bs =
-  hfDepth hf >= 2 ==> -- rewind does not make sense for lesser depths.
-    let  limit = min (length bs) (hfDepth hf - 1) -- Make the rewind legal
-         size  = historyLength hf
-         hf'   = rewind limit $ insertL bs hf
-     in  property $ Debug.trace ("Limit: " <> show limit) $ isJust hf' && fromJust hf' `matchesHistory` hf
+prop_InsertRewindInverse hf =
+  -- rewind does not make sense for lesser depths.
+  hfDepth hf >= 2 ==>
+  -- if the history is not fully re-written, then we can get a common
+  -- prefix after the insert/rewind play. We need input which is less
+  -- than `hfDepth hf`
+  forAll (resize (hfDepth hf - 1) arbitrary) $
+  \bs ->
+      let hf'   = rewind (length bs) $ insertL bs hf
+       in property $ isJust hf' && fromJust hf' `matchesHistory` hf
+
 
 main :: IO ()
 main = defaultMain tests

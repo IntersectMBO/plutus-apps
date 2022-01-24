@@ -75,8 +75,7 @@ matchesHistory :: (Show a, Eq a) => HistoricalFold a b -> HistoricalFold a b -> 
 matchesHistory hl hr =
   let hlAccumulator = toList $ hfAccumulator hl
       hrAccumulator = toList $ hfAccumulator hr
-   in Debug.trace (show hlAccumulator <> " vs " <> show hrAccumulator <> " -> " <> show (hrAccumulator == hlAccumulator)) $
-         hlAccumulator `isInfixOf` hrAccumulator
+   in    hlAccumulator `isInfixOf` hrAccumulator
       || hrAccumulator `isInfixOf` hlAccumulator
       || hrAccumulator      ==     hlAccumulator
 
