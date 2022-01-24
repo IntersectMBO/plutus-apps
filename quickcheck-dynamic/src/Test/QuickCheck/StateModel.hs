@@ -117,6 +117,9 @@ pattern Actions as <- Actions_ (Smart _ as) where
 
 {-# COMPLETE Actions #-}
 
+instance Semigroup (Actions state) where
+  Actions as <> Actions as' = Actions (as <> as')
+
 instance Eq (Actions state) where
   Actions as == Actions as' = as == as'
 
@@ -127,7 +130,6 @@ instance (forall a. Show (Action state a)) => Show (Actions state) where
     | otherwise = (("Actions \n [")++) .
                   foldr (.) (showsPrec 0 (last as) . ("]"++))
                     [showsPrec 0 a . (",\n  "++) | a <- init as]
-
 
 instance (Typeable state, StateModel state) => Arbitrary (Actions state) where
   arbitrary = Actions <$> arbActions initialState 1
