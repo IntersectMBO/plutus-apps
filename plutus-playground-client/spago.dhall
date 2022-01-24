@@ -59,6 +59,5 @@ You can edit this file as you like.
   , "test/**/*.purs"
   , "generated/**/*.purs"
   , "../web-common-plutus/src/**/*.purs"
-  , "../web-common-playground/src/**/*.purs"
   ]
 }
