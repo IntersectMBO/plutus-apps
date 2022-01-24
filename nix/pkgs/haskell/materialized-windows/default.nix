@@ -727,7 +727,6 @@
         freer-extras = ./.plan.nix/freer-extras.nix;
         cardano-prelude = ./.plan.nix/cardano-prelude.nix;
         js-bindgen = ./.plan.nix/js-bindgen.nix;
-        wide-word = ./.plan.nix/wide-word.nix;
         measures = ./.plan.nix/measures.nix;
         ouroboros-network-testing = ./.plan.nix/ouroboros-network-testing.nix;
         cardano-api-stub = ./.plan.nix/cardano-api-stub.nix;
@@ -840,7 +839,6 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "js-bindgen" = { flags = {}; };
-          "wide-word" = { flags = {}; };
           "measures" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
@@ -1517,7 +1515,6 @@
           "kan-extensions".components.library.planned = lib.mkOverride 900 true;
           "string-interpolate".components.library.planned = lib.mkOverride 900 true;
           "ListLike".components.library.planned = lib.mkOverride 900 true;
-          "wide-word".components.library.planned = lib.mkOverride 900 true;
           "microstache".components.library.planned = lib.mkOverride 900 true;
           "bsb-http-chunked".components.library.planned = lib.mkOverride 900 true;
           "conduit".components.library.planned = lib.mkOverride 900 true;
