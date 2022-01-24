@@ -46,10 +46,15 @@ let
       stylish-haskell = stylish-haskell;
       nixpkgs-fmt = nixpkgs-fmt;
       shellcheck = pkgs.shellcheck;
-      purty = plutus-apps.purty-pre-commit;
     };
     hooks = {
-      purty.enable = true;
+      purs-tidy-hook = {
+        enable = true;
+        name = "purs-tidy";
+        entry = "${plutus-apps.purs-tidy}/bin/purs-tidy format-in-place";
+        files = "\\.purs$";
+        language = "system";
+      };
       stylish-haskell.enable = true;
       nixpkgs-fmt = {
         enable = true;
@@ -99,7 +104,7 @@ let
     cardano-wallet.cardano-wallet
     cardano-repo-tool
     fixPngOptimization
-    fixPurty
+    fix-purs-tidy
     fixStylishHaskell
     haskell-language-server
     haskell-language-server-wrapper
@@ -112,7 +117,7 @@ let
     psa
     purescript-language-server
     purs
-    purty
+    purs-tidy
     spago
     spago2nix
     stylish-haskell

@@ -1,4 +1,4 @@
-{ purty, pkgs, lib, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
+{ purs-tidy, pkgs, lib, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
 let
   playground-exe = haskell.packages.plutus-playground-server.components.exes.plutus-playground-server;
 
@@ -18,9 +18,7 @@ let
       PATH=${ghcWithPlutus}/bin:$PATH
       mkdir $out
       ${playground-exe}/bin/plutus-playground-server psgenerator $out
-      ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purty}/bin/purty format --write
-      # believe it or not, purty is not idempotent!
-      ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purty}/bin/purty format --write
+      ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
     '';
 
   # generate-purescript: script to create purescript bridge code
@@ -37,9 +35,7 @@ let
     rm -rf ./generated
     ${build-playground-exe}/bin/plutus-playground-server psgenerator generated
     echo Formatting files...
-    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purty}/bin/purty format --write
-    # believe it or not, purty is not idempotent!
-    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purty}/bin/purty format --write
+    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
     echo Done: formatted
   '';
 

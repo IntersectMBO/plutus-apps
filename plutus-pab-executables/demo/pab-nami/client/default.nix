@@ -1,4 +1,4 @@
-{ purty, pkgs, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
+{ purs-tidy, pkgs, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
 let
   pab-nami-demo-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-nami-demo;
   pab-nami-demo-generator = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-nami-demo-generator;
@@ -9,9 +9,7 @@ let
   generated-purescript = pkgs.runCommand "pab-nami-demo-purescript" { } ''
     mkdir $out
     ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $out
-    ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purty}/bin/purty format --write
-    # believe it or not, purty is not idempotent!
-    ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purty}/bin/purty format --write
+    ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
   '';
 
   generate-purescript = pkgs.writeShellScriptBin "pab-nami-demo-generate-purs" ''
@@ -19,9 +17,7 @@ let
     rm -rf $generatedDir
     $(nix-build ../../../../default.nix -A pab-nami-demo.pab-nami-demo-generator)/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
     echo Formatting files...
-    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purty}/bin/purty format --write
-    # believe it or not, purty is not idempotent!
-    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purty}/bin/purty format --write
+    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
     echo Done: formatted
   '';
 

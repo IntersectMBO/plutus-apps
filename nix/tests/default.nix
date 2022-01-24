@@ -1,7 +1,7 @@
 { pkgs
 , gitignore-nix
 , fixStylishHaskell
-, fixPurty
+, fix-purs-tidy
 , fixPngOptimization
 , src
 , play-generated
@@ -28,9 +28,9 @@ pkgs.recurseIntoAttrs {
     inherit play-generated nami-generated;
   };
 
-  purty = pkgs.callPackage ./purty.nix {
+  purs-tidy = pkgs.callPackage ./purs-tidy.nix {
     src = cleanSrc;
-    inherit fixPurty;
+    inherit fix-purs-tidy;
   };
 
   nixpkgsFmt = pkgs.callPackage ./nixpkgs-fmt.nix {

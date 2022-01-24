@@ -43,7 +43,7 @@ rec {
     haddock = plutus-apps.plutus-haddock-combined;
 
     inherit (pkgs.callPackage ./plutus-playground-client {
-      inherit (plutus-apps) purty;
+      inherit (plutus-apps) purs-tidy;
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
       inherit haskell webCommon;
     }) client server start-backend generate-purescript generated-purescript;
@@ -53,7 +53,7 @@ rec {
   # To reproduce the error, run `npm run build:webpack:prod` in `plutus-pab-executables/demo/pab-nami/client`
   pab-nami-demo = pkgs.recurseIntoAttrs rec {
     inherit (pkgs.callPackage ./plutus-pab-executables/demo/pab-nami/client {
-      inherit (plutus-apps) purty;
+      inherit (plutus-apps) purs-tidy;
       inherit pkgs haskell webCommon;
       inherit (plutus-apps.lib) buildPursPackage buildNodeModules filterNpm gitignore-nix;
     }) client pab-setup-invoker pab-nami-demo-invoker pab-nami-demo-generator generate-purescript generated-purescript start-backend;
@@ -66,7 +66,7 @@ rec {
   tests = import ./nix/tests/default.nix {
     inherit pkgs docs;
     inherit (plutus-apps.lib) gitignore-nix;
-    inherit (plutus-apps) fixStylishHaskell fixPurty fixPngOptimization;
+    inherit (plutus-apps) fixStylishHaskell fix-purs-tidy fixPngOptimization;
     inherit plutus-playground web-ghc;
     src = ./.;
     play-generated = plutus-playground.generated-purescript;
