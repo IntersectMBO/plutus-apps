@@ -8,21 +8,23 @@ module Model ( -- * Model data
              , view
              , historyLength
              , rewind
-             , sameHistory
+             , matchesHistory
                -- * Helpers
              , insertL
                -- * QuickCheck instrumentation
              ) where
 
 import           Control.Monad      (replicateM)
-import           Data.List          (foldl')
-import           Data.List.NonEmpty (NonEmpty (..), (<|))
+import           Data.List          (foldl', isInfixOf)
+import           Data.List.NonEmpty (NonEmpty (..), (<|), toList)
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe         (fromJust)
 
 import           Test.QuickCheck    (Arbitrary (arbitrary), CoArbitrary, Gen,
                                      choose, chooseInt, frequency, listOf,
                                      sized)
+
+import Debug.Trace qualified as Debug
 
 -- | Model of a historical (we can go backwards) fold over a data set.
 
@@ -34,7 +36,7 @@ data HistoricalFold a b = HistoricalFold
 
 instance (Show a, Show b) => Show (HistoricalFold a b) where
   show (HistoricalFold _ depth acc) =
-    show $ "HF " <> show depth <> " " <> show acc
+    show $ "HistoricalFold { hfDepth = " <> show depth <> ", hfAccumulator = " <> show (toList acc) <> " }"
 
 -- | Operations over the historical folds.
 new :: (a -> b -> a) -> Int -> a -> Maybe (HistoricalFold a b)
@@ -64,14 +66,19 @@ historyLength (HistoricalFold _ _ acc) = NE.length acc
 
 rewind :: Int -> HistoricalFold a b -> Maybe (HistoricalFold a b)
 rewind depth hf
-  | hfDepth hf < depth = Nothing
+  | hfDepth hf <= depth = Nothing
   | historyLength hf < depth = Nothing
   | otherwise = Just $ hf { hfAccumulator = NE.fromList
                                           $ NE.drop depth (hfAccumulator hf) }
 
-sameHistory :: Eq a => HistoricalFold a b -> HistoricalFold a b -> Bool
-sameHistory hl hr =
-  hfAccumulator hl == hfAccumulator hr
+matchesHistory :: (Show a, Eq a) => HistoricalFold a b -> HistoricalFold a b -> Bool
+matchesHistory hl hr =
+  let hlAccumulator = toList $ hfAccumulator hl
+      hrAccumulator = toList $ hfAccumulator hr
+   in Debug.trace (show hlAccumulator <> " vs " <> show hrAccumulator <> " -> " <> show (hrAccumulator == hlAccumulator)) $
+         hlAccumulator `isInfixOf` hrAccumulator
+      || hrAccumulator `isInfixOf` hlAccumulator
+      || hrAccumulator      ==     hlAccumulator
 
 -- QuickCheck infrastructure
 instance ( CoArbitrary a
