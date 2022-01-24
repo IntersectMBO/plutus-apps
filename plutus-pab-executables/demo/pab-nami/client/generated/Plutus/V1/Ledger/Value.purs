@@ -2,11 +2,12 @@
 module Plutus.V1.Ledger.Value where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.BigInt.Argonaut (BigInt)
 import Data.Generic.Rep (class Generic)
@@ -24,123 +25,114 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype Value
-  = Value { getValue :: Map CurrencySymbol (Map TokenName BigInt) }
+newtype AssetClass = AssetClass { unAssetClass :: Tuple CurrencySymbol TokenName }
 
-derive instance eqValue :: Eq Value
-
-instance showValue :: Show Value where
+instance Show AssetClass where
   show a = genericShow a
 
-instance encodeJsonValue :: EncodeJson Value where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$<
-          ( E.record
-              { getValue: E.value :: _ (Map CurrencySymbol (Map TokenName BigInt)) }
-          )
+derive instance Eq AssetClass
 
-instance decodeJsonValue :: DecodeJson Value where
-  decodeJson = defer \_ -> D.decode $ (Value <$> D.record "Value" { getValue: D.value :: _ (Map CurrencySymbol (Map TokenName BigInt)) })
+derive instance Ord AssetClass
 
-derive instance genericValue :: Generic Value _
+instance EncodeJson AssetClass where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { unAssetClass: (E.tuple (E.value >/\< E.value)) :: _ (Tuple CurrencySymbol TokenName) }
+    )
 
-derive instance newtypeValue :: Newtype Value _
-
---------------------------------------------------------------------------------
-_Value :: Iso' Value { getValue :: Map CurrencySymbol (Map TokenName BigInt) }
-_Value = _Newtype
-
---------------------------------------------------------------------------------
-newtype CurrencySymbol
-  = CurrencySymbol { unCurrencySymbol :: String }
-
-instance showCurrencySymbol :: Show CurrencySymbol where
-  show a = genericShow a
-
-derive instance eqCurrencySymbol :: Eq CurrencySymbol
-
-derive instance ordCurrencySymbol :: Ord CurrencySymbol
-
-instance encodeJsonCurrencySymbol :: EncodeJson CurrencySymbol where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$<
-          ( E.record
-              { unCurrencySymbol: E.value :: _ String }
-          )
-
-instance decodeJsonCurrencySymbol :: DecodeJson CurrencySymbol where
-  decodeJson = defer \_ -> D.decode $ (CurrencySymbol <$> D.record "CurrencySymbol" { unCurrencySymbol: D.value :: _ String })
-
-derive instance genericCurrencySymbol :: Generic CurrencySymbol _
-
-derive instance newtypeCurrencySymbol :: Newtype CurrencySymbol _
-
---------------------------------------------------------------------------------
-_CurrencySymbol :: Iso' CurrencySymbol { unCurrencySymbol :: String }
-_CurrencySymbol = _Newtype
-
---------------------------------------------------------------------------------
-newtype AssetClass
-  = AssetClass { unAssetClass :: Tuple CurrencySymbol TokenName }
-
-instance showAssetClass :: Show AssetClass where
-  show a = genericShow a
-
-derive instance eqAssetClass :: Eq AssetClass
-
-derive instance ordAssetClass :: Ord AssetClass
-
-instance encodeJsonAssetClass :: EncodeJson AssetClass where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$<
-          ( E.record
-              { unAssetClass: (E.tuple (E.value >/\< E.value)) :: _ (Tuple CurrencySymbol TokenName) }
-          )
-
-instance decodeJsonAssetClass :: DecodeJson AssetClass where
+instance DecodeJson AssetClass where
   decodeJson = defer \_ -> D.decode $ (AssetClass <$> D.record "AssetClass" { unAssetClass: (D.tuple (D.value </\> D.value)) :: _ (Tuple CurrencySymbol TokenName) })
 
-derive instance genericAssetClass :: Generic AssetClass _
+derive instance Generic AssetClass _
 
-derive instance newtypeAssetClass :: Newtype AssetClass _
+derive instance Newtype AssetClass _
 
 --------------------------------------------------------------------------------
+
 _AssetClass :: Iso' AssetClass { unAssetClass :: Tuple CurrencySymbol TokenName }
 _AssetClass = _Newtype
 
 --------------------------------------------------------------------------------
-newtype TokenName
-  = TokenName { unTokenName :: String }
 
-instance showTokenName :: Show TokenName where
+newtype CurrencySymbol = CurrencySymbol { unCurrencySymbol :: String }
+
+instance Show CurrencySymbol where
   show a = genericShow a
 
-derive instance eqTokenName :: Eq TokenName
+derive instance Eq CurrencySymbol
 
-derive instance ordTokenName :: Ord TokenName
+derive instance Ord CurrencySymbol
 
-instance encodeJsonTokenName :: EncodeJson TokenName where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$<
-          ( E.record
-              { unTokenName: E.value :: _ String }
-          )
+instance EncodeJson CurrencySymbol where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { unCurrencySymbol: E.value :: _ String }
+    )
 
-instance decodeJsonTokenName :: DecodeJson TokenName where
-  decodeJson = defer \_ -> D.decode $ (TokenName <$> D.record "TokenName" { unTokenName: D.value :: _ String })
+instance DecodeJson CurrencySymbol where
+  decodeJson = defer \_ -> D.decode $ (CurrencySymbol <$> D.record "CurrencySymbol" { unCurrencySymbol: D.value :: _ String })
 
-derive instance genericTokenName :: Generic TokenName _
+derive instance Generic CurrencySymbol _
 
-derive instance newtypeTokenName :: Newtype TokenName _
+derive instance Newtype CurrencySymbol _
 
 --------------------------------------------------------------------------------
+
+_CurrencySymbol :: Iso' CurrencySymbol { unCurrencySymbol :: String }
+_CurrencySymbol = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype TokenName = TokenName { unTokenName :: String }
+
+instance Show TokenName where
+  show a = genericShow a
+
+derive instance Eq TokenName
+
+derive instance Ord TokenName
+
+instance EncodeJson TokenName where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { unTokenName: E.value :: _ String }
+    )
+
+instance DecodeJson TokenName where
+  decodeJson = defer \_ -> D.decode $ (TokenName <$> D.record "TokenName" { unTokenName: D.value :: _ String })
+
+derive instance Generic TokenName _
+
+derive instance Newtype TokenName _
+
+--------------------------------------------------------------------------------
+
 _TokenName :: Iso' TokenName { unTokenName :: String }
 _TokenName = _Newtype
+
+--------------------------------------------------------------------------------
+
+newtype Value = Value { getValue :: Map CurrencySymbol (Map TokenName BigInt) }
+
+derive instance Eq Value
+
+instance Show Value where
+  show a = genericShow a
+
+instance EncodeJson Value where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { getValue: E.value :: _ (Map CurrencySymbol (Map TokenName BigInt)) }
+    )
+
+instance DecodeJson Value where
+  decodeJson = defer \_ -> D.decode $ (Value <$> D.record "Value" { getValue: D.value :: _ (Map CurrencySymbol (Map TokenName BigInt)) })
+
+derive instance Generic Value _
+
+derive instance Newtype Value _
+
+--------------------------------------------------------------------------------
+
+_Value :: Iso' Value { getValue :: Map CurrencySymbol (Map TokenName BigInt) }
+_Value = _Newtype

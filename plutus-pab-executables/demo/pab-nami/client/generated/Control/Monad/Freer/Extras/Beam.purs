@@ -2,11 +2,12 @@
 module Control.Monad.Freer.Extras.Beam where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -21,47 +22,48 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype BeamError
-  = SqlError String
+newtype BeamError = SqlError String
 
-derive instance eqBeamError :: Eq BeamError
+derive instance Eq BeamError
 
-instance showBeamError :: Show BeamError where
+instance Show BeamError where
   show a = genericShow a
 
-instance encodeJsonBeamError :: EncodeJson BeamError where
+instance EncodeJson BeamError where
   encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
 
-instance decodeJsonBeamError :: DecodeJson BeamError where
+instance DecodeJson BeamError where
   decodeJson = defer \_ -> D.decode $ (SqlError <$> D.value)
 
-derive instance genericBeamError :: Generic BeamError _
+derive instance Generic BeamError _
 
-derive instance newtypeBeamError :: Newtype BeamError _
+derive instance Newtype BeamError _
 
 --------------------------------------------------------------------------------
+
 _SqlError :: Iso' BeamError String
 _SqlError = _Newtype
 
 --------------------------------------------------------------------------------
-newtype BeamLog
-  = SqlLog String
 
-derive instance eqBeamLog :: Eq BeamLog
+newtype BeamLog = SqlLog String
 
-instance showBeamLog :: Show BeamLog where
+derive instance Eq BeamLog
+
+instance Show BeamLog where
   show a = genericShow a
 
-instance encodeJsonBeamLog :: EncodeJson BeamLog where
+instance EncodeJson BeamLog where
   encodeJson = defer \_ -> E.encode $ unwrap >$< E.value
 
-instance decodeJsonBeamLog :: DecodeJson BeamLog where
+instance DecodeJson BeamLog where
   decodeJson = defer \_ -> D.decode $ (SqlLog <$> D.value)
 
-derive instance genericBeamLog :: Generic BeamLog _
+derive instance Generic BeamLog _
 
-derive instance newtypeBeamLog :: Newtype BeamLog _
+derive instance Newtype BeamLog _
 
 --------------------------------------------------------------------------------
+
 _SqlLog :: Iso' BeamLog String
 _SqlLog = _Newtype

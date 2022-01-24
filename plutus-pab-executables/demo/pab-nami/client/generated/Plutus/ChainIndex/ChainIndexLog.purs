@@ -2,12 +2,13 @@
 module Plutus.ChainIndex.ChainIndexLog where
 
 import Prelude
+
 import Control.Lazy (defer)
 import Control.Monad.Freer.Extras.Beam (BeamLog)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Enum (class Enum)
@@ -41,135 +42,124 @@ data ChainIndexLog
   | NoDatumScriptAddr TxOut
   | BeamLogItem BeamLog
 
-derive instance eqChainIndexLog :: Eq ChainIndexLog
+derive instance Eq ChainIndexLog
 
-instance showChainIndexLog :: Show ChainIndexLog where
+instance Show ChainIndexLog where
   show a = genericShow a
 
-instance encodeJsonChainIndexLog :: EncodeJson ChainIndexLog where
-  encodeJson =
-    defer \_ -> case _ of
-      InsertionSuccess a b -> E.encodeTagged "InsertionSuccess" (a /\ b) (E.tuple (E.value >/\< E.value))
-      ConversionFailed a -> E.encodeTagged "ConversionFailed" a E.value
-      RollbackSuccess a -> E.encodeTagged "RollbackSuccess" a E.value
-      Err a -> E.encodeTagged "Err" a E.value
-      TxNotFound a -> E.encodeTagged "TxNotFound" a E.value
-      TxOutNotFound a -> E.encodeTagged "TxOutNotFound" a E.value
-      TipIsGenesis -> encodeJson { tag: "TipIsGenesis", contents: jsonNull }
-      NoDatumScriptAddr a -> E.encodeTagged "NoDatumScriptAddr" a E.value
-      BeamLogItem a -> E.encodeTagged "BeamLogItem" a E.value
+instance EncodeJson ChainIndexLog where
+  encodeJson = defer \_ -> case _ of
+    InsertionSuccess a b -> E.encodeTagged "InsertionSuccess" (a /\ b) (E.tuple (E.value >/\< E.value))
+    ConversionFailed a -> E.encodeTagged "ConversionFailed" a E.value
+    RollbackSuccess a -> E.encodeTagged "RollbackSuccess" a E.value
+    Err a -> E.encodeTagged "Err" a E.value
+    TxNotFound a -> E.encodeTagged "TxNotFound" a E.value
+    TxOutNotFound a -> E.encodeTagged "TxOutNotFound" a E.value
+    TipIsGenesis -> encodeJson { tag: "TipIsGenesis", contents: jsonNull }
+    NoDatumScriptAddr a -> E.encodeTagged "NoDatumScriptAddr" a E.value
+    BeamLogItem a -> E.encodeTagged "BeamLogItem" a E.value
 
-instance decodeJsonChainIndexLog :: DecodeJson ChainIndexLog where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $ D.sumType "ChainIndexLog"
-        $ Map.fromFoldable
-            [ "InsertionSuccess" /\ D.content (D.tuple $ InsertionSuccess </$\> D.value </*\> D.value)
-            , "ConversionFailed" /\ D.content (ConversionFailed <$> D.value)
-            , "RollbackSuccess" /\ D.content (RollbackSuccess <$> D.value)
-            , "Err" /\ D.content (Err <$> D.value)
-            , "TxNotFound" /\ D.content (TxNotFound <$> D.value)
-            , "TxOutNotFound" /\ D.content (TxOutNotFound <$> D.value)
-            , "TipIsGenesis" /\ pure TipIsGenesis
-            , "NoDatumScriptAddr" /\ D.content (NoDatumScriptAddr <$> D.value)
-            , "BeamLogItem" /\ D.content (BeamLogItem <$> D.value)
-            ]
+instance DecodeJson ChainIndexLog where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "ChainIndexLog"
+    $ Map.fromFoldable
+        [ "InsertionSuccess" /\ D.content (D.tuple $ InsertionSuccess </$\> D.value </*\> D.value)
+        , "ConversionFailed" /\ D.content (ConversionFailed <$> D.value)
+        , "RollbackSuccess" /\ D.content (RollbackSuccess <$> D.value)
+        , "Err" /\ D.content (Err <$> D.value)
+        , "TxNotFound" /\ D.content (TxNotFound <$> D.value)
+        , "TxOutNotFound" /\ D.content (TxOutNotFound <$> D.value)
+        , "TipIsGenesis" /\ pure TipIsGenesis
+        , "NoDatumScriptAddr" /\ D.content (NoDatumScriptAddr <$> D.value)
+        , "BeamLogItem" /\ D.content (BeamLogItem <$> D.value)
+        ]
 
-derive instance genericChainIndexLog :: Generic ChainIndexLog _
+derive instance Generic ChainIndexLog _
 
 --------------------------------------------------------------------------------
+
 _InsertionSuccess :: Prism' ChainIndexLog { a :: Tip, b :: InsertUtxoPosition }
-_InsertionSuccess =
-  prism' (\{ a, b } -> (InsertionSuccess a b)) case _ of
-    (InsertionSuccess a b) -> Just { a, b }
-    _ -> Nothing
+_InsertionSuccess = prism' (\{ a, b } -> (InsertionSuccess a b)) case _ of
+  (InsertionSuccess a b) -> Just { a, b }
+  _ -> Nothing
 
 _ConversionFailed :: Prism' ChainIndexLog FromCardanoError
-_ConversionFailed =
-  prism' ConversionFailed case _ of
-    (ConversionFailed a) -> Just a
-    _ -> Nothing
+_ConversionFailed = prism' ConversionFailed case _ of
+  (ConversionFailed a) -> Just a
+  _ -> Nothing
 
 _RollbackSuccess :: Prism' ChainIndexLog Tip
-_RollbackSuccess =
-  prism' RollbackSuccess case _ of
-    (RollbackSuccess a) -> Just a
-    _ -> Nothing
+_RollbackSuccess = prism' RollbackSuccess case _ of
+  (RollbackSuccess a) -> Just a
+  _ -> Nothing
 
 _Err :: Prism' ChainIndexLog ChainIndexError
-_Err =
-  prism' Err case _ of
-    (Err a) -> Just a
-    _ -> Nothing
+_Err = prism' Err case _ of
+  (Err a) -> Just a
+  _ -> Nothing
 
 _TxNotFound :: Prism' ChainIndexLog TxId
-_TxNotFound =
-  prism' TxNotFound case _ of
-    (TxNotFound a) -> Just a
-    _ -> Nothing
+_TxNotFound = prism' TxNotFound case _ of
+  (TxNotFound a) -> Just a
+  _ -> Nothing
 
 _TxOutNotFound :: Prism' ChainIndexLog TxOutRef
-_TxOutNotFound =
-  prism' TxOutNotFound case _ of
-    (TxOutNotFound a) -> Just a
-    _ -> Nothing
+_TxOutNotFound = prism' TxOutNotFound case _ of
+  (TxOutNotFound a) -> Just a
+  _ -> Nothing
 
 _TipIsGenesis :: Prism' ChainIndexLog Unit
-_TipIsGenesis =
-  prism' (const TipIsGenesis) case _ of
-    TipIsGenesis -> Just unit
-    _ -> Nothing
+_TipIsGenesis = prism' (const TipIsGenesis) case _ of
+  TipIsGenesis -> Just unit
+  _ -> Nothing
 
 _NoDatumScriptAddr :: Prism' ChainIndexLog TxOut
-_NoDatumScriptAddr =
-  prism' NoDatumScriptAddr case _ of
-    (NoDatumScriptAddr a) -> Just a
-    _ -> Nothing
+_NoDatumScriptAddr = prism' NoDatumScriptAddr case _ of
+  (NoDatumScriptAddr a) -> Just a
+  _ -> Nothing
 
 _BeamLogItem :: Prism' ChainIndexLog BeamLog
-_BeamLogItem =
-  prism' BeamLogItem case _ of
-    (BeamLogItem a) -> Just a
-    _ -> Nothing
+_BeamLogItem = prism' BeamLogItem case _ of
+  (BeamLogItem a) -> Just a
+  _ -> Nothing
 
 --------------------------------------------------------------------------------
+
 data InsertUtxoPosition
   = InsertAtEnd
   | InsertBeforeEnd
 
-derive instance eqInsertUtxoPosition :: Eq InsertUtxoPosition
+derive instance Eq InsertUtxoPosition
 
-derive instance ordInsertUtxoPosition :: Ord InsertUtxoPosition
+derive instance Ord InsertUtxoPosition
 
-instance showInsertUtxoPosition :: Show InsertUtxoPosition where
+instance Show InsertUtxoPosition where
   show a = genericShow a
 
-instance encodeJsonInsertUtxoPosition :: EncodeJson InsertUtxoPosition where
+instance EncodeJson InsertUtxoPosition where
   encodeJson = defer \_ -> E.encode E.enum
 
-instance decodeJsonInsertUtxoPosition :: DecodeJson InsertUtxoPosition where
+instance DecodeJson InsertUtxoPosition where
   decodeJson = defer \_ -> D.decode D.enum
 
-derive instance genericInsertUtxoPosition :: Generic InsertUtxoPosition _
+derive instance Generic InsertUtxoPosition _
 
-instance enumInsertUtxoPosition :: Enum InsertUtxoPosition where
+instance Enum InsertUtxoPosition where
   succ = genericSucc
   pred = genericPred
 
-instance boundedInsertUtxoPosition :: Bounded InsertUtxoPosition where
+instance Bounded InsertUtxoPosition where
   bottom = genericBottom
   top = genericTop
 
 --------------------------------------------------------------------------------
+
 _InsertAtEnd :: Prism' InsertUtxoPosition Unit
-_InsertAtEnd =
-  prism' (const InsertAtEnd) case _ of
-    InsertAtEnd -> Just unit
-    _ -> Nothing
+_InsertAtEnd = prism' (const InsertAtEnd) case _ of
+  InsertAtEnd -> Just unit
+  _ -> Nothing
 
 _InsertBeforeEnd :: Prism' InsertUtxoPosition Unit
-_InsertBeforeEnd =
-  prism' (const InsertBeforeEnd) case _ of
-    InsertBeforeEnd -> Just unit
-    _ -> Nothing
+_InsertBeforeEnd = prism' (const InsertBeforeEnd) case _ of
+  InsertBeforeEnd -> Just unit
+  _ -> Nothing

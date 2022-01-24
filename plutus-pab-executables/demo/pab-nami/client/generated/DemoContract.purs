@@ -2,11 +2,12 @@
 module DemoContract where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Enum (class Enum)
@@ -24,30 +25,30 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-data DemoContract
-  = DemoContract
+data DemoContract = DemoContract
 
-derive instance eqDemoContract :: Eq DemoContract
+derive instance Eq DemoContract
 
-instance showDemoContract :: Show DemoContract where
+instance Show DemoContract where
   show a = genericShow a
 
-instance encodeJsonDemoContract :: EncodeJson DemoContract where
+instance EncodeJson DemoContract where
   encodeJson = defer \_ -> E.encode E.enum
 
-instance decodeJsonDemoContract :: DecodeJson DemoContract where
+instance DecodeJson DemoContract where
   decodeJson = defer \_ -> D.decode D.enum
 
-derive instance genericDemoContract :: Generic DemoContract _
+derive instance Generic DemoContract _
 
-instance enumDemoContract :: Enum DemoContract where
+instance Enum DemoContract where
   succ = genericSucc
   pred = genericPred
 
-instance boundedDemoContract :: Bounded DemoContract where
+instance Bounded DemoContract where
   bottom = genericBottom
   top = genericTop
 
 --------------------------------------------------------------------------------
+
 _DemoContract :: Iso' DemoContract Unit
 _DemoContract = iso (const unit) (const DemoContract)

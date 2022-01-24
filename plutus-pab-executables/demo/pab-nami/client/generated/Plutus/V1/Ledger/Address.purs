@@ -2,11 +2,12 @@
 module Plutus.V1.Ledger.Address where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -22,46 +23,39 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype Address
-  = Address
+newtype Address = Address
   { addressCredential :: Credential
   , addressStakingCredential :: Maybe StakingCredential
   }
 
-derive instance eqAddress :: Eq Address
+derive instance Eq Address
 
-derive instance ordAddress :: Ord Address
+derive instance Ord Address
 
-instance showAddress :: Show Address where
+instance Show Address where
   show a = genericShow a
 
-instance encodeJsonAddress :: EncodeJson Address where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$<
-          ( E.record
-              { addressCredential: E.value :: _ Credential
-              , addressStakingCredential: (E.maybe E.value) :: _ (Maybe StakingCredential)
-              }
-          )
+instance EncodeJson Address where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { addressCredential: E.value :: _ Credential
+        , addressStakingCredential: (E.maybe E.value) :: _ (Maybe StakingCredential)
+        }
+    )
 
-instance decodeJsonAddress :: DecodeJson Address where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $
-          ( Address
-              <$> D.record "Address"
-                { addressCredential: D.value :: _ Credential
-                , addressStakingCredential: (D.maybe D.value) :: _ (Maybe StakingCredential)
-                }
-          )
+instance DecodeJson Address where
+  decodeJson = defer \_ -> D.decode $
+    ( Address <$> D.record "Address"
+        { addressCredential: D.value :: _ Credential
+        , addressStakingCredential: (D.maybe D.value) :: _ (Maybe StakingCredential)
+        }
+    )
 
-derive instance genericAddress :: Generic Address _
+derive instance Generic Address _
 
-derive instance newtypeAddress :: Newtype Address _
+derive instance Newtype Address _
 
 --------------------------------------------------------------------------------
+
 _Address :: Iso' Address { addressCredential :: Credential, addressStakingCredential :: Maybe StakingCredential }
 _Address = _Newtype

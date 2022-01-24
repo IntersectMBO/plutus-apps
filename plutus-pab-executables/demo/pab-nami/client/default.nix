@@ -10,14 +10,21 @@ let
     mkdir $out
     ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $out
     ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
+    cp ${builtins.path { name = "tidyrc.json"; path = ../.tidyrc.json; } } $out/.tidyrc.json
+    cp ${builtins.path { name = "tidyoperators"; path = ../.tidyoperators; } } $out/.tidyoperators
+    cd $out
+    ${purs-tidy}/bin/purs-tidy format-in-place $out
+    rm $out/.tidyrc.json
+    rm $out/.tidyoperators
   '';
 
   generate-purescript = pkgs.writeShellScriptBin "pab-nami-demo-generate-purs" ''
     generatedDir=./generated
     rm -rf $generatedDir
     $(nix-build ../../../../default.nix -A pab-nami-demo.pab-nami-demo-generator)/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
+    cd ../../../..
     echo Formatting files...
-    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
+    ${purs-tidy}/bin/purs-tidy format-in-place ./plutus-pab-executables/demo/pab-nami/client/generated
     echo Done: formatted
   '';
 

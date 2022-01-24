@@ -2,11 +2,12 @@
 module Cardano.Wallet.Mock.Types where
 
 import Prelude
+
 import Control.Lazy (defer)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
@@ -23,42 +24,35 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype WalletInfo
-  = WalletInfo
+newtype WalletInfo = WalletInfo
   { wiWallet :: Wallet
   , wiPaymentPubKeyHash :: PaymentPubKeyHash
   }
 
-instance showWalletInfo :: Show WalletInfo where
+instance Show WalletInfo where
   show a = genericShow a
 
-instance encodeJsonWalletInfo :: EncodeJson WalletInfo where
-  encodeJson =
-    defer \_ ->
-      E.encode $ unwrap
-        >$<
-          ( E.record
-              { wiWallet: E.value :: _ Wallet
-              , wiPaymentPubKeyHash: E.value :: _ PaymentPubKeyHash
-              }
-          )
+instance EncodeJson WalletInfo where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { wiWallet: E.value :: _ Wallet
+        , wiPaymentPubKeyHash: E.value :: _ PaymentPubKeyHash
+        }
+    )
 
-instance decodeJsonWalletInfo :: DecodeJson WalletInfo where
-  decodeJson =
-    defer \_ ->
-      D.decode
-        $
-          ( WalletInfo
-              <$> D.record "WalletInfo"
-                { wiWallet: D.value :: _ Wallet
-                , wiPaymentPubKeyHash: D.value :: _ PaymentPubKeyHash
-                }
-          )
+instance DecodeJson WalletInfo where
+  decodeJson = defer \_ -> D.decode $
+    ( WalletInfo <$> D.record "WalletInfo"
+        { wiWallet: D.value :: _ Wallet
+        , wiPaymentPubKeyHash: D.value :: _ PaymentPubKeyHash
+        }
+    )
 
-derive instance genericWalletInfo :: Generic WalletInfo _
+derive instance Generic WalletInfo _
 
-derive instance newtypeWalletInfo :: Newtype WalletInfo _
+derive instance Newtype WalletInfo _
 
 --------------------------------------------------------------------------------
+
 _WalletInfo :: Iso' WalletInfo { wiWallet :: Wallet, wiPaymentPubKeyHash :: PaymentPubKeyHash }
 _WalletInfo = _Newtype

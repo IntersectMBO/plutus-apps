@@ -18,7 +18,12 @@ let
       PATH=${ghcWithPlutus}/bin:$PATH
       mkdir $out
       ${playground-exe}/bin/plutus-playground-server psgenerator $out
-      ${pkgs.fd}/bin/fd . $out --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
+      cp ${builtins.path { name = "tidyrc.json"; path = ../.tidyrc.json; } } $out/.tidyrc.json
+      cp ${builtins.path { name = "tidyoperators"; path = ../.tidyoperators; } } $out/.tidyoperators
+      cd $out
+      ${purs-tidy}/bin/purs-tidy format-in-place $out
+      rm $out/.tidyrc.json
+      rm $out/.tidyoperators
     '';
 
   # generate-purescript: script to create purescript bridge code
@@ -34,8 +39,9 @@ let
 
     rm -rf ./generated
     ${build-playground-exe}/bin/plutus-playground-server psgenerator generated
+    cd ..
     echo Formatting files...
-    ${pkgs.fd}/bin/fd . ./generated --extension purs --exec ${purs-tidy}/bin/purs-tidy format --write
+    ${purs-tidy}/bin/purs-tidy format-in-place ./plutus-playground-client/generated
     echo Done: formatted
   '';
 
