@@ -10,33 +10,27 @@ tests = testGroup "Utxo index" [hfProperties]
 
 hfProperties :: TestTree
 hfProperties = testGroup "Historical fold"
-  [ testProperty "New: Negative or zero depth" $ prop_hfNewReturnsNothing @Int @Int
-  , testProperty "New: Positive depth" $ prop_hfNewReturnsSomething @Int @Int
+  [ testProperty "New: Positive or non-positive depth" $ prop_hfNewReturn @Int @Int
   , testProperty "History length is always smaller than the max depth" $
       prop_historyLengthLEDepth @Int @Int
   , testProperty "Rewind: Connection with `hfDepth`" $
       prop_rewindWithDepth @Int @Int
   ]
 
-prop_hfNewReturnsNothing
+prop_hfNewReturn
   :: Fun (a, b) a
-  -> NonPositive Int
   -> a
-  -> Bool
-prop_hfNewReturnsNothing
-  fn2 
-  (NonPositive depth)
-  acc = isNothing $ new (applyFun2 fn2) depth acc
-
-prop_hfNewReturnsSomething
-  :: Fun (a, b) a
-  -> Positive Int
-  -> a
-  -> Bool
-prop_hfNewReturnsSomething
-  fn2
-  (Positive depth)
-  acc = isJust $ new (applyFun2 fn2) depth acc
+  -> Property
+prop_hfNewReturn f acc =
+  forAll (frequency [ (50, chooseInt (-100, 0))
+                    , (50, chooseInt (1, 100)) ]) $
+  \depth ->
+    cover 30 (depth <  0) "Negative depth" $
+    cover 30 (depth >= 0) "Non negative depth" $
+    let newHF = new (applyFun2 f) depth acc
+    in  property $ if depth < 0
+                   then isNothing newHF
+                   else isJust    newHF
 
 prop_rewindWithDepth
   :: HistoricalFold a b
