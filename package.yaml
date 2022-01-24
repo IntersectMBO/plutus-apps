@@ -5,6 +5,8 @@ license:             BSD3
 author:              "Author name here"
 maintainer:          "example@example.com"
 copyright:           "2022 Author name here"
+category:            "Testing"
+synopsis:            "Exercises in Algebra Driven Design"
 
 extra-source-files:
 - README.md

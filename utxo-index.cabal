@@ -6,7 +6,9 @@ cabal-version: 1.12
 
 name:           utxo-index
 version:        0.1.0.0
+synopsis:       Exercises in Algebra Driven Design
 description:    Please see the README on GitHub at <https://github.com/githubuser/utxo-index#readme>
+category:       Testing
 homepage:       https://github.com/githubuser/utxo-index#readme
 bug-reports:    https://github.com/githubuser/utxo-index/issues
 author:         Author name here
