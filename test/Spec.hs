@@ -22,13 +22,14 @@ prop_hfNewReturn
   -> a
   -> Property
 prop_hfNewReturn f acc =
-  forAll (frequency [ (50, chooseInt (-100, 0))
+  forAll (frequency [ (10, pure 0)
+                    , (50, chooseInt (-100, 0))
                     , (50, chooseInt (1, 100)) ]) $
   \depth ->
     cover 30 (depth <  0) "Negative depth" $
     cover 30 (depth >= 0) "Non negative depth" $
     let newHF = new (applyFun2 f) depth acc
-    in  property $ if depth < 0
+    in  property $ if depth <= 0
                    then isNothing newHF
                    else isJust    newHF
 
