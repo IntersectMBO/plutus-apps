@@ -94,7 +94,6 @@ executable plutus-pab-setup
         optparse-applicative -any,
         plutus-contract -any,
         plutus-pab -any,
-        plutus-pab-executables -any,
 
 -- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
 -- depend on plutus-use-cases anymore.
