@@ -40,6 +40,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxInsCollateral
   , toCardanoTxInWitness
   , toCardanoTxOut
+  , toCardanoTxOutDatumHash
   , toCardanoAddress
   , toCardanoMintValue
   , toCardanoValue
@@ -52,6 +53,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxId
   , ToCardanoError(..)
   , FromCardanoError(..)
+  , deserialiseFromRawBytes
 ) where
 
 import Cardano.Api qualified as C
@@ -314,7 +316,7 @@ toCardanoTxBody ::
 toCardanoTxBody sigs protocolParams networkId P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
+    txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
@@ -421,14 +423,19 @@ fromCardanoTxOut (C.TxOut addr value datumHash) =
     <*> pure (fromCardanoTxOutValue value)
     <*> pure (fromCardanoTxOutDatumHash datumHash)
 
-toCardanoTxOut :: C.NetworkId -> Map P.DatumHash P.Datum -> P.TxOut -> Either ToCardanoError (C.TxOut C.CtxTx C.AlonzoEra)
-toCardanoTxOut networkId datums (P.TxOut addr value datumHash) =
+toCardanoTxOut
+    :: C.NetworkId
+    -> (Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra))
+    -> P.TxOut
+    -> Either ToCardanoError (C.TxOut ctx C.AlonzoEra)
+toCardanoTxOut networkId fromHash (P.TxOut addr value datumHash) =
     C.TxOut <$> toCardanoAddress networkId addr
             <*> toCardanoTxOutValue value
-            <*> cardanoDatumHash
-  where
-    cardanoDatumHash =
-      case flip Map.lookup datums =<< datumHash of
+            <*> fromHash datumHash
+
+lookupDatum :: Map P.DatumHash P.Datum -> Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
+lookupDatum datums datumHash =
+    case flip Map.lookup datums =<< datumHash of
         Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
         Nothing    -> toCardanoTxOutDatumHash datumHash
 

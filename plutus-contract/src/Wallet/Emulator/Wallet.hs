@@ -58,6 +58,7 @@ import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (FeeConfig, calcFees)
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
+import Ledger.Validation (hasValidationErrors)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -256,6 +257,9 @@ handleWallet feeCfg = \case
         tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ (utxWithFees ^. U.tx . Ledger.fee))
         tx'' <- handleAddSignature tx'
         logInfo $ FinishedBalancing tx''
+        let utxoIndex = Ledger.UtxoIndex $ fmap Ledger.toTxOut $ (U.fromScriptOutput <$> unBalancedTxUtxoIndex utx) <> utxo
+        let requiredSigners = fst <$> Map.toList (U.unBalancedTxRequiredSignatories utx')
+        for_ (hasValidationErrors requiredSigners utxoIndex tx'') (error . show . (,) tx'')
         pure $ Right tx''
 
     walletAddSignatureH :: (Member (State WalletState) effs) => CardanoTx -> Eff effs CardanoTx
