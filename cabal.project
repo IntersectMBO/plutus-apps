@@ -251,6 +251,13 @@ source-repository-package
   location: https://github.com/input-output-hk/goblins
   tag: cde90a2b27f79187ca8310b6549331e59595e7ba
 
+-- GHCJS needs this change (not in hackage yet)
+-- https://github.com/erikd/wide-word/commit/fbf891f89e36ca262c2c46e5d96c139b845f7874#diff-39f3f2419a47b090968a7fd6e2ea0f85b3f0fb638d1473126f2ee45ac1941ba0
+source-repository-package
+  type: git
+  location: https://github.com/erikd/wide-word
+  tag: 6c5ff8e79e8f958cb6e9ff3e64dc184d60aab0a9
+
 -- A lot of plutus-apps dependencies have to be syncronized with the dependencies of
 -- plutus. If you update plutus, please make sure that all dependencies of plutus
 -- are also updated

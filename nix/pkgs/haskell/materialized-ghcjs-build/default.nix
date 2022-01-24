@@ -368,7 +368,6 @@
         "unliftio".revision = (((hackage."unliftio")."0.2.20").revisions).default;
         "directory".revision = (((hackage."directory")."1.3.6.0").revisions).default;
         "smallcheck".revision = (((hackage."smallcheck")."1.2.1").revisions).default;
-        "wide-word".revision = (((hackage."wide-word")."0.1.1.2").revisions).default;
         "http-client-tls".revision = (((hackage."http-client-tls")."0.3.5.3").revisions).default;
         "clock".revision = (((hackage."clock")."0.8.2").revisions).default;
         "clock".flags.llvm = false;
@@ -774,6 +773,7 @@
         ghcjs = ./.plan.nix/ghcjs.nix;
         cardano-prelude = ./.plan.nix/cardano-prelude.nix;
         js-bindgen = ./.plan.nix/js-bindgen.nix;
+        wide-word = ./.plan.nix/wide-word.nix;
         measures = ./.plan.nix/measures.nix;
         ouroboros-network-testing = ./.plan.nix/ouroboros-network-testing.nix;
         cardano-api-stub = ./.plan.nix/cardano-api-stub.nix;
@@ -900,6 +900,7 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "js-bindgen" = { flags = {}; };
+          "wide-word" = { flags = {}; };
           "measures" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
