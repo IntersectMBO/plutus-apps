@@ -1604,7 +1604,7 @@ checkNoLockedFundsProofWithWiggleRoom' wiggle run NoLockedFundsProof{nlfpMainStr
                      "  " ++ show bal'
               bal' = stateAfter (Actions $ as ++ as') ^. balanceChange w
               smacts = toStateModelActions (Actions as) <> acts
-              err' = "The ContractModel's Unilteral behaviour for " ++ show w ++ " does not match the actual behaviour for actions:\n"
+              err' = "The ContractModel's Unilateral behaviour for " ++ show w ++ " does not match the actual behaviour for actions:\n"
                    ++ show smacts
           in counterexample err (symLeqWiggle wiggle bal bal')
           QC..&&. counterexample err' (run smacts)
