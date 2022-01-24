@@ -8,6 +8,7 @@ module Model ( -- * Model data
              , view
              , historyLength
              , rewind
+             , sameHistory
                -- * Helpers
              , insertL
                -- * QuickCheck instrumentation
@@ -36,7 +37,6 @@ instance (Show a, Show b) => Show (HistoricalFold a b) where
     show $ "HF " <> show depth <> " " <> show acc
 
 -- | Operations over the historical folds.
-
 new :: (a -> b -> a) -> Int -> a -> Maybe (HistoricalFold a b)
 new fn depth acc
   | depth <= 0 = Nothing
@@ -68,6 +68,10 @@ rewind depth hf
   | historyLength hf < depth = Nothing
   | otherwise = Just $ hf { hfAccumulator = NE.fromList
                                           $ NE.drop depth (hfAccumulator hf) }
+
+sameHistory :: Eq a => HistoricalFold a b -> HistoricalFold a b -> Bool
+sameHistory hl hr =
+  hfAccumulator hl == hfAccumulator hr
 
 -- QuickCheck infrastructure
 instance ( CoArbitrary a

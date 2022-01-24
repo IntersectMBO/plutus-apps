@@ -31,6 +31,9 @@ dependencies:
 library:
   source-dirs: src
 
+verbatim:
+  Tested-With: GHC ==8.10.7
+
 executables:
   utxo-index-exe:
     main:                Main.hs

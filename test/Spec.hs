@@ -1,7 +1,7 @@
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
-import           Data.Maybe            (isJust, isNothing)
+import           Data.Maybe            (isJust, isNothing, fromJust)
 
 import           Model
 
@@ -15,8 +15,11 @@ hfProperties = testGroup "Historical fold"
       prop_historyLengthLEDepth @Int @Int
   , testProperty "Rewind: Connection with `hfDepth`" $
       prop_rewindWithDepth @Int @Int
+  -- , testProperty "Relationship between Insert/Rewind" $
+  --     prop_InsertRewindInverse @Int @Int
   ]
 
+-- | Properties of the `new` operation.
 prop_hfNewReturn
   :: Fun (a, b) a
   -> a
@@ -33,6 +36,7 @@ prop_hfNewReturn f acc =
                    then isNothing newHF
                    else isJust    newHF
 
+-- | Properties of the connection between rewind and depth
 prop_rewindWithDepth
   :: HistoricalFold a b
   -> Property
@@ -51,11 +55,22 @@ prop_rewindWithDepth hf =
         then property $ isNothing newHF
         else property $ isJust    newHF
 
+-- | Property that validates the HF data structure.
 prop_historyLengthLEDepth
   :: HistoricalFold a b
   -> Property
 prop_historyLengthLEDepth hf =
   property $ historyLength hf <= hfDepth hf
+
+prop_InsertRewindInverse
+  :: Eq a
+  => HistoricalFold a b
+  -> [b]
+  -> Property
+prop_InsertRewindInverse hf bs =
+  let bs' = take   (hfDepth hf) bs -- limit the input to the depth.
+      hf' = rewind (length bs') $ insertL bs' hf
+   in  property $ isJust hf' && fromJust hf' `sameHistory` hf
 
 main :: IO ()
 main = defaultMain tests
