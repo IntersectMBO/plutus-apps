@@ -40,9 +40,7 @@
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           (hsPkgs."purescript-bridge" or (errorHandler.buildDepError "purescript-bridge"))
-          (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
           (hsPkgs."servant-purescript" or (errorHandler.buildDepError "servant-purescript"))
-          (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           ];
         buildable = true;
@@ -272,6 +270,39 @@
           hsSourceDirs = [ "demo/pab-nami/pab/app" ];
           mainPath = [
             "Generator.hs"
+            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
+          };
+        "pab-cli" = {
+          depends = [
+            (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
+            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."cardano-ledger-shelley" or (errorHandler.buildDepError "cardano-ledger-shelley"))
+            (hsPkgs."ouroboros-consensus-shelley" or (errorHandler.buildDepError "ouroboros-consensus-shelley"))
+            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."async" or (errorHandler.buildDepError "async"))
+            (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
+            (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
+            (hsPkgs."docopt" or (errorHandler.buildDepError "docopt"))
+            (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
+            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
+            (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
+            (hsPkgs."process" or (errorHandler.buildDepError "process"))
+            (hsPkgs."req" or (errorHandler.buildDepError "req"))
+            (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            (hsPkgs."time" or (errorHandler.buildDepError "time"))
+            (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
+            (hsPkgs."MissingH" or (errorHandler.buildDepError "MissingH"))
+            ];
+          buildable = true;
+          modules = [ "App" "CommandParser" "Types" ];
+          hsSourceDirs = [ "pab-cli" ];
+          mainPath = [
+            "Main.hs"
             ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
           };
         };

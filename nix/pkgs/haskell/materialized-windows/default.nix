@@ -5,6 +5,8 @@
         "partial-order".revision = (((hackage."partial-order")."0.2.0.0").revisions).default;
         "partial-order".flags.extra-instances = true;
         "charset".revision = (((hackage."charset")."0.3.9").revisions).default;
+        "req".revision = (((hackage."req")."3.9.2").revisions).default;
+        "req".flags.dev = false;
         "insert-ordered-containers".revision = (((hackage."insert-ordered-containers")."0.2.5.1").revisions).default;
         "size-based".revision = (((hackage."size-based")."0.1.2.0").revisions).default;
         "time-manager".revision = (((hackage."time-manager")."0.0.0").revisions).default;
@@ -21,6 +23,8 @@
         "http-media".revision = (((hackage."http-media")."0.8.0.0").revisions).default;
         "tf-random".revision = (((hackage."tf-random")."0.5").revisions).default;
         "servant-client".revision = (((hackage."servant-client")."0.18.3").revisions).default;
+        "hslogger".revision = (((hackage."hslogger")."1.3.1.0").revisions).default;
+        "hslogger".flags.network--gt-3_0_0 = true;
         "mmorph".revision = (((hackage."mmorph")."1.1.5").revisions).default;
         "natural-transformation".revision = (((hackage."natural-transformation")."0.4").revisions).default;
         "blaze-textual".revision = (((hackage."blaze-textual")."0.2.2.1").revisions).default;
@@ -31,6 +35,7 @@
         "generics-sop".revision = (((hackage."generics-sop")."0.5.1.0").revisions).default;
         "abstract-deque".revision = (((hackage."abstract-deque")."0.3").revisions).default;
         "abstract-deque".flags.usecas = false;
+        "network-bsd".revision = (((hackage."network-bsd")."2.8.1.0").revisions).default;
         "streaming".revision = (((hackage."streaming")."0.2.3.1").revisions).default;
         "old-time".revision = (((hackage."old-time")."1.1.0.3").revisions).default;
         "http-conduit".revision = (((hackage."http-conduit")."2.3.8").revisions).default;
@@ -54,6 +59,8 @@
         "servant".revision = (((hackage."servant")."0.18.3").revisions).default;
         "asn1-encoding".revision = (((hackage."asn1-encoding")."0.9.6").revisions).default;
         "regex-posix-clib".revision = (((hackage."regex-posix-clib")."2.7").revisions).default;
+        "MissingH".revision = (((hackage."MissingH")."1.4.3.0").revisions).default;
+        "MissingH".flags.network--ge-3_0_0 = true;
         "pretty".revision = (((hackage."pretty")."1.1.3.6").revisions).default;
         "network-uri".revision = (((hackage."network-uri")."2.6.4.1").revisions).default;
         "haskell-src-exts".revision = (((hackage."haskell-src-exts")."1.23.1").revisions).default;
@@ -84,6 +91,7 @@
         "text".revision = (((hackage."text")."1.2.4.1").revisions).default;
         "base".revision = (((hackage."base")."4.14.1.0").revisions).default;
         "microlens-mtl".revision = (((hackage."microlens-mtl")."0.2.0.1").revisions).default;
+        "RSA".revision = (((hackage."RSA")."2.4.1").revisions).default;
         "word8".revision = (((hackage."word8")."0.1.3").revisions).default;
         "lift-type".revision = (((hackage."lift-type")."0.1.0.1").revisions).default;
         "hourglass".revision = (((hackage."hourglass")."0.2.12").revisions).default;
@@ -354,6 +362,8 @@
         "mtl-compat".flags.two-point-one = false;
         "mtl-compat".flags.two-point-two = false;
         "command".revision = (((hackage."command")."0.1.1").revisions).default;
+        "modern-uri".revision = (((hackage."modern-uri")."0.3.4.2").revisions).default;
+        "modern-uri".flags.dev = false;
         "concurrent-output".revision = (((hackage."concurrent-output")."1.10.14").revisions).default;
         "sop-core".revision = (((hackage."sop-core")."0.5.0.2").revisions).default;
         "abstract-par".revision = (((hackage."abstract-par")."0.3.3").revisions).default;
@@ -441,6 +451,7 @@
         "reflection".flags.template-haskell = true;
         "reflection".flags.slow = false;
         "hspec-discover".revision = (((hackage."hspec-discover")."2.9.2").revisions).default;
+        "authenticate-oauth".revision = (((hackage."authenticate-oauth")."1.7").revisions).default;
         "pretty-show".revision = (((hackage."pretty-show")."1.10").revisions).default;
         "template-haskell".revision = (((hackage."template-haskell")."2.16.0.0").revisions).default;
         "tasty-golden".revision = (((hackage."tasty-golden")."2.3.5").revisions).default;
@@ -483,6 +494,9 @@
         "barbies".revision = (((hackage."barbies")."2.0.3.1").revisions).default;
         "persistent-template".revision = (((hackage."persistent-template")."2.12.0.0").revisions).default;
         "syb".revision = (((hackage."syb")."0.7.2.1").revisions).default;
+        "docopt".revision = (((hackage."docopt")."0.7.0.7").revisions).default;
+        "docopt".flags.template-haskell = true;
+        "crypto-pubkey-types".revision = (((hackage."crypto-pubkey-types")."0.4.3").revisions).default;
         "zlib".revision = (((hackage."zlib")."0.6.2.3").revisions).default;
         "zlib".flags.non-blocking-ffi = false;
         "zlib".flags.pkg-config = false;
@@ -562,6 +576,8 @@
         "SHA".flags.exe = false;
         "fmlist".revision = (((hackage."fmlist")."0.9.4").revisions).default;
         "stm".revision = (((hackage."stm")."2.5.0.0").revisions).default;
+        "crypto-api".revision = (((hackage."crypto-api")."0.13.3").revisions).default;
+        "crypto-api".flags.all_cpolys = false;
         "warp".revision = (((hackage."warp")."3.3.18").revisions).default;
         "warp".flags.network-bytestring = false;
         "warp".flags.allow-sendfilefd = true;
@@ -1110,6 +1126,7 @@
           "fmlist".components.library.planned = lib.mkOverride 900 true;
           "text-conversions".components.library.planned = lib.mkOverride 900 true;
           "contravariant".components.library.planned = lib.mkOverride 900 true;
+          "crypto-pubkey-types".components.library.planned = lib.mkOverride 900 true;
           "microlens-th".components.library.planned = lib.mkOverride 900 true;
           "extra".components.library.planned = lib.mkOverride 900 true;
           "barbies".components.library.planned = lib.mkOverride 900 true;
@@ -1167,6 +1184,7 @@
           "text-short".components.library.planned = lib.mkOverride 900 true;
           "regex-posix-clib".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab-executables".components.exes."plutus-uniswap".planned = lib.mkOverride 900 true;
+          "MissingH".components.library.planned = lib.mkOverride 900 true;
           "assoc".components.library.planned = lib.mkOverride 900 true;
           "process".components.library.planned = lib.mkOverride 900 true;
           "fmt".components.library.planned = lib.mkOverride 900 true;
@@ -1187,10 +1205,12 @@
           "prettyprinter".components.library.planned = lib.mkOverride 900 true;
           "plutus-chain-index-core".components.library.planned = lib.mkOverride 900 true;
           "cardano-ledger-core".components.library.planned = lib.mkOverride 900 true;
+          "docopt".components.library.planned = lib.mkOverride 900 true;
           "mintty".components.library.planned = lib.mkOverride 900 true;
           "streaming".components.library.planned = lib.mkOverride 900 true;
           "monoidal-containers".components.library.planned = lib.mkOverride 900 true;
           "zlib".components.library.planned = lib.mkOverride 900 true;
+          "authenticate-oauth".components.library.planned = lib.mkOverride 900 true;
           "transformers-except".components.library.planned = lib.mkOverride 900 true;
           "cardano-prelude-test".components.library.planned = lib.mkOverride 900 true;
           "libyaml".components.library.planned = lib.mkOverride 900 true;
@@ -1249,6 +1269,7 @@
           "mtl-compat".components.library.planned = lib.mkOverride 900 true;
           "cardano-crypto-test".components.library.planned = lib.mkOverride 900 true;
           "erf".components.library.planned = lib.mkOverride 900 true;
+          "modern-uri".components.library.planned = lib.mkOverride 900 true;
           "set-algebra".components.library.planned = lib.mkOverride 900 true;
           "dbvar".components.library.planned = lib.mkOverride 900 true;
           "unliftio".components.library.planned = lib.mkOverride 900 true;
@@ -1271,6 +1292,7 @@
           "openapi3".components.library.planned = lib.mkOverride 900 true;
           "semigroupoids".components.setup.planned = lib.mkOverride 900 true;
           "async".components.library.planned = lib.mkOverride 900 true;
+          "hslogger".components.library.planned = lib.mkOverride 900 true;
           "microlens-mtl".components.library.planned = lib.mkOverride 900 true;
           "async-timer".components.library.planned = lib.mkOverride 900 true;
           "size-based".components.library.planned = lib.mkOverride 900 true;
@@ -1336,6 +1358,7 @@
           "cardano-wallet".components.exes."local-cluster".planned = lib.mkOverride 900 true;
           "QuickCheck".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-dynamic".components.library.planned = lib.mkOverride 900 true;
+          "network-bsd".components.library.planned = lib.mkOverride 900 true;
           "canonical-json".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-network-framework".components.library.planned = lib.mkOverride 900 true;
           "th-extras".components.library.planned = lib.mkOverride 900 true;
@@ -1353,6 +1376,7 @@
           "monoidal-synchronisation".components.library.planned = lib.mkOverride 900 true;
           "filelock".components.library.planned = lib.mkOverride 900 true;
           "generic-arbitrary".components.library.planned = lib.mkOverride 900 true;
+          "req".components.library.planned = lib.mkOverride 900 true;
           "stm-chans".components.library.planned = lib.mkOverride 900 true;
           "compact-map".components.library.planned = lib.mkOverride 900 true;
           "tracer-transformers".components.library.planned = lib.mkOverride 900 true;
@@ -1432,6 +1456,7 @@
           "wai-websockets".components.exes."wai-websockets-example".planned = lib.mkOverride 900 true;
           "beam-migrate".components.library.planned = lib.mkOverride 900 true;
           "flat".components.library.planned = lib.mkOverride 900 true;
+          "RSA".components.library.planned = lib.mkOverride 900 true;
           "persistent-sqlite".components.library.planned = lib.mkOverride 900 true;
           "unbounded-delays".components.library.planned = lib.mkOverride 900 true;
           "web-ghc".components.exes."web-ghc-server".planned = lib.mkOverride 900 true;
@@ -1604,6 +1629,7 @@
           "websockets".components.library.planned = lib.mkOverride 900 true;
           "x509-store".components.library.planned = lib.mkOverride 900 true;
           "Win32-network".components.exes."named-pipe-demo".planned = lib.mkOverride 900 true;
+          "plutus-pab-executables".components.exes."pab-cli".planned = lib.mkOverride 900 true;
           "void".components.library.planned = lib.mkOverride 900 true;
           "beam-core".components.library.planned = lib.mkOverride 900 true;
           "text-class".components.library.planned = lib.mkOverride 900 true;
@@ -1613,6 +1639,7 @@
           "Only".components.library.planned = lib.mkOverride 900 true;
           "cryptohash-sha1".components.library.planned = lib.mkOverride 900 true;
           "exact-combinatorics".components.library.planned = lib.mkOverride 900 true;
+          "crypto-api".components.library.planned = lib.mkOverride 900 true;
           "non-integral".components.library.planned = lib.mkOverride 900 true;
           "testing-type-modifiers".components.library.planned = lib.mkOverride 900 true;
           };

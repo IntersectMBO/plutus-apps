@@ -133,7 +133,7 @@ data PABServerConfig =
         -- ^ Whether to connect to an Alonzo node or a mock node
         }
     deriving stock (Show, Eq, Generic)
-    deriving anyclass (FromJSON)
+    deriving anyclass (FromJSON, ToJSON)
 
 
 defaultPABServerConfig :: PABServerConfig

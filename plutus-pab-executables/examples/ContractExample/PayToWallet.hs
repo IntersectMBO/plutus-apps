@@ -20,7 +20,7 @@ import Schema (ToSchema)
 
 import Ledger (PaymentPubKeyHash, Value)
 import Ledger.Constraints (adjustUnbalancedTx, mustPayToPubKey)
-import Plutus.Contract (ContractError, Endpoint, Promise, endpoint, mkTxConstraints, yieldUnbalancedTx)
+import Plutus.Contract (ContractError, Endpoint, Promise, endpoint, logInfo, mkTxConstraints, yieldUnbalancedTx)
 
 data PayToWalletParams =
     PayToWalletParams
@@ -34,5 +34,8 @@ type PayToWalletSchema = Endpoint "PayToWallet" PayToWalletParams
 
 payToWallet :: Promise () PayToWalletSchema ContractError ()
 payToWallet = endpoint @"PayToWallet" $ \PayToWalletParams{amount, pkh} -> do
-  utx <- mkTxConstraints @Void mempty (mustPayToPubKey pkh amount)
-  yieldUnbalancedTx $ adjustUnbalancedTx utx
+    logInfo @String "Calling PayToWallet endpoint"
+    utx <- mkTxConstraints @Void mempty (mustPayToPubKey pkh amount)
+    logInfo @String $ "Yielding the unbalanced transaction " <> show utx
+    yieldUnbalancedTx $ adjustUnbalancedTx utx
+
