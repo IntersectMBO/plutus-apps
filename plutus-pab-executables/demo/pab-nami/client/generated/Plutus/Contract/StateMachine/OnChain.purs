@@ -37,7 +37,8 @@ instance encodeJsonState :: (EncodeJson a) => EncodeJson (State a) where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { stateData: E.value :: _ a
               , stateValue: E.value :: _ Value
               }
@@ -47,11 +48,12 @@ instance decodeJsonState :: (DecodeJson a) => DecodeJson (State a) where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( State
+        $
+          ( State
               <$> D.record "State"
-                  { stateData: D.value :: _ a
-                  , stateValue: D.value :: _ Value
-                  }
+                { stateData: D.value :: _ a
+                , stateValue: D.value :: _ Value
+                }
           )
 
 derive instance genericState :: Generic (State a) _

@@ -33,7 +33,8 @@ instance encodeJsonWallet :: EncodeJson Wallet where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getWalletId: E.value :: _ String }
           )
 

@@ -77,7 +77,8 @@ instance encodeJsonBlockId :: EncodeJson BlockId where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getBlockId: E.value :: _ String }
           )
 

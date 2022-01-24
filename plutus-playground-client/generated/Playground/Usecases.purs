@@ -1,7 +1,8 @@
 module Playground.Usecases where
 
 vesting :: String
-vesting = """-- Vesting scheme as a PLC contract
+vesting =
+  """-- Vesting scheme as a PLC contract
 import Control.Lens (view)
 import Control.Monad (void, when)
 import Data.Default (Default (def))
@@ -219,7 +220,8 @@ $(mkKnownCurrencies [])
 """
 
 game :: String
-game = """-- A game with two players. Player 1 thinks of a secret word
+game =
+  """-- A game with two players. Player 1 thinks of a secret word
 -- and uses its hash, and the game validator script, to lock
 -- some funds (the prize) in a pay-to-script transaction output.
 -- Player 2 guesses the word by attempting to spend the transaction
@@ -388,7 +390,8 @@ $(mkKnownCurrencies [])
 """
 
 crowdFunding :: String
-crowdFunding = """-- Crowdfunding contract implemented using the [[Plutus]] interface.
+crowdFunding =
+  """-- Crowdfunding contract implemented using the [[Plutus]] interface.
 -- This is the fully parallel version that collects all contributions
 -- in a single transaction.
 --
@@ -624,7 +627,8 @@ $(mkKnownCurrencies [])
 """
 
 errorHandling :: String
-errorHandling = """import Control.Lens (makeClassyPrisms, prism', review)
+errorHandling =
+  """import Control.Lens (makeClassyPrisms, prism', review)
 import Control.Monad (void)
 import Control.Monad.Error.Lens (catching, throwing, throwing_)
 import Data.Text (Text)
@@ -713,7 +717,8 @@ $(mkKnownCurrencies [])
 """
 
 starter :: String
-starter = """-- This is a starter contract, based on the Game contract,
+starter =
+  """-- This is a starter contract, based on the Game contract,
 -- containing the bare minimum required scaffolding.
 --
 -- What you should change to something more suitable for
@@ -796,7 +801,8 @@ $(mkKnownCurrencies [])
 """
 
 contractDemos :: String
-contractDemos = """[
+contractDemos =
+  """[
     {
         "contractDemoName": "Hello, world",
         "contractDemoEditorContents": "import Data.Text qualified as T\nimport Playground.Contract\nimport Plutus.Contract\nimport PlutusTx.Prelude\nimport Prelude qualified as Haskell\n\n-- | A 'Contract' that logs a message.\nhello :: Contract () EmptySchema T.Text ()\nhello = logInfo @Haskell.String \"Hello, world\"\n\nendpoints :: Contract () EmptySchema T.Text ()\nendpoints = hello\n\n-- 'mkSchemaDefinitions' doesn't work with 'EmptySchema'\n-- (that is, with 0 endpoints) so we define a\n-- dummy schema type with 1 endpoint to make it compile.\n-- TODO: Repair 'mkSchemaDefinitions'\ntype DummySchema = Endpoint \"dummy\" ()\n\nmkSchemaDefinitions ''DummySchema\n\n$(mkKnownCurrencies [])\n",

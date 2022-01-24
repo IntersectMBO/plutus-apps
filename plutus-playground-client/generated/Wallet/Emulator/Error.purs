@@ -56,16 +56,17 @@ instance EncodeJson WalletAPIError where
 
 instance DecodeJson WalletAPIError where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "WalletAPIError" $ Map.fromFoldable
-      [ "InsufficientFunds" /\ D.content (InsufficientFunds <$> D.value)
-      , "ChangeHasLessThanNAda" /\ D.content (D.tuple $ ChangeHasLessThanNAda </$\>D.value </*\> D.value)
-      , "PaymentPrivateKeyNotFound" /\ D.content (PaymentPrivateKeyNotFound <$> D.value)
-      , "ValidationError" /\ D.content (ValidationError <$> D.value)
-      , "ToCardanoError" /\ D.content (ToCardanoError <$> D.value)
-      , "PaymentMkTxError" /\ D.content (PaymentMkTxError <$> D.value)
-      , "RemoteClientFunctionNotYetSupported" /\ D.content (RemoteClientFunctionNotYetSupported <$> D.value)
-      , "OtherError" /\ D.content (OtherError <$> D.value)
-      ]
+    $ D.sumType "WalletAPIError"
+    $ Map.fromFoldable
+        [ "InsufficientFunds" /\ D.content (InsufficientFunds <$> D.value)
+        , "ChangeHasLessThanNAda" /\ D.content (D.tuple $ ChangeHasLessThanNAda </$\> D.value </*\> D.value)
+        , "PaymentPrivateKeyNotFound" /\ D.content (PaymentPrivateKeyNotFound <$> D.value)
+        , "ValidationError" /\ D.content (ValidationError <$> D.value)
+        , "ToCardanoError" /\ D.content (ToCardanoError <$> D.value)
+        , "PaymentMkTxError" /\ D.content (PaymentMkTxError <$> D.value)
+        , "RemoteClientFunctionNotYetSupported" /\ D.content (RemoteClientFunctionNotYetSupported <$> D.value)
+        , "OtherError" /\ D.content (OtherError <$> D.value)
+        ]
 
 derive instance Generic WalletAPIError _
 
@@ -76,9 +77,9 @@ _InsufficientFunds = prism' InsufficientFunds case _ of
   (InsufficientFunds a) -> Just a
   _ -> Nothing
 
-_ChangeHasLessThanNAda :: Prism' WalletAPIError {a :: Value, b :: Ada}
-_ChangeHasLessThanNAda = prism' (\{a, b} -> (ChangeHasLessThanNAda a b)) case _ of
-  (ChangeHasLessThanNAda a b) -> Just {a, b}
+_ChangeHasLessThanNAda :: Prism' WalletAPIError { a :: Value, b :: Ada }
+_ChangeHasLessThanNAda = prism' (\{ a, b } -> (ChangeHasLessThanNAda a b)) case _ of
+  (ChangeHasLessThanNAda a b) -> Just { a, b }
   _ -> Nothing
 
 _PaymentPrivateKeyNotFound :: Prism' WalletAPIError PaymentPubKeyHash

@@ -46,13 +46,14 @@ instance EncodeJson ChainIndexError where
 
 instance DecodeJson ChainIndexError where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ChainIndexError" $ Map.fromFoldable
-      [ "InsertionFailed" /\ D.content (InsertionFailed <$> D.value)
-      , "RollbackFailed" /\ D.content (RollbackFailed <$> D.value)
-      , "ResumeNotSupported" /\ pure ResumeNotSupported
-      , "QueryFailedNoTip" /\ pure QueryFailedNoTip
-      , "BeamEffectError" /\ D.content (BeamEffectError <$> D.value)
-      ]
+    $ D.sumType "ChainIndexError"
+    $ Map.fromFoldable
+        [ "InsertionFailed" /\ D.content (InsertionFailed <$> D.value)
+        , "RollbackFailed" /\ D.content (RollbackFailed <$> D.value)
+        , "ResumeNotSupported" /\ pure ResumeNotSupported
+        , "QueryFailedNoTip" /\ pure QueryFailedNoTip
+        , "BeamEffectError" /\ D.content (BeamEffectError <$> D.value)
+        ]
 
 derive instance Generic ChainIndexError _
 
@@ -101,10 +102,11 @@ instance EncodeJson InsertUtxoFailed where
 
 instance DecodeJson InsertUtxoFailed where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "InsertUtxoFailed" $ Map.fromFoldable
-      [ "DuplicateBlock" /\ D.content (DuplicateBlock <$> D.value)
-      , "InsertUtxoNoTip" /\ pure InsertUtxoNoTip
-      ]
+    $ D.sumType "InsertUtxoFailed"
+    $ Map.fromFoldable
+        [ "DuplicateBlock" /\ D.content (DuplicateBlock <$> D.value)
+        , "InsertUtxoNoTip" /\ pure InsertUtxoNoTip
+        ]
 
 derive instance Generic InsertUtxoFailed _
 
@@ -125,9 +127,9 @@ _InsertUtxoNoTip = prism' (const InsertUtxoNoTip) case _ of
 data RollbackFailed
   = RollbackNoTip
   | TipMismatch
-    { foundTip :: Tip
-    , targetPoint :: Point
-    }
+      { foundTip :: Tip
+      , targetPoint :: Point
+      }
   | OldPointNotFound Point
 
 derive instance Eq RollbackFailed
@@ -138,7 +140,7 @@ instance Show RollbackFailed where
 instance EncodeJson RollbackFailed where
   encodeJson = defer \_ -> case _ of
     RollbackNoTip -> encodeJson { tag: "RollbackNoTip", contents: jsonNull }
-    TipMismatch {foundTip, targetPoint} -> encodeJson
+    TipMismatch { foundTip, targetPoint } -> encodeJson
       { tag: "TipMismatch"
       , foundTip: flip E.encode foundTip E.value
       , targetPoint: flip E.encode targetPoint E.value
@@ -147,14 +149,17 @@ instance EncodeJson RollbackFailed where
 
 instance DecodeJson RollbackFailed where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "RollbackFailed" $ Map.fromFoldable
-      [ "RollbackNoTip" /\ pure RollbackNoTip
-      , "TipMismatch" /\ (TipMismatch <$> D.object "TipMismatch"
-        { foundTip: D.value :: _ Tip
-        , targetPoint: D.value :: _ Point
-        })
-      , "OldPointNotFound" /\ D.content (OldPointNotFound <$> D.value)
-      ]
+    $ D.sumType "RollbackFailed"
+    $ Map.fromFoldable
+        [ "RollbackNoTip" /\ pure RollbackNoTip
+        , "TipMismatch" /\
+            ( TipMismatch <$> D.object "TipMismatch"
+                { foundTip: D.value :: _ Tip
+                , targetPoint: D.value :: _ Point
+                }
+            )
+        , "OldPointNotFound" /\ D.content (OldPointNotFound <$> D.value)
+        ]
 
 derive instance Generic RollbackFailed _
 
@@ -165,7 +170,7 @@ _RollbackNoTip = prism' (const RollbackNoTip) case _ of
   RollbackNoTip -> Just unit
   _ -> Nothing
 
-_TipMismatch :: Prism' RollbackFailed {foundTip :: Tip, targetPoint :: Point}
+_TipMismatch :: Prism' RollbackFailed { foundTip :: Tip, targetPoint :: Point }
 _TipMismatch = prism' TipMismatch case _ of
   (TipMismatch a) -> Just a
   _ -> Nothing

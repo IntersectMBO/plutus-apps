@@ -40,18 +40,22 @@ instance Show ContractInstanceLog where
   show a = genericShow a
 
 instance EncodeJson ContractInstanceLog where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { _cilMessage: E.value :: _ ContractInstanceMsg
-                                                   , _cilId: E.value :: _ ContractInstanceId
-                                                   , _cilTag: E.value :: _ ContractInstanceTag
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { _cilMessage: E.value :: _ ContractInstanceMsg
+        , _cilId: E.value :: _ ContractInstanceId
+        , _cilTag: E.value :: _ ContractInstanceTag
+        }
+    )
 
 instance DecodeJson ContractInstanceLog where
-  decodeJson = defer \_ -> D.decode $ (ContractInstanceLog <$> D.record "ContractInstanceLog"
-      { _cilMessage: D.value :: _ ContractInstanceMsg
-      , _cilId: D.value :: _ ContractInstanceId
-      , _cilTag: D.value :: _ ContractInstanceTag
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( ContractInstanceLog <$> D.record "ContractInstanceLog"
+        { _cilMessage: D.value :: _ ContractInstanceMsg
+        , _cilId: D.value :: _ ContractInstanceId
+        , _cilTag: D.value :: _ ContractInstanceTag
+        }
+    )
 
 derive instance Generic ContractInstanceLog _
 
@@ -59,17 +63,17 @@ derive instance Newtype ContractInstanceLog _
 
 --------------------------------------------------------------------------------
 
-_ContractInstanceLog :: Iso' ContractInstanceLog {_cilMessage :: ContractInstanceMsg, _cilId :: ContractInstanceId, _cilTag :: ContractInstanceTag}
+_ContractInstanceLog :: Iso' ContractInstanceLog { _cilMessage :: ContractInstanceMsg, _cilId :: ContractInstanceId, _cilTag :: ContractInstanceTag }
 _ContractInstanceLog = _Newtype
 
 cilMessage :: Lens' ContractInstanceLog ContractInstanceMsg
-cilMessage = _Newtype <<< prop (Proxy :: _"_cilMessage")
+cilMessage = _Newtype <<< prop (Proxy :: _ "_cilMessage")
 
 cilId :: Lens' ContractInstanceLog ContractInstanceId
-cilId = _Newtype <<< prop (Proxy :: _"_cilId")
+cilId = _Newtype <<< prop (Proxy :: _ "_cilId")
 
 cilTag :: Lens' ContractInstanceLog ContractInstanceTag
-cilTag = _Newtype <<< prop (Proxy :: _"_cilTag")
+cilTag = _Newtype <<< prop (Proxy :: _ "_cilTag")
 
 --------------------------------------------------------------------------------
 
@@ -117,24 +121,25 @@ instance EncodeJson ContractInstanceMsg where
 
 instance DecodeJson ContractInstanceMsg where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ContractInstanceMsg" $ Map.fromFoldable
-      [ "Started" /\ pure Started
-      , "StoppedNoError" /\ pure StoppedNoError
-      , "StoppedWithError" /\ D.content (StoppedWithError <$> D.value)
-      , "ReceiveEndpointCall" /\ D.content (D.tuple $ ReceiveEndpointCall </$\>D.value </*\> D.value)
-      , "ReceiveEndpointCallSuccess" /\ pure ReceiveEndpointCallSuccess
-      , "ReceiveEndpointCallFailure" /\ D.content (ReceiveEndpointCallFailure <$> D.value)
-      , "NoRequestsHandled" /\ pure NoRequestsHandled
-      , "HandledRequest" /\ D.content (HandledRequest <$> D.value)
-      , "CurrentRequests" /\ D.content (CurrentRequests <$> D.value)
-      , "InstErr" /\ D.content (InstErr <$> D.value)
-      , "ContractLog" /\ D.content (ContractLog <$> D.value)
-      , "SendingNotification" /\ D.content (SendingNotification <$> D.value)
-      , "NotificationSuccess" /\ D.content (NotificationSuccess <$> D.value)
-      , "NotificationFailure" /\ D.content (NotificationFailure <$> D.value)
-      , "SendingContractState" /\ D.content (SendingContractState <$> D.value)
-      , "Freezing" /\ pure Freezing
-      ]
+    $ D.sumType "ContractInstanceMsg"
+    $ Map.fromFoldable
+        [ "Started" /\ pure Started
+        , "StoppedNoError" /\ pure StoppedNoError
+        , "StoppedWithError" /\ D.content (StoppedWithError <$> D.value)
+        , "ReceiveEndpointCall" /\ D.content (D.tuple $ ReceiveEndpointCall </$\> D.value </*\> D.value)
+        , "ReceiveEndpointCallSuccess" /\ pure ReceiveEndpointCallSuccess
+        , "ReceiveEndpointCallFailure" /\ D.content (ReceiveEndpointCallFailure <$> D.value)
+        , "NoRequestsHandled" /\ pure NoRequestsHandled
+        , "HandledRequest" /\ D.content (HandledRequest <$> D.value)
+        , "CurrentRequests" /\ D.content (CurrentRequests <$> D.value)
+        , "InstErr" /\ D.content (InstErr <$> D.value)
+        , "ContractLog" /\ D.content (ContractLog <$> D.value)
+        , "SendingNotification" /\ D.content (SendingNotification <$> D.value)
+        , "NotificationSuccess" /\ D.content (NotificationSuccess <$> D.value)
+        , "NotificationFailure" /\ D.content (NotificationFailure <$> D.value)
+        , "SendingContractState" /\ D.content (SendingContractState <$> D.value)
+        , "Freezing" /\ pure Freezing
+        ]
 
 derive instance Generic ContractInstanceMsg _
 
@@ -155,9 +160,9 @@ _StoppedWithError = prism' StoppedWithError case _ of
   (StoppedWithError a) -> Just a
   _ -> Nothing
 
-_ReceiveEndpointCall :: Prism' ContractInstanceMsg {a :: EndpointDescription, b :: RawJson}
-_ReceiveEndpointCall = prism' (\{a, b} -> (ReceiveEndpointCall a b)) case _ of
-  (ReceiveEndpointCall a b) -> Just {a, b}
+_ReceiveEndpointCall :: Prism' ContractInstanceMsg { a :: EndpointDescription, b :: RawJson }
+_ReceiveEndpointCall = prism' (\{ a, b } -> (ReceiveEndpointCall a b)) case _ of
+  (ReceiveEndpointCall a b) -> Just { a, b }
   _ -> Nothing
 
 _ReceiveEndpointCallSuccess :: Prism' ContractInstanceMsg Unit
@@ -233,16 +238,20 @@ instance Show ContractInstanceTag where
   show a = genericShow a
 
 instance EncodeJson ContractInstanceTag where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { unContractInstanceTag: E.value :: _ String
-                                                   , shortContractInstanceTag: E.value :: _ String
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { unContractInstanceTag: E.value :: _ String
+        , shortContractInstanceTag: E.value :: _ String
+        }
+    )
 
 instance DecodeJson ContractInstanceTag where
-  decodeJson = defer \_ -> D.decode $ (ContractInstanceTag <$> D.record "ContractInstanceTag"
-      { unContractInstanceTag: D.value :: _ String
-      , shortContractInstanceTag: D.value :: _ String
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( ContractInstanceTag <$> D.record "ContractInstanceTag"
+        { unContractInstanceTag: D.value :: _ String
+        , shortContractInstanceTag: D.value :: _ String
+        }
+    )
 
 derive instance Generic ContractInstanceTag _
 
@@ -250,7 +259,7 @@ derive instance Newtype ContractInstanceTag _
 
 --------------------------------------------------------------------------------
 
-_ContractInstanceTag :: Iso' ContractInstanceTag {unContractInstanceTag :: String, shortContractInstanceTag :: String}
+_ContractInstanceTag :: Iso' ContractInstanceTag { unContractInstanceTag :: String, shortContractInstanceTag :: String }
 _ContractInstanceTag = _Newtype
 
 --------------------------------------------------------------------------------
@@ -279,14 +288,15 @@ instance EncodeJson EmulatorRuntimeError where
 
 instance DecodeJson EmulatorRuntimeError where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "EmulatorRuntimeError" $ Map.fromFoldable
-      [ "ThreadIdNotFound" /\ D.content (ThreadIdNotFound <$> D.value)
-      , "InstanceIdNotFound" /\ D.content (InstanceIdNotFound <$> D.value)
-      , "EmulatorJSONDecodingError" /\ D.content (D.tuple $ EmulatorJSONDecodingError </$\>D.value </*\> D.value)
-      , "GenericError" /\ D.content (GenericError <$> D.value)
-      , "EmulatedWalletError" /\ D.content (EmulatedWalletError <$> D.value)
-      , "AssertionError" /\ D.content (AssertionError <$> D.value)
-      ]
+    $ D.sumType "EmulatorRuntimeError"
+    $ Map.fromFoldable
+        [ "ThreadIdNotFound" /\ D.content (ThreadIdNotFound <$> D.value)
+        , "InstanceIdNotFound" /\ D.content (InstanceIdNotFound <$> D.value)
+        , "EmulatorJSONDecodingError" /\ D.content (D.tuple $ EmulatorJSONDecodingError </$\> D.value </*\> D.value)
+        , "GenericError" /\ D.content (GenericError <$> D.value)
+        , "EmulatedWalletError" /\ D.content (EmulatedWalletError <$> D.value)
+        , "AssertionError" /\ D.content (AssertionError <$> D.value)
+        ]
 
 derive instance Generic EmulatorRuntimeError _
 
@@ -302,9 +312,9 @@ _InstanceIdNotFound = prism' InstanceIdNotFound case _ of
   (InstanceIdNotFound a) -> Just a
   _ -> Nothing
 
-_EmulatorJSONDecodingError :: Prism' EmulatorRuntimeError {a :: String, b :: RawJson}
-_EmulatorJSONDecodingError = prism' (\{a, b} -> (EmulatorJSONDecodingError a b)) case _ of
-  (EmulatorJSONDecodingError a b) -> Just {a, b}
+_EmulatorJSONDecodingError :: Prism' EmulatorRuntimeError { a :: String, b :: RawJson }
+_EmulatorJSONDecodingError = prism' (\{ a, b } -> (EmulatorJSONDecodingError a b)) case _ of
+  (EmulatorJSONDecodingError a b) -> Just { a, b }
   _ -> Nothing
 
 _GenericError :: Prism' EmulatorRuntimeError String
@@ -340,10 +350,11 @@ instance EncodeJson UserThreadMsg where
 
 instance DecodeJson UserThreadMsg where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "UserThreadMsg" $ Map.fromFoldable
-      [ "UserThreadErr" /\ D.content (UserThreadErr <$> D.value)
-      , "UserLog" /\ D.content (UserLog <$> D.value)
-      ]
+    $ D.sumType "UserThreadMsg"
+    $ Map.fromFoldable
+        [ "UserThreadErr" /\ D.content (UserThreadErr <$> D.value)
+        , "UserLog" /\ D.content (UserLog <$> D.value)
+        ]
 
 derive instance Generic UserThreadMsg _
 

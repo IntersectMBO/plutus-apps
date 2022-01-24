@@ -42,10 +42,11 @@ instance EncodeJson Credential where
 
 instance DecodeJson Credential where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "Credential" $ Map.fromFoldable
-      [ "PubKeyCredential" /\ D.content (PubKeyCredential <$> D.value)
-      , "ScriptCredential" /\ D.content (ScriptCredential <$> D.value)
-      ]
+    $ D.sumType "Credential"
+    $ Map.fromFoldable
+        [ "PubKeyCredential" /\ D.content (PubKeyCredential <$> D.value)
+        , "ScriptCredential" /\ D.content (ScriptCredential <$> D.value)
+        ]
 
 derive instance Generic Credential _
 
@@ -81,10 +82,11 @@ instance EncodeJson StakingCredential where
 
 instance DecodeJson StakingCredential where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "StakingCredential" $ Map.fromFoldable
-      [ "StakingHash" /\ D.content (StakingHash <$> D.value)
-      , "StakingPtr" /\ D.content (D.tuple $ StakingPtr </$\>D.value </*\> D.value </*\> D.value)
-      ]
+    $ D.sumType "StakingCredential"
+    $ Map.fromFoldable
+        [ "StakingHash" /\ D.content (StakingHash <$> D.value)
+        , "StakingPtr" /\ D.content (D.tuple $ StakingPtr </$\> D.value </*\> D.value </*\> D.value)
+        ]
 
 derive instance Generic StakingCredential _
 
@@ -95,7 +97,7 @@ _StakingHash = prism' StakingHash case _ of
   (StakingHash a) -> Just a
   _ -> Nothing
 
-_StakingPtr :: Prism' StakingCredential {a :: BigInt, b :: BigInt, c :: BigInt}
-_StakingPtr = prism' (\{a, b, c} -> (StakingPtr a b c)) case _ of
-  (StakingPtr a b c) -> Just {a, b, c}
+_StakingPtr :: Prism' StakingCredential { a :: BigInt, b :: BigInt, c :: BigInt }
+_StakingPtr = prism' (\{ a, b, c } -> (StakingPtr a b c)) case _ of
+  (StakingPtr a b c) -> Just { a, b, c }
   _ -> Nothing

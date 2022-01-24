@@ -39,7 +39,8 @@ instance encodeJsonRequest :: (EncodeJson a) => EncodeJson (Request a) where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { rqID: E.value :: _ RequestID
               , itID: E.value :: _ IterationID
               , rqRequest: E.value :: _ a
@@ -50,12 +51,13 @@ instance decodeJsonRequest :: (DecodeJson a) => DecodeJson (Request a) where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Request
+        $
+          ( Request
               <$> D.record "Request"
-                  { rqID: D.value :: _ RequestID
-                  , itID: D.value :: _ IterationID
-                  , rqRequest: D.value :: _ a
-                  }
+                { rqID: D.value :: _ RequestID
+                , itID: D.value :: _ IterationID
+                , rqRequest: D.value :: _ a
+                }
           )
 
 derive instance genericRequest :: Generic (Request a) _
@@ -83,7 +85,8 @@ instance encodeJsonResponse :: (EncodeJson a) => EncodeJson (Response a) where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { rspRqID: E.value :: _ RequestID
               , rspItID: E.value :: _ IterationID
               , rspResponse: E.value :: _ a
@@ -94,12 +97,13 @@ instance decodeJsonResponse :: (DecodeJson a) => DecodeJson (Response a) where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Response
+        $
+          ( Response
               <$> D.record "Response"
-                  { rspRqID: D.value :: _ RequestID
-                  , rspItID: D.value :: _ IterationID
-                  , rspResponse: D.value :: _ a
-                  }
+                { rspRqID: D.value :: _ RequestID
+                , rspItID: D.value :: _ IterationID
+                , rspResponse: D.value :: _ a
+                }
           )
 
 derive instance genericResponse :: Generic (Response a) _
@@ -173,7 +177,8 @@ instance encodeJsonResponses :: (EncodeJson a) => EncodeJson (Responses a) where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unResponses: (E.dictionary (E.tuple (E.value >/\< E.value)) E.value) :: _ (Map (Tuple IterationID RequestID) a) }
           )
 

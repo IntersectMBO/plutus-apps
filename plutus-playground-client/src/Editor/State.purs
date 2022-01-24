@@ -42,13 +42,13 @@ initialState =
           , feedbackPanePreviousExtend: 0
           }
 
-handleAction ::
-  forall action output m.
-  MonadEffect m =>
-  MonadAff m =>
-  Key ->
-  Action ->
-  HalogenM State action ChildSlots output m Unit
+handleAction
+  :: forall action output m
+   . MonadEffect m
+  => MonadAff m
+  => Key
+  -> Action
+  -> HalogenM State action ChildSlots output m Unit
 handleAction _ DoNothing = pure unit
 
 handleAction bufferLocalStorageKey Init = do
@@ -104,8 +104,8 @@ handleAction _ (FixFeedbackPaneExtend mouseY) = do
         assign _feedbackPaneExtend
           $ clamp 0 100
           $ startMouseY
-          - mouseY
-          + feedbackPanePreviousExtend
+              - mouseY
+              + feedbackPanePreviousExtend
 
 ------------------------------------------------------------
 loadKeyBindings :: forall m. MonadEffect m => m KeyBindings
@@ -114,14 +114,14 @@ loadKeyBindings = maybe DefaultBindings readKeyBindings <$> liftEffect (getItem 
 saveBuffer :: forall m. MonadEffect m => Key -> String -> m Unit
 saveBuffer bufferLocalStorageKey text = liftEffect $ setItem bufferLocalStorageKey text
 
-initEditor ::
-  forall m.
-  MonadEffect m =>
-  Maybe String ->
-  Key ->
-  State ->
-  Monaco.Editor ->
-  m Unit
+initEditor
+  :: forall m
+   . MonadEffect m
+  => Maybe String
+  -> Key
+  -> State
+  -> Monaco.Editor
+  -> m Unit
 initEditor initialContents bufferLocalStorageKey (State _) editor =
   liftEffect do
     savedContents <- getItem bufferLocalStorageKey

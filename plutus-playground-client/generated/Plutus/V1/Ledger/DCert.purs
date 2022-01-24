@@ -53,15 +53,16 @@ instance EncodeJson DCert where
 
 instance DecodeJson DCert where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "DCert" $ Map.fromFoldable
-      [ "DCertDelegRegKey" /\ D.content (DCertDelegRegKey <$> D.value)
-      , "DCertDelegDeRegKey" /\ D.content (DCertDelegDeRegKey <$> D.value)
-      , "DCertDelegDelegate" /\ D.content (D.tuple $ DCertDelegDelegate </$\>D.value </*\> D.value)
-      , "DCertPoolRegister" /\ D.content (D.tuple $ DCertPoolRegister </$\>D.value </*\> D.value)
-      , "DCertPoolRetire" /\ D.content (D.tuple $ DCertPoolRetire </$\>D.value </*\> D.value)
-      , "DCertGenesis" /\ pure DCertGenesis
-      , "DCertMir" /\ pure DCertMir
-      ]
+    $ D.sumType "DCert"
+    $ Map.fromFoldable
+        [ "DCertDelegRegKey" /\ D.content (DCertDelegRegKey <$> D.value)
+        , "DCertDelegDeRegKey" /\ D.content (DCertDelegDeRegKey <$> D.value)
+        , "DCertDelegDelegate" /\ D.content (D.tuple $ DCertDelegDelegate </$\> D.value </*\> D.value)
+        , "DCertPoolRegister" /\ D.content (D.tuple $ DCertPoolRegister </$\> D.value </*\> D.value)
+        , "DCertPoolRetire" /\ D.content (D.tuple $ DCertPoolRetire </$\> D.value </*\> D.value)
+        , "DCertGenesis" /\ pure DCertGenesis
+        , "DCertMir" /\ pure DCertMir
+        ]
 
 derive instance Generic DCert _
 
@@ -77,19 +78,19 @@ _DCertDelegDeRegKey = prism' DCertDelegDeRegKey case _ of
   (DCertDelegDeRegKey a) -> Just a
   _ -> Nothing
 
-_DCertDelegDelegate :: Prism' DCert {a :: StakingCredential, b :: PubKeyHash}
-_DCertDelegDelegate = prism' (\{a, b} -> (DCertDelegDelegate a b)) case _ of
-  (DCertDelegDelegate a b) -> Just {a, b}
+_DCertDelegDelegate :: Prism' DCert { a :: StakingCredential, b :: PubKeyHash }
+_DCertDelegDelegate = prism' (\{ a, b } -> (DCertDelegDelegate a b)) case _ of
+  (DCertDelegDelegate a b) -> Just { a, b }
   _ -> Nothing
 
-_DCertPoolRegister :: Prism' DCert {a :: PubKeyHash, b :: PubKeyHash}
-_DCertPoolRegister = prism' (\{a, b} -> (DCertPoolRegister a b)) case _ of
-  (DCertPoolRegister a b) -> Just {a, b}
+_DCertPoolRegister :: Prism' DCert { a :: PubKeyHash, b :: PubKeyHash }
+_DCertPoolRegister = prism' (\{ a, b } -> (DCertPoolRegister a b)) case _ of
+  (DCertPoolRegister a b) -> Just { a, b }
   _ -> Nothing
 
-_DCertPoolRetire :: Prism' DCert {a :: PubKeyHash, b :: BigInt}
-_DCertPoolRetire = prism' (\{a, b} -> (DCertPoolRetire a b)) case _ of
-  (DCertPoolRetire a b) -> Just {a, b}
+_DCertPoolRetire :: Prism' DCert { a :: PubKeyHash, b :: BigInt }
+_DCertPoolRetire = prism' (\{ a, b } -> (DCertPoolRetire a b)) case _ of
+  (DCertPoolRetire a b) -> Just { a, b }
   _ -> Nothing
 
 _DCertGenesis :: Prism' DCert Unit

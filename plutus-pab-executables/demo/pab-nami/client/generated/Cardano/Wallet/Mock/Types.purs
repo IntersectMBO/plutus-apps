@@ -36,7 +36,8 @@ instance encodeJsonWalletInfo :: EncodeJson WalletInfo where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { wiWallet: E.value :: _ Wallet
               , wiPaymentPubKeyHash: E.value :: _ PaymentPubKeyHash
               }
@@ -46,11 +47,12 @@ instance decodeJsonWalletInfo :: DecodeJson WalletInfo where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( WalletInfo
+        $
+          ( WalletInfo
               <$> D.record "WalletInfo"
-                  { wiWallet: D.value :: _ Wallet
-                  , wiPaymentPubKeyHash: D.value :: _ PaymentPubKeyHash
-                  }
+                { wiWallet: D.value :: _ Wallet
+                , wiPaymentPubKeyHash: D.value :: _ PaymentPubKeyHash
+                }
           )
 
 derive instance genericWalletInfo :: Generic WalletInfo _

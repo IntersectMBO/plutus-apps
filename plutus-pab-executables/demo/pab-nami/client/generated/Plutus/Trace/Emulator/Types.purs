@@ -43,7 +43,8 @@ instance encodeJsonContractInstanceLog :: EncodeJson ContractInstanceLog where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _cilMessage: E.value :: _ ContractInstanceMsg
               , _cilId: E.value :: _ ContractInstanceId
               , _cilTag: E.value :: _ ContractInstanceTag
@@ -54,12 +55,13 @@ instance decodeJsonContractInstanceLog :: DecodeJson ContractInstanceLog where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ContractInstanceLog
+        $
+          ( ContractInstanceLog
               <$> D.record "ContractInstanceLog"
-                  { _cilMessage: D.value :: _ ContractInstanceMsg
-                  , _cilId: D.value :: _ ContractInstanceId
-                  , _cilTag: D.value :: _ ContractInstanceTag
-                  }
+                { _cilMessage: D.value :: _ ContractInstanceMsg
+                , _cilId: D.value :: _ ContractInstanceId
+                , _cilTag: D.value :: _ ContractInstanceTag
+                }
           )
 
 derive instance genericContractInstanceLog :: Generic ContractInstanceLog _
@@ -303,7 +305,8 @@ instance encodeJsonContractInstanceTag :: EncodeJson ContractInstanceTag where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unContractInstanceTag: E.value :: _ String
               , shortContractInstanceTag: E.value :: _ String
               }
@@ -313,11 +316,12 @@ instance decodeJsonContractInstanceTag :: DecodeJson ContractInstanceTag where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ContractInstanceTag
+        $
+          ( ContractInstanceTag
               <$> D.record "ContractInstanceTag"
-                  { unContractInstanceTag: D.value :: _ String
-                  , shortContractInstanceTag: D.value :: _ String
-                  }
+                { unContractInstanceTag: D.value :: _ String
+                , shortContractInstanceTag: D.value :: _ String
+                }
           )
 
 derive instance genericContractInstanceTag :: Generic ContractInstanceTag _

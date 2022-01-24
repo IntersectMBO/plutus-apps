@@ -40,7 +40,8 @@ instance encodeJsonSlotConfig :: EncodeJson SlotConfig where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { scSlotLength: E.value :: _ BigInt
               , scSlotZeroTime: E.value :: _ POSIXTime
               }
@@ -50,11 +51,12 @@ instance decodeJsonSlotConfig :: DecodeJson SlotConfig where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( SlotConfig
+        $
+          ( SlotConfig
               <$> D.record "SlotConfig"
-                  { scSlotLength: D.value :: _ BigInt
-                  , scSlotZeroTime: D.value :: _ POSIXTime
-                  }
+                { scSlotLength: D.value :: _ BigInt
+                , scSlotZeroTime: D.value :: _ POSIXTime
+                }
           )
 
 derive instance genericSlotConfig :: Generic SlotConfig _
@@ -81,7 +83,8 @@ instance encodeJsonSlotConversionError :: EncodeJson SlotConversionError where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { requestedSlot: E.value :: _ Slot
               , horizon: (E.tuple (E.value >/\< E.value)) :: _ (Tuple Slot POSIXTime)
               }
@@ -91,11 +94,12 @@ instance decodeJsonSlotConversionError :: DecodeJson SlotConversionError where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( SlotOutOfRange
+        $
+          ( SlotOutOfRange
               <$> D.record "SlotOutOfRange"
-                  { requestedSlot: D.value :: _ Slot
-                  , horizon: (D.tuple (D.value </\> D.value)) :: _ (Tuple Slot POSIXTime)
-                  }
+                { requestedSlot: D.value :: _ Slot
+                , horizon: (D.tuple (D.value </\> D.value)) :: _ (Tuple Slot POSIXTime)
+                }
           )
 
 derive instance genericSlotConversionError :: Generic SlotConversionError _

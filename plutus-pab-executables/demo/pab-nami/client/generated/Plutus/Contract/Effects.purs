@@ -754,7 +754,8 @@ instance encodeJsonActiveEndpoint :: EncodeJson ActiveEndpoint where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { aeDescription: E.value :: _ EndpointDescription
               , aeMetadata: (E.maybe E.value) :: _ (Maybe RawJson)
               }
@@ -764,11 +765,12 @@ instance decodeJsonActiveEndpoint :: DecodeJson ActiveEndpoint where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ActiveEndpoint
+        $
+          ( ActiveEndpoint
               <$> D.record "ActiveEndpoint"
-                  { aeDescription: D.value :: _ EndpointDescription
-                  , aeMetadata: (D.maybe D.value) :: _ (Maybe RawJson)
-                  }
+                { aeDescription: D.value :: _ EndpointDescription
+                , aeMetadata: (D.maybe D.value) :: _ (Maybe RawJson)
+                }
           )
 
 derive instance genericActiveEndpoint :: Generic ActiveEndpoint _

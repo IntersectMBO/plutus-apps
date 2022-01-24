@@ -37,7 +37,8 @@ instance encodeJsonPage :: (EncodeJson a) => EncodeJson (Page a) where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { currentPageQuery: E.value :: _ (PageQuery a)
               , nextPageQuery: (E.maybe E.value) :: _ (Maybe (PageQuery a))
               , pageItems: E.value :: _ (Array a)
@@ -48,12 +49,13 @@ instance decodeJsonPage :: (DecodeJson a) => DecodeJson (Page a) where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Page
+        $
+          ( Page
               <$> D.record "Page"
-                  { currentPageQuery: D.value :: _ (PageQuery a)
-                  , nextPageQuery: (D.maybe D.value) :: _ (Maybe (PageQuery a))
-                  , pageItems: D.value :: _ (Array a)
-                  }
+                { currentPageQuery: D.value :: _ (PageQuery a)
+                , nextPageQuery: (D.maybe D.value) :: _ (Maybe (PageQuery a))
+                , pageItems: D.value :: _ (Array a)
+                }
           )
 
 derive instance genericPage :: Generic (Page a) _
@@ -80,7 +82,8 @@ instance encodeJsonPageQuery :: (EncodeJson a) => EncodeJson (PageQuery a) where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { pageQuerySize: E.value :: _ PageSize
               , pageQueryLastItem: (E.maybe E.value) :: _ (Maybe a)
               }
@@ -90,11 +93,12 @@ instance decodeJsonPageQuery :: (DecodeJson a) => DecodeJson (PageQuery a) where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( PageQuery
+        $
+          ( PageQuery
               <$> D.record "PageQuery"
-                  { pageQuerySize: D.value :: _ PageSize
-                  , pageQueryLastItem: (D.maybe D.value) :: _ (Maybe a)
-                  }
+                { pageQuerySize: D.value :: _ PageSize
+                , pageQueryLastItem: (D.maybe D.value) :: _ (Maybe a)
+                }
           )
 
 derive instance genericPageQuery :: Generic (PageQuery a) _
@@ -118,7 +122,8 @@ instance encodeJsonPageSize :: EncodeJson PageSize where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getPageSize: E.value :: _ Int }
           )
 

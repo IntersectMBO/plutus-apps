@@ -39,7 +39,8 @@ instance encodeJsonIsUtxoResponse :: EncodeJson IsUtxoResponse where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { currentTip: E.value :: _ Tip
               , isUtxo: E.value :: _ Boolean
               }
@@ -49,11 +50,12 @@ instance decodeJsonIsUtxoResponse :: DecodeJson IsUtxoResponse where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( IsUtxoResponse
+        $
+          ( IsUtxoResponse
               <$> D.record "IsUtxoResponse"
-                  { currentTip: D.value :: _ Tip
-                  , isUtxo: D.value :: _ Boolean
-                  }
+                { currentTip: D.value :: _ Tip
+                , isUtxo: D.value :: _ Boolean
+                }
           )
 
 derive instance genericIsUtxoResponse :: Generic IsUtxoResponse _
@@ -77,7 +79,8 @@ instance encodeJsonTxosResponse :: EncodeJson TxosResponse where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { paget: E.value :: _ (Page TxOutRef) }
           )
 
@@ -108,7 +111,8 @@ instance encodeJsonUtxosResponse :: EncodeJson UtxosResponse where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { currentTip: E.value :: _ Tip
               , page: E.value :: _ (Page TxOutRef)
               }
@@ -118,11 +122,12 @@ instance decodeJsonUtxosResponse :: DecodeJson UtxosResponse where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( UtxosResponse
+        $
+          ( UtxosResponse
               <$> D.record "UtxosResponse"
-                  { currentTip: D.value :: _ Tip
-                  , page: D.value :: _ (Page TxOutRef)
-                  }
+                { currentTip: D.value :: _ Tip
+                , page: D.value :: _ (Page TxOutRef)
+                }
           )
 
 derive instance genericUtxosResponse :: Generic UtxosResponse _

@@ -44,7 +44,8 @@ instance encodeJsonFunctionSchema :: (EncodeJson a) => EncodeJson (FunctionSchem
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { endpointDescription: E.value :: _ EndpointDescription
               , argument: E.value :: _ a
               }
@@ -54,11 +55,12 @@ instance decodeJsonFunctionSchema :: (DecodeJson a) => DecodeJson (FunctionSchem
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( FunctionSchema
+        $
+          ( FunctionSchema
               <$> D.record "FunctionSchema"
-                  { endpointDescription: D.value :: _ EndpointDescription
-                  , argument: D.value :: _ a
-                  }
+                { endpointDescription: D.value :: _ EndpointDescription
+                , argument: D.value :: _ a
+                }
           )
 
 derive instance genericFunctionSchema :: Generic (FunctionSchema a) _
@@ -86,7 +88,8 @@ instance encodeJsonKnownCurrency :: EncodeJson KnownCurrency where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { hash: E.value :: _ String
               , friendlyName: E.value :: _ String
               , knownTokens: E.value :: _ (NonEmptyList TokenName)
@@ -97,12 +100,13 @@ instance decodeJsonKnownCurrency :: DecodeJson KnownCurrency where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( KnownCurrency
+        $
+          ( KnownCurrency
               <$> D.record "KnownCurrency"
-                  { hash: D.value :: _ String
-                  , friendlyName: D.value :: _ String
-                  , knownTokens: D.value :: _ (NonEmptyList TokenName)
-                  }
+                { hash: D.value :: _ String
+                , friendlyName: D.value :: _ String
+                , knownTokens: D.value :: _ (NonEmptyList TokenName)
+                }
           )
 
 derive instance genericKnownCurrency :: Generic KnownCurrency _
@@ -116,16 +120,16 @@ _KnownCurrency = _Newtype
 --------------------------------------------------------------------------------
 data ContractCall a
   = CallEndpoint
-    { caller :: WalletNumber
-    , argumentValues :: FunctionSchema a
-    }
+      { caller :: WalletNumber
+      , argumentValues :: FunctionSchema a
+      }
   | AddBlocks { blocks :: BigInt }
   | AddBlocksUntil { slot :: Slot }
   | PayToWallet
-    { sender :: WalletNumber
-    , recipient :: WalletNumber
-    , amount :: Value
-    }
+      { sender :: WalletNumber
+      , recipient :: WalletNumber
+      , amount :: Value
+      }
 
 instance showContractCall :: (Show a) => Show (ContractCall a) where
   show a = genericShow a
@@ -166,21 +170,23 @@ instance decodeJsonContractCall :: (DecodeJson a) => DecodeJson (ContractCall a)
         $ D.sumType "ContractCall"
         $ Map.fromFoldable
             [ "CallEndpoint"
-                /\ ( CallEndpoint
+                /\
+                  ( CallEndpoint
                       <$> D.object "CallEndpoint"
-                          { caller: D.value :: _ WalletNumber
-                          , argumentValues: D.value :: _ (FunctionSchema a)
-                          }
+                        { caller: D.value :: _ WalletNumber
+                        , argumentValues: D.value :: _ (FunctionSchema a)
+                        }
                   )
             , "AddBlocks" /\ (AddBlocks <$> D.object "AddBlocks" { blocks: D.value :: _ BigInt })
             , "AddBlocksUntil" /\ (AddBlocksUntil <$> D.object "AddBlocksUntil" { slot: D.value :: _ Slot })
             , "PayToWallet"
-                /\ ( PayToWallet
+                /\
+                  ( PayToWallet
                       <$> D.object "PayToWallet"
-                          { sender: D.value :: _ WalletNumber
-                          , recipient: D.value :: _ WalletNumber
-                          , amount: D.value :: _ Value
-                          }
+                        { sender: D.value :: _ WalletNumber
+                        , recipient: D.value :: _ WalletNumber
+                        , amount: D.value :: _ Value
+                        }
                   )
             ]
 

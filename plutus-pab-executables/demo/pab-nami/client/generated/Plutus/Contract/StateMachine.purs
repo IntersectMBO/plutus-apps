@@ -38,7 +38,8 @@ instance encodeJsonInvalidTransition :: (EncodeJson a, EncodeJson b) => EncodeJs
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { tfState: (E.maybe E.value) :: _ (Maybe (State a))
               , tfInput: E.value :: _ b
               }
@@ -48,11 +49,12 @@ instance decodeJsonInvalidTransition :: (DecodeJson a, DecodeJson b) => DecodeJs
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( InvalidTransition
+        $
+          ( InvalidTransition
               <$> D.record "InvalidTransition"
-                  { tfState: (D.maybe D.value) :: _ (Maybe (State a))
-                  , tfInput: D.value :: _ b
-                  }
+                { tfState: (D.maybe D.value) :: _ (Maybe (State a))
+                , tfInput: D.value :: _ b
+                }
           )
 
 derive instance genericInvalidTransition :: Generic (InvalidTransition a b) _

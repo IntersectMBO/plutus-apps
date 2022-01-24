@@ -50,7 +50,8 @@ instance encodeJsonChainIndexTx :: EncodeJson ChainIndexTx where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _citxTxId: E.value :: _ TxId
               , _citxInputs: E.value :: _ (Set TxIn)
               , _citxOutputs: E.value :: _ ChainIndexTxOutputs
@@ -66,17 +67,18 @@ instance decodeJsonChainIndexTx :: DecodeJson ChainIndexTx where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ChainIndexTx
+        $
+          ( ChainIndexTx
               <$> D.record "ChainIndexTx"
-                  { _citxTxId: D.value :: _ TxId
-                  , _citxInputs: D.value :: _ (Set TxIn)
-                  , _citxOutputs: D.value :: _ ChainIndexTxOutputs
-                  , _citxValidRange: D.value :: _ (Interval Slot)
-                  , _citxData: (D.dictionary D.value D.value) :: _ (Map DatumHash String)
-                  , _citxRedeemers: (D.dictionary D.value D.value) :: _ (Map String String)
-                  , _citxScripts: (D.dictionary D.value D.value) :: _ (Map String String)
-                  , _citxCardanoTx: (D.maybe D.value) :: _ (Maybe RawJson)
-                  }
+                { _citxTxId: D.value :: _ TxId
+                , _citxInputs: D.value :: _ (Set TxIn)
+                , _citxOutputs: D.value :: _ ChainIndexTxOutputs
+                , _citxValidRange: D.value :: _ (Interval Slot)
+                , _citxData: (D.dictionary D.value D.value) :: _ (Map DatumHash String)
+                , _citxRedeemers: (D.dictionary D.value D.value) :: _ (Map String String)
+                , _citxScripts: (D.dictionary D.value D.value) :: _ (Map String String)
+                , _citxCardanoTx: (D.maybe D.value) :: _ (Maybe RawJson)
+                }
           )
 
 derive instance genericChainIndexTx :: Generic ChainIndexTx _

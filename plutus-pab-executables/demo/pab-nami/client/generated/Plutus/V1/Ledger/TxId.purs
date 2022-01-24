@@ -35,7 +35,8 @@ instance encodeJsonTxId :: EncodeJson TxId where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getTxId: E.value :: _ String }
           )
 

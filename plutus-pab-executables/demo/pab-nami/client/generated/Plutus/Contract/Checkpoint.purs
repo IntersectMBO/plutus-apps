@@ -59,7 +59,8 @@ instance encodeJsonCheckpointStore :: EncodeJson CheckpointStore where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unCheckpointStore: (E.dictionary E.value E.value) :: _ (Map CheckpointKey (CheckpointStoreItem RawJson)) }
           )
 
@@ -115,7 +116,8 @@ instance encodeJsonCheckpointStoreItem :: (EncodeJson a) => EncodeJson (Checkpoi
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { csValue: E.value :: _ a
               , csNewKey: E.value :: _ CheckpointKey
               }
@@ -125,11 +127,12 @@ instance decodeJsonCheckpointStoreItem :: (DecodeJson a) => DecodeJson (Checkpoi
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( CheckpointStoreItem
+        $
+          ( CheckpointStoreItem
               <$> D.record "CheckpointStoreItem"
-                  { csValue: D.value :: _ a
-                  , csNewKey: D.value :: _ CheckpointKey
-                  }
+                { csValue: D.value :: _ a
+                , csNewKey: D.value :: _ CheckpointKey
+                }
           )
 
 derive instance genericCheckpointStoreItem :: Generic (CheckpointStoreItem a) _

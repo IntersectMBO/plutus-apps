@@ -36,16 +36,20 @@ instance Show Address where
   show a = genericShow a
 
 instance EncodeJson Address where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { addressCredential: E.value :: _ Credential
-                                                   , addressStakingCredential: (E.maybe E.value) :: _ (Maybe StakingCredential)
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { addressCredential: E.value :: _ Credential
+        , addressStakingCredential: (E.maybe E.value) :: _ (Maybe StakingCredential)
+        }
+    )
 
 instance DecodeJson Address where
-  decodeJson = defer \_ -> D.decode $ (Address <$> D.record "Address"
-      { addressCredential: D.value :: _ Credential
-      , addressStakingCredential: (D.maybe D.value) :: _ (Maybe StakingCredential)
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( Address <$> D.record "Address"
+        { addressCredential: D.value :: _ Credential
+        , addressStakingCredential: (D.maybe D.value) :: _ (Maybe StakingCredential)
+        }
+    )
 
 derive instance Generic Address _
 
@@ -53,5 +57,5 @@ derive instance Newtype Address _
 
 --------------------------------------------------------------------------------
 
-_Address :: Iso' Address {addressCredential :: Credential, addressStakingCredential :: Maybe StakingCredential}
+_Address :: Iso' Address { addressCredential :: Credential, addressStakingCredential :: Maybe StakingCredential }
 _Address = _Newtype

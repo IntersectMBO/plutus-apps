@@ -130,17 +130,20 @@ instance
     $ mapExceptT (HalogenApp <<< lift)
     $ request
     $ r
-      { uri = over
-          (_relPart <<< _relPath) (Just <<< maybe ["api"] (cons "api"))
-          r.uri
-      }
+        { uri = over
+            (_relPart <<< _relPath)
+            (Just <<< maybe [ "api" ] (cons "api"))
+            r.uri
+        }
 
 ------------------------------------------------------------
 runHalogenApp :: forall m a. HalogenApp m a -> HalogenM State HAction ChildSlots Void m a
 runHalogenApp = unwrap
 
 instance
-  (MonadAjax JsonDecodeError Json (AjaxError JsonDecodeError Json) m, MonadAff m) =>
+  ( MonadAjax JsonDecodeError Json (AjaxError JsonDecodeError Json) m
+  , MonadAff m
+  ) =>
   MonadApp (HalogenApp m) where
   editorGetContents = do
     mText <- wrap $ query _editorSlot unit $ Monaco.GetText identity

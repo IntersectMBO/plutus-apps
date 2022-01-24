@@ -95,10 +95,11 @@ type WebEvaluationResult
   = WebData (Either PlaygroundError EvaluationResult)
 
 type FullSimulation
-  = { simulation :: Simulation
-    , blockchainVisualisationState :: Chain.State
-    , evaluationResult :: WebEvaluationResult
-    }
+  =
+  { simulation :: Simulation
+  , blockchainVisualisationState :: Chain.State
+  , evaluationResult :: WebEvaluationResult
+  }
 
 -- this synonym is defined in playground-common/src/Playground/Types.hs
 type SimulatorAction
@@ -158,9 +159,10 @@ instance showDragAndDropEventType :: Show DragAndDropEventType where
   show Drop = "Drop"
 
 type ChildSlots
-  = ( editorSlot :: H.Slot Monaco.Query Monaco.Message Unit
-    , balancesChartSlot :: H.Slot Chartist.Query Chartist.Message Unit
-    )
+  =
+  ( editorSlot :: H.Slot Monaco.Query Monaco.Message Unit
+  , balancesChartSlot :: H.Slot Chartist.Query Chartist.Message Unit
+  )
 
 -- | Here we decide which top-level queries to track as GA events, and
 -- how to classify them.

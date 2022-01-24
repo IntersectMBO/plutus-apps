@@ -43,24 +43,28 @@ instance Show AnnotatedTx where
   show a = genericShow a
 
 instance EncodeJson AnnotatedTx where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { sequenceId: E.value :: _ SequenceId
-                                                   , txId: E.value :: _ TxId
-                                                   , tx: E.value :: _ Tx
-                                                   , dereferencedInputs: E.value :: _ (Array DereferencedInput)
-                                                   , balances: (E.dictionary E.value E.value) :: _ (Map BeneficialOwner Value)
-                                                   , valid: E.value :: _ Boolean
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { sequenceId: E.value :: _ SequenceId
+        , txId: E.value :: _ TxId
+        , tx: E.value :: _ Tx
+        , dereferencedInputs: E.value :: _ (Array DereferencedInput)
+        , balances: (E.dictionary E.value E.value) :: _ (Map BeneficialOwner Value)
+        , valid: E.value :: _ Boolean
+        }
+    )
 
 instance DecodeJson AnnotatedTx where
-  decodeJson = defer \_ -> D.decode $ (AnnotatedTx <$> D.record "AnnotatedTx"
-      { sequenceId: D.value :: _ SequenceId
-      , txId: D.value :: _ TxId
-      , tx: D.value :: _ Tx
-      , dereferencedInputs: D.value :: _ (Array DereferencedInput)
-      , balances: (D.dictionary D.value D.value) :: _ (Map BeneficialOwner Value)
-      , valid: D.value :: _ Boolean
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( AnnotatedTx <$> D.record "AnnotatedTx"
+        { sequenceId: D.value :: _ SequenceId
+        , txId: D.value :: _ TxId
+        , tx: D.value :: _ Tx
+        , dereferencedInputs: D.value :: _ (Array DereferencedInput)
+        , balances: (D.dictionary D.value D.value) :: _ (Map BeneficialOwner Value)
+        , valid: D.value :: _ Boolean
+        }
+    )
 
 derive instance Generic AnnotatedTx _
 
@@ -68,7 +72,7 @@ derive instance Newtype AnnotatedTx _
 
 --------------------------------------------------------------------------------
 
-_AnnotatedTx :: Iso' AnnotatedTx {sequenceId :: SequenceId, txId :: TxId, tx :: Tx, dereferencedInputs :: Array DereferencedInput, balances :: Map BeneficialOwner Value, valid :: Boolean}
+_AnnotatedTx :: Iso' AnnotatedTx { sequenceId :: SequenceId, txId :: TxId, tx :: Tx, dereferencedInputs :: Array DereferencedInput, balances :: Map BeneficialOwner Value, valid :: Boolean }
 _AnnotatedTx = _Newtype
 
 --------------------------------------------------------------------------------
@@ -91,10 +95,11 @@ instance EncodeJson BeneficialOwner where
 
 instance DecodeJson BeneficialOwner where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "BeneficialOwner" $ Map.fromFoldable
-      [ "OwnedByPaymentPubKey" /\ D.content (OwnedByPaymentPubKey <$> D.value)
-      , "OwnedByScript" /\ D.content (OwnedByScript <$> D.value)
-      ]
+    $ D.sumType "BeneficialOwner"
+    $ Map.fromFoldable
+        [ "OwnedByPaymentPubKey" /\ D.content (OwnedByPaymentPubKey <$> D.value)
+        , "OwnedByScript" /\ D.content (OwnedByScript <$> D.value)
+        ]
 
 derive instance Generic BeneficialOwner _
 
@@ -114,9 +119,9 @@ _OwnedByScript = prism' OwnedByScript case _ of
 
 data DereferencedInput
   = DereferencedInput
-    { originalInput :: TxIn
-    , refersTo :: TxOut
-    }
+      { originalInput :: TxIn
+      , refersTo :: TxOut
+      }
   | InputNotFound TxKey
 
 derive instance Eq DereferencedInput
@@ -126,7 +131,7 @@ instance Show DereferencedInput where
 
 instance EncodeJson DereferencedInput where
   encodeJson = defer \_ -> case _ of
-    DereferencedInput {originalInput, refersTo} -> encodeJson
+    DereferencedInput { originalInput, refersTo } -> encodeJson
       { tag: "DereferencedInput"
       , originalInput: flip E.encode originalInput E.value
       , refersTo: flip E.encode refersTo E.value
@@ -135,19 +140,22 @@ instance EncodeJson DereferencedInput where
 
 instance DecodeJson DereferencedInput where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "DereferencedInput" $ Map.fromFoldable
-      [ "DereferencedInput" /\ (DereferencedInput <$> D.object "DereferencedInput"
-        { originalInput: D.value :: _ TxIn
-        , refersTo: D.value :: _ TxOut
-        })
-      , "InputNotFound" /\ D.content (InputNotFound <$> D.value)
-      ]
+    $ D.sumType "DereferencedInput"
+    $ Map.fromFoldable
+        [ "DereferencedInput" /\
+            ( DereferencedInput <$> D.object "DereferencedInput"
+                { originalInput: D.value :: _ TxIn
+                , refersTo: D.value :: _ TxOut
+                }
+            )
+        , "InputNotFound" /\ D.content (InputNotFound <$> D.value)
+        ]
 
 derive instance Generic DereferencedInput _
 
 --------------------------------------------------------------------------------
 
-_DereferencedInput :: Prism' DereferencedInput {originalInput :: TxIn, refersTo :: TxOut}
+_DereferencedInput :: Prism' DereferencedInput { originalInput :: TxIn, refersTo :: TxOut }
 _DereferencedInput = prism' DereferencedInput case _ of
   (DereferencedInput a) -> Just a
   _ -> Nothing
@@ -172,16 +180,20 @@ instance Show SequenceId where
   show a = genericShow a
 
 instance EncodeJson SequenceId where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { slotIndex: E.value :: _ Int
-                                                   , txIndex: E.value :: _ Int
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { slotIndex: E.value :: _ Int
+        , txIndex: E.value :: _ Int
+        }
+    )
 
 instance DecodeJson SequenceId where
-  decodeJson = defer \_ -> D.decode $ (SequenceId <$> D.record "SequenceId"
-      { slotIndex: D.value :: _ Int
-      , txIndex: D.value :: _ Int
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( SequenceId <$> D.record "SequenceId"
+        { slotIndex: D.value :: _ Int
+        , txIndex: D.value :: _ Int
+        }
+    )
 
 derive instance Generic SequenceId _
 
@@ -189,7 +201,7 @@ derive instance Newtype SequenceId _
 
 --------------------------------------------------------------------------------
 
-_SequenceId :: Iso' SequenceId {slotIndex :: Int, txIndex :: Int}
+_SequenceId :: Iso' SequenceId { slotIndex :: Int, txIndex :: Int }
 _SequenceId = _Newtype
 
 --------------------------------------------------------------------------------
@@ -205,16 +217,20 @@ instance Show TxKey where
   show a = genericShow a
 
 instance EncodeJson TxKey where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { _txKeyTxId: E.value :: _ TxId
-                                                   , _txKeyTxOutRefIdx: E.value :: _ BigInt
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { _txKeyTxId: E.value :: _ TxId
+        , _txKeyTxOutRefIdx: E.value :: _ BigInt
+        }
+    )
 
 instance DecodeJson TxKey where
-  decodeJson = defer \_ -> D.decode $ (TxKey <$> D.record "TxKey"
-      { _txKeyTxId: D.value :: _ TxId
-      , _txKeyTxOutRefIdx: D.value :: _ BigInt
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( TxKey <$> D.record "TxKey"
+        { _txKeyTxId: D.value :: _ TxId
+        , _txKeyTxOutRefIdx: D.value :: _ BigInt
+        }
+    )
 
 derive instance Generic TxKey _
 
@@ -222,11 +238,11 @@ derive instance Newtype TxKey _
 
 --------------------------------------------------------------------------------
 
-_TxKey :: Iso' TxKey {_txKeyTxId :: TxId, _txKeyTxOutRefIdx :: BigInt}
+_TxKey :: Iso' TxKey { _txKeyTxId :: TxId, _txKeyTxOutRefIdx :: BigInt }
 _TxKey = _Newtype
 
 txKeyTxId :: Lens' TxKey TxId
-txKeyTxId = _Newtype <<< prop (Proxy :: _"_txKeyTxId")
+txKeyTxId = _Newtype <<< prop (Proxy :: _ "_txKeyTxId")
 
 txKeyTxOutRefIdx :: Lens' TxKey BigInt
-txKeyTxOutRefIdx = _Newtype <<< prop (Proxy :: _"_txKeyTxOutRefIdx")
+txKeyTxOutRefIdx = _Newtype <<< prop (Proxy :: _ "_txKeyTxOutRefIdx")

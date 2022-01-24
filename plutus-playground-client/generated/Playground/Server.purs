@@ -26,11 +26,11 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.String.NonEmpty as NES
 
-postContract ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  SourceCode ->
-  ExceptT e m (Either InterpreterError (InterpreterResult CompilationResult))
+postContract
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => SourceCode
+  -> ExceptT e m (Either InterpreterError (InterpreterResult CompilationResult))
 postContract reqBody =
   request req
   where
@@ -50,11 +50,11 @@ postContract reqBody =
     ]
   query = Nothing
 
-postEvaluate ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  Evaluation ->
-  ExceptT e m (Either PlaygroundError EvaluationResult)
+postEvaluate
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => Evaluation
+  -> ExceptT e m (Either PlaygroundError EvaluationResult)
 postEvaluate reqBody =
   request req
   where
@@ -74,10 +74,10 @@ postEvaluate reqBody =
     ]
   query = Nothing
 
-getHealth ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  ExceptT e m Unit
+getHealth
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => ExceptT e m Unit
 getHealth =
   request req
   where
@@ -97,10 +97,10 @@ getHealth =
     ]
   query = Nothing
 
-getOauthStatus ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  ExceptT e m AuthStatus
+getOauthStatus
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => ExceptT e m AuthStatus
 getOauthStatus =
   request req
   where
@@ -121,10 +121,10 @@ getOauthStatus =
     ]
   query = Nothing
 
-getOauthGithub ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  ExceptT e m Unit
+getOauthGithub
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => ExceptT e m Unit
 getOauthGithub =
   request req
   where
@@ -145,10 +145,10 @@ getOauthGithub =
     ]
   query = Nothing
 
-getGists ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  ExceptT e m (Array Gist)
+getGists
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => ExceptT e m (Array Gist)
 getGists =
   request req
   where
@@ -168,11 +168,11 @@ getGists =
     ]
   query = Nothing
 
-postGists ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  NewGist ->
-  ExceptT e m Gist
+postGists
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => NewGist
+  -> ExceptT e m Gist
 postGists reqBody =
   request req
   where
@@ -192,11 +192,11 @@ postGists reqBody =
     ]
   query = Nothing
 
-getGistsByGistId ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  GistId ->
-  ExceptT e m Gist
+getGistsByGistId
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => GistId
+  -> ExceptT e m Gist
 getGistsByGistId gistId =
   request req
   where
@@ -217,12 +217,12 @@ getGistsByGistId gistId =
     ]
   query = Nothing
 
-postGistsByGistId ::
-  forall e m.
-  MonadAjax JsonDecodeError Json e m =>
-  NewGist ->
-  GistId ->
-  ExceptT e m Gist
+postGistsByGistId
+  :: forall e m
+   . MonadAjax JsonDecodeError Json e m
+  => NewGist
+  -> GistId
+  -> ExceptT e m Gist
 postGistsByGistId reqBody gistId =
   request req
   where

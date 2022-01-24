@@ -42,7 +42,8 @@ instance encodeJsonSchedulerLog :: EncodeJson SchedulerLog where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { slEvent: E.value :: _ ThreadEvent
               , slThread: E.value :: _ ThreadId
               , slTag: E.value :: _ Tag
@@ -54,13 +55,14 @@ instance decodeJsonSchedulerLog :: DecodeJson SchedulerLog where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( SchedulerLog
+        $
+          ( SchedulerLog
               <$> D.record "SchedulerLog"
-                  { slEvent: D.value :: _ ThreadEvent
-                  , slThread: D.value :: _ ThreadId
-                  , slTag: D.value :: _ Tag
-                  , slPrio: D.value :: _ Priority
-                  }
+                { slEvent: D.value :: _ ThreadEvent
+                , slThread: D.value :: _ ThreadId
+                , slTag: D.value :: _ Tag
+                , slPrio: D.value :: _ Priority
+                }
           )
 
 derive instance genericSchedulerLog :: Generic SchedulerLog _
@@ -152,7 +154,8 @@ instance encodeJsonThreadId :: EncodeJson ThreadId where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unThreadId: E.value :: _ Int }
           )
 

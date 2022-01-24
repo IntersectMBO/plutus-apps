@@ -36,7 +36,8 @@ instance encodeJsonValue :: EncodeJson Value where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getValue: E.value :: _ (Map CurrencySymbol (Map TokenName BigInt)) }
           )
 
@@ -66,7 +67,8 @@ instance encodeJsonCurrencySymbol :: EncodeJson CurrencySymbol where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unCurrencySymbol: E.value :: _ String }
           )
 
@@ -96,7 +98,8 @@ instance encodeJsonAssetClass :: EncodeJson AssetClass where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unAssetClass: (E.tuple (E.value >/\< E.value)) :: _ (Tuple CurrencySymbol TokenName) }
           )
 
@@ -126,7 +129,8 @@ instance encodeJsonTokenName :: EncodeJson TokenName where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unTokenName: E.value :: _ String }
           )
 

@@ -34,7 +34,8 @@ instance encodeJsonWalletNumber :: EncodeJson WalletNumber where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getWallet: E.value :: _ BigInt }
           )
 

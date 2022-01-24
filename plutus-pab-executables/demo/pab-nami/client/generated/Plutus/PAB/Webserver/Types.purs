@@ -52,7 +52,8 @@ instance encodeJsonFullReport :: (EncodeJson a) => EncodeJson (FullReport a) whe
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { contractReport: E.value :: _ (ContractReport a)
               , chainReport: E.value :: _ ChainReport
               }
@@ -62,11 +63,12 @@ instance decodeJsonFullReport :: (DecodeJson a) => DecodeJson (FullReport a) whe
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( FullReport
+        $
+          ( FullReport
               <$> D.record "FullReport"
-                  { contractReport: D.value :: _ (ContractReport a)
-                  , chainReport: D.value :: _ ChainReport
-                  }
+                { contractReport: D.value :: _ (ContractReport a)
+                , chainReport: D.value :: _ ChainReport
+                }
           )
 
 derive instance genericFullReport :: Generic (FullReport a) _
@@ -94,7 +96,8 @@ instance encodeJsonChainReport :: EncodeJson ChainReport where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { transactionMap: (E.dictionary E.value E.value) :: _ (Map TxId Tx)
               , utxoIndex: E.value :: _ UtxoIndex
               , annotatedBlockchain: E.value :: _ (Array (Array AnnotatedTx))
@@ -105,12 +108,13 @@ instance decodeJsonChainReport :: DecodeJson ChainReport where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ChainReport
+        $
+          ( ChainReport
               <$> D.record "ChainReport"
-                  { transactionMap: (D.dictionary D.value D.value) :: _ (Map TxId Tx)
-                  , utxoIndex: D.value :: _ UtxoIndex
-                  , annotatedBlockchain: D.value :: _ (Array (Array AnnotatedTx))
-                  }
+                { transactionMap: (D.dictionary D.value D.value) :: _ (Map TxId Tx)
+                , utxoIndex: D.value :: _ UtxoIndex
+                , annotatedBlockchain: D.value :: _ (Array (Array AnnotatedTx))
+                }
           )
 
 derive instance genericChainReport :: Generic ChainReport _
@@ -137,7 +141,8 @@ instance encodeJsonContractReport :: (EncodeJson a) => EncodeJson (ContractRepor
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { crAvailableContracts: E.value :: _ (Array (ContractSignatureResponse a))
               , crActiveContractStates: E.value :: _ (Array (Tuple ContractInstanceId (PartiallyDecodedResponse PABReq)))
               }
@@ -147,11 +152,12 @@ instance decodeJsonContractReport :: (DecodeJson a) => DecodeJson (ContractRepor
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ContractReport
+        $
+          ( ContractReport
               <$> D.record "ContractReport"
-                  { crAvailableContracts: D.value :: _ (Array (ContractSignatureResponse a))
-                  , crActiveContractStates: D.value :: _ (Array (Tuple ContractInstanceId (PartiallyDecodedResponse PABReq)))
-                  }
+                { crAvailableContracts: D.value :: _ (Array (ContractSignatureResponse a))
+                , crActiveContractStates: D.value :: _ (Array (Tuple ContractInstanceId (PartiallyDecodedResponse PABReq)))
+                }
           )
 
 derive instance genericContractReport :: Generic (ContractReport a) _
@@ -178,7 +184,8 @@ instance encodeJsonContractSignatureResponse :: (EncodeJson a) => EncodeJson (Co
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { csrDefinition: E.value :: _ a
               , csrSchemas: E.value :: _ (Array (FunctionSchema FormSchema))
               }
@@ -188,11 +195,12 @@ instance decodeJsonContractSignatureResponse :: (DecodeJson a) => DecodeJson (Co
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ContractSignatureResponse
+        $
+          ( ContractSignatureResponse
               <$> D.record "ContractSignatureResponse"
-                  { csrDefinition: D.value :: _ a
-                  , csrSchemas: D.value :: _ (Array (FunctionSchema FormSchema))
-                  }
+                { csrDefinition: D.value :: _ a
+                , csrSchemas: D.value :: _ (Array (FunctionSchema FormSchema))
+                }
           )
 
 derive instance genericContractSignatureResponse :: Generic (ContractSignatureResponse a) _
@@ -219,7 +227,8 @@ instance encodeJsonContractActivationArgs :: (EncodeJson a) => EncodeJson (Contr
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { caID: E.value :: _ a
               , caWallet: (E.maybe E.value) :: _ (Maybe Wallet)
               }
@@ -229,11 +238,12 @@ instance decodeJsonContractActivationArgs :: (DecodeJson a) => DecodeJson (Contr
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ContractActivationArgs
+        $
+          ( ContractActivationArgs
               <$> D.record "ContractActivationArgs"
-                  { caID: D.value :: _ a
-                  , caWallet: (D.maybe D.value) :: _ (Maybe Wallet)
-                  }
+                { caID: D.value :: _ a
+                , caWallet: (D.maybe D.value) :: _ (Maybe Wallet)
+                }
           )
 
 derive instance genericContractActivationArgs :: Generic (ContractActivationArgs a) _
@@ -262,7 +272,8 @@ instance encodeJsonContractInstanceClientState :: (EncodeJson a) => EncodeJson (
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { cicContract: E.value :: _ ContractInstanceId
               , cicCurrentState: E.value :: _ (PartiallyDecodedResponse ActiveEndpoint)
               , cicWallet: E.value :: _ Wallet
@@ -276,15 +287,16 @@ instance decodeJsonContractInstanceClientState :: (DecodeJson a) => DecodeJson (
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ContractInstanceClientState
+        $
+          ( ContractInstanceClientState
               <$> D.record "ContractInstanceClientState"
-                  { cicContract: D.value :: _ ContractInstanceId
-                  , cicCurrentState: D.value :: _ (PartiallyDecodedResponse ActiveEndpoint)
-                  , cicWallet: D.value :: _ Wallet
-                  , cicDefinition: D.value :: _ a
-                  , cicStatus: D.value :: _ ContractActivityStatus
-                  , cicYieldedExportTxs: D.value :: _ (Array RawJson)
-                  }
+                { cicContract: D.value :: _ ContractInstanceId
+                , cicCurrentState: D.value :: _ (PartiallyDecodedResponse ActiveEndpoint)
+                , cicWallet: D.value :: _ Wallet
+                , cicDefinition: D.value :: _ a
+                , cicStatus: D.value :: _ ContractActivityStatus
+                , cicYieldedExportTxs: D.value :: _ (Array RawJson)
+                }
           )
 
 derive instance genericContractInstanceClientState :: Generic (ContractInstanceClientState a) _

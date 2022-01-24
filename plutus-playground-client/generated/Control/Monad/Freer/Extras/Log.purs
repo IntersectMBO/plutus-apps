@@ -111,16 +111,20 @@ instance (Show a) => Show (LogMessage a) where
   show a = genericShow a
 
 instance (EncodeJson a) => EncodeJson (LogMessage a) where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { _logLevel: E.value :: _ LogLevel
-                                                   , _logMessageContent: E.value :: _ a
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { _logLevel: E.value :: _ LogLevel
+        , _logMessageContent: E.value :: _ a
+        }
+    )
 
 instance (DecodeJson a) => DecodeJson (LogMessage a) where
-  decodeJson = defer \_ -> D.decode $ (LogMessage <$> D.record "LogMessage"
-      { _logLevel: D.value :: _ LogLevel
-      , _logMessageContent: D.value :: _ a
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( LogMessage <$> D.record "LogMessage"
+        { _logLevel: D.value :: _ LogLevel
+        , _logMessageContent: D.value :: _ a
+        }
+    )
 
 derive instance Generic (LogMessage a) _
 
@@ -128,11 +132,11 @@ derive instance Newtype (LogMessage a) _
 
 --------------------------------------------------------------------------------
 
-_LogMessage :: forall a. Iso' (LogMessage a) {_logLevel :: LogLevel, _logMessageContent :: a}
+_LogMessage :: forall a. Iso' (LogMessage a) { _logLevel :: LogLevel, _logMessageContent :: a }
 _LogMessage = _Newtype
 
 logLevel :: forall a. Lens' (LogMessage a) LogLevel
-logLevel = _Newtype <<< prop (Proxy :: _"_logLevel")
+logLevel = _Newtype <<< prop (Proxy :: _ "_logLevel")
 
 logMessageContent :: forall a. Lens' (LogMessage a) a
-logMessageContent = _Newtype <<< prop (Proxy :: _"_logMessageContent")
+logMessageContent = _Newtype <<< prop (Proxy :: _ "_logMessageContent")

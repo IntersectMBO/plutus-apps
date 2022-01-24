@@ -90,7 +90,8 @@ instance encodeJsonInterval :: (EncodeJson a) => EncodeJson (Interval a) where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { ivFrom: E.value :: _ (LowerBound a)
               , ivTo: E.value :: _ (UpperBound a)
               }
@@ -100,11 +101,12 @@ instance decodeJsonInterval :: (DecodeJson a) => DecodeJson (Interval a) where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Interval
+        $
+          ( Interval
               <$> D.record "Interval"
-                  { ivFrom: D.value :: _ (LowerBound a)
-                  , ivTo: D.value :: _ (UpperBound a)
-                  }
+                { ivFrom: D.value :: _ (LowerBound a)
+                , ivTo: D.value :: _ (UpperBound a)
+                }
           )
 
 derive instance genericInterval :: Generic (Interval a) _

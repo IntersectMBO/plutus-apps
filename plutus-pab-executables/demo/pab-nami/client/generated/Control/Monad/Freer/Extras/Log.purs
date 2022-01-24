@@ -39,7 +39,8 @@ instance encodeJsonLogMessage :: (EncodeJson a) => EncodeJson (LogMessage a) whe
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _logLevel: E.value :: _ LogLevel
               , _logMessageContent: E.value :: _ a
               }
@@ -49,11 +50,12 @@ instance decodeJsonLogMessage :: (DecodeJson a) => DecodeJson (LogMessage a) whe
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( LogMessage
+        $
+          ( LogMessage
               <$> D.record "LogMessage"
-                  { _logLevel: D.value :: _ LogLevel
-                  , _logMessageContent: D.value :: _ a
-                  }
+                { _logLevel: D.value :: _ LogLevel
+                , _logMessageContent: D.value :: _ a
+                }
           )
 
 derive instance genericLogMessage :: Generic (LogMessage a) _

@@ -42,24 +42,25 @@ instance EncodeJson ChainEvent where
 
 instance DecodeJson ChainEvent where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ChainEvent" $ Map.fromFoldable
-      [ "TxnValidate" /\ D.content (D.tuple $ TxnValidate </$\>D.value </*\> D.value </*\> D.value)
-      , "TxnValidationFail" /\ D.content (D.tuple $ TxnValidationFail </$\>D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
-      , "SlotAdd" /\ D.content (SlotAdd <$> D.value)
-      ]
+    $ D.sumType "ChainEvent"
+    $ Map.fromFoldable
+        [ "TxnValidate" /\ D.content (D.tuple $ TxnValidate </$\> D.value </*\> D.value </*\> D.value)
+        , "TxnValidationFail" /\ D.content (D.tuple $ TxnValidationFail </$\> D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
+        , "SlotAdd" /\ D.content (SlotAdd <$> D.value)
+        ]
 
 derive instance Generic ChainEvent _
 
 --------------------------------------------------------------------------------
 
-_TxnValidate :: Prism' ChainEvent {a :: TxId, b :: Tx, c :: Array ScriptValidationEvent}
-_TxnValidate = prism' (\{a, b, c} -> (TxnValidate a b c)) case _ of
-  (TxnValidate a b c) -> Just {a, b, c}
+_TxnValidate :: Prism' ChainEvent { a :: TxId, b :: Tx, c :: Array ScriptValidationEvent }
+_TxnValidate = prism' (\{ a, b, c } -> (TxnValidate a b c)) case _ of
+  (TxnValidate a b c) -> Just { a, b, c }
   _ -> Nothing
 
-_TxnValidationFail :: Prism' ChainEvent {a :: ValidationPhase, b :: TxId, c :: Tx, d :: ValidationError, e :: Array ScriptValidationEvent}
-_TxnValidationFail = prism' (\{a, b, c, d, e} -> (TxnValidationFail a b c d e)) case _ of
-  (TxnValidationFail a b c d e) -> Just {a, b, c, d, e}
+_TxnValidationFail :: Prism' ChainEvent { a :: ValidationPhase, b :: TxId, c :: Tx, d :: ValidationError, e :: Array ScriptValidationEvent }
+_TxnValidationFail = prism' (\{ a, b, c, d, e } -> (TxnValidationFail a b c d e)) case _ of
+  (TxnValidationFail a b c d e) -> Just { a, b, c, d, e }
   _ -> Nothing
 
 _SlotAdd :: Prism' ChainEvent Slot

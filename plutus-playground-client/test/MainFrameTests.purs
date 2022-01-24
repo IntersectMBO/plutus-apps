@@ -65,12 +65,13 @@ all =
 
 ------------------------------------------------------------
 type World
-  = { gists :: Map GistId Gist
-    , editorContents :: Maybe SourceCode
-    , localStorage :: Map String String
-    , evaluationResult :: Either String EvaluationResult
-    , compilationResult :: (Either String (Either InterpreterError (InterpreterResult CompilationResult)))
-    }
+  =
+  { gists :: Map GistId Gist
+  , editorContents :: Maybe SourceCode
+  , localStorage :: Map String String
+  , evaluationResult :: Either String EvaluationResult
+  , compilationResult :: (Either String (Either InterpreterError (InterpreterResult CompilationResult)))
+  }
 
 _gists :: forall r a. Lens' { gists :: a | r } a
 _gists = prop (Proxy :: _ "gists")
@@ -105,29 +106,29 @@ instance Monad m => MonadAjax JsonDecodeError Json String (MockApp m) where
     let mMethod = preview _Left req.method
     let mUri = preview (_relPart <<< _relPath <<< _Just) req.uri
     jsonResult <- case mMethod, mUri of
-      Just GET, Just ["oauth", "status"] ->
+      Just GET, Just [ "oauth", "status" ] ->
         pure $ encodeJson { _authStatusAuthRole: "GithubUser" }
-      Just GET, Just ["gists", gistId] -> do
+      Just GET, Just [ "gists", gistId ] -> do
         Tuple { gists } _ <- lift $ MockApp $ get
         case Map.lookup (GistId gistId) gists of
           Nothing -> throwError $ "Not found: " <> gistId
           Just gist -> pure $ encodeJson gist
-      Just POST, Just ["contract"] -> do
+      Just POST, Just [ "contract" ] -> do
         Tuple { compilationResult } _ <- lift $ MockApp $ get
         except $ map encodeJson $ compilationResult
       _, _ -> throwError
         $ "Resource not mocked: "
-        <> show mMethod
-        <> " "
-        <> RelativeRef.print
-            { printUserInfo: identity
-            , printHosts: Host.print
-            , printPath: identity
-            , printRelPath: Left <<< segmentsToPathAbsolute
-            , printQuery: QueryPairs.print identity identity
-            , printFragment: identity
-            }
-            req.uri
+            <> show mMethod
+            <> " "
+            <> RelativeRef.print
+              { printUserInfo: identity
+              , printHosts: Host.print
+              , printPath: identity
+              , printRelPath: Left <<< segmentsToPathAbsolute
+              , printQuery: QueryPairs.print identity identity
+              , printFragment: identity
+              }
+              req.uri
     except $ lmap printJsonDecodeError $ req.decode jsonResult
 
 instance monadAppMockApp :: Monad m => MonadApp (MockApp m) where
@@ -274,11 +275,11 @@ evalTests =
               ]
           view _currentView finalState `shouldEqual` Editor
 
-loadCompilationResponse1 ::
-  forall m.
-  MonadEffect m =>
-  MonadThrow Error m =>
-  m (InterpreterResult CompilationResult)
+loadCompilationResponse1
+  :: forall m
+   . MonadEffect m
+  => MonadThrow Error m
+  => m (InterpreterResult CompilationResult)
 loadCompilationResponse1 = do
   contents <- liftEffect $ FS.readTextFile UTF8 "generated/compilation_response.json"
   case parseDecodeJson contents of

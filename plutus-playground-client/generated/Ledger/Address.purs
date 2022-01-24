@@ -33,8 +33,10 @@ instance Show PaymentPubKey where
   show a = genericShow a
 
 instance EncodeJson PaymentPubKey where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { unPaymentPubKey: E.value :: _ PubKey })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { unPaymentPubKey: E.value :: _ PubKey }
+    )
 
 instance DecodeJson PaymentPubKey where
   decodeJson = defer \_ -> D.decode $ (PaymentPubKey <$> D.record "PaymentPubKey" { unPaymentPubKey: D.value :: _ PubKey })
@@ -45,7 +47,7 @@ derive instance Newtype PaymentPubKey _
 
 --------------------------------------------------------------------------------
 
-_PaymentPubKey :: Iso' PaymentPubKey {unPaymentPubKey :: PubKey}
+_PaymentPubKey :: Iso' PaymentPubKey { unPaymentPubKey :: PubKey }
 _PaymentPubKey = _Newtype
 
 --------------------------------------------------------------------------------
@@ -60,8 +62,10 @@ instance Show PaymentPubKeyHash where
   show a = genericShow a
 
 instance EncodeJson PaymentPubKeyHash where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { unPaymentPubKeyHash: E.value :: _ PubKeyHash })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { unPaymentPubKeyHash: E.value :: _ PubKeyHash }
+    )
 
 instance DecodeJson PaymentPubKeyHash where
   decodeJson = defer \_ -> D.decode $ (PaymentPubKeyHash <$> D.record "PaymentPubKeyHash" { unPaymentPubKeyHash: D.value :: _ PubKeyHash })
@@ -72,7 +76,7 @@ derive instance Newtype PaymentPubKeyHash _
 
 --------------------------------------------------------------------------------
 
-_PaymentPubKeyHash :: Iso' PaymentPubKeyHash {unPaymentPubKeyHash :: PubKeyHash}
+_PaymentPubKeyHash :: Iso' PaymentPubKeyHash { unPaymentPubKeyHash :: PubKeyHash }
 _PaymentPubKeyHash = _Newtype
 
 --------------------------------------------------------------------------------
@@ -87,8 +91,10 @@ instance Show StakePubKey where
   show a = genericShow a
 
 instance EncodeJson StakePubKey where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { unStakePubKey: E.value :: _ PubKey })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { unStakePubKey: E.value :: _ PubKey }
+    )
 
 instance DecodeJson StakePubKey where
   decodeJson = defer \_ -> D.decode $ (StakePubKey <$> D.record "StakePubKey" { unStakePubKey: D.value :: _ PubKey })
@@ -99,7 +105,7 @@ derive instance Newtype StakePubKey _
 
 --------------------------------------------------------------------------------
 
-_StakePubKey :: Iso' StakePubKey {unStakePubKey :: PubKey}
+_StakePubKey :: Iso' StakePubKey { unStakePubKey :: PubKey }
 _StakePubKey = _Newtype
 
 --------------------------------------------------------------------------------
@@ -114,8 +120,10 @@ instance Show StakePubKeyHash where
   show a = genericShow a
 
 instance EncodeJson StakePubKeyHash where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { unStakePubKeyHash: E.value :: _ PubKeyHash })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { unStakePubKeyHash: E.value :: _ PubKeyHash }
+    )
 
 instance DecodeJson StakePubKeyHash where
   decodeJson = defer \_ -> D.decode $ (StakePubKeyHash <$> D.record "StakePubKeyHash" { unStakePubKeyHash: D.value :: _ PubKeyHash })
@@ -126,5 +134,5 @@ derive instance Newtype StakePubKeyHash _
 
 --------------------------------------------------------------------------------
 
-_StakePubKeyHash :: Iso' StakePubKeyHash {unStakePubKeyHash :: PubKeyHash}
+_StakePubKeyHash :: Iso' StakePubKeyHash { unStakePubKeyHash :: PubKeyHash }
 _StakePubKeyHash = _Newtype

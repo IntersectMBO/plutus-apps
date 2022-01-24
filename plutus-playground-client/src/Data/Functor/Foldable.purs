@@ -21,10 +21,10 @@ derive instance genericFix :: Generic (Fix f) _
 
 derive instance eqFix :: Eq1 f => Eq (Fix f)
 
-instance recursiveFix ∷ Functor f ⇒ Recursive (Fix f) f where
+instance recursiveFix :: Functor f => Recursive (Fix f) f where
   project (Fix v) = v
 
-instance corecursiveFix ∷ Functor f ⇒ Corecursive (Fix f) f where
+instance corecursiveFix :: Functor f => Corecursive (Fix f) f where
   embed v = Fix v
 
 ------------------------------------------------------------

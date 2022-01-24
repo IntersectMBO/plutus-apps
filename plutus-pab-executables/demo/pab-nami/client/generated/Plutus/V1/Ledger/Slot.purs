@@ -34,7 +34,8 @@ instance encodeJsonSlot :: EncodeJson Slot where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getSlot: E.value :: _ BigInt }
           )
 

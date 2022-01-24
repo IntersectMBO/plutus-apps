@@ -30,19 +30,20 @@ import Data.Argonaut.Encode.Aeson as E
 foreign import encodeURIComponent :: String -> String
 
 type SPSettings_
-  = { baseURL :: String
-    }
+  =
+  { baseURL :: String
+  }
 
 class HasSPSettings a where
   spSettings :: a -> SPSettings_
 
-getApiHealthcheck ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  m Unit
+getApiHealthcheck
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => m Unit
 getApiHealthcheck = do
   spSettings <- asks spSettings
   let
@@ -87,13 +88,13 @@ getApiHealthcheck = do
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-getApiFullreport ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  m (FullReport DemoContract)
+getApiFullreport
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => m (FullReport DemoContract)
 getApiFullreport = do
   spSettings <- asks spSettings
   let
@@ -138,14 +139,14 @@ getApiFullreport = do
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-postApiContractActivate ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  ContractActivationArgs DemoContract ->
-  m ContractInstanceId
+postApiContractActivate
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => ContractActivationArgs DemoContract
+  -> m ContractInstanceId
 postApiContractActivate reqBody = do
   spSettings <- asks spSettings
   let
@@ -179,10 +180,10 @@ postApiContractActivate reqBody = do
         , headers = defaultRequest.headers <> reqHeaders
         , responseFormat = Response.json
         , content =
-          Just
-            $ Request.json
-            $ flip E.encode reqBody
-            $ E.value
+            Just
+              $ Request.json
+              $ flip E.encode reqBody
+              $ E.value
         }
   let
     decoder = D.value
@@ -197,14 +198,14 @@ postApiContractActivate reqBody = do
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-getApiContractInstanceByContractinstanceidStatus ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  ContractInstanceId ->
-  m (ContractInstanceClientState DemoContract)
+getApiContractInstanceByContractinstanceidStatus
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => ContractInstanceId
+  -> m (ContractInstanceClientState DemoContract)
 getApiContractInstanceByContractinstanceidStatus contract_instance_id = do
   spSettings <- asks spSettings
   let
@@ -255,14 +256,14 @@ getApiContractInstanceByContractinstanceidStatus contract_instance_id = do
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-getApiContractInstanceByContractinstanceidSchema ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  ContractInstanceId ->
-  m (ContractSignatureResponse DemoContract)
+getApiContractInstanceByContractinstanceidSchema
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => ContractInstanceId
+  -> m (ContractSignatureResponse DemoContract)
 getApiContractInstanceByContractinstanceidSchema contract_instance_id = do
   spSettings <- asks spSettings
   let
@@ -313,16 +314,16 @@ getApiContractInstanceByContractinstanceidSchema contract_instance_id = do
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-postApiContractInstanceByContractinstanceidEndpointByEndpointname ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  RawJson ->
-  ContractInstanceId ->
-  String ->
-  m Unit
+postApiContractInstanceByContractinstanceidEndpointByEndpointname
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => RawJson
+  -> ContractInstanceId
+  -> String
+  -> m Unit
 postApiContractInstanceByContractinstanceidEndpointByEndpointname reqBody contract_instance_id endpoint_name = do
   spSettings <- asks spSettings
   let
@@ -362,10 +363,10 @@ postApiContractInstanceByContractinstanceidEndpointByEndpointname reqBody contra
         , headers = defaultRequest.headers <> reqHeaders
         , responseFormat = Response.json
         , content =
-          Just
-            $ Request.json
-            $ flip E.encode reqBody
-            $ E.value
+            Just
+              $ Request.json
+              $ flip E.encode reqBody
+              $ E.value
         }
   let
     decoder = D.unit
@@ -380,14 +381,14 @@ postApiContractInstanceByContractinstanceidEndpointByEndpointname reqBody contra
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-putApiContractInstanceByContractinstanceidStop ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  ContractInstanceId ->
-  m Unit
+putApiContractInstanceByContractinstanceidStop
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => ContractInstanceId
+  -> m Unit
 putApiContractInstanceByContractinstanceidStop contract_instance_id = do
   spSettings <- asks spSettings
   let
@@ -438,15 +439,15 @@ putApiContractInstanceByContractinstanceidStop contract_instance_id = do
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-getApiContractInstancesWalletByWalletid ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  String ->
-  Maybe String ->
-  m (Array (ContractInstanceClientState DemoContract))
+getApiContractInstancesWalletByWalletid
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => String
+  -> Maybe String
+  -> m (Array (ContractInstanceClientState DemoContract))
 getApiContractInstancesWalletByWalletid wallet_id status = do
   spSettings <- asks spSettings
   let
@@ -499,14 +500,14 @@ getApiContractInstancesWalletByWalletid wallet_id status = do
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-getApiContractInstances ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  Maybe String ->
-  m (Array (ContractInstanceClientState DemoContract))
+getApiContractInstances
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => Maybe String
+  -> m (Array (ContractInstanceClientState DemoContract))
 getApiContractInstances status = do
   spSettings <- asks spSettings
   let
@@ -555,13 +556,13 @@ getApiContractInstances status = do
     Left err -> throwError $ { request: affReq, description: DecodingError err }
     Right body -> pure body
 
-getApiContractDefinitions ::
-  forall env m.
-  HasSPSettings env =>
-  MonadAsk env m =>
-  MonadError AjaxError m =>
-  MonadAff m =>
-  m (Array (ContractSignatureResponse DemoContract))
+getApiContractDefinitions
+  :: forall env m
+   . HasSPSettings env
+  => MonadAsk env m
+  => MonadError AjaxError m
+  => MonadAff m
+  => m (Array (ContractSignatureResponse DemoContract))
 getApiContractDefinitions = do
   spSettings <- asks spSettings
   let

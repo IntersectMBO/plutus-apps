@@ -46,7 +46,8 @@ instance encodeJsonUtxoIndex :: EncodeJson UtxoIndex where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef TxOut) }
           )
 
@@ -278,7 +279,8 @@ instance encodeJsonScriptValidationEvent :: EncodeJson ScriptValidationEvent whe
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { sveScript: E.value :: _ String
               , sveResult: (E.either E.value (E.tuple (E.value >/\< E.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
               , sveRedeemer: E.value :: _ String
@@ -290,13 +292,14 @@ instance decodeJsonScriptValidationEvent :: DecodeJson ScriptValidationEvent whe
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ScriptValidationEvent
+        $
+          ( ScriptValidationEvent
               <$> D.record "ScriptValidationEvent"
-                  { sveScript: D.value :: _ String
-                  , sveResult: (D.either D.value (D.tuple (D.value </\> D.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
-                  , sveRedeemer: D.value :: _ String
-                  , sveType: D.value :: _ ScriptType
-                  }
+                { sveScript: D.value :: _ String
+                , sveResult: (D.either D.value (D.tuple (D.value </\> D.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
+                , sveRedeemer: D.value :: _ String
+                , sveType: D.value :: _ ScriptType
+                }
           )
 
 derive instance genericScriptValidationEvent :: Generic ScriptValidationEvent _

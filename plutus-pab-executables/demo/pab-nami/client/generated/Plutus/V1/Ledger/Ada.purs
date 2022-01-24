@@ -34,7 +34,8 @@ instance encodeJsonAda :: EncodeJson Ada where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getLovelace: E.value :: _ BigInt }
           )
 

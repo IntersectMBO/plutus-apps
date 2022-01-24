@@ -58,25 +58,26 @@ instance EncodeJson ConnectionError where
 
 instance DecodeJson ConnectionError where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ConnectionError" $ Map.fromFoldable
-      [ "WrongValidatorAddress" /\ D.content (D.tuple $ WrongValidatorAddress </$\>D.value </*\> D.value)
-      , "WrongOutType" /\ D.content (WrongOutType <$> D.value)
-      , "WrongInType" /\ D.content (WrongInType <$> D.value)
-      , "MissingInType" /\ pure MissingInType
-      , "WrongValidatorType" /\ D.content (WrongValidatorType <$> D.value)
-      , "WrongRedeemerType" /\ D.content (WrongRedeemerType <$> D.value)
-      , "WrongDatumType" /\ D.content (WrongDatumType <$> D.value)
-      , "NoDatum" /\ D.content (D.tuple $ NoDatum </$\>D.value </*\> D.value)
-      , "UnknownRef" /\ pure UnknownRef
-      ]
+    $ D.sumType "ConnectionError"
+    $ Map.fromFoldable
+        [ "WrongValidatorAddress" /\ D.content (D.tuple $ WrongValidatorAddress </$\> D.value </*\> D.value)
+        , "WrongOutType" /\ D.content (WrongOutType <$> D.value)
+        , "WrongInType" /\ D.content (WrongInType <$> D.value)
+        , "MissingInType" /\ pure MissingInType
+        , "WrongValidatorType" /\ D.content (WrongValidatorType <$> D.value)
+        , "WrongRedeemerType" /\ D.content (WrongRedeemerType <$> D.value)
+        , "WrongDatumType" /\ D.content (WrongDatumType <$> D.value)
+        , "NoDatum" /\ D.content (D.tuple $ NoDatum </$\> D.value </*\> D.value)
+        , "UnknownRef" /\ pure UnknownRef
+        ]
 
 derive instance Generic ConnectionError _
 
 --------------------------------------------------------------------------------
 
-_WrongValidatorAddress :: Prism' ConnectionError {a :: Address, b :: Address}
-_WrongValidatorAddress = prism' (\{a, b} -> (WrongValidatorAddress a b)) case _ of
-  (WrongValidatorAddress a b) -> Just {a, b}
+_WrongValidatorAddress :: Prism' ConnectionError { a :: Address, b :: Address }
+_WrongValidatorAddress = prism' (\{ a, b } -> (WrongValidatorAddress a b)) case _ of
+  (WrongValidatorAddress a b) -> Just { a, b }
   _ -> Nothing
 
 _WrongOutType :: Prism' ConnectionError WrongOutTypeError
@@ -109,9 +110,9 @@ _WrongDatumType = prism' WrongDatumType case _ of
   (WrongDatumType a) -> Just a
   _ -> Nothing
 
-_NoDatum :: Prism' ConnectionError {a :: TxOutRef, b :: DatumHash}
-_NoDatum = prism' (\{a, b} -> (NoDatum a b)) case _ of
-  (NoDatum a b) -> Just {a, b}
+_NoDatum :: Prism' ConnectionError { a :: TxOutRef, b :: DatumHash }
+_NoDatum = prism' (\{ a, b } -> (NoDatum a b)) case _ of
+  (NoDatum a b) -> Just { a, b }
   _ -> Nothing
 
 _UnknownRef :: Prism' ConnectionError Unit

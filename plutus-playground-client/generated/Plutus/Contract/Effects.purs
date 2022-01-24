@@ -55,16 +55,20 @@ instance Show ActiveEndpoint where
   show a = genericShow a
 
 instance EncodeJson ActiveEndpoint where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { aeDescription: E.value :: _ EndpointDescription
-                                                   , aeMetadata: (E.maybe E.value) :: _ (Maybe RawJson)
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { aeDescription: E.value :: _ EndpointDescription
+        , aeMetadata: (E.maybe E.value) :: _ (Maybe RawJson)
+        }
+    )
 
 instance DecodeJson ActiveEndpoint where
-  decodeJson = defer \_ -> D.decode $ (ActiveEndpoint <$> D.record "ActiveEndpoint"
-      { aeDescription: D.value :: _ EndpointDescription
-      , aeMetadata: (D.maybe D.value) :: _ (Maybe RawJson)
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( ActiveEndpoint <$> D.record "ActiveEndpoint"
+        { aeDescription: D.value :: _ EndpointDescription
+        , aeMetadata: (D.maybe D.value) :: _ (Maybe RawJson)
+        }
+    )
 
 derive instance Generic ActiveEndpoint _
 
@@ -72,7 +76,7 @@ derive instance Newtype ActiveEndpoint _
 
 --------------------------------------------------------------------------------
 
-_ActiveEndpoint :: Iso' ActiveEndpoint {aeDescription :: EndpointDescription, aeMetadata :: Maybe RawJson}
+_ActiveEndpoint :: Iso' ActiveEndpoint { aeDescription :: EndpointDescription, aeMetadata :: Maybe RawJson }
 _ActiveEndpoint = _Newtype
 
 --------------------------------------------------------------------------------
@@ -93,10 +97,11 @@ instance EncodeJson BalanceTxResponse where
 
 instance DecodeJson BalanceTxResponse where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "BalanceTxResponse" $ Map.fromFoldable
-      [ "BalanceTxFailed" /\ D.content (BalanceTxFailed <$> D.value)
-      , "BalanceTxSuccess" /\ D.content (BalanceTxSuccess <$> (D.either D.value D.value))
-      ]
+    $ D.sumType "BalanceTxResponse"
+    $ Map.fromFoldable
+        [ "BalanceTxFailed" /\ D.content (BalanceTxFailed <$> D.value)
+        , "BalanceTxSuccess" /\ D.content (BalanceTxSuccess <$> (D.either D.value D.value))
+        ]
 
 derive instance Generic BalanceTxResponse _
 
@@ -152,21 +157,22 @@ instance EncodeJson ChainIndexQuery where
 
 instance DecodeJson ChainIndexQuery where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ChainIndexQuery" $ Map.fromFoldable
-      [ "DatumFromHash" /\ D.content (DatumFromHash <$> D.value)
-      , "ValidatorFromHash" /\ D.content (ValidatorFromHash <$> D.value)
-      , "MintingPolicyFromHash" /\ D.content (MintingPolicyFromHash <$> D.value)
-      , "StakeValidatorFromHash" /\ D.content (StakeValidatorFromHash <$> D.value)
-      , "RedeemerFromHash" /\ D.content (RedeemerFromHash <$> D.value)
-      , "TxOutFromRef" /\ D.content (TxOutFromRef <$> D.value)
-      , "TxFromTxId" /\ D.content (TxFromTxId <$> D.value)
-      , "UtxoSetMembership" /\ D.content (UtxoSetMembership <$> D.value)
-      , "UtxoSetAtAddress" /\ D.content (D.tuple $ UtxoSetAtAddress </$\>D.value </*\> D.value)
-      , "UtxoSetWithCurrency" /\ D.content (D.tuple $ UtxoSetWithCurrency </$\>D.value </*\> D.value)
-      , "TxsFromTxIds" /\ D.content (TxsFromTxIds <$> D.value)
-      , "TxoSetAtAddress" /\ D.content (D.tuple $ TxoSetAtAddress </$\>D.value </*\> D.value)
-      , "GetTip" /\ pure GetTip
-      ]
+    $ D.sumType "ChainIndexQuery"
+    $ Map.fromFoldable
+        [ "DatumFromHash" /\ D.content (DatumFromHash <$> D.value)
+        , "ValidatorFromHash" /\ D.content (ValidatorFromHash <$> D.value)
+        , "MintingPolicyFromHash" /\ D.content (MintingPolicyFromHash <$> D.value)
+        , "StakeValidatorFromHash" /\ D.content (StakeValidatorFromHash <$> D.value)
+        , "RedeemerFromHash" /\ D.content (RedeemerFromHash <$> D.value)
+        , "TxOutFromRef" /\ D.content (TxOutFromRef <$> D.value)
+        , "TxFromTxId" /\ D.content (TxFromTxId <$> D.value)
+        , "UtxoSetMembership" /\ D.content (UtxoSetMembership <$> D.value)
+        , "UtxoSetAtAddress" /\ D.content (D.tuple $ UtxoSetAtAddress </$\> D.value </*\> D.value)
+        , "UtxoSetWithCurrency" /\ D.content (D.tuple $ UtxoSetWithCurrency </$\> D.value </*\> D.value)
+        , "TxsFromTxIds" /\ D.content (TxsFromTxIds <$> D.value)
+        , "TxoSetAtAddress" /\ D.content (D.tuple $ TxoSetAtAddress </$\> D.value </*\> D.value)
+        , "GetTip" /\ pure GetTip
+        ]
 
 derive instance Generic ChainIndexQuery _
 
@@ -212,14 +218,14 @@ _UtxoSetMembership = prism' UtxoSetMembership case _ of
   (UtxoSetMembership a) -> Just a
   _ -> Nothing
 
-_UtxoSetAtAddress :: Prism' ChainIndexQuery {a :: PageQuery TxOutRef, b :: Credential}
-_UtxoSetAtAddress = prism' (\{a, b} -> (UtxoSetAtAddress a b)) case _ of
-  (UtxoSetAtAddress a b) -> Just {a, b}
+_UtxoSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Credential }
+_UtxoSetAtAddress = prism' (\{ a, b } -> (UtxoSetAtAddress a b)) case _ of
+  (UtxoSetAtAddress a b) -> Just { a, b }
   _ -> Nothing
 
-_UtxoSetWithCurrency :: Prism' ChainIndexQuery {a :: PageQuery TxOutRef, b :: AssetClass}
-_UtxoSetWithCurrency = prism' (\{a, b} -> (UtxoSetWithCurrency a b)) case _ of
-  (UtxoSetWithCurrency a b) -> Just {a, b}
+_UtxoSetWithCurrency :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: AssetClass }
+_UtxoSetWithCurrency = prism' (\{ a, b } -> (UtxoSetWithCurrency a b)) case _ of
+  (UtxoSetWithCurrency a b) -> Just { a, b }
   _ -> Nothing
 
 _TxsFromTxIds :: Prism' ChainIndexQuery (Array TxId)
@@ -227,9 +233,9 @@ _TxsFromTxIds = prism' TxsFromTxIds case _ of
   (TxsFromTxIds a) -> Just a
   _ -> Nothing
 
-_TxoSetAtAddress :: Prism' ChainIndexQuery {a :: PageQuery TxOutRef, b :: Credential}
-_TxoSetAtAddress = prism' (\{a, b} -> (TxoSetAtAddress a b)) case _ of
-  (TxoSetAtAddress a b) -> Just {a, b}
+_TxoSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Credential }
+_TxoSetAtAddress = prism' (\{ a, b } -> (TxoSetAtAddress a b)) case _ of
+  (TxoSetAtAddress a b) -> Just { a, b }
   _ -> Nothing
 
 _GetTip :: Prism' ChainIndexQuery Unit
@@ -277,21 +283,22 @@ instance EncodeJson ChainIndexResponse where
 
 instance DecodeJson ChainIndexResponse where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ChainIndexResponse" $ Map.fromFoldable
-      [ "DatumHashResponse" /\ D.content (DatumHashResponse <$> (D.maybe D.value))
-      , "ValidatorHashResponse" /\ D.content (ValidatorHashResponse <$> (D.maybe D.value))
-      , "MintingPolicyHashResponse" /\ D.content (MintingPolicyHashResponse <$> (D.maybe D.value))
-      , "StakeValidatorHashResponse" /\ D.content (StakeValidatorHashResponse <$> (D.maybe D.value))
-      , "TxOutRefResponse" /\ D.content (TxOutRefResponse <$> (D.maybe D.value))
-      , "RedeemerHashResponse" /\ D.content (RedeemerHashResponse <$> (D.maybe D.value))
-      , "TxIdResponse" /\ D.content (TxIdResponse <$> (D.maybe D.value))
-      , "UtxoSetMembershipResponse" /\ D.content (UtxoSetMembershipResponse <$> D.value)
-      , "UtxoSetAtResponse" /\ D.content (UtxoSetAtResponse <$> D.value)
-      , "UtxoSetWithCurrencyResponse" /\ D.content (UtxoSetWithCurrencyResponse <$> D.value)
-      , "TxIdsResponse" /\ D.content (TxIdsResponse <$> D.value)
-      , "TxoSetAtResponse" /\ D.content (TxoSetAtResponse <$> D.value)
-      , "GetTipResponse" /\ D.content (GetTipResponse <$> D.value)
-      ]
+    $ D.sumType "ChainIndexResponse"
+    $ Map.fromFoldable
+        [ "DatumHashResponse" /\ D.content (DatumHashResponse <$> (D.maybe D.value))
+        , "ValidatorHashResponse" /\ D.content (ValidatorHashResponse <$> (D.maybe D.value))
+        , "MintingPolicyHashResponse" /\ D.content (MintingPolicyHashResponse <$> (D.maybe D.value))
+        , "StakeValidatorHashResponse" /\ D.content (StakeValidatorHashResponse <$> (D.maybe D.value))
+        , "TxOutRefResponse" /\ D.content (TxOutRefResponse <$> (D.maybe D.value))
+        , "RedeemerHashResponse" /\ D.content (RedeemerHashResponse <$> (D.maybe D.value))
+        , "TxIdResponse" /\ D.content (TxIdResponse <$> (D.maybe D.value))
+        , "UtxoSetMembershipResponse" /\ D.content (UtxoSetMembershipResponse <$> D.value)
+        , "UtxoSetAtResponse" /\ D.content (UtxoSetAtResponse <$> D.value)
+        , "UtxoSetWithCurrencyResponse" /\ D.content (UtxoSetWithCurrencyResponse <$> D.value)
+        , "TxIdsResponse" /\ D.content (TxIdsResponse <$> D.value)
+        , "TxoSetAtResponse" /\ D.content (TxoSetAtResponse <$> D.value)
+        , "GetTipResponse" /\ D.content (GetTipResponse <$> D.value)
+        ]
 
 derive instance Generic ChainIndexResponse _
 
@@ -408,24 +415,25 @@ instance EncodeJson PABReq where
 
 instance DecodeJson PABReq where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "PABReq" $ Map.fromFoldable
-      [ "AwaitSlotReq" /\ D.content (AwaitSlotReq <$> D.value)
-      , "AwaitTimeReq" /\ D.content (AwaitTimeReq <$> D.value)
-      , "AwaitUtxoSpentReq" /\ D.content (AwaitUtxoSpentReq <$> D.value)
-      , "AwaitUtxoProducedReq" /\ D.content (AwaitUtxoProducedReq <$> D.value)
-      , "AwaitTxStatusChangeReq" /\ D.content (AwaitTxStatusChangeReq <$> D.value)
-      , "AwaitTxOutStatusChangeReq" /\ D.content (AwaitTxOutStatusChangeReq <$> D.value)
-      , "CurrentSlotReq" /\ pure CurrentSlotReq
-      , "CurrentTimeReq" /\ pure CurrentTimeReq
-      , "OwnContractInstanceIdReq" /\ pure OwnContractInstanceIdReq
-      , "OwnPaymentPublicKeyHashReq" /\ pure OwnPaymentPublicKeyHashReq
-      , "ChainIndexQueryReq" /\ D.content (ChainIndexQueryReq <$> D.value)
-      , "BalanceTxReq" /\ D.content (BalanceTxReq <$> D.value)
-      , "WriteBalancedTxReq" /\ D.content (WriteBalancedTxReq <$> (D.either D.value D.value))
-      , "ExposeEndpointReq" /\ D.content (ExposeEndpointReq <$> D.value)
-      , "PosixTimeRangeToContainedSlotRangeReq" /\ D.content (PosixTimeRangeToContainedSlotRangeReq <$> D.value)
-      , "YieldUnbalancedTxReq" /\ D.content (YieldUnbalancedTxReq <$> D.value)
-      ]
+    $ D.sumType "PABReq"
+    $ Map.fromFoldable
+        [ "AwaitSlotReq" /\ D.content (AwaitSlotReq <$> D.value)
+        , "AwaitTimeReq" /\ D.content (AwaitTimeReq <$> D.value)
+        , "AwaitUtxoSpentReq" /\ D.content (AwaitUtxoSpentReq <$> D.value)
+        , "AwaitUtxoProducedReq" /\ D.content (AwaitUtxoProducedReq <$> D.value)
+        , "AwaitTxStatusChangeReq" /\ D.content (AwaitTxStatusChangeReq <$> D.value)
+        , "AwaitTxOutStatusChangeReq" /\ D.content (AwaitTxOutStatusChangeReq <$> D.value)
+        , "CurrentSlotReq" /\ pure CurrentSlotReq
+        , "CurrentTimeReq" /\ pure CurrentTimeReq
+        , "OwnContractInstanceIdReq" /\ pure OwnContractInstanceIdReq
+        , "OwnPaymentPublicKeyHashReq" /\ pure OwnPaymentPublicKeyHashReq
+        , "ChainIndexQueryReq" /\ D.content (ChainIndexQueryReq <$> D.value)
+        , "BalanceTxReq" /\ D.content (BalanceTxReq <$> D.value)
+        , "WriteBalancedTxReq" /\ D.content (WriteBalancedTxReq <$> (D.either D.value D.value))
+        , "ExposeEndpointReq" /\ D.content (ExposeEndpointReq <$> D.value)
+        , "PosixTimeRangeToContainedSlotRangeReq" /\ D.content (PosixTimeRangeToContainedSlotRangeReq <$> D.value)
+        , "YieldUnbalancedTxReq" /\ D.content (YieldUnbalancedTxReq <$> D.value)
+        ]
 
 derive instance Generic PABReq _
 
@@ -557,24 +565,25 @@ instance EncodeJson PABResp where
 
 instance DecodeJson PABResp where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "PABResp" $ Map.fromFoldable
-      [ "AwaitSlotResp" /\ D.content (AwaitSlotResp <$> D.value)
-      , "AwaitTimeResp" /\ D.content (AwaitTimeResp <$> D.value)
-      , "AwaitUtxoSpentResp" /\ D.content (AwaitUtxoSpentResp <$> D.value)
-      , "AwaitUtxoProducedResp" /\ D.content (AwaitUtxoProducedResp <$> D.value)
-      , "AwaitTxStatusChangeResp" /\ D.content (D.tuple $ AwaitTxStatusChangeResp </$\>D.value </*\> D.value)
-      , "AwaitTxOutStatusChangeResp" /\ D.content (D.tuple $ AwaitTxOutStatusChangeResp </$\>D.value </*\> D.value)
-      , "CurrentSlotResp" /\ D.content (CurrentSlotResp <$> D.value)
-      , "CurrentTimeResp" /\ D.content (CurrentTimeResp <$> D.value)
-      , "OwnContractInstanceIdResp" /\ D.content (OwnContractInstanceIdResp <$> D.value)
-      , "OwnPaymentPublicKeyHashResp" /\ D.content (OwnPaymentPublicKeyHashResp <$> D.value)
-      , "ChainIndexQueryResp" /\ D.content (ChainIndexQueryResp <$> D.value)
-      , "BalanceTxResp" /\ D.content (BalanceTxResp <$> D.value)
-      , "WriteBalancedTxResp" /\ D.content (WriteBalancedTxResp <$> D.value)
-      , "ExposeEndpointResp" /\ D.content (D.tuple $ ExposeEndpointResp </$\>D.value </*\> D.value)
-      , "PosixTimeRangeToContainedSlotRangeResp" /\ D.content (PosixTimeRangeToContainedSlotRangeResp <$> (D.either D.value D.value))
-      , "YieldUnbalancedTxResp" /\ D.content (YieldUnbalancedTxResp <$> D.unit)
-      ]
+    $ D.sumType "PABResp"
+    $ Map.fromFoldable
+        [ "AwaitSlotResp" /\ D.content (AwaitSlotResp <$> D.value)
+        , "AwaitTimeResp" /\ D.content (AwaitTimeResp <$> D.value)
+        , "AwaitUtxoSpentResp" /\ D.content (AwaitUtxoSpentResp <$> D.value)
+        , "AwaitUtxoProducedResp" /\ D.content (AwaitUtxoProducedResp <$> D.value)
+        , "AwaitTxStatusChangeResp" /\ D.content (D.tuple $ AwaitTxStatusChangeResp </$\> D.value </*\> D.value)
+        , "AwaitTxOutStatusChangeResp" /\ D.content (D.tuple $ AwaitTxOutStatusChangeResp </$\> D.value </*\> D.value)
+        , "CurrentSlotResp" /\ D.content (CurrentSlotResp <$> D.value)
+        , "CurrentTimeResp" /\ D.content (CurrentTimeResp <$> D.value)
+        , "OwnContractInstanceIdResp" /\ D.content (OwnContractInstanceIdResp <$> D.value)
+        , "OwnPaymentPublicKeyHashResp" /\ D.content (OwnPaymentPublicKeyHashResp <$> D.value)
+        , "ChainIndexQueryResp" /\ D.content (ChainIndexQueryResp <$> D.value)
+        , "BalanceTxResp" /\ D.content (BalanceTxResp <$> D.value)
+        , "WriteBalancedTxResp" /\ D.content (WriteBalancedTxResp <$> D.value)
+        , "ExposeEndpointResp" /\ D.content (D.tuple $ ExposeEndpointResp </$\> D.value </*\> D.value)
+        , "PosixTimeRangeToContainedSlotRangeResp" /\ D.content (PosixTimeRangeToContainedSlotRangeResp <$> (D.either D.value D.value))
+        , "YieldUnbalancedTxResp" /\ D.content (YieldUnbalancedTxResp <$> D.unit)
+        ]
 
 derive instance Generic PABResp _
 
@@ -600,14 +609,14 @@ _AwaitUtxoProducedResp = prism' AwaitUtxoProducedResp case _ of
   (AwaitUtxoProducedResp a) -> Just a
   _ -> Nothing
 
-_AwaitTxStatusChangeResp :: Prism' PABResp {a :: TxId, b :: RollbackState Unit}
-_AwaitTxStatusChangeResp = prism' (\{a, b} -> (AwaitTxStatusChangeResp a b)) case _ of
-  (AwaitTxStatusChangeResp a b) -> Just {a, b}
+_AwaitTxStatusChangeResp :: Prism' PABResp { a :: TxId, b :: RollbackState Unit }
+_AwaitTxStatusChangeResp = prism' (\{ a, b } -> (AwaitTxStatusChangeResp a b)) case _ of
+  (AwaitTxStatusChangeResp a b) -> Just { a, b }
   _ -> Nothing
 
-_AwaitTxOutStatusChangeResp :: Prism' PABResp {a :: TxOutRef, b :: RollbackState TxOutState}
-_AwaitTxOutStatusChangeResp = prism' (\{a, b} -> (AwaitTxOutStatusChangeResp a b)) case _ of
-  (AwaitTxOutStatusChangeResp a b) -> Just {a, b}
+_AwaitTxOutStatusChangeResp :: Prism' PABResp { a :: TxOutRef, b :: RollbackState TxOutState }
+_AwaitTxOutStatusChangeResp = prism' (\{ a, b } -> (AwaitTxOutStatusChangeResp a b)) case _ of
+  (AwaitTxOutStatusChangeResp a b) -> Just { a, b }
   _ -> Nothing
 
 _CurrentSlotResp :: Prism' PABResp Slot
@@ -645,9 +654,9 @@ _WriteBalancedTxResp = prism' WriteBalancedTxResp case _ of
   (WriteBalancedTxResp a) -> Just a
   _ -> Nothing
 
-_ExposeEndpointResp :: Prism' PABResp {a :: EndpointDescription, b :: EndpointValue RawJson}
-_ExposeEndpointResp = prism' (\{a, b} -> (ExposeEndpointResp a b)) case _ of
-  (ExposeEndpointResp a b) -> Just {a, b}
+_ExposeEndpointResp :: Prism' PABResp { a :: EndpointDescription, b :: EndpointValue RawJson }
+_ExposeEndpointResp = prism' (\{ a, b } -> (ExposeEndpointResp a b)) case _ of
+  (ExposeEndpointResp a b) -> Just { a, b }
   _ -> Nothing
 
 _PosixTimeRangeToContainedSlotRangeResp :: Prism' PABResp (Either SlotConversionError (Interval Slot))
@@ -678,10 +687,11 @@ instance EncodeJson WriteBalancedTxResponse where
 
 instance DecodeJson WriteBalancedTxResponse where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "WriteBalancedTxResponse" $ Map.fromFoldable
-      [ "WriteBalancedTxFailed" /\ D.content (WriteBalancedTxFailed <$> D.value)
-      , "WriteBalancedTxSuccess" /\ D.content (WriteBalancedTxSuccess <$> (D.either D.value D.value))
-      ]
+    $ D.sumType "WriteBalancedTxResponse"
+    $ Map.fromFoldable
+        [ "WriteBalancedTxFailed" /\ D.content (WriteBalancedTxFailed <$> D.value)
+        , "WriteBalancedTxSuccess" /\ D.content (WriteBalancedTxSuccess <$> (D.either D.value D.value))
+        ]
 
 derive instance Generic WriteBalancedTxResponse _
 

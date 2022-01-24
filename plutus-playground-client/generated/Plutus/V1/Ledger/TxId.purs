@@ -32,8 +32,10 @@ instance Show TxId where
   show a = genericShow a
 
 instance EncodeJson TxId where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { getTxId: E.value :: _ String })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { getTxId: E.value :: _ String }
+    )
 
 instance DecodeJson TxId where
   decodeJson = defer \_ -> D.decode $ (TxId <$> D.record "TxId" { getTxId: D.value :: _ String })
@@ -44,5 +46,5 @@ derive instance Newtype TxId _
 
 --------------------------------------------------------------------------------
 
-_TxId :: Iso' TxId {getTxId :: String}
+_TxId :: Iso' TxId { getTxId :: String }
 _TxId = _Newtype

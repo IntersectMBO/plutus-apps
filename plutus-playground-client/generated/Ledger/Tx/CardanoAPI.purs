@@ -94,20 +94,21 @@ instance EncodeJson ToCardanoError where
 
 instance DecodeJson ToCardanoError where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ToCardanoError" $ Map.fromFoldable
-      [ "TxBodyError" /\ D.content (TxBodyError <$> D.value)
-      , "DeserialisationError" /\ pure DeserialisationError
-      , "InvalidValidityRange" /\ pure InvalidValidityRange
-      , "ValueNotPureAda" /\ pure ValueNotPureAda
-      , "OutputHasZeroAda" /\ pure OutputHasZeroAda
-      , "StakingPointersNotSupported" /\ pure StakingPointersNotSupported
-      , "SimpleScriptsNotSupportedToCardano" /\ pure SimpleScriptsNotSupportedToCardano
-      , "MissingTxInType" /\ pure MissingTxInType
-      , "MissingMintingPolicyRedeemer" /\ pure MissingMintingPolicyRedeemer
-      , "MissingMintingPolicy" /\ pure MissingMintingPolicy
-      , "ScriptPurposeNotSupported" /\ D.content (ScriptPurposeNotSupported <$> D.value)
-      , "Tag" /\ D.content (D.tuple $ Tag </$\>D.value </*\> D.value)
-      ]
+    $ D.sumType "ToCardanoError"
+    $ Map.fromFoldable
+        [ "TxBodyError" /\ D.content (TxBodyError <$> D.value)
+        , "DeserialisationError" /\ pure DeserialisationError
+        , "InvalidValidityRange" /\ pure InvalidValidityRange
+        , "ValueNotPureAda" /\ pure ValueNotPureAda
+        , "OutputHasZeroAda" /\ pure OutputHasZeroAda
+        , "StakingPointersNotSupported" /\ pure StakingPointersNotSupported
+        , "SimpleScriptsNotSupportedToCardano" /\ pure SimpleScriptsNotSupportedToCardano
+        , "MissingTxInType" /\ pure MissingTxInType
+        , "MissingMintingPolicyRedeemer" /\ pure MissingMintingPolicyRedeemer
+        , "MissingMintingPolicy" /\ pure MissingMintingPolicy
+        , "ScriptPurposeNotSupported" /\ D.content (ScriptPurposeNotSupported <$> D.value)
+        , "Tag" /\ D.content (D.tuple $ Tag </$\> D.value </*\> D.value)
+        ]
 
 derive instance Generic ToCardanoError _
 
@@ -168,7 +169,7 @@ _ScriptPurposeNotSupported = prism' ScriptPurposeNotSupported case _ of
   (ScriptPurposeNotSupported a) -> Just a
   _ -> Nothing
 
-_Tag :: Prism' ToCardanoError {a :: String, b :: ToCardanoError}
-_Tag = prism' (\{a, b} -> (Tag a b)) case _ of
-  (Tag a b) -> Just {a, b}
+_Tag :: Prism' ToCardanoError { a :: String, b :: ToCardanoError }
+_Tag = prism' (\{ a, b } -> (Tag a b)) case _ of
+  (Tag a b) -> Just { a, b }
   _ -> Nothing

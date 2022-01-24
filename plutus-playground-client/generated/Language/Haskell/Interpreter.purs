@@ -25,11 +25,11 @@ import Data.Map as Map
 data CompilationError
   = RawError String
   | CompilationError
-    { filename :: String
-    , row :: Int
-    , column :: Int
-    , text :: Array String
-    }
+      { filename :: String
+      , row :: Int
+      , column :: Int
+      , text :: Array String
+      }
 
 instance Show CompilationError where
   show a = genericShow a
@@ -37,7 +37,7 @@ instance Show CompilationError where
 instance EncodeJson CompilationError where
   encodeJson = defer \_ -> case _ of
     RawError a -> E.encodeTagged "RawError" a E.value
-    CompilationError {filename, row, column, text} -> encodeJson
+    CompilationError { filename, row, column, text } -> encodeJson
       { tag: "CompilationError"
       , filename: flip E.encode filename E.value
       , row: flip E.encode row E.value
@@ -47,15 +47,18 @@ instance EncodeJson CompilationError where
 
 instance DecodeJson CompilationError where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "CompilationError" $ Map.fromFoldable
-      [ "RawError" /\ D.content (RawError <$> D.value)
-      , "CompilationError" /\ (CompilationError <$> D.object "CompilationError"
-        { filename: D.value :: _ String
-        , row: D.value :: _ Int
-        , column: D.value :: _ Int
-        , text: D.value :: _ (Array String)
-        })
-      ]
+    $ D.sumType "CompilationError"
+    $ Map.fromFoldable
+        [ "RawError" /\ D.content (RawError <$> D.value)
+        , "CompilationError" /\
+            ( CompilationError <$> D.object "CompilationError"
+                { filename: D.value :: _ String
+                , row: D.value :: _ Int
+                , column: D.value :: _ Int
+                , text: D.value :: _ (Array String)
+                }
+            )
+        ]
 
 derive instance Generic CompilationError _
 
@@ -66,7 +69,7 @@ _RawError = prism' RawError case _ of
   (RawError a) -> Just a
   _ -> Nothing
 
-_CompilationError :: Prism' CompilationError {filename :: String, row :: Int, column :: Int, text :: Array String}
+_CompilationError :: Prism' CompilationError { filename :: String, row :: Int, column :: Int, text :: Array String }
 _CompilationError = prism' CompilationError case _ of
   (CompilationError a) -> Just a
   _ -> Nothing
@@ -87,10 +90,11 @@ instance EncodeJson InterpreterError where
 
 instance DecodeJson InterpreterError where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "InterpreterError" $ Map.fromFoldable
-      [ "CompilationErrors" /\ D.content (CompilationErrors <$> D.value)
-      , "TimeoutError" /\ D.content (TimeoutError <$> D.value)
-      ]
+    $ D.sumType "InterpreterError"
+    $ Map.fromFoldable
+        [ "CompilationErrors" /\ D.content (CompilationErrors <$> D.value)
+        , "TimeoutError" /\ D.content (TimeoutError <$> D.value)
+        ]
 
 derive instance Generic InterpreterError _
 
@@ -119,16 +123,20 @@ instance (Show a) => Show (InterpreterResult a) where
 derive instance (Eq a) => Eq (InterpreterResult a)
 
 instance (EncodeJson a) => EncodeJson (InterpreterResult a) where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { warnings: E.value :: _ (Array Warning)
-                                                   , result: E.value :: _ a
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { warnings: E.value :: _ (Array Warning)
+        , result: E.value :: _ a
+        }
+    )
 
 instance (DecodeJson a) => DecodeJson (InterpreterResult a) where
-  decodeJson = defer \_ -> D.decode $ (InterpreterResult <$> D.record "InterpreterResult"
-      { warnings: D.value :: _ (Array Warning)
-      , result: D.value :: _ a
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( InterpreterResult <$> D.record "InterpreterResult"
+        { warnings: D.value :: _ (Array Warning)
+        , result: D.value :: _ a
+        }
+    )
 
 derive instance Generic (InterpreterResult a) _
 
@@ -136,7 +144,7 @@ derive instance Newtype (InterpreterResult a) _
 
 --------------------------------------------------------------------------------
 
-_InterpreterResult :: forall a. Iso' (InterpreterResult a) {warnings :: Array Warning, result :: a}
+_InterpreterResult :: forall a. Iso' (InterpreterResult a) { warnings :: Array Warning, result :: a }
 _InterpreterResult = _Newtype
 
 --------------------------------------------------------------------------------

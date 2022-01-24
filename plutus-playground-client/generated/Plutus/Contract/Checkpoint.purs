@@ -95,16 +95,17 @@ instance EncodeJson CheckpointLogMsg where
 
 instance DecodeJson CheckpointLogMsg where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "CheckpointLogMsg" $ Map.fromFoldable
-      [ "LogFoundValueRestoringKey" /\ D.content (LogFoundValueRestoringKey <$> D.value)
-      , "LogDecodingErrorAtKey" /\ D.content (LogDecodingErrorAtKey <$> D.value)
-      , "LogNoValueForKey" /\ D.content (LogNoValueForKey <$> D.value)
-      , "LogDoCheckpoint" /\ pure LogDoCheckpoint
-      , "LogAllocateKey" /\ pure LogAllocateKey
-      , "LogRetrieve" /\ D.content (LogRetrieve <$> D.value)
-      , "LogStore" /\ D.content (D.tuple $ LogStore </$\>D.value </*\> D.value)
-      , "LogKeyUpdate" /\ D.content (D.tuple $ LogKeyUpdate </$\>D.value </*\> D.value)
-      ]
+    $ D.sumType "CheckpointLogMsg"
+    $ Map.fromFoldable
+        [ "LogFoundValueRestoringKey" /\ D.content (LogFoundValueRestoringKey <$> D.value)
+        , "LogDecodingErrorAtKey" /\ D.content (LogDecodingErrorAtKey <$> D.value)
+        , "LogNoValueForKey" /\ D.content (LogNoValueForKey <$> D.value)
+        , "LogDoCheckpoint" /\ pure LogDoCheckpoint
+        , "LogAllocateKey" /\ pure LogAllocateKey
+        , "LogRetrieve" /\ D.content (LogRetrieve <$> D.value)
+        , "LogStore" /\ D.content (D.tuple $ LogStore </$\> D.value </*\> D.value)
+        , "LogKeyUpdate" /\ D.content (D.tuple $ LogKeyUpdate </$\> D.value </*\> D.value)
+        ]
 
 derive instance Generic CheckpointLogMsg _
 
@@ -140,12 +141,12 @@ _LogRetrieve = prism' LogRetrieve case _ of
   (LogRetrieve a) -> Just a
   _ -> Nothing
 
-_LogStore :: Prism' CheckpointLogMsg {a :: CheckpointKey, b :: CheckpointKey}
-_LogStore = prism' (\{a, b} -> (LogStore a b)) case _ of
-  (LogStore a b) -> Just {a, b}
+_LogStore :: Prism' CheckpointLogMsg { a :: CheckpointKey, b :: CheckpointKey }
+_LogStore = prism' (\{ a, b } -> (LogStore a b)) case _ of
+  (LogStore a b) -> Just { a, b }
   _ -> Nothing
 
-_LogKeyUpdate :: Prism' CheckpointLogMsg {a :: CheckpointKey, b :: CheckpointKey}
-_LogKeyUpdate = prism' (\{a, b} -> (LogKeyUpdate a b)) case _ of
-  (LogKeyUpdate a b) -> Just {a, b}
+_LogKeyUpdate :: Prism' CheckpointLogMsg { a :: CheckpointKey, b :: CheckpointKey }
+_LogKeyUpdate = prism' (\{ a, b } -> (LogKeyUpdate a b)) case _ of
+  (LogKeyUpdate a b) -> Just { a, b }
   _ -> Nothing

@@ -60,18 +60,22 @@ instance (Show a) => Show (Request a) where
   show a = genericShow a
 
 instance (EncodeJson a) => EncodeJson (Request a) where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { rqID: E.value :: _ RequestID
-                                                   , itID: E.value :: _ IterationID
-                                                   , rqRequest: E.value :: _ a
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { rqID: E.value :: _ RequestID
+        , itID: E.value :: _ IterationID
+        , rqRequest: E.value :: _ a
+        }
+    )
 
 instance (DecodeJson a) => DecodeJson (Request a) where
-  decodeJson = defer \_ -> D.decode $ (Request <$> D.record "Request"
-      { rqID: D.value :: _ RequestID
-      , itID: D.value :: _ IterationID
-      , rqRequest: D.value :: _ a
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( Request <$> D.record "Request"
+        { rqID: D.value :: _ RequestID
+        , itID: D.value :: _ IterationID
+        , rqRequest: D.value :: _ a
+        }
+    )
 
 derive instance Generic (Request a) _
 
@@ -79,7 +83,7 @@ derive instance Newtype (Request a) _
 
 --------------------------------------------------------------------------------
 
-_Request :: forall a. Iso' (Request a) {rqID :: RequestID, itID :: IterationID, rqRequest :: a}
+_Request :: forall a. Iso' (Request a) { rqID :: RequestID, itID :: IterationID, rqRequest :: a }
 _Request = _Newtype
 
 --------------------------------------------------------------------------------
@@ -122,18 +126,22 @@ instance (Show a) => Show (Response a) where
   show a = genericShow a
 
 instance (EncodeJson a) => EncodeJson (Response a) where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { rspRqID: E.value :: _ RequestID
-                                                   , rspItID: E.value :: _ IterationID
-                                                   , rspResponse: E.value :: _ a
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { rspRqID: E.value :: _ RequestID
+        , rspItID: E.value :: _ IterationID
+        , rspResponse: E.value :: _ a
+        }
+    )
 
 instance (DecodeJson a) => DecodeJson (Response a) where
-  decodeJson = defer \_ -> D.decode $ (Response <$> D.record "Response"
-      { rspRqID: D.value :: _ RequestID
-      , rspItID: D.value :: _ IterationID
-      , rspResponse: D.value :: _ a
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( Response <$> D.record "Response"
+        { rspRqID: D.value :: _ RequestID
+        , rspItID: D.value :: _ IterationID
+        , rspResponse: D.value :: _ a
+        }
+    )
 
 derive instance Generic (Response a) _
 
@@ -141,5 +149,5 @@ derive instance Newtype (Response a) _
 
 --------------------------------------------------------------------------------
 
-_Response :: forall a. Iso' (Response a) {rspRqID :: RequestID, rspItID :: IterationID, rspResponse :: a}
+_Response :: forall a. Iso' (Response a) { rspRqID :: RequestID, rspItID :: IterationID, rspResponse :: a }
 _Response = _Newtype

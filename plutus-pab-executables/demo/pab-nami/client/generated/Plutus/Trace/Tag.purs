@@ -33,7 +33,8 @@ instance encodeJsonTag :: EncodeJson Tag where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unTag: E.value :: _ String }
           )
 

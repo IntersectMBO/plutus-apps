@@ -36,7 +36,8 @@ instance encodeJsonAuthStatus :: EncodeJson AuthStatus where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _authStatusAuthRole: E.value :: _ AuthRole }
           )
 

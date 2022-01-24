@@ -159,7 +159,8 @@ instance encodeJsonUnbalancedTx :: EncodeJson UnbalancedTx where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unBalancedTxTx: E.value :: _ Tx
               , unBalancedTxRequiredSignatories: (E.dictionary E.value (E.maybe E.value)) :: _ (Map PaymentPubKeyHash (Maybe PaymentPubKey))
               , unBalancedTxUtxoIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef ScriptOutput)
@@ -171,13 +172,14 @@ instance decodeJsonUnbalancedTx :: DecodeJson UnbalancedTx where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( UnbalancedTx
+        $
+          ( UnbalancedTx
               <$> D.record "UnbalancedTx"
-                  { unBalancedTxTx: D.value :: _ Tx
-                  , unBalancedTxRequiredSignatories: (D.dictionary D.value (D.maybe D.value)) :: _ (Map PaymentPubKeyHash (Maybe PaymentPubKey))
-                  , unBalancedTxUtxoIndex: (D.dictionary D.value D.value) :: _ (Map TxOutRef ScriptOutput)
-                  , unBalancedTxValidityTimeRange: D.value :: _ (Interval POSIXTime)
-                  }
+                { unBalancedTxTx: D.value :: _ Tx
+                , unBalancedTxRequiredSignatories: (D.dictionary D.value (D.maybe D.value)) :: _ (Map PaymentPubKeyHash (Maybe PaymentPubKey))
+                , unBalancedTxUtxoIndex: (D.dictionary D.value D.value) :: _ (Map TxOutRef ScriptOutput)
+                , unBalancedTxValidityTimeRange: D.value :: _ (Interval POSIXTime)
+                }
           )
 
 derive instance genericUnbalancedTx :: Generic UnbalancedTx _
@@ -205,7 +207,8 @@ instance encodeJsonScriptOutput :: EncodeJson ScriptOutput where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { scriptOutputValidatorHash: E.value :: _ String
               , scriptOutputValue: E.value :: _ Value
               , scriptOutputDatumHash: E.value :: _ DatumHash
@@ -216,12 +219,13 @@ instance decodeJsonScriptOutput :: DecodeJson ScriptOutput where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( ScriptOutput
+        $
+          ( ScriptOutput
               <$> D.record "ScriptOutput"
-                  { scriptOutputValidatorHash: D.value :: _ String
-                  , scriptOutputValue: D.value :: _ Value
-                  , scriptOutputDatumHash: D.value :: _ DatumHash
-                  }
+                { scriptOutputValidatorHash: D.value :: _ String
+                , scriptOutputValue: D.value :: _ Value
+                , scriptOutputDatumHash: D.value :: _ DatumHash
+                }
           )
 
 derive instance genericScriptOutput :: Generic ScriptOutput _

@@ -42,11 +42,12 @@ instance (EncodeJson a) => EncodeJson (Extended a) where
 
 instance (DecodeJson a) => DecodeJson (Extended a) where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "Extended" $ Map.fromFoldable
-      [ "NegInf" /\ pure NegInf
-      , "Finite" /\ D.content (Finite <$> D.value)
-      , "PosInf" /\ pure PosInf
-      ]
+    $ D.sumType "Extended"
+    $ Map.fromFoldable
+        [ "NegInf" /\ pure NegInf
+        , "Finite" /\ D.content (Finite <$> D.value)
+        , "PosInf" /\ pure PosInf
+        ]
 
 derive instance Generic (Extended a) _
 
@@ -82,16 +83,20 @@ instance (Show a) => Show (Interval a) where
   show a = genericShow a
 
 instance (EncodeJson a) => EncodeJson (Interval a) where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { ivFrom: E.value :: _ (LowerBound a)
-                                                   , ivTo: E.value :: _ (UpperBound a)
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { ivFrom: E.value :: _ (LowerBound a)
+        , ivTo: E.value :: _ (UpperBound a)
+        }
+    )
 
 instance (DecodeJson a) => DecodeJson (Interval a) where
-  decodeJson = defer \_ -> D.decode $ (Interval <$> D.record "Interval"
-      { ivFrom: D.value :: _ (LowerBound a)
-      , ivTo: D.value :: _ (UpperBound a)
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( Interval <$> D.record "Interval"
+        { ivFrom: D.value :: _ (LowerBound a)
+        , ivTo: D.value :: _ (UpperBound a)
+        }
+    )
 
 derive instance Generic (Interval a) _
 
@@ -99,7 +104,7 @@ derive instance Newtype (Interval a) _
 
 --------------------------------------------------------------------------------
 
-_Interval :: forall a. Iso' (Interval a) {ivFrom :: LowerBound a, ivTo :: UpperBound a}
+_Interval :: forall a. Iso' (Interval a) { ivFrom :: LowerBound a, ivTo :: UpperBound a }
 _Interval = _Newtype
 
 --------------------------------------------------------------------------------
@@ -117,14 +122,14 @@ instance (EncodeJson a) => EncodeJson (LowerBound a) where
   encodeJson = defer \_ -> E.encode $ (case _ of LowerBound a b -> (a /\ b)) >$< (E.tuple (E.value >/\< E.value))
 
 instance (DecodeJson a) => DecodeJson (LowerBound a) where
-  decodeJson = defer \_ -> D.decode $ (D.tuple $ LowerBound </$\>D.value </*\> D.value)
+  decodeJson = defer \_ -> D.decode $ (D.tuple $ LowerBound </$\> D.value </*\> D.value)
 
 derive instance Generic (LowerBound a) _
 
 --------------------------------------------------------------------------------
 
-_LowerBound :: forall a. Iso' (LowerBound a) {a :: Extended a, b :: Boolean}
-_LowerBound = iso (\(LowerBound a b) -> {a, b}) (\{a, b} -> (LowerBound a b))
+_LowerBound :: forall a. Iso' (LowerBound a) { a :: Extended a, b :: Boolean }
+_LowerBound = iso (\(LowerBound a b) -> { a, b }) (\{ a, b } -> (LowerBound a b))
 
 --------------------------------------------------------------------------------
 
@@ -141,11 +146,11 @@ instance (EncodeJson a) => EncodeJson (UpperBound a) where
   encodeJson = defer \_ -> E.encode $ (case _ of UpperBound a b -> (a /\ b)) >$< (E.tuple (E.value >/\< E.value))
 
 instance (DecodeJson a) => DecodeJson (UpperBound a) where
-  decodeJson = defer \_ -> D.decode $ (D.tuple $ UpperBound </$\>D.value </*\> D.value)
+  decodeJson = defer \_ -> D.decode $ (D.tuple $ UpperBound </$\> D.value </*\> D.value)
 
 derive instance Generic (UpperBound a) _
 
 --------------------------------------------------------------------------------
 
-_UpperBound :: forall a. Iso' (UpperBound a) {a :: Extended a, b :: Boolean}
-_UpperBound = iso (\(UpperBound a b) -> {a, b}) (\{a, b} -> (UpperBound a b))
+_UpperBound :: forall a. Iso' (UpperBound a) { a :: Extended a, b :: Boolean }
+_UpperBound = iso (\(UpperBound a b) -> { a, b }) (\{ a, b } -> (UpperBound a b))

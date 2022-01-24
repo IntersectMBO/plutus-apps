@@ -34,18 +34,22 @@ instance (Show a) => Show (Page a) where
   show a = genericShow a
 
 instance (EncodeJson a) => EncodeJson (Page a) where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { currentPageQuery: E.value :: _ (PageQuery a)
-                                                   , nextPageQuery: (E.maybe E.value) :: _ (Maybe (PageQuery a))
-                                                   , pageItems: E.value :: _ (Array a)
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { currentPageQuery: E.value :: _ (PageQuery a)
+        , nextPageQuery: (E.maybe E.value) :: _ (Maybe (PageQuery a))
+        , pageItems: E.value :: _ (Array a)
+        }
+    )
 
 instance (DecodeJson a) => DecodeJson (Page a) where
-  decodeJson = defer \_ -> D.decode $ (Page <$> D.record "Page"
-      { currentPageQuery: D.value :: _ (PageQuery a)
-      , nextPageQuery: (D.maybe D.value) :: _ (Maybe (PageQuery a))
-      , pageItems: D.value :: _ (Array a)
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( Page <$> D.record "Page"
+        { currentPageQuery: D.value :: _ (PageQuery a)
+        , nextPageQuery: (D.maybe D.value) :: _ (Maybe (PageQuery a))
+        , pageItems: D.value :: _ (Array a)
+        }
+    )
 
 derive instance Generic (Page a) _
 
@@ -53,7 +57,7 @@ derive instance Newtype (Page a) _
 
 --------------------------------------------------------------------------------
 
-_Page :: forall a. Iso' (Page a) {currentPageQuery :: PageQuery a, nextPageQuery :: Maybe (PageQuery a), pageItems :: Array a}
+_Page :: forall a. Iso' (Page a) { currentPageQuery :: PageQuery a, nextPageQuery :: Maybe (PageQuery a), pageItems :: Array a }
 _Page = _Newtype
 
 --------------------------------------------------------------------------------
@@ -69,16 +73,20 @@ instance (Show a) => Show (PageQuery a) where
   show a = genericShow a
 
 instance (EncodeJson a) => EncodeJson (PageQuery a) where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { pageQuerySize: E.value :: _ PageSize
-                                                   , pageQueryLastItem: (E.maybe E.value) :: _ (Maybe a)
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { pageQuerySize: E.value :: _ PageSize
+        , pageQueryLastItem: (E.maybe E.value) :: _ (Maybe a)
+        }
+    )
 
 instance (DecodeJson a) => DecodeJson (PageQuery a) where
-  decodeJson = defer \_ -> D.decode $ (PageQuery <$> D.record "PageQuery"
-      { pageQuerySize: D.value :: _ PageSize
-      , pageQueryLastItem: (D.maybe D.value) :: _ (Maybe a)
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( PageQuery <$> D.record "PageQuery"
+        { pageQuerySize: D.value :: _ PageSize
+        , pageQueryLastItem: (D.maybe D.value) :: _ (Maybe a)
+        }
+    )
 
 derive instance Generic (PageQuery a) _
 
@@ -86,7 +94,7 @@ derive instance Newtype (PageQuery a) _
 
 --------------------------------------------------------------------------------
 
-_PageQuery :: forall a. Iso' (PageQuery a) {pageQuerySize :: PageSize, pageQueryLastItem :: Maybe a}
+_PageQuery :: forall a. Iso' (PageQuery a) { pageQuerySize :: PageSize, pageQueryLastItem :: Maybe a }
 _PageQuery = _Newtype
 
 --------------------------------------------------------------------------------
@@ -99,8 +107,10 @@ instance Show PageSize where
   show a = genericShow a
 
 instance EncodeJson PageSize where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { getPageSize: E.value :: _ Int })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { getPageSize: E.value :: _ Int }
+    )
 
 instance DecodeJson PageSize where
   decodeJson = defer \_ -> D.decode $ (PageSize <$> D.record "PageSize" { getPageSize: D.value :: _ Int })
@@ -111,5 +121,5 @@ derive instance Newtype PageSize _
 
 --------------------------------------------------------------------------------
 
-_PageSize :: Iso' PageSize {getPageSize :: Int}
+_PageSize :: Iso' PageSize { getPageSize :: Int }
 _PageSize = _Newtype

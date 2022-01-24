@@ -184,11 +184,11 @@ mkInitialValue currencies initialBalance = Value { getValue: value }
           )
           currencies
 
-handleFormEvent ::
-  Value ->
-  FormEvent ->
-  FormArgument ->
-  FormArgument
+handleFormEvent
+  :: Value
+  -> FormEvent
+  -> FormArgument
+  -> FormArgument
 handleFormEvent initialValue event = cata (Fix <<< algebra event)
   where
   algebra (SetField (SetIntField n)) (FormIntF _) = FormIntF n
@@ -249,11 +249,12 @@ handleValueEvent :: ValueEvent -> Value -> Value
 handleValueEvent (SetBalance currencySymbol tokenName amount) = set (_value <<< ix currencySymbol <<< ix tokenName) amount
 
 -- | This only exists because of the orphan instance restriction.
-traverseFunctionSchema ::
-  forall m a b.
-  Applicative m =>
-  (a -> m b) ->
-  FunctionSchema a -> m (FunctionSchema b)
+traverseFunctionSchema
+  :: forall m a b
+   . Applicative m
+  => (a -> m b)
+  -> FunctionSchema a
+  -> m (FunctionSchema b)
 traverseFunctionSchema f (FunctionSchema { endpointDescription, argument: oldArgument }) = rewrap <$> f oldArgument
   where
   rewrap newArgument = FunctionSchema { endpointDescription, argument: newArgument }

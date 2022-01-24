@@ -74,8 +74,10 @@ instance Show AuthStatus where
   show a = genericShow a
 
 instance EncodeJson AuthStatus where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { _authStatusAuthRole: E.value :: _ AuthRole })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { _authStatusAuthRole: E.value :: _ AuthRole }
+    )
 
 instance DecodeJson AuthStatus where
   decodeJson = defer \_ -> D.decode $ (AuthStatus <$> D.record "AuthStatus" { _authStatusAuthRole: D.value :: _ AuthRole })
@@ -86,8 +88,8 @@ derive instance Newtype AuthStatus _
 
 --------------------------------------------------------------------------------
 
-_AuthStatus :: Iso' AuthStatus {_authStatusAuthRole :: AuthRole}
+_AuthStatus :: Iso' AuthStatus { _authStatusAuthRole :: AuthRole }
 _AuthStatus = _Newtype
 
 authStatusAuthRole :: Lens' AuthStatus AuthRole
-authStatusAuthRole = _Newtype <<< prop (Proxy :: _"_authStatusAuthRole")
+authStatusAuthRole = _Newtype <<< prop (Proxy :: _ "_authStatusAuthRole")

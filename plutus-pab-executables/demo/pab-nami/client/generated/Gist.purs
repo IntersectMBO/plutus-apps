@@ -69,7 +69,8 @@ instance encodeJsonGist :: EncodeJson Gist where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _gistId: E.value :: _ GistId
               , _gistGitPushUrl: E.value :: _ String
               , _gistHtmlUrl: E.value :: _ String
@@ -86,18 +87,19 @@ instance decodeJsonGist :: DecodeJson Gist where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Gist
+        $
+          ( Gist
               <$> D.record "Gist"
-                  { _gistId: D.value :: _ GistId
-                  , _gistGitPushUrl: D.value :: _ String
-                  , _gistHtmlUrl: D.value :: _ String
-                  , _gistOwner: D.value :: _ Owner
-                  , _gistFiles: (D.dictionary D.value D.value) :: _ (Map String GistFile)
-                  , _gistTruncated: D.value :: _ Boolean
-                  , _gistCreatedAt: D.value :: _ String
-                  , _gistUpdatedAt: D.value :: _ String
-                  , _gistDescription: D.value :: _ String
-                  }
+                { _gistId: D.value :: _ GistId
+                , _gistGitPushUrl: D.value :: _ String
+                , _gistHtmlUrl: D.value :: _ String
+                , _gistOwner: D.value :: _ Owner
+                , _gistFiles: (D.dictionary D.value D.value) :: _ (Map String GistFile)
+                , _gistTruncated: D.value :: _ Boolean
+                , _gistCreatedAt: D.value :: _ String
+                , _gistUpdatedAt: D.value :: _ String
+                , _gistDescription: D.value :: _ String
+                }
           )
 
 derive instance genericGist :: Generic Gist _
@@ -154,7 +156,8 @@ instance encodeJsonGistFile :: EncodeJson GistFile where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _gistFileFilename: E.value :: _ String
               , _gistFileLanguage: (E.maybe E.value) :: _ (Maybe String)
               , _gistFileType: E.value :: _ String
@@ -167,14 +170,15 @@ instance decodeJsonGistFile :: DecodeJson GistFile where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( GistFile
+        $
+          ( GistFile
               <$> D.record "GistFile"
-                  { _gistFileFilename: D.value :: _ String
-                  , _gistFileLanguage: (D.maybe D.value) :: _ (Maybe String)
-                  , _gistFileType: D.value :: _ String
-                  , _gistFileTruncated: (D.maybe D.value) :: _ (Maybe Boolean)
-                  , _gistFileContent: (D.maybe D.value) :: _ (Maybe String)
-                  }
+                { _gistFileFilename: D.value :: _ String
+                , _gistFileLanguage: (D.maybe D.value) :: _ (Maybe String)
+                , _gistFileType: D.value :: _ String
+                , _gistFileTruncated: (D.maybe D.value) :: _ (Maybe Boolean)
+                , _gistFileContent: (D.maybe D.value) :: _ (Maybe String)
+                }
           )
 
 derive instance genericGistFile :: Generic GistFile _
@@ -212,7 +216,8 @@ instance encodeJsonNewGist :: EncodeJson NewGist where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _newGistDescription: E.value :: _ String
               , _newGistPublic: E.value :: _ Boolean
               , _newGistFiles: E.value :: _ (Array NewGistFile)
@@ -223,12 +228,13 @@ instance decodeJsonNewGist :: DecodeJson NewGist where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( NewGist
+        $
+          ( NewGist
               <$> D.record "NewGist"
-                  { _newGistDescription: D.value :: _ String
-                  , _newGistPublic: D.value :: _ Boolean
-                  , _newGistFiles: D.value :: _ (Array NewGistFile)
-                  }
+                { _newGistDescription: D.value :: _ String
+                , _newGistPublic: D.value :: _ Boolean
+                , _newGistFiles: D.value :: _ (Array NewGistFile)
+                }
           )
 
 derive instance genericNewGist :: Generic NewGist _
@@ -259,7 +265,8 @@ instance encodeJsonNewGistFile :: EncodeJson NewGistFile where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _newGistFilename: E.value :: _ String
               , _newGistFileContent: E.value :: _ String
               }
@@ -269,11 +276,12 @@ instance decodeJsonNewGistFile :: DecodeJson NewGistFile where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( NewGistFile
+        $
+          ( NewGistFile
               <$> D.record "NewGistFile"
-                  { _newGistFilename: D.value :: _ String
-                  , _newGistFileContent: D.value :: _ String
-                  }
+                { _newGistFilename: D.value :: _ String
+                , _newGistFileContent: D.value :: _ String
+                }
           )
 
 derive instance genericNewGistFile :: Generic NewGistFile _
@@ -306,7 +314,8 @@ instance encodeJsonOwner :: EncodeJson Owner where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _ownerLogin: E.value :: _ String
               , _ownerHtmlUrl: E.value :: _ String
               }
@@ -316,11 +325,12 @@ instance decodeJsonOwner :: DecodeJson Owner where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Owner
+        $
+          ( Owner
               <$> D.record "Owner"
-                  { _ownerLogin: D.value :: _ String
-                  , _ownerHtmlUrl: D.value :: _ String
-                  }
+                { _ownerLogin: D.value :: _ String
+                , _ownerHtmlUrl: D.value :: _ String
+                }
           )
 
 derive instance genericOwner :: Generic Owner _

@@ -46,7 +46,8 @@ instance encodeJsonAnnotatedTx :: EncodeJson AnnotatedTx where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { sequenceId: E.value :: _ SequenceId
               , txId: E.value :: _ TxId
               , tx: E.value :: _ Tx
@@ -60,15 +61,16 @@ instance decodeJsonAnnotatedTx :: DecodeJson AnnotatedTx where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( AnnotatedTx
+        $
+          ( AnnotatedTx
               <$> D.record "AnnotatedTx"
-                  { sequenceId: D.value :: _ SequenceId
-                  , txId: D.value :: _ TxId
-                  , tx: D.value :: _ Tx
-                  , dereferencedInputs: D.value :: _ (Array DereferencedInput)
-                  , balances: (D.dictionary D.value D.value) :: _ (Map BeneficialOwner Value)
-                  , valid: D.value :: _ Boolean
-                  }
+                { sequenceId: D.value :: _ SequenceId
+                , txId: D.value :: _ TxId
+                , tx: D.value :: _ Tx
+                , dereferencedInputs: D.value :: _ (Array DereferencedInput)
+                , balances: (D.dictionary D.value D.value) :: _ (Map BeneficialOwner Value)
+                , valid: D.value :: _ Boolean
+                }
           )
 
 derive instance genericAnnotatedTx :: Generic AnnotatedTx _
@@ -82,9 +84,9 @@ _AnnotatedTx = _Newtype
 --------------------------------------------------------------------------------
 data DereferencedInput
   = DereferencedInput
-    { originalInput :: TxIn
-    , refersTo :: TxOut
-    }
+      { originalInput :: TxIn
+      , refersTo :: TxOut
+      }
   | InputNotFound TxKey
 
 derive instance eqDereferencedInput :: Eq DereferencedInput
@@ -110,11 +112,12 @@ instance decodeJsonDereferencedInput :: DecodeJson DereferencedInput where
         $ D.sumType "DereferencedInput"
         $ Map.fromFoldable
             [ "DereferencedInput"
-                /\ ( DereferencedInput
+                /\
+                  ( DereferencedInput
                       <$> D.object "DereferencedInput"
-                          { originalInput: D.value :: _ TxIn
-                          , refersTo: D.value :: _ TxOut
-                          }
+                        { originalInput: D.value :: _ TxIn
+                        , refersTo: D.value :: _ TxOut
+                        }
                   )
             , "InputNotFound" /\ D.content (InputNotFound <$> D.value)
             ]
@@ -195,7 +198,8 @@ instance encodeJsonSequenceId :: EncodeJson SequenceId where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { slotIndex: E.value :: _ Int
               , txIndex: E.value :: _ Int
               }
@@ -205,11 +209,12 @@ instance decodeJsonSequenceId :: DecodeJson SequenceId where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( SequenceId
+        $
+          ( SequenceId
               <$> D.record "SequenceId"
-                  { slotIndex: D.value :: _ Int
-                  , txIndex: D.value :: _ Int
-                  }
+                { slotIndex: D.value :: _ Int
+                , txIndex: D.value :: _ Int
+                }
           )
 
 derive instance genericSequenceId :: Generic SequenceId _
@@ -238,7 +243,8 @@ instance encodeJsonTxKey :: EncodeJson TxKey where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { _txKeyTxId: E.value :: _ TxId
               , _txKeyTxOutRefIdx: E.value :: _ BigInt
               }
@@ -248,11 +254,12 @@ instance decodeJsonTxKey :: DecodeJson TxKey where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( TxKey
+        $
+          ( TxKey
               <$> D.record "TxKey"
-                  { _txKeyTxId: D.value :: _ TxId
-                  , _txKeyTxOutRefIdx: D.value :: _ BigInt
-                  }
+                { _txKeyTxId: D.value :: _ TxId
+                , _txKeyTxOutRefIdx: D.value :: _ BigInt
+                }
           )
 
 derive instance genericTxKey :: Generic TxKey _

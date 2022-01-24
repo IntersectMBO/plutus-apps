@@ -27,15 +27,15 @@ import Data.Map as Map
 
 data ChainIndexTxOut
   = PublicKeyChainIndexTxOut
-    { _ciTxOutAddress :: Address
-    , _ciTxOutValue :: Value
-    }
+      { _ciTxOutAddress :: Address
+      , _ciTxOutValue :: Value
+      }
   | ScriptChainIndexTxOut
-    { _ciTxOutAddress :: Address
-    , _ciTxOutValidator :: Either String Validator
-    , _ciTxOutDatum :: Either DatumHash String
-    , _ciTxOutValue :: Value
-    }
+      { _ciTxOutAddress :: Address
+      , _ciTxOutValidator :: Either String Validator
+      , _ciTxOutDatum :: Either DatumHash String
+      , _ciTxOutValue :: Value
+      }
 
 derive instance eqChainIndexTxOut :: Eq ChainIndexTxOut
 
@@ -67,20 +67,22 @@ instance decodeJsonChainIndexTxOut :: DecodeJson ChainIndexTxOut where
         $ D.sumType "ChainIndexTxOut"
         $ Map.fromFoldable
             [ "PublicKeyChainIndexTxOut"
-                /\ ( PublicKeyChainIndexTxOut
+                /\
+                  ( PublicKeyChainIndexTxOut
                       <$> D.object "PublicKeyChainIndexTxOut"
-                          { _ciTxOutAddress: D.value :: _ Address
-                          , _ciTxOutValue: D.value :: _ Value
-                          }
+                        { _ciTxOutAddress: D.value :: _ Address
+                        , _ciTxOutValue: D.value :: _ Value
+                        }
                   )
             , "ScriptChainIndexTxOut"
-                /\ ( ScriptChainIndexTxOut
+                /\
+                  ( ScriptChainIndexTxOut
                       <$> D.object "ScriptChainIndexTxOut"
-                          { _ciTxOutAddress: D.value :: _ Address
-                          , _ciTxOutValidator: (D.either D.value D.value) :: _ (Either String Validator)
-                          , _ciTxOutDatum: (D.either D.value D.value) :: _ (Either DatumHash String)
-                          , _ciTxOutValue: D.value :: _ Value
-                          }
+                        { _ciTxOutAddress: D.value :: _ Address
+                        , _ciTxOutValidator: (D.either D.value D.value) :: _ (Either String Validator)
+                        , _ciTxOutDatum: (D.either D.value D.value) :: _ (Either DatumHash String)
+                        , _ciTxOutValue: D.value :: _ Value
+                        }
                   )
             ]
 

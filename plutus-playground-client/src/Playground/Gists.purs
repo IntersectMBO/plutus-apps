@@ -19,11 +19,11 @@ import Language.Haskell.Interpreter (SourceCode)
 import Playground.Types (Simulation)
 import Prelude (($), (<$>), (<<<))
 
-mkNewGist ::
-  { source :: Maybe SourceCode
-  , simulations :: Cursor Simulation
-  } ->
-  Maybe NewGist
+mkNewGist
+  :: { source :: Maybe SourceCode
+     , simulations :: Cursor Simulation
+     }
+  -> Maybe NewGist
 mkNewGist { source, simulations } =
   if Array.null gistFiles then
     Nothing

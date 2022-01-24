@@ -35,7 +35,8 @@ instance encodeJsonMintingPolicy :: EncodeJson MintingPolicy where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getMintingPolicy: E.value :: _ String }
           )
 
@@ -65,7 +66,8 @@ instance encodeJsonStakeValidator :: EncodeJson StakeValidator where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getStakeValidator: E.value :: _ String }
           )
 
@@ -95,7 +97,8 @@ instance encodeJsonValidator :: EncodeJson Validator where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getValidator: E.value :: _ String }
           )
 

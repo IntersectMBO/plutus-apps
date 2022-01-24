@@ -53,10 +53,11 @@ _AnnotatedBlocks :: Traversal' AnnotatedBlockchain AnnotatedTx
 _AnnotatedBlocks = _AnnotatedBlockchain <<< traversed <<< traversed
 
 type State
-  = { chainFocus :: Maybe TxId
-    , chainFocusAppearing :: Boolean
-    , chainFocusAge :: Ordering
-    }
+  =
+  { chainFocus :: Maybe TxId
+  , chainFocusAppearing :: Boolean
+  , chainFocusAge :: Ordering
+  }
 
 initialState :: State
 initialState =

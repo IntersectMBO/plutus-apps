@@ -47,28 +47,32 @@ instance Show ChainIndexTx where
   show a = genericShow a
 
 instance EncodeJson ChainIndexTx where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { _citxTxId: E.value :: _ TxId
-                                                   , _citxInputs: E.value :: _ (Set TxIn)
-                                                   , _citxOutputs: E.value :: _ ChainIndexTxOutputs
-                                                   , _citxValidRange: E.value :: _ (Interval Slot)
-                                                   , _citxData: (E.dictionary E.value E.value) :: _ (Map DatumHash String)
-                                                   , _citxRedeemers: (E.dictionary E.value E.value) :: _ (Map String String)
-                                                   , _citxScripts: (E.dictionary E.value E.value) :: _ (Map String String)
-                                                   , _citxCardanoTx: (E.maybe E.value) :: _ (Maybe RawJson)
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { _citxTxId: E.value :: _ TxId
+        , _citxInputs: E.value :: _ (Set TxIn)
+        , _citxOutputs: E.value :: _ ChainIndexTxOutputs
+        , _citxValidRange: E.value :: _ (Interval Slot)
+        , _citxData: (E.dictionary E.value E.value) :: _ (Map DatumHash String)
+        , _citxRedeemers: (E.dictionary E.value E.value) :: _ (Map String String)
+        , _citxScripts: (E.dictionary E.value E.value) :: _ (Map String String)
+        , _citxCardanoTx: (E.maybe E.value) :: _ (Maybe RawJson)
+        }
+    )
 
 instance DecodeJson ChainIndexTx where
-  decodeJson = defer \_ -> D.decode $ (ChainIndexTx <$> D.record "ChainIndexTx"
-      { _citxTxId: D.value :: _ TxId
-      , _citxInputs: D.value :: _ (Set TxIn)
-      , _citxOutputs: D.value :: _ ChainIndexTxOutputs
-      , _citxValidRange: D.value :: _ (Interval Slot)
-      , _citxData: (D.dictionary D.value D.value) :: _ (Map DatumHash String)
-      , _citxRedeemers: (D.dictionary D.value D.value) :: _ (Map String String)
-      , _citxScripts: (D.dictionary D.value D.value) :: _ (Map String String)
-      , _citxCardanoTx: (D.maybe D.value) :: _ (Maybe RawJson)
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( ChainIndexTx <$> D.record "ChainIndexTx"
+        { _citxTxId: D.value :: _ TxId
+        , _citxInputs: D.value :: _ (Set TxIn)
+        , _citxOutputs: D.value :: _ ChainIndexTxOutputs
+        , _citxValidRange: D.value :: _ (Interval Slot)
+        , _citxData: (D.dictionary D.value D.value) :: _ (Map DatumHash String)
+        , _citxRedeemers: (D.dictionary D.value D.value) :: _ (Map String String)
+        , _citxScripts: (D.dictionary D.value D.value) :: _ (Map String String)
+        , _citxCardanoTx: (D.maybe D.value) :: _ (Maybe RawJson)
+        }
+    )
 
 derive instance Generic ChainIndexTx _
 
@@ -76,32 +80,32 @@ derive instance Newtype ChainIndexTx _
 
 --------------------------------------------------------------------------------
 
-_ChainIndexTx :: Iso' ChainIndexTx {_citxTxId :: TxId, _citxInputs :: Set TxIn, _citxOutputs :: ChainIndexTxOutputs, _citxValidRange :: Interval Slot, _citxData :: Map DatumHash String, _citxRedeemers :: Map String String, _citxScripts :: Map String String, _citxCardanoTx :: Maybe RawJson}
+_ChainIndexTx :: Iso' ChainIndexTx { _citxTxId :: TxId, _citxInputs :: Set TxIn, _citxOutputs :: ChainIndexTxOutputs, _citxValidRange :: Interval Slot, _citxData :: Map DatumHash String, _citxRedeemers :: Map String String, _citxScripts :: Map String String, _citxCardanoTx :: Maybe RawJson }
 _ChainIndexTx = _Newtype
 
 citxTxId :: Lens' ChainIndexTx TxId
-citxTxId = _Newtype <<< prop (Proxy :: _"_citxTxId")
+citxTxId = _Newtype <<< prop (Proxy :: _ "_citxTxId")
 
 citxInputs :: Lens' ChainIndexTx (Set TxIn)
-citxInputs = _Newtype <<< prop (Proxy :: _"_citxInputs")
+citxInputs = _Newtype <<< prop (Proxy :: _ "_citxInputs")
 
 citxOutputs :: Lens' ChainIndexTx ChainIndexTxOutputs
-citxOutputs = _Newtype <<< prop (Proxy :: _"_citxOutputs")
+citxOutputs = _Newtype <<< prop (Proxy :: _ "_citxOutputs")
 
 citxValidRange :: Lens' ChainIndexTx (Interval Slot)
-citxValidRange = _Newtype <<< prop (Proxy :: _"_citxValidRange")
+citxValidRange = _Newtype <<< prop (Proxy :: _ "_citxValidRange")
 
 citxData :: Lens' ChainIndexTx (Map DatumHash String)
-citxData = _Newtype <<< prop (Proxy :: _"_citxData")
+citxData = _Newtype <<< prop (Proxy :: _ "_citxData")
 
 citxRedeemers :: Lens' ChainIndexTx (Map String String)
-citxRedeemers = _Newtype <<< prop (Proxy :: _"_citxRedeemers")
+citxRedeemers = _Newtype <<< prop (Proxy :: _ "_citxRedeemers")
 
 citxScripts :: Lens' ChainIndexTx (Map String String)
-citxScripts = _Newtype <<< prop (Proxy :: _"_citxScripts")
+citxScripts = _Newtype <<< prop (Proxy :: _ "_citxScripts")
 
 citxCardanoTx :: Lens' ChainIndexTx (Maybe RawJson)
-citxCardanoTx = _Newtype <<< prop (Proxy :: _"_citxCardanoTx")
+citxCardanoTx = _Newtype <<< prop (Proxy :: _ "_citxCardanoTx")
 
 --------------------------------------------------------------------------------
 
@@ -121,10 +125,11 @@ instance EncodeJson ChainIndexTxOutputs where
 
 instance DecodeJson ChainIndexTxOutputs where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ChainIndexTxOutputs" $ Map.fromFoldable
-      [ "InvalidTx" /\ pure InvalidTx
-      , "ValidTx" /\ D.content (ValidTx <$> D.value)
-      ]
+    $ D.sumType "ChainIndexTxOutputs"
+    $ Map.fromFoldable
+        [ "InvalidTx" /\ pure InvalidTx
+        , "ValidTx" /\ D.content (ValidTx <$> D.value)
+        ]
 
 derive instance Generic ChainIndexTxOutputs _
 

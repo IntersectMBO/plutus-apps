@@ -33,11 +33,11 @@ instance EncodeJson NodeClientEvent where
   encodeJson = defer \_ -> E.encode $ (case _ of TxSubmit a b -> (a /\ b)) >$< (E.tuple (E.value >/\< E.value))
 
 instance DecodeJson NodeClientEvent where
-  decodeJson = defer \_ -> D.decode $ (D.tuple $ TxSubmit </$\>D.value </*\> D.value)
+  decodeJson = defer \_ -> D.decode $ (D.tuple $ TxSubmit </$\> D.value </*\> D.value)
 
 derive instance Generic NodeClientEvent _
 
 --------------------------------------------------------------------------------
 
-_TxSubmit :: Iso' NodeClientEvent {a :: TxId, b :: Value}
-_TxSubmit = iso (\(TxSubmit a b) -> {a, b}) (\{a, b} -> (TxSubmit a b))
+_TxSubmit :: Iso' NodeClientEvent { a :: TxId, b :: Value }
+_TxSubmit = iso (\(TxSubmit a b) -> { a, b }) (\{ a, b } -> (TxSubmit a b))

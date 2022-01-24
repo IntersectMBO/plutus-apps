@@ -39,7 +39,8 @@ instance encodeJsonAddress :: EncodeJson Address where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { addressCredential: E.value :: _ Credential
               , addressStakingCredential: (E.maybe E.value) :: _ (Maybe StakingCredential)
               }
@@ -49,11 +50,12 @@ instance decodeJsonAddress :: DecodeJson Address where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Address
+        $
+          ( Address
               <$> D.record "Address"
-                  { addressCredential: D.value :: _ Credential
-                  , addressStakingCredential: (D.maybe D.value) :: _ (Maybe StakingCredential)
-                  }
+                { addressCredential: D.value :: _ Credential
+                , addressStakingCredential: (D.maybe D.value) :: _ (Maybe StakingCredential)
+                }
           )
 
 derive instance genericAddress :: Generic Address _

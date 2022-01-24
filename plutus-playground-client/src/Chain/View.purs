@@ -51,9 +51,9 @@ chainView namingFn state annotatedBlockchain =
         ( [ ClassName "chain" ]
             <> animationClass _chainFocusAppearing state
             <> case state.chainFocusAge of
-                LT -> [ ClassName "chain-focus-newer" ]
-                EQ -> []
-                GT -> [ ClassName "chain-focus-older" ]
+              LT -> [ ClassName "chain-focus-newer" ]
+              EQ -> []
+              GT -> [ ClassName "chain-focus-older" ]
         )
     ]
     [ h2_
@@ -232,8 +232,8 @@ balancesTable namingFn sequenceId balances =
                                   in
                                     ClipboardAction
                                       <$> showShortCopyLong
-                                          formatted
-                                          (Just [ text $ abbreviate 15 formatted ])
+                                        formatted
+                                        (Just [ text $ abbreviate 15 formatted ])
                                 ]
                             ]
                         )
@@ -304,13 +304,13 @@ txIdView :: forall p. TxId -> HTML p Action
 txIdView (TxId { getTxId: str }) =
   ClipboardAction
     <$> showShortCopyLong
-        str
-        ( Just
-            [ strong_ [ text "Tx: " ]
-            , nbsp
-            , text str
-            ]
-        )
+      str
+      ( Just
+          [ strong_ [ text "Tx: " ]
+          , nbsp
+          , text str
+          ]
+      )
 
 dereferencedInputView :: forall p. NamingFn -> AnnotatedBlockchain -> DereferencedInput -> HTML p Action
 dereferencedInputView namingFn annotatedBlockchain (DereferencedInput { originalInput, refersTo }) =
@@ -395,34 +395,34 @@ beneficialOwnerView namingFn (OwnedByPaymentPubKey (PaymentPubKeyHash { unPaymen
 beneficialOwnerView _ (OwnedByScript a) =
   ClipboardAction
     <$> showShortCopyLong a
-        ( Just
-            [ text "Script"
-            , nbsp
-            , text a
-            ]
-        )
+      ( Just
+          [ text "Script"
+          , nbsp
+          , text a
+          ]
+      )
 
 showPubKey :: forall p. PubKey -> HTML p Action
 showPubKey (PubKey { getPubKey: p }) =
   ClipboardAction
     <$> showShortCopyLong p
-        ( Just
-            [ text "PubKey"
-            , nbsp
-            , text p
-            ]
-        )
+      ( Just
+          [ text "PubKey"
+          , nbsp
+          , text p
+          ]
+      )
 
 showPubKeyHash :: forall p. PubKeyHash -> HTML p Action
 showPubKeyHash (PubKeyHash { getPubKeyHash: p }) =
   ClipboardAction
     <$> showShortCopyLong p
-        ( Just
-            [ text "PubKeyHash"
-            , nbsp
-            , text p
-            ]
-        )
+      ( Just
+          [ text "PubKeyHash"
+          , nbsp
+          , text p
+          ]
+      )
 
 valueView :: forall p i. Value -> HTML p i
 valueView (Value { getValue: (AssocMap.Map []) }) = empty
@@ -458,7 +458,7 @@ showToken (TokenName { unTokenName: "" }) = text "Lovelace"
 
 showToken (TokenName { unTokenName: name }) = text name
 
-onClickFocusTx :: forall p. TxId -> IProp ( onClick :: MouseEvent | p ) Action
+onClickFocusTx :: forall p. TxId -> IProp (onClick :: MouseEvent | p) Action
 onClickFocusTx txId =
   onClick
     $ const

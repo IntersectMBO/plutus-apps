@@ -42,7 +42,8 @@ instance encodeJsonPartiallyDecodedResponse :: (EncodeJson a) => EncodeJson (Par
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { hooks: E.value :: _ (Array (Request a))
               , logs: E.value :: _ (Array (LogMessage RawJson))
               , lastLogs: E.value :: _ (Array (LogMessage RawJson))
@@ -55,14 +56,15 @@ instance decodeJsonPartiallyDecodedResponse :: (DecodeJson a) => DecodeJson (Par
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( PartiallyDecodedResponse
+        $
+          ( PartiallyDecodedResponse
               <$> D.record "PartiallyDecodedResponse"
-                  { hooks: D.value :: _ (Array (Request a))
-                  , logs: D.value :: _ (Array (LogMessage RawJson))
-                  , lastLogs: D.value :: _ (Array (LogMessage RawJson))
-                  , err: (D.maybe D.value) :: _ (Maybe RawJson)
-                  , observableState: D.value :: _ RawJson
-                  }
+                { hooks: D.value :: _ (Array (Request a))
+                , logs: D.value :: _ (Array (LogMessage RawJson))
+                , lastLogs: D.value :: _ (Array (LogMessage RawJson))
+                , err: (D.maybe D.value) :: _ (Maybe RawJson)
+                , observableState: D.value :: _ RawJson
+                }
           )
 
 derive instance genericPartiallyDecodedResponse :: Generic (PartiallyDecodedResponse a) _

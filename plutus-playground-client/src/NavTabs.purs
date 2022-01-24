@@ -7,17 +7,18 @@ import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (classes, id)
 import Prelude (class Eq, class Show, const, show, ($), (<$>), (<>), (==))
 
-mainTabBar ::
-  forall view r p i.
-  Eq view =>
-  Show view =>
-  (view -> i) ->
-  Array
-    { link :: view
-    , title :: String
-    | r
-    } ->
-  view -> HTML p i
+mainTabBar
+  :: forall view r p i
+   . Eq view
+  => Show view
+  => (view -> i)
+  -> Array
+       { link :: view
+       , title :: String
+       | r
+       }
+  -> view
+  -> HTML p i
 mainTabBar mkAction tabs activeView =
   div_
     [ navTabs_ (mkTab <$> tabs) ]

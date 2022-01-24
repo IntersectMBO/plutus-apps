@@ -126,13 +126,13 @@ mkInitialState editorState = do
         , gistUrl: Nothing
         }
 
-mkMainFrame ::
-  forall m n.
-  MonadThrow Error n =>
-  MonadEffect n =>
-  MonadAff m =>
-  MonadAjax JsonDecodeError Json (AjaxError JsonDecodeError Json) m =>
-  n (Component Query HAction Void m)
+mkMainFrame
+  :: forall m n
+   . MonadThrow Error n
+  => MonadEffect n
+  => MonadAff m
+  => MonadAjax JsonDecodeError Json (AjaxError JsonDecodeError Json) m
+  => n (Component Query HAction Void m)
 mkMainFrame = do
   editorState <- Editor.initialState
   initialState <- mkInitialState editorState
@@ -150,26 +150,26 @@ mkMainFrame = do
     }
 
 -- TODO: use web-common withAnalytics function
-handleActionWithAnalyticsTracking ::
-  forall m.
-  MonadAjax JsonDecodeError Json (AjaxError JsonDecodeError Json) m =>
-  MonadEffect m =>
-  MonadAff m =>
-  HAction ->
-  HalogenM State HAction ChildSlots Void m Unit
+handleActionWithAnalyticsTracking
+  :: forall m
+   . MonadAjax JsonDecodeError Json (AjaxError JsonDecodeError Json) m
+  => MonadEffect m
+  => MonadAff m
+  => HAction
+  -> HalogenM State HAction ChildSlots Void m Unit
 handleActionWithAnalyticsTracking action = do
   liftEffect $ analyticsTracking action
   runHalogenApp $ handleAction action
 
-handleAction ::
-  forall m.
-  MonadAjax JsonDecodeError Json String m =>
-  MonadState State m =>
-  MonadClipboard m =>
-  MonadApp m =>
-  MonadAnimate m State =>
-  HAction ->
-  m Unit
+handleAction
+  :: forall m
+   . MonadAjax JsonDecodeError Json String m
+  => MonadState State m
+  => MonadClipboard m
+  => MonadApp m
+  => MonadAnimate m State
+  => HAction
+  -> m Unit
 handleAction Init = do
   handleAction CheckAuthStatus
   editorHandleAction $ Editor.Init
@@ -197,8 +197,8 @@ handleAction (ActionDragAndDrop _ DragLeave _) = pure unit
 handleAction (ActionDragAndDrop destination Drop event) = do
   use _actionDrag
     >>= case _ of
-        Just source -> modifying (_simulations <<< _current <<< _simulation <<< _simulationActions) (Array.move source destination)
-        _ -> pure unit
+      Just source -> modifying (_simulations <<< _current <<< _simulation <<< _simulationActions) (Array.move source destination)
+      _ -> pure unit
   preventDefault event
   assign _actionDrag Nothing
 
@@ -371,7 +371,7 @@ handleAction CompileProgram = do
       unless
         ( oldSignatures == newSignatures
             && oldCurrencies
-            == newCurrencies
+              == newCurrencies
         )
         ( assign _simulations
             $ case newCurrencies of
@@ -380,11 +380,11 @@ handleAction CompileProgram = do
         )
       pure unit
 
-handleSimulationAction ::
-  Value ->
-  SimulationAction ->
-  Array (ContractCall FormArgument) ->
-  Array (ContractCall FormArgument)
+handleSimulationAction
+  :: Value
+  -> SimulationAction
+  -> Array (ContractCall FormArgument)
+  -> Array (ContractCall FormArgument)
 handleSimulationAction _ (ModifyActions actionEvent) = handleActionEvent actionEvent
 
 handleSimulationAction initialValue (PopulateAction n event) = do
@@ -490,11 +490,12 @@ toExpression = traverseContractCall encodeForm
   encodeForm :: FormArgument -> Maybe RawJson
   encodeForm argument = (RawJson <<< encodeStringifyJson) <$> formArgumentToJson argument
 
-traverseContractCall ::
-  forall m b a.
-  Applicative m =>
-  (a -> m b) ->
-  ContractCall a -> m (ContractCall b)
+traverseContractCall
+  :: forall m b a
+   . Applicative m
+  => (a -> m b)
+  -> ContractCall a
+  -> m (ContractCall b)
 traverseContractCall _ (AddBlocks addBlocks) = pure $ AddBlocks addBlocks
 
 traverseContractCall _ (AddBlocksUntil addBlocksUntil) = pure $ AddBlocksUntil addBlocksUntil

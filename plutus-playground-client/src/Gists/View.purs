@@ -21,21 +21,21 @@ import Icons (Icon(..), icon)
 import MainFrame.Types (WebData)
 import Network.RemoteData (RemoteData(NotAsked, Loading, Failure, Success))
 
-idPublishGist :: forall r i. IProp ( id :: String | r ) i
+idPublishGist :: forall r i. IProp (id :: String | r) i
 idPublishGist = id "publish-gist"
 
-idLoadGist :: forall r i. IProp ( id :: String | r ) i
+idLoadGist :: forall r i. IProp (id :: String | r) i
 idLoadGist = id "load-gist"
 
-gistControls ::
-  forall a p.
-  { authStatus :: WebData AuthStatus
-  , createGistResult :: WebData Gist
-  , gistErrorPaneVisible :: Boolean
-  , gistUrl :: Maybe String
-  | a
-  } ->
-  HTML p GistAction
+gistControls
+  :: forall a p
+   . { authStatus :: WebData AuthStatus
+     , createGistResult :: WebData Gist
+     , gistErrorPaneVisible :: Boolean
+     , gistUrl :: Maybe String
+     | a
+     }
+  -> HTML p GistAction
 gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
   authButton
     $ div
@@ -54,9 +54,9 @@ gistControls { authStatus, createGistResult, gistErrorPaneVisible, gistUrl } =
                     , classes
                         ( [ formControl, ClassName "form-control-sm" ]
                             <> case parsedGistId of
-                                Just (Left _) -> [ isInvalid ]
-                                Just (Right _) -> [ isValid ]
-                                Nothing -> []
+                              Just (Left _) -> [ isInvalid ]
+                              Just (Right _) -> [ isValid ]
+                              Nothing -> []
                         )
                     , onValueInput SetGistUrl
                     ]

@@ -36,16 +36,20 @@ instance Show IsUtxoResponse where
   show a = genericShow a
 
 instance EncodeJson IsUtxoResponse where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { currentTip: E.value :: _ Tip
-                                                   , isUtxo: E.value :: _ Boolean
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { currentTip: E.value :: _ Tip
+        , isUtxo: E.value :: _ Boolean
+        }
+    )
 
 instance DecodeJson IsUtxoResponse where
-  decodeJson = defer \_ -> D.decode $ (IsUtxoResponse <$> D.record "IsUtxoResponse"
-      { currentTip: D.value :: _ Tip
-      , isUtxo: D.value :: _ Boolean
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( IsUtxoResponse <$> D.record "IsUtxoResponse"
+        { currentTip: D.value :: _ Tip
+        , isUtxo: D.value :: _ Boolean
+        }
+    )
 
 derive instance Generic IsUtxoResponse _
 
@@ -53,7 +57,7 @@ derive instance Newtype IsUtxoResponse _
 
 --------------------------------------------------------------------------------
 
-_IsUtxoResponse :: Iso' IsUtxoResponse {currentTip :: Tip, isUtxo :: Boolean}
+_IsUtxoResponse :: Iso' IsUtxoResponse { currentTip :: Tip, isUtxo :: Boolean }
 _IsUtxoResponse = _Newtype
 
 --------------------------------------------------------------------------------
@@ -66,8 +70,10 @@ instance Show TxosResponse where
   show a = genericShow a
 
 instance EncodeJson TxosResponse where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { paget: E.value :: _ (Page TxOutRef) })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { paget: E.value :: _ (Page TxOutRef) }
+    )
 
 instance DecodeJson TxosResponse where
   decodeJson = defer \_ -> D.decode $ (TxosResponse <$> D.record "TxosResponse" { paget: D.value :: _ (Page TxOutRef) })
@@ -78,7 +84,7 @@ derive instance Newtype TxosResponse _
 
 --------------------------------------------------------------------------------
 
-_TxosResponse :: Iso' TxosResponse {paget :: Page TxOutRef}
+_TxosResponse :: Iso' TxosResponse { paget :: Page TxOutRef }
 _TxosResponse = _Newtype
 
 --------------------------------------------------------------------------------
@@ -94,16 +100,20 @@ instance Show UtxosResponse where
   show a = genericShow a
 
 instance EncodeJson UtxosResponse where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { currentTip: E.value :: _ Tip
-                                                   , page: E.value :: _ (Page TxOutRef)
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { currentTip: E.value :: _ Tip
+        , page: E.value :: _ (Page TxOutRef)
+        }
+    )
 
 instance DecodeJson UtxosResponse where
-  decodeJson = defer \_ -> D.decode $ (UtxosResponse <$> D.record "UtxosResponse"
-      { currentTip: D.value :: _ Tip
-      , page: D.value :: _ (Page TxOutRef)
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( UtxosResponse <$> D.record "UtxosResponse"
+        { currentTip: D.value :: _ Tip
+        , page: D.value :: _ (Page TxOutRef)
+        }
+    )
 
 derive instance Generic UtxosResponse _
 
@@ -111,5 +121,5 @@ derive instance Newtype UtxosResponse _
 
 --------------------------------------------------------------------------------
 
-_UtxosResponse :: Iso' UtxosResponse {currentTip :: Tip, page :: Page TxOutRef}
+_UtxosResponse :: Iso' UtxosResponse { currentTip :: Tip, page :: Page TxOutRef }
 _UtxosResponse = _Newtype

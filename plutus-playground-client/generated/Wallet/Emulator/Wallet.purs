@@ -32,8 +32,10 @@ instance Show Wallet where
   show a = genericShow a
 
 instance EncodeJson Wallet where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { getWalletId: E.value :: _ String })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { getWalletId: E.value :: _ String }
+    )
 
 instance DecodeJson Wallet where
   decodeJson = defer \_ -> D.decode $ (Wallet <$> D.record "Wallet" { getWalletId: D.value :: _ String })
@@ -44,7 +46,7 @@ derive instance Newtype Wallet _
 
 --------------------------------------------------------------------------------
 
-_Wallet :: Iso' Wallet {getWalletId :: String}
+_Wallet :: Iso' Wallet { getWalletId :: String }
 _Wallet = _Newtype
 
 --------------------------------------------------------------------------------
@@ -67,12 +69,13 @@ instance EncodeJson WalletEvent where
 
 instance DecodeJson WalletEvent where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "WalletEvent" $ Map.fromFoldable
-      [ "GenericLog" /\ D.content (GenericLog <$> D.value)
-      , "CheckpointLog" /\ D.content (CheckpointLog <$> D.value)
-      , "RequestHandlerLog" /\ D.content (RequestHandlerLog <$> D.value)
-      , "TxBalanceLog" /\ D.content (TxBalanceLog <$> D.value)
-      ]
+    $ D.sumType "WalletEvent"
+    $ Map.fromFoldable
+        [ "GenericLog" /\ D.content (GenericLog <$> D.value)
+        , "CheckpointLog" /\ D.content (CheckpointLog <$> D.value)
+        , "RequestHandlerLog" /\ D.content (RequestHandlerLog <$> D.value)
+        , "TxBalanceLog" /\ D.content (TxBalanceLog <$> D.value)
+        ]
 
 derive instance Generic WalletEvent _
 

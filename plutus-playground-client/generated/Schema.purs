@@ -72,22 +72,23 @@ instance (EncodeJson a) => EncodeJson (FormArgumentF a) where
 
 instance (DecodeJson a) => DecodeJson (FormArgumentF a) where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "FormArgumentF" $ Map.fromFoldable
-      [ "FormUnitF" /\ pure FormUnitF
-      , "FormBoolF" /\ D.content (FormBoolF <$> D.value)
-      , "FormIntF" /\ D.content (FormIntF <$> (D.maybe D.value))
-      , "FormIntegerF" /\ D.content (FormIntegerF <$> (D.maybe D.value))
-      , "FormStringF" /\ D.content (FormStringF <$> (D.maybe D.value))
-      , "FormHexF" /\ D.content (FormHexF <$> (D.maybe D.value))
-      , "FormRadioF" /\ D.content (D.tuple $ FormRadioF </$\>D.value </*\> (D.maybe D.value))
-      , "FormArrayF" /\ D.content (D.tuple $ FormArrayF </$\>D.value </*\> D.value)
-      , "FormMaybeF" /\ D.content (D.tuple $ FormMaybeF </$\>D.value </*\> (D.maybe D.value))
-      , "FormTupleF" /\ D.content (D.tuple $ FormTupleF </$\>D.value </*\> D.value)
-      , "FormObjectF" /\ D.content (FormObjectF <$> D.value)
-      , "FormValueF" /\ D.content (FormValueF <$> D.value)
-      , "FormPOSIXTimeRangeF" /\ D.content (FormPOSIXTimeRangeF <$> D.value)
-      , "FormUnsupportedF" /\ D.content (FormUnsupportedF <$> D.value)
-      ]
+    $ D.sumType "FormArgumentF"
+    $ Map.fromFoldable
+        [ "FormUnitF" /\ pure FormUnitF
+        , "FormBoolF" /\ D.content (FormBoolF <$> D.value)
+        , "FormIntF" /\ D.content (FormIntF <$> (D.maybe D.value))
+        , "FormIntegerF" /\ D.content (FormIntegerF <$> (D.maybe D.value))
+        , "FormStringF" /\ D.content (FormStringF <$> (D.maybe D.value))
+        , "FormHexF" /\ D.content (FormHexF <$> (D.maybe D.value))
+        , "FormRadioF" /\ D.content (D.tuple $ FormRadioF </$\> D.value </*\> (D.maybe D.value))
+        , "FormArrayF" /\ D.content (D.tuple $ FormArrayF </$\> D.value </*\> D.value)
+        , "FormMaybeF" /\ D.content (D.tuple $ FormMaybeF </$\> D.value </*\> (D.maybe D.value))
+        , "FormTupleF" /\ D.content (D.tuple $ FormTupleF </$\> D.value </*\> D.value)
+        , "FormObjectF" /\ D.content (FormObjectF <$> D.value)
+        , "FormValueF" /\ D.content (FormValueF <$> D.value)
+        , "FormPOSIXTimeRangeF" /\ D.content (FormPOSIXTimeRangeF <$> D.value)
+        , "FormUnsupportedF" /\ D.content (FormUnsupportedF <$> D.value)
+        ]
 
 derive instance Generic (FormArgumentF a) _
 
@@ -123,24 +124,24 @@ _FormHexF = prism' FormHexF case _ of
   (FormHexF a) -> Just a
   _ -> Nothing
 
-_FormRadioF :: forall a. Prism' (FormArgumentF a) {a :: Array String, b :: Maybe String}
-_FormRadioF = prism' (\{a, b} -> (FormRadioF a b)) case _ of
-  (FormRadioF a b) -> Just {a, b}
+_FormRadioF :: forall a. Prism' (FormArgumentF a) { a :: Array String, b :: Maybe String }
+_FormRadioF = prism' (\{ a, b } -> (FormRadioF a b)) case _ of
+  (FormRadioF a b) -> Just { a, b }
   _ -> Nothing
 
-_FormArrayF :: forall a. Prism' (FormArgumentF a) {a :: FormSchema, b :: Array a}
-_FormArrayF = prism' (\{a, b} -> (FormArrayF a b)) case _ of
-  (FormArrayF a b) -> Just {a, b}
+_FormArrayF :: forall a. Prism' (FormArgumentF a) { a :: FormSchema, b :: Array a }
+_FormArrayF = prism' (\{ a, b } -> (FormArrayF a b)) case _ of
+  (FormArrayF a b) -> Just { a, b }
   _ -> Nothing
 
-_FormMaybeF :: forall a. Prism' (FormArgumentF a) {a :: FormSchema, b :: Maybe a}
-_FormMaybeF = prism' (\{a, b} -> (FormMaybeF a b)) case _ of
-  (FormMaybeF a b) -> Just {a, b}
+_FormMaybeF :: forall a. Prism' (FormArgumentF a) { a :: FormSchema, b :: Maybe a }
+_FormMaybeF = prism' (\{ a, b } -> (FormMaybeF a b)) case _ of
+  (FormMaybeF a b) -> Just { a, b }
   _ -> Nothing
 
-_FormTupleF :: forall a. Prism' (FormArgumentF a) {a :: a, b :: a}
-_FormTupleF = prism' (\{a, b} -> (FormTupleF a b)) case _ of
-  (FormTupleF a b) -> Just {a, b}
+_FormTupleF :: forall a. Prism' (FormArgumentF a) { a :: a, b :: a }
+_FormTupleF = prism' (\{ a, b } -> (FormTupleF a b)) case _ of
+  (FormTupleF a b) -> Just { a, b }
   _ -> Nothing
 
 _FormObjectF :: forall a. Prism' (FormArgumentF a) (Array (Tuple String a))
@@ -205,22 +206,23 @@ instance EncodeJson FormSchema where
 
 instance DecodeJson FormSchema where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "FormSchema" $ Map.fromFoldable
-      [ "FormSchemaUnit" /\ pure FormSchemaUnit
-      , "FormSchemaBool" /\ pure FormSchemaBool
-      , "FormSchemaInt" /\ pure FormSchemaInt
-      , "FormSchemaInteger" /\ pure FormSchemaInteger
-      , "FormSchemaString" /\ pure FormSchemaString
-      , "FormSchemaHex" /\ pure FormSchemaHex
-      , "FormSchemaArray" /\ D.content (FormSchemaArray <$> D.value)
-      , "FormSchemaMaybe" /\ D.content (FormSchemaMaybe <$> D.value)
-      , "FormSchemaRadio" /\ D.content (FormSchemaRadio <$> D.value)
-      , "FormSchemaTuple" /\ D.content (D.tuple $ FormSchemaTuple </$\>D.value </*\> D.value)
-      , "FormSchemaObject" /\ D.content (FormSchemaObject <$> D.value)
-      , "FormSchemaValue" /\ pure FormSchemaValue
-      , "FormSchemaPOSIXTimeRange" /\ pure FormSchemaPOSIXTimeRange
-      , "FormSchemaUnsupported" /\ D.content (FormSchemaUnsupported <$> D.value)
-      ]
+    $ D.sumType "FormSchema"
+    $ Map.fromFoldable
+        [ "FormSchemaUnit" /\ pure FormSchemaUnit
+        , "FormSchemaBool" /\ pure FormSchemaBool
+        , "FormSchemaInt" /\ pure FormSchemaInt
+        , "FormSchemaInteger" /\ pure FormSchemaInteger
+        , "FormSchemaString" /\ pure FormSchemaString
+        , "FormSchemaHex" /\ pure FormSchemaHex
+        , "FormSchemaArray" /\ D.content (FormSchemaArray <$> D.value)
+        , "FormSchemaMaybe" /\ D.content (FormSchemaMaybe <$> D.value)
+        , "FormSchemaRadio" /\ D.content (FormSchemaRadio <$> D.value)
+        , "FormSchemaTuple" /\ D.content (D.tuple $ FormSchemaTuple </$\> D.value </*\> D.value)
+        , "FormSchemaObject" /\ D.content (FormSchemaObject <$> D.value)
+        , "FormSchemaValue" /\ pure FormSchemaValue
+        , "FormSchemaPOSIXTimeRange" /\ pure FormSchemaPOSIXTimeRange
+        , "FormSchemaUnsupported" /\ D.content (FormSchemaUnsupported <$> D.value)
+        ]
 
 derive instance Generic FormSchema _
 
@@ -271,9 +273,9 @@ _FormSchemaRadio = prism' FormSchemaRadio case _ of
   (FormSchemaRadio a) -> Just a
   _ -> Nothing
 
-_FormSchemaTuple :: Prism' FormSchema {a :: FormSchema, b :: FormSchema}
-_FormSchemaTuple = prism' (\{a, b} -> (FormSchemaTuple a b)) case _ of
-  (FormSchemaTuple a b) -> Just {a, b}
+_FormSchemaTuple :: Prism' FormSchema { a :: FormSchema, b :: FormSchema }
+_FormSchemaTuple = prism' (\{ a, b } -> (FormSchemaTuple a b)) case _ of
+  (FormSchemaTuple a b) -> Just { a, b }
   _ -> Nothing
 
 _FormSchemaObject :: Prism' FormSchema (Array (Tuple String FormSchema))

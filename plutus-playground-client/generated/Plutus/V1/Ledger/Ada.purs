@@ -31,8 +31,10 @@ instance Show Ada where
   show a = genericShow a
 
 instance EncodeJson Ada where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { getLovelace: E.value :: _ BigInt })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { getLovelace: E.value :: _ BigInt }
+    )
 
 instance DecodeJson Ada where
   decodeJson = defer \_ -> D.decode $ (Lovelace <$> D.record "Lovelace" { getLovelace: D.value :: _ BigInt })
@@ -43,5 +45,5 @@ derive instance Newtype Ada _
 
 --------------------------------------------------------------------------------
 
-_Lovelace :: Iso' Ada {getLovelace :: BigInt}
+_Lovelace :: Iso' Ada { getLovelace :: BigInt }
 _Lovelace = _Newtype

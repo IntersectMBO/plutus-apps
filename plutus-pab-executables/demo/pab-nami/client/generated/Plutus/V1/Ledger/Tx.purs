@@ -57,7 +57,8 @@ instance encodeJsonTx :: EncodeJson Tx where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { txInputs: E.value :: _ (Set TxIn)
               , txCollateral: E.value :: _ (Set TxIn)
               , txOutputs: E.value :: _ (Array TxOut)
@@ -75,19 +76,20 @@ instance decodeJsonTx :: DecodeJson Tx where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Tx
+        $
+          ( Tx
               <$> D.record "Tx"
-                  { txInputs: D.value :: _ (Set TxIn)
-                  , txCollateral: D.value :: _ (Set TxIn)
-                  , txOutputs: D.value :: _ (Array TxOut)
-                  , txMint: D.value :: _ Value
-                  , txFee: D.value :: _ Value
-                  , txValidRange: D.value :: _ (Interval Slot)
-                  , txMintScripts: D.value :: _ (Set MintingPolicy)
-                  , txSignatures: (D.dictionary D.value D.value) :: _ (Map PubKey Signature)
-                  , txRedeemers: (D.dictionary D.value D.value) :: _ (Map RedeemerPtr String)
-                  , txData: (D.dictionary D.value D.value) :: _ (Map DatumHash String)
-                  }
+                { txInputs: D.value :: _ (Set TxIn)
+                , txCollateral: D.value :: _ (Set TxIn)
+                , txOutputs: D.value :: _ (Array TxOut)
+                , txMint: D.value :: _ Value
+                , txFee: D.value :: _ Value
+                , txValidRange: D.value :: _ (Interval Slot)
+                , txMintScripts: D.value :: _ (Set MintingPolicy)
+                , txSignatures: (D.dictionary D.value D.value) :: _ (Map PubKey Signature)
+                , txRedeemers: (D.dictionary D.value D.value) :: _ (Map RedeemerPtr String)
+                , txData: (D.dictionary D.value D.value) :: _ (Map DatumHash String)
+                }
           )
 
 derive instance genericTx :: Generic Tx _
@@ -116,7 +118,8 @@ instance encodeJsonTxIn :: EncodeJson TxIn where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { txInRef: E.value :: _ TxOutRef
               , txInType: (E.maybe E.value) :: _ (Maybe TxInType)
               }
@@ -126,11 +129,12 @@ instance decodeJsonTxIn :: DecodeJson TxIn where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( TxIn
+        $
+          ( TxIn
               <$> D.record "TxIn"
-                  { txInRef: D.value :: _ TxOutRef
-                  , txInType: (D.maybe D.value) :: _ (Maybe TxInType)
-                  }
+                { txInRef: D.value :: _ TxOutRef
+                , txInType: (D.maybe D.value) :: _ (Maybe TxInType)
+                }
           )
 
 derive instance genericTxIn :: Generic TxIn _
@@ -158,7 +162,8 @@ instance encodeJsonTxOut :: EncodeJson TxOut where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { txOutAddress: E.value :: _ Address
               , txOutValue: E.value :: _ Value
               , txOutDatumHash: (E.maybe E.value) :: _ (Maybe DatumHash)
@@ -169,12 +174,13 @@ instance decodeJsonTxOut :: DecodeJson TxOut where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( TxOut
+        $
+          ( TxOut
               <$> D.record "TxOut"
-                  { txOutAddress: D.value :: _ Address
-                  , txOutValue: D.value :: _ Value
-                  , txOutDatumHash: (D.maybe D.value) :: _ (Maybe DatumHash)
-                  }
+                { txOutAddress: D.value :: _ Address
+                , txOutValue: D.value :: _ Value
+                , txOutDatumHash: (D.maybe D.value) :: _ (Maybe DatumHash)
+                }
           )
 
 derive instance genericTxOut :: Generic TxOut _
@@ -201,7 +207,8 @@ instance encodeJsonTxOutTx :: EncodeJson TxOutTx where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { txOutTxTx: E.value :: _ Tx
               , txOutTxOut: E.value :: _ TxOut
               }
@@ -211,11 +218,12 @@ instance decodeJsonTxOutTx :: DecodeJson TxOutTx where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( TxOutTx
+        $
+          ( TxOutTx
               <$> D.record "TxOutTx"
-                  { txOutTxTx: D.value :: _ Tx
-                  , txOutTxOut: D.value :: _ TxOut
-                  }
+                { txOutTxTx: D.value :: _ Tx
+                , txOutTxOut: D.value :: _ TxOut
+                }
           )
 
 derive instance genericTxOutTx :: Generic TxOutTx _
@@ -244,7 +252,8 @@ instance encodeJsonTxOutRef :: EncodeJson TxOutRef where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { txOutRefId: E.value :: _ TxId
               , txOutRefIdx: E.value :: _ BigInt
               }
@@ -254,11 +263,12 @@ instance decodeJsonTxOutRef :: DecodeJson TxOutRef where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( TxOutRef
+        $
+          ( TxOutRef
               <$> D.record "TxOutRef"
-                  { txOutRefId: D.value :: _ TxId
-                  , txOutRefIdx: D.value :: _ BigInt
-                  }
+                { txOutRefId: D.value :: _ TxId
+                , txOutRefIdx: D.value :: _ BigInt
+                }
           )
 
 derive instance genericTxOutRef :: Generic TxOutRef _

@@ -35,7 +35,8 @@ instance encodeJsonSignature :: EncodeJson Signature where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getSignature: E.value :: _ String }
           )
 
@@ -65,7 +66,8 @@ instance encodeJsonPubKey :: EncodeJson PubKey where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getPubKey: E.value :: _ String }
           )
 
@@ -95,7 +97,8 @@ instance encodeJsonPubKeyHash :: EncodeJson PubKeyHash where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getPubKeyHash: E.value :: _ String }
           )
 

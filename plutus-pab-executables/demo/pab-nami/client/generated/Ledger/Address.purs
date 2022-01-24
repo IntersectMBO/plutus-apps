@@ -36,7 +36,8 @@ instance encodeJsonPaymentPubKey :: EncodeJson PaymentPubKey where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unPaymentPubKey: E.value :: _ PubKey }
           )
 
@@ -66,7 +67,8 @@ instance encodeJsonPaymentPubKeyHash :: EncodeJson PaymentPubKeyHash where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unPaymentPubKeyHash: E.value :: _ PubKeyHash }
           )
 
@@ -96,7 +98,8 @@ instance encodeJsonStakePubKey :: EncodeJson StakePubKey where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unStakePubKey: E.value :: _ PubKey }
           )
 
@@ -126,7 +129,8 @@ instance encodeJsonStakePubKeyHash :: EncodeJson StakePubKeyHash where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unStakePubKeyHash: E.value :: _ PubKeyHash }
           )
 

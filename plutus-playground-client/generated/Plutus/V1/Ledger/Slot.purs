@@ -31,8 +31,10 @@ instance Show Slot where
   show a = genericShow a
 
 instance EncodeJson Slot where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { getSlot: E.value :: _ BigInt })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { getSlot: E.value :: _ BigInt }
+    )
 
 instance DecodeJson Slot where
   decodeJson = defer \_ -> D.decode $ (Slot <$> D.record "Slot" { getSlot: D.value :: _ BigInt })
@@ -43,5 +45,5 @@ derive instance Newtype Slot _
 
 --------------------------------------------------------------------------------
 
-_Slot :: Iso' Slot {getSlot :: BigInt}
+_Slot :: Iso' Slot { getSlot :: BigInt }
 _Slot = _Newtype

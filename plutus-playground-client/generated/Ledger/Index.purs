@@ -50,18 +50,19 @@ instance EncodeJson ScriptType where
 
 instance DecodeJson ScriptType where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ScriptType" $ Map.fromFoldable
-      [ "ValidatorScript" /\ D.content (D.tuple $ ValidatorScript </$\>D.value </*\> D.value)
-      , "MintingPolicyScript" /\ D.content (MintingPolicyScript <$> D.value)
-      ]
+    $ D.sumType "ScriptType"
+    $ Map.fromFoldable
+        [ "ValidatorScript" /\ D.content (D.tuple $ ValidatorScript </$\> D.value </*\> D.value)
+        , "MintingPolicyScript" /\ D.content (MintingPolicyScript <$> D.value)
+        ]
 
 derive instance Generic ScriptType _
 
 --------------------------------------------------------------------------------
 
-_ValidatorScript :: Prism' ScriptType {a :: Validator, b :: String}
-_ValidatorScript = prism' (\{a, b} -> (ValidatorScript a b)) case _ of
-  (ValidatorScript a b) -> Just {a, b}
+_ValidatorScript :: Prism' ScriptType { a :: Validator, b :: String }
+_ValidatorScript = prism' (\{ a, b } -> (ValidatorScript a b)) case _ of
+  (ValidatorScript a b) -> Just { a, b }
   _ -> Nothing
 
 _MintingPolicyScript :: Prism' ScriptType MintingPolicy
@@ -84,20 +85,24 @@ instance Show ScriptValidationEvent where
   show a = genericShow a
 
 instance EncodeJson ScriptValidationEvent where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { sveScript: E.value :: _ String
-                                                   , sveResult: (E.either E.value (E.tuple (E.value >/\< E.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
-                                                   , sveRedeemer: E.value :: _ String
-                                                   , sveType: E.value :: _ ScriptType
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { sveScript: E.value :: _ String
+        , sveResult: (E.either E.value (E.tuple (E.value >/\< E.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
+        , sveRedeemer: E.value :: _ String
+        , sveType: E.value :: _ ScriptType
+        }
+    )
 
 instance DecodeJson ScriptValidationEvent where
-  decodeJson = defer \_ -> D.decode $ (ScriptValidationEvent <$> D.record "ScriptValidationEvent"
-      { sveScript: D.value :: _ String
-      , sveResult: (D.either D.value (D.tuple (D.value </\> D.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
-      , sveRedeemer: D.value :: _ String
-      , sveType: D.value :: _ ScriptType
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( ScriptValidationEvent <$> D.record "ScriptValidationEvent"
+        { sveScript: D.value :: _ String
+        , sveResult: (D.either D.value (D.tuple (D.value </\> D.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
+        , sveRedeemer: D.value :: _ String
+        , sveType: D.value :: _ ScriptType
+        }
+    )
 
 derive instance Generic ScriptValidationEvent _
 
@@ -105,7 +110,7 @@ derive instance Newtype ScriptValidationEvent _
 
 --------------------------------------------------------------------------------
 
-_ScriptValidationEvent :: Iso' ScriptValidationEvent {sveScript :: String, sveResult :: Either ScriptError (Tuple RawJson (Array String)), sveRedeemer :: String, sveType :: ScriptType}
+_ScriptValidationEvent :: Iso' ScriptValidationEvent { sveScript :: String, sveResult :: Either ScriptError (Tuple RawJson (Array String)), sveRedeemer :: String, sveType :: ScriptType }
 _ScriptValidationEvent = _Newtype
 
 --------------------------------------------------------------------------------
@@ -118,8 +123,10 @@ instance Show UtxoIndex where
   show a = genericShow a
 
 instance EncodeJson UtxoIndex where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                 { getIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef TxOut) })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { getIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef TxOut) }
+    )
 
 instance DecodeJson UtxoIndex where
   decodeJson = defer \_ -> D.decode $ (UtxoIndex <$> D.record "UtxoIndex" { getIndex: (D.dictionary D.value D.value) :: _ (Map TxOutRef TxOut) })
@@ -130,7 +137,7 @@ derive instance Newtype UtxoIndex _
 
 --------------------------------------------------------------------------------
 
-_UtxoIndex :: Iso' UtxoIndex {getIndex :: Map TxOutRef TxOut}
+_UtxoIndex :: Iso' UtxoIndex { getIndex :: Map TxOutRef TxOut }
 _UtxoIndex = _Newtype
 
 --------------------------------------------------------------------------------
@@ -177,31 +184,32 @@ instance EncodeJson ValidationError where
 
 instance DecodeJson ValidationError where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ValidationError" $ Map.fromFoldable
-      [ "InOutTypeMismatch" /\ D.content (D.tuple $ InOutTypeMismatch </$\>D.value </*\> D.value)
-      , "TxOutRefNotFound" /\ D.content (TxOutRefNotFound <$> D.value)
-      , "InvalidScriptHash" /\ D.content (D.tuple $ InvalidScriptHash </$\>D.value </*\> D.value)
-      , "InvalidDatumHash" /\ D.content (D.tuple $ InvalidDatumHash </$\>D.value </*\> D.value)
-      , "MissingRedeemer" /\ D.content (MissingRedeemer <$> D.value)
-      , "InvalidSignature" /\ D.content (D.tuple $ InvalidSignature </$\>D.value </*\> D.value)
-      , "ValueNotPreserved" /\ D.content (D.tuple $ ValueNotPreserved </$\>D.value </*\> D.value)
-      , "NegativeValue" /\ D.content (NegativeValue <$> D.value)
-      , "ValueContainsLessThanMinAda" /\ D.content (D.tuple $ ValueContainsLessThanMinAda </$\>D.value </*\> D.value)
-      , "NonAdaFees" /\ D.content (NonAdaFees <$> D.value)
-      , "ScriptFailure" /\ D.content (ScriptFailure <$> D.value)
-      , "CurrentSlotOutOfRange" /\ D.content (CurrentSlotOutOfRange <$> D.value)
-      , "SignatureMissing" /\ D.content (SignatureMissing <$> D.value)
-      , "MintWithoutScript" /\ D.content (MintWithoutScript <$> D.value)
-      , "TransactionFeeTooLow" /\ D.content (D.tuple $ TransactionFeeTooLow </$\>D.value </*\> D.value)
-      ]
+    $ D.sumType "ValidationError"
+    $ Map.fromFoldable
+        [ "InOutTypeMismatch" /\ D.content (D.tuple $ InOutTypeMismatch </$\> D.value </*\> D.value)
+        , "TxOutRefNotFound" /\ D.content (TxOutRefNotFound <$> D.value)
+        , "InvalidScriptHash" /\ D.content (D.tuple $ InvalidScriptHash </$\> D.value </*\> D.value)
+        , "InvalidDatumHash" /\ D.content (D.tuple $ InvalidDatumHash </$\> D.value </*\> D.value)
+        , "MissingRedeemer" /\ D.content (MissingRedeemer <$> D.value)
+        , "InvalidSignature" /\ D.content (D.tuple $ InvalidSignature </$\> D.value </*\> D.value)
+        , "ValueNotPreserved" /\ D.content (D.tuple $ ValueNotPreserved </$\> D.value </*\> D.value)
+        , "NegativeValue" /\ D.content (NegativeValue <$> D.value)
+        , "ValueContainsLessThanMinAda" /\ D.content (D.tuple $ ValueContainsLessThanMinAda </$\> D.value </*\> D.value)
+        , "NonAdaFees" /\ D.content (NonAdaFees <$> D.value)
+        , "ScriptFailure" /\ D.content (ScriptFailure <$> D.value)
+        , "CurrentSlotOutOfRange" /\ D.content (CurrentSlotOutOfRange <$> D.value)
+        , "SignatureMissing" /\ D.content (SignatureMissing <$> D.value)
+        , "MintWithoutScript" /\ D.content (MintWithoutScript <$> D.value)
+        , "TransactionFeeTooLow" /\ D.content (D.tuple $ TransactionFeeTooLow </$\> D.value </*\> D.value)
+        ]
 
 derive instance Generic ValidationError _
 
 --------------------------------------------------------------------------------
 
-_InOutTypeMismatch :: Prism' ValidationError {a :: TxIn, b :: TxOut}
-_InOutTypeMismatch = prism' (\{a, b} -> (InOutTypeMismatch a b)) case _ of
-  (InOutTypeMismatch a b) -> Just {a, b}
+_InOutTypeMismatch :: Prism' ValidationError { a :: TxIn, b :: TxOut }
+_InOutTypeMismatch = prism' (\{ a, b } -> (InOutTypeMismatch a b)) case _ of
+  (InOutTypeMismatch a b) -> Just { a, b }
   _ -> Nothing
 
 _TxOutRefNotFound :: Prism' ValidationError TxOutRef
@@ -209,14 +217,14 @@ _TxOutRefNotFound = prism' TxOutRefNotFound case _ of
   (TxOutRefNotFound a) -> Just a
   _ -> Nothing
 
-_InvalidScriptHash :: Prism' ValidationError {a :: Validator, b :: String}
-_InvalidScriptHash = prism' (\{a, b} -> (InvalidScriptHash a b)) case _ of
-  (InvalidScriptHash a b) -> Just {a, b}
+_InvalidScriptHash :: Prism' ValidationError { a :: Validator, b :: String }
+_InvalidScriptHash = prism' (\{ a, b } -> (InvalidScriptHash a b)) case _ of
+  (InvalidScriptHash a b) -> Just { a, b }
   _ -> Nothing
 
-_InvalidDatumHash :: Prism' ValidationError {a :: String, b :: DatumHash}
-_InvalidDatumHash = prism' (\{a, b} -> (InvalidDatumHash a b)) case _ of
-  (InvalidDatumHash a b) -> Just {a, b}
+_InvalidDatumHash :: Prism' ValidationError { a :: String, b :: DatumHash }
+_InvalidDatumHash = prism' (\{ a, b } -> (InvalidDatumHash a b)) case _ of
+  (InvalidDatumHash a b) -> Just { a, b }
   _ -> Nothing
 
 _MissingRedeemer :: Prism' ValidationError RedeemerPtr
@@ -224,14 +232,14 @@ _MissingRedeemer = prism' MissingRedeemer case _ of
   (MissingRedeemer a) -> Just a
   _ -> Nothing
 
-_InvalidSignature :: Prism' ValidationError {a :: PubKey, b :: Signature}
-_InvalidSignature = prism' (\{a, b} -> (InvalidSignature a b)) case _ of
-  (InvalidSignature a b) -> Just {a, b}
+_InvalidSignature :: Prism' ValidationError { a :: PubKey, b :: Signature }
+_InvalidSignature = prism' (\{ a, b } -> (InvalidSignature a b)) case _ of
+  (InvalidSignature a b) -> Just { a, b }
   _ -> Nothing
 
-_ValueNotPreserved :: Prism' ValidationError {a :: Value, b :: Value}
-_ValueNotPreserved = prism' (\{a, b} -> (ValueNotPreserved a b)) case _ of
-  (ValueNotPreserved a b) -> Just {a, b}
+_ValueNotPreserved :: Prism' ValidationError { a :: Value, b :: Value }
+_ValueNotPreserved = prism' (\{ a, b } -> (ValueNotPreserved a b)) case _ of
+  (ValueNotPreserved a b) -> Just { a, b }
   _ -> Nothing
 
 _NegativeValue :: Prism' ValidationError Tx
@@ -239,9 +247,9 @@ _NegativeValue = prism' NegativeValue case _ of
   (NegativeValue a) -> Just a
   _ -> Nothing
 
-_ValueContainsLessThanMinAda :: Prism' ValidationError {a :: Tx, b :: TxOut}
-_ValueContainsLessThanMinAda = prism' (\{a, b} -> (ValueContainsLessThanMinAda a b)) case _ of
-  (ValueContainsLessThanMinAda a b) -> Just {a, b}
+_ValueContainsLessThanMinAda :: Prism' ValidationError { a :: Tx, b :: TxOut }
+_ValueContainsLessThanMinAda = prism' (\{ a, b } -> (ValueContainsLessThanMinAda a b)) case _ of
+  (ValueContainsLessThanMinAda a b) -> Just { a, b }
   _ -> Nothing
 
 _NonAdaFees :: Prism' ValidationError Tx
@@ -269,9 +277,9 @@ _MintWithoutScript = prism' MintWithoutScript case _ of
   (MintWithoutScript a) -> Just a
   _ -> Nothing
 
-_TransactionFeeTooLow :: Prism' ValidationError {a :: Value, b :: Value}
-_TransactionFeeTooLow = prism' (\{a, b} -> (TransactionFeeTooLow a b)) case _ of
-  (TransactionFeeTooLow a b) -> Just {a, b}
+_TransactionFeeTooLow :: Prism' ValidationError { a :: Value, b :: Value }
+_TransactionFeeTooLow = prism' (\{ a, b } -> (TransactionFeeTooLow a b)) case _ of
+  (TransactionFeeTooLow a b) -> Just { a, b }
   _ -> Nothing
 
 --------------------------------------------------------------------------------

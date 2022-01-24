@@ -135,9 +135,9 @@ _InsertUtxoNoTip =
 data RollbackFailed
   = RollbackNoTip
   | TipMismatch
-    { foundTip :: Tip
-    , targetPoint :: Point
-    }
+      { foundTip :: Tip
+      , targetPoint :: Point
+      }
   | OldPointNotFound Point
 
 derive instance eqRollbackFailed :: Eq RollbackFailed
@@ -165,11 +165,12 @@ instance decodeJsonRollbackFailed :: DecodeJson RollbackFailed where
         $ Map.fromFoldable
             [ "RollbackNoTip" /\ pure RollbackNoTip
             , "TipMismatch"
-                /\ ( TipMismatch
+                /\
+                  ( TipMismatch
                       <$> D.object "TipMismatch"
-                          { foundTip: D.value :: _ Tip
-                          , targetPoint: D.value :: _ Point
-                          }
+                        { foundTip: D.value :: _ Tip
+                        , targetPoint: D.value :: _ Point
+                        }
                   )
             , "OldPointNotFound" /\ D.content (OldPointNotFound <$> D.value)
             ]

@@ -138,10 +138,10 @@ editorFeedback (State { currentCodeIsCompiled, feedbackPaneExtend, feedbackPaneM
   feedbackPaneClasses =
     [ ClassName "editor-feedback" ]
       <> case feedbackPaneMinimised, feedbackPaneExtend of
-          false, 0 -> []
-          true, 0 -> [ ClassName "minimised" ]
-          false, size -> [ ClassName $ "expanded-" <> show size ]
-          true, size -> [ ClassName "minimised", ClassName $ "expanded-" <> show size ]
+        false, 0 -> []
+        true, 0 -> [ ClassName "minimised" ]
+        false, size -> [ ClassName $ "expanded-" <> show size ]
+        true, size -> [ ClassName "minimised", ClassName $ "expanded-" <> show size ]
 
   summaryText = case compilationResult of
     NotAsked -> text "Not compiled"
@@ -160,7 +160,8 @@ editorFeedback (State { currentCodeIsCompiled, feedbackPaneExtend, feedbackPaneM
       , onClick $ const ToggleFeedbackPane
       ]
       [ icon
-          $ if feedbackPaneMinimised then
+          $
+            if feedbackPaneMinimised then
               ArrowUp
             else
               ArrowDown

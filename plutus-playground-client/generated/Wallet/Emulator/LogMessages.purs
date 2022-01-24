@@ -48,20 +48,21 @@ instance EncodeJson RequestHandlerLogMsg where
 
 instance DecodeJson RequestHandlerLogMsg where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "RequestHandlerLogMsg" $ Map.fromFoldable
-      [ "SlotNoticationTargetVsCurrent" /\ D.content (D.tuple $ SlotNoticationTargetVsCurrent </$\>D.value </*\> D.value)
-      , "StartWatchingContractAddresses" /\ pure StartWatchingContractAddresses
-      , "HandleTxFailed" /\ D.content (HandleTxFailed <$> D.value)
-      , "UtxoAtFailed" /\ D.content (UtxoAtFailed <$> D.value)
-      ]
+    $ D.sumType "RequestHandlerLogMsg"
+    $ Map.fromFoldable
+        [ "SlotNoticationTargetVsCurrent" /\ D.content (D.tuple $ SlotNoticationTargetVsCurrent </$\> D.value </*\> D.value)
+        , "StartWatchingContractAddresses" /\ pure StartWatchingContractAddresses
+        , "HandleTxFailed" /\ D.content (HandleTxFailed <$> D.value)
+        , "UtxoAtFailed" /\ D.content (UtxoAtFailed <$> D.value)
+        ]
 
 derive instance Generic RequestHandlerLogMsg _
 
 --------------------------------------------------------------------------------
 
-_SlotNoticationTargetVsCurrent :: Prism' RequestHandlerLogMsg {a :: Slot, b :: Slot}
-_SlotNoticationTargetVsCurrent = prism' (\{a, b} -> (SlotNoticationTargetVsCurrent a b)) case _ of
-  (SlotNoticationTargetVsCurrent a b) -> Just {a, b}
+_SlotNoticationTargetVsCurrent :: Prism' RequestHandlerLogMsg { a :: Slot, b :: Slot }
+_SlotNoticationTargetVsCurrent = prism' (\{ a, b } -> (SlotNoticationTargetVsCurrent a b)) case _ of
+  (SlotNoticationTargetVsCurrent a b) -> Just { a, b }
   _ -> Nothing
 
 _StartWatchingContractAddresses :: Prism' RequestHandlerLogMsg Unit
@@ -111,18 +112,19 @@ instance EncodeJson TxBalanceMsg where
 
 instance DecodeJson TxBalanceMsg where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "TxBalanceMsg" $ Map.fromFoldable
-      [ "BalancingUnbalancedTx" /\ D.content (BalancingUnbalancedTx <$> D.value)
-      , "NoOutputsAdded" /\ pure NoOutputsAdded
-      , "AddingPublicKeyOutputFor" /\ D.content (AddingPublicKeyOutputFor <$> D.value)
-      , "NoInputsAdded" /\ pure NoInputsAdded
-      , "AddingInputsFor" /\ D.content (AddingInputsFor <$> D.value)
-      , "NoCollateralInputsAdded" /\ pure NoCollateralInputsAdded
-      , "AddingCollateralInputsFor" /\ D.content (AddingCollateralInputsFor <$> D.value)
-      , "FinishedBalancing" /\ D.content (FinishedBalancing <$> D.value)
-      , "SubmittingTx" /\ D.content (SubmittingTx <$> D.value)
-      , "ValidationFailed" /\ D.content (D.tuple $ ValidationFailed </$\>D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
-      ]
+    $ D.sumType "TxBalanceMsg"
+    $ Map.fromFoldable
+        [ "BalancingUnbalancedTx" /\ D.content (BalancingUnbalancedTx <$> D.value)
+        , "NoOutputsAdded" /\ pure NoOutputsAdded
+        , "AddingPublicKeyOutputFor" /\ D.content (AddingPublicKeyOutputFor <$> D.value)
+        , "NoInputsAdded" /\ pure NoInputsAdded
+        , "AddingInputsFor" /\ D.content (AddingInputsFor <$> D.value)
+        , "NoCollateralInputsAdded" /\ pure NoCollateralInputsAdded
+        , "AddingCollateralInputsFor" /\ D.content (AddingCollateralInputsFor <$> D.value)
+        , "FinishedBalancing" /\ D.content (FinishedBalancing <$> D.value)
+        , "SubmittingTx" /\ D.content (SubmittingTx <$> D.value)
+        , "ValidationFailed" /\ D.content (D.tuple $ ValidationFailed </$\> D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
+        ]
 
 derive instance Generic TxBalanceMsg _
 
@@ -173,7 +175,7 @@ _SubmittingTx = prism' SubmittingTx case _ of
   (SubmittingTx a) -> Just a
   _ -> Nothing
 
-_ValidationFailed :: Prism' TxBalanceMsg {a :: ValidationPhase, b :: TxId, c :: Tx, d :: ValidationError, e :: Array ScriptValidationEvent}
-_ValidationFailed = prism' (\{a, b, c, d, e} -> (ValidationFailed a b c d e)) case _ of
-  (ValidationFailed a b c d e) -> Just {a, b, c, d, e}
+_ValidationFailed :: Prism' TxBalanceMsg { a :: ValidationPhase, b :: TxId, c :: Tx, d :: ValidationError, e :: Array ScriptValidationEvent }
+_ValidationFailed = prism' (\{ a, b, c, d, e } -> (ValidationFailed a b c d e)) case _ of
+  (ValidationFailed a b c d e) -> Just { a, b, c, d, e }
   _ -> Nothing

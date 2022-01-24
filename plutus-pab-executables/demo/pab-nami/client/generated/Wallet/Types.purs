@@ -122,7 +122,8 @@ instance encodeJsonNotification :: EncodeJson Notification where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { notificationContractID: E.value :: _ ContractInstanceId
               , notificationContractEndpoint: E.value :: _ EndpointDescription
               , notificationContractArg: E.value :: _ RawJson
@@ -133,12 +134,13 @@ instance decodeJsonNotification :: DecodeJson Notification where
   decodeJson =
     defer \_ ->
       D.decode
-        $ ( Notification
+        $
+          ( Notification
               <$> D.record "Notification"
-                  { notificationContractID: D.value :: _ ContractInstanceId
-                  , notificationContractEndpoint: D.value :: _ EndpointDescription
-                  , notificationContractArg: D.value :: _ RawJson
-                  }
+                { notificationContractID: D.value :: _ ContractInstanceId
+                , notificationContractEndpoint: D.value :: _ EndpointDescription
+                , notificationContractArg: D.value :: _ RawJson
+                }
           )
 
 derive instance genericNotification :: Generic Notification _
@@ -230,7 +232,8 @@ instance encodeJsonMatchingError :: EncodeJson MatchingError where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unWrongVariantError: E.value :: _ String }
           )
 
@@ -258,7 +261,8 @@ instance encodeJsonAssertionError :: EncodeJson AssertionError where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unAssertionError: E.value :: _ String }
           )
 
@@ -288,7 +292,8 @@ instance encodeJsonContractInstanceId :: EncodeJson ContractInstanceId where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unContractInstanceId: E.value :: _ UUID }
           )
 
@@ -364,7 +369,8 @@ instance encodeJsonEndpointValue :: (EncodeJson a) => EncodeJson (EndpointValue 
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unEndpointValue: E.value :: _ a }
           )
 
@@ -394,7 +400,8 @@ instance encodeJsonEndpointDescription :: EncodeJson EndpointDescription where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { getEndpointDescription: E.value :: _ String }
           )
 

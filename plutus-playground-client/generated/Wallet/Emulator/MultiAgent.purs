@@ -53,15 +53,16 @@ instance EncodeJson EmulatorEvent' where
 
 instance DecodeJson EmulatorEvent' where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "EmulatorEvent'" $ Map.fromFoldable
-      [ "ChainEvent" /\ D.content (ChainEvent <$> D.value)
-      , "ClientEvent" /\ D.content (D.tuple $ ClientEvent </$\>D.value </*\> D.value)
-      , "WalletEvent" /\ D.content (D.tuple $ WalletEvent </$\>D.value </*\> D.value)
-      , "ChainIndexEvent" /\ D.content (D.tuple $ ChainIndexEvent </$\>D.value </*\> D.value)
-      , "SchedulerEvent" /\ D.content (SchedulerEvent <$> D.value)
-      , "InstanceEvent" /\ D.content (InstanceEvent <$> D.value)
-      , "UserThreadEvent" /\ D.content (UserThreadEvent <$> D.value)
-      ]
+    $ D.sumType "EmulatorEvent'"
+    $ Map.fromFoldable
+        [ "ChainEvent" /\ D.content (ChainEvent <$> D.value)
+        , "ClientEvent" /\ D.content (D.tuple $ ClientEvent </$\> D.value </*\> D.value)
+        , "WalletEvent" /\ D.content (D.tuple $ WalletEvent </$\> D.value </*\> D.value)
+        , "ChainIndexEvent" /\ D.content (D.tuple $ ChainIndexEvent </$\> D.value </*\> D.value)
+        , "SchedulerEvent" /\ D.content (SchedulerEvent <$> D.value)
+        , "InstanceEvent" /\ D.content (InstanceEvent <$> D.value)
+        , "UserThreadEvent" /\ D.content (UserThreadEvent <$> D.value)
+        ]
 
 derive instance Generic EmulatorEvent' _
 
@@ -72,19 +73,19 @@ _ChainEvent = prism' ChainEvent case _ of
   (ChainEvent a) -> Just a
   _ -> Nothing
 
-_ClientEvent :: Prism' EmulatorEvent' {a :: Wallet, b :: NodeClientEvent}
-_ClientEvent = prism' (\{a, b} -> (ClientEvent a b)) case _ of
-  (ClientEvent a b) -> Just {a, b}
+_ClientEvent :: Prism' EmulatorEvent' { a :: Wallet, b :: NodeClientEvent }
+_ClientEvent = prism' (\{ a, b } -> (ClientEvent a b)) case _ of
+  (ClientEvent a b) -> Just { a, b }
   _ -> Nothing
 
-_WalletEvent :: Prism' EmulatorEvent' {a :: Wallet, b :: WalletEvent}
-_WalletEvent = prism' (\{a, b} -> (WalletEvent a b)) case _ of
-  (WalletEvent a b) -> Just {a, b}
+_WalletEvent :: Prism' EmulatorEvent' { a :: Wallet, b :: WalletEvent }
+_WalletEvent = prism' (\{ a, b } -> (WalletEvent a b)) case _ of
+  (WalletEvent a b) -> Just { a, b }
   _ -> Nothing
 
-_ChainIndexEvent :: Prism' EmulatorEvent' {a :: Wallet, b :: ChainIndexLog}
-_ChainIndexEvent = prism' (\{a, b} -> (ChainIndexEvent a b)) case _ of
-  (ChainIndexEvent a b) -> Just {a, b}
+_ChainIndexEvent :: Prism' EmulatorEvent' { a :: Wallet, b :: ChainIndexLog }
+_ChainIndexEvent = prism' (\{ a, b } -> (ChainIndexEvent a b)) case _ of
+  (ChainIndexEvent a b) -> Just { a, b }
   _ -> Nothing
 
 _SchedulerEvent :: Prism' EmulatorEvent' SchedulerLog
@@ -113,16 +114,20 @@ instance (Show a) => Show (EmulatorTimeEvent a) where
   show a = genericShow a
 
 instance (EncodeJson a) => EncodeJson (EmulatorTimeEvent a) where
-  encodeJson = defer \_ -> E.encode $ unwrap >$< (E.record
-                                                   { _eteEmulatorTime: E.value :: _ Slot
-                                                   , _eteEvent: E.value :: _ a
-                                                   })
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { _eteEmulatorTime: E.value :: _ Slot
+        , _eteEvent: E.value :: _ a
+        }
+    )
 
 instance (DecodeJson a) => DecodeJson (EmulatorTimeEvent a) where
-  decodeJson = defer \_ -> D.decode $ (EmulatorTimeEvent <$> D.record "EmulatorTimeEvent"
-      { _eteEmulatorTime: D.value :: _ Slot
-      , _eteEvent: D.value :: _ a
-      })
+  decodeJson = defer \_ -> D.decode $
+    ( EmulatorTimeEvent <$> D.record "EmulatorTimeEvent"
+        { _eteEmulatorTime: D.value :: _ Slot
+        , _eteEvent: D.value :: _ a
+        }
+    )
 
 derive instance Generic (EmulatorTimeEvent a) _
 
@@ -130,11 +135,11 @@ derive instance Newtype (EmulatorTimeEvent a) _
 
 --------------------------------------------------------------------------------
 
-_EmulatorTimeEvent :: forall a. Iso' (EmulatorTimeEvent a) {_eteEmulatorTime :: Slot, _eteEvent :: a}
+_EmulatorTimeEvent :: forall a. Iso' (EmulatorTimeEvent a) { _eteEmulatorTime :: Slot, _eteEvent :: a }
 _EmulatorTimeEvent = _Newtype
 
 eteEmulatorTime :: forall a. Lens' (EmulatorTimeEvent a) Slot
-eteEmulatorTime = _Newtype <<< prop (Proxy :: _"_eteEmulatorTime")
+eteEmulatorTime = _Newtype <<< prop (Proxy :: _ "_eteEmulatorTime")
 
 eteEvent :: forall a. Lens' (EmulatorTimeEvent a) a
-eteEvent = _Newtype <<< prop (Proxy :: _"_eteEvent")
+eteEvent = _Newtype <<< prop (Proxy :: _ "_eteEvent")

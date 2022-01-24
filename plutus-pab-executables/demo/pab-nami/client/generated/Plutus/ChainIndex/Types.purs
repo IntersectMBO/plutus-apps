@@ -31,10 +31,10 @@ import Data.Map as Map
 data Tip
   = TipAtGenesis
   | Tip
-    { tipSlot :: Slot
-    , tipBlockId :: BlockId
-    , tipBlockNo :: BlockNumber
-    }
+      { tipSlot :: Slot
+      , tipBlockId :: BlockId
+      , tipBlockNo :: BlockNumber
+      }
 
 derive instance eqTip :: Eq Tip
 
@@ -61,12 +61,13 @@ instance decodeJsonTip :: DecodeJson Tip where
         $ Map.fromFoldable
             [ "TipAtGenesis" /\ pure TipAtGenesis
             , "Tip"
-                /\ ( Tip
+                /\
+                  ( Tip
                       <$> D.object "Tip"
-                          { tipSlot: D.value :: _ Slot
-                          , tipBlockId: D.value :: _ BlockId
-                          , tipBlockNo: D.value :: _ BlockNumber
-                          }
+                        { tipSlot: D.value :: _ Slot
+                        , tipBlockId: D.value :: _ BlockId
+                        , tipBlockNo: D.value :: _ BlockNumber
+                        }
                   )
             ]
 
@@ -89,9 +90,9 @@ _Tip =
 data Point
   = PointAtGenesis
   | Point
-    { pointSlot :: Slot
-    , pointBlockId :: BlockId
-    }
+      { pointSlot :: Slot
+      , pointBlockId :: BlockId
+      }
 
 derive instance eqPoint :: Eq Point
 
@@ -117,11 +118,12 @@ instance decodeJsonPoint :: DecodeJson Point where
         $ Map.fromFoldable
             [ "PointAtGenesis" /\ pure PointAtGenesis
             , "Point"
-                /\ ( Point
+                /\
+                  ( Point
                       <$> D.object "Point"
-                          { pointSlot: D.value :: _ Slot
-                          , pointBlockId: D.value :: _ BlockId
-                          }
+                        { pointSlot: D.value :: _ Slot
+                        , pointBlockId: D.value :: _ BlockId
+                        }
                   )
             ]
 
@@ -292,7 +294,8 @@ instance encodeJsonBlockNumber :: EncodeJson BlockNumber where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unBlockNumber: E.value :: _ BigInt }
           )
 
@@ -320,7 +323,8 @@ instance encodeJsonDepth :: EncodeJson Depth where
   encodeJson =
     defer \_ ->
       E.encode $ unwrap
-        >$< ( E.record
+        >$<
+          ( E.record
               { unDepth: E.value :: _ Int }
           )
 

@@ -61,25 +61,26 @@ instance EncodeJson ChainIndexLog where
 
 instance DecodeJson ChainIndexLog where
   decodeJson = defer \_ -> D.decode
-    $ D.sumType "ChainIndexLog" $ Map.fromFoldable
-      [ "InsertionSuccess" /\ D.content (D.tuple $ InsertionSuccess </$\>D.value </*\> D.value)
-      , "ConversionFailed" /\ D.content (ConversionFailed <$> D.value)
-      , "RollbackSuccess" /\ D.content (RollbackSuccess <$> D.value)
-      , "Err" /\ D.content (Err <$> D.value)
-      , "TxNotFound" /\ D.content (TxNotFound <$> D.value)
-      , "TxOutNotFound" /\ D.content (TxOutNotFound <$> D.value)
-      , "TipIsGenesis" /\ pure TipIsGenesis
-      , "NoDatumScriptAddr" /\ D.content (NoDatumScriptAddr <$> D.value)
-      , "BeamLogItem" /\ D.content (BeamLogItem <$> D.value)
-      ]
+    $ D.sumType "ChainIndexLog"
+    $ Map.fromFoldable
+        [ "InsertionSuccess" /\ D.content (D.tuple $ InsertionSuccess </$\> D.value </*\> D.value)
+        , "ConversionFailed" /\ D.content (ConversionFailed <$> D.value)
+        , "RollbackSuccess" /\ D.content (RollbackSuccess <$> D.value)
+        , "Err" /\ D.content (Err <$> D.value)
+        , "TxNotFound" /\ D.content (TxNotFound <$> D.value)
+        , "TxOutNotFound" /\ D.content (TxOutNotFound <$> D.value)
+        , "TipIsGenesis" /\ pure TipIsGenesis
+        , "NoDatumScriptAddr" /\ D.content (NoDatumScriptAddr <$> D.value)
+        , "BeamLogItem" /\ D.content (BeamLogItem <$> D.value)
+        ]
 
 derive instance Generic ChainIndexLog _
 
 --------------------------------------------------------------------------------
 
-_InsertionSuccess :: Prism' ChainIndexLog {a :: Tip, b :: InsertUtxoPosition}
-_InsertionSuccess = prism' (\{a, b} -> (InsertionSuccess a b)) case _ of
-  (InsertionSuccess a b) -> Just {a, b}
+_InsertionSuccess :: Prism' ChainIndexLog { a :: Tip, b :: InsertUtxoPosition }
+_InsertionSuccess = prism' (\{ a, b } -> (InsertionSuccess a b)) case _ of
+  (InsertionSuccess a b) -> Just { a, b }
   _ -> Nothing
 
 _ConversionFailed :: Prism' ChainIndexLog FromCardanoError

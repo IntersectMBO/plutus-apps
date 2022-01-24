@@ -30,22 +30,22 @@ import ValueEditor (valueForm)
 -- TODO Handle the Unsupported case.
 -- TODO Handle the FormMaybe case.
 -- TODO Force Hex fields to comply to [0-9a-fA-F].
-actionArgumentForm ::
-  forall p i.
-  Int ->
-  (FormEvent -> i) ->
-  FormArgument ->
-  HTML p i
+actionArgumentForm
+  :: forall p i
+   . Int
+  -> (FormEvent -> i)
+  -> FormArgument
+  -> HTML p i
 actionArgumentForm index wrapper argument =
   div [ class_ wasValidated ]
     [ wrapper <$> actionArgumentField [ show index ] false argument ]
 
-actionArgumentField ::
-  forall p.
-  Array String ->
-  Boolean ->
-  FormArgument ->
-  HTML p FormEvent
+actionArgumentField
+  :: forall p
+   . Array String
+  -> Boolean
+  -> FormArgument
+  -> HTML p FormEvent
 actionArgumentField _ _ (Fix FormUnitF) = Bootstrap.empty
 
 actionArgumentField ancestors _ arg@(Fix (FormBoolF b)) =
@@ -172,18 +172,18 @@ actionArgumentField ancestors isNested (Fix (FormArrayF _ subFields)) =
   subFormContainer i field =
     show i
       /\ formGroup_
-          [ row_
-              [ col10_
-                  [ SetSubField i <$> actionArgumentField (Array.snoc ancestors (show i)) true field ]
-              , col2_
-                  [ button
-                      [ classes [ btn, btnLink ]
-                      , onClick $ const $ RemoveSubField i
-                      ]
-                      [ icon Trash ]
-                  ]
-              ]
-          ]
+        [ row_
+            [ col10_
+                [ SetSubField i <$> actionArgumentField (Array.snoc ancestors (show i)) true field ]
+            , col2_
+                [ button
+                    [ classes [ btn, btnLink ]
+                    , onClick $ const $ RemoveSubField i
+                    ]
+                    [ icon Trash ]
+                ]
+            ]
+        ]
 
 actionArgumentField ancestors isNested (Fix (FormObjectF subFields)) =
   div [ nesting isNested ]
@@ -252,7 +252,8 @@ actionArgumentField _ isNested (Fix (FormPOSIXTimeRangeF interval)) =
       , onClick $ const $ SetField $ SetPOSIXTimeRangeField $ over inclusionLens not interval
       ]
       [ icon
-          $ if view inclusionLens interval then
+          $
+            if view inclusionLens interval then
               inclusionIcon
             else
               exclusionIcon
@@ -285,11 +286,11 @@ actionArgumentField _ isNested (Fix (FormPOSIXTimeRangeF interval)) =
               _ -> mempty
       , onValueInput $ BigInt.fromString
           >>> case _ of
-              Just n ->
-                SetField
-                  $ SetPOSIXTimeRangeField
-                  $ set extensionLens (Finite (POSIXTime { getPOSIXTime: n })) interval
-              Nothing -> SetField $ SetPOSIXTimeRangeField interval
+            Just n ->
+              SetField
+                $ SetPOSIXTimeRangeField
+                $ set extensionLens (Finite (POSIXTime { getPOSIXTime: n })) interval
+            Nothing -> SetField $ SetPOSIXTimeRangeField interval
       ]
 
 actionArgumentField _ isNested (Fix (FormValueF value)) =
@@ -321,7 +322,7 @@ validationFeedback [] = validFeedback_ []
 
 validationFeedback errors = invalidFeedback_ (div_ <<< pure <<< text <<< showPathValue <$> errors)
 
-nesting :: forall r i. Boolean -> IProp ( "class" :: String | r ) i
+nesting :: forall r i. Boolean -> IProp ("class" :: String | r) i
 nesting true = classes [ ClassName "nested" ]
 
 nesting false = classes []
