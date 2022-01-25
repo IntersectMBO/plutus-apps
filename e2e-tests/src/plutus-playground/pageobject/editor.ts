@@ -16,7 +16,8 @@ export class EditorPage {
     this.vesting = this.page.locator("a >> text=Vesting");
     this.crowdFunding = this.page.locator("a >> text=Crowd Funding");
     this.errorHandling = this.page.locator("a >> text=Error Handling");
-    this.helloWorldText = this.page.locator("//div[@class='code-editor']/descendant::span[contains(text(), 'Hello') and contains(text(), 'world')]"); // text in code editor
+    this.helloWorldInEditor = this.page.locator("//div[@class='code-editor']/descendant::span[contains(text(), 'Hello') and contains(text(), 'world')]"); // text in code editor
+    this.compilingInEditor = this.page.locator("//div[@class='code-editor']/descendant::span[contains(text(), 'Crowdfunding')]"); // text in code editor
     this.compileBtn = this.page.locator("button >> text=Compile");
     this.simulateBtn = this.page.locator("//button >> text=Simulate");
     this.feedbackHeader = this.page.locator("//div[@class='editor-feedback-header']");
@@ -30,7 +31,7 @@ export class EditorPage {
 
   async modifyHelloWorldText(text: string) {
     await expect(this.feedbackHeader).toHaveText(this.compilationSuccessfulText); // it's already compiled becuse it's an example?
-    await this.helloWorldText.click();
+    await this.helloWorldInEditor.click();
     await this.page.keyboard.type(text);
   }
 
@@ -38,14 +39,14 @@ export class EditorPage {
     const textToInsert = this.wonderfulText;
     await this.helloWorld.click();
     await this.modifyHelloWorldText(textToInsert);
-    await expect(this.helloWorldText).toBeVisible();
+    await expect(this.helloWorldInEditor).toBeVisible();
     await this.compile();
     return textToInsert;
   }
 
   async compileCrowdFunding() {
-    const textToInsert = this.wonderfulText;
     await this.crowdFunding.click();
+    await expect(this.compilingInEditor).toBeVisible();
     await this.compile();
   }
 

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+//import envs from '../envs.json';
 import envs from '../envs.json';
 
 const { EditorPage } = require('../pageobject/editor');

@@ -3,16 +3,19 @@ import { PlaywrightTestConfig, devices } from '@playwright/test';
 const config: PlaywrightTestConfig = {
   timeout: 60000,
   expect: {
-    timeout: 30000,
+    timeout: 40000,
     toMatchSnapshot: {
       threshold: 0.3,
     },
   },
   reporter: [
-    ['json', { outputFile: './report.json' }]
+    //[process.env.CI ? 'github' : 'list'],
+    ['list'],
+    ['html', { open: 'never' , outputFolder: 'html-report'}]
   ],
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  workers: 1,
   use: {
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true
@@ -20,16 +23,25 @@ const config: PlaywrightTestConfig = {
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-/*    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 1280, height: 720 },
+      },
     },
     {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      name: 'firefox',
+      use: {
+        browserName: 'firefox',
+        viewport: { width: 1280, height: 720 },
+      }
     },
-*/  ],
+/*    {
+      name: 'safari',
+      use: {
+        browserName: 'webkit',
+        viewport: { width: 1280, height: 720 },
+      }
+    }*/
+  ],
 };
 export default config;
