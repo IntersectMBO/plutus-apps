@@ -23,16 +23,13 @@ import Control.Monad.Freer.Coroutine
 import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Maybe (maybeToList)
-import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
 import Wallet.Emulator.Chain (ChainControlEffect, modifySlot, processBlock)
 import Wallet.Emulator.MultiAgent (MultiAgentControlEffect, MultiAgentEffect, walletAction, walletControlAction)
 
-import Data.Hashable (hash)
 import Data.String (IsString (..))
-import Ledger (Block, Slot, TxId (..), eitherTx, txId)
-import Plutus.ChainIndex (BlockId (..), ChainIndexControlEffect, ChainSyncBlock (Block), Tip (Tip, TipAtGenesis),
-                          appendBlock, fromOnChainTx, getTip)
+import Ledger (Block, Slot)
+import Plutus.ChainIndex (ChainIndexControlEffect, ChainSyncBlock (Block), Tip (Tip, TipAtGenesis), appendBlock,
+                          blockId, fromOnChainTx, getTip)
 import Plutus.Trace.Emulator.Types (EmulatorMessage (..))
 import Plutus.Trace.Scheduler (EmSystemCall, MessageCall (..), Priority (..), Tag, fork, mkSysCall, sleep)
 import Wallet.Emulator.NodeClient (ChainClientNotification (..), clientNotify)
@@ -142,11 +139,5 @@ appendNewTipBlock ::
 appendNewTipBlock lastTip block newSlot = do
   let nextBlockNo = case lastTip of TipAtGenesis -> 0
                                     Tip _ _ n    -> n + 1
-
-  -- To calculate the hast of a block, we concat the tx ids, and
-  -- apply 'hash' to the resulting string.
-  let blockId = BlockId
-              $ (Text.encodeUtf8 . Text.pack . show . hash)
-              $ foldMap (getTxId . eitherTx txId txId) block
-  let newTip = Tip newSlot blockId nextBlockNo
+      newTip = Tip newSlot (blockId block) nextBlockNo
   appendBlock (Block newTip (fmap (\tx -> (fromOnChainTx tx, def)) block))
