@@ -1,31 +1,41 @@
 {
     "warnings": [],
     "result": {
-        "feesDistribution": [
-            {
-                "simulatorWalletBalance": {
-                    "getValue": []
-                },
-                "simulatorWalletWallet": {
-                    "getWallet": 1
-                }
-            },
-            {
-                "simulatorWalletBalance": {
-                    "getValue": []
-                },
-                "simulatorWalletWallet": {
-                    "getWallet": 2
-                }
-            }
-        ],
         "resultRollup": [
             [
                 {
+                    "txId": {
+                        "getTxId": "7423953d56c71e969089b20764496c924ee6b20afff93637bf34b1140a33d0ad"
+                    },
+                    "sequenceId": {
+                        "slotIndex": 0,
+                        "txIndex": 0
+                    },
+                    "valid": false,
                     "tx": {
-                        "txData": [],
                         "txInputs": [],
-                        "txRedeemers": [],
+                        "txFee": {
+                            "getValue": []
+                        },
+                        "txSignatures": [],
+                        "txMint": {
+                            "getValue": [
+                                [
+                                    {
+                                        "unCurrencySymbol": ""
+                                    },
+                                    [
+                                        [
+                                            {
+                                                "unTokenName": ""
+                                            },
+                                            200
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        },
+                        "txData": [],
                         "txOutputs": [
                             {
                                 "txOutValue": {
@@ -45,6 +55,7 @@
                                         ]
                                     ]
                                 },
+                                "txOutDatumHash": null,
                                 "txOutAddress": {
                                     "addressStakingCredential": null,
                                     "addressCredential": {
@@ -53,8 +64,7 @@
                                         },
                                         "tag": "PubKeyCredential"
                                     }
-                                },
-                                "txOutDatumHash": null
+                                }
                             },
                             {
                                 "txOutValue": {
@@ -74,6 +84,7 @@
                                         ]
                                     ]
                                 },
+                                "txOutDatumHash": null,
                                 "txOutAddress": {
                                     "addressStakingCredential": null,
                                     "addressCredential": {
@@ -82,79 +93,53 @@
                                         },
                                         "tag": "PubKeyCredential"
                                     }
-                                },
-                                "txOutDatumHash": null
+                                }
                             }
                         ],
+                        "txMintScripts": [],
+                        "txRedeemers": [],
+                        "txCollateral": [],
                         "txValidRange": {
-                            "ivTo": [
-                                {
-                                    "tag": "PosInf"
-                                },
-                                true
-                            ],
                             "ivFrom": [
                                 {
                                     "tag": "NegInf"
                                 },
                                 true
+                            ],
+                            "ivTo": [
+                                {
+                                    "tag": "PosInf"
+                                },
+                                true
                             ]
-                        },
-                        "txMint": {
-                            "getValue": [
-                                [
-                                    {
-                                        "unCurrencySymbol": ""
-                                    },
-                                    [
-                                        [
-                                            {
-                                                "unTokenName": ""
-                                            },
-                                            200
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        },
-                        "txFee": {
-                            "getValue": []
-                        },
-                        "txCollateral": [],
-                        "txMintScripts": [],
-                        "txSignatures": []
+                        }
                     },
-                    "dereferencedInputs": [],
-                    "sequenceId": {
-                        "slotIndex": 0,
-                        "txIndex": 0
-                    },
-                    "txId": {
-                        "getTxId": "7423953d56c71e969089b20764496c924ee6b20afff93637bf34b1140a33d0ad"
-                    },
-                    "valid": false,
-                    "balances": []
+                    "balances": [],
+                    "dereferencedInputs": []
                 }
             ]
         ],
-        "emulatorTrace": "[ Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract instance stopped (no errors) ]\n[ Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract instance stopped (no errors) ]",
-        "fundsDistribution": [
-            {
-                "simulatorWalletBalance": {
-                    "getValue": []
+        "walletKeys": [
+            [
+                {
+                    "unPaymentPubKeyHash": {
+                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                    }
                 },
-                "simulatorWalletWallet": {
+                {
                     "getWallet": 1
                 }
-            },
-            {
-                "simulatorWalletBalance": {
-                    "getValue": []
+            ],
+            [
+                {
+                    "unPaymentPubKeyHash": {
+                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                    }
                 },
-                "simulatorWalletWallet": {
+                {
                     "getWallet": 2
                 }
-            }
+            ]
         ],
         "emulatorLog": [
             {
@@ -169,9 +154,29 @@
                                 "getTxId": "7423953d56c71e969089b20764496c924ee6b20afff93637bf34b1140a33d0ad"
                             },
                             {
-                                "txData": [],
                                 "txInputs": [],
-                                "txRedeemers": [],
+                                "txFee": {
+                                    "getValue": []
+                                },
+                                "txSignatures": [],
+                                "txMint": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    200
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txData": [],
                                 "txOutputs": [
                                     {
                                         "txOutValue": {
@@ -191,6 +196,7 @@
                                                 ]
                                             ]
                                         },
+                                        "txOutDatumHash": null,
                                         "txOutAddress": {
                                             "addressStakingCredential": null,
                                             "addressCredential": {
@@ -199,8 +205,7 @@
                                                 },
                                                 "tag": "PubKeyCredential"
                                             }
-                                        },
-                                        "txOutDatumHash": null
+                                        }
                                     },
                                     {
                                         "txOutValue": {
@@ -220,6 +225,7 @@
                                                 ]
                                             ]
                                         },
+                                        "txOutDatumHash": null,
                                         "txOutAddress": {
                                             "addressStakingCredential": null,
                                             "addressCredential": {
@@ -228,54 +234,53 @@
                                                 },
                                                 "tag": "PubKeyCredential"
                                             }
-                                        },
-                                        "txOutDatumHash": null
+                                        }
                                     }
                                 ],
+                                "txMintScripts": [],
+                                "txRedeemers": [],
+                                "txCollateral": [],
                                 "txValidRange": {
-                                    "ivTo": [
-                                        {
-                                            "tag": "PosInf"
-                                        },
-                                        true
-                                    ],
                                     "ivFrom": [
                                         {
                                             "tag": "NegInf"
                                         },
                                         true
+                                    ],
+                                    "ivTo": [
+                                        {
+                                            "tag": "PosInf"
+                                        },
+                                        true
                                     ]
-                                },
-                                "txMint": {
-                                    "getValue": [
-                                        [
-                                            {
-                                                "unCurrencySymbol": ""
-                                            },
-                                            [
-                                                [
-                                                    {
-                                                        "unTokenName": ""
-                                                    },
-                                                    200
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-                                },
-                                "txFee": {
-                                    "getValue": []
-                                },
-                                "txCollateral": [],
-                                "txMintScripts": [],
-                                "txSignatures": []
+                                }
                             },
                             {
                                 "contents": [
                                     {
-                                        "txData": [],
                                         "txInputs": [],
-                                        "txRedeemers": [],
+                                        "txFee": {
+                                            "getValue": []
+                                        },
+                                        "txSignatures": [],
+                                        "txMint": {
+                                            "getValue": [
+                                                [
+                                                    {
+                                                        "unCurrencySymbol": ""
+                                                    },
+                                                    [
+                                                        [
+                                                            {
+                                                                "unTokenName": ""
+                                                            },
+                                                            200
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        },
+                                        "txData": [],
                                         "txOutputs": [
                                             {
                                                 "txOutValue": {
@@ -295,6 +300,7 @@
                                                         ]
                                                     ]
                                                 },
+                                                "txOutDatumHash": null,
                                                 "txOutAddress": {
                                                     "addressStakingCredential": null,
                                                     "addressCredential": {
@@ -303,8 +309,7 @@
                                                         },
                                                         "tag": "PubKeyCredential"
                                                     }
-                                                },
-                                                "txOutDatumHash": null
+                                                }
                                             },
                                             {
                                                 "txOutValue": {
@@ -324,6 +329,7 @@
                                                         ]
                                                     ]
                                                 },
+                                                "txOutDatumHash": null,
                                                 "txOutAddress": {
                                                     "addressStakingCredential": null,
                                                     "addressCredential": {
@@ -332,47 +338,26 @@
                                                         },
                                                         "tag": "PubKeyCredential"
                                                     }
-                                                },
-                                                "txOutDatumHash": null
+                                                }
                                             }
                                         ],
+                                        "txMintScripts": [],
+                                        "txRedeemers": [],
+                                        "txCollateral": [],
                                         "txValidRange": {
-                                            "ivTo": [
-                                                {
-                                                    "tag": "PosInf"
-                                                },
-                                                true
-                                            ],
                                             "ivFrom": [
                                                 {
                                                     "tag": "NegInf"
                                                 },
                                                 true
+                                            ],
+                                            "ivTo": [
+                                                {
+                                                    "tag": "PosInf"
+                                                },
+                                                true
                                             ]
-                                        },
-                                        "txMint": {
-                                            "getValue": [
-                                                [
-                                                    {
-                                                        "unCurrencySymbol": ""
-                                                    },
-                                                    [
-                                                        [
-                                                            {
-                                                                "unTokenName": ""
-                                                            },
-                                                            200
-                                                        ]
-                                                    ]
-                                                ]
-                                            ]
-                                        },
-                                        "txFee": {
-                                            "getValue": []
-                                        },
-                                        "txCollateral": [],
-                                        "txMintScripts": [],
-                                        "txSignatures": []
+                                        }
                                     },
                                     {
                                         "txOutValue": {
@@ -392,6 +377,7 @@
                                                 ]
                                             ]
                                         },
+                                        "txOutDatumHash": null,
                                         "txOutAddress": {
                                             "addressStakingCredential": null,
                                             "addressCredential": {
@@ -400,8 +386,7 @@
                                                 },
                                                 "tag": "PubKeyCredential"
                                             }
-                                        },
-                                        "txOutDatumHash": null
+                                        }
                                     }
                                 ],
                                 "tag": "ValueContainsLessThanMinAda"
@@ -433,9 +418,6 @@
                 },
                 "_eteEvent": {
                     "contents": {
-                        "_cilId": {
-                            "unContractInstanceId": "00000000-0000-4000-8000-000000000000"
-                        },
                         "_cilMessage": {
                             "contents": "Hello, world",
                             "tag": "ContractLog"
@@ -443,6 +425,9 @@
                         "_cilTag": {
                             "shortContractInstanceTag": "Wallet W7ce8",
                             "unContractInstanceTag": "Contract instance for W7ce812d"
+                        },
+                        "_cilId": {
+                            "unContractInstanceId": "00000000-0000-4000-8000-000000000000"
                         }
                     },
                     "tag": "InstanceEvent"
@@ -454,9 +439,6 @@
                 },
                 "_eteEvent": {
                     "contents": {
-                        "_cilId": {
-                            "unContractInstanceId": "00000000-0000-4000-8000-000000000001"
-                        },
                         "_cilMessage": {
                             "contents": "Hello, world",
                             "tag": "ContractLog"
@@ -464,6 +446,9 @@
                         "_cilTag": {
                             "shortContractInstanceTag": "Wallet W872c",
                             "unContractInstanceTag": "Contract instance for W872cb83"
+                        },
+                        "_cilId": {
+                            "unContractInstanceId": "00000000-0000-4000-8000-000000000001"
                         }
                     },
                     "tag": "InstanceEvent"
@@ -484,27 +469,42 @@
                 }
             }
         ],
-        "walletKeys": [
-            [
-                {
-                    "unPaymentPubKeyHash": {
-                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
-                    }
+        "feesDistribution": [
+            {
+                "simulatorWalletBalance": {
+                    "getValue": []
                 },
-                {
+                "simulatorWalletWallet": {
                     "getWallet": 1
                 }
-            ],
-            [
-                {
-                    "unPaymentPubKeyHash": {
-                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
-                    }
+            },
+            {
+                "simulatorWalletBalance": {
+                    "getValue": []
                 },
-                {
+                "simulatorWalletWallet": {
                     "getWallet": 2
                 }
-            ]
-        ]
+            }
+        ],
+        "fundsDistribution": [
+            {
+                "simulatorWalletBalance": {
+                    "getValue": []
+                },
+                "simulatorWalletWallet": {
+                    "getWallet": 1
+                }
+            },
+            {
+                "simulatorWalletBalance": {
+                    "getValue": []
+                },
+                "simulatorWalletWallet": {
+                    "getWallet": 2
+                }
+            }
+        ],
+        "emulatorTrace": "[ Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract instance stopped (no errors) ]\n[ Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract instance stopped (no errors) ]"
     }
 }
