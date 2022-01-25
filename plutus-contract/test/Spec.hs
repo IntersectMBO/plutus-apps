@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main(main) where
 
+import Spec.Balancing qualified
 import Spec.Contract qualified
 import Spec.Emulator qualified
 import Spec.ErrorChecking qualified
@@ -25,5 +26,6 @@ tests = testGroup "plutus-contract" [
     Spec.Secrets.tests,
     Spec.ErrorChecking.tests,
     Spec.Plutus.Contract.Wallet.tests,
-    Spec.Plutus.Contract.Oracle.tests
+    Spec.Plutus.Contract.Oracle.tests,
+    Spec.Balancing.tests
     ]
