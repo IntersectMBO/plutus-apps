@@ -7,7 +7,6 @@ import Chain.Types
 import Animation (animationClass)
 import Bootstrap (active, card, cardBody_, cardFooter_, cardHeader, cardHeader_, col, col3_, col6_, colLg2, colMd3, colSm6, colXs12, col_, empty, nbsp, row, row_, tableBordered, tableSmall, textTruncate)
 import Bootstrap as Bootstrap
-import Bootstrap.Extra (clickable)
 import Clipboard (showShortCopyLong)
 import Data.Array ((:))
 import Data.Array as Array
@@ -91,7 +90,7 @@ chainSlotView state chainSlot =
 blockView :: forall p. State -> AnnotatedTx -> HTML p Action
 blockView state (AnnotatedTx { txId, sequenceId }) =
   div
-    [ classes ([ card, clickable, ClassName "transaction" ] <> if isActive then [ active ] else [])
+    [ classes ([ card, ClassName "clickable", ClassName "transaction" ] <> if isActive then [ active ] else [])
     , onClickFocusTx txId
     ]
     [ entryCardHeader sequenceId false ]
