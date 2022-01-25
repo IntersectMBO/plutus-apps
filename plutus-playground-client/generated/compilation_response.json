@@ -13,8 +13,8 @@
         ],
         "knownCurrencies": [
             {
-                "friendlyName": "Ada",
                 "hash": "",
+                "friendlyName": "Ada",
                 "knownTokens": [
                     {
                         "unTokenName": ""

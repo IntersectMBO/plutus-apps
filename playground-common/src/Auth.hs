@@ -127,7 +127,7 @@ mkGithubEndpoints = do
 -- | Config supplied at runtime.
 data Config =
     Config
-        { _configJWTSignature       :: !JWT.Signer
+        { _configJWTSignature       :: !JWT.EncodeSigner
         , _configFrontendUrl        :: !Text
         , _configGithubCbPath       :: !Text
         , _configGithubClientId     :: !OAuthClientId
@@ -214,7 +214,7 @@ authStatus cookieHeader = do
     pure authStatusResult
 
 extractGithubToken ::
-       JWT.Signer -> POSIXTime -> Maybe Text -> Either Text (Token 'Github)
+       JWT.EncodeSigner -> POSIXTime -> Maybe Text -> Either Text (Token 'Github)
 extractGithubToken signer now cookieHeader =
     runTrace "Reading cookies." $ do
         cookies <- parseCookies . encodeUtf8 <$> withTrace cookieHeader
@@ -223,7 +223,7 @@ extractGithubToken signer now cookieHeader =
         attempt $ "Reading JWT Cookie: " <> decodeUtf8 githubAuth
         unverifiedJwt <- withTrace . JWT.decode . decodeUtf8 $ githubAuth
         attempt "Verifying JWT Cookie."
-        verifiedJwt <- withTrace $ JWT.verify signer unverifiedJwt
+        verifiedJwt <- withTrace $ JWT.verify (JWT.toVerify signer) unverifiedJwt
         let claims = JWT.claims verifiedJwt
         attempt "Checking expiry date is set."
         expiry <- withTrace $ JWT.exp claims
@@ -305,7 +305,7 @@ makeTokenRequest GithubEndpoints {..} Config {..} code =
         -> Maybe ByteString
     param = Just . encodeUtf8 . unpack
 
-createSessionCookie :: JWT.Signer -> OAuthToken 'Github -> UTCTime -> SetCookie
+createSessionCookie :: JWT.EncodeSigner -> OAuthToken 'Github -> UTCTime -> SetCookie
 createSessionCookie signer token now =
     defaultSetCookie
         { setCookieName = encodeUtf8 hSessionIdCookie

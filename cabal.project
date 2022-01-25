@@ -1,5 +1,5 @@
 -- Bump this if you need newer packages.
-index-state: 2021-10-20T00:00:00Z
+index-state: 2022-01-22T00:00:00Z
 
 packages: doc
           freer-extras
@@ -28,11 +28,6 @@ test-show-details: streaming
 
 allow-newer:
   size-based:template-haskell
-
-constraints:
-  -- Newer Hashable have instances for Set, which breaks beam-migrate
-  -- which declares its own instances of Hashable Set
-  hashable < 1.3.4.0
 
 -- These packages appear in our dependency tree and are very slow to build.
 -- Empirically, turning off optimization shaves off ~50% build time.
