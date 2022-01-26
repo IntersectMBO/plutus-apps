@@ -1,11 +1,12 @@
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
-import           Data.Maybe            (isJust, isNothing, fromJust)
+import           Data.List             (foldl')
+import           Data.Maybe            (fromJust, isJust, isNothing)
 
 import           Model
 
-import Debug.Trace qualified as Debug
+import qualified Debug.Trace           as Debug
 
 tests :: TestTree
 tests = testGroup "Utxo index" [hfProperties]
@@ -20,6 +21,10 @@ hfProperties = testGroup "Historical fold"
       withMaxSuccess 10000 $ prop_rewindWithDepth @Int @Int
   , testProperty "Relationship between Insert/Rewind" $
       withMaxSuccess 10000 $ prop_InsertRewindInverse @Int @Int
+  , testProperty "Insert is folding the structure" $
+      withMaxSuccess 10000 $ prop_InsertFolds @Int @Int
+  , testProperty "Insert is increasing the length unless overflowing" $
+      withMaxSuccess 10000 $ prop_InsertHistoryLength @Int @Int
   ]
 
 -- | Properties of the `new` operation.
@@ -67,6 +72,7 @@ prop_historyLengthLEDepth
 prop_historyLengthLEDepth hf =
   property $ historyLength hf <= hfDepth hf
 
+-- | Relation between Rewind and Inverse
 prop_InsertRewindInverse
   :: (Show a, Show b, Arbitrary b, Eq a)
   => HistoricalFold a b
@@ -82,6 +88,30 @@ prop_InsertRewindInverse hf =
       let hf'   = rewind (length bs) $ insertL bs hf
        in property $ isJust hf' && fromJust hf' `matchesHistory` hf
 
+-- | Generally this would not be a good property since it is very coupled
+--   to the implementation, but it will be useful when trying to certify that
+--   another implmentation is confirming.
+prop_InsertFolds
+  :: (Eq a, Show a)
+  => HistoricalFold a b
+  -> [b]
+  -> Property
+prop_InsertFolds hf bs =
+  view (insertL bs hf) ===
+    foldl' (hfFunction hf) (view hf) bs
+
+prop_InsertHistoryLength
+  :: HistoricalFold a b
+  -> b
+  -> Property
+prop_InsertHistoryLength hf b =
+  let initialLength = historyLength hf
+      finalLength   = historyLength (insert b hf)
+   in cover 10 (initialLength == hfDepth hf) "Overflowing" $
+      cover 30 (initialLength < hfDepth hf)  "Not filled" $
+      if initialLength == hfDepth hf
+      then finalLength === initialLength
+      else finalLength === initialLength + 1
 
 main :: IO ()
 main = defaultMain tests

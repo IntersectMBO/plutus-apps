@@ -2,6 +2,8 @@ module Model ( -- * Model data
                HistoricalFold
                -- Should we provide access to these?
              , hfDepth
+             , hfAccumulator
+             , hfFunction
                -- * Model functionality
              , new
              , insert
