@@ -70,12 +70,12 @@ prop_Success = checkErrorWhitelist defaultWhitelist (actionsFromList [Success])
 -- test that are convenient for testing them in isolation.
 data DummyModel = DummyModel deriving Haskell.Show
 
-deriving instance Haskell.Eq (ContractInstanceKey DummyModel w schema err)
-deriving instance Haskell.Show (ContractInstanceKey DummyModel w schema err)
+deriving instance Haskell.Eq (ContractInstanceKey DummyModel w schema err param)
+deriving instance Haskell.Show (ContractInstanceKey DummyModel w schema err param)
 
 instance ContractModel DummyModel where
-  data ContractInstanceKey DummyModel w schema err where
-    WalletKey :: Wallet -> ContractInstanceKey DummyModel () Schema ContractError
+  data ContractInstanceKey DummyModel w schema err param where
+    WalletKey :: Wallet -> ContractInstanceKey DummyModel () Schema ContractError ()
 
   data Action DummyModel = FailFalse
                          | FailHeadNil
@@ -103,11 +103,11 @@ instance ContractModel DummyModel where
 
   initialState = DummyModel
 
-  initialInstances = [Key (WalletKey w1)]
+  initialInstances = [StartContract (WalletKey w1) ()]
 
   instanceWallet (WalletKey w) = w
 
-  instanceContract _ _ (WalletKey _) = contract
+  instanceContract _ (WalletKey _) _ = contract
 
   nextState _ = wait 2
 
