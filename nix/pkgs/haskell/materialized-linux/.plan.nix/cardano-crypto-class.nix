@@ -26,7 +26,11 @@
       licenseFiles = [ "LICENSE" "NOTICE" ];
       dataDir = ".";
       dataFiles = [];
-      extraSrcFiles = [ "README.md" ];
+      extraSrcFiles = [
+        "README.md"
+        "jsbits/libsodium.c"
+        "jsbits/bindings.js.pp"
+        ];
       extraTmpFiles = [];
       extraDocFiles = [];
       };
@@ -99,6 +103,7 @@
           "Cardano/Crypto/Libsodium/UnsafeC"
           "Cardano/Foreign"
           ];
+        jsSources = (pkgs.lib).optional (compiler.isGhcjs && true || system.isGhcjs) "jsbits/bindings.js.pp";
         hsSourceDirs = [ "src" ];
         };
       tests = {
