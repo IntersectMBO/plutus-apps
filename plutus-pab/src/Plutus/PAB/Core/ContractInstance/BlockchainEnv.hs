@@ -42,6 +42,7 @@ import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
+import System.Random
 
 -- | Connect to the node and write node updates to the blockchain
 --   env.
@@ -78,7 +79,9 @@ handleSyncAction action = do
                                 -- we start logging from here to avoid spamming the terminal
                                 -- should be removed when we have better logging to report
                                 -- on the PAB sync status
-      if (n `mod` 100_000 == 0 && n > 0) || (s >= recentSlot)
+      stdGen <- newStdGen
+      let logBlock = fst (randomR (0 :: Int, 10_000) stdGen) == 0
+      if  logBlock || (s >= recentSlot)
         then do
           putStrLn $ "Current block: " <> show n <> ". Current slot: " <> show s
         else pure ()
