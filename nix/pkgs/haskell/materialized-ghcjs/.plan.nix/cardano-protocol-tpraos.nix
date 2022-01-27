@@ -45,12 +45,12 @@
           (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
           (hsPkgs."quiet" or (errorHandler.buildDepError "quiet"))
           (hsPkgs."non-integral" or (errorHandler.buildDepError "non-integral"))
+          (hsPkgs."set-algebra" or (errorHandler.buildDepError "set-algebra"))
           (hsPkgs."small-steps" or (errorHandler.buildDepError "small-steps"))
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
           ];
         buildable = true;
         modules = [
-          "Cardano/Protocol/TPraos"
           "Cardano/Protocol/TPraos/BHeader"
           "Cardano/Protocol/TPraos/OCert"
           "Cardano/Protocol/TPraos/Rules/OCert"
@@ -64,13 +64,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "11";
+      url = "8";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "11";
+      url = "8";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/cardano-protocol-tpraos; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/libs/cardano-protocol-tpraos; echo source root reset to \$sourceRoot";
     }

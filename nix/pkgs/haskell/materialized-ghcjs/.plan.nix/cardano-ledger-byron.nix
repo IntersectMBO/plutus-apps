@@ -208,6 +208,7 @@
             "Test/Cardano/Chain/Byron/API"
             "Test/Cardano/Chain/Buildable"
             "Test/Cardano/Chain/Common/Address"
+            "Test/Cardano/Chain/Common/Attributes"
             "Test/Cardano/Chain/Common/CBOR"
             "Test/Cardano/Chain/Common/Compact"
             "Test/Cardano/Chain/Common/Example"
@@ -286,13 +287,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "11";
+      url = "8";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "11";
+      url = "8";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/byron/ledger/impl; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/eras/byron/ledger/impl; echo source root reset to \$sourceRoot";
     }

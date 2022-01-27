@@ -11,7 +11,7 @@
     flags = { release = false; };
     package = {
       specVersion = "1.12";
-      identifier = { name = "cardano-addresses-cli"; version = "3.7.0"; };
+      identifier = { name = "cardano-addresses-cli"; version = "3.6.0"; };
       license = "Apache-2.0";
       copyright = "2021 IOHK";
       maintainer = "operations@iohk.io";
@@ -158,11 +158,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "12";
+      url = "13";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "12";
+      url = "13";
       rev = "minimal";
       sha256 = "";
       };
