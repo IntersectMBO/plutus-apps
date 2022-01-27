@@ -326,7 +326,7 @@ validateTxAndAddFees feeCfg slotCfg ownTxOuts utx = do
     -- Balance and sign just for validation
     tx <- handleBalanceTx ownTxOuts utx
     signedTx <- handleAddSignature tx
-    let utxoIndex        = Ledger.UtxoIndex $ fmap Ledger.toTxOut $ (U.fromScriptOutput <$> unBalancedTxUtxoIndex utx) <> ownTxOuts
+    let utxoIndex        = Ledger.UtxoIndex $ unBalancedTxUtxoIndex utx <> fmap Ledger.toTxOut ownTxOuts
         ((e, _), events) = Ledger.runValidation (Ledger.validateTransactionOffChain signedTx) (Ledger.ValidationCtx utxoIndex slotCfg)
     for_ e $ \(phase, ve) -> do
         logWarn $ ValidationFailed phase (Ledger.txId tx) tx ve events

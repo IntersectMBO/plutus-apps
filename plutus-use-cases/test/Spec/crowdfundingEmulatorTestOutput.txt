@@ -176,13 +176,13 @@ Slot 20: W872cb83: Balancing an unbalanced transaction:
                      Utxo index:
                        ( 1dc8c21dc6a9ae5cecd57646a344745dba3d2d9929e30498c7da36f0a8ff0c78!1
                        , - Value (Map [(,Map [("",10000000)])]) addressed to
-                           9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 )
+                           ScriptCredential: 9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 (no staking credential) )
                        ( 3885731ef1d31f92492628bdb6982c22de9af5eb4286c4cde47c6f2f62156eea!1
                        , - Value (Map [(,Map [("",10000000)])]) addressed to
-                           9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 )
+                           ScriptCredential: 9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 (no staking credential) )
                        ( d90b088b39ea27cd845200fc4242f7aa048eaba5dd5f33ff0757ee5bb22d0ff9!1
                        , - Value (Map [(,Map [("",2500000)])]) addressed to
-                           9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 )
+                           ScriptCredential: 9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 (no staking credential) )
                      Validity range:
                        [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
 Slot 20: W872cb83: Finished balancing:
