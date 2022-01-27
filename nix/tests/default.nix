@@ -1,9 +1,11 @@
 { pkgs
 , gitignore-nix
 , fixStylishHaskell
-, fixPurty
+, fix-purs-tidy
 , fixPngOptimization
 , src
+, play-generated
+, nami-generated
 , plutus-playground
 , web-ghc
 , docs
@@ -21,9 +23,14 @@ pkgs.recurseIntoAttrs {
     inherit fixStylishHaskell;
   };
 
-  purty = pkgs.callPackage ./purty.nix {
+  generated = pkgs.callPackage ./generated.nix {
     src = cleanSrc;
-    inherit fixPurty;
+    inherit play-generated nami-generated;
+  };
+
+  purs-tidy = pkgs.callPackage ./purs-tidy.nix {
+    src = cleanSrc;
+    inherit fix-purs-tidy;
   };
 
   nixpkgsFmt = pkgs.callPackage ./nixpkgs-fmt.nix {

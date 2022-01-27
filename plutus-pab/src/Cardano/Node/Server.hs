@@ -35,7 +35,7 @@ import Servant.Client (BaseUrl (baseUrlPort))
 import Wallet.Emulator.Wallet (fromWalletNumber)
 
 app ::
-    Trace IO MockServerLogMsg
+    Trace IO PABServerLogMsg
  -> SlotConfig
  -> Client.TxSendHandle
  -> MVar AppState
@@ -44,33 +44,33 @@ app trace slotCfg clientHandler stateVar =
     serve (Proxy @API) $
     hoistServer
         (Proxy @API)
-        (liftIO . processChainEffects trace slotCfg clientHandler stateVar)
+        (liftIO . processChainEffects trace slotCfg (Just clientHandler) stateVar)
         (healthcheck :<|> consumeEventHistory stateVar)
 
 data Ctx = Ctx { serverHandler :: Server.ServerHandler
                , txSendHandle  :: Client.TxSendHandle
                , serverState   :: MVar AppState
-               , mockTrace     :: Trace IO MockServerLogMsg
+               , mockTrace     :: Trace IO PABServerLogMsg
                }
 
-main :: Trace IO MockServerLogMsg -> MockServerConfig -> Availability -> IO ()
-main trace MockServerConfig { mscBaseUrl
-                            , mscKeptBlocks
-                            , mscSlotConfig
-                            , mscInitialTxWallets
-                            , mscSocketPath } availability = LM.runLogEffects trace $ do
+main :: Trace IO PABServerLogMsg -> PABServerConfig -> Availability -> IO ()
+main trace PABServerConfig { pscBaseUrl
+                            , pscKeptBlocks
+                            , pscSlotConfig
+                            , pscInitialTxWallets
+                            , pscSocketPath } availability = LM.runLogEffects trace $ do
 
     -- make initial distribution of 1 billion Ada to all configured wallets
-    let dist = Map.fromList $ zip (fromWalletNumber <$> mscInitialTxWallets) (repeat (Ada.adaValueOf 1000_000_000))
+    let dist = Map.fromList $ zip (fromWalletNumber <$> pscInitialTxWallets) (repeat (Ada.adaValueOf 1000_000_000))
     initialState <- initialChainState dist
     let appState = AppState
             { _chainState = initialState
             , _eventHistory = mempty
             }
-    serverHandler <- liftIO $ Server.runServerNode trace mscSocketPath mscKeptBlocks (_chainState appState) mscSlotConfig
+    serverHandler <- liftIO $ Server.runServerNode trace pscSocketPath pscKeptBlocks (_chainState appState) pscSlotConfig
     serverState   <- liftIO $ newMVar appState
     handleDelayEffect $ delayThread (2 :: Second)
-    clientHandler <- liftIO $ Client.runTxSender mscSocketPath
+    clientHandler <- liftIO $ Client.runTxSender pscSocketPath
 
     let ctx = Ctx { serverHandler = serverHandler
                   , txSendHandle  = clientHandler
@@ -80,14 +80,14 @@ main trace MockServerConfig { mscBaseUrl
 
     runSlotCoordinator ctx
 
-    logInfo $ StartingMockServer $ baseUrlPort mscBaseUrl
-    liftIO $ Warp.runSettings warpSettings $ app trace mscSlotConfig clientHandler serverState
+    logInfo $ StartingPABServer $ baseUrlPort pscBaseUrl
+    liftIO $ Warp.runSettings warpSettings $ app trace pscSlotConfig clientHandler serverState
 
         where
-            warpSettings = Warp.defaultSettings & Warp.setPort (baseUrlPort mscBaseUrl) & Warp.setBeforeMainLoop (available availability)
+            warpSettings = Warp.defaultSettings & Warp.setPort (baseUrlPort pscBaseUrl) & Warp.setBeforeMainLoop (available availability)
 
             runSlotCoordinator (Ctx serverHandler _ _ _)  = do
-                let SlotConfig{scSlotZeroTime, scSlotLength} = mscSlotConfig
+                let SlotConfig{scSlotZeroTime, scSlotLength} = pscSlotConfig
                 logInfo $ StartingSlotCoordination (posixSecondsToUTCTime $ realToFrac scSlotZeroTime / 1000)
                                                    (fromInteger scSlotLength :: Millisecond)
-                void $ liftIO $ forkIO $ slotCoordinator mscSlotConfig serverHandler
+                void $ liftIO $ forkIO $ slotCoordinator pscSlotConfig serverHandler

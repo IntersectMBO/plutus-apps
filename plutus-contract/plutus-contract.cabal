@@ -160,6 +160,7 @@ library
             Plutus.Contract.Test.Coverage
             Plutus.Contract.Test.ContractModel
             Plutus.Contract.Test.ContractModel.Internal
+            Plutus.Contract.Test.ContractModel.Symbolics
             Plutus.Contract.Test.ContractModel.CrashTolerance
         build-depends:
             tasty -any,
@@ -180,6 +181,7 @@ test-suite plutus-contract-test
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     hs-source-dirs: test
     other-modules:
+        Spec.Balancing
         Spec.Contract
         Spec.ErrorChecking
         Spec.Emulator
@@ -208,7 +210,6 @@ test-suite plutus-contract-test
         aeson -any,
         lens -any,
         transformers -any,
-        extensible-effects -any,
         plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-ledger -any,

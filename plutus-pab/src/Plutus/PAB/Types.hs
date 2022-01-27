@@ -12,7 +12,7 @@
 module Plutus.PAB.Types where
 
 import Cardano.ChainIndex.Types qualified as ChainIndex
-import Cardano.Node.Types (MockServerConfig)
+import Cardano.Node.Types (PABServerConfig)
 import Cardano.Wallet.Types qualified as Wallet
 import Control.Lens.TH (makePrisms)
 import Control.Monad.Freer.Extras.Beam (BeamError)
@@ -59,6 +59,7 @@ data PABError
     | AesonDecodingError Text Text
     | MigrationNotDoneError Text
     | RemoteWalletWithMockNodeError
+    | TxSenderNotAvailable
     deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -88,6 +89,7 @@ instance Pretty PABError where
                                    <> "Did you forget to run the 'migrate' command ?"
                                    <+> "(ex. 'plutus-pab-migrate' or 'plutus-pab-examples --config <CONFIG_FILE> migrate')"
         RemoteWalletWithMockNodeError   -> "The remote wallet can't be used with the mock node."
+        TxSenderNotAvailable         -> "Cannot send a transaction when connected to the real node."
 
 data DbConfig =
     DbConfig
@@ -115,7 +117,7 @@ data Config =
     Config
         { dbConfig                :: DbConfig
         , walletServerConfig      :: Wallet.WalletConfig
-        , nodeServerConfig        :: MockServerConfig
+        , nodeServerConfig        :: PABServerConfig
         , pabWebserverConfig      :: WebserverConfig
         , chainIndexConfig        :: ChainIndex.ChainIndexConfig
         , requestProcessingConfig :: RequestProcessingConfig

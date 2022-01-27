@@ -171,7 +171,7 @@ mockNodeParser :: Mod CommandFields ConfigCommand
 mockNodeParser =
     command "node-server" $
         info
-            (pure StartMockNode)
+            (pure StartNode)
             (fullDesc <> progDesc "Run a mock version of the Cardano node API server.")
 
 mockWalletParser :: Mod CommandFields ConfigCommand
@@ -192,7 +192,7 @@ allServersParser =
     command "all-servers" $
     flip info (fullDesc <> progDesc "Run all the mock servers needed.") $ do
         pure  (ForkCommands
-                   [ StartMockNode
+                   [ StartNode
                    , MockWallet
                    , PABWebserver
                    , ChainIndex

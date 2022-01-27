@@ -115,7 +115,9 @@
           build-tools = [
             (hsPkgs.buildPackages.doctest.components.exes.doctest or (pkgs.buildPackages.doctest or (errorHandler.buildToolDepError "doctest:doctest")))
             ];
-          buildable = if system.isWindows then false else true;
+          buildable = if compiler.isGhcjs && true || system.isWindows
+            then false
+            else true;
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
           };
@@ -123,11 +125,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "15";
+      url = "1";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "15";
+      url = "1";
       rev = "minimal";
       sha256 = "";
       };

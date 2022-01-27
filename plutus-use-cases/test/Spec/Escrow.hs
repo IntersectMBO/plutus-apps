@@ -72,7 +72,11 @@ instance ContractModel EscrowModel where
                                                              ]
                              }
 
-  initialHandleSpecs = [ ContractInstanceSpec (WalletKey w) w testContract | w <- testWallets ]
+  initialInstances = Key . WalletKey <$> testWallets
+
+  instanceWallet (WalletKey w) = w
+
+  instanceContract _ _ WalletKey{} = testContract
     where
       -- TODO: Lazy test contract for now
       testContract = selectList [void $ payEp modelParams, void $ redeemEp modelParams, void $ refundEp modelParams] >> testContract
@@ -80,7 +84,7 @@ instance ContractModel EscrowModel where
   nextState a = void $ case a of
     Pay w v -> do
       withdraw w (Ada.adaValueOf $ fromInteger v)
-      contributions $~ Map.insertWith (<>) w (Ada.adaValueOf $ fromInteger v)
+      contributions %= Map.insertWith (<>) w (Ada.adaValueOf $ fromInteger v)
       wait 1
     Redeem w -> do
       targets <- viewContractState targets
@@ -88,11 +92,11 @@ instance ContractModel EscrowModel where
       sequence_ [ deposit w v | (w, v) <- Map.toList targets ]
       let leftoverValue = fold contribs <> inv (fold targets)
       deposit w leftoverValue
-      contributions $= Map.empty
+      contributions .= Map.empty
       wait 1
     Refund w -> do
       v <- viewContractState $ contributions . at w . to fold
-      contributions $~ Map.delete w
+      contributions %= Map.delete w
       deposit w v
       wait 1
     WaitUntil s -> do
@@ -108,17 +112,17 @@ instance ContractModel EscrowModel where
             && s ^. currentSlot + 1 < s ^. contractState . refundSlot
             && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
 
-  perform h _ a = void $ case a of
-    WaitUntil slot -> Trace.waitUntilSlot slot
+  perform h _ _ a = case a of
+    WaitUntil slot -> void $ Trace.waitUntilSlot slot
     Pay w v        -> do
       Trace.callEndpoint @"pay-escrow" (h $ WalletKey w) (Ada.adaValueOf $ fromInteger v)
-      Trace.waitNSlots 1
+      delay 1
     Redeem w       -> do
       Trace.callEndpoint @"redeem-escrow" (h $ WalletKey w) ()
-      Trace.waitNSlots 1
+      delay 1
     Refund w       -> do
       Trace.callEndpoint @"refund-escrow" (h $ WalletKey w) ()
-      Trace.waitNSlots 1
+      delay 1
 
   arbitraryAction s = oneof $ [ Pay <$> QC.elements testWallets <*> choose @Integer (10, 30)
                               , Redeem <$> QC.elements testWallets

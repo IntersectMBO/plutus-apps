@@ -16,13 +16,14 @@
 module Cardano.Node.Types
     (
       -- * Logging types
-      MockServerLogMsg (..)
+      PABServerLogMsg (..)
 
      -- * Event types
     , BlockEvent (..)
 
      -- * Effects
     , NodeServerEffects
+    , ChainSyncHandle
 
      -- *  State types
     , AppState (..)
@@ -34,7 +35,7 @@ module Cardano.Node.Types
     , eventHistory
 
     -- * Config types
-    , MockServerConfig (..)
+    , PABServerConfig (..)
     , NodeMode (..)
 
     -- * newtype wrappers
@@ -45,6 +46,7 @@ module Cardano.Node.Types
 import Cardano.BM.Data.Tracer (ToObject (..))
 import Cardano.BM.Data.Tracer.Extras (Tagged (..), mkObjectStr)
 import Cardano.Chain (MockNodeServerChainState, fromEmulatorChainState)
+import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Control.Lens (makeLenses, view)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (..))
@@ -60,7 +62,7 @@ import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
-import Ledger (Tx, txId)
+import Ledger (Block, Tx, txId)
 import Ledger.CardanoWallet (WalletNumber (..))
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Trace qualified as Trace
@@ -105,81 +107,86 @@ data NodeMode =
     deriving stock (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
--- | Mock Node server configuration
-data MockServerConfig =
-    MockServerConfig
-        { mscBaseUrl                    :: BaseUrl
+-- | Node server configuration
+data PABServerConfig =
+    PABServerConfig
+        { pscBaseUrl                    :: BaseUrl
         -- ^ base url of the service
-        , mscInitialTxWallets           :: [WalletNumber]
+        , pscInitialTxWallets           :: [WalletNumber]
         -- ^ The wallets that receive money from the initial transaction.
-        , mscSocketPath                 :: FilePath
+        , pscSocketPath                 :: FilePath
         -- ^ Path to the socket used to communicate with the server.
-        , mscKeptBlocks                 :: Integer
+        , pscKeptBlocks                 :: Integer
         -- ^ The number of blocks to keep for replaying to a newly connected clients
-        , mscSlotConfig                 :: SlotConfig
+        , pscSlotConfig                 :: SlotConfig
         -- ^ Beginning of slot 0.
-        , mscFeeConfig                  :: FeeConfig
+        , pscFeeConfig                  :: FeeConfig
         -- ^ Configure constant fee per transaction and ratio by which to
         -- multiply size-dependent scripts fee.
-        , mscNetworkId                  :: NetworkIdWrapper
+        , pscNetworkId                  :: NetworkIdWrapper
         -- ^ NetworkId that's used with the CardanoAPI.
-        , mscProtocolParametersJsonPath :: Maybe FilePath
+        , pscProtocolParametersJsonPath :: Maybe FilePath
         -- ^ Path to a JSON file containing the protocol parameters
-        , mscPassphrase                 :: Maybe Text
+        , pscPassphrase                 :: Maybe Text
         -- ^ Wallet passphrase
-        , mscNodeMode                   :: NodeMode
+        , pscNodeMode                   :: NodeMode
         -- ^ Whether to connect to an Alonzo node or a mock node
         }
     deriving stock (Show, Eq, Generic)
     deriving anyclass (FromJSON)
 
 
-defaultMockServerConfig :: MockServerConfig
-defaultMockServerConfig =
-    MockServerConfig
+defaultPABServerConfig :: PABServerConfig
+defaultPABServerConfig =
+    PABServerConfig
       -- See Note [pab-ports] in 'test/full/Plutus/PAB/CliSpec.hs'.
-      { mscBaseUrl = BaseUrl Http "localhost" 9082 ""
-      , mscInitialTxWallets =
+      { pscBaseUrl = BaseUrl Http "localhost" 9082 ""
+      , pscInitialTxWallets =
           [ WalletNumber 1
           , WalletNumber 2
           , WalletNumber 3
           ]
-      , mscSocketPath = "./node-server.sock"
-      , mscKeptBlocks = 100
-      , mscSlotConfig = def
-      , mscFeeConfig  = def
-      , mscNetworkId = testnetNetworkId
-      , mscProtocolParametersJsonPath = Nothing
-      , mscPassphrase = Nothing
-      , mscNodeMode  = MockNode
+      , pscSocketPath = "./node-server.sock"
+      , pscKeptBlocks = 100
+      , pscSlotConfig = def
+      , pscFeeConfig  = def
+      , pscNetworkId = testnetNetworkId
+      , pscProtocolParametersJsonPath = Nothing
+      , pscPassphrase = Nothing
+      , pscNodeMode  = MockNode
       }
 
-instance Default MockServerConfig where
-  def = defaultMockServerConfig
+instance Default PABServerConfig where
+  def = defaultPABServerConfig
+
+-- | The types of handles varies based on the type of clients (mocked or
+-- real nodes) and we need a generic way of handling either type of response.
+type ChainSyncHandle = Either (Client.ChainSyncHandle Block) (Client.ChainSyncHandle Client.ChainSyncEvent)
 
 -- Logging ------------------------------------------------------------------------------------------------------------
 
 -- | Top-level logging data type for structural logging
--- inside the Mock Node server.
-data MockServerLogMsg =
+-- inside the PAB server.
+data PABServerLogMsg =
     StartingSlotCoordination UTCTime Millisecond
     | NoRandomTxGeneration
     | StartingRandomTx
     | KeepingOldBlocks
     | RemovingOldBlocks
-    | StartingMockServer Int
+    | StartingPABServer Int
     | ProcessingChainEvent ChainEvent
     | BlockOperation BlockEvent
     | CreatingRandomTransaction
+    | TxSendCalledWithoutMock
     deriving (Generic, Show, ToJSON, FromJSON)
 
-instance Pretty MockServerLogMsg where
+instance Pretty PABServerLogMsg where
     pretty = \case
         NoRandomTxGeneration      -> "Not creating random transactions"
         StartingRandomTx          -> "Starting random transaction generation thread"
         KeepingOldBlocks          -> "Not starting block reaper thread (old blocks will be retained in-memory forever"
         RemovingOldBlocks         -> "Starting block reaper thread (old blocks will be removed)"
-        StartingMockServer p      -> "Starting Mock Node Server on port" <+> pretty p
+        StartingPABServer p      -> "Starting PAB Server on port" <+> pretty p
         StartingSlotCoordination initialSlotTime slotLength  ->
             "Starting slot coordination thread."
             <+> "Initial slot time:" <+> pretty (F.iso8601Show initialSlotTime)
@@ -187,18 +194,20 @@ instance Pretty MockServerLogMsg where
         ProcessingChainEvent e    -> "Processing chain event" <+> pretty e
         BlockOperation e          -> "Block operation" <+> pretty e
         CreatingRandomTransaction -> "Generating a random transaction"
+        TxSendCalledWithoutMock   -> "Cannot send transaction without a mocked environment."
 
-instance ToObject MockServerLogMsg where
+instance ToObject PABServerLogMsg where
     toObject _ = \case
         NoRandomTxGeneration      ->  mkObjectStr "Not creating random transactions" ()
         StartingRandomTx          ->  mkObjectStr "Starting random transaction generation thread" ()
         KeepingOldBlocks          ->  mkObjectStr "Not starting block reaper thread (old blocks will be retained in-memory forever" ()
         RemovingOldBlocks         ->  mkObjectStr "Starting block reaper thread (old blocks will be removed)" ()
-        StartingMockServer p      ->  mkObjectStr "Starting Mock Node Server on port " (Tagged @"port" p)
+        StartingPABServer p      ->  mkObjectStr "Starting PAB Server on port " (Tagged @"port" p)
         StartingSlotCoordination i l  -> mkObjectStr "Starting slot coordination thread" (Tagged @"initial-slot-time" (F.iso8601Show  i), Tagged @"slot-length" l)
         ProcessingChainEvent e    ->  mkObjectStr "Processing chain event" (Tagged @"event" e)
         BlockOperation e          ->  mkObjectStr "Block operation" (Tagged @"event" e)
         CreatingRandomTransaction ->  mkObjectStr "Creating random transaction" ()
+        TxSendCalledWithoutMock   ->  mkObjectStr "Cannot send transaction without a mocked environment." ()
 
 data BlockEvent = NewSlot
     | NewTransaction Tx
@@ -216,7 +225,7 @@ instance Pretty BlockEvent where
 data AppState =
     AppState
         { _chainState   :: MockNodeServerChainState -- ^ blockchain state
-        , _eventHistory :: [LogMessage MockServerLogMsg] -- ^ history of all log messages
+        , _eventHistory :: [LogMessage PABServerLogMsg] -- ^ history of all log messages
         }
     deriving (Show)
 
@@ -244,8 +253,8 @@ type NodeServerEffects m
      = '[ ChainControlEffect
         , ChainEffect
         , State MockNodeServerChainState
-        , LogMsg MockServerLogMsg
-        , Reader Client.TxSendHandle
+        , LogMsg PABServerLogMsg
+        , Reader (Maybe Client.TxSendHandle)
         , State AppState
-        , LogMsg MockServerLogMsg
+        , LogMsg PABServerLogMsg
         , m]

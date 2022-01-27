@@ -8,7 +8,7 @@
   , config
   , ... }:
   {
-    flags = { use-ghc-stub = false; ghcjs-plugin = true; };
+    flags = { use-ghc-stub = false; };
     package = {
       specVersion = "2.2";
       identifier = { name = "plutus-tx-plugin"; version = "0.1.0.0"; };
@@ -52,9 +52,7 @@
           then [
             (hsPkgs."plutus-ghc-stub" or (errorHandler.buildDepError "plutus-ghc-stub"))
             ]
-          else if flags.ghcjs-plugin
-            then [ (hsPkgs."ghcjs" or (errorHandler.buildDepError "ghcjs")) ]
-            else [ (hsPkgs."ghc" or (errorHandler.buildDepError "ghc")) ]);
+          else [ (hsPkgs."ghc" or (errorHandler.buildDepError "ghc")) ]);
         buildable = true;
         modules = [
           "PlutusTx/Compiler/Binders"
@@ -96,7 +94,7 @@
             (hsPkgs."ghc-prim" or (errorHandler.buildDepError "ghc-prim"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             ];
-          buildable = true;
+          buildable = if flags.use-ghc-stub then false else true;
           modules = [
             "Budget/Lib"
             "Budget/Spec"
@@ -108,6 +106,7 @@
             "Plugin/Errors/Spec"
             "Plugin/Functions/Spec"
             "Plugin/Laziness/Spec"
+            "Plugin/NoTrace/Spec"
             "Plugin/Primitives/Spec"
             "Plugin/Profiling/Spec"
             "Plugin/Typeclasses/Spec"
@@ -126,11 +125,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "15";
+      url = "1";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "15";
+      url = "1";
       rev = "minimal";
       sha256 = "";
       };

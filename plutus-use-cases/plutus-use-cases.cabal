@@ -36,6 +36,7 @@ library
         Plutus.Contracts.Escrow
         Plutus.Contracts.SimpleEscrow
         Plutus.Contracts.Future
+        Plutus.Contracts.Game
         Plutus.Contracts.GameStateMachine
         Plutus.Contracts.Governance
         Plutus.Contracts.MultiSig
@@ -108,6 +109,7 @@ test-suite plutus-use-cases-test
         Spec.Escrow
         Spec.SimpleEscrow
         Spec.Future
+        Spec.Game
         Spec.GameStateMachine
         Spec.Governance
         Spec.MultiSig
@@ -172,6 +174,7 @@ executable plutus-use-cases-scripts
         Spec.Escrow
         Spec.SimpleEscrow
         Spec.Future
+        Spec.Game
         Spec.GameStateMachine
         Spec.Governance
         Spec.MultiSig
@@ -190,14 +193,11 @@ executable plutus-use-cases-scripts
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     build-depends:
         base >= 4.9 && <5,
-        aeson -any,
         bytestring -any,
         cardano-crypto-class -any,
         containers -any,
         data-default -any,
-        flat -any,
         freer-extras -any,
-        hedgehog -any,
         prettyprinter -any,
         QuickCheck -any,
         tasty -any,
@@ -207,25 +207,15 @@ executable plutus-use-cases-scripts
         text -any,
         lens -any,
         mtl -any,
-        row-types -any,
         freer-simple -any,
         foldl -any,
         streaming -any,
-        directory -any,
-        filepath -any,
-        serialise -any,
-        plutus-core -any,
         plutus-ledger-api -any,
         plutus-tx -any,
         plutus-tx-plugin -any,
         plutus-contract -any,
-        plutus-chain-index-core -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
         plutus-use-cases -any,
         optparse-applicative -any,
-        aeson-pretty -any,
-        cardano-api -any,
-        cardano-binary -any,
-        cborg -any,
-        memory -any
+        cardano-api -any

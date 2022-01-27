@@ -8,8 +8,8 @@ module Simulator.View
 
 import Action.View (actionsPane)
 import Action.Validation (actionIsValid)
-import AjaxUtils (ajaxErrorPane)
 import Bootstrap (active, alertDanger_, btn, empty, floatRight, nav, navItem, navLink)
+import Component.ErrorPane (errorPane)
 import Cursor (Cursor, current)
 import Cursor as Cursor
 import Data.Array as Array
@@ -68,7 +68,7 @@ simulationsPane initialValue actionDrag compilationResult simulations = case cur
               , viewTransactionsButton evaluationResult
               ]
           , case evaluationResult of
-              Failure error -> ajaxErrorPane error
+              Failure error -> errorPane error
               Success (Left error) -> actionsErrorPane error
               _ -> empty
           ]
@@ -166,7 +166,7 @@ viewTransactionsButton evaluationResult =
 actionsErrorPane :: forall p i. PlaygroundError -> HTML p i
 actionsErrorPane error =
   div
-    [ class_ $ ClassName "ajax-error"
+    [ class_ $ ClassName "error-pane"
     , ref simulationsErrorRefLabel
     ]
     [ alertDanger_

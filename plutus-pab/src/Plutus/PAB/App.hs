@@ -33,10 +33,9 @@ import Cardano.Api.ProtocolParameters ()
 import Cardano.Api.Shelley (ProtocolParameters)
 import Cardano.BM.Trace (Trace, logDebug)
 import Cardano.ChainIndex.Types qualified as ChainIndex
-import Cardano.Node.Client (handleNodeClientClient)
-import Cardano.Node.Client qualified as NodeClient
-import Cardano.Node.Types (MockServerConfig (MockServerConfig, mscBaseUrl, mscNetworkId, mscNodeMode, mscProtocolParametersJsonPath, mscSlotConfig, mscSocketPath),
-                           NodeMode (AlonzoNode, MockNode))
+import Cardano.Node.Client (handleNodeClientClient, runChainSyncWithCfg)
+import Cardano.Node.Types (ChainSyncHandle, NodeMode (AlonzoNode, MockNode),
+                           PABServerConfig (PABServerConfig, pscBaseUrl, pscNetworkId, pscNodeMode, pscProtocolParametersJsonPath, pscSlotConfig, pscSocketPath))
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.LocalClient qualified as LocalWalletClient
 import Cardano.Wallet.Mock.Client qualified as WalletMockClient
@@ -99,8 +98,8 @@ data AppEnv a =
         , walletClientEnv       :: Maybe ClientEnv -- ^ No 'ClientEnv' when in the remote client setting.
         , nodeClientEnv         :: ClientEnv
         , chainIndexEnv         :: ClientEnv
-        , txSendHandle          :: MockClient.TxSendHandle
-        , chainSyncHandle       :: NodeClient.ChainSyncHandle
+        , txSendHandle          :: Maybe MockClient.TxSendHandle -- No 'TxSendHandle' required when connecting to the real node.
+        , chainSyncHandle       :: ChainSyncHandle
         , appConfig             :: Config
         , appTrace              :: Trace IO (PABLogMsg (Builtin a))
         , appInMemContractStore :: InMemInstances (Builtin a)
@@ -123,10 +122,10 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
     EffectHandlers
         { initialiseEnvironment = do
             env <- liftIO $ mkEnv trace config
-            let Config { nodeServerConfig = MockServerConfig{mscSocketPath, mscSlotConfig, mscNodeMode, mscNetworkId = NetworkIdWrapper networkId}
+            let Config { nodeServerConfig = PABServerConfig{pscSocketPath, pscSlotConfig, pscNodeMode, pscNetworkId = NetworkIdWrapper networkId}
                        , developmentOptions = DevelopmentOptions{pabRollbackHistory, pabResumeFrom} } = config
             instancesState <- liftIO $ STM.atomically Instances.emptyInstancesState
-            blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient mscSocketPath mscNodeMode pabRollbackHistory mscSlotConfig networkId pabResumeFrom instancesState
+            blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient pscSocketPath pscNodeMode pabRollbackHistory pscSlotConfig networkId pabResumeFrom instancesState
             pure (instancesState, blockchainEnv, env)
 
         , handleLogMessages =
@@ -166,12 +165,12 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             -- handle 'NodeClientEffect'
             flip handleError (throwError . NodeClientError)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . reinterpret (Core.handleMappedReader @(AppEnv a) @NodeClient.ChainSyncHandle chainSyncHandle)
+            . reinterpret (Core.handleMappedReader @(AppEnv a) @ChainSyncHandle chainSyncHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . reinterpret (Core.handleMappedReader @(AppEnv a) @MockClient.TxSendHandle txSendHandle)
+            . reinterpret (Core.handleMappedReader @(AppEnv a) @(Maybe MockClient.TxSendHandle) txSendHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv nodeClientEnv)
-            . reinterpretN @'[_, _, _, _] (handleNodeClientClient @IO $ mscSlotConfig $ nodeServerConfig config)
+            . reinterpretN @'[_, _, _, _] (handleNodeClientClient @IO $ pscSlotConfig $ nodeServerConfig config)
 
             -- handle 'ChainIndexEffect'
             . flip handleError (throwError . ChainIndexError)
@@ -206,18 +205,18 @@ handleWalletEffect
   , Member (LogMsg WalletClientMsg) effs
   , Member (Reader InstancesState) effs
   )
-  => MockServerConfig
+  => PABServerConfig
   -> Maybe ContractInstanceId
   -> Wallet
   -> WalletEffect
   ~> Eff effs
-handleWalletEffect MockServerConfig { mscNodeMode = MockNode } _ w eff = do
+handleWalletEffect PABServerConfig { pscNodeMode = MockNode } _ w eff = do
     clientEnvM <- ask @(Maybe ClientEnv)
     case clientEnvM of
         Nothing -> throwError RemoteWalletWithMockNodeError
         Just clientEnv ->
             runReader clientEnv $ WalletMockClient.handleWalletClient @IO w eff
-handleWalletEffect nodeCfg@MockServerConfig { mscNodeMode = AlonzoNode } cidM w eff = do
+handleWalletEffect nodeCfg@PABServerConfig { pscNodeMode = AlonzoNode } cidM w eff = do
     clientEnvM <- ask @(Maybe ClientEnv)
     case clientEnvM of
         Nothing -> RemoteWalletClient.handleWalletClient nodeCfg cidM eff
@@ -251,19 +250,23 @@ data StorageBackend = BeamSqliteBackend | InMemoryBackend
 
 mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
 mkEnv appTrace appConfig@Config { dbConfig
-             , nodeServerConfig = MockServerConfig{mscBaseUrl, mscSocketPath, mscSlotConfig, mscProtocolParametersJsonPath}
+             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscProtocolParametersJsonPath, pscNodeMode}
              , walletServerConfig
              , chainIndexConfig
              } = do
     walletClientEnv <- maybe (pure Nothing) (fmap Just . clientEnv) $ preview Wallet._LocalWalletConfig walletServerConfig
-    nodeClientEnv <- clientEnv mscBaseUrl
+    nodeClientEnv <- clientEnv pscBaseUrl
     chainIndexEnv <- clientEnv (ChainIndex.ciBaseUrl chainIndexConfig)
     dbConnection <- dbConnect appTrace dbConfig
-    txSendHandle <- liftIO $ MockClient.runTxSender mscSocketPath
+    txSendHandle <-
+      case pscNodeMode of
+        AlonzoNode -> pure Nothing
+        MockNode   ->
+          liftIO $ Just <$> MockClient.runTxSender pscSocketPath
     -- This is for access to the slot number in the interpreter
-    chainSyncHandle <- Left <$> (liftIO $ MockClient.runChainSync' mscSocketPath mscSlotConfig)
+    chainSyncHandle <- runChainSyncWithCfg $ nodeServerConfig appConfig
     appInMemContractStore <- liftIO initialInMemInstances
-    protocolParameters <- maybe (pure def) readPP mscProtocolParametersJsonPath
+    protocolParameters <- maybe (pure def) readPP pscProtocolParametersJsonPath
     pure AppEnv {..}
   where
     clientEnv baseUrl = mkClientEnv <$> liftIO mkManager <*> pure (coerce baseUrl)
@@ -276,7 +279,7 @@ mkEnv appTrace appConfig@Config { dbConfig
       bs <- BSL.readFile path
       case eitherDecode bs of
         Left err -> error $ "Error reading protocol parameters JSON file: "
-                         ++ show mscProtocolParametersJsonPath ++ " (" ++ err ++ ")"
+                         ++ show pscProtocolParametersJsonPath ++ " (" ++ err ++ ")"
         Right params -> pure params
 
 

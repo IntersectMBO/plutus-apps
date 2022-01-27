@@ -4,12 +4,14 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE PatternSynonyms       #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module Test.QuickCheck.StateModel(
     StateModel(..)
@@ -17,14 +19,19 @@ module Test.QuickCheck.StateModel(
   , Step(..)
   , LookUp, Var(..) -- we export the constructors so that users can construct test cases
   , Actions(..)
+  , pattern Actions
+  , EnvEntry(..)
+  , Env
   , stateAfter
   , runActions
   , runActionsInState
+  , lookUpVar
 ) where
 
 import Data.Typeable
 
 import Test.QuickCheck as QC
+import Test.QuickCheck.DynamicLogic.SmartShrinking
 import Test.QuickCheck.Monadic
 
 class (forall a. Show (Action state a),
@@ -98,14 +105,23 @@ instance Eq (Step state) where
   (Var i := act) == (Var j := act') =
     (i==j) && Some act == Some act'
 
-newtype Actions state = Actions [Step state]
-  deriving Eq
+-- Action sequences use Smart shrinking, but this is invisible to
+-- client code because the extra Smart constructor is concealed by a
+-- pattern synonym.
+
+newtype Actions state = Actions_ (Smart [Step state])
+
+pattern Actions :: [Step state] -> Actions state
+pattern Actions as <- Actions_ (Smart _ as) where
+  Actions as = Actions_ (Smart 0 as)
+
+{-# COMPLETE Actions #-}
 
 instance Semigroup (Actions state) where
   Actions as <> Actions as' = Actions (as <> as')
 
-instance Monoid (Actions state) where
-  mempty = Actions []
+instance Eq (Actions state) where
+  Actions as == Actions as' = as == as'
 
 instance (forall a. Show (Action state a)) => Show (Actions state) where
   showsPrec d (Actions as)
@@ -114,7 +130,6 @@ instance (forall a. Show (Action state a)) => Show (Actions state) where
     | otherwise = (("Actions \n [")++) .
                   foldr (.) (showsPrec 0 (last as) . ("]"++))
                     [showsPrec 0 a . (",\n  "++) | a <- init as]
-
 
 instance (Typeable state, StateModel state) => Arbitrary (Actions state) where
   arbitrary = Actions <$> arbActions initialState 1
@@ -134,8 +149,8 @@ instance (Typeable state, StateModel state) => Arbitrary (Actions state) where
                               Nothing ->
                                 return [])]
 
-  shrink (Actions as) =
-    map (Actions . prune . map fst) (shrinkList shrinker (withStates as))
+  shrink (Actions_ as) =
+    map Actions_ (shrinkSmart (map (prune . map fst) . shrinkList shrinker . withStates) as)
     where shrinker ((Var i := act),s) = [((Var i := act'),s) | Some act' <- shrinkAction s act]
 
 prune :: StateModel state => [Step state] -> [Step state]

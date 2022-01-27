@@ -40,7 +40,7 @@ import Wallet.Emulator.Chain qualified as Chain
 healthcheck :: Monad m => m NoContent
 healthcheck = pure NoContent
 
-consumeEventHistory :: MonadIO m => MVar AppState -> m [LogMessage MockServerLogMsg]
+consumeEventHistory :: MonadIO m => MVar AppState -> m [LogMessage PABServerLogMsg]
 consumeEventHistory stateVar =
     liftIO $ do
         oldState <- takeMVar stateVar
@@ -50,8 +50,8 @@ consumeEventHistory stateVar =
         pure events
 
 addTx ::
-    ( Member (LogMsg MockServerLogMsg) effs
-    , Member (Reader Client.TxSendHandle) effs
+    ( Member (LogMsg PABServerLogMsg) effs
+    , Member (Reader (Maybe Client.TxSendHandle)) effs
     , MonadIO m
     , LastMember m effs
     )
@@ -59,17 +59,20 @@ addTx ::
 addTx tx = do
     logInfo $ BlockOperation $ NewTransaction tx
     clientHandler <- Eff.ask
-    liftIO $ Client.queueTx clientHandler tx
+    case clientHandler of
+      Nothing      -> logError TxSendCalledWithoutMock
+      Just handler ->
+          liftIO $ Client.queueTx handler tx
     pure NoContent
 
 -- | Run all chain effects in the IO Monad
 runChainEffects ::
- Trace IO MockServerLogMsg
+ Trace IO PABServerLogMsg
  -> SlotConfig
- -> Client.TxSendHandle
+ -> Maybe Client.TxSendHandle
  -> MVar AppState
  -> Eff (NodeServerEffects IO) a
- -> IO ([LogMessage MockServerLogMsg], a)
+ -> IO ([LogMessage PABServerLogMsg], a)
 runChainEffects trace slotCfg clientHandler stateVar eff = do
     oldAppState <- liftIO $ takeMVar stateVar
     ((a, events), newState) <- liftIO
@@ -92,14 +95,14 @@ runChainEffects trace slotCfg clientHandler stateVar eff = do
 
             mergeState = interpret (handleZoomedState chainState)
 
-            toWriter = Eff.runWriter . reinterpret (handleLogWriter @MockServerLogMsg @[LogMessage MockServerLogMsg] (unto return))
+            toWriter = Eff.runWriter . reinterpret (handleLogWriter @PABServerLogMsg @[LogMessage PABServerLogMsg] (unto return))
 
             runReaders s = Eff.runState s . Eff.runReader clientHandler
 
 processChainEffects ::
-    Trace IO MockServerLogMsg
+    Trace IO PABServerLogMsg
     -> SlotConfig
-    -> Client.TxSendHandle
+    -> Maybe Client.TxSendHandle
     -> MVar AppState
     -> Eff (NodeServerEffects IO) a
     -> IO a

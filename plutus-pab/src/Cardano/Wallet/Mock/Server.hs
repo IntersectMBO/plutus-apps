@@ -14,7 +14,7 @@ module Cardano.Wallet.Mock.Server
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Types (ChainIndexUrl (ChainIndexUrl))
-import Cardano.Node.Client qualified as NodeClient
+import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.API (API)
 import Cardano.Wallet.Mock.Handlers (processWalletEffects)
@@ -47,7 +47,7 @@ import Wallet.Emulator.Wallet qualified as Wallet
 
 app :: Trace IO WalletMsg
     -> MockClient.TxSendHandle
-    -> NodeClient.ChainSyncHandle
+    -> ChainSyncHandle
     -> ClientEnv
     -> MVar Wallets
     -> FeeConfig

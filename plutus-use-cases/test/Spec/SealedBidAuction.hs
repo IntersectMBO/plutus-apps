@@ -52,7 +52,7 @@ mpsHash = Value.CurrencySymbol $ PlutusTx.toBuiltin $ Crypto.hashToBytes $ Crypt
 
 -- | 'CheckOptions' that includes 'theToken' in the initial distribution of Wallet 1.
 options :: CheckOptions
-options = defaultCheckOptions
+options = defaultCheckOptionsContractModel
     & changeInitialWalletValue w1 ((<>) theToken)
 
 -- * QuickCheck model
@@ -92,11 +92,16 @@ instance ContractModel AuctionModel where
         , _parameters        = Nothing
         }
 
-    initialHandleSpecs = []
+    initialInstances = []
 
-    startInstances s StartContracts = ContractInstanceSpec SellerH w1 (sellerContract . fromJust $ s ^. contractState . parameters)
-                                    : [ ContractInstanceSpec (BidderH w) w (bidderContract . fromJust $ s ^. contractState . parameters) | w <- [w2, w3, w4] ]
+    startInstances _ StartContracts = Key SellerH : [ Key (BidderH w) | w <- [w2, w3, w4] ]
     startInstances _ _              = []
+
+    instanceWallet SellerH     = w1
+    instanceWallet (BidderH w) = w
+
+    instanceContract s _ SellerH   = sellerContract (fromJust $ s ^. contractState . parameters)
+    instanceContract s _ BidderH{} = bidderContract (fromJust $ s ^. contractState . parameters)
 
     arbitraryAction s
         | p /= NotStarted =
@@ -109,7 +114,7 @@ instance ContractModel AuctionModel where
                       -- Correct reveal
                       , (20, uncurry Reveal <$> elements [ (w,i) | (i,w) <- s ^. contractState . currentBids ])
                       , (20, Payout <$> elements [w1, w2, w3, w4]) ]
-        | otherwise = Init <$> arbitrary
+        | otherwise = oneof [Init <$> arbitrary, pure StartContracts]
         where
             p    = s ^. contractState . phase
             slot = s ^. currentSlot
@@ -125,31 +130,26 @@ instance ContractModel AuctionModel where
 
             WaitUntil slot -> slot > s ^. currentSlot
 
-            Bid w v        -> let currentWalletBalance = Ada.adaOf 100 + Ada.fromValue (s ^. balanceChange w)
-                               in s ^. contractState . phase == Bidding
-                                  && w `notElem` fmap snd (s ^. contractState . currentBids)
-                                  && v >= Ada.getLovelace Ledger.minAdaTxOut
-                                  && currentWalletBalance - Ada.lovelaceOf v >= Ledger.minAdaTxOut <> Ledger.maxFee
+            Bid w v        -> s ^. contractState . phase == Bidding
+                           && w `notElem` fmap snd (s ^. contractState . currentBids)
+                           && v >= Ada.getLovelace Ledger.minAdaTxOut
 
-            Reveal w v     -> let currentWalletBalance = Ada.adaOf 100 + Ada.fromValue (s ^. balanceChange w)
-                               in s ^. contractState . phase == AwaitingPayout
-                                  && w `elem` fmap snd (s ^. contractState . currentBids)
-                                  && v >= Ada.getLovelace Ledger.minAdaTxOut
-                                  && currentWalletBalance - Ada.lovelaceOf v >= Ledger.minAdaTxOut <> Ledger.maxFee
+            Reveal w v     -> s ^. contractState . phase == AwaitingPayout
+                           && w `elem` fmap snd (s ^. contractState . currentBids)
+                           && v >= Ada.getLovelace Ledger.minAdaTxOut
 
             Payout _       -> s ^. contractState . phase == PayoutTime
 
-
-    perform _ _ (Init _)            = delay 3
-    perform _ _ StartContracts      = delay 3
-    perform _ _ (WaitUntil slot)    = void $ Trace.waitUntilSlot slot
-    perform handle _ (Bid w bid)    = do
+    perform _ _ _ (Init _)          = delay 3
+    perform _ _ _ StartContracts    = delay 3
+    perform _ _ _ (WaitUntil slot)  = void $ Trace.waitUntilSlot slot
+    perform handle _ _ (Bid w bid)  = do
         Trace.callEndpoint @"bid" (handle $ BidderH w) (BidArgs (secretArg bid))
         delay 1
-    perform handle _ (Reveal w bid) = do
+    perform handle _ _ (Reveal w bid) = do
         Trace.callEndpoint @"reveal" (handle $ BidderH w) (RevealArgs bid)
         delay 1
-    perform handle _ (Payout w)
+    perform handle _ _ (Payout w)
       | w == w1 = do
         Trace.callEndpoint @"payout" (handle SellerH) ()
         delay 1
@@ -199,11 +199,11 @@ instance ContractModel AuctionModel where
                     when ((bid, w) `elem` bids && bid > oldBid) $ do
                       withdraw w $ Ada.lovelaceValueOf bid
                       deposit w' $ Ada.lovelaceValueOf oldBid
-                      currentWinningBid $= Just (bid, w)
+                      currentWinningBid .= Just (bid, w)
                   Nothing ->
                     when ((bid, w) `elem` bids) $ do
                       withdraw w $ Ada.lovelaceValueOf bid
-                      currentWinningBid $= Just (bid, w)
+                      currentWinningBid .= Just (bid, w)
                 wait 1
 
             Payout _ | currentPhase == PayoutTime -> do
@@ -228,17 +228,12 @@ instance ContractModel AuctionModel where
             eSlot      <- viewContractState endBidSlot
             pSlot <- viewContractState payoutSlot
             when (slot >= eSlot) $ do
-              phase $= AwaitingPayout
+              phase .= AwaitingPayout
             when (slot >= pSlot) $ do
-              phase $= PayoutTime
-
-delay :: Integer -> Trace.EmulatorTraceNoStartContract ()
-delay n = void $ Trace.waitNSlots $ fromIntegral n
+              phase .= PayoutTime
 
 prop_Auction :: Actions AuctionModel -> Property
-prop_Auction = propRunActionsWithOptions options defaultCoverageOptions
-               (\ _ -> pure True)  -- TODO: check termination
-
+prop_Auction = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure True)
 
 tests :: TestTree
 tests =

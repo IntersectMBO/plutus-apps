@@ -50,12 +50,13 @@ import PaymentForm as PaymentForm
 import Text.Pretty (class Pretty, pretty, text)
 
 type State
-  = { cardanoWasm :: CardanoWasm
-    , errors :: Set AppError
-    , isLoadingWallet :: Boolean
-    , isSubmittingPayment :: Boolean
-    , lastSubmittedTxId :: Maybe String
-    }
+  =
+  { cardanoWasm :: CardanoWasm
+  , errors :: Set AppError
+  , isLoadingWallet :: Boolean
+  , isSubmittingPayment :: Boolean
+  , lastSubmittedTxId :: Maybe String
+  }
 
 data Action
   = ConnectWallet
@@ -105,24 +106,26 @@ initialState cardanoWasm = do
   }
 
 type ChildSlot
-  = ( formless :: F.Slot PaymentForm (Const Void) ChildSlots Payment Unit )
+  = (formless :: F.Slot PaymentForm (Const Void) ChildSlots Payment Unit)
 
 render :: State -> HH.HTML (H.ComponentSlot ChildSlots AppM Action) Action
 render s =
   HH.div [ HP.class_ <<< ClassName $ "pa4 black-80" ]
-    $ [ HH.h1_ [ HH.text "PAB-Nami demo" ]
+    $
+      [ HH.h1_ [ HH.text "PAB-Nami demo" ]
       , HH.p_ [ HH.text "This simple demo allows you to send a lovelace amount to another Cardano testnet address using the PAB (PayToWallet contract) and the Nami wallet." ]
       , HH.slot F._formless unit (PaymentForm.component s.cardanoWasm) unit MakePayment
       , modal s.isLoadingWallet (modalView s "Connecting to Nami...")
       , modal s.isSubmittingPayment (modalView s "Currently submitting the payment to the Cardano blockchain testnet...")
       ]
-    <> submittedPaymentHtml
-    <> [ HH.div_
-          [ HH.ul_
-              $ map (\e -> HH.li [ HP.class_ <<< ClassName $ "light-red" ] [ HH.text $ show $ pretty e ])
-              $ Set.toUnfoldable s.errors
+        <> submittedPaymentHtml
+        <>
+          [ HH.div_
+              [ HH.ul_
+                  $ map (\e -> HH.li [ HP.class_ <<< ClassName $ "light-red" ] [ HH.text $ show $ pretty e ])
+                  $ Set.toUnfoldable s.errors
+              ]
           ]
-      ]
   where
   submittedPaymentHtml = case s.lastSubmittedTxId of
     Nothing -> []
@@ -138,10 +141,10 @@ render s =
           ]
       ]
 
-modal ::
-  Boolean ->
-  HH.HTML (H.ComponentSlot ChildSlots AppM Action) Action ->
-  HH.HTML (H.ComponentSlot ChildSlots AppM Action) Action
+modal
+  :: Boolean
+  -> HH.HTML (H.ComponentSlot ChildSlots AppM Action) Action
+  -> HH.HTML (H.ComponentSlot ChildSlots AppM Action) Action
 modal isVisible view =
   let
     displayClass = if isVisible then "flex" else "dn"
@@ -167,14 +170,14 @@ modalView _ text =
     , HH.div [ HP.class_ <<< ClassName $ "loader" ] []
     ]
 
-handleAction ::
-  forall msg m.
-  MonadAsk Env m =>
-  MonadAff m =>
-  MonadThrow Error m =>
-  MonadError Error m =>
-  Action ->
-  H.HalogenM State Action ChildSlots msg m Unit
+handleAction
+  :: forall msg m
+   . MonadAsk Env m
+  => MonadAff m
+  => MonadThrow Error m
+  => MonadError Error m
+  => Action
+  -> H.HalogenM State Action ChildSlots msg m Unit
 -- | Connect to the Nami wallet
 handleAction ConnectWallet = do
   enableRes <- H.lift $ try $ void $ Nami.enable
@@ -223,15 +226,15 @@ handleAction (MakePayment payment) = do
 
 -- | Given a 'WalletId', an 'Address' and an amount in lovelace, use the PAB and
 -- Nami wallet to balance, sign and submit a transaction.
-makePayment ::
-  forall m.
-  MonadAff m =>
-  MonadThrow Error m =>
-  MonadAsk CardanoWasm m =>
-  WalletId ->
-  Address ->
-  Int ->
-  m String
+makePayment
+  :: forall m
+   . MonadAff m
+  => MonadThrow Error m
+  => MonadAsk CardanoWasm m
+  => WalletId
+  -> Address
+  -> Int
+  -> m String
 makePayment walletId recipientAddr lovelaceAmount = do
   pubKeyHashesHex <- getPaymentStakeKeyHashesHex recipientAddr
   cid <-
@@ -247,12 +250,12 @@ makePayment walletId recipientAddr lovelaceAmount = do
   balanceSignAndSubmitTx partialCborTx
 
 -- | Activate the 'PayToWallet' contract in the PAB.
-activateContract ::
-  forall m.
-  MonadAff m =>
-  MonadThrow Error m =>
-  Nami.WalletId ->
-  m String
+activateContract
+  :: forall m
+   . MonadAff m
+  => MonadThrow Error m
+  => Nami.WalletId
+  -> m String
 activateContract walletId = do
   let
     body =
@@ -279,12 +282,12 @@ activateContract walletId = do
 
 -- | From a Cardano address, extract the payment key and stake key encoded in
 -- CBOR.
-getPaymentStakeKeyHashesHex ::
-  forall m.
-  MonadEffect m =>
-  MonadAsk Env m =>
-  Address ->
-  m (Tuple String String)
+getPaymentStakeKeyHashesHex
+  :: forall m
+   . MonadEffect m
+  => MonadAsk Env m
+  => Address
+  -> m (Tuple String String)
 getPaymentStakeKeyHashesHex address = do
   baseAddress <- BaseAddress.fromAddress address
   let
@@ -295,7 +298,7 @@ getPaymentStakeKeyHashesHex address = do
   paymentKeyHashHex <-
     liftEffect $ identity
       $ (Buffer.fromArrayBuffer (ArrayBuffer.buffer paymentKeyHash) :: Effect Buffer)
-      >>= Buffer.toString Encoding.Hex
+          >>= Buffer.toString Encoding.Hex
   let
     stakeKeyHash =
       Ed25519KeyHash.toBytes
@@ -304,18 +307,18 @@ getPaymentStakeKeyHashesHex address = do
   stakeKeyHashHex <-
     liftEffect $ identity
       $ (Buffer.fromArrayBuffer (ArrayBuffer.buffer stakeKeyHash) :: Effect Buffer)
-      >>= Buffer.toString Encoding.Hex
+          >>= Buffer.toString Encoding.Hex
   pure $ Tuple paymentKeyHashHex stakeKeyHashHex
 
 -- | Call the endpoint of our contract to generate a transaction for a payment.
-callPayToWalletEndpoint ::
-  forall m.
-  MonadAff m =>
-  MonadThrow Error m =>
-  String ->
-  Tuple String String ->
-  Int ->
-  m Unit
+callPayToWalletEndpoint
+  :: forall m
+   . MonadAff m
+  => MonadThrow Error m
+  => String
+  -> Tuple String String
+  -> Int
+  -> m Unit
 callPayToWalletEndpoint cid (Tuple paymentKeyHashHex stakeKeyHashHex) lovelaceAmount = do
   -- TODO: Use the generated PS types from plutus-ledger to construct the JSON instead
   let
@@ -375,12 +378,12 @@ callPayToWalletEndpoint cid (Tuple paymentKeyHashHex stakeKeyHashHex) lovelaceAm
   either (throwError <<< error <<< AX.printError) (const $ pure unit) resE
 
 -- | Fetch the partial transaction from the PAB.
-fetchContractPartialTx ::
-  forall m.
-  MonadAff m =>
-  MonadThrow Error m =>
-  String ->
-  m String
+fetchContractPartialTx
+  :: forall m
+   . MonadAff m
+  => MonadThrow Error m
+  => String
+  -> m String
 fetchContractPartialTx cid = do
   resE <-
     H.liftAff
@@ -399,13 +402,13 @@ fetchContractPartialTx cid = do
 
 -- | Given a partial transaction encoded in CBOR, balance, sign and submit it
 -- using the Nami wallet api.
-balanceSignAndSubmitTx ::
-  forall m.
-  MonadAsk Env m =>
-  MonadAff m =>
-  MonadThrow Error m =>
-  String ->
-  m String
+balanceSignAndSubmitTx
+  :: forall m
+   . MonadAsk Env m
+  => MonadAff m
+  => MonadThrow Error m
+  => String
+  -> m String
 balanceSignAndSubmitTx partialTxCbor = do
   balancedTxCbor <- H.liftAff $ Nami.balanceTx partialTxCbor
   balancedTxE <- mkFromCbor balancedTxCbor Transaction.fromBytes
@@ -420,12 +423,12 @@ balanceSignAndSubmitTx partialTxCbor = do
   Nami.submitTx finalTxCbor
 
 -- | Decode a CBOR string to the given type 'a'.
-mkFromCbor ::
-  forall m a.
-  MonadEffect m =>
-  String ->
-  (Uint8Array -> m (Either Error a)) ->
-  m (Either Error a)
+mkFromCbor
+  :: forall m a
+   . MonadEffect m
+  => String
+  -> (Uint8Array -> m (Either Error a))
+  -> m (Either Error a)
 mkFromCbor cbor mk = do
   bytes <-
     liftEffect $ (Buffer.fromString cbor Encoding.Hex :: Effect Buffer)
@@ -434,11 +437,11 @@ mkFromCbor cbor mk = do
   mk bytes
 
 -- | Convert a byte array to a CBOR string.
-bytesToCbor ::
-  forall m.
-  MonadEffect m =>
-  Uint8Array ->
-  m String
+bytesToCbor
+  :: forall m
+   . MonadEffect m
+  => Uint8Array
+  -> m String
 bytesToCbor bytes =
   liftEffect $ (Buffer.fromArrayBuffer (ArrayBuffer.buffer bytes) :: Effect Buffer)
     >>= Buffer.toString Encoding.Hex

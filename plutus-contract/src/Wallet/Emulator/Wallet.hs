@@ -46,8 +46,8 @@ import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash,
-               ScriptValidationEvent (sveScript), StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOut,
-               TxOutRef, UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx), ValidatorHash, Value)
+               ScriptValidationEvent (sveScript), StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef,
+               UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx), ValidatorHash, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -371,8 +371,7 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
         right = fees <> foldMap (view Tx.outValue) (filteredUnbalancedTxTx ^. Tx.outputs)
         remainingFees = fees PlutusTx.- fold collateral -- TODO: add collateralPercent
         balance = left PlutusTx.- right
-
-    (neg, pos) <- adjustBalanceWithMissingLovelace utxo ownPaymentPubKey filteredUnbalancedTxTx $ Value.split balance
+        (neg, pos) = adjustBalanceWithMissingLovelace $ Value.split balance
 
     tx' <- if Value.isZero pos
            then do
@@ -405,52 +404,23 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
 -- | Adjust the left and right balance of an unbalanced 'Tx' with the missing
 -- lovelace considering the minimum lovelace per transaction output constraint
 -- from the Cardano blockchain.
-adjustBalanceWithMissingLovelace ::
-    forall effs.
-    ( Member ChainIndexQueryEffect effs
-    , Member (Error WAPI.WalletAPIError) effs
-    )
-    => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
-    -> PaymentPubKey -- ^ Wallet's public key
-    -> Tx -- ^ An unbalanced tx
-    -> (Value, Value) -- ^ The unbalanced tx's left and right balance.
-    -> Eff effs (Value, Value) -- ^ New left and right balance.
-adjustBalanceWithMissingLovelace utxo ownPaymentPubKey unBalancedTx (neg, pos) = do
-    -- Find the tx's input value which refer to the current wallet's address.
-    let ownPkh = Ledger.pubKeyHash $ unPaymentPubKey ownPaymentPubKey
-    let pkhOfUnspentTxIn TxIn { txInRef } =
-            (Ledger.toPubKeyHash . view Ledger.ciTxOutAddress) =<< Map.lookup txInRef utxo
-    let ownTxInputs = filter (\txIn -> Just ownPkh == pkhOfUnspentTxIn txIn)
-                             (Set.toList $ Tx.txInputs unBalancedTx)
-    ownInputValues <- traverse lookupValue ownTxInputs
+adjustBalanceWithMissingLovelace
+    :: (Value, Value) -- ^ The unbalanced tx's left and right balance.
+    -> (Value, Value) -- ^ New left and right balance.
+adjustBalanceWithMissingLovelace (neg, pos) = do
 
-    -- When minting a token, there will be eventually a transaction output
-    -- with that token. However, it is important to make sure that we can add
-    -- the minimum lovelace alongside that token value in order to satisfy the
-    -- Cardano blockchain constraint. Therefore, if there is a minted token, we
-    -- add the missing lovelace on the positive balance.
-    let txMintMaybe = if Value.isZero (txMint unBalancedTx) then Nothing else Just (txMint unBalancedTx)
-        -- If the tx mints a token, then we find the missing lovelace considering the wallet's inputs.
-        -- Ex. If we mint token A, with no wallet inputs, then the missing lovelace is 'Ledger.minAdaTxOut'.
-        missingLovelaceForMintValue =
-          maybe 0
-                (\mintValue -> max 0 (Ledger.minAdaTxOut - Ada.fromValue (mintValue <> fold ownInputValues)))
-                txMintMaybe
-        -- We add to the missing lovelace from the minting to the positive balance.
-        posWithMintAda = pos <> Ada.toValue missingLovelaceForMintValue
-        -- Now, we find the missing lovelace from the new positive balance. If
-        -- a token was minted, this should always be 0. But if no token was
-        -- minted, and if the positive balance is > 0 and < 'Ledger.minAdaTxOut',
-        -- then we adjust it to the minimum Ada.
-        missingLovelaceFromPosValue =
-          if Value.isZero posWithMintAda || Ada.fromValue posWithMintAda >= Ledger.minAdaTxOut
+    -- We find the missing lovelace from the new positive balance. If
+    -- the positive balance is > 0 and < 'Ledger.minAdaTxOut',
+    -- then we adjust it to the minimum Ada.
+    let missingLovelaceFromPosValue =
+          if valueIsZeroOrHasMinAda pos
             then 0
-            else max 0 (Ledger.minAdaTxOut - Ada.fromValue posWithMintAda)
+            else max 0 (Ledger.minAdaTxOut - Ada.fromValue pos)
         -- We calculate the final negative and positive balances
-        newPos = pos <> Ada.toValue missingLovelaceForMintValue <> Ada.toValue missingLovelaceFromPosValue
-        newNeg = neg <> Ada.toValue missingLovelaceForMintValue <> Ada.toValue missingLovelaceFromPosValue
+        newPos = pos <> Ada.toValue missingLovelaceFromPosValue
+        newNeg = neg <> Ada.toValue missingLovelaceFromPosValue
 
-    pure (newNeg, newPos)
+    (newNeg, newPos)
 
 addOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Tx -> Tx
 addOutput pk sk vl tx = tx & over Tx.outputs (pko :) where
@@ -497,11 +467,6 @@ addInputs mp pk sk vl tx = do
 
     pure $ tx & addTxOut & addTxIns
 
--- Make a transaction output from a positive value.
-mkChangeOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Maybe TxOut
-mkChangeOutput pubK sk v =
-    if Value.isZero v then Nothing else Just (Ledger.pubKeyTxOut v pubK sk)
-
 -- | Given a set of @a@s with coin values, and a target value, select a number
 -- of @a@ such that their total value is greater than or equal to the target.
 selectCoin ::
@@ -530,18 +495,20 @@ selectCoin fnds vl =
                 -- that it's geq the target value, and if the resulting change
                 -- is not between 0 and the minimum Ada per tx output.
                 isTotalValueEnough totalVal =
-                  let adaChange = Ada.fromValue totalVal PlutusTx.- Ada.fromValue vl
-                   in vl `Value.leq` totalVal && (adaChange == 0 || adaChange >= Ledger.minAdaTxOut)
+                    vl `Value.leq` totalVal && valueIsZeroOrHasMinAda (totalVal PlutusTx.- vl)
                 fundsWithTotal = zip fnds (drop 1 $ scanl (<>) mempty $ fmap snd fnds)
                 fundsToSpend   = takeUntil (isTotalValueEnough . snd) fundsWithTotal
                 totalSpent     = maybe PlutusTx.zero snd $ listToMaybe $ reverse fundsToSpend
                 change         = totalSpent PlutusTx.- vl
-                changeAda      = Ada.fromValue change
              -- Make sure that the change is not less than the minimum amount
              -- of lovelace per tx output.
-             in if changeAda > 0 && changeAda < Ledger.minAdaTxOut
-                   then throwError $ WAPI.ChangeHasLessThanNAda change Ledger.minAdaTxOut
-                   else pure (fst <$> fundsToSpend, change)
+             in if valueIsZeroOrHasMinAda change
+                   then pure (fst <$> fundsToSpend, change)
+                   else throwError $ WAPI.ChangeHasLessThanNAda change Ledger.minAdaTxOut
+
+-- | Check that a value is a proper TxOut value or is zero (i.e. the absence of a TxOut)
+valueIsZeroOrHasMinAda :: Value -> Bool
+valueIsZeroOrHasMinAda v = Value.isZero v || Ada.fromValue v >= Ledger.minAdaTxOut
 
 -- | Removes transaction outputs with empty datum and empty value.
 removeEmptyOutputs :: Tx -> Tx

@@ -17,7 +17,6 @@ An emulator trace is a contract trace that can be run in the Plutus emulator.
 module Plutus.Trace.Emulator(
     Emulator
     , EmulatorTrace
-    , EmulatorTraceNoStartContract
     , Wallet.Emulator.Stream.EmulatorErr(..)
     , Plutus.Trace.Emulator.Types.ContractHandle(..)
     , ContractInstanceTag
@@ -139,18 +138,7 @@ data PrintEffect r where
   PrintLn :: String -> PrintEffect ()
 makeEffect ''PrintEffect
 
-type EmulatorTraceNoStartContract a =
-        Eff
-            '[ RunContract
-            , Assert
-            , Waiting
-            , EmulatorControl
-            , EmulatedWalletAPI
-            , LogMsg String
-            , Error EmulatorRuntimeError
-            ] a
-
-type EmulatorTrace a =
+type EmulatorTrace =
         Eff
             '[ StartContract
             , RunContract
@@ -160,7 +148,7 @@ type EmulatorTrace a =
             , EmulatedWalletAPI
             , LogMsg String
             , Error EmulatorRuntimeError
-            ] a
+            ]
 
 handleEmulatorTrace ::
     forall effs a.

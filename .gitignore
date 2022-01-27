@@ -65,10 +65,8 @@ pkgs/.stack
 *.code-workspace
 .*.sw*
 
-# Frontend generated files (NPM/Yarn, Spago, generated PS, etc.)
+# Frontend files (NPM/Yarn, Spago, etc.)
 # N.B. officially we use NPM; ignoring Yarn files allows the local use of Yarn for those that want
-**/generated
-**/generated/
 **/generated-docs/
 **/node_modules/
 **/output/

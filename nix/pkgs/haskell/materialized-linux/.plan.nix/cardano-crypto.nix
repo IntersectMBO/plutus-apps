@@ -13,7 +13,7 @@
       specVersion = "1.10";
       identifier = { name = "cardano-crypto"; version = "1.1.0"; };
       license = "MIT";
-      copyright = "2016-2021 IOHK";
+      copyright = "2016-2017 IOHK";
       maintainer = "contact@typed.io";
       author = "Vincent Hanquez";
       homepage = "https://github.com/input-output-hk/cardano-crypto#readme";
@@ -26,12 +26,7 @@
       licenseFiles = [ "LICENSE" ];
       dataDir = ".";
       dataFiles = [];
-      extraSrcFiles = [
-        "README.md"
-        "cbits/*.h"
-        "cbits/ed25519/*.h"
-        "jsbits/bindings.js"
-        ];
+      extraSrcFiles = [ "README.md" "cbits/*.h" "cbits/ed25519/*.h" ];
       extraTmpFiles = [];
       extraDocFiles = [];
       };
@@ -68,7 +63,6 @@
           "Cardano/Internal/Compat"
           ];
         cSources = [ "cbits/ed25519/ed25519.c" "cbits/encrypted_sign.c" ];
-        jsSources = (pkgs.lib).optional (system.isGhcjs) "jsbits/bindings.js";
         hsSourceDirs = [ "src" ];
         includeDirs = [ "cbits/ed25519" "cbits" ];
         };
@@ -147,11 +141,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "4";
+      url = "11";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "4";
+      url = "11";
       rev = "minimal";
       sha256 = "";
       };

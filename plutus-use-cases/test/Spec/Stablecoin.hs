@@ -15,7 +15,7 @@ module Spec.Stablecoin(
 import Control.Lens (preview)
 import Control.Monad (void)
 import Data.Maybe (listToMaybe, mapMaybe)
-import Prelude hiding (negate)
+import Prelude hiding (Rational, negate)
 
 import Ledger.Ada (adaSymbol, adaToken)
 import Ledger.Ada qualified as Ada
@@ -36,7 +36,7 @@ import Plutus.Trace.Emulator (ContractHandle, EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import Plutus.Trace.Emulator.Types (_ContractLog, cilMessage)
 import PlutusTx.Numeric (negate, one, zero)
-import PlutusTx.Ratio as Ratio
+import PlutusTx.Ratio qualified as R
 import Wallet.Emulator.MultiAgent (eteEvent)
 
 import Test.Tasty
@@ -47,15 +47,15 @@ user = w1
 oraclePrivateKey :: PaymentPrivateKey
 oraclePrivateKey = CW.paymentPrivateKey $ CW.fromWalletNumber $ CW.WalletNumber 2
 
-onePercent :: Ratio Integer
-onePercent = 1 % 100
+onePercent :: R.Rational
+onePercent = R.unsafeRatio 1 100
 
 coin :: Stablecoin
 coin = Stablecoin
     { scOracle = PaymentPubKey $ toPublicKey (unPaymentPrivateKey oraclePrivateKey)
     , scFee = onePercent
     , scMinReserveRatio = zero
-    , scMaxReserveRatio = 4 % 1
+    , scMaxReserveRatio = R.unsafeRatio 4 1
     , scReservecoinDefaultPrice = BC 1
     , scBaseCurrency = Value.assetClass adaSymbol adaToken
     , scStablecoinTokenName = "stablecoin"
@@ -101,7 +101,7 @@ tests = testGroup "Stablecoin"
         )
         stablecoinTrace
 
-    , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = (20000000 % 1)}, actual = BC {unBC = (20173235 % 1)}}. The transition is not allowed." in
+    , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = Rational 20000000 1}, actual = BC {unBC = Rational 20173235 1}}. The transition is not allowed." in
       checkPredicate "Cannot exceed the maximum reserve ratio"
         (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
         .&&. assertNoFailedTransactions
@@ -156,7 +156,7 @@ stablecoinTrace = do
     mintReserveCoins (RC 10_000_000) one hdl
     mintStableCoins (SC 5_000_000) one hdl
     -- redeem 2M stablecoins at an exchange rate of 2 Ada : 1 USD (so we get 4 Ada from the bank)
-    redeemStableCoins (SC 2_000_000) (Ratio.fromInteger 2) hdl
+    redeemStableCoins (SC 2_000_000) (R.fromInteger 2) hdl
 
 -- | Mint 100 reserve coins, mint 50 stablecoins, then attempt to mint
 --   another 49 reserve coins. This fails because the max. reserve ratio

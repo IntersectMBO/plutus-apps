@@ -6,14 +6,24 @@ let
   inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks;
-  inherit (haskell.project.hsPkgs.cardano-wallet.components.exes) cardano-wallet;
 
-  # A standard release to feed cardano-cli & cardano-node to our shell
+  # Feed cardano-wallet, cardano-cli & cardano-node to our shell.
+  # This is stable as it doesn't mix dependencies with this code-base;
+  # the fetched binaries are the "standard" builds that people test.
+  # This should be fast as it mostly fetches Hydra caches without building much.
+  cardano-wallet = import
+    (pkgs.fetchgit {
+      url = "https://github.com/input-output-hk/cardano-wallet";
+      rev = "a5085acbd2670c24251cf8d76a4e83c77a2679ba";
+      sha256 = "1apzfy7qdgf6l0lb3icqz3rvaq2w3a53xq6wvhqnbfi8i7cacy03";
+    })
+    { };
   cardano-node = import
     (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-node";
-      rev = "1.32.1";
-      sha256 = "00k9fqrm0gphjji23x0nc9z6bqh8bqrncgivn3mi3csacjzicrrx";
+      # A standard release compatible with the cardano-wallet commit above is always preferred.
+      rev = "1.33.0";
+      sha256 = "1hr00wqzmcyc3x0kp2hyw78rfmimf6z4zd4vv85b9zv3nqbjgrik";
     })
     { };
 
@@ -40,14 +50,18 @@ let
       stylish-haskell = stylish-haskell;
       nixpkgs-fmt = nixpkgs-fmt;
       shellcheck = pkgs.shellcheck;
-      purty = plutus-apps.purty-pre-commit;
     };
     hooks = {
-      purty.enable = true;
+      purs-tidy-hook = {
+        enable = true;
+        name = "purs-tidy";
+        entry = "${plutus-apps.purs-tidy}/bin/purs-tidy format-in-place";
+        files = "\\.purs$";
+        language = "system";
+      };
       stylish-haskell = {
         enable = true;
         excludes = [
-          "contrib/.*"
           "stubs/cardano-api-stub/.*"
           "stubs/iohk-monitoring-stub/.*"
         ];
@@ -100,10 +114,10 @@ let
     cabal-install
     cardano-node.cardano-cli
     cardano-node.cardano-node
-    cardano-wallet
+    cardano-wallet.cardano-wallet
     cardano-repo-tool
     fixPngOptimization
-    fixPurty
+    fix-purs-tidy
     fixStylishHaskell
     haskell-language-server
     haskell-language-server-wrapper
@@ -116,7 +130,7 @@ let
     psa
     purescript-language-server
     purs
-    purty
+    purs-tidy
     spago
     spago2nix
     stylish-haskell

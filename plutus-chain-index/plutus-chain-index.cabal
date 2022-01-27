@@ -47,7 +47,6 @@ library
         beam-sqlite -any,
         beam-migrate -any,
         cardano-api -any,
-        containers -any,
         contra-tracer -any,
         data-default -any,
         freer-simple -any,
@@ -56,7 +55,6 @@ library
         ouroboros-network -any,
         prettyprinter >=1.1.0.1,
         sqlite-simple -any,
-        stm -any,
         yaml -any,
         optparse-applicative -any
 

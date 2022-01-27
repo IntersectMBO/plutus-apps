@@ -222,8 +222,8 @@ mkInitialValueSpec =
             , knownTokens:
                 NonEmptyList
                   $ TokenName { unTokenName: "USDToken" }
-                  :| TokenName { unTokenName: "EURToken" }
-                  : Nil
+                      :| TokenName { unTokenName: "EURToken" }
+                        : Nil
             }
         ]
         (BigInt.fromInt 10)

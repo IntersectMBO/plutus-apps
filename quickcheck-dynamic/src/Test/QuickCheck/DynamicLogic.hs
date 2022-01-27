@@ -13,8 +13,8 @@ module Test.QuickCheck.DynamicLogic
     , DynLogicModel(..), DynLogicTest(..), TestStep(..)
     , ignore, passTest, afterAny, after, (|||), forAllQ, weight, toStop
     , done, errorDL, monitorDL, always
-    , forAllScripts, withDLScript, withDLScriptPrefix, forAllMappedScripts
-    , propPruningGeneratedScriptIsNoop
+    , forAllScripts, forAllScripts_, withDLScript, withDLScriptPrefix, forAllMappedScripts, forAllMappedScripts_
+    , forAllUniqueScripts, propPruningGeneratedScriptIsNoop
     ) where
 
 import Data.List
@@ -22,10 +22,11 @@ import Data.Typeable
 
 import Control.Applicative
 
-import Test.QuickCheck
+import Test.QuickCheck hiding (generate)
 
 import Test.QuickCheck.DynamicLogic.CanGenerate
 import Test.QuickCheck.DynamicLogic.Quantify
+import Test.QuickCheck.DynamicLogic.SmartShrinking
 import Test.QuickCheck.StateModel
 
 -- | Dynamic logic formulae.
@@ -113,7 +114,6 @@ instance StateModel s => Show (TestStep s) where
   show (Do step)   = "Do $ "++show step
   show (Witness a) = "Witness ("++show a++" :: "++show (typeOf a)++")"
 
-
 instance StateModel s => Show (DynLogicTest s) where
     show (BadPrecondition as bads s) =
         unlines $ ["BadPrecondition"] ++
@@ -143,17 +143,35 @@ class StateModel s => DynLogicModel s where
     restricted :: Action s a -> Bool
     restricted _ = False
 
+forAllUniqueScripts :: (DynLogicModel s, Testable a) =>
+                          Int -> s -> DynLogic s -> (Actions s -> a) -> Property
+forAllUniqueScripts n s d k = case generate chooseUniqueNextStep d n s 500 [] of
+  Nothing   -> counterexample "Generating Non-unique script in forAllUniqueScripts" False
+  Just test -> validDLTest d test .&&. (applyMonitoring d test . property $ k (scriptFromDL test))
+
 forAllScripts :: (DynLogicModel s, Testable a) =>
                    DynLogic s -> (Actions s -> a) -> Property
-forAllScripts d k =
-    forAllShrink (sized $ generateDLTest d) (shrinkDLTest d) $
+forAllScripts d k = forAllMappedScripts id id d k
+
+forAllScripts_ :: (DynLogicModel s, Testable a) =>
+                   DynLogic s -> (Actions s -> a) -> Property
+forAllScripts_ d k =
+    forAll (sized $ generateDLTest d) $
         withDLScript d k
 
 forAllMappedScripts ::
   (DynLogicModel s, Testable a, Show rep) =>
     (rep -> DynLogicTest s) -> (DynLogicTest s -> rep) -> DynLogic s -> (Actions s -> a) -> Property
 forAllMappedScripts to from d k =
-    forAllShrink (sized $ (from<$>) . generateDLTest d) ((from<$>) . shrinkDLTest d . to) $
+    forAllShrink (Smart 0 <$> (sized $ (from<$>) . generateDLTest d))
+                 (shrinkSmart ((from<$>) . shrinkDLTest d . to)) $ \(Smart _ script) ->
+        withDLScript d k (to script)
+
+forAllMappedScripts_ ::
+  (DynLogicModel s, Testable a, Show rep) =>
+    (rep -> DynLogicTest s) -> (DynLogicTest s -> rep) -> DynLogic s -> (Actions s -> a) -> Property
+forAllMappedScripts_ to from d k =
+    forAll (sized $ (from<$>) . generateDLTest d) $
         withDLScript d k . to
 
 withDLScript :: (DynLogicModel s, Testable a) => DynLogic s -> (Actions s -> a) -> DynLogicTest s -> Property
@@ -167,28 +185,43 @@ withDLScriptPrefix d k test =
         test' = unfailDLTest d test
 
 generateDLTest :: DynLogicModel s => DynLogic s -> Int -> Gen (DynLogicTest s)
-generateDLTest d size = generate d 0 (initialStateFor d) []
-    where
-        generate d n s as =
-            case badActions d s of
-                [] ->
-                    if n > sizeLimit size then
-                        return $ Looping (reverse as)
-                    else do
-                        let preferred = if n > size then stopping d else noStopping d
-                            useStep StoppingStep _ = return $ DLScript (reverse as)
-                            useStep (Stepping (Do (var := act)) d') _ =
-                              generate d'
-                                       (n+1)
-                                       (nextState s act var)
-                                       (Do (var := act):as)
-                            useStep (Stepping (Witness a) d') _ =
-                              generate d' n s (Witness a:as)
-                            useStep NoStep alt = alt
-                        foldr (\ step k -> do try <- chooseNextStep s n step; useStep try k)
-                              (return $ Stuck (reverse as) s)
-                              [preferred, noAny preferred, d, noAny d]
-                bs -> return $ BadPrecondition (reverse as) bs s
+generateDLTest d size = generate chooseNextStep d 0 (initialStateFor d) size []
+
+generate :: (Monad m, DynLogicModel s)
+         => (s -> Int -> DynLogic s -> m (NextStep s))
+         -> DynLogic s
+         -> Int
+         -> s
+         -> Int
+         -> [TestStep s]
+         -> m (DynLogicTest s)
+generate chooseNextStepFun d n s size as =
+    case badActions d s of
+        [] ->
+            if n > sizeLimit size then
+                return $ Looping (reverse as)
+            else do
+                let preferred = if n > size then stopping d else noStopping d
+                    useStep StoppingStep _ = return $ DLScript (reverse as)
+                    useStep (Stepping (Do (var := act)) d') _ =
+                      generate chooseNextStepFun
+                               d'
+                               (n+1)
+                               (nextState s act var)
+                               size
+                               (Do (var := act):as)
+                    useStep (Stepping (Witness a) d') _ =
+                      generate chooseNextStepFun
+                               d'
+                               n
+                               s
+                               size
+                               (Witness a:as)
+                    useStep NoStep alt = alt
+                foldr (\ step k -> do try <- chooseNextStepFun s n step; useStep try k)
+                      (return $ Stuck (reverse as) s)
+                      [preferred, noAny preferred, d, noAny d]
+        bs -> return $ BadPrecondition (reverse as) bs s
 
 sizeLimit :: Int -> Int
 sizeLimit size = 2 * size + 20
@@ -232,7 +265,7 @@ noAny (Monitor f d) = Monitor f (noAny d)
 nextSteps :: DynLogic s -> [(Double, DynLogic s)]
 nextSteps EmptySpec     = []
 nextSteps Stop          = [(1, Stop)]
-nextSteps (After act k)=[(1, After act k)]
+nextSteps (After act k) = [(1, After act k)]
 nextSteps (AfterAny k)  = [(1, AfterAny k)]
 nextSteps (Alt _ d d')  = nextSteps d ++ nextSteps d'
 nextSteps (Stopping d)  = nextSteps d
@@ -281,6 +314,15 @@ chooseNextStep s n d =
                 Weight{}        -> error "chooseNextStep: Weight"
                 Monitor{}       -> error "chooseNextStep: Monitor"
 
+chooseUniqueNextStep :: (MonadFail m, DynLogicModel s) => s -> Int -> DynLogic s -> m (NextStep s)
+chooseUniqueNextStep s n d =
+    case snd <$> nextSteps d of
+        []                 -> return NoStep
+        [EmptySpec]        -> return NoStep
+        [Stop]             -> return StoppingStep
+        [After (Some a) k] -> return $ Stepping (Do $ Var n := a) (k (nextState s a (Var n)))
+        _                  -> fail "chooseUniqueNextStep: non-unique action in DynLogic"
+
 keepTryingUntil :: Int -> Gen a -> (a -> Bool) -> Gen (Maybe a)
 keepTryingUntil 0 _ _ = return Nothing
 keepTryingUntil n g p = do
@@ -288,6 +330,7 @@ keepTryingUntil n g p = do
     if p x then return $ Just x else scale (+1) $ keepTryingUntil (n-1) g p
 
 
+-- TODO: Add shrink state to this following what we do with actions
 shrinkDLTest :: DynLogicModel s => DynLogic s -> DynLogicTest s -> [DynLogicTest s]
 shrinkDLTest _ (Looping _) = []
 shrinkDLTest d tc =
@@ -433,9 +476,14 @@ stuck (Weight w d) s       = w < never || stuck d s
 stuck (ForAll _ _) _       = False
 stuck (Monitor _ d)s       = stuck d s
 
-validDLTest :: DynLogic s -> DynLogicTest s -> Bool
-validDLTest _ (DLScript _) = True
-validDLTest _ _            = False
+validDLTest :: StateModel s => DynLogic s -> DynLogicTest s -> Property
+validDLTest _ (DLScript _)                = property True
+validDLTest _ (Stuck as _)                = counterexample ("Stuck\n" ++ (unlines . map ("  "++) . lines $ show as)) False
+validDLTest _ (Looping as)                = counterexample ("Looping\n" ++ (unlines . map ("  "++) . lines $ show as)) False
+validDLTest _ (BadPrecondition as bads s) = counterexample ("BadPrecondition\n" ++ show as ++ "\n" ++ unlines (showBad <$> bads)) $ False
+  where
+    showBad (Error s) = s
+    showBad a         = show a
 
 scriptFromDL :: DynLogicTest s -> Actions s
 scriptFromDL (DLScript s) = Actions [a | Do a <- s]

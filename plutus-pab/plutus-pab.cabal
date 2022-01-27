@@ -39,7 +39,6 @@ common lang
         ImportQualifiedPost
         ScopedTypeVariables
         StandaloneDeriving
-
     ghc-options:
         -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
         -Wincomplete-record-updates -Wredundant-constraints -Widentities
@@ -117,7 +116,6 @@ library
         Plutus.PAB.Webserver.Server
         Plutus.PAB.Webserver.Types
         Plutus.PAB.Webserver.WebSocket
-
     other-modules:      Servant.Extra
     hs-source-dirs:     src
     build-depends:
@@ -131,7 +129,6 @@ library
         , plutus-ledger-constraints
         , plutus-tx
         , plutus-tx-plugin
-
     build-depends:
         QuickCheck -any,
         aeson -any,
@@ -206,6 +203,7 @@ library
 test-suite plutus-pab-test-light
     default-language: Haskell2010
     default-extensions: ImportQualifiedPost
+    ghc-options: -Wunused-packages
     hs-source-dirs:   test/light
     type:             exitcode-stdio-1.0
     main-is:          Spec.hs
@@ -215,32 +213,21 @@ test-suite plutus-pab-test-light
         Cardano.Wallet.ServerSpec
         Control.Concurrent.STM.ExtrasSpec
         Plutus.PAB.ArbitrarySpec
-
     build-depends:
         QuickCheck -any,
         aeson -any,
-        aeson-pretty -any,
         base >=4.9 && <5,
         bytestring -any,
         cardano-api -any,
         cardano-api:gen -any,
-        containers -any,
         data-default -any,
-        freer-extras -any,
         freer-simple -any,
         hedgehog -any,
-        http-client -any,
-        http-client-tls -any,
-        lens -any,
-        monad-logger -any,
-        mtl -any,
         plutus-contract -any,
         plutus-pab,
-        plutus-ledger -any,
         plutus-ledger-constraints -any,
         plutus-tx -any,
         quickcheck-instances -any,
-        servant-client -any,
         tasty -any,
         tasty-hunit -any,
         smallcheck -any,
@@ -248,9 +235,6 @@ test-suite plutus-pab-test-light
         tasty-hedgehog -any,
         tasty-smallcheck -any,
         tasty-quickcheck -any,
-        text -any,
-        transformers -any,
-        prettyprinter -any,
         stm -any,
         async -any,
 

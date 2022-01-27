@@ -52,7 +52,7 @@ The PAB subscribes to ledger state updates from the node, using a socket protoco
 Wallet
 ~~~~~~
 
-A Cardano wallet is required for balancing and signing transactions.
+A Cardano wallet is required for balancing and signing transactions (and optionnaly submitting transactions).
 Balancing means taking a partial transaction and adding inputs and outputs to make the transaction valid.
 
 Take :ref:`Marlowe<introducing-marlowe>` as an example.
@@ -62,6 +62,14 @@ The wallet adds some of its own inputs to cover the amount that is to be paid in
 When the Marlowe contract has finished, funds are transferred back to the user's wallet using the same mechanism:
 The PAB sends another partial transaction, this time with a single script input and no outputs.
 The wallet then adds an output at one of its own addresses to receive the funds.
+
+There are multiple ways to setup a wallet:
+
+1. Host a cardano wallet backend instance (WBE) using `cardano-wallet <https://github.com/input-output-hk/cardano-wallet>`_
+2. Setup a desktop wallet application (ex. `Daedalus <https://daedaluswallet.io/>`_)
+3. Setup a browser wallet application (ex. `Nami <https://namiwallet.io>`_, `Yoroi <https://yoroi-wallet.com>`_, etc.)
+
+These different wallet setups each imply a different use-case of the PAB.
 
 Deployment Scenarios
 --------------------
@@ -76,12 +84,70 @@ Hosted
 In the “Hosted PAB” scenario, the dApp provider / developer hosts an instance of the PAB alongside the :ref:`chain index<pab_chain_index>` and an Alonzo node.
 The off-chain code of the Plutus app is run on the dApp provider’s infrastructure.
 
-.. figure:: ./hosted-pab.png
+In the following sections, we illustrate the ways a hosted PAB can be used with the different type of wallets.
 
-    The hosted deployment scenario for the PAB.
+WBE (Supported)
+^^^^^^^^^^^^^^^
 
-Coin selection and transaction signing (in short: anything that deals with the user’s money) happens on the user’s machine.
-The PAB produces a link (URI) for each partial transaction that needs to be balanced and signed.
+In this wallet scenario, the dApp provider /developer also hosts an instance of the WBE, which handles the wallets for each user.
+The WBE handles balancing, signing and submitting transaction requests from the PAB.
+
+.. figure:: ./hosted-pab-wbe.png
+
+    The hosted deployment scenario for the PAB with the WBE
+
+This is currently used for testing purposes and shouldn't be used in a production setting, because we wallets are normally controlled by the users themselves.
+
+A simple demo of this scenario is available here: `<https://github.com/input-output-hk/plutus-apps/tree/main/plutus-pab/test-node>`_.
+
+Desktop wallet (Not yet supported)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this wallet scenario, the user has setup a desktop wallet (light or full node) such as Daedalus.
+Transaction balancing (coin selection) and transaction signing (in short: anything that deals with the user’s money) happens on the user’s machine.
+The PAB produces a link (URI) for each partial transaction that needs to be balanced, signed and submitted.
 When the user clicks the link, the user's operating system opens the wallet that is registered to handle the link schema.
-This scheme is not restricted to Daedalus, or even to full wallets.
+This scheme is not restricted to Daedalus, or even to full node wallets.
 Any wallet that implements a handler for the link schema can be used to balance, sign and submit Plutus transactions.
+
+.. figure:: ./hosted-pab-cardano-wallet.png
+
+    The hosted deployment scenario for the PAB communicating with a desktop wallet.
+
+Browser wallet (In progress)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this wallet scenario, the user has setup a browser wallet such as Nami or Yoroi.
+The PAB updates it's contract instance status endpoint for each partial transaction that needs to be balanced, signed and submitted.
+Transaction signing happens on the user's machine.
+However, transaction balancing (coin selection) is handled by the PAB as it is not currently possible to balance transaction that contain script inputs in the browser (i.e. browser wallets can't balance transactions until it is possible to execute Plutus script in the browser).
+Therefore, browser wallets will need to call a PAB helper endpoint which can balance the transaction using funds from the user's browser wallet.
+
+.. figure:: ./hosted-pab-browser-wallet.png
+
+    The hosted deployment scenario for the PAB communicating with a browser wallet.
+
+A simple demo of this scenario is available here: `<https://github.com/input-output-hk/plutus-apps/tree/main/plutus-pab-executables/demo/pab-nami>`_.
+This demo is a work in progress.
+
+In-browser
+~~~~~~~~~~
+
+In the “In-browser PAB” scenario, the dApp provider / developer hosts an instance of the :ref:`chain index<pab_chain_index>` and an Alonzo node.
+The dApp users work with a browser interface which uses a light version of the PAB.
+
+Similary to the hosted PAB scenario, we illustrate the ways it can be used the different type of wallets.
+
+Desktop wallet (Not yet supported)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. figure:: ./in-browser-pab-cardano-wallet.png
+
+    The in-browser PAB communicating with a desktop wallet.
+
+Browser wallet (Not yet supported)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. figure:: ./in-browser-pab-browser-wallet.png
+
+    The in-browser PAB communicating with a browser wallet.

@@ -39,7 +39,6 @@ import Playground.Types (CompilationResult, ContractCall, ContractDemo, Evaluati
 import Plutus.V1.Ledger.Tx (Tx)
 import Prelude (class Eq, class Show, Unit, show, ($))
 import Schema.Types (ActionEvent(..), FormArgument, SimulationAction(..))
-import Servant.PureScript (AjaxError)
 import Test.QuickCheck.Arbitrary (class Arbitrary)
 import Test.QuickCheck.Gen as Gen
 import ValueEditor (ValueEvent(..))
@@ -87,8 +86,7 @@ type ChainSlot
 type Blockchain
   = Array ChainSlot
 
-type WebData
-  = RemoteData AjaxError
+type WebData = RemoteData String
 
 type WebCompilationResult
   = WebData (Either InterpreterError (InterpreterResult CompilationResult))
@@ -97,10 +95,11 @@ type WebEvaluationResult
   = WebData (Either PlaygroundError EvaluationResult)
 
 type FullSimulation
-  = { simulation :: Simulation
-    , blockchainVisualisationState :: Chain.State
-    , evaluationResult :: WebEvaluationResult
-    }
+  =
+  { simulation :: Simulation
+  , blockchainVisualisationState :: Chain.State
+  , evaluationResult :: WebEvaluationResult
+  }
 
 -- this synonym is defined in playground-common/src/Playground/Types.hs
 type SimulatorAction
@@ -160,9 +159,10 @@ instance showDragAndDropEventType :: Show DragAndDropEventType where
   show Drop = "Drop"
 
 type ChildSlots
-  = ( editorSlot :: H.Slot Monaco.Query Monaco.Message Unit
-    , balancesChartSlot :: H.Slot Chartist.Query Chartist.Message Unit
-    )
+  =
+  ( editorSlot :: H.Slot Monaco.Query Monaco.Message Unit
+  , balancesChartSlot :: H.Slot Chartist.Query Chartist.Message Unit
+  )
 
 -- | Here we decide which top-level queries to track as GA events, and
 -- how to classify them.
@@ -177,7 +177,7 @@ instance actionIsEvent :: IsEvent HAction where
   toEvent (GistAction PublishOrUpdateGist) = Just $ (defaultEvent "Publish") { category = Just "Gist" }
   toEvent (GistAction (SetGistUrl _)) = Nothing
   toEvent (GistAction LoadGist) = Just $ (defaultEvent "LoadGist") { category = Just "Gist" }
-  toEvent (GistAction (AjaxErrorPaneAction _)) = Nothing
+  toEvent (GistAction (ErrorPaneAction _)) = Nothing
   toEvent ToggleDemoFilesMenu = Nothing
   toEvent (ChangeView view) = Just $ (defaultEvent "View") { label = Just $ show view }
   toEvent (LoadScript script) = Just $ (defaultEvent "LoadScript") { label = Just script }

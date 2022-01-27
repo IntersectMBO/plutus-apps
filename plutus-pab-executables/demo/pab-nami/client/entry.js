@@ -2,6 +2,6 @@
 /*global global*/
 import './static/main.css';
 
-import('./src/Main.purs')
+import('./output/Main')
   .then(m => m.main())
   .catch(err => console.log(err))

@@ -45,6 +45,7 @@
           (hsPkgs."safe" or (errorHandler.buildDepError "safe"))
           (hsPkgs."say" or (errorHandler.buildDepError "say"))
           (hsPkgs."semigroupoids" or (errorHandler.buildDepError "semigroupoids"))
+          (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
           ];
@@ -81,11 +82,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "8";
+      url = "5";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "8";
+      url = "5";
       rev = "minimal";
       sha256 = "";
       };

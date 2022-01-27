@@ -433,6 +433,8 @@ deriving anyclass instance ToArgument Wallet
 
 deriving anyclass instance ToArgument WalletNumber
 
+deriving anyclass instance ToArgument Slot
+
 instance ToArgument WalletId where
     toArgument = Fix . FormStringF . Just . show
 
