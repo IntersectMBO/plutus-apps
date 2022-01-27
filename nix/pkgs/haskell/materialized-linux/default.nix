@@ -357,7 +357,6 @@
         "unliftio".revision = (((hackage."unliftio")."0.2.20").revisions).default;
         "directory".revision = (((hackage."directory")."1.3.6.0").revisions).default;
         "smallcheck".revision = (((hackage."smallcheck")."1.2.1").revisions).default;
-        "wide-word".revision = (((hackage."wide-word")."0.1.1.2").revisions).default;
         "http-client-tls".revision = (((hackage."http-client-tls")."0.3.5.3").revisions).default;
         "clock".revision = (((hackage."clock")."0.8.2").revisions).default;
         "clock".flags.llvm = false;
@@ -1515,7 +1514,6 @@
           "kan-extensions".components.library.planned = lib.mkOverride 900 true;
           "string-interpolate".components.library.planned = lib.mkOverride 900 true;
           "ListLike".components.library.planned = lib.mkOverride 900 true;
-          "wide-word".components.library.planned = lib.mkOverride 900 true;
           "microstache".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab-executables".components.library.planned = lib.mkOverride 900 true;
           "bsb-http-chunked".components.library.planned = lib.mkOverride 900 true;
