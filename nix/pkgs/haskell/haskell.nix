@@ -52,7 +52,7 @@ let
       "https://github.com/input-output-hk/cardano-node"."814df2c146f5d56f8c35a681fe75e85b905aed5d" = "1hr00wqzmcyc3x0kp2hyw78rfmimf6z4zd4vv85b9zv3nqbjgrik";
       "https://github.com/input-output-hk/cardano-ledger"."1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5" = "0avzyiqq0m8njd41ck9kpn992yq676b1az9xs77977h7cf85y4wm";
       "https://github.com/input-output-hk/ouroboros-network"."d2d219a86cda42787325bb8c20539a75c2667132" = "18xk7r0h2pxrbx76d6flsxifh0a9rz1cj1rjqs1pbs5kdmy8b7kx";
-      "https://github.com/input-output-hk/cardano-base"."0192ba6ce710226a81894de2f1b56fe9dd160801" = "0kckfbv1b6w6ml4kkz2yihqxjbcb5x2s4vqh289y2cabfbf29wmh";
+      "https://github.com/input-output-hk/cardano-base"."44e7572b0cde519b5741982d6a4bb088b2c1d4e0" = "01w1wfwr2wyzaalzb9v1zbvln771xnl0ynixzyw6zzxmhs887fmm";
       "https://github.com/input-output-hk/cardano-prelude"."bb4ed71ba8e587f672d06edf9d2e376f4b055555" = "00h10l5mmiza9819p9v5q5749nb9pzgi20vpzpy1d34zmh6gf1cj";
       "https://github.com/input-output-hk/cardano-crypto"."1fff72e39e690676d4156a56858c6b72e1f0bff9" = "06kahs46z842xndq3sgcrqyvmgvs05rnflbq76599pfnb2vspy2q";
       "https://github.com/input-output-hk/cardano-addresses"."35f9c49dcd953b45da6dfbcb84b39c3f448ced58" = "1cv2frbxc6ic9n5xi5bxvxdgbh1nkl0ymqidq90qis0x3ln6b53n";
