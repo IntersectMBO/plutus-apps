@@ -8,7 +8,7 @@
   , config
   , ... }:
   {
-    flags = { use-ghc-stub = false; };
+    flags = { use-ghc-stub = false; ghcjs-plugin = true; };
     package = {
       specVersion = "2.2";
       identifier = { name = "plutus-tx-plugin"; version = "0.1.0.0"; };
@@ -52,7 +52,9 @@
           then [
             (hsPkgs."plutus-ghc-stub" or (errorHandler.buildDepError "plutus-ghc-stub"))
             ]
-          else [ (hsPkgs."ghc" or (errorHandler.buildDepError "ghc")) ]);
+          else if flags.ghcjs-plugin
+            then [ (hsPkgs."ghcjs" or (errorHandler.buildDepError "ghcjs")) ]
+            else [ (hsPkgs."ghc" or (errorHandler.buildDepError "ghc")) ]);
         buildable = true;
         modules = [
           "PlutusTx/Compiler/Binders"
@@ -94,7 +96,7 @@
             (hsPkgs."ghc-prim" or (errorHandler.buildDepError "ghc-prim"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             ];
-          buildable = if flags.use-ghc-stub then false else true;
+          buildable = true;
           modules = [
             "Budget/Lib"
             "Budget/Spec"
@@ -120,6 +122,18 @@
             ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Spec.hs" ];
+          };
+        "size" = {
+          depends = [
+            (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
+            (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
+            (hsPkgs."tagged" or (errorHandler.buildDepError "tagged"))
+            (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
+            ];
+          buildable = true;
+          hsSourceDirs = [ "test/size" ];
+          mainPath = [ "Main.hs" ];
           };
         };
       };
