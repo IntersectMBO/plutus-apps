@@ -44,7 +44,7 @@ let
     inherit checkMaterialization;
     sha256map = {
       "https://github.com/input-output-hk/iohk-monitoring-framework"."46f994e216a1f8b36fe4669b47b2a7011b0e153c" = "1il8fx3misp3650ryj368b3x95ksz01zz3x0z9k00807j93d0ka0";
-      "https://github.com/input-output-hk/plutus"."acbb4ad38aa24634f582941518e05e0e3065c38e" = "0w84650s6k42dfmzmi5gv6z3pz2m4h4rj47n4gvkfsxbw2sm54mb";
+      "https://github.com/input-output-hk/plutus"."73f2d9d749d19de058996442b76e4d0068fc87ef" = "1mh84qldc7bg84884aqfwhhwx3f93jp5bdb240gs8ba6rbsa9s8p";
       "https://github.com/Quid2/flat"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
       "https://github.com/input-output-hk/servant-purescript"."44e7cacf109f84984cd99cd3faf185d161826963" = "10pb0yfp80jhb9ryn65a4rha2lxzsn2vlhcc6xphrrkf4x5lhzqc";
       "https://github.com/input-output-hk/purescript-bridge"."47a1f11825a0f9445e0f98792f79172efef66c00" = "0da1vn2l6iyfxcjk58qal1l4755v92zi6yppmjmqvxf1gacyf9px";
