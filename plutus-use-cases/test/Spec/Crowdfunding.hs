@@ -181,17 +181,17 @@ params = theCampaign (TimeSlot.scSlotZeroTime def)
 deriving instance Eq (Action CrowdfundingModel)
 deriving instance Show (Action CrowdfundingModel)
 
-deriving instance Eq (ContractInstanceKey CrowdfundingModel w schema err)
-deriving instance Show (ContractInstanceKey CrowdfundingModel w schema err)
+deriving instance Eq (ContractInstanceKey CrowdfundingModel w schema err params)
+deriving instance Show (ContractInstanceKey CrowdfundingModel w schema err params)
 
 instance ContractModel CrowdfundingModel where
   data Action CrowdfundingModel = CContribute Wallet Value
                                 | CWaitUntil Slot
                                 | CStart
 
-  data ContractInstanceKey CrowdfundingModel w schema err where
-    ContributorKey :: Wallet -> ContractInstanceKey CrowdfundingModel () CrowdfundingSchema ContractError
-    OwnerKey :: Wallet -> ContractInstanceKey CrowdfundingModel () CrowdfundingSchema ContractError
+  data ContractInstanceKey CrowdfundingModel w schema err params where
+    ContributorKey :: Wallet -> ContractInstanceKey CrowdfundingModel () CrowdfundingSchema ContractError ()
+    OwnerKey :: Wallet -> ContractInstanceKey CrowdfundingModel () CrowdfundingSchema ContractError ()
 
   initialState = CrowdfundingModel { _contributions       = Map.empty
                                    , _ownerWallet         = w1
@@ -201,13 +201,13 @@ instance ContractModel CrowdfundingModel where
                                    , _endSlot             = TimeSlot.posixTimeToEnclosingSlot def $ campaignDeadline params
                                    }
 
-  initialInstances = (Key $ OwnerKey w1) : [ (Key $ ContributorKey w) | w <- contributorWallets ]
+  initialInstances = StartContract (OwnerKey w1) () : [ StartContract (ContributorKey w) () | w <- contributorWallets ]
 
   instanceWallet (OwnerKey w)       = w
   instanceWallet (ContributorKey w) = w
 
-  instanceContract _ _ OwnerKey{}       = crowdfunding params
-  instanceContract _ _ ContributorKey{} = crowdfunding params
+  instanceContract _ OwnerKey{}       _ = crowdfunding params
+  instanceContract _ ContributorKey{} _ = crowdfunding params
 
   perform h _ s a = case a of
     CWaitUntil slot -> void $ Trace.waitUntilSlot slot

@@ -47,8 +47,8 @@ modelParams = escrowParams $ TimeSlot.scSlotZeroTime def
 deriving instance Eq (Action EscrowModel)
 deriving instance Show (Action EscrowModel)
 
-deriving instance Eq (ContractInstanceKey EscrowModel w s e)
-deriving instance Show (ContractInstanceKey EscrowModel w s e)
+deriving instance Eq (ContractInstanceKey EscrowModel w s e params)
+deriving instance Show (ContractInstanceKey EscrowModel w s e params)
 
 instance ContractModel EscrowModel where
   data Action EscrowModel = Pay Wallet Integer
@@ -56,8 +56,8 @@ instance ContractModel EscrowModel where
                           | Refund Wallet
                           | WaitUntil Slot
 
-  data ContractInstanceKey EscrowModel w s e where
-    WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError
+  data ContractInstanceKey EscrowModel w s e params where
+    WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError ()
 
   initialState = EscrowModel { _contributions = Map.empty
                              , _refundSlot    = TimeSlot.posixTimeToEnclosingSlot def
@@ -72,11 +72,11 @@ instance ContractModel EscrowModel where
                                                              ]
                              }
 
-  initialInstances = Key . WalletKey <$> testWallets
+  initialInstances = (`StartContract` ()) . WalletKey <$> testWallets
 
   instanceWallet (WalletKey w) = w
 
-  instanceContract _ _ WalletKey{} = testContract
+  instanceContract _ WalletKey{} _ = testContract
     where
       -- TODO: Lazy test contract for now
       testContract = selectList [void $ payEp modelParams, void $ redeemEp modelParams, void $ refundEp modelParams] >> testContract

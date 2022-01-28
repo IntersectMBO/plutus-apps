@@ -170,16 +170,16 @@ data Phase = NotStarted | Bidding | AuctionOver
 
 makeLenses 'AuctionModel
 
-deriving instance Eq (ContractInstanceKey AuctionModel w s e)
-deriving instance Show (ContractInstanceKey AuctionModel w s e)
+deriving instance Eq (ContractInstanceKey AuctionModel w s e params)
+deriving instance Show (ContractInstanceKey AuctionModel w s e params)
 
 instance ContractModel AuctionModel where
 
-    data ContractInstanceKey AuctionModel w s e where
-        SellerH :: ContractInstanceKey AuctionModel AuctionOutput SellerSchema AuctionError
-        BuyerH  :: Wallet -> ContractInstanceKey AuctionModel AuctionOutput BuyerSchema AuctionError
+    data ContractInstanceKey AuctionModel w s e params where
+        SellerH :: ContractInstanceKey AuctionModel AuctionOutput SellerSchema AuctionError ()
+        BuyerH  :: Wallet -> ContractInstanceKey AuctionModel AuctionOutput BuyerSchema AuctionError ()
 
-    data Action AuctionModel = Init | Bid Wallet Integer | WaitUntil Slot
+    data Action AuctionModel = Init Wallet | Bid Wallet Integer | WaitUntil Slot
         deriving (Eq, Show)
 
     initialState = AuctionModel
@@ -189,34 +189,36 @@ instance ContractModel AuctionModel where
         , _phase      = NotStarted
         }
 
-    initialInstances = Key SellerH : [ Key (BuyerH w) | w <- [w2, w3, w4] ]
+    initialInstances = StartContract SellerH () : [ StartContract (BuyerH w) () | w <- [w2, w3, w4] ]
 
     instanceWallet SellerH    = w1
     instanceWallet (BuyerH w) = w
 
-    instanceContract _ _ SellerH  = seller
-    instanceContract _ _ BuyerH{} = buyer threadToken
+    instanceContract _ SellerH  _ = seller
+    instanceContract _ BuyerH{} _ = buyer threadToken
 
     arbitraryAction s
         | p /= NotStarted =
-            frequency [ (1, WaitUntil . step <$> choose (1, 10 :: Integer))
-                      , (10, Bid  <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000)) ]
-        | otherwise = pure Init
+            frequency $  [ (1, WaitUntil . step <$> choose (1, 10 :: Integer)) ]
+                      ++ [ (3, Bid w <$> chooseBid (lo,hi))
+                         | w <- [w2, w3, w4]
+                         , let (lo,hi) = validBidRange s w
+                         , lo <= hi ]
+        | otherwise = pure $ Init w1
         where
             p    = s ^. contractState . phase
             slot = s ^. currentSlot
             step n = slot + fromIntegral n
 
-    precondition s Init = s ^. contractState . phase == NotStarted
-    precondition s cmd  = s ^. contractState . phase /= NotStarted &&
+    precondition s (Init _) = s ^. contractState . phase == NotStarted
+    precondition s cmd      = s ^. contractState . phase /= NotStarted &&
         case cmd of
             WaitUntil slot -> slot > s ^. currentSlot
 
             -- In order to place a bid, we need to satisfy the constraint where
             -- each tx output must have at least N Ada.
-            Bid _ bid      -> let current = s ^. contractState . currentBid
-                              in bid > current
-                              && bid >= Ada.getLovelace Ledger.minAdaTxOut
+            Bid w bid      -> let (lo,hi) = validBidRange s w in
+                              lo <= bid && bid <= hi
             _              -> True
 
     nextReactiveState slot' = do
@@ -234,7 +236,7 @@ instance ContractModel AuctionModel where
         slot <- viewModelState currentSlot
         end  <- viewContractState endSlot
         case cmd of
-            Init -> do
+            Init _ -> do
                 phase .= Bidding
                 withdraw w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
                 wait 3
@@ -249,7 +251,7 @@ instance ContractModel AuctionModel where
                     winner     .= w
                 wait 2
 
-    perform _ _ _ Init = delay 3
+    perform _ _ _ (Init _) = delay 3
     perform _ _ _ (WaitUntil slot) = void $ Trace.waitUntilSlot slot
     perform handle _ _ (Bid w bid) = do
         -- FIXME: You cannot bid in certain slots when the off-chain code is busy, so to make the
@@ -262,12 +264,42 @@ instance ContractModel AuctionModel where
         Trace.callEndpoint @"bid" (handle $ BuyerH w) (Ada.lovelaceOf bid)
         delay 1
 
-    shrinkAction _ Init      = []
+    shrinkAction _ (Init _)  = []
     shrinkAction _ (WaitUntil (Slot n))  = [ WaitUntil (Slot n') | n' <- shrink n ]
     shrinkAction s (Bid w v) =
         WaitUntil (s ^. currentSlot + 1) : [ Bid w v' | v' <- shrink v ]
 
+    monitoring _ (Bid _ bid) =
+      classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOut <> Ledger.maxFee))
+        "Maximum bid reached"
     monitoring _ _ = id
+
+-- In order to place a bid, we need to satisfy the constraint where
+-- each tx output must have at least N Ada.
+--
+-- When we bid, we must make sure that we don't bid too high such
+-- that:
+--     - we can't pay for fees anymore
+--     - we have a tx output of less than N Ada.
+--
+-- We suppose the initial balance is 100 Ada. Needs to be changed if
+-- the emulator initialises the wallets with a different value.
+validBidRange :: ModelState AuctionModel -> Wallet -> (Integer,Integer)
+validBidRange s _w =
+  let currentWalletBalance = Ada.adaOf 100  -- this is approximate
+      current = s ^. contractState . currentBid
+  in ( (current+1) `max` Ada.getLovelace Ledger.minAdaTxOut,
+       Ada.getLovelace (currentWalletBalance - (Ledger.minAdaTxOut <> Ledger.maxFee))
+     )
+
+-- When we choose a bid, we prefer a lower bid to a higher
+-- one. Otherwise longer tests very often reach the maximum possible
+-- bid, which makes little sense.
+chooseBid :: (Integer,Integer) -> Gen Integer
+chooseBid (lo,hi)
+  | lo==hi = pure lo
+  | lo <hi = oneof [choose (lo,lo+k) | k <- takeWhile (>0) (iterate (`div` 400) (hi-lo))]
+  | otherwise = error $ "chooseBid "++show (lo,hi)
 
 prop_Auction :: Actions AuctionModel -> Property
 prop_Auction script =
@@ -277,7 +309,7 @@ prop_Auction script =
 
 finishAuction :: DL AuctionModel ()
 finishAuction = do
-    action Init
+    action $ Init w1
     anyActions_
     slot <- viewModelState currentSlot
     when (slot < 101) $ action $ WaitUntil 101
@@ -296,7 +328,7 @@ noLockProof = NoLockedFundsProof
   where
     strat = do
       p <- viewContractState phase
-      when (p == NotStarted) $ action Init
+      when (p == NotStarted) $ action $ Init w1
       slot <- viewModelState currentSlot
       when (slot < 101) $ action $ WaitUntil 101
 
