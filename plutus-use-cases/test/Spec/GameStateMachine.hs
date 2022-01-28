@@ -327,7 +327,7 @@ tests =
 
     , testProperty "sanity check the contract model" prop_SanityCheckModel
 
-    , testProperty "game state machine crash tolernace" $ withMaxSuccess 20 prop_GameCrashTolerance
+    , testProperty "game state machine crash tolerance" $ withMaxSuccess 20 prop_GameCrashTolerance
     ]
 
 initialVal :: Value
