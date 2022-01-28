@@ -47,8 +47,7 @@ import GHC.Generics (Generic)
 import Ledger qualified as Plutus
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
-import Ledger.Constraints.OffChain (ScriptOutput (ScriptOutput),
-                                    UnbalancedTx (UnbalancedTx, unBalancedTxRequiredSignatories, unBalancedTxTx, unBalancedTxUtxoIndex),
+import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequiredSignatories, unBalancedTxTx, unBalancedTxUtxoIndex),
                                     adjustUnbalancedTx, mkTx)
 import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
@@ -251,19 +250,19 @@ mkPartialTx requiredSigners params networkId =
       fmap (C.makeSignedTransaction [])
     . CardanoAPI.toCardanoTxBody requiredSigners (Just params) networkId
 
-mkInputs :: C.NetworkId -> Map Plutus.TxOutRef ScriptOutput -> Either CardanoAPI.ToCardanoError [ExportTxInput]
+mkInputs :: C.NetworkId -> Map Plutus.TxOutRef Plutus.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList
 
-toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> ScriptOutput -> Either CardanoAPI.ToCardanoError ExportTxInput
-toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} (ScriptOutput vh value dh) = do
-    cardanoValue <- CardanoAPI.toCardanoValue value
+toExportTxInput :: C.NetworkId -> Plutus.TxOutRef -> Plutus.TxOut -> Either CardanoAPI.ToCardanoError ExportTxInput
+toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx} Plutus.TxOut{Plutus.txOutAddress, Plutus.txOutValue, Plutus.txOutDatumHash} = do
+    cardanoValue <- CardanoAPI.toCardanoValue txOutValue
     let otherQuantities = mapMaybe (\case { (C.AssetId policyId assetName, quantity) -> Just (policyId, assetName, quantity); _ -> Nothing }) $ C.valueToList cardanoValue
     ExportTxInput
         <$> CardanoAPI.toCardanoTxId txOutRefId
         <*> pure (C.TxIx $ fromInteger txOutRefIdx)
-        <*> CardanoAPI.toCardanoAddress networkId (Plutus.scriptHashAddress vh)
+        <*> CardanoAPI.toCardanoAddress networkId txOutAddress
         <*> pure (C.selectLovelace cardanoValue)
-        <*> either (const $ pure Nothing) (pure . Just) (CardanoAPI.toCardanoScriptDataHash dh)
+        <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> txOutDatumHash)
         <*> pure otherQuantities
 
 mkRedeemers :: Plutus.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]

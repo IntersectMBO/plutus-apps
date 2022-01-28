@@ -22,7 +22,7 @@ import Ledger (Address, BlockId, ChainIndexTxOut, DatumHash, MintingPolicy, OnCh
                PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash, StakeValidator, Tx,
                TxId, TxIn, TxInType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Validator)
 import Ledger.Ada (Ada)
-import Ledger.Constraints.OffChain (MkTxError, ScriptOutput, UnbalancedTx)
+import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
 import Ledger.DCert (DCert)
 import Ledger.Index (ExCPU, ExMemory, ScriptType, ScriptValidationEvent, ValidationError)
@@ -405,7 +405,6 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @WriteBalancedTxResponse
     , equal . genericShow . argonaut $ mkSumType @ActiveEndpoint
     , equal . genericShow . argonaut $ mkSumType @UnbalancedTx
-    , equal . genericShow . argonaut $ mkSumType @ScriptOutput
     , order . equal . genericShow . argonaut $ mkSumType @TxValidity
     , equal . genericShow . argonaut $ mkSumType @TxOutState
     , equal . genericShow . argonaut $ mkSumType @(RollbackState A)
