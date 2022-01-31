@@ -436,7 +436,12 @@ let
           plutus-tx.ghcOptions = [ "-Werror" ];
           # plutus-tx-plugin.ghcOptions = [ "-Werror" ];
           # plutus-pab.ghcOptions = [ "-Werror" ];
-          plutus-pab-executables.ghcOptions = [ "-Werror" ];
+          plutus-pab-executables.ghcOptions =
+            # "-Wno-deprecations" works around
+            #    Module ‘Data.Yaml’:
+            #      GHCJS is not supported yet (will break at runtime once called).
+            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
+              ++ [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
           # plutus-use-cases.ghcOptions = [ "-Werror" ];
 
