@@ -533,6 +533,7 @@ let
             plutus-core.ghcOptions = [ "-Wno-unused-packages" ];
             iohk-monitoring.ghcOptions = [ "-Wno-deprecations" ]; # TODO find alternative fo libyaml
             plutus-pab.components.tests.psgenerator.buildable = false;
+            plutus-playground-server.package.buildable = false;
 
             # basement.patches = [ ../../../contrib/basement-0.0.12.patch ];
             # beam-sqlite.patches = [ ../../../contrib/beam-sqlite-0.5.0.0.patch ];
