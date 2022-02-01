@@ -43,6 +43,7 @@ import Data.ByteString.Lazy.Char8 qualified as BSL8
 import Data.ByteString.Lazy.Char8 qualified as Char8
 import Data.Function ((&))
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import Data.Text.Encoding (encodeUtf8)
 import Ledger.Ada qualified as Ada
@@ -89,9 +90,11 @@ distributeNewWalletFunds :: forall effs.
     , Member (Error WalletAPIError) effs
     , Member (LogMsg Text) effs
     )
-    => PaymentPubKeyHash
+    => Maybe Ada.Ada
+    -> PaymentPubKeyHash
     -> Eff effs CardanoTx
-distributeNewWalletFunds = WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange (Ada.adaValueOf 10_000)
+distributeNewWalletFunds funds = WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange
+    (maybe (Ada.adaValueOf 10_000) Ada.toValue funds)
 
 newWallet :: forall m effs. (LastMember m effs, MonadIO m) => Eff effs MockWallet
 newWallet = do
@@ -125,7 +128,7 @@ handleMultiWallet feeCfg = \case
                 put @Wallets (wallets & at wallet ?~ newState)
                 pure x
             Nothing -> throwError $ WAPI.OtherError "Wallet not found"
-    CreateWallet -> do
+    CreateWallet funds -> do
         wallets <- get @Wallets
         mockWallet <- newWallet
         let walletId = Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId mockWallet
@@ -139,7 +142,7 @@ handleMultiWallet feeCfg = \case
         _ <- evalState sourceWallet $
             interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
             $ interpret (Wallet.handleWallet feeCfg)
-            $ distributeNewWalletFunds pkh
+            $ distributeNewWalletFunds funds pkh
         return $ WalletInfo{wiWallet = walletId, wiPaymentPubKeyHash = pkh}
     GetWalletInfo wllt -> do
         wallets <- get @Wallets
