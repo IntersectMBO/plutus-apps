@@ -76,15 +76,10 @@ handleSyncAction action = do
   case result of
     Left err -> putStrLn $ "handleSyncAction failed with: " <> show err
     Right (Slot s, BlockNumber n) -> do
-      let recentSlot = 41511045 -- TODO: This is a relatively recent slot number
-                                -- we start logging from here to avoid spamming the terminal
-                                -- should be removed when we have better logging to report
-                                -- on the PAB sync status
-      stdGen <- newStdGen
-      let logBlock = fst (randomR (0 :: Int, 10_000) stdGen) == 0
-      if  logBlock || (s >= recentSlot)
+      logBlock <- (== 0) <$> randomRIO (0, 10_000 :: Int)
+      if logBlock
         then do
-          putStrLn $ "Current block: " <> show n <> ". Current slot: " <> show s
+          putStrLn $ "Current block: " <> show n <> ". Current slot: " <> show s  -- TODO: Since it is outside the logging system, should this be written to stderr instead?
         else pure ()
   either (error . show) (const $ pure ()) result
 
