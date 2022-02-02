@@ -43,7 +43,6 @@ import Data.ByteString.Lazy.Char8 qualified as BSL8
 import Data.ByteString.Lazy.Char8 qualified as Char8
 import Data.Function ((&))
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import Data.Text.Encoding (encodeUtf8)
 import Ledger.Ada qualified as Ada
