@@ -28,6 +28,7 @@ module Plutus.PAB.Simulator(
     , SimulatorEffectHandlers
     , mkSimulatorHandlers
     , addWallet
+    , addWalletWith
     -- * Logging
     , logString
     -- ** Agent actions
@@ -739,7 +740,12 @@ instanceActivity = Core.instanceActivity
 -- | Create a new wallet with a random key, give it some funds
 --   and add it to the list of simulated wallets.
 addWallet :: forall t. Simulation t (Wallet, PaymentPubKeyHash)
-addWallet = do
+addWallet = addWalletWith Nothing
+
+-- | Create a new wallet with a random key, give it provided funds
+--   and add it to the list of simulated wallets.
+addWalletWith :: forall t. Maybe Ada.Ada -> Simulation t (Wallet, PaymentPubKeyHash)
+addWalletWith funds = do
     SimulatorState{_agentStates} <- Core.askUserEnv @t @(SimulatorState t)
     mockWallet <- MockWallet.newWallet
     void $ liftIO $ STM.atomically $ do
@@ -748,9 +754,8 @@ addWallet = do
         STM.writeTVar _agentStates newWallets
     _ <- handleAgentThread (knownWallet 2) Nothing
             $ Modify.wrapError WalletError
-            $ MockWallet.distributeNewWalletFunds (CW.paymentPubKeyHash mockWallet)
+            $ MockWallet.distributeNewWalletFunds funds (CW.paymentPubKeyHash mockWallet)
     pure (Wallet.toMockWallet mockWallet, CW.paymentPubKeyHash mockWallet)
-
 
 -- | Retrieve the balances of all the entities in the simulator.
 currentBalances :: forall t. Simulation t (Map.Map Wallet.Entity Value)
