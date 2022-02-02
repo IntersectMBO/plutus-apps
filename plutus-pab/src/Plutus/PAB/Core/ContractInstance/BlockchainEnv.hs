@@ -56,7 +56,7 @@ startNodeClient ::
   -> InstancesState -- ^ In-memory state of running contract instances
   -> IO BlockchainEnv
 startNodeClient socket mode rollbackHistory slotConfig networkId resumePoint instancesState = do
-    env <- STM.atomically $ emptyBlockchainEnv rollbackHistory
+    env <- STM.atomically $ emptyBlockchainEnv rollbackHistory (Just slotConfig)
     case mode of
       MockNode -> do
         void $ MockClient.runChainSync socket slotConfig
