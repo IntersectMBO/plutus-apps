@@ -54,12 +54,10 @@ import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad (guard, (<=<))
 import Data.Aeson (Value)
-import Data.Default (def)
 import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import Ledger (Address, Slot, TxId, TxOutRef)
 import Ledger.Time (POSIXTime)
@@ -159,14 +157,14 @@ data BlockchainEnv =
         }
 
 -- | Initialise an empty 'BlockchainEnv' value
-emptyBlockchainEnv :: Maybe Int -> Maybe TimeSlot.SlotConfig -> STM BlockchainEnv
+emptyBlockchainEnv :: Maybe Int -> TimeSlot.SlotConfig -> STM BlockchainEnv
 emptyBlockchainEnv rollbackHistory slotConfig =
     BlockchainEnv rollbackHistory
         <$> STM.newTVar 0
         <*> STM.newTVar mempty
         <*> STM.newTVar mempty
         <*> STM.newTVar (BlockNumber 0)
-        <*> pure (fromMaybe def slotConfig)
+        <*> pure slotConfig
 
 -- | Wait until the current slot is greater than or equal to the
 --   target slot, then return the current slot.
