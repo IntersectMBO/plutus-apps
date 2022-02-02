@@ -3,7 +3,7 @@
 , packages ? import ./. { inherit system enableHaskellProfiling; }
 }:
 let
-  inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo docs webCommon;
+  inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo plutus-chain-index pab-cli docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
   inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks;
 
@@ -114,6 +114,8 @@ let
     pab-nami-demo.start-backend
     plutus-playground.generate-purescript
     plutus-playground.start-backend
+    plutus-chain-index
+    pab-cli
     psa
     purescript-language-server
     purs

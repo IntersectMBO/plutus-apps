@@ -67,9 +67,7 @@ library
         lens -any,
         playground-common -any,
         purescript-bridge -any,
-        servant -any,
         servant-purescript -any,
-        servant-server -any,
         text -any,
 
 executable plutus-pab-setup
@@ -448,3 +446,43 @@ executable plutus-pab-nami-demo-generator
     purescript-bridge -any,
     plutus-ledger -any,
     plutus-ledger-constraints -any,
+
+executable pab-cli
+  import: lang
+  main-is: Main.hs
+  hs-source-dirs: pab-cli
+  other-modules:
+      App
+      CommandParser
+      Types
+  ghc-options:
+    -threaded
+    -Wmissing-import-lists
+    -Wunused-packages
+  build-depends:
+    plutus-chain-index-core -any,
+    plutus-ledger -any,
+    plutus-pab -any,
+  build-depends:
+    cardano-api -any,
+    cardano-ledger-shelley -any,
+    ouroboros-consensus-shelley -any,
+  build-depends:
+    aeson -any,
+    async -any,
+    base >= 4.9 && < 5,
+    bytestring -any,
+    cardano-api -any,
+    data-default -any,
+    directory -any,
+    docopt -any,
+    exceptions -any,
+    filepath -any,
+    freer-simple -any,
+    process -any,
+    req -any,
+    servant-client -any,
+    text -any,
+    time -any,
+    yaml -any,
+    MissingH -any,
