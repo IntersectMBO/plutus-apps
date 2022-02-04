@@ -17,9 +17,9 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
+import Plutus.Contract.Error (ContractError)
 import Plutus.Contract.StateMachine.OnChain (State)
 import Type.Proxy (Proxy(Proxy))
-import Wallet.Types (ContractError)
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
