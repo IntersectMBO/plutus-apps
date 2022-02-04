@@ -4,10 +4,12 @@ module Chain.View
   ) where
 
 import Chain.Types
+
 import Animation (animationClass)
 import Bootstrap (active, card, cardBody_, cardFooter_, cardHeader, cardHeader_, col, col3_, col6_, colLg2, colMd3, colSm6, colXs12, col_, empty, nbsp, row, row_, tableBordered, tableSmall, textTruncate)
 import Bootstrap as Bootstrap
-import Clipboard (showShortCopyLong)
+import Bootstrap.Extra (clickable)
+import ClipboardViews (showShortCopyLong)
 import Data.Array ((:))
 import Data.Array as Array
 import Data.BigInt.Argonaut (BigInt)
@@ -29,13 +31,13 @@ import Data.Tuple.Nested ((/\))
 import Halogen.HTML (ClassName(..), HTML, IProp, br_, div, div_, h2_, hr_, li_, p_, small_, span_, strong_, table, tbody_, td, text, th, th_, thead_, tr, tr_, ul_)
 import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (class_, classes, colSpan, rowSpan)
-import PlutusTx.AssocMap as AssocMap
-import Plutus.V1.Ledger.Crypto (PubKey(..), PubKeyHash(..))
-import Ledger.Extra (humaniseSlotInterval)
 import Ledger.Address (PaymentPubKeyHash(..))
+import Ledger.Extra (humaniseSlotInterval)
+import Plutus.V1.Ledger.Crypto (PubKey(..), PubKeyHash(..))
 import Plutus.V1.Ledger.Tx (TxOut(..))
 import Plutus.V1.Ledger.TxId (TxId(..))
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), TokenName(..), Value(..))
+import PlutusTx.AssocMap as AssocMap
 import Prologue (Ordering(..), Tuple, const, eq, pure, show, zero, ($), (<$>), (<<<), (<>))
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput(..), SequenceId(..))
 import Web.UIEvent.MouseEvent (MouseEvent)
