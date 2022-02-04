@@ -26,6 +26,7 @@ default-extensions:
   - ExplicitForAll
   - TypeApplications
   - PatternSynonyms
+  - DeriveGeneric
 
 dependencies:
 - base >= 4.7 && < 5
@@ -35,17 +36,6 @@ library:
 
 verbatim:
   Tested-With: GHC ==8.10.7
-
-executables:
-  utxo-index-exe:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - utxo-index
 
 tests:
   utxo-index-test:
@@ -58,5 +48,7 @@ tests:
     dependencies:
     - utxo-index
     - QuickCheck
+    - quickspec
     - tasty
     - tasty-quickcheck
+    - containers

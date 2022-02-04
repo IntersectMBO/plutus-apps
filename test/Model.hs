@@ -1,3 +1,7 @@
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving    #-}
+
 module Model ( -- * Model data
                HistoricalFold
                -- Should we provide access to these?
@@ -13,28 +17,35 @@ module Model ( -- * Model data
              , matchesHistory
                -- * Helpers
              , insertL
-               -- * QuickCheck instrumentation
+               -- * QuickSpec
+             , hfSignature
              ) where
 
 import           Control.Monad      (replicateM)
 import           Data.List          (foldl', isInfixOf)
-import           Data.List.NonEmpty (NonEmpty (..), (<|), toList)
+import           Data.List.NonEmpty (NonEmpty (..), toList, (<|))
 import qualified Data.List.NonEmpty as NE
+import           Data.Map           (Map)
 import           Data.Maybe         (fromJust)
+import           GHC.Generics
 
+import           QuickSpec
 import           Test.QuickCheck    (Arbitrary (arbitrary), CoArbitrary, Gen,
                                      choose, chooseInt, frequency, listOf,
                                      sized)
 
-import Debug.Trace qualified as Debug
+import           Types              (Address, Tx, TxId, Value)
+
+import qualified Debug.Trace        as Debug
 
 -- | Model of a historical (we can go backwards) fold over a data set.
 
+--   Should we make `b` a monoid?
 data HistoricalFold a b = HistoricalFold
   { hfFunction    :: a -> b -> a
   , hfDepth       :: Int
   , hfAccumulator :: NonEmpty a
-  }
+  } deriving (Typeable)
 
 instance (Show a, Show b) => Show (HistoricalFold a b) where
   show (HistoricalFold _ depth acc) =
@@ -81,6 +92,8 @@ matchesHistory hl hr =
       || hrAccumulator `isInfixOf` hlAccumulator
       || hrAccumulator      ==     hlAccumulator
 
+type UtxoIndex a = HistoricalFold Tx a
+
 -- QuickCheck infrastructure
 instance ( CoArbitrary a
          , CoArbitrary b
@@ -107,3 +120,36 @@ instance ( CoArbitrary a
     let newHf = fromJust $ new fn depth acc
     pure $ insertL bs newHf
 
+-- QuickSpec infrastructure
+data HFObs a = HFObs
+  { hfoDepth       :: Int
+  , hfoAccumulator :: NonEmpty a
+  } deriving (Eq, Ord, Typeable)
+
+newtype HFIns a b = HFIns [b]
+    deriving (Eq, Ord, Typeable)
+
+instance Arbitrary b => Arbitrary (HFIns a b) where
+  arbitrary = HFIns <$> listOf arbitrary
+
+instance ( Ord a
+         , Arbitrary a
+         , Arbitrary b
+         , CoArbitrary a
+         , CoArbitrary b ) => Observe (HistoricalFold a b) (HFObs a) (HFIns a b) where
+  observe hf (HFIns bs) =
+    let newHF = insertL bs hf
+     in HFObs { hfoDepth = hfDepth newHF
+              , hfoAccumulator = hfAccumulator newHF
+              }
+
+hfSignature :: [Sig]
+hfSignature =
+  [ monoTypeObserve (Proxy :: Proxy (HFIns Int String))
+  , con "new" (new :: (Int -> String -> Int) -> Int -> Int -> Maybe (HistoricalFold Int String))
+  , con "insert" (insert :: String -> HistoricalFold Int String -> HistoricalFold Int String)
+  , con "view" (view :: HistoricalFold Int String -> Int)
+  , con "historyLength" (historyLength :: HistoricalFold Int String -> Int)
+  , con "rewind" (rewind :: Int -> HistoricalFold Int String -> Maybe (HistoricalFold Int String))
+  , withMaxTermSize 4
+  ]

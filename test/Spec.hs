@@ -1,5 +1,6 @@
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
+import QuickSpec
 
 import           Data.List             (foldl')
 import           Data.Maybe            (fromJust, isJust, isNothing)
@@ -114,4 +115,6 @@ prop_InsertHistoryLength hf b =
       else finalLength === initialLength + 1
 
 main :: IO ()
-main = defaultMain tests
+main = do
+  quickSpec hfSignature
+  defaultMain tests
