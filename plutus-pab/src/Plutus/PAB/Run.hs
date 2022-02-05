@@ -39,7 +39,7 @@ import Plutus.PAB.Run.CommandParser
 import Plutus.PAB.Types (Config (..), DevelopmentOptions (..), PABError (MissingConfigFileOption))
 import Prettyprinter (Pretty (pretty))
 import Servant qualified
-import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
+import System.Exit (ExitCode (ExitFailure), exitWith)
 
 -- | PAB entry point for a contract type `a`.
 runWith :: forall a.
@@ -107,7 +107,7 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resum
 
     -- execute parsed pab command and handle errors on faliure
     result <- sequence (run <$> pabConfig)
-    either handleError (const exitSuccess) result
+    either handleError (const $ pure ()) result
 
         where
 
