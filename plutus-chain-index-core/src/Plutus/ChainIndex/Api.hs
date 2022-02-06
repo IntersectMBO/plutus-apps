@@ -26,7 +26,6 @@ import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
                StakeValidator, StakeValidatorHash, TxId, Validator, ValidatorHash)
-import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (Diagnostics, Tip)
@@ -141,8 +140,8 @@ data IsUtxoResponse = IsUtxoResponse
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
 data TxoAtAddressRequest = TxoAtAddressRequest
-    { pageQuery  :: Maybe (PageQuery TxOutRef)
-    , credential :: Credential
+    { pageQuery :: Maybe (PageQuery TxOutRef)
+    , address   :: Address
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 

@@ -32,7 +32,6 @@ import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
 import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
                StakeValidator, StakeValidatorHash, TxId, Validator, ValidatorHash)
-import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
@@ -77,7 +76,7 @@ data ChainIndexQueryEffect r where
     TxsFromTxIds :: [TxId] -> ChainIndexQueryEffect [ChainIndexTx]
 
     -- | Outputs located at addresses with the given credential.
-    TxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect TxosResponse
+    TxoSetAtAddress :: PageQuery TxOutRef -> Address -> ChainIndexQueryEffect TxosResponse
 
     -- | Get the tip of the chain index
     GetTip :: ChainIndexQueryEffect Tip

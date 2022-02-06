@@ -29,7 +29,6 @@ import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (RollbackState, Tip, TxOutState)
 import Plutus.V1.Ledger.Address (Address)
-import Plutus.V1.Ledger.Credential (Credential)
 import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash, MintingPolicy, StakeValidator, Validator)
 import Plutus.V1.Ledger.Slot (Slot)
@@ -131,7 +130,7 @@ data ChainIndexQuery
   | UtxoSetAtAddress (PageQuery TxOutRef) Address
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds (Array TxId)
-  | TxoSetAtAddress (PageQuery TxOutRef) Credential
+  | TxoSetAtAddress (PageQuery TxOutRef) Address
   | GetTip
 
 derive instance Eq ChainIndexQuery
@@ -233,7 +232,7 @@ _TxsFromTxIds = prism' TxsFromTxIds case _ of
   (TxsFromTxIds a) -> Just a
   _ -> Nothing
 
-_TxoSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Credential }
+_TxoSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Address }
 _TxoSetAtAddress = prism' (\{ a, b } -> (TxoSetAtAddress a b)) case _ of
   (TxoSetAtAddress a b) -> Just { a, b }
   _ -> Nothing

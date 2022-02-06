@@ -116,7 +116,7 @@ import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy, MintingPolicyHash, POSIXTime,
                PaymentPubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId,
-               TxOutRef (txOutRefId), Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
+               TxOutRef (txOutRefId), Validator, ValidatorHash, Value, fromMilliSeconds)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -514,7 +514,7 @@ txoRefsAt ::
     -> Address
     -> Contract w s e TxosResponse
 txoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.TxoSetAtResponse r -> pure r
     _ -> throwError $ review _OtherError

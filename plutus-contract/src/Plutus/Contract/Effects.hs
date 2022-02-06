@@ -89,7 +89,6 @@ import GHC.Generics (Generic)
 import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, PaymentPubKeyHash, Redeemer,
                RedeemerHash, StakeValidator, StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Credential (Credential)
 import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
@@ -237,7 +236,7 @@ data ChainIndexQuery =
   | UtxoSetAtAddress (PageQuery TxOutRef) Address
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds [TxId]
-  | TxoSetAtAddress (PageQuery TxOutRef) Credential
+  | TxoSetAtAddress (PageQuery TxOutRef) Address
   | GetTip
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
@@ -255,7 +254,7 @@ instance Pretty ChainIndexQuery where
         UtxoSetAtAddress _ a       -> "requesting utxos located at addresses" <+> pretty a
         UtxoSetWithCurrency _ ac   -> "requesting utxos containing the asset class" <+> pretty ac
         TxsFromTxIds i             -> "requesting chain index txs from ids" <+> pretty i
-        TxoSetAtAddress _ c        -> "requesting txos located at addresses with the credential" <+> pretty c
+        TxoSetAtAddress _ a        -> "requesting txos located at addresses" <+> pretty a
         GetTip                     -> "requesting the tip of the chain index"
 
 -- | Represents all possible responses to chain index queries. Each constructor

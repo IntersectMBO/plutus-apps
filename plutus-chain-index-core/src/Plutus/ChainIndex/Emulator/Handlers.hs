@@ -152,7 +152,8 @@ handleQuery = \case
                 pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
             tp           -> pure (UtxosResponse tp page)
     TxsFromTxIds is -> catMaybes <$> mapM getTxFromTxId is
-    TxoSetAtAddress pageQuery cred -> do
+    TxoSetAtAddress pageQuery addr -> do
+        let cred = addressCredential addr
         state <- get
         let outRefs = view (diskState . addressMap . at cred) state
             txoRefs = fromMaybe mempty outRefs

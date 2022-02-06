@@ -67,7 +67,7 @@ serveChainIndex =
     :<|> (\(UtxoAtAddressRequest pq c) -> E.utxoSetAtAddress (fromMaybe def pq) c)
     :<|> (\(UtxoWithCurrencyRequest pq c) -> E.utxoSetWithCurrency (fromMaybe def pq) c)
     :<|> E.txsFromTxIds
-    :<|> (\(TxoAtAddressRequest pq c) -> E.txoSetAtAddress (fromMaybe def pq) c)
+    :<|> (\(TxoAtAddressRequest pq a) -> E.txoSetAtAddress (fromMaybe def pq) a)
     :<|> E.getTip
     :<|> E.collectGarbage *> pure NoContent
     :<|> E.getDiagnostics

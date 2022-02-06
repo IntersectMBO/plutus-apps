@@ -92,7 +92,7 @@ handleQuery = \case
     UtxoSetAtAddress pageQuery addr -> getUtxoSetAtAddress pageQuery addr
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
-    TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
+    TxoSetAtAddress pageQuery addr -> getTxoSetAtAddress pageQuery addr
     TxsFromTxIds txids             -> getTxsFromTxIds txids
     GetTip -> getTip
 
@@ -267,9 +267,9 @@ getTxoSetAtAddress
     , Member (LogMsg ChainIndexLog) effs
     )
   => PageQuery TxOutRef
-  -> Credential
+  -> Address
   -> Eff effs TxosResponse
-getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
+getTxoSetAtAddress pageQuery (toDbValue . addressCredential -> cred) = do
   utxoState <- gets @ChainIndexState UtxoState.utxoState
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
