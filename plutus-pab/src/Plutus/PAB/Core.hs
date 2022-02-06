@@ -104,7 +104,7 @@ import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
-import Ledger (Address (addressCredential), TxOutRef)
+import Ledger (TxOutRef)
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Tx (CardanoTx, ciTxOutValue)
 import Ledger.TxId (TxId)
@@ -587,9 +587,9 @@ valueAt wallet = do
     txOutsM <- traverse ChainIndex.txOutFromRef utxoRefs
     pure $ foldMap (view ciTxOutValue) $ catMaybes txOutsM
   where
-    cred = addressCredential $ mockWalletAddress wallet
+    addr = mockWalletAddress wallet
     getAllUtxoRefs pq = do
-      utxoRefsPage <- page <$> ChainIndex.utxoSetAtAddress pq cred
+      utxoRefsPage <- page <$> ChainIndex.utxoSetAtAddress pq addr
       case ChainIndex.nextPageQuery utxoRefsPage of
         Nothing -> pure $ ChainIndex.pageItems utxoRefsPage
         Just newPageQuery -> do

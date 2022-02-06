@@ -234,7 +234,7 @@ data ChainIndexQuery =
   | TxOutFromRef TxOutRef
   | TxFromTxId TxId
   | UtxoSetMembership TxOutRef
-  | UtxoSetAtAddress (PageQuery TxOutRef) Credential
+  | UtxoSetAtAddress (PageQuery TxOutRef) Address
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds [TxId]
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
@@ -252,7 +252,7 @@ instance Pretty ChainIndexQuery where
         TxOutFromRef r             -> "requesting utxo from utxo reference" <+> pretty r
         TxFromTxId i               -> "requesting chain index tx from id" <+> pretty i
         UtxoSetMembership txOutRef -> "whether tx output is part of the utxo set" <+> pretty txOutRef
-        UtxoSetAtAddress _ c       -> "requesting utxos located at addresses with the credential" <+> pretty c
+        UtxoSetAtAddress _ a       -> "requesting utxos located at addresses" <+> pretty a
         UtxoSetWithCurrency _ ac   -> "requesting utxos containing the asset class" <+> pretty ac
         TxsFromTxIds i             -> "requesting chain index txs from ids" <+> pretty i
         TxoSetAtAddress _ c        -> "requesting txos located at addresses with the credential" <+> pretty c

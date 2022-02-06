@@ -365,7 +365,7 @@ utxoRefsAt ::
     -> Address
     -> Contract w s e UtxosResponse
 utxoRefsAt pq addr = do
-  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq addr) E._ChainIndexQueryResp
   case cir of
     E.UtxoSetAtResponse r -> pure r
     _ -> throwError $ review _OtherError

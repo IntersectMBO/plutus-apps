@@ -127,7 +127,8 @@ handleQuery = \case
         case tip utxo of
             TipAtGenesis -> throwError QueryFailedNoTip
             tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxo))
-    UtxoSetAtAddress pageQuery cred -> do
+    UtxoSetAtAddress pageQuery addr -> do
+        let cred = addressCredential addr
         state <- get
         let outRefs = view (diskState . addressMap . at cred) state
             utxo = view (utxoIndex . to utxoState) state

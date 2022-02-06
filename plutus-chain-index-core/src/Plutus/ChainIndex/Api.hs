@@ -24,8 +24,8 @@ import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
-import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-               StakeValidatorHash, TxId, Validator, ValidatorHash)
+import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
+               StakeValidator, StakeValidatorHash, TxId, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
@@ -42,11 +42,14 @@ import Servant.Swagger.UI (SwaggerSchemaUI, SwaggerSchemaUI', swaggerSchemaUISer
 -- Here's an example for requesting the first page:
 --
 -- {
---   "credential": {
---     "tag": "PubKeyCredential",
---     "contents": {
---       "getPubKeyHash": "88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce"
---     }
+--   "address": {
+--     "addressCredential": {
+--       "tag": "PubKeyCredential",
+--       "contents": {
+--         "getPubKeyHash": "88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce"
+--       }
+--     },
+--     "addressStakingCredential": null
 --   }
 -- }
 --
@@ -58,12 +61,15 @@ import Servant.Swagger.UI (SwaggerSchemaUI, SwaggerSchemaUI', swaggerSchemaUISer
 --       "getPageSize": 10
 --     }
 --   },
---   "credential": {
---     "tag": "PubKeyCredential",
---     "contents": {
---       "getPubKeyHash": "88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce"
---     }
---   }
+--   "address": {
+--     "addressCredential": {
+--       "tag": "PubKeyCredential",
+--       "contents": {
+--         "getPubKeyHash": "88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce"
+--       }
+--     },
+--     "addressStakingCredential": null
+--    }
 -- }
 --
 -- Here's an example for requesting the next page:
@@ -80,22 +86,25 @@ import Servant.Swagger.UI (SwaggerSchemaUI, SwaggerSchemaUI', swaggerSchemaUISer
 --       "txOutRefIdx": 0
 --     }
 --   },
---   "credential": {
---     "tag": "PubKeyCredential",
---     "contents": {
---       "getPubKeyHash": "88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce"
---     }
+--   "address": {
+--     "addressCredential": {
+--       "tag": "PubKeyCredential",
+--       "contents": {
+--         "getPubKeyHash": "88ff402b0522f27649ac742238c697c579beeb344eb723099d1f16ce"
+--       }
+--     },
+--     "addressStakingCredential": null
 --   }
 -- }
 data UtxoAtAddressRequest = UtxoAtAddressRequest
-    { pageQuery  :: Maybe (PageQuery TxOutRef)
-    , credential :: Credential
+    { pageQuery :: Maybe (PageQuery TxOutRef)
+    , address   :: Address
     }
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
 -- | See the comment on 'UtxoAtAddressRequest'.
 --
--- The difference is using @currency@ field instead of @credential@.
+-- The difference is using @currency@ field instead of @address@.
 -- {
 --   "pageQuery": {
 --     ...

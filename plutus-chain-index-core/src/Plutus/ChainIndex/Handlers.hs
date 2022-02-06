@@ -89,7 +89,7 @@ handleQuery = \case
         case UtxoState.tip utxoState of
             TipAtGenesis -> throwError QueryFailedNoTip
             tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxoState))
-    UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
+    UtxoSetAtAddress pageQuery addr -> getUtxoSetAtAddress pageQuery addr
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
     TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
@@ -188,9 +188,9 @@ getUtxoSetAtAddress
     , Member (LogMsg ChainIndexLog) effs
     )
   => PageQuery TxOutRef
-  -> Credential
+  -> Address
   -> Eff effs UtxosResponse
-getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
+getUtxoSetAtAddress pageQuery (toDbValue . addressCredential -> cred) = do
   utxoState <- gets @ChainIndexState UtxoState.utxoState
 
   case UtxoState.tip utxoState of

@@ -44,8 +44,7 @@ import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
-               PaymentPubKey (PaymentPubKey, unPaymentPubKey),
-               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash,
+               PaymentPubKey (PaymentPubKey, unPaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), PubKeyHash,
                ScriptValidationEvent (sveScript), StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef,
                UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx), ValidatorHash, Value)
 import Ledger qualified
@@ -293,18 +292,18 @@ ownOutputs :: forall effs.
     )
     => WalletState
     -> Eff effs (Map.Map TxOutRef ChainIndexTxOut)
-ownOutputs WalletState{_mockWallet} = do
+ownOutputs ws = do
     refs <- allUtxoSet (Just def)
     Map.fromList . catMaybes <$> traverse txOutRefTxOutFromRef refs
   where
-    cred :: Credential
-    cred = PubKeyCredential (unPaymentPubKeyHash $ CW.paymentPubKeyHash _mockWallet)
+    addr :: Address
+    addr = ownAddress ws
 
     -- Accumulate all unspent 'TxOutRef's from the resulting pages.
     allUtxoSet :: Maybe (PageQuery TxOutRef) -> Eff effs [TxOutRef]
     allUtxoSet Nothing = pure []
     allUtxoSet (Just pq) = do
-      refPage <- page <$> ChainIndex.utxoSetAtAddress pq cred
+      refPage <- page <$> ChainIndex.utxoSetAtAddress pq addr
       nextItems <- allUtxoSet (ChainIndex.nextPageQuery refPage)
       pure $ ChainIndex.pageItems refPage ++ nextItems
 

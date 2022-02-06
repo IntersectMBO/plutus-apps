@@ -30,8 +30,8 @@ module Plutus.ChainIndex.Effects(
 
 import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
-import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-               StakeValidatorHash, TxId, Validator, ValidatorHash)
+import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
+               StakeValidator, StakeValidatorHash, TxId, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
@@ -65,7 +65,7 @@ data ChainIndexQueryEffect r where
     UtxoSetMembership :: TxOutRef -> ChainIndexQueryEffect IsUtxoResponse
 
     -- | Unspent outputs located at addresses with the given credential.
-    UtxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect UtxosResponse
+    UtxoSetAtAddress :: PageQuery TxOutRef -> Address -> ChainIndexQueryEffect UtxosResponse
 
     -- | Unspent outputs containing a specific currency ('AssetClass').
     --

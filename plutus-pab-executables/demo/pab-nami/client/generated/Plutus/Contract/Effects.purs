@@ -128,7 +128,7 @@ data ChainIndexQuery
   | TxOutFromRef TxOutRef
   | TxFromTxId TxId
   | UtxoSetMembership TxOutRef
-  | UtxoSetAtAddress (PageQuery TxOutRef) Credential
+  | UtxoSetAtAddress (PageQuery TxOutRef) Address
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds (Array TxId)
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
@@ -218,7 +218,7 @@ _UtxoSetMembership = prism' UtxoSetMembership case _ of
   (UtxoSetMembership a) -> Just a
   _ -> Nothing
 
-_UtxoSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Credential }
+_UtxoSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Address }
 _UtxoSetAtAddress = prism' (\{ a, b } -> (UtxoSetAtAddress a b)) case _ of
   (UtxoSetAtAddress a b) -> Just { a, b }
   _ -> Nothing
