@@ -19,7 +19,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.OpenApi qualified as OpenApi
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Language.PureScript.Bridge (argonaut, equal, genericShow, mkSumType)
+import Language.PureScript.Bridge (argonaut, equal, genericShow, mkSumType, order)
 import Ledger (PaymentPubKeyHash, StakePubKeyHash, Value)
 import Ledger.Constraints (adjustUnbalancedTx, mustPayToPubKeyAddress)
 import Playground.Types (FunctionSchema)
@@ -39,7 +39,7 @@ instance Pretty DemoContract where
 
 instance HasPSTypes DemoContract where
     psTypes =
-        [ equal . genericShow . argonaut $ mkSumType @DemoContract
+        [ order . equal . genericShow . argonaut $ mkSumType @DemoContract
         ]
 
 

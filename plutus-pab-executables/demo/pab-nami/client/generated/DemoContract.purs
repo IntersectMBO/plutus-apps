@@ -29,6 +29,8 @@ data DemoContract = DemoContract
 
 derive instance Eq DemoContract
 
+derive instance Ord DemoContract
+
 instance Show DemoContract where
   show a = genericShow a
 
