@@ -178,7 +178,7 @@ data ContractInstanceTag = ContractInstanceTag { unContractInstanceTag :: Text, 
     deriving anyclass (ToJSON, FromJSON)
 
 instance NFData ContractInstanceTag where
-  rnf (ContractInstanceTag txt txt') = rnf txt `seq` rnf txt' `seq` ()
+  rnf (ContractInstanceTag txt txt') = rnf txt `seq` rnf txt'
 
 instance Pretty ContractInstanceTag where
   pretty = pretty . shortContractInstanceTag

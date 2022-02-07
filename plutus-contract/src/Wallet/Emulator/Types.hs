@@ -32,8 +32,8 @@ module Wallet.Emulator.Types(
     Wallet.Emulator.MultiAgent.Assertion(OwnFundsEqual, IsValidated),
     Wallet.Emulator.MultiAgent.assert,
     Wallet.Emulator.MultiAgent.assertIsValidated,
-    Wallet.Types.AssertionError(..),
-    Wallet.Types.AsAssertionError(..),
+    Plutus.Contract.Error.AssertionError(..),
+    Plutus.Contract.Error.AsAssertionError(..),
     Wallet.Emulator.NodeClient.ChainClientNotification(..),
     Wallet.Emulator.MultiAgent.EmulatorEvent,
     Wallet.Emulator.MultiAgent.EmulatorEvent',
@@ -80,6 +80,8 @@ import Wallet.API (WalletAPIError)
 import Ledger.CardanoWallet qualified
 import Ledger.Fee (FeeConfig)
 import Ledger.TimeSlot (SlotConfig)
+import Plutus.Contract.Error (AssertionError)
+import Plutus.Contract.Error qualified
 import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent, ChainState, handleChain, handleControlChain)
 import Wallet.Emulator.Chain qualified
 import Wallet.Emulator.MultiAgent (EmulatorEvent', EmulatorState, MultiAgentControlEffect, MultiAgentEffect, chainEvent,
@@ -87,8 +89,6 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent', EmulatorState, MultiAgentCont
 import Wallet.Emulator.MultiAgent qualified
 import Wallet.Emulator.NodeClient qualified
 import Wallet.Emulator.Wallet qualified
-import Wallet.Types (AssertionError)
-import Wallet.Types qualified
 
 type EmulatorEffs = '[MultiAgentEffect, ChainEffect, ChainControlEffect]
 

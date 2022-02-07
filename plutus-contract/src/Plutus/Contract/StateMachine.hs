@@ -80,9 +80,9 @@ import Ledger.Typed.Tx (TypedScriptTxOut (TypedScriptTxOut, tyTxOutData, tyTxOut
 import Ledger.Typed.Tx qualified as Typed
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs))
-import Plutus.Contract (AsContractError (_ConstraintResolutionError, _ContractError), Contract, ContractError, Promise,
-                        awaitPromise, isSlot, isTime, logWarn, mapError, never, ownPaymentPubKeyHash, promiseBind,
-                        select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt, utxosTxOutTxAt,
+import Plutus.Contract (AsContractError (_ConstraintResolutionContractError, _ContractError), Contract, ContractError,
+                        Promise, awaitPromise, isSlot, isTime, logWarn, mapError, never, ownPaymentPubKeyHash,
+                        promiseBind, select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt, utxosTxOutTxAt,
                         utxosTxOutTxFromTx)
 import Plutus.Contract.Request (mkTxContract)
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
@@ -435,7 +435,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
             <> foldMap (mintingPolicy . curPolicy . ttOutRef) (smThreadToken stateMachine)
             <> Constraints.unspentOutputs utxo
             <> customLookups
-    utx <- mapError (review _ConstraintResolutionError) (mkTxContract lookups constraints)
+    utx <- mapError (review _ConstraintResolutionContractError) (mkTxContract lookups constraints)
     let adjustedUtx = Constraints.adjustUnbalancedTx utx
     unless (utx == adjustedUtx) $
       logWarn @Text $ "Plutus.Contract.StateMachine.runInitialise: "
@@ -483,7 +483,7 @@ runGuardedStepWith userLookups userConstraints smc input guard = mapError (revie
     Right StateMachineTransition{smtConstraints,smtOldState=State{stateData=os}, smtNewState=State{stateData=ns}, smtLookups} -> do
         pk <- ownPaymentPubKeyHash
         let lookups = smtLookups { Constraints.slOwnPaymentPubKeyHash = Just pk }
-        utx <- either (throwing _ConstraintResolutionError)
+        utx <- either (throwing _ConstraintResolutionContractError)
                       pure
                       (Constraints.mkTx (lookups <> userLookups) (smtConstraints <> userConstraints))
         let adjustedUtx = Constraints.adjustUnbalancedTx utx

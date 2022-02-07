@@ -155,9 +155,14 @@ tests =
                 (endpointAvailable @"1" theContract tag)
                 (void $ activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 1)
 
-        , let theContract :: Contract () Schema ContractError () = void $ throwing Con._ContractError $ OtherError "error"
+        , let theContract :: Contract () Schema ContractError () =
+                  void $ throwing Con._ContractError $ OtherContractError "error"
           in run "throw an error"
-                (assertContractError theContract tag (\case { OtherError "error" -> True; _ -> False}) "failed to throw error")
+                (assertContractError
+                    theContract
+                    tag
+                    (\case { OtherContractError "error" -> True; _ -> False })
+                    "failed to throw error")
                 (void $ activateContract w1 theContract tag)
 
         , run "pay to wallet"
@@ -166,7 +171,8 @@ tests =
                 .&&. assertNoFailedTransactions)
             (void $ Trace.payToWallet w1 w2 (Ada.adaValueOf 20))
 
-        , let theContract :: Contract () Schema ContractError () = void $ awaitUtxoProduced (mockWalletAddress w2)
+        , let theContract :: Contract () Schema ContractError () =
+                  void $ awaitUtxoProduced (mockWalletAddress w2)
           in run "await utxo produced"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -175,7 +181,10 @@ tests =
                 Trace.waitNSlots 1
             )
 
-        , let theContract :: Contract () Schema ContractError () = void (utxosAt (mockWalletAddress w1) >>= awaitUtxoSpent . fst . head . Map.toList)
+        , let theContract :: Contract () Schema ContractError () =
+                  void ( utxosAt (mockWalletAddress w1)
+                     >>= awaitUtxoSpent . fst . head . Map.toList
+                       )
           in run "await txout spent"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -336,7 +345,8 @@ loopCheckpointContract = do
 errorContract :: Contract () Schema ContractError Int
 errorContract = do
     catchError
-        (awaitPromise $ endpoint @"1" @Int $ \_ -> throwError (OtherError "something went wrong"))
+        (awaitPromise $ endpoint @"1" @Int
+                      $ \_ -> throwError (OtherContractError "something went wrong"))
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
 someAddress :: Address

@@ -43,6 +43,7 @@ import Plutus.ChainIndex.UtxoState (InsertUtxoFailed, InsertUtxoPosition, Rollba
 import Plutus.Contract.Checkpoint (CheckpointError)
 import Plutus.Contract.Effects (ActiveEndpoint, BalanceTxResponse, ChainIndexQuery, ChainIndexResponse, PABReq, PABResp,
                                 WriteBalancedTxResponse)
+import Plutus.Contract.Error (AssertionError, ContractError, MatchingError)
 import Plutus.Contract.Resumable (IterationID, Request, RequestID, Response)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg, ContractInstanceTag, EmulatorRuntimeError,
                                     UserThreadMsg)
@@ -52,9 +53,8 @@ import Schema (FormArgumentF, FormSchema)
 import Wallet.API (WalletAPIError)
 import Wallet.Emulator.Types qualified as EM
 import Wallet.Rollup.Types (AnnotatedTx, BeneficialOwner, DereferencedInput, SequenceId, TxKey)
-import Wallet.Types (AssertionError, ContractActivityStatus, ContractError, ContractInstanceId, EndpointDescription,
-                     EndpointValue, MatchingError, Notification, NotificationError)
-
+import Wallet.Types (ContractActivityStatus, ContractInstanceId, EndpointDescription, EndpointValue, Notification,
+                     NotificationError)
 
 psJson :: PSType
 psJson = TypeInfo "web-common" "Data.RawJson" "RawJson" []
