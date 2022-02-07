@@ -84,6 +84,7 @@ import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
                          WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, developmentOptions,
                          endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
 import Servant.Client (ClientEnv, ClientError, mkClientEnv)
+import Wallet.API (NodeClientEffect)
 import Wallet.Effects (WalletEffect)
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Error (WalletAPIError)
@@ -197,6 +198,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
 handleWalletEffect
   :: forall effs.
   ( LastMember IO effs
+  , Member NodeClientEffect effs
   , Member (Error ClientError) effs
   , Member (Error WalletAPIError) effs
   , Member (Error PABError) effs
