@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "types": [
+            "node",
+            "mocha",
+            "module"
+        ],
+        "composite": true,
+        "module": "es2020",
+        "target": "es2020",
+        "esModuleInterop": true,
+        "declaration": true,
+        "declarationMap": true,
+        "noEmitOnError": true,
+        "noUnusedParameters": true,
+        "noUnusedLocals": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "sourceMap": true,
+        "strict": true,
+        "strictPropertyInitialization": false,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true
+    }
+}
