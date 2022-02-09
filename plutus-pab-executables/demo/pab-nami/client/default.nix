@@ -57,5 +57,5 @@ let
     });
 in
 {
-  inherit client pab-nami-demo-invoker pab-nami-demo-generator generate-purescript generated-purescript start-backend;
+  inherit pab-setup-invoker client pab-nami-demo-invoker pab-nami-demo-generator generate-purescript generated-purescript start-backend;
 }
