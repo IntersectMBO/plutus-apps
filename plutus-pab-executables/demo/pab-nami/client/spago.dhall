@@ -3,6 +3,7 @@
   [ "aff"
   , "aff-promise"
   , "affjax"
+  , "argonaut"
   , "argonaut-codecs"
   , "argonaut-core"
   , "arraybuffer"
