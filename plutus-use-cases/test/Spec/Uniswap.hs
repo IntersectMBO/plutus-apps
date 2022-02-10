@@ -329,6 +329,10 @@ instance ContractModel UniswapModel where
         let liqVal = symAssetClassValue (p ^. liquidityToken) (unAmount deltaL)
         mint liqVal
         deposit w liqVal
+        -- Make sure product increases
+        assertSpec "AddLiquidity increases total product" $
+          unAmount (p ^. coinAAmount) * unAmount (p ^. coinBAmount) <
+            unAmount (p' ^. coinAAmount) * unAmount (p' ^. coinBAmount)
       wait 5
 
     PerformSwap w t1 t2 a -> do
@@ -354,6 +358,10 @@ instance ContractModel UniswapModel where
         deposit w $ symAssetClassValue t2 a'
         -- Update the pool
         pools . at (poolIndex t1 t2) .= Just p'
+        -- Make sure product increases
+        assertSpec "PerformSwap increases total product" $
+            unAmount (p ^. coinAAmount) * unAmount (p ^. coinBAmount) <
+              unAmount (p' ^. coinAAmount) * unAmount (p' ^. coinBAmount)
       wait 5
 
     RemoveLiquidity w t1 t2 a -> do
@@ -524,4 +532,5 @@ tests = testGroup "uniswap" [
         .&&. assertNoFailedTransactions)
         Uniswap.uniswapTrace
     , testProperty "prop_Uniswap" $ withMaxSuccess 20 prop_Uniswap
+    , testProperty "prop_UniswapAssertions" $ withMaxSuccess 1000 (propSanityCheckAssertions @UniswapModel)
     ]

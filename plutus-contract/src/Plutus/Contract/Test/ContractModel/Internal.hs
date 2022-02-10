@@ -67,6 +67,7 @@ module Plutus.Contract.Test.ContractModel.Internal
     , transfer
     , modifyContractState
     , createToken
+    , assertSpec
     , ($=)
     , ($~)
     , SpecificationEmulatorTrace
@@ -107,6 +108,7 @@ module Plutus.Contract.Test.ContractModel.Internal
     , HandleFun
     -- ** Model properties
     , propSanityCheckModel
+    , propSanityCheckAssertions
     -- ** Coverage checking options
     , CoverageOptions
     , defaultCoverageOptions
@@ -329,6 +331,8 @@ data ModelState state = ModelState
         { _currentSlot    :: Slot
         , _balanceChanges :: Map Wallet SymValue
         , _minted         :: SymValue
+        , _assertions     :: [(String, Bool)]
+        , _assertionsOk   :: Bool
         , _contractState  :: state
         }
   deriving (Show)
@@ -337,7 +341,7 @@ instance Functor ModelState where
   fmap f m = m { _contractState = f (_contractState m) }
 
 dummyModelState :: state -> ModelState state
-dummyModelState s = ModelState 0 Map.empty mempty s
+dummyModelState s = ModelState 0 Map.empty mempty [] True s
 
 -- | The `Spec` monad is a state monad over the `ModelState` with reader and writer components to keep track
 --   of newly created symbolic tokens. It is used exclusively by the `nextState` function to model the effects
@@ -516,12 +520,13 @@ class ( Typeable state
 --
 --   `Spec` monad update functions: `$=` and `$~`.
 makeLensesFor [("_contractState",  "contractState")]   'ModelState
-
 makeLensesFor [("_currentSlot",    "currentSlotL")]    'ModelState
 makeLensesFor [("_lastSlot",       "lastSlotL")]       'ModelState
 makeLensesFor [("_balanceChanges", "balanceChangesL")] 'ModelState
 makeLensesFor [("_minted",         "mintedL")]         'ModelState
 makeLensesFor [("_tokenNameIndex", "tokenNameIndex")]  'ModelState
+makeLensesFor [("_assertions", "assertions")]          'ModelState
+makeLensesFor [("_assertionsOk", "assertionsOk")]      'ModelState
 
 -- | Get the current slot.
 --
@@ -659,6 +664,12 @@ transfer :: SymValueLike v
          -> Spec state ()
 transfer fromW toW val = withdraw fromW val >> deposit toW val
 
+-- | Assert that a particular predicate holds at a point in the specification
+assertSpec :: String -> Bool -> Spec state ()
+assertSpec s b = do
+  modState assertions ((s, b):)
+  modState assertionsOk (&&b)
+
 -- | Modify the contract state.
 modifyContractState :: (state -> state) -> Spec state ()
 modifyContractState f = modState contractState f
@@ -779,16 +790,18 @@ instance ContractModel state => StateModel (ModelState state) where
     shrinkAction s (ContractAction _ a) = [ Some (contractAction s a') | a' <- shrinkAction s a ]
     shrinkAction _ _                    = []
 
-    initialState = ModelState { _currentSlot    = 0
-                              , _balanceChanges = Map.empty
-                              , _minted         = mempty
-                              , _contractState  = initialState
+    initialState = ModelState { _currentSlot      = 0
+                              , _balanceChanges   = Map.empty
+                              , _minted           = mempty
+                              , _assertions       = []
+                              , _assertionsOk     = True
+                              , _contractState    = initialState
                               }
 
     nextState s (ContractAction _ cmd) v = runSpec (nextState cmd) v s
     nextState s Unilateral{} _           = s
 
-    precondition s (ContractAction _ cmd) = precondition s cmd
+    precondition s (ContractAction _ cmd) = (s ^. assertionsOk) && precondition s cmd
     precondition _ _                      = True
 
     perform s (ContractAction _ cmd) envOuter = do
@@ -1416,7 +1429,7 @@ propRunActionsWithOptions ::
     => CheckOptions                          -- ^ Emulator options
     -> CoverageOptions                       -- ^ Coverage options
     -> (ModelState state -> TracePredicate)  -- ^ Predicate to check at the end
-    -> Actions state                          -- ^ The actions to run
+    -> Actions state                         -- ^ The actions to run
     -> Property
 propRunActionsWithOptions opts copts predicate actions' =
   propRunActionsWithOptions' opts copts predicate (toStateModelActions actions')
@@ -1435,14 +1448,19 @@ propRunActionsWithOptions' :: forall state.
     -> StateModel.Actions (ModelState state) -- ^ The actions to run
     -> Property
 propRunActionsWithOptions' opts copts predicate actions =
-    monadic (flip State.evalState mempty) $ finalChecks opts copts finalPredicate $ do
+    asserts finalState QC..&&.
+    (monadic (flip State.evalState mempty) $ finalChecks opts copts finalPredicate $ do
             QC.run initiateWallets
-            snd <$> runActionsInState StateModel.initialState actions
+            snd <$> runActionsInState StateModel.initialState actions)
     where
         finalState = StateModel.stateAfter actions
         finalPredicate keys' outerEnv = predicate finalState .&&. checkBalances finalState outerEnv
                                                              .&&. checkNoCrashes keys'
                                                              .&&. checkNoOverlappingTokens
+
+asserts :: ModelState state -> Property
+asserts finalState = foldr (QC..&&.) (property True) [ counterexample ("assertSpec failed: " ++ s) b
+                                                     | (s, b) <- finalState ^. assertions ]
 
 stateAfter :: ContractModel state => Actions state -> ModelState state
 stateAfter actions = StateModel.stateAfter $ toStateModelActions actions
@@ -1515,9 +1533,15 @@ checkNoCrashes = foldr (\ (Key k) -> (assertInstanceLog (instanceTag k) notError
 
 -- | Sanity check a `ContractModel`. Ensures that wallet balances are not always unchanged.
 propSanityCheckModel :: forall state. ContractModel state => Property
-propSanityCheckModel = QC.expectFailure $ noBalanceChanges . stateAfter @state
+propSanityCheckModel =
+  QC.expectFailure (noBalanceChanges . stateAfter @state)
   where
     noBalanceChanges s = all symIsZero (s ^. balanceChanges)
+
+-- | Sanity check a `ContractModel`. Ensures that all assertions in
+-- the property generation succeed.
+propSanityCheckAssertions :: forall state. ContractModel state => Property
+propSanityCheckAssertions = property (asserts . stateAfter @state)
 
 -- $noLockedFunds
 -- Showing that funds can not be locked in the contract forever.

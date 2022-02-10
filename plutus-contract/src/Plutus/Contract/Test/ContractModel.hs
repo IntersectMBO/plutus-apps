@@ -46,6 +46,7 @@ module Plutus.Contract.Test.ContractModel
     , transfer
     , modifyContractState
     , createToken
+    , assertSpec
     , ($=)
     , ($~)
     -- * Helper functions for writing perform functions
@@ -97,6 +98,7 @@ module Plutus.Contract.Test.ContractModel
     , HandleFun
     -- ** Model properties
     , propSanityCheckModel
+    , propSanityCheckAssertions
     -- ** Coverage cheking options
     , CoverageOptions
     , defaultCoverageOptions
