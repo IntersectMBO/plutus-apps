@@ -36,8 +36,8 @@ import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
                              assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
                              assertUserLog, checkEmulatorFails, checkPredicateOptions, defaultCheckOptions,
-                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, waitingForSlot,
-                             walletFundsChange, (.&&.))
+                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, w3,
+                             waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Trace qualified as Trace
@@ -227,6 +227,27 @@ tests =
             ( assertAccumState c tag isExpectedDatumHash "should be done"
             ) $ do
               _ <- activateContract w1 c tag
+              void (Trace.waitNSlots 2)
+
+        -- verify that 'matchInputOutput' doesn't thrown 'InOutTypeMismatch' error
+        -- in case of two transactions with 'mustPayWithDatumToPubKey'
+        , let c1 :: Contract [Maybe DatumHash] Schema ContractError () = do
+                let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
+                let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash datum1 (Ada.adaValueOf 10)
+                void $ submitTx payment
+              c2 :: Contract [Maybe DatumHash] Schema ContractError () = do
+                let w3PubKeyHash = mockWalletPaymentPubKeyHash w3
+                let payment = Constraints.mustPayWithDatumToPubKey w3PubKeyHash datum2 (Ada.adaValueOf 50)
+                void $ submitTx payment
+
+              datum1 = Datum $ PlutusTx.toBuiltinData (23 :: Integer)
+              datum2 = Datum $ PlutusTx.toBuiltinData (42 :: Integer)
+
+          in run "mustPayWithDatumToPubKey doesn't throw 'InOutTypeMismatch' error"
+            ( assertNoFailedTransactions ) $ do
+              _ <- activateContract w1 c1 tag
+              void (Trace.waitNSlots 2)
+              _ <- activateContract w2 c2 tag
               void (Trace.waitNSlots 2)
 
         , let c :: Contract [TxOutStatus] Schema ContractError () = do
