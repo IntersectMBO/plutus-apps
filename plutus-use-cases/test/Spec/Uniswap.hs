@@ -149,7 +149,7 @@ setupTokens = do
     amount = 1000000
 
 wallets :: [Wallet]
-wallets = take 9 knownWallets
+wallets = take 6 knownWallets
 
 tokenNames :: [String]
 tokenNames = ["A", "B", "C", "D"]
@@ -193,7 +193,7 @@ instance ContractModel UniswapModel where
     frequency $ [ (1, pure Start)
                 , (1, pure SetupTokens) ] ++
                 [ (3, createPool) | not . null $ s ^. contractState . exchangeableTokens ] ++
-                [ (10, gen) | gen <- [createPool, add, swap, remove, close]
+                [ (10, gen) | gen <- [add, swap, remove, close]
                            , not . null $ s ^. contractState . exchangeableTokens
                            , not . null $ s ^. contractState . pools ]
     where
@@ -203,14 +203,16 @@ instance ContractModel UniswapModel where
         t2 <- elements $ s ^. contractState . exchangeableTokens . to (Set.delete t1) . to Set.toList
         a1 <- choose (1, 100)
         a2 <- choose (1, 100)
-        return $ CreatePool w (getAToken t1 t2) a1 (getBToken t1 t2) a2
+        (tA, tB) <- elements [(t1, t2), (t2, t1)]
+        return $ CreatePool w tA a1 tB a2
 
       add = do
         w <- elements $ wallets \\ [w1]
         PoolIndex t1 t2 <- elements $ s ^. contractState . pools . to Map.keys
-        a1 <- choose (1, 100)
-        a2 <- choose (1, 100)
-        return $ AddLiquidity w (getAToken t1 t2) a1 (getBToken t1 t2) a2
+        a1 <- choose (0, 100)
+        a2 <- choose (0, 100)
+        (tA, tB) <- elements [(t1, t2), (t2, t1)]
+        return $ AddLiquidity w tA a1 tB a2
 
       swap = do
         PoolIndex t1 t2 <- elements $ s ^. contractState . pools . to Map.keys
@@ -223,12 +225,14 @@ instance ContractModel UniswapModel where
         idx@(PoolIndex t1 t2) <- elements $ s ^. contractState . pools . to Map.keys
         w <- elements . fold $ s ^? contractState . pools . at idx . _Just . liquidities . to (Map.filter (0<)) . to Map.keys
         a <- choose (1, sum $ s ^? contractState . pools . at idx . _Just . liquidities . at w . _Just . to unAmount)
-        return $ RemoveLiquidity w (getAToken t1 t2) (getBToken t1 t2) a
+        (tA, tB) <- elements [(t1, t2), (t2, t1)]
+        return $ RemoveLiquidity w tA tB a
 
       close = do
         w <- elements $ wallets \\ [w1]
         PoolIndex t1 t2 <- elements $ s ^. contractState . pools . to Map.keys
-        return $ ClosePool w (getAToken t1 t2) (getBToken t1 t2)
+        (tA, tB) <- elements [(t1, t2), (t2, t1)]
+        return $ ClosePool w tA tB
 
   startInstances s act = case act of
     Start       -> [ StartContract OwnerKey () ]
@@ -243,10 +247,8 @@ instance ContractModel UniswapModel where
                                                 && t1 /= t2
                                                 && 0 < a1
                                                 && 0 < a2
-  precondition s (AddLiquidity _ t1 a1 t2 a2) = hasOpenPool s t1 t2
+  precondition s (AddLiquidity _ t1 _ t2 _  ) = hasOpenPool s t1 t2
                                                 && t1 /= t2
-                                                && 0 < a1
-                                                && 0 < a2
   precondition s (PerformSwap _ t1 t2 a)      = hasOpenPool s t1 t2
                                                 && t1 /= t2
                                                 && 0 < a
@@ -313,7 +315,7 @@ instance ContractModel UniswapModel where
     AddLiquidity w t1 a1 t2 a2 -> do
       startedUserCode %= Set.insert w
       p <- use $ pools . at (poolIndex t1 t2) . to fromJust
-      -- Compute the amount of liqiudity token we get
+      -- Compute the amount of liquidity token we get
       let (deltaA, deltaB) = mkAmounts t1 t2 a1 a2
           deltaL = calculateAdditionalLiquidity (p ^. coinAAmount)
                                                 (p ^. coinBAmount)
@@ -425,8 +427,8 @@ instance ContractModel UniswapModel where
 
     CreatePool w t1 a1 t2 a2 -> do
       let us = s ^. contractState . uniswapToken . to fromJust
-          c1 = Coin (tokenSem $ getAToken t1 t2)
-          c2 = Coin (tokenSem $ getBToken t1 t2)
+          c1 = Coin (tokenSem t1)
+          c2 = Coin (tokenSem t2)
           Coin ac = liquidityCoin (fst . Value.unAssetClass . tokenSem $ us) c1 c2
       Trace.callEndpoint @"create" (h (WalletKey w)) $ CreateParams c1 c2 (Amount a1) (Amount a2)
       delay 5
@@ -434,8 +436,8 @@ instance ContractModel UniswapModel where
         registerToken "Liquidity" ac
 
     AddLiquidity w t1 a1 t2 a2 -> do
-      let c1 = Coin (tokenSem $ getAToken t1 t2)
-          c2 = Coin (tokenSem $ getBToken t1 t2)
+      let c1 = Coin (tokenSem t1)
+          c2 = Coin (tokenSem t2)
       Trace.callEndpoint @"add" (h (WalletKey w)) $ AddParams c1 c2 (Amount a1) (Amount a2)
       delay 5
 
@@ -446,14 +448,14 @@ instance ContractModel UniswapModel where
       delay 5
 
     RemoveLiquidity w t1 t2 a -> do
-      let c1 = Coin (tokenSem $ getAToken t1 t2)
-          c2 = Coin (tokenSem $ getBToken t1 t2)
+      let c1 = Coin (tokenSem t1)
+          c2 = Coin (tokenSem t2)
       Trace.callEndpoint @"remove" (h (WalletKey w)) $ RemoveParams c1 c2 (Amount a)
       delay 5
 
     ClosePool w t1 t2 -> do
-      let c1 = Coin (tokenSem $ getAToken t1 t2)
-          c2 = Coin (tokenSem $ getBToken t1 t2)
+      let c1 = Coin (tokenSem t1)
+          c2 = Coin (tokenSem t2)
       Trace.callEndpoint @"close" (h (WalletKey w)) $ CloseParams c1 c2
       delay 5
 
