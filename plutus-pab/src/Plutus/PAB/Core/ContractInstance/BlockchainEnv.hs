@@ -37,10 +37,11 @@ import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutpu
                           InsertUtxoFailed (..), InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..),
                           RollbackFailed (..), RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..),
                           TxOutBalance, TxValidity (..), UtxoIndex, UtxoState (..), blockId, citxTxId, fromOnChainTx,
-                          insert, reduceBlockCount, utxoState)
+                          insert, reduceBlockCount, tipAsPoint, utxoState)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint, toCardanoPoint)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
+import Plutus.ChainIndex.UtxoState (viewTip)
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import System.Random
 
@@ -126,23 +127,30 @@ data SyncActionFailure
 
 -- | Roll back the chain to the given ChainPoint and slot.
 runRollback :: BlockchainEnv -> ChainPoint -> STM (Either SyncActionFailure (Slot, BlockNumber))
-runRollback env@BlockchainEnv{beTxChanges, beTxOutChanges} chainPoint = do
+runRollback env@BlockchainEnv{beCurrentSlot, beTxChanges, beTxOutChanges} chainPoint = do
+  currentSlot <- STM.readTVar beCurrentSlot
   txIdStateIndex <- STM.readTVar beTxChanges
   txOutBalanceStateIndex <- STM.readTVar beTxOutChanges
 
   let point = fromCardanoPoint chainPoint
       rs    = TxIdState.rollback point txIdStateIndex
       rs'   = TxOutBalance.rollback point txOutBalanceStateIndex
+      -- Check to see if the rollback is just through a sequence of empty blocks ending at the tip.
+      emptyRollBack =
+           point > tipAsPoint (viewTip txIdStateIndex)
+        && pointSlot point <= currentSlot
 
-  case rs of
-    Left e                                -> pure $ Left (RollbackFailure e)
-    Right RollbackResult{rolledBackIndex=rolledBackTxIdStateIndex} ->
-      case rs' of
-        Left e' -> pure $ Left (RollbackFailure e')
-        Right RollbackResult{rolledBackIndex=rolledBackTxOutBalanceStateIndex} -> do
-          STM.writeTVar beTxChanges rolledBackTxIdStateIndex
-          STM.writeTVar beTxOutChanges rolledBackTxOutBalanceStateIndex
-          Right <$> blockAndSlot env
+  if emptyRollBack
+    then Right <$> blockAndSlot env
+    else case rs of
+           Left e                                -> pure $ Left (RollbackFailure e)
+           Right RollbackResult{rolledBackIndex=rolledBackTxIdStateIndex} ->
+             case rs' of
+               Left e' -> pure $ Left (RollbackFailure e')
+               Right RollbackResult{rolledBackIndex=rolledBackTxOutBalanceStateIndex} -> do
+                 STM.writeTVar beTxChanges rolledBackTxIdStateIndex
+                 STM.writeTVar beTxOutChanges rolledBackTxOutBalanceStateIndex
+                 Right <$> blockAndSlot env
 
 -- | Get transaction ID and validity from a transaction.
 txEvent :: ChainIndexTx -> (TxId, TxOutBalance, TxValidity)
