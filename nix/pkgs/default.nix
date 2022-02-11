@@ -26,6 +26,7 @@ let
   exeFromExtras = x: haskell.extraPackages."${x}".components.exes."${x}";
   cabal-install = haskell.extraPackages.cabal-install.components.exes.cabal;
   cardano-repo-tool = exeFromExtras "cardano-repo-tool";
+  pab-cli = exeFromExtras "pab-cli";
   stylish-haskell = exeFromExtras "stylish-haskell";
   hlint = exeFromExtras "hlint";
   haskell-language-server = exeFromExtras "haskell-language-server";
@@ -123,7 +124,7 @@ in
 {
   inherit sphinx-markdown-tables sphinxemoji sphinxcontrib-haddock;
   inherit nix-pre-commit-hooks;
-  inherit haskell cabal-install cardano-repo-tool stylish-haskell hlint haskell-language-server haskell-language-server-wrapper hie-bios;
+  inherit haskell cabal-install cardano-repo-tool pab-cli stylish-haskell hlint haskell-language-server haskell-language-server-wrapper hie-bios;
   inherit purs-tidy purs spago spago2nix purescript-language-server psa;
   inherit fix-purs-tidy fixStylishHaskell fixPngOptimization updateMaterialized updateClientDeps;
   inherit web-ghc;
