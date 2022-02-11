@@ -2,9 +2,7 @@ name: Plutus Playground E2E Tests
 
 on:
   schedule:
-  - cron: '0 4 * * *'
-  push:
-    branches: [ playwright-e2e-tests ]
+  - cron: '0 2 * * *'
   workflow_dispatch:
 
 jobs:
@@ -30,7 +28,6 @@ jobs:
 
     - name: Build Plutus Playground
       run: nix-build -A plutus-playground.client -A plutus-playground.server
-        #  nix build -f default.nix plutus.haskell.packages.plutus-core.components.library
 
     - name: Run Plutus Playground
       working-directory: ./plutus-playground-client
@@ -47,14 +44,13 @@ jobs:
         node-version: '12.12.0'
   
     - name: Setup Playwright
-      working-directory: ./e2e-tests/
+      working-directory: ./plutus-playground-client/e2e-tests/
       run: |
         npm install -D @playwright/test
-#        npx playwright install-deps
         npx playwright install
   
     - name: Run Tests
-      working-directory: ./e2e-tests/
+      working-directory: ./plutus-playground-client/e2e-tests/
       run: |
         npx playwright test
   
@@ -62,5 +58,5 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: html-report
-        path: e2e-tests/html-report/index.html
+        path: plutus-playground-client/e2e-tests/html-report/index.html
         retention-days: 5

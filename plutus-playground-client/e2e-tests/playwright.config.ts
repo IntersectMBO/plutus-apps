@@ -9,9 +9,8 @@ const config: PlaywrightTestConfig = {
     },
   },
   reporter: [
-    //[process.env.CI ? 'github' : 'list'],
     ['list'],
-    ['html', { open: 'never' , outputFolder: 'html-report'}]
+    ['html', { open: 'never', outputFolder: 'html-report' }]
   ],
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -34,14 +33,7 @@ const config: PlaywrightTestConfig = {
         browserName: 'firefox',
         viewport: { width: 1280, height: 720 },
       }
-    },
-/*    {
-      name: 'safari',
-      use: {
-        browserName: 'webkit',
-        viewport: { width: 1280, height: 720 },
-      }
-    }*/
+    }
   ],
 };
 export default config;
