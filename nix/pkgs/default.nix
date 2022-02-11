@@ -26,7 +26,7 @@ let
   exeFromExtras = x: haskell.extraPackages."${x}".components.exes."${x}";
   cabal-install = haskell.extraPackages.cabal-install.components.exes.cabal;
   cardano-repo-tool = exeFromExtras "cardano-repo-tool";
-  pab-cli = exeFromExtras "pab-cli";
+  pab-cli = haskell.extraPackages.plutus-pab-executables.components.exes.pab-cli;
   stylish-haskell = exeFromExtras "stylish-haskell";
   hlint = exeFromExtras "hlint";
   haskell-language-server = exeFromExtras "haskell-language-server";
