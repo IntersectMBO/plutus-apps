@@ -117,7 +117,7 @@ instance ContractModel EscrowModel where
              && (s ^. currentSlot < s ^. contractState . refundSlot - 1)
     Refund w -> s ^. currentSlot >= s ^. contractState . refundSlot
              && Nothing /= (s ^. contractState . contributions . at w)
-    Pay w v -> s ^. currentSlot + 1 < s ^. contractState . refundSlot
+    Pay _ v -> s ^. currentSlot + 1 < s ^. contractState . refundSlot
             && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
     BadRefund w w' -> s ^. currentSlot < s ^. contractState . refundSlot - 2  -- why -2?
                    || w /= w'
