@@ -77,7 +77,9 @@ instance OpenApi.ToSchema BlockId where
     declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy @String)
 
 instance Pretty BlockId where
-    pretty (BlockId blockId) = "BlockId(" <> pretty (fromRight (JSON.encodeByteString blockId) $ decodeUtf8' blockId) <> ")"
+    pretty (BlockId blockId) =
+        "BlockId "
+     <> pretty (fromRight (JSON.encodeByteString blockId) $ decodeUtf8' blockId)
 
 -- | A transaction on the blockchain.
 -- Invalid transactions are still put on the chain to be able to collect fees.

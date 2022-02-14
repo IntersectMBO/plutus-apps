@@ -25,7 +25,7 @@ common lang
                         DeriveTraversable ImportQualifiedPost
     ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities
+                 -Wredundant-constraints -Widentities -Wmissing-import-lists
 
 library
     import: lang
@@ -35,6 +35,7 @@ library
         Plutus.ChainIndex.Config
         Plutus.ChainIndex.Lib
         Plutus.ChainIndex.Logging
+        Plutus.ChainIndex.SyncStats
     hs-source-dirs: src
     build-depends:
         plutus-ledger -any,
@@ -43,6 +44,7 @@ library
         freer-extras -any
     build-depends:
         aeson -any,
+        async -any,
         base >=4.7 && <5,
         beam-sqlite -any,
         beam-migrate -any,
@@ -52,11 +54,13 @@ library
         freer-simple -any,
         iohk-monitoring -any,
         lens -any,
+        optparse-applicative -any,
         ouroboros-network -any,
         prettyprinter >=1.1.0.1,
         sqlite-simple -any,
+        stm -any,
+        time-units -any,
         yaml -any,
-        optparse-applicative -any
 
 executable plutus-chain-index
   main-is: Main.hs
