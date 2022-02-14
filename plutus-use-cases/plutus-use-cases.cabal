@@ -108,6 +108,7 @@ test-suite plutus-use-cases-test
         Spec.Currency
         Spec.ErrorHandling
         Spec.Escrow
+        Spec.Escrow.Endpoints
         Spec.SimpleEscrow
         Spec.Future
         Spec.Game
@@ -175,6 +176,7 @@ executable plutus-use-cases-scripts
         Spec.Currency
         Spec.ErrorHandling
         Spec.Escrow
+        Spec.Escrow.Endpoints
         Spec.SimpleEscrow
         Spec.Future
         Spec.Game
