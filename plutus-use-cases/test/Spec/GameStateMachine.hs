@@ -21,6 +21,7 @@ module Spec.GameStateMachine
   , prop_NoLockedFunds
   , prop_CheckNoLockedFundsProof
   , prop_SanityCheckModel
+  , prop_SanityCheckAssertions
   , prop_GameCrashTolerance
   ) where
 
@@ -144,7 +145,8 @@ instance ContractModel GameModel where
     -- command given the current model state.
     arbitraryAction s = oneof $
         [ genLockAction ] ++
-        [ Guess w   <$> genGuess  <*> genGuess <*> genGuessAmount | val > Ada.getLovelace Ledger.minAdaTxOut, Just w <- [tok] ] ++
+        [ Guess w   <$> genGuess  <*> genGuess <*> genGuessAmount
+          | val > Ada.getLovelace Ledger.minAdaTxOut, Just w <- [tok] ] ++
         [ GiveToken <$> genWallet | isJust tok ]
         where
             genGuessAmount = frequency [(1, pure val), (1, pure $ Ada.getLovelace Ledger.minAdaTxOut), (8, choose (Ada.getLovelace Ledger.minAdaTxOut, val))]
@@ -194,6 +196,9 @@ prop_GameWhitelist = checkErrorWhitelist defaultWhitelist
 
 prop_SanityCheckModel :: Property
 prop_SanityCheckModel = propSanityCheckModel @GameModel
+
+prop_SanityCheckAssertions :: Property
+prop_SanityCheckAssertions = propSanityCheckAssertions @GameModel
 
 check_prop_Game_with_coverage :: IO CoverageReport
 check_prop_Game_with_coverage =
