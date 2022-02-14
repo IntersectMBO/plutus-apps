@@ -136,10 +136,9 @@ module Plutus.Contract.Test.ContractModel.Internal
     --
     -- $noLockedFunds
     , NoLockedFundsProof(..)
+    , defaultNLFP
     , checkNoLockedFundsProof
     , checkNoLockedFundsProofFast
-    , checkNoLockedFundsProofWithWiggleRoom
-    , checkNoLockedFundsProofWithWiggleRoomFast
     -- $checkNoPartiality
     , Whitelist
     , whitelistOk
@@ -1563,7 +1562,21 @@ data NoLockedFundsProof model = NoLockedFundsProof
   , nlfpWalletStrategy :: Wallet -> DL model ()
     -- ^ A strategy for each wallet to recover as much (or more) funds as the main strategy would
     --   give them in a given state, without the assistance of any other wallet.
+  , nlfpOverhead       :: ModelState model -> SymValue
+    -- ^ An initial amount of overhead value that may be lost - e.g. setup fees for scripts that
+    -- can't be recovered.
+  , nlfpErrorMargin    :: ModelState model -> SymValue
+    -- ^ The total amount of margin for error in the value collected by the WalletStrategy compared
+    -- to the MainStrategy. This is useful if your contract contains rounding code that makes the order
+    -- of operations have a small but predictable effect on the value collected by different wallets.
   }
+
+-- | The default skeleton of a NoLockedFundsProof - doesn't permit any overhead or error margin.
+defaultNLFP :: NoLockedFundsProof model
+defaultNLFP = NoLockedFundsProof { nlfpMainStrategy = return ()
+                                 , nlfpWalletStrategy = const (return ())
+                                 , nlfpOverhead = const mempty
+                                 , nlfpErrorMargin = const mempty }
 
 -- | Check a `NoLockedFundsProof`. Each test will generate an arbitrary sequence of actions
 --   (`anyActions_`) and ask the `nlfpMainStrategy` to recover all funds locked by the contract
@@ -1578,63 +1591,55 @@ checkNoLockedFundsProof
   => CheckOptions
   -> NoLockedFundsProof model
   -> Property
-checkNoLockedFundsProof = checkNoLockedFundsProofWithWiggleRoom 0
+checkNoLockedFundsProof options =
+  checkNoLockedFundsProof' prop
+  where
+    prop = propRunActionsWithOptions' options defaultCoverageOptions (\ _ -> pure True)
 
 checkNoLockedFundsProofFast
   :: (ContractModel model)
   => CheckOptions
   -> NoLockedFundsProof model
   -> Property
-checkNoLockedFundsProofFast _ = checkNoLockedFundsProofWithWiggleRoomFast 0
+checkNoLockedFundsProofFast _ = checkNoLockedFundsProof' (const $ property True)
 
-checkNoLockedFundsProofWithWiggleRoom
+checkNoLockedFundsProof'
   :: (ContractModel model)
-  => Integer
-  -> CheckOptions
+  => (StateModel.Actions (ModelState model) -> Property)
   -> NoLockedFundsProof model
   -> Property
-checkNoLockedFundsProofWithWiggleRoom wiggle options =
-  checkNoLockedFundsProofWithWiggleRoom' wiggle prop
-  where
-    prop = propRunActionsWithOptions' options defaultCoverageOptions (\ _ -> pure True)
-
-checkNoLockedFundsProofWithWiggleRoomFast
-  :: (ContractModel model)
-  => Integer
-  -> NoLockedFundsProof model
-  -> Property
-checkNoLockedFundsProofWithWiggleRoomFast wiggle = checkNoLockedFundsProofWithWiggleRoom' wiggle (const $ property True)
-
-checkNoLockedFundsProofWithWiggleRoom'
-  :: (ContractModel model)
-  => Integer
-  -> (StateModel.Actions (ModelState model) -> Property)
-  -> NoLockedFundsProof model
-  -> Property
-checkNoLockedFundsProofWithWiggleRoom' wiggle run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
-                                                                     nlfpWalletStrategy = walletStrat } =
+checkNoLockedFundsProof' run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
+                                                nlfpWalletStrategy = walletStrat,
+                                                nlfpOverhead       = overhead,
+                                                nlfpErrorMargin    = wiggle } =
     forAllDL anyActions_ $ \ (Actions as) ->
     forAllUniqueDL (nextVarIdx as) (stateAfter $ Actions as) mainStrat $ \ (Actions as') ->
-          let s = stateAfter $ Actions (as ++ as') in
-            foldl (QC..&&.) (counterexample "Main run prop" (run (toStateModelActions $ Actions $ as ++ as')) QC..&&. (counterexample "Main strategy" . counterexample (show . Actions $ as ++ as') $ prop s))
-                            [ walletProp as w bal | (w, bal) <- Map.toList (s ^. balanceChanges) ]
+          let s0 = (stateAfter $ Actions as)
+              s = stateAfter $ Actions (as ++ as') in
+            foldl (QC..&&.) (counterexample "Main run prop" (run (toStateModelActions $ Actions $ as ++ as')) QC..&&. (counterexample "Main strategy" . counterexample (show . Actions $ as ++ as') $ prop s0 s))
+                            [ walletProp s0 as w bal | (w, bal) <- Map.toList (s ^. balanceChanges) ]
     where
         nextVarIdx as = 1 + maximum ([0] ++ [ i | Var i <- varOf <$> as ])
-        prop s =
+        prop s0 s =
           let lockedVal = lockedValue s
-          in (counterexample ("Locked funds should be zero, but they are\n  " ++ show lockedVal) $ symIsZero lockedVal)
+          in (counterexample ("Locked funds should be at most " ++ show (overhead s0) ++ ", but they are\n  " ++ show lockedVal)
+            $ symLeq lockedVal (overhead s0))
 
-        walletProp as w bal = DL.forAllUniqueDL (nextVarIdx as) (stateAfter $ Actions as) (DL.action (Unilateral w) >> walletStrat w) $ \ acts ->
+        walletProp s0 as w bal =
+          DL.forAllUniqueDL (nextVarIdx as) s0 (DL.action (Unilateral w) >> walletStrat w) $ \ acts ->
           let Actions as' = fromStateModelActions acts
+              wig = wiggle s0
               err  = "Unilateral strategy for " ++ show w ++ " should have gotten it at least\n" ++
                      "  " ++ show bal ++ "\n" ++
+                     concat [ "with wiggle room\n" ++ "  " ++ show wig ++ "\n"
+                            | wig /= mempty ] ++
                      "but it got\n" ++
                      "  " ++ show bal'
               bal' = stateAfter (Actions $ as ++ as') ^. balanceChange w
               smacts = toStateModelActions (Actions as) <> acts
               err' = "The ContractModel's Unilateral behaviour for " ++ show w ++ " does not match the actual behaviour for actions:\n"
                    ++ show smacts
-          in counterexample err (symLeqWiggle wiggle bal bal')
+          in counterexample err (symLeq bal (bal' <> wig))
           QC..&&. counterexample err' (run smacts)
 
 -- | A whitelist entry tells you what final log entry prefixes

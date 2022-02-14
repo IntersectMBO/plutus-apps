@@ -125,10 +125,9 @@ module Plutus.Contract.Test.ContractModel
     --
     -- $noLockedFunds
     , NoLockedFundsProof(..)
+    , defaultNLFP
     , checkNoLockedFundsProof
     , checkNoLockedFundsProofFast
-    , checkNoLockedFundsProofWithWiggleRoom
-    , checkNoLockedFundsProofWithWiggleRoomFast
     -- $checkNoPartiality
     , Whitelist
     , whitelistOk

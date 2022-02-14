@@ -248,7 +248,7 @@ prop_FinishAuction :: Property
 prop_FinishAuction = forAllDL finishAuction prop_Auction
 
 noLockProof :: NoLockedFundsProof AuctionModel
-noLockProof = NoLockedFundsProof
+noLockProof = defaultNLFP
   { nlfpMainStrategy   = finishingStrategy w1
   , nlfpWalletStrategy = finishingStrategy }
 
