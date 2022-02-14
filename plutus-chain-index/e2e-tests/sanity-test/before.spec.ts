@@ -1,6 +1,6 @@
-const env = require('./testnet-env.json')
+import * as env from './testnet-env.json';
+import { expect } from "chai";
 const request = require("supertest")(env.url);
-const { expect } = require("chai");
 
 before(async () => {
     const response = await request.get("/tip");

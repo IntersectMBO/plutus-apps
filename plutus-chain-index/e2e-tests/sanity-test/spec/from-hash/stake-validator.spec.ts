@@ -1,18 +1,19 @@
-const env = require('../../testnet-env.json')
+import * as env from '../../testnet-env.json';
+import { expect } from "chai";
 const request = require("supertest")(env.url);
-const { expect } = require("chai");
 
-//there's any example of stake validator onchain yet
-describe("POST /from-hash/stake-validator", () => {
-    var response, resBody;
-    before(async () => {
-        response = await request
-            .post("/from-hash/minting-policy")
-            .type("application/json")
-            .send(`"${env.minting_policy_hash}"`)
-        expect(response.status).to.equal(200);
-        resBody = response.body;
-    });
+// TODO: update when there are stake validators onchain to query
+// describe("POST /from-hash/stake-validator", () => {
+//     let response, resBody;
+//     before(async () => {
+//         response = await request
+//             .post("/from-hash/stake-validator")
+//             .type("application/json")
+//             .send(`${env.stake_validator_hash}`)
+//         expect(response.status).to.equal(200);
+//         /* eslint-disable @typescript-eslint/no-unused-vars */
+//         resBody = response.body;
+//     });
 
-    it("returns correct minting policy bytecode");
-});
+//     it("returns correct stake validator bytecode");
+// });

@@ -1,6 +1,5 @@
-const env = require('./testnet-env.json');
-
-module.exports = function atAddressBody(pageSize, txOutRef_id, txOutRef_idx, pubkeyhash) {
+export default function atAddressBody(pageSize?: number, txOutRef_id?: string,
+    txOutRef_idx?: number, pubkeyhash?: string) {
     return {
         ...(pageSize || txOutRef_id) && {
             pageQuery: {

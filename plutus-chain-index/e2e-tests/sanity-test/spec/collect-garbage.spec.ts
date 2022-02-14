@@ -1,13 +1,14 @@
-const env = require('../testnet-env.json');;
+import * as env from '../testnet-env.json';
+import { expect } from "chai";
 const request = require("supertest")(env.url);
-const { expect } = require("chai");
 
 // todo
 describe("GET /collect-garbage", async () => {
-  var response, resBody;
+  let response, resBody;
   before(async () => {
     response = await request.get("/collect-garbage");
     expect(response.status).to.equal(200);
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     resBody = response.body;
   });
 });

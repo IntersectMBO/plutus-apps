@@ -1,14 +1,17 @@
-const env = require('../testnet-env.json');
+import * as env from '../testnet-env.json'
+import { expect } from "chai";
 const request = require("supertest")(env.url);
-const { expect } = require("chai");
 
 describe("POST /is-utxo", () => {
     describe("relevant utxo", () => {
-        var response, resBody;
+        let response, resBody;
         before(async () => {
             response = await request
                 .post("/is-utxo")
-                .send({ "txOutRefId": { "getTxId": env.relevant_txOutRef_id }, "txOutRefIdx": env.relevant_txOutRef_idx });
+                .send({
+                    "txOutRefId": { "getTxId": env.relevant_txOutRef_id },
+                    "txOutRefIdx": env.relevant_txOutRef_idx
+                });
             expect(response.status).to.equal(200);
             resBody = response.body;
         });
@@ -23,7 +26,7 @@ describe("POST /is-utxo", () => {
     });
 
     describe("irrelevant utxo ref id", () => {
-        var response, resBody;
+        let response, resBody;
         before(async () => {
             response = await request
                 .post("/is-utxo")

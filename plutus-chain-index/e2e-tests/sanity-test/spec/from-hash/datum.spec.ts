@@ -1,10 +1,10 @@
-const env = require('../../testnet-env.json')
+import * as env from '../../testnet-env.json';
+import { expect } from "chai";
 const request = require("supertest")(env.url);
-const { expect } = require("chai");
 
 describe("POST /from-hash/datum", () => {
     describe("relevant datum hash", () => {
-        var response, resBody;
+        let response, resBody;
         before(async () => {
             response = await request
                 .post("/from-hash/datum")
@@ -20,13 +20,14 @@ describe("POST /from-hash/datum", () => {
     });
 
     describe("not relevant datum hash", () => {
-        var response, resBody;
+        let response, resBody;
         before(async () => {
             response = await request
                 .post("/from-hash/datum")
                 .type("application/json")
                 .send(`"${env.not_relevant_datum_hash}"`)
             expect(response.status).to.equal(404);
+            /* eslint-disable @typescript-eslint/no-unused-vars */
             resBody = response.body;
         });
 

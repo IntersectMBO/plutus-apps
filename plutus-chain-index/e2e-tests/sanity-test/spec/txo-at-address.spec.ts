@@ -1,16 +1,16 @@
-const env = require('../testnet-env.json');
+import * as env from '../testnet-env.json'
+import { expect } from "chai";
+import atAddressBody from "../at-address-body";
 const request = require("supertest")(env.url);
-const { expect } = require("chai");
-const atAddressBody = require("../at-address-body.ts");
-
 
 describe("POST /txo-at-address", () => {
     describe("relevant pubkeyhash & with pageQuery", () => {
-        var response, resBody;
+        let response, resBody;
         before(async () => {
             response = await request
                 .post("/txo-at-address")
-                .send(atAddressBody(10, env.relevant_txOutRef_id, env.relevant_txOutRef_idx, env.relevant_txOut_pubkeyhash));
+                .send(atAddressBody(10, env.relevant_txOutRef_id,
+                    env.relevant_txOutRef_idx, env.relevant_txOut_pubkeyhash));
             expect(response.status).to.equal(200);
             resBody = response.body;
         });
@@ -27,7 +27,7 @@ describe("POST /txo-at-address", () => {
     });
 
     describe("relevant pubkeyhash & no pageQuery", () => {
-        var response, resBody;
+        let response, resBody;
         before(async () => {
             response = await request
                 .post("/txo-at-address")

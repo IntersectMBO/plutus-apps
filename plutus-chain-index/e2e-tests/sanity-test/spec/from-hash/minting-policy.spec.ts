@@ -1,9 +1,9 @@
-const env = require('../../testnet-env.json')
+import * as env from '../../testnet-env.json';
+import { expect } from "chai";
 const request = require("supertest")(env.url);
-const { expect } = require("chai");
 
 describe("POST /from-hash/minting-policy", () => {
-    var response, resBody;
+    let response, resBody;
     before(async () => {
         response = await request
             .post("/from-hash/minting-policy")
