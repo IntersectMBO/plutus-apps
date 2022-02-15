@@ -122,6 +122,7 @@ test-suite plutus-use-cases-test
         Spec.Rollup
         Spec.Stablecoin
         Spec.Uniswap
+        Spec.Uniswap.Endpoints
         Spec.TokenAccount
         Spec.Vesting
     default-language: Haskell2010
@@ -137,7 +138,8 @@ test-suite plutus-use-cases-test
         plutus-contract-certification -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
-        plutus-use-cases -any
+        plutus-use-cases -any,
+        playground-common -any
     build-depends:
         base >=4.9 && <5,
         bytestring -any,

@@ -29,6 +29,10 @@ module Plutus.Contracts.Uniswap.OffChain
     , start, create, add, remove, close, swap, pools
     , ownerEndpoint, userEndpoints
     , findSwapA, findSwapB, covIdx
+    -- exported for defining test endpoints
+    , findUniswapFactoryAndPool, uniswapInstance, liquidityPolicy
+    , uniswapScript, poolStateCoin, liquidityCurrency, lpTicker
+    , calculateRemoval, funds
     ) where
 
 import Control.Lens (view)

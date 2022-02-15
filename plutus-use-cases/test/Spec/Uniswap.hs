@@ -58,6 +58,8 @@ import Data.Semigroup qualified as Semigroup
 
 import Ledger.Constraints
 
+import Spec.Uniswap.Endpoints
+
 data PoolIndex = PoolIndex SymToken SymToken deriving (Show, Data)
 
 poolIndex :: SymToken -> SymToken -> PoolIndex
@@ -95,13 +97,15 @@ deriving instance Show (ContractInstanceKey UniswapModel w s e params)
 
 walletOf :: Action UniswapModel -> Wallet
 walletOf a = case a of
-  SetupTokens             -> w1
-  Start                   -> w1
-  CreatePool w _ _ _ _    -> w
-  AddLiquidity w _ _ _ _  -> w
-  RemoveLiquidity w _ _ _ -> w
-  PerformSwap w _ _ _     -> w
-  ClosePool w _ _         -> w
+  SetupTokens                    -> w1
+  Start                          -> w1
+  CreatePool w _ _ _ _           -> w
+  AddLiquidity w _ _ _ _         -> w
+  RemoveLiquidity w _ _ _        -> w
+  PerformSwap w _ _ _            -> w
+  ClosePool w _ _                -> w
+  BadRemoveLiquidity w _ _ _ _ _ -> w
+  Bad act                        -> walletOf act
 
 hasPool :: ModelState UniswapModel -> SymToken -> SymToken -> Bool
 hasPool s t1 t2 = isJust (s ^. contractState . pools . at (poolIndex t1 t2))
@@ -119,6 +123,9 @@ totalLiquidity s t1 t2 = sum $ s ^? contractState . pools . at (poolIndex t1 t2)
 hasUniswapToken :: ModelState UniswapModel -> Bool
 hasUniswapToken s = isJust $ s ^. contractState . uniswapToken
 
+hasExchangeableToken :: SymToken -> ModelState UniswapModel -> Bool
+hasExchangeableToken t = (^. contractState . exchangeableTokens . to (t `elem`))
+
 swapUnless :: Bool -> (a, a) -> (a, a)
 swapUnless b (a, a') = if b then (a, a') else (a', a)
 
@@ -128,6 +135,9 @@ mkAmounts t1 t2 a1 a2 = Amount *** Amount $ swapUnless (t1 < t2) (a1, a2)
 getAToken, getBToken :: SymToken -> SymToken -> SymToken
 getAToken = min
 getBToken = max
+
+actionName :: Show a => a -> String
+actionName act = head . words . show $ act
 
 -- | Create some sample tokens and distribute them to
 --   the emulated wallets
@@ -169,23 +179,30 @@ instance ContractModel UniswapModel where
                            -- ^ Amount of liquidity to cash in
                            | ClosePool Wallet SymToken SymToken
                            -- ^ Close a liquidity pool
+                           | Bad (Action UniswapModel)
+                           -- ^ An action included for negative testing
+                           | BadRemoveLiquidity Wallet SymToken Integer SymToken Integer Integer
+                           -- ^ Remove liquidity, specify amounts to get
                            deriving (Eq, Show, Data)
 
   data ContractInstanceKey UniswapModel w s e params where
     OwnerKey :: ContractInstanceKey UniswapModel (Last (Either Text.Text Uniswap)) EmptySchema ContractError ()
     SetupKey :: ContractInstanceKey UniswapModel (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
     WalletKey :: Wallet -> ContractInstanceKey UniswapModel (Last (Either Text.Text UserContractState)) UniswapUserSchema Void SymToken
+    BadReqKey :: Wallet -> ContractInstanceKey UniswapModel () BadEndpoints Void SymToken
 
   initialInstances = []
 
   instanceWallet OwnerKey      = w1
   instanceWallet SetupKey      = w1
   instanceWallet (WalletKey w) = w
+  instanceWallet (BadReqKey w) = w
 
   instanceContract tokenSem key token = case key of
     OwnerKey    -> ownerEndpoint
     SetupKey    -> setupTokens
     WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . tokenSem  $ token
+    BadReqKey _ -> toContract . badEndpoints  . Uniswap . Coin . tokenSem  $ token
 
   initialState = UniswapModel Nothing mempty mempty mempty
 
@@ -193,9 +210,13 @@ instance ContractModel UniswapModel where
     frequency $ [ (1, pure Start)
                 , (1, pure SetupTokens) ] ++
                 [ (3, createPool) | not . null $ s ^. contractState . exchangeableTokens ] ++
-                [ (10, gen) | gen <- [add, swap, remove, close]
+                [ (10, gen) | gen <- [add True, swap True, remove True, close]
                            , not . null $ s ^. contractState . exchangeableTokens
-                           , not . null $ s ^. contractState . pools ]
+                           , not . null $ s ^. contractState . pools ] ++
+                [ (1, bad) | bad <- [add False, swap False, remove False]
+                           , not . null $ s ^. contractState . exchangeableTokens ] ++
+                [ (1, generalRemove) | not . null $ s ^. contractState . exchangeableTokens
+                                     , not . null $ s ^. contractState . pools ]
     where
       createPool = do
         w <- elements $ wallets \\ [w1]
@@ -206,27 +227,35 @@ instance ContractModel UniswapModel where
         (tA, tB) <- elements [(t1, t2), (t2, t1)]
         return $ CreatePool w tA a1 tB a2
 
-      add = do
+      add good = do
         w <- elements $ wallets \\ [w1]
-        PoolIndex t1 t2 <- elements $ s ^. contractState . pools . to Map.keys
+        (t1, t2) <- twoTokens good
         a1 <- choose (0, 100)
         a2 <- choose (0, 100)
         (tA, tB) <- elements [(t1, t2), (t2, t1)]
-        return $ AddLiquidity w tA a1 tB a2
+        return . bad $ AddLiquidity w tA a1 tB a2
 
-      swap = do
-        PoolIndex t1 t2 <- elements $ s ^. contractState . pools . to Map.keys
-        w <- elements $ s ^. contractState . pools . at (poolIndex t1 t2) . to fromJust . liquidities . to Map.keys
+      swap good = do
+        (t1, t2) <- twoTokens good
+        w <- elements $ wallets \\ [w1]
         a <- choose (1, 100)
         (tA, tB) <- elements [(t1, t2), (t2, t1)]
-        return $ PerformSwap w tA tB a
+        return . bad $ PerformSwap w tA tB a
 
-      remove = do
-        idx@(PoolIndex t1 t2) <- elements $ s ^. contractState . pools . to Map.keys
-        w <- elements . fold $ s ^? contractState . pools . at idx . _Just . liquidities . to (Map.filter (0<)) . to Map.keys
-        a <- choose (1, sum $ s ^? contractState . pools . at idx . _Just . liquidities . at w . _Just . to unAmount)
+      remove good = do
+        (t1, t2) <- twoTokens good
+        let idx = poolIndex t1 t2
+        w <- if good && hasOpenPool s t1 t2 then
+            -- if the poolIndex exists, but the pool has been closed, then we cannot choose a wallet with liquidity
+            elements . fold $ s ^? contractState . pools . at idx . _Just . liquidities . to (Map.filter (0<)) . to Map.keys
+          else
+          elements $ wallets \\ [w1]
+        a <- if good then
+          choose (1, sum $ s ^? contractState . pools . at idx . _Just . liquidities . at w . _Just . to unAmount)
+          else
+          oneof [choose (1,10), choose (1,100)]
         (tA, tB) <- elements [(t1, t2), (t2, t1)]
-        return $ RemoveLiquidity w tA tB a
+        return . bad $ RemoveLiquidity w tA tB a
 
       close = do
         w <- elements $ wallets \\ [w1]
@@ -234,11 +263,29 @@ instance ContractModel UniswapModel where
         (tA, tB) <- elements [(t1, t2), (t2, t1)]
         return $ ClosePool w tA tB
 
+      generalRemove = do
+        r <- remove True
+        case r of
+          RemoveLiquidity w tA tB a -> do
+            (Positive aA, Positive aB) <- arbitrary
+            return . bad $ BadRemoveLiquidity w tA aA tB aB a
+          _ -> return r
+
+      twoTokens True  = do PoolIndex t1 t2 <- elements $ s ^. contractState . pools . to Map.keys
+                           return (t1, t2)
+      twoTokens False = two (/=) . elements $ s ^. contractState . exchangeableTokens . to Set.toList
+
+      two p gen = ((,) <$> gen <*> gen) `suchThat` uncurry p
+
+      bad act = if precondition s act then act else Bad act
+
   startInstances s act = case act of
     Start       -> [ StartContract OwnerKey () ]
     SetupTokens -> [ StartContract SetupKey () ]
-    _           -> [ StartContract (WalletKey $ walletOf act) (fromJust $ s ^. contractState . uniswapToken)
-                   | walletOf act `notElem` s ^. contractState . startedUserCode ]
+    _           -> [ start (walletOf act) t
+                   | Just t <- s ^. contractState . uniswapToken . to (:[])
+                   , walletOf act `notElem` s ^. contractState . startedUserCode
+                   , start <- [StartContract . WalletKey, StartContract . BadReqKey] ]
 
   precondition s Start                        = not $ hasUniswapToken s
   precondition _ SetupTokens                  = True
@@ -260,6 +307,23 @@ instance ContractModel UniswapModel where
   precondition s (ClosePool w t1 t2)          = hasOpenPool s t1 t2
                                                 && t1 /= t2
                                                 && liquidityOf s w t1 t2 == totalLiquidity s t1 t2
+  precondition s (Bad badAction)              = (wf badAction &&) . not $ precondition s badAction
+    where wf (AddLiquidity _ t1 _ t2 _ )        = wfTokens t1 t2
+          wf (PerformSwap _ t1 t2 _)            = wfTokens t1 t2
+          wf (RemoveLiquidity _ t1 t2 _)        = wfTokens t1 t2
+          wf (BadRemoveLiquidity _ t1 _ t2 _ _) = wfTokens t1 t2
+          wf _                                  = error "Pattern match(es) are not exhaustive\nIn an equation for `wf'."
+
+          wfTokens t1 t2 = hasUniswapToken s
+                        && hasExchangeableToken t1 s
+                        && hasExchangeableToken t2 s
+                        && t1 /= t2
+  precondition s (BadRemoveLiquidity w t1 a1 t2 a2 a) =
+    precondition s (RemoveLiquidity w t1 t2 a) &&
+    let p = s ^. contractState . pools . at (poolIndex t1 t2) . to fromJust in
+    calculateRemoval (p ^. coinAAmount) (p ^. coinBAmount) (sum $ p ^. liquidities) (Amount a)
+    ==
+    (Amount a1, Amount a2)
 
   nextState act = case act of
     SetupTokens -> do
@@ -412,6 +476,12 @@ instance ContractModel UniswapModel where
       deposit w $ Ada.toValue Ledger.minAdaTxOut
       wait 5
 
+    Bad _ -> do
+      wait 5
+
+    BadRemoveLiquidity w t1 _ t2 _ a ->
+      nextState $ RemoveLiquidity w t1 t2 a      -- because the precondition ensures the amounts are valid
+
   perform h tokenSem s act = case act of
     SetupTokens -> do
       delay 20
@@ -453,18 +523,32 @@ instance ContractModel UniswapModel where
       Trace.callEndpoint @"remove" (h (WalletKey w)) $ RemoveParams c1 c2 (Amount a)
       delay 5
 
+    BadRemoveLiquidity w t1 a1 t2 a2 a -> do
+      let c1 = Coin (tokenSem t1)
+          c2 = Coin (tokenSem t2)
+      Trace.callEndpoint @"bad-remove" (h (BadReqKey w)) $ BadRemoveParams c1 (Amount a1) c2 (Amount a2) (Amount a)
+      delay 5
+
     ClosePool w t1 t2 -> do
       let c1 = Coin (tokenSem t1)
           c2 = Coin (tokenSem t2)
       Trace.callEndpoint @"close" (h (WalletKey w)) $ CloseParams c1 c2
       delay 5
 
-  shrinkAction _ a = case a of
-    CreatePool w t1 a1 t2 a2   -> [ CreatePool w t1 a1' t2 a2'   | (a1', a2') <- shrink (a1, a2), a1' >= 0, a2' >= 0 ]
-    AddLiquidity w t1 a1 t2 a2 -> [ AddLiquidity w t1 a1' t2 a2' | (a1', a2') <- shrink (a1, a2), a1' >= 0, a2' >= 0 ]
-    RemoveLiquidity w t1 t2 a  -> [ RemoveLiquidity w t1 t2 a'   | a'         <- shrink a, a' >= 0 ]
-    PerformSwap w t1 t2 a      -> [ PerformSwap w t1 t2 a'       | a'         <- shrink a, a' >= 0 ]
-    _                          -> []
+    Bad act -> do
+      perform h tokenSem s act
+
+  shrinkAction s a = case a of
+    CreatePool w t1 a1 t2 a2           -> [ CreatePool w t1 a1' t2 a2'   | (a1', a2') <- shrink (a1, a2), a1' >= 0, a2' >= 0 ]
+    AddLiquidity w t1 a1 t2 a2         -> [ AddLiquidity w t1 a1' t2 a2' | (a1', a2') <- shrink (a1, a2), a1' >= 0, a2' >= 0 ]
+    RemoveLiquidity w t1 t2 a          -> [ RemoveLiquidity w t1 t2 a'   | a'         <- shrink a, a' >= 0 ]
+    PerformSwap w t1 t2 a              -> [ PerformSwap w t1 t2 a'       | a'         <- shrink a, a' >= 0 ]
+    Bad act                            -> Bad <$> shrinkAction s act
+    BadRemoveLiquidity w t1 a1 t2 a2 a -> [ BadRemoveLiquidity w t1 a1' t2 a2' a' | (a1', a2', a') <- shrink (a1, a2, a)]
+    _                                  -> []
+
+  monitoring _ (Bad act) = tabulate "Bad actions" [actionName act]
+  monitoring _ _         = id
 
 -- This doesn't hold
 prop_liquidityValue :: Property
