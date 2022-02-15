@@ -1509,7 +1509,8 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
                     , " " <+> viaShow dlt] ++
                     if initialValue == finalValue
                     then ["but they did not change"]
-                    else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue)]
+                    else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue),
+                          "a discrepancy of",    " " <+> viaShow (finalValue P.- initialValue P.- dlt)]
             pure result
           _ -> error "I am the pope"
 

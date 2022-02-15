@@ -549,7 +549,8 @@ walletFundsChangeImpl exact w dlt =
                 (if exact then [] else ["  (excluding" <+> viaShow (Ada.getLovelace (Ada.fromValue fees)) <+> "lovelace in fees)" ]) ++
                 if initialValue == finalValue
                 then ["but they did not change"]
-                else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue)]
+                else ["but they changed by", " " <+> viaShow (finalValue P.- initialValue),
+                      "a discrepancy of",    " " <+> viaShow (finalValue P.- initialValue P.- dlt)]
         pure result
 
 walletPaidFees :: Wallet -> Value -> TracePredicate

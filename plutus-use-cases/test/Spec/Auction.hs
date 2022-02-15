@@ -333,7 +333,7 @@ noLockProof = defaultNLFP
       when (slot < 101) $ action $ WaitUntil 101
 
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = checkNoLockedFundsProof options noLockProof
+prop_NoLockedFunds = checkNoLockedFundsProof (set minLogLevel Critical options) noLockProof
 
 tests :: TestTree
 tests =
