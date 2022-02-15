@@ -34,8 +34,6 @@ import           Test.QuickCheck    (Arbitrary (arbitrary), CoArbitrary, Gen,
                                      choose, chooseInt, frequency, listOf,
                                      sized)
 
-import           Types              (Address, Tx, TxId, Value)
-
 import qualified Debug.Trace        as Debug
 
 -- | Model of a historical (we can go backwards) fold over a data set.
@@ -91,8 +89,6 @@ matchesHistory hl hr =
    in    hlAccumulator `isInfixOf` hrAccumulator
       || hrAccumulator `isInfixOf` hlAccumulator
       || hrAccumulator      ==     hlAccumulator
-
-type UtxoIndex a = HistoricalFold Tx a
 
 -- QuickCheck infrastructure
 instance ( CoArbitrary a

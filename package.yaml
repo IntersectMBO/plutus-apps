@@ -1,6 +1,6 @@
-name:                utxo-index
+name:                hysterical-screams
 version:             0.1.0.0
-github:              "githubuser/utxo-index"
+github:              "githubuser/hysterical-screams"
 license:             BSD3
 author:              "Author name here"
 maintainer:          "example@example.com"
@@ -19,7 +19,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/utxo-index#readme>
+description:         Please see the README on GitHub at <https://github.com/githubuser/hysterical-screams#readme>
 
 default-extensions:
   - ImportQualifiedPost
@@ -38,7 +38,7 @@ verbatim:
   Tested-With: GHC ==8.10.7
 
 tests:
-  utxo-index-test:
+  hysterical-screams-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -46,7 +46,7 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - utxo-index
+    - hysterical-screams
     - QuickCheck
     - quickspec
     - tasty

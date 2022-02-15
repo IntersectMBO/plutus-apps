@@ -115,6 +115,5 @@ prop_InsertHistoryLength hf b =
       else finalLength === initialLength + 1
 
 main :: IO ()
-main = do
-  quickSpec hfSignature
+main =
   defaultMain tests
