@@ -1,8 +1,9 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE NamedFieldPuns   #-}
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
 {-| Transaction validation using 'cardano-ledger-specs'
 -}
 module Ledger.Validation(
@@ -14,6 +15,7 @@ module Ledger.Validation(
   EmulatorEra,
   EmApplyTxFailure(..),
   initialState,
+  calculateMinFee,
   applyTx,
   hasValidationErrors,
   -- * Modifying the state
@@ -28,40 +30,33 @@ module Ledger.Validation(
   -- * Etc.
   emulatorGlobals
   ) where
-import Cardano.Api.Shelley (Address (ShelleyAddress), AddressInEra (AddressInEra), NetworkId, ProtocolParameters,
-                            ShelleyBasedEra (ShelleyBasedEraAlonzo), alonzoGenesisDefaults, makeSignedTransaction,
-                            shelleyGenesisDefaults, toShelleyTxId, toShelleyTxOut)
+import Cardano.Api.Shelley (NetworkId, ProtocolParameters, ShelleyBasedEra (ShelleyBasedEraAlonzo),
+                            alonzoGenesisDefaults, makeSignedTransaction, shelleyGenesisDefaults, toShelleyTxId,
+                            toShelleyTxOut)
 import Cardano.Api.Shelley qualified as Shelley
 import Cardano.Ledger.Alonzo (AlonzoEra, TxOut)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure, constructValidated)
-import Cardano.Ledger.Alonzo.Scripts (txscriptfee)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (ValidatedTx), minfee)
-import Cardano.Ledger.Alonzo.TxBody (txfee)
-import Cardano.Ledger.Alonzo.TxWitness (unRedeemers)
-import Cardano.Ledger.BaseTypes (Globals (..), Network (Testnet), boundRational, mkActiveSlotCoeff)
-import Cardano.Ledger.Core (Tx)
+import Cardano.Ledger.Alonzo.Tx (minfee, wits)
+import Cardano.Ledger.BaseTypes (Globals (..))
+import Cardano.Ledger.Core (PParams, Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.API (Addr (..), ApplyTxError (..), Coin (..), LedgerEnv (..), MempoolEnv, MempoolState,
-                                   NewEpochState, ShelleyGenesis (..), UTxOState (..), UtxoEnv (..), Validated)
+import Cardano.Ledger.Shelley.API (ApplyTxError (..), Coin (..), LedgerEnv (..), MempoolEnv, MempoolState,
+                                   NewEpochState, UTxOState (..), UtxoEnv (..), Validated, mkShelleyGlobals, nesEs)
 import Cardano.Ledger.Shelley.API qualified as Shelley.API
-import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (esPp, smartUTxOState)
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId, TxIn (TxIn))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
-import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Cardano.Slotting.Time (mkSlotLength)
 import Control.Lens (_1, makeLenses, over, view, (&), (.~), (^.))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default (def)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Time.Format.ISO8601 qualified as F
-import GHC.Records (getField)
 import Ledger qualified as P
-import Ledger.Tx.CardanoAPI as P
-import Plutus.V1.Ledger.Api qualified as P
+import Ledger.Tx.CardanoAPI qualified as P
+import Plutus.V1.Ledger.Ada qualified as P
 
 type EmulatorEra = AlonzoEra StandardCrypto
 
@@ -138,26 +133,20 @@ makeBlock state =
 
 {-| Initial ledger state for a distribution
 -}
-initialState :: [(P.PubKey, Coin)] -> EmulatedLedgerState
-initialState initialDistribution = EmulatedLedgerState
-  { _ledgerEnv = Shelley.API.mkMempoolEnv nes 0
-  , _memPoolState = Shelley.API.mkMempoolState nes
+initialState :: EmulatedLedgerState
+initialState = EmulatedLedgerState
+  { _ledgerEnv = Shelley.API.mkMempoolEnv emulatorNes 0
+  , _memPoolState = Shelley.API.mkMempoolState emulatorNes
   , _currentBlock = []
   , _previousBlocks = []
   }
-  where
-    nes :: NewEpochState EmulatorEra
-    nes = Shelley.API.initialState sg alonzoGenesisDefaults
-    sg :: ShelleyGenesis EmulatorEra
-    sg = shelleyGenesisDefaults {
-      sgInitialFunds = Map.fromList $ mapMaybe toAddr initialDistribution
-    }
-    toAddr :: (P.PubKey, Coin) -> Maybe (Addr StandardCrypto, Coin)
-    toAddr (pk, coin) =
-      case P.toCardanoAddress emulatorNetworkId (P.pubKeyHashAddress (P.paymentPubKeyHash $ P.PaymentPubKey pk) Nothing) of
-        Right (AddressInEra _ (ShelleyAddress _ paymentCredential stakeAddressReference))
-            -> Just (Addr Testnet paymentCredential stakeAddressReference, coin)
-        _ -> Nothing
+
+-- toAddr :: (P.PubKey, Coin) -> Maybe (Addr StandardCrypto, Coin)
+-- toAddr (pk, coin) =
+--   case P.toCardanoAddress emulatorNetworkId (P.pubKeyHashAddress (P.paymentPubKeyHash $ P.PaymentPubKey pk) Nothing) of
+--     Right (AddressInEra _ (ShelleyAddress _ paymentCredential stakeAddressReference))
+--         -> Just (Addr Testnet paymentCredential stakeAddressReference, coin)
+--     _ -> Nothing
 
 {-| Reason for failing to add a transaction to the ledger
 -}
@@ -171,7 +160,7 @@ data EmApplyTxFailure =
 utxoEnv :: EmulatedLedgerState -> UtxoEnv EmulatorEra
 utxoEnv state =
   let LedgerEnv{ledgerSlotNo, ledgerPp} = view ledgerEnv state
-  in UtxoEnv ledgerSlotNo ledgerPp mempty (GenDelegs mempty)
+  in UtxoEnv ledgerSlotNo ledgerPp mempty (Shelley.API.GenDelegs mempty)
 
 applyTx ::
   EmulatedLedgerState ->
@@ -188,55 +177,51 @@ emulatorNetworkId = Shelley.Testnet $ Shelley.NetworkMagic 1
 {-| A sensible default 'Globals' value for the emulator
 -}
 emulatorGlobals :: Globals
-emulatorGlobals = fromMaybe (error "emulatorGlobals") $ do
-  start <- F.iso8601ParseM "2017-09-23T21:44:51Z"
-  asc <- boundRational 0.05
-  pure $ Globals
-    { epochInfoWithErr = fixedEpochInfo (EpochSize 432000) (mkSlotLength 8) -- ?
-    , slotsPerKESPeriod = 129600
-    , stabilityWindow = 129600 -- 3k/f
-    , randomnessStabilisationWindow = 172800 -- 4k/f
-    , securityParameter = 2160 -- k
-    , maxKESEvo = 62
-    , quorum = 5
-    , maxMajorPV = 2
-    , maxLovelaceSupply = 45000000000000000
-    , activeSlotCoeff = mkActiveSlotCoeff asc -- f = 0.05
-    , networkId = Testnet
-    , systemStart = SystemStart start
-    }
+emulatorGlobals = mkShelleyGlobals
+  shelleyGenesisDefaults
+  (fixedEpochInfo (EpochSize 432000) (mkSlotLength 8)) -- ?
+  2 -- maxMajorPV
 
-hasValidationErrors :: [P.PaymentPubKeyHash] -> P.UtxoIndex -> P.Tx -> Maybe String
-hasValidationErrors requiredSigners utxo ptx =
+emulatorNes :: NewEpochState EmulatorEra
+emulatorNes = Shelley.API.initialState shelleyGenesisDefaults alonzoGenesisDefaults
+
+emulatorPParams :: PParams EmulatorEra
+emulatorPParams = esPp $ nesEs emulatorNes
+
+emulatorProtocolParameters :: Shelley.ProtocolParameters
+emulatorProtocolParameters = Shelley.fromLedgerPParams ShelleyBasedEraAlonzo emulatorPParams
+
+hasValidationErrors :: [P.PaymentPubKeyHash] -> P.PaymentPrivateKey -> P.UtxoIndex -> P.Tx -> Maybe String
+hasValidationErrors requiredSigners privKey utxo ptx =
   case res of
-    Left e   -> Just $ show e
-    Right () -> Nothing
+    Left e  -> Just $ show e
+    Right _ -> Nothing
   where
     utxoState = fromPlutusIndex utxo
-    state = initialState [] & memPoolState . _1 .~ utxoState
-    env@(UtxoEnv _ pp _ _) = utxoEnv state
-    tx = fromPlutusTx requiredSigners ptx
-    a = fromIntegral (getField @"_minfeeA" pp)
-    b = fromIntegral (getField @"_minfeeB" pp)
+    state = initialState & memPoolState . _1 .~ utxoState
+    tx = fromPlutusTx requiredSigners privKey ptx
     res = do
-      vtx@(ValidatedTx txb wits isValid aux) <- first UtxosPredicateFailures (constructValidated emulatorGlobals env utxoState tx)
-      let Coin totExUnits = txscriptfee (getField @"_prices" pp) . foldMap snd . Map.elems . unRedeemers . getField @"txrdmrs" $ wits
-      let txb' = txb { txfee = Coin (getField @"txsize" vtx * a + b + totExUnits) }
-      _ <- applyTx state (ValidatedTx txb' wits isValid aux)
-      pure ()
+      vtx <- first UtxosPredicateFailures (constructValidated emulatorGlobals (utxoEnv state) utxoState tx)
+      applyTx state vtx
 
-fromPlutusTx :: [P.PaymentPubKeyHash] -> P.Tx -> Tx EmulatorEra
-fromPlutusTx requiredSigners = either (error . show) id . mkPartialTx requiredSigners (error "ProtocolParameters") emulatorNetworkId
+fromPlutusTx :: [P.PaymentPubKeyHash] -> P.PaymentPrivateKey -> P.Tx -> Tx EmulatorEra
+fromPlutusTx requiredSigners privKey = either (error . show) id . mkPartialTx requiredSigners privKey emulatorProtocolParameters emulatorNetworkId
+
+calculateMinFee :: [P.PaymentPubKeyHash] -> P.PaymentPrivateKey -> P.Tx -> P.Value
+calculateMinFee requiredSigners privKey tx = case minfee emulatorPParams $ fromPlutusTx requiredSigners privKey tx of
+  Coin fee -> P.lovelaceValueOf (fee + 2) -- TODO: why this discrepancy of 1 or 2 lovelace?
 
 mkPartialTx
   :: [P.PaymentPubKeyHash]
+  -> P.PaymentPrivateKey
   -> ProtocolParameters
   -> NetworkId
   -> P.Tx
   -> Either P.ToCardanoError (Tx EmulatorEra)
-mkPartialTx requiredSigners params networkId tx = do
-  let witnesses = [] -- _ <$> Map.elems (P.txSignatures tx)
-  stx <- makeSignedTransaction witnesses <$> P.toCardanoTxBody requiredSigners (Just params) networkId tx
+mkPartialTx requiredSigners privKey params networkId tx = do
+  let txBody = P.toCardanoTxBody requiredSigners (Just params) networkId tx
+      witnesses = pure . fromPaymentPrivateKey privKey <$> txBody
+  stx <- makeSignedTransaction <$> witnesses <*> txBody
   case stx of
     Shelley.ShelleyTx _ tx' -> pure tx'
 
@@ -256,7 +241,6 @@ fromPlutusTxId = either (error . show) toShelleyTxId . P.toCardanoTxId
 fromPlutusTxOut :: P.TxOut -> TxOut EmulatorEra
 fromPlutusTxOut = toShelleyTxOut ShelleyBasedEraAlonzo . either (error . show) id . P.toCardanoTxOut emulatorNetworkId P.toCardanoTxOutDatumHash
 
--- fromPlutusSignature :: P.Signature -> Shelley.KeyWitness Shelley.AlonzoEra
--- fromPlutusSignature (P.Signature bbs) =
---   let bs = P.fromBuiltin bbs
---   in either (error . show) (Shelley.ShelleyKeyWitness Shelley.ShelleyBasedEraAlonzo) $ P.deserialiseFromRawBytes _ bs
+fromPaymentPrivateKey :: P.PaymentPrivateKey -> Shelley.TxBody Shelley.AlonzoEra -> Shelley.KeyWitness Shelley.AlonzoEra
+fromPaymentPrivateKey (P.PaymentPrivateKey xprv) txBody
+  = Shelley.makeShelleyKeyWitness txBody (Shelley.WitnessPaymentExtendedKey (Shelley.PaymentExtendedSigningKey xprv))

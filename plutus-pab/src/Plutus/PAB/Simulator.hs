@@ -102,7 +102,6 @@ import Ledger (Address, Blockchain, CardanoTx, PaymentPubKeyHash, TxId, TxOut (T
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Fee (FeeConfig)
 import Ledger.Index qualified as UtxoIndex
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Ledger.Value (Value, flattenValue)
@@ -205,11 +204,10 @@ mkSimulatorHandlers ::
     ( Pretty (Contract.ContractDef t)
     , HasDefinitions (Contract.ContractDef t)
     )
-    => FeeConfig
-    -> SlotConfig
+    => SlotConfig
     -> SimulatorContractHandler t -- ^ Making calls to the contract (see 'Plutus.PAB.Effects.Contract.ContractTest.handleContractTest' for an example)
     -> SimulatorEffectHandlers t
-mkSimulatorHandlers feeCfg slotCfg handleContractEffect =
+mkSimulatorHandlers slotCfg handleContractEffect =
     EffectHandlers
         { initialiseEnvironment =
             (,,)
@@ -220,7 +218,7 @@ mkSimulatorHandlers feeCfg slotCfg handleContractEffect =
             interpret handleContractStore
         , handleContractEffect
         , handleLogMessages = handleLogSimulator @t
-        , handleServicesEffects = handleServicesSimulator @t feeCfg slotCfg
+        , handleServicesEffects = handleServicesSimulator @t slotCfg
         , handleContractDefinitionEffect =
             interpret $ \case
                 Contract.AddDefinition _ -> pure () -- not supported
@@ -262,13 +260,12 @@ handleServicesSimulator ::
     , LastMember IO effs
     , Member (Error PABError) effs
     )
-    => FeeConfig
-    -> SlotConfig
+    => SlotConfig
     -> Wallet
     -> Maybe ContractInstanceId
     -> Eff (WalletEffect ': ChainIndexQueryEffect ': NodeClientEffect ': effs)
     ~> Eff effs
-handleServicesSimulator feeCfg slotCfg wallet _ =
+handleServicesSimulator slotCfg wallet _ =
     let makeTimedChainIndexEvent wllt =
             interpret (mapLog @_ @(PABMultiAgentMsg t) EmulatorMsg)
             . reinterpret (Core.timed @EmulatorEvent')
@@ -298,7 +295,7 @@ handleServicesSimulator feeCfg slotCfg wallet _ =
         . flip (handleError @WAPI.WalletAPIError) (throwError @PABError . WalletError)
         . interpret (Core.handleUserEnvReader @t @(SimulatorState t))
         . reinterpret (runWalletState @t wallet)
-        . reinterpretN @'[State Wallet.WalletState, Error WAPI.WalletAPIError, LogMsg TxBalanceMsg] (Wallet.handleWallet feeCfg)
+        . reinterpretN @'[State Wallet.WalletState, Error WAPI.WalletAPIError, LogMsg TxBalanceMsg] Wallet.handleWallet
 
 initialStateFromWallet :: Wallet -> AgentState t
 initialStateFromWallet = maybe (error "runWalletState") (initialAgentState . Wallet._mockWallet) . Wallet.emptyWalletState

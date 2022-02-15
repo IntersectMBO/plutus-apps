@@ -32,7 +32,6 @@ import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
-import Ledger.Fee (FeeConfig)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import Ledger hiding (to, value)
@@ -337,9 +336,8 @@ handleMultiAgentControl = interpret $ \case
 
 handleMultiAgent
     :: forall effs. Members MultiAgentEffs effs
-    => FeeConfig
-    -> Eff (MultiAgentEffect ': effs) ~> Eff effs
-handleMultiAgent feeCfg = interpret $ \case
+    => Eff (MultiAgentEffect ': effs) ~> Eff effs
+handleMultiAgent = interpret $ \case
     -- TODO: catch, log, and rethrow wallet errors?
     WalletAction wallet act ->  do
         let
@@ -357,7 +355,7 @@ handleMultiAgent feeCfg = interpret $ \case
             p6 = walletEvent wallet . Wallet._TxBalanceLog
         act
             & raiseEnd
-            & interpret (Wallet.handleWallet feeCfg)
+            & interpret Wallet.handleWallet
             & subsume
             & NC.handleNodeClient
             & interpret ChainIndex.handleQuery

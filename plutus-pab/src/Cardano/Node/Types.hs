@@ -72,7 +72,6 @@ import Wallet.Emulator.Chain (ChainControlEffect, ChainEffect, ChainEvent)
 import Wallet.Emulator.MultiAgent qualified as MultiAgent
 
 import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..), testnetNetworkId)
-import Ledger.Fee (FeeConfig)
 import Plutus.PAB.Arbitrary ()
 
 -- Configuration ------------------------------------------------------------------------------------------------------
@@ -118,9 +117,6 @@ data PABServerConfig =
         -- ^ The number of blocks to keep for replaying to a newly connected clients
         , pscSlotConfig                 :: SlotConfig
         -- ^ Beginning of slot 0.
-        , pscFeeConfig                  :: FeeConfig
-        -- ^ Configure constant fee per transaction and ratio by which to
-        -- multiply size-dependent scripts fee.
         , pscNetworkId                  :: NetworkIdWrapper
         -- ^ NetworkId that's used with the CardanoAPI.
         , pscProtocolParametersJsonPath :: Maybe FilePath

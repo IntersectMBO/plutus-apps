@@ -235,7 +235,7 @@ instance ToJSON ExportTxInput where
 
 export :: C.ProtocolParameters -> C.NetworkId -> UnbalancedTx -> Either CardanoAPI.ToCardanoError ExportTx
 export params networkId UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBalancedTxRequiredSignatories} =
-    let requiredSigners = fst <$> Map.toList unBalancedTxRequiredSignatories in
+    let requiredSigners = Map.keys unBalancedTxRequiredSignatories in
     ExportTx
         <$> mkPartialTx requiredSigners params networkId unBalancedTxTx
         <*> mkInputs networkId unBalancedTxUtxoIndex

@@ -24,7 +24,6 @@ module Ledger.CardanoWallet(
     paymentPubKey
     ) where
 
-import Cardano.Address.Derivation (XPrv)
 import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Wallet.Primitive.Types qualified as CW
 import Codec.Serialise (serialise)
@@ -45,7 +44,7 @@ import Ledger.Crypto qualified as Crypto
 import Plutus.V1.Ledger.Bytes (LedgerBytes (getLedgerBytes))
 import Servant.API (FromHttpApiData, ToHttpApiData)
 
-newtype MockPrivateKey = MockPrivateKey { unMockPrivateKey :: XPrv }
+newtype MockPrivateKey = MockPrivateKey { unMockPrivateKey :: Crypto.XPrv }
 
 instance Show MockPrivateKey where
     show = T.unpack . encodeByteString . Crypto.unXPrv . unMockPrivateKey

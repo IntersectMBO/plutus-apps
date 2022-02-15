@@ -36,7 +36,6 @@ import Data.Foldable (Foldable (fold), find, foldl', for_)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isNothing, listToMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
-import Data.Semigroup (Sum (Sum, getSum))
 import Data.Set qualified as Set
 import Data.String (IsString (fromString))
 import Data.Text qualified as T
@@ -45,9 +44,9 @@ import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
-               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash,
-               ScriptValidationEvent (sveScript), StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef,
-               UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx), ValidatorHash, Value)
+               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash, StakePubKey, Tx (txFee, txMint),
+               TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx),
+               ValidatorHash, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -55,10 +54,9 @@ import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx, unBalancedTxUtxoIndex))
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
-import Ledger.Fee (FeeConfig, calcFees)
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (hasValidationErrors)
+import Ledger.Validation (calculateMinFee, hasValidationErrors)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -77,6 +75,8 @@ import Wallet.Emulator.Chain (ChainState (_index))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
                                     TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SubmittingTx, ValidationFailed))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
+
+import Debug.Trace
 
 newtype SigningProcess = SigningProcess {
     unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> Tx -> Eff effs Tx
@@ -218,9 +218,8 @@ handleWallet ::
     , Member (State WalletState) effs
     , Member (LogMsg TxBalanceMsg) effs
     )
-    => FeeConfig
-    -> WalletEffect ~> Eff effs
-handleWallet feeCfg = \case
+    => WalletEffect ~> Eff effs
+handleWallet = \case
     SubmitTxn tx          -> submitTxnH tx
     OwnPaymentPubKeyHash  -> ownPaymentPubKeyHashH
     BalanceTx utx         -> balanceTxH utx
@@ -252,14 +251,11 @@ handleWallet feeCfg = \case
         slotConfig <- WAPI.getClientSlotConfig
         let validitySlotRange = posixTimeRangeToContainedSlotRange slotConfig (utx' ^. U.validityTimeRange)
         let utx = utx' & U.tx . Ledger.validRange .~ validitySlotRange
-        utxWithFees <- validateTxAndAddFees feeCfg slotConfig utxo utx
+        utxWithFees <- validateTxAndAddFees slotConfig utxo utx
         -- balance to add fees
         tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ (utxWithFees ^. U.tx . Ledger.fee))
         tx'' <- handleAddSignature tx'
         logInfo $ FinishedBalancing tx''
-        let utxoIndex = Ledger.UtxoIndex $ fmap Ledger.toTxOut $ (U.fromScriptOutput <$> unBalancedTxUtxoIndex utx) <> utxo
-        let requiredSigners = fst <$> Map.toList (U.unBalancedTxRequiredSignatories utx')
-        for_ (hasValidationErrors requiredSigners utxoIndex tx'') (error . show . (,) tx'')
         pure $ Right tx''
 
     walletAddSignatureH :: (Member (State WalletState) effs) => CardanoTx -> Eff effs CardanoTx
@@ -321,23 +317,26 @@ validateTxAndAddFees ::
     , Member (LogMsg TxBalanceMsg) effs
     , Member (State WalletState) effs
     )
-    => FeeConfig
-    -> SlotConfig
+    => SlotConfig
     -> Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
     -> UnbalancedTx
     -> Eff effs UnbalancedTx
-validateTxAndAddFees feeCfg slotCfg ownTxOuts utx = do
+validateTxAndAddFees slotCfg ownTxOuts utx = do
     -- Balance and sign just for validation
-    tx <- handleBalanceTx ownTxOuts utx
+    tx <- handleBalanceTx ownTxOuts (utx & U.tx . Ledger.fee .~ Ledger.minFee mempty)
     signedTx <- handleAddSignature tx
+    let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
+    privKey <- CW.paymentPrivateKey . _mockWallet <$> get
+    let theFee = calculateMinFee requiredSigners privKey signedTx
+    let utxWithFee = utx & U.tx . Ledger.fee .~ theFee
     let utxoIndex        = Ledger.UtxoIndex $ fmap Ledger.toTxOut $ (U.fromScriptOutput <$> unBalancedTxUtxoIndex utx) <> ownTxOuts
         ((e, _), events) = Ledger.runValidation (Ledger.validateTransactionOffChain signedTx) (Ledger.ValidationCtx utxoIndex slotCfg)
     for_ e $ \(phase, ve) -> do
         logWarn $ ValidationFailed phase (Ledger.txId tx) tx ve events
         throwError $ WAPI.ValidationError ve
-    let scriptsSize = getSum $ foldMap (Sum . Ledger.scriptSize . Ledger.sveScript) events
-        theFee = Ada.toValue $ calcFees feeCfg scriptsSize -- TODO: use protocol parameters
-    pure $ utx{ unBalancedTxTx = (unBalancedTxTx utx){ txFee = theFee }}
+    tx' <- handleBalanceTx ownTxOuts utxWithFee
+    for_ (hasValidationErrors requiredSigners privKey utxoIndex tx') (traceShowM . (, tx'))
+    pure utxWithFee
 
 lookupValue ::
     ( Member (Error WAPI.WalletAPIError) effs

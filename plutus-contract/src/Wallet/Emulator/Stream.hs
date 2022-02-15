@@ -17,7 +17,6 @@ module Wallet.Emulator.Stream(
     , initialDist
     , initialState
     , slotConfig
-    , feeConfig
     , runTraceStream
     -- * Stream manipulation
     , takeUntilSlot
@@ -45,7 +44,6 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Ledger.AddressMap qualified as AM
 import Ledger.Blockchain (Block, OnChainTx (Valid))
-import Ledger.Fee (FeeConfig)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexError)
@@ -120,7 +118,7 @@ runTraceStream :: forall effs.
             , Error EmulatorRuntimeError
             ] ()
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
-runTraceStream conf@EmulatorConfig{_slotConfig, _feeConfig} =
+runTraceStream conf@EmulatorConfig{_slotConfig} =
     fmap (first (either Just (const Nothing)))
     . S.hoist (pure . run)
     . runStream @(LogMessage EmulatorEvent) @_ @'[]
@@ -132,7 +130,7 @@ runTraceStream conf@EmulatorConfig{_slotConfig, _feeConfig} =
     . wrapError ChainIndexErr
     . wrapError AssertionErr
     . wrapError InstanceErr
-    . EM.processEmulated _slotConfig _feeConfig
+    . EM.processEmulated _slotConfig
     . subsume
     . subsume @(State EmulatorState)
     . raiseEnd
@@ -141,7 +139,6 @@ data EmulatorConfig =
     EmulatorConfig
         { _initialChainState :: InitialChainState -- ^ State of the blockchain at the beginning of the simulation. Can be given as a map of funds to wallets, or as a block of transactions.
         , _slotConfig        :: SlotConfig -- ^ Set the start time of slot 0 and the length of one slot
-        , _feeConfig         :: FeeConfig -- ^ Configure the fee of a transaction
         } deriving (Eq, Show)
 
 type InitialChainState = Either InitialDistribution EM.TxPool
@@ -159,7 +156,6 @@ instance Default EmulatorConfig where
   def = EmulatorConfig
           { _initialChainState = Left defaultDist
           , _slotConfig = def
-          , _feeConfig = def
           }
 
 initialState :: EmulatorConfig -> EM.EmulatorState

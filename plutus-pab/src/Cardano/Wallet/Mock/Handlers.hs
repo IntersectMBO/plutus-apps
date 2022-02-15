@@ -48,7 +48,6 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Fee (FeeConfig)
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
@@ -108,9 +107,8 @@ handleMultiWallet :: forall m effs.
     , LastMember m effs
     , MonadIO m
     )
-    => FeeConfig
-    -> MultiWalletEffect ~> Eff effs
-handleMultiWallet feeCfg = \case
+    => MultiWalletEffect ~> Eff effs
+handleMultiWallet = \case
     MultiWallet wallet action -> do
         wallets <- get @Wallets
         case Map.lookup wallet wallets of
@@ -118,7 +116,7 @@ handleMultiWallet feeCfg = \case
                 (x, newState) <- runState walletState
                     $ action
                         & raiseEnd
-                        & interpret (Wallet.handleWallet feeCfg)
+                        & interpret Wallet.handleWallet
                         & interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
                 put @Wallets (wallets & at wallet ?~ newState)
                 pure x
@@ -136,7 +134,7 @@ handleMultiWallet feeCfg = \case
         let sourceWallet = Wallet.fromMockWallet (CW.knownMockWallet 2)
         _ <- evalState sourceWallet $
             interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
-            $ interpret (Wallet.handleWallet feeCfg)
+            $ interpret Wallet.handleWallet
             $ distributeNewWalletFunds pkh
         return $ WalletInfo{wiWallet = walletId, wiPaymentPubKeyHash = pkh}
     GetWalletInfo wllt -> do
@@ -152,18 +150,16 @@ processWalletEffects ::
     -> NodeClient.ChainSyncHandle -- ^ node client
     -> ClientEnv          -- ^ chain index client
     -> MVar Wallets   -- ^ wallets state
-    -> FeeConfig
     -> SlotConfig
     -> Eff (WalletEffects IO) a -- ^ wallet effect
     -> m a
-processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState feeCfg slotCfg action = do
+processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg action = do
     oldState <- liftIO $ takeMVar mVarState
     result <- liftIO $ runWalletEffects trace
                                         txSendHandle
                                         chainSyncHandle
                                         chainIndexEnv
                                         oldState
-                                        feeCfg
                                         slotCfg
                                         action
     case result of
@@ -181,12 +177,11 @@ runWalletEffects ::
     -> NodeClient.ChainSyncHandle -- ^ node client
     -> ClientEnv -- ^ chain index client
     -> Wallets -- ^ current state
-    -> FeeConfig
     -> SlotConfig
     -> Eff (WalletEffects IO) a -- ^ wallet effect
     -> IO (Either ServerError (a, Wallets))
-runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets feeCfg slotCfg action =
-    reinterpret (handleMultiWallet feeCfg) action
+runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets slotCfg action =
+    reinterpret handleMultiWallet action
     & interpret (LM.handleLogMsgTrace trace)
     & reinterpret2 (NodeClient.handleNodeClientClient slotCfg)
     & runReader chainSyncHandle

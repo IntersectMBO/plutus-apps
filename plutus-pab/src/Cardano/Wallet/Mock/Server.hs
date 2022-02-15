@@ -33,7 +33,6 @@ import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Fee (FeeConfig)
 import Ledger.TimeSlot (SlotConfig)
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Network.Wai.Handler.Warp qualified as Warp
@@ -50,14 +49,13 @@ app :: Trace IO WalletMsg
     -> NodeClient.ChainSyncHandle
     -> ClientEnv
     -> MVar Wallets
-    -> FeeConfig
     -> SlotConfig
     -> Application
-app trace txSendHandle chainSyncHandle chainIndexEnv mVarState feeCfg slotCfg =
+app trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg =
     serve (Proxy @(API WalletId)) $
     hoistServer
         (Proxy @(API WalletId))
-        (processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState feeCfg slotCfg) $
+        (processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg) $
             createWallet :<|>
             (\w tx -> multiWallet (Wallet w) (submitTxn $ Right tx) >>= const (pure NoContent)) :<|>
             (getWalletInfo >=> maybe (throwError err404) pure ) :<|>
@@ -67,8 +65,8 @@ app trace txSendHandle chainSyncHandle chainIndexEnv mVarState feeCfg slotCfg =
             (\w tx -> fmap (fromRight (error "Cardano.Wallet.Mock.Server: Expecting a mock tx, not an Alonzo tx when adding a signature."))
                     $ multiWallet (Wallet w) (walletAddSignature $ Right tx))
 
-main :: Trace IO WalletMsg -> LocalWalletSettings -> FeeConfig -> FilePath -> SlotConfig -> ChainIndexUrl -> Availability -> IO ()
-main trace LocalWalletSettings { baseUrl } feeCfg serverSocket slotCfg (ChainIndexUrl chainUrl) availability = LM.runLogEffects trace $ do
+main :: Trace IO WalletMsg -> LocalWalletSettings -> FilePath -> SlotConfig -> ChainIndexUrl -> Availability -> IO ()
+main trace LocalWalletSettings { baseUrl } serverSocket slotCfg (ChainIndexUrl chainUrl) availability = LM.runLogEffects trace $ do
     chainIndexEnv <- buildEnv chainUrl defaultManagerSettings
     let knownWallets = Map.fromList $ zip Wallet.knownWallets (Wallet.fromMockWallet <$> CW.knownMockWallets)
     mVarState <- liftIO $ newMVar knownWallets
@@ -81,7 +79,6 @@ main trace LocalWalletSettings { baseUrl } feeCfg serverSocket slotCfg (ChainInd
                  chainSyncHandle
                  chainIndexEnv
                  mVarState
-                 feeCfg
                  slotCfg
     where
         servicePort = baseUrlPort (coerce baseUrl)
