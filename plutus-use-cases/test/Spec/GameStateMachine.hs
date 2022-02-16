@@ -152,12 +152,15 @@ instance ContractModel GameModel where
     -- To generate a random test case we need to know how to generate a random
     -- command given the current model state.
     arbitraryAction s = oneof $
-        [ genLockAction ] ++
+        [ genLockAction | Nothing <- [tok] ] ++
         [ Guess w   <$> genGuess  <*> genGuess <*> genGuessAmount
-          | val > Ada.getLovelace Ledger.minAdaTxOut, Just w <- [tok] ] ++
+          | val > minOut, Just w <- [tok] ] ++
         [ GiveToken <$> genWallet | isJust tok ]
         where
-            genGuessAmount = frequency [(1, pure val), (1, pure $ Ada.getLovelace Ledger.minAdaTxOut), (8, choose (Ada.getLovelace Ledger.minAdaTxOut, val))]
+            genGuessAmount = frequency $ [(1, pure val)] ++
+                                         [(1, pure $ minOut)               | 2*minOut <= val] ++
+                                         [(8, choose (minOut, val-minOut)) | minOut <= val-minOut]
+            minOut = Ada.getLovelace Ledger.minAdaTxOut
             tok = s ^. contractState . hasToken
             val = s ^. contractState . gameValue
             genLockAction :: Gen (Action GameModel)
