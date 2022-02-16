@@ -184,7 +184,7 @@ prop_FinishEscrow :: Property
 prop_FinishEscrow = forAllDL finishEscrow prop_Escrow
 
 noLockProof :: NoLockedFundsProof EscrowModel
-noLockProof = NoLockedFundsProof
+noLockProof = defaultNLFP
   { nlfpMainStrategy   = finishingStrategy (const True)
   , nlfpWalletStrategy = finishingStrategy . (==) }
 

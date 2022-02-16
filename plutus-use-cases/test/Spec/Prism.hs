@@ -197,10 +197,7 @@ prop_Prism = propRunActions @PrismModel finalPredicate
 
 -- | The Prism contract does not lock any funds.
 noLockProof :: NoLockedFundsProof PrismModel
-noLockProof = NoLockedFundsProof
-  { nlfpMainStrategy   = return ()
-  , nlfpWalletStrategy = \ _ -> return ()
-  }
+noLockProof = defaultNLFP
 
 prop_NoLock :: Property
 prop_NoLock = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof

@@ -272,7 +272,7 @@ prop_NoLockedFunds :: Property
 prop_NoLockedFunds = forAllDL noLockedFunds prop_Game
 
 noLockProof :: NoLockedFundsProof GameModel
-noLockProof = NoLockedFundsProof{
+noLockProof = defaultNLFP {
       nlfpMainStrategy   = mainStrat,
       nlfpWalletStrategy = walletStrat }
     where

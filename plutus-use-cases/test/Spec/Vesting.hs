@@ -197,7 +197,7 @@ prop_Vesting :: Actions VestingModel -> Property
 prop_Vesting = propRunActions_
 
 noLockProof :: NoLockedFundsProof VestingModel
-noLockProof = NoLockedFundsProof{
+noLockProof = defaultNLFP {
       nlfpMainStrategy   = mainStrat,
       nlfpWalletStrategy = walletStrat }
     where

@@ -322,7 +322,7 @@ prop_FinishAuction = forAllDL finishAuction prop_Auction
 --   seller walks away the buyer will not get their token (unless going around the off-chain code
 --   and building a Payout transaction manually).
 noLockProof :: NoLockedFundsProof AuctionModel
-noLockProof = NoLockedFundsProof
+noLockProof = defaultNLFP
   { nlfpMainStrategy   = strat
   , nlfpWalletStrategy = const strat }
   where

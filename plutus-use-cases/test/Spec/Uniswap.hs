@@ -473,12 +473,19 @@ prop_liquidityValue = forAllDL liquidityValue (const True)
                           /= (p ^. coinAAmount, p ^. coinBAmount)
         assert ("Pool\n  " ++ show p ++ "\nforgets single liquidities") cond
 
--- This doesn't work
 noLockProof :: NoLockedFundsProof UniswapModel
-noLockProof = NoLockedFundsProof{
+noLockProof = defaultNLFP {
       nlfpMainStrategy   = mainStrat,
-      nlfpWalletStrategy = walletStrat }
+      nlfpWalletStrategy = walletStrat,
+      nlfpOverhead       = const $ toSymValue Ledger.minAdaTxOut,
+      nlfpErrorMargin    = wiggle }
     where
+        wiggle s = fold [symAssetClassValue t1 (toInteger m) <>
+                         symAssetClassValue t2 (toInteger m) <>
+                         toSymValue Ledger.minAdaTxOut
+                        | (PoolIndex t1 t2, p) <- Map.toList (s ^. contractState . pools)
+                        , let numLiqs = length $ p ^. liquidities
+                              m = max 0 (numLiqs - 1) ]
         mainStrat = do
             pools <- viewContractState pools
             forM_ (Map.toList pools) $ \ (PoolIndex t1 t2, p) -> do
@@ -497,14 +504,11 @@ noLockProof = NoLockedFundsProof{
                 then action $ ClosePool w t1 t2
                 else action $ RemoveLiquidity w t1 t2 (unAmount . sum $ Map.lookup w liqs)
 
--- This doesn't hold
 prop_CheckNoLockedFundsProof :: Property
 prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
 
--- In principle this property does not hold for any wiggle room! You can chain together the issues
--- you get for normal "No locked funds"
 prop_CheckNoLockedFundsProofFast :: Property
-prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofWithWiggleRoomFast 3 noLockProof
+prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofFast defaultCheckOptionsContractModel noLockProof
 
 check_propUniswapWithCoverage :: IO ()
 check_propUniswapWithCoverage = void $
@@ -533,4 +537,5 @@ tests = testGroup "uniswap" [
         Uniswap.uniswapTrace
     , testProperty "prop_Uniswap" $ withMaxSuccess 20 prop_Uniswap
     , testProperty "prop_UniswapAssertions" $ withMaxSuccess 1000 (propSanityCheckAssertions @UniswapModel)
+    , testProperty "prop_NLFP" $ withMaxSuccess 250 prop_CheckNoLockedFundsProofFast
     ]
