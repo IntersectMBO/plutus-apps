@@ -624,6 +624,7 @@ modState l f = Spec $ State.modify $ over l f
 
 -- | Wait the given number of slots. Updates the `currentSlot` of the model state.
 wait :: ContractModel state => Integer -> Spec state ()
+wait 0 = return ()
 wait n = do
   Slot now <- viewModelState currentSlot
   nextReactiveState (Slot $ now + n)
