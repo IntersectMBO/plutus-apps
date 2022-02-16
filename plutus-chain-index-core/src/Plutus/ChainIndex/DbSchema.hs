@@ -77,17 +77,6 @@ instance Table RedeemerRowT where
     data PrimaryKey RedeemerRowT f = RedeemerRowId (Columnar f ByteString) deriving (Generic, Beamable)
     primaryKey = RedeemerRowId . _redeemerRowHash
 
-data TxRowT f = TxRow
-    { _txRowTxId :: Columnar f ByteString
-    , _txRowTx   :: Columnar f ByteString
-    } deriving (Generic, Beamable)
-
-type TxRow = TxRowT Identity
-
-instance Table TxRowT where
-    data PrimaryKey TxRowT f = TxRowId (Columnar f ByteString) deriving (Generic, Beamable)
-    primaryKey = TxRowId . _txRowTxId
-
 data AddressRowT f = AddressRow
     { _addressRowCred   :: Columnar f ByteString
     , _addressRowOutRef :: Columnar f ByteString
@@ -164,7 +153,6 @@ data Db f = Db
     { datumRows          :: f (TableEntity DatumRowT)
     , scriptRows         :: f (TableEntity ScriptRowT)
     , redeemerRows       :: f (TableEntity RedeemerRowT)
-    , txRows             :: f (TableEntity TxRowT)
     , addressRows        :: f (TableEntity AddressRowT)
     , assetClassRows     :: f (TableEntity AssetClassRowT)
     , tipRows            :: f (TableEntity TipRowT)
@@ -176,7 +164,6 @@ type AllTables (c :: * -> Constraint) f =
     ( c (f (TableEntity DatumRowT))
     , c (f (TableEntity ScriptRowT))
     , c (f (TableEntity RedeemerRowT))
-    , c (f (TableEntity TxRowT))
     , c (f (TableEntity AddressRowT))
     , c (f (TableEntity AssetClassRowT))
     , c (f (TableEntity TipRowT))
@@ -195,7 +182,6 @@ checkedSqliteDb = defaultMigratableDbSettings
     { datumRows   = renameCheckedEntity (const "datums")
     , scriptRows  = renameCheckedEntity (const "scripts")
     , redeemerRows = renameCheckedEntity (const "redeemers")
-    , txRows      = renameCheckedEntity (const "txs")
     , addressRows = renameCheckedEntity (const "addresses")
     , assetClassRows = renameCheckedEntity (const "asset_classes")
     , tipRows     = renameCheckedEntity (const "tips")
@@ -276,11 +262,6 @@ instance HasDbType (RedeemerHash, Redeemer) where
     type DbType (RedeemerHash, Redeemer) = RedeemerRow
     toDbValue (hash, redeemer) = RedeemerRow (toDbValue hash) (toDbValue redeemer)
     fromDbValue (RedeemerRow hash redeemer) = (fromDbValue hash, fromDbValue redeemer)
-
-instance HasDbType (TxId, ChainIndexTx) where
-    type DbType (TxId, ChainIndexTx) = TxRow
-    toDbValue (txId, tx) = TxRow (toDbValue txId) (toDbValue tx)
-    fromDbValue (TxRow txId tx) = (fromDbValue txId, fromDbValue tx)
 
 instance HasDbType (Credential, TxOutRef) where
     type DbType (Credential, TxOutRef) = AddressRow

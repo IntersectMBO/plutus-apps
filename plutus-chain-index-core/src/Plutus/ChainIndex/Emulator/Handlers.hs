@@ -74,36 +74,6 @@ getTxFromTxId i = do
         Nothing -> logWarn (TxNotFound i) >> pure Nothing
         _       -> pure result
 
--- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
-getTxOutFromRef ::
-  forall effs.
-  ( Member (State ChainIndexEmulatorState) effs
-  , Member (LogMsg ChainIndexLog) effs
-  )
-  => TxOutRef
-  -> Eff effs (Maybe ChainIndexTxOut)
-getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
-  ds <- gets (view diskState)
-  -- Find the output in the tx matching the output ref
-  case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
-    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout -> do
-      -- The output might come from a public key address or a script address.
-      -- We need to handle them differently.
-      case addressCredential $ txOutAddress txout of
-        PubKeyCredential _ ->
-          pure $ Just $ PublicKeyChainIndexTxOut (txOutAddress txout) (txOutValue txout)
-        ScriptCredential vh@(ValidatorHash h) -> do
-          case txOutDatumHash txout of
-            Nothing -> do
-              -- If the txout comes from a script address, the Datum should not be Nothing
-              logWarn $ NoDatumScriptAddr txout
-              pure Nothing
-            Just dh -> do
-              let v = maybe (Left vh) (Right . Validator) $ preview (scriptMap . ix (ScriptHash h)) ds
-              let d = maybe (Left dh) Right $ preview (dataMap . ix dh) ds
-              pure $ Just $ ScriptChainIndexTxOut (txOutAddress txout) v d (txOutValue txout)
-
 handleQuery ::
     forall effs.
     ( Member (State ChainIndexEmulatorState) effs
@@ -119,9 +89,7 @@ handleQuery = \case
       gets (fmap (fmap MintingPolicy) . view $ diskState . scriptMap . at (ScriptHash h))
     StakeValidatorFromHash (StakeValidatorHash h) ->
       gets (fmap (fmap StakeValidator) . view $ diskState . scriptMap . at (ScriptHash h))
-    TxOutFromRef ref -> getTxOutFromRef ref
     RedeemerFromHash h -> gets (view $ diskState . redeemerMap . at h)
-    TxFromTxId i -> getTxFromTxId i
     UtxoSetMembership r -> do
         utxo <- gets (utxoState . view utxoIndex)
         case tip utxo of
@@ -150,7 +118,6 @@ handleQuery = \case
                 logWarn TipIsGenesis
                 pure (UtxosResponse TipAtGenesis (pageOf pageQuery Set.empty))
             tp           -> pure (UtxosResponse tp page)
-    TxsFromTxIds is -> catMaybes <$> mapM getTxFromTxId is
     TxoSetAtAddress pageQuery cred -> do
         state <- get
         let outRefs = view (diskState . addressMap . at cred) state

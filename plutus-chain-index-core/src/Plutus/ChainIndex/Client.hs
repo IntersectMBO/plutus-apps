@@ -11,12 +11,9 @@ module Plutus.ChainIndex.Client(
     , getValidator
     , getMintingPolicy
     , getStakeValidator
-    , getTxOut
-    , getTx
     , getIsUtxo
     , getUtxoSetAtAddress
     , getUtxoSetWithCurrency
-    , getTxs
     , getTxoSetAtAddress
     , getTip
     , collectGarbage
@@ -51,25 +48,19 @@ getMintingPolicy :: MintingPolicyHash -> ClientM MintingPolicy
 getStakeValidator :: StakeValidatorHash -> ClientM StakeValidator
 getRedeemer :: RedeemerHash -> ClientM Redeemer
 
-getTxOut :: TxOutRef -> ClientM ChainIndexTxOut
-getTx :: TxId -> ClientM ChainIndexTx
 getIsUtxo :: TxOutRef -> ClientM IsUtxoResponse
 getUtxoSetAtAddress :: UtxoAtAddressRequest -> ClientM UtxosResponse
 getUtxoSetWithCurrency :: UtxoWithCurrencyRequest -> ClientM UtxosResponse
-getTxs :: [TxId] -> ClientM [ChainIndexTx]
 getTxoSetAtAddress :: TxoAtAddressRequest -> ClientM TxosResponse
 getTip :: ClientM Tip
 
-(healthCheck, (getDatum, getValidator, getMintingPolicy, getStakeValidator, getRedeemer), getTxOut, getTx, getIsUtxo, getUtxoSetAtAddress, getUtxoSetWithCurrency, getTxs, getTxoSetAtAddress, getTip, collectGarbage) =
-    (healthCheck_, (getDatum_, getValidator_, getMintingPolicy_, getStakeValidator_, getRedeemer_), getTxOut_, getTx_, getIsUtxo_, getUtxoSetAtAddress_, getUtxoSetWithCurrency_, getTxs_, getTxoSetAtAddress_, getTip_, collectGarbage_) where
+(healthCheck, (getDatum, getValidator, getMintingPolicy, getStakeValidator, getRedeemer), getIsUtxo, getUtxoSetAtAddress, getUtxoSetWithCurrency, getTxoSetAtAddress, getTip, collectGarbage) =
+    (healthCheck_, (getDatum_, getValidator_, getMintingPolicy_, getStakeValidator_, getRedeemer_), getIsUtxo_, getUtxoSetAtAddress_, getUtxoSetWithCurrency_, getTxoSetAtAddress_, getTip_, collectGarbage_) where
         healthCheck_
             :<|> (getDatum_ :<|> getValidator_ :<|> getMintingPolicy_ :<|> getStakeValidator_ :<|> getRedeemer_)
-            :<|> getTxOut_
-            :<|> getTx_
             :<|> getIsUtxo_
             :<|> getUtxoSetAtAddress_
             :<|> getUtxoSetWithCurrency_
-            :<|> getTxs_
             :<|> getTxoSetAtAddress_
             :<|> getTip_
             :<|> collectGarbage_
@@ -106,11 +97,8 @@ handleChainIndexClient event = do
         MintingPolicyFromHash d  -> runClientMaybe (getMintingPolicy d)
         StakeValidatorFromHash d -> runClientMaybe (getStakeValidator d)
         RedeemerFromHash d       -> runClientMaybe (getRedeemer d)
-        TxOutFromRef r           -> runClientMaybe (getTxOut r)
-        TxFromTxId t             -> runClientMaybe (getTx t)
         UtxoSetMembership r      -> runClient (getIsUtxo r)
         UtxoSetAtAddress pq a    -> runClient (getUtxoSetAtAddress $ UtxoAtAddressRequest (Just pq) a)
         UtxoSetWithCurrency pq a -> runClient (getUtxoSetWithCurrency $ UtxoWithCurrencyRequest (Just pq) a)
-        TxsFromTxIds t           -> runClient (getTxs t)
         TxoSetAtAddress pq a     -> runClient (getTxoSetAtAddress $ TxoAtAddressRequest (Just pq) a)
         GetTip                   -> runClient getTip

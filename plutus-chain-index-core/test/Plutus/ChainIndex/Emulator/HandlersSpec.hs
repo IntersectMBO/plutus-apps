@@ -21,14 +21,13 @@ import Data.Sequence (Seq)
 import Data.Set qualified as S
 import Generators qualified as Gen
 import Ledger (outValue)
-import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlock, txFromTxId,
-                          utxoSetMembership, utxoSetWithCurrency)
-import Plutus.ChainIndex.Api (IsUtxoResponse (isUtxo), UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlock, utxoSetWithCurrency)
+import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Emulator.Handlers (ChainIndexEmulatorState, handleControl, handleQuery)
-import Plutus.ChainIndex.Tx (_ValidTx, citxOutputs, citxTxId)
-import Plutus.ChainIndex.Types (ChainSyncBlock (..), TxProcessOption (..))
+import Plutus.ChainIndex.Tx (_ValidTx, citxOutputs)
+import Plutus.ChainIndex.Types (ChainSyncBlock (..))
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 import Hedgehog (Property, assert, forAll, property, (===))
@@ -39,36 +38,14 @@ import Util (utxoSetFromBlockAddrs)
 tests :: TestTree
 tests = do
   testGroup "chain index emulator handlers"
-    [ testGroup "txFromTxId"
-      [ testProperty "get tx from tx id" txFromTxIdSpec
-      ]
-    , testGroup "utxoSetAtAddress"
+    [ testGroup "utxoSetAtAddress"
       [ testProperty "each txOutRef should be unspent" eachTxOutRefAtAddressShouldBeUnspentSpec
       ]
     , testGroup "utxoSetWithCurrency"
       [ testProperty "each txOutRef should be unspent" eachTxOutRefWithCurrencyShouldBeUnspentSpec
       , testProperty "should restrict to non-ADA currencies" cantRequestForTxOutRefsWithAdaSpec
       ]
-    , testGroup "BlockProcessOption"
-      [ testProperty "do not store txs" doNotStoreTxs
-      ]
     ]
-
--- | Tests we can correctly query a tx in the database using a tx id. We also
--- test with an non-existant tx id.
-txFromTxIdSpec :: Property
-txFromTxIdSpec = property $ do
-  (tip, block@(fstTx:_)) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
-  unknownTxId <- forAll Gen.genRandomTxId
-  txs <- liftIO $ runEmulatedChainIndex mempty $ do
-    appendBlock (Block tip (map (, def) block))
-    tx <- txFromTxId (view citxTxId fstTx)
-    tx' <- txFromTxId unknownTxId
-    pure (tx, tx')
-
-  case txs of
-    Right (Just tx, Nothing) -> fstTx === tx
-    _                        -> Hedgehog.assert False
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns
@@ -129,22 +106,6 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
   case result of
     Left _         -> Hedgehog.assert False
     Right utxoRefs -> Hedgehog.assert $ null utxoRefs
-
--- | Do not store txs through BlockProcessOption.
--- The UTxO set must still be stored.
--- But cannot be fetched through addresses as addresses are not stored.
-doNotStoreTxs :: Property
-doNotStoreTxs = property $ do
-  ((tip, block), state) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
-  result <- liftIO $ runEmulatedChainIndex mempty $ do
-    appendBlock (Block tip (map (, TxProcessOption{tpoStoreTx=False}) block))
-    tx <- txFromTxId (view citxTxId (head block))
-    utxosFromAddr <- utxoSetFromBlockAddrs block
-    utxosStored <- traverse utxoSetMembership (S.toList (view Gen.txgsUtxoSet state))
-    pure (tx, concat utxosFromAddr, utxosStored)
-  case result of
-    Right (Nothing, [], utxosStored) -> Hedgehog.assert $ and (isUtxo <$> utxosStored)
-    _                                -> Hedgehog.assert False
 
 -- | Run an emulated chain index effect against a starting state
 runEmulatedChainIndex
