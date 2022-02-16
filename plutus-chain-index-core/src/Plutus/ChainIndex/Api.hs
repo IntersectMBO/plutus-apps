@@ -27,7 +27,7 @@ import GHC.Generics (Generic)
 import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
                StakeValidatorHash, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
-import Ledger.Tx (TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Plutus.ChainIndex.Types (Diagnostics, Tip)
 import Servant qualified
 import Servant.API (Description, Get, JSON, NoContent, Post, Put, ReqBody, (:<|>), (:>))
@@ -145,6 +145,7 @@ data TxosResponse = TxosResponse
 type API
     = "healthcheck" :> Description "Is the server alive?" :> Get '[JSON] NoContent
     :<|> "from-hash" :> FromHashAPI
+    :<|> "tx-out" :> Description "Get a transaction output from its reference." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] ChainIndexTxOut
     :<|> "is-utxo" :> Description "Check if the reference is an UTxO." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] IsUtxoResponse
     :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoAtAddressRequest :> Post '[JSON] UtxosResponse
     :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] UtxosResponse

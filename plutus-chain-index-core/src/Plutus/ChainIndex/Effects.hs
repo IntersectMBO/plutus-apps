@@ -11,6 +11,7 @@ module Plutus.ChainIndex.Effects(
     , mintingPolicyFromHash
     , stakeValidatorFromHash
     , redeemerFromHash
+    , txOutFromRef
     , utxoSetMembership
     , utxoSetAtAddress
     , utxoSetWithCurrency
@@ -30,7 +31,7 @@ import Control.Monad.Freer.TH (makeEffect)
 import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
                StakeValidatorHash, TxId, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
-import Ledger.Tx (TxOutRef)
+import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
 
@@ -50,6 +51,9 @@ data ChainIndexQueryEffect r where
 
     -- | Get the stake validator from a stake validator hash (if available)
     StakeValidatorFromHash :: StakeValidatorHash -> ChainIndexQueryEffect (Maybe StakeValidator)
+
+    -- | Get the TxOut from a TxOutRef (if available)
+    TxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe ChainIndexTxOut)
 
     -- | Whether a tx output is part of the UTXO set
     UtxoSetMembership :: TxOutRef -> ChainIndexQueryEffect IsUtxoResponse

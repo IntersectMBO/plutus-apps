@@ -82,6 +82,7 @@ handleQuery = \case
     MintingPolicyFromHash hash  -> getScriptFromHash hash
     RedeemerFromHash hash       -> getRedeemerFromHash hash
     StakeValidatorFromHash hash -> getScriptFromHash hash
+    TxOutFromRef tor            -> getTxOutFromRef tor
     UtxoSetMembership r -> do
         utxoState <- gets @ChainIndexState UtxoState.utxoState
         case UtxoState.tip utxoState of
@@ -98,6 +99,9 @@ getTip = fmap fromDbValue . selectOne . select $ limit_ 1 (orderBy_ (desc_ . _ti
 
 getDatumFromHash :: Member BeamEffect effs => DatumHash -> Eff effs (Maybe Datum)
 getDatumFromHash = queryOne . queryKeyValue datumRows _datumRowHash _datumRowDatum
+
+getTxFromTxId :: Member BeamEffect effs => TxId -> Eff effs (Maybe ChainIndexTx)
+getTxFromTxId = undefined -- queryOne . queryKeyValue txRows _txRowTxId _txRowTx
 
 getScriptFromHash ::
     ( Member BeamEffect effs
@@ -137,6 +141,36 @@ queryOne ::
     ) => SqlSelect Sqlite (DbType o)
     -> Eff effs (Maybe o)
 queryOne = fmap (fmap fromDbValue) . selectOne
+
+-- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
+getTxOutFromRef ::
+  forall effs.
+  ( Member BeamEffect effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => TxOutRef
+  -> Eff effs (Maybe ChainIndexTxOut)
+getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
+  mTx <- getTxFromTxId txOutRefId
+  -- Find the output in the tx matching the output ref
+  case mTx ^? _Just . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx) of
+    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
+    Just txout -> do
+      -- The output might come from a public key address or a script address.
+      -- We need to handle them differently.
+      case addressCredential $ txOutAddress txout of
+        PubKeyCredential _ ->
+          pure $ Just $ PublicKeyChainIndexTxOut (txOutAddress txout) (txOutValue txout)
+        ScriptCredential vh -> do
+          case txOutDatumHash txout of
+            Nothing -> do
+              -- If the txout comes from a script address, the Datum should not be Nothing
+              logWarn $ NoDatumScriptAddr txout
+              pure Nothing
+            Just dh -> do
+                v <- maybe (Left vh) Right <$> getScriptFromHash vh
+                d <- maybe (Left dh) Right <$> getDatumFromHash dh
+                pure $ Just $ ScriptChainIndexTxOut (txOutAddress txout) v d (txOutValue txout)
 
 getUtxoSetAtAddress
   :: forall effs.

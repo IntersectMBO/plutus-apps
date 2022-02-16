@@ -25,12 +25,12 @@ import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
 import Ledger (outValue)
 import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), RunRequirements (..), appendBlock, citxOutputs,
-                          runChainIndexEffects, utxoSetMembership, utxoSetWithCurrency)
-import Plutus.ChainIndex.Api (IsUtxoResponse (isUtxo), UtxosResponse (UtxosResponse))
+                          runChainIndexEffects, utxoSetWithCurrency)
+import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
-import Plutus.ChainIndex.Tx (_ValidTx, citxTxId)
-import Plutus.ChainIndex.Types (ChainSyncBlock (..), TxProcessOption (..))
+import Plutus.ChainIndex.Tx (_ValidTx)
+import Plutus.ChainIndex.Types (ChainSyncBlock (..))
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Test.Tasty (TestTree, testGroup)
