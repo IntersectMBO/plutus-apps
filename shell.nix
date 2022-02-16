@@ -88,6 +88,7 @@ let
     nixFlakesAlias
     nixpkgs-fmt
     nodejs
+    plantuml
     shellcheck
     sqlite-interactive
     stack
@@ -103,6 +104,7 @@ let
     cardano-node.cardano-node
     cardano-wallet.cardano-wallet
     cardano-repo-tool
+    docs.build-and-serve-docs
     fixPngOptimization
     fix-purs-tidy
     fixStylishHaskell
@@ -123,7 +125,6 @@ let
     stylish-haskell
     updateMaterialized
     updateClientDeps
-    docs.build-and-serve-docs
   ]);
 
 in
