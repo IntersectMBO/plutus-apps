@@ -128,7 +128,7 @@ import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
                                 PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
-                                PABResp (ExposeEndpointResp))
+                                PABResp (ExposeEndpointResp), PACReq, PACResp)
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Logging (logDebug)
 import Plutus.Contract.Schema (Input, Output)
@@ -158,16 +158,22 @@ pabReq ::
   )
   => PABReq -- ^ The request to send
   -> Prism' PABResp a -- ^ Prism for the response
-  -> Contract w s e a
+  -> Contract () () w s e a
 pabReq req prism = Contract $ do
-  x <- prompt @PABResp @PABReq req
-  case preview prism x of
-    Just r -> pure r
-    _      ->
-        E.throwError @e
-            $ review _ResumableContractError
-            $ WrongVariantError
-            $ "unexpected answer: " <> tshow x
+  x <- prompt @(PACResp ()) @(PACReq ()) $ E.BasePACReq req
+  case x of
+      E.BasePACResp br ->
+          case preview prism br of
+            Just r -> pure r
+            _      ->
+                E.throwError @e
+                    $ review _ResumableContractError
+                    $ WrongVariantError
+                    $ "unexpected answer: " <> tshow x
+      _ -> E.throwError @e
+                    $ review _ResumableContractError
+                    $ WrongVariantError
+                    $ "unexpected answer: " <> tshow x
 
 -- | Wait until the slot
 awaitSlot ::
@@ -175,7 +181,7 @@ awaitSlot ::
     ( AsContractError e
     )
     => Slot
-    -> Contract w s e Slot
+    -> Contract () () w s e Slot
 awaitSlot s = pabReq (AwaitSlotReq s) E._AwaitSlotResp
 
 -- | Wait until the slot
@@ -184,7 +190,7 @@ isSlot ::
     ( AsContractError e
     )
     => Slot
-    -> Promise w s e Slot
+    -> Promise () () w s e Slot
 isSlot = Promise . awaitSlot
 
 -- | Get the current slot number
@@ -192,7 +198,7 @@ currentSlot ::
     forall w s e.
     ( AsContractError e
     )
-    => Contract w s e Slot
+    => Contract () () w s e Slot
 currentSlot = pabReq CurrentSlotReq E._CurrentSlotResp
 
 -- | Wait for a number of slots to pass
@@ -201,7 +207,7 @@ waitNSlots ::
   ( AsContractError e
   )
   => Natural
-  -> Contract w s e Slot
+  -> Contract () () w s e Slot
 waitNSlots n = do
   c <- currentSlot
   awaitSlot $ c + fromIntegral n
@@ -216,7 +222,7 @@ awaitTime ::
     ( AsContractError e
     )
     => POSIXTime
-    -> Contract w s e POSIXTime
+    -> Contract () () w s e POSIXTime
 awaitTime s = pabReq (AwaitTimeReq s) E._AwaitTimeResp
 
 -- | Wait until the slot where the given time falls into and return latest time
@@ -226,7 +232,7 @@ isTime ::
     ( AsContractError e
     )
     => POSIXTime
-    -> Promise w s e POSIXTime
+    -> Promise () () w s e POSIXTime
 isTime = Promise . awaitTime
 
 -- | Get the latest time of the current slot.
@@ -237,7 +243,7 @@ currentTime ::
     forall w s e.
     ( AsContractError e
     )
-    => Contract w s e POSIXTime
+    => Contract () () w s e POSIXTime
 currentTime = pabReq CurrentTimeReq E._CurrentTimeResp
 
 -- | Wait for a number of milliseconds starting at the ending time of the current
@@ -251,7 +257,7 @@ waitNMilliSeconds ::
   ( AsContractError e
   )
   => DiffMilliSeconds
-  -> Contract w s e POSIXTime
+  -> Contract () () w s e POSIXTime
 waitNMilliSeconds n = do
   t <- currentTime
   awaitTime $ t + fromMilliSeconds n
@@ -261,7 +267,7 @@ datumFromHash ::
     ( AsContractError e
     )
     => DatumHash
-    -> Contract w s e (Maybe Datum)
+    -> Contract () () w s e (Maybe Datum)
 datumFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.DatumFromHash h) E._ChainIndexQueryResp
   case cir of
@@ -273,7 +279,7 @@ validatorFromHash ::
     ( AsContractError e
     )
     => ValidatorHash
-    -> Contract w s e (Maybe Validator)
+    -> Contract () () w s e (Maybe Validator)
 validatorFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.ValidatorFromHash h) E._ChainIndexQueryResp
   case cir of
@@ -285,7 +291,7 @@ mintingPolicyFromHash ::
     ( AsContractError e
     )
     => MintingPolicyHash
-    -> Contract w s e (Maybe MintingPolicy)
+    -> Contract () () w s e (Maybe MintingPolicy)
 mintingPolicyFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.MintingPolicyFromHash h) E._ChainIndexQueryResp
   case cir of
@@ -297,7 +303,7 @@ stakeValidatorFromHash ::
     ( AsContractError e
     )
     => StakeValidatorHash
-    -> Contract w s e (Maybe StakeValidator)
+    -> Contract () () w s e (Maybe StakeValidator)
 stakeValidatorFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.StakeValidatorFromHash h) E._ChainIndexQueryResp
   case cir of
@@ -309,7 +315,7 @@ redeemerFromHash ::
     ( AsContractError e
     )
     => RedeemerHash
-    -> Contract w s e (Maybe Redeemer)
+    -> Contract () () w s e (Maybe Redeemer)
 redeemerFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.RedeemerFromHash h) E._ChainIndexQueryResp
   case cir of
@@ -321,7 +327,7 @@ txOutFromRef ::
     ( AsContractError e
     )
     => TxOutRef
-    -> Contract w s e (Maybe ChainIndexTxOut)
+    -> Contract () () w s e (Maybe ChainIndexTxOut)
 txOutFromRef ref = do
   cir <- pabReq (ChainIndexQueryReq $ E.TxOutFromRef ref) E._ChainIndexQueryResp
   case cir of
@@ -333,7 +339,7 @@ txFromTxId ::
     ( AsContractError e
     )
     => TxId
-    -> Contract w s e (Maybe ChainIndexTx)
+    -> Contract () () w s e (Maybe ChainIndexTx)
 txFromTxId txid = do
   cir <- pabReq (ChainIndexQueryReq $ E.TxFromTxId txid) E._ChainIndexQueryResp
   case cir of
@@ -345,7 +351,7 @@ utxoRefMembership ::
     ( AsContractError e
     )
     => TxOutRef
-    -> Contract w s e IsUtxoResponse
+    -> Contract () () w s e IsUtxoResponse
 utxoRefMembership ref = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetMembership ref) E._ChainIndexQueryResp
   case cir of
@@ -359,7 +365,7 @@ utxoRefsAt ::
     )
     => PageQuery TxOutRef
     -> Address
-    -> Contract w s e UtxosResponse
+    -> Contract () () w s e UtxosResponse
 utxoRefsAt pq addr = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
   case cir of
@@ -373,7 +379,7 @@ utxoRefsWithCurrency ::
     )
     => PageQuery TxOutRef
     -> AssetClass
-    -> Contract w s e UtxosResponse
+    -> Contract () () w s e UtxosResponse
 utxoRefsWithCurrency pq assetClass = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetWithCurrency pq assetClass) E._ChainIndexQueryResp
   case cir of
@@ -386,10 +392,10 @@ foldUtxoRefsAt ::
     forall w s e a.
     ( AsContractError e
     )
-    => (a -> Page TxOutRef -> Contract w s e a) -- ^ Accumulator function
+    => (a -> Page TxOutRef -> Contract () () w s e a) -- ^ Accumulator function
     -> a -- ^ Initial value
     -> Address -- ^ Address which contain the UTXOs
-    -> Contract w s e a
+    -> Contract () () w s e a
 foldUtxoRefsAt f ini addr = go ini (Just def)
   where
     go acc Nothing = pure acc
@@ -404,7 +410,7 @@ utxosAt ::
     ( AsContractError e
     )
     => Address
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract () () w s e (Map TxOutRef ChainIndexTxOut)
 utxosAt addr = do
   foldUtxoRefsAt f Map.empty addr
   where
@@ -422,13 +428,13 @@ utxosTxOutTxAt ::
     ( AsContractError e
     )
     => Address
-    -> Contract w s e (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+    -> Contract () () w s e (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
 utxosTxOutTxAt addr = do
   snd <$> foldUtxoRefsAt (\acc page -> go acc (pageItems page)) (mempty, mempty) addr
   where
     go :: (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
        -> [TxOutRef]
-       -> Contract w s e (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+       -> Contract () () w s e (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
     go acc [] = pure acc
     go (lookupTx, oldResult) (ref:refs) = do
       outM <- txOutFromRef ref
@@ -459,7 +465,7 @@ utxosTxOutTxAt addr = do
 utxosTxOutTxFromTx ::
     AsContractError e
     => ChainIndexTx
-    -> Contract w s e [(TxOutRef, (ChainIndexTxOut, ChainIndexTx))]
+    -> Contract () () w s e [(TxOutRef, (ChainIndexTxOut, ChainIndexTx))]
 utxosTxOutTxFromTx tx =
   catMaybes <$> mapM mkOutRef (txOutRefs tx)
   where
@@ -471,10 +477,10 @@ foldTxoRefsAt ::
     forall w s e a.
     ( AsContractError e
     )
-    => (a -> Page TxOutRef -> Contract w s e a)
+    => (a -> Page TxOutRef -> Contract () () w s e a)
     -> a
     -> Address
-    -> Contract w s e a
+    -> Contract () () w s e a
 foldTxoRefsAt f ini addr = go ini (Just def)
   where
     go acc Nothing = pure acc
@@ -489,7 +495,7 @@ txsAt ::
     ( AsContractError e
     )
     => Address
-    -> Contract w s e [ChainIndexTx]
+    -> Contract () () w s e [ChainIndexTx]
 txsAt addr = do
   foldTxoRefsAt f [] addr
   where
@@ -506,7 +512,7 @@ txoRefsAt ::
     )
     => PageQuery TxOutRef
     -> Address
-    -> Contract w s e TxosResponse
+    -> Contract () () w s e TxosResponse
 txoRefsAt pq addr = do
   cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
   case cir of
@@ -519,7 +525,7 @@ txsFromTxIds ::
     ( AsContractError e
     )
     => [TxId]
-    -> Contract w s e [ChainIndexTx]
+    -> Contract () () w s e [ChainIndexTx]
 txsFromTxIds txid = do
   cir <- pabReq (ChainIndexQueryReq $ E.TxsFromTxIds txid) E._ChainIndexQueryResp
   case cir of
@@ -530,7 +536,7 @@ getTip ::
     forall w s e.
     ( AsContractError e
     )
-    => Contract w s e Tip
+    => Contract () () w s e Tip
 getTip = do
   cir <- pabReq (ChainIndexQueryReq E.GetTip) E._ChainIndexQueryResp
   case cir of
@@ -545,7 +551,7 @@ watchAddressUntilSlot ::
     )
     => Address
     -> Slot
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract () () w s e (Map TxOutRef ChainIndexTxOut)
 watchAddressUntilSlot a slot = awaitSlot slot >> utxosAt a
 
 -- | Wait until the target time and get the unspent transaction outputs at an
@@ -556,7 +562,7 @@ watchAddressUntilTime ::
     )
     => Address
     -> POSIXTime
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract () () w s e (Map TxOutRef ChainIndexTxOut)
 watchAddressUntilTime a time = awaitTime time >> utxosAt a
 
 {-| Wait until the UTXO has been spent, returning the transaction that spends it.
@@ -566,7 +572,7 @@ awaitUtxoSpent ::
   ( AsContractError e
   )
   => TxOutRef
-  -> Contract w s e ChainIndexTx
+  -> Contract () () w s e ChainIndexTx
 awaitUtxoSpent utxo = pabReq (AwaitUtxoSpentReq utxo) E._AwaitUtxoSpentResp
 
 {-| Wait until the UTXO has been spent, returning the transaction that spends it.
@@ -576,7 +582,7 @@ utxoIsSpent ::
   ( AsContractError e
   )
   => TxOutRef
-  -> Promise w s e ChainIndexTx
+  -> Promise () () w s e ChainIndexTx
 utxoIsSpent = Promise . awaitUtxoSpent
 
 {-| Wait until one or more unspent outputs are produced at an address.
@@ -586,7 +592,7 @@ awaitUtxoProduced ::
   ( AsContractError e
   )
   => Address
-  -> Contract w s e (NonEmpty ChainIndexTx)
+  -> Contract () () w s e (NonEmpty ChainIndexTx)
 awaitUtxoProduced address =
   pabReq (AwaitUtxoProducedReq address) E._AwaitUtxoProducedResp
 
@@ -597,7 +603,7 @@ utxoIsProduced ::
   ( AsContractError e
   )
   => Address
-  -> Promise w s e (NonEmpty ChainIndexTx)
+  -> Promise () () w s e (NonEmpty ChainIndexTx)
 utxoIsProduced = Promise . awaitUtxoProduced
 
 -- | Watch an address for changes, and return the outputs
@@ -609,7 +615,7 @@ fundsAtAddressGt
        )
     => Address
     -> Value
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract () () w s e (Map TxOutRef ChainIndexTxOut)
 fundsAtAddressGt addr vl =
     fundsAtAddressCondition (\presentVal -> presentVal `V.gt` vl) addr
 
@@ -619,7 +625,7 @@ fundsAtAddressCondition
        )
     => (Value -> Bool)
     -> Address
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract () () w s e (Map TxOutRef ChainIndexTxOut)
 fundsAtAddressCondition condition addr = loopM go () where
     go () = do
         cur <- utxosAt addr
@@ -637,12 +643,12 @@ fundsAtAddressGeq
        )
     => Address
     -> Value
-    -> Contract w s e (Map TxOutRef ChainIndexTxOut)
+    -> Contract () () w s e (Map TxOutRef ChainIndexTxOut)
 fundsAtAddressGeq addr vl =
     fundsAtAddressCondition (\presentVal -> presentVal `V.geq` vl) addr
 
 -- | Wait for the status of a transaction to change
-awaitTxStatusChange :: forall w s e. AsContractError e => TxId -> Contract w s e TxStatus
+awaitTxStatusChange :: forall w s e. AsContractError e => TxId -> Contract () () w s e TxStatus
 awaitTxStatusChange i = pabReq (AwaitTxStatusChangeReq i) (E._AwaitTxStatusChangeResp' i)
 
 -- TODO: Configurable level of confirmation (for example, as soon as the tx is
@@ -650,7 +656,7 @@ awaitTxStatusChange i = pabReq (AwaitTxStatusChangeReq i) (E._AwaitTxStatusChang
 -- | Wait until a transaction is confirmed (added to the ledger).
 --   If the transaction is never added to the ledger then 'awaitTxConfirmed' never
 --   returns
-awaitTxConfirmed :: forall w s e. (AsContractError e) => TxId -> Contract w s e ()
+awaitTxConfirmed :: forall w s e. (AsContractError e) => TxId -> Contract () () w s e ()
 awaitTxConfirmed i = go where
   go = do
     newStatus <- awaitTxStatusChange i
@@ -659,15 +665,15 @@ awaitTxConfirmed i = go where
       _       -> pure ()
 
 -- | Wait until a transaction is confirmed (added to the ledger).
-isTxConfirmed :: forall w s e. (AsContractError e) => TxId -> Promise w s e ()
+isTxConfirmed :: forall w s e. (AsContractError e) => TxId -> Promise () () w s e ()
 isTxConfirmed = Promise . awaitTxConfirmed
 
 -- | Wait for the status of a transaction output to change.
-awaitTxOutStatusChange :: forall w s e. AsContractError e => TxOutRef -> Contract w s e TxOutStatus
+awaitTxOutStatusChange :: forall w s e. AsContractError e => TxOutRef -> Contract () () w s e TxOutStatus
 awaitTxOutStatusChange ref = snd <$> pabReq (AwaitTxOutStatusChangeReq ref) E._AwaitTxOutStatusChangeResp
 
 -- | Get the 'ContractInstanceId' of this instance.
-ownInstanceId :: forall w s e. (AsContractError e) => Contract w s e ContractInstanceId
+ownInstanceId :: forall w s e. (AsContractError e) => Contract () () w s e ContractInstanceId
 ownInstanceId = pabReq OwnContractInstanceIdReq E._OwnContractInstanceIdResp
 
 type HasEndpoint l a s =
@@ -701,7 +707,7 @@ endpoint
      , AsContractError e
      , FromJSON a
      )
-  => (a -> Contract w s e b) -> Promise w s e b
+  => (a -> Contract () () w s e b) -> Promise () () w s e b
 endpoint f = Promise $ do
     (ed, ev) <- pabReq (ExposeEndpointReq $ endpointReq @l @a @s) E._ExposeEndpointResp
     a <- decode ed ev
@@ -714,7 +720,7 @@ decode
        )
     => EndpointDescription
     -> EndpointValue JSON.Value
-    -> Contract w s e a
+    -> Contract () () w s e a
 decode ed ev@EndpointValue{unEndpointValue} =
     either
         (\e -> throwError $ review _EndpointDecodeContractError (ed, ev, Text.pack e))
@@ -727,7 +733,7 @@ handleEndpoint
      , AsContractError e1
      , FromJSON a
      )
-  => (Either e1 a -> Contract w s e2 b) -> Promise w s e2 b
+  => (Either e1 a -> Contract () () w s e2 b) -> Promise () () w s e2 b
 handleEndpoint f = Promise $ do
   a <- runError $ do
       (ed, ev) <- pabReq (ExposeEndpointReq $ endpointReq @l @a @s) E._ExposeEndpointResp
@@ -743,8 +749,8 @@ endpointWithMeta
      , FromJSON a
      )
   => meta
-  -> (a -> Contract w s e b)
-  -> Promise w s e b
+  -> (a -> Contract () () w s e b)
+  -> Promise () () w s e b
 endpointWithMeta meta f = Promise $ do
     (ed, ev) <- pabReq (ExposeEndpointReq s) E._ExposeEndpointResp
     a <- decode ed ev
@@ -766,13 +772,13 @@ endpointDescription = EndpointDescription . symbolVal
 --     'requiredSignatures' field of 'Tx'.
 --   * There is a 1-n relationship between wallets and public keys (although in
 --     the mockchain n=1)
-ownPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
+ownPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract () () w s e PaymentPubKeyHash
 ownPaymentPubKeyHash = pabReq OwnPaymentPublicKeyHashReq E._OwnPaymentPublicKeyHashResp
 
 -- | Send an unbalanced transaction to be balanced and signed. Returns the ID
 --    of the final transaction when the transaction was submitted. Throws an
 --    error if balancing or signing failed.
-submitUnbalancedTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e CardanoTx
+submitUnbalancedTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract () () w s e CardanoTx
 -- See Note [Injecting errors into the user's error type]
 submitUnbalancedTx utx = do
   tx <- balanceTx utx
@@ -780,7 +786,7 @@ submitUnbalancedTx utx = do
 
 -- | Send an unbalanced transaction to be balanced. Returns the balanced transaction.
 --    Throws an error if balancing failed.
-balanceTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e CardanoTx
+balanceTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract () () w s e CardanoTx
 -- See Note [Injecting errors into the user's error type]
 balanceTx t =
   let req = pabReq (BalanceTxReq t) E._BalanceTxResp in
@@ -789,7 +795,7 @@ balanceTx t =
 -- | Send an balanced transaction to be signed. Returns the ID
 --    of the final transaction when the transaction was submitted. Throws an
 --    error if signing failed.
-submitBalancedTx :: forall w s e. (AsContractError e) => CardanoTx -> Contract w s e CardanoTx
+submitBalancedTx :: forall w s e. (AsContractError e) => CardanoTx -> Contract () () w s e CardanoTx
 -- See Note [Injecting errors into the user's error type]
 submitBalancedTx t =
   let req = pabReq (WriteBalancedTxReq t) E._WriteBalancedTxResp in
@@ -802,7 +808,7 @@ submitTx :: forall w s e.
   ( AsContractError e
   )
   => TxConstraints Void Void
-  -> Contract w s e CardanoTx
+  -> Contract () () w s e CardanoTx
 submitTx = submitTxConstraintsWith @Void mempty
 
 -- | Build a transaction that satisfies the constraints, then submit it to the
@@ -817,7 +823,7 @@ submitTxConstraints
   )
   => TypedValidator a
   -> TxConstraints (RedeemerType a) (DatumType a)
-  -> Contract w s e CardanoTx
+  -> Contract () () w s e CardanoTx
 submitTxConstraints inst = submitTxConstraintsWith (Constraints.typedValidatorLookups inst)
 
 -- | Build a transaction that satisfies the constraints using the UTXO map
@@ -832,7 +838,7 @@ submitTxConstraintsSpending
   => TypedValidator a
   -> Map TxOutRef ChainIndexTxOut
   -> TxConstraints (RedeemerType a) (DatumType a)
-  -> Contract w s e CardanoTx
+  -> Contract () () w s e CardanoTx
 submitTxConstraintsSpending inst utxo =
   let lookups = Constraints.typedValidatorLookups inst <> Constraints.unspentOutputs utxo
   in submitTxConstraintsWith lookups
@@ -848,7 +854,7 @@ mkTxContract ::
     )
     => ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
-    -> Contract w s Constraints.MkTxError UnbalancedTx
+    -> Contract () () w s Constraints.MkTxError UnbalancedTx
 mkTxContract lookups txc = do
     let result = Constraints.mkTx lookups txc
         logData = MkTxLog{mkTxLogLookups=Constraints.generalise lookups, mkTxLogTxConstraints=bimap PlutusTx.toBuiltinData PlutusTx.toBuiltinData txc, mkTxLogResult = result}
@@ -877,7 +883,7 @@ mkTxConstraints :: forall a w s e.
   )
   => ScriptLookups a
   -> TxConstraints (RedeemerType a) (DatumType a)
-  -> Contract w s e UnbalancedTx
+  -> Contract () () w s e UnbalancedTx
 mkTxConstraints sl constraints =
   mapError (review _ConstraintResolutionContractError) (mkTxContract sl constraints)
 
@@ -892,12 +898,12 @@ submitTxConstraintsWith
   )
   => ScriptLookups a
   -> TxConstraints (RedeemerType a) (DatumType a)
-  -> Contract w s e CardanoTx
+  -> Contract () () w s e CardanoTx
 submitTxConstraintsWith sl constraints = mkTxConstraints sl constraints >>= submitUnbalancedTx
 
 -- | A version of 'submitTx' that waits until the transaction has been
 --   confirmed on the ledger before returning.
-submitTxConfirmed :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e ()
+submitTxConfirmed :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract () () w s e ()
 submitTxConfirmed t = submitUnbalancedTx t >>= awaitTxConfirmed . getCardanoTxId
 
 -- | Take an 'UnbalancedTx' then balance, sign and submit it to the blockchain
@@ -905,5 +911,5 @@ submitTxConfirmed t = submitUnbalancedTx t >>= awaitTxConfirmed . getCardanoTxId
 yieldUnbalancedTx
     :: forall w s e. (AsContractError e)
     => UnbalancedTx
-    -> Contract w s e ()
+    -> Contract () () w s e ()
 yieldUnbalancedTx utx = pabReq (YieldUnbalancedTxReq utx) E._YieldUnbalancedTxResp

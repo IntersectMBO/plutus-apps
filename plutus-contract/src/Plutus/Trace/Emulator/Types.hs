@@ -72,7 +72,6 @@ import Ledger.Blockchain (Block)
 import Ledger.Slot (Slot (..))
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.Contract (Contract (..), WalletAPIError)
-import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Resumable (Request (..), Requests (..), Response (..))
 import Plutus.Contract.Resumable qualified as State
 import Plutus.Contract.Schema (Input, Output)
@@ -145,9 +144,9 @@ type EmulatorAgentThreadEffs effs =
 data Emulator
 
 -- | A reference to a running contract in the emulator.
-data ContractHandle w s e =
+data ContractHandle i o w s e =
     ContractHandle
-        { chContract    :: Contract w s e ()
+        { chContract    :: Contract i o w s e ()
         , chInstanceId  :: ContractInstanceId
         , chInstanceTag :: ContractInstanceTag
         }
@@ -264,17 +263,17 @@ instance Pretty ContractInstanceLog where
 -- | State of the contract instance, internal to the contract instance thread.
 --   It contains both the serialisable state of the contract instance and the
 --   non-serialisable continuations in 'SuspendedContract'.
-data ContractInstanceStateInternal w (s :: Row *) e a =
+data ContractInstanceStateInternal i o w (s :: Row *) e a =
     ContractInstanceStateInternal
-        { cisiSuspState       :: SuspendedContract w e PABResp PABReq a
-        , cisiEvents          :: Seq (Response PABResp)
-        , cisiHandlersHistory :: Seq [State.Request PABReq]
+        { cisiSuspState       :: SuspendedContract w e o i a
+        , cisiEvents          :: Seq (Response o)
+        , cisiHandlersHistory :: Seq [State.Request i]
         }
 
 -- | Extract the serialisable 'ContractInstanceState' from the
 --   'ContractInstanceStateInternal'. We need to do this when
 --   we want to send the instance state to another thread.
-toInstanceState :: ContractInstanceStateInternal w (s :: Row *) e a -> ContractInstanceState w s e a
+toInstanceState :: ContractInstanceStateInternal i o w (s :: Row *) e a -> ContractInstanceState i o w s e a
 toInstanceState ContractInstanceStateInternal{cisiSuspState=SuspendedContract{_resumableResult}, cisiEvents, cisiHandlersHistory} =
     ContractInstanceState
         { instContractState = _resumableResult
@@ -284,22 +283,22 @@ toInstanceState ContractInstanceStateInternal{cisiSuspState=SuspendedContract{_r
 
 -- | The state of a running contract instance with schema @s@ and error type @e@
 --   Serialisable to JSON.
-data ContractInstanceState w (s :: Row *) e a =
+data ContractInstanceState i o w (s :: Row *) e a =
     ContractInstanceState
-        { instContractState   :: ResumableResult w e PABResp PABReq a
-        , instEvents          :: Seq (Response PABResp) -- ^ Events received by the contract instance. (Used for debugging purposes)
-        , instHandlersHistory :: Seq [State.Request PABReq] -- ^ Requests issued by the contract instance (Used for debugging purposes)
+        { instContractState   :: ResumableResult w e o i a
+        , instEvents          :: Seq (Response o) -- ^ Events received by the contract instance. (Used for debugging purposes)
+        , instHandlersHistory :: Seq [State.Request i] -- ^ Requests issued by the contract instance (Used for debugging purposes)
         }
         deriving stock Generic
 
-deriving anyclass instance  (JSON.ToJSON e, JSON.ToJSON a, JSON.ToJSON w) => JSON.ToJSON (ContractInstanceState w s e a)
-deriving anyclass instance  (JSON.FromJSON e, JSON.FromJSON a, JSON.FromJSON w) => JSON.FromJSON (ContractInstanceState w s e a)
+deriving anyclass instance  (JSON.ToJSON i, JSON.ToJSON o, JSON.ToJSON e, JSON.ToJSON a, JSON.ToJSON w) => JSON.ToJSON (ContractInstanceState i o w s e a)
+deriving anyclass instance  (JSON.FromJSON i, JSON.FromJSON o, JSON.FromJSON e, JSON.FromJSON a, JSON.FromJSON w) => JSON.FromJSON (ContractInstanceState i o w s e a)
 
 emptyInstanceState ::
-    forall w (s :: Row *) e a.
+    forall i o w (s :: Row *) e a.
     Monoid w
-    => Contract w s e a
-    -> ContractInstanceStateInternal w s e a
+    => Contract i o w s e a
+    -> ContractInstanceStateInternal (PACReq i) (PACResp o) w s e a
 emptyInstanceState (Contract c) =
     ContractInstanceStateInternal
         { cisiSuspState = Contract.Types.suspend mempty c
@@ -307,11 +306,11 @@ emptyInstanceState (Contract c) =
         , cisiHandlersHistory = mempty
         }
 
-addEventInstanceState :: forall w s e a.
+addEventInstanceState :: forall i o w s e a.
     Monoid w
-    => Response PABResp
-    -> ContractInstanceStateInternal w s e a
-    -> Maybe (ContractInstanceStateInternal w s e a)
+    => Response o
+    -> ContractInstanceStateInternal i o w s e a
+    -> Maybe (ContractInstanceStateInternal i o w s e a)
 addEventInstanceState event ContractInstanceStateInternal{cisiSuspState, cisiEvents, cisiHandlersHistory} =
     case Contract.Types.runStep cisiSuspState event of
         Nothing -> Nothing

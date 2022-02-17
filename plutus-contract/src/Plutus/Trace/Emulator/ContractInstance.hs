@@ -32,6 +32,7 @@ module Plutus.Trace.Emulator.ContractInstance(
     -- * Internals
     , getHooks
     , addResponse
+    , handleBlockchainQueries
     ) where
 
 import Control.Lens (at, preview, view, (?~))
@@ -86,8 +87,8 @@ import Wallet.Types (ContractInstanceId)
 
 -- | Effects available to threads that run in the context of specific
 --   agents (ie wallets)
-type ContractInstanceThreadEffs w s e effs =
-    State (ContractInstanceStateInternal w s e ())
+type ContractInstanceThreadEffs i o w s e effs =
+    State (ContractInstanceStateInternal i o w s e ())
     ': Reader ContractInstanceId
     ': LogMsg ContractInstanceMsg
     ': EmulatorAgentThreadEffs effs
@@ -97,13 +98,14 @@ type ContractInstanceThreadEffs w s e effs =
 contractThread :: forall w s e effs.
     ( Member (State EmulatorThreads) effs
     , Member (Error EmulatorRuntimeError) effs
+    , Member (Reader (RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) PABReq PABResp)) effs
     , ContractConstraints s
     , Show e
     , JSON.ToJSON e
     , JSON.ToJSON w
     , Monoid w
     )
-    => ContractHandle w s e
+    => ContractHandle PABReq PABResp w s e
     -> Eff (EmulatorAgentThreadEffs effs) ()
 contractThread ContractHandle{chInstanceId, chContract, chInstanceTag} = do
     ask @ThreadId >>= registerInstance chInstanceId
@@ -112,11 +114,11 @@ contractThread ContractHandle{chInstanceId, chContract, chInstanceTag} = do
         $ evalState (emptyInstanceState chContract)
         $ do
             logInfo Started
-            logNewMessages @w @s @e
-            logCurrentRequests @w @s @e
+            logNewMessages @PABReq @PABResp @w @s @e
+            logCurrentRequests @PABReq @PABResp @w @s @e
             msg <- mkAgentSysCall @_ @EmulatorMessage Normal WaitForMessage
             runInstance chContract msg
-            runInstanceObservableState chContract msg
+            runInstanceObservableState @PABReq @PABResp chContract msg
 
 registerInstance :: forall effs.
     ( Member (State EmulatorThreads) effs )
@@ -135,11 +137,11 @@ getThread t = do
     r <- gets (view $ instanceIdThreads . at t)
     maybe (throwError $ ThreadIdNotFound t) pure r
 
-logStopped :: forall w e effs.
+logStopped :: forall i o w e effs.
     ( Member (LogMsg ContractInstanceMsg) effs
     , Show e
     )
-    => ResumableResult w e PABResp PABReq ()
+    => ResumableResult w e i o ()
     -> Eff effs ()
 logStopped ResumableResult{_finalState} =
     case _finalState of
@@ -150,18 +152,19 @@ logStopped ResumableResult{_finalState} =
 runInstance :: forall w s e effs.
     ( ContractConstraints s
     , Member (Error EmulatorRuntimeError) effs
+    , Member (Reader (RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) PABReq PABResp)) effs
     , Show e
     , JSON.ToJSON e
     , JSON.ToJSON w
     , Monoid w
     )
-    => Contract w s e ()
+    => Contract PABReq PABResp w s e ()
     -> Maybe EmulatorMessage
-    -> Eff (ContractInstanceThreadEffs w s e effs) ()
+    -> Eff (ContractInstanceThreadEffs PABReq PABResp w s e effs) ()
 runInstance contract event = do
-    hks <- getHooks @w @s @e
+    hks <- getHooks @PABReq @PABResp @w @s @e
     when (null hks) $
-        gets @(ContractInstanceStateInternal w s e ()) (view resumableResult . cisiSuspState) >>= logStopped
+        gets @(ContractInstanceStateInternal PABReq PABResp w s e ()) (view resumableResult . cisiSuspState) >>= logStopped
     unless (null hks) $
         case event of
             Just Freeze -> do
@@ -183,17 +186,20 @@ runInstance contract event = do
 
 -- | Run an instance to only answer to observable state requests even when the
 -- contract has stopped.
-runInstanceObservableState :: forall w s e effs.
+runInstanceObservableState :: forall i o w s e effs.
     ( ContractConstraints s
     , Member (Error EmulatorRuntimeError) effs
+    , Member (Reader (RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) i o)) effs
     , Show e
     , JSON.ToJSON e
     , JSON.ToJSON w
     , Monoid w
+    , JSON.ToJSON i
+    , JSON.ToJSON o
     )
-    => Contract w s e ()
+    => Contract i o w s e ()
     -> Maybe EmulatorMessage
-    -> Eff (ContractInstanceThreadEffs w s e effs) ()
+    -> Eff (ContractInstanceThreadEffs i o w s e effs) ()
 runInstanceObservableState contract event = do
     case event of
         Just (ContractInstanceStateRequest sender) -> do
@@ -202,14 +208,16 @@ runInstanceObservableState contract event = do
         _ -> waitForNextMessage False >>= runInstanceObservableState contract
 
 -- | Contract instance state request handler.
-handleObservableStateRequest :: forall w s e effs.
+handleObservableStateRequest :: forall i o w s e effs.
     ( JSON.ToJSON e
     , JSON.ToJSON w
+    , JSON.ToJSON i
+    , JSON.ToJSON o
     )
     => ThreadId -- ^ Thread ID sending the request
-    -> Eff (ContractInstanceThreadEffs w s e effs) ()
+    -> Eff (ContractInstanceThreadEffs i o w s e effs) ()
 handleObservableStateRequest sender = do
-    state <- get @(ContractInstanceStateInternal w s e ())
+    state <- get @(ContractInstanceStateInternal i o w s e ())
 
     -- TODO: Maybe we should send it as a 'Dynamic' instead of
     -- JSON? It all stays in the same process, and it would save
@@ -219,13 +227,18 @@ handleObservableStateRequest sender = do
     void $ mkAgentSysCall Normal (Message sender $ ContractInstanceStateResponse stateJSON)
 
 -- | Wait for the next emulator message.
-waitForNextMessage :: forall w s e effs.
+waitForNextMessage :: forall i o w s e effs.
     ( Monoid w
+    , Member (Reader (RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) i o)) effs
+    , JSON.ToJSON i
+    , JSON.ToJSON o
     )
     => Bool -- ^ Flag on whether to log 'NoRequestsHandled' messages
-    -> Eff (ContractInstanceThreadEffs w s e effs) (Maybe EmulatorMessage)
+    -- -> RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) i o
+    -> Eff (ContractInstanceThreadEffs i o w s e effs) (Maybe EmulatorMessage)
 waitForNextMessage isLogShowed = do
-    response <- respondToRequest @w @s @e isLogShowed handleBlockchainQueries
+    requestHandler <- ask
+    response <- respondToRequest @i @o @w @s @e isLogShowed requestHandler
     let prio =
             maybe
                 -- If no events could be handled we go to sleep
@@ -275,13 +288,13 @@ decodeEvent vl =
                 throwError msg
             JSON.Success event' -> pure event'
 
-getHooks :: forall w s e effs. Member (State (ContractInstanceStateInternal w s e ())) effs => Eff effs [Request PABReq]
-getHooks = gets @(ContractInstanceStateInternal w s e ()) (State.unRequests . view requests . view resumableResult . cisiSuspState)
+getHooks :: forall i o w s e effs. Member (State (ContractInstanceStateInternal i o w s e ())) effs => Eff effs [Request i]
+getHooks = gets @(ContractInstanceStateInternal i o w s e ()) (State.unRequests . view requests . view resumableResult . cisiSuspState)
 
 -- | Update the contract instance with information from the new block.
 processNewTransactions ::
     forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+    ( Member (State (ContractInstanceStateInternal PABReq PABResp w s e ())) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Monoid w
     )
@@ -301,7 +314,7 @@ processNewTransactions txns = do
 --   new block.
 updateTxStatus ::
     forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+    ( Member (State (ContractInstanceStateInternal PABReq PABResp w s e ())) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Monoid w
     )
@@ -314,14 +327,14 @@ updateTxStatus txns = do
     let txWithStatus (Invalid tx) = (txId tx, TxInvalid)
         txWithStatus (Valid tx)   = (txId tx, TxValid)
         statusMap = Map.fromList $ fmap txWithStatus txns
-    hks <- mapMaybe (traverse (preview E._AwaitTxStatusChangeReq)) <$> getHooks @w @s @e
+    hks <- mapMaybe (traverse (preview E._AwaitTxStatusChangeReq)) <$> getHooks @PABReq @PABResp @w @s @e
     let mpReq Request{rqID, itID, rqRequest=txid} =
             case Map.lookup txid statusMap of
                 Nothing -> Nothing
                 Just newStatus -> Just Response{rspRqID=rqID, rspItID=itID, rspResponse=AwaitTxStatusChangeResp txid (Committed newStatus ())}
         txStatusHk = listToMaybe $ mapMaybe mpReq hks
-    traverse_ (addResponse @w @s @e) txStatusHk
-    logResponse @w @s @e False txStatusHk
+    traverse_ (addResponse @PABReq @PABResp @w @s @e) txStatusHk
+    logResponse @PABReq @PABResp @w @s @e False txStatusHk
 
 -- | Update the contract instance with transaction outputs status information
 -- from the new block.
@@ -331,7 +344,7 @@ updateTxStatus txns = do
 -- represent the @TentativelyConfirmed@ state in the emulator.
 updateTxOutStatus ::
     forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+    ( Member (State (ContractInstanceStateInternal PABReq PABResp w s e ())) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Monoid w
     )
@@ -349,7 +362,7 @@ updateTxOutStatus txns = do
              fmap (, Committed TxValid (Spent _citxTxId)) (getSpentOutputs tx)
           <> fmap (, Committed TxValid Unspent) (txOutRefs tx)
         statusMap = Map.fromList $ foldMap txWithTxOutStatus txns
-    hks <- mapMaybe (traverse (preview E._AwaitTxOutStatusChangeReq)) <$> getHooks @w @s @e
+    hks <- mapMaybe (traverse (preview E._AwaitTxOutStatusChangeReq)) <$> getHooks @PABReq @PABResp @w @s @e
     let mpReq Request{rqID, itID, rqRequest=txOutRef} =
             case Map.lookup txOutRef statusMap of
                 Nothing        -> Nothing
@@ -359,14 +372,14 @@ updateTxOutStatus txns = do
                                   , rspResponse=E.AwaitTxOutStatusChangeResp txOutRef newStatus
                                   }
         utxoResp = listToMaybe $ mapMaybe mpReq hks
-    traverse_ (addResponse @w @s @e) utxoResp
-    logResponse @w @s @e False utxoResp
+    traverse_ (addResponse @PABReq @PABResp @w @s @e) utxoResp
+    logResponse @PABReq @PABResp @w @s @e False utxoResp
 
 -- | Update the contract instance with transaction output information from the
 --   new block.
 updateTxOutProduced ::
     forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+    ( Member (State (ContractInstanceStateInternal PABReq PABResp w s e ())) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Monoid w
     )
@@ -374,20 +387,20 @@ updateTxOutProduced ::
     -> Eff effs ()
 updateTxOutProduced IndexedBlock{ibUtxoProduced} = do
     -- Check whether the contract instance is waiting for address changes
-    hks <- mapMaybe (traverse (preview E._AwaitUtxoProducedReq)) <$> getHooks @w @s @e
+    hks <- mapMaybe (traverse (preview E._AwaitUtxoProducedReq)) <$> getHooks @PABReq @PABResp @w @s @e
     let mpReq Request{rqID, itID, rqRequest=addr} =
             case Map.lookup addr ibUtxoProduced of
                 Nothing      -> Nothing
                 Just newTxns -> Just Response{rspRqID=rqID, rspItID=itID, rspResponse=E.AwaitUtxoProducedResp newTxns}
         utxoResp = listToMaybe $ mapMaybe mpReq hks
-    traverse_ (addResponse @w @s @e) utxoResp
-    logResponse @w @s @e False utxoResp
+    traverse_ (addResponse @PABReq @PABResp @w @s @e) utxoResp
+    logResponse @PABReq @PABResp @w @s @e False utxoResp
 
 -- | Update the contract instance with transaction input information from the
 --   new block.
 updateTxOutSpent ::
     forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+    ( Member (State (ContractInstanceStateInternal PABReq PABResp w s e ())) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Monoid w
     )
@@ -395,29 +408,29 @@ updateTxOutSpent ::
     -> Eff effs ()
 updateTxOutSpent IndexedBlock{ibUtxoSpent} = do
     -- Check whether the contract instance is waiting for address changes
-    hks <- mapMaybe (traverse (preview E._AwaitUtxoSpentReq)) <$> getHooks @w @s @e
+    hks <- mapMaybe (traverse (preview E._AwaitUtxoSpentReq)) <$> getHooks @PABReq @PABResp @w @s @e
     let mpReq Request{rqID, itID, rqRequest=addr} =
             case Map.lookup addr ibUtxoSpent of
                 Nothing      -> Nothing
                 Just newTxns -> Just Response{rspRqID=rqID, rspItID=itID, rspResponse=E.AwaitUtxoSpentResp newTxns}
         utxoResp = listToMaybe $ mapMaybe mpReq hks
-    traverse_ (addResponse @w @s @e) utxoResp
-    logResponse @w @s @e False utxoResp
+    traverse_ (addResponse @PABReq @PABResp @w @s @e) utxoResp
+    logResponse @PABReq @PABResp @w @s @e False utxoResp
 
 -- | Add a 'Response' to the contract instance state
 addResponse
-    :: forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+    :: forall i o w s e effs.
+    ( Member (State (ContractInstanceStateInternal i o w s e ())) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Monoid w
     )
-    => Response PABResp
+    => Response o
     -> Eff effs ()
 addResponse e = do
-    oldState <- get @(ContractInstanceStateInternal w s e ())
+    oldState <- get @(ContractInstanceStateInternal i o w s e ())
     let newState = addEventInstanceState e oldState
     traverse_ put newState
-    logNewMessages @w @s @e
+    logNewMessages @i @o @w @s @e
 
 type ContractInstanceRequests effs =
         Reader ContractInstanceId
@@ -426,7 +439,7 @@ type ContractInstanceRequests effs =
 -- | Respond to a specific event
 respondToEvent ::
     forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+    ( Member (State (ContractInstanceStateInternal PABReq PABResp w s e ())) effs
     , Members EmulatedWalletEffects effs
     , Member (Reader ContractInstanceId) effs
     , Member (LogMsg ContractInstanceMsg) effs
@@ -434,30 +447,32 @@ respondToEvent ::
     )
     => PABResp
     -> Eff effs (Maybe (Response PABResp))
-respondToEvent e = respondToRequest @w @s @e True $ RequestHandler $ \h -> do
+respondToEvent e = respondToRequest @PABReq @PABResp @w @s @e True $ RequestHandler $ \h -> do
     guard $ h `matches` e
     pure e
 
 -- | Inspect the open requests of a contract instance,
 --   and maybe respond to them. Returns the response that was provided to the
 --   contract, if any.
-respondToRequest :: forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+respondToRequest :: forall i o w s e effs.
+    ( Member (State (ContractInstanceStateInternal i o w s e ())) effs
     , Member (Reader ContractInstanceId) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Members EmulatedWalletEffects effs
     , Monoid w
+    , JSON.ToJSON i
+    , JSON.ToJSON o
     )
     => Bool -- ^ Flag on whether to log 'NoRequestsHandled' messages.
-    -> RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) PABReq PABResp
+    -> RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) i o
     -- ^ How to respond to the requests.
-    -> Eff effs (Maybe (Response PABResp))
+    -> Eff effs (Maybe (Response o))
 respondToRequest isLogShowed f = do
-    hks <- getHooks @w @s @e
-    let hdl :: (Eff (Reader ContractInstanceId ': EmulatedWalletEffects) (Maybe (Response PABResp))) = tryHandler (wrapHandler f) hks
-        hdl' :: (Eff (ContractInstanceRequests effs) (Maybe (Response PABResp))) = raiseEnd hdl
+    hks <- getHooks @i @o @w @s @e
+    let hdl :: (Eff (Reader ContractInstanceId ': EmulatedWalletEffects) (Maybe (Response o))) = tryHandler (wrapHandler f) hks
+        hdl' :: (Eff (ContractInstanceRequests effs) (Maybe (Response o))) = raiseEnd hdl
 
-        response_ :: Eff effs (Maybe (Response PABResp)) =
+        response_ :: Eff effs (Maybe (Response o)) =
             subsume @(LogMsg T.Text)
                     $ subsume @(LogMsg TxBalanceMsg)
                     $ subsume @(LogMsg RequestHandlerLogMsg)
@@ -468,45 +483,48 @@ respondToRequest isLogShowed f = do
                     $ subsume @WalletEffect
                     $ subsume @(Reader ContractInstanceId) hdl'
     response <- response_
-    traverse_ (addResponse @w @s @e) response
-    logResponse @w @s @e isLogShowed response
+    traverse_ (addResponse @i @o @w @s @e) response
+    logResponse @i @o @w @s @e isLogShowed response
     pure response
 
 ---
 -- Logging
 ---
 
-logResponse ::  forall w s e effs.
+logResponse ::  forall i o w s e effs.
     ( Member (LogMsg ContractInstanceMsg) effs
-    , Member (State (ContractInstanceStateInternal w s e ())) effs
+    , Member (State (ContractInstanceStateInternal i o w s e ())) effs
+    , JSON.ToJSON i
+    , JSON.ToJSON o
     )
     => Bool -- ^ Flag on whether to log 'NoRequestsHandled' messages
-    -> Maybe (Response PABResp)
+    -> Maybe (Response o)
     -> Eff effs ()
 logResponse isLogShowed = \case
     Nothing -> when isLogShowed $ logDebug NoRequestsHandled
     Just rsp -> do
         logDebug $ HandledRequest $ fmap JSON.toJSON rsp
-        logCurrentRequests @w @s @e
+        logCurrentRequests @i @o @w @s @e
 
-logCurrentRequests :: forall w s e effs.
-    ( Member (State (ContractInstanceStateInternal w s e ())) effs
+logCurrentRequests :: forall i o w s e effs.
+    ( Member (State (ContractInstanceStateInternal i o w s e ())) effs
     , Member (LogMsg ContractInstanceMsg) effs
+    , JSON.ToJSON i
     )
     => Eff effs ()
 logCurrentRequests = do
-    hks <- getHooks @w @s @e
+    hks <- getHooks @i @o @w @s @e
     logDebug $ CurrentRequests $ fmap (fmap JSON.toJSON) hks
 
 -- | Take the new log messages that were produced by the contract
 --   instance and log them with the 'LogMsg' effect.
-logNewMessages :: forall w s e effs.
+logNewMessages :: forall i o w s e effs.
     ( Member (LogMsg ContractInstanceMsg) effs
-    , Member (State (ContractInstanceStateInternal w s e ())) effs
+    , Member (State (ContractInstanceStateInternal i o w s e ())) effs
     )
     => Eff effs ()
 logNewMessages = do
-    newContractLogs <- gets @(ContractInstanceStateInternal w s e ()) (view (resumableResult . lastLogs) . cisiSuspState)
+    newContractLogs <- gets @(ContractInstanceStateInternal i o w s e ()) (view (resumableResult . lastLogs) . cisiSuspState)
     traverse_ (send . LMessage . fmap ContractLog) newContractLogs
 
 -- | A block of transactions, indexed by tx outputs spent and by

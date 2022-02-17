@@ -62,9 +62,14 @@ import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (EmulatorTim
 import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
 -- TODO: Move these two to 'Wallet.Emulator.XXX'?
+import Control.Monad.Freer.Reader (Reader, runReader)
 import Ledger.TimeSlot (SlotConfig)
+import Plutus.Contract (ContractInstanceId)
+import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Trace (InitialDistribution, defaultDist, knownWallets)
-import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
+import Plutus.Contract.Trace.RequestHandler (RequestHandler)
+import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError, handleBlockchainQueries)
+import Plutus.Trace.Emulator.Types (EmulatedWalletEffects)
 
 {- Note [Emulator event stream]
 
@@ -118,6 +123,7 @@ runTraceStream :: forall effs.
             , ChainEffect
             , ChainControlEffect
             , Error EmulatorRuntimeError
+            , Reader (RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) PABReq PABResp)
             ] ()
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
 runTraceStream conf@EmulatorConfig{_slotConfig, _feeConfig} =
@@ -131,6 +137,7 @@ runTraceStream conf@EmulatorConfig{_slotConfig, _feeConfig} =
     . wrapError WalletErr
     . wrapError ChainIndexErr
     . wrapError AssertionErr
+    . runReader handleBlockchainQueries
     . wrapError InstanceErr
     . EM.processEmulated _slotConfig _feeConfig
     . subsume

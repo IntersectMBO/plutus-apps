@@ -119,9 +119,9 @@ import Wallet.API (WalletAPIError)
 import Wallet.Types qualified
 
 -- | Execute both contracts in any order
-both :: Promise w s e a -> Promise w s e b -> Promise w s e (a, b)
+both :: Promise i o w s e a -> Promise i o w s e b -> Promise i o w s e (a, b)
 both a b = liftF2 (,) a b `select` liftF2 (flip (,)) b a
 
 -- | Update the contract's accumulating state @w@
-tell :: w -> Contract w s e ()
+tell :: w -> Contract i o w s e ()
 tell = Contract . W.tell

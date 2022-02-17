@@ -116,7 +116,7 @@ import Plutus.Trace.Effects.Waiting qualified as Waiting
 import Plutus.Trace.Emulator.System (launchSystemThreads)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog (ContractInstanceLog),
                                     ContractInstanceMsg (ContractLog, CurrentRequests, HandledRequest, NoRequestsHandled, StoppedWithError),
-                                    ContractInstanceTag, Emulator, EmulatorMessage,
+                                    ContractInstanceTag, EmulatedWalletEffects, Emulator, EmulatorMessage,
                                     EmulatorRuntimeError (EmulatedWalletError), EmulatorThreads,
                                     UserThreadMsg (UserLog))
 import Plutus.Trace.Emulator.Types qualified
@@ -125,6 +125,9 @@ import Streaming.Prelude (Of ((:>)))
 
 import Data.Aeson qualified as A
 import Ledger.TimeSlot (SlotConfig)
+import Plutus.Contract (ContractInstanceId)
+import Plutus.Contract.Effects (PABReq, PABResp)
+import Plutus.Contract.Trace.RequestHandler (RequestHandler)
 import Plutus.V1.Ledger.Slot (getSlot)
 import Plutus.V1.Ledger.Value (Value, flattenValue)
 
@@ -157,6 +160,7 @@ handleEmulatorTrace ::
     , Member (State EmulatorThreads) effs
     , Member (State EmulatorState) effs
     , Member (Error EmulatorRuntimeError) effs
+    , Member (Reader (RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) PABReq PABResp)) effs
     , Member (LogMsg EmulatorEvent') effs
     , Member ContractInstanceIdEff effs
     )
@@ -192,6 +196,7 @@ interpretEmulatorTrace :: forall effs a.
     , Member ChainControlEffect effs
     , Member (LogMsg EmulatorEvent') effs
     , Member (State EmulatorState) effs
+    , Member (Reader (RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) PABReq PABResp)) effs
     )
     => EmulatorConfig
     -> EmulatorTrace a

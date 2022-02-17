@@ -43,7 +43,7 @@ balanceTxnMinAda =
             & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
         vHash = validatorHash someValidator
 
-        contract :: Contract () EmptySchema ContractError ()
+        contract :: Contract eff () EmptySchema ContractError ()
         contract = do
             let constraints1 = Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
                 utx1 = either (error . show) id $ Constraints.mkTx @Void mempty constraints1
@@ -74,7 +74,7 @@ balanceTxnMinAda2 =
         payToWallet w = Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
         mkTx lookups constraints = Constraints.adjustUnbalancedTx . either (error . show) id $ Constraints.mkTx @Void lookups constraints
 
-        setupContract :: Contract () EmptySchema ContractError ()
+        setupContract :: Contract eff () EmptySchema ContractError ()
         setupContract = do
             -- Make sure there is a utxo with 1 A, 1 B, and 4 ada at w2
             submitTxConfirmed $ mkTx mempty (payToWallet w2 (vA 1 <> vB 1 <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)))
@@ -83,7 +83,7 @@ balanceTxnMinAda2 =
             -- utxo0 @ wallet2 = 1 A, 1 B, 4 Ada
             -- utxo1 @ script  = 1 B, 2 Ada
 
-        wallet2Contract :: Contract () EmptySchema ContractError ()
+        wallet2Contract :: Contract eff () EmptySchema ContractError ()
         wallet2Contract = do
             utxos <- utxosAt someAddress
             let txOutRef = head (Map.keys utxos)
@@ -109,7 +109,7 @@ balanceTxnNoExtraOutput =
     let vL n = Value.singleton (Ledger.scriptCurrencySymbol coinMintingPolicy) "coinToken" n
         mkTx lookups constraints = either (error . show) id $ Constraints.mkTx @Void lookups constraints
 
-        mintingOperation :: Contract [Int] EmptySchema ContractError ()
+        mintingOperation :: Contract eff [Int] EmptySchema ContractError ()
         mintingOperation = do
             pkh <- Con.ownPaymentPubKeyHash
 

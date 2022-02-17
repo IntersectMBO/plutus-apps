@@ -92,7 +92,7 @@ import Plutus.Contract.Checkpoint (AsCheckpointError (_CheckpointError),
                                    Checkpoint (AllocateKey, DoCheckpoint, Retrieve, Store),
                                    CheckpointError (JSONDecodeError), CheckpointKey, CheckpointLogMsg, CheckpointStore,
                                    completedIntervals, handleCheckpoint, jsonCheckpoint, jsonCheckpointLoop)
-import Plutus.Contract.Effects (PABReq, PABResp)
+import Plutus.Contract.Effects (PACReq, PACResp)
 import Plutus.Contract.Error qualified
 import Plutus.Contract.Resumable (IterationID, MultiRequestContStatus (AContinuation, AResult),
                                   MultiRequestContinuation (MultiRequestContinuation, ndcCont, ndcRequests), RequestID,
@@ -104,12 +104,12 @@ import PlutusTx.Functor qualified as PlutusTx
 import Prelude as Haskell
 
 -- | Effects that are available to contracts.
-type ContractEffs w e =
+type ContractEffs i o w e =
     '[ Error e
     ,  LogMsg Value
     ,  Writer w
     ,  Checkpoint
-    ,  Resumable PABResp PABReq
+    ,  Resumable (PACResp o) (PACReq i)
     ]
 
 type ContractEnv = (IterationID, RequestID)
@@ -122,7 +122,7 @@ _AccumState :: forall w. Iso' (AccumState w) w
 _AccumState = iso unAccumState AccumState
 
 handleContractEffs ::
-  forall w e effs a.
+  forall i o w e effs a.
   ( Member (Error e) effs
   , Member (State CheckpointStore) effs
   , Member (State CheckpointKey) effs
@@ -131,11 +131,11 @@ handleContractEffs ::
   , Member (LogMsg Value) effs
   , Monoid w
   )
-  => Eff (ContractEffs w e) a
-  -> Eff effs (Maybe (MultiRequestContStatus PABResp PABReq effs a))
+  => Eff (ContractEffs i o w e) a
+  -> Eff effs (Maybe (MultiRequestContStatus (PACResp o) (PACReq i) effs a))
 handleContractEffs =
-  suspendNonDet @PABResp @PABReq @a @effs
-  . handleResumable @PABResp @PABReq
+  suspendNonDet @(PACResp o) @(PACReq i) @a @effs
+  . handleResumable @(PACResp o) @(PACReq i)
   . handleCheckpoint
   . addEnvToCheckpoint
   . interpret @(Writer w) (writeIntoState _AccumState)
@@ -187,52 +187,52 @@ addEnvToCheckpoint = reinterpret @Checkpoint @Checkpoint @effs $ \case
 -- | @Contract w s e a@ is a contract with schema 's', producing a value of
 --  type 'a' or an error 'e'. See note [Contract Schema].
 --
-newtype Contract w (s :: Row *) e a = Contract { unContract :: Eff (ContractEffs w e) a }
+newtype Contract i o w (s :: Row *) e a = Contract { unContract :: Eff (ContractEffs i o w e) a }
   deriving newtype (Functor, Applicative, Monad)
 
-instance MonadError e (Contract w s e) where
+instance MonadError e (Contract i o w s e) where
     throwError = Contract . E.throwError
     catchError (Contract f) handler =
       Contract
       $ E.catchError f
       $ unContract . handler
 
-instance PlutusTx.Functor (Contract w s e) where
+instance PlutusTx.Functor (Contract i o w s e) where
   fmap = Haskell.fmap
 
-instance PlutusTx.Applicative (Contract w s e) where
+instance PlutusTx.Applicative (Contract i o w s e) where
   (<*>) = (Haskell.<*>)
   pure  = Haskell.pure
 
-instance Bifunctor (Contract w s) where
+instance Bifunctor (Contract i o w s) where
   bimap l r = mapError l . fmap r
 
-instance Semigroup a => Semigroup (Contract w s e a) where
+instance Semigroup a => Semigroup (Contract i o w s e a) where
   Contract ma <> Contract ma' = Contract $ (<>) <$> ma <*> ma'
 
 -- | A wrapper indicating that this contract starts with a waiting action. For use with @select@.
-newtype Promise w (s :: Row *) e a = Promise { awaitPromise :: Contract w s e a }
+newtype Promise i o w (s :: Row *) e a = Promise { awaitPromise :: Contract i o w s e a }
   deriving newtype (Functor, Bifunctor, Semigroup)
 
-instance Apply (Promise w s e) where
+instance Apply (Promise i o w s e) where
   liftF2 f (Promise a) (Promise b) = Promise (f <$> a <*> b)
 
 -- | A `Promise` that is never fulfilled. This is the identity of `select`.
-never :: Promise w s e a
-never = Promise (Contract $ Resumable.never @PABResp @PABReq)
+never :: forall i o w s e a. Promise i o w s e a
+never = Promise (Contract $ Resumable.never @(PACResp o) @(PACReq i))
 
 -- | Run more `Contract` code after the `Promise`.
-promiseBind :: Promise w s e a -> (a -> Contract w s e b) -> Promise w s e b
+promiseBind :: Promise i o w s e a -> (a -> Contract i o w s e b) -> Promise i o w s e b
 promiseBind (Promise ma) f = Promise (ma >>= f)
 
 -- | Lift a mapping function for `Contract` to a mapping function for `Promise`.
-promiseMap :: (Contract w1 s1 e1 a1 -> Contract w2 s2 e2 a2) -> Promise w1 s1 e1 a1 -> Promise w2 s2 e2 a2
+promiseMap :: (Contract i o w1 s1 e1 a1 -> Contract i o w2 s2 e2 a2) -> Promise i o w1 s1 e1 a1 -> Promise i o w2 s2 e2 a2
 promiseMap f (Promise ma) = Promise (f ma)
 
 -- | Class of types that can be trivially converted to a `Contract`.
 -- For use with functions where it is convenient to accept both `Contract` and `Promise` types.
 class IsContract c where
-  toContract :: c w s e a -> Contract w s e a
+  toContract :: c i o w s e a -> Contract i o w s e a
 
 instance IsContract Contract where
   toContract = id
@@ -247,11 +247,11 @@ instance IsContract Promise where
 -- @P1 `select` P2 `select` P3@ and all three can make progress at the same
 -- moment, then @select@ will prioritize the promises starting from the right
 -- (first @P3@ then @P2@ then @P1@).
-select :: forall w s e a. Promise w s e a -> Promise w s e a -> Promise w s e a
-select (Promise (Contract l)) (Promise (Contract r)) = Promise (Contract (Resumable.select @PABResp @PABReq @(ContractEffs w e) l r))
+select :: forall i o w s e a. Promise i o w s e a -> Promise i o w s e a -> Promise i o w s e a
+select (Promise (Contract l)) (Promise (Contract r)) = Promise (Contract (Resumable.select @(PACResp o) @(PACReq i) @(ContractEffs i o w e) l r))
 
 -- | A variant of @select@ for contracts with different return types.
-selectEither :: forall w s e a b. Promise w s e a -> Promise w s e b -> Promise w s e (Either a b)
+selectEither :: forall i o w s e a b. Promise i o w s e a -> Promise i o w s e b -> Promise i o w s e (Either a b)
 selectEither l r = (Left <$> l) `select` (Right <$> r)
 
 -- | 'selectList' returns the contract that makes progress first, discarding the
@@ -260,38 +260,38 @@ selectEither l r = (Left <$> l) `select` (Right <$> r)
 -- However, if multiple contracts can make progress, 'selectList' prioritizes
 -- the ones appearing first in the input list. Therefore, the order of the
 -- list of promises is important.
-selectList :: [Promise w s e a] -> Contract w s e a
+selectList :: [Promise i o w s e a] -> Contract i o w s e a
 selectList = awaitPromise . foldr1 select . reverse
 
 -- | Write the current state of the contract to a checkpoint.
-checkpoint :: forall w s e a. (AsCheckpointError e, Aeson.FromJSON a, Aeson.ToJSON a) => Contract w s e a -> Contract w s e a
+checkpoint :: forall i o w s e a. (AsCheckpointError e, Aeson.FromJSON a, Aeson.ToJSON a) => Contract i o w s e a -> Contract i o w s e a
 checkpoint = Contract . jsonCheckpoint @e . unContract
 
-checkpointLoop :: forall w s e a b. (AsCheckpointError e, Aeson.FromJSON a, Aeson.ToJSON a, Aeson.ToJSON b, Aeson.FromJSON b) => (a -> Contract w s e (Either b a)) -> a -> Contract w s e b
+checkpointLoop :: forall i o w s e a b. (AsCheckpointError e, Aeson.FromJSON a, Aeson.ToJSON a, Aeson.ToJSON b, Aeson.FromJSON b) => (a -> Contract i o w s e (Either b a)) -> a -> Contract i o w s e b
 checkpointLoop f initial = Contract $ jsonCheckpointLoop @e (fmap unContract f) initial
 
 -- | Transform any exceptions thrown by the 'Contract' using the given function.
 mapError ::
-  forall w s e e' a.
+  forall i o w s e e' a.
   (e -> e')
-  -> Contract w s e a
-  -> Contract w s e' a
+  -> Contract i o w s e a
+  -> Contract i o w s e' a
 mapError f = handleError (throwError . f)
 
 -- | Turn a contract with error type 'e' and return type 'a' into one with
 --   any error type (ie. throwing no errors) that returns 'Either e a'
 runError ::
-  forall w s e e0 a.
-  Contract w s e a
-  -> Contract w s e0 (Either e a)
+  forall i o w s e e0 a.
+  Contract i o w s e a
+  -> Contract i o w s e0 (Either e a)
 runError (Contract r) = Contract (E.runError $ raiseUnder r)
 
 -- | Handle errors, potentially throwing new errors.
 handleError ::
-  forall w s e e' a.
-  (e -> Contract w s e' a)
-  -> Contract w s e a
-  -> Contract w s e' a
+  forall i o w s e e' a.
+  (e -> Contract i o w s e' a)
+  -> Contract i o w s e a
+  -> Contract i o w s e' a
 handleError f (Contract c) = Contract c' where
   c' = E.handleError @e (raiseUnder c) (fmap unContract f)
 
@@ -343,10 +343,10 @@ makeLenses ''SuspendedContract
 
 runResumable ::
   Monoid w
-  => [Response PABResp]
+  => [Response (PACResp o)]
   -> CheckpointStore
-  -> Eff (ContractEffs w e) a
-  -> ResumableResult w e PABResp PABReq a
+  -> Eff (ContractEffs i o w e) a
+  -> ResumableResult w e (PACResp o) (PACReq i) a
 runResumable events store action =
   let initial = suspend store action
       runStep' con rsp = fromMaybe con (runStep con rsp)
@@ -354,27 +354,27 @@ runResumable events store action =
   in result
 
 runWithRecord ::
-  forall w e a.
+  forall i o w e a.
   Monoid w
-  => Eff (ContractEffs w e) a
+  => Eff (ContractEffs i o w e) a
   -> CheckpointStore
-  -> Responses PABResp
-  -> ResumableResult w e PABResp PABReq a
+  -> Responses (PACResp o)
+  -> ResumableResult w e (PACResp o) (PACReq i) a
 runWithRecord action store events =
   runResumable (Resumable.responses events) store action
 
 mkResult ::
-  forall w e a.
+  forall i o w e a.
   Monoid w
   => w
   -> Seq (LogMessage Value) -- ^ Old logs
-  -> ( Either e (Maybe (MultiRequestContStatus PABResp PABReq (SuspendedContractEffects w e) a))
+  -> ( Either e (Maybe (MultiRequestContStatus (PACResp o) (PACReq i) (SuspendedContractEffects w e) a))
      , CheckpointKey
      , CheckpointStore
      , AccumState w
      , Seq (LogMessage Value)
      )
-  -> SuspendedContract w e PABResp PABReq a
+  -> SuspendedContract w e (PACResp o) (PACReq i) a
 mkResult oldW oldLogs (initialRes, cpKey, cpStore, AccumState newW, newLogs) =
   SuspendedContract
       { _resumableResult =
@@ -418,26 +418,26 @@ runSuspContractEffects cpKey cpStore =
 -- | Run an action of @ContractEffs@ until it requests input for the first
 --   time, returning the 'SuspendedContract'
 suspend ::
-  forall w e a.
+  forall i o w e a.
   Monoid w
   => CheckpointStore
-  -> Eff (ContractEffs w e) a -- ^ The contract
-  -> SuspendedContract w e PABResp PABReq a
+  -> Eff (ContractEffs i o w e) a -- ^ The contract
+  -> SuspendedContract w e (PACResp o) (PACReq i) a
 suspend store action =
   let initialKey = 0 in
   mkResult mempty mempty
     $ runSuspContractEffects @w @e
       initialKey
       store
-      (handleContractEffs @w @e @(SuspendedContractEffects w e) action)
+      (handleContractEffs @i @o @w @e @(SuspendedContractEffects w e) action)
 
 -- | Feed a 'Response' to a 'SuspendedContract'.
 runStep ::
-  forall w e a.
+  forall i o w e a.
   Monoid w
-  => SuspendedContract w e PABResp PABReq a
-  -> Response PABResp
-  -> Maybe (SuspendedContract w e PABResp PABReq a)
+  => SuspendedContract w e (PACResp o) (PACReq i) a
+  -> Response (PACResp o)
+  -> Maybe (SuspendedContract w e (PACResp o) (PACReq i) a)
 runStep SuspendedContract{_continuations=Just (AContinuation MultiRequestContinuation{ndcCont}), _checkpointKey, _resumableResult=ResumableResult{_responses, _checkpointStore, _observableState=oldW, _logs=oldLogs}} event =
   Just
     $ set (resumableResult . responses) (insertResponse (fmap (_checkpointKey,) event) _responses)
@@ -449,12 +449,12 @@ runStep SuspendedContract{_continuations=Just (AContinuation MultiRequestContinu
 runStep _ _ = Nothing
 
 insertAndUpdate ::
-  forall w e a.
+  forall i o w e a.
   Monoid w
-  => Eff (ContractEffs w e) a
+  => Eff (ContractEffs i o w e) a
   -> CheckpointStore -- ^ Checkpoint store
-  -> Responses (CheckpointKey, PABResp)  -- ^ Previous responses
-  -> Response PABResp
-  -> ResumableResult w e PABResp PABReq a
+  -> Responses (CheckpointKey, PACResp o)  -- ^ Previous responses
+  -> Response (PACResp o)
+  -> ResumableResult w e (PACResp o) (PACReq i) a
 insertAndUpdate action store record newResponse =
   runWithRecord action store (insertResponse newResponse $ fmap snd record)

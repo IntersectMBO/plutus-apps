@@ -7,6 +7,11 @@
 {-# LANGUAGE TemplateHaskell   #-}
 module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     -- * Plutus application backend request effect types
+    PACReq(..),
+    PACResp(..),
+    -- BasePACReq(..),
+    -- BasePACResp(..),
+
     PABReq(..),
     _AwaitSlotReq,
     _AwaitTimeReq,
@@ -103,6 +108,38 @@ import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
 import Prettyprinter (Pretty (pretty), hsep, indent, viaShow, vsep, (<+>))
 import Wallet.API (WalletAPIError)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue)
+
+-- Possible replacement to PABReq and PABResp to make the Contract Monad more general
+
+data PACReq i =
+    BasePACReq PABReq
+    | CustomPABRequest i
+    deriving (Show)
+
+data PACResp o =
+    BasePACResp PABResp
+    | CustomPACResp o
+    deriving Show
+
+-- data BasePACReq =
+--     AwaitSlotReq' Slot
+--     | AwaitTimeReq' POSIXTime
+--     | CurrentSlotReq'
+--     | CurrentTimeReq'
+--     | OwnContractInstanceIdReq'
+--     | BalanceTxReq' UnbalancedTx
+--     | ExposeEndpointReq' ActiveEndpoint
+--     | PosixTimeRangeToContainedSlotRangeReq' POSIXTimeRange
+
+-- data BasePACResp =
+--     AwaitSlotResp' Slot
+--     | AwaitTimeResp' POSIXTime
+--     | CurrentSlotResp' Slot
+--     | CurrentTimeResp' POSIXTime
+--     | OwnContractInstanceIdResp' ContractInstanceId
+--     | BalanceTxResp' BalanceTxResponse
+--     | ExposeEndpointResp' EndpointDescription (EndpointValue JSON.Value)
+--     | PosixTimeRangeToContainedSlotRangeResp' (Either SlotConversionError SlotRange)
 
 -- | Requests that 'Contract's can make
 data PABReq =

@@ -51,6 +51,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequ
                                     adjustUnbalancedTx, mkTx)
 import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
+import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
 import Plutus.Contract.Request qualified as Contract
 import Plutus.Contract.Types (Contract)
@@ -106,7 +107,7 @@ handleTx ::
 handleTx = balanceTx >=> either throwError WAPI.signTxAndSubmit
 
 -- | Get an unspent output belonging to the wallet.
-getUnspentOutput :: AsContractError e => Contract w s e TxOutRef
+getUnspentOutput :: AsContractError e => Contract () () w s e TxOutRef
 getUnspentOutput = do
     ownPkh <- Contract.ownPaymentPubKeyHash
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)

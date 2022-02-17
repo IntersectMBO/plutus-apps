@@ -126,7 +126,7 @@ type Schema = Endpoint "failFalse" ()
 
 -- | For each endpoint in the schema: pay to the corresponding validator
 -- and then spend that UTxO
-contract :: Contract () Schema ContractError ()
+contract :: Contract eff () Schema ContractError ()
 contract = selectList [failFalseC, failHeadNilC, divZeroC, divZeroTraceC, successC]
   where
     run validator = void $ do

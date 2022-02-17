@@ -28,7 +28,7 @@ import Data.Foldable (toList)
 import GHC.Generics (Generic)
 
 import Plutus.Contract.Checkpoint (CheckpointKey, CheckpointStore)
-import Plutus.Contract.Effects (PABReq, PABResp)
+import Plutus.Contract.Effects (PACReq, PACResp)
 import Plutus.Contract.Resumable
 import Plutus.Contract.Types hiding (lastLogs, lastState, logs, observableState)
 import Prettyprinter.Extras (Pretty, PrettyShow (..))
@@ -103,11 +103,11 @@ mapW f c@ContractResponse{lastState, newState} = c{lastState = f lastState, newS
 -- | Run one step of the contract by restoring it to its previous state and
 --   feeding it a single new 'Response' event.
 insertAndUpdateContract ::
-    forall w s e a.
+    forall i o w s e a.
     (Monoid w)
-    => Contract w s e a -- ^ The 'Contract' with schema @s@ error type @e@.
-    -> ContractRequest w PABResp -- ^  The 'ContractRequest' value with the previous state and the new event.
-    -> ContractResponse w e PABResp PABReq
+    => Contract i o w s e a -- ^ The 'Contract' with schema @s@ error type @e@.
+    -> ContractRequest w (PACResp o) -- ^  The 'ContractRequest' value with the previous state and the new event.
+    -> ContractResponse w e (PACResp o) (PACReq i)
 insertAndUpdateContract (Contract con) ContractRequest{oldState=State record checkpoints oldW, event} =
     mkResponse
         oldW
@@ -131,8 +131,8 @@ mkResponse oldW ResumableResult{_responses, _requests=Requests{unRequests},_chec
 
 -- | The 'ContractResponse' with the initial state of the contract.
 initialiseContract ::
-    forall w s e a.
+    forall i o w s e a.
     (Monoid w)
-    => Contract w s e a
-    -> ContractResponse w e PABResp PABReq
+    => Contract i o w s e a
+    -> ContractResponse w e (PACResp o) (PACReq i)
 initialiseContract (Contract c) = mkResponse mempty $ runResumable [] mempty c

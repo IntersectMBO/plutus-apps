@@ -69,7 +69,7 @@ stateMachineClient threadToken =
 
 -- * Minimal test runner for repro
 
-contract :: Contract () EmptySchema String ()
+contract :: Contract eff () EmptySchema String ()
 contract = do
   threadToken <- mapSMError SM.getThreadToken
   logError @String $ "Forged thread token: " <> show threadToken

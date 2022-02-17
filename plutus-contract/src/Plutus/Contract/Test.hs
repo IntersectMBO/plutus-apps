@@ -122,6 +122,7 @@ import Ledger.Index (ScriptValidationEvent, ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
 
+import Data.Aeson qualified as JSON
 import Plutus.Contract.Trace as X
 import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, runEmulatorStream)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
@@ -208,8 +209,8 @@ checkPredicateInner :: forall m.
     -> (String -> m ()) -- ^ Print out debug information in case of test failures
     -> (Bool -> m ()) -- ^ assert
     -> m ()
-checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action annot assert =
-    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action) annot assert
+checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action =
+    checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action)
 
 checkPredicateInnerStream :: forall m.
     Monad m
@@ -226,8 +227,7 @@ checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} predicate 
     result <- runM
                 $ reinterpret @(Writer (Doc Void)) @m  (\case { Tell d -> sendM $ annot $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
                 $ runError
-                $ runReader dist
-                $ consumedStream
+                $ runReader dist consumedStream
 
     unless (result == Right True) $ do
         annot "Test failed."
@@ -274,7 +274,7 @@ endpointAvailable
        ( KnownSymbol l
        , Monoid w
        )
-    => Contract w s e a
+    => Contract PABReq PABResp w s e a
     -> ContractInstanceTag
     -> TracePredicate
 endpointAvailable contract inst =
@@ -292,7 +292,7 @@ tx
     :: forall w s e a.
        ( Monoid w
        )
-    => Contract w s e a
+    => Contract PABReq PABResp w s e a
     -> ContractInstanceTag
     -> (UnbalancedTx -> Bool)
     -> String
@@ -309,12 +309,14 @@ tx contract inst flt nm =
             pure False
 
 assertEvents
-    :: forall w s e a.
+    :: forall i o w s e a.
        ( Monoid w
+       , JSON.FromJSON o
+       , Pretty o
        )
-    => Contract w s e a
+    => Contract i o w s e a
     -> ContractInstanceTag
-    -> ([PABResp] -> Bool)
+    -> ([o] -> Bool)
     -> String
     -> TracePredicate
 assertEvents contract inst pr nm =
@@ -362,10 +364,10 @@ dataAtAddress address check =
       pure result
 
 waitingForSlot
-    :: forall w s e a.
+    :: forall i o w s e a.
        ( Monoid w
        )
-    => Contract w s e a
+    => Contract i o w s e a
     -> ContractInstanceTag
     -> Slot
     -> TracePredicate
@@ -380,19 +382,19 @@ waitingForSlot contract inst sl =
             _ -> pure True
 
 anyTx
-    :: forall w s e a.
+    :: forall i o w s e a.
        ( Monoid w
        )
-    => Contract w s e a
+    => Contract i o w s e a
     -> ContractInstanceTag
     -> TracePredicate
 anyTx contract inst = tx contract inst (const True) "anyTx"
 
 assertHooks
-    :: forall w s e a.
+    :: forall i o w s e a.
        ( Monoid w
        )
-    => Contract w s e a
+    => Contract i o w s e a
     -> ContractInstanceTag
     -> ([PABReq] -> Bool)
     -> String
@@ -411,10 +413,10 @@ assertHooks contract inst p nm =
 
 -- | Make an assertion about the responses provided to the contract instance.
 assertResponses
-    :: forall w s e a.
+    :: forall i o w s e a.
        ( Monoid w
        )
-    => Contract w s e a
+    => Contract i o w s e a
     -> ContractInstanceTag
     -> ([Response PABResp] -> Bool)
     -> String
@@ -436,13 +438,13 @@ data Shrinking = DoShrink | DontShrink
 -- | make an assertion about the 'ContractInstanceState' of a contract
 --   instance
 assertResumableResult ::
-    forall w s e a.
+    forall i o w s e a.
     ( Monoid w
     , Show e
     , Show a
     , Show w
     )
-    => Contract w s e a
+    => Contract i o w s e a
     -> ContractInstanceTag
     -> Shrinking
     -> (ResumableResult w e PABResp PABReq a -> Bool)
@@ -468,11 +470,11 @@ assertResumableResult contract inst shrinking p nm =
 -- | A 'TracePredicate' checking that the wallet's contract instance finished
 --   without errors.
 assertDone
-    :: forall contract w s e a.
+    :: forall contract i o w s e a.
     ( Monoid w
     , IsContract contract
     )
-    => contract w s e a
+    => contract i o w s e a
     -> ContractInstanceTag
     -> (a -> Bool)
     -> String
@@ -482,11 +484,11 @@ assertDone contract inst pr = assertOutcome contract inst (\case { Done a -> pr 
 -- | A 'TracePredicate' checking that the wallet's contract instance is
 --   waiting for input.
 assertNotDone
-    :: forall contract w s e a.
+    :: forall contract i o w s e a.
     ( Monoid w
     , IsContract contract
     )
-    => contract w s e a
+    => contract i o w s e a
     -> ContractInstanceTag
     -> String
     -> TracePredicate
@@ -495,11 +497,11 @@ assertNotDone contract inst = assertOutcome contract inst (\case { NotDone -> Tr
 -- | A 'TracePredicate' checking that the wallet's contract instance
 --   failed with an error.
 assertContractError
-    :: forall contract w s e a.
+    :: forall contract i o w s e a.
     ( Monoid w
     , IsContract contract
     )
-    => contract w s e a
+    => contract i o w s e a
     -> ContractInstanceTag
     -> (e -> Bool)
     -> String
@@ -507,11 +509,11 @@ assertContractError
 assertContractError contract inst p = assertOutcome contract inst (\case { Failed err -> p err; _ -> False })
 
 assertOutcome
-    :: forall contract w s e a.
+    :: forall contract i o w s e a.
        ( Monoid w
        , IsContract contract
        )
-    => contract w s e a
+    => contract i o w s e a
     -> ContractInstanceTag
     -> (Outcome e a -> Bool)
     -> String
@@ -623,12 +625,13 @@ assertUserLog pred' = flip postMapM (L.generalize Folds.userLog) $ \lg -> do
 -- | Make an assertion about the accumulated state @w@ of
 --   a contract instance.
 assertAccumState ::
-    forall contract w s e a.
+    forall contract i o w s e a.
     ( Monoid w
     , Show w
     , IsContract contract
+    , JSON.FromJSON o
     )
-    => contract w s e a
+    => contract i o w s e a
     -> ContractInstanceTag
     -> (w -> Bool)
     -> String

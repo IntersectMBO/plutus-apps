@@ -90,7 +90,7 @@ type PlaygroundTrace a =
         ] a
 
 handlePlaygroundTrace ::
-    forall w s e effs a.
+    forall eff w s e effs a.
     ( ContractConstraints s
     , Show e
     , JSON.ToJSON e
@@ -104,7 +104,7 @@ handlePlaygroundTrace ::
     , Member ContractInstanceIdEff effs
     )
     => EmulatorConfig
-    -> Contract w s e ()
+    -> Contract eff w s e ()
     -> PlaygroundTrace a
     -> Eff (Reader ThreadId ': Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
 handlePlaygroundTrace conf contract action = do
@@ -112,12 +112,12 @@ handlePlaygroundTrace conf contract action = do
             . reinterpret handleEmulatedWalletAPI
             . interpret (handleWaiting @_ @effs (_slotConfig conf))
             . subsume
-            . interpret (handleRunContractPlayground @w @s @e @_ @effs contract)
+            . interpret (handleRunContractPlayground @eff @w @s @e @_ @effs contract)
             $ raiseEnd action
     void $ exit @effs @EmulatorMessage
 
 -- | Run a 'Trace Playground', streaming the log messages as they arrive
-runPlaygroundStream :: forall w s e effs a.
+runPlaygroundStream :: forall eff w s e effs a.
     ( ContractConstraints s
     , Show e
     , JSON.ToJSON e
@@ -125,14 +125,14 @@ runPlaygroundStream :: forall w s e effs a.
     , Monoid w
     )
     => EmulatorConfig
-    -> Contract w s e ()
+    -> Contract eff w s e ()
     -> PlaygroundTrace a
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
 runPlaygroundStream conf contract =
     let wallets = fromMaybe knownWallets (preview (initialChainState . _Left . to Map.keys) conf)
     in runTraceStream conf . interpretPlaygroundTrace conf contract wallets
 
-interpretPlaygroundTrace :: forall w s e effs a.
+interpretPlaygroundTrace :: forall eff w s e effs a.
     ( Member MultiAgentEffect effs
     , Member MultiAgentControlEffect effs
     , Member (Error EmulatorRuntimeError) effs
@@ -145,7 +145,7 @@ interpretPlaygroundTrace :: forall w s e effs a.
     , Monoid w
     )
     => EmulatorConfig
-    -> Contract w s e () -- ^ The contract
+    -> Contract eff w s e () -- ^ The contract
     -> [Wallet] -- ^ Wallets that should be simulated in the emulator
     -> PlaygroundTrace a
     -> Eff effs ()

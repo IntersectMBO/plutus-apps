@@ -226,7 +226,7 @@ getOnChainState ::
     , PlutusTx.ToData state
     )
     => StateMachineClient state i
-    -> Contract w schema e (Maybe (OnChainState state i, Map TxOutRef Tx.ChainIndexTxOut))
+    -> Contract PABReq PABResp w schema e (Maybe (OnChainState state i, Map TxOutRef Tx.ChainIndexTxOut))
 getOnChainState StateMachineClient{scInstance, scChooser} = mapError (review _SMContractError) $ do
     utxoTx <- utxosTxOutTxAt (SM.machineAddress scInstance)
     let states = getStates scInstance utxoTx
@@ -259,7 +259,7 @@ waitForUpdateUntilSlot ::
     )
     => StateMachineClient state i
     -> Slot
-    -> Contract w schema e (WaitingResult Slot i state)
+    -> Contract PABReq PABResp w schema e (WaitingResult Slot i state)
 waitForUpdateUntilSlot client timeoutSlot = waitForUpdateTimeout client (isSlot timeoutSlot) >>= fmap (fmap (tyTxOutData . ocsTxOut)) . awaitPromise
 
 -- | Same as 'waitForUpdateUntilSlot', but works with 'POSIXTime' instead.
@@ -272,7 +272,7 @@ waitForUpdateUntilTime ::
     )
     => StateMachineClient state i
     -> POSIXTime
-    -> Contract w schema e (WaitingResult POSIXTime i state)
+    -> Contract PABReq PABResp w schema e (WaitingResult POSIXTime i state)
 waitForUpdateUntilTime client timeoutTime = waitForUpdateTimeout client (isTime timeoutTime) >>= fmap (fmap (tyTxOutData . ocsTxOut)) . awaitPromise
 
 -- | Wait until the on-chain state of the state machine instance has changed,
@@ -281,7 +281,7 @@ waitForUpdateUntilTime client timeoutTime = waitForUpdateTimeout client (isTime 
 --   started then it returns the first state of the instance as soon as it
 --   has started.
 waitForUpdate ::
-    forall state i w schema e.
+    forall state i eff w schema e.
     ( AsSMContractError e
     , AsContractError e
     , PlutusTx.FromData state
@@ -289,7 +289,7 @@ waitForUpdate ::
     , PlutusTx.FromData i
     )
     => StateMachineClient state i
-    -> Contract w schema e (Maybe (OnChainState state i))
+    -> Contract PABReq PABResp w schema e (Maybe (OnChainState state i))
 waitForUpdate client = waitForUpdateTimeout client never >>= awaitPromise >>= \case
     Timeout t        -> absurd t
     ContractEnded{}  -> pure Nothing
@@ -299,7 +299,7 @@ waitForUpdate client = waitForUpdateTimeout client never >>= awaitPromise >>= \c
 -- | Construct a 'Promise' that waits for an update to the state machine's
 --   on-chain state, or a user-defined timeout (whichever happens first).
 waitForUpdateTimeout ::
-    forall state i t w schema e.
+    forall state i t eff w schema e.
     ( AsSMContractError e
     , AsContractError e
     , PlutusTx.FromData state
@@ -307,8 +307,8 @@ waitForUpdateTimeout ::
     , PlutusTx.FromData i
     )
     => StateMachineClient state i -- ^ The state machine client
-    -> Promise w schema e t -- ^ The timeout
-    -> Contract w schema e (Promise w schema e (WaitingResult t i (OnChainState state i)))
+    -> Promise PABReq PABResp w schema e t -- ^ The timeout
+    -> Contract PABReq PABResp w schema e (Promise PABReq PABResp w schema e (WaitingResult t i (OnChainState state i)))
 waitForUpdateTimeout client@StateMachineClient{scInstance, scChooser} timeout = do
     currentState <- getOnChainState client
     let success = case currentState of
@@ -349,7 +349,7 @@ runGuardedStep ::
     => StateMachineClient state input              -- ^ The state machine
     -> input                                       -- ^ The input to apply to the state machine
     -> (UnbalancedTx -> state -> state -> Maybe a) -- ^ The guard to check before running the step
-    -> Contract w schema e (Either a (TransitionResult state input))
+    -> Contract PABReq PABResp w schema e (Either a (TransitionResult state input))
 runGuardedStep = runGuardedStepWith mempty mempty
 
 -- | Run one step of a state machine, returning the new state.
@@ -364,13 +364,13 @@ runStep ::
     -- ^ The state machine
     -> input
     -- ^ The input to apply to the state machine
-    -> Contract w schema e (TransitionResult state input)
+    -> Contract PABReq PABResp w schema e (TransitionResult state input)
 runStep = runStepWith mempty mempty
 
 -- | Create a thread token. The thread token contains a reference to an unspent output of the wallet,
 -- so it needs to used with 'mkStateMachine' immediately, and the machine must be initialised,
 -- to prevent the output from getting spent in the mean time.
-getThreadToken :: AsSMContractError e => Contract w schema e ThreadToken
+getThreadToken :: AsSMContractError e => Contract PABReq PABResp w schema e ThreadToken
 getThreadToken = mapError (review _SMContractError) $ do
     txOutRef <- getUnspentOutput
     pure $ ThreadToken txOutRef (scriptCurrencySymbol (curPolicy txOutRef))
@@ -389,7 +389,7 @@ runInitialise ::
     -- ^ The initial state
     -> Value
     -- ^ The value locked by the contract at the beginning
-    -> Contract w schema e state
+    -> Contract PABReq PABResp w schema e state
 runInitialise = runInitialiseWith mempty mempty
 
 -- | Constraints & lookups needed to transition a state machine instance
@@ -419,7 +419,7 @@ runInitialiseWith ::
     -- ^ The initial state
     -> Value
     -- ^ The value locked by the contract at the beginning
-    -> Contract w schema e state
+    -> Contract PABReq PABResp w schema e state
 runInitialiseWith customLookups customConstraints StateMachineClient{scInstance} initialState initialValue = mapError (review _SMContractError) $ do
     ownPK <- ownPaymentPubKeyHash
     utxo <- utxosAt (Ledger.pubKeyHashAddress ownPK Nothing)
@@ -459,7 +459,7 @@ runStepWith ::
     -- ^ The state machine
     -> input
     -- ^ The input to apply to the state machine
-    -> Contract w schema e (TransitionResult state input)
+    -> Contract PABReq PABResp w schema e (TransitionResult state input)
 runStepWith lookups constraints smc input =
     runGuardedStepWith lookups constraints smc input (\_ _ _ -> Nothing) >>= pure . \case
         Left a  -> absurd a
@@ -478,7 +478,7 @@ runGuardedStepWith ::
     -> StateMachineClient state input              -- ^ The state machine
     -> input                                       -- ^ The input to apply to the state machine
     -> (UnbalancedTx -> state -> state -> Maybe a) -- ^ The guard to check before running the step
-    -> Contract w schema e (Either a (TransitionResult state input))
+    -> Contract PABReq PABResp w schema e (Either a (TransitionResult state input))
 runGuardedStepWith userLookups userConstraints smc input guard = mapError (review _SMContractError) $ mkStep smc input >>= \case
     Right StateMachineTransition{smtConstraints,smtOldState=State{stateData=os}, smtNewState=State{stateData=ns}, smtLookups} -> do
         pk <- ownPaymentPubKeyHash
@@ -508,7 +508,7 @@ mkStep ::
     )
     => StateMachineClient state input
     -> input
-    -> Contract w schema e (Either (InvalidTransition state input) (StateMachineTransition state input))
+    -> Contract PABReq PABResp w schema e (Either (InvalidTransition state input) (StateMachineTransition state input))
 mkStep client@StateMachineClient{scInstance} input = do
     let StateMachineInstance{stateMachine, typedValidator} = scInstance
         StateMachine{smTransition} = stateMachine

@@ -169,7 +169,7 @@ import Control.Monad.Cont
 import Control.Monad.Freer (Eff, raise, run)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, logMessageContent)
 import Control.Monad.Reader
-import Control.Monad.State (MonadState, State)
+import Control.Monad.State (MonadState, State, gets)
 import Control.Monad.State qualified as State
 import Control.Monad.Writer qualified as Writer
 import Data.Aeson qualified as JSON
@@ -230,9 +230,9 @@ import Prettyprinter
 -- | Key-value map where keys and values have three indices that can vary between different elements
 --   of the map. Used to store `ContractHandle`s, which are indexed over observable state, schema,
 --   and error type.
-data IMap (key :: i -> j -> k -> l -> *) (val :: i -> j -> k -> *) where
+data IMap (key :: i -> j -> k -> l -> *) (val :: h -> i -> j -> k -> *) where
     IMNil  :: IMap key val
-    IMCons :: (Typeable i, Typeable j, Typeable k, Typeable l) => key i j k l -> val i j k -> IMap key val -> IMap key val
+    IMCons :: (Typeable h, Typeable i, Typeable j, Typeable k, Typeable l) => key i j k l -> val h i j k -> IMap key val -> IMap key val
 
 -- TODO: Should this make sure we don't duplicate keys?
 imAppend :: IMap key val -> IMap key val -> IMap key val
@@ -241,7 +241,7 @@ imAppend (IMCons k v m) m' = IMCons k v (imAppend m m')
 
 -- | Look up a value in an indexed map. First checks that the indices agree, using `cast`. Once the
 --   type checker is convinced that the indices match we can check the key for equality.
-imLookup :: (Typeable i, Typeable j, Typeable k, Typeable l, Typeable key, Typeable val, Eq (key i j k l)) => key i j k l -> IMap key val -> Maybe (val i j k)
+imLookup :: (Typeable h, Typeable i, Typeable j, Typeable k, Typeable l, Typeable key, Typeable val, Eq (key i j k l)) => key i j k l -> IMap key val -> Maybe (val h i j k)
 imLookup _ IMNil = Nothing
 imLookup k (IMCons key val m) =
     case cast (key, val) of
@@ -279,7 +279,7 @@ data ContractInstanceSpec state where
     ContractInstanceSpec :: (SchemaConstraints w schema err, Typeable params)
                   => ContractInstanceKey state w schema err params -- ^ The key used when looking up contract instance handles in `perform`
                   -> Wallet                                        -- ^ The wallet who owns the contract instance
-                  -> Contract w schema err ()                      -- ^ The contract that is running in the instance
+                  -> Contract eff w schema err ()                      -- ^ The contract that is running in the instance
                   -> ContractInstanceSpec state
 
 -- TODO: Here be ugly hacks to make the CrashTolerance stuff less ugly. The crash tolerance stuff can be done without this
@@ -294,7 +294,7 @@ instance (forall w s e p. Show (ContractInstanceKey state w s e p)) => Show (Con
 instance (Typeable state, forall w s e p. Eq (ContractInstanceKey state w s e p)) => Eq (ContractInstanceSpec state) where
   ContractInstanceSpec key w _ == ContractInstanceSpec key' w' _ = w == w' && cast key == Just key'
 
-data WalletContractHandle w s e = WalletContractHandle Wallet (ContractHandle w s e)
+data WalletContractHandle eff w s e = WalletContractHandle Wallet (ContractHandle eff w s e)
 
 type Handles state = IMap (ContractInstanceKey state) WalletContractHandle
 
@@ -314,12 +314,12 @@ activateWallets sa (StartContract key params : starts) = do
     let wallet = instanceWallet key
     h <- activateContract wallet (instanceContract sa key params) (instanceTag key)
     m <- activateWallets sa starts
-    return $ IMCons key (WalletContractHandle wallet h) m
+    return $ undefined -- IMCons key (WalletContractHandle wallet h) m
 
 -- | A function returning the `ContractHandle` corresponding to a `ContractInstanceKey`. A
 --   `HandleFun` is provided to the `perform` function to enable calling contract endpoints with
 --   `Plutus.Trace.Emulator.callEndpoint`.
-type HandleFun state = forall w schema err params. (Typeable w, Typeable schema, Typeable err, Typeable params) => ContractInstanceKey state w schema err params -> ContractHandle w schema err
+type HandleFun state = forall eff w schema err params. (Typeable w, Typeable schema, Typeable err, Typeable params) => ContractInstanceKey state w schema err params -> ContractHandle eff w schema err
 
 -- | The `ModelState` models the state of the blockchain. It contains,
 --
@@ -341,7 +341,7 @@ instance Functor ModelState where
   fmap f m = m { _contractState = f (_contractState m) }
 
 dummyModelState :: state -> ModelState state
-dummyModelState s = ModelState 0 Map.empty mempty [] True s
+dummyModelState = ModelState 0 Map.empty mempty [] True
 
 -- | The `Spec` monad is a state monad over the `ModelState` with reader and writer components to keep track
 --   of newly created symbolic tokens. It is used exclusively by the `nextState` function to model the effects
@@ -354,7 +354,7 @@ instance MonadState state (Spec state) where
         (a, cs) -> (a, s { _contractState = cs })
     {-# INLINE state #-}
 
-    get = Spec $ fmap _contractState State.get
+    get = Spec $ gets _contractState
     {-# INLINE get #-}
 
     put cs = Spec $ State.modify' $ \s -> s { _contractState = cs }
@@ -478,7 +478,7 @@ class ( Typeable state
     instanceContract :: (SymToken -> AssetClass)
                      -> ContractInstanceKey state w s e p
                      -> p
-                     -> Contract w s e ()
+                     -> Contract eff w s e ()
 
     -- | While `nextState` models the behaviour of the actions, `perform` contains the code for
     --   running the actions in the emulator (see "Plutus.Trace.Emulator"). It gets access to the
@@ -610,7 +610,7 @@ runSpec :: Spec state ()
         -> Var AssetKey
         -> ModelState state
         -> ModelState state
-runSpec (Spec spec) v s = State.execState (runReaderT (fst <$> Writer.runWriterT spec) v) s
+runSpec (Spec spec) v = State.execState (runReaderT (fst <$> Writer.runWriterT spec) v)
 
 -- | Check if a given action creates new symbolic tokens in a given `ModelState`
 createsTokens :: ContractModel state
@@ -672,7 +672,7 @@ assertSpec s b = do
 
 -- | Modify the contract state.
 modifyContractState :: (state -> state) -> Spec state ()
-modifyContractState f = modState contractState f
+modifyContractState = modState contractState
 
 -- | Set a specific field of the contract state.
 ($=) :: Setter' state a -> a -> Spec state ()
@@ -704,10 +704,10 @@ instance GetModelState (Spec state) where
     getModelState = Spec State.get
 
 handle :: ContractModel s => Handles s -> HandleFun s
-handle handles key =
-    case imLookup key handles of
-        Just (WalletContractHandle _ h) -> h
-        Nothing                         -> error $ "handle: No handle for " ++ show key
+handle handles key = undefined
+    -- case imLookup key handles of
+    --     Just (WalletContractHandle _ h) -> h
+    --     Nothing                         -> error $ "handle: No handle for " ++ show key
 
 type AssetMap = Map AssetKey (Map String AssetClass)
 
@@ -1314,7 +1314,7 @@ finalChecks opts copts predicate prop = do
         action = do
           -- see note [The Env contract]
           env <- innerAction
-          hdl <- activateContract w1 (getEnvContract @()) envContractInstanceTag
+          hdl <- activateContract w1 (getEnvContract @_ @()) envContractInstanceTag
           void $ callEndpoint @"register-token-env" hdl env
         stream :: forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
         stream = fst <$> runEmulatorStream (opts ^. emulatorConfig) action
@@ -1483,7 +1483,7 @@ type EnvContractSchema = Endpoint "register-token-env" AssetMap
 envContractInstanceTag :: ContractInstanceTag
 envContractInstanceTag = "supercalifragilisticexpialidocious"
 
-getEnvContract :: Contract w EnvContractSchema ContractError AssetMap
+getEnvContract :: Contract eff w EnvContractSchema ContractError AssetMap
 getEnvContract = toContract $ endpoint @"register-token-env" pure
 
 checkBalances :: ModelState state
@@ -1493,7 +1493,7 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
   where
     walletFundsChange w sval =
       -- see Note [The Env contract]
-      flip postMapM ((,) <$> Folds.instanceOutcome @() (toContract getEnvContract) envContractInstanceTag
+      flip postMapM ((,) <$> Folds.instanceOutcome @_ @() (toContract getEnvContract) envContractInstanceTag
                          <*> L.generalize ((,) <$> Folds.walletFunds w <*> Folds.walletFees w)) $ \(outcome, (finalValue', fees)) -> do
         dist <- Freer.ask @InitialDistribution
         case outcome of
@@ -1515,7 +1515,7 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
 
 -- See the uniqueness requirement in Note [Symbolic Tokens and Symbolic Values]
 checkNoOverlappingTokens :: TracePredicate
-checkNoOverlappingTokens = flip postMapM (Folds.instanceOutcome @() (toContract getEnvContract) envContractInstanceTag) $ \ outcome ->
+checkNoOverlappingTokens = flip postMapM (Folds.instanceOutcome @_ @() (toContract getEnvContract) envContractInstanceTag) $ \ outcome ->
   case outcome of
     Done envInner -> do
      let tokens = concatMap Map.elems $ Map.elems envInner
