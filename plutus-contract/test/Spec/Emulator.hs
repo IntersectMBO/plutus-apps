@@ -22,6 +22,7 @@ import Data.ByteString.Lazy.Char8 (pack)
 import Data.Default (Default (def))
 import Data.Foldable (fold)
 import Data.Set qualified as Set
+import Data.These (These (..))
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -160,13 +161,13 @@ txnUpdateUtxo = property $ do
         -- submit the same txn twice, so it should be accepted the first time
         -- and rejected the second time.
         trace = do
-            Trace.liftWallet wallet1 (submitTxn $ Right txn)
-            Trace.liftWallet wallet1 (submitTxn $ Right txn)
+            Trace.liftWallet wallet1 (submitTxn $ This txn)
+            Trace.liftWallet wallet1 (submitTxn $ This txn)
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidate _ i1 _
-                , Chain.TxnValidationFail _ _ txi (Index.TxOutRefNotFound _) _
+                , Chain.TxnValidate _ (This i1) _
+                , Chain.TxnValidationFail _ _ (This txi) (Index.TxOutRefNotFound _) _
                 , Chain.SlotAdd _
                 ] -> i1 == txn && txi == txn
             _ -> False
@@ -176,7 +177,7 @@ validTrace :: Property
 validTrace = property $ do
     (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        trace = Trace.liftWallet wallet1 (submitTxn $ Right txn)
+        trace = Trace.liftWallet wallet1 (submitTxn $ This txn)
     checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert
 
 validTrace2 :: Property
@@ -184,8 +185,8 @@ validTrace2 = property $ do
     (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = do
-            Trace.liftWallet wallet1 (submitTxn $ Right txn)
-            Trace.liftWallet wallet1 (submitTxn $ Right txn)
+            Trace.liftWallet wallet1 (submitTxn $ This txn)
+            Trace.liftWallet wallet1 (submitTxn $ This txn)
         predicate = assertFailedTransaction (\_ _ _ -> True)
     checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert
 
@@ -194,11 +195,11 @@ invalidTrace = property $ do
     (Mockchain m _ _, txn) <- forAll genChainTxn
     let invalidTxn = txn { txMint = Ada.adaValueOf 1 }
         options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        trace = Trace.liftWallet wallet1 (submitTxn $ Right invalidTxn)
+        trace = Trace.liftWallet wallet1 (submitTxn $ This invalidTxn)
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ txn (Index.ValueNotPreserved _ _) _
+                , Chain.TxnValidationFail _ _ (This txn) (Index.ValueNotPreserved _ _) _
                 , Chain.SlotAdd _
                 ] -> txn == invalidTxn
             _ -> False
@@ -227,15 +228,15 @@ invalidScript = property $ do
         -- may spend outputs belonging to one of the other two wallets.
         -- So we add all the wallets' signatures with 'signAll'.
         trace = do
-            Trace.liftWallet wallet1 (submitTxn $ Right (Gen.signAll scriptTxn))
+            Trace.liftWallet wallet1 (submitTxn $ This (Gen.signAll scriptTxn))
             _ <- Trace.nextSlot
-            Trace.liftWallet wallet1 (submitTxn $ Right invalidTxn)
+            Trace.liftWallet wallet1 (submitTxn $ This invalidTxn)
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
                 , Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ txn (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure")) _
+                , Chain.TxnValidationFail _ _ (This txn) (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure")) _
                 , Chain.SlotAdd _
                 ] -> txn == invalidTxn
             _ -> False

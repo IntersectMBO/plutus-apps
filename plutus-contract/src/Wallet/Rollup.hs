@@ -112,8 +112,8 @@ getAnnotatedTransactions = groupBy (equating (slotIndex . sequenceId)) . reverse
 handleChainEvent :: RollupState -> ChainEvent -> RollupState
 handleChainEvent s = \case
     SlotAdd _                         -> s & over currentSequenceId (set txIndexL 0 . over slotIndexL succ)
-    TxnValidate _ tx _                -> addTx s (Valid tx)
-    TxnValidationFail Phase2 _ tx _ _ -> addTx s (Invalid tx)
+    TxnValidate _ tx _                -> Tx.theseTx (addTx s . Valid) (const s) tx
+    TxnValidationFail Phase2 _ tx _ _ -> Tx.theseTx (addTx s . Invalid) (const s) tx
     _                                 -> s
 
 addTx :: RollupState -> OnChainTx -> RollupState

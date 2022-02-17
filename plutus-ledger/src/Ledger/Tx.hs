@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE RecordWildCards   #-}
 
 module Ledger.Tx
@@ -23,10 +24,12 @@ module Ledger.Tx
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
     , CardanoTx
+    , theseTx
     , getCardanoTxId
     , getCardanoTxInputs
     , getCardanoTxOutRefs
     , getCardanoTxUnspentOutputsTx
+    , getCardanoTxFee
     , SomeCardanoApiTx(..)
     -- * Transactions
     , addSignature
@@ -53,6 +56,7 @@ import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.These (These (..))
 import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
 import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
@@ -114,24 +118,29 @@ instance Pretty ChainIndexTxOut where
     pretty ScriptChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
 
-type CardanoTx = Either SomeCardanoApiTx Tx
+type CardanoTx = These Tx SomeCardanoApiTx
+
+theseTx :: (Tx -> r) -> (SomeCardanoApiTx -> r) -> CardanoTx -> r
+theseTx l _ (This tx)    = l tx
+theseTx l _ (These tx _) = l tx
+theseTx _ r (That tx)    = r tx
 
 getCardanoTxId :: CardanoTx -> TxId
-getCardanoTxId (Left (SomeTx (C.Tx body _) _)) = CardanoAPI.fromCardanoTxId $ C.getTxId body
-getCardanoTxId (Right tx)                      = txId tx
+getCardanoTxId = theseTx txId (\(SomeTx (C.Tx body _) _) -> CardanoAPI.fromCardanoTxId $ C.getTxId body)
 
 getCardanoTxInputs :: CardanoTx -> Set TxIn
-getCardanoTxInputs (Left (SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _)) =
-  Set.fromList $ fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns
-getCardanoTxInputs (Right tx) = txInputs tx
+getCardanoTxInputs = theseTx txInputs
+    (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
+        Set.fromList $ fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
 
 getCardanoTxOutRefs :: CardanoTx -> [(TxOut, TxOutRef)]
-getCardanoTxOutRefs (Left tx)  = CardanoAPI.txOutRefs tx
-getCardanoTxOutRefs (Right tx) = txOutRefs tx
+getCardanoTxOutRefs = theseTx txOutRefs CardanoAPI.txOutRefs
 
 getCardanoTxUnspentOutputsTx :: CardanoTx -> Map TxOutRef TxOut
-getCardanoTxUnspentOutputsTx (Left tx)  = CardanoAPI.unspentOutputsTx tx
-getCardanoTxUnspentOutputsTx (Right tx) = unspentOutputsTx tx
+getCardanoTxUnspentOutputsTx = theseTx unspentOutputsTx CardanoAPI.unspentOutputsTx
+
+getCardanoTxFee :: CardanoTx -> Value
+getCardanoTxFee = theseTx txFee (const mempty) -- TODO: support CardanoTx
 
 instance Pretty Tx where
     pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =

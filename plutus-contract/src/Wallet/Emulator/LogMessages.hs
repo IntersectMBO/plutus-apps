@@ -14,8 +14,9 @@ module Wallet.Emulator.LogMessages(
 
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.These (These (That))
 import GHC.Generics (Generic)
-import Ledger (Address, Tx, TxId, txId)
+import Ledger (Address, CardanoTx, TxId, getCardanoTxId, theseTx)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase)
 import Ledger.Slot (Slot)
@@ -47,9 +48,9 @@ data TxBalanceMsg =
     | AddingInputsFor Value
     | NoCollateralInputsAdded
     | AddingCollateralInputsFor Value
-    | FinishedBalancing Tx
-    | SubmittingTx Tx
-    | ValidationFailed ValidationPhase TxId Tx ValidationError [ScriptValidationEvent]
+    | FinishedBalancing CardanoTx
+    | SubmittingTx CardanoTx
+    | ValidationFailed ValidationPhase TxId CardanoTx ValidationError [ScriptValidationEvent]
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -62,8 +63,8 @@ instance Pretty TxBalanceMsg where
         AddingInputsFor vl           -> "Adding inputs for" <+> pretty vl
         NoCollateralInputsAdded      -> "No collateral inputs added"
         AddingCollateralInputsFor vl -> "Adding collateral inputs for" <+> pretty vl
-        FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", pretty tx]
-        SubmittingTx tx              -> "Submitting tx:" <+> pretty (txId tx)
+        FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", theseTx pretty (pretty . getCardanoTxId . That) tx]
+        SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
         ValidationFailed p i _ e _   -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
 
 makePrisms ''TxBalanceMsg

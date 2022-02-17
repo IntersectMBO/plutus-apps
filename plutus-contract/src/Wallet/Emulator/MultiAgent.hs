@@ -31,6 +31,7 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
+import Data.These (These (This))
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
@@ -279,7 +280,7 @@ emulatorStatePool tp = emptyEmulatorState
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
-emulatorStateInitialDist mp = emulatorStatePool [tx] where
+emulatorStateInitialDist mp = emulatorStatePool [This tx] where
     tx = Tx
             { txInputs = mempty
             , txCollateral = mempty

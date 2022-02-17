@@ -40,6 +40,7 @@ import Data.Set qualified as Set
 import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
+import Data.These (These (..))
 import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
@@ -56,7 +57,7 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (calculateMinFee, hasValidationErrors)
+import Ledger.Validation (calculateMinFee, fromPlutusTx, hasValidationErrors)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -76,6 +77,7 @@ import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
                                     TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SubmittingTx, ValidationFailed))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
 
+import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
 import Debug.Trace
 
 newtype SigningProcess = SigningProcess {
@@ -229,8 +231,7 @@ handleWallet = \case
 
   where
     submitTxnH :: (Member NodeClientEffect effs, Member (LogMsg TxBalanceMsg) effs) => CardanoTx -> Eff effs ()
-    submitTxnH (Left _) = error "Wallet.Emulator.Wallet.handleWallet: Expecting a mock tx, not an Alonzo tx when submitting it."
-    submitTxnH (Right tx) = do
+    submitTxnH tx = do
         logInfo $ SubmittingTx tx
         publishTx tx
 
@@ -251,16 +252,23 @@ handleWallet = \case
         slotConfig <- WAPI.getClientSlotConfig
         let validitySlotRange = posixTimeRangeToContainedSlotRange slotConfig (utx' ^. U.validityTimeRange)
         let utx = utx' & U.tx . Ledger.validRange .~ validitySlotRange
-        utxWithFees <- validateTxAndAddFees slotConfig utxo utx
-        -- balance to add fees
-        tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ (utxWithFees ^. U.tx . Ledger.fee))
+        -- Balance with dummy fee to get a better estimate of the number of inputs and outputs
+        tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ Ledger.minFee mempty)
+        signedTx <- handleAddSignature tx
+        let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
+        privKey <- CW.paymentPrivateKey . _mockWallet <$> get
+        ctx <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey signedTx
+        let theFee = calculateMinFee ctx
+        tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
         tx'' <- handleAddSignature tx'
-        logInfo $ FinishedBalancing tx''
-        pure $ Right tx''
+        let txctx = These tx'' (Tx.SomeTx ctx AlonzoEraInCardanoMode)
+        logInfo $ FinishedBalancing txctx
+        pure txctx
 
     walletAddSignatureH :: (Member (State WalletState) effs) => CardanoTx -> Eff effs CardanoTx
-    walletAddSignatureH (Left _) = error "Wallet.Emulator.Wallet.handleWallet: Expecting a mock tx, not an Alonzo tx when adding a signature."
-    walletAddSignatureH (Right tx) = Right <$> handleAddSignature tx
+    walletAddSignatureH (That _) = error "Wallet.Emulator.Wallet.handleWallet: Expecting a mock tx, not an Alonzo tx when adding a signature."
+    walletAddSignatureH (This tx) = This <$> handleAddSignature tx
+    walletAddSignatureH (These tx _) = This <$> handleAddSignature tx
 
     totalFundsH :: (Member (State WalletState) effs, Member ChainIndexQueryEffect effs) => Eff effs Value
     totalFundsH = foldMap (view Ledger.ciTxOutValue) <$> (get >>= ownOutputs)
@@ -310,33 +318,6 @@ ownOutputs WalletState{_mockWallet} = do
 
     txOutRefTxOutFromRef :: TxOutRef -> Eff effs (Maybe (TxOutRef, ChainIndexTxOut))
     txOutRefTxOutFromRef ref = fmap (ref,) <$> ChainIndex.txOutFromRef ref
-
-validateTxAndAddFees ::
-    ( Member (Error WAPI.WalletAPIError) effs
-    , Member ChainIndexQueryEffect effs
-    , Member (LogMsg TxBalanceMsg) effs
-    , Member (State WalletState) effs
-    )
-    => SlotConfig
-    -> Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
-    -> UnbalancedTx
-    -> Eff effs UnbalancedTx
-validateTxAndAddFees slotCfg ownTxOuts utx = do
-    -- Balance and sign just for validation
-    tx <- handleBalanceTx ownTxOuts (utx & U.tx . Ledger.fee .~ Ledger.minFee mempty)
-    signedTx <- handleAddSignature tx
-    let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
-    privKey <- CW.paymentPrivateKey . _mockWallet <$> get
-    let theFee = calculateMinFee requiredSigners privKey signedTx
-    let utxWithFee = utx & U.tx . Ledger.fee .~ theFee
-    let utxoIndex        = Ledger.UtxoIndex $ fmap Ledger.toTxOut $ (U.fromScriptOutput <$> unBalancedTxUtxoIndex utx) <> ownTxOuts
-        ((e, _), events) = Ledger.runValidation (Ledger.validateTransactionOffChain signedTx) (Ledger.ValidationCtx utxoIndex slotCfg)
-    for_ e $ \(phase, ve) -> do
-        logWarn $ ValidationFailed phase (Ledger.txId tx) tx ve events
-        throwError $ WAPI.ValidationError ve
-    tx' <- handleBalanceTx ownTxOuts utxWithFee
-    for_ (hasValidationErrors requiredSigners privKey utxoIndex tx') (traceShowM . (, tx'))
-    pure utxWithFee
 
 lookupValue ::
     ( Member (Error WAPI.WalletAPIError) effs

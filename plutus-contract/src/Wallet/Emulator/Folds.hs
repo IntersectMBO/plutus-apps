@@ -66,7 +66,7 @@ import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase (Phase1, Phase2))
-import Ledger.Tx (Address, Tx, TxOut (txOutValue), TxOutTx (txOutTxOut))
+import Ledger.Tx (Address, CardanoTx, TxOut (txOutValue), TxOutTx (txOutTxOut), theseTx)
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
@@ -95,7 +95,7 @@ type EmulatorEventFold a = Fold EmulatorEvent a
 type EmulatorEventFoldM effs a = FoldM (Eff effs) EmulatorEvent a
 
 -- | Transactions that failed to validate, in the given validation phase (if specified).
-failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, Tx, ValidationError, [ScriptValidationEvent])]
+failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, CardanoTx, ValidationError, [ScriptValidationEvent])]
 failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
     where
         f e = preview (eteEvent . chainEvent . _TxnValidationFail) e
@@ -104,7 +104,7 @@ failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
         filterPhase (Just p) (p', i, t, v, e) = if p == p' then Just (i, t, v, e) else Nothing
 
 -- | Transactions that were validated
-validatedTransactions :: EmulatorEventFold [(TxId, Tx, [ScriptValidationEvent])]
+validatedTransactions :: EmulatorEventFold [(TxId, CardanoTx, [ScriptValidationEvent])]
 validatedTransactions = preMapMaybe (preview (eteEvent . chainEvent . _TxnValidate)) L.list
 
 -- | All scripts that are run during transaction validation
@@ -238,7 +238,7 @@ instanceOutcome ::
     -> ContractInstanceTag
     -> EmulatorEventFoldM effs (Outcome e a)
 instanceOutcome con =
-    fmap (fromMaybe NotDone . fmap (fromResumableResult . instContractState)) . instanceState con
+    fmap (maybe NotDone (fromResumableResult . instContractState)) . instanceState con
 
 -- | Unspent outputs at an address
 utxoAtAddress :: Address -> EmulatorEventFold UtxoMap
@@ -247,8 +247,8 @@ utxoAtAddress addr =
     $ Fold (flip step) (AM.addAddress addr mempty) (view (AM.fundsAt addr))
     where
         step = \case
-            TxnValidate _ txn _                -> AM.updateAddresses (Valid txn)
-            TxnValidationFail Phase2 _ txn _ _ -> AM.updateAddresses (Invalid txn)
+            TxnValidate _ txn _                -> theseTx (AM.updateAddresses . Valid) (const id) txn
+            TxnValidationFail Phase2 _ txn _ _ -> theseTx (AM.updateAddresses . Invalid) (const id) txn
             _                                  -> id
 
 
@@ -283,12 +283,13 @@ blockchain :: EmulatorEventFold [Block]
 blockchain =
     let step (currentBlock, otherBlocks) = \case
             SlotAdd _                          -> ([], currentBlock : otherBlocks)
-            TxnValidate _ txn _                -> (Valid txn : currentBlock, otherBlocks)
+            TxnValidate _ txn _                -> (add Valid txn currentBlock, otherBlocks)
             TxnValidationFail Phase1 _ _   _ _ -> (currentBlock, otherBlocks)
-            TxnValidationFail Phase2 _ txn _ _ -> (Invalid txn : currentBlock, otherBlocks)
+            TxnValidationFail Phase2 _ txn _ _ -> (add Invalid txn currentBlock, otherBlocks)
         initial = ([], [])
         extract (currentBlock, otherBlocks) =
             (currentBlock : otherBlocks)
+        add val txn currentBlock = theseTx ((: currentBlock) . val) (const currentBlock) txn
     in preMapMaybe (preview (eteEvent . chainEvent))
         $ Fold step initial extract
 
