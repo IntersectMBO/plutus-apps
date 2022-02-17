@@ -30,11 +30,9 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _MintingPolicyFromHash,
     _RedeemerFromHash,
     _TxOutFromRef,
-    _TxFromTxId,
     _UtxoSetMembership,
     _UtxoSetAtAddress,
     _UtxoSetWithCurrency,
-    _TxsFromTxIds,
     _TxoSetAtAddress,
     _GetTip,
     -- * Plutus application backend response effect types
@@ -213,11 +211,9 @@ chainIndexMatches q r = case (q, r) of
     (StakeValidatorFromHash{}, StakeValidatorHashResponse{}) -> True
     (RedeemerFromHash{}, RedeemerHashResponse{})             -> True
     (TxOutFromRef{}, TxOutRefResponse{})                     -> True
-    (TxFromTxId{}, TxIdResponse{})                           -> True
     (UtxoSetMembership{}, UtxoSetMembershipResponse{})       -> True
     (UtxoSetAtAddress{}, UtxoSetAtResponse{})                -> True
     (UtxoSetWithCurrency{}, UtxoSetWithCurrencyResponse{})   -> True
-    (TxsFromTxIds{}, TxIdsResponse{})                        -> True
     (TxoSetAtAddress{}, TxoSetAtResponse{})                  -> True
     (GetTip{}, GetTipResponse{})                             -> True
     _                                                        -> False
@@ -232,11 +228,9 @@ data ChainIndexQuery =
   | StakeValidatorFromHash StakeValidatorHash
   | RedeemerFromHash RedeemerHash
   | TxOutFromRef TxOutRef
-  | TxFromTxId TxId
   | UtxoSetMembership TxOutRef
   | UtxoSetAtAddress (PageQuery TxOutRef) Credential
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
-  | TxsFromTxIds [TxId]
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
   | GetTip
     deriving stock (Eq, Show, Generic)
@@ -250,11 +244,9 @@ instance Pretty ChainIndexQuery where
         StakeValidatorFromHash h   -> "requesting stake validator from hash" <+> pretty h
         RedeemerFromHash h         -> "requesting redeemer from hash" <+> pretty h
         TxOutFromRef r             -> "requesting utxo from utxo reference" <+> pretty r
-        TxFromTxId i               -> "requesting chain index tx from id" <+> pretty i
         UtxoSetMembership txOutRef -> "whether tx output is part of the utxo set" <+> pretty txOutRef
         UtxoSetAtAddress _ c       -> "requesting utxos located at addresses with the credential" <+> pretty c
         UtxoSetWithCurrency _ ac   -> "requesting utxos containing the asset class" <+> pretty ac
-        TxsFromTxIds i             -> "requesting chain index txs from ids" <+> pretty i
         TxoSetAtAddress _ c        -> "requesting txos located at addresses with the credential" <+> pretty c
         GetTip                     -> "requesting the tip of the chain index"
 
