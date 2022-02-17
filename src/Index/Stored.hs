@@ -23,11 +23,11 @@ data StoredIndex m a e = StoredIndex
 storeEventsThreshold :: Int
 storeEventsThreshold = 3
 
-new :: Monad m => (a -> [e] -> m a) -> Int -> a -> m (Maybe (StoredIndex m a e))
+new :: Monad m => (a -> [e] -> m a) -> Int -> m a -> Maybe (StoredIndex m a e)
 new store depth acc
-  | depth <= 0 = pure Nothing
-  | otherwise  = pure $ Just $ StoredIndex
-    { siHandle = pure acc
+  | depth <= 0 = Nothing
+  | otherwise  = Just $ StoredIndex
+    { siHandle = acc
     , siEvents = []
     , siDepth  = depth
     , siStore  = store
