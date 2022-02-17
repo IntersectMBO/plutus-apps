@@ -58,6 +58,7 @@ module Plutus.Contract.Test.ContractModel
     -- $dynamicLogic
     , DL
     , action
+    , waitUntilDL
     , anyAction
     , anyActions
     , anyActions_

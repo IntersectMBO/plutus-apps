@@ -78,6 +78,7 @@ module Plutus.Contract.Test.ContractModel.Internal
     -- $dynamicLogic
     , DL
     , action
+    , waitUntilDL
     , anyAction
     , anyActions
     , anyActions_
@@ -156,7 +157,7 @@ import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI)
 import Plutus.Trace.Effects.EmulatorControl (EmulatorControl)
 import Plutus.Trace.Effects.RunContract (RunContract)
 import Plutus.Trace.Effects.Waiting (Waiting)
-import Plutus.Trace.Emulator (initialChainState)
+import Plutus.Trace.Emulator (initialChainState, waitUntilSlot)
 import Plutus.Trace.Emulator.Types (ContractHandle (..), ContractInstanceMsg (..), ContractInstanceTag,
                                     EmulatorRuntimeError (..), UserThreadMsg (..), cilMessage)
 
@@ -439,6 +440,12 @@ class ( Typeable state
     --   This is used in the `Arbitrary` instance for `Actions`s as well as by `anyAction` and
     --   `anyActions`.
     arbitraryAction :: ModelState state -> Gen (Action state)
+
+    -- | Control the distribution of how long `WaitUntil` waits
+    arbitraryWaitInterval :: ModelState state -> Gen Slot
+    arbitraryWaitInterval s = Slot <$> choose (1,max 10 n)
+      where
+        Slot n = _currentSlot s
 
     -- | The initial state, before any actions have been performed.
     initialState :: state
@@ -767,6 +774,7 @@ contractAction s a = ContractAction (createsTokens s a) a
 
 instance ContractModel state => Show (StateModel.Action (ModelState state) a) where
     showsPrec p (ContractAction _ a) = showsPrec p a
+    showsPrec p (WaitUntil n)        = showParen (p >= 11) $ showString "WaitUntil " . showsPrec 11 n
     showsPrec p (Unilateral w)       = showParen (p >= 11) $ showString "Unilateral " . showsPrec 11 w
 
 deriving instance ContractModel state => Eq (StateModel.Action (ModelState state) a)
@@ -780,14 +788,27 @@ instance ContractModel state => StateModel (ModelState state) where
           --   contract instances and removing their private keys from the emulator state. This can
           --   be used to check that a wallet can *unilaterally* achieve a desired outcome, without
           --   the help of other wallets.
+        WaitUntil :: Slot -> StateModel.Action (ModelState state) ()
 
     type ActionMonad (ModelState state) = ContractMonad state
 
-    arbitraryAction s = do
-        a <- arbitraryAction s
-        return (Some (ContractAction (createsTokens s a) a))
+    arbitraryAction s =
+        -- TODO: do we need some way to control the distribution
+        -- between actions and waits here?
+        frequency [(9, do a <- arbitraryAction s
+                          return (Some (ContractAction (createsTokens s a) a)))
+                  ,(1, Some . WaitUntil . step <$> arbitraryWaitInterval s)]
+        where
+            slot = s ^. currentSlot
+            step n = slot + n
 
-    shrinkAction s (ContractAction _ a) = [ Some (contractAction s a') | a' <- shrinkAction s a ]
+    shrinkAction s (ContractAction _ a) =
+      [ Some (WaitUntil (Slot n')) | let Slot n = runSpec (nextState a) (Var 0) s ^. currentSlot
+                                   , n' <- n : shrink n
+                                   , Slot n' > s ^. currentSlot ] ++
+      [ Some (contractAction s a') | a' <- shrinkAction s a ]
+    shrinkAction s (WaitUntil (Slot n))        =
+      [ Some (WaitUntil (Slot n')) | n' <- shrink n, Slot n' > s ^. currentSlot ]
     shrinkAction _ _                    = []
 
     initialState = ModelState { _currentSlot      = 0
@@ -799,9 +820,11 @@ instance ContractModel state => StateModel (ModelState state) where
                               }
 
     nextState s (ContractAction _ cmd) v = runSpec (nextState cmd) v s
+    nextState s (WaitUntil n) _          = runSpec (() <$ waitUntil n) (error "unreachable") s
     nextState s Unilateral{} _           = s
 
     precondition s (ContractAction _ cmd) = (s ^. assertionsOk) && precondition s cmd
+    precondition s (WaitUntil n)          = n > s ^. currentSlot
     precondition _ _                      = True
 
     perform s (ContractAction _ cmd) envOuter = do
@@ -827,6 +850,7 @@ instance ContractModel state => StateModel (ModelState state) where
       let insts = instancesForOtherWallets w h
       mapM_ freezeContractInstance insts
       discardWallets (w /=)
+    perform _ (WaitUntil slot) _ = runEmulator_ $ \ _ -> lift . void $ waitUntilSlot slot
 
     postcondition _s _cmd _env _res = True
 
@@ -863,18 +887,11 @@ pattern Actions :: [Act s] -> Actions s
 pattern Actions as <- Actions_ _ (Smart _ as) where
   Actions as = Actions_ [] (Smart 0 as)
 
-data Act s = Bind (Var AssetKey) (Action s)
-           | NoBind (Var AssetKey) (Action s)
+data Act s = Bind {varOf :: Var AssetKey, actionOf :: Action s }
+           | NoBind {varOf :: Var AssetKey, actionOf :: Action s}
+           | ActWaitUntil (Var ()) Slot
 
 deriving instance ContractModel s => Eq (Act s)
-
-actionOf :: Act s -> Action s
-actionOf (Bind _ a)   = a
-actionOf (NoBind _ a) = a
-
-varOf :: Act s -> Var AssetKey
-varOf (Bind v _)   = v
-varOf (NoBind v _) = v
 
 isBind :: Act s -> Bool
 isBind Bind{} = True
@@ -883,9 +900,14 @@ isBind _      = False
 actionsFromList :: [Action s] -> Actions s
 actionsFromList = Actions . zipWith NoBind (Var <$> [0..])
 
+varNumOf :: Act s -> Int
+varNumOf (ActWaitUntil (Var i) _) = i
+varNumOf act | Var i <- varOf act = i
+
 instance ContractModel state => Show (Act state) where
-  showsPrec d (Bind (Var i) a) = showParen (d >= 11) $ showString ("tok" ++ show i ++ " := ") . showsPrec 0 a
-  showsPrec d (NoBind _ a)     = showsPrec d a
+  showsPrec d (Bind (Var i) a)   = showParen (d >= 11) $ showString ("tok" ++ show i ++ " := ") . showsPrec 0 a
+  showsPrec d (ActWaitUntil _ n) = showParen (d >= 11) $ showString ("WaitUntil ") . showsPrec 11 n
+  showsPrec d (NoBind _ a)       = showsPrec d a
 
 instance ContractModel state => Show (Actions state) where
   showsPrec d (Actions as)
@@ -902,12 +924,18 @@ instance ContractModel s => Arbitrary (Actions s) where
 toStateModelActions :: ContractModel state =>
                         Actions state -> StateModel.Actions (ModelState state)
 toStateModelActions (Actions_ rs (Smart k s)) =
-  StateModel.Actions_ rs (Smart k [ varOf act := ContractAction (isBind act) (actionOf act) | act <- s ])
+  StateModel.Actions_ rs (Smart k $ map mkStep s)
+    where mkStep (ActWaitUntil v n) = v := WaitUntil n
+          mkStep act                = varOf act := ContractAction (isBind act) (actionOf act)
 
 fromStateModelActions :: StateModel.Actions (ModelState s) -> Actions s
 fromStateModelActions (StateModel.Actions_ rs (Smart k s)) =
-  Actions_ rs (Smart k [ if b then Bind (Var i) act else NoBind (Var i) act
-                    | Var i := ContractAction b act <- s])
+  Actions_ rs (Smart k (catMaybes $ map mkAct s))
+  where
+    mkAct :: Step (ModelState s) -> Maybe (Act s)
+    mkAct (Var i := ContractAction b act) = Just $ if b then Bind (Var i) act else NoBind (Var i) act
+    mkAct (v     := WaitUntil n)          = Just $ ActWaitUntil v n
+    mkAct (_     := Unilateral{})         = Nothing
 
 -- | An instance of a `DL` scenario generated by `forAllDL`. It is turned into a `Actions` before
 --   being passed to the property argument of `forAllDL`, but in case of a failure the generated
@@ -937,9 +965,10 @@ data FailedStep state = Action (Act state)
 
 deriving instance ContractModel s => Show (FailedStep s)
 instance ContractModel s => Eq (FailedStep s) where
-  Assert s == Assert s' = s == s'
-  Action a == Action a' = actionOf a == actionOf a'
-  _ == _                = False
+  Assert s == Assert s'                                   = s == s'
+  Action (ActWaitUntil _ n) == Action (ActWaitUntil _ n') = n == n'
+  Action a == Action a'                                   = actionOf a == actionOf a'
+  _ == _                                                  = False
 
 instance ContractModel s => Show (DLTest s) where
     show (BadPrecondition as bads s) =
@@ -976,8 +1005,9 @@ toDLTest :: ContractModel state =>
 toDLTest (BadPrecondition steps acts s) =
   DL.BadPrecondition (toDLTestSteps steps) (map conv acts) (dummyModelState s)
     where
-        conv (Action a) = Some (ContractAction (isBind a) (actionOf a))
-        conv (Assert e) = Error e
+        conv (Action (ActWaitUntil _ n)) = Some (WaitUntil n)
+        conv (Action a)                  = Some (ContractAction (isBind a) (actionOf a))
+        conv (Assert e)                  = Error e
 toDLTest (Looping steps) =
   DL.Looping (toDLTestSteps steps)
 toDLTest (Stuck steps s) =
@@ -991,14 +1021,16 @@ toDLTestSteps steps = map toDLTestStep steps
 
 toDLTestStep :: ContractModel state =>
                   TestStep state -> DL.TestStep (ModelState state)
-toDLTestStep (Do act)    = DL.Do $ varOf act StateModel.:= ContractAction (isBind act) (actionOf act)
-toDLTestStep (Witness a) = DL.Witness a
+toDLTestStep (Do (ActWaitUntil v n)) = DL.Do $ v StateModel.:= WaitUntil n
+toDLTestStep (Do act)                = DL.Do $ varOf act StateModel.:= ContractAction (isBind act) (actionOf act)
+toDLTestStep (Witness a)             = DL.Witness a
 
 fromDLTest :: forall s. DL.DynLogicTest (ModelState s) -> DLTest s
 fromDLTest (DL.BadPrecondition steps acts s) =
   BadPrecondition (fromDLTestSteps steps) (concatMap conv acts) (_contractState s)
   where conv :: Any (StateModel.Action (ModelState s)) -> [FailedStep s]
         conv (Some (ContractAction _ act)) = [Action $ NoBind (Var 0) act]
+        conv (Some (WaitUntil n))          = [Action $ ActWaitUntil (Var 0) n]
         conv (Some Unilateral{})           = []
         conv (Error e)                     = [Assert e]
 fromDLTest (DL.Looping steps) =
@@ -1013,6 +1045,7 @@ fromDLTestSteps steps = concatMap fromDLTestStep steps
 
 fromDLTestStep :: DL.TestStep (ModelState state) -> [TestStep state]
 fromDLTestStep (DL.Do (v := ContractAction b act)) = [Do $ if b then Bind v act else NoBind v act]
+fromDLTestStep (DL.Do (v := WaitUntil n))          = [Do $ ActWaitUntil v n]
 fromDLTestStep (DL.Do (_ := Unilateral{}))         = []
 fromDLTestStep (DL.Witness a)                      = [Witness a]
 
@@ -1107,6 +1140,10 @@ action :: ContractModel state => Action state -> DL state ()
 action cmd = do
   s <- getModelState
   DL.action (contractAction s cmd)
+
+-- | Generate a specific action. Fails if the action's `precondition` is not satisfied.
+waitUntilDL :: ContractModel state => Slot -> DL state ()
+waitUntilDL = DL.action . WaitUntil
 
 -- | Generate a random action using `arbitraryAction`. The generated action is guaranteed to satisfy
 --   its `precondition`. Fails with `Stuck` if no action satisfying the precondition can be found
@@ -1235,6 +1272,7 @@ forAllUniqueDL nextVar state dl prop = DL.forAllUniqueDL nextVar state dl (prop 
 
 instance ContractModel s => DL.DynLogicModel (ModelState s) where
     restricted (ContractAction _ act) = restricted act
+    restricted WaitUntil{}            = False
     restricted Unilateral{}           = True
 
 instance GetModelState (DL state) where
@@ -1623,7 +1661,7 @@ checkNoLockedFundsProof' run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
             foldl (QC..&&.) (counterexample "Main run prop" (run (toStateModelActions $ Actions $ as ++ as')) QC..&&. (counterexample "Main strategy" . counterexample (show . Actions $ as ++ as') $ prop s0 s))
                             [ walletProp s0 as w bal | (w, bal) <- Map.toList (s ^. balanceChanges) ]
     where
-        nextVarIdx as = 1 + maximum ([0] ++ [ i | Var i <- varOf <$> as ])
+        nextVarIdx as = 1 + maximum ([0] ++ [ i | i <- varNumOf <$> as ])
         prop s0 s =
           let lockedVal = lockedValue s
           in (counterexample ("Locked funds should be at most " ++ show (overhead s0) ++ ", but they are\n  " ++ show lockedVal)

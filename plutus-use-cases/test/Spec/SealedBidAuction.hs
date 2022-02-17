@@ -12,7 +12,7 @@ module Spec.SealedBidAuction where
 
 import Cardano.Crypto.Hash as Crypto
 import Control.Lens hiding (elements)
-import Control.Monad (void, when)
+import Control.Monad (when)
 import Data.Default (Default (def))
 
 import Ledger (Slot (..), Value)
@@ -30,17 +30,6 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
-
-instance Arbitrary AuctionParams where
-  arbitrary = do
-    endTime    <- choose (20, 50)
-    payoutTime <- choose (endTime+1, 70)
-    return $ AuctionParams
-              { apOwner      = mockWalletPaymentPubKeyHash w1
-              , apAsset      = theToken
-              , apEndTime    = TimeSlot.scSlotZeroTime def + fromInteger (endTime*1000)
-              , apPayoutTime = TimeSlot.scSlotZeroTime def + fromInteger (payoutTime*1000)
-              }
 
 -- | The token that we are auctioning off.
 theToken :: Value
@@ -78,20 +67,30 @@ instance ContractModel AuctionModel where
         SellerH :: ContractInstanceKey AuctionModel () SellerSchema AuctionError AuctionParams
         BidderH :: Wallet -> ContractInstanceKey AuctionModel () BidderSchema AuctionError AuctionParams
 
-    data Action AuctionModel = Init AuctionParams | Bid Wallet Integer | WaitUntil Slot | Reveal Wallet Integer | Payout Wallet
+    data Action AuctionModel = Init Slot Slot
+                             | Bid Wallet Integer
+                             | Reveal Wallet Integer
+                             | Payout Wallet
         deriving (Eq, Show)
 
     initialState = AuctionModel
         { _currentBids       = []
         , _currentWinningBid = Nothing
-        , _endBidSlot        = TimeSlot.posixTimeToEnclosingSlot def (TimeSlot.scSlotZeroTime def)
-        , _payoutSlot        = TimeSlot.posixTimeToEnclosingSlot def (TimeSlot.scSlotZeroTime def)
+        , _endBidSlot        = 0
+        , _payoutSlot        = 0
         , _phase             = NotStarted
         }
 
     initialInstances = []
 
-    startInstances _ (Init params) = StartContract SellerH params : [ StartContract (BidderH w) params | w <- [w2, w3, w4] ]
+    startInstances _ (Init (Slot ebS) (Slot pS)) =
+      let params =  AuctionParams
+            { apOwner      = mockWalletPaymentPubKeyHash w1
+            , apAsset      = theToken
+            , apEndTime    = TimeSlot.scSlotZeroTime def + fromInteger (ebS*1000)
+            , apPayoutTime = TimeSlot.scSlotZeroTime def + fromInteger (pS*1000)
+            }
+      in StartContract SellerH params : [ StartContract (BidderH w) params | w <- [w2, w3, w4] ]
     startInstances _ _             = []
 
     instanceWallet SellerH     = w1
@@ -102,10 +101,7 @@ instance ContractModel AuctionModel where
 
     arbitraryAction s
         | p /= NotStarted =
-            frequency$[ (1, WaitUntil . step <$> choose (1, 3 :: Integer))
-                      , (5, pure (WaitUntil $ s ^. contractState . endBidSlot))
-                      , (5, pure (WaitUntil $ s ^. contractState . payoutSlot))
-                      , (40, Bid  <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000))
+            frequency$[ (40, Bid  <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000))
                       -- Random reveal
                       , (20, Reveal <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000))
                       ] ++
@@ -114,17 +110,24 @@ instance ContractModel AuctionModel where
                       | not (null (s ^. contractState . currentBids))
                       ] ++
                       [ (20, Payout <$> elements [w1, w2, w3, w4]) ]
-        | otherwise = oneof [Init <$> arbitrary]
+        | otherwise = do
+            endTime    <- choose (20, 50)
+            payoutTime <- choose (endTime+1, 70)
+            return $ Init (Slot endTime) (Slot payoutTime)
         where
             p    = s ^. contractState . phase
-            slot = s ^. currentSlot
-            step n = slot + fromIntegral n
+
+    arbitraryWaitInterval s = frequency $ [(1, Slot <$> choose (1, 3))] ++
+                                          [(5, pure $ s ^. contractState . endBidSlot - s ^. currentSlot)
+                                          | s ^. contractState . endBidSlot > s ^. currentSlot ] ++
+                                          [(5, pure $ s ^. contractState . payoutSlot - s ^. currentSlot)
+                                          | s ^. contractState . payoutSlot > s ^. currentSlot ]
 
     precondition s cmd  =
         case cmd of
-            Init _         -> s ^. contractState . phase == NotStarted
-
-            WaitUntil slot -> slot > s ^. currentSlot
+            -- TODO: do you want to require that the payout time is after the end bidding time?
+            -- maybe not?
+            Init{}         -> s ^. contractState . phase == NotStarted
 
             Bid w v        -> s ^. contractState . phase == Bidding
                            && w `notElem` fmap snd (s ^. contractState . currentBids)
@@ -135,8 +138,7 @@ instance ContractModel AuctionModel where
 
             Payout _       -> s ^. contractState . phase == PayoutTime
 
-    perform _ _ _ (Init _)          = delay 3
-    perform _ _ _ (WaitUntil slot)  = void $ Trace.waitUntilSlot slot
+    perform _ _ _ (Init _ _)        = delay 3
     perform handle _ _ (Bid w bid)  = do
         Trace.callEndpoint @"bid" (handle $ BidderH w) (BidArgs (secretArg bid))
         delay 1
@@ -151,12 +153,9 @@ instance ContractModel AuctionModel where
         Trace.callEndpoint @"payout" (handle $ BidderH w) ()
         delay 1
 
-    shrinkAction _ (WaitUntil (Slot n))  = [ WaitUntil (Slot n') | n' <- shrink n ]
-    shrinkAction s (Bid w v) =
-        WaitUntil (s ^. currentSlot + 1) : [ Bid w v' | v' <- shrink v ]
-    shrinkAction s (Reveal w v) =
-        WaitUntil (s ^. currentSlot + 1) : [ Reveal w v' | v' <- shrink v ]
-    shrinkAction _ _ = []
+    shrinkAction _ (Bid w v)    = [ Bid w v' | v' <- shrink v ]
+    shrinkAction _ (Reveal w v) = [ Reveal w v' | v' <- shrink v ]
+    shrinkAction _ _            = []
 
     monitoring (s,_) (Reveal w bid)
       | (bid,w) `elem` bids   = tabulate "Reveals" ["honest"]
@@ -167,18 +166,14 @@ instance ContractModel AuctionModel where
 
     -- This command is only for setting up the model state with theToken
     nextState cmd = do
-        updatePhase
         currentPhase <- viewContractState phase
         case cmd of
-            Init params -> do
-                endBidSlot .= TimeSlot.posixTimeToEnclosingSlot def (apEndTime params)
-                payoutSlot .= TimeSlot.posixTimeToEnclosingSlot def (apPayoutTime params)
+            Init ebS pS -> do
+                endBidSlot .= ebS
+                payoutSlot .= pS
                 withdraw w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
                 phase .= Bidding
                 wait 3
-
-            WaitUntil slot' -> do
-                waitUntil slot'
 
             Bid w bid | currentPhase == Bidding -> do
                   bids <- viewContractState currentBids
@@ -214,12 +209,10 @@ instance ContractModel AuctionModel where
                   phase $= AuctionOver
 
             _ -> pure ()
-        updatePhase
-      where
-        updatePhase = do
+
+    nextReactiveState slot = do
           currentPhase <- viewContractState phase
           when (currentPhase `notElem` [NotStarted, AuctionOver]) $ do
-            slot       <- viewModelState currentSlot
             eSlot      <- viewContractState endBidSlot
             pSlot <- viewContractState payoutSlot
             when (slot >= eSlot) $ do
@@ -240,7 +233,7 @@ finishingStrategy :: Wallet -> DL AuctionModel ()
 finishingStrategy w = do
     slot <- viewModelState currentSlot
     payday <- viewContractState payoutSlot
-    when (slot < payday) $ action $ WaitUntil $ payday
+    when (slot < payday) $ waitUntilDL payday
     currentPhase <- viewContractState phase
     when (currentPhase == PayoutTime) $ action $ Payout w
 
