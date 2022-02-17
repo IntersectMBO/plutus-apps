@@ -12,7 +12,7 @@ import           Data.List.NonEmpty (NonEmpty (..), toList, (<|))
 import           GHC.Generics
 
 import           QuickSpec
-import           Test.QuickCheck    (Arbitrary (arbitrary), CoArbitrary, Gen,
+import           Test.QuickCheck    (Arbitrary (..), CoArbitrary(..), Gen,
                                      choose, chooseInt, frequency, listOf,
                                      sized)
 
@@ -73,10 +73,15 @@ instance ( Ord a
 hfSignature :: [Sig]
 hfSignature =
   [ monoObserve @(HistoricalFold Int String)
+  , monoObserve @(HistoricalFold Int Int)
+  , monoObserve @(HistoricalFold Int [Int])
+  , monoObserve @(Maybe (HistoricalFold Int String))
+  , monoObserve @(Maybe (HistoricalFold Int Int))
+  , monoObserve @(Maybe (HistoricalFold Int [Int]))
   , con "new" (HF.new :: (Int -> String -> Int) -> Int -> Int -> Maybe (HistoricalFold Int String))
   , con "insert" (HF.insert :: String -> HistoricalFold Int String -> HistoricalFold Int String)
   , con "view" (HF.view :: HistoricalFold Int String -> Int)
   , con "historyLength" (HF.historyLength :: HistoricalFold Int String -> Int)
   , con "rewind" (HF.rewind :: Int -> HistoricalFold Int String -> Maybe (HistoricalFold Int String))
-  , withMaxTermSize 4
+  , withMaxTermSize 6
   ]
