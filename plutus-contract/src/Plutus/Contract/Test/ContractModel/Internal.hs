@@ -441,9 +441,13 @@ class ( Typeable state
     --   `anyActions`.
     arbitraryAction :: ModelState state -> Gen (Action state)
 
+    -- | The probability that we will generate a `WaitUntil` in a given state
+    waitProbability :: ModelState state -> Double
+    waitProbability _ = 0.1
+
     -- | Control the distribution of how long `WaitUntil` waits
     arbitraryWaitInterval :: ModelState state -> Gen Slot
-    arbitraryWaitInterval s = Slot <$> choose (1,max 10 n)
+    arbitraryWaitInterval s = Slot <$> choose (1,max 10 (head [ 5*(k-1) | k <- [0..], 2^k > n]))
       where
         Slot n = _currentSlot s
 
@@ -795,9 +799,9 @@ instance ContractModel state => StateModel (ModelState state) where
     arbitraryAction s =
         -- TODO: do we need some way to control the distribution
         -- between actions and waits here?
-        frequency [(9, do a <- arbitraryAction s
-                          return (Some (ContractAction (createsTokens s a) a)))
-                  ,(1, Some . WaitUntil . step <$> arbitraryWaitInterval s)]
+        frequency [(floor $ 100.0*(1.0-waitProbability s), do a <- arbitraryAction s
+                                                              return (Some (ContractAction (createsTokens s a) a)))
+                  ,(floor $ 100.0*waitProbability s, Some . WaitUntil . step <$> arbitraryWaitInterval s)]
         where
             slot = s ^. currentSlot
             step n = slot + n
@@ -855,7 +859,18 @@ instance ContractModel state => StateModel (ModelState state) where
     postcondition _s _cmd _env _res = True
 
     monitoring (s0, s1) (ContractAction _ cmd) _env _res = monitoring (s0, s1) cmd
-    monitoring _ _ _ _                                   = id
+    monitoring (s0, _) (WaitUntil n@(Slot _n)) _ _                 =
+      tabulate "Wait interval" (bucket 10 diff) .
+      tabulate "Wait until" (bucket 10 _n)
+      where Slot diff = n - s0 ^. currentSlot
+            bucket size n | n < size = [ "<" ++ show size ]
+                          | size <= n
+                          , n < size*10 = [bucketIn size n]
+                          | otherwise = bucket (size*10) n
+            bucketIn size n =
+              let b = n `div` size in
+              show (b*size) ++ "-" ++ show (b*size+(size - 1))
+    monitoring _ _ _ _ = id
 
 -- We present a simplified view of test sequences, and DL test cases, so
 -- that users do not need to see the variables bound to results.
@@ -1581,8 +1596,11 @@ propSanityCheckModel =
 
 -- | Sanity check a `ContractModel`. Ensures that all assertions in
 -- the property generation succeed.
-propSanityCheckAssertions :: forall state. ContractModel state => Property
-propSanityCheckAssertions = property (asserts . stateAfter @state)
+propSanityCheckAssertions :: forall state. ContractModel state => Actions state -> Property
+propSanityCheckAssertions as = monadic (flip State.evalState mempty) $ do
+  -- We do this to gather all the statistics we need
+  _ <- runActionsInState StateModel.initialState (toStateModelActions as)
+  return (asserts $ stateAfter as)
 
 -- $noLockedFunds
 -- Showing that funds can not be locked in the contract forever.

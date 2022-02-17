@@ -252,6 +252,7 @@ instance ContractModel CrowdfundingModel where
 
   -- To generate a random test case we need to know how to generate a random
   -- command given the current model state.
+
   arbitraryAction s = oneof $
     [ CContribute <$> QC.elements availableWallets <*> (Ada.lovelaceValueOf . abs <$> choose (2000000, 100000000))
     | Prelude.not . null $ availableWallets
@@ -262,7 +263,13 @@ instance ContractModel CrowdfundingModel where
     where
       availableWallets = [ w | w <- contributorWallets, w `notElem` Map.keys (s ^. contractState . contributions) ]
 
-  arbitraryWaitInterval _ = Slot <$> choose (1, 100)
+  waitProbability s
+    | Prelude.not . null $ availableWallets
+    , s ^. currentSlot < s ^. contractState . endSlot = 0.05
+    | Prelude.not (s ^. contractState . ownerOnline || s ^. contractState . ownerContractDone) = 0.05
+    | otherwise = 1
+    where
+      availableWallets = [ w | w <- contributorWallets, w `notElem` Map.keys (s ^. contractState . contributions) ]
 
   shrinkAction _ _ = []
 

@@ -206,8 +206,6 @@ instance ContractModel AuctionModel where
         | otherwise = pure $ Init w1
         where
             p    = s ^. contractState . phase
-            slot = s ^. currentSlot
-            step n = slot + fromIntegral n
 
     precondition s (Init _) = s ^. contractState . phase == NotStarted
     precondition s cmd      = s ^. contractState . phase /= NotStarted &&
@@ -260,7 +258,7 @@ instance ContractModel AuctionModel where
         delay 1
 
     shrinkAction _ (Init _)  = []
-    shrinkAction s (Bid w v) = [ Bid w v' | v' <- shrink v ]
+    shrinkAction _ (Bid w v) = [ Bid w v' | v' <- shrink v ]
 
     monitoring _ (Bid _ bid) =
       classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOut <> Ledger.maxFee))

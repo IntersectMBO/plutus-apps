@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace, prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds) where
+module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace, prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) where
 
 import Control.Lens hiding (both)
 import Control.Monad (void, when)
@@ -142,8 +142,6 @@ instance ContractModel EscrowModel where
                     beforeRefund = slot < s ^. contractState . refundSlot
                     afterRefund = Prelude.not beforeRefund
                     prefer b = if b then 10 else 1
-
-  shrinkAction _ _ = []
 
   monitoring _ (Redeem _) = classify True "Contains Redeem"
   monitoring (_,_) (BadRefund w w') = tabulate "Bad refund attempts" [if w==w' then "early refund" else "steal refund"]

@@ -149,7 +149,8 @@ instance ContractModel VestingModel where
                                 ]
     where
       amount   = s ^. contractState . vestedAmount
-      (Slot n) = s ^. currentSlot
+
+
 
   shrinkAction _ (Vest _)       = []
   shrinkAction _ (Retrieve w v) = Retrieve w <$> shrinkValue v
