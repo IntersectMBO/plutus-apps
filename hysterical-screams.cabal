@@ -28,6 +28,7 @@ source-repository head
 
 library
   exposed-modules:
+      Index.HistoricalFold
       Index.Stored
   other-modules:
       Paths_hysterical_screams
@@ -47,7 +48,7 @@ test-suite hysterical-screams-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Model
+      HistoricalFold
       Paths_hysterical_screams
   hs-source-dirs:
       test

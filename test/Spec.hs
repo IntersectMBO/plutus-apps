@@ -1,13 +1,12 @@
+import           QuickSpec
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
-import QuickSpec
 
 import           Data.List             (foldl')
 import           Data.Maybe            (fromJust, isJust, isNothing)
 
-import           Model
-
-import qualified Debug.Trace           as Debug
+import           Index.HistoricalFold
+import           HistoricalFold
 
 tests :: TestTree
 tests = testGroup "Utxo index" [hfProperties]
