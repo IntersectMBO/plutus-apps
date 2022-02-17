@@ -63,8 +63,8 @@ instance ( Ord a
          , Arbitrary a
          , Arbitrary b
          , CoArbitrary a
-         , CoArbitrary b ) => Observe (HistoricalFold a b) (HFObs a) (HFIns a b) where
-  observe hf (HFIns bs) =
+         , CoArbitrary b ) => Observe (HFIns a b) (HFObs a) (HistoricalFold a b) where
+  observe (HFIns bs) hf =
     let newHF = HF.insertL bs hf
      in HFObs { hfoDepth = HF.hfDepth newHF
               , hfoAccumulator = HF.hfAccumulator newHF
@@ -72,7 +72,7 @@ instance ( Ord a
 
 hfSignature :: [Sig]
 hfSignature =
-  [ monoTypeObserve (Proxy :: Proxy (HFIns Int String))
+  [ monoObserve @(HistoricalFold Int String)
   , con "new" (HF.new :: (Int -> String -> Int) -> Int -> Int -> Maybe (HistoricalFold Int String))
   , con "insert" (HF.insert :: String -> HistoricalFold Int String -> HistoricalFold Int String)
   , con "view" (HF.view :: HistoricalFold Int String -> Int)
