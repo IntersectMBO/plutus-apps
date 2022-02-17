@@ -36,9 +36,9 @@ import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBacken
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
                               unCheckDatabase)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (AssetClass, BlockId (..), Datum, DatumHash (..), MintingPolicy, MintingPolicyHash (..), Redeemer,
-               RedeemerHash (..), Script, ScriptHash (..), Slot, StakeValidator, StakeValidatorHash (..), TxId (..),
-               TxOutRef (..), Validator, ValidatorHash (..))
+import Ledger (AssetClass, BlockId (..), ChainIndexTxOut (..), Datum, DatumHash (..), MintingPolicy,
+               MintingPolicyHash (..), Redeemer, RedeemerHash (..), Script, ScriptHash (..), Slot, StakeValidator,
+               StakeValidatorHash (..), TxId (..), TxOutRef (..), Validator, ValidatorHash (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
 import Plutus.V1.Ledger.Api (Credential)
@@ -76,6 +76,17 @@ type RedeemerRow = RedeemerRowT Identity
 instance Table RedeemerRowT where
     data PrimaryKey RedeemerRowT f = RedeemerRowId (Columnar f ByteString) deriving (Generic, Beamable)
     primaryKey = RedeemerRowId . _redeemerRowHash
+
+data UtxoRowT f = UtxoRow
+    { _utxoRowOutRef :: Columnar f ByteString
+    , _utxoRowTxOut  :: Columnar f ByteString
+    } deriving (Generic, Beamable)
+
+type UtxoRow = UtxoRowT Identity
+
+instance Table UtxoRowT where
+    data PrimaryKey UtxoRowT f = UtxoRowOutRef (Columnar f ByteString) deriving (Generic, Beamable)
+    primaryKey = UtxoRowOutRef . _utxoRowOutRef
 
 data AddressRowT f = AddressRow
     { _addressRowCred   :: Columnar f ByteString
@@ -153,6 +164,7 @@ data Db f = Db
     { datumRows          :: f (TableEntity DatumRowT)
     , scriptRows         :: f (TableEntity ScriptRowT)
     , redeemerRows       :: f (TableEntity RedeemerRowT)
+    , utxoOutRefRows     :: f (TableEntity UtxoRowT)
     , addressRows        :: f (TableEntity AddressRowT)
     , assetClassRows     :: f (TableEntity AssetClassRowT)
     , tipRows            :: f (TableEntity TipRowT)
@@ -164,6 +176,7 @@ type AllTables (c :: * -> Constraint) f =
     ( c (f (TableEntity DatumRowT))
     , c (f (TableEntity ScriptRowT))
     , c (f (TableEntity RedeemerRowT))
+    , c (f (TableEntity UtxoRowT))
     , c (f (TableEntity AddressRowT))
     , c (f (TableEntity AssetClassRowT))
     , c (f (TableEntity TipRowT))
@@ -182,6 +195,7 @@ checkedSqliteDb = defaultMigratableDbSettings
     { datumRows   = renameCheckedEntity (const "datums")
     , scriptRows  = renameCheckedEntity (const "scripts")
     , redeemerRows = renameCheckedEntity (const "redeemers")
+    , utxoOutRefRows = renameCheckedEntity (const "utxo_out_refs")
     , addressRows = renameCheckedEntity (const "addresses")
     , assetClassRows = renameCheckedEntity (const "asset_classes")
     , tipRows     = renameCheckedEntity (const "tips")
@@ -226,6 +240,7 @@ deriving via Serialisable Redeemer instance HasDbType Redeemer
 deriving via Serialisable StakeValidator instance HasDbType StakeValidator
 deriving via Serialisable Validator instance HasDbType Validator
 deriving via Serialisable ChainIndexTx instance HasDbType ChainIndexTx
+deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
 deriving via Serialisable TxOutRef instance HasDbType TxOutRef
 deriving via Serialisable Credential instance HasDbType Credential
 deriving via Serialisable AssetClass instance HasDbType AssetClass
@@ -262,6 +277,11 @@ instance HasDbType (RedeemerHash, Redeemer) where
     type DbType (RedeemerHash, Redeemer) = RedeemerRow
     toDbValue (hash, redeemer) = RedeemerRow (toDbValue hash) (toDbValue redeemer)
     fromDbValue (RedeemerRow hash redeemer) = (fromDbValue hash, fromDbValue redeemer)
+
+-- instance HasDbType (TxOutRef, TxOut) where
+--     type DbType (TxOutRef, TxOut) = UtxoRow
+--     toDbValue (outRef, txOut) = UtxoRow (toDbValue outRef) (toDbValue txOut)
+--     fromDbValue (UtxoRow outRef txOut) = (fromDbValue outRef, fromDbValue txOut)
 
 instance HasDbType (Credential, TxOutRef) where
     type DbType (Credential, TxOutRef) = AddressRow

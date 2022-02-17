@@ -20,7 +20,7 @@ module Plutus.ChainIndex.Handlers
 
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
-import Control.Lens (Lens', _Just, ix, view, (^?))
+import Control.Lens (Lens', view)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, addRowsInBatches, combined, deleteRows,
@@ -38,13 +38,13 @@ import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, guard_,
-                      in_, limit_, not_, nub_, select, val_)
+                      limit_, not_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update, (&&.), (<-.), (<.), (==.),
                             (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxId (..), TxOut (..), TxOutRef (..))
+import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxOut (..), TxOutRef (..))
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
                               UtxosResponse (UtxosResponse))
@@ -60,7 +60,7 @@ import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Plutus.V1.Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
+import Plutus.V1.Ledger.Api (Credential)
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
 
@@ -99,9 +99,6 @@ getTip = fmap fromDbValue . selectOne . select $ limit_ 1 (orderBy_ (desc_ . _ti
 
 getDatumFromHash :: Member BeamEffect effs => DatumHash -> Eff effs (Maybe Datum)
 getDatumFromHash = queryOne . queryKeyValue datumRows _datumRowHash _datumRowDatum
-
-getTxFromTxId :: Member BeamEffect effs => TxId -> Eff effs (Maybe ChainIndexTx)
-getTxFromTxId = undefined -- queryOne . queryKeyValue txRows _txRowTxId _txRowTx
 
 getScriptFromHash ::
     ( Member BeamEffect effs
@@ -146,31 +143,10 @@ queryOne = fmap (fmap fromDbValue) . selectOne
 getTxOutFromRef ::
   forall effs.
   ( Member BeamEffect effs
-  , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
   -> Eff effs (Maybe ChainIndexTxOut)
-getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
-  mTx <- getTxFromTxId txOutRefId
-  -- Find the output in the tx matching the output ref
-  case mTx ^? _Just . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx) of
-    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout -> do
-      -- The output might come from a public key address or a script address.
-      -- We need to handle them differently.
-      case addressCredential $ txOutAddress txout of
-        PubKeyCredential _ ->
-          pure $ Just $ PublicKeyChainIndexTxOut (txOutAddress txout) (txOutValue txout)
-        ScriptCredential vh -> do
-          case txOutDatumHash txout of
-            Nothing -> do
-              -- If the txout comes from a script address, the Datum should not be Nothing
-              logWarn $ NoDatumScriptAddr txout
-              pure Nothing
-            Just dh -> do
-                v <- maybe (Left vh) Right <$> getScriptFromHash vh
-                d <- maybe (Left dh) Right <$> getDatumFromHash dh
-                pure $ Just $ ScriptChainIndexTxOut (txOutAddress txout) v d (txOutValue txout)
+getTxOutFromRef = queryOne . queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut
 
 getUtxoSetAtAddress
   :: forall effs.
@@ -307,9 +283,10 @@ handleControl = \case
             [ DeleteRows $ truncateTable (datumRows db)
             , DeleteRows $ truncateTable (scriptRows db)
             , DeleteRows $ truncateTable (redeemerRows db)
+            , DeleteRows $ truncateTable (utxoOutRefRows db)
             , DeleteRows $ truncateTable (addressRows db)
             , DeleteRows $ truncateTable (assetClassRows db)
-            ] -- ++ getConst (zipTables Proxy (\tbl (InsertRows rows) -> Const [AddRowsInBatches batchSize tbl rows]) db)
+            ]
         where
             truncateTable table = delete table (const (val_ True))
     GetDiagnostics -> diagnostics
