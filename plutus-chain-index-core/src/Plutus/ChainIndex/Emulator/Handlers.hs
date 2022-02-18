@@ -21,6 +21,7 @@ module Plutus.ChainIndex.Emulator.Handlers(
     ) where
 
 import Control.Lens (at, ix, makeLenses, over, preview, set, to, view, (&))
+import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
@@ -163,6 +164,31 @@ handleQuery = \case
     GetTip ->
         gets (tip . utxoState . view utxoIndex)
 
+appendBlocks ::
+    forall effs.
+    ( Member (State ChainIndexEmulatorState) effs
+    , Member (Error ChainIndexError) effs
+    , Member (LogMsg ChainIndexLog) effs
+    )
+    => [ChainSyncBlock] -> Eff effs ()
+appendBlocks blocks = do
+    let
+        processBlock (utxoIndexState, txs) (Block tip_ transactions) = do
+            case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) utxoIndexState of
+                Left err -> do
+                    let reason = InsertionFailed err
+                    logError $ Err reason
+                    throwError reason
+                Right InsertUtxoSuccess{newIndex, insertPosition} -> do
+                    logDebug $ InsertionSuccess tip_ insertPosition
+                    return (newIndex, transactions ++ txs)
+    oldState <- get @ChainIndexEmulatorState
+    (newIndex, transactions) <- foldM processBlock (view utxoIndex oldState, []) blocks
+    put $ oldState
+            & set utxoIndex newIndex
+            & over diskState
+                (mappend $ foldMap (\(tx, opt) -> if tpoStoreTx opt then DiskState.fromTx tx else mempty) (reverse transactions))
+
 handleControl ::
     forall effs.
     ( Member (State ChainIndexEmulatorState) effs
@@ -172,19 +198,8 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlock (Block tip_ transactions) -> do
-        oldState <- get @ChainIndexEmulatorState
-        case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) (view utxoIndex oldState) of
-            Left err -> do
-                let reason = InsertionFailed err
-                logError $ Err reason
-                throwError reason
-            Right InsertUtxoSuccess{newIndex, insertPosition} -> do
-                put $ oldState
-                        & set utxoIndex newIndex
-                        & over diskState
-                            (mappend $ foldMap (\(tx, opt) -> if tpoStoreTx opt then DiskState.fromTx tx else mempty) transactions)
-                logDebug $ InsertionSuccess tip_ insertPosition
+    AppendBlock block -> appendBlocks [block]
+    AppendBlocks blocks -> appendBlocks blocks
     Rollback tip_ -> do
         oldState <- get @ChainIndexEmulatorState
         case TxUtxoBalance.rollback tip_ (view utxoIndex oldState) of
