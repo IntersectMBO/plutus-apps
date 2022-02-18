@@ -126,11 +126,9 @@ data ChainIndexQuery
   | StakeValidatorFromHash String
   | RedeemerFromHash String
   | TxOutFromRef TxOutRef
-  | TxFromTxId TxId
   | UtxoSetMembership TxOutRef
   | UtxoSetAtAddress (PageQuery TxOutRef) Credential
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
-  | TxsFromTxIds (Array TxId)
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
   | GetTip
 
@@ -147,11 +145,9 @@ instance EncodeJson ChainIndexQuery where
     StakeValidatorFromHash a -> E.encodeTagged "StakeValidatorFromHash" a E.value
     RedeemerFromHash a -> E.encodeTagged "RedeemerFromHash" a E.value
     TxOutFromRef a -> E.encodeTagged "TxOutFromRef" a E.value
-    TxFromTxId a -> E.encodeTagged "TxFromTxId" a E.value
     UtxoSetMembership a -> E.encodeTagged "UtxoSetMembership" a E.value
     UtxoSetAtAddress a b -> E.encodeTagged "UtxoSetAtAddress" (a /\ b) (E.tuple (E.value >/\< E.value))
     UtxoSetWithCurrency a b -> E.encodeTagged "UtxoSetWithCurrency" (a /\ b) (E.tuple (E.value >/\< E.value))
-    TxsFromTxIds a -> E.encodeTagged "TxsFromTxIds" a E.value
     TxoSetAtAddress a b -> E.encodeTagged "TxoSetAtAddress" (a /\ b) (E.tuple (E.value >/\< E.value))
     GetTip -> encodeJson { tag: "GetTip", contents: jsonNull }
 
@@ -165,11 +161,9 @@ instance DecodeJson ChainIndexQuery where
         , "StakeValidatorFromHash" /\ D.content (StakeValidatorFromHash <$> D.value)
         , "RedeemerFromHash" /\ D.content (RedeemerFromHash <$> D.value)
         , "TxOutFromRef" /\ D.content (TxOutFromRef <$> D.value)
-        , "TxFromTxId" /\ D.content (TxFromTxId <$> D.value)
         , "UtxoSetMembership" /\ D.content (UtxoSetMembership <$> D.value)
         , "UtxoSetAtAddress" /\ D.content (D.tuple $ UtxoSetAtAddress </$\> D.value </*\> D.value)
         , "UtxoSetWithCurrency" /\ D.content (D.tuple $ UtxoSetWithCurrency </$\> D.value </*\> D.value)
-        , "TxsFromTxIds" /\ D.content (TxsFromTxIds <$> D.value)
         , "TxoSetAtAddress" /\ D.content (D.tuple $ TxoSetAtAddress </$\> D.value </*\> D.value)
         , "GetTip" /\ pure GetTip
         ]
@@ -208,11 +202,6 @@ _TxOutFromRef = prism' TxOutFromRef case _ of
   (TxOutFromRef a) -> Just a
   _ -> Nothing
 
-_TxFromTxId :: Prism' ChainIndexQuery TxId
-_TxFromTxId = prism' TxFromTxId case _ of
-  (TxFromTxId a) -> Just a
-  _ -> Nothing
-
 _UtxoSetMembership :: Prism' ChainIndexQuery TxOutRef
 _UtxoSetMembership = prism' UtxoSetMembership case _ of
   (UtxoSetMembership a) -> Just a
@@ -226,11 +215,6 @@ _UtxoSetAtAddress = prism' (\{ a, b } -> (UtxoSetAtAddress a b)) case _ of
 _UtxoSetWithCurrency :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: AssetClass }
 _UtxoSetWithCurrency = prism' (\{ a, b } -> (UtxoSetWithCurrency a b)) case _ of
   (UtxoSetWithCurrency a b) -> Just { a, b }
-  _ -> Nothing
-
-_TxsFromTxIds :: Prism' ChainIndexQuery (Array TxId)
-_TxsFromTxIds = prism' TxsFromTxIds case _ of
-  (TxsFromTxIds a) -> Just a
   _ -> Nothing
 
 _TxoSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Credential }
