@@ -20,19 +20,20 @@
 
 module Wallet.Emulator.Wallet where
 
+import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
 import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, Members, interpret, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
-import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo)
 import Control.Monad.Freer.State (State, get, gets, put)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), ToJSONKey)
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (bimap, first, second)
 import Data.Default (Default (def))
-import Data.Foldable (Foldable (fold), find, foldl', for_)
+import Data.Foldable (Foldable (fold), find, foldl')
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isNothing, listToMaybe)
 import Data.OpenApi.Schema qualified as OpenApi
@@ -46,18 +47,17 @@ import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash, StakePubKey, Tx (txFee, txMint),
-               TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (UtxoIndex, getIndex), ValidationCtx (ValidationCtx),
-               ValidatorHash, Value)
+               TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (getIndex), ValidatorHash, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx, unBalancedTxUtxoIndex))
+import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx))
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
-import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
+import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (calculateMinFee, fromPlutusTx, hasValidationErrors)
+import Ledger.Validation (calculateMinFee, fromPlutusTx)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -74,11 +74,8 @@ import Wallet.Effects (NodeClientEffect,
                        publishTx)
 import Wallet.Emulator.Chain (ChainState (_index))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
-                                    TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SubmittingTx, ValidationFailed))
+                                    TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SubmittingTx))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
-
-import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
-import Debug.Trace
 
 newtype SigningProcess = SigningProcess {
     unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> Tx -> Eff effs Tx
@@ -254,21 +251,21 @@ handleWallet = \case
         let utx = utx' & U.tx . Ledger.validRange .~ validitySlotRange
         -- Balance with dummy fee to get a better estimate of the number of inputs and outputs
         tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ Ledger.minFee mempty)
-        signedTx <- handleAddSignature tx
+        -- signedTx <- handleAddSignature tx
         let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
         privKey <- CW.paymentPrivateKey . _mockWallet <$> get
-        ctx <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey signedTx
+        ctx <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey tx
         let theFee = calculateMinFee ctx
         tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-        tx'' <- handleAddSignature tx'
-        let txctx = These tx'' (Tx.SomeTx ctx AlonzoEraInCardanoMode)
+        ctx' <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey tx'
+        let txctx = These tx' (Tx.SomeTx ctx' AlonzoEraInCardanoMode)
         logInfo $ FinishedBalancing txctx
         pure txctx
 
     walletAddSignatureH :: (Member (State WalletState) effs) => CardanoTx -> Eff effs CardanoTx
     walletAddSignatureH (That _) = error "Wallet.Emulator.Wallet.handleWallet: Expecting a mock tx, not an Alonzo tx when adding a signature."
     walletAddSignatureH (This tx) = This <$> handleAddSignature tx
-    walletAddSignatureH (These tx _) = This <$> handleAddSignature tx
+    walletAddSignatureH (These tx ctx) = (`These` ctx) <$> handleAddSignature tx
 
     totalFundsH :: (Member (State WalletState) effs, Member ChainIndexQueryEffect effs) => Eff effs Value
     totalFundsH = foldMap (view Ledger.ciTxOutValue) <$> (get >>= ownOutputs)

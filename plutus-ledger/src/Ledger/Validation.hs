@@ -195,7 +195,7 @@ hasValidationErrors slotNo utxoState (Shelley.ShelleyTx _ tx) =
     Left e  -> Just $ show e
     Right _ -> Nothing
   where
-    state = initialState & memPoolState . _1 .~ utxoState
+    state = setSlot slotNo (initialState & memPoolState . _1 .~ utxoState)
     res = do
       vtx <- first UtxosPredicateFailures (constructValidated emulatorGlobals (utxoEnv slotNo) utxoState tx)
       applyTx state vtx

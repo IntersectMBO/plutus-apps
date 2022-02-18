@@ -16,6 +16,7 @@
 
 module Wallet.Emulator.Chain where
 
+import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
 import Codec.Serialise (Serialise)
 import Control.DeepSeq (NFData)
 import Control.Lens hiding (index)
@@ -27,16 +28,20 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.List (partition, (\\))
 import Data.Maybe (mapMaybe)
-import Data.These (These (..))
+import Data.These (These (..), mergeTheseWith)
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx, OnChainTx (..), ScriptValidationEvent, Slot (..), Tx (..), TxId, eitherTx,
-               getCardanoTxId, theseTx)
+import Ledger (Block, Blockchain, CardanoTx, OnChainTx (..), ScriptValidationEvent, Slot (..),
+               SomeCardanoApiTx (SomeTx), Tx (..), TxId, eitherTx, getCardanoTxId, theseTx)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig)
+import Ledger.Validation (fromPlutusIndex, hasValidationErrors)
 import Plutus.Contract.Util (uncurry3)
 import Prettyprinter
+
+import Control.Applicative ((<|>))
+import Debug.Trace
 
 -- | Events produced by the blockchain emulator.
 data ChainEvent =
@@ -187,11 +192,16 @@ mkValidationEvent t result events =
 validateEm :: S.MonadState Index.ValidationCtx m => Slot -> CardanoTx -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
 validateEm h txn = do
     ctx@(Index.ValidationCtx idx _) <- S.get
-    let ((e, idx'), events) = case txn of
-            This tx -> Index.runValidation (Index.validateTransaction h tx) ctx
-            _       -> ((Nothing, idx) , [])
+    let ((e, idx'), events) = txn & mergeTheseWith
+            (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
+            (\tx -> ((validateL h idx tx, idx), []))
+            (\((e1, utxo), sve1) ((e2, _), sve2) -> ((e1 <|> e2, utxo), sve1 ++ sve2))
     _ <- S.put ctx{Index.vctxIndex=idx'}
     pure (e, events)
+
+validateL :: Slot -> Index.UtxoIndex -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
+validateL slot idx (SomeTx tx AlonzoEraInCardanoMode) = (maybe id (traceShow . (, tx)) $ hasValidationErrors (fromIntegral slot) (fromPlutusIndex idx) tx) Nothing
+validateL _    _   _ = Nothing
 
 -- | Adds a block to ChainState, without validation.
 addBlock :: Block -> ChainState -> ChainState
