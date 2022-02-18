@@ -25,21 +25,19 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Ledger (Address, PaymentPubKeyHash, Validator, validatorHash)
+import Ledger (Address, PaymentPubKeyHash, Validator)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Scripts (datumHash, mintingPolicyHash, unitDatum, unitRedeemer)
+import Ledger.Scripts (datumHash)
 import Ledger.Tx (getCardanoTxId)
-import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
-import Ledger.Value qualified as Value
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
                              assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
-                             assertUserLog, changeInitialWalletValue, checkEmulatorFails, checkPredicateOptions,
-                             defaultCheckOptions, endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1,
-                             w2, waitingForSlot, walletFundsChange, (.&&.))
+                             assertUserLog, checkEmulatorFails, checkPredicateOptions, defaultCheckOptions,
+                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, w3,
+                             waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Trace qualified as Trace
@@ -157,9 +155,14 @@ tests =
                 (endpointAvailable @"1" theContract tag)
                 (void $ activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 1)
 
-        , let theContract :: Contract () Schema ContractError () = void $ throwing Con._ContractError $ OtherError "error"
+        , let theContract :: Contract () Schema ContractError () =
+                  void $ throwing Con._ContractError $ OtherContractError "error"
           in run "throw an error"
-                (assertContractError theContract tag (\case { OtherError "error" -> True; _ -> False}) "failed to throw error")
+                (assertContractError
+                    theContract
+                    tag
+                    (\case { OtherContractError "error" -> True; _ -> False })
+                    "failed to throw error")
                 (void $ activateContract w1 theContract tag)
 
         , run "pay to wallet"
@@ -168,7 +171,8 @@ tests =
                 .&&. assertNoFailedTransactions)
             (void $ Trace.payToWallet w1 w2 (Ada.adaValueOf 20))
 
-        , let theContract :: Contract () Schema ContractError () = void $ awaitUtxoProduced (mockWalletAddress w2)
+        , let theContract :: Contract () Schema ContractError () =
+                  void $ awaitUtxoProduced (mockWalletAddress w2)
           in run "await utxo produced"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -177,7 +181,10 @@ tests =
                 Trace.waitNSlots 1
             )
 
-        , let theContract :: Contract () Schema ContractError () = void (utxosAt (mockWalletAddress w1) >>= awaitUtxoSpent . fst . head . Map.toList)
+        , let theContract :: Contract () Schema ContractError () =
+                  void ( utxosAt (mockWalletAddress w1)
+                     >>= awaitUtxoSpent . fst . head . Map.toList
+                       )
           in run "await txout spent"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -220,6 +227,27 @@ tests =
             ( assertAccumState c tag isExpectedDatumHash "should be done"
             ) $ do
               _ <- activateContract w1 c tag
+              void (Trace.waitNSlots 2)
+
+        -- verify that 'matchInputOutput' doesn't thrown 'InOutTypeMismatch' error
+        -- in case of two transactions with 'mustPayWithDatumToPubKey'
+        , let c1 :: Contract [Maybe DatumHash] Schema ContractError () = do
+                let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
+                let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash datum1 (Ada.adaValueOf 10)
+                void $ submitTx payment
+              c2 :: Contract [Maybe DatumHash] Schema ContractError () = do
+                let w3PubKeyHash = mockWalletPaymentPubKeyHash w3
+                let payment = Constraints.mustPayWithDatumToPubKey w3PubKeyHash datum2 (Ada.adaValueOf 50)
+                void $ submitTx payment
+
+              datum1 = Datum $ PlutusTx.toBuiltinData (23 :: Integer)
+              datum2 = Datum $ PlutusTx.toBuiltinData (42 :: Integer)
+
+          in run "mustPayWithDatumToPubKey doesn't throw 'InOutTypeMismatch' error"
+            ( assertNoFailedTransactions ) $ do
+              _ <- activateContract w1 c1 tag
+              void (Trace.waitNSlots 2)
+              _ <- activateContract w2 c2 tag
               void (Trace.waitNSlots 2)
 
         , let c :: Contract [TxOutStatus] Schema ContractError () = do
@@ -316,79 +344,7 @@ tests =
           in run "mustSatisfyAnyOf [mempty] works"
             ( assertDone c tag (const True) "should be done"
             ) (void $ activateContract w1 c tag)
-
-        , balanceTxnMinAda
-        , balanceTxnMinAda2
         ]
-
-balanceTxnMinAda :: TestTree
-balanceTxnMinAda =
-    let ee = Value.singleton "ee" "ee" 1
-        ff = Value.singleton "ff" "ff" 1
-        options = defaultCheckOptions
-            & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
-        vHash = validatorHash someValidator
-
-        contract :: Contract () EmptySchema ContractError ()
-        contract = do
-            let constraints1 = Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
-                utx1 = either (error . show) id $ Constraints.mkTx @Void mempty constraints1
-            submitTxConfirmed utx1
-            utxo <- utxosAt someAddress
-            let txOutRef = head (Map.keys utxo)
-                constraints2 = Constraints.mustSpendScriptOutput txOutRef unitRedeemer
-                    <> Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 200 ee)
-                lookups2 = Constraints.unspentOutputs utxo <> Constraints.otherScript someValidator
-                utx2 = Constraints.adjustUnbalancedTx $ either (error . show) id $ Constraints.mkTx @Void lookups2 constraints2
-            submitTxConfirmed utx2
-
-        trace = do
-            Trace.activateContractWallet w1 contract
-            Trace.waitNSlots 2
-
-    in checkPredicateOptions options "balancing doesn't create outputs with no Ada" assertNoFailedTransactions (void trace)
-
-balanceTxnMinAda2 :: TestTree
-balanceTxnMinAda2 =
-    let vA n = Value.singleton "ee" "A" n
-        vB n = Value.singleton "ff" "B" n
-        mps  = MPS.mkForwardingMintingPolicy vHash
-        vL n = Value.singleton (Value.mpsSymbol $ mintingPolicyHash mps) "L" n
-        options = defaultCheckOptions
-            & changeInitialWalletValue w1 (<> vA 1 <> vB 2)
-        vHash = validatorHash someValidator
-        payToWallet w = Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
-        mkTx lookups constraints = Constraints.adjustUnbalancedTx . either (error . show) id $ Constraints.mkTx @Void lookups constraints
-
-        setupContract :: Contract () EmptySchema ContractError ()
-        setupContract = do
-            -- Make sure there is a utxo with 1 A, 1 B, and 4 ada at w2
-            submitTxConfirmed $ mkTx mempty (payToWallet w2 (vA 1 <> vB 1 <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)))
-            -- Make sure there is a UTxO with 1 B and datum () at the script
-            submitTxConfirmed $ mkTx mempty (Constraints.mustPayToOtherScript vHash unitDatum (vB 1))
-            -- utxo0 @ wallet2 = 1 A, 1 B, 4 Ada
-            -- utxo1 @ script  = 1 B, 2 Ada
-
-        wallet2Contract :: Contract () EmptySchema ContractError ()
-        wallet2Contract = do
-            utxos <- utxosAt someAddress
-            let txOutRef = head (Map.keys utxos)
-                lookups = Constraints.unspentOutputs utxos
-                        <> Constraints.otherScript someValidator
-                        <> Constraints.mintingPolicy mps
-                constraints = Constraints.mustSpendScriptOutput txOutRef unitRedeemer                                        -- spend utxo1
-                            <> Constraints.mustPayToOtherScript vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
-                            <> Constraints.mustPayToOtherScript vHash (Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
-                            <> Constraints.mustMintValue (vL 1) -- 1 L and 2 ada to wallet2
-            submitTxConfirmed $ mkTx lookups constraints
-
-        trace = do
-            Trace.activateContractWallet w1 setupContract
-            Trace.waitNSlots 10
-            Trace.activateContractWallet w2 wallet2Contract
-            Trace.waitNSlots 10
-
-    in checkPredicateOptions options "balancing doesn't create outputs with no Ada (2)" assertNoFailedTransactions (void trace)
 
 checkpointContract :: Contract () Schema ContractError ()
 checkpointContract = void $ do
@@ -410,7 +366,8 @@ loopCheckpointContract = do
 errorContract :: Contract () Schema ContractError Int
 errorContract = do
     catchError
-        (awaitPromise $ endpoint @"1" @Int $ \_ -> throwError (OtherError "something went wrong"))
+        (awaitPromise $ endpoint @"1" @Int
+                      $ \_ -> throwError (OtherContractError "something went wrong"))
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
 someAddress :: Address

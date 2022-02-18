@@ -91,6 +91,7 @@
           "Data/UUID/Extras"
           "Plutus/Contract"
           "Plutus/Contract/Effects"
+          "Plutus/Contract/Error"
           "Plutus/Contract/Request"
           "Plutus/Contract/Checkpoint"
           "Plutus/Contract/Constraints"
@@ -177,7 +178,6 @@
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
             (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
-            (hsPkgs."extensible-effects" or (errorHandler.buildDepError "extensible-effects"))
             (hsPkgs."plutus-chain-index-core" or (errorHandler.buildDepError "plutus-chain-index-core"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
@@ -192,6 +192,7 @@
             ] ++ (pkgs.lib).optional (!(compiler.isGhcjs && true || system.isGhcjs)) (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"));
           buildable = true;
           modules = [
+            "Spec/Balancing"
             "Spec/Contract"
             "Spec/ErrorChecking"
             "Spec/Emulator"

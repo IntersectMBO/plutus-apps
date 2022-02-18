@@ -14,7 +14,7 @@ module Cardano.Wallet.Mock.Server
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Types (ChainIndexUrl (ChainIndexUrl))
-import Cardano.Node.Client qualified as NodeClient
+import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.API (API)
 import Cardano.Wallet.Mock.Handlers (processWalletEffects)
@@ -32,6 +32,7 @@ import Data.Either (fromRight)
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
+import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.TimeSlot (SlotConfig)
 import Network.HTTP.Client (defaultManagerSettings, newManager)
@@ -46,7 +47,7 @@ import Wallet.Emulator.Wallet qualified as Wallet
 
 app :: Trace IO WalletMsg
     -> MockClient.TxSendHandle
-    -> NodeClient.ChainSyncHandle
+    -> ChainSyncHandle
     -> ClientEnv
     -> MVar Wallets
     -> SlotConfig
@@ -56,7 +57,7 @@ app trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg =
     hoistServer
         (Proxy @(API WalletId))
         (processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg) $
-            createWallet :<|>
+            (\funds -> createWallet (Ada.lovelaceOf <$> funds)) :<|>
             (\w tx -> multiWallet (Wallet w) (submitTxn $ Right tx) >>= const (pure NoContent)) :<|>
             (getWalletInfo >=> maybe (throwError err404) pure ) :<|>
             (\w -> fmap (fmap (fromRight (error "Cardano.Wallet.Mock.Server: Expecting a mock tx, not an Alonzo tx when submitting it.")))

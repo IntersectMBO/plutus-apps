@@ -7,7 +7,7 @@ module Editor.View
   ) where
 
 import Prologue hiding (div)
-import AjaxUtils (ajaxErrorPane)
+import Component.ErrorPane (errorPane)
 import Bootstrap (btn, card, cardHeader, cardHeader_, cardBody_, customSelect, empty, listGroupItem_, listGroup_, nbsp)
 import Data.Array as Array
 import Data.Lens (_Right, preview, to, view)
@@ -138,10 +138,10 @@ editorFeedback (State { currentCodeIsCompiled, feedbackPaneExtend, feedbackPaneM
   feedbackPaneClasses =
     [ ClassName "editor-feedback" ]
       <> case feedbackPaneMinimised, feedbackPaneExtend of
-          false, 0 -> []
-          true, 0 -> [ ClassName "minimised" ]
-          false, size -> [ ClassName $ "expanded-" <> show size ]
-          true, size -> [ ClassName "minimised", ClassName $ "expanded-" <> show size ]
+        false, 0 -> []
+        true, 0 -> [ ClassName "minimised" ]
+        false, size -> [ ClassName $ "expanded-" <> show size ]
+        true, size -> [ ClassName "minimised", ClassName $ "expanded-" <> show size ]
 
   summaryText = case compilationResult of
     NotAsked -> text "Not compiled"
@@ -160,7 +160,8 @@ editorFeedback (State { currentCodeIsCompiled, feedbackPaneExtend, feedbackPaneM
       , onClick $ const ToggleFeedbackPane
       ]
       [ icon
-          $ if feedbackPaneMinimised then
+          $
+            if feedbackPaneMinimised then
               ArrowUp
             else
               ArrowDown
@@ -168,7 +169,7 @@ editorFeedback (State { currentCodeIsCompiled, feedbackPaneExtend, feedbackPaneM
 
   errorList = case compilationResult of
     Success (Left error) -> listGroup_ (interpreterErrorPane error)
-    Failure error -> ajaxErrorPane error
+    Failure error -> errorPane error
     _ -> empty
 
   warningList =

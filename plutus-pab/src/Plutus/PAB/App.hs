@@ -33,9 +33,8 @@ import Cardano.Api.ProtocolParameters ()
 import Cardano.Api.Shelley (ProtocolParameters)
 import Cardano.BM.Trace (Trace, logDebug)
 import Cardano.ChainIndex.Types qualified as ChainIndex
-import Cardano.Node.Client (handleNodeClientClient)
-import Cardano.Node.Client qualified as NodeClient
-import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
+import Cardano.Node.Client (handleNodeClientClient, runChainSyncWithCfg)
+import Cardano.Node.Types (ChainSyncHandle, NodeMode (AlonzoNode, MockNode),
                            PABServerConfig (PABServerConfig, pscBaseUrl, pscNetworkId, pscNodeMode, pscProtocolParametersJsonPath, pscSlotConfig, pscSocketPath))
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.LocalClient qualified as LocalWalletClient
@@ -85,6 +84,7 @@ import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
                          WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, developmentOptions,
                          endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
 import Servant.Client (ClientEnv, ClientError, mkClientEnv)
+import Wallet.API (NodeClientEffect)
 import Wallet.Effects (WalletEffect)
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Error (WalletAPIError)
@@ -99,8 +99,8 @@ data AppEnv a =
         , walletClientEnv       :: Maybe ClientEnv -- ^ No 'ClientEnv' when in the remote client setting.
         , nodeClientEnv         :: ClientEnv
         , chainIndexEnv         :: ClientEnv
-        , txSendHandle          :: MockClient.TxSendHandle
-        , chainSyncHandle       :: NodeClient.ChainSyncHandle
+        , txSendHandle          :: Maybe MockClient.TxSendHandle -- No 'TxSendHandle' required when connecting to the real node.
+        , chainSyncHandle       :: ChainSyncHandle
         , appConfig             :: Config
         , appTrace              :: Trace IO (PABLogMsg (Builtin a))
         , appInMemContractStore :: InMemInstances (Builtin a)
@@ -166,9 +166,9 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             -- handle 'NodeClientEffect'
             flip handleError (throwError . NodeClientError)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . reinterpret (Core.handleMappedReader @(AppEnv a) @NodeClient.ChainSyncHandle chainSyncHandle)
+            . reinterpret (Core.handleMappedReader @(AppEnv a) @ChainSyncHandle chainSyncHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . reinterpret (Core.handleMappedReader @(AppEnv a) @MockClient.TxSendHandle txSendHandle)
+            . reinterpret (Core.handleMappedReader @(AppEnv a) @(Maybe MockClient.TxSendHandle) txSendHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv nodeClientEnv)
             . reinterpretN @'[_, _, _, _] (handleNodeClientClient @IO $ pscSlotConfig $ nodeServerConfig config)
@@ -198,6 +198,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
 handleWalletEffect
   :: forall effs.
   ( LastMember IO effs
+  , Member NodeClientEffect effs
   , Member (Error ClientError) effs
   , Member (Error WalletAPIError) effs
   , Member (Error PABError) effs
@@ -251,7 +252,7 @@ data StorageBackend = BeamSqliteBackend | InMemoryBackend
 
 mkEnv :: Trace IO (PABLogMsg (Builtin a)) -> Config -> IO (AppEnv a)
 mkEnv appTrace appConfig@Config { dbConfig
-             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscSlotConfig, pscProtocolParametersJsonPath}
+             , nodeServerConfig = PABServerConfig{pscBaseUrl, pscSocketPath, pscProtocolParametersJsonPath, pscNodeMode}
              , walletServerConfig
              , chainIndexConfig
              } = do
@@ -259,9 +260,13 @@ mkEnv appTrace appConfig@Config { dbConfig
     nodeClientEnv <- clientEnv pscBaseUrl
     chainIndexEnv <- clientEnv (ChainIndex.ciBaseUrl chainIndexConfig)
     dbConnection <- dbConnect appTrace dbConfig
-    txSendHandle <- liftIO $ MockClient.runTxSender pscSocketPath
+    txSendHandle <-
+      case pscNodeMode of
+        AlonzoNode -> pure Nothing
+        MockNode   ->
+          liftIO $ Just <$> MockClient.runTxSender pscSocketPath
     -- This is for access to the slot number in the interpreter
-    chainSyncHandle <- Left <$> (liftIO $ MockClient.runChainSync' pscSocketPath pscSlotConfig)
+    chainSyncHandle <- runChainSyncWithCfg $ nodeServerConfig appConfig
     appInMemContractStore <- liftIO initialInMemInstances
     protocolParameters <- maybe (pure def) readPP pscProtocolParametersJsonPath
     pure AppEnv {..}

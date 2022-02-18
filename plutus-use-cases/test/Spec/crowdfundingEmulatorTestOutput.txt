@@ -53,7 +53,6 @@ Slot 1: W7ce812d: Finished balancing:
                       fee: Value (Map [(,Map [("",368)])])
                       mps:
                       signatures:
-                        98c77c40ccc536e0d433874dae97d4a0787b10b3bca0dc2e1bdc7be0a544f0ac
                       validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                       data:
                         "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"}
@@ -101,7 +100,6 @@ Slot 1: Wc30efb7: Finished balancing:
                       fee: Value (Map [(,Map [("",368)])])
                       mps:
                       signatures:
-                        4cdc632449cde98d811f78ad2e2d15a278731bc5e3b8821739a47534c324fe20
                       validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                       data:
                         ".\n\214\f2\a$\140\236\212}\189\227\215R\224\170\209A\214\184\248\SUB\194\198\236\162|"}
@@ -143,7 +141,6 @@ Slot 1: W5f5a4f5: Finished balancing:
                       fee: Value (Map [(,Map [("",368)])])
                       mps:
                       signatures:
-                        c0a4b02f44c212ba6c1197df5a5cf8bd1a3dceef9c42e4a17c0d48f8ae468cdb
                       validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound (Finite (Slot {getSlot = 20})) False}
                       data:
                         "U}#\192\165\&3\180\210\149\172-\193Kx:~\252);\194>\222\136\166\254\253 ="}
@@ -176,13 +173,13 @@ Slot 20: W872cb83: Balancing an unbalanced transaction:
                      Utxo index:
                        ( 2edaa1a13b06722b721e49c401ee0aa3e1cbb13c9a5e5cb2095ee18c57ac3c5d!1
                        , - Value (Map [(,Map [("",2500000)])]) addressed to
-                           9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 )
+                           ScriptCredential: 9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 (no staking credential) )
                        ( d507aff428758d9c580344c5f3f1243d348c2cd173976cbe0b01662c3b6335cf!1
                        , - Value (Map [(,Map [("",10000000)])]) addressed to
-                           9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 )
+                           ScriptCredential: 9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 (no staking credential) )
                        ( d6f79937b2d59d67263a4d6aaca4f18fef552f8ea133f3de740ab779454710a4!1
                        , - Value (Map [(,Map [("",10000000)])]) addressed to
-                           9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 )
+                           ScriptCredential: 9fe341a3110281ecdbcf3d79ce1c2d95f6afa1452377e318e610b586 (no staking credential) )
                      Validity range:
                        [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
 Slot 20: W872cb83: Finished balancing:
@@ -204,7 +201,6 @@ Slot 20: W872cb83: Finished balancing:
                        fee: Value (Map [(,Map [("",3809)])])
                        mps:
                        signatures:
-                         8d9de88fbf445b7f6c3875a14daba94caee2ffcbc9ac211c95aba0a2f5711853
                        validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 29})) True}
                        data:}
 Slot 20: W872cb83: Submitting tx: 6d0a27f09d6a45a5e91274a7b376017275c91e6a83e5734dcf5c09518c6384c4

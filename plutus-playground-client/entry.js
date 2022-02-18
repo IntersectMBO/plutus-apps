@@ -17,4 +17,4 @@ global.VimMode = VimMode;
 global.initVimMode = initVimMode;
 global.monacoExtraTypeScriptLibs = [];
 
-require('./src/Main.purs').main();
+require('./output/Main').main();

@@ -8,16 +8,8 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
 
-module Plutus.PAB.Run.PSGenerator
-    ( HasPSTypes(..)
-    , generateDefault
-    , generateWith
-    , generateAPIModule
-    , pabBridge
-    , pabTypes
-    ) where
+module Plutus.PAB.Run.PSGenerator where
 
 import Cardano.Wallet.Mock.Types (WalletInfo)
 import Control.Applicative ((<|>))
@@ -27,7 +19,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Text qualified as Text
 import Data.Typeable (Typeable)
 import Language.PureScript.Bridge (BridgePart, Language (Haskell), SumType, argonaut, buildBridge, equal, genericShow,
-                                   mkSumType, order, writePSTypes)
+                                   mkSumType, order)
 import Language.PureScript.Bridge.TypeParameters (A, B)
 import PSGenerator.Common qualified
 import Plutus.Contract.Checkpoint (CheckpointKey, CheckpointStore, CheckpointStoreItem)
@@ -41,8 +33,8 @@ import Plutus.PAB.Webserver.API qualified as API
 import Plutus.PAB.Webserver.Types (ChainReport, CombinedWSStreamToClient, CombinedWSStreamToServer,
                                    ContractActivationArgs, ContractInstanceClientState, ContractReport,
                                    ContractSignatureResponse, FullReport, InstanceStatusToClient)
-import Servant.PureScript (HasBridge, Settings, apiModuleName, defaultBridge, defaultSettings, languageBridge,
-                           writeAPIModuleWithSettings)
+import Servant.PureScript (HasBridge, Settings, addTypes, apiModuleName, defaultBridge, defaultSettings,
+                           generateWithSettings, languageBridge)
 
 -- | List of types linked to contract type `a` that need to be available in
 -- Purescript.
@@ -108,41 +100,24 @@ pabTypes =
     , genericShow . argonaut $ mkSumType @WalletInfo
     ]
 
-mySettings :: Settings
-mySettings = defaultSettings & set apiModuleName "Plutus.PAB.Webserver"
+pabSettings :: Settings
+pabSettings = defaultSettings
+    & set apiModuleName "Plutus.PAB.Webserver"
+    & addTypes pabTypes
 
 ------------------------------------------------------------
 -- | Use the Proxy for specifying `a` when generating PS functions for the
 -- webserver using a specific Builtin (ex. generate 'Builtin Marlowe' instead
 -- of 'Builtin a').
 generateAPIModule
-    :: forall a. Typeable a
+    :: forall a. (Typeable a, HasPSTypes a)
     => Proxy a
     -> FilePath -- ^ Output directory of PS files
     -> IO ()
 generateAPIModule _ outputDir = do
-    writeAPIModuleWithSettings
-        mySettings
+    generateWithSettings
+        (addTypes (psTypes @a) pabSettings)
         outputDir
         pabBridgeProxy
         (    Proxy @(API.API (Contract.ContractDef (Builtin a)) Text.Text)
         )
-
--- | Generate PS modules in 'outputDir' which includes common types for the PAB.
-generateDefault
-    :: FilePath -- ^ Output directory of PS files
-    -> IO ()
-generateDefault outputDir = do
-    writePSTypes outputDir (buildBridge pabBridge) pabTypes
-    putStrLn $ "Done: " <> outputDir
-
--- | Generate PS modules in 'outputDir' for types specified with 'HasPSTypes'
--- typeclass.
-generateWith
-    :: forall a
-     . HasPSTypes a
-    => FilePath -- ^ Output directory of PS files
-    -> IO ()
-generateWith outputDir = do
-    writePSTypes outputDir (buildBridge pabBridge) (psTypes @a)
-    putStrLn $ "Done: " <> outputDir

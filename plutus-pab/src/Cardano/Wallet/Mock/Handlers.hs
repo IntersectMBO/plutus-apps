@@ -19,6 +19,7 @@ module Cardano.Wallet.Mock.Handlers
 
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.Client qualified as NodeClient
+import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.Types (MultiWalletEffect (..), WalletEffects, WalletInfo (..), WalletMsg (..), Wallets,
                                   fromWalletState)
@@ -29,7 +30,7 @@ import Control.Monad.Error (MonadError)
 import Control.Monad.Except qualified as MonadError
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
-import Control.Monad.Freer.Extras
+import Control.Monad.Freer.Extras hiding (Error)
 import Control.Monad.Freer.Reader (runReader)
 import Control.Monad.Freer.State (State, evalState, get, put, runState)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -42,7 +43,7 @@ import Data.ByteString.Lazy.Char8 qualified as BSL8
 import Data.ByteString.Lazy.Char8 qualified as Char8
 import Data.Function ((&))
 import Data.Map qualified as Map
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Data.Text.Encoding (encodeUtf8)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
@@ -54,6 +55,7 @@ import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Client qualified as ChainIndex
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
+import Plutus.PAB.Types (PABError)
 import Prettyprinter (pretty)
 import Servant (ServerError (..), err400, err401, err404)
 import Servant.Client (ClientEnv)
@@ -86,9 +88,11 @@ distributeNewWalletFunds :: forall effs.
     , Member (Error WalletAPIError) effs
     , Member (LogMsg Text) effs
     )
-    => PaymentPubKeyHash
+    => Maybe Ada.Ada
+    -> PaymentPubKeyHash
     -> Eff effs CardanoTx
-distributeNewWalletFunds = WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange (Ada.adaValueOf 10_000)
+distributeNewWalletFunds funds = WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange
+    (maybe (Ada.adaValueOf 10_000) Ada.toValue funds)
 
 newWallet :: forall m effs. (LastMember m effs, MonadIO m) => Eff effs MockWallet
 newWallet = do
@@ -121,7 +125,7 @@ handleMultiWallet = \case
                 put @Wallets (wallets & at wallet ?~ newState)
                 pure x
             Nothing -> throwError $ WAPI.OtherError "Wallet not found"
-    CreateWallet -> do
+    CreateWallet funds -> do
         wallets <- get @Wallets
         mockWallet <- newWallet
         let walletId = Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId mockWallet
@@ -135,7 +139,7 @@ handleMultiWallet = \case
         _ <- evalState sourceWallet $
             interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
             $ interpret Wallet.handleWallet
-            $ distributeNewWalletFunds pkh
+            $ distributeNewWalletFunds funds pkh
         return $ WalletInfo{wiWallet = walletId, wiPaymentPubKeyHash = pkh}
     GetWalletInfo wllt -> do
         wallets <- get @Wallets
@@ -147,7 +151,7 @@ processWalletEffects ::
     (MonadIO m, MonadError ServerError m)
     => Trace IO WalletMsg -- ^ trace for logging
     -> MockClient.TxSendHandle -- ^ node client
-    -> NodeClient.ChainSyncHandle -- ^ node client
+    -> ChainSyncHandle -- ^ node client
     -> ClientEnv          -- ^ chain index client
     -> MVar Wallets   -- ^ wallets state
     -> SlotConfig
@@ -174,7 +178,7 @@ processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState 
 runWalletEffects ::
     Trace IO WalletMsg -- ^ trace for logging
     -> MockClient.TxSendHandle -- ^ node client
-    -> NodeClient.ChainSyncHandle -- ^ node client
+    -> ChainSyncHandle -- ^ node client
     -> ClientEnv -- ^ chain index client
     -> Wallets -- ^ current state
     -> SlotConfig
@@ -185,10 +189,12 @@ runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets slotCf
     & interpret (LM.handleLogMsgTrace trace)
     & reinterpret2 (NodeClient.handleNodeClientClient slotCfg)
     & runReader chainSyncHandle
-    & runReader txSendHandle
+    & runReader (Just txSendHandle)
     & reinterpret ChainIndex.handleChainIndexClient
     & runReader chainIndexEnv
     & runState wallets
+    & flip catchError logPabErrorAndRethrow
+    & handlePrettyErrors
     & interpret (LM.handleLogMsgTrace (toWalletMsg trace))
     & handleWalletApiErrors
     & handleClientErrors
@@ -197,7 +203,11 @@ runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets slotCf
         where
             handleWalletApiErrors = flip handleError (throwError . fromWalletAPIError)
             handleClientErrors = flip handleError (\e -> throwError $ err500 { errBody = Char8.pack (show e) })
+            handlePrettyErrors = flip handleError (\e -> throwError $ err500 { errBody = Char8.pack (show $ pretty e) })
             toWalletMsg = LM.convertLog ChainClientMsg
+            logPabErrorAndRethrow (e :: PABError) = do
+                logError (pack $ show $ pretty e)
+                throwError e
 
 -- | Convert Wallet errors to Servant error responses
 fromWalletAPIError :: WalletAPIError -> ServerError

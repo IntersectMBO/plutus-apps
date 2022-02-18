@@ -51,7 +51,7 @@ consumeEventHistory stateVar =
 
 addTx ::
     ( Member (LogMsg PABServerLogMsg) effs
-    , Member (Reader Client.TxSendHandle) effs
+    , Member (Reader (Maybe Client.TxSendHandle)) effs
     , MonadIO m
     , LastMember m effs
     )
@@ -59,14 +59,17 @@ addTx ::
 addTx tx = do
     logInfo $ BlockOperation $ NewTransaction tx
     clientHandler <- Eff.ask
-    liftIO $ Client.queueTx clientHandler tx
+    case clientHandler of
+      Nothing      -> logError TxSendCalledWithoutMock
+      Just handler ->
+          liftIO $ Client.queueTx handler tx
     pure NoContent
 
 -- | Run all chain effects in the IO Monad
 runChainEffects ::
  Trace IO PABServerLogMsg
  -> SlotConfig
- -> Client.TxSendHandle
+ -> Maybe Client.TxSendHandle
  -> MVar AppState
  -> Eff (NodeServerEffects IO) a
  -> IO ([LogMessage PABServerLogMsg], a)
@@ -99,7 +102,7 @@ runChainEffects trace slotCfg clientHandler stateVar eff = do
 processChainEffects ::
     Trace IO PABServerLogMsg
     -> SlotConfig
-    -> Client.TxSendHandle
+    -> Maybe Client.TxSendHandle
     -> MVar AppState
     -> Eff (NodeServerEffects IO) a
     -> IO a

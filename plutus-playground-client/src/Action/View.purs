@@ -38,7 +38,8 @@ actionsPane actionDrag wallets actions =
     , p_ [ text "This is your action sequence. Click 'Evaluate' to run these actions against a simulated blockchain." ]
     , Keyed.div
         [ classes $ [ ClassName "action-list" ]
-            <> if actionDrag == Nothing then
+            <>
+              if actionDrag == Nothing then
                 []
               else
                 [ ClassName "actions-being-dragged" ]
@@ -62,7 +63,8 @@ actionPane actionDrag wallets index action =
                         <> (if actionIsValid wallets action then "valid-wallet" else "invalid-wallet")
                     )
                 ]
-                  <> if actionDrag == Just index then
+                  <>
+                    if actionDrag == Just index then
                       [ ClassName "drag-source" ]
                     else
                       []
@@ -73,16 +75,16 @@ actionPane actionDrag wallets index action =
         )
         [ ChangeSimulation
             <$> cardBody_
-                [ div
-                    [ class_ $ ClassName "action-label" ]
-                    [ text $ show (index + 1) ]
-                , button
-                    [ classes [ btn, floatRight, ClassName "close-button" ]
-                    , onClick $ const $ ModifyActions $ RemoveAction index
-                    ]
-                    [ icon Close ]
-                , actionPaneBody index action
-                ]
+              [ div
+                  [ class_ $ ClassName "action-label" ]
+                  [ text $ show (index + 1) ]
+              , button
+                  [ classes [ btn, floatRight, ClassName "close-button" ]
+                  , onClick $ const $ ModifyActions $ RemoveAction index
+                  ]
+                  [ icon Close ]
+              , actionPaneBody index action
+              ]
         ]
 
 actionPaneBody :: forall p. Int -> SimulatorAction -> HTML p SimulationAction
@@ -220,37 +222,37 @@ addWaitActionPane index =
         ]
 
 ------------------------------------------------------------
-dragSourceProperties ::
-  forall i.
-  Int ->
-  Array
-    ( IProp
-        ( draggable :: Boolean
-        , onDragStart :: DragEvent
-        , onDragEnd :: DragEvent
-        | i
-        )
-        HAction
-    )
+dragSourceProperties
+  :: forall i
+   . Int
+  -> Array
+       ( IProp
+           ( draggable :: Boolean
+           , onDragStart :: DragEvent
+           , onDragEnd :: DragEvent
+           | i
+           )
+           HAction
+       )
 dragSourceProperties index =
   [ draggable true
   , onDragStart $ ActionDragAndDrop index DragStart
   , onDragEnd $ ActionDragAndDrop index DragEnd
   ]
 
-dragTargetProperties ::
-  forall i.
-  Int ->
-  Array
-    ( IProp
-        ( onDragEnter :: DragEvent
-        , onDragOver :: DragEvent
-        , onDragLeave :: DragEvent
-        , onDrop :: DragEvent
-        | i
-        )
-        HAction
-    )
+dragTargetProperties
+  :: forall i
+   . Int
+  -> Array
+       ( IProp
+           ( onDragEnter :: DragEvent
+           , onDragOver :: DragEvent
+           , onDragLeave :: DragEvent
+           , onDrop :: DragEvent
+           | i
+           )
+           HAction
+       )
 dragTargetProperties index =
   [ onDragEnter $ ActionDragAndDrop index DragEnter
   , onDragOver $ ActionDragAndDrop index DragOver
@@ -259,7 +261,7 @@ dragTargetProperties index =
   ]
 
 -- defaults to 1 because all the BigInt fields here have a minimum value of 1
-onBigIntInput :: forall i r. (BigInt -> i) -> IProp ( onInput :: Event, value :: String | r ) i
+onBigIntInput :: forall i r. (BigInt -> i) -> IProp (onInput :: Event, value :: String | r) i
 onBigIntInput f = onValueInput $ f <<< fromMaybe one <<< BigInt.fromString
 
 actionClass :: ClassName

@@ -30,9 +30,9 @@ module Plutus.Contract.Types(
     , selectList
     , never
     -- * Error handling
-    , ContractError(..)
-    , AsContractError(..)
-    , MatchingError(..)
+    , Plutus.Contract.Error.ContractError(..)
+    , Plutus.Contract.Error.AsContractError(..)
+    , Plutus.Contract.Error.MatchingError(..)
     , mapError
     , throwError
     , runError
@@ -66,22 +66,21 @@ module Plutus.Contract.Types(
     , lastLogs
     ) where
 
-import Control.Applicative
-import Control.Lens
-import Control.Monad
-import Control.Monad.Except (MonadError (..))
-import Control.Monad.Freer
+import Control.Lens (Bifunctor (bimap), Iso', iso, makeLenses, over, set, to, unto, view, (&), (.~), (^.))
+import Control.Monad.Except (MonadError (catchError, throwError))
+import Control.Monad.Freer (Eff, Member, interpret, reinterpret, run, send, subsume, type (~>))
 import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Error qualified as E
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, handleLogIgnore, handleLogWriter)
 import Control.Monad.Freer.Extras.Modify (raiseEnd, raiseUnder, writeIntoState)
-import Control.Monad.Freer.State
+import Control.Monad.Freer.State (State, get, put, runState)
 import Control.Monad.Freer.Writer (Writer)
 import Control.Monad.Freer.Writer qualified as W
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
+import Data.Either (fromRight)
 import Data.Foldable (foldl')
-import Data.Functor.Apply (Apply (..))
+import Data.Functor.Apply (Apply, liftF2)
 import Data.IntervalSet qualified as IS
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -89,17 +88,20 @@ import Data.Row (Row)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 
-import Plutus.Contract.Checkpoint (AsCheckpointError (..), Checkpoint (..), CheckpointError (..), CheckpointKey,
-                                   CheckpointLogMsg, CheckpointStore, completedIntervals, handleCheckpoint,
-                                   jsonCheckpoint, jsonCheckpointLoop)
-import Plutus.Contract.Resumable hiding (never, responses, select)
-import Plutus.Contract.Resumable qualified as Resumable
-
+import Plutus.Contract.Checkpoint (AsCheckpointError (_CheckpointError),
+                                   Checkpoint (AllocateKey, DoCheckpoint, Retrieve, Store),
+                                   CheckpointError (JSONDecodeError), CheckpointKey, CheckpointLogMsg, CheckpointStore,
+                                   completedIntervals, handleCheckpoint, jsonCheckpoint, jsonCheckpointLoop)
 import Plutus.Contract.Effects (PABReq, PABResp)
+import Plutus.Contract.Error qualified
+import Plutus.Contract.Resumable (IterationID, MultiRequestContStatus (AContinuation, AResult),
+                                  MultiRequestContinuation (MultiRequestContinuation, ndcCont, ndcRequests), RequestID,
+                                  Requests, Response, Responses, Resumable, _Responses, handleResumable, insertResponse,
+                                  suspendNonDet)
+import Plutus.Contract.Resumable qualified as Resumable
 import PlutusTx.Applicative qualified as PlutusTx
 import PlutusTx.Functor qualified as PlutusTx
 import Prelude as Haskell
-import Wallet.Types (AsContractError (..), ContractError (..), MatchingError (..))
 
 -- | Effects that are available to contracts.
 type ContractEffs w e =
@@ -380,7 +382,7 @@ mkResult oldW oldLogs (initialRes, cpKey, cpStore, AccumState newW, newLogs) =
             { _responses = mempty
             , _requests =
                 let getRequests = \case { AContinuation MultiRequestContinuation{ndcRequests} -> Just ndcRequests; _ -> Nothing }
-                in either mempty ((fromMaybe mempty) . (>>= getRequests)) initialRes
+                in either mempty (fromMaybe mempty . (>>= getRequests)) initialRes
             , _finalState =
                 let getResult = \case { AResult a -> Just a; _ -> Nothing } in
                 fmap (>>= getResult) initialRes
@@ -390,7 +392,7 @@ mkResult oldW oldLogs (initialRes, cpKey, cpStore, AccumState newW, newLogs) =
             , _observableState = oldW <> newW
             , _lastState = newW
             }
-      , _continuations = either (const Nothing) id initialRes
+      , _continuations = fromRight Nothing initialRes
       , _checkpointKey = cpKey
       }
 

@@ -39,6 +39,7 @@ import Ledger hiding (to, value)
 import Ledger.AddressMap qualified as AM
 import Ledger.Index qualified as Index
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
+import Plutus.Contract.Error (AssertionError (GenericAssertion))
 import Plutus.Trace.Emulator.Types (ContractInstanceLog, EmulatedWalletEffects, EmulatedWalletEffects', UserThreadMsg)
 import Plutus.Trace.Scheduler qualified as Scheduler
 import Wallet.API qualified as WAPI
@@ -47,7 +48,6 @@ import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.NodeClient qualified as NC
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Emulator.Wallet qualified as Wallet
-import Wallet.Types (AssertionError (GenericAssertion))
 
 -- | Assertions which will be checked during execution of the emulator.
 data Assertion

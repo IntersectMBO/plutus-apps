@@ -253,10 +253,8 @@ launchPAB userContractHandler passPhrase dir walletUrl (RunningNode socketPath _
                 , chainIndexConfig = def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
                 , walletServerConfig = set (Wallet.Config.walletSettingsL . Wallet.Config.baseUrlL) (WalletUrl walletUrl) def
                 }
-    -- TODO: For some reason this has to be async - program terminates if it's done synchronously???
-    void . async $ PAB.Run.runWithOpts userContractHandler (Just config) opts{cmd=Migrate}
-    sleep 2
-    void . async $ PAB.Run.runWithOpts userContractHandler (Just config) opts{cmd=PABWebserver}
+    PAB.Run.runWithOpts userContractHandler (Just config) opts { cmd = Migrate }
+    PAB.Run.runWithOpts userContractHandler (Just config) opts { cmd = PABWebserver }
 
 {-| Set up wallets
 -}

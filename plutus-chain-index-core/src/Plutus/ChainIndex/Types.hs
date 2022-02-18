@@ -14,6 +14,8 @@ module Plutus.ChainIndex.Types(
     , Point(..)
     , pointsToTip
     , tipAsPoint
+    , _PointAtGenesis
+    , _Point
     , TxValidity(..)
     , TxStatus
     , TxOutStatus
@@ -39,7 +41,7 @@ module Plutus.ChainIndex.Types(
 
 import Codec.Serialise (Serialise)
 import Codec.Serialise qualified as CBOR
-import Control.Lens (makeLenses)
+import Control.Lens (makeLenses, makePrisms)
 import Control.Monad (void)
 import Crypto.Hash (SHA256, hash)
 import Data.Aeson (FromJSON, ToJSON)
@@ -61,7 +63,7 @@ import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
 import Ledger.TxId (TxId)
 import PlutusTx.Lattice (MeetSemiLattice (..))
-import Prettyprinter (Pretty (..), (<+>))
+import Prettyprinter (Pretty (..), comma, (<+>))
 import Prettyprinter.Extras (PrettyShow (..))
 
 import Plutus.ChainIndex.Tx (ChainIndexTx)
@@ -73,6 +75,14 @@ blockId = BlockId
         . hash @_ @SHA256
         . BSL.toStrict
         . CBOR.serialise
+
+newtype BlockNumber = BlockNumber { unBlockNumber :: Word64 }
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving newtype (Num, Real, Enum, Integral, ToJSON, FromJSON, OpenApi.ToSchema)
+
+instance Pretty BlockNumber where
+    pretty (BlockNumber blockNumber) =
+        "BlockNumber " <> pretty blockNumber
 
 -- | The tip of the chain index.
 data Tip =
@@ -96,6 +106,8 @@ data Point =
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
+makePrisms ''Point
+
 instance Ord Point where
   PointAtGenesis <= _              = True
   _              <= PointAtGenesis = False
@@ -104,11 +116,11 @@ instance Ord Point where
 instance Pretty Point where
     pretty PointAtGenesis = "PointAtGenesis"
     pretty Point {pointSlot, pointBlockId} =
-            "Tip(slot="
-        <+> pretty pointSlot
-        <>  ", blockId="
-        <+> pretty pointBlockId
-        <>  ")"
+        "Point("
+     <> pretty pointSlot
+     <> comma
+     <+> pretty pointBlockId
+     <>  ")"
 
 tipAsPoint :: Tip -> Point
 tipAsPoint TipAtGenesis = PointAtGenesis
@@ -129,8 +141,15 @@ instance Semigroup Tip where
     t <> TipAtGenesis = t
     _ <> t            = t
 
+instance Semigroup Point where
+    t <> PointAtGenesis = t
+    _ <> t              = t
+
 instance Monoid Tip where
     mempty = TipAtGenesis
+
+instance Monoid Point where
+    mempty = PointAtGenesis
 
 instance Ord Tip where
     TipAtGenesis <= _            = True
@@ -140,11 +159,11 @@ instance Ord Tip where
 instance Pretty Tip where
     pretty TipAtGenesis = "TipAtGenesis"
     pretty Tip {tipSlot, tipBlockId, tipBlockNo} =
-            "Tip(slot="
-        <+> pretty tipSlot
-        <>  ", blockId="
+            "Tip("
+        <>  pretty tipSlot
+        <>  comma
         <+> pretty tipBlockId
-        <> ", blockNo="
+        <>  comma
         <+> pretty tipBlockNo
         <>  ")"
 
@@ -242,10 +261,6 @@ txOutStatusTxOutState (Committed _ s)              = Just s
 -- Note, however, that we can't convert a 'TxStatus' to a 'TxOutStatus'.
 liftTxOutStatus :: TxOutStatus -> TxStatus
 liftTxOutStatus = void
-
-newtype BlockNumber = BlockNumber { unBlockNumber :: Word64 }
-    deriving stock (Eq, Ord, Show, Generic)
-    deriving newtype (Num, Real, Enum, Integral, Pretty, ToJSON, FromJSON, OpenApi.ToSchema)
 
 data Diagnostics =
     Diagnostics
@@ -366,6 +381,7 @@ newtype TxProcessOption = TxProcessOption
     -- If not, only handle the UTXOs.
     -- This, for example, allows applications to skip unwanted pre-Alonzo transactions.
     }
+    deriving (Show)
 
 -- We should think twice when setting the default option.
 -- For now, it should store all data to avoid weird non-backward-compatible bugs in the future.
@@ -377,3 +393,4 @@ data ChainSyncBlock = Block
     { blockTip :: Tip
     , blockTxs :: [(ChainIndexTx, TxProcessOption)]
     }
+    deriving (Show)

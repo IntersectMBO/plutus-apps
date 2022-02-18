@@ -59,6 +59,7 @@ data PABError
     | AesonDecodingError Text Text
     | MigrationNotDoneError Text
     | RemoteWalletWithMockNodeError
+    | TxSenderNotAvailable
     deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -88,6 +89,7 @@ instance Pretty PABError where
                                    <> "Did you forget to run the 'migrate' command ?"
                                    <+> "(ex. 'plutus-pab-migrate' or 'plutus-pab-examples --config <CONFIG_FILE> migrate')"
         RemoteWalletWithMockNodeError   -> "The remote wallet can't be used with the mock node."
+        TxSenderNotAvailable         -> "Cannot send a transaction when connected to the real node."
 
 data DbConfig =
     DbConfig
@@ -121,7 +123,7 @@ data Config =
         , requestProcessingConfig :: RequestProcessingConfig
         , developmentOptions      :: DevelopmentOptions
         }
-    deriving (Show, Eq, Generic, FromJSON)
+    deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 defaultConfig :: Config
 defaultConfig =
@@ -143,7 +145,7 @@ newtype RequestProcessingConfig =
         { requestProcessingInterval :: Second -- ^ How many seconds to wait between calls to 'Plutus.PAB.Core.ContractInstance.processAllContractOutboxes'
         }
     deriving (Show, Eq, Generic)
-    deriving anyclass (FromJSON)
+    deriving anyclass (FromJSON, ToJSON)
 
 defaultRequestProcessingConfig :: RequestProcessingConfig
 defaultRequestProcessingConfig =

@@ -1,8 +1,8 @@
-{ pkgs, lib, gitignore-nix, haskell, webCommon, webCommonPlutus, webCommonPlayground, buildPursPackage, buildNodeModules, filterNpm }:
+{ purs-tidy, pkgs, lib, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
 let
   playground-exe = haskell.packages.plutus-playground-server.components.exes.plutus-playground-server;
 
-  build-playground-exe = "$(nix-build --quiet --no-build-output ../default.nix -A plutus-apps.haskell.packages.plutus-playground-server.components.exes.plutus-playground-server)";
+  build-playground-exe = "$(nix-build ../default.nix -A plutus-apps.haskell.packages.plutus-playground-server.components.exes.plutus-playground-server)";
 
   build-ghc-with-plutus = "$(nix-build --quiet --no-build-output -E '(import ./.. {}).plutus-apps.haskell.project.ghcWithPackages(ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ])')";
 
@@ -18,6 +18,12 @@ let
       PATH=${ghcWithPlutus}/bin:$PATH
       mkdir $out
       ${playground-exe}/bin/plutus-playground-server psgenerator $out
+      cp ${builtins.path { name = "tidyrc.json"; path = ../.tidyrc.json; } } $out/.tidyrc.json
+      cp ${builtins.path { name = "tidyoperators"; path = ../.tidyoperators; } } $out/.tidyoperators
+      cd $out
+      ${purs-tidy}/bin/purs-tidy format-in-place $out
+      rm $out/.tidyrc.json
+      rm $out/.tidyoperators
     '';
 
   # generate-purescript: script to create purescript bridge code
@@ -33,6 +39,10 @@ let
 
     rm -rf ./generated
     ${build-playground-exe}/bin/plutus-playground-server psgenerator generated
+    cd ..
+    echo Formatting files...
+    ${purs-tidy}/bin/purs-tidy format-in-place ./plutus-playground-client/generated
+    echo Done: formatted
   '';
 
   # start-backend: script to start the plutus-playground-server
@@ -71,11 +81,6 @@ let
       checkPhase = ''
         node -e 'require("./output/Test.Main").main()'
       '';
-      extraSrcs = {
-        web-common-plutus = webCommonPlutus;
-        web-common-playground = webCommonPlayground;
-        generated = generated-purescript;
-      };
       spagoPackages = pkgs.callPackage ./spago-packages.nix { };
     })
     (_: {
@@ -83,6 +88,6 @@ let
     });
 in
 {
-  inherit client generate-purescript start-backend;
+  inherit client generate-purescript generated-purescript start-backend;
   server = playground-exe;
 }

@@ -1,4 +1,4 @@
-{ pkgs, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
+{ purs-tidy, pkgs, gitignore-nix, haskell, webCommon, buildPursPackage, buildNodeModules, filterNpm }:
 let
   pab-nami-demo-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-nami-demo;
   pab-nami-demo-generator = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-nami-demo-generator;
@@ -8,15 +8,23 @@ let
   # TODO: Use the PS generator in the demo app
   generated-purescript = pkgs.runCommand "pab-nami-demo-purescript" { } ''
     mkdir $out
-    ${pab-setup-invoker}/bin/plutus-pab-setup psgenerator $out
     ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $out
+    cp ${builtins.path { name = "tidyrc.json"; path = ../../../../.tidyrc.json; } } $out/.tidyrc.json
+    cp ${builtins.path { name = "tidyoperators"; path = ../../../../.tidyoperators; } } $out/.tidyoperators
+    cd $out
+    ${purs-tidy}/bin/purs-tidy format-in-place $out
+    rm $out/.tidyrc.json
+    rm $out/.tidyoperators
   '';
 
   generate-purescript = pkgs.writeShellScriptBin "pab-nami-demo-generate-purs" ''
     generatedDir=./generated
     rm -rf $generatedDir
-    $(nix-build ../../../../default.nix -A pab-nami-demo.pab-setup-invoker)/bin/plutus-pab-setup psgenerator $generatedDir
     $(nix-build ../../../../default.nix -A pab-nami-demo.pab-nami-demo-generator)/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
+    cd ../../../..
+    echo Formatting files...
+    ${purs-tidy}/bin/purs-tidy format-in-place ./plutus-pab-executables/demo/pab-nami/client/generated
+    echo Done: formatted
   '';
 
   start-backend = pkgs.writeShellScriptBin "pab-nami-demo-server" ''
@@ -42,10 +50,6 @@ let
         node -e 'require("./output/Test.Main").main()'
       '';
       name = "pab-nami-demo";
-      extraSrcs = {
-        # web-common-marlowe = webCommonMarlowe;
-        generated = generated-purescript;
-      };
       spagoPackages = pkgs.callPackage ./spago-packages.nix { };
     })
     (_: {

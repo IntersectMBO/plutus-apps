@@ -1,7 +1,7 @@
 "use strict";
 
-const buildTx = require('../../../lib/nami-wallet/src/api/extension/wallet.js').buildTx;
-const Loader = require('../../../lib/nami-wallet/src/api/loader.js').default;
+const buildTx = require('nami-wallet/src/api/extension/wallet').buildTx;
+const Loader = require('nami-wallet/src/api/loader').default;
 
 exports.enableImpl = () => window.cardano.enable()
 

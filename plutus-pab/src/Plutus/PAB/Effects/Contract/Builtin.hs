@@ -39,28 +39,30 @@ module Plutus.PAB.Effects.Contract.Builtin(
 import Control.Monad (unless)
 import Control.Monad.Freer
 import Control.Monad.Freer.Error (Error, throwError)
-import Control.Monad.Freer.Extras.Log (LogMsg (..), logDebug)
+import Control.Monad.Freer.Extras.Log (LogMsg (LMessage), logDebug, logError)
 import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Aeson qualified as JSON
 import Data.Foldable (foldlM, traverse_)
 import Data.OpenApi qualified as OpenApi
-import Data.Proxy (Proxy (..))
+import Data.Proxy (Proxy (Proxy))
 import Data.Row
 import GHC.Generics (Generic)
 import Playground.Schema (endpointsToSchemas)
 import Playground.Types (FunctionSchema)
-import Plutus.Contract (ContractInstanceId, EmptySchema, IsContract (..))
+import Plutus.Contract (ContractInstanceId, EmptySchema, IsContract (toContract))
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Resumable (Response, responses)
 import Plutus.Contract.Schema (Input, Output)
-import Plutus.Contract.State (ContractResponse (..), State (..))
+import Plutus.Contract.State (ContractResponse (ContractResponse, newState), State (State, record))
 import Plutus.Contract.State qualified as ContractState
-import Plutus.Contract.Types (ResumableResult (..), SuspendedContract (..))
+import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState, _lastLogs, _lastState),
+                              SuspendedContract (SuspendedContract, _resumableResult))
 import Plutus.PAB.Core.ContractInstance.RequestHandlers (ContractInstanceMsg (ContractLog, ProcessFirstInboxMessage))
-import Plutus.PAB.Effects.Contract (ContractEffect (..), PABContract (..))
-import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (..))
-import Plutus.PAB.Types (PABError (..))
-import Plutus.Trace.Emulator.Types (ContractInstanceStateInternal (..))
+import Plutus.PAB.Effects.Contract (ContractEffect (ExportSchema, InitialState, UpdateContract),
+                                    PABContract (ContractDef, State, serialisableState))
+import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (ContractInstanceLog))
+import Plutus.PAB.Types (PABError (ContractCommandError))
+import Plutus.Trace.Emulator.Types (ContractInstanceStateInternal (ContractInstanceStateInternal, cisiSuspState))
 import Plutus.Trace.Emulator.Types qualified as Emulator
 import Schema (FormSchema)
 
@@ -89,7 +91,10 @@ type ContractConstraints w schema error =
 --   'ContractConstraints'.
 data SomeBuiltin where
     SomeBuiltin
-        :: forall contract w schema error a. (ContractConstraints w schema error, IsContract contract)
+        :: forall contract w schema error a.
+         ( ContractConstraints w schema error
+         , IsContract contract
+         )
         => contract w schema error a -> SomeBuiltin
 
 data SomeBuiltinState a where
@@ -212,7 +217,8 @@ updateBuiltin' silent i oldState oldW resp = do
     let newState = Emulator.addEventInstanceState resp oldState
     case newState of
         Just k -> do
-            logDebug @(PABMultiAgentMsg (Builtin a)) (ContractInstanceLog $ ProcessFirstInboxMessage i resp)
+            logDebug @(PABMultiAgentMsg (Builtin a))
+                     (ContractInstanceLog $ ProcessFirstInboxMessage i resp)
             unless silent $ logNewMessages @a i k
             let newW = oldW <> (_lastState $ _resumableResult $ Emulator.cisiSuspState oldState)
             pure (SomeBuiltinState k newW)
@@ -221,9 +227,31 @@ updateBuiltin' silent i oldState oldW resp = do
 logNewMessages ::
     forall b w s e a effs.
     ( Member (LogMsg (PABMultiAgentMsg (Builtin b))) effs
+    , ToJSON e
     )
     => ContractInstanceId
     -> ContractInstanceStateInternal w s e a
     -> Eff effs ()
-logNewMessages i ContractInstanceStateInternal{cisiSuspState=SuspendedContract{_resumableResult=ResumableResult{_lastLogs, _observableState}}} = do
-    traverse_ (send @(LogMsg (PABMultiAgentMsg (Builtin b))) . LMessage . fmap (ContractInstanceLog . ContractLog i)) _lastLogs
+logNewMessages
+    i
+    ContractInstanceStateInternal
+        { cisiSuspState = SuspendedContract
+            { _resumableResult = ResumableResult { _lastLogs, _finalState }}
+        } = do
+    traverse_
+        ( send @(LogMsg (PABMultiAgentMsg (Builtin b)))
+        . LMessage
+        . fmap (ContractInstanceLog . ContractLog i)
+        )
+        _lastLogs
+
+    -- If an error was thrown in a 'Contract', we log it.
+    either
+        ( logError @(PABMultiAgentMsg (Builtin b))
+        . ContractInstanceLog
+        . ContractLog i
+        . JSON.toJSON
+        )
+        (const $ pure ())
+        _finalState
+

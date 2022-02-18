@@ -21,6 +21,7 @@ module Spec.GameStateMachine
   , prop_NoLockedFunds
   , prop_CheckNoLockedFundsProof
   , prop_SanityCheckModel
+  , prop_SanityCheckAssertions
   , prop_GameCrashTolerance
   ) where
 
@@ -63,14 +64,14 @@ data GameModel = GameModel
 
 makeLenses 'GameModel
 
-deriving instance Eq (ContractInstanceKey GameModel w schema err)
-deriving instance Ord (ContractInstanceKey GameModel w schema err)
-deriving instance Show (ContractInstanceKey GameModel w schema err)
+deriving instance Eq (ContractInstanceKey GameModel w schema err params)
+deriving instance Ord (ContractInstanceKey GameModel w schema err params)
+deriving instance Show (ContractInstanceKey GameModel w schema err params)
 
 instance ContractModel GameModel where
 
-    data ContractInstanceKey GameModel w schema err where
-        WalletKey :: Wallet -> ContractInstanceKey GameModel () GameStateMachineSchema GameError
+    data ContractInstanceKey GameModel w schema err params where
+        WalletKey :: Wallet -> ContractInstanceKey GameModel () GameStateMachineSchema GameError ()
 
     -- The commands available to a test case
     data Action GameModel = Lock      Wallet String Integer
@@ -84,11 +85,11 @@ instance ContractModel GameModel where
         , _currentSecret = ""
         }
 
-    initialInstances = Key . WalletKey <$> wallets
+    initialInstances = (`StartContract` ()) . WalletKey <$> wallets
 
     instanceWallet (WalletKey w) = w
 
-    instanceContract _ _ WalletKey{} = G.contract
+    instanceContract _ WalletKey{} _ = G.contract
 
     -- 'perform' gets a state, which includes the GameModel state, but also contract handles for the
     -- wallets and what the model thinks the current balances are.
@@ -144,7 +145,8 @@ instance ContractModel GameModel where
     -- command given the current model state.
     arbitraryAction s = oneof $
         [ genLockAction ] ++
-        [ Guess w   <$> genGuess  <*> genGuess <*> genGuessAmount | val > Ada.getLovelace Ledger.minAdaTxOut, Just w <- [tok] ] ++
+        [ Guess w   <$> genGuess  <*> genGuess <*> genGuessAmount
+          | val > Ada.getLovelace Ledger.minAdaTxOut, Just w <- [tok] ] ++
         [ GiveToken <$> genWallet | isJust tok ]
         where
             genGuessAmount = frequency [(1, pure val), (1, pure $ Ada.getLovelace Ledger.minAdaTxOut), (8, choose (Ada.getLovelace Ledger.minAdaTxOut, val))]
@@ -183,6 +185,8 @@ instance CrashTolerance GameModel where
   available (Guess w _ _ _) alive = (Key $ WalletKey w) `elem` alive
   available _ _                   = True
 
+  restartArguments _ WalletKey{} = ()
+
 -- | The main property. 'propRunActions_' checks that balances match the model after each test.
 prop_Game :: Actions GameModel -> Property
 prop_Game = propRunActions_
@@ -192,6 +196,9 @@ prop_GameWhitelist = checkErrorWhitelist defaultWhitelist
 
 prop_SanityCheckModel :: Property
 prop_SanityCheckModel = propSanityCheckModel @GameModel
+
+prop_SanityCheckAssertions :: Property
+prop_SanityCheckAssertions = propSanityCheckAssertions @GameModel
 
 check_prop_Game_with_coverage :: IO CoverageReport
 check_prop_Game_with_coverage =
@@ -265,7 +272,7 @@ prop_NoLockedFunds :: Property
 prop_NoLockedFunds = forAllDL noLockedFunds prop_Game
 
 noLockProof :: NoLockedFundsProof GameModel
-noLockProof = NoLockedFundsProof{
+noLockProof = defaultNLFP {
       nlfpMainStrategy   = mainStrat,
       nlfpWalletStrategy = walletStrat }
     where
@@ -324,6 +331,8 @@ tests =
         withMaxSuccess 10 prop_NoLockedFunds
 
     , testProperty "sanity check the contract model" prop_SanityCheckModel
+
+    , testProperty "game state machine crash tolerance" $ withMaxSuccess 20 prop_GameCrashTolerance
     ]
 
 initialVal :: Value

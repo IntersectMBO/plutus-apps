@@ -23,6 +23,7 @@ module Cardano.Node.Types
 
      -- * Effects
     , NodeServerEffects
+    , ChainSyncHandle
 
      -- *  State types
     , AppState (..)
@@ -45,6 +46,7 @@ module Cardano.Node.Types
 import Cardano.BM.Data.Tracer (ToObject (..))
 import Cardano.BM.Data.Tracer.Extras (Tagged (..), mkObjectStr)
 import Cardano.Chain (MockNodeServerChainState, fromEmulatorChainState)
+import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Control.Lens (makeLenses, view)
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg (..))
@@ -60,7 +62,7 @@ import Data.Time.Format.ISO8601 qualified as F
 import Data.Time.Units (Millisecond)
 import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
-import Ledger (Tx, txId)
+import Ledger (Block, Tx, txId)
 import Ledger.CardanoWallet (WalletNumber (..))
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Trace qualified as Trace
@@ -127,7 +129,7 @@ data PABServerConfig =
         -- ^ Whether to connect to an Alonzo node or a mock node
         }
     deriving stock (Show, Eq, Generic)
-    deriving anyclass (FromJSON)
+    deriving anyclass (FromJSON, ToJSON)
 
 
 defaultPABServerConfig :: PABServerConfig
@@ -153,6 +155,10 @@ defaultPABServerConfig =
 instance Default PABServerConfig where
   def = defaultPABServerConfig
 
+-- | The types of handles varies based on the type of clients (mocked or
+-- real nodes) and we need a generic way of handling either type of response.
+type ChainSyncHandle = Either (Client.ChainSyncHandle Block) (Client.ChainSyncHandle Client.ChainSyncEvent)
+
 -- Logging ------------------------------------------------------------------------------------------------------------
 
 -- | Top-level logging data type for structural logging
@@ -167,6 +173,7 @@ data PABServerLogMsg =
     | ProcessingChainEvent ChainEvent
     | BlockOperation BlockEvent
     | CreatingRandomTransaction
+    | TxSendCalledWithoutMock
     deriving (Generic, Show, ToJSON, FromJSON)
 
 instance Pretty PABServerLogMsg where
@@ -183,6 +190,7 @@ instance Pretty PABServerLogMsg where
         ProcessingChainEvent e    -> "Processing chain event" <+> pretty e
         BlockOperation e          -> "Block operation" <+> pretty e
         CreatingRandomTransaction -> "Generating a random transaction"
+        TxSendCalledWithoutMock   -> "Cannot send transaction without a mocked environment."
 
 instance ToObject PABServerLogMsg where
     toObject _ = \case
@@ -195,6 +203,7 @@ instance ToObject PABServerLogMsg where
         ProcessingChainEvent e    ->  mkObjectStr "Processing chain event" (Tagged @"event" e)
         BlockOperation e          ->  mkObjectStr "Block operation" (Tagged @"event" e)
         CreatingRandomTransaction ->  mkObjectStr "Creating random transaction" ()
+        TxSendCalledWithoutMock   ->  mkObjectStr "Cannot send transaction without a mocked environment." ()
 
 data BlockEvent = NewSlot
     | NewTransaction Tx
@@ -241,7 +250,7 @@ type NodeServerEffects m
         , ChainEffect
         , State MockNodeServerChainState
         , LogMsg PABServerLogMsg
-        , Reader Client.TxSendHandle
+        , Reader (Maybe Client.TxSendHandle)
         , State AppState
         , LogMsg PABServerLogMsg
         , m]

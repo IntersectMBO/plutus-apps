@@ -60,7 +60,6 @@ executable doc-doctests
       base >=4.9 && <5,
       template-haskell >=2.13.0.0,
       bytestring -any,
-      cardano-api -any,
       data-default -any,
       flat -any,
       plutus-core -any,
@@ -73,7 +72,6 @@ executable doc-doctests
       playground-common -any,
       plutus-use-cases -any,
       quickcheck-dynamic -any,
-      prettyprinter -any,
       containers -any,
       freer-extras -any,
       lens -any,
@@ -82,7 +80,6 @@ executable doc-doctests
       random -any,
       text -any,
       aeson -any,
-      plutus-chain-index
 
     if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any

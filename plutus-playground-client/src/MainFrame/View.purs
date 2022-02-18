@@ -221,26 +221,27 @@ transactionsWrapper simulations =
         [ class_ $ ClassName "simulations" ]
         [ simulationsNav simulations
         , div
-            [ class_ $ ClassName "simulation" ] case current simulations of
-            Just { evaluationResult, blockchainVisualisationState } -> case evaluationResult of
-              Success (Right evaluation) -> [ evaluationPane blockchainVisualisationState evaluation ]
-              Success (Left _) ->
-                [ text "Your simulation has errors. Click the "
-                , strong_ [ text "Simulations" ]
-                , text " tab above to fix them and recompile."
-                ]
-              Failure _ ->
-                [ text "Your simulation has errors. Click the "
-                , strong_ [ text "Simulations" ]
-                , text " tab above to fix them and recompile."
-                ]
-              Loading -> [ icon Spinner ]
-              NotAsked ->
-                [ text "Click the "
-                , strong_ [ text "Simulations" ]
-                , text " tab above and evaluate a simulation to see some results."
-                ]
-            Nothing -> []
+            [ class_ $ ClassName "simulation" ]
+            case current simulations of
+              Just { evaluationResult, blockchainVisualisationState } -> case evaluationResult of
+                Success (Right evaluation) -> [ evaluationPane blockchainVisualisationState evaluation ]
+                Success (Left _) ->
+                  [ text "Your simulation has errors. Click the "
+                  , strong_ [ text "Simulations" ]
+                  , text " tab above to fix them and recompile."
+                  ]
+                Failure _ ->
+                  [ text "Your simulation has errors. Click the "
+                  , strong_ [ text "Simulations" ]
+                  , text " tab above to fix them and recompile."
+                  ]
+                Loading -> [ icon Spinner ]
+                NotAsked ->
+                  [ text "Click the "
+                  , strong_ [ text "Simulations" ]
+                  , text " tab above and evaluate a simulation to see some results."
+                  ]
+              Nothing -> []
         ]
     ]
 

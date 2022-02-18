@@ -24,7 +24,7 @@ import Wallet.Effects (WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn,
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Wallet (Wallet (Wallet, getWalletId), WalletId)
 
-createWallet :: ClientM WalletInfo
+createWallet :: Maybe Integer -> ClientM WalletInfo
 submitTxn :: Wallet -> Tx -> ClientM ()
 ownPaymentPublicKey :: Wallet -> ClientM WalletInfo
 balanceTx :: Wallet -> UnbalancedTx -> ClientM (Either WalletAPIError Tx)

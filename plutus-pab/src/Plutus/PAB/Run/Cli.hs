@@ -29,11 +29,11 @@ import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
 import Cardano.Wallet.Mock.Server qualified as WalletServer
 import Cardano.Wallet.Mock.Types (WalletMsg)
 import Cardano.Wallet.Types (WalletConfig (LocalWalletConfig, RemoteWalletConfig))
-import Control.Concurrent (takeMVar)
+import Control.Concurrent (takeMVar, threadDelay)
 import Control.Concurrent.Async (Async, async, waitAny)
 import Control.Concurrent.Availability (Availability, available, starting)
 import Control.Concurrent.STM qualified as STM
-import Control.Monad (forM, forM_, void)
+import Control.Monad (forM, forM_, forever, void)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, runM)
 import Control.Monad.Freer.Delay (DelayEffect, delayThread, handleDelayEffect)
 import Control.Monad.Freer.Error (throwError)
@@ -133,7 +133,10 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServer
                 $ logInfo @(LM.AppMsg (Builtin a))
                 $ LM.PABMsg
                 $ LM.SCoreMsg LM.ConnectingToAlonzoNode
-            pure () -- TODO: Log message that we're connecting to the real Alonzo node
+            -- The semantics of Command(s) is that once a set of commands are
+            -- started if any finishes the entire application is terminated. We want
+            -- to prevent that by keeping the thread suspended.
+            forever $ threadDelay 1000000000
 
 -- Run PAB webserver
 runConfigCommand contractHandler ConfigCommandArgs{ccaTrace, ccaPABConfig=config@Config{pabWebserverConfig, dbConfig}, ccaAvailability, ccaStorageBackend} PABWebserver =
@@ -182,10 +185,11 @@ runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConf
     let shouldStartMocks = case pscNodeMode nodeServerConfig of
                              MockNode   -> True
                              AlonzoNode -> False
+        startedCommands  = filter (mockedServices shouldStartMocks) commands
      in void $ do
-          threads <- traverse forkCommand
-                   $ filter (mockedServices shouldStartMocks) commands
-          putStrLn "Started all commands."
+          putStrLn $ "Starting all commands (" <> show startedCommands <> ")."
+          threads <- traverse forkCommand startedCommands
+          putStrLn $ "Started all commands (" <> show startedCommands <> ")."
           waitAny threads
   where
     mockedServices :: Bool -> ConfigCommand -> Bool
@@ -201,12 +205,13 @@ runConfigCommand contractHandler c@ConfigCommandArgs{ccaAvailability, ccaPABConf
       pure asyncId
 
 -- Run the chain-index service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainIndexConfig }} ChainIndex =
+runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Config { nodeServerConfig, chainIndexConfig }} ChainIndex =
     ChainIndex.main
         (toChainIndexLog ccaTrace)
         chainIndexConfig
         (pscSocketPath nodeServerConfig)
         (pscSlotConfig nodeServerConfig)
+        ccaAvailability
 
 -- Get the state of a contract
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ContractState contractInstanceId) = do

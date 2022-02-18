@@ -46,10 +46,15 @@ let
       stylish-haskell = stylish-haskell;
       nixpkgs-fmt = nixpkgs-fmt;
       shellcheck = pkgs.shellcheck;
-      purty = plutus-apps.purty-pre-commit;
     };
     hooks = {
-      purty.enable = true;
+      purs-tidy-hook = {
+        enable = true;
+        name = "purs-tidy";
+        entry = "${plutus-apps.purs-tidy}/bin/purs-tidy format-in-place";
+        files = "\\.purs$";
+        language = "system";
+      };
       stylish-haskell.enable = true;
       nixpkgs-fmt = {
         enable = true;
@@ -83,6 +88,7 @@ let
     nixFlakesAlias
     nixpkgs-fmt
     nodejs
+    plantuml
     shellcheck
     sqlite-interactive
     stack
@@ -98,8 +104,9 @@ let
     cardano-node.cardano-node
     cardano-wallet.cardano-wallet
     cardano-repo-tool
+    docs.build-and-serve-docs
     fixPngOptimization
-    fixPurty
+    fix-purs-tidy
     fixStylishHaskell
     haskell-language-server
     haskell-language-server-wrapper
@@ -112,13 +119,12 @@ let
     psa
     purescript-language-server
     purs
-    purty
+    purs-tidy
     spago
     spago2nix
     stylish-haskell
     updateMaterialized
     updateClientDeps
-    docs.build-and-serve-docs
   ]);
 
 in

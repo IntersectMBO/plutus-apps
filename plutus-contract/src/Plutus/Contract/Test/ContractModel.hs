@@ -46,6 +46,7 @@ module Plutus.Contract.Test.ContractModel
     , transfer
     , modifyContractState
     , createToken
+    , assertSpec
     , ($=)
     , ($~)
     -- * Helper functions for writing perform functions
@@ -93,9 +94,11 @@ module Plutus.Contract.Test.ContractModel
     , SchemaConstraints
     , ContractInstanceSpec(..)
     , SomeContractInstanceKey(..)
+    , StartContract(..)
     , HandleFun
     -- ** Model properties
     , propSanityCheckModel
+    , propSanityCheckAssertions
     -- ** Coverage cheking options
     , CoverageOptions
     , defaultCoverageOptions
@@ -122,10 +125,9 @@ module Plutus.Contract.Test.ContractModel
     --
     -- $noLockedFunds
     , NoLockedFundsProof(..)
+    , defaultNLFP
     , checkNoLockedFundsProof
     , checkNoLockedFundsProofFast
-    , checkNoLockedFundsProofWithWiggleRoom
-    , checkNoLockedFundsProofWithWiggleRoomFast
     -- $checkNoPartiality
     , Whitelist
     , whitelistOk
