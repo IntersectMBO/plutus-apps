@@ -28,12 +28,12 @@ import Plutus.ChainIndex.CommandLine (AppConfig (AppConfig, acCLIConfigOverrides
                                       applyOverrides, cmdWithHelpParser)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
-import Plutus.ChainIndex.Lib (defaultChainSyncHandler, getTipSlot, storeFromBlockNo, syncChainIndex,
-                              withRunRequirements, writeChainSyncEventToChan)
+import Plutus.ChainIndex.Events (processEventsChan)
+import Plutus.ChainIndex.Lib (getTipSlot, storeChainSyncHandler, storeFromBlockNo, syncChainIndex, withRunRequirements)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
-import Plutus.ChainIndex.SyncStats (SyncLog, convertEventToSyncStats, logProgress)
-import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
+import Plutus.ChainIndex.SyncStats (SyncLog)
+import Plutus.Monitoring.Util (PrettyObject)
 
 main :: IO ()
 main = do
@@ -77,22 +77,23 @@ runMain logConfig config = do
     slotNo <- getTipSlot config
     print slotNo
 
-    -- Channel for broadcasting 'ChainSyncEvent's
-    chan <- newBroadcastTChanIO
+    -- Channel for processing events
+    eventsChan <- newBroadcastTChanIO
     syncHandler
-      <- defaultChainSyncHandler runReq
+      <- storeChainSyncHandler eventsChan
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)
-        & writeChainSyncEventToChan convertEventToSyncStats chan
+        & pure
 
     putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config
     syncChainIndex config runReq syncHandler
 
     (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
-    withAsync (runLogEffects (convertLog PrettyObject trace) $ logProgress chan) $ \logAsync -> do
+    withAsync (processEventsChan trace runReq eventsChan (Config.cicAppendPeriod config) (Config.cicAppendBatchSize config)) $ \processAsync -> do
+
       let port = show (Config.cicPort config)
       putStrLn $ "Starting webserver on port " <> port
       putStrLn $ "A Swagger UI for the endpoints are available at "
               <> "http://localhost:" <> port <> "/swagger/swagger-ui"
       Server.serveChainIndexQueryServer (Config.cicPort config) runReq
-      wait logAsync
+      wait processAsync
 

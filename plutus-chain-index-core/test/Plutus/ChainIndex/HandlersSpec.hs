@@ -25,7 +25,7 @@ import Database.SQLite.Simple qualified as Sqlite
 import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
 import Ledger (outValue)
-import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), RunRequirements (..), appendBlock, citxOutputs,
+import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), RunRequirements (..), appendBlocks, citxOutputs,
                           runChainIndexEffects, unspentTxOutFromRef, utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
@@ -62,7 +62,7 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlock (Block tip (map (, def) block))
+      appendBlocks [(Block tip (map (, def) block))]
       utxoSetFromBlockAddrs block
 
   S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
@@ -76,7 +76,7 @@ eachTxOutRefAtAddressShouldHaveTxOutSpec = property $ do
 
   utxouts <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlock (Block tip (map (, def) block))
+      appendBlocks [(Block tip (map (, def) block))]
       utxos <- utxoSetFromBlockAddrs block
       traverse unspentTxOutFromRef (concat utxos)
 
@@ -97,7 +97,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlock (Block tip (map (, def) block))
+      appendBlocks [(Block tip (map (, def) block))]
 
       forM assetClasses $ \ac -> do
         let pq = PageQuery 200 Nothing
@@ -115,7 +115,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
 
   utxoRefs <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlock (Block tip (map (, def) block))
+      appendBlocks [(Block tip (map (, def) block))]
 
       let pq = PageQuery 200 Nothing
       UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq (AssetClass (Ada.adaSymbol, Ada.adaToken))

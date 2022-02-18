@@ -11,13 +11,11 @@
 module Plutus.ChainIndex.SyncStats where
 
 import Cardano.BM.Tracing (ToObject)
-import Control.Concurrent (threadDelay)
-import Control.Concurrent.STM (TChan, atomically, dupTChan, tryReadTChan)
-import Control.Monad.Freer (Eff, LastMember, Member)
+import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Extras (LogMsg, logInfo, logWarn)
-import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Time.Units (Second, TimeUnit (fromMicroseconds))
+import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
 import Ledger (Slot (Slot))
 import Plutus.ChainIndex (Point (PointAtGenesis), tipAsPoint)
@@ -79,31 +77,15 @@ instance Pretty SyncState where
     Syncing pct -> "Syncing (" <> pretty (printf "%.2f" pct :: String) <> "%)."
     NotSyncing  -> "Not syncing."
 
--- | Read 'ChainSyncEvent's for the 'TChan' every 30 seconds and log syncing summary.
-logProgress :: forall effs.
-    ( Member (LogMsg SyncLog) effs
-    , LastMember IO effs
-    )
-    => TChan SyncStats
-    -> Eff effs ()
-logProgress broadcastChan = do
-    chan <- liftIO $ atomically $ dupTChan broadcastChan
-    go chan 30_000_000 -- 30s
-  where
-    go chan delay = do
-        liftIO $ threadDelay (fromIntegral delay)
-        syncStats <- liftIO $ foldTChanUntilEmpty chan
-        let syncState = getSyncStateFromStats syncStats
-        case syncState of
-          NotSyncing -> do
-              logWarn $ SyncLog syncState syncStats (fromMicroseconds delay)
-              go chan 300_000_000 -- 300s
-          Synced -> do
-              logInfo $ SyncLog syncState syncStats (fromMicroseconds delay)
-              go chan 300_000_000 -- 300s
-          Syncing _ -> do
-              logInfo $ SyncLog syncState syncStats (fromMicroseconds delay)
-              go chan 30_000_000 -- 30s
+-- | Log syncing summary.
+logProgress :: forall effs. (Member (LogMsg SyncLog) effs) => [ChainSyncEvent] -> Int -> Eff effs ()
+logProgress events delay = do
+    let syncStats = foldl (<>) mempty $ map convertEventToSyncStats events
+    let syncState = getSyncStateFromStats syncStats
+    let syncLog = SyncLog syncState syncStats (fromMicroseconds $ toInteger delay)
+    case syncState of
+      NotSyncing -> logWarn syncLog
+      _          -> logInfo syncLog
 
 -- | Get the 'SyncState' for a 'SyncState'.
 --
@@ -124,17 +106,6 @@ getSyncStateFromStats (SyncStats _ _ chainSyncPoint nodePoint) =
         (CI.Point (Slot chainSyncSlot) _, CI.Point (Slot nodeSlot) _) ->
             let pct = ((100 :: Double) * fromIntegral chainSyncSlot) / fromIntegral nodeSlot
              in Syncing pct
-
--- | Read all elements from the 'TChan' until it is empty and combine them with
--- it's 'Monoid' instance.
-foldTChanUntilEmpty :: (Monoid a) => TChan a -> IO a
-foldTChanUntilEmpty chan =
-    let go combined = do
-            elementM <- atomically $ tryReadTChan chan
-            case elementM of
-              Nothing      -> pure combined
-              Just element -> go (combined <> element)
-     in go mempty
 
 convertEventToSyncStats :: ChainSyncEvent -> SyncStats
 convertEventToSyncStats (RollForward (CI.Block chainSyncTip _) nodeTip) =
