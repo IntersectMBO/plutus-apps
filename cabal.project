@@ -15,6 +15,7 @@ packages: doc
           plutus-pab-executables
           plutus-playground-server
           plutus-use-cases
+          plutus-streaming
           quickcheck-dynamic
           web-ghc
 
