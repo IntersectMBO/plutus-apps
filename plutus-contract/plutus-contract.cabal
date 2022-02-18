@@ -127,6 +127,7 @@ library
         freer-simple -any,
         hashable -any,
         hedgehog -any,
+        html-entities -any,
         lens -any,
         memory -any,
         mmorph -any,
@@ -161,6 +162,7 @@ library
         exposed-modules:
             Plutus.Contract.Test
             Plutus.Contract.Test.Coverage
+            Plutus.Contract.Test.Coverage.ReportCoverage
             Plutus.Contract.Test.ContractModel
             Plutus.Contract.Test.ContractModel.Internal
             Plutus.Contract.Test.ContractModel.Symbolics

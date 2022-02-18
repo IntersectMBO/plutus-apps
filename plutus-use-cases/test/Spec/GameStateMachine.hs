@@ -27,6 +27,7 @@ module Spec.GameStateMachine
   , prop_SanityCheckAssertions
   , prop_GameCrashTolerance
   , certification
+  , covIndex
   ) where
 
 import Control.Exception hiding (handle)
@@ -211,12 +212,16 @@ prop_SanityCheckModel = propSanityCheckModel @GameModel
 prop_SanityCheckAssertions :: Actions GameModel -> Property
 prop_SanityCheckAssertions = propSanityCheckAssertions
 
-check_prop_Game_with_coverage :: IO CoverageReport
-check_prop_Game_with_coverage =
-  quickCheckWithCoverage stdArgs (set coverageIndex (covIdx gameParam) defaultCoverageOptions) $ \covopts ->
+check_prop_Game_with_coverage :: IO ()
+check_prop_Game_with_coverage = do
+  cr <- quickCheckWithCoverage (set coverageIndex covIndex defaultCoverageOptions) $ \covopts ->
     propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))
+  writeCoverageReport "GameStateMachine" covIndex cr
+
+covIndex :: CoverageIndex
+covIndex = covIdx gameParam
 
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions

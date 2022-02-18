@@ -604,13 +604,10 @@ prop_CheckNoLockedFundsProofFast :: Property
 prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofFast defaultCheckOptionsContractModel noLockProof
 
 check_propUniswapWithCoverage :: IO ()
-check_propUniswapWithCoverage = void $
-  quickCheckWithCoverage (stdArgs { maxSuccess = 1000 })
-                         (set endpointCoverageReq epReqs $ set coverageIndex covIdx $ defaultCoverageOptions)
-                         $ \covopts -> propRunActionsWithOptions @UniswapModel
-                                          defaultCheckOptionsContractModel
-                                          covopts
-                                          (const (pure True))
+check_propUniswapWithCoverage = do
+  cr <- quickCheckWithCoverage (set endpointCoverageReq epReqs $ set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+    withMaxSuccess 1000 $ propRunActionsWithOptions @UniswapModel defaultCheckOptionsContractModel covopts (const (pure True))
+  writeCoverageReport "Uniswap" covIdx cr
   where
     epReqs t ep
       | t == Trace.walletInstanceTag w1 = 0
