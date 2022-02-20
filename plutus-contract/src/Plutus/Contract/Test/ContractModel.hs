@@ -100,6 +100,7 @@ module Plutus.Contract.Test.ContractModel
     -- ** Model properties
     , propSanityCheckModel
     , propSanityCheckAssertions
+    , propSanityCheckReactive
     -- ** Coverage cheking options
     , CoverageOptions
     , defaultCoverageOptions

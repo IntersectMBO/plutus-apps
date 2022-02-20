@@ -110,6 +110,7 @@ module Plutus.Contract.Test.ContractModel.Internal
     -- ** Model properties
     , propSanityCheckModel
     , propSanityCheckAssertions
+    , propSanityCheckReactive
     -- ** Coverage checking options
     , CoverageOptions
     , defaultCoverageOptions
@@ -1601,6 +1602,17 @@ propSanityCheckAssertions as = monadic (flip State.evalState mempty) $ do
   -- We do this to gather all the statistics we need
   _ <- runActionsInState StateModel.initialState (toStateModelActions as)
   return (asserts $ stateAfter as)
+
+-- | Sanity check a `ContractModel`. Ensures that `nextReactiveState` is idempotent.
+propSanityCheckReactive :: forall state. (ContractModel state, Eq state) => Actions state -> Positive Integer -> Positive Integer -> Property
+propSanityCheckReactive as (Positive sl) (Positive sl') =
+    let s0 = stateAfter as
+        sl1 = s0 ^. currentSlot + Slot sl
+        sl2 = sl1 + Slot sl'
+        s1 = runSpec (nextReactiveState sl1 >> nextReactiveState sl2) (error "unreachable") s0
+        s2 = runSpec (nextReactiveState sl2) (error "unreachable") s0
+    in counterexample "Balance changes not idempotent" (s1 ^. balanceChanges === s2 ^. balanceChanges)
+    QC..&&. counterexample "Contract state changes not idempotent" (s1 ^. contractState === s2 ^. contractState)
 
 -- $noLockedFunds
 -- Showing that funds can not be locked in the contract forever.

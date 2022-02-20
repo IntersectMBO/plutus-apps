@@ -12,6 +12,7 @@ module Spec.Auction
     , options
     , auctionTrace1
     , auctionTrace2
+    , AuctionModel
     , prop_Auction
     , prop_FinishAuction
     , prop_NoLockedFunds
@@ -163,7 +164,7 @@ data AuctionModel = AuctionModel
     , _winner     :: Wallet
     , _endSlot    :: Slot
     , _phase      :: Phase
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 data Phase = NotStarted | Bidding | AuctionOver
     deriving (Eq, Show)
@@ -198,14 +199,19 @@ instance ContractModel AuctionModel where
     instanceContract _ BuyerH{} _ = buyer threadToken
 
     arbitraryAction s
-        | p /= NotStarted =
-            frequency $ [ (3, Bid w <$> chooseBid (lo,hi))
-                        | w <- [w2, w3, w4]
-                        , let (lo,hi) = validBidRange s w
-                        , lo <= hi ]
+        | p /= NotStarted = do
+            oneof [ Bid w <$> chooseBid (lo,hi)
+                  | w <- [w2, w3, w4]
+                  , let (lo,hi) = validBidRange s w
+                  , lo <= hi ]
         | otherwise = pure $ Init w1
         where
             p    = s ^. contractState . phase
+
+    waitProbability s
+      | s ^. contractState . phase /= NotStarted
+      , all (uncurry (>) . validBidRange s) [w2, w3, w4] = 1
+      | otherwise = 0.1
 
     precondition s (Init _) = s ^. contractState . phase == NotStarted
     precondition s cmd      = s ^. contractState . phase /= NotStarted &&
@@ -350,4 +356,6 @@ tests =
             withMaxSuccess 10 prop_FinishAuction
         , testProperty "NLFP fails" $
             expectFailure $ noShrinking prop_NoLockedFunds
+        , testProperty "prop_Reactive" $
+            withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
         ]
