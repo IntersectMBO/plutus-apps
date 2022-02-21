@@ -77,17 +77,6 @@ instance Table RedeemerRowT where
     data PrimaryKey RedeemerRowT f = RedeemerRowId (Columnar f ByteString) deriving (Generic, Beamable)
     primaryKey = RedeemerRowId . _redeemerRowHash
 
-data UtxoRowT f = UtxoRow
-    { _utxoRowOutRef :: Columnar f ByteString
-    , _utxoRowTxOut  :: Columnar f ByteString
-    } deriving (Generic, Beamable)
-
-type UtxoRow = UtxoRowT Identity
-
-instance Table UtxoRowT where
-    data PrimaryKey UtxoRowT f = UtxoRowOutRef (Columnar f ByteString) deriving (Generic, Beamable)
-    primaryKey = UtxoRowOutRef . _utxoRowOutRef
-
 data AddressRowT f = AddressRow
     { _addressRowCred   :: Columnar f ByteString
     , _addressRowOutRef :: Columnar f ByteString
@@ -159,6 +148,17 @@ type UnmatchedInputRow = UnmatchedInputRowT Identity
 instance Table UnmatchedInputRowT where
     data PrimaryKey UnmatchedInputRowT f = UnmatchedInputRowId (PrimaryKey TipRowT f) (Columnar f ByteString) deriving (Generic, Beamable)
     primaryKey (UnmatchedInputRow t o) = UnmatchedInputRowId t o
+
+data UtxoRowT f = UtxoRow
+    { _utxoRowOutRef :: Columnar f ByteString
+    , _utxoRowTxOut  :: Columnar f ByteString
+    } deriving (Generic, Beamable)
+
+type UtxoRow = UtxoRowT Identity
+
+instance Table UtxoRowT where
+    data PrimaryKey UtxoRowT f = UtxoRowOutRef (Columnar f ByteString) deriving (Generic, Beamable)
+    primaryKey = UtxoRowOutRef . _utxoRowOutRef
 
 data Db f = Db
     { datumRows          :: f (TableEntity DatumRowT)

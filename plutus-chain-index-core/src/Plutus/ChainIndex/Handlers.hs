@@ -334,6 +334,14 @@ reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = do
     -- Among these older changes, delete the matching input/output pairs
     -- We're deleting only the outputs here, the matching input is deleted by a trigger (See Main.hs)
     deleteRows $ delete
+        (utxoOutRefRows db)
+        (\utxoRow ->
+            exists_ (filter_
+                (\input ->
+                    (unTipRowId (_unmatchedInputRowTip input) ==. val_ slot) &&.
+                    (_utxoRowOutRef utxoRow ==. _unmatchedInputRowOutRef input))
+                (all_ (unmatchedInputRows db))))
+    deleteRows $ delete
         (unspentOutputRows db)
         (\output -> unTipRowId (_unspentOutputRowTip output) ==. val_ slot &&.
             exists_ (filter_
@@ -346,6 +354,13 @@ rollbackUtxoDb :: Member BeamEffect effs => Point -> Eff effs ()
 rollbackUtxoDb PointAtGenesis = deleteRows $ delete (tipRows db) (const (val_ True))
 rollbackUtxoDb (Point (toDbValue -> slot) _) = do
     deleteRows $ delete (tipRows db) (\row -> _tipRowSlot row >. val_ slot)
+    deleteRows $ delete (utxoOutRefRows db)
+        (\utxoRow ->
+            exists_ (filter_
+                (\output ->
+                    (unTipRowId (_unspentOutputRowTip output) >. val_ slot) &&.
+                    (_utxoRowOutRef utxoRow ==. _unspentOutputRowOutRef output))
+                (all_ (unspentOutputRows db))))
     deleteRows $ delete (unspentOutputRows db) (\row -> unTipRowId (_unspentOutputRowTip row) >. val_ slot)
     deleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
 
