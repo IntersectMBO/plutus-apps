@@ -247,7 +247,8 @@ handleControl ::
 handleControl = \case
     AppendBlock (Block tip_ transactions) -> do
         oldIndex <- get @ChainIndexState
-        let newUtxoState = TxUtxoBalance.fromBlock tip_ (map fst transactions)
+        let txs = map fst transactions
+        let newUtxoState = TxUtxoBalance.fromBlock tip_ txs
         case UtxoState.insert newUtxoState oldIndex of
             Left err -> do
                 let reason = InsertionFailed err
@@ -261,7 +262,7 @@ handleControl = \case
                     put $ UtxoState.reducedIndex lbcResult
                     reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
                 insert $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
-                insertUtxoDb newUtxoState
+                insertUtxoDb txs newUtxoState
                 logDebug $ InsertionSuccess tip_ insertPosition
     Rollback tip_ -> do
         oldIndex <- get @ChainIndexState
@@ -301,16 +302,19 @@ insertUtxoDb ::
     ( Member BeamEffect effs
     , Member (Error ChainIndexError) effs
     )
-    => UtxoState.UtxoState TxUtxoBalance
+    => [ChainIndexTx]
+    -> UtxoState.UtxoState TxUtxoBalance
     -> Eff effs ()
-insertUtxoDb (UtxoState.UtxoState _ TipAtGenesis) = throwError $ InsertionFailed UtxoState.InsertUtxoNoTip
-insertUtxoDb (UtxoState.UtxoState (TxUtxoBalance outputs inputs) tip)
+insertUtxoDb _ (UtxoState.UtxoState _ TipAtGenesis) = throwError $ InsertionFailed UtxoState.InsertUtxoNoTip
+insertUtxoDb txs (UtxoState.UtxoState (TxUtxoBalance outputs inputs) tip)
     = insert $ mempty
         { tipRows = InsertRows $ catMaybes [toDbValue tip]
         , unspentOutputRows = InsertRows $ UnspentOutputRow tipRowId . toDbValue <$> Set.toList outputs
         , unmatchedInputRows = InsertRows $ UnmatchedInputRow tipRowId . toDbValue <$> Set.toList inputs
+        , utxoOutRefRows = InsertRows $ (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) <$> txOuts
         }
         where
+            txOuts = concatMap txOutsWithRef txs
             tipRowId = TipRowId (toDbValue (tipSlot tip))
 
 reduceOldUtxoDb :: Member BeamEffect effs => Tip -> Eff effs ()

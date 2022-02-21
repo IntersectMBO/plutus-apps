@@ -38,7 +38,7 @@ import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettin
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (AssetClass, BlockId (..), ChainIndexTxOut (..), Datum, DatumHash (..), MintingPolicy,
                MintingPolicyHash (..), Redeemer, RedeemerHash (..), Script, ScriptHash (..), Slot, StakeValidator,
-               StakeValidatorHash (..), TxId (..), TxOutRef (..), Validator, ValidatorHash (..))
+               StakeValidatorHash (..), TxId (..), TxOut, TxOutRef (..), Validator, ValidatorHash (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
 import Plutus.V1.Ledger.Api (Credential)
@@ -242,6 +242,7 @@ deriving via Serialisable Validator instance HasDbType Validator
 deriving via Serialisable ChainIndexTx instance HasDbType ChainIndexTx
 deriving via Serialisable ChainIndexTxOut instance HasDbType ChainIndexTxOut
 deriving via Serialisable TxOutRef instance HasDbType TxOutRef
+deriving via Serialisable TxOut instance HasDbType TxOut
 deriving via Serialisable Credential instance HasDbType Credential
 deriving via Serialisable AssetClass instance HasDbType AssetClass
 deriving via Serialisable Script instance HasDbType Script
