@@ -1323,7 +1323,14 @@ finalChecks opts copts predicate prop = do
         QC.monitor $ counterexample (show err)
         QC.assert False
       _ -> return ()
-    addEndpointCoverage copts keys' events $ checkPredicateInnerStream opts (noMainThreadCrashes .&&. predicate keys' outerEnv) (void stream) debugOutput assertResult
+    let cover report | copts ^. checkCoverage
+                     , Just ref <- copts ^. coverageIORef =
+                       report `deepseq`
+                        (QC.monitor $ \ p -> ioProperty $ do
+                           modifyIORef ref (report<>)
+                           return p)
+                     | otherwise = pure ()
+    addEndpointCoverage copts keys' events $ checkPredicateInnerStream opts (noMainThreadCrashes .&&. predicate keys' outerEnv) (void stream) debugOutput assertResult cover
     where
         debugOutput :: Monad m => String -> PropertyM m ()
         debugOutput = QC.monitor . whenFail . putStrLn
@@ -1343,7 +1350,7 @@ addEndpointCoverage :: ContractModel state
                     -> PropertyM (ContractMonad state) a
                     -> PropertyM (ContractMonad state) a
 addEndpointCoverage copts keys es pm
-  | copts ^. checkCoverage, Just ref <- copts ^. coverageIORef = do
+  | copts ^. checkCoverage = do
     x <- pm
     let -- Endpoint covereage
         epsToCover = [(instanceTag k, contractInstanceEndpoints k) | Key k <- keys]
@@ -1353,13 +1360,8 @@ addEndpointCoverage copts keys es pm
                                     (Text.unpack (unContractInstanceTag t) ++ " at endpoint " ++ e)
                          | (t, eps) <- epsToCover
                          , e <- eps ]
-        coverageReport = getCoverageReport es
     endpointCovers `deepseq`
       (QC.monitor . foldr (.) id $ endpointCovers)
-    coverageReport `deepseq`
-      (QC.monitor $ \ p -> ioProperty $ do
-         modifyIORef ref (coverageReport<>)
-         return p)
     QC.monitor QC.checkCoverage
     return x
   | otherwise = pm
@@ -1453,6 +1455,7 @@ propRunActionsWithOptions' opts copts predicate actions =
             snd <$> runActionsInState StateModel.initialState actions)
     where
         finalState = StateModel.stateAfter actions
+        finalPredicate :: [SomeContractInstanceKey state] -> Env {- Outer env -} -> TracePredicate
         finalPredicate keys' outerEnv = predicate finalState .&&. checkBalances finalState outerEnv
                                                              .&&. checkNoCrashes keys'
                                                              .&&. checkNoOverlappingTokens
@@ -1490,7 +1493,8 @@ checkBalances :: ModelState state
               -> TracePredicate
 checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w sval .&&. p) (pure True) (s ^. balanceChanges)
   where
-    walletFundsChange w sval =
+    walletFundsChange :: Wallet -> SymValue -> TracePredicate
+    walletFundsChange w sval = TracePredicate $
       -- see Note [The Env contract]
       flip postMapM ((,) <$> Folds.instanceOutcome @() (toContract getEnvContract) envContractInstanceTag
                          <*> L.generalize ((,) <$> Folds.walletFunds w <*> Folds.walletFees w)) $ \(outcome, (finalValue', fees)) -> do
@@ -1514,7 +1518,7 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
 
 -- See the uniqueness requirement in Note [Symbolic Tokens and Symbolic Values]
 checkNoOverlappingTokens :: TracePredicate
-checkNoOverlappingTokens = flip postMapM (Folds.instanceOutcome @() (toContract getEnvContract) envContractInstanceTag) $ \ outcome ->
+checkNoOverlappingTokens = TracePredicate $ flip postMapM (Folds.instanceOutcome @() (toContract getEnvContract) envContractInstanceTag) $ \ outcome ->
   case outcome of
     Done envInner -> do
      let tokens = concatMap Map.elems $ Map.elems envInner
@@ -1594,7 +1598,7 @@ checkNoLockedFundsProof
 checkNoLockedFundsProof options =
   checkNoLockedFundsProof' prop
   where
-    prop = propRunActionsWithOptions' options defaultCoverageOptions (\ _ -> pure True)
+    prop = propRunActionsWithOptions' options defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
 
 checkNoLockedFundsProofFast
   :: (ContractModel model)
@@ -1641,6 +1645,19 @@ checkNoLockedFundsProof' run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
                    ++ show smacts
           in counterexample err (symLeq bal (bal' <> wig))
           QC..&&. counterexample err' (run smacts)
+
+checkNoLockedFundsProofLight
+  :: ContractModel model
+  => NoLockedFundsProofLight model
+  -> Property
+checkNoLockedFundsProofLight NoLockedFundsProofLight{nlfplMainStrategy = mainStrat} =
+  forAllDL anyActions_ $ \ (Actions as) ->
+    forAllUniqueDL (nextVarIdx as) (stateAfter $ Actions as) mainStrat $ \ (Actions as') ->
+      counterexample "Main run prop" (run (toStateModelActions $ Actions $ as ++ as'))
+  where
+    nextVarIdx as = 1 + maximum ([0] ++ [ i | Var i <- varOf <$> as ])
+    run = propRunActionsWithOptions' defaultCheckOptionsContractModel
+                                     defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
 
 -- | A whitelist entry tells you what final log entry prefixes
 -- are acceptable for a given error

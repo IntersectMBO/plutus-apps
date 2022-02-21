@@ -102,6 +102,7 @@ module Plutus.Contract.Test.ContractModel
     -- ** Coverage cheking options
     , CoverageOptions
     , defaultCoverageOptions
+    , CoverageRef
     , endpointCoverageReq
     , checkCoverage
     , coverageIndex
@@ -139,5 +140,6 @@ module Plutus.Contract.Test.ContractModel
     ) where
 
 import Plutus.Contract.Test.ContractModel.Internal
+import Plutus.Contract.Test.Coverage
 import Test.QuickCheck.DynamicLogic.Monad qualified as DL
 import Test.QuickCheck.DynamicLogic.Quantify
