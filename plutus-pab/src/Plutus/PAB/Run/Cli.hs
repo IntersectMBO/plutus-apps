@@ -20,12 +20,16 @@ module Plutus.PAB.Run.Cli (ConfigCommandArgs(..), runConfigCommand) where
 -- Command interpretation
 -----------------------------------------------------------------------------------------------------------------------
 
+import Cardano.Api qualified as C
+import Cardano.Api.NetworkId.Extra (unNetworkIdWrapper)
 import Cardano.BM.Configuration (Configuration)
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
 import Cardano.Node.Server qualified as NodeServer
 import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
-                           PABServerConfig (pscFeeConfig, pscNodeMode, pscSlotConfig, pscSocketPath))
+                           PABServerConfig (pscFeeConfig, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath),
+                           _AlonzoNode)
+import Cardano.Protocol.Socket.Type (epochSlots)
 import Cardano.Wallet.Mock.Server qualified as WalletServer
 import Cardano.Wallet.Mock.Types (WalletMsg)
 import Cardano.Wallet.Types (WalletConfig (LocalWalletConfig, RemoteWalletConfig))
@@ -33,7 +37,8 @@ import Control.Concurrent (takeMVar, threadDelay)
 import Control.Concurrent.Async (Async, async, waitAny)
 import Control.Concurrent.Availability (Availability, available, starting)
 import Control.Concurrent.STM qualified as STM
-import Control.Monad (forM, forM_, forever, void)
+import Control.Lens (preview)
+import Control.Monad (forM, forM_, forever, void, when)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, runM)
 import Control.Monad.Freer.Delay (DelayEffect, delayThread, handleDelayEffect)
 import Control.Monad.Freer.Error (throwError)
@@ -44,7 +49,7 @@ import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
@@ -119,7 +124,7 @@ runConfigCommand _ ConfigCommandArgs{ccaPABConfig = Config {walletServerConfig =
     error "Plutus.PAB.Run.Cli.runConfigCommand: Can't run mock wallet in remote wallet config."
 
 -- Run mock node server
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartNode =
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig},ccaAvailability} StartNode = do
     case pscNodeMode nodeServerConfig of
         MockNode -> do
             liftIO $ NodeServer.main
@@ -128,53 +133,66 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServer
                 ccaAvailability
         AlonzoNode -> do
             available ccaAvailability
-            runM
-                $ interpret (LM.handleLogMsgTrace ccaTrace)
-                $ logInfo @(LM.AppMsg (Builtin a))
-                $ LM.PABMsg
-                $ LM.SCoreMsg LM.ConnectingToAlonzoNode
             -- The semantics of Command(s) is that once a set of commands are
             -- started if any finishes the entire application is terminated. We want
             -- to prevent that by keeping the thread suspended.
             forever $ threadDelay 1000000000
 
 -- Run PAB webserver
-runConfigCommand contractHandler ConfigCommandArgs{ccaTrace, ccaPABConfig=config@Config{pabWebserverConfig, dbConfig}, ccaAvailability, ccaStorageBackend} PABWebserver =
-    do
-        connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
-        -- Restore the running contracts by first collecting up enough details about the
-        -- previous contracts to re-start them
-        previousContracts <-
-            Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
-            $ interpret (LM.handleLogMsgTrace ccaTrace)
-            $ do
-                cIds   <- Map.toList <$> Contract.getActiveContracts @(Builtin a)
-                forM cIds $ \(cid, args) -> do
-                    s <- Contract.getState @(Builtin a) cid
-                    let priorContract :: (SomeBuiltinState a, Wallet.ContractInstanceId, ContractActivationArgs a)
-                        priorContract = (s, cid, args)
-                    pure priorContract
+runConfigCommand
+    contractHandler
+    ConfigCommandArgs { ccaTrace
+                      , ccaPABConfig =
+                          config@Config { pabWebserverConfig, nodeServerConfig, dbConfig }
+                      , ccaAvailability, ccaStorageBackend
+                      } PABWebserver = do
 
-        -- Then, start the server
-        result <- App.runApp ccaStorageBackend (toPABMsg ccaTrace) contractHandler config
-          $ do
-              env <- ask @(Core.PABEnvironment (Builtin a) (App.AppEnv a))
+    when (isJust $ preview _AlonzoNode $ pscNodeMode nodeServerConfig) $ do
+        C.ChainTip slotNo _ _ <- C.getLocalChainTip $ C.LocalNodeConnectInfo
+            { C.localConsensusModeParams = C.CardanoModeParams epochSlots
+            , C.localNodeNetworkId = unNetworkIdWrapper $ pscNetworkId nodeServerConfig
+            , C.localNodeSocketPath = pscSocketPath nodeServerConfig
+            }
+        LM.runLogEffects ccaTrace $ do
+            logInfo @(LM.AppMsg (Builtin a))
+                $ LM.PABMsg
+                $ LM.SCoreMsg
+                $ LM.ConnectingToAlonzoNode nodeServerConfig slotNo
 
-              -- But first, spin up all the previous contracts
-              logInfo @(LM.PABMultiAgentMsg (Builtin a)) LM.RestoringPABState
-              case previousContracts of
-                Left err -> throwError err
-                Right ts -> do
-                    forM_ ts $ \(s, cid, args) -> do
-                      action <- buildPABAction @a @(App.AppEnv a) s cid args
-                      liftIO . async $ Core.runPAB' env action
-                      pure ()
-                    logInfo @(LM.PABMultiAgentMsg (Builtin a)) (LM.PABStateRestored $ length ts)
+    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
+    -- Restore the running contracts by first collecting up enough details about the
+    -- previous contracts to re-start them
+    previousContracts <-
+        Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
+        $ interpret (LM.handleLogMsgTrace ccaTrace)
+        $ do
+            cIds   <- Map.toList <$> Contract.getActiveContracts @(Builtin a)
+            forM cIds $ \(cid, args) -> do
+                s <- Contract.getState @(Builtin a) cid
+                let priorContract :: (SomeBuiltinState a, Wallet.ContractInstanceId, ContractActivationArgs a)
+                    priorContract = (s, cid, args)
+                pure priorContract
 
-              -- then, actually start the server.
-              (mvar, _) <- PABServer.startServer pabWebserverConfig ccaAvailability
-              liftIO $ takeMVar mvar
-        either handleError return result
+    -- Then, start the server
+    result <- App.runApp ccaStorageBackend (toPABMsg ccaTrace) contractHandler config
+      $ do
+          env <- ask @(Core.PABEnvironment (Builtin a) (App.AppEnv a))
+
+          -- But first, spin up all the previous contracts
+          logInfo @(LM.PABMultiAgentMsg (Builtin a)) LM.RestoringPABState
+          case previousContracts of
+            Left err -> throwError err
+            Right ts -> do
+                forM_ ts $ \(s, cid, args) -> do
+                  action <- buildPABAction @a @(App.AppEnv a) s cid args
+                  liftIO . async $ Core.runPAB' env action
+                  pure ()
+                logInfo @(LM.PABMultiAgentMsg (Builtin a)) (LM.PABStateRestored $ length ts)
+
+          -- then, actually start the server.
+          (mvar, _) <- PABServer.startServer pabWebserverConfig ccaAvailability
+          liftIO $ takeMVar mvar
+    either handleError return result
   where
     handleError err = do
         runStdoutLoggingT $ (logErrorN . tshow . pretty) err
@@ -305,3 +323,4 @@ buildPABAction currentState cid ContractActivationArgs{caWallet, caID} = do
     let ciState = ContractInstanceState currentState (pure stmState)
         wallet = fromMaybe (Wallet.knownWallet 1) caWallet
     pure $ Core.activateContract' @(Builtin a) ciState cid wallet caID
+
