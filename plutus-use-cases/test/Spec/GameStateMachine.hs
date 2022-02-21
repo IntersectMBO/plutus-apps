@@ -197,8 +197,8 @@ prop_GameWhitelist = checkErrorWhitelist defaultWhitelist
 prop_SanityCheckModel :: Property
 prop_SanityCheckModel = propSanityCheckModel @GameModel
 
-prop_SanityCheckAssertions :: Property
-prop_SanityCheckAssertions = propSanityCheckAssertions @GameModel
+prop_SanityCheckAssertions :: Actions GameModel -> Property
+prop_SanityCheckAssertions = propSanityCheckAssertions
 
 check_prop_Game_with_coverage :: IO CoverageReport
 check_prop_Game_with_coverage =

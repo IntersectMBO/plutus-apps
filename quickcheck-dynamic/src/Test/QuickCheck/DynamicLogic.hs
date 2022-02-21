@@ -330,7 +330,6 @@ keepTryingUntil n g p = do
     if p x then return $ Just x else scale (+1) $ keepTryingUntil (n-1) g p
 
 
--- TODO: Add shrink state to this following what we do with actions
 shrinkDLTest :: DynLogicModel s => DynLogic s -> DynLogicTest s -> [DynLogicTest s]
 shrinkDLTest _ (Looping _) = []
 shrinkDLTest d tc =

@@ -2,7 +2,7 @@
 module Plutus.Contract.Test.ContractModel.Symbolics where
 
 import Ledger.Ada qualified as Ada
-import Ledger.Value (AssetClass, Value, assetClassValue, isZero, leq)
+import Ledger.Value (AssetClass, Value, assetClassValue, assetClassValueOf, isZero, leq)
 import PlutusTx.Monoid qualified as PlutusTx
 
 import Data.Aeson qualified as JSON
@@ -30,14 +30,15 @@ import Test.QuickCheck.StateModel hiding (Action, Actions, arbitraryAction, init
   inner monad.
 -}
 
--- | Symbolic tokens and values
 newtype AssetKey = AssetKey Int deriving (Ord, Eq, Show, Num, JSON.FromJSONKey, JSON.ToJSONKey)
+-- | A symbolic token is a token that exists only during ContractModel generation time
 data SymToken = SymToken { symVar :: Var AssetKey, symVarIdx :: String } deriving (Ord, Eq)
+-- | A symbolic value is a combination of a real value and a value associating symbolic
+-- tokens with an amount
 data SymValue = SymValue { symValMap :: Map SymToken Integer, actualValPart :: Value } deriving (Show)
 
 instance Show SymToken where
   show (SymToken (Var i) n) = "tok" ++ show i ++ "." ++ n
-
 instance Semigroup SymValue where
   (SymValue m v) <> (SymValue m' v') = SymValue (Map.unionWith (+) m m') (v <> v')
 instance Monoid SymValue where
@@ -53,18 +54,22 @@ symIsZero (SymValue m v) = all (==0) m && isZero v
 symLeq :: SymValue -> SymValue -> Bool
 symLeq (SymValue m v) (SymValue m' v') = v `leq` v' && all (<=0) (Map.unionWith (+) m (negate <$> m'))
 
-symLeqWiggle :: Integer -> SymValue -> SymValue -> Bool
-symLeqWiggle w (SymValue m v) (SymValue m' v') = v `leq` v' && all (<=w) (Map.unionWith (+) m (negate <$> m'))
-
-symAssetClassValue :: SymToken -> Integer -> SymValue
-symAssetClassValue _ 0 = SymValue mempty mempty
-symAssetClassValue t i = SymValue (Map.singleton t i) mempty
-
+-- | Using a semantics function for symbolic tokens, convert a SymValue to a Value
 toValue :: (SymToken -> AssetClass) -> SymValue -> Value
 toValue symTokenMap (SymValue m v) = v <> fold [ assetClassValue (symTokenMap t) v | (t, v) <- Map.toList m ]
 
+-- Negate a symbolic value
+inv :: SymValue -> SymValue
+inv (SymValue m v) = SymValue (negate <$> m) (PlutusTx.inv v)
+
 class SymValueLike v where
   toSymValue :: v -> SymValue
+
+class TokenLike t where
+  -- | Get the value of a specific token in a `SymValue`
+  symAssetClassValueOf :: SymValue -> t -> Integer
+  -- | Convert a token and an amount to a `SymValue`
+  symAssetClassValue :: t -> Integer -> SymValue
 
 instance SymValueLike Value where
   toSymValue = SymValue mempty
@@ -75,5 +80,12 @@ instance SymValueLike SymValue where
 instance SymValueLike Ada.Ada where
   toSymValue = toSymValue . Ada.toValue
 
-inv :: SymValue -> SymValue
-inv (SymValue m v) = SymValue (negate <$> m) (PlutusTx.inv v)
+instance TokenLike SymToken where
+  symAssetClassValueOf (SymValue svm _) t = sum $ Map.lookup t svm
+
+  symAssetClassValue _ 0 = SymValue mempty mempty
+  symAssetClassValue t i = SymValue (Map.singleton t i) mempty
+
+instance TokenLike AssetClass where
+  symAssetClassValueOf (SymValue _ v) t = assetClassValueOf v t
+  symAssetClassValue t i = toSymValue $ assetClassValue t i

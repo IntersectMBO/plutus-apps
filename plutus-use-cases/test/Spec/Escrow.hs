@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace, prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds) where
+module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace, prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) where
 
 import Control.Lens hiding (both)
 import Control.Monad (void, when)
@@ -57,7 +57,6 @@ instance ContractModel EscrowModel where
                           | Redeem Wallet
                           | Refund Wallet
                           | BadRefund Wallet Wallet
-                          | WaitUntil Slot
 
   data ContractInstanceKey EscrowModel w s e params where
     WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowTestSchema EscrowError ()
@@ -106,13 +105,10 @@ instance ContractModel EscrowModel where
       contributions %= Map.delete w
       deposit w v
       wait 1
-    WaitUntil s -> do
-      waitUntil s
     BadRefund _ _ -> do
       wait 2
 
   precondition s a = case a of
-    WaitUntil slot' -> s ^. currentSlot < slot'
     Redeem _ -> (s ^. contractState . contributions . to fold) `geq` (s ^. contractState . targets . to fold)
              && (s ^. currentSlot < s ^. contractState . refundSlot - 1)
     Refund w -> s ^. currentSlot >= s ^. contractState . refundSlot
@@ -123,7 +119,6 @@ instance ContractModel EscrowModel where
                    || w /= w'
 
   perform h _ _ a = case a of
-    WaitUntil slot -> void $ Trace.waitUntilSlot slot
     Pay w v        -> do
       Trace.callEndpoint @"pay-escrow" (h $ WalletKey w) (Ada.adaValueOf $ fromInteger v)
       delay 1
@@ -139,20 +134,14 @@ instance ContractModel EscrowModel where
 
   arbitraryAction s = frequency $ [ (prefer beforeRefund,  Pay <$> QC.elements testWallets <*> choose @Integer (10, 30))
                                   , (prefer beforeRefund,  Redeem <$> QC.elements testWallets)
-                                  , (1,                    WaitUntil . step <$> choose @Int (1, 10))
                                   , (prefer afterRefund,   BadRefund <$> QC.elements testWallets <*> QC.elements testWallets) ] ++
                                   [ (prefer afterRefund,   Refund <$> QC.elements (s ^. contractState . contributions . to Map.keys))
                                   | Prelude.not . null $ s ^. contractState . contributions . to Map.keys ]
                   where
                     slot = s ^. currentSlot
-                    step n = slot + fromIntegral n
                     beforeRefund = slot < s ^. contractState . refundSlot
                     afterRefund = Prelude.not beforeRefund
                     prefer b = if b then 10 else 1
-
-  shrinkAction _ (WaitUntil s) = WaitUntil . fromIntegral <$> (shrink . toInteger $ s)
-  -- TODO: This trick should be part of every model. We should make waiting a builtin thing
-  shrinkAction s _             = [WaitUntil $ s ^. currentSlot + n | n <- [1..10]]
 
   monitoring _ (Redeem _) = classify True "Contains Redeem"
   monitoring (_,_) (BadRefund w w') = tabulate "Bad refund attempts" [if w==w' then "early refund" else "steal refund"]
@@ -175,7 +164,7 @@ finishingStrategy :: (Wallet -> Bool) -> DL EscrowModel ()
 finishingStrategy walletAlive = do
     now <- viewModelState currentSlot
     slot <- viewContractState refundSlot
-    when (now < slot+1) $ action $ WaitUntil $ slot+1
+    when (now < slot+1) $ waitUntilDL $ slot+1
     contribs <- viewContractState contributions
     monitor (classify (Map.null contribs) "no need for extra refund to recover funds")
     sequence_ [action $ Refund w | w <- testWallets, w `Map.member` contribs, walletAlive w]
