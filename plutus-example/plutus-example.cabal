@@ -69,6 +69,7 @@ library
                       , plutus-ledger
                       , plutus-ledger-api
                       , plutus-tx
+                      , plutus-tx-plugin
                       , serialise
                       , strict-containers
                       , transformers
