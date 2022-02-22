@@ -75,14 +75,14 @@ getTxFromTxId i = do
         _       -> pure result
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
-getTxOutFromRef ::
+getUtxoutFromRef ::
   forall effs.
   ( Member (State ChainIndexEmulatorState) effs
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
   -> Eff effs (Maybe ChainIndexTxOut)
-getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
+getUtxoutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   ds <- gets (view diskState)
   -- Find the output in the tx matching the output ref
   case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
@@ -119,7 +119,7 @@ handleQuery = \case
       gets (fmap (fmap MintingPolicy) . view $ diskState . scriptMap . at (ScriptHash h))
     StakeValidatorFromHash (StakeValidatorHash h) ->
       gets (fmap (fmap StakeValidator) . view $ diskState . scriptMap . at (ScriptHash h))
-    TxOutFromRef ref -> getTxOutFromRef ref
+    UnspentTxOutFromRef ref -> getUtxoutFromRef ref
     RedeemerFromHash h -> gets (view $ diskState . redeemerMap . at h)
     UtxoSetMembership r -> do
         utxo <- gets (utxoState . view utxoIndex)

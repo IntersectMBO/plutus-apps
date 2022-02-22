@@ -11,7 +11,7 @@ module Plutus.ChainIndex.Effects(
     , mintingPolicyFromHash
     , stakeValidatorFromHash
     , redeemerFromHash
-    , txOutFromRef
+    , unspentTxOutFromRef
     , utxoSetMembership
     , utxoSetAtAddress
     , utxoSetWithCurrency
@@ -53,7 +53,7 @@ data ChainIndexQueryEffect r where
     StakeValidatorFromHash :: StakeValidatorHash -> ChainIndexQueryEffect (Maybe StakeValidator)
 
     -- | Get the TxOut from a TxOutRef (if available)
-    TxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe ChainIndexTxOut)
+    UnspentTxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe ChainIndexTxOut)
 
     -- | Whether a tx output is part of the UTXO set
     UtxoSetMembership :: TxOutRef -> ChainIndexQueryEffect IsUtxoResponse

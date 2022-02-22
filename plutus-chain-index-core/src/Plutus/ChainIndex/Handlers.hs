@@ -82,7 +82,7 @@ handleQuery = \case
     MintingPolicyFromHash hash  -> getScriptFromHash hash
     RedeemerFromHash hash       -> getRedeemerFromHash hash
     StakeValidatorFromHash hash -> getScriptFromHash hash
-    TxOutFromRef tor            -> getTxOutFromRef tor
+    UnspentTxOutFromRef tor     -> getUtxoutFromRef tor
     UtxoSetMembership r -> do
         utxoState <- gets @ChainIndexState UtxoState.utxoState
         case UtxoState.tip utxoState of
@@ -140,13 +140,13 @@ queryOne ::
 queryOne = fmap (fmap fromDbValue) . selectOne
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
-getTxOutFromRef ::
+getUtxoutFromRef ::
   forall effs.
   ( Member BeamEffect effs
   )
   => TxOutRef
   -> Eff effs (Maybe ChainIndexTxOut)
-getTxOutFromRef = queryOne . queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut
+getUtxoutFromRef = queryOne . queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut
 
 getUtxoSetAtAddress
   :: forall effs.
