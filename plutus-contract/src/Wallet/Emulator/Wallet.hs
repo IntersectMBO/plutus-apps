@@ -57,7 +57,7 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (calculateMinFee, fromPlutusTx)
+import Ledger.Validation (evaluateMinFee, fromPlutusTx)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -76,6 +76,8 @@ import Wallet.Emulator.Chain (ChainState (_index))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
                                     TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SubmittingTx))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
+
+import Debug.Trace
 
 newtype SigningProcess = SigningProcess {
     unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> Tx -> Eff effs Tx
@@ -250,17 +252,18 @@ handleWallet = \case
         let validitySlotRange = posixTimeRangeToContainedSlotRange slotConfig (utx' ^. U.validityTimeRange)
         let utx = utx' & U.tx . Ledger.validRange .~ validitySlotRange
         -- Balance with dummy fee to get a better estimate of the number of inputs and outputs
-        tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ Ledger.minFee mempty)
-        -- signedTx <- handleAddSignature tx
+        -- Use a large value otherwise `evaluateMinFee` calculates a value 1 or 2 lovelace too few
+        tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ Ada.lovelaceValueOf 1000000)
         let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
         privKey <- CW.paymentPrivateKey . _mockWallet <$> get
-        ctx <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey tx
-        let theFee = calculateMinFee ctx
+        cTx <- either (throwError . WAPI.ToCardanoError . traceShowId) pure $ fromPlutusTx requiredSigners privKey tx
+        let theFee = evaluateMinFee cTx
         tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-        ctx' <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey tx'
-        let txctx = These tx' (Tx.SomeTx ctx' AlonzoEraInCardanoMode)
-        logInfo $ FinishedBalancing txctx
-        pure txctx
+        cTx' <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey tx'
+        let txCTx = These tx' (Tx.SomeTx cTx' AlonzoEraInCardanoMode)
+        logInfo $ FinishedBalancing txCTx
+        traceShowM cTx'
+        pure txCTx
 
     walletAddSignatureH :: (Member (State WalletState) effs) => CardanoTx -> Eff effs CardanoTx
     walletAddSignatureH (That _) = error "Wallet.Emulator.Wallet.handleWallet: Expecting a mock tx, not an Alonzo tx when adding a signature."

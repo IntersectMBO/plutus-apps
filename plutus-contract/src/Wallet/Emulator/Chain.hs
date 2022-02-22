@@ -36,7 +36,7 @@ import Ledger (Block, Blockchain, CardanoTx, OnChainTx (..), ScriptValidationEve
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig)
-import Ledger.Validation (fromPlutusIndex, hasValidationErrors)
+import Ledger.Validation qualified as Validation
 import Plutus.Contract.Util (uncurry3)
 import Prettyprinter
 
@@ -157,7 +157,7 @@ validateBlock slotCfg slot@(Slot s) idx txns =
         -- Validate eligible transactions, updating the UTXO index each time
         processed =
             flip S.evalState (Index.ValidationCtx idx slotCfg) $ for eligibleTxns $ \tx -> do
-                (err, events_) <- validateEm slot tx
+                (err, events_) <- validateEm slot cUtxoIndex tx
                 pure (tx, err, events_)
 
         -- The new block contains all transaction that were validated
@@ -176,6 +176,8 @@ validateBlock slotCfg slot@(Slot s) idx txns =
         nextSlot = Slot (s + 1)
         events   = (uncurry3 mkValidationEvent <$> processed) ++ [SlotAdd nextSlot]
 
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
+
     in ValidatedBlock block events rest
 
 -- | Check whether the given transaction can be validated in the given slot.
@@ -189,18 +191,23 @@ mkValidationEvent t result events =
         Just (phase, err) -> TxnValidationFail phase (getCardanoTxId t) t err events
 
 -- | Validate a transaction in the current emulator state.
-validateEm :: S.MonadState Index.ValidationCtx m => Slot -> CardanoTx -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
-validateEm h txn = do
+validateEm
+    :: S.MonadState Index.ValidationCtx m
+    => Slot
+    -> Validation.UTxOState Index.EmulatorEra
+    -> CardanoTx
+    -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
+validateEm h cUtxoIndex txn = do
     ctx@(Index.ValidationCtx idx _) <- S.get
     let ((e, idx'), events) = txn & mergeTheseWith
             (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
-            (\tx -> ((validateL h idx tx, idx), []))
+            (\tx -> ((validateL h cUtxoIndex tx, idx), []))
             (\((e1, utxo), sve1) ((e2, _), sve2) -> ((e1 <|> e2, utxo), sve1 ++ sve2))
     _ <- S.put ctx{Index.vctxIndex=idx'}
     pure (e, events)
 
-validateL :: Slot -> Index.UtxoIndex -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
-validateL slot idx (SomeTx tx AlonzoEraInCardanoMode) = (maybe id (traceShow . (, tx)) $ hasValidationErrors (fromIntegral slot) (fromPlutusIndex idx) tx) Nothing
+validateL :: Slot -> Validation.UTxOState Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
+validateL slot idx (SomeTx tx AlonzoEraInCardanoMode) = (,) Index.Phase1 <$> Validation.hasValidationErrors (fromIntegral slot) idx tx
 validateL _    _   _ = Nothing
 
 -- | Adds a block to ChainState, without validation.

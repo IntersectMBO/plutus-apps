@@ -11,11 +11,10 @@ module Ledger.Validation(
   EmulatedLedgerState(..),
   Coin(..),
   SlotNo(..),
-  ApplyTxError(..),
   EmulatorEra,
-  EmApplyTxFailure(..),
   initialState,
-  calculateMinFee,
+  evaluateMinFee,
+  evaluateMinLovelaceOutput,
   applyTx,
   hasValidationErrors,
   -- * Modifying the state
@@ -23,6 +22,7 @@ module Ledger.Validation(
   setSlot,
   nextSlot,
   -- * Conversion from Plutus types
+  UTxOState,
   fromPlutusTx,
   fromPlutusIndex,
   -- * Lenses
@@ -35,32 +35,34 @@ module Ledger.Validation(
   ) where
 import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), alonzoGenesisDefaults, makeSignedTransaction,
                             shelleyGenesisDefaults, toShelleyTxId, toShelleyTxOut)
-import Cardano.Api.Shelley qualified as Shelley
-import Cardano.Ledger.Alonzo (AlonzoEra, TxOut)
+import Cardano.Api.Shelley qualified as C.Api
+import Cardano.Ledger.Alonzo (TxOut)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure, constructValidated)
-import Cardano.Ledger.Alonzo.Tx (minfee, wits)
+import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Core (PParams, Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley.API (ApplyTxError (..), Coin (..), LedgerEnv (..), MempoolEnv, MempoolState,
-                                   NewEpochState, UTxOState (..), UtxoEnv (..), Validated, mkShelleyGlobals, nesEs)
-import Cardano.Ledger.Shelley.API qualified as Shelley.API
-import Cardano.Ledger.Shelley.LedgerState (esPp, smartUTxOState)
-import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
-import Cardano.Ledger.TxIn (TxId, TxIn (TxIn))
+import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, NewEpochState, TxId,
+                                   TxIn (TxIn), UTxO (UTxO), UTxOState (..), UtxoEnv (..), Validated, esPp,
+                                   mkShelleyGlobals, nesEs)
+import Cardano.Ledger.Shelley.API qualified as C.Ledger
+import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.Lens (_1, makeLenses, over, (&), (.~), (^.))
 import Data.Bifunctor (Bifunctor (..))
+import Data.Bitraversable (bitraverse)
 import Data.Default (def)
 import Data.Map qualified as Map
-import Ledger qualified as P
+import Ledger.Address qualified as P
+import Ledger.Index (EmApplyTxFailure (..), EmulatorEra, ValidationError (..))
+import Ledger.Index qualified as P
+import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
+import Ledger.Value qualified as P
 import Plutus.V1.Ledger.Ada qualified as P
-
-type EmulatorEra = AlonzoEra StandardCrypto
+import Plutus.V1.Ledger.TxId qualified as P
 
 type EmulatorBlock = [Validated (Tx EmulatorEra)]
 
@@ -137,8 +139,8 @@ makeBlock state =
 -}
 initialState :: EmulatedLedgerState
 initialState = EmulatedLedgerState
-  { _ledgerEnv = Shelley.API.mkMempoolEnv emulatorNes 0
-  , _memPoolState = Shelley.API.mkMempoolState emulatorNes
+  { _ledgerEnv = C.Ledger.mkMempoolEnv emulatorNes 0
+  , _memPoolState = C.Ledger.mkMempoolState emulatorNes
   , _currentBlock = []
   , _previousBlocks = []
   }
@@ -150,27 +152,20 @@ initialState = EmulatedLedgerState
 --         -> Just (Addr Testnet paymentCredential stakeAddressReference, coin)
 --     _ -> Nothing
 
-{-| Reason for failing to add a transaction to the ledger
--}
-data EmApplyTxFailure =
-  ApplyTxFailed (ApplyTxError EmulatorEra)
-  | UtxosPredicateFailures [UtxosPredicateFailure EmulatorEra]
-  deriving Show
-
 utxoEnv :: SlotNo -> UtxoEnv EmulatorEra
-utxoEnv slotNo = UtxoEnv slotNo emulatorPParams mempty (Shelley.API.GenDelegs mempty)
+utxoEnv slotNo = UtxoEnv slotNo emulatorPParams mempty (C.Ledger.GenDelegs mempty)
 
 applyTx ::
   EmulatedLedgerState ->
   Tx EmulatorEra ->
-  Either EmApplyTxFailure (EmulatedLedgerState, Validated (Tx EmulatorEra))
+  Either ValidationError (EmulatedLedgerState, Validated (Tx EmulatorEra))
 applyTx oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
-  (newMempool, vtx) <- first ApplyTxFailed (Shelley.API.applyTx emulatorGlobals _ledgerEnv _memPoolState tx)
+  (newMempool, vtx) <- first (EmApplyTxFailure . ApplyTxFailed) (C.Ledger.applyTx emulatorGlobals _ledgerEnv _memPoolState tx)
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 
-emulatorNetworkId :: Shelley.NetworkId
-emulatorNetworkId = Shelley.Testnet $ Shelley.NetworkMagic 1
+emulatorNetworkId :: C.Api.NetworkId
+emulatorNetworkId = C.Api.Testnet $ C.Api.NetworkMagic 1
 
 {-| A sensible default 'Globals' value for the emulator
 -}
@@ -181,57 +176,57 @@ emulatorGlobals = mkShelleyGlobals
   2 -- maxMajorPV
 
 emulatorNes :: NewEpochState EmulatorEra
-emulatorNes = Shelley.API.initialState shelleyGenesisDefaults alonzoGenesisDefaults
+emulatorNes = C.Ledger.initialState shelleyGenesisDefaults alonzoGenesisDefaults
 
 emulatorPParams :: PParams EmulatorEra
 emulatorPParams = esPp $ nesEs emulatorNes
 
-emulatorProtocolParameters :: Shelley.ProtocolParameters
-emulatorProtocolParameters = Shelley.fromLedgerPParams ShelleyBasedEraAlonzo emulatorPParams
+emulatorProtocolParameters :: C.Api.ProtocolParameters
+emulatorProtocolParameters = C.Api.fromLedgerPParams ShelleyBasedEraAlonzo emulatorPParams
 
-hasValidationErrors :: SlotNo -> UTxOState EmulatorEra -> Shelley.Tx Shelley.AlonzoEra -> Maybe String
-hasValidationErrors slotNo utxoState (Shelley.ShelleyTx _ tx) =
+hasValidationErrors :: SlotNo -> UTxOState EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe ValidationError
+hasValidationErrors slotNo utxoState (C.Api.ShelleyTx _ tx) =
   case res of
-    Left e  -> Just $ show e
+    Left e  -> Just e
     Right _ -> Nothing
   where
     state = setSlot slotNo (initialState & memPoolState . _1 .~ utxoState)
     res = do
-      vtx <- first UtxosPredicateFailures (constructValidated emulatorGlobals (utxoEnv slotNo) utxoState tx)
+      vtx <- first (EmApplyTxFailure . UtxosPredicateFailures) (constructValidated emulatorGlobals (utxoEnv slotNo) utxoState tx)
       applyTx state vtx
 
-calculateMinFee :: Shelley.Tx Shelley.AlonzoEra -> P.Value
-calculateMinFee (Shelley.ShelleyTx _ tx) = case minfee emulatorPParams tx of
-  Coin fee -> P.lovelaceValueOf (fee + 2) -- TODO: why this discrepancy of 1 or 2 lovelace?
+evaluateMinFee :: C.Api.Tx C.Api.AlonzoEra -> P.Value
+evaluateMinFee (C.Api.ShelleyTx _ tx) = toPlutusValue $ C.Ledger.evaluateMinFee emulatorPParams tx
+
+evaluateMinLovelaceOutput :: TxOut EmulatorEra -> P.Value
+evaluateMinLovelaceOutput = toPlutusValue . C.Ledger.evaluateMinLovelaceOutput emulatorPParams
+
+toPlutusValue :: Coin -> P.Value
+toPlutusValue (Coin c) = P.lovelaceValueOf c
 
 fromPlutusTx
   :: [P.PaymentPubKeyHash]
   -> P.PaymentPrivateKey
   -> P.Tx
-  -> Either P.ToCardanoError (Shelley.Tx Shelley.AlonzoEra)
+  -> Either P.ToCardanoError (C.Api.Tx C.Api.AlonzoEra)
 fromPlutusTx requiredSigners privKey tx = do
   let txBody = P.toCardanoTxBody requiredSigners (Just emulatorProtocolParameters) emulatorNetworkId tx
       witnesses = pure . fromPaymentPrivateKey privKey <$> txBody
   makeSignedTransaction <$> witnesses <*> txBody
 
--- Shelley.ShelleyTx
+fromPlutusIndex :: P.UtxoIndex -> Either P.ToCardanoError (UTxOState EmulatorEra)
+fromPlutusIndex (P.UtxoIndex m) = (\utxo -> smartUTxOState utxo (Coin 0) (Coin 0) def) <$>
+  (UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef fromPlutusTxOut) (Map.toList m))
 
-fromPlutusIndex :: P.UtxoIndex -> UTxOState EmulatorEra
-fromPlutusIndex (P.UtxoIndex m) = smartUTxOState
-  (UTxO $ Map.fromList $ bimap fromPlutusTxOutRef fromPlutusTxOut <$> Map.toList m)
-  (Coin 0)
-  (Coin 0)
-  def
+fromPlutusTxOutRef :: P.TxOutRef -> Either P.ToCardanoError (TxIn StandardCrypto)
+fromPlutusTxOutRef (P.TxOutRef txId i) = TxIn <$> fromPlutusTxId txId <*> pure (fromInteger i)
 
-fromPlutusTxOutRef :: P.TxOutRef -> TxIn StandardCrypto
-fromPlutusTxOutRef (P.TxOutRef txId i) = TxIn (fromPlutusTxId txId) (fromInteger i)
+fromPlutusTxId :: P.TxId -> Either P.ToCardanoError (TxId StandardCrypto)
+fromPlutusTxId = fmap toShelleyTxId . P.toCardanoTxId
 
-fromPlutusTxId :: P.TxId -> TxId StandardCrypto
-fromPlutusTxId = either (error . show) toShelleyTxId . P.toCardanoTxId
+fromPlutusTxOut :: P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
+fromPlutusTxOut = fmap (toShelleyTxOut ShelleyBasedEraAlonzo) . P.toCardanoTxOut emulatorNetworkId P.toCardanoTxOutDatumHash
 
-fromPlutusTxOut :: P.TxOut -> TxOut EmulatorEra
-fromPlutusTxOut = toShelleyTxOut ShelleyBasedEraAlonzo . either (error . show) id . P.toCardanoTxOut emulatorNetworkId P.toCardanoTxOutDatumHash
-
-fromPaymentPrivateKey :: P.PaymentPrivateKey -> Shelley.TxBody Shelley.AlonzoEra -> Shelley.KeyWitness Shelley.AlonzoEra
+fromPaymentPrivateKey :: P.PaymentPrivateKey -> C.Api.TxBody C.Api.AlonzoEra -> C.Api.KeyWitness C.Api.AlonzoEra
 fromPaymentPrivateKey (P.PaymentPrivateKey xprv) txBody
-  = Shelley.makeShelleyKeyWitness txBody (Shelley.WitnessPaymentExtendedKey (Shelley.PaymentExtendedSigningKey xprv))
+  = C.Api.makeShelleyKeyWitness txBody (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
