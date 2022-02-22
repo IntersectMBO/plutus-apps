@@ -584,7 +584,7 @@ valueAt :: Wallet -> PABAction t env Value
 valueAt wallet = do
   handleAgentThread wallet Nothing $ do
     utxoRefs <- getAllUtxoRefs def
-    txOutsM <- traverse ChainIndex.txOutFromRef utxoRefs
+    txOutsM <- traverse ChainIndex.unspentTxOutFromRef utxoRefs
     pure $ foldMap (view ciTxOutValue) $ catMaybes txOutsM
   where
     cred = addressCredential $ mockWalletAddress wallet

@@ -108,8 +108,7 @@ import Ledger.Index qualified as UtxoIndex
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Ledger.Value (Value, flattenValue)
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
-                                   ChainIndexQueryEffect (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxOutFromRef, TxoSetAtAddress, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
-                                   TxOutStatus, TxStatus, getTip)
+                                   ChainIndexQueryEffect (..), TxOutStatus, TxStatus, getTip)
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers, handleContractDefinitionEffect, handleContractEffect, handleContractStoreEffect, handleLogMessages, handleServicesEffects, initialiseEnvironment, onShutdown, onStartup))
 import Plutus.PAB.Core qualified as Core
@@ -580,7 +579,7 @@ handleChainIndexEffect = runChainIndexEffects @t . \case
     MintingPolicyFromHash h   -> ChainIndex.mintingPolicyFromHash h
     StakeValidatorFromHash h  -> ChainIndex.stakeValidatorFromHash h
     RedeemerFromHash h        -> ChainIndex.redeemerFromHash h
-    TxOutFromRef ref          -> ChainIndex.txOutFromRef ref
+    UnspentTxOutFromRef ref   -> ChainIndex.unspentTxOutFromRef ref
     UtxoSetMembership ref     -> ChainIndex.utxoSetMembership ref
     UtxoSetAtAddress pq addr  -> ChainIndex.utxoSetAtAddress pq addr
     UtxoSetWithCurrency pq ac -> ChainIndex.utxoSetWithCurrency pq ac
