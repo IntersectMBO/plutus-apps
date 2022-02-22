@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "module": "commonjs",
+        "target": "es2020",
+        "esModuleInterop": true,
+        "declaration": true,
+        "declarationMap": true,
+        "noEmitOnError": true,
+        "noImplicitAny": false,
+        "noUnusedParameters": true,
+        "noUnusedLocals": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "resolveJsonModule": true,
+        "sourceMap": true,
+        "strict": true,
+        "strictPropertyInitialization": false,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true
+    }
+}
