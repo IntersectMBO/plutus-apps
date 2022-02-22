@@ -11,12 +11,10 @@ module Plutus.ChainIndex.Effects(
     , mintingPolicyFromHash
     , stakeValidatorFromHash
     , redeemerFromHash
-    , txOutFromRef
-    , txFromTxId
+    , unspentTxOutFromRef
     , utxoSetMembership
     , utxoSetAtAddress
     , utxoSetWithCurrency
-    , txsFromTxIds
     , txoSetAtAddress
     , getTip
     -- * Control effect
@@ -31,11 +29,10 @@ module Plutus.ChainIndex.Effects(
 import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
 import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-               StakeValidatorHash, TxId, Validator, ValidatorHash)
+               StakeValidatorHash, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
-import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
 
 data ChainIndexQueryEffect r where
@@ -56,10 +53,7 @@ data ChainIndexQueryEffect r where
     StakeValidatorFromHash :: StakeValidatorHash -> ChainIndexQueryEffect (Maybe StakeValidator)
 
     -- | Get the TxOut from a TxOutRef (if available)
-    TxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe ChainIndexTxOut)
-
-    -- | Get the transaction for a tx ID
-    TxFromTxId :: TxId -> ChainIndexQueryEffect (Maybe ChainIndexTx)
+    UnspentTxOutFromRef :: TxOutRef -> ChainIndexQueryEffect (Maybe ChainIndexTxOut)
 
     -- | Whether a tx output is part of the UTXO set
     UtxoSetMembership :: TxOutRef -> ChainIndexQueryEffect IsUtxoResponse
@@ -72,9 +66,6 @@ data ChainIndexQueryEffect r where
     -- Note that requesting unspent outputs containing Ada should not return
     -- anything, as this request will always return all unspent outputs.
     UtxoSetWithCurrency :: PageQuery TxOutRef -> AssetClass -> ChainIndexQueryEffect UtxosResponse
-
-    -- | Get the transactions for a list of tx IDs.
-    TxsFromTxIds :: [TxId] -> ChainIndexQueryEffect [ChainIndexTx]
 
     -- | Outputs located at addresses with the given credential.
     TxoSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect TxosResponse

@@ -309,7 +309,7 @@ ownOutputs WalletState{_mockWallet} = do
       pure $ ChainIndex.pageItems refPage ++ nextItems
 
     txOutRefTxOutFromRef :: TxOutRef -> Eff effs (Maybe (TxOutRef, ChainIndexTxOut))
-    txOutRefTxOutFromRef ref = fmap (ref,) <$> ChainIndex.txOutFromRef ref
+    txOutRefTxOutFromRef ref = fmap (ref,) <$> ChainIndex.unspentTxOutFromRef ref
 
 validateTxAndAddFees ::
     ( Member (Error WAPI.WalletAPIError) effs
@@ -342,7 +342,7 @@ lookupValue ::
     => Tx.TxIn
     -> Eff effs Value
 lookupValue outputRef@TxIn {txInRef} = do
-    txoutMaybe <- ChainIndex.txOutFromRef txInRef
+    txoutMaybe <- ChainIndex.unspentTxOutFromRef txInRef
     case txoutMaybe of
         Just txout -> pure $ view Ledger.ciTxOutValue txout
         Nothing ->

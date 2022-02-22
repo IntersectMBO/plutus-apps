@@ -268,7 +268,7 @@ tests =
                 -- contract's caller. It's status should be changed eventually
                 -- to confirmed spent.
                 pubKeyHash <- ownPaymentPubKeyHash
-                ciTxOutM <- txOutFromRef utxo
+                ciTxOutM <- unspentTxOutFromRef utxo
                 let lookups = Constraints.unspentOutputs (maybe mempty (Map.singleton utxo) ciTxOutM)
                 submitTxConstraintsWith @Void lookups $ Constraints.mustSpendPubKeyOutput utxo
                                                      <> Constraints.mustBeSignedBy pubKeyHash

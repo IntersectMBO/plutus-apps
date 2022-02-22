@@ -25,10 +25,9 @@ import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
-               StakeValidatorHash, TxId, Validator, ValidatorHash)
+               StakeValidatorHash, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
-import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (Diagnostics, Tip)
 import Servant qualified
 import Servant.API (Description, Get, JSON, NoContent, Post, Put, ReqBody, (:<|>), (:>))
@@ -146,12 +145,10 @@ data TxosResponse = TxosResponse
 type API
     = "healthcheck" :> Description "Is the server alive?" :> Get '[JSON] NoContent
     :<|> "from-hash" :> FromHashAPI
-    :<|> "tx-out" :> Description "Get a transaction output from its reference." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] ChainIndexTxOut
-    :<|> "tx" :> Description "Get a transaction from its id." :> ReqBody '[JSON] TxId :> Post '[JSON] ChainIndexTx
+    :<|> "unspent-tx-out" :> Description "Get an unspent transaction output from its reference." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] ChainIndexTxOut
     :<|> "is-utxo" :> Description "Check if the reference is an UTxO." :> ReqBody '[JSON] TxOutRef :> Post '[JSON] IsUtxoResponse
     :<|> "utxo-at-address" :> Description "Get all UTxOs at an address." :> ReqBody '[JSON] UtxoAtAddressRequest :> Post '[JSON] UtxosResponse
     :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] UtxosResponse
-    :<|> "txs" :> Description "Get transactions from a list of their ids." :> ReqBody '[JSON] [TxId] :> Post '[JSON] [ChainIndexTx]
     :<|> "txo-at-address" :> Description "Get TxOs at an address." :> ReqBody '[JSON] TxoAtAddressRequest :> Post '[JSON] TxosResponse
     :<|> "tip" :> Description "Get the current synced tip." :> Get '[JSON] Tip
     :<|> "collect-garbage" :> Description "Collect chain index garbage to free up space." :> Put '[JSON] NoContent

@@ -84,6 +84,6 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
     case refs of
         []                   -> throwing _ScriptOutputMissing pk
         [outRef] -> do
-            ciTxOut <- txOutFromRef outRef
+            ciTxOut <- unspentTxOutFromRef outRef
             pure (outRef, ciTxOut, inst)
         _                    -> throwing _MultipleScriptOutputs pk

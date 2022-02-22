@@ -53,13 +53,11 @@ module Plutus.Contract(
     , Request.validatorFromHash
     , Request.mintingPolicyFromHash
     , Request.stakeValidatorFromHash
-    , Request.txOutFromRef
-    , Request.txFromTxId
+    , Request.unspentTxOutFromRef
     , Request.utxoRefMembership
     , Request.utxoRefsAt
     , Request.utxoRefsWithCurrency
     , Request.utxosAt
-    , Request.utxosTxOutTxAt
     , Request.utxosTxOutTxFromTx
     , Request.getTip
     -- * Wallet's own public key
