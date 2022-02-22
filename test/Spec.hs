@@ -6,7 +6,6 @@ import           Data.List             (foldl')
 import           Data.Maybe            (fromJust, isJust, isNothing)
 
 import           Index
-import           HistoricalFold
 
 tests :: TestTree
 tests = testGroup "Index" [hfProperties]
@@ -120,5 +119,5 @@ prop_InsertHistoryLength (ObservedIndex ix) b =
 
 main :: IO ()
 main = do
-  -- quickSpec hfSignature
+  quickSpec ixSignature
   defaultMain tests

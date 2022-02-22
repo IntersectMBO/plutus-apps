@@ -1,3 +1,6 @@
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
 module Index
   ( Index
   -- * Constructors
@@ -15,6 +18,7 @@ module Index
   -- * Testing
   , ObservedIndex (..)
   , GrammarIndex (..)
+  , ixSignature
   ) where
 
 import           Control.Monad   (replicateM)
@@ -25,6 +29,7 @@ import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
                                   arbitrarySizedIntegral, choose, chooseInt,
                                   frequency, listOf, sized)
 import QuickSpec
+import GHC.Generics
 
 data Index a b = New (a -> b -> a) Int a
                | Insert b (Index a b)
@@ -45,7 +50,7 @@ data IndexView a = IndexView
   { ixDepth :: Int
   , ixView  :: a
   , ixSize  :: Int
-  } deriving (Show, Ord, Eq)
+  } deriving (Show, Ord, Eq, Typeable, Generic)
 
 -- | Constructors
 
@@ -96,7 +101,8 @@ getHistory (New _ _ i) = [i]
 getHistory (Insert b ix) =
   let f = getFunction ix
       h = getHistory  ix
-  in f (head h) b : h
+      v = view ix
+  in f (head h) b : take (ixDepth v - 1) h
 getHistory (Rewind n ix) = drop n $ getHistory ix
 
 -- | Utility
@@ -140,6 +146,15 @@ instance ( CoArbitrary a
 instance ( CoArbitrary a
          , CoArbitrary b
          , Arbitrary a
+         , Arbitrary b ) => Arbitrary (Index a b) where
+  -- Use the ObservedIndex instance as a generator for Indexes
+  arbitrary = do
+    (ObservedIndex ix) <- arbitrary
+    pure ix
+
+instance ( CoArbitrary a
+         , CoArbitrary b
+         , Arbitrary a
          , Arbitrary b ) => Arbitrary (GrammarIndex a b) where
   arbitrary = sized $ \n -> do
     depth <- frequency [ (05, pure 1)                       -- overfill
@@ -162,6 +177,16 @@ generateGrammarIndex n ix = do
                       ]
   generateGrammarIndex (n - 1) nextIx
 
+instance Arbitrary a => Arbitrary (IndexView a) where
+  arbitrary = sized $ \n -> do
+    depth <- chooseInt (2, n)
+    size  <- chooseInt (0, depth)
+    view  <- arbitrary
+    pure IndexView { ixDepth = depth
+                   , ixSize  = size
+                   , ixView  = view
+                   }
+
 -- | QuickSpec
 
 newtype IxEvents b = IxEvents [b]
@@ -176,3 +201,20 @@ instance ( Ord a
          , CoArbitrary a
          , CoArbitrary b) => Observe (IxEvents b) (IndexView a) (Index a b) where
   observe (IxEvents es) ix = view $ insertL es ix
+
+ixSignature :: [Sig]
+ixSignature =
+  [ monoObserve @(Index Int String)
+  , monoObserve @(Index Int Int)
+  , monoObserve @(Index Int [Int])
+  , mono @(IndexView Int)
+  , monoObserve @(Maybe (Index Int String))
+  , monoObserve @(Maybe (Index Int Int))
+  , monoObserve @(Maybe (Index Int [Int]))
+  , con "new" (new :: (Int -> String -> Int) -> Int -> Int -> Maybe (Index Int String))
+  , con "insert" (insert :: String -> Index Int String -> Index Int String)
+  , con "view" (view :: Index Int String -> IndexView Int)
+  , con "rewind" (rewind :: Int -> Index Int String -> Maybe (Index Int String))
+  , con "getHistory" (getHistory :: Index Int String -> [Int])
+  , withMaxTermSize 6
+  ]
