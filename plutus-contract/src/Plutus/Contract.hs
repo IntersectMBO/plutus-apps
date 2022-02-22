@@ -53,7 +53,7 @@ module Plutus.Contract(
     , Request.validatorFromHash
     , Request.mintingPolicyFromHash
     , Request.stakeValidatorFromHash
-    , Request.txOutFromRef
+    , Request.unspentTxOutFromRef
     , Request.utxoRefMembership
     , Request.utxoRefsAt
     , Request.utxoRefsWithCurrency

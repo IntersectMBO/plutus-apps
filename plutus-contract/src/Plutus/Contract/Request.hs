@@ -33,7 +33,7 @@ module Plutus.Contract.Request(
     , mintingPolicyFromHash
     , stakeValidatorFromHash
     , redeemerFromHash
-    , txOutFromRef
+    , unspentTxOutFromRef
     , utxoRefMembership
     , utxoRefsAt
     , utxoRefsWithCurrency
@@ -312,17 +312,17 @@ redeemerFromHash h = do
     E.RedeemerHashResponse r -> pure r
     r                        -> throwError $ review _ChainIndexContractError ("RedeemerHashResponse", r)
 
-txOutFromRef ::
+unspentTxOutFromRef ::
     forall w s e.
     ( AsContractError e
     )
     => TxOutRef
     -> Contract w s e (Maybe ChainIndexTxOut)
-txOutFromRef ref = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxOutFromRef ref) E._ChainIndexQueryResp
+unspentTxOutFromRef ref = do
+  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutFromRef ref) E._ChainIndexQueryResp
   case cir of
-    E.TxOutRefResponse r -> pure r
-    r                    -> throwError $ review _ChainIndexContractError ("TxOutRefResponse", r)
+    E.UnspentTxOutResponse r -> pure r
+    r                        -> throwError $ review _ChainIndexContractError ("UnspentTxOutResponse", r)
 
 utxoRefMembership ::
     forall w s e.
@@ -394,7 +394,7 @@ utxosAt addr = do
   where
     f acc page = do
       let utxoRefs = pageItems page
-      txOuts <- traverse txOutFromRef utxoRefs
+      txOuts <- traverse unspentTxOutFromRef utxoRefs
       let utxos = Map.fromList
                 $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
                 $ zip utxoRefs txOuts
@@ -409,7 +409,7 @@ utxosTxOutTxFromTx tx =
   catMaybes <$> mapM mkOutRef (txOutRefs tx)
   where
     mkOutRef txOutRef = do
-      ciTxOutM <- txOutFromRef txOutRef
+      ciTxOutM <- unspentTxOutFromRef txOutRef
       pure $ ciTxOutM >>= \ciTxOut -> pure (txOutRef, (ciTxOut, tx))
 
 -- | Get the transaction outputs at an address.

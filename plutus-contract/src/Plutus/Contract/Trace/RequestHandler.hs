@@ -53,8 +53,7 @@ import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as ChainIndexEff
-import Plutus.Contract.Effects (ChainIndexQuery (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxOutFromRef, TxoSetAtAddress, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
-                                ChainIndexResponse (DatumHashResponse, GetTipResponse, MintingPolicyHashResponse, RedeemerHashResponse, StakeValidatorHashResponse, TxOutRefResponse, TxoSetAtResponse, UtxoSetAtResponse, UtxoSetMembershipResponse, UtxoSetWithCurrencyResponse, ValidatorHashResponse))
+import Plutus.Contract.Effects (ChainIndexQuery (..), ChainIndexResponse (..))
 import Plutus.Contract.Wallet qualified as Wallet
 import Wallet.API (WalletAPIError)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
@@ -228,7 +227,7 @@ handleChainIndexQueries = RequestHandler $ \chainIndexQuery ->
         MintingPolicyFromHash h    -> MintingPolicyHashResponse <$> ChainIndexEff.mintingPolicyFromHash h
         StakeValidatorFromHash h   -> StakeValidatorHashResponse <$> ChainIndexEff.stakeValidatorFromHash h
         RedeemerFromHash h         -> RedeemerHashResponse <$> ChainIndexEff.redeemerFromHash h
-        TxOutFromRef txOutRef      -> TxOutRefResponse <$> ChainIndexEff.unspentTxOutFromRef txOutRef
+        UnspentTxOutFromRef ref    -> UnspentTxOutResponse <$> ChainIndexEff.unspentTxOutFromRef ref
         UtxoSetMembership txOutRef -> UtxoSetMembershipResponse <$> ChainIndexEff.utxoSetMembership txOutRef
         UtxoSetAtAddress pq c      -> UtxoSetAtResponse <$> ChainIndexEff.utxoSetAtAddress pq c
         UtxoSetWithCurrency pq ac  -> UtxoSetWithCurrencyResponse <$> ChainIndexEff.utxoSetWithCurrency pq ac
