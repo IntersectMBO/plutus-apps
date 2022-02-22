@@ -107,7 +107,7 @@ mkValidator _datum (MyCustomRedeemer txouts txins minted txValidRange _fee datum
   AMap.member paymentOutputFromRedeemer scriptContextOutputsMap P.&&
   -- Txins are equivalent
   (AMap.member txinA scriptContextTxinsMap P.&& AMap.member txinB scriptContextTxinsMap) P.&&
-  -- Cert if equivalent
+  -- Check if tx inputs are equivalent
   AMap.member singleRedeemerCert scriptContextCertsMap P.&&
   -- Check if the script purposes are equivalent
   case mPurpose of

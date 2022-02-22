@@ -97,7 +97,7 @@ executable plutus-example
                       , directory
                       , filepath
                       , plutus-example
-
+x
 
 executable create-script-context
   import:               base, project-config
@@ -120,6 +120,8 @@ test-suite plutus-example-test
 
   build-depends:        cardano-prelude
                       , aeson
+                      , base16-bytestring
+                      , bytestring
                       , cardano-api
                       , cardano-api:gen
                       , cardano-ledger-alonzo
@@ -141,10 +143,12 @@ test-suite plutus-example-test
 
 
   other-modules:
+
+                        Test.PlutusExample.Direct.ScriptContextEquality
                         -- TODO: Re-enable when cardano-node is bumped to the latest master
-                        -- Test.PlutusExample.Direct.ScriptContextEquality
+                        -- We are missing `waitUntilEpoch`.
                         -- Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus
-                        -- Test.PlutusExample.Direct.ScriptContextEqualityMint
+                        Test.PlutusExample.Direct.ScriptContextEqualityMint
                         Test.PlutusExample.Direct.TxInLockingPlutus
                         Test.PlutusExample.Script.TxInLockingPlutus
                         Test.PlutusExample.SubmitApi.TxInLockingPlutus

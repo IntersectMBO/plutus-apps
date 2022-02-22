@@ -29,6 +29,8 @@ must supply as collateral.
 it*\ **cannot**\ *reside at a script address; it must reside at a
 ‘normal’ payment address and it cannot contain any multi-assets.*
 
+NB: All variable assignments can be looked up in `cardano-node/scripts/plutus/example-txin-locking-plutus-script.sh <(https://github.com/input-output-hk/cardano-node/blob/master/scripts/plutus/example-txin-locking-plutus-script.sh>`_
+
 An example of using a Plutus spending script
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -82,7 +84,7 @@ Run the following command:
 
    cabal install cardano-cli
    cabal install cardano-node
-   ./scripts/byron-to-alonzo/mkfiles.sh alonzo
+   ./cardano-node/scripts/byron-to-alonzo/mkfiles.sh alonzo
 
 Follow the instructions displayed in the terminal to start your Alonzo
 cluster.
@@ -103,8 +105,8 @@ In this example, the script we are using always succeeds so we can use
 any datum hash. We calculate the script address as follows:
 
 .. code:: bash
-
-   > cardano-cli address build --payment-script-file plutus-example/generated-plutus-scripts/always-succeeds-txin.plutus  --testnet-magic 42
+   > cabal run exe:plutus-example
+   > cardano-cli address build --payment-script-file generated-plutus-scripts/always-succeeds-txin.plutus  --testnet-magic 42
    > addr_test1wzeqkp6ne3xm6gz39l874va4ujgl4kr0e46pf3ey8xsu3jsgkpcj2
 
 Now, we should create the tx that will send ADA to the script address of

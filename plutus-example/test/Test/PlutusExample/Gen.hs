@@ -10,7 +10,6 @@ import Data.Map.Strict qualified as Map
 
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo
--- import           Cardano.Ledger.BaseTypes (ProtoVer)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era qualified as Ledger
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger

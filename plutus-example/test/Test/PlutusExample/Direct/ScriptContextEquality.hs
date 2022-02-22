@@ -38,10 +38,8 @@ import Hedgehog.Extras.Test.File qualified as H
 import Hedgehog.Extras.Test.Process qualified as H
 import System.Directory qualified as IO
 import Test.Base qualified as H
-import Test.Process qualified (execCreateScriptContext, execCreateScriptContext')
 import Test.Process qualified as H
-import Testnet.Cardano
-import Testnet.Cardano qualified (defaultTestnetOptions, testnet)
+import Testnet.Cardano (TestnetRuntime (..), defaultTestnetOptions, testnet)
 import Testnet.Conf qualified as H
 
 {- HLINT ignore "Redundant <&>" -}
@@ -63,7 +61,7 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
 
-  TC.TestnetRuntime { bftSprockets, testnetMagic } <- testnet defaultTestnetOptions conf
+  Testnet.Cardano.TestnetRuntime { bftSprockets, testnetMagic } <- testnet defaultTestnetOptions conf
 
   env <- H.evalIO getEnvironment
 
@@ -213,7 +211,7 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   plutusUtxo <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) plutusUtxoJson
   plutusUtxoTxIn <- H.noteShow $ head $ HM.keys plutusUtxo
 
-  void $ execCreateScriptContext ["--out-file", scriptDummyRedeemer]
+  void $ H.execCreateScriptContext ["--out-file", scriptDummyRedeemer]
 
   void $ H.execCli' execConfig
     [ "transaction", "build"
@@ -244,7 +242,7 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
     ]
 
   -- Generate the redeeemer we will use in the tx!
-  void $ execCreateScriptContext' execConfig
+  void $ H.execCreateScriptContext' execConfig
            [ "--generate-tx" , work </> "dummy.tx"
            , "--cardano-mode"
            , "--testnet-magic", show @Int testnetMagic
