@@ -17,11 +17,13 @@ import Control.Monad.Freer.State (State, runState)
 import Control.Monad.Freer.Writer (runWriter)
 import Control.Monad.IO.Class (liftIO)
 import Data.Default (def)
+import Data.Maybe (isJust)
 import Data.Sequence (Seq)
 import Data.Set qualified as S
 import Generators qualified as Gen
 import Ledger (outValue)
-import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlock, utxoSetWithCurrency)
+import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlock, unspentTxOutFromRef,
+                          utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
@@ -40,6 +42,9 @@ tests = do
   testGroup "chain index emulator handlers"
     [ testGroup "utxoSetAtAddress"
       [ testProperty "each txOutRef should be unspent" eachTxOutRefAtAddressShouldBeUnspentSpec
+      ]
+    , testGroup "unspentTxOutFromRef"
+      [ testProperty "get unspent tx out from ref" eachTxOutRefAtAddressShouldHaveTxOutSpec
       ]
     , testGroup "utxoSetWithCurrency"
       [ testProperty "each txOutRef should be unspent" eachTxOutRefWithCurrencyShouldBeUnspentSpec
@@ -62,6 +67,23 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
   case result of
     Left _           -> Hedgehog.assert False
     Right utxoGroups -> S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
+
+-- | After generating and appending a block in the chain index, verify that
+-- querying the chain index with each of the addresses in the block returns
+-- unspent 'TxOutRef's with presented 'TxOut's.
+eachTxOutRefAtAddressShouldHaveTxOutSpec :: Property
+eachTxOutRefAtAddressShouldHaveTxOutSpec = property $ do
+  ((tip, block), _) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
+
+  result <- liftIO $ runEmulatedChainIndex mempty $ do
+    -- Append the generated block in the chain index
+    appendBlock (Block tip (map (, def) block))
+    utxos <- utxoSetFromBlockAddrs block
+    traverse unspentTxOutFromRef (concat utxos)
+
+  case result of
+    Left _        -> Hedgehog.assert False
+    Right utxouts -> Hedgehog.assert $ and $ map isJust utxouts
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the asset classes in the block returns

@@ -16,6 +16,7 @@ import Control.Monad.Freer.Extras.Beam (BeamEffect)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Tracer (nullTracer)
 import Data.Default (def)
+import Data.Maybe (isJust)
 import Data.Set qualified as S
 import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
@@ -25,7 +26,7 @@ import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
 import Ledger (outValue)
 import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), RunRequirements (..), appendBlock, citxOutputs,
-                          runChainIndexEffects, utxoSetWithCurrency)
+                          runChainIndexEffects, unspentTxOutFromRef, utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
@@ -42,6 +43,9 @@ tests = do
   testGroup "chain-index handlers"
     [ testGroup "utxoSetAtAddress"
       [ testProperty "each txOutRef should be unspent" eachTxOutRefAtAddressShouldBeUnspentSpec
+      ]
+    , testGroup "unspentTxOutFromRef"
+      [ testProperty "get unspent tx out from ref" eachTxOutRefAtAddressShouldHaveTxOutSpec
       ]
     , testGroup "utxoSetWithCurrency"
       [ testProperty "each txOutRef should be unspent" eachTxOutRefWithCurrencyShouldBeUnspentSpec
@@ -62,6 +66,21 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
       utxoSetFromBlockAddrs block
 
   S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
+
+-- | After generating and appending a block in the chain index, verify that
+-- querying the chain index with each of the addresses in the block returns
+-- unspent 'TxOutRef's with presented 'TxOut's.
+eachTxOutRefAtAddressShouldHaveTxOutSpec :: Property
+eachTxOutRefAtAddressShouldHaveTxOutSpec = property $ do
+  ((tip, block), _) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
+
+  utxouts <- runChainIndexTest $ do
+      -- Append the generated block in the chain index
+      appendBlock (Block tip (map (, def) block))
+      utxos <- utxoSetFromBlockAddrs block
+      traverse unspentTxOutFromRef (concat utxos)
+
+  Hedgehog.assert $ and $ map isJust utxouts
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns
