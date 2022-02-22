@@ -7,26 +7,39 @@ module Index
   -- * Projections
   , IndexView(..)
   , view
+  , getFunction
+  , getHistory
   -- * Helpers
   , insertL
+  , matches
+  -- * Testing
+  , ObservedIndex (..)
+  , GrammarIndex (..)
   ) where
 
 import           Control.Monad   (replicateM)
 import           Data.Foldable   (foldl')
+import Data.List (isInfixOf)
 import           Data.Maybe      (fromJust)
 import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
                                   arbitrarySizedIntegral, choose, chooseInt,
                                   frequency, listOf, sized)
 import QuickSpec
 
-data Index a b where
-  New    :: (a -> b -> a) -> Int -> a -> Index a b
-  Insert :: b -> Index a b -> Index a b
-  Rewind :: Int -> Index a b -> Index a b
+data Index a b = New (a -> b -> a) Int a
+               | Insert b (Index a b)
+               | Rewind Int (Index a b)
+
+instance (Show a, Show b) => Show (Index a b) where
+  show (New f depth acc) = "New <f> " <> show depth <> " " <> show acc
+  show (Insert b ix) = "Insert " <> show b <> " (" <> show ix <> ")"
+  show (Rewind n ix) = "Rewind " <> show n <> " (" <> show ix <> ")"
 
 newtype GrammarIndex a b = GrammarIndex (Index a b)
+  deriving (Show)
 
 newtype ObservedIndex a b = ObservedIndex (Index a b)
+  deriving (Show)
 
 data IndexView a = IndexView
   { ixDepth :: Int
@@ -43,8 +56,6 @@ new f depth initial
 
 insert :: b -> Index a b -> Index a b
 insert = Insert
-
-insertL bs ix = foldl' (flip insert) ix bs
 
 rewind :: Int -> Index a b -> Maybe (Index a b)
 rewind n ix
@@ -64,7 +75,7 @@ view (Insert b ix) =
   let f = getFunction ix
       v = view ix
    in v { ixView = f (ixView v) b
-        , ixSize = ixSize v + 1
+        , ixSize = min (ixDepth v) (ixSize v + 1)
         }
 view (Rewind n ix) =
   let h = getHistory ix
@@ -88,6 +99,18 @@ getHistory (Insert b ix) =
   in f (head h) b : h
 getHistory (Rewind n ix) = drop n $ getHistory ix
 
+-- | Utility
+
+matches :: Eq a => Index a b -> Index a b -> Bool
+matches hl hr =
+  let hlAccumulator = getHistory hl
+      hrAccumulator = getHistory hr
+  in     hlAccumulator `isInfixOf` hrAccumulator
+      || hrAccumulator `isInfixOf` hlAccumulator
+      || hrAccumulator     ==      hlAccumulator
+
+insertL :: [b] -> Index a b -> Index a b
+insertL bs ix = foldl' (flip insert) ix bs
 -- | QuickCheck
 
 instance ( CoArbitrary a

@@ -5,14 +5,14 @@ import           Test.Tasty.QuickCheck
 import           Data.List             (foldl')
 import           Data.Maybe            (fromJust, isJust, isNothing)
 
-import           Index.HistoricalFold
+import           Index
 import           HistoricalFold
 
 tests :: TestTree
-tests = testGroup "Utxo index" [hfProperties]
+tests = testGroup "Index" [hfProperties]
 
 hfProperties :: TestTree
-hfProperties = testGroup "Historical fold"
+hfProperties = testGroup "Basic model"
   [ testProperty "New: Positive or non-positive depth" $
       withMaxSuccess 10000 $ prop_hfNewReturn @Int @Int
   , testProperty "History length is always smaller than the max depth" $
@@ -47,73 +47,78 @@ prop_hfNewReturn f acc =
 -- | Properties of the connection between rewind and depth
 --   Note: Cannot rewind if (hfDepth hf == 1)
 prop_rewindWithDepth
-  :: HistoricalFold a b
+  :: ObservedIndex a b
   -> Property
-prop_rewindWithDepth hf =
-  hfDepth hf >= 2 ==>
-  forAll (frequency [ (20, chooseInt (hfDepth hf, hfDepth hf * 2))
-                    , (30, chooseInt (historyLength hf + 1, hfDepth hf - 1))
-                    , (50, chooseInt (1, historyLength hf)) ]) $
+prop_rewindWithDepth (ObservedIndex ix) =
+  let v = view ix in
+  ixDepth v >= 2 ==>
+  forAll (frequency [ (20, chooseInt (ixDepth v, ixDepth v * 2))
+                    , (30, chooseInt (ixSize v + 1, ixDepth v - 1))
+                    , (50, chooseInt (1, ixSize v)) ]) $
   \depth ->
-    cover 15 (depth > hfDepth hf) "Depth is larger than max depth." $
-    cover 15 (depth <= hfDepth hf && depth > historyLength hf)
+    cover 15 (depth >  ixDepth v) "Depth is larger than max depth." $
+    cover 15 (depth <= ixDepth v && depth > ixSize v)
           "Depth is lower than max but there is not enough data."   $
-    cover 40 (depth <= hfDepth hf && depth <= historyLength hf)
+    cover 40 (depth <= ixDepth v && depth <= ixSize v)
           "Depth is properly set."                                  $
-    let newHF = rewind depth hf
-    in  if depth > (hfDepth hf - 1) || (depth > historyLength hf)
-        then property $ isNothing newHF
-        else property $ isJust    newHF
+    let newIx = rewind depth ix
+    in  if depth > (ixDepth v - 1) || (depth > ixSize v)
+        then property $ isNothing newIx
+        else property $ isJust    newIx
 
 -- | Property that validates the HF data structure.
 prop_historyLengthLEDepth
-  :: HistoricalFold a b
+  :: ObservedIndex a b
   -> Property
-prop_historyLengthLEDepth hf =
-  property $ historyLength hf <= hfDepth hf
+prop_historyLengthLEDepth (ObservedIndex ix) =
+  let v = view ix
+   in property $ ixSize v <= ixDepth v
 
 -- | Relation between Rewind and Inverse
 prop_InsertRewindInverse
   :: (Show a, Show b, Arbitrary b, Eq a)
-  => HistoricalFold a b
+  => ObservedIndex a b
   -> Property
-prop_InsertRewindInverse hf =
+prop_InsertRewindInverse (ObservedIndex ix) =
+  let v = view ix
   -- rewind does not make sense for lesser depths.
-  hfDepth hf >= 2 ==>
+   in ixDepth v >= 2 ==>
   -- if the history is not fully re-written, then we can get a common
   -- prefix after the insert/rewind play. We need input which is less
   -- than `hfDepth hf`
-  forAll (resize (hfDepth hf - 1) arbitrary) $
+  forAll (resize (ixDepth v - 1) arbitrary) $
   \bs ->
-      let hf'   = rewind (length bs) $ insertL bs hf
-       in property $ isJust hf' && fromJust hf' `matchesHistory` hf
+      let ix'   = rewind (length bs) $ insertL bs ix
+          v'    = view (fromJust ix')
+       in property $ isJust ix' && fromJust ix' `matches` ix
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
 --   another implmentation is confirming.
 prop_InsertFolds
   :: (Eq a, Show a)
-  => HistoricalFold a b
+  => ObservedIndex a b
   -> [b]
   -> Property
-prop_InsertFolds hf bs =
-  view (insertL bs hf) ===
-    foldl' (hfFunction hf) (view hf) bs
+prop_InsertFolds (ObservedIndex ix) bs =
+  ixView (view (insertL bs ix)) ===
+    foldl' (getFunction ix) (ixView $ view ix) bs
 
 prop_InsertHistoryLength
-  :: HistoricalFold a b
+  :: ObservedIndex a b
   -> b
   -> Property
-prop_InsertHistoryLength hf b =
-  let initialLength = historyLength hf
-      finalLength   = historyLength (insert b hf)
-   in cover 10 (initialLength == hfDepth hf) "Overflowing" $
-      cover 30 (initialLength < hfDepth hf)  "Not filled" $
-      if initialLength == hfDepth hf
+prop_InsertHistoryLength (ObservedIndex ix) b =
+  let v             = view ix
+      initialLength = ixSize v
+      finalLength   = ixSize . view $ insert b ix
+   in cover 10 (initialLength == ixDepth v) "Overflowing" $
+      cover 30 (initialLength <  ixDepth v)  "Not filled" $
+      if initialLength == ixDepth v
       then finalLength === initialLength
       else finalLength === initialLength + 1
 
 main :: IO ()
 main = do
-  quickSpec hfSignature
+  -- quickSpec hfSignature
   defaultMain tests
