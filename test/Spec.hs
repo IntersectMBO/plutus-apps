@@ -119,5 +119,5 @@ prop_InsertHistoryLength (ObservedIndex ix) b =
 
 main :: IO ()
 main = do
-  quickSpec ixSignature
+  -- quickSpec ixSignature
   defaultMain tests
