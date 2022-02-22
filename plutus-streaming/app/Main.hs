@@ -66,8 +66,9 @@ justBlocks =
     . S.take 10
 
 howManyBlocksBeforeRollback ::
-  Stream (Of ChainSyncEvent) IO () ->
-  Stream (Of Int) IO ()
+  Monad m =>
+  Stream (Of ChainSyncEvent) m () ->
+  Stream (Of Int) m ()
 howManyBlocksBeforeRollback =
   S.scan
     ( \acc ->
@@ -80,8 +81,9 @@ howManyBlocksBeforeRollback =
     . S.take 100
 
 howManyBlocksBeforeRollbackImpure ::
-  Stream (Of ChainSyncEvent) IO () ->
-  Stream (Of Int) IO ()
+  (Monad m, MonadIO m) =>
+  Stream (Of ChainSyncEvent) m () ->
+  Stream (Of Int) m ()
 howManyBlocksBeforeRollbackImpure =
   S.scanM
     ( \acc ->
@@ -89,23 +91,20 @@ howManyBlocksBeforeRollbackImpure =
           RollForward _ _ ->
             pure $ acc + 1
           RollBackward _ _ -> do
-            putStrLn $ "Rollback after " ++ show acc ++ " blocks"
+            liftIO $ putStrLn $ "Rollback after " ++ show acc ++ " blocks"
             pure acc
     )
     (pure 0)
     pure
     . S.take 100
 
---
--- Ah! This doesn't do what I meant and I think for good reasons
---
 composePureAndImpure ::
   Stream (Of ChainSyncEvent) IO () ->
-  Stream (Of (Int, Int)) IO ()
-composePureAndImpure s =
-  S.zip
-    (howManyBlocksBeforeRollback s)
-    (howManyBlocksBeforeRollbackImpure s)
+  IO ()
+composePureAndImpure =
+    (S.print . howManyBlocksBeforeRollbackImpure)
+    . (S.print . howManyBlocksBeforeRollback)
+    . S.copy
 
 --
 -- Main
@@ -130,7 +129,7 @@ main = do
       JustBlocks                        -> S.print . justBlocks
       HowManyBlocksBeforeRollback       -> S.print . howManyBlocksBeforeRollback
       HowManyBlocksBeforeRollbackImpure -> S.print . howManyBlocksBeforeRollbackImpure
-      ComposePureAndImpure              -> S.print . composePureAndImpure
+      ComposePureAndImpure              -> composePureAndImpure
 
 --
 -- Utilities for development
