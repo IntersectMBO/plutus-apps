@@ -88,6 +88,7 @@ let
           plutus-playground-server.package.buildable = false; # Would also require libpq
           plutus-tx-plugin.package.buildable = false;
           plutus-use-cases.package.buildable = false;
+          plutus-example.package.buildable = false;
           web-ghc.package.buildable = false;
           # These need R
           plutus-core.components.benchmarks.cost-model-test.buildable = lib.mkForce false;
@@ -136,6 +137,9 @@ let
           plutus-ledger.doHaddock = deferPluginErrors;
           plutus-ledger.flags.defer-plugin-errors = deferPluginErrors;
 
+          plutus-example.doHaddock = deferPluginErrors;
+          plutus-example.flags.defer-plugin-errors = deferPluginErrors;
+
           # FIXME: Haddock mysteriously gives a spurious missing-home-modules warning
           plutus-tx-plugin.doHaddock = false;
 
@@ -161,6 +165,7 @@ let
           plutus-pab-executables.ghcOptions = [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
           plutus-use-cases.ghcOptions = [ "-Werror" ];
+          plutus-example.ghcOptions = [ "-Werror" ];
 
           # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
           # This will go away when we upgrade nixpkgs and things use ieee754 anyway.

@@ -1079,7 +1079,10 @@
             flags = { "development" = lib.mkOverride 900 false; };
             };
           "plutus-example" = {
-            flags = { "unexpected_thunks" = lib.mkOverride 900 false; };
+            flags = {
+              "unexpected_thunks" = lib.mkOverride 900 false;
+              "defer-plugin-errors" = lib.mkOverride 900 false;
+              };
             };
           "set-algebra" = { flags = {}; };
           "prettyprinter-configurable" = { flags = {}; };

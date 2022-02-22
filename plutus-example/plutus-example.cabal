@@ -13,6 +13,13 @@ Flag unexpected_thunks
   Description:   Turn on unexpected thunks checks
   Default:       False
 
+flag defer-plugin-errors
+    description:
+        Defer errors from the plugin, useful for things like Haddock that can't handle it.
+
+    default:     False
+    manual:      True
+
 common base
   build-depends: base >= 4.14 && < 4.15
 
@@ -33,6 +40,10 @@ common project-config
                         -fobject-code
                         -fno-ignore-interface-pragmas
                         -fno-omit-interface-pragmas
+
+  -- See Plutus Tx readme
+  if flag(defer-plugin-errors)
+      ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 common maybe-Win32
   if os(windows)

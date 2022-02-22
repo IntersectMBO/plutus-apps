@@ -8,7 +8,7 @@
   , config
   , ... }:
   {
-    flags = { unexpected_thunks = false; };
+    flags = { unexpected_thunks = false; defer-plugin-errors = false; };
     package = {
       specVersion = "3.0";
       identifier = { name = "plutus-example"; version = "1.33.0"; };
@@ -77,7 +77,9 @@
             ];
           buildable = true;
           hsSourceDirs = [ "app" ];
-          mainPath = [ "plutus-example.hs" ];
+          mainPath = [
+            "plutus-example.hs"
+            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
           };
         "create-script-context" = {
           depends = [
@@ -90,7 +92,9 @@
             ];
           buildable = true;
           hsSourceDirs = [ "app" ];
-          mainPath = [ "create-script-context.hs" ];
+          mainPath = [
+            "create-script-context.hs"
+            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
           };
         };
       tests = {
