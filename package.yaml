@@ -27,9 +27,14 @@ default-extensions:
   - TypeApplications
   - PatternSynonyms
   - DeriveGeneric
+  - MultiParamTypeClasses
+  - FlexibleInstances
+  - GADTs
 
 dependencies:
 - base >= 4.7 && < 5
+- QuickCheck
+- quickspec
 
 library:
   source-dirs: src

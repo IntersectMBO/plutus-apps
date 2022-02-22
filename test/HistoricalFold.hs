@@ -1,25 +1,22 @@
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 module HistoricalFold
   ( hfSignature
   ) where
 
-import           Control.Monad      (replicateM)
-import           Data.Map           (Map)
-import           Data.Maybe         (fromJust)
-import           Data.List.NonEmpty (NonEmpty (..), toList, (<|))
+import           Control.Monad        (replicateM)
+import           Data.List.NonEmpty   (NonEmpty (..), toList, (<|))
+import           Data.Map             (Map)
+import           Data.Maybe           (fromJust)
 import           GHC.Generics
 
 import           QuickSpec
-import           Test.QuickCheck    (Arbitrary (..), CoArbitrary(..), Gen,
-                                     choose, chooseInt, frequency, listOf,
-                                     sized)
+import           Test.QuickCheck      (Arbitrary (..), CoArbitrary (..), Gen,
+                                       choose, chooseInt, frequency, listOf,
+                                       sized)
 
-import Index.HistoricalFold (HistoricalFold)
-import Index.HistoricalFold qualified as HF
+import           Index.HistoricalFold (HistoricalFold)
+import qualified Index.HistoricalFold as HF
 
-import qualified Debug.Trace        as Debug
+import qualified Debug.Trace          as Debug
 
 -- QuickCheck infrastructure
 instance ( CoArbitrary a
@@ -83,5 +80,5 @@ hfSignature =
   , con "view" (HF.view :: HistoricalFold Int String -> Int)
   , con "historyLength" (HF.historyLength :: HistoricalFold Int String -> Int)
   , con "rewind" (HF.rewind :: Int -> HistoricalFold Int String -> Maybe (HistoricalFold Int String))
-  , withMaxTermSize 6
+  , withMaxTermSize 5
   ]
