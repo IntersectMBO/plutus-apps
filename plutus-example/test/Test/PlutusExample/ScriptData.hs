@@ -8,7 +8,7 @@ import Cardano.Api
 
 import Data.Aeson qualified as Aeson
 
-import Hedgehog (Property, checkParallel, discover, forAll, property, tripping, (===))
+import Hedgehog (Property, forAll, property, tripping, (===))
 import Hedgehog.Internal.Property (failWith)
 
 import PlutusExample.ScriptContextChecker

@@ -8,7 +8,7 @@ import Cardano.Api
 import Cardano.Api.Shelley
 
 
-import Hedgehog (Property, discover, forAll, property, (===))
+import Hedgehog (Property, forAll, property, (===))
 
 import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo
 import PlutusExample.ScriptContextChecker
