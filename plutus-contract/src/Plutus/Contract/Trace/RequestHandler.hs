@@ -228,7 +228,7 @@ handleChainIndexQueries = RequestHandler $ \chainIndexQuery ->
         MintingPolicyFromHash h    -> MintingPolicyHashResponse <$> ChainIndexEff.mintingPolicyFromHash h
         StakeValidatorFromHash h   -> StakeValidatorHashResponse <$> ChainIndexEff.stakeValidatorFromHash h
         RedeemerFromHash h         -> RedeemerHashResponse <$> ChainIndexEff.redeemerFromHash h
-        TxOutFromRef txOutRef      -> TxOutRefResponse <$> ChainIndexEff.txOutFromRef txOutRef
+        TxOutFromRef txOutRef      -> TxOutRefResponse <$> ChainIndexEff.unspentTxOutFromRef txOutRef
         UtxoSetMembership txOutRef -> UtxoSetMembershipResponse <$> ChainIndexEff.utxoSetMembership txOutRef
         UtxoSetAtAddress pq c      -> UtxoSetAtResponse <$> ChainIndexEff.utxoSetAtAddress pq c
         UtxoSetWithCurrency pq ac  -> UtxoSetWithCurrencyResponse <$> ChainIndexEff.utxoSetWithCurrency pq ac
