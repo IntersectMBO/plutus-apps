@@ -462,8 +462,8 @@ certification = defaultCertification {
     certWhitelist          = Just defaultWhitelist
   }
   where
-    unitTest =
-      checkPredicate "run a successful game trace"
+    unitTest ref =
+      checkPredicateCoverage "run a successful game trace" ref
         (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 3 <> guessTokenVal)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))

@@ -4,6 +4,7 @@ module Plutus.Contract.Test.Certification where
 
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
+import Plutus.Contract.Test.Coverage
 import PlutusTx.Coverage
 import Test.Tasty as Tasty
 
@@ -14,7 +15,7 @@ data Certification m = Certification {
     certCoverageIndex      :: CoverageIndex,
     certNoLockedFunds      :: Maybe (NoLockedFundsProof m),
     certNoLockedFundsLight :: Maybe (NoLockedFundsProofLight m),
-    certUnitTests          :: Maybe TestTree,
+    certUnitTests          :: Maybe (CoverageRef -> TestTree),
     certCrashTolerance     :: Maybe (Instance CrashTolerance m),
     certWhitelist          :: Maybe Whitelist,
     certDLTests            :: [(String, DL m ())]

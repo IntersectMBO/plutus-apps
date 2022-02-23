@@ -47,6 +47,7 @@ import GHC.Generics
 import Plutus.Contract.Test.Certification
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
+import Plutus.Contract.Test.Coverage
 import PlutusTx.Coverage
 import System.Random.SplitMix
 import Test.QuickCheck as QC
@@ -145,10 +146,14 @@ checkNoLockedFundsLight opts prf =
 mkQCArgs :: CertificationOptions -> Args
 mkQCArgs CertificationOptions{..} = stdArgs { chatty = certOptOutput , maxSuccess = certOptNumTests }
 
-runUnitTests :: TestTree -> CertMonad [Tasty.Result]
-runUnitTests t = lift $ launchTestTree mempty t $ \ status -> do
-    rs <- atomically $ mapM waitForDone (IntMap.elems status)
-    return $ \ _ -> return rs
+runUnitTests :: (CoverageRef -> TestTree) -> CertMonad [Tasty.Result]
+runUnitTests t = liftIORep $ do
+    ref <- newCoverageRef
+    res <- launchTestTree mempty (t ref) $ \ status -> do
+      rs <- atomically $ mapM waitForDone (IntMap.elems status)
+      return $ \ _ -> return rs
+    cov <- readCoverageRef ref
+    return (cov, res)
   where
     waitForDone tv = do
       s <- readTVar tv
