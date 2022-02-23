@@ -11,9 +11,11 @@ module Index.Split
   , rewind
   ) where
 
-import           Data.Foldable (foldlM)
+import           Control.Monad ((=<<))
+import           Data.Foldable (foldl', foldlM)
+import           Data.Maybe    (fromJust)
 
-import           Index         (Index (..), IndexView(..))
+import           Index         (Index (..), IndexView (..))
 import qualified Index         as Ix
 
 data SplitIndex m a e = SplitIndex
@@ -80,4 +82,12 @@ toIndexView si@SplitIndex{siHandle, siDepth, siStore, siEvents} = do
                    , ixView  = v
                    }
 
+fromIndex :: forall m a e. Monad m => Index a e -> m (SplitIndex m a e)
+fromIndex (Ix.New f depth acc) =
+  pure $ fromJust $ new merge depth (pure acc)
+  where
+    merge :: Monad m => a -> [e] -> m a
+    merge acc es = pure $ foldl' f acc es
+fromIndex (Ix.Insert e ix) = insert e =<< fromIndex ix
+fromIndex (Ix.Rewind n ix) = rewind n <$> fromIndex ix
 

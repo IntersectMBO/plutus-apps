@@ -37,6 +37,7 @@ library
   default-extensions:
       ImportQualifiedPost
       ExplicitForAll
+      ScopedTypeVariables
       TypeApplications
       PatternSynonyms
       DeriveGeneric
@@ -59,6 +60,7 @@ test-suite hysterical-screams-test
   default-extensions:
       ImportQualifiedPost
       ExplicitForAll
+      ScopedTypeVariables
       TypeApplications
       PatternSynonyms
       DeriveGeneric
