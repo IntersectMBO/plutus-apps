@@ -1,17 +1,19 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE GADTs              #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing -fno-warn-redundant-constraints #-}
 module Spec.Uniswap where
 
 import Control.Arrow
+import Control.Exception hiding (assert)
 import Control.Lens hiding (elements)
 import Control.Monad
 import Plutus.Contract
@@ -19,11 +21,13 @@ import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.Symbolics
+import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap hiding (pools, setupTokens, tokenNames, wallets)
 import Plutus.Contracts.Uniswap.Trace qualified as Uniswap
 import Plutus.Trace.Emulator (EmulatorRuntimeError (GenericError))
 import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx.Coverage
 
 import Ledger qualified as Ledger
 import Ledger.Ada qualified as Ada
@@ -539,3 +543,22 @@ tests = testGroup "uniswap" [
     , testProperty "prop_UniswapAssertions" $ withMaxSuccess 1000 (propSanityCheckAssertions @UniswapModel)
     , testProperty "prop_NLFP" $ withMaxSuccess 250 prop_CheckNoLockedFundsProofFast
     ]
+
+runTestsWithCoverage :: IO ()
+runTestsWithCoverage = do
+  ref <- newCoverageRef
+  defaultMain (coverageTests ref)
+    `catch` \(e :: SomeException) -> do
+                report <- readCoverageRef ref
+                putStrLn . show $ pprCoverageReport covIdx report
+                throwIO e
+  where
+    coverageTests ref = testGroup "game state machine tests"
+                         [ checkPredicateCoverage "can create a liquidity pool and add liquidity"
+                            ref
+                            (assertNotDone Uniswap.setupTokens
+                                           (Trace.walletInstanceTag w1)
+                                           "setupTokens contract should be still running"
+                            .&&. assertNoFailedTransactions)
+                            Uniswap.uniswapTrace
+                          ]

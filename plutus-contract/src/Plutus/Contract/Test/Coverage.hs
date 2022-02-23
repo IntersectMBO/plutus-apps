@@ -3,6 +3,9 @@
 module Plutus.Contract.Test.Coverage
   ( getInvokedEndpoints
   , getCoverageReport
+  , CoverageRef(..)
+  , newCoverageRef
+  , readCoverageRef
   ) where
 
 import Data.Foldable
@@ -25,6 +28,8 @@ import Plutus.Trace.Emulator.Types
 import Wallet.Emulator.Chain
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (..), EmulatorTimeEvent (..), eteEvent)
 import Wallet.Types
+
+import Data.IORef
 
 
 -- | Get every endpoint name that has been invoced in the emulator events in `es`
@@ -55,6 +60,14 @@ getCoverageReport es =
     logEvent <- log
     let msg = Text.unpack logEvent
     return $ coverageReportFromLogMsg msg
+
+newtype CoverageRef = CoverageRef (IORef CoverageReport)
+
+newCoverageRef :: IO CoverageRef
+newCoverageRef = CoverageRef <$> newIORef mempty
+
+readCoverageRef :: CoverageRef -> IO CoverageReport
+readCoverageRef (CoverageRef ioref) = readIORef ioref
 
 -- TODO: Move this to plutus core to avoid orhpan instance
 instance NFData CovLoc where
