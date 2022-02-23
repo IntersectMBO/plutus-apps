@@ -103,6 +103,8 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
+            (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
             (hsPkgs."cardano-api".components.sublibs.gen or (errorHandler.buildDepError "cardano-api:gen"))
             (hsPkgs."cardano-ledger-alonzo" or (errorHandler.buildDepError "cardano-ledger-alonzo"))
@@ -124,6 +126,8 @@
             ];
           buildable = true;
           modules = [
+            "Test/PlutusExample/Direct/ScriptContextEquality"
+            "Test/PlutusExample/Direct/ScriptContextEqualityMint"
             "Test/PlutusExample/Direct/TxInLockingPlutus"
             "Test/PlutusExample/Script/TxInLockingPlutus"
             "Test/PlutusExample/SubmitApi/TxInLockingPlutus"
