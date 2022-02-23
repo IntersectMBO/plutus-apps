@@ -29,7 +29,7 @@ source-repository head
 library
   exposed-modules:
       Index
-      Index.Stored
+      Index.Split
   other-modules:
       Paths_hysterical_screams
   hs-source-dirs:
