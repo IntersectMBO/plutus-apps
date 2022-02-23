@@ -1,8 +1,5 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveAnyClass #-}
-
 module Index
-  ( Index
+  ( Index(..)
   -- * Constructors
   , new
   , insert
@@ -16,8 +13,8 @@ module Index
   , insertL
   , matches
   -- * Testing
-  , ObservedIndex (..)
-  , GrammarIndex (..)
+  , ObservedBuilder (..)
+  , GrammarBuilder (..)
   , ixSignature
   ) where
 
@@ -31,19 +28,19 @@ import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
 import QuickSpec
 import GHC.Generics
 
-data Index a b = New (a -> b -> a) Int a
-               | Insert b (Index a b)
-               | Rewind Int (Index a b)
+data Index a e = New (a -> e -> a) Int a
+               | Insert e (Index a e)
+               | Rewind Int (Index a e)
 
-instance (Show a, Show b) => Show (Index a b) where
+instance (Show a, Show e) => Show (Index a e) where
   show (New f depth acc) = "New <f> " <> show depth <> " " <> show acc
   show (Insert b ix) = "Insert " <> show b <> " (" <> show ix <> ")"
   show (Rewind n ix) = "Rewind " <> show n <> " (" <> show ix <> ")"
 
-newtype GrammarIndex a b = GrammarIndex (Index a b)
+newtype GrammarBuilder a e = GrammarBuilder (Index a e)
   deriving (Show)
 
-newtype ObservedIndex a b = ObservedIndex (Index a b)
+newtype ObservedBuilder a e = ObservedBuilder (Index a e)
   deriving (Show)
 
 data IndexView a = IndexView
@@ -54,15 +51,15 @@ data IndexView a = IndexView
 
 -- | Constructors
 
-new :: (a -> b -> a) -> Int -> a -> Maybe (Index a b)
+new :: (a -> e -> a) -> Int -> a -> Maybe (Index a e)
 new f depth initial
   | depth > 0 = Just $ New f depth initial
   | otherwise = Nothing
 
-insert :: b -> Index a b -> Index a b
+insert :: e -> Index a e -> Index a e
 insert = Insert
 
-rewind :: Int -> Index a b -> Maybe (Index a b)
+rewind :: Int -> Index a e -> Maybe (Index a e)
 rewind n ix
   | ixDepth (view ix) <= n = Nothing
   | ixSize  (view ix) <  n = Nothing
@@ -70,16 +67,16 @@ rewind n ix
 
 -- | Observations
 
-view :: Index a b -> IndexView a
+view :: Index a e -> IndexView a
 view (New f depth initial) =
   IndexView { ixDepth = depth
             , ixView  = initial
             , ixSize  = 0
             }
-view (Insert b ix) =
+view (Insert e ix) =
   let f = getFunction ix
       v = view ix
-   in v { ixView = f (ixView v) b
+   in v { ixView = f (ixView v) e
         , ixSize = min (ixDepth v) (ixSize v + 1)
         }
 view (Rewind n ix) =
@@ -91,23 +88,23 @@ view (Rewind n ix) =
 
 -- | Internal
 
-getFunction :: Index a b -> (a -> b -> a)
+getFunction :: Index a e -> (a -> e -> a)
 getFunction (New f _ _)   = f
 getFunction (Insert _ ix) = getFunction ix
 getFunction (Rewind _ ix) = getFunction ix
 
-getHistory :: Index a b -> [a]
+getHistory :: Index a e -> [a]
 getHistory (New _ _ i) = [i]
-getHistory (Insert b ix) =
+getHistory (Insert e ix) =
   let f = getFunction ix
       h = getHistory  ix
       v = view ix
-  in f (head h) b : take (ixDepth v - 1) h
+  in f (head h) e : take (ixDepth v - 1) h
 getHistory (Rewind n ix) = drop n $ getHistory ix
 
 -- | Utility
 
-matches :: Eq a => Index a b -> Index a b -> Bool
+matches :: Eq a => Index a e -> Index a e -> Bool
 matches hl hr =
   let hlAccumulator = getHistory hl
       hrAccumulator = getHistory hr
@@ -115,14 +112,14 @@ matches hl hr =
       || hrAccumulator `isInfixOf` hlAccumulator
       || hrAccumulator     ==      hlAccumulator
 
-insertL :: [b] -> Index a b -> Index a b
-insertL bs ix = foldl' (flip insert) ix bs
+insertL :: [e] -> Index a e -> Index a e
+insertL es ix = foldl' (flip insert) ix es
 -- | QuickCheck
 
 instance ( CoArbitrary a
-         , CoArbitrary b
+         , CoArbitrary e
          , Arbitrary a
-         , Arbitrary b ) => Arbitrary (ObservedIndex a b) where
+         , Arbitrary e ) => Arbitrary (ObservedBuilder a e) where
   arbitrary = sized $ \n -> do
     depth <- frequency [ (05, pure 1)                       -- overfill
                        , (40, chooseInt (2, n + 2))         -- about filled
@@ -141,21 +138,21 @@ instance ( CoArbitrary a
     -- Construction can only fail due to NonPositive depth
     -- Tested with prop_hfNewReturns...
     let newHf = fromJust $ new fn depth acc
-    pure . ObservedIndex $ insertL bs newHf
+    pure . ObservedBuilder $ insertL bs newHf
 
 instance ( CoArbitrary a
-         , CoArbitrary b
+         , CoArbitrary e
          , Arbitrary a
-         , Arbitrary b ) => Arbitrary (Index a b) where
+         , Arbitrary e ) => Arbitrary (Index a e) where
   -- Use the ObservedIndex instance as a generator for Indexes
   arbitrary = do
-    (ObservedIndex ix) <- arbitrary
+    (ObservedBuilder ix) <- arbitrary
     pure ix
 
 instance ( CoArbitrary a
-         , CoArbitrary b
+         , CoArbitrary e
          , Arbitrary a
-         , Arbitrary b ) => Arbitrary (GrammarIndex a b) where
+         , Arbitrary e ) => Arbitrary (GrammarBuilder a e) where
   arbitrary = sized $ \n -> do
     depth <- frequency [ (05, pure 1)                       -- overfill
                        , (40, chooseInt (2, n + 2))         -- about filled
@@ -167,8 +164,8 @@ instance ( CoArbitrary a
     complexity <- arbitrarySizedIntegral
     generateGrammarIndex complexity ix
 
-generateGrammarIndex :: Arbitrary b => Int -> Index a b -> Gen (GrammarIndex a b)
-generateGrammarIndex 0 ix = pure $ GrammarIndex ix
+generateGrammarIndex :: Arbitrary e => Int -> Index a e -> Gen (GrammarBuilder a e)
+generateGrammarIndex 0 ix = pure $ GrammarBuilder ix
 generateGrammarIndex n ix = do
   b      <- arbitrary
   n      <- chooseInt (1, ixDepth $ view ix)
@@ -189,17 +186,17 @@ instance Arbitrary a => Arbitrary (IndexView a) where
 
 -- | QuickSpec
 
-newtype IxEvents b = IxEvents [b]
+newtype IxEvents e = IxEvents [e]
   deriving (Eq, Ord, Typeable)
 
-instance Arbitrary b => Arbitrary (IxEvents b) where
+instance Arbitrary e => Arbitrary (IxEvents e) where
   arbitrary = IxEvents <$> listOf arbitrary
 
 instance ( Ord a
          , Arbitrary a
-         , Arbitrary b
+         , Arbitrary e
          , CoArbitrary a
-         , CoArbitrary b) => Observe (IxEvents b) (IndexView a) (Index a b) where
+         , CoArbitrary e) => Observe (IxEvents e) (IndexView a) (Index a e) where
   observe (IxEvents es) ix = view $ insertL es ix
 
 ixSignature :: [Sig]

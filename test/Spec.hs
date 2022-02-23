@@ -46,9 +46,9 @@ prop_hfNewReturn f acc =
 -- | Properties of the connection between rewind and depth
 --   Note: Cannot rewind if (hfDepth hf == 1)
 prop_rewindWithDepth
-  :: ObservedIndex a b
+  :: ObservedBuilder a b
   -> Property
-prop_rewindWithDepth (ObservedIndex ix) =
+prop_rewindWithDepth (ObservedBuilder ix) =
   let v = view ix in
   ixDepth v >= 2 ==>
   forAll (frequency [ (20, chooseInt (ixDepth v, ixDepth v * 2))
@@ -67,18 +67,18 @@ prop_rewindWithDepth (ObservedIndex ix) =
 
 -- | Property that validates the HF data structure.
 prop_historyLengthLEDepth
-  :: ObservedIndex a b
+  :: ObservedBuilder a b
   -> Property
-prop_historyLengthLEDepth (ObservedIndex ix) =
+prop_historyLengthLEDepth (ObservedBuilder ix) =
   let v = view ix
    in property $ ixSize v <= ixDepth v
 
 -- | Relation between Rewind and Inverse
 prop_InsertRewindInverse
   :: (Show a, Show b, Arbitrary b, Eq a)
-  => ObservedIndex a b
+  => ObservedBuilder a b
   -> Property
-prop_InsertRewindInverse (ObservedIndex ix) =
+prop_InsertRewindInverse (ObservedBuilder ix) =
   let v = view ix
   -- rewind does not make sense for lesser depths.
    in ixDepth v >= 2 ==>
@@ -96,18 +96,18 @@ prop_InsertRewindInverse (ObservedIndex ix) =
 --   another implmentation is confirming.
 prop_InsertFolds
   :: (Eq a, Show a)
-  => ObservedIndex a b
+  => ObservedBuilder a b
   -> [b]
   -> Property
-prop_InsertFolds (ObservedIndex ix) bs =
+prop_InsertFolds (ObservedBuilder ix) bs =
   ixView (view (insertL bs ix)) ===
     foldl' (getFunction ix) (ixView $ view ix) bs
 
 prop_InsertHistoryLength
-  :: ObservedIndex a b
+  :: ObservedBuilder a b
   -> b
   -> Property
-prop_InsertHistoryLength (ObservedIndex ix) b =
+prop_InsertHistoryLength (ObservedBuilder ix) b =
   let v             = view ix
       initialLength = ixSize v
       finalLength   = ixSize . view $ insert b ix
