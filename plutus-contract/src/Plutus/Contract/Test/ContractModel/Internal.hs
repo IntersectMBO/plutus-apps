@@ -1646,19 +1646,6 @@ checkNoLockedFundsProof' run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
           in counterexample err (symLeq bal (bal' <> wig))
           QC..&&. counterexample err' (run smacts)
 
-checkNoLockedFundsProofLight
-  :: ContractModel model
-  => NoLockedFundsProofLight model
-  -> Property
-checkNoLockedFundsProofLight NoLockedFundsProofLight{nlfplMainStrategy = mainStrat} =
-  forAllDL anyActions_ $ \ (Actions as) ->
-    forAllUniqueDL (nextVarIdx as) (stateAfter $ Actions as) mainStrat $ \ (Actions as') ->
-      counterexample "Main run prop" (run (toStateModelActions $ Actions $ as ++ as'))
-  where
-    nextVarIdx as = 1 + maximum ([0] ++ [ i | Var i <- varOf <$> as ])
-    run = propRunActionsWithOptions' defaultCheckOptionsContractModel
-                                     defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
-
 -- | A whitelist entry tells you what final log entry prefixes
 -- are acceptable for a given error
 data Whitelist = Whitelist { errorPrefixes :: Set Text.Text }

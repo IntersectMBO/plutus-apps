@@ -192,11 +192,11 @@ checkPredicate = checkPredicateOptions defaultCheckOptions
 
 checkPredicateCoverage ::
        String -- ^ Descriptive name of the test
+    -> CoverageRef
     -> TracePredicate -- ^ The predicate to check
     -> EmulatorTrace ()
-    -> CoverageRef
     -> TestTree
-checkPredicateCoverage nm predicate action (CoverageRef ioref) =
+checkPredicateCoverage nm (CoverageRef ioref) predicate action =
   HUnit.testCaseSteps nm $ \step -> do
         checkPredicateInner defaultCheckOptions predicate action step (HUnit.assertBool nm) (\ rep -> modifyIORef ioref (rep<>))
 

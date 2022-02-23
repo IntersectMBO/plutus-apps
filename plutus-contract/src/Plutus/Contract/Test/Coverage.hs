@@ -4,6 +4,8 @@ module Plutus.Contract.Test.Coverage
   ( getInvokedEndpoints
   , getCoverageReport
   , CoverageRef(..)
+  , newCoverageRef
+  , readCoverageRef
   ) where
 
 import Data.Foldable
@@ -60,6 +62,12 @@ getCoverageReport es =
     return $ coverageReportFromLogMsg msg
 
 newtype CoverageRef = CoverageRef (IORef CoverageReport)
+
+newCoverageRef :: IO CoverageRef
+newCoverageRef = CoverageRef <$> newIORef mempty
+
+readCoverageRef :: CoverageRef -> IO CoverageReport
+readCoverageRef (CoverageRef ioref) = readIORef ioref
 
 -- TODO: Move this to plutus core to avoid orhpan instance
 instance NFData CovLoc where
