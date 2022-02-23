@@ -27,7 +27,7 @@ module Spec.GameStateMachine
   , prop_GameCrashTolerance
   ) where
 
-import Control.Exception
+import Control.Exception hiding (handle)
 import Control.Lens
 import Control.Monad
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
