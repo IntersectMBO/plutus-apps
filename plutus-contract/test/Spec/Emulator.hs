@@ -170,14 +170,14 @@ txnUpdateUtxo = property $ do
                 , Chain.SlotAdd _
                 ] -> i1 == txn && txi == txn
             _ -> False
-    checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert
+    checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 validTrace :: Property
 validTrace = property $ do
     (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = Trace.liftWallet wallet1 (submitTxn $ Right txn)
-    checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert
+    checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 validTrace2 :: Property
 validTrace2 = property $ do
@@ -187,7 +187,7 @@ validTrace2 = property $ do
             Trace.liftWallet wallet1 (submitTxn $ Right txn)
             Trace.liftWallet wallet1 (submitTxn $ Right txn)
         predicate = assertFailedTransaction (\_ _ _ -> True)
-    checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert
+    checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 invalidTrace :: Property
 invalidTrace = property $ do
@@ -202,7 +202,7 @@ invalidTrace = property $ do
                 , Chain.SlotAdd _
                 ] -> txn == invalidTxn
             _ -> False
-    checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert
+    checkPredicateInner options (assertChainEvents pred) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 invalidScript :: Property
 invalidScript = property $ do
@@ -240,7 +240,7 @@ invalidScript = property $ do
                 ] -> txn == invalidTxn
             _ -> False
 
-    checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn <> txFee invalidTxn)) trace Hedgehog.annotate Hedgehog.assert
+    checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn <> txFee invalidTxn)) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
     where
         failValidator :: Validator
         failValidator = mkValidatorScript $$(PlutusTx.compile [|| wrapValidator validator ||])
