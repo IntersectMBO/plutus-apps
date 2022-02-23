@@ -22,6 +22,7 @@ import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Plutus.PAB.Types (PABError)
 
 import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
+import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 
 runNoConfigCommand ::
     NoConfigCommand
@@ -37,6 +38,9 @@ main = do
     -- execute parsed pab command and handle errors on failure
     result <- Right <$> runNoConfigCommand cmd
     either handleError (const exitSuccess) result
+
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
 
     where
         handleError (err :: PABError) = do
