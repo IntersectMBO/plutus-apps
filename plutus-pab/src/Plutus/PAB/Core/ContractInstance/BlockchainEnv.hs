@@ -3,6 +3,7 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE RecordWildCards    #-}
 -- |
 module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
   startNodeClient
@@ -10,7 +11,8 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
   , processChainSyncEvent
   ) where
 
-import Cardano.Api (BlockInMode (..), ChainPoint (..), NetworkId)
+import Cardano.Api (BlockInMode (..), ChainPoint (..), ConsensusModeParams (CardanoModeParams), EpochSlots (..),
+                    LocalNodeConnectInfo (..), NetworkId, QueryInMode (QuerySystemStart), queryNodeLocalState)
 import Cardano.Api qualified as C
 import Cardano.Node.Types (NodeMode (..))
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
@@ -63,10 +65,21 @@ startNodeClient socket mode rollbackHistory slotConfig networkId resumePoint ins
         void $ MockClient.runChainSync socket slotConfig
             (\block slot -> handleSyncAction $ processMockBlock instancesState env block slot)
       AlonzoNode -> do
+        ensureSocket socket networkId
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
           (\block -> handleSyncAction $ processChainSyncEvent instancesState env block)
+
     pure env
+
+-- | Test the connection to the node socket.
+ensureSocket :: FilePath -> NetworkId -> IO ()
+ensureSocket localNodeSocketPath localNodeNetworkId =
+  let
+    localConsensusModeParams = CardanoModeParams $ EpochSlots 21600
+  in
+    void
+      $ queryNodeLocalState LocalNodeConnectInfo{..} Nothing QuerySystemStart
 
 -- | Deal with sync action failures from running this STM action. For now, we
 -- deal with them by simply calling `error`; i.e. the application exits.
