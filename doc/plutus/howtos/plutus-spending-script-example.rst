@@ -105,6 +105,7 @@ In this example, the script we are using always succeeds so we can use
 any datum hash. We calculate the script address as follows:
 
 .. code:: bash
+
    > cabal run exe:plutus-example
    > cardano-cli address build --payment-script-file generated-plutus-scripts/always-succeeds-txin.plutus  --testnet-magic 42
    > addr_test1wzeqkp6ne3xm6gz39l874va4ujgl4kr0e46pf3ey8xsu3jsgkpcj2
