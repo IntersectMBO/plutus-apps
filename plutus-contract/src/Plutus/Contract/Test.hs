@@ -33,6 +33,7 @@ module Plutus.Contract.Test(
     , assertOutcome
     , assertInstanceLog
     , assertNoFailedTransactions
+    , assertValidatedTransactionCount
     , assertFailedTransaction
     , assertHooks
     , assertResponses
@@ -602,6 +603,18 @@ assertNoFailedTransactions =
             let prettyTxFail (i, _, err, _) = pretty i <> colon <+> pretty err
             tell @(Doc Void) $ vsep ("Transactions failed to validate:" : fmap prettyTxFail xs)
             pure False
+
+-- | Assert that n transactions validated, and no transaction failed to validate.
+assertValidatedTransactionCount :: Int -> TracePredicate
+assertValidatedTransactionCount expected =
+    assertNoFailedTransactions
+    .&&.
+    (flip postMapM (L.generalize Folds.validatedTransactions) $ \xs ->
+        let actual = length xs - 1 in -- ignore the initial wallet distribution transaction
+        if actual == expected then pure True else do
+            tell @(Doc Void) $ "Unexpected number of validated transactions:" <+> pretty actual
+            pure False
+    )
 
 assertInstanceLog ::
     ContractInstanceTag

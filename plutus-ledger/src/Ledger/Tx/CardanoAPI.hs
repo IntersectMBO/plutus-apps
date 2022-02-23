@@ -597,7 +597,7 @@ fromCardanoValidityLowerBound (C.TxValidityLowerBound _ slotNo) = P.LowerBound (
 toCardanoValidityLowerBound :: P.LowerBound P.Slot -> Either ToCardanoError (C.TxValidityLowerBound C.AlonzoEra)
 toCardanoValidityLowerBound (P.LowerBound P.NegInf _) = pure C.TxValidityNoLowerBound
 toCardanoValidityLowerBound (P.LowerBound (P.Finite slotNo) closed)
-    = pure . C.TxValidityLowerBound C.ValidityLowerBoundInAlonzoEra . toCardanoSlotNo $ if closed then slotNo else slotNo + 1
+    = pure . C.TxValidityLowerBound C.ValidityLowerBoundInAlonzoEra . toCardanoSlotNo $ if slotNo < 0 then 0 else if closed then slotNo else slotNo + 1
 toCardanoValidityLowerBound (P.LowerBound P.PosInf _) = Left InvalidValidityRange
 
 fromCardanoValidityUpperBound :: C.TxValidityUpperBound era -> P.UpperBound P.Slot

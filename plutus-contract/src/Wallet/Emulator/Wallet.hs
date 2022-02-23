@@ -262,7 +262,6 @@ handleWallet = \case
         cTx' <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey tx'
         let txCTx = These tx' (Tx.SomeTx cTx' AlonzoEraInCardanoMode)
         logInfo $ FinishedBalancing txCTx
-        traceShowM cTx'
         pure txCTx
 
     walletAddSignatureH :: (Member (State WalletState) effs) => CardanoTx -> Eff effs CardanoTx
@@ -406,9 +405,15 @@ adjustBalanceWithMissingLovelace (neg, pos) = do
 
     (newNeg, newPos)
 
+-- | Split value into an ada-only and an non-ada-only value, making sure each has at least minAdaTxOut.
+splitOffAdaOnlyValue :: Value -> [Value]
+splitOffAdaOnlyValue vl = if Value.isAdaOnlyValue vl || ada < Ledger.minAdaTxOut then [vl] else [Ada.toValue ada, vl <> Ada.toValue (-ada)]
+    where
+        ada = Ada.fromValue vl - Ledger.minAdaTxOut
+
 addOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Tx -> Tx
-addOutput pk sk vl tx = tx & over Tx.outputs (pko :) where
-    pko = Tx.pubKeyTxOut vl pk sk
+addOutput pk sk vl tx = tx & over Tx.outputs (pkos ++) where
+    pkos = (\v -> Tx.pubKeyTxOut v pk sk) <$> splitOffAdaOnlyValue vl
 
 addCollateral
     :: ( Member (Error WAPI.WalletAPIError) effs
@@ -418,11 +423,13 @@ addCollateral
     -> Tx
     -> Eff effs Tx
 addCollateral mp vl tx = do
-    (spend, _) <- selectCoin (second (view Ledger.ciTxOutValue) <$> Map.toList mp) vl
+    (spend, _) <- selectCoin (filter (hasOnlyAda . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
     let addTxCollateral =
             let ins = Set.fromList (Tx.pubKeyTxIn . fst <$> spend)
             in over Tx.collateralInputs (Set.union ins)
     pure $ tx & addTxCollateral
+    where
+        hasOnlyAda v = v == (Ada.toValue . Ada.fromValue $ v)
 
 -- | @addInputs mp pk vl tx@ selects transaction outputs worth at least
 --   @vl@ from the UTXO map @mp@ and adds them as inputs to @tx@. A public

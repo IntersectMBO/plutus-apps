@@ -46,7 +46,8 @@ module Ledger.Generators(
     splitVal,
     validateMockchain,
     signAll,
-    knownPaymentPublicKeys
+    knownPaymentPublicKeys,
+    someTokenValue
     ) where
 
 import Cardano.Api qualified as C
@@ -215,7 +216,7 @@ genValidTransactionSpending' g feeCfg ins totalVal = do
     mintTokenName <- genTokenName
     let mintValue = if mintAmount == 0
                        then Nothing
-                       else Just $ Value.singleton (scriptCurrencySymbol alwaysSucceedPolicy) mintTokenName mintAmount
+                       else Just $ someTokenValue mintTokenName mintAmount
         fee' = calcFees feeCfg 0
         numOut = Set.size (gmPubKeys g) - 1
         totalValAda = Ada.fromValue totalVal
@@ -250,6 +251,9 @@ genValidTransactionSpending' g feeCfg ins totalVal = do
 
 alwaysSucceedPolicy :: MintingPolicy
 alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
+
+someTokenValue :: TokenName -> Integer -> Value
+someTokenValue = Value.singleton (scriptCurrencySymbol alwaysSucceedPolicy)
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.

@@ -284,7 +284,7 @@ emulatorStateInitialDist mp = emulatorStatePool [This tx] where
     tx = Tx
             { txInputs = mempty
             , txCollateral = mempty
-            , txOutputs = uncurry (flip pubKeyHashTxOut . unPaymentPubKeyHash) <$> Map.toList mp
+            , txOutputs = Map.toList mp >>= mkOutputs
             , txMint = foldMap snd $ Map.toList mp
             , txFee = mempty
             , txValidRange = WAPI.defaultSlotRange
@@ -293,6 +293,8 @@ emulatorStateInitialDist mp = emulatorStatePool [This tx] where
             , txRedeemers = mempty
             , txData = mempty
             }
+    mkOutputs (key, vl) = mkOutput key <$> Wallet.splitOffAdaOnlyValue vl
+    mkOutput key vl = pubKeyHashTxOut vl (unPaymentPubKeyHash key)
 
 type MultiAgentEffs =
     '[ State EmulatorState
