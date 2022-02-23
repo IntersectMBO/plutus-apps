@@ -20,7 +20,7 @@ import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
-import Ledger (Block, Slot (..), TxId (..))
+import Ledger (Address (..), Block, Slot (..), TxId (..))
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                              emptyBlockchainEnv)
@@ -188,9 +188,23 @@ processBlock instancesState header env transactions era = do
             ciTxs = catMaybes (either (const Nothing) Just . fromCardanoTx era <$> transactions)
 
         instEnv <- S.instancesClientEnv instancesState
-        updateInstances (indexBlock ciTxs) instEnv
+        updateInstances (indexBlockAgnosticToStake ciTxs) instEnv
 
         updateTransactionState tip env (txEvent <$> ciTxs)
+
+-- | Index the block both by the address and by the address without its stake credential.
+--   This makes it possible to watch any payments to the payment credential, regardless of
+--   the stake credential.
+indexBlockAgnosticToStake :: [ChainIndexTx] -> IndexedBlock
+indexBlockAgnosticToStake ciTxs =
+  let
+    discardStake (Address credential _) = Address credential Nothing
+    ib = indexBlock ciTxs
+    produced = ibUtxoProduced ib
+    producedWithoutStake = Map.mapKeys discardStake produced
+  in
+    ib {ibUtxoProduced = produced `Map.union` producedWithoutStake}
+
 
 -- | For the given transactions, perform the updates in the 'TxIdState', and
 -- also record that a new block has been processed.
