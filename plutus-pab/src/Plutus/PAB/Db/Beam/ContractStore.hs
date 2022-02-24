@@ -83,7 +83,7 @@ mkContracts xs =
                       . encodeUtf8Builder
                       . _contractInstanceContractId
                       $ ci
-          wallet <- fmap Wallet . either (const Nothing) Just . Wallet.fromBase16 . _contractInstanceWallet $ ci
+          wallet <- fmap (Wallet Nothing) . either (const Nothing) Just . Wallet.fromBase16 . _contractInstanceWallet $ ci
           return ( ciId
                  , ContractActivationArgs contractId (Just wallet)
                  )

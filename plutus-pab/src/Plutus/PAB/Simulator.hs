@@ -178,7 +178,7 @@ initialState :: forall t. IO (SimulatorState t)
 initialState = do
     let initialDistribution = Map.fromList $ fmap (, Ada.adaValueOf 100_000) knownWallets
         Emulator.EmulatorState{Emulator._chainState} = Emulator.initialState (def & Emulator.initialChainState .~ Left initialDistribution)
-        initialWallets = Map.fromList $ fmap (\w -> (Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId w, initialAgentState w)) CW.knownMockWallets
+        initialWallets = Map.fromList $ fmap (\w -> (Wallet.toMockWallet w, initialAgentState w)) CW.knownMockWallets
     STM.atomically $
         SimulatorState
             <$> STM.newTQueue

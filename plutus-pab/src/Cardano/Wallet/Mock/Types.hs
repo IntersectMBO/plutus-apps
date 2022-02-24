@@ -70,7 +70,7 @@ data WalletInfo =
     deriving stock (Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
-type Wallets = Map Wallet WalletState
+type Wallets = Map WalletId WalletState
 
 fromWalletState :: WalletState -> WalletInfo
 fromWalletState WalletState{_mockWallet} = WalletInfo{wiWallet, wiPaymentPubKeyHash} where

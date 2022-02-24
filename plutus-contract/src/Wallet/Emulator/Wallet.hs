@@ -86,8 +86,14 @@ instance Show SigningProcess where
 
 -- | A wallet identifier
 data Wallet = Wallet { prettyWalletName :: Maybe String , getWalletId :: WalletId }
-    deriving (Eq, Ord, Generic)
+    deriving (Generic)
     deriving anyclass (ToJSON, FromJSON, ToJSONKey)
+
+instance Eq Wallet where
+  w == w' = getWalletId w == getWalletId w'
+
+instance Ord Wallet where
+  compare w w' = compare (getWalletId w) (getWalletId w')
 
 instance ToHttpApiData Wallet where
   toUrlPiece = toUrlPiece . getWalletId

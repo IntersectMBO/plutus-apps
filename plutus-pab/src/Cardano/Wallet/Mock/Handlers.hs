@@ -115,22 +115,22 @@ handleMultiWallet :: forall m effs.
     => FeeConfig
     -> MultiWalletEffect ~> Eff effs
 handleMultiWallet feeCfg = \case
-    MultiWallet wallet action -> do
+    MultiWallet (Wallet.Wallet _ walletId) action -> do
         wallets <- get @Wallets
-        case Map.lookup wallet wallets of
+        case Map.lookup walletId wallets of
             Just walletState -> do
                 (x, newState) <- runState walletState
                     $ action
                         & raiseEnd
                         & interpret (Wallet.handleWallet feeCfg)
                         & interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
-                put @Wallets (wallets & at wallet ?~ newState)
+                put @Wallets (wallets & at walletId ?~ newState)
                 pure x
             Nothing -> throwError $ WAPI.OtherError "Wallet not found"
     CreateWallet funds -> do
         wallets <- get @Wallets
         mockWallet <- newWallet
-        let walletId = Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId mockWallet
+        let walletId = Wallet.WalletId (CW.mwWalletId mockWallet)
             wallets' = Map.insert walletId (Wallet.fromMockWallet mockWallet) wallets
             pkh = CW.paymentPubKeyHash mockWallet
         put wallets'
@@ -142,10 +142,10 @@ handleMultiWallet feeCfg = \case
             interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
             $ interpret (Wallet.handleWallet feeCfg)
             $ distributeNewWalletFunds funds pkh
-        return $ WalletInfo{wiWallet = walletId, wiPaymentPubKeyHash = pkh}
+        return $ WalletInfo{wiWallet = Wallet.toMockWallet mockWallet, wiPaymentPubKeyHash = pkh}
     GetWalletInfo wllt -> do
         wallets <- get @Wallets
-        return $ fmap fromWalletState $ Map.lookup (Wallet.Wallet wllt) wallets
+        return $ fmap fromWalletState $ Map.lookup wllt wallets
 
 -- | Process wallet effects. Retain state and yield HTTP400 on error
 --   or set new state on success.

@@ -32,7 +32,7 @@ totalFunds :: Wallet -> ClientM Value
 sign :: Wallet -> Tx -> ClientM Tx
 (createWallet, submitTxn, ownPaymentPublicKey, balanceTx, totalFunds, sign) =
   ( createWallet_
-  , \(Wallet wid) tx -> void (submitTxn_ wid tx)
+  , \(Wallet _ wid) tx -> void (submitTxn_ wid tx)
   , ownPaymentPublicKey_ . getWalletId
   , balanceTx_ . getWalletId
   , totalFunds_ . getWalletId

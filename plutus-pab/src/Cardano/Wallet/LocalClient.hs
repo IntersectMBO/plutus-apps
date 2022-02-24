@@ -77,7 +77,7 @@ handleWalletClient
     -> Wallet
     -> WalletEffect
     ~> Eff effs
-handleWalletClient config (Wallet (WalletId walletId)) event = do
+handleWalletClient config (Wallet _ (WalletId walletId)) event = do
     let NetworkIdWrapper networkId = pscNetworkId config
     let mpassphrase = pscPassphrase config
     clientEnv <- ask @ClientEnv
