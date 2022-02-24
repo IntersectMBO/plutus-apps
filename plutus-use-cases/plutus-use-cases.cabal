@@ -34,6 +34,8 @@ library
         Plutus.Contracts.ErrorHandling
         Plutus.Contracts.Escrow
         Plutus.Contracts.SimpleEscrow
+        Plutus.Contracts.Tutorial.Escrow
+        Plutus.Contracts.Tutorial.EscrowStrict
         Plutus.Contracts.Future
         Plutus.Contracts.Game
         Plutus.Contracts.GameStateMachine
@@ -110,6 +112,10 @@ test-suite plutus-use-cases-test
         Spec.Escrow
         Spec.Escrow.Endpoints
         Spec.SimpleEscrow
+        Spec.Tutorial.Escrow
+        Spec.Tutorial.Escrow1
+        Spec.Tutorial.Escrow2
+        Spec.Tutorial.Escrow3
         Spec.Future
         Spec.Game
         Spec.GameStateMachine

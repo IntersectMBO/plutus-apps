@@ -13,3 +13,5 @@ Tutorials
    basic-validators
    basic-minting-policies
    contract-testing
+   contract-models
+   
