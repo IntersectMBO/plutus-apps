@@ -22,7 +22,7 @@ module Wallet.Emulator.Wallet where
 
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
-import Control.Monad (foldM)
+import Control.Monad (foldM, (<=<))
 import Control.Monad.Freer (Eff, Member, Members, interpret, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
@@ -85,13 +85,18 @@ instance Show SigningProcess where
     show = const "SigningProcess <...>"
 
 -- | A wallet identifier
-newtype Wallet = Wallet { getWalletId :: WalletId }
+data Wallet = Wallet { prettyWalletName :: Maybe String , getWalletId :: WalletId }
     deriving (Eq, Ord, Generic)
-    deriving newtype (ToHttpApiData, FromHttpApiData)
     deriving anyclass (ToJSON, FromJSON, ToJSONKey)
 
+instance ToHttpApiData Wallet where
+  toUrlPiece = toUrlPiece . getWalletId
+
+instance FromHttpApiData Wallet where
+  parseUrlPiece = pure . Wallet Nothing <=< parseUrlPiece
+
 toMockWallet :: MockWallet -> Wallet
-toMockWallet = Wallet . WalletId . CW.mwWalletId
+toMockWallet mw = Wallet (CW.mwPrintAs mw) . WalletId . CW.mwWalletId $ mw
 
 knownWallets :: [Wallet]
 knownWallets = toMockWallet <$> CW.knownMockWallets
@@ -103,10 +108,12 @@ fromWalletNumber :: WalletNumber -> Wallet
 fromWalletNumber = toMockWallet . CW.fromWalletNumber
 
 instance Show Wallet where
-    showsPrec p (Wallet i) = showParen (p > 9) $ showString "Wallet " . shows i
+    showsPrec p (Wallet Nothing i)  = showParen (p > 9) $ showString "Wallet " . shows i
+    showsPrec p (Wallet (Just s) _) = showParen (p > 9) $ showString ("Wallet " ++ s)
 
 instance Pretty Wallet where
-    pretty (Wallet i) = "W" <> pretty (T.take 7 $ toBase16 i)
+    pretty (Wallet Nothing i)  = "W" <> pretty (T.take 7 $ toBase16 i)
+    pretty (Wallet (Just s) _) = "W[" <> fromString s <> "]"
 
 deriving anyclass instance OpenApi.ToSchema Wallet
 deriving anyclass instance OpenApi.ToSchema Cardano.Wallet.WalletId
@@ -135,7 +142,7 @@ fromBase16 s = bimap show WalletId (fromText s)
 
 -- | The 'MockWallet' whose ID is the given wallet ID (if it exists)
 walletToMockWallet :: Wallet -> Maybe MockWallet
-walletToMockWallet (Wallet wid) = find ((==) wid . WalletId . CW.mwWalletId) CW.knownMockWallets
+walletToMockWallet (Wallet _ wid) = find ((==) wid . WalletId . CW.mwWalletId) CW.knownMockWallets
 
 -- | The public key of a mock wallet.  (Fails if the wallet is not a mock wallet).
 mockWalletPaymentPubKey :: Wallet -> PaymentPubKey

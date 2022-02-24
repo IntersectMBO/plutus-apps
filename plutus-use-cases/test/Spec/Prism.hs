@@ -123,7 +123,7 @@ doRevoke Revoked = Revoked
 doRevoke Issued  = Revoked
 
 waitSlots :: Integer
-waitSlots = 10
+waitSlots = 9
 
 users :: [Wallet]
 users = [user, w4]
@@ -133,14 +133,14 @@ deriving instance Show (ContractInstanceKey PrismModel w s e params)
 
 instance ContractModel PrismModel where
 
-    data Action PrismModel = Delay | Issue Wallet | Revoke Wallet | Call Wallet
+    data Action PrismModel = Issue Wallet | Revoke Wallet | Call Wallet
         deriving (Eq, Show)
 
     data ContractInstanceKey PrismModel w s e params where
         MirrorH  ::           ContractInstanceKey PrismModel () C.MirrorSchema            C.MirrorError ()
         UserH    :: Wallet -> ContractInstanceKey PrismModel () C.STOSubscriberSchema     C.UnlockError ()
 
-    arbitraryAction _ = QC.oneof [pure Delay, genUser Revoke, genUser Issue,
+    arbitraryAction _ = QC.oneof [genUser Revoke, genUser Issue,
                                   genUser Call]
         where genUser f = f <$> QC.elements users
 
@@ -160,9 +160,10 @@ instance ContractModel PrismModel where
     nextState cmd = do
         wait waitSlots
         case cmd of
-            Delay     -> wait 1
             Revoke w  -> isIssued w %= doRevoke
-            Issue w   -> isIssued w .= Issued
+            Issue w   -> do
+              wait 1
+              isIssued w .= Issued
             Call w    -> do
               iss  <- (== Issued)   <$> viewContractState (isIssued w)
               pend <- (== STOReady) <$> viewContractState (stoState w)
@@ -173,15 +174,13 @@ instance ContractModel PrismModel where
                 deposit w stoValue
 
     perform handle _ _ cmd = case cmd of
-        Delay     -> wrap $ delay 1
         Issue w   -> wrap $ delay 1 >> Trace.callEndpoint @"issue"   (handle MirrorH) CredentialOwnerReference{coTokenName=kyc, coOwner=w}
         Revoke w  -> wrap $ Trace.callEndpoint @"revoke"             (handle MirrorH) CredentialOwnerReference{coTokenName=kyc, coOwner=w}
         Call w    -> wrap $ Trace.callEndpoint @"sto"                (handle $ UserH w) stoSubscriber
         where                     -- v Wait a generous amount of blocks between calls
             wrap m   = () <$ m <* delay waitSlots
 
-    shrinkAction _ Delay = []
-    shrinkAction _ _     = [Delay]
+    shrinkAction _ _ = []
 
     monitoring (_, s) _ = counterexample (show s)
 

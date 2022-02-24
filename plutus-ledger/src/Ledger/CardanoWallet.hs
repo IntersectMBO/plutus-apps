@@ -62,8 +62,8 @@ data MockWallet =
         { mwWalletId   :: CW.WalletId
         , mwPaymentKey :: MockPrivateKey
         , mwStakeKey   :: Maybe MockPrivateKey
-        }
-        deriving Show
+        , mwPrintAs    :: Maybe String
+        } deriving Show
 
 -- | Wrapper for config files and APIs
 newtype WalletNumber = WalletNumber { getWallet :: Integer }
@@ -72,7 +72,7 @@ newtype WalletNumber = WalletNumber { getWallet :: Integer }
     deriving anyclass (FromJSON, ToJSON)
 
 fromWalletNumber :: WalletNumber -> MockWallet
-fromWalletNumber (WalletNumber i) = fromSeed' (BSL.toStrict $ serialise i)
+fromWalletNumber (WalletNumber i) = (fromSeed' (BSL.toStrict $ serialise i)) { mwPrintAs = Just (show i) }
 
 fromSeed :: BS.ByteString -> Crypto.Passphrase -> MockWallet
 fromSeed bs passPhrase = fromSeedInternal (flip Crypto.generateFromSeed passPhrase) bs
@@ -81,7 +81,7 @@ fromSeed' :: BS.ByteString -> MockWallet
 fromSeed' = fromSeedInternal Crypto.generateFromSeed'
 
 fromSeedInternal :: (BS.ByteString -> Crypto.XPrv) -> BS.ByteString -> MockWallet
-fromSeedInternal seedGen bs = MockWallet{mwWalletId, mwPaymentKey, mwStakeKey} where
+fromSeedInternal seedGen bs = MockWallet{mwWalletId, mwPaymentKey, mwStakeKey, mwPrintAs = Nothing} where
     missing = max 0 (32 - BS.length bs)
     bs' = bs <> BS.replicate missing 0
     k = seedGen bs'

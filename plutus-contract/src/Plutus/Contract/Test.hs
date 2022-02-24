@@ -41,6 +41,7 @@ module Plutus.Contract.Test(
     , assertUserLog
     , assertBlockchain
     , assertChainEvents
+    , assertChainEvents'
     , assertAccumState
     , Shrinking(..)
     , assertResumableResult
@@ -603,11 +604,16 @@ assertBlockchain predicate = TracePredicate $
 
 -- | An assertion about the chain events
 assertChainEvents :: ([ChainEvent] -> Bool) -> TracePredicate
-assertChainEvents predicate = TracePredicate $
+assertChainEvents = assertChainEvents' (const "")
+
+-- | An assertion about the chain events with a custom error message
+assertChainEvents' :: ([ChainEvent] -> String) -> ([ChainEvent] -> Bool) -> TracePredicate
+assertChainEvents' logMsg predicate = TracePredicate $
     flip postMapM (L.generalize Folds.chainEvents) $ \evts -> do
         let passing = predicate evts
         unless passing $ do
-            tell @(Doc Void) $ "Chain events do not match predicate."
+            let msg = logMsg evts
+            tell @(Doc Void) $ "Chain events do not match predicate" <> if null msg then "" else ":" <+> fromString msg
             traverse_ (tell @(Doc Void) . pretty) evts
         pure passing
 
