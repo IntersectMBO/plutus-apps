@@ -22,7 +22,7 @@ import Data.Sequence (Seq)
 import Data.Set qualified as S
 import Generators qualified as Gen
 import Ledger (outValue)
-import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlock, unspentTxOutFromRef,
+import Plutus.ChainIndex (ChainIndexLog, Page (pageItems), PageQuery (PageQuery), appendBlocks, unspentTxOutFromRef,
                           utxoSetWithCurrency)
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
@@ -61,7 +61,7 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlock (Block tip (map (, def) block))
+    appendBlocks [(Block tip (map (, def) block))]
     utxoSetFromBlockAddrs block
 
   case result of
@@ -77,7 +77,7 @@ eachTxOutRefAtAddressShouldHaveTxOutSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlock (Block tip (map (, def) block))
+    appendBlocks [(Block tip (map (, def) block))]
     utxos <- utxoSetFromBlockAddrs block
     traverse unspentTxOutFromRef (concat utxos)
 
@@ -99,7 +99,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlock (Block tip (map (, def) block))
+    appendBlocks [(Block tip (map (, def) block))]
 
     forM assetClasses $ \ac -> do
       let pq = PageQuery 200 Nothing
@@ -119,7 +119,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
 
   result <- liftIO $ runEmulatedChainIndex mempty $ do
     -- Append the generated block in the chain index
-    appendBlock (Block tip (map (, def) block))
+    appendBlocks [(Block tip (map (, def) block))]
 
     let pq = PageQuery 200 Nothing
     UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq (AssetClass ("", ""))

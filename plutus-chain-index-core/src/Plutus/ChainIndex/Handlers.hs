@@ -278,7 +278,6 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlock block -> appendBlocks [block]
     AppendBlocks blocks -> appendBlocks blocks
     Rollback tip_ -> do
         oldIndex <- get @ChainIndexState
