@@ -1,5 +1,7 @@
 import Cardano.Prelude
 
+import GHC.IO.Encoding
+
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -7,7 +9,8 @@ import Test.PlutusExample.Plutus
 import Test.PlutusExample.ScriptData
 
 main :: IO ()
-main =
+main = do
+  setLocaleEncoding utf8
   defaultMain plutusExampleTests
 
 plutusExampleTests :: TestTree
