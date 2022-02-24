@@ -30,13 +30,15 @@ import Data.Foldable (for_)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text.Extras (tshow)
 import Data.Yaml (decodeFileThrow)
-import Plutus.Monitoring.Util (PrettyObject (..), convertLog)
+import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions)
 import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
-import Plutus.PAB.Monitoring.PABLogMsg (AppMsg (..))
-import Plutus.PAB.Run.Cli
+import Plutus.PAB.Monitoring.PABLogMsg (AppMsg)
+import Plutus.PAB.Run.Cli (ConfigCommandArgs (ConfigCommandArgs), ccaAvailability, ccaLoggingConfig, ccaPABConfig,
+                           ccaStorageBackend, ccaTrace, runConfigCommand)
 import Plutus.PAB.Run.CommandParser
-import Plutus.PAB.Types (Config (..), DevelopmentOptions (..), PABError (MissingConfigFileOption))
+import Plutus.PAB.Types (Config (Config), DevelopmentOptions (pabResumeFrom, pabRollbackHistory),
+                         PABError (MissingConfigFileOption), developmentOptions, nodeServerConfig)
 import Prettyprinter (Pretty (pretty))
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitWith)
@@ -92,25 +94,35 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resum
             Nothing -> pure $ Left MissingConfigFileOption
             Just p  -> do Right <$> (liftIO $ decodeFileThrow p)
 
-    let mkArgs config@Config{nodeServerConfig, developmentOptions} = ConfigCommandArgs
+    let mkNodeServerConfig nodeServerConfig =
+            nodeServerConfig
+                { pscPassphrase = passphrase <|> pscPassphrase nodeServerConfig
+                }
+        mkDevOpts developmentOptions =
+            developmentOptions
+                { pabRollbackHistory = rollbackHistory
+                                   <|> pabRollbackHistory developmentOptions
+                , pabResumeFrom = max resumeFrom (pabResumeFrom developmentOptions)
+
+                }
+        mkArgs config@Config{nodeServerConfig, developmentOptions} =
+            ConfigCommandArgs
                 { ccaTrace = convertLog PrettyObject trace
                 , ccaLoggingConfig = logConfig
-                , ccaPABConfig = config { nodeServerConfig   = nodeServerConfig   { pscPassphrase      = passphrase      <|> pscPassphrase nodeServerConfig }
-                                        , developmentOptions = developmentOptions { pabRollbackHistory = rollbackHistory <|> pabRollbackHistory developmentOptions
-                                                                                  , pabResumeFrom      = max resumeFrom (pabResumeFrom developmentOptions) }
-                                        }
+                , ccaPABConfig =
+                    config { nodeServerConfig = mkNodeServerConfig nodeServerConfig
+                           , developmentOptions = mkDevOpts developmentOptions
+                           }
                 , ccaAvailability = serviceAvailability
                 , ccaStorageBackend = storageBackend
                 }
 
-    let run config = runConfigCommand userContractHandler (mkArgs config) cmd
-
     -- execute parsed pab command and handle errors on faliure
-    result <- sequence (run <$> pabConfig)
+    result <- sequence (run . mkArgs <$> pabConfig)
     either handleError (const $ pure ()) result
 
-        where
-
-            handleError (err :: PABError) = do
-                runStdoutLoggingT $ (logErrorN . tshow . pretty) err
-                exitWith (ExitFailure 1)
+    where
+        run config = runConfigCommand userContractHandler config cmd
+        handleError (err :: PABError) = do
+            runStdoutLoggingT $ (logErrorN . tshow . pretty) err
+            exitWith (ExitFailure 1)
