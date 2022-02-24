@@ -24,7 +24,10 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype Wallet = Wallet { getWalletId :: String }
+newtype Wallet = Wallet
+  { prettyWalletName :: Maybe String
+  , getWalletId :: String
+  }
 
 derive instance Eq Wallet
 
@@ -34,11 +37,18 @@ instance Show Wallet where
 instance EncodeJson Wallet where
   encodeJson = defer \_ -> E.encode $ unwrap >$<
     ( E.record
-        { getWalletId: E.value :: _ String }
+        { prettyWalletName: (E.maybe E.value) :: _ (Maybe String)
+        , getWalletId: E.value :: _ String
+        }
     )
 
 instance DecodeJson Wallet where
-  decodeJson = defer \_ -> D.decode $ (Wallet <$> D.record "Wallet" { getWalletId: D.value :: _ String })
+  decodeJson = defer \_ -> D.decode $
+    ( Wallet <$> D.record "Wallet"
+        { prettyWalletName: (D.maybe D.value) :: _ (Maybe String)
+        , getWalletId: D.value :: _ String
+        }
+    )
 
 derive instance Generic Wallet _
 
@@ -46,7 +56,7 @@ derive instance Newtype Wallet _
 
 --------------------------------------------------------------------------------
 
-_Wallet :: Iso' Wallet { getWalletId :: String }
+_Wallet :: Iso' Wallet { prettyWalletName :: Maybe String, getWalletId :: String }
 _Wallet = _Newtype
 
 --------------------------------------------------------------------------------
