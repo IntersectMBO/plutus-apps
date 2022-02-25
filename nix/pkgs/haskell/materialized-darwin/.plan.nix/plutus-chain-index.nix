@@ -59,6 +59,7 @@
         buildable = true;
         modules = [
           "Plutus/ChainIndex/App"
+          "Plutus/ChainIndex/Blocks"
           "Plutus/ChainIndex/CommandLine"
           "Plutus/ChainIndex/Config"
           "Plutus/ChainIndex/Lib"
