@@ -12,7 +12,7 @@ module Plutus.ChainIndex.SyncStats where
 
 import Cardano.BM.Tracing (ToObject)
 import Control.Concurrent (threadDelay)
-import Control.Concurrent.STM (TChan, atomically, dupTChan, tryReadTChan)
+import Control.Concurrent.STM (TChan, atomically, dupTChan)
 import Control.Monad.Freer (Eff, LastMember, Member)
 import Control.Monad.Freer.Extras (LogMsg, logInfo, logWarn)
 import Control.Monad.IO.Class (liftIO)
@@ -22,7 +22,7 @@ import GHC.Generics (Generic)
 import Ledger (Slot (Slot))
 import Plutus.ChainIndex (Point (PointAtGenesis), tipAsPoint)
 import Plutus.ChainIndex qualified as CI
-import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward))
+import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward), foldTChanUntilEmpty)
 import Prettyprinter (Pretty (pretty), comma, viaShow, (<+>))
 import Text.Printf (printf)
 
@@ -124,17 +124,6 @@ getSyncStateFromStats (SyncStats _ _ chainSyncPoint nodePoint) =
         (CI.Point (Slot chainSyncSlot) _, CI.Point (Slot nodeSlot) _) ->
             let pct = ((100 :: Double) * fromIntegral chainSyncSlot) / fromIntegral nodeSlot
              in Syncing pct
-
--- | Read all elements from the 'TChan' until it is empty and combine them with
--- it's 'Monoid' instance.
-foldTChanUntilEmpty :: (Monoid a) => TChan a -> IO a
-foldTChanUntilEmpty chan =
-    let go combined = do
-            elementM <- atomically $ tryReadTChan chan
-            case elementM of
-              Nothing      -> pure combined
-              Just element -> go (combined <> element)
-     in go mempty
 
 convertEventToSyncStats :: ChainSyncEvent -> SyncStats
 convertEventToSyncStats (RollForward (CI.Block chainSyncTip _) nodeTip) =
