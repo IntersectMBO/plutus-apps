@@ -23,7 +23,7 @@ batchSize = 100
 
 -- | 30s
 period :: Int
-period = 30_000_000
+period = 5_000_000
 
 processBlockChan :: RunRequirements -> BlocksChan -> IO ()
 processBlockChan runReq blocksChan = void $ do
@@ -33,5 +33,6 @@ processBlockChan runReq blocksChan = void $ do
     go chan = do
       liftIO $ threadDelay period
       blocks :: [CI.ChainSyncBlock] <- liftIO $ readNFromTChan batchSize chan
+      liftIO $ print $ show $ length blocks
       void $ runChainIndexDuringSync runReq $ appendBlocks blocks
       go chan
