@@ -222,6 +222,7 @@ test-suite plutus-pab-test-light
         hedgehog -any,
         plutus-contract -any,
         plutus-pab,
+        plutus-ledger -any,
         plutus-ledger-constraints -any,
         plutus-tx -any,
         quickcheck-instances -any,
