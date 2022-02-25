@@ -21,7 +21,7 @@ import Cardano.BM.Configuration.Model qualified as CM
 
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.BM.Trace (Trace)
-import Control.Concurrent.Async (wait, withAsync)
+import Control.Concurrent.Async (withAsync)
 import Control.Concurrent.STM.TChan (newBroadcastTChanIO)
 import Plutus.ChainIndex.Blocks (processBlockChan)
 import Plutus.ChainIndex.CommandLine (AppConfig (AppConfig, acCLIConfigOverrides, acCommand, acConfigPath, acLogConfigPath, acMinLogLevel),
