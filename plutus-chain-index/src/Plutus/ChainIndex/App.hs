@@ -89,14 +89,18 @@ runMain logConfig config = do
 
     putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config
     syncChainIndex config runReq syncHandler
+    putStrLn $ "setup trace"
 
     (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
-    withAsync (runLogEffects (convertLog PrettyObject trace) $ logProgress syncStatsChan) wait
-    withAsync (processBlockChan runReq blocksChan) wait
+    putStrLn $ "log progress"
+    withAsync (runLogEffects (convertLog PrettyObject trace) $ logProgress syncStatsChan) $ \_ -> do
+      putStrLn $ "starting processBlockChan"
+      withAsync (processBlockChan runReq blocksChan) $ \_ -> do
+        putStrLn $ "started processBlockChan"
 
-    let port = show (Config.cicPort config)
-    putStrLn $ "Starting webserver on port " <> port
-    putStrLn $ "A Swagger UI for the endpoints are available at "
-            <> "http://localhost:" <> port <> "/swagger/swagger-ui"
-    Server.serveChainIndexQueryServer (Config.cicPort config) runReq
+        let port = show (Config.cicPort config)
+        putStrLn $ "Starting webserver on port " <> port
+        putStrLn $ "A Swagger UI for the endpoints are available at "
+                <> "http://localhost:" <> port <> "/swagger/swagger-ui"
+        Server.serveChainIndexQueryServer (Config.cicPort config) runReq
 

@@ -19,16 +19,16 @@ import Plutus.ChainIndex.Effects (appendBlocks)
 import Plutus.ChainIndex.Lib (BlocksChan, RunRequirements, readNFromTChan, runChainIndexDuringSync)
 
 batchSize :: Int
-batchSize = 100
+batchSize = 10
 
 -- | 30s
 period :: Int
-period = 5_000_000
+period = 10_000_000
 
 processBlockChan :: RunRequirements -> BlocksChan -> IO ()
 processBlockChan runReq blocksChan = void $ do
-    chan <- liftIO $ atomically $ dupTChan blocksChan
-    go chan
+  chan <- liftIO $ atomically $ dupTChan blocksChan
+  go chan
   where
     go chan = do
       liftIO $ threadDelay period
