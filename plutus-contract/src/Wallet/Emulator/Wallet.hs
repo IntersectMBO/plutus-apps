@@ -46,8 +46,9 @@ import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
-               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash, StakePubKey, Tx (txFee, txMint),
-               TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (getIndex), ValidatorHash, Value)
+               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PrivateKey, PubKeyHash, SomeCardanoApiTx,
+               StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (getIndex), ValidatorHash,
+               Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -57,7 +58,7 @@ import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (evaluateMinFee, fromPlutusTx)
+import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusTx)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -74,7 +75,7 @@ import Wallet.Effects (NodeClientEffect,
                        publishTx)
 import Wallet.Emulator.Chain (ChainState (_index))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
-                                    TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SubmittingTx))
+                                    TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SigningTx, SubmittingTx))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
 
 import Debug.Trace
@@ -255,19 +256,17 @@ handleWallet = \case
         -- Use a large value otherwise `evaluateMinFee` calculates a value 1 or 2 lovelace too few
         tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ Ada.lovelaceValueOf 1000000)
         let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
-        privKey <- CW.paymentPrivateKey . _mockWallet <$> get
-        cTx <- either (throwError . WAPI.ToCardanoError . traceShowId) pure $ fromPlutusTx requiredSigners privKey tx
-        let theFee = evaluateMinFee cTx
+        theFee <- either (throwError . WAPI.ToCardanoError) pure $ evaluateTransactionFee requiredSigners tx
         tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-        cTx' <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners privKey tx'
-        let txCTx = These tx' (Tx.SomeTx cTx' AlonzoEraInCardanoMode)
+        cTx <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners tx'
+        let txCTx = These tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
         logInfo $ FinishedBalancing txCTx
         pure txCTx
 
-    walletAddSignatureH :: (Member (State WalletState) effs) => CardanoTx -> Eff effs CardanoTx
-    walletAddSignatureH (That _) = error "Wallet.Emulator.Wallet.handleWallet: Expecting a mock tx, not an Alonzo tx when adding a signature."
-    walletAddSignatureH (This tx) = This <$> handleAddSignature tx
-    walletAddSignatureH (These tx ctx) = (`These` ctx) <$> handleAddSignature tx
+    walletAddSignatureH :: (Member (State WalletState) effs, Member (LogMsg TxBalanceMsg) effs) => CardanoTx -> Eff effs CardanoTx
+    walletAddSignatureH txCTx = do
+        logInfo $ SigningTx txCTx
+        handleAddSignature txCTx
 
     totalFundsH :: (Member (State WalletState) effs, Member ChainIndexQueryEffect effs) => Eff effs Value
     totalFundsH = foldMap (view Ledger.ciTxOutValue) <$> (get >>= ownOutputs)
@@ -289,11 +288,16 @@ handleWallet = \case
 
 handleAddSignature ::
     Member (State WalletState) effs
-    => Tx
-    -> Eff effs Tx
+    => CardanoTx
+    -> Eff effs CardanoTx
 handleAddSignature tx = do
     (PaymentPrivateKey privKey) <- gets ownPaymentPrivateKey
-    pure (Ledger.addSignature' privKey tx)
+    pure $ bimap (Ledger.addSignature' privKey) (addSignatureCardano privKey) tx
+    where
+        addSignatureCardano :: PrivateKey -> SomeCardanoApiTx -> SomeCardanoApiTx
+        addSignatureCardano privKey (Tx.SomeTx ctx AlonzoEraInCardanoMode)
+            = Tx.SomeTx (addSignature privKey ctx) AlonzoEraInCardanoMode
+        addSignatureCardano _ ctx = ctx
 
 ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs

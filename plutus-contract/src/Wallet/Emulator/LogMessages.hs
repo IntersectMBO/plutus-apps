@@ -49,6 +49,7 @@ data TxBalanceMsg =
     | NoCollateralInputsAdded
     | AddingCollateralInputsFor Value
     | FinishedBalancing CardanoTx
+    | SigningTx CardanoTx
     | SubmittingTx CardanoTx
     | ValidationFailed ValidationPhase TxId CardanoTx ValidationError [ScriptValidationEvent]
     deriving stock (Eq, Show, Generic)
@@ -64,6 +65,7 @@ instance Pretty TxBalanceMsg where
         NoCollateralInputsAdded      -> "No collateral inputs added"
         AddingCollateralInputsFor vl -> "Adding collateral inputs for" <+> pretty vl
         FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", theseTx pretty (pretty . getCardanoTxId . That) tx]
+        SigningTx tx                 -> "Signing tx:" <+> pretty (getCardanoTxId tx)
         SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
         ValidationFailed p i _ e _   -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
 

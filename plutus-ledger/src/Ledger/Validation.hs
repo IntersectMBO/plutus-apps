@@ -13,8 +13,9 @@ module Ledger.Validation(
   SlotNo(..),
   EmulatorEra,
   initialState,
-  evaluateMinFee,
+  evaluateTransactionFee,
   evaluateMinLovelaceOutput,
+  addSignature,
   applyTx,
   hasValidationErrors,
   -- * Modifying the state
@@ -36,9 +37,11 @@ module Ledger.Validation(
 import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), alonzoGenesisDefaults, makeSignedTransaction,
                             shelleyGenesisDefaults, toShelleyTxId, toShelleyTxOut)
 import Cardano.Api.Shelley qualified as C.Api
-import Cardano.Ledger.Alonzo (TxOut)
+import Cardano.Ledger.Alonzo (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (ValidatedTx))
+import Cardano.Ledger.Alonzo.TxWitness (txwitsVKey)
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Core (PParams, Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -55,7 +58,9 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bitraverse)
 import Data.Default (def)
 import Data.Map qualified as Map
+import Data.Set qualified as Set
 import Ledger.Address qualified as P
+import Ledger.Crypto qualified as P
 import Ledger.Index (EmApplyTxFailure (..), EmulatorEra, ValidationError (..))
 import Ledger.Index qualified as P
 import Ledger.Tx qualified as P
@@ -167,19 +172,27 @@ applyTx oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
 emulatorNetworkId :: C.Api.NetworkId
 emulatorNetworkId = C.Api.Testnet $ C.Api.NetworkMagic 1
 
+-- TODO: the larger maxTxSize should only be used when needed.
+genesisDefaultsWithBigMaxTxSize :: C.Ledger.ShelleyGenesis EmulatorEra
+genesisDefaultsWithBigMaxTxSize = shelleyGenesisDefaults {
+  C.Ledger.sgProtocolParams = (C.Ledger.sgProtocolParams shelleyGenesisDefaults) {
+    C.Ledger._maxTxSize = 256 * 1024
+  }
+}
+
 {-| A sensible default 'Globals' value for the emulator
 -}
 emulatorGlobals :: Globals
 emulatorGlobals = mkShelleyGlobals
-  shelleyGenesisDefaults
+  genesisDefaultsWithBigMaxTxSize
   (fixedEpochInfo (EpochSize 432000) (mkSlotLength 8)) -- ?
   2 -- maxMajorPV
 
 emulatorNes :: NewEpochState EmulatorEra
-emulatorNes = C.Ledger.initialState shelleyGenesisDefaults alonzoGenesisDefaults
+emulatorNes = C.Ledger.initialState genesisDefaultsWithBigMaxTxSize alonzoGenesisDefaults
 
 emulatorPParams :: PParams EmulatorEra
-emulatorPParams = esPp $ nesEs emulatorNes
+emulatorPParams = (esPp $ nesEs emulatorNes) { _maxTxSize = 262144 }
 
 emulatorProtocolParameters :: C.Api.ProtocolParameters
 emulatorProtocolParameters = C.Api.fromLedgerPParams ShelleyBasedEraAlonzo emulatorPParams
@@ -195,8 +208,13 @@ hasValidationErrors slotNo utxoState (C.Api.ShelleyTx _ tx) =
       vtx <- first (EmApplyTxFailure . UtxosPredicateFailures) (constructValidated emulatorGlobals (utxoEnv slotNo) utxoState tx)
       applyTx state vtx
 
-evaluateMinFee :: C.Api.Tx C.Api.AlonzoEra -> P.Value
-evaluateMinFee (C.Api.ShelleyTx _ tx) = toPlutusValue $ C.Ledger.evaluateMinFee emulatorPParams tx
+evaluateTransactionFee :: [P.PaymentPubKeyHash] -> P.Tx -> Either P.ToCardanoError P.Value
+evaluateTransactionFee requiredSigners tx = do
+  txBodyContent <- plutusTxToTxBodyContent requiredSigners tx
+  let nkeys = C.Api.estimateTransactionKeyWitnessCount txBodyContent
+  txBody <- P.makeTransactionBody txBodyContent
+  case C.Api.evaluateTransactionFee emulatorProtocolParameters txBody nkeys 0 of
+    C.Api.Lovelace fee -> pure $ P.lovelaceValueOf fee
 
 evaluateMinLovelaceOutput :: TxOut EmulatorEra -> P.Value
 evaluateMinLovelaceOutput = toPlutusValue . C.Ledger.evaluateMinLovelaceOutput emulatorPParams
@@ -206,13 +224,30 @@ toPlutusValue (Coin c) = P.lovelaceValueOf c
 
 fromPlutusTx
   :: [P.PaymentPubKeyHash]
-  -> P.PaymentPrivateKey
   -> P.Tx
   -> Either P.ToCardanoError (C.Api.Tx C.Api.AlonzoEra)
-fromPlutusTx requiredSigners privKey tx = do
-  let txBody = P.toCardanoTxBody requiredSigners (Just emulatorProtocolParameters) emulatorNetworkId tx
-      witnesses = pure . fromPaymentPrivateKey privKey <$> txBody
-  makeSignedTransaction <$> witnesses <*> txBody
+fromPlutusTx requiredSigners tx = do
+  txBodyContent <- plutusTxToTxBodyContent requiredSigners tx
+  makeSignedTransaction [] <$> P.makeTransactionBody txBodyContent
+
+plutusTxToTxBodyContent
+  :: [P.PaymentPubKeyHash]
+  -> P.Tx
+  -> Either P.ToCardanoError (C.Api.TxBodyContent C.Api.BuildTx C.Api.AlonzoEra)
+plutusTxToTxBodyContent requiredSigners =
+  P.toCardanoTxBodyContent requiredSigners (Just emulatorProtocolParameters) emulatorNetworkId
+
+addSignature
+  :: P.PrivateKey
+  -> C.Api.Tx C.Api.AlonzoEra
+  -> C.Api.Tx C.Api.AlonzoEra
+addSignature privKey (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isValid aux))
+    = C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits' isValid aux)
+  where
+    wits' = wits <> mempty { txwitsVKey = newWits }
+    newWits = case fromPaymentPrivateKey privKey body of
+      C.Api.ShelleyKeyWitness _ wit -> Set.singleton wit
+      _                             -> Set.empty
 
 fromPlutusIndex :: P.UtxoIndex -> Either P.ToCardanoError (UTxOState EmulatorEra)
 fromPlutusIndex (P.UtxoIndex m) = (\utxo -> smartUTxOState utxo (Coin 0) (Coin 0) def) <$>
@@ -227,6 +262,10 @@ fromPlutusTxId = fmap toShelleyTxId . P.toCardanoTxId
 fromPlutusTxOut :: P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
 fromPlutusTxOut = fmap (toShelleyTxOut ShelleyBasedEraAlonzo) . P.toCardanoTxOut emulatorNetworkId P.toCardanoTxOutDatumHash
 
-fromPaymentPrivateKey :: P.PaymentPrivateKey -> C.Api.TxBody C.Api.AlonzoEra -> C.Api.KeyWitness C.Api.AlonzoEra
-fromPaymentPrivateKey (P.PaymentPrivateKey xprv) txBody
-  = C.Api.makeShelleyKeyWitness txBody (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
+fromPaymentPrivateKey :: P.PrivateKey -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.AlonzoEra
+fromPaymentPrivateKey xprv txBody
+  = C.Api.makeShelleyKeyWitness
+      (C.Api.ShelleyTxBody C.Api.ShelleyBasedEraAlonzo txBody notUsed notUsed notUsed notUsed)
+      (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
+  where
+    notUsed = undefined -- hack so we can reuse code from cardano-api

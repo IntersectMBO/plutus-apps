@@ -35,7 +35,9 @@ module Ledger.Tx.CardanoAPI(
   , fromTxScriptValidity
   , scriptDataFromCardanoTxBody
   , plutusScriptsFromTxBody
+  , makeTransactionBody
   , toCardanoTxBody
+  , toCardanoTxBodyContent
   , toCardanoTxIn
   , toCardanoTxInsCollateral
   , toCardanoTxInWitness
@@ -307,13 +309,13 @@ fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
    in either (const Nothing) Just script
 
 
-toCardanoTxBody ::
+toCardanoTxBodyContent ::
     [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
     -> C.NetworkId -- ^ Network ID
     -> P.Tx
-    -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-toCardanoTxBody sigs protocolParams networkId P.Tx{..} = do
+    -> Either ToCardanoError (C.TxBodyContent C.BuildTx C.AlonzoEra)
+toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
     txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
@@ -321,7 +323,7 @@ toCardanoTxBody sigs protocolParams networkId P.Tx{..} = do
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInAlonzoEra <$> traverse toCardanoPaymentKeyHash sigs
-    first (TxBodyError . C.displayError) $ makeTransactionBody' C.TxBodyContent
+    pure $ C.TxBodyContent
         { txIns = txIns
         , txInsCollateral = txInsCollateral
         , txOuts = txOuts
@@ -338,6 +340,22 @@ toCardanoTxBody sigs protocolParams networkId P.Tx{..} = do
         , txCertificates = C.TxCertificatesNone
         , txUpdateProposal = C.TxUpdateProposalNone
         }
+
+toCardanoTxBody ::
+    [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
+    -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
+    -> C.NetworkId -- ^ Network ID
+    -> P.Tx
+    -> Either ToCardanoError (C.TxBody C.AlonzoEra)
+toCardanoTxBody sigs protocolParams networkId tx = do
+    txBodyContent <- toCardanoTxBodyContent sigs protocolParams networkId tx
+    makeTransactionBody txBodyContent
+
+makeTransactionBody ::
+    C.TxBodyContent C.BuildTx C.AlonzoEra
+    -> Either ToCardanoError (C.TxBody C.AlonzoEra)
+makeTransactionBody txBodyContent =
+  first (TxBodyError . C.displayError) $ makeTransactionBody' txBodyContent
 
 fromCardanoTxIn :: C.TxIn -> P.TxOutRef
 fromCardanoTxIn (C.TxIn txId (C.TxIx txIx)) = P.TxOutRef (fromCardanoTxId txId) (toInteger txIx)
