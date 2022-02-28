@@ -18,6 +18,7 @@ module Ledger.Tx.CardanoAPI(
   SomeCardanoApiTx(..)
   , txOutRefs
   , unspentOutputsTx
+  , fromCardanoBlockInMode
   , fromCardanoTxId
   , fromCardanoTxIn
   , fromCardanoTxInsCollateral
@@ -61,6 +62,7 @@ module Ledger.Tx.CardanoAPI(
 
 import Cardano.Api qualified as C
 import Cardano.Api.Byron qualified as C
+import Cardano.Api.Improved
 import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.Chain.Common (addrToBase58)
@@ -72,7 +74,7 @@ import Codec.Serialise qualified as Codec
 import Codec.Serialise.Decoding (Decoder, decodeBytes, decodeSimple)
 import Codec.Serialise.Encoding (Encoding (Encoding), Tokens (TkBytes, TkSimple))
 import Control.Applicative ((<|>))
-import Control.Lens ((&), (.~), (?~))
+import Control.Lens (Fold, folding, (&), (.~), (?~))
 import Control.Monad (when)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.:), (.=))
 import Data.Aeson qualified as Aeson
@@ -113,6 +115,12 @@ instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode
 instance (Typeable era) => OpenApi.ToSchema (C.Tx era) where
   declareNamedSchema _ = do
     return $ NamedSchema (Just "Tx") byteSchema
+
+fromCardanoBlockInMode :: C.BlockInMode C.CardanoMode -> [SomeCardanoApiTx]
+fromCardanoBlockInMode (improveBlockInMode -> ImprovedBlockInMode (C.Block _ txs) eim) = map (flip SomeTx eim) txs
+
+_txs :: Fold (C.BlockInMode C.CardanoMode) SomeCardanoApiTx
+_txs = folding fromCardanoBlockInMode
 
 -- | Cardano tx from any era.
 data SomeCardanoApiTx where
