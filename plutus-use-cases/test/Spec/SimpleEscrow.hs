@@ -12,9 +12,9 @@ import Control.Monad (void)
 import Ledger (Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
+import Ledger.Generators (someTokenValue)
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Value qualified as Value
 import Plutus.Contract.Test
 import Plutus.Contracts.SimpleEscrow
 import Plutus.Trace.Emulator qualified as Trace
@@ -62,7 +62,7 @@ tests = testGroup "simple-escrow"
             void $ Trace.callEndpoint @"refund" hdl params
     , checkPredicate "only locking wallet can request refund"
         ( walletFundsChange w1 (Ada.adaValueOf (-10))
-          .&&. walletFundsChange w2 mempty
+          .&&. walletFundsExactChange w2 (Ada.adaValueOf (-10)) -- loss of collateral
         )
         $ do
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig
@@ -93,10 +93,10 @@ tests = testGroup "simple-escrow"
     ]
 
 token1 :: Integer -> Value
-token1 = Value.singleton "1111" "Token1"
+token1 = someTokenValue "Token1"
 
 token2 :: Integer -> Value
-token2 = Value.singleton "2222" "Token2"
+token2 = someTokenValue "Token2"
 
 options :: CheckOptions
 options =

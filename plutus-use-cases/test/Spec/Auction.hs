@@ -17,7 +17,6 @@ module Spec.Auction
     , prop_NoLockedFunds
     ) where
 
-import Cardano.Crypto.Hash as Crypto
 import Control.Lens hiding (elements)
 import Control.Monad (void, when)
 import Control.Monad.Freer qualified as Freer
@@ -28,6 +27,7 @@ import Data.Monoid (Last (..))
 
 import Ledger (Ada, Slot (..), Value)
 import Ledger.Ada qualified as Ada
+import Ledger.Generators (someTokenValue)
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test hiding (not)
 import Streaming.Prelude qualified as S
@@ -37,12 +37,10 @@ import Wallet.Emulator.Stream qualified as Stream
 import Ledger qualified
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Value qualified as Value
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.Auction hiding (Bid)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Monoid (inv)
-import PlutusTx.Prelude qualified as PlutusTx
 
 import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty
@@ -59,14 +57,11 @@ params =
         , apEndTime = TimeSlot.scSlotZeroTime slotCfg + 100000
         }
 
-mpsHash :: Value.CurrencySymbol
-mpsHash = Value.CurrencySymbol $ PlutusTx.toBuiltin $ Crypto.hashToBytes $ Crypto.hashWith @Crypto.Blake2b_256 id "ffff"
-
 -- | The token that we are auctioning off.
 theToken :: Value
 theToken =
     -- This currency is created by the initial transaction.
-    Value.singleton mpsHash "token" 1
+    someTokenValue "token" 1
 
 -- | 'CheckOptions' that includes 'theToken' in the initial distribution of Wallet 1.
 options :: CheckOptions

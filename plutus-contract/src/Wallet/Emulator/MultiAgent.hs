@@ -36,6 +36,7 @@ import GHC.Generics (Generic)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import Ledger hiding (to, value)
+import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.Index qualified as Index
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
@@ -293,7 +294,12 @@ emulatorStateInitialDist mp = emulatorStatePool [This tx] where
             , txRedeemers = mempty
             , txData = mempty
             }
-    mkOutputs (key, vl) = mkOutput key <$> Wallet.splitOffAdaOnlyValue vl
+    mkOutputs (key, vl) = mkOutput key <$> splitHeadinto10 (Wallet.splitOffAdaOnlyValue vl)
+    splitHeadinto10 []       = []
+    splitHeadinto10 (vl:vls) = replicate (fromIntegral count) (Ada.toValue . (`div` count) . Ada.fromValue $ vl) ++ vls
+        where
+            -- Make sure we don't make the outputs too small
+            count = min 10 $ Ada.fromValue vl `div` minAdaTxOut
     mkOutput key vl = pubKeyHashTxOut vl (unPaymentPubKeyHash key)
 
 type MultiAgentEffs =

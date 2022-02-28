@@ -10,7 +10,6 @@
 {-# LANGUAGE NumericUnderscores #-}
 module Spec.SealedBidAuction where
 
-import Cardano.Crypto.Hash as Crypto
 import Control.Lens hiding (elements)
 import Control.Monad (void, when)
 import Data.Default (Default (def))
@@ -18,14 +17,13 @@ import Data.Default (Default (def))
 import Ledger (Slot (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
+import Ledger.Generators (someTokenValue)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Value qualified as Value
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.SealedBidAuction
 import Plutus.Trace.Emulator qualified as Trace
-import PlutusTx.Prelude qualified as PlutusTx
 
 import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty
@@ -44,10 +42,7 @@ instance Arbitrary AuctionParams where
 
 -- | The token that we are auctioning off.
 theToken :: Value
-theToken = Value.singleton mpsHash "token" 1
-
-mpsHash :: Value.CurrencySymbol
-mpsHash = Value.CurrencySymbol $ PlutusTx.toBuiltin $ Crypto.hashToBytes $ Crypto.hashWith @Crypto.Blake2b_256 id "ffff"
+theToken = someTokenValue "token" 1
 
 -- | 'CheckOptions' that includes 'theToken' in the initial distribution of Wallet 1.
 options :: CheckOptions
