@@ -1,9 +1,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Main where
 
 import Cardano.Api
 import Cardano.Api.Extras ()
+import Control.Monad ((>=>))
 import Data.Maybe qualified as Maybe
 import Options.Applicative
 import Plutus.ChainIndex.Tx
@@ -17,25 +19,43 @@ import Streaming.Prelude qualified as S
 --
 
 data Example
-  = JustBlocks
+  = Print
   | HowManyBlocksBeforeRollback
   | HowManyBlocksBeforeRollbackImpure
   | ComposePureAndImpure
   deriving (Show, Read)
 
-data Options = Options
-  { optionsSocketPath :: String,
-    optionsChainPoint :: ChainPoint,
-    optionsExample    :: Example
-  }
+data Options
+  = Simple
+      { optionsSocketPath :: String,
+        optionsChainPoint :: ChainPoint,
+        optionsExample    :: Example
+      }
+  | WithLedgerState
+      { optionsNetworkConfigPath :: String,
+        optionsSocketPath        :: String,
+        optionsChainPoint        :: ChainPoint
+      }
   deriving (Show)
 
 optionsParser :: Parser Options
 optionsParser =
-  Options
-    <$> strOption (long "socket-path" <> help "Node socket path")
-    <*> chainPointParser
-    <*> option auto (long "example" <> value JustBlocks)
+  subparser
+    ( command "simple" (info simple (progDesc "simple"))
+        <> command "with-ledger-state" (info withLedgerState (progDesc "withLedgerSate"))
+    )
+  where
+    simple =
+      Simple
+        <$> strOption (long "socket-path" <> help "Node socket path")
+        <*> chainPointParser
+        <*> option auto (long "example" <> value Print)
+
+    withLedgerState =
+      WithLedgerState
+        <$> strOption (long "network-config-path" <> help "Node config path")
+        <*> strOption (long "socket-path" <> help "Node socket path")
+        <*> chainPointParser
 
 chainPointParser :: Parser ChainPoint
 chainPointParser =
@@ -50,8 +70,9 @@ chainPointParser =
 --
 
 justBlocks ::
-  Stream (Of ChainSyncEvent) IO () ->
-  Stream (Of (Either FromCardanoError [ChainIndexTx])) IO ()
+  Monad m =>
+  Stream (Of SimpleChainSyncEvent) m b ->
+  Stream (Of (Either FromCardanoError [ChainIndexTx])) m ()
 justBlocks =
   --
   -- read the following back to front
@@ -65,9 +86,18 @@ justBlocks =
     -- take 10 blocks
     . S.take 10
 
+transactions ::
+  Monad m =>
+  Stream (Of SimpleChainSyncEvent) m () ->
+  Stream (Of SomeCardanoApiTx) m ()
+transactions =
+  S.concat . S.map (\case
+    RollForward bim _ -> fromCardanoBlockInMode bim
+    RollBackward _ _  -> [])
+
 howManyBlocksBeforeRollback ::
   Monad m =>
-  Stream (Of ChainSyncEvent) m () ->
+  Stream (Of SimpleChainSyncEvent) m r ->
   Stream (Of Int) m ()
 howManyBlocksBeforeRollback =
   S.scan
@@ -82,7 +112,7 @@ howManyBlocksBeforeRollback =
 
 howManyBlocksBeforeRollbackImpure ::
   (Monad m, MonadIO m) =>
-  Stream (Of ChainSyncEvent) m () ->
+  Stream (Of SimpleChainSyncEvent) m r ->
   Stream (Of Int) m ()
 howManyBlocksBeforeRollbackImpure =
   S.scanM
@@ -99,10 +129,10 @@ howManyBlocksBeforeRollbackImpure =
     . S.take 100
 
 composePureAndImpure ::
-  Stream (Of ChainSyncEvent) IO () ->
+  Stream (Of SimpleChainSyncEvent) IO r ->
   IO ()
 composePureAndImpure =
-    (S.print . howManyBlocksBeforeRollbackImpure)
+  (S.print . howManyBlocksBeforeRollbackImpure)
     . (S.print . howManyBlocksBeforeRollback)
     . S.copy
 
@@ -112,7 +142,7 @@ composePureAndImpure =
 
 main :: IO ()
 main = do
-  Options {optionsSocketPath, optionsChainPoint, optionsExample} <-
+  options <-
     execParser $
       info
         (optionsParser <**> helper)
@@ -121,15 +151,36 @@ main = do
             <> header "hello - a test for optparse-applicative"
         )
 
-  withChainSyncEventStream
-    optionsSocketPath
-    Mainnet
-    optionsChainPoint
-    $ case optionsExample of
-      JustBlocks                        -> S.print . justBlocks
-      HowManyBlocksBeforeRollback       -> S.print . howManyBlocksBeforeRollback
-      HowManyBlocksBeforeRollbackImpure -> S.print . howManyBlocksBeforeRollbackImpure
-      ComposePureAndImpure              -> composePureAndImpure
+  case options of
+    Simple {optionsSocketPath, optionsChainPoint, optionsExample} -> do
+      withSimpleChainSyncEventStream
+        optionsSocketPath
+        Mainnet
+        optionsChainPoint
+        $ case optionsExample of
+          Print ->
+            S.print >=> print
+          HowManyBlocksBeforeRollback ->
+            S.print . howManyBlocksBeforeRollback >=> print
+          HowManyBlocksBeforeRollbackImpure ->
+            S.print . howManyBlocksBeforeRollbackImpure >=> print
+          ComposePureAndImpure ->
+            composePureAndImpure >=> print
+    WithLedgerState {optionsNetworkConfigPath, optionsSocketPath, optionsChainPoint} ->
+      withChainSyncEventStreamWithLedgerState
+        optionsNetworkConfigPath
+        optionsSocketPath
+        Mainnet
+        optionsChainPoint
+        (S.print . S.take 10 >=> print)
+
+deriving instance Show LedgerState
+
+deriving instance Show LedgerEvent
+
+deriving instance Show MIRDistributionDetails
+
+deriving instance Show PoolReapDetails
 
 --
 -- Utilities for development
@@ -140,7 +191,7 @@ nthBlock = nthBlockAt ChainPointAtGenesis
 
 nthBlockAt :: ChainPoint -> Int -> IO (BlockInMode CardanoMode)
 nthBlockAt point n = do
-  withChainSyncEventStream
+  withSimpleChainSyncEventStream
     "/tmp/node.socket"
     Mainnet
     point
@@ -151,4 +202,3 @@ nthBlockAt point n = do
         . S.drop n
         . S.map (\case RollForward bim _ -> Just bim; _ -> Nothing)
     )
-
