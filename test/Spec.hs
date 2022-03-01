@@ -2,46 +2,57 @@ import           QuickSpec
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
-import           Data.List             (foldl')
+import           Data.List             (foldl', isInfixOf)
 import           Data.Maybe            (fromJust, isJust, isNothing)
 
 import           Index
 
-tests :: TestTree
-tests = testGroup "Index" [hfProperties]
+import qualified Debug.Trace           as Debug
 
-hfProperties :: TestTree
-hfProperties = testGroup "Basic model"
+tests :: TestTree
+tests = testGroup "Index" [ixProperties]
+
+ixProperties :: TestTree
+ixProperties = testGroup "Basic model"
   [ testProperty "New: Positive or non-positive depth" $
-      withMaxSuccess 10000 $ prop_hfNewReturn @Int @Int
+      withMaxSuccess 10000 $ prop_newReturn @Int @Int
   , testProperty "History length is always smaller than the max depth" $
-      withMaxSuccess 10000 $ prop_historyLengthLEDepth @Int @Int
+      withMaxSuccess 10000 $ prop_sizeLEDepth @Int @Int
   , testProperty "Rewind: Connection with `hfDepth`" $
       withMaxSuccess 10000 $ prop_rewindWithDepth @Int @Int
   , testProperty "Relationship between Insert/Rewind" $
-      withMaxSuccess 10000 $ prop_InsertRewindInverse @Int @Int
+      withMaxSuccess 10000 $ prop_insertRewindInverse @Int @Int
   , testProperty "Insert is folding the structure" $
-      withMaxSuccess 10000 $ prop_InsertFolds @Int @Int
+      withMaxSuccess 10000 $ prop_insertFolds @Int @Int
   , testProperty "Insert is increasing the length unless overflowing" $
-      withMaxSuccess 10000 $ prop_InsertHistoryLength @Int @Int
+      withMaxSuccess 10000 $ prop_insertHistoryLength @Int @Int
   ]
 
--- | Properties of the `new` operation.
-prop_hfNewReturn
-  :: Fun (a, b) a
+{- | Properties of the `new` operation.
+       view (new f d a) =
+         | d > 0     = IndexView [d a 0]
+         | otherwise = Nothing
+       getHistory (new f d a) = []
+-}
+prop_newReturn
+  :: Eq a
+  => Fun (a, b) a
   -> a
   -> Property
-prop_hfNewReturn f acc =
+prop_newReturn f acc =
   forAll (frequency [ (10, pure 0)
                     , (50, chooseInt (-100, 0))
                     , (50, chooseInt (1, 100)) ]) $
   \depth ->
     cover 30 (depth <  0) "Negative depth" $
     cover 30 (depth >= 0) "Non negative depth" $
-    let newHF = new (applyFun2 f) depth acc
+    let newIx = new (applyFun2 f) depth acc
     in  property $ if depth <= 0
-                   then isNothing newHF
-                   else isJust    newHF
+                   then isNothing newIx
+                   else view (fromJust newIx) == IndexView { ixDepth = depth
+                                                           , ixView  = acc
+                                                           , ixSize  = 0
+                                                           }
 
 -- | Properties of the connection between rewind and depth
 --   Note: Cannot rewind if (hfDepth hf == 1)
@@ -66,19 +77,19 @@ prop_rewindWithDepth (ObservedBuilder ix) =
         else property $ isJust    newIx
 
 -- | Property that validates the HF data structure.
-prop_historyLengthLEDepth
+prop_sizeLEDepth
   :: ObservedBuilder a b
   -> Property
-prop_historyLengthLEDepth (ObservedBuilder ix) =
+prop_sizeLEDepth (ObservedBuilder ix) =
   let v = view ix
    in property $ ixSize v <= ixDepth v
 
 -- | Relation between Rewind and Inverse
-prop_InsertRewindInverse
+prop_insertRewindInverse
   :: (Show a, Show b, Arbitrary b, Eq a)
   => ObservedBuilder a b
   -> Property
-prop_InsertRewindInverse (ObservedBuilder ix) =
+prop_insertRewindInverse (ObservedBuilder ix) =
   let v = view ix
   -- rewind does not make sense for lesser depths.
    in ixDepth v >= 2 ==>
@@ -87,27 +98,30 @@ prop_InsertRewindInverse (ObservedBuilder ix) =
   -- than `hfDepth hf`
   forAll (resize (ixDepth v - 1) arbitrary) $
   \bs ->
-      let ix'   = rewind (length bs) $ insertL bs ix
-          v'    = view (fromJust ix')
-       in property $ isJust ix' && fromJust ix' `matches` ix
+      let mix' = rewind (length bs) $ insertL bs ix
+          -- This should always be Just.. because of the resize of `bs`
+          ix'  = fromJust mix'
+          v'   = view ix'
+       in property $ ix `matches` ix'
+                  -- && getHistory ix == getHistory ix'
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
 --   another implmentation is confirming.
-prop_InsertFolds
+prop_insertFolds
   :: (Eq a, Show a)
   => ObservedBuilder a b
   -> [b]
   -> Property
-prop_InsertFolds (ObservedBuilder ix) bs =
+prop_insertFolds (ObservedBuilder ix) bs =
   ixView (view (insertL bs ix)) ===
     foldl' (getFunction ix) (ixView $ view ix) bs
 
-prop_InsertHistoryLength
+prop_insertHistoryLength
   :: ObservedBuilder a b
   -> b
   -> Property
-prop_InsertHistoryLength (ObservedBuilder ix) b =
+prop_insertHistoryLength (ObservedBuilder ix) b =
   let v             = view ix
       initialLength = ixSize v
       finalLength   = ixSize . view $ insert b ix
@@ -116,6 +130,14 @@ prop_InsertHistoryLength (ObservedBuilder ix) b =
       if initialLength == ixDepth v
       then finalLength === initialLength
       else finalLength === initialLength + 1
+
+matches :: Eq a => Index a e -> Index a e -> Bool
+matches hl hr =
+  let hlAccumulator = getHistory hl
+      hrAccumulator = getHistory hr
+  in     hlAccumulator `isInfixOf` hrAccumulator
+      || hrAccumulator `isInfixOf` hlAccumulator
+      || hrAccumulator     ==      hlAccumulator
 
 main :: IO ()
 main = do

@@ -11,7 +11,6 @@ module Index
   , getHistory
   -- * Helpers
   , insertL
-  , matches
   -- * Testing
   , ObservedBuilder (..)
   , GrammarBuilder (..)
@@ -20,13 +19,39 @@ module Index
 
 import           Control.Monad   (replicateM)
 import           Data.Foldable   (foldl')
-import Data.List (isInfixOf)
 import           Data.Maybe      (fromJust)
 import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
                                   arbitrarySizedIntegral, choose, chooseInt,
                                   frequency, listOf, sized)
 import QuickSpec
 import GHC.Generics
+
+{- | Laws
+  Constructors: new, insert, rewind
+  Observations: view [depth, view, size], getHistory, getFunction
+
+  Laws derived by constructors/observations:
+
+    view (new f d a) =
+      | d > 0     = IndexView [d a 0]
+      | otherwise = Nothing
+    getHistory (new f d a) = []
+    view (insertL bs (new f d a)) = IndexView [d (foldl' f a bs) (max (length bs) d)]
+    getHistory (insertL bs (new f d a)) = take d bs
+    view (rewind n (new f d a)) = Nothing
+    view (rewind n (insertL bs (new f d a))) =
+      | n <= length bs = IndexView [d a' ((max (length bs) d) - n)]
+        where a' = head $ drop n $ scanl' f a bs
+      | otherwise = nothing
+    getHistory (rewind n (insertL bs (new f d a))) = drop n $ scanl' f a bs
+
+  Laws derived by interplay of constructors:
+
+    d >= length bs =>
+      obs (rewind (length bs) (insertL bs (new f d a))) = obs (new f d a)
+    rewind _ (new f d a) = Nothing
+    depth >= size
+-}
 
 data Index a e = New (a -> e -> a) Int a
                | Insert e (Index a e)
@@ -46,7 +71,7 @@ newtype ObservedBuilder a e = ObservedBuilder (Index a e)
 data IndexView a = IndexView
   { ixDepth :: Int
   , ixView  :: a
-  , ixSize  :: Int
+  , ixSize  :: Int -- ^ Size represents the stored history elements
   } deriving (Show, Ord, Eq, Typeable, Generic)
 
 -- | Constructors
@@ -103,14 +128,6 @@ getHistory (Insert e ix) =
 getHistory (Rewind n ix) = drop n $ getHistory ix
 
 -- | Utility
-
-matches :: Eq a => Index a e -> Index a e -> Bool
-matches hl hr =
-  let hlAccumulator = getHistory hl
-      hrAccumulator = getHistory hr
-  in     hlAccumulator `isInfixOf` hrAccumulator
-      || hrAccumulator `isInfixOf` hlAccumulator
-      || hrAccumulator     ==      hlAccumulator
 
 insertL :: [e] -> Index a e -> Index a e
 insertL es ix = foldl' (flip insert) ix es
