@@ -67,7 +67,7 @@ import Plutus.Contract.StateMachine.ThreadToken (ThreadToken)
 import PlutusTx.AssocMap qualified
 import PlutusTx.Prelude qualified as P
 import PlutusTx.Ratio qualified as P
-import Wallet.Emulator.Wallet (Wallet, WalletId)
+import Wallet.Emulator.Wallet (Wallet, WalletId, getWalletId)
 import Wallet.Types (ContractInstanceId)
 
 import Data.OpenApi.Schema qualified as OpenApi
@@ -422,21 +422,22 @@ deriving anyclass instance ToSchema TxOutRef
 
 deriving anyclass instance ToSchema ValidatorHash
 
-deriving anyclass instance ToSchema Wallet
-
 deriving anyclass instance ToSchema WalletNumber
 
+instance ToSchema Wallet where
+  toSchema = toSchema @WalletId
 
 deriving anyclass instance ToArgument Ada
-
-deriving anyclass instance ToArgument Wallet
 
 deriving anyclass instance ToArgument WalletNumber
 
 deriving anyclass instance ToArgument Slot
 
+instance ToArgument Wallet where
+  toArgument = toArgument . getWalletId
+
 instance ToArgument WalletId where
-    toArgument = Fix . FormStringF . Just . show
+  toArgument = Fix . FormStringF . Just . show
 
 instance forall a. ToSchema a => ToSchema (SecretArgument a) where
   toSchema = toSchema @a
