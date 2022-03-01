@@ -150,13 +150,6 @@ initialState = EmulatedLedgerState
   , _previousBlocks = []
   }
 
--- toAddr :: (P.PubKey, Coin) -> Maybe (Addr StandardCrypto, Coin)
--- toAddr (pk, coin) =
---   case P.toCardanoAddress emulatorNetworkId (P.pubKeyHashAddress (P.paymentPubKeyHash $ P.PaymentPubKey pk) Nothing) of
---     Right (AddressInEra _ (ShelleyAddress _ paymentCredential stakeAddressReference))
---         -> Just (Addr Testnet paymentCredential stakeAddressReference, coin)
---     _ -> Nothing
-
 utxoEnv :: SlotNo -> UtxoEnv EmulatorEra
 utxoEnv slotNo = UtxoEnv slotNo emulatorPParams mempty (C.Ledger.GenDelegs mempty)
 

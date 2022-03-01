@@ -115,7 +115,8 @@ data FutureAccounts =
         { ftoLong         :: Account
         -- ^ The owner of the "long" account (represented by a token)
         , ftoLongAccount  :: ValidatorHash
-        -- ^ Address of the 'TokenAccount' validator script for 'ftoLong'. This --   hash can be derived from 'ftoLong', but only in off-chain code. We
+        -- ^ Address of the 'TokenAccount' validator script for 'ftoLong'. This
+        --   hash can be derived from 'ftoLong', but only in off-chain code. We
         --   store it here so that we can lift it into on-chain code.
         , ftoShort        :: Account
         -- ^ The owner of the "short" account (represented by a token).

@@ -62,7 +62,7 @@ tests = testGroup "simple-escrow"
             void $ Trace.callEndpoint @"refund" hdl params
     , checkPredicate "only locking wallet can request refund"
         ( walletFundsChange w1 (Ada.adaValueOf (-10))
-          .&&. walletFundsExactChange w2 (Ada.adaValueOf (-10)) -- loss of collateral
+          .&&. walletFundsChange w2 mempty
         )
         $ do
             startTime <- TimeSlot.scSlotZeroTime <$> Trace.getSlotConfig

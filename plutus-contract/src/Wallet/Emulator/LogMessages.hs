@@ -8,7 +8,6 @@
 module Wallet.Emulator.LogMessages(
   RequestHandlerLogMsg(..)
   , TxBalanceMsg(..)
-  , _ValidationFailed
   , _BalancingUnbalancedTx
   ) where
 
@@ -16,12 +15,11 @@ import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.These (These (That))
 import GHC.Generics (Generic)
-import Ledger (Address, CardanoTx, TxId, getCardanoTxId, theseTx)
+import Ledger (Address, CardanoTx, getCardanoTxId, theseTx)
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
-import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
+import Prettyprinter (Pretty (..), hang, viaShow, vsep, (<+>))
 import Wallet.Emulator.Error (WalletAPIError)
 
 data RequestHandlerLogMsg =
@@ -51,7 +49,6 @@ data TxBalanceMsg =
     | FinishedBalancing CardanoTx
     | SigningTx CardanoTx
     | SubmittingTx CardanoTx
-    | ValidationFailed ValidationPhase TxId CardanoTx ValidationError [ScriptValidationEvent]
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -67,6 +64,5 @@ instance Pretty TxBalanceMsg where
         FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", theseTx pretty (pretty . getCardanoTxId . That) tx]
         SigningTx tx                 -> "Signing tx:" <+> pretty (getCardanoTxId tx)
         SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
-        ValidationFailed p i _ e _   -> "Validation error:" <+> pretty p <+> pretty i <> colon <+> pretty e
 
 makePrisms ''TxBalanceMsg

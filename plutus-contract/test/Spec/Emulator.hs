@@ -167,7 +167,7 @@ txnUpdateUtxo = property $ do
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
                 , Chain.TxnValidate _ (This i1) _
-                , Chain.TxnValidationFail _ _ (This txi) (Index.TxOutRefNotFound _) _
+                , Chain.TxnValidationFail _ _ (This txi) (Index.TxOutRefNotFound _) _ _
                 , Chain.SlotAdd _
                 ] -> i1 == txn && txi == txn
             _ -> False
@@ -199,7 +199,7 @@ invalidTrace = property $ do
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ (This txn) (Index.ValueNotPreserved _ _) _
+                , Chain.TxnValidationFail _ _ (This txn) (Index.ValueNotPreserved _ _) _ _
                 , Chain.SlotAdd _
                 ] -> txn == invalidTxn
             _ -> False
@@ -236,12 +236,12 @@ invalidScript = property $ do
                 , Chain.SlotAdd _
                 , Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ (This txn) (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure")) _
+                , Chain.TxnValidationFail _ _ (This txn) (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure")) _ _
                 , Chain.SlotAdd _
                 ] -> txn == invalidTxn
             _ -> False
 
-    checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn <> txFee invalidTxn)) trace Hedgehog.annotate Hedgehog.assert
+    checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn)) trace Hedgehog.annotate Hedgehog.assert
     where
         failValidator :: Validator
         failValidator = mkValidatorScript $$(PlutusTx.compile [|| wrapValidator validator ||])

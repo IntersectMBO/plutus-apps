@@ -22,6 +22,7 @@ module Ledger.Index(
     initialise,
     Validation(..),
     runValidation,
+    lookup,
     lkpValue,
     lkpTxOut,
     lkpOutputs,
