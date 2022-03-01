@@ -35,7 +35,7 @@ import GHC.Generics
     view (new f d a) =
       | d > 0     = IndexView [d a 0]
       | otherwise = Nothing
-    getHistory (new f d a) = []
+    getHistory (new f d a) = [a]
     view (insertL bs (new f d a)) = IndexView [d (foldl' f a bs) (max (length bs) d)]
     getHistory (insertL bs (new f d a)) = take d bs
     view (rewind n (new f d a)) = Nothing
@@ -96,7 +96,7 @@ view :: Index a e -> IndexView a
 view (New f depth initial) =
   IndexView { ixDepth = depth
             , ixView  = initial
-            , ixSize  = 0
+            , ixSize  = 1
             }
 view (Insert e ix) =
   let f = getFunction ix

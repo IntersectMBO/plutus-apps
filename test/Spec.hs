@@ -2,7 +2,7 @@ import           QuickSpec
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
-import           Data.List             (foldl', isInfixOf)
+import           Data.List             (foldl', isInfixOf, null)
 import           Data.Maybe            (fromJust, isJust, isNothing)
 
 import           Index
@@ -15,17 +15,17 @@ tests = testGroup "Index" [ixProperties]
 ixProperties :: TestTree
 ixProperties = testGroup "Basic model"
   [ testProperty "New: Positive or non-positive depth" $
-      withMaxSuccess 10000 $ prop_newReturn @Int @Int
+      withMaxSuccess 10000 $ prop_observeNew @Int @Int
   , testProperty "History length is always smaller than the max depth" $
       withMaxSuccess 10000 $ prop_sizeLEDepth @Int @Int
-  , testProperty "Rewind: Connection with `hfDepth`" $
-      withMaxSuccess 10000 $ prop_rewindWithDepth @Int @Int
+  , testProperty "Rewind: Connection with `ixDepth`" $
+      withMaxSuccess 10000 $ prop_rewindDepth @Int @Int
   , testProperty "Relationship between Insert/Rewind" $
       withMaxSuccess 10000 $ prop_insertRewindInverse @Int @Int
   , testProperty "Insert is folding the structure" $
-      withMaxSuccess 10000 $ prop_insertFolds @Int @Int
+      withMaxSuccess 10000 $ prop_observeInsert @Int @Int
   , testProperty "Insert is increasing the length unless overflowing" $
-      withMaxSuccess 10000 $ prop_insertHistoryLength @Int @Int
+      withMaxSuccess 10000 $ prop_insertSize @Int @Int
   ]
 
 {- | Properties of the `new` operation.
@@ -34,12 +34,12 @@ ixProperties = testGroup "Basic model"
          | otherwise = Nothing
        getHistory (new f d a) = []
 -}
-prop_newReturn
-  :: Eq a
+prop_observeNew
+  :: (Eq a, Show a)
   => Fun (a, b) a
   -> a
   -> Property
-prop_newReturn f acc =
+prop_observeNew f acc =
   forAll (frequency [ (10, pure 0)
                     , (50, chooseInt (-100, 0))
                     , (50, chooseInt (1, 100)) ]) $
@@ -51,15 +51,16 @@ prop_newReturn f acc =
                    then isNothing newIx
                    else view (fromJust newIx) == IndexView { ixDepth = depth
                                                            , ixView  = acc
-                                                           , ixSize  = 0
+                                                           , ixSize  = 1
                                                            }
+                     && getHistory (fromJust newIx) == [acc]
 
 -- | Properties of the connection between rewind and depth
---   Note: Cannot rewind if (hfDepth hf == 1)
-prop_rewindWithDepth
+--   Note: Cannot rewind if (ixDepth ix == 1)
+prop_rewindDepth
   :: ObservedBuilder a b
   -> Property
-prop_rewindWithDepth (ObservedBuilder ix) =
+prop_rewindDepth (ObservedBuilder ix) =
   let v = view ix in
   ixDepth v >= 2 ==>
   forAll (frequency [ (20, chooseInt (ixDepth v, ixDepth v * 2))
@@ -103,25 +104,28 @@ prop_insertRewindInverse (ObservedBuilder ix) =
           ix'  = fromJust mix'
           v'   = view ix'
        in property $ ix `matches` ix'
-                  -- && getHistory ix == getHistory ix'
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
 --   another implmentation is confirming.
-prop_insertFolds
+prop_observeInsert
   :: (Eq a, Show a)
   => ObservedBuilder a b
   -> [b]
   -> Property
-prop_insertFolds (ObservedBuilder ix) bs =
-  ixView (view (insertL bs ix)) ===
-    foldl' (getFunction ix) (ixView $ view ix) bs
+prop_observeInsert (ObservedBuilder ix) bs =
+  let v = view ix
+   in view (insertL bs ix) ===
+        IndexView { ixDepth = ixDepth v
+                  , ixSize  = min (ixDepth v) (length bs + ixSize v)
+                  , ixView  = foldl' (getFunction ix) (ixView $ view ix) bs
+                  }
 
-prop_insertHistoryLength
+prop_insertSize
   :: ObservedBuilder a b
   -> b
   -> Property
-prop_insertHistoryLength (ObservedBuilder ix) b =
+prop_insertSize (ObservedBuilder ix) b =
   let v             = view ix
       initialLength = ixSize v
       finalLength   = ixSize . view $ insert b ix
