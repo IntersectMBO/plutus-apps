@@ -46,7 +46,6 @@ getCoverageReport es =
 
       logOf (Left (Ledger.EvaluationError lg _)) = lg
       logOf (Left Ledger.EvaluationException{})  = []
-      logOf (Left Ledger.MalformedScript{})      = []
       logOf (Right (_, lg))                      = lg
 
   in fold $ do
