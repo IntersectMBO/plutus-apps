@@ -56,7 +56,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx, 
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Fee (FeeConfig, calcFees)
-import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
+import Ledger.TimeSlot (SlotConfig)
 import Ledger.Tx qualified as Tx
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
@@ -65,6 +65,7 @@ import Plutus.ChainIndex.Api (UtxosResponse (page))
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
 import Plutus.Contract (WalletAPIError)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
+import Plutus.Contract.Wallet (finalize)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
@@ -262,8 +263,7 @@ handleWallet feeCfg = \case
         logInfo $ BalancingUnbalancedTx utx'
         utxo <- get >>= ownOutputs
         slotConfig <- WAPI.getClientSlotConfig
-        let validitySlotRange = posixTimeRangeToContainedSlotRange slotConfig (utx' ^. U.validityTimeRange)
-        let utx = utx' & U.tx . Ledger.validRange .~ validitySlotRange
+        let utx = finalize slotConfig utx'
         utxWithFees <- validateTxAndAddFees feeCfg slotConfig utxo utx
         -- balance to add fees
         tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ (utxWithFees ^. U.tx . Ledger.fee))

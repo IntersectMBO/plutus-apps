@@ -24,7 +24,6 @@ import Cardano.Wallet.Primitive.Types.TokenMap qualified as C
 import Cardano.Wallet.Primitive.Types.TokenPolicy qualified as C
 import Cardano.Wallet.Primitive.Types.TokenQuantity qualified as C
 import Cardano.Wallet.Primitive.Types.Tx qualified as C
-import Control.Lens ((&), (.~), (^.))
 import Control.Monad.Freer (Eff, LastMember, Member, sendM, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Log (LogMsg, logWarn)
@@ -43,8 +42,6 @@ import Ledger (CardanoTx)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Constraints.OffChain qualified as U
-import Ledger.TimeSlot (posixTimeRangeToContainedSlotRange)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError, toCardanoTxBody)
 import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), Value (Value))
 import Plutus.Contract.Wallet (export)
@@ -114,11 +111,9 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
                              (Just True)
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
-        balanceTxH utx' = do
+        balanceTxH utx = do
             slotConfig <- WAPI.getClientSlotConfig
-            let validitySlotRange = posixTimeRangeToContainedSlotRange slotConfig (utx' ^. U.validityTimeRange)
-            let utx = utx' & U.tx . Ledger.validRange .~ validitySlotRange
-            case export protocolParams networkId utx of
+            case export protocolParams networkId slotConfig utx of
                 Left err -> do
                     logWarn $ BalanceTxError $ show $ pretty err
                     throwOtherError $ pretty err

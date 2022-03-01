@@ -305,8 +305,8 @@ fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
    in either (const Nothing) Just script
 
 
-toCardanoTxBody ::
-    [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
+toCardanoTxBody
+    :: [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
     -> C.NetworkId -- ^ Network ID
     -> P.Tx
