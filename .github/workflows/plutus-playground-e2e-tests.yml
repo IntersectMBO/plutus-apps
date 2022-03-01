@@ -39,7 +39,7 @@ jobs:
         while ! echo exit | nc localhost $CLIENT_PORT; do echo "Waiting for playground client on $CLIENT_PORT" && sleep 10; done
   
     - name: Setup NodeJs
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: '12.12.0'
   
