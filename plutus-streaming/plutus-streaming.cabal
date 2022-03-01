@@ -30,11 +30,17 @@ library
         Plutus.Streaming
     build-depends:
         base >=4.9 && <5,
+        async,
         base16-bytestring,
         bytestring,
-        async,
         cardano-api,
+        contra-tracer,
+        lens,
+        plutus-ledger,
         streaming,
+        transformers,
+        ouroboros-network,
+        ouroboros-network-framework,
     hs-source-dirs:   src
     default-language: Haskell2010
 
