@@ -83,7 +83,7 @@ launchSystemThreads wallets = do
 
 -- | Tag for an agent thread. See note [Thread Tag]
 agentTag :: Wallet -> Tag
-agentTag (Wallet i) = fromString ("W " <> show i)
+agentTag (Wallet _ i) = fromString ("W " <> show i)
 
 -- | Tag for the block maker thread. See note [Thread Tag]
 blockMakerTag :: Tag

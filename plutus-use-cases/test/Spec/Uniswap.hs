@@ -275,7 +275,7 @@ instance ContractModel UniswapModel where
         deposit w $ Ada.toValue Ledger.minAdaTxOut
         deposit w $ mconcat [ symAssetClassValue t 1000000 | t <- ts ]
       exchangeableTokens %= (Set.fromList ts <>)
-      wait 20
+      wait 21
 
     Start -> do
       -- Create the uniswap token
@@ -283,7 +283,7 @@ instance ContractModel UniswapModel where
       uniswapToken .= Just us
       -- Pay to the UTxO for the uniswap factory
       withdraw w1 (Ada.toValue Ledger.minAdaTxOut)
-      wait 10
+      wait 6
 
     CreatePool w t1 a1 t2 a2 -> do
       startedUserCode %= Set.insert w

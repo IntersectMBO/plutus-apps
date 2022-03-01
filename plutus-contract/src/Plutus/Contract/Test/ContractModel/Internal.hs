@@ -342,7 +342,7 @@ instance Functor ModelState where
   fmap f m = m { _contractState = f (_contractState m) }
 
 dummyModelState :: state -> ModelState state
-dummyModelState s = ModelState 0 Map.empty mempty [] True s
+dummyModelState s = ModelState 1 Map.empty mempty [] True s
 
 -- | The `Spec` monad is a state monad over the `ModelState` with reader and writer components to keep track
 --   of newly created symbolic tokens. It is used exclusively by the `nextState` function to model the effects
@@ -816,7 +816,7 @@ instance ContractModel state => StateModel (ModelState state) where
       [ Some (WaitUntil (Slot n')) | n' <- shrink n, Slot n' > s ^. currentSlot ]
     shrinkAction _ _                    = []
 
-    initialState = ModelState { _currentSlot      = 0
+    initialState = ModelState { _currentSlot      = 1
                               , _balanceChanges   = Map.empty
                               , _minted           = mempty
                               , _assertions       = []
@@ -1516,6 +1516,7 @@ propRunActionsWithOptions' opts copts predicate actions =
         finalPredicate keys' outerEnv = predicate finalState .&&. checkBalances finalState outerEnv
                                                              .&&. checkNoCrashes keys'
                                                              .&&. checkNoOverlappingTokens
+                                                             .&&. checkSlot finalState
 
 asserts :: ModelState state -> Property
 asserts finalState = foldr (QC..&&.) (property True) [ counterexample ("assertSpec failed: " ++ s) b
@@ -1573,6 +1574,13 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
                           "a discrepancy of",    " " <+> viaShow (finalValue P.- initialValue P.- dlt)]
             pure result
           _ -> error "I am the pope"
+
+checkSlot :: ModelState state
+          -> TracePredicate
+checkSlot st =
+  let lastSlot@(Slot s) = 1 + st ^. currentSlot in
+  assertChainEvents' (\evs -> "Final emulator slot " ++ show (maximum [ s | SlotAdd (Slot s) <- evs ]) ++ " doesn't match model slot " ++ show s)
+                                  (\evs -> lastSlot == maximum [ s | SlotAdd s <- evs ])
 
 -- See the uniqueness requirement in Note [Symbolic Tokens and Symbolic Values]
 checkNoOverlappingTokens :: TracePredicate
