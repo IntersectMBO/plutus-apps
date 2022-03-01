@@ -88,7 +88,6 @@ library
         base >=4.9 && <5,
         aeson -any,
         bytestring -any,
-        cardano-addresses -any,
         cardano-api -any,
         cardano-api:gen -any,
         cardano-crypto -any,

@@ -427,6 +427,9 @@
         "semialign".flags.semigroupoids = true;
         "ekg-json".revision = (((hackage."ekg-json")."0.1.0.6").revisions).default;
         "OddWord".revision = (((hackage."OddWord")."1.0.2.0").revisions).default;
+        "extensible-effects".revision = (((hackage."extensible-effects")."5.0.0.1").revisions).default;
+        "extensible-effects".flags.lib-werror = false;
+        "extensible-effects".flags.dump-core = false;
         "silently".revision = (((hackage."silently")."1.2.5.2").revisions).default;
         "OneTuple".revision = (((hackage."OneTuple")."0.3.1").revisions).default;
         "monad-par".revision = (((hackage."monad-par")."0.3.5").revisions).default;
@@ -1491,6 +1494,7 @@
           "silently".components.library.planned = lib.mkOverride 900 true;
           "mime-types".components.library.planned = lib.mkOverride 900 true;
           "foldl".components.library.planned = lib.mkOverride 900 true;
+          "extensible-effects".components.library.planned = lib.mkOverride 900 true;
           "constraints-extras".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-network-framework".components.exes."demo-connection-manager".planned = lib.mkOverride 900 true;
           "generic-lens".components.library.planned = lib.mkOverride 900 true;
