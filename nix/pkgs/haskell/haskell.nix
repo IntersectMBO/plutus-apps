@@ -41,7 +41,8 @@ let
       else if pkgs.stdenv.hostPlatform.isWindows then ./materialized-windows
       else builtins.error "Don't have materialized files for this platform";
     # If true, we check that the generated files are correct. Set in the CI so we don't make mistakes.
-    inherit checkMaterialization;
+    #inherit checkMaterialization;
+    checkMaterialization = true;
     sha256map = {
       "https://github.com/input-output-hk/iohk-monitoring-framework"."46f994e216a1f8b36fe4669b47b2a7011b0e153c" = "1il8fx3misp3650ryj368b3x95ksz01zz3x0z9k00807j93d0ka0";
       "https://github.com/input-output-hk/plutus"."73f2d9d749d19de058996442b76e4d0068fc87ef" = "1mh84qldc7bg84884aqfwhhwx3f93jp5bdb240gs8ba6rbsa9s8p";
@@ -61,7 +62,7 @@ let
       "https://github.com/input-output-hk/cardano-config"."e9de7a2cf70796f6ff26eac9f9540184ded0e4e6" = "1wm1c99r5zvz22pdl8nhkp13falvqmj8dgkm8fxskwa9ydqz01ld";
       "https://github.com/input-output-hk/optparse-applicative"."7497a29cb998721a9068d5725d49461f2bba0e7a" = "1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r";
       "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" = "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
-      "https://raw.githubusercontent.com/input-output-hk/hackage-overlay-ghcjs/8756b0891a0a550cc8b00dacd24227aee483c0ca" = "sha256:1v1af391f70212914ayf35w7672s11s4w6q5y7gn1x1brqjwlc2k";
+      "https://raw.githubusercontent.com/input-output-hk/hackage-overlay-ghcjs/fdb618b59d8fd5ef101acc97dee6a4f2f59f898b" = "1cpni2xw24kllpx76y4fwqxspv7kzrsy76ksk104zha5wp7wcr01";
     };
     # Configuration settings needed for cabal configure to work when cross compiling
     # for windows. We can't use `modules` for these as `modules` are only applied
@@ -129,7 +130,7 @@ let
 
       index-state: ghcjs-overlay HEAD
       repository ghcjs-overlay
-        url: https://raw.githubusercontent.com/input-output-hk/hackage-overlay-ghcjs/8756b0891a0a550cc8b00dacd24227aee483c0ca
+        url: https://raw.githubusercontent.com/input-output-hk/hackage-overlay-ghcjs/fdb618b59d8fd5ef101acc97dee6a4f2f59f898b
         secure: True
         root-keys:
         key-threshold: 0
@@ -421,11 +422,8 @@ let
             lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
               ++ [ "-Werror" ];
           plutus-chain-index-core.ghcOptions = [ "-Werror" ];
-          plutus-contract.ghcOptions = [ "-Werror" ];
-          plutus-ledger.ghcOptions = [ "-Werror" ];
           plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
           plutus-playground-server.ghcOptions = [ "-Werror" ];
-          plutus-pab.ghcOptions = [ "-Werror" ];
           plutus-pab-executables.ghcOptions =
             # "-Wno-deprecations" works around
             #    Module ‘Data.Yaml’:
@@ -433,7 +431,6 @@ let
             lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
               ++ [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
-          plutus-use-cases.ghcOptions = [ "-Werror" ];
           plutus-example.ghcOptions = [ "-Werror" ];
 
           # Honestly not sure why we need this, it has a mysterious unused dependency on "m"

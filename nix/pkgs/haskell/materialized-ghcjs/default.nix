@@ -15,6 +15,9 @@
         "http-conduit".revision = (((hackage."http-conduit")."2.3.8").revisions).default;
         "http-conduit".flags.aeson = true;
         "natural-transformation".revision = (((hackage."natural-transformation")."0.4").revisions).default;
+        "network-bsd".revision = (((hackage."network-bsd")."2.8.1.0").revisions).default;
+        "req".revision = (((hackage."req")."3.9.2").revisions).default;
+        "req".flags.dev = false;
         "happy".revision = (((hackage."happy")."1.20.0").revisions).default;
         "blaze-textual".revision = (((hackage."blaze-textual")."0.2.2.1").revisions).default;
         "blaze-textual".flags.integer-simple = false;
@@ -63,6 +66,8 @@
         "groups".revision = (((hackage."groups")."0.5.3").revisions).default;
         "Stream".revision = (((hackage."Stream")."0.4.7.2").revisions).default;
         "aeson-casing".revision = (((hackage."aeson-casing")."0.2.0.0").revisions).default;
+        "entropy".revision = (((hackage."entropy")."0.4.1.7").revisions).default;
+        "entropy".flags.halvm = false;
         "lzma".revision = (((hackage."lzma")."0.0.0.3").revisions).default;
         "array".revision = (((hackage."array")."0.5.4.0").revisions).default;
         "ghcjs-dom-jsffi".revision = (((hackage."ghcjs-dom-jsffi")."0.9.5.0").revisions).default;
@@ -263,6 +268,8 @@
         "aeson".flags.developer = false;
         "aeson".flags.cffi = false;
         "tdigest".revision = (((hackage."tdigest")."0.2.1.1").revisions).default;
+        "docopt".revision = (((hackage."docopt")."0.7.0.7").revisions).default;
+        "docopt".flags.template-haskell = true;
         "zlib".revision = (((hackage."zlib")."0.6.2.3").revisions).default;
         "zlib".flags.non-blocking-ffi = false;
         "zlib".flags.bundled-c-zlib = false;
@@ -329,6 +336,8 @@
         "ghcjs-prim".revision = (((hackage."ghcjs-prim")."0.1.1.0").revisions).default;
         "connection".revision = (((hackage."connection")."0.3.1").revisions).default;
         "pipes".revision = (((hackage."pipes")."4.3.16").revisions).default;
+        "crypto-api".revision = (((hackage."crypto-api")."0.13.3").revisions).default;
+        "crypto-api".flags.all_cpolys = false;
         "haskell-lexer".revision = (((hackage."haskell-lexer")."1.1").revisions).default;
         "microlens".revision = (((hackage."microlens")."0.4.12.0").revisions).default;
         "ghc-heap".revision = (((hackage."ghc-heap")."8.10.7").revisions).default;
@@ -381,8 +390,12 @@
         "ghc-prim".revision = (((hackage."ghc-prim")."0.6.1").revisions).default;
         "x509-validation".revision = (((hackage."x509-validation")."1.6.12").revisions).default;
         "typerep-map".revision = (((hackage."typerep-map")."0.4.0.0").revisions).default;
+        "hslogger".revision = (((hackage."hslogger")."1.3.1.0").revisions).default;
+        "hslogger".flags.network--gt-3_0_0 = true;
         "ghc-boot-th".revision = (((hackage."ghc-boot-th")."8.10.7").revisions).default;
         "asn1-encoding".revision = (((hackage."asn1-encoding")."0.9.6").revisions).default;
+        "MissingH".revision = (((hackage."MissingH")."1.4.3.0").revisions).default;
+        "MissingH".flags.network--ge-3_0_0 = true;
         "hedgehog-quickcheck".revision = (((hackage."hedgehog-quickcheck")."0.1.1").revisions).default;
         "indexed-traversable".revision = (((hackage."indexed-traversable")."0.1.2").revisions).default;
         "distributive".revision = (((hackage."distributive")."0.6.2.1").revisions).default;
@@ -394,6 +407,7 @@
         "servant".revision = (((hackage."servant")."0.18.3").revisions).default;
         "bin".revision = (((hackage."bin")."0.1").revisions).default;
         "signal".revision = (((hackage."signal")."0.1.0.4").revisions).default;
+        "show-combinators".revision = (((hackage."show-combinators")."0.2.0.0").revisions).default;
         "bsb-http-chunked".revision = (((hackage."bsb-http-chunked")."0.0.0.4").revisions).default;
         "bifunctors".revision = (((hackage."bifunctors")."5.5.7").revisions).default;
         "bifunctors".flags.tagged = true;
@@ -404,6 +418,7 @@
         "microlens-mtl".revision = (((hackage."microlens-mtl")."0.2.0.1").revisions).default;
         "reducers".revision = (((hackage."reducers")."3.12.4").revisions).default;
         "servant-swagger-ui".revision = (((hackage."servant-swagger-ui")."0.3.5.3.52.5").revisions).default;
+        "RSA".revision = (((hackage."RSA")."2.4.1").revisions).default;
         "base".revision = (((hackage."base")."4.14.3.0").revisions).default;
         "time".revision = (((hackage."time")."1.9.3").revisions).default;
         "ListLike".revision = (((hackage."ListLike")."4.7.6").revisions).default;
@@ -478,6 +493,7 @@
         "quickcheck-instances".flags.bytestring-builder = false;
         "bimap".revision = (((hackage."bimap")."0.4.0").revisions).default;
         "prettyprinter-ansi-terminal".revision = (((hackage."prettyprinter-ansi-terminal")."1.1.3").revisions).default;
+        "generic-data".revision = (((hackage."generic-data")."0.9.2.1").revisions).default;
         "dependent-sum-template".revision = (((hackage."dependent-sum-template")."0.1.0.3").revisions).default;
         "srcloc".revision = (((hackage."srcloc")."0.6").revisions).default;
         "logict".revision = (((hackage."logict")."0.7.0.3").revisions).default;
@@ -525,6 +541,8 @@
         "base64-bytestring-type".flags.http-api-data = true;
         "base64-bytestring-type".flags.cereal = true;
         "base64-bytestring-type".flags.serialise = true;
+        "modern-uri".revision = (((hackage."modern-uri")."0.3.4.2").revisions).default;
+        "modern-uri".flags.dev = false;
         "half".revision = (((hackage."half")."0.3.1").revisions).default;
         "optparse-applicative".revision = (((hackage."optparse-applicative")."0.16.1.0").revisions).default;
         "optparse-applicative".flags.process = true;
@@ -562,6 +580,7 @@
         "wai-app-static".flags.print = false;
         "transformers".revision = (((hackage."transformers")."0.5.6.2").revisions).default;
         "moo".revision = (((hackage."moo")."1.2").revisions).default;
+        "authenticate-oauth".revision = (((hackage."authenticate-oauth")."1.7").revisions).default;
         "template-haskell".revision = (((hackage."template-haskell")."2.16.0.0").revisions).default;
         "direct-sqlite".revision = (((hackage."direct-sqlite")."2.3.26").revisions).default;
         "direct-sqlite".flags.haveusleep = true;
@@ -570,6 +589,7 @@
         "direct-sqlite".flags.urifilenames = true;
         "direct-sqlite".flags.json1 = true;
         "blaze-markup".revision = (((hackage."blaze-markup")."0.8.2.8").revisions).default;
+        "crypto-pubkey-types".revision = (((hackage."crypto-pubkey-types")."0.4.3").revisions).default;
         "optics-extra".revision = (((hackage."optics-extra")."0.3").revisions).default;
         "pretty-show".revision = (((hackage."pretty-show")."1.10").revisions).default;
         "tasty-golden".revision = (((hackage."tasty-golden")."2.3.5").revisions).default;
@@ -669,6 +689,8 @@
         "ansi-wl-pprint".revision = (((hackage."ansi-wl-pprint")."0.6.9").revisions).default;
         "ansi-wl-pprint".flags.example = false;
         "filelock".revision = (((hackage."filelock")."0.1.1.5").revisions).default;
+        "ap-normalize".revision = (((hackage."ap-normalize")."0.1.0.1").revisions).default;
+        "ap-normalize".flags.test-with-clang = false;
         "QuickCheck".revision = (((hackage."QuickCheck")."2.14.2").revisions).default;
         "QuickCheck".flags.old-random = false;
         "QuickCheck".flags.templatehaskell = true;
@@ -720,9 +742,11 @@
   extras = hackage:
     {
       packages = {
+        cardano-node = ./.plan.nix/cardano-node.nix;
         strict-containers = ./.plan.nix/strict-containers.nix;
         cardano-ledger-byron-test = ./.plan.nix/cardano-ledger-byron-test.nix;
         plutus-pab-executables = ./.plan.nix/plutus-pab-executables.nix;
+        cardano-testnet = ./.plan.nix/cardano-testnet.nix;
         plutus-tx = ./.plan.nix/plutus-tx.nix;
         cardano-ledger-byron = ./.plan.nix/cardano-ledger-byron.nix;
         cardano-data = ./.plan.nix/cardano-data.nix;
@@ -737,6 +761,7 @@
         cardano-prelude-test = ./.plan.nix/cardano-prelude-test.nix;
         strict-non-empty-containers = ./.plan.nix/strict-non-empty-containers.nix;
         cardano-wallet-core = ./.plan.nix/cardano-wallet-core.nix;
+        hedgehog-extras = ./.plan.nix/hedgehog-extras.nix;
         plutus-pab = ./.plan.nix/plutus-pab.nix;
         plutus-use-cases = ./.plan.nix/plutus-use-cases.nix;
         goblins = ./.plan.nix/goblins.nix;
@@ -751,15 +776,17 @@
         cardano-crypto-class = ./.plan.nix/cardano-crypto-class.nix;
         playground-common = ./.plan.nix/playground-common.nix;
         cardano-addresses = ./.plan.nix/cardano-addresses.nix;
-        entropy = ./.plan.nix/entropy.nix;
+        cardano-cli = ./.plan.nix/cardano-cli.nix;
         ouroboros-consensus-cardano = ./.plan.nix/ouroboros-consensus-cardano.nix;
         plutus-chain-index-core = ./.plan.nix/plutus-chain-index-core.nix;
         flat = ./.plan.nix/flat.nix;
         servant-purescript = ./.plan.nix/servant-purescript.nix;
         cardano-crypto-praos = ./.plan.nix/cardano-crypto-praos.nix;
         text-class = ./.plan.nix/text-class.nix;
+        lobemo-backend-trace-forwarder = ./.plan.nix/lobemo-backend-trace-forwarder.nix;
         ntp-client = ./.plan.nix/ntp-client.nix;
         plutus-doc = ./.plan.nix/plutus-doc.nix;
+        optparse-applicative-fork = ./.plan.nix/optparse-applicative-fork.nix;
         lobemo-backend-ekg = ./.plan.nix/lobemo-backend-ekg.nix;
         cardano-addresses-cli = ./.plan.nix/cardano-addresses-cli.nix;
         quickcheck-dynamic = ./.plan.nix/quickcheck-dynamic.nix;
@@ -773,10 +800,13 @@
         ouroboros-consensus-shelley = ./.plan.nix/ouroboros-consensus-shelley.nix;
         byron-spec-chain = ./.plan.nix/byron-spec-chain.nix;
         cardano-crypto-test = ./.plan.nix/cardano-crypto-test.nix;
+        plutus-example = ./.plan.nix/plutus-example.nix;
+        cardano-config = ./.plan.nix/cardano-config.nix;
         js-bindgen = ./.plan.nix/js-bindgen.nix;
         ouroboros-network-testing = ./.plan.nix/ouroboros-network-testing.nix;
         Win32-network = ./.plan.nix/Win32-network.nix;
         cardano-ledger-shelley-test = ./.plan.nix/cardano-ledger-shelley-test.nix;
+        lobemo-backend-monitoring = ./.plan.nix/lobemo-backend-monitoring.nix;
         iohk-monitoring = ./.plan.nix/iohk-monitoring.nix;
         plutus-contract = ./.plan.nix/plutus-contract.nix;
         io-sim = ./.plan.nix/io-sim.nix;
@@ -795,6 +825,7 @@
         cardano-binary-test = ./.plan.nix/cardano-binary-test.nix;
         cardano-crypto = ./.plan.nix/cardano-crypto.nix;
         web-ghc = ./.plan.nix/web-ghc.nix;
+        lobemo-backend-aggregation = ./.plan.nix/lobemo-backend-aggregation.nix;
         cardano-addresses-jsbits = ./.plan.nix/cardano-addresses-jsbits.nix;
         cardano-slotting = ./.plan.nix/cardano-slotting.nix;
         io-classes = ./.plan.nix/io-classes.nix;
@@ -820,6 +851,12 @@
     ({ lib, ... }:
       {
         packages = {
+          "cardano-node" = {
+            flags = {
+              "unexpected_thunks" = lib.mkOverride 900 false;
+              "systemd" = lib.mkOverride 900 true;
+              };
+            };
           "strict-containers" = {
             flags = { "development" = lib.mkOverride 900 false; };
             };
@@ -827,6 +864,7 @@
           "plutus-pab-executables" = {
             flags = { "defer-plugin-errors" = lib.mkOverride 900 false; };
             };
+          "cardano-testnet" = { flags = {}; };
           "plutus-tx" = { flags = {}; };
           "cardano-ledger-byron" = {
             flags = { "test-normal-form" = lib.mkOverride 900 false; };
@@ -855,6 +893,7 @@
           "cardano-wallet-core" = {
             flags = { "release" = lib.mkOverride 900 false; };
             };
+          "hedgehog-extras" = { flags = {}; };
           "plutus-pab" = {
             flags = { "defer-plugin-errors" = lib.mkOverride 900 false; };
             };
@@ -883,7 +922,9 @@
           "cardano-addresses" = {
             flags = { "release" = lib.mkOverride 900 false; };
             };
-          "entropy" = { flags = {}; };
+          "cardano-cli" = {
+            flags = { "unexpected_thunks" = lib.mkOverride 900 false; };
+            };
           "ouroboros-consensus-cardano" = {
             flags = { "asserts" = lib.mkOverride 900 false; };
             };
@@ -897,9 +938,13 @@
               };
             };
           "text-class" = { flags = { "release" = lib.mkOverride 900 false; }; };
+          "lobemo-backend-trace-forwarder" = { flags = {}; };
           "ntp-client" = { flags = { "demo" = lib.mkOverride 900 true; }; };
           "plutus-doc" = {
             flags = { "defer-plugin-errors" = lib.mkOverride 900 false; };
+            };
+          "optparse-applicative-fork" = {
+            flags = { "process" = lib.mkOverride 900 true; };
             };
           "lobemo-backend-ekg" = { flags = {}; };
           "cardano-addresses-cli" = {
@@ -926,10 +971,20 @@
             };
           "byron-spec-chain" = { flags = {}; };
           "cardano-crypto-test" = { flags = {}; };
+          "plutus-example" = {
+            flags = {
+              "unexpected_thunks" = lib.mkOverride 900 false;
+              "defer-plugin-errors" = lib.mkOverride 900 false;
+              };
+            };
+          "cardano-config" = {
+            flags = { "systemd" = lib.mkOverride 900 true; };
+            };
           "js-bindgen" = { flags = {}; };
           "ouroboros-network-testing" = { flags = {}; };
           "Win32-network" = { flags = { "demo" = lib.mkOverride 900 false; }; };
           "cardano-ledger-shelley-test" = { flags = {}; };
+          "lobemo-backend-monitoring" = { flags = {}; };
           "iohk-monitoring" = {
             flags = {
               "disable-observables" = lib.mkOverride 900 false;
@@ -982,6 +1037,7 @@
           "web-ghc" = {
             flags = { "defer-plugin-errors" = lib.mkOverride 900 false; };
             };
+          "lobemo-backend-aggregation" = { flags = {}; };
           "cardano-addresses-jsbits" = { flags = {}; };
           "cardano-slotting" = {
             flags = { "development" = lib.mkOverride 900 false; };
@@ -1050,6 +1106,7 @@
           "base16-bytestring".components.library.planned = lib.mkOverride 900 true;
           "terminal-size".components.library.planned = lib.mkOverride 900 true;
           "invariant".components.library.planned = lib.mkOverride 900 true;
+          "cardano-node".components.library.planned = lib.mkOverride 900 true;
           "transformers-base".components.library.planned = lib.mkOverride 900 true;
           "base-orphans".components.library.planned = lib.mkOverride 900 true;
           "scrypt".components.library.planned = lib.mkOverride 900 true;
@@ -1092,6 +1149,7 @@
           "web-ghc".components.tests."web-ghc-test".planned = lib.mkOverride 900 true;
           "pretty-show".components.library.planned = lib.mkOverride 900 true;
           "newtype-generics".components.library.planned = lib.mkOverride 900 true;
+          "plutus-example".components.exes."create-script-context".planned = lib.mkOverride 900 true;
           "cardano-addresses".components.library.planned = lib.mkOverride 900 true;
           "ral".components.library.planned = lib.mkOverride 900 true;
           "cardano-wallet-core-integration".components.library.planned = lib.mkOverride 900 true;
@@ -1106,11 +1164,13 @@
           "ouroboros-network-framework".components.exes."demo-ping-pong".planned = lib.mkOverride 900 true;
           "pretty".components.library.planned = lib.mkOverride 900 true;
           "utf8-string".components.library.planned = lib.mkOverride 900 true;
+          "plutus-example".components.library.planned = lib.mkOverride 900 true;
           "pretty-simple".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-consensus-cardano".components.library.planned = lib.mkOverride 900 true;
           "typerep-map".components.sublibs."typerep-extra-impls".planned = lib.mkOverride 900 true;
           "Cabal".components.library.planned = lib.mkOverride 900 true;
           "reflection".components.library.planned = lib.mkOverride 900 true;
+          "authenticate-oauth".components.library.planned = lib.mkOverride 900 true;
           "Unique".components.library.planned = lib.mkOverride 900 true;
           "attoparsec-iso8601".components.library.planned = lib.mkOverride 900 true;
           "vector-sized".components.library.planned = lib.mkOverride 900 true;
@@ -1125,6 +1185,7 @@
           "plutus-chain-index-core".components.library.planned = lib.mkOverride 900 true;
           "mwc-random".components.library.planned = lib.mkOverride 900 true;
           "mono-traversable".components.library.planned = lib.mkOverride 900 true;
+          "docopt".components.library.planned = lib.mkOverride 900 true;
           "cardano-ledger-core".components.library.planned = lib.mkOverride 900 true;
           "zlib".components.library.planned = lib.mkOverride 900 true;
           "servant-server".components.exes."greet".planned = lib.mkOverride 900 true;
@@ -1141,6 +1202,7 @@
           "dbvar".components.library.planned = lib.mkOverride 900 true;
           "plutus-core".components.exes."uplc".planned = lib.mkOverride 900 true;
           "purescript-bridge".components.library.planned = lib.mkOverride 900 true;
+          "modern-uri".components.library.planned = lib.mkOverride 900 true;
           "set-algebra".components.library.planned = lib.mkOverride 900 true;
           "unliftio".components.library.planned = lib.mkOverride 900 true;
           "typed-protocols-examples".components.library.planned = lib.mkOverride 900 true;
@@ -1169,14 +1231,17 @@
           "playground-common".components.tests."playground-common-test".planned = lib.mkOverride 900 true;
           "size-based".components.library.planned = lib.mkOverride 900 true;
           "dlist".components.library.planned = lib.mkOverride 900 true;
+          "cardano-testnet".components.library.planned = lib.mkOverride 900 true;
           "time-manager".components.library.planned = lib.mkOverride 900 true;
           "snap-core".components.library.planned = lib.mkOverride 900 true;
           "ghc-prim".components.library.planned = lib.mkOverride 900 true;
           "servant-purescript".components.library.planned = lib.mkOverride 900 true;
           "HUnit".components.library.planned = lib.mkOverride 900 true;
           "some".components.library.planned = lib.mkOverride 900 true;
+          "lobemo-backend-trace-forwarder".components.library.planned = lib.mkOverride 900 true;
           "dependent-sum-template".components.library.planned = lib.mkOverride 900 true;
           "plutus-ghc-stub".components.library.planned = lib.mkOverride 900 true;
+          "generic-data".components.library.planned = lib.mkOverride 900 true;
           "IntervalMap".components.library.planned = lib.mkOverride 900 true;
           "small-steps".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-classes".components.library.planned = lib.mkOverride 900 true;
@@ -1287,6 +1352,7 @@
           "http-api-data".components.library.planned = lib.mkOverride 900 true;
           "network".components.library.planned = lib.mkOverride 900 true;
           "psqueues".components.library.planned = lib.mkOverride 900 true;
+          "show-combinators".components.library.planned = lib.mkOverride 900 true;
           "ListLike".components.library.planned = lib.mkOverride 900 true;
           "string-interpolate".components.library.planned = lib.mkOverride 900 true;
           "bsb-http-chunked".components.library.planned = lib.mkOverride 900 true;
@@ -1296,6 +1362,7 @@
           "aeson-pretty".components.exes."aeson-pretty".planned = lib.mkOverride 900 true;
           "prettyprinter-configurable".components.setup.planned = lib.mkOverride 900 true;
           "StateVar".components.library.planned = lib.mkOverride 900 true;
+          "cardano-node".components.exes."cardano-node".planned = lib.mkOverride 900 true;
           "deriving-compat".components.library.planned = lib.mkOverride 900 true;
           "fast-logger".components.library.planned = lib.mkOverride 900 true;
           "data-default".components.library.planned = lib.mkOverride 900 true;
@@ -1367,6 +1434,7 @@
           "katip".components.library.planned = lib.mkOverride 900 true;
           "cardano-wallet".components.exes."cardano-wallet".planned = lib.mkOverride 900 true;
           "lzma".components.library.planned = lib.mkOverride 900 true;
+          "plutus-example".components.exes."plutus-example".planned = lib.mkOverride 900 true;
           "wai-logger".components.setup.planned = lib.mkOverride 900 true;
           "streaming-binary".components.library.planned = lib.mkOverride 900 true;
           "regex-posix".components.library.planned = lib.mkOverride 900 true;
@@ -1376,6 +1444,7 @@
           "plutus-pab".components.tests."pab-mktx".planned = lib.mkOverride 900 true;
           "ouroboros-consensus-byron".components.library.planned = lib.mkOverride 900 true;
           "hedgehog-quickcheck".components.library.planned = lib.mkOverride 900 true;
+          "crypto-pubkey-types".components.library.planned = lib.mkOverride 900 true;
           "cardano-wallet-cli".components.library.planned = lib.mkOverride 900 true;
           "memory".components.library.planned = lib.mkOverride 900 true;
           "pem".components.library.planned = lib.mkOverride 900 true;
@@ -1391,6 +1460,7 @@
           "pqueue".components.library.planned = lib.mkOverride 900 true;
           "contravariant".components.library.planned = lib.mkOverride 900 true;
           "appar".components.library.planned = lib.mkOverride 900 true;
+          "optparse-applicative-fork".components.library.planned = lib.mkOverride 900 true;
           "ghcjs-base".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-consensus-cardano".components.exes."db-analyser".planned = lib.mkOverride 900 true;
           "beam-sqlite".components.library.planned = lib.mkOverride 900 true;
@@ -1402,6 +1472,7 @@
           "syb".components.library.planned = lib.mkOverride 900 true;
           "vector-th-unbox".components.library.planned = lib.mkOverride 900 true;
           "hspec".components.library.planned = lib.mkOverride 900 true;
+          "cardano-cli".components.library.planned = lib.mkOverride 900 true;
           "signal".components.library.planned = lib.mkOverride 900 true;
           "ghcjs-dom-jsffi".components.library.planned = lib.mkOverride 900 true;
           "cardano-binary".components.library.planned = lib.mkOverride 900 true;
@@ -1412,6 +1483,8 @@
           "assoc".components.library.planned = lib.mkOverride 900 true;
           "process".components.library.planned = lib.mkOverride 900 true;
           "http-date".components.library.planned = lib.mkOverride 900 true;
+          "MissingH".components.library.planned = lib.mkOverride 900 true;
+          "plutus-example".components.tests."plutus-example-test".planned = lib.mkOverride 900 true;
           "hspec-discover".components.library.planned = lib.mkOverride 900 true;
           "cardano-ledger-shelley".components.library.planned = lib.mkOverride 900 true;
           "tf-random".components.library.planned = lib.mkOverride 900 true;
@@ -1456,6 +1529,7 @@
           "ghc-boot".components.library.planned = lib.mkOverride 900 true;
           "word8".components.library.planned = lib.mkOverride 900 true;
           "cardano-ledger-byron-test".components.library.planned = lib.mkOverride 900 true;
+          "hslogger".components.library.planned = lib.mkOverride 900 true;
           "openapi3".components.library.planned = lib.mkOverride 900 true;
           "microlens-mtl".components.library.planned = lib.mkOverride 900 true;
           "semigroupoids".components.setup.planned = lib.mkOverride 900 true;
@@ -1479,6 +1553,7 @@
           "small-steps-test".components.library.planned = lib.mkOverride 900 true;
           "network-mux".components.library.planned = lib.mkOverride 900 true;
           "logict".components.library.planned = lib.mkOverride 900 true;
+          "cardano-testnet".components.exes."cardano-testnet".planned = lib.mkOverride 900 true;
           "srcloc".components.library.planned = lib.mkOverride 900 true;
           "atomic-primops".components.library.planned = lib.mkOverride 900 true;
           "gray-code".components.library.planned = lib.mkOverride 900 true;
@@ -1486,13 +1561,16 @@
           "ansi-wl-pprint".components.library.planned = lib.mkOverride 900 true;
           "uuid-types".components.library.planned = lib.mkOverride 900 true;
           "generic-arbitrary".components.library.planned = lib.mkOverride 900 true;
+          "req".components.library.planned = lib.mkOverride 900 true;
           "process-extras".components.library.planned = lib.mkOverride 900 true;
           "io-classes".components.library.planned = lib.mkOverride 900 true;
           "monoidal-synchronisation".components.library.planned = lib.mkOverride 900 true;
           "plutus-use-cases".components.tests."plutus-use-cases-test".planned = lib.mkOverride 900 true;
+          "ap-normalize".components.library.planned = lib.mkOverride 900 true;
           "semigroupoids".components.library.planned = lib.mkOverride 900 true;
           "x509-validation".components.library.planned = lib.mkOverride 900 true;
           "cardano-wallet".components.exes."local-cluster".planned = lib.mkOverride 900 true;
+          "network-bsd".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-dynamic".components.library.planned = lib.mkOverride 900 true;
           "ghc-heap".components.library.planned = lib.mkOverride 900 true;
           "filelock".components.library.planned = lib.mkOverride 900 true;
@@ -1522,9 +1600,11 @@
           "plutus-ledger-api".components.library.planned = lib.mkOverride 900 true;
           "plutus-contract".components.tests."plutus-contract-test".planned = lib.mkOverride 900 true;
           "statistics".components.library.planned = lib.mkOverride 900 true;
+          "lobemo-backend-monitoring".components.library.planned = lib.mkOverride 900 true;
           "aeson-qq".components.library.planned = lib.mkOverride 900 true;
           "vault".components.library.planned = lib.mkOverride 900 true;
           "th-abstraction".components.library.planned = lib.mkOverride 900 true;
+          "RSA".components.library.planned = lib.mkOverride 900 true;
           "cardano-ledger-shelley-test".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab".components.library.planned = lib.mkOverride 900 true;
           "parsers".components.library.planned = lib.mkOverride 900 true;
@@ -1553,6 +1633,7 @@
           "servant-websockets".components.exes."websocket-echo".planned = lib.mkOverride 900 true;
           "lifted-async".components.library.planned = lib.mkOverride 900 true;
           "conduit".components.library.planned = lib.mkOverride 900 true;
+          "cardano-config".components.library.planned = lib.mkOverride 900 true;
           "blaze-textual".components.library.planned = lib.mkOverride 900 true;
           "errors".components.library.planned = lib.mkOverride 900 true;
           "microstache".components.library.planned = lib.mkOverride 900 true;
@@ -1618,15 +1699,20 @@
           "byron-spec-chain".components.library.planned = lib.mkOverride 900 true;
           "warp".components.library.planned = lib.mkOverride 900 true;
           "mainland-pretty".components.library.planned = lib.mkOverride 900 true;
+          "lobemo-backend-aggregation".components.library.planned = lib.mkOverride 900 true;
+          "plutus-pab-executables".components.exes."pab-cli".planned = lib.mkOverride 900 true;
           "easy-file".components.library.planned = lib.mkOverride 900 true;
+          "cardano-cli".components.exes."cardano-cli".planned = lib.mkOverride 900 true;
           "say".components.library.planned = lib.mkOverride 900 true;
           "regex-compat".components.library.planned = lib.mkOverride 900 true;
           "conduit-extra".components.library.planned = lib.mkOverride 900 true;
+          "hedgehog-extras".components.library.planned = lib.mkOverride 900 true;
           "non-integral".components.library.planned = lib.mkOverride 900 true;
           "connection".components.library.planned = lib.mkOverride 900 true;
           "void".components.library.planned = lib.mkOverride 900 true;
           "Only".components.library.planned = lib.mkOverride 900 true;
           "exact-combinatorics".components.library.planned = lib.mkOverride 900 true;
+          "crypto-api".components.library.planned = lib.mkOverride 900 true;
           "testing-type-modifiers".components.library.planned = lib.mkOverride 900 true;
           };
         })

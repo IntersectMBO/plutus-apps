@@ -270,9 +270,3 @@ source-repository-package
   location: https://github.com/input-output-hk/Win32-network
   tag: 3825d3abf75f83f406c1f7161883c438dac7277d
 
--- For ghcjs fix
-source-repository-package
-  type: git
-  location: https://github.com/hamishmack/entropy
-  tag: 0272c697499b1304fccd43e6a983df93ce0cf761
-

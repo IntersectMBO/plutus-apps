@@ -92,6 +92,7 @@
           "Data/UUID/Extras"
           "Plutus/Contract"
           "Plutus/Contract/Effects"
+          "Plutus/Contract/Error"
           "Plutus/Contract/Request"
           "Plutus/Contract/Checkpoint"
           "Plutus/Contract/Constraints"

@@ -63,5 +63,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/plugins/backend-aggregation; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/plugins/backend-aggregation; echo source root reset to $sourceRoot";
     }
