@@ -41,8 +41,7 @@ let
       else if pkgs.stdenv.hostPlatform.isWindows then ./materialized-windows
       else builtins.error "Don't have materialized files for this platform";
     # If true, we check that the generated files are correct. Set in the CI so we don't make mistakes.
-    #inherit checkMaterialization;
-    checkMaterialization = true;
+    inherit checkMaterialization;
     sha256map = {
       "https://github.com/input-output-hk/iohk-monitoring-framework"."46f994e216a1f8b36fe4669b47b2a7011b0e153c" = "1il8fx3misp3650ryj368b3x95ksz01zz3x0z9k00807j93d0ka0";
       "https://github.com/input-output-hk/plutus"."73f2d9d749d19de058996442b76e4d0068fc87ef" = "1mh84qldc7bg84884aqfwhhwx3f93jp5bdb240gs8ba6rbsa9s8p";
