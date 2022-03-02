@@ -10,7 +10,9 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Spec.ErrorChecking where
 
+import Control.Lens hiding (elements)
 import Control.Monad
+import Control.Monad.Freer.Extras.Log
 import Data.Row
 import Test.Tasty
 
@@ -48,34 +50,37 @@ tests = testGroup "error checking"
 
 -- | Normal failures should be allowed
 prop_FailFalse :: Property
-prop_FailFalse = checkErrorWhitelist defaultWhitelist (actionsFromList [FailFalse])
+prop_FailFalse = checkErrorWhitelistWithOptions checkOptions defaultCoverageOptions defaultWhitelist (actionsFromList [FailFalse])
 
 -- | Head Nil failure should not be allowed
 prop_FailHeadNil :: Property
-prop_FailHeadNil = checkErrorWhitelist defaultWhitelist (actionsFromList [FailHeadNil])
+prop_FailHeadNil = checkErrorWhitelistWithOptions checkOptions defaultCoverageOptions defaultWhitelist (actionsFromList [FailHeadNil])
 
 -- | Division by zero failure should not be allowed
 prop_DivZero :: Property
-prop_DivZero = checkErrorWhitelist defaultWhitelist (actionsFromList [DivZero])
+prop_DivZero = checkErrorWhitelistWithOptions checkOptions defaultCoverageOptions defaultWhitelist (actionsFromList [DivZero])
 
 -- | Division by zero failure should not be allowed (tracing before the failure).
 prop_DivZero_t :: Property
-prop_DivZero_t = checkErrorWhitelist defaultWhitelist (actionsFromList [DivZero_t])
+prop_DivZero_t = checkErrorWhitelistWithOptions checkOptions defaultCoverageOptions defaultWhitelist (actionsFromList [DivZero_t])
 
 -- | Successful validation should be allowed
 prop_Success :: Property
-prop_Success = checkErrorWhitelist defaultWhitelist (actionsFromList [Success])
+prop_Success = checkErrorWhitelistWithOptions checkOptions defaultCoverageOptions defaultWhitelist (actionsFromList [Success])
+
+checkOptions :: CheckOptions
+checkOptions = set minLogLevel Critical defaultCheckOptionsContractModel
 
 -- | This QuickCheck model only provides an interface to the validators used in this
 -- test that are convenient for testing them in isolation.
 data DummyModel = DummyModel deriving Haskell.Show
 
-deriving instance Haskell.Eq (ContractInstanceKey DummyModel w schema err)
-deriving instance Haskell.Show (ContractInstanceKey DummyModel w schema err)
+deriving instance Haskell.Eq (ContractInstanceKey DummyModel w schema err param)
+deriving instance Haskell.Show (ContractInstanceKey DummyModel w schema err param)
 
 instance ContractModel DummyModel where
-  data ContractInstanceKey DummyModel w schema err where
-    WalletKey :: Wallet -> ContractInstanceKey DummyModel () Schema ContractError
+  data ContractInstanceKey DummyModel w schema err param where
+    WalletKey :: Wallet -> ContractInstanceKey DummyModel () Schema ContractError ()
 
   data Action DummyModel = FailFalse
                          | FailHeadNil
@@ -103,11 +108,11 @@ instance ContractModel DummyModel where
 
   initialState = DummyModel
 
-  initialInstances = [Key (WalletKey w1)]
+  initialInstances = [StartContract (WalletKey w1) ()]
 
   instanceWallet (WalletKey w) = w
 
-  instanceContract _ _ (WalletKey _) = contract
+  instanceContract _ (WalletKey _) _ = contract
 
   nextState _ = wait 2
 

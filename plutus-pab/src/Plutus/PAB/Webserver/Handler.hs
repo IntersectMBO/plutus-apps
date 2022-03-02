@@ -49,7 +49,7 @@ import Servant ((:<|>) ((:<|>)))
 import Servant.OpenApi (toOpenApi)
 import Servant.Server qualified as Servant
 import Servant.Swagger.UI (SwaggerSchemaUI', swaggerSchemaUIServer)
-import Wallet.Emulator.Wallet (Wallet (Wallet), WalletId, knownWallet)
+import Wallet.Emulator.Wallet (Wallet, WalletId, getWalletId, knownWallet)
 import Wallet.Types (ContractActivityStatus, ContractInstanceId, parseContractActivityStatus)
 
 healthcheck :: forall t env. PABAction t env ()
@@ -153,7 +153,7 @@ callEndpoint :: forall t env. ContractInstanceId -> String -> JSON.Value -> PABA
 callEndpoint a b v = Core.callEndpointOnInstance a b v >>= traverse_ (throwError @PABError . EndpointCallError)
 
 instancesForWallets :: forall t env. Contract.PABContract t => WalletId -> Maybe Text -> PABAction t env [ContractInstanceClientState (Contract.ContractDef t)]
-instancesForWallets wallet mStatus = filter ((==) (Wallet wallet) . cicWallet) <$> allInstanceStates mStatus
+instancesForWallets wallet mStatus = filter ((==) wallet . getWalletId . cicWallet) <$> allInstanceStates mStatus
 
 allInstanceStates :: forall t env. Contract.PABContract t => Maybe Text -> PABAction t env [ContractInstanceClientState (Contract.ContractDef t)]
 allInstanceStates mStatus = do

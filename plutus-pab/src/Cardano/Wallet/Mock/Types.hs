@@ -47,6 +47,7 @@ import Data.Map.Strict (Map)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash)
+import Ledger.Ada (Ada)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Types (PABError)
@@ -69,7 +70,7 @@ data WalletInfo =
     deriving stock (Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
-type Wallets = Map Wallet WalletState
+type Wallets = Map WalletId WalletState
 
 fromWalletState :: WalletState -> WalletInfo
 fromWalletState WalletState{_mockWallet} = WalletInfo{wiWallet, wiPaymentPubKeyHash} where
@@ -77,7 +78,7 @@ fromWalletState WalletState{_mockWallet} = WalletInfo{wiWallet, wiPaymentPubKeyH
     wiPaymentPubKeyHash = mockWalletPaymentPubKeyHash wiWallet
 
 data MultiWalletEffect r where
-    CreateWallet :: MultiWalletEffect WalletInfo
+    CreateWallet :: Maybe Ada -> MultiWalletEffect WalletInfo
     MultiWallet :: Wallet -> Eff '[WalletEffect] a -> MultiWalletEffect a
     GetWalletInfo :: WalletId -> MultiWalletEffect (Maybe WalletInfo)
 makeEffect ''MultiWalletEffect

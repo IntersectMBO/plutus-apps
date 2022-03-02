@@ -327,7 +327,7 @@ matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txO
         unless (validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
 
         pure $ ScriptMatch (txInRef txin) v r d
-    (Just ConsumePublicKeyAddress, Nothing, Address{addressCredential=PubKeyCredential pkh}) ->
+    (Just ConsumePublicKeyAddress, _, Address{addressCredential=PubKeyCredential pkh}) ->
         let sigMatches = flip fmap (Map.toList mp) $ \(pk,sig) ->
                 if pubKeyHash pk == pkh
                 then Just (PubKeyMatch txid pk sig)

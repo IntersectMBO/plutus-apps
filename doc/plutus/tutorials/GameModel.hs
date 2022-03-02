@@ -83,8 +83,8 @@ data GameModel = GameModel
 makeLenses 'GameModel
 -- END GameModel
 
-deriving instance Eq (ContractInstanceKey GameModel w schema err)
-deriving instance Show (ContractInstanceKey GameModel w schema err)
+deriving instance Eq (ContractInstanceKey GameModel w schema err param)
+deriving instance Show (ContractInstanceKey GameModel w schema err param)
 
 -- START instance ContractModel and Action type
 instance ContractModel GameModel where
@@ -96,8 +96,8 @@ instance ContractModel GameModel where
 -- END instance ContractModel and Action type
 
 -- START ContractInstanceKey
-    data ContractInstanceKey GameModel w schema err where
-        WalletKey :: Wallet -> ContractInstanceKey GameModel () G.GameStateMachineSchema G.GameError
+    data ContractInstanceKey GameModel w schema err param where
+        WalletKey :: Wallet -> ContractInstanceKey GameModel () G.GameStateMachineSchema G.GameError ()
 -- END ContractInstanceKey
 
 -- START initialState
@@ -109,9 +109,9 @@ instance ContractModel GameModel where
 -- END initialState
 
 -- START initialHandleSpecs
-    initialInstances = Key . WalletKey <$> wallets
+    initialInstances = (`StartContract` ()) . WalletKey <$> wallets
 
-    instanceContract _ _ WalletKey{} = G.contract
+    instanceContract _ WalletKey{} _ = G.contract
 
     instanceWallet (WalletKey w) = w
 -- END initialHandleSpecs

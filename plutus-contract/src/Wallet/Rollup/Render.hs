@@ -203,7 +203,7 @@ deriving via RenderPretty Integer instance Render Integer
 deriving via RenderPretty Address instance Render Address
 
 instance Render Wallet where
-    render (Wallet n) = pure $ "Wallet" <+> viaShow n
+    render (Wallet _ n) = pure $ "Wallet" <+> viaShow n
 
 instance Render BeneficialOwner where
     render (OwnedByScript address) = ("Script:" <+>) <$> render address

@@ -62,19 +62,18 @@ data VestingModel =
 
 makeLenses 'VestingModel
 
-deriving instance Eq (ContractInstanceKey VestingModel w schema err)
-deriving instance Show (ContractInstanceKey VestingModel w schema err)
+deriving instance Eq (ContractInstanceKey VestingModel w schema err params)
+deriving instance Show (ContractInstanceKey VestingModel w schema err params)
 
 -- This instance models the behaviour of the vesting contract. There are some peculiarities
 -- that stem from the implementation of the contract that are apparent in the precondition
 -- to the `Vest` endpoint.
 instance ContractModel VestingModel where
-  data ContractInstanceKey VestingModel w schema err where
-    WalletKey :: Wallet -> ContractInstanceKey VestingModel () VestingSchema VestingError
+  data ContractInstanceKey VestingModel w schema err params where
+    WalletKey :: Wallet -> ContractInstanceKey VestingModel () VestingSchema VestingError ()
 
   data Action VestingModel = Vest Wallet
                            | Retrieve Wallet Value
-                           | WaitUntil Slot
                            deriving (Eq, Show)
 
   initialState = VestingModel
@@ -85,11 +84,11 @@ instance ContractModel VestingModel where
     , _t1Amount     = vestingTrancheAmount (vestingTranche1 params)
     , _t2Amount     = vestingTrancheAmount (vestingTranche2 params) }
 
-  initialInstances = Key . WalletKey <$> [w1, w2, w3]
+  initialInstances = (`StartContract` ()) . WalletKey <$> [w1, w2, w3]
 
   instanceWallet (WalletKey w) = w
 
-  instanceContract _ _ WalletKey{} = vestingContract params
+  instanceContract _ WalletKey{} _ = vestingContract params
 
   perform handle _ _ cmd = case cmd of
     Vest w -> do
@@ -99,8 +98,6 @@ instance ContractModel VestingModel where
     Retrieve w val -> do
       callEndpoint @"retrieve funds" (handle $ WalletKey w) val
       delay 2
-
-    WaitUntil slot -> void $ Trace.waitUntilSlot slot
 
   -- Vest the sum of the two tranches
   nextState (Vest w) = do
@@ -127,11 +124,6 @@ instance ContractModel VestingModel where
       vestedAmount .= newAmount
     wait 2
 
-  nextState (WaitUntil s) = do
-    slot <- viewModelState currentSlot
-    when (slot < s) $ do
-      waitUntil s
-
   precondition s (Vest w) =  w `notElem` s ^. contractState . vested -- After a wallet has vested the contract shuts down
                           && mockWalletPaymentPubKeyHash w /= vestingOwner params -- The vesting owner shouldn't vest
                           && slot < t1 -- If you vest after slot 1 it can cause the vesting owner to terminate prematurely
@@ -148,22 +140,20 @@ instance ContractModel VestingModel where
       amount = s ^. contractState . vestedAmount
       newAmount = amount Numeric.- v
 
-  precondition s (WaitUntil slot') = s ^. currentSlot < slot'
-
   arbitraryAction s = frequency [ (1, Vest <$> genWallet)
                                 , (1, Retrieve <$> genWallet
                                                <*> (Ada.lovelaceValueOf
                                                    <$> choose (Ada.getLovelace Ledger.minAdaTxOut, valueOf amount Ada.adaSymbol Ada.adaToken)
                                                    )
                                   )
-                                , (1, WaitUntil . Slot <$> choose (n+1, n+30 :: Integer)) ]
+                                ]
     where
       amount   = s ^. contractState . vestedAmount
-      (Slot n) = s ^. currentSlot
 
-  shrinkAction _ (Vest _)             = []
-  shrinkAction _ (Retrieve w v)       = Retrieve w <$> shrinkValue v
-  shrinkAction _ (WaitUntil (Slot n)) = [ WaitUntil (Slot n') | n' <- shrink n ]
+
+
+  shrinkAction _ (Vest _)       = []
+  shrinkAction _ (Retrieve w v) = Retrieve w <$> shrinkValue v
 
 -- | Check that the amount of value left in the contract
 -- is at least the amount that remains locked at the current
@@ -197,7 +187,7 @@ prop_Vesting :: Actions VestingModel -> Property
 prop_Vesting = propRunActions_
 
 noLockProof :: NoLockedFundsProof VestingModel
-noLockProof = NoLockedFundsProof{
+noLockProof = defaultNLFP {
       nlfpMainStrategy   = mainStrat,
       nlfpWalletStrategy = walletStrat }
     where
@@ -208,7 +198,7 @@ noLockProof = NoLockedFundsProof{
             t2     <- viewContractState t2Slot
             slot   <- viewModelState currentSlot
             when (slot < t2 + Slot 1) $ do
-              action (WaitUntil $ t2 + Slot 1)
+              waitUntilDL $ t2 + Slot 1
             when (amount `gt` mempty) $ do
               action (Retrieve w1 amount)
 

@@ -125,12 +125,10 @@ data ChainIndexQuery
   | MintingPolicyFromHash String
   | StakeValidatorFromHash String
   | RedeemerFromHash String
-  | TxOutFromRef TxOutRef
-  | TxFromTxId TxId
+  | UnspentTxOutFromRef TxOutRef
   | UtxoSetMembership TxOutRef
   | UtxoSetAtAddress (PageQuery TxOutRef) Credential
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
-  | TxsFromTxIds (Array TxId)
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
   | GetTip
 
@@ -146,12 +144,10 @@ instance EncodeJson ChainIndexQuery where
     MintingPolicyFromHash a -> E.encodeTagged "MintingPolicyFromHash" a E.value
     StakeValidatorFromHash a -> E.encodeTagged "StakeValidatorFromHash" a E.value
     RedeemerFromHash a -> E.encodeTagged "RedeemerFromHash" a E.value
-    TxOutFromRef a -> E.encodeTagged "TxOutFromRef" a E.value
-    TxFromTxId a -> E.encodeTagged "TxFromTxId" a E.value
+    UnspentTxOutFromRef a -> E.encodeTagged "UnspentTxOutFromRef" a E.value
     UtxoSetMembership a -> E.encodeTagged "UtxoSetMembership" a E.value
     UtxoSetAtAddress a b -> E.encodeTagged "UtxoSetAtAddress" (a /\ b) (E.tuple (E.value >/\< E.value))
     UtxoSetWithCurrency a b -> E.encodeTagged "UtxoSetWithCurrency" (a /\ b) (E.tuple (E.value >/\< E.value))
-    TxsFromTxIds a -> E.encodeTagged "TxsFromTxIds" a E.value
     TxoSetAtAddress a b -> E.encodeTagged "TxoSetAtAddress" (a /\ b) (E.tuple (E.value >/\< E.value))
     GetTip -> encodeJson { tag: "GetTip", contents: jsonNull }
 
@@ -164,12 +160,10 @@ instance DecodeJson ChainIndexQuery where
         , "MintingPolicyFromHash" /\ D.content (MintingPolicyFromHash <$> D.value)
         , "StakeValidatorFromHash" /\ D.content (StakeValidatorFromHash <$> D.value)
         , "RedeemerFromHash" /\ D.content (RedeemerFromHash <$> D.value)
-        , "TxOutFromRef" /\ D.content (TxOutFromRef <$> D.value)
-        , "TxFromTxId" /\ D.content (TxFromTxId <$> D.value)
+        , "UnspentTxOutFromRef" /\ D.content (UnspentTxOutFromRef <$> D.value)
         , "UtxoSetMembership" /\ D.content (UtxoSetMembership <$> D.value)
         , "UtxoSetAtAddress" /\ D.content (D.tuple $ UtxoSetAtAddress </$\> D.value </*\> D.value)
         , "UtxoSetWithCurrency" /\ D.content (D.tuple $ UtxoSetWithCurrency </$\> D.value </*\> D.value)
-        , "TxsFromTxIds" /\ D.content (TxsFromTxIds <$> D.value)
         , "TxoSetAtAddress" /\ D.content (D.tuple $ TxoSetAtAddress </$\> D.value </*\> D.value)
         , "GetTip" /\ pure GetTip
         ]
@@ -203,14 +197,9 @@ _RedeemerFromHash = prism' RedeemerFromHash case _ of
   (RedeemerFromHash a) -> Just a
   _ -> Nothing
 
-_TxOutFromRef :: Prism' ChainIndexQuery TxOutRef
-_TxOutFromRef = prism' TxOutFromRef case _ of
-  (TxOutFromRef a) -> Just a
-  _ -> Nothing
-
-_TxFromTxId :: Prism' ChainIndexQuery TxId
-_TxFromTxId = prism' TxFromTxId case _ of
-  (TxFromTxId a) -> Just a
+_UnspentTxOutFromRef :: Prism' ChainIndexQuery TxOutRef
+_UnspentTxOutFromRef = prism' UnspentTxOutFromRef case _ of
+  (UnspentTxOutFromRef a) -> Just a
   _ -> Nothing
 
 _UtxoSetMembership :: Prism' ChainIndexQuery TxOutRef
@@ -226,11 +215,6 @@ _UtxoSetAtAddress = prism' (\{ a, b } -> (UtxoSetAtAddress a b)) case _ of
 _UtxoSetWithCurrency :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: AssetClass }
 _UtxoSetWithCurrency = prism' (\{ a, b } -> (UtxoSetWithCurrency a b)) case _ of
   (UtxoSetWithCurrency a b) -> Just { a, b }
-  _ -> Nothing
-
-_TxsFromTxIds :: Prism' ChainIndexQuery (Array TxId)
-_TxsFromTxIds = prism' TxsFromTxIds case _ of
-  (TxsFromTxIds a) -> Just a
   _ -> Nothing
 
 _TxoSetAtAddress :: Prism' ChainIndexQuery { a :: PageQuery TxOutRef, b :: Credential }
@@ -250,7 +234,7 @@ data ChainIndexResponse
   | ValidatorHashResponse (Maybe Validator)
   | MintingPolicyHashResponse (Maybe MintingPolicy)
   | StakeValidatorHashResponse (Maybe StakeValidator)
-  | TxOutRefResponse (Maybe ChainIndexTxOut)
+  | UnspentTxOutResponse (Maybe ChainIndexTxOut)
   | RedeemerHashResponse (Maybe String)
   | TxIdResponse (Maybe ChainIndexTx)
   | UtxoSetMembershipResponse IsUtxoResponse
@@ -271,7 +255,7 @@ instance EncodeJson ChainIndexResponse where
     ValidatorHashResponse a -> E.encodeTagged "ValidatorHashResponse" a (E.maybe E.value)
     MintingPolicyHashResponse a -> E.encodeTagged "MintingPolicyHashResponse" a (E.maybe E.value)
     StakeValidatorHashResponse a -> E.encodeTagged "StakeValidatorHashResponse" a (E.maybe E.value)
-    TxOutRefResponse a -> E.encodeTagged "TxOutRefResponse" a (E.maybe E.value)
+    UnspentTxOutResponse a -> E.encodeTagged "UnspentTxOutResponse" a (E.maybe E.value)
     RedeemerHashResponse a -> E.encodeTagged "RedeemerHashResponse" a (E.maybe E.value)
     TxIdResponse a -> E.encodeTagged "TxIdResponse" a (E.maybe E.value)
     UtxoSetMembershipResponse a -> E.encodeTagged "UtxoSetMembershipResponse" a E.value
@@ -289,7 +273,7 @@ instance DecodeJson ChainIndexResponse where
         , "ValidatorHashResponse" /\ D.content (ValidatorHashResponse <$> (D.maybe D.value))
         , "MintingPolicyHashResponse" /\ D.content (MintingPolicyHashResponse <$> (D.maybe D.value))
         , "StakeValidatorHashResponse" /\ D.content (StakeValidatorHashResponse <$> (D.maybe D.value))
-        , "TxOutRefResponse" /\ D.content (TxOutRefResponse <$> (D.maybe D.value))
+        , "UnspentTxOutResponse" /\ D.content (UnspentTxOutResponse <$> (D.maybe D.value))
         , "RedeemerHashResponse" /\ D.content (RedeemerHashResponse <$> (D.maybe D.value))
         , "TxIdResponse" /\ D.content (TxIdResponse <$> (D.maybe D.value))
         , "UtxoSetMembershipResponse" /\ D.content (UtxoSetMembershipResponse <$> D.value)
@@ -324,9 +308,9 @@ _StakeValidatorHashResponse = prism' StakeValidatorHashResponse case _ of
   (StakeValidatorHashResponse a) -> Just a
   _ -> Nothing
 
-_TxOutRefResponse :: Prism' ChainIndexResponse (Maybe ChainIndexTxOut)
-_TxOutRefResponse = prism' TxOutRefResponse case _ of
-  (TxOutRefResponse a) -> Just a
+_UnspentTxOutResponse :: Prism' ChainIndexResponse (Maybe ChainIndexTxOut)
+_UnspentTxOutResponse = prism' UnspentTxOutResponse case _ of
+  (UnspentTxOutResponse a) -> Just a
   _ -> Nothing
 
 _RedeemerHashResponse :: Prism' ChainIndexResponse (Maybe String)

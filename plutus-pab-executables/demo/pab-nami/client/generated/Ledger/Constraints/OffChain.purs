@@ -23,8 +23,7 @@ import Ledger.Typed.Tx (ConnectionError)
 import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash)
 import Plutus.V1.Ledger.Time (POSIXTime)
-import Plutus.V1.Ledger.Tx (Tx, TxOutRef)
-import Plutus.V1.Ledger.Value (Value)
+import Plutus.V1.Ledger.Tx (Tx, TxOut, TxOutRef)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
@@ -132,50 +131,10 @@ _CannotSatisfyAny = prism' (const CannotSatisfyAny) case _ of
 
 --------------------------------------------------------------------------------
 
-newtype ScriptOutput = ScriptOutput
-  { scriptOutputValidatorHash :: String
-  , scriptOutputValue :: Value
-  , scriptOutputDatumHash :: DatumHash
-  }
-
-derive instance Eq ScriptOutput
-
-instance Show ScriptOutput where
-  show a = genericShow a
-
-instance EncodeJson ScriptOutput where
-  encodeJson = defer \_ -> E.encode $ unwrap >$<
-    ( E.record
-        { scriptOutputValidatorHash: E.value :: _ String
-        , scriptOutputValue: E.value :: _ Value
-        , scriptOutputDatumHash: E.value :: _ DatumHash
-        }
-    )
-
-instance DecodeJson ScriptOutput where
-  decodeJson = defer \_ -> D.decode $
-    ( ScriptOutput <$> D.record "ScriptOutput"
-        { scriptOutputValidatorHash: D.value :: _ String
-        , scriptOutputValue: D.value :: _ Value
-        , scriptOutputDatumHash: D.value :: _ DatumHash
-        }
-    )
-
-derive instance Generic ScriptOutput _
-
-derive instance Newtype ScriptOutput _
-
---------------------------------------------------------------------------------
-
-_ScriptOutput :: Iso' ScriptOutput { scriptOutputValidatorHash :: String, scriptOutputValue :: Value, scriptOutputDatumHash :: DatumHash }
-_ScriptOutput = _Newtype
-
---------------------------------------------------------------------------------
-
 newtype UnbalancedTx = UnbalancedTx
   { unBalancedTxTx :: Tx
   , unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey)
-  , unBalancedTxUtxoIndex :: Map TxOutRef ScriptOutput
+  , unBalancedTxUtxoIndex :: Map TxOutRef TxOut
   , unBalancedTxValidityTimeRange :: Interval POSIXTime
   }
 
@@ -189,7 +148,7 @@ instance EncodeJson UnbalancedTx where
     ( E.record
         { unBalancedTxTx: E.value :: _ Tx
         , unBalancedTxRequiredSignatories: (E.dictionary E.value (E.maybe E.value)) :: _ (Map PaymentPubKeyHash (Maybe PaymentPubKey))
-        , unBalancedTxUtxoIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef ScriptOutput)
+        , unBalancedTxUtxoIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef TxOut)
         , unBalancedTxValidityTimeRange: E.value :: _ (Interval POSIXTime)
         }
     )
@@ -199,7 +158,7 @@ instance DecodeJson UnbalancedTx where
     ( UnbalancedTx <$> D.record "UnbalancedTx"
         { unBalancedTxTx: D.value :: _ Tx
         , unBalancedTxRequiredSignatories: (D.dictionary D.value (D.maybe D.value)) :: _ (Map PaymentPubKeyHash (Maybe PaymentPubKey))
-        , unBalancedTxUtxoIndex: (D.dictionary D.value D.value) :: _ (Map TxOutRef ScriptOutput)
+        , unBalancedTxUtxoIndex: (D.dictionary D.value D.value) :: _ (Map TxOutRef TxOut)
         , unBalancedTxValidityTimeRange: D.value :: _ (Interval POSIXTime)
         }
     )
@@ -210,5 +169,5 @@ derive instance Newtype UnbalancedTx _
 
 --------------------------------------------------------------------------------
 
-_UnbalancedTx :: Iso' UnbalancedTx { unBalancedTxTx :: Tx, unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey), unBalancedTxUtxoIndex :: Map TxOutRef ScriptOutput, unBalancedTxValidityTimeRange :: Interval POSIXTime }
+_UnbalancedTx :: Iso' UnbalancedTx { unBalancedTxTx :: Tx, unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey), unBalancedTxUtxoIndex :: Map TxOutRef TxOut, unBalancedTxValidityTimeRange :: Interval POSIXTime }
 _UnbalancedTx = _Newtype

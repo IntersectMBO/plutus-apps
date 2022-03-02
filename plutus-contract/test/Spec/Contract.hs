@@ -36,8 +36,8 @@ import Plutus.Contract.State qualified as State
 import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, assertAccumState, assertContractError,
                              assertDone, assertInstanceLog, assertNoFailedTransactions, assertResumableResult,
                              assertUserLog, checkEmulatorFails, checkPredicateOptions, defaultCheckOptions,
-                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, waitingForSlot,
-                             walletFundsChange, (.&&.))
+                             endpointAvailable, minLogLevel, mockWalletPaymentPubKeyHash, not, w1, w2, w3,
+                             waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
 import Plutus.Trace qualified as Trace
@@ -155,9 +155,14 @@ tests =
                 (endpointAvailable @"1" theContract tag)
                 (void $ activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 1)
 
-        , let theContract :: Contract () Schema ContractError () = void $ throwing Con._ContractError $ OtherError "error"
+        , let theContract :: Contract () Schema ContractError () =
+                  void $ throwing Con._ContractError $ OtherContractError "error"
           in run "throw an error"
-                (assertContractError theContract tag (\case { OtherError "error" -> True; _ -> False}) "failed to throw error")
+                (assertContractError
+                    theContract
+                    tag
+                    (\case { OtherContractError "error" -> True; _ -> False })
+                    "failed to throw error")
                 (void $ activateContract w1 theContract tag)
 
         , run "pay to wallet"
@@ -166,7 +171,8 @@ tests =
                 .&&. assertNoFailedTransactions)
             (void $ Trace.payToWallet w1 w2 (Ada.adaValueOf 20))
 
-        , let theContract :: Contract () Schema ContractError () = void $ awaitUtxoProduced (mockWalletAddress w2)
+        , let theContract :: Contract () Schema ContractError () =
+                  void $ awaitUtxoProduced (mockWalletAddress w2)
           in run "await utxo produced"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -175,7 +181,10 @@ tests =
                 Trace.waitNSlots 1
             )
 
-        , let theContract :: Contract () Schema ContractError () = void (utxosAt (mockWalletAddress w1) >>= awaitUtxoSpent . fst . head . Map.toList)
+        , let theContract :: Contract () Schema ContractError () =
+                  void ( utxosAt (mockWalletAddress w1)
+                     >>= awaitUtxoSpent . fst . head . Map.toList
+                       )
           in run "await txout spent"
             (assertDone theContract tag (const True) "should receive a notification")
             (void $ do
@@ -220,6 +229,27 @@ tests =
               _ <- activateContract w1 c tag
               void (Trace.waitNSlots 2)
 
+        -- verify that 'matchInputOutput' doesn't thrown 'InOutTypeMismatch' error
+        -- in case of two transactions with 'mustPayWithDatumToPubKey'
+        , let c1 :: Contract [Maybe DatumHash] Schema ContractError () = do
+                let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
+                let payment = Constraints.mustPayWithDatumToPubKey w2PubKeyHash datum1 (Ada.adaValueOf 10)
+                void $ submitTx payment
+              c2 :: Contract [Maybe DatumHash] Schema ContractError () = do
+                let w3PubKeyHash = mockWalletPaymentPubKeyHash w3
+                let payment = Constraints.mustPayWithDatumToPubKey w3PubKeyHash datum2 (Ada.adaValueOf 50)
+                void $ submitTx payment
+
+              datum1 = Datum $ PlutusTx.toBuiltinData (23 :: Integer)
+              datum2 = Datum $ PlutusTx.toBuiltinData (42 :: Integer)
+
+          in run "mustPayWithDatumToPubKey doesn't throw 'InOutTypeMismatch' error"
+            ( assertNoFailedTransactions ) $ do
+              _ <- activateContract w1 c1 tag
+              void (Trace.waitNSlots 2)
+              _ <- activateContract w2 c2 tag
+              void (Trace.waitNSlots 2)
+
         , let c :: Contract [TxOutStatus] Schema ContractError () = do
                 -- Submit a payment tx of 10 lovelace to W2.
                 let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
@@ -238,7 +268,7 @@ tests =
                 -- contract's caller. It's status should be changed eventually
                 -- to confirmed spent.
                 pubKeyHash <- ownPaymentPubKeyHash
-                ciTxOutM <- txOutFromRef utxo
+                ciTxOutM <- unspentTxOutFromRef utxo
                 let lookups = Constraints.unspentOutputs (maybe mempty (Map.singleton utxo) ciTxOutM)
                 submitTxConstraintsWith @Void lookups $ Constraints.mustSpendPubKeyOutput utxo
                                                      <> Constraints.mustBeSignedBy pubKeyHash
@@ -336,7 +366,8 @@ loopCheckpointContract = do
 errorContract :: Contract () Schema ContractError Int
 errorContract = do
     catchError
-        (awaitPromise $ endpoint @"1" @Int $ \_ -> throwError (OtherError "something went wrong"))
+        (awaitPromise $ endpoint @"1" @Int
+                      $ \_ -> throwError (OtherContractError "something went wrong"))
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
 someAddress :: Address

@@ -423,8 +423,8 @@
                             "tag": "ContractLog"
                         },
                         "_cilTag": {
-                            "shortContractInstanceTag": "Wallet W7ce8",
-                            "unContractInstanceTag": "Contract instance for W7ce812d"
+                            "shortContractInstanceTag": "Wallet W[2]",
+                            "unContractInstanceTag": "Contract instance for W[2]"
                         },
                         "_cilId": {
                             "unContractInstanceId": "00000000-0000-4000-8000-000000000000"
@@ -444,8 +444,8 @@
                             "tag": "ContractLog"
                         },
                         "_cilTag": {
-                            "shortContractInstanceTag": "Wallet W872c",
-                            "unContractInstanceTag": "Contract instance for W872cb83"
+                            "shortContractInstanceTag": "Wallet W[1]",
+                            "unContractInstanceTag": "Contract instance for W[1]"
                         },
                         "_cilId": {
                             "unContractInstanceId": "00000000-0000-4000-8000-000000000001"
@@ -505,6 +505,6 @@
                 }
             }
         ],
-        "emulatorTrace": "[ Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W872c}:\n            Contract instance stopped (no errors) ]\n[ Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W7ce8}:\n            Contract instance stopped (no errors) ]"
+        "emulatorTrace": "[ Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W[1]}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W[1]}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W[1]}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W[1]}:\n            Contract instance stopped (no errors) ]\n[ Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[2]}:\n            Contract instance started\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[2]}:\n            Contract log: String \"Hello, world\"\n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[2]}:\n            Current requests (0): \n, Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[2]}:\n            Contract instance stopped (no errors) ]"
     }
 }

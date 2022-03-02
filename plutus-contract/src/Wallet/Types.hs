@@ -13,20 +13,11 @@ module Wallet.Types(
     , ContractActivityStatus(..)
     , parseContractActivityStatus
     , Notification(..)
+    , NotificationError(..)
     , EndpointDescription(..)
     , EndpointValue(..)
-    -- * Error types
-    , MatchingError(..)
-    , AsMatchingError(..)
-    , AssertionError(..)
-    , AsAssertionError(..)
-    , ContractError(..)
-    , AsContractError(..)
-    , NotificationError(..)
-    , AsNotificationError(..)
     ) where
 
-import Control.Lens (prism')
 import Control.Lens.TH (makeClassyPrisms)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Aeson qualified as Aeson
@@ -42,68 +33,9 @@ import GHC.Generics (Generic)
 import Language.Haskell.TH.Syntax qualified as TH
 import Prettyprinter (Pretty (..), colon, hang, viaShow, vsep, (<+>))
 
-import Ledger.Constraints.OffChain (MkTxError)
-import Plutus.Contract.Checkpoint (AsCheckpointError (..), CheckpointError)
 import Prettyprinter.Extras (PrettyShow (..), Tagged (..))
-import Wallet.Error (WalletAPIError)
 
 import Data.OpenApi.Schema qualified as OpenApi
-
--- | An error
-newtype MatchingError = WrongVariantError { unWrongVariantError :: Text }
-    deriving stock (Eq, Ord, Show, Generic)
-    deriving anyclass (Aeson.ToJSON, Aeson.FromJSON)
-makeClassyPrisms ''MatchingError
-instance Pretty MatchingError where
-  pretty = \case
-    WrongVariantError t -> "Wrong variant:" <+> pretty t
-
--- | An error emitted when an 'Assertion' fails.
-newtype AssertionError = GenericAssertion { unAssertionError :: T.Text }
-    deriving stock (Show, Eq, Generic)
-    deriving anyclass (ToJSON, FromJSON)
-makeClassyPrisms ''AssertionError
-
-instance Pretty AssertionError where
-    pretty = \case
-        GenericAssertion t -> "Generic assertion:" <+> pretty t
-
--- | This lets people use 'T.Text' as their error type.
-instance AsAssertionError T.Text where
-    _AssertionError = prism' (T.pack . show) (const Nothing)
-
-data ContractError =
-    WalletError WalletAPIError
-    | EmulatorAssertionError AssertionError -- TODO: Why do we need this constructor
-    | OtherError T.Text
-    | ConstraintResolutionError MkTxError
-    | ResumableError MatchingError
-    | CCheckpointError CheckpointError
-    deriving stock (Show, Eq, Generic)
-    deriving anyclass (Aeson.ToJSON, Aeson.FromJSON)
-makeClassyPrisms ''ContractError
-
-instance Pretty ContractError where
-  pretty = \case
-    WalletError e               -> "Wallet error:" <+> pretty e
-    EmulatorAssertionError a    -> "Emulator assertion error:" <+> pretty a
-    OtherError t                -> "Other error:" <+> pretty t
-    ConstraintResolutionError e -> "Constraint resolution error:" <+> pretty e
-    ResumableError e            -> "Resumable error:" <+> pretty e
-    CCheckpointError e          -> "Checkpoint error:" <+> pretty e
-
--- | This lets people use 'T.Text' as their error type.
-instance AsContractError T.Text where
-    _ContractError = prism' (T.pack . show) (const Nothing)
-
-instance IsString ContractError where
-  fromString = OtherError . fromString
-
-instance AsAssertionError ContractError where
-    _AssertionError = _EmulatorAssertionError
-
-instance AsCheckpointError ContractError where
-  _CheckpointError = _CCheckpointError
 
 -- | Unique ID for contract instance
 newtype ContractInstanceId = ContractInstanceId { unContractInstanceId :: UUID }
@@ -160,8 +92,14 @@ data NotificationError =
     EndpointNotAvailable ContractInstanceId EndpointDescription
     | MoreThanOneEndpointAvailable ContractInstanceId EndpointDescription
     | InstanceDoesNotExist ContractInstanceId
-    | OtherNotificationError ContractError
-    | NotificationJSONDecodeError EndpointDescription Aeson.Value String -- ^ Indicates that the target contract does not have the expected schema
+    | NotificationJSONDecodeError EndpointDescription Aeson.Value String
+    -- ^ Indicates that the target contract does not have the expected schema
+    --
+    -- TODO: SCP-2137
+    -- Not currently used. As endpoint parameter decoding happends inside the Contract and
+    -- a throwError is used is decoding failed.
+    -- However, still valuable to be used by the PAB to throw an error is an endpoint
+    -- could not be decoded.
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -170,7 +108,6 @@ instance Pretty NotificationError where
         EndpointNotAvailable i ep -> "Endpoint" <+> pretty ep <+> "not available on" <+> pretty i
         MoreThanOneEndpointAvailable i ep -> "Endpoint" <+> pretty ep <+> "is exposed more than once on" <+> pretty i
         InstanceDoesNotExist i -> "Instance does not exist:" <+> pretty i
-        OtherNotificationError e -> "Other notification error:" <+> pretty e
         NotificationJSONDecodeError ep vv e ->
                 "Notification JSON decoding error:"
                     <+> pretty e

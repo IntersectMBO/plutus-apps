@@ -28,6 +28,7 @@ module Plutus.PAB.Simulator(
     , SimulatorEffectHandlers
     , mkSimulatorHandlers
     , addWallet
+    , addWalletWith
     -- * Logging
     , logString
     -- ** Agent actions
@@ -107,8 +108,7 @@ import Ledger.Index qualified as UtxoIndex
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Ledger.Value (Value, flattenValue)
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
-                                   ChainIndexQueryEffect (DatumFromHash, GetTip, MintingPolicyFromHash, RedeemerFromHash, StakeValidatorFromHash, TxFromTxId, TxOutFromRef, TxoSetAtAddress, TxsFromTxIds, UtxoSetAtAddress, UtxoSetMembership, UtxoSetWithCurrency, ValidatorFromHash),
-                                   TxOutStatus, TxStatus, getTip)
+                                   ChainIndexQueryEffect (..), TxOutStatus, TxStatus, getTip)
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers, handleContractDefinitionEffect, handleContractEffect, handleContractStoreEffect, handleLogMessages, handleServicesEffects, initialiseEnvironment, onShutdown, onStartup))
 import Plutus.PAB.Core qualified as Core
@@ -178,7 +178,7 @@ initialState :: forall t. IO (SimulatorState t)
 initialState = do
     let initialDistribution = Map.fromList $ fmap (, Ada.adaValueOf 100_000) knownWallets
         Emulator.EmulatorState{Emulator._chainState} = Emulator.initialState (def & Emulator.initialChainState .~ Left initialDistribution)
-        initialWallets = Map.fromList $ fmap (\w -> (Wallet.Wallet $ Wallet.WalletId $ CW.mwWalletId w, initialAgentState w)) CW.knownMockWallets
+        initialWallets = Map.fromList $ fmap (\w -> (Wallet.toMockWallet w, initialAgentState w)) CW.knownMockWallets
     STM.atomically $
         SimulatorState
             <$> STM.newTQueue
@@ -214,7 +214,7 @@ mkSimulatorHandlers feeCfg slotCfg handleContractEffect =
         { initialiseEnvironment =
             (,,)
                 <$> liftIO (STM.atomically   Instances.emptyInstancesState )
-                <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv Nothing)
+                <*> liftIO (STM.atomically $ Instances.emptyBlockchainEnv Nothing def)
                 <*> liftIO (initialState @t)
         , handleContractStoreEffect =
             interpret handleContractStore
@@ -579,12 +579,10 @@ handleChainIndexEffect = runChainIndexEffects @t . \case
     MintingPolicyFromHash h   -> ChainIndex.mintingPolicyFromHash h
     StakeValidatorFromHash h  -> ChainIndex.stakeValidatorFromHash h
     RedeemerFromHash h        -> ChainIndex.redeemerFromHash h
-    TxOutFromRef ref          -> ChainIndex.txOutFromRef ref
-    TxFromTxId txid           -> ChainIndex.txFromTxId txid
+    UnspentTxOutFromRef ref   -> ChainIndex.unspentTxOutFromRef ref
     UtxoSetMembership ref     -> ChainIndex.utxoSetMembership ref
     UtxoSetAtAddress pq addr  -> ChainIndex.utxoSetAtAddress pq addr
     UtxoSetWithCurrency pq ac -> ChainIndex.utxoSetWithCurrency pq ac
-    TxsFromTxIds txids        -> ChainIndex.txsFromTxIds txids
     TxoSetAtAddress pq addr   -> ChainIndex.txoSetAtAddress pq addr
     GetTip                    -> ChainIndex.getTip
 
@@ -739,7 +737,12 @@ instanceActivity = Core.instanceActivity
 -- | Create a new wallet with a random key, give it some funds
 --   and add it to the list of simulated wallets.
 addWallet :: forall t. Simulation t (Wallet, PaymentPubKeyHash)
-addWallet = do
+addWallet = addWalletWith Nothing
+
+-- | Create a new wallet with a random key, give it provided funds
+--   and add it to the list of simulated wallets.
+addWalletWith :: forall t. Maybe Ada.Ada -> Simulation t (Wallet, PaymentPubKeyHash)
+addWalletWith funds = do
     SimulatorState{_agentStates} <- Core.askUserEnv @t @(SimulatorState t)
     mockWallet <- MockWallet.newWallet
     void $ liftIO $ STM.atomically $ do
@@ -748,9 +751,8 @@ addWallet = do
         STM.writeTVar _agentStates newWallets
     _ <- handleAgentThread (knownWallet 2) Nothing
             $ Modify.wrapError WalletError
-            $ MockWallet.distributeNewWalletFunds (CW.paymentPubKeyHash mockWallet)
+            $ MockWallet.distributeNewWalletFunds funds (CW.paymentPubKeyHash mockWallet)
     pure (Wallet.toMockWallet mockWallet, CW.paymentPubKeyHash mockWallet)
-
 
 -- | Retrieve the balances of all the entities in the simulator.
 currentBalances :: forall t. Simulation t (Map.Map Wallet.Entity Value)

@@ -58,8 +58,9 @@ let
       "https://github.com/input-output-hk/cardano-addresses"."35f9c49dcd953b45da6dfbcb84b39c3f448ced58" = "1cv2frbxc6ic9n5xi5bxvxdgbh1nkl0ymqidq90qis0x3ln6b53n";
       "https://github.com/input-output-hk/goblins"."cde90a2b27f79187ca8310b6549331e59595e7ba" = "17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg";
       "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" = "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx";
-      "https://github.com/hamishmack/foundation"."656db6d6f5d860fab6895247da42cf8895ab9c6c" = "1q12mhjj47bpaj9zy8c85qa0sj58q0kz776pqj8nfzx7bi7b7ngx";
-      "https://github.com/hamishmack/entropy"."0272c697499b1304fccd43e6a983df93ce0cf761" = "0ibhf9c914dd8cn8c5vs2h9a5cram41v6m85ln0pjimqjxvpbr34";
+      "https://github.com/input-output-hk/cardano-config"."e9de7a2cf70796f6ff26eac9f9540184ded0e4e6" = "1wm1c99r5zvz22pdl8nhkp13falvqmj8dgkm8fxskwa9ydqz01ld";
+      "https://github.com/input-output-hk/optparse-applicative"."7497a29cb998721a9068d5725d49461f2bba0e7a" = "1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r";
+      "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" = "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
       "https://raw.githubusercontent.com/input-output-hk/hackage-overlay-ghcjs/8756b0891a0a550cc8b00dacd24227aee483c0ca" = "sha256:1v1af391f70212914ayf35w7672s11s4w6q5y7gn1x1brqjwlc2k";
     };
     # Configuration settings needed for cabal configure to work when cross compiling
@@ -197,6 +198,7 @@ let
           plutus-playground-server.package.buildable = false; # Would also require libpq
           plutus-tx-plugin.package.buildable = false;
           plutus-use-cases.package.buildable = false;
+          plutus-example.package.buildable = false;
           web-ghc.package.buildable = false;
         };
       })
@@ -394,6 +396,9 @@ let
           plutus-ledger.doHaddock = deferPluginErrors;
           plutus-ledger.flags.defer-plugin-errors = deferPluginErrors;
 
+          plutus-example.doHaddock = deferPluginErrors;
+          plutus-example.flags.defer-plugin-errors = deferPluginErrors;
+
           # FIXME: Haddock mysteriously gives a spurious missing-home-modules warning
           plutus-tx-plugin.doHaddock = false;
 
@@ -416,15 +421,11 @@ let
             lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
               ++ [ "-Werror" ];
           plutus-chain-index-core.ghcOptions = [ "-Werror" ];
-          # plutus-contract.ghcOptions = [ "-Werror" ];
-          # plutus-ledger.ghcOptions = [ "-Werror" ];
+          plutus-contract.ghcOptions = [ "-Werror" ];
+          plutus-ledger.ghcOptions = [ "-Werror" ];
           plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
-          plutus-ledger-api.ghcOptions = [ "-Werror" ];
           plutus-playground-server.ghcOptions = [ "-Werror" ];
-          # plutus-pab.ghcOptions = [ "-Werror" ];
-          plutus-tx.ghcOptions = [ "-Werror" ];
-          # plutus-tx-plugin.ghcOptions = [ "-Werror" ];
-          # plutus-pab.ghcOptions = [ "-Werror" ];
+          plutus-pab.ghcOptions = [ "-Werror" ];
           plutus-pab-executables.ghcOptions =
             # "-Wno-deprecations" works around
             #    Module ‘Data.Yaml’:
@@ -432,7 +433,8 @@ let
             lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
               ++ [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
-          # plutus-use-cases.ghcOptions = [ "-Werror" ];
+          plutus-use-cases.ghcOptions = [ "-Werror" ];
+          plutus-example.ghcOptions = [ "-Werror" ];
 
           # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
           # This will go away when we upgrade nixpkgs and things use ieee754 anyway.

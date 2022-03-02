@@ -63,6 +63,10 @@ rec {
     inherit haskell;
   });
 
+  pab-cli = plutus-apps.haskell.packages.plutus-pab-executables.components.exes.pab-cli;
+
+  plutus-chain-index = plutus-apps.haskell.packages.plutus-chain-index.components.exes.plutus-chain-index;
+
   tests = import ./nix/tests/default.nix {
     inherit pkgs docs;
     inherit (plutus-apps.lib) gitignore-nix;

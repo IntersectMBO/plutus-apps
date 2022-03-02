@@ -46,6 +46,7 @@ module Plutus.Contract.Test.ContractModel
     , transfer
     , modifyContractState
     , createToken
+    , assertSpec
     , ($=)
     , ($~)
     -- * Helper functions for writing perform functions
@@ -57,6 +58,7 @@ module Plutus.Contract.Test.ContractModel
     -- $dynamicLogic
     , DL
     , action
+    , waitUntilDL
     , anyAction
     , anyActions
     , anyActions_
@@ -93,12 +95,16 @@ module Plutus.Contract.Test.ContractModel
     , SchemaConstraints
     , ContractInstanceSpec(..)
     , SomeContractInstanceKey(..)
+    , StartContract(..)
     , HandleFun
     -- ** Model properties
     , propSanityCheckModel
+    , propSanityCheckAssertions
+    , propSanityCheckReactive
     -- ** Coverage cheking options
     , CoverageOptions
     , defaultCoverageOptions
+    , CoverageRef
     , endpointCoverageReq
     , checkCoverage
     , coverageIndex
@@ -122,10 +128,9 @@ module Plutus.Contract.Test.ContractModel
     --
     -- $noLockedFunds
     , NoLockedFundsProof(..)
+    , defaultNLFP
     , checkNoLockedFundsProof
     , checkNoLockedFundsProofFast
-    , checkNoLockedFundsProofWithWiggleRoom
-    , checkNoLockedFundsProofWithWiggleRoomFast
     -- $checkNoPartiality
     , Whitelist
     , whitelistOk
@@ -137,5 +142,6 @@ module Plutus.Contract.Test.ContractModel
     ) where
 
 import Plutus.Contract.Test.ContractModel.Internal
+import Plutus.Contract.Test.Coverage
 import Test.QuickCheck.DynamicLogic.Monad qualified as DL
 import Test.QuickCheck.DynamicLogic.Quantify

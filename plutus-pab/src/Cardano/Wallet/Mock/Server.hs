@@ -32,6 +32,7 @@ import Data.Either (fromRight)
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
+import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Fee (FeeConfig)
 import Ledger.TimeSlot (SlotConfig)
@@ -58,19 +59,19 @@ app trace txSendHandle chainSyncHandle chainIndexEnv mVarState feeCfg slotCfg =
     hoistServer
         (Proxy @(API WalletId))
         (processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState feeCfg slotCfg) $
-            createWallet :<|>
-            (\w tx -> multiWallet (Wallet w) (submitTxn $ Right tx) >>= const (pure NoContent)) :<|>
+            (\funds -> createWallet (Ada.lovelaceOf <$> funds)) :<|>
+            (\w tx -> multiWallet (Wallet Nothing w) (submitTxn $ Right tx) >>= const (pure NoContent)) :<|>
             (getWalletInfo >=> maybe (throwError err404) pure ) :<|>
             (\w -> fmap (fmap (fromRight (error "Cardano.Wallet.Mock.Server: Expecting a mock tx, not an Alonzo tx when submitting it.")))
-                 . multiWallet (Wallet w) . balanceTx) :<|>
-            (\w -> multiWallet (Wallet w) totalFunds) :<|>
+                 . multiWallet (Wallet Nothing w) . balanceTx) :<|>
+            (\w -> multiWallet (Wallet Nothing w) totalFunds) :<|>
             (\w tx -> fmap (fromRight (error "Cardano.Wallet.Mock.Server: Expecting a mock tx, not an Alonzo tx when adding a signature."))
-                    $ multiWallet (Wallet w) (walletAddSignature $ Right tx))
+                    $ multiWallet (Wallet Nothing w) (walletAddSignature $ Right tx))
 
 main :: Trace IO WalletMsg -> LocalWalletSettings -> FeeConfig -> FilePath -> SlotConfig -> ChainIndexUrl -> Availability -> IO ()
 main trace LocalWalletSettings { baseUrl } feeCfg serverSocket slotCfg (ChainIndexUrl chainUrl) availability = LM.runLogEffects trace $ do
     chainIndexEnv <- buildEnv chainUrl defaultManagerSettings
-    let knownWallets = Map.fromList $ zip Wallet.knownWallets (Wallet.fromMockWallet <$> CW.knownMockWallets)
+    let knownWallets = Map.fromList $ zip (Wallet.getWalletId <$> Wallet.knownWallets) (Wallet.fromMockWallet <$> CW.knownMockWallets)
     mVarState <- liftIO $ newMVar knownWallets
     txSendHandle    <- liftIO $ MockClient.runTxSender serverSocket
     chainSyncHandle <- Left <$> (liftIO $ MockClient.runChainSync' serverSocket slotCfg)

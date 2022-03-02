@@ -37,16 +37,16 @@ module Plutus.Contracts.TokenAccount(
   , typedValidator
   ) where
 
-import Control.Lens
+import Control.Lens (makeClassyPrisms, review, view)
 import Control.Monad (void)
-import Control.Monad.Error.Lens
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
-import Prettyprinter
+import Prettyprinter (Pretty)
 
-import Plutus.Contract
-import Plutus.Contract.Constraints
+import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint, endpoint,
+                        logInfo, mapError, mkTxConstraints, selectList, submitUnbalancedTx, type (.\/), utxosAt)
+import Plutus.Contract.Constraints (ScriptLookups, TxConstraints)
 import PlutusTx qualified
 
 import Ledger (Address, PaymentPubKeyHash, ValidatorHash)
@@ -55,15 +55,14 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts qualified as V
 import Ledger.Scripts qualified
 import Ledger.Tx (CardanoTx)
-import Ledger.Typed.Scripts (ValidatorTypes (..))
+import Ledger.Typed.Scripts (ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Typed.Tx qualified as TypedTx
-
 import Plutus.Contracts.Currency qualified as Currency
 
-import Prettyprinter.Extras (PrettyShow (..))
+import Prettyprinter.Extras (PrettyShow (PrettyShow))
 
 newtype Account = Account { accountOwner :: Value.AssetClass }
     deriving stock    (Eq, Show, Generic)
@@ -202,10 +201,8 @@ redeem
   -> Contract w s e CardanoTx
 redeem pk account = mapError (review _TokenAccountError) $ do
     (constraints, lookups) <- redeemTx account pk
-    utx <- either (throwing _ConstraintResolutionError)
-                  (pure . Constraints.adjustUnbalancedTx)
-                  (Constraints.mkTx lookups constraints)
-    submitUnbalancedTx utx
+    utx <- mkTxConstraints lookups constraints
+    submitUnbalancedTx $ Constraints.adjustUnbalancedTx utx
 
 -- | @balance account@ returns the value of all unspent outputs that can be
 --   unlocked with @accountToken account@

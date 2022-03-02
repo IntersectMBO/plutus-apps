@@ -1,17 +1,19 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE GADTs              #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing -fno-warn-redundant-constraints #-}
 module Spec.Uniswap where
 
 import Control.Arrow
+import Control.Exception hiding (assert)
 import Control.Lens hiding (elements)
 import Control.Monad
 import Plutus.Contract
@@ -19,11 +21,13 @@ import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.Symbolics
+import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap hiding (pools, setupTokens, tokenNames, wallets)
 import Plutus.Contracts.Uniswap.Trace qualified as Uniswap
 import Plutus.Trace.Emulator (EmulatorRuntimeError (GenericError))
 import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx.Coverage
 
 import Ledger qualified as Ledger
 import Ledger.Ada qualified as Ada
@@ -85,8 +89,8 @@ prop_Uniswap = propRunActions_
 
 deriving instance Eq (Action UniswapModel)
 deriving instance Show (Action UniswapModel)
-deriving instance Eq (ContractInstanceKey UniswapModel w s e)
-deriving instance Show (ContractInstanceKey UniswapModel w s e)
+deriving instance Eq (ContractInstanceKey UniswapModel w s e params)
+deriving instance Show (ContractInstanceKey UniswapModel w s e params)
 
 walletOf :: Action UniswapModel -> Wallet
 walletOf a = case a of
@@ -165,10 +169,10 @@ instance ContractModel UniswapModel where
                            | ClosePool Wallet SymToken SymToken
                            -- ^ Close a liquidity pool
 
-  data ContractInstanceKey UniswapModel w s e where
-    OwnerKey :: ContractInstanceKey UniswapModel (Last (Either Text.Text Uniswap)) EmptySchema ContractError
-    SetupKey :: ContractInstanceKey UniswapModel (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError
-    WalletKey :: Wallet -> ContractInstanceKey UniswapModel (Last (Either Text.Text UserContractState)) UniswapUserSchema Void
+  data ContractInstanceKey UniswapModel w s e params where
+    OwnerKey :: ContractInstanceKey UniswapModel (Last (Either Text.Text Uniswap)) EmptySchema ContractError ()
+    SetupKey :: ContractInstanceKey UniswapModel (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
+    WalletKey :: Wallet -> ContractInstanceKey UniswapModel (Last (Either Text.Text UserContractState)) UniswapUserSchema Void SymToken
 
   initialInstances = []
 
@@ -176,10 +180,10 @@ instance ContractModel UniswapModel where
   instanceWallet SetupKey      = w1
   instanceWallet (WalletKey w) = w
 
-  instanceContract s tokenSem key = case key of
-    OwnerKey -> ownerEndpoint
-    SetupKey -> setupTokens
-    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . tokenSem . fromJust . view (contractState . uniswapToken) $ s
+  instanceContract tokenSem key token = case key of
+    OwnerKey    -> ownerEndpoint
+    SetupKey    -> setupTokens
+    WalletKey _ -> toContract . userEndpoints . Uniswap . Coin . tokenSem  $ token
 
   initialState = UniswapModel Nothing mempty mempty mempty
 
@@ -225,9 +229,9 @@ instance ContractModel UniswapModel where
         return $ ClosePool w (getAToken t1 t2) (getBToken t1 t2)
 
   startInstances s act = case act of
-    Start       -> [ Key OwnerKey ]
-    SetupTokens -> [ Key SetupKey ]
-    _           -> [ Key . WalletKey . walletOf $ act
+    Start       -> [ StartContract OwnerKey () ]
+    SetupTokens -> [ StartContract SetupKey () ]
+    _           -> [ StartContract (WalletKey $ walletOf act) (fromJust $ s ^. contractState . uniswapToken)
                    | walletOf act `notElem` s ^. contractState . startedUserCode ]
 
   precondition s Start                        = not $ hasUniswapToken s
@@ -271,7 +275,7 @@ instance ContractModel UniswapModel where
         deposit w $ Ada.toValue Ledger.minAdaTxOut
         deposit w $ mconcat [ symAssetClassValue t 1000000 | t <- ts ]
       exchangeableTokens %= (Set.fromList ts <>)
-      wait 20
+      wait 21
 
     Start -> do
       -- Create the uniswap token
@@ -279,7 +283,7 @@ instance ContractModel UniswapModel where
       uniswapToken .= Just us
       -- Pay to the UTxO for the uniswap factory
       withdraw w1 (Ada.toValue Ledger.minAdaTxOut)
-      wait 10
+      wait 6
 
     CreatePool w t1 a1 t2 a2 -> do
       startedUserCode %= Set.insert w
@@ -329,6 +333,10 @@ instance ContractModel UniswapModel where
         let liqVal = symAssetClassValue (p ^. liquidityToken) (unAmount deltaL)
         mint liqVal
         deposit w liqVal
+        -- Make sure product increases
+        assertSpec "AddLiquidity increases total product" $
+          unAmount (p ^. coinAAmount) * unAmount (p ^. coinBAmount) <
+            unAmount (p' ^. coinAAmount) * unAmount (p' ^. coinBAmount)
       wait 5
 
     PerformSwap w t1 t2 a -> do
@@ -354,6 +362,10 @@ instance ContractModel UniswapModel where
         deposit w $ symAssetClassValue t2 a'
         -- Update the pool
         pools . at (poolIndex t1 t2) .= Just p'
+        -- Make sure product increases
+        assertSpec "PerformSwap increases total product" $
+            unAmount (p ^. coinAAmount) * unAmount (p ^. coinBAmount) <
+              unAmount (p' ^. coinAAmount) * unAmount (p' ^. coinBAmount)
       wait 5
 
     RemoveLiquidity w t1 t2 a -> do
@@ -465,12 +477,19 @@ prop_liquidityValue = forAllDL liquidityValue (const True)
                           /= (p ^. coinAAmount, p ^. coinBAmount)
         assert ("Pool\n  " ++ show p ++ "\nforgets single liquidities") cond
 
--- This doesn't work
 noLockProof :: NoLockedFundsProof UniswapModel
-noLockProof = NoLockedFundsProof{
+noLockProof = defaultNLFP {
       nlfpMainStrategy   = mainStrat,
-      nlfpWalletStrategy = walletStrat }
+      nlfpWalletStrategy = walletStrat,
+      nlfpOverhead       = const $ toSymValue Ledger.minAdaTxOut,
+      nlfpErrorMargin    = wiggle }
     where
+        wiggle s = fold [symAssetClassValue t1 (toInteger m) <>
+                         symAssetClassValue t2 (toInteger m) <>
+                         toSymValue Ledger.minAdaTxOut
+                        | (PoolIndex t1 t2, p) <- Map.toList (s ^. contractState . pools)
+                        , let numLiqs = length $ p ^. liquidities
+                              m = max 0 (numLiqs - 1) ]
         mainStrat = do
             pools <- viewContractState pools
             forM_ (Map.toList pools) $ \ (PoolIndex t1 t2, p) -> do
@@ -489,14 +508,11 @@ noLockProof = NoLockedFundsProof{
                 then action $ ClosePool w t1 t2
                 else action $ RemoveLiquidity w t1 t2 (unAmount . sum $ Map.lookup w liqs)
 
--- This doesn't hold
 prop_CheckNoLockedFundsProof :: Property
 prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
 
--- In principle this property does not hold for any wiggle room! You can chain together the issues
--- you get for normal "No locked funds"
 prop_CheckNoLockedFundsProofFast :: Property
-prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofWithWiggleRoomFast 3 noLockProof
+prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofFast defaultCheckOptionsContractModel noLockProof
 
 check_propUniswapWithCoverage :: IO ()
 check_propUniswapWithCoverage = void $
@@ -524,4 +540,25 @@ tests = testGroup "uniswap" [
         .&&. assertNoFailedTransactions)
         Uniswap.uniswapTrace
     , testProperty "prop_Uniswap" $ withMaxSuccess 20 prop_Uniswap
+    , testProperty "prop_UniswapAssertions" $ withMaxSuccess 1000 (propSanityCheckAssertions @UniswapModel)
+    , testProperty "prop_NLFP" $ withMaxSuccess 250 prop_CheckNoLockedFundsProofFast
     ]
+
+runTestsWithCoverage :: IO ()
+runTestsWithCoverage = do
+  ref <- newCoverageRef
+  defaultMain (coverageTests ref)
+    `catch` \(e :: SomeException) -> do
+                report <- readCoverageRef ref
+                putStrLn . show $ pprCoverageReport covIdx report
+                throwIO e
+  where
+    coverageTests ref = testGroup "game state machine tests"
+                         [ checkPredicateCoverage "can create a liquidity pool and add liquidity"
+                            ref
+                            (assertNotDone Uniswap.setupTokens
+                                           (Trace.walletInstanceTag w1)
+                                           "setupTokens contract should be still running"
+                            .&&. assertNoFailedTransactions)
+                            Uniswap.uniswapTrace
+                          ]

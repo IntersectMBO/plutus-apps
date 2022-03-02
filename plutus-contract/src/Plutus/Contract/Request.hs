@@ -33,17 +33,13 @@ module Plutus.Contract.Request(
     , mintingPolicyFromHash
     , stakeValidatorFromHash
     , redeemerFromHash
-    , txOutFromRef
-    , txFromTxId
+    , unspentTxOutFromRef
     , utxoRefMembership
     , utxoRefsAt
     , utxoRefsWithCurrency
     , utxosAt
-    , utxosTxOutTxAt
     , utxosTxOutTxFromTx
-    , txsFromTxIds
     , txoRefsAt
-    , txsAt
     , getTip
     -- ** Waiting for changes to the UTXO set
     , fundsAtAddressGt
@@ -115,8 +111,8 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy, MintingPolicyHash, POSIXTime,
-               PaymentPubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId,
-               TxOutRef (txOutRefId), Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
+               PaymentPubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId, TxOutRef,
+               Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -136,11 +132,11 @@ import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescriptio
                      EndpointValue (EndpointValue, unEndpointValue))
 
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse (paget), UtxosResponse (page))
+import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse (page))
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
+import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _ResumableContractError, _WalletContractError))
 import Plutus.Contract.Resumable (prompt)
-import Plutus.Contract.Types (AsContractError (_ConstraintResolutionError, _OtherError, _ResumableError, _WalletError),
-                              Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
+import Plutus.Contract.Types (Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
                               runError, throwError)
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
@@ -163,7 +159,11 @@ pabReq req prism = Contract $ do
   x <- prompt @PABResp @PABReq req
   case preview prism x of
     Just r -> pure r
-    _      -> E.throwError @e $ review _ResumableError $ WrongVariantError $ "unexpected answer: " <> tshow x
+    _      ->
+        E.throwError @e
+            $ review _ResumableContractError
+            $ WrongVariantError
+            $ "unexpected answer: " <> tshow x
 
 -- | Wait until the slot
 awaitSlot ::
@@ -262,8 +262,7 @@ datumFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.DatumFromHash h) E._ChainIndexQueryResp
   case cir of
     E.DatumHashResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request DatumFromHash from the chain index"
+    r                     -> throwError $ review _ChainIndexContractError ("DatumHashResponse", r)
 
 validatorFromHash ::
     forall w s e.
@@ -275,8 +274,7 @@ validatorFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.ValidatorFromHash h) E._ChainIndexQueryResp
   case cir of
     E.ValidatorHashResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request ValidatorFromHash from the chain index"
+    r                         -> throwError $ review _ChainIndexContractError ("ValidatorHashResponse", r)
 
 mintingPolicyFromHash ::
     forall w s e.
@@ -288,8 +286,7 @@ mintingPolicyFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.MintingPolicyFromHash h) E._ChainIndexQueryResp
   case cir of
     E.MintingPolicyHashResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request MintingPolicyFromHash from the chain index"
+    r                             -> throwError $ review _ChainIndexContractError ("MintingPolicyHashResponse", r)
 
 stakeValidatorFromHash ::
     forall w s e.
@@ -301,8 +298,7 @@ stakeValidatorFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.StakeValidatorFromHash h) E._ChainIndexQueryResp
   case cir of
     E.StakeValidatorHashResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request StakeValidatorFromHash from the chain index"
+    r                              -> throwError $ review _ChainIndexContractError ("StakeValidatorHashResponse", r)
 
 redeemerFromHash ::
     forall w s e.
@@ -314,34 +310,19 @@ redeemerFromHash h = do
   cir <- pabReq (ChainIndexQueryReq $ E.RedeemerFromHash h) E._ChainIndexQueryResp
   case cir of
     E.RedeemerHashResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request RedeemerFromHash from the chain index"
+    r                        -> throwError $ review _ChainIndexContractError ("RedeemerHashResponse", r)
 
-txOutFromRef ::
+unspentTxOutFromRef ::
     forall w s e.
     ( AsContractError e
     )
     => TxOutRef
     -> Contract w s e (Maybe ChainIndexTxOut)
-txOutFromRef ref = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxOutFromRef ref) E._ChainIndexQueryResp
+unspentTxOutFromRef ref = do
+  cir <- pabReq (ChainIndexQueryReq $ E.UnspentTxOutFromRef ref) E._ChainIndexQueryResp
   case cir of
-    E.TxOutRefResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request TxOutFromRef from the chain index"
-
-txFromTxId ::
-    forall w s e.
-    ( AsContractError e
-    )
-    => TxId
-    -> Contract w s e (Maybe ChainIndexTx)
-txFromTxId txid = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxFromTxId txid) E._ChainIndexQueryResp
-  case cir of
-    E.TxIdResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request TxFromTxId from the chain index"
+    E.UnspentTxOutResponse r -> pure r
+    r                        -> throwError $ review _ChainIndexContractError ("UnspentTxOutResponse", r)
 
 utxoRefMembership ::
     forall w s e.
@@ -353,8 +334,7 @@ utxoRefMembership ref = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetMembership ref) E._ChainIndexQueryResp
   case cir of
     E.UtxoSetMembershipResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request UtxoSetMembership from the chain index"
+    r                             -> throwError $ review _ChainIndexContractError ("UtxoSetMembershipResponse", r)
 
 -- | Get the unspent transaction output references at an address.
 utxoRefsAt ::
@@ -368,8 +348,7 @@ utxoRefsAt pq addr = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.UtxoSetAtResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request UtxoSetAtAddress from the chain index"
+    r                     -> throwError $ review _ChainIndexContractError ("UtxoSetAtResponse", r)
 
 -- | Get the unspent transaction output references with a specific currrency ('AssetClass').
 utxoRefsWithCurrency ::
@@ -383,8 +362,7 @@ utxoRefsWithCurrency pq assetClass = do
   cir <- pabReq (ChainIndexQueryReq $ E.UtxoSetWithCurrency pq assetClass) E._ChainIndexQueryResp
   case cir of
     E.UtxoSetWithCurrencyResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request UtxoSetWithCurrency from the chain index"
+    r                               -> throwError $ review _ChainIndexContractError ("UtxoSetWithCurrencyResponse", r)
 
 -- | Fold through each 'Page's of unspent 'TxOutRef's at a given 'Address', and
 -- accumulate the result.
@@ -416,50 +394,11 @@ utxosAt addr = do
   where
     f acc page = do
       let utxoRefs = pageItems page
-      txOuts <- traverse txOutFromRef utxoRefs
+      txOuts <- traverse unspentTxOutFromRef utxoRefs
       let utxos = Map.fromList
                 $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
                 $ zip utxoRefs txOuts
       pure $ acc <> utxos
-
--- | Get unspent transaction outputs with transaction from address.
-utxosTxOutTxAt ::
-    forall w s e.
-    ( AsContractError e
-    )
-    => Address
-    -> Contract w s e (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
-utxosTxOutTxAt addr = do
-  snd <$> foldUtxoRefsAt (\acc page -> go acc (pageItems page)) (mempty, mempty) addr
-  where
-    go :: (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
-       -> [TxOutRef]
-       -> Contract w s e (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
-    go acc [] = pure acc
-    go (lookupTx, oldResult) (ref:refs) = do
-      outM <- txOutFromRef ref
-      case outM of
-        Just out -> do
-          let txid = txOutRefId ref
-          -- Lookup the txid in the lookup table. If it's present, we don't need
-          -- to query the chain index again. If it's not, we query the chain
-          -- index and store the result in the lookup table.
-          case Map.lookup txid lookupTx of
-            Just tx -> do
-              let result = oldResult <> Map.singleton ref (out, tx)
-              go (lookupTx, result) refs
-            Nothing -> do
-              -- We query the chain index for the tx and store it in the lookup
-              -- table if it is found.
-              txM <- txFromTxId txid
-              case txM of
-                Just tx -> do
-                  let newLookupTx = lookupTx <> Map.singleton txid tx
-                  let result = oldResult <> Map.singleton ref (out, tx)
-                  go (newLookupTx, result) refs
-                Nothing ->
-                  go (lookupTx, oldResult) refs
-        Nothing -> go (lookupTx, oldResult) refs
 
 -- | Get the unspent transaction outputs from a 'ChainIndexTx'.
 utxosTxOutTxFromTx ::
@@ -470,40 +409,8 @@ utxosTxOutTxFromTx tx =
   catMaybes <$> mapM mkOutRef (txOutRefs tx)
   where
     mkOutRef txOutRef = do
-      ciTxOutM <- txOutFromRef txOutRef
+      ciTxOutM <- unspentTxOutFromRef txOutRef
       pure $ ciTxOutM >>= \ciTxOut -> pure (txOutRef, (ciTxOut, tx))
-
-foldTxoRefsAt ::
-    forall w s e a.
-    ( AsContractError e
-    )
-    => (a -> Page TxOutRef -> Contract w s e a)
-    -> a
-    -> Address
-    -> Contract w s e a
-foldTxoRefsAt f ini addr = go ini (Just def)
-  where
-    go acc Nothing = pure acc
-    go acc (Just pq) = do
-      page <- paget <$> txoRefsAt pq addr
-      newAcc <- f acc page
-      go newAcc (nextPageQuery page)
-
--- | Get the transactions at an address.
-txsAt ::
-    forall w s e.
-    ( AsContractError e
-    )
-    => Address
-    -> Contract w s e [ChainIndexTx]
-txsAt addr = do
-  foldTxoRefsAt f [] addr
-  where
-    f acc page = do
-      let txoRefs = pageItems page
-      let txIds = txOutRefId <$> txoRefs
-      txs <- txsFromTxIds txIds
-      pure $ acc <> txs
 
 -- | Get the transaction outputs at an address.
 txoRefsAt ::
@@ -517,22 +424,7 @@ txoRefsAt pq addr = do
   cir <- pabReq (ChainIndexQueryReq $ E.TxoSetAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
   case cir of
     E.TxoSetAtResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request TxoSetAtAddress from the chain index"
-
--- | Get the transactions for a list of transaction ids.
-txsFromTxIds ::
-    forall w s e.
-    ( AsContractError e
-    )
-    => [TxId]
-    -> Contract w s e [ChainIndexTx]
-txsFromTxIds txid = do
-  cir <- pabReq (ChainIndexQueryReq $ E.TxsFromTxIds txid) E._ChainIndexQueryResp
-  case cir of
-    E.TxIdsResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request TxsFromTxIds from the chain index"
+    r                    -> throwError $ review _ChainIndexContractError ("TxoSetAtAddress", r)
 
 getTip ::
     forall w s e.
@@ -543,8 +435,7 @@ getTip = do
   cir <- pabReq (ChainIndexQueryReq E.GetTip) E._ChainIndexQueryResp
   case cir of
     E.GetTipResponse r -> pure r
-    _ -> throwError $ review _OtherError
-                    $ Text.pack "Could not request GetTip from the chain index"
+    r                  -> throwError $ review _ChainIndexContractError ("GetTipResponse", r)
 
 -- | Wait until the target slot and get the unspent transaction outputs at an
 -- address.
@@ -712,14 +603,23 @@ endpoint
      )
   => (a -> Contract w s e b) -> Promise w s e b
 endpoint f = Promise $ do
-    (_, endpointValue) <- pabReq (ExposeEndpointReq $ endpointReq @l @a @s) E._ExposeEndpointResp
-    a <- decode endpointValue
+    (ed, ev) <- pabReq (ExposeEndpointReq $ endpointReq @l @a @s) E._ExposeEndpointResp
+    a <- decode ed ev
     f a
 
-decode :: forall a w s e. (FromJSON a, AsContractError e) => EndpointValue JSON.Value -> Contract w s e a
-decode EndpointValue{unEndpointValue} =
-    either (throwError . review _OtherError . Text.pack) pure
-    $ JSON.parseEither JSON.parseJSON unEndpointValue
+decode
+    :: forall a w s e.
+       ( FromJSON a
+       , AsContractError e
+       )
+    => EndpointDescription
+    -> EndpointValue JSON.Value
+    -> Contract w s e a
+decode ed ev@EndpointValue{unEndpointValue} =
+    either
+        (\e -> throwError $ review _EndpointDecodeContractError (ed, ev, Text.pack e))
+        pure
+        $ JSON.parseEither JSON.parseJSON unEndpointValue
 
 handleEndpoint
   :: forall l a w s e1 e2 b.
@@ -730,8 +630,8 @@ handleEndpoint
   => (Either e1 a -> Contract w s e2 b) -> Promise w s e2 b
 handleEndpoint f = Promise $ do
   a <- runError $ do
-      (_, endpointValue) <- pabReq (ExposeEndpointReq $ endpointReq @l @a @s) E._ExposeEndpointResp
-      decode endpointValue
+      (ed, ev) <- pabReq (ExposeEndpointReq $ endpointReq @l @a @s) E._ExposeEndpointResp
+      decode ed ev
   f a
 
 -- | Expose an endpoint with some metadata. Return the data that was entered.
@@ -746,8 +646,8 @@ endpointWithMeta
   -> (a -> Contract w s e b)
   -> Promise w s e b
 endpointWithMeta meta f = Promise $ do
-    (_, endpointValue) <- pabReq (ExposeEndpointReq s) E._ExposeEndpointResp
-    a <- decode endpointValue
+    (ed, ev) <- pabReq (ExposeEndpointReq s) E._ExposeEndpointResp
+    a <- decode ed ev
     f a
     where
         s = ActiveEndpoint
@@ -784,7 +684,7 @@ balanceTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e
 -- See Note [Injecting errors into the user's error type]
 balanceTx t =
   let req = pabReq (BalanceTxReq t) E._BalanceTxResp in
-  req >>= either (throwError . review _WalletError) pure . view E.balanceTxResponse
+  req >>= either (throwError . review _WalletContractError) pure . view E.balanceTxResponse
 
 -- | Send an balanced transaction to be signed. Returns the ID
 --    of the final transaction when the transaction was submitted. Throws an
@@ -793,7 +693,7 @@ submitBalancedTx :: forall w s e. (AsContractError e) => CardanoTx -> Contract w
 -- See Note [Injecting errors into the user's error type]
 submitBalancedTx t =
   let req = pabReq (WriteBalancedTxReq t) E._WriteBalancedTxResp in
-  req >>= either (throwError . review _WalletError) pure . view E.writeBalancedTxResponse
+  req >>= either (throwError . review _WalletContractError) pure . view E.writeBalancedTxResponse
 
 -- | Build a transaction that satisfies the constraints, then submit it to the
 --   network. The constraints do not refer to any typed script inputs or
@@ -879,7 +779,7 @@ mkTxConstraints :: forall a w s e.
   -> TxConstraints (RedeemerType a) (DatumType a)
   -> Contract w s e UnbalancedTx
 mkTxConstraints sl constraints =
-  mapError (review _ConstraintResolutionError) (mkTxContract sl constraints)
+  mapError (review _ConstraintResolutionContractError) (mkTxContract sl constraints)
 
 -- | Build a transaction that satisfies the constraints, then submit it to the
 --   network. Using the given constraints.

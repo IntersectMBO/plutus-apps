@@ -49,6 +49,8 @@ class ContractModel state => CrashTolerance state where
   -- | Specify what happens when a contract instance is restarted
   restart :: SomeContractInstanceKey state -> Spec state ()
   restart _ = return ()
+  -- | Specify the arguments to give to a restarted contract
+  restartArguments :: ModelState state -> ContractInstanceKey state w s e p -> p
   -- | Check if an action is available given a list of alive
   -- contract instances.
   available :: Action state -> [SomeContractInstanceKey state] -> Bool
@@ -59,16 +61,14 @@ instance ContractModel state => Show (Action (WithCrashTolerance state)) where
   showsPrec p (UnderlyingAction a) = showsPrec p a
 deriving instance ContractModel state => Eq (Action (WithCrashTolerance state))
 
-deriving instance Show (ContractInstanceKey state w s e) => Show (ContractInstanceKey (WithCrashTolerance state) w s e)
-deriving instance Eq (ContractInstanceKey state w s e) => Eq (ContractInstanceKey (WithCrashTolerance state) w s e)
+deriving instance Show (ContractInstanceKey state w s e p) => Show (ContractInstanceKey (WithCrashTolerance state) w s e p)
+deriving instance Eq (ContractInstanceKey state w s e p) => Eq (ContractInstanceKey (WithCrashTolerance state) w s e p)
 
-liftSomeContractInstanceKey :: SomeContractInstanceKey state -> SomeContractInstanceKey (WithCrashTolerance state)
-liftSomeContractInstanceKey (Key k) = Key (UnderlyingContractInstanceKey k)
+liftStartContract :: StartContract state -> StartContract (WithCrashTolerance state)
+liftStartContract (StartContract k p) = StartContract (UnderlyingContractInstanceKey k) p
 
-lowerSomeContractInstanceKey :: SomeContractInstanceKey (WithCrashTolerance state) -> SomeContractInstanceKey state
-lowerSomeContractInstanceKey (Key (UnderlyingContractInstanceKey k)) = Key k
-
-instance ( Typeable state
+instance forall state.
+         ( Typeable state
          , Show (ContractInstanceSpec state)
          , Eq (ContractInstanceSpec state)
          , CrashTolerance state) => ContractModel (WithCrashTolerance state) where
@@ -77,21 +77,21 @@ instance ( Typeable state
                                          | Restart (SomeContractInstanceKey state)
                                          | UnderlyingAction (Action state)
 
-  data ContractInstanceKey (WithCrashTolerance state) w s e where
-    UnderlyingContractInstanceKey :: ContractInstanceKey state w s e -> ContractInstanceKey (WithCrashTolerance state) w s e
+  data ContractInstanceKey (WithCrashTolerance state) w s e p where
+    UnderlyingContractInstanceKey :: ContractInstanceKey state w s e p -> ContractInstanceKey (WithCrashTolerance state) w s e p
 
-  initialState = WithCrashTolerance initialState initialInstances []
+  initialState = WithCrashTolerance initialState [Key k | StartContract k _ <- initialInstances @state] []
 
-  initialInstances = liftSomeContractInstanceKey <$> initialInstances
+  initialInstances = [StartContract (UnderlyingContractInstanceKey k) p | StartContract k p <- initialInstances @state ]
 
   instanceWallet (UnderlyingContractInstanceKey k) = instanceWallet k
 
-  instanceContract s sa (UnderlyingContractInstanceKey k) = instanceContract (_underlyingModelState <$> s) sa k
+  instanceContract sa (UnderlyingContractInstanceKey k) p = instanceContract sa k p
 
   -- We piggy-back on the underlying mechanism for starting contract instances that we
   -- get from
-  startInstances _ (Restart cis)        = [liftSomeContractInstanceKey cis]
-  startInstances s (UnderlyingAction a) = liftSomeContractInstanceKey <$> startInstances (_underlyingModelState <$> s) a
+  startInstances s (Restart (Key k))    = [StartContract (UnderlyingContractInstanceKey k) (restartArguments (_underlyingModelState <$> s) k)]
+  startInstances s (UnderlyingAction a) = liftStartContract <$> startInstances (_underlyingModelState <$> s) a
   startInstances _ _                    = []
 
   perform h t s a = case a of
@@ -133,7 +133,7 @@ instance ( Typeable state
       embed $ nextState a
       s <- Spec get
       -- An action may start its own contract instances and we need to keep track of them
-      aliveContractInstances %= ((lowerSomeContractInstanceKey <$> startInstances s (UnderlyingAction a)) ++)
+      aliveContractInstances %= ([Key k | StartContract (UnderlyingContractInstanceKey k) _ <- startInstances s (UnderlyingAction a)] ++)
     where
       embed :: Spec state a -> Spec (WithCrashTolerance state) a
       embed (Spec comp) = Spec (zoom (liftL _contractState underlyingModelState) comp)

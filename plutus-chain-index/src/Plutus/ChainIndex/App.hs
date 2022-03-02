@@ -1,13 +1,9 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 
 {-| Main entry points to the chain index.
 -}
@@ -19,17 +15,25 @@ import Data.Foldable (for_)
 import Data.Function ((&))
 import Data.Yaml qualified as Y
 import Options.Applicative (execParser)
-import Prettyprinter (Pretty (..))
+import Prettyprinter (Pretty (pretty))
 
 import Cardano.BM.Configuration.Model qualified as CM
 
-import Plutus.ChainIndex.CommandLine (AppConfig (..), Command (..), applyOverrides, cmdWithHelpParser)
+import Cardano.BM.Setup (setupTrace_)
+import Cardano.BM.Trace (Trace)
+import Control.Concurrent.Async (wait, withAsync)
+import Control.Concurrent.STM.TChan (newBroadcastTChanIO)
+import Plutus.ChainIndex.CommandLine (AppConfig (AppConfig, acCLIConfigOverrides, acCommand, acConfigPath, acLogConfigPath, acMinLogLevel),
+                                      Command (DumpDefaultConfig, DumpDefaultLoggingConfig, StartChainIndex),
+                                      applyOverrides, cmdWithHelpParser)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
-import Plutus.ChainIndex.Lib (defaultChainSyncHandler, getTipSlot, showingProgress, storeFromBlockNo, syncChainIndex,
-                              withRunRequirements)
+import Plutus.ChainIndex.Lib (defaultChainSyncHandler, getTipSlot, storeFromBlockNo, syncChainIndex,
+                              withRunRequirements, writeChainSyncEventToChan)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
+import Plutus.ChainIndex.SyncStats (SyncLog, convertEventToSyncStats, logProgress)
+import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 
 main :: IO ()
 main = do
@@ -43,7 +47,7 @@ main = do
     DumpDefaultLoggingConfig path ->
       Logging.defaultConfig >>= CM.toRepresentation >>= Y.encodeFile path
 
-    StartChainIndex{} -> do
+    StartChainIndex {} -> do
       -- Initialise logging
       logConfig <- maybe Logging.defaultConfig Logging.loadConfig acLogConfigPath
       for_ acMinLogLevel $ \ll -> CM.setMinSeverity logConfig ll
@@ -73,13 +77,18 @@ runMain logConfig config = do
     slotNo <- getTipSlot config
     print slotNo
 
+    -- Channel for broadcasting 'ChainSyncEvent's
+    chan <- newBroadcastTChanIO
     syncHandler
       <- defaultChainSyncHandler runReq
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)
-        & showingProgress
+        & writeChainSyncEventToChan convertEventToSyncStats chan
 
     putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config
     syncChainIndex config runReq syncHandler
+
+    (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
+    withAsync (runLogEffects (convertLog PrettyObject trace) $ logProgress chan) wait
 
     let port = show (Config.cicPort config)
     putStrLn $ "Starting webserver on port " <> port

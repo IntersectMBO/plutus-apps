@@ -61,12 +61,10 @@ serveChainIndex ::
 serveChainIndex =
     pure NoContent
     :<|> serveFromHashApi
-    :<|> (E.txOutFromRef >=> handleMaybe)
-    :<|> (E.txFromTxId >=> handleMaybe)
+    :<|> (E.unspentTxOutFromRef >=> handleMaybe)
     :<|> E.utxoSetMembership
     :<|> (\(UtxoAtAddressRequest pq c) -> E.utxoSetAtAddress (fromMaybe def pq) c)
     :<|> (\(UtxoWithCurrencyRequest pq c) -> E.utxoSetWithCurrency (fromMaybe def pq) c)
-    :<|> E.txsFromTxIds
     :<|> (\(TxoAtAddressRequest pq c) -> E.txoSetAtAddress (fromMaybe def pq) c)
     :<|> E.getTip
     :<|> E.collectGarbage *> pure NoContent

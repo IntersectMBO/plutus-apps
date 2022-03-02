@@ -36,9 +36,6 @@ module Ledger.Constraints.OffChain(
     , validityTimeRange
     , emptyUnbalancedTx
     , adjustUnbalancedTx
-    , ScriptOutput(..)
-    , toScriptOutput
-    , fromScriptOutput
     , MkTxError(..)
     , mkTx
     , mkSomeTx
@@ -185,29 +182,6 @@ ownPaymentPubKeyHash pkh = mempty { slOwnPaymentPubKeyHash = Just pkh }
 ownStakePubKeyHash :: StakePubKeyHash -> ScriptLookups a
 ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
 
-data ScriptOutput =
-    ScriptOutput
-        { scriptOutputValidatorHash :: ValidatorHash
-        , scriptOutputValue         :: Value
-        , scriptOutputDatumHash     :: DatumHash
-        }
-    deriving stock (Eq, Generic, Show)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
-
-toScriptOutput :: ChainIndexTxOut -> Maybe ScriptOutput
-toScriptOutput (Tx.ScriptChainIndexTxOut _ validatorOrHash datumOrHash v)
-    = Just $ ScriptOutput (either id validatorHash validatorOrHash) v (either id datumHash datumOrHash)
-toScriptOutput Tx.PublicKeyChainIndexTxOut{}
-    = Nothing
-
-fromScriptOutput :: ScriptOutput -> ChainIndexTxOut
-fromScriptOutput (ScriptOutput vh v dh) =
-    Tx.ScriptChainIndexTxOut (Address.scriptHashAddress vh) (Left vh) (Left dh) v
-
-instance Pretty ScriptOutput where
-    pretty ScriptOutput{scriptOutputValidatorHash, scriptOutputValue} =
-        hang 2 $ vsep ["-" <+> pretty scriptOutputValue <+> "addressed to", pretty scriptOutputValidatorHash]
-
 -- | An unbalanced transaction. It needs to be balanced and signed before it
 --   can be submitted to the ledeger. See note [Submitting transactions from
 --   Plutus contracts] in 'Plutus.Contract.Wallet'.
@@ -215,7 +189,7 @@ data UnbalancedTx =
     UnbalancedTx
         { unBalancedTxTx                  :: Tx
         , unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey)
-        , unBalancedTxUtxoIndex           :: Map TxOutRef ScriptOutput
+        , unBalancedTxUtxoIndex           :: Map TxOutRef TxOut
         , unBalancedTxValidityTimeRange   :: POSIXTimeRange
         }
     deriving stock (Eq, Generic, Show)
@@ -431,7 +405,7 @@ updateUtxoIndex
     => m ()
 updateUtxoIndex = do
     ScriptLookups{slTxOutputs} <- ask
-    unbalancedTx . utxoIndex <>= Map.mapMaybe toScriptOutput slTxOutputs
+    unbalancedTx . utxoIndex <>= fmap Tx.toTxOut slTxOutputs
 
 -- | Add a typed input, checking the type of the output it spends. Return the value
 --   of the spent output.

@@ -38,6 +38,8 @@ module Plutus.Contracts.Escrow(
     , RedeemSuccess(..)
     , RefundSuccess(..)
     , EscrowSchema
+    -- * Exposed for test endpoints
+    , Action(..)
     ) where
 
 import Control.Lens (makeClassyPrisms, review, view)

@@ -28,6 +28,8 @@ module Test.QuickCheck.StateModel(
   , lookUpVar
 ) where
 
+import Control.Monad
+
 import Data.Typeable
 
 import Test.QuickCheck as QC
@@ -109,16 +111,19 @@ instance Eq (Step state) where
 -- client code because the extra Smart constructor is concealed by a
 -- pattern synonym.
 
-newtype Actions state = Actions_ (Smart [Step state])
+-- We also collect a list of names of actions which were generated,
+-- but were then rejected by their precondition.
+
+data Actions state = Actions_ [String] (Smart [Step state])
 
 pattern Actions :: [Step state] -> Actions state
-pattern Actions as <- Actions_ (Smart _ as) where
-  Actions as = Actions_ (Smart 0 as)
+pattern Actions as <- Actions_ _ (Smart _ as) where
+  Actions as = Actions_ [] (Smart 0 as)
 
 {-# COMPLETE Actions #-}
 
 instance Semigroup (Actions state) where
-  Actions as <> Actions as' = Actions (as <> as')
+  Actions_ rs (Smart k as) <> Actions_ rs' (Smart _ as') = Actions_ (rs++rs') (Smart k (as <> as'))
 
 instance Eq (Actions state) where
   Actions as == Actions as' = as == as'
@@ -132,25 +137,35 @@ instance (forall a. Show (Action state a)) => Show (Actions state) where
                     [showsPrec 0 a . (",\n  "++) | a <- init as]
 
 instance (Typeable state, StateModel state) => Arbitrary (Actions state) where
-  arbitrary = Actions <$> arbActions initialState 1
+  arbitrary = do (as,rejected) <- arbActions initialState 1
+                 return $ Actions_ rejected (Smart 0 as)
     where
-      arbActions :: state -> Int -> Gen [Step state]
+      arbActions :: state -> Int -> Gen ([Step state],[String])
       arbActions s step = sized $ \n ->
         let w = n `div` 2 + 1 in
-          frequency [(1, return []),
-                     (w, do mact <- arbitraryAction s `suchThatMaybe`
-                                      \a -> case a of
-                                              Some act -> precondition s act
-                                              Error _  -> False
+          frequency [(1, return ([], [])),
+                     (w, do (mact, rej) <- satisfyPrecondition
                             case mact of
-                              Just (Some act) ->
-                                ((Var step := act):) <$> arbActions (nextState s act (Var step)) (step+1)
+                              Just (Some act) -> do
+                                (as,rejected) <- arbActions (nextState s act (Var step)) (step+1)
+                                return ((Var step := act):as, rej++rejected)
                               Just Error{} -> error "impossible"
                               Nothing ->
-                                return [])]
+                                return ([], []))]
+        where satisfyPrecondition = sized $ \n -> go n (2*n) []  -- idea copied from suchThatMaybe
+              go m n rej
+                | m > n = return (Nothing, rej)
+                | otherwise = do
+                    a <- resize m $ arbitraryAction s
+                    case a of
+                      Some act ->
+                        if precondition s act then return (Just (Some act), rej)
+                        else go (m+1) n (actionName act:rej)
+                      Error _ ->
+                        go (m+1) n rej
 
-  shrink (Actions_ as) =
-    map Actions_ (shrinkSmart (map (prune . map fst) . shrinkList shrinker . withStates) as)
+  shrink (Actions_ rs as) =
+    map (Actions_ rs) (shrinkSmart (map (prune . map fst) . shrinkList shrinker . withStates) as)
     where shrinker ((Var i := act),s) = [((Var i := act'),s) | Some act' <- shrinkAction s act]
 
 prune :: StateModel state => [Step state] -> [Step state]
@@ -182,9 +197,12 @@ runActions = runActionsInState initialState
 
 runActionsInState :: StateModel state =>
                     state -> Actions state -> PropertyM (ActionMonad state) (state,Env)
-runActionsInState state (Actions actions) = loop state [] actions
+runActionsInState state (Actions_ rejected (Smart _ actions)) = loop state [] actions
   where
-    loop _s env [] = return (_s,reverse env)
+    loop _s env [] = do
+      when (not . null $ rejected) $
+        monitor (tabulate "Actions rejected by precondition" rejected)
+      return (_s,reverse env)
     loop s env ((Var n := act):as) = do
       pre $ precondition s act
       ret <- run (perform s act (lookUpVar env))

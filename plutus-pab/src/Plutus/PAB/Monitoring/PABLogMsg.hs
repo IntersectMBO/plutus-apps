@@ -21,10 +21,11 @@ module Plutus.PAB.Monitoring.PABLogMsg(
     WalletClientMsg(..)
     ) where
 
-import Cardano.BM.Data.Tracer (ToObject (..), TracingVerbosity (..))
-import Cardano.BM.Data.Tracer.Extras (StructuredLog, Tagged (..), mkObjectStr)
+import Cardano.Api qualified as C
+import Cardano.BM.Data.Tracer (ToObject (toObject), TracingVerbosity (MaximalVerbosity))
+import Cardano.BM.Data.Tracer.Extras (StructuredLog, Tagged (Tagged), mkObjectStr)
 import Cardano.ChainIndex.Types (ChainIndexServerMsg)
-import Cardano.Node.Types (PABServerLogMsg)
+import Cardano.Node.Types (PABServerConfig, PABServerLogMsg)
 import Cardano.Wallet.Mock.Types (WalletMsg)
 import Control.Monad.Freer.Extras.Beam (BeamLog)
 import Data.Aeson (FromJSON, ToJSON, Value)
@@ -35,11 +36,11 @@ import GHC.Generics (Generic)
 import Plutus.Contract.Effects (PABReq, PABResp)
 import Plutus.Contract.Resumable (Response)
 import Plutus.Contract.State (ContractResponse)
-import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg (..))
+import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg)
 import Plutus.PAB.Effects.Contract (PABContract (..))
 import Plutus.PAB.Events.Contract (ContractInstanceId)
 import Plutus.PAB.Instances ()
-import Prettyprinter (Pretty (..), colon, viaShow, (<+>))
+import Prettyprinter (Pretty (pretty), colon, line, viaShow, (<+>))
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
 import Wallet.Emulator.MultiAgent (EmulatorEvent)
 import Wallet.Emulator.Wallet (Wallet)
@@ -192,7 +193,7 @@ instance Pretty (ContractDef t) => Pretty (PABMultiAgentMsg t) where
 data CoreMsg t =
     FindingContract ContractInstanceId
     | FoundContract (Maybe (ContractResponse Value Value PABResp PABReq))
-    | ConnectingToAlonzoNode
+    | ConnectingToAlonzoNode PABServerConfig C.SlotNo
     deriving stock Generic
 
 deriving stock instance (Show (ContractDef t)) => Show (CoreMsg t)
@@ -203,7 +204,13 @@ instance Pretty (ContractDef t) => Pretty (CoreMsg t) where
     pretty = \case
         FindingContract i      -> "Finding contract" <+> pretty i
         FoundContract c        -> "Found contract" <+> viaShow c
-        ConnectingToAlonzoNode -> "Connecting to Alonzo node"
+        ConnectingToAlonzoNode config slotNo ->
+                "Connecting to Alonzo node with config:"
+            <>  line
+            <>  pretty config
+            <>  line
+            <>  "The tip of the local node:"
+            <+> viaShow slotNo
 
 instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (CoreMsg t) where
     toObject v = \case
@@ -214,7 +221,7 @@ instance (StructuredLog (ContractDef t), ToJSON (ContractDef t)) => ToObject (Co
                 case v of
                     MaximalVerbosity -> Left (Tagged @"contract" state)
                     _                -> Right ()
-        ConnectingToAlonzoNode -> mkObjectStr "Connecting to Alonzo node" ()
+        ConnectingToAlonzoNode _ _ -> mkObjectStr "Connecting to Alonzo node" ()
 
 newtype RequestSize = RequestSize Int
     deriving stock (Show)

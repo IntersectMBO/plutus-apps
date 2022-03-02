@@ -358,6 +358,6 @@ auctionBuyer currency params = do
 
         -- If the state can't be found we wait for it to appear.
         Nothing -> SM.waitForUpdateUntilTime client (apEndTime params) >>= \case
-            Transition _ _ (Ongoing s) -> loop s
-            InitialState _ (Ongoing s) -> loop s
-            _                          -> logWarn CurrentStateNotFound
+            Transition _ (Ongoing s) -> loop s
+            InitialState (Ongoing s) -> loop s
+            _                        -> logWarn CurrentStateNotFound

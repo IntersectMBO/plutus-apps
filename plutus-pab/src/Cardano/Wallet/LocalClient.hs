@@ -39,10 +39,9 @@ import Data.Quantity (Quantity (Quantity))
 import Data.Text (pack)
 import Data.Text.Class (fromText)
 import Ledger (CardanoTx)
+import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError, toCardanoTxBody)
 import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), Value (Value))
 import Plutus.Contract.Wallet (export)
@@ -52,17 +51,19 @@ import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import Prettyprinter (Pretty (pretty))
 import Servant ((:<|>) ((:<|>)), (:>))
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
+import Wallet.API qualified as WAPI
 import Wallet.Effects (WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
 import Wallet.Emulator.Error (WalletAPIError (OtherError, ToCardanoError))
 import Wallet.Emulator.Wallet (Wallet (Wallet), WalletId (WalletId))
 
-getWalletKey :: C.ApiT C.WalletId -> C.ApiT C.Role -> C.ApiT C.DerivationIndex -> Maybe Bool -> ClientM ApiVerificationKeyShelley
+getWalletKey :: C.ApiT C.WalletId -> C.ApiT C.Role -> C.ApiT C.DerivationIndex -> Maybe Bool -> ClientM C.ApiVerificationKeyShelley
 getWalletKey :<|> _ :<|> _ :<|> _ = client (Proxy @("v2" :> C.WalletKeys))
 
 handleWalletClient
     :: forall m effs.
     ( LastMember m effs
     , MonadIO m
+    , Member WAPI.NodeClientEffect effs
     , Member (Error ClientError) effs
     , Member (Error WalletAPIError) effs
     , Member (Reader ClientEnv) effs
@@ -73,7 +74,7 @@ handleWalletClient
     -> Wallet
     -> WalletEffect
     ~> Eff effs
-handleWalletClient config (Wallet (WalletId walletId)) event = do
+handleWalletClient config (Wallet _ (WalletId walletId)) event = do
     let NetworkIdWrapper networkId = pscNetworkId config
     let mpassphrase = pscPassphrase config
     clientEnv <- ask @ClientEnv
@@ -101,9 +102,9 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
             sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
             void . runClient $ C.postExternalTransaction C.transactionClient (C.ApiBytesT (C.SerialisedTx $ C.serialisedTx sealedTx))
 
-        ownPaymentPubKeyHashH :: Eff effs PaymentPubKeyHash
+        ownPaymentPubKeyHashH :: Eff effs Ledger.PaymentPubKeyHash
         ownPaymentPubKeyHashH =
-            fmap (PaymentPubKeyHash . PubKeyHash . BuiltinByteString . fst . getApiVerificationKey) . runClient $
+            fmap (Ledger.PaymentPubKeyHash . Ledger.PubKeyHash . BuiltinByteString . fst . getApiVerificationKey) . runClient $
                 getWalletKey (C.ApiT walletId)
                              (C.ApiT C.UtxoExternal)
                              (C.ApiT (C.DerivationIndex 0))
@@ -111,7 +112,8 @@ handleWalletClient config (Wallet (WalletId walletId)) event = do
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = do
-            case export protocolParams networkId utx of
+            slotConfig <- WAPI.getClientSlotConfig
+            case export protocolParams networkId slotConfig utx of
                 Left err -> do
                     logWarn $ BalanceTxError $ show $ pretty err
                     throwOtherError $ pretty err

@@ -33,11 +33,11 @@ import Control.Monad.Freer.Reader (runReader)
 import Control.Monad.Freer.State (runState)
 import Control.Monad.IO.Class (liftIO)
 import Database.SQLite.Simple qualified as Sqlite
-import Plutus.Monitoring.Util (convertLog, runLogEffects)
+import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 
 -- | The required arguments to run the chain index effects.
 data RunRequirements = RunRequirements
-    { trace         :: Trace IO ChainIndexLog
+    { trace         :: Trace IO (PrettyObject ChainIndexLog)
     , stateMVar     :: MVar ChainIndexState
     , conn          :: Sqlite.Connection
     , securityParam :: Int
@@ -49,7 +49,7 @@ runChainIndexEffects
     -> Eff '[ChainIndexQueryEffect, ChainIndexControlEffect, BeamEffect] a
     -> IO (Either ChainIndexError a)
 runChainIndexEffects runReq action =
-    runLogEffects (trace runReq)
+    runLogEffects (convertLog PrettyObject $ trace runReq)
         $ handleChainIndexEffects runReq
         $ raiseEnd action
 
@@ -67,7 +67,7 @@ handleChainIndexEffects RunRequirements{trace, stateMVar, conn, securityParam} a
         $ runReader (Depth securityParam)
         $ runError @ChainIndexError
         $ flip handleError (throwError . BeamEffectError)
-        $ interpret (handleBeam (convertLog BeamLogItem trace))
+        $ interpret (handleBeam (convertLog (PrettyObject . BeamLogItem) trace))
         $ interpret handleControl
         $ interpret handleQuery
         -- Insert the 5 effects needed by the handlers of the 3 chain index effects between those 3 effects and 'effs'.

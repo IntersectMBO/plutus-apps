@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -8,10 +6,11 @@ module Plutus.ChainIndex.Logging where
 
 import Cardano.BM.Configuration (setup)
 import Cardano.BM.Configuration.Model qualified as CM
-import Cardano.BM.Data.BackendKind
-import Cardano.BM.Data.Configuration (Endpoint (..))
-import Cardano.BM.Data.Output
-import Cardano.BM.Data.Severity
+import Cardano.BM.Data.BackendKind (BackendKind (AggregationBK, EKGViewBK, KatipBK, MonitoringBK))
+import Cardano.BM.Data.Configuration (Endpoint (Endpoint))
+import Cardano.BM.Data.Output (ScribeDefinition (ScribeDefinition, scFormat, scKind, scMaxSev, scMinSev, scName, scPrivacy, scRotation),
+                               ScribeFormat (ScText), ScribeKind (StdoutSK), ScribePrivacy (ScPublic))
+import Cardano.BM.Data.Severity (Severity (Info))
 
 -- | Logging (definitions from Plutus.PAB.Monitoring.Config)
 

@@ -4,24 +4,24 @@
 {-# LANGUAGE MonoLocalBinds     #-}
 module Plutus.Contract(
       Contract(..)
-    , ContractError(..)
-    , AsContractError(..)
-    , IsContract(..)
+    , Plutus.Contract.Types.ContractError(..)
+    , Plutus.Contract.Types.AsContractError(..)
+    , Plutus.Contract.Types.IsContract(..)
     , (>>)
-    , throwError
-    , handleError
-    , mapError
-    , runError
+    , Plutus.Contract.Types.throwError
+    , Plutus.Contract.Types.handleError
+    , Plutus.Contract.Types.mapError
+    , Plutus.Contract.Types.runError
     -- * Select
     , Promise
-    , awaitPromise
-    , promiseMap
-    , promiseBind
+    , Plutus.Contract.Types.awaitPromise
+    , Plutus.Contract.Types.promiseMap
+    , Plutus.Contract.Types.promiseBind
     , both
-    , selectEither
-    , select
-    , selectList
-    , never
+    , Plutus.Contract.Types.selectEither
+    , Plutus.Contract.Types.select
+    , Plutus.Contract.Types.selectList
+    , Plutus.Contract.Types.never
     -- * Dealing with time
     , Request.awaitSlot
     , Request.isSlot
@@ -53,13 +53,11 @@ module Plutus.Contract(
     , Request.validatorFromHash
     , Request.mintingPolicyFromHash
     , Request.stakeValidatorFromHash
-    , Request.txOutFromRef
-    , Request.txFromTxId
+    , Request.unspentTxOutFromRef
     , Request.utxoRefMembership
     , Request.utxoRefsAt
     , Request.utxoRefsWithCurrency
     , Request.utxosAt
-    , Request.utxosTxOutTxAt
     , Request.utxosTxOutTxFromTx
     , Request.getTip
     -- * Wallet's own public key
@@ -90,10 +88,10 @@ module Plutus.Contract(
     -- ** Tx output confirmation
     , Request.awaitTxOutStatusChange
     -- * Checkpoints
-    , checkpoint
-    , checkpointLoop
-    , AsCheckpointError(..)
-    , CheckpointError(..)
+    , Plutus.Contract.Types.checkpoint
+    , Plutus.Contract.Types.checkpointLoop
+    , Plutus.Contract.Types.AsCheckpointError(..)
+    , Plutus.Contract.Types.CheckpointError(..)
     -- * Logging
     , module Logging
     -- * Row-related things
@@ -110,10 +108,8 @@ import Plutus.Contract.Request (ContractRow)
 import Plutus.Contract.Request qualified as Request
 import Plutus.Contract.Schema qualified as Schema
 import Plutus.Contract.Typed.Tx as Tx (collectFromScript, collectFromScriptFilter)
-import Plutus.Contract.Types (AsCheckpointError (..), AsContractError (..), CheckpointError (..), Contract (..),
-                              ContractError (..), IsContract (..), Promise (..), checkpoint, checkpointLoop,
-                              handleError, mapError, never, promiseBind, promiseMap, runError, select, selectEither,
-                              selectList, throwError)
+import Plutus.Contract.Types (Contract (Contract), Promise, select)
+import Plutus.Contract.Types qualified
 
 import Control.Monad.Freer.Writer qualified as W
 import Data.Functor.Apply (liftF2)

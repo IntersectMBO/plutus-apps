@@ -37,11 +37,13 @@ import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutpu
                           InsertUtxoFailed (..), InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..),
                           RollbackFailed (..), RollbackResult (..), Tip (..), TxConfirmedState (..), TxIdState (..),
                           TxOutBalance, TxValidity (..), UtxoIndex, UtxoState (..), blockId, citxTxId, fromOnChainTx,
-                          insert, reduceBlockCount, utxoState)
+                          insert, reduceBlockCount, tipAsPoint, utxoState)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint, toCardanoPoint)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
+import Plutus.ChainIndex.UtxoState (viewTip)
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
+import System.Random
 
 -- | Connect to the node and write node updates to the blockchain
 --   env.
@@ -55,7 +57,7 @@ startNodeClient ::
   -> InstancesState -- ^ In-memory state of running contract instances
   -> IO BlockchainEnv
 startNodeClient socket mode rollbackHistory slotConfig networkId resumePoint instancesState = do
-    env <- STM.atomically $ emptyBlockchainEnv rollbackHistory
+    env <- STM.atomically $ emptyBlockchainEnv rollbackHistory slotConfig
     case mode of
       MockNode -> do
         void $ MockClient.runChainSync socket slotConfig
@@ -78,7 +80,9 @@ handleSyncAction action = do
                                 -- we start logging from here to avoid spamming the terminal
                                 -- should be removed when we have better logging to report
                                 -- on the PAB sync status
-      if (n `mod` 100_000 == 0 && n > 0) || (s >= recentSlot)
+      stdGen <- newStdGen
+      let logBlock = fst (randomR (0 :: Int, 10_000) stdGen) == 0
+      if  logBlock || (s >= recentSlot)
         then do
           putStrLn $ "Current block: " <> show n <> ". Current slot: " <> show s
         else pure ()
@@ -123,23 +127,30 @@ data SyncActionFailure
 
 -- | Roll back the chain to the given ChainPoint and slot.
 runRollback :: BlockchainEnv -> ChainPoint -> STM (Either SyncActionFailure (Slot, BlockNumber))
-runRollback env@BlockchainEnv{beTxChanges, beTxOutChanges} chainPoint = do
+runRollback env@BlockchainEnv{beCurrentSlot, beTxChanges, beTxOutChanges} chainPoint = do
+  currentSlot <- STM.readTVar beCurrentSlot
   txIdStateIndex <- STM.readTVar beTxChanges
   txOutBalanceStateIndex <- STM.readTVar beTxOutChanges
 
   let point = fromCardanoPoint chainPoint
       rs    = TxIdState.rollback point txIdStateIndex
       rs'   = TxOutBalance.rollback point txOutBalanceStateIndex
+      -- Check to see if the rollback is just through a sequence of empty blocks ending at the tip.
+      emptyRollBack =
+           point > tipAsPoint (viewTip txIdStateIndex)
+        && pointSlot point <= currentSlot
 
-  case rs of
-    Left e                                -> pure $ Left (RollbackFailure e)
-    Right RollbackResult{rolledBackIndex=rolledBackTxIdStateIndex} ->
-      case rs' of
-        Left e' -> pure $ Left (RollbackFailure e')
-        Right RollbackResult{rolledBackIndex=rolledBackTxOutBalanceStateIndex} -> do
-          STM.writeTVar beTxChanges rolledBackTxIdStateIndex
-          STM.writeTVar beTxOutChanges rolledBackTxOutBalanceStateIndex
-          Right <$> blockAndSlot env
+  if emptyRollBack
+    then Right <$> blockAndSlot env
+    else case rs of
+           Left e                                -> pure $ Left (RollbackFailure e)
+           Right RollbackResult{rolledBackIndex=rolledBackTxIdStateIndex} ->
+             case rs' of
+               Left e' -> pure $ Left (RollbackFailure e')
+               Right RollbackResult{rolledBackIndex=rolledBackTxOutBalanceStateIndex} -> do
+                 STM.writeTVar beTxChanges rolledBackTxIdStateIndex
+                 STM.writeTVar beTxOutChanges rolledBackTxOutBalanceStateIndex
+                 Right <$> blockAndSlot env
 
 -- | Get transaction ID and validity from a transaction.
 txEvent :: ChainIndexTx -> (TxId, TxOutBalance, TxValidity)
