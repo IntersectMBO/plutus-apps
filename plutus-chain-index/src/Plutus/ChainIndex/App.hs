@@ -23,12 +23,12 @@ import Cardano.BM.Setup (setupTrace_)
 import Cardano.BM.Trace (Trace)
 import Control.Concurrent.Async (withAsync)
 import Control.Concurrent.STM.TChan (newBroadcastTChanIO)
-import Plutus.ChainIndex.Blocks (processBlockChan)
 import Plutus.ChainIndex.CommandLine (AppConfig (AppConfig, acCLIConfigOverrides, acCommand, acConfigPath, acLogConfigPath, acMinLogLevel),
                                       Command (DumpDefaultConfig, DumpDefaultLoggingConfig, StartChainIndex),
                                       applyOverrides, cmdWithHelpParser)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
+import Plutus.ChainIndex.Events (processEventsChan)
 import Plutus.ChainIndex.Lib (getTipSlot, storeChainSyncHandler, storeFromBlockNo, syncChainIndex, withRunRequirements,
                               writeChainSyncEventToChan)
 import Plutus.ChainIndex.Logging qualified as Logging
@@ -80,10 +80,10 @@ runMain logConfig config = do
 
     -- Channel for broadcasting 'ChainSyncEvent's for sync stats
     syncStatsChan <- newBroadcastTChanIO
-    -- Channel for processing blocks
-    blocksChan <- newBroadcastTChanIO
+    -- Channel for processing events
+    eventsChan <- newBroadcastTChanIO
     syncHandler
-      <- storeChainSyncHandler blocksChan runReq
+      <- storeChainSyncHandler eventsChan
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)
         & writeChainSyncEventToChan convertEventToSyncStats syncStatsChan
 
@@ -94,9 +94,9 @@ runMain logConfig config = do
     (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
     putStrLn $ "log progress"
     withAsync (runLogEffects (convertLog PrettyObject trace) $ logProgress syncStatsChan) $ \_ -> do
-      putStrLn $ "starting processBlockChan"
-      withAsync (processBlockChan runReq blocksChan) $ \_ -> do
-        putStrLn $ "started processBlockChan"
+      putStrLn $ "starting processEventsChan"
+      withAsync (processEventsChan runReq eventsChan) $ \_ -> do
+        putStrLn $ "started processEventsChan"
 
         let port = show (Config.cicPort config)
         putStrLn $ "Starting webserver on port " <> port

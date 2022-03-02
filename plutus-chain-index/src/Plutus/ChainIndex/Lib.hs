@@ -35,7 +35,7 @@ module Plutus.ChainIndex.Lib (
     -- ** Synchronisation handlers
     , ChainSyncHandler
     , ChainSyncEvent(..)
-    , BlocksChan
+    , EventsChan
     , defaultChainSyncHandler
     , storeChainSyncHandler
     , storeFromBlockNo
@@ -45,7 +45,6 @@ module Plutus.ChainIndex.Lib (
     -- * Utils
     , getTipSlot
     , foldTChanUntilEmpty
-    , readNFromTChan
 ) where
 
 import Control.Concurrent.MVar (newMVar)
@@ -137,7 +136,7 @@ toCardanoChainSyncHandler runReq handler = \case
 
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
-type BlocksChan = TChan CI.ChainSyncBlock
+type EventsChan = TChan ChainSyncEvent
 
 -- | The default chain synchronisation event handler. Updates the in-memory state and the database.
 defaultChainSyncHandler :: RunRequirements -> ChainSyncHandler
@@ -146,11 +145,8 @@ defaultChainSyncHandler runReq evt = void $ runChainIndexDuringSync runReq $ cas
     (RollBackward point _) -> rollback point
     (Resume point)         -> resumeSync point
 
-storeChainSyncHandler :: BlocksChan -> RunRequirements -> ChainSyncHandler
-storeChainSyncHandler blocksChan runReq evt = case evt of
-    (RollForward block _)  -> atomically $ writeTChan blocksChan block
-    (RollBackward point _) -> void $ runChainIndexDuringSync runReq $ rollback point
-    (Resume point)         -> void $ runChainIndexDuringSync runReq $ resumeSync point
+storeChainSyncHandler :: EventsChan -> ChainSyncHandler
+storeChainSyncHandler eventsChan = atomically . writeTChan eventsChan
 
 -- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
 storeFromBlockNo :: CI.BlockNumber -> ChainSyncHandler -> ChainSyncHandler
@@ -231,13 +227,3 @@ foldTChanUntilEmpty chan =
               Nothing      -> pure combined
               Just element -> go (combined <> element)
      in go mempty
-
--- | Read 'n' elements from the 'TChan'.
-readNFromTChan :: Int -> TChan a -> IO [a]
-readNFromTChan n chan =
-    let go combined n' = do
-            elementM <- atomically $ tryReadTChan chan
-            case elementM of
-              Nothing      -> pure combined
-              Just element -> go (element : combined) (n' - 1)
-     in go [] n
