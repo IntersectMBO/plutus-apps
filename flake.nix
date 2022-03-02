@@ -20,7 +20,7 @@
       flake = false;
     };
     haskell-nix = {
-      url = "github:input-output-hk/haskell.nix";
+      url = "github:input-output-hk/haskell.nix/hkm/index-state-fix";
       flake = false;
     };
 

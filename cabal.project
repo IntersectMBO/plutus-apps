@@ -57,14 +57,6 @@ package cardano-wallet-launcher
 package cardano-wallet-core-integration
   optimization: False
 
--- needed because they prohibit building with ghcjs...
-source-repository-package
-  type: git
-  location: https://github.com/hamishmack/foundation
-  tag: 656db6d6f5d860fab6895247da42cf8895ab9c6c
-  subdir:
-    foundation
-
 -- Direct dependency.
 -- Are you thinking of updating this tag to some other commit?
 -- Please ensure that the commit you are about to use is the latest one from
