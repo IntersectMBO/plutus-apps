@@ -45,13 +45,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "10";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "10";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/orphans-deriving-via; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/orphans-deriving-via; echo source root reset to $sourceRoot";
     }

@@ -53,13 +53,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "8";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "8";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/libs/non-integral; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/libs/non-integral; echo source root reset to $sourceRoot";
     }

@@ -239,13 +239,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "7";
+      url = "6";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "7";
+      url = "6";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/cardano-api; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/cardano-api; echo source root reset to $sourceRoot";
     }

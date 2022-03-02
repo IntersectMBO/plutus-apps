@@ -153,13 +153,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "9";
+      url = "8";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "9";
+      url = "8";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/network-mux; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/network-mux; echo source root reset to $sourceRoot";
     }

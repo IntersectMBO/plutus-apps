@@ -325,13 +325,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "6";
+      url = "5";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "6";
+      url = "5";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/lib/shelley; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/lib/shelley; echo source root reset to $sourceRoot";
     }

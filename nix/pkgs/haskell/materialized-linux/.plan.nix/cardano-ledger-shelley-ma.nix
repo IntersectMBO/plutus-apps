@@ -78,13 +78,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "8";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "8";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/eras/shelley-ma/impl; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/eras/shelley-ma/impl; echo source root reset to $sourceRoot";
     }

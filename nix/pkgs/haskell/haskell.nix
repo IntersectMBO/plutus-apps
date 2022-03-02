@@ -60,6 +60,7 @@ let
       "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" = "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx";
       "https://github.com/hamishmack/foundation"."656db6d6f5d860fab6895247da42cf8895ab9c6c" = "1q12mhjj47bpaj9zy8c85qa0sj58q0kz776pqj8nfzx7bi7b7ngx";
       "https://github.com/hamishmack/entropy"."0272c697499b1304fccd43e6a983df93ce0cf761" = "0ibhf9c914dd8cn8c5vs2h9a5cram41v6m85ln0pjimqjxvpbr34";
+      "https://raw.githubusercontent.com/input-output-hk/hackage-overlay-ghcjs/8756b0891a0a550cc8b00dacd24227aee483c0ca" = "sha256:1v1af391f70212914ayf35w7672s11s4w6q5y7gn1x1brqjwlc2k";
     };
     # Configuration settings needed for cabal configure to work when cross compiling
     # for windows. We can't use `modules` for these as `modules` are only applied
@@ -111,8 +112,26 @@ let
            , jsaddle:base64-bytestring
            -- no idea why ouroboros-consensus-byron restricts to <.28
            , ouroboros-consensus-byron:cryptonite
+           -- Needed for the version of beam-sqllite in ghcjs-overlay
+           , beam-sqlite:aeson
 
-      constraints: cborg < 0.2.6.0
+      constraints:
+          cborg < 0.2.6.0
+        -- Make sure we use versions in ghcjs-overlay
+        , network == 3.1.2.5
+        , unix-compat == 0.5.3
+        , basement == 0.0.12
+        , foundation == 0.0.26.1
+        , beam-sqlite == 0.5.0.0
+        , digest == 0.0.1.2
+        , unix-bytestring == 0.3.7.3
+
+      index-state: ghcjs-overlay HEAD
+      repository ghcjs-overlay
+        url: https://raw.githubusercontent.com/input-output-hk/hackage-overlay-ghcjs/8756b0891a0a550cc8b00dacd24227aee483c0ca
+        secure: True
+        root-keys:
+        key-threshold: 0
 
     '' + lib.optionalString (topLevelPkgs.stdenv.hostPlatform.isGhcjs && !pkgs.stdenv.hostPlatform.isGhcjs) ''
       packages:
@@ -363,36 +382,6 @@ let
           # load it into ghcjs, otherwise we'll choke on the c++ dependency, which
           # brings in R_X86_64_TLSLD (20) relocation.
           # double-conversion.patches = [ ../../../contrib/double-conversion-2.0.2.0.patch ];
-
-          basement.patches = [ ../../../contrib/basement-0.0.12.patch ];
-          beam-sqlite.patches = [ ../../../contrib/beam-sqlite-0.5.0.0.patch ];
-          clock.patches = [ ../../../contrib/clock-0.8.2.patch ];
-          cryptonite.patches = [ ../../../contrib/cryptonite-0.29.patch ];
-          digest.patches = [ ../../../contrib/digest-0.0.1.2.patch ];
-          direct-sqlite.patches = [ ../../../contrib/direct-sqlite-2.3.26.patch ];
-          double-conversion.patches = [ ../../../contrib/double-conversion-2.0.2.0.patch ];
-          foundation.patches = [ ../../../contrib/foundation-0.0.26.1.patch ];
-          gauge.patches = [ ../../../contrib/gauge-0.2.5.patch ];
-          lzma.patches = [ ../../../contrib/lzma-0.0.0.3.patch ];
-          mersenne-random-pure64.patches = [ ../../../contrib/mersenne-random-pure64-0.2.2.0.patch ];
-          network.patches = [
-            ({ version, revision }: (if version == "3.1.2.1" then ../../../contrib/network-3.1.2.1.patch else null))
-            ({ version, revision }: (if version == "3.1.2.5" then ../../../contrib/network-3.1.2.5.patch else null))
-          ];
-          network.postUnpack = ''
-            export patchFlags="--binary -p1"
-          '';
-
-          network-info.patches = [ ../../../contrib/network-info-0.2.0.10.patch ];
-          network-info.postUnpack = ''
-            export patchFlags="--binary -p1"
-          '';
-          scrypt.patches = [ ../../../contrib/scrypt-0.5.0.patch ];
-          terminal-size.patches = [ ../../../contrib/terminal-size-0.3.2.1.patch ];
-          unix-bytestring.patches = [ ../../../contrib/unix-bytestring-0.3.7.3.patch ];
-          unix-compat.patches = [ ../../../contrib/unix-compat-0.5.3.patch ];
-
-          Cabal.patches = [ ../../patches/cabal.patch ];
 
           cardano-wallet-core.patches = [ ../../patches/cardano-wallet-pr-3074.patch ];
 

@@ -122,13 +122,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "10";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "10";
+      url = "9";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/cardano-crypto-class; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/cardano-crypto-class; echo source root reset to $sourceRoot";
     }

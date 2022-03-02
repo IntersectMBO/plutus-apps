@@ -73,13 +73,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "2";
+      url = "1";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "2";
+      url = "1";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/word-array; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/word-array; echo source root reset to $sourceRoot";
     }

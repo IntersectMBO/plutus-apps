@@ -84,13 +84,13 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "9";
+      url = "8";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "9";
+      url = "8";
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/ntp-client; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/ntp-client; echo source root reset to $sourceRoot";
     }
