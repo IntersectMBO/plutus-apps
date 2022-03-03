@@ -1559,7 +1559,9 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
         dist <- Freer.ask @InitialDistribution
         case outcome of
           Done envInner -> do
-            let lookup (SymToken outerVar idx) = fromJust . Map.lookup idx $ fold (Map.lookup (lookUpVar envOuter outerVar) envInner)
+            let lookup st@(SymToken outerVar idx) = case Map.lookup idx $ fold (Map.lookup (lookUpVar envOuter outerVar) envInner) of
+                  Nothing  -> error ("Trying to look up unknown symbolic token: " ++ show st)
+                  Just tok -> tok
                 dlt = toValue lookup sval
                 initialValue = fold (dist ^. at w)
                 finalValue = finalValue' P.+ fees
