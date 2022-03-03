@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -17,6 +18,7 @@
 module Plutus.Contracts.Uniswap.Types
   where
 
+import Data.Data
 import Data.OpenApi.Schema qualified as OpenApi
 import Ledger
 import Ledger.Value (AssetClass (..), assetClass, assetClassValue, assetClassValueOf)
@@ -27,34 +29,34 @@ import Prelude qualified as Haskell
 import Text.Printf (PrintfArg)
 
 -- | Uniswap coin token
-data U = U deriving (Haskell.Show, Haskell.Eq, Generic)
+data U = U deriving (Haskell.Show, Haskell.Eq, Generic, Data)
 PlutusTx.makeIsDataIndexed ''U [('U, 0)]
 PlutusTx.makeLift ''U
 
 -- | "A"-side coin token
-data A = A
+data A = A deriving Data
 PlutusTx.makeIsDataIndexed ''A [('A, 0)]
 PlutusTx.makeLift ''A
 
 -- | "B"-side coin token
-data B = B
+data B = B deriving Data
 PlutusTx.makeIsDataIndexed ''B [('B, 0)]
 PlutusTx.makeLift ''B
 
 -- | Pool-state coin token
-data PoolState = PoolState
+data PoolState = PoolState deriving Data
 PlutusTx.makeIsDataIndexed ''PoolState [('PoolState, 0)]
 PlutusTx.makeLift ''PoolState
 
 -- | Liquidity-state coin token
-data Liquidity = Liquidity
+data Liquidity = Liquidity deriving Data
 PlutusTx.makeIsDataIndexed ''Liquidity [('Liquidity, 0)]
 PlutusTx.makeLift ''Liquidity
 
 -- | A single 'AssetClass'. Because we use three coins, we use a phantom type to track
 -- which one is which.
 newtype Coin a = Coin { unCoin :: AssetClass }
-  deriving stock   (Haskell.Show, Generic)
+  deriving stock   (Haskell.Show, Generic, Data)
   deriving newtype (ToJSON, FromJSON, ToSchema, Eq, Haskell.Eq, Haskell.Ord, OpenApi.ToSchema)
 PlutusTx.makeIsDataIndexed ''Coin [('Coin, 0)]
 PlutusTx.makeLift ''Coin
@@ -62,7 +64,7 @@ PlutusTx.makeLift ''Coin
 -- | Likewise for 'Integer'; the corresponding amount we have of the
 -- particular 'Coin'.
 newtype Amount a = Amount { unAmount :: Integer }
-  deriving stock   (Haskell.Show, Generic)
+  deriving stock   (Haskell.Show, Generic, Data)
   deriving newtype (ToJSON, FromJSON, ToSchema, Eq, Ord, PrintfArg)
   deriving newtype (Haskell.Eq, Haskell.Ord, Haskell.Num)
   deriving newtype (AdditiveGroup, AdditiveMonoid, AdditiveSemigroup, MultiplicativeSemigroup)
@@ -91,7 +93,7 @@ mkCoin c = Coin . assetClass c
 
 newtype Uniswap = Uniswap
     { usCoin :: Coin U
-    } deriving stock    (Haskell.Show, Generic)
+    } deriving stock    (Haskell.Show, Generic, Data)
       deriving anyclass (ToJSON, FromJSON, ToSchema, OpenApi.ToSchema)
       deriving newtype  (Haskell.Eq, Haskell.Ord)
 PlutusTx.makeIsDataIndexed ''Uniswap [('Uniswap, 0)]
@@ -101,7 +103,7 @@ data LiquidityPool = LiquidityPool
     { lpCoinA :: Coin A
     , lpCoinB :: Coin B
     }
-    deriving (Haskell.Show, Generic, ToJSON, FromJSON, ToSchema)
+    deriving (Haskell.Show, Generic, ToJSON, FromJSON, ToSchema, Data)
 PlutusTx.makeIsDataIndexed ''LiquidityPool [('LiquidityPool, 0)]
 PlutusTx.makeLift ''LiquidityPool
 

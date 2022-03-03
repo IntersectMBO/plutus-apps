@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
@@ -33,6 +34,7 @@ import Ledger qualified as Ledger
 import Ledger.Ada qualified as Ada
 import Ledger.Value qualified as Value
 
+import Data.Data
 import Data.Foldable
 import Data.List
 import Data.Maybe
@@ -55,7 +57,7 @@ import Data.Semigroup qualified as Semigroup
 
 import Ledger.Constraints
 
-data PoolIndex = PoolIndex SymToken SymToken deriving (Show)
+data PoolIndex = PoolIndex SymToken SymToken deriving (Show, Data)
 
 poolIndex :: SymToken -> SymToken -> PoolIndex
 poolIndex t1 t2 = PoolIndex (min t1 t2) (max t1 t2)
@@ -70,13 +72,13 @@ data PoolModel = PoolModel { _coinAAmount    :: Amount A
                            , _coinBAmount    :: Amount B
                            , _liquidities    :: Map Wallet (Amount Liquidity)
                            , _liquidityToken :: SymToken
-                           } deriving (Ord, Eq, Show)
+                           } deriving (Ord, Eq, Show, Data)
 
 data UniswapModel = UniswapModel { _uniswapToken       :: Maybe SymToken
                                  , _exchangeableTokens :: Set SymToken
                                  , _pools              :: Map PoolIndex PoolModel
                                  , _startedUserCode    :: Set Wallet
-                                 } deriving (Show)
+                                 } deriving (Show, Data)
 
 makeLenses ''UniswapModel
 makeLenses ''PoolModel
@@ -87,8 +89,6 @@ open = to $ \ p -> p ^. coinAAmount > 0 -- If one is bigger than zero the other 
 prop_Uniswap :: Actions UniswapModel -> Property
 prop_Uniswap = propRunActions_
 
-deriving instance Eq (Action UniswapModel)
-deriving instance Show (Action UniswapModel)
 deriving instance Eq (ContractInstanceKey UniswapModel w s e params)
 deriving instance Show (ContractInstanceKey UniswapModel w s e params)
 
@@ -168,6 +168,7 @@ instance ContractModel UniswapModel where
                            -- ^ Amount of liquidity to cash in
                            | ClosePool Wallet SymToken SymToken
                            -- ^ Close a liquidity pool
+                           deriving (Eq, Show, Data)
 
   data ContractInstanceKey UniswapModel w s e params where
     OwnerKey :: ContractInstanceKey UniswapModel (Last (Either Text.Text Uniswap)) EmptySchema ContractError ()
@@ -238,8 +239,6 @@ instance ContractModel UniswapModel where
   precondition _ SetupTokens                  = True
   precondition s (CreatePool _ t1 a1 t2 a2)   = hasUniswapToken s
                                                 && not (hasOpenPool s t1 t2)
-                                                && t1 `elem` s ^. contractState . exchangeableTokens
-                                                && t2 `elem` s ^. contractState . exchangeableTokens
                                                 && t1 /= t2
                                                 && 0 < a1
                                                 && 0 < a2

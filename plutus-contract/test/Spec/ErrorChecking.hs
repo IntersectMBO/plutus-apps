@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
@@ -13,6 +14,7 @@ module Spec.ErrorChecking where
 import Control.Lens hiding (elements)
 import Control.Monad
 import Control.Monad.Freer.Extras.Log
+import Data.Data
 import Data.Row
 import Test.Tasty
 
@@ -73,7 +75,7 @@ checkOptions = set minLogLevel Critical defaultCheckOptionsContractModel
 
 -- | This QuickCheck model only provides an interface to the validators used in this
 -- test that are convenient for testing them in isolation.
-data DummyModel = DummyModel deriving Haskell.Show
+data DummyModel = DummyModel deriving (Haskell.Show, Data)
 
 deriving instance Haskell.Eq (ContractInstanceKey DummyModel w schema err param)
 deriving instance Haskell.Show (ContractInstanceKey DummyModel w schema err param)
@@ -87,7 +89,7 @@ instance ContractModel DummyModel where
                          | DivZero
                          | DivZero_t    -- Trace before dividing by zero
                          | Success
-                         deriving (Haskell.Eq, Haskell.Show)
+                         deriving (Haskell.Eq, Haskell.Show, Data)
 
   perform handle _ _ cmd = void $ case cmd of
     FailFalse -> do

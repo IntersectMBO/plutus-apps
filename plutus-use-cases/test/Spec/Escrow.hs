@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -10,6 +11,7 @@ module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace, prop_Escrow, p
 
 import Control.Lens hiding (both)
 import Control.Monad (void, when)
+import Data.Data
 import Data.Default (Default (def))
 import Data.Foldable
 import Data.Map (Map)
@@ -39,15 +41,12 @@ import Spec.Escrow.Endpoints
 data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _refundSlot    :: Slot
                                , _targets       :: Map Wallet Value
-                               } deriving (Eq, Show)
+                               } deriving (Eq, Show, Data)
 
 makeLenses ''EscrowModel
 
 modelParams :: EscrowParams d
 modelParams = escrowParams $ TimeSlot.scSlotZeroTime def
-
-deriving instance Eq (Action EscrowModel)
-deriving instance Show (Action EscrowModel)
 
 deriving instance Eq (ContractInstanceKey EscrowModel w s e params)
 deriving instance Show (ContractInstanceKey EscrowModel w s e params)
@@ -57,6 +56,7 @@ instance ContractModel EscrowModel where
                           | Redeem Wallet
                           | Refund Wallet
                           | BadRefund Wallet Wallet
+                          deriving (Eq, Show, Data)
 
   data ContractInstanceKey EscrowModel w s e params where
     WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowTestSchema EscrowError ()

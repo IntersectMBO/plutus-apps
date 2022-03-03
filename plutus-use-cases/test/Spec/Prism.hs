@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
@@ -18,6 +19,7 @@ module Spec.Prism (tests, prismTrace, prop_Prism, prop_NoLock) where
 
 import Control.Lens
 import Control.Monad
+import Data.Data
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Ledger.Ada qualified as Ada
@@ -96,15 +98,15 @@ prismTrace = do
 -- * QuickCheck model
 
 data STOState = STOReady | STOPending | STODone
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Data)
 
 data IssueState = NoIssue | Revoked | Issued
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Data)
 
 newtype PrismModel = PrismModel
     { _walletState :: Map Wallet (IssueState, STOState)
     }
-    deriving (Show)
+    deriving (Show, Data)
 
 makeLenses 'PrismModel
 
@@ -134,7 +136,7 @@ deriving instance Show (ContractInstanceKey PrismModel w s e params)
 instance ContractModel PrismModel where
 
     data Action PrismModel = Issue Wallet | Revoke Wallet | Call Wallet
-        deriving (Eq, Show)
+        deriving (Eq, Show, Data)
 
     data ContractInstanceKey PrismModel w s e params where
         MirrorH  ::           ContractInstanceKey PrismModel () C.MirrorSchema            C.MirrorError ()

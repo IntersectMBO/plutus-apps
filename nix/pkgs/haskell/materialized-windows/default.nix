@@ -531,6 +531,7 @@
         "conduit-extra".revision = (((hackage."conduit-extra")."1.3.5").revisions).default;
         "algebraic-graphs".revision = (((hackage."algebraic-graphs")."0.6").revisions).default;
         "singleton-bool".revision = (((hackage."singleton-bool")."0.1.5").revisions).default;
+        "uniplate".revision = (((hackage."uniplate")."1.6.13").revisions).default;
         "blaze-html".revision = (((hackage."blaze-html")."0.9.1.2").revisions).default;
         "filepath".revision = (((hackage."filepath")."1.4.2.1").revisions).default;
         "generic-arbitrary".revision = (((hackage."generic-arbitrary")."0.2.0").revisions).default;
@@ -1218,6 +1219,7 @@
           "network-mux".components.exes."mux-demo".planned = lib.mkOverride 900 true;
           "pretty".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-network-framework".components.exes."demo-ping-pong".planned = lib.mkOverride 900 true;
+          "plutus-tx".components.sublibs."plutus-tx-testlib".planned = lib.mkOverride 900 true;
           "signal".components.library.planned = lib.mkOverride 900 true;
           "ral".components.library.planned = lib.mkOverride 900 true;
           "wai".components.library.planned = lib.mkOverride 900 true;
@@ -1451,6 +1453,7 @@
           "io-sim".components.library.planned = lib.mkOverride 900 true;
           "pipes".components.library.planned = lib.mkOverride 900 true;
           "hspec-golden-aeson".components.library.planned = lib.mkOverride 900 true;
+          "uniplate".components.library.planned = lib.mkOverride 900 true;
           "OddWord".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab-executables".components.exes."plutus-pab-nami-demo-generator".planned = lib.mkOverride 900 true;
           "time-out".components.library.planned = lib.mkOverride 900 true;
@@ -1664,6 +1667,7 @@
           "free".components.library.planned = lib.mkOverride 900 true;
           "readable".components.library.planned = lib.mkOverride 900 true;
           "generic-deriving".components.library.planned = lib.mkOverride 900 true;
+          "plutus-core".components.sublibs."plutus-core-testlib".planned = lib.mkOverride 900 true;
           "auto-update".components.library.planned = lib.mkOverride 900 true;
           "byron-spec-chain".components.library.planned = lib.mkOverride 900 true;
           "say".components.library.planned = lib.mkOverride 900 true;

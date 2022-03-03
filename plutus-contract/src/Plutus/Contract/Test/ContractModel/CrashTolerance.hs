@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes        #-}
 {-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
@@ -60,6 +61,10 @@ instance ContractModel state => Show (Action (WithCrashTolerance state)) where
   showsPrec p (Restart cis)        = showParen (p >= 11) $ showString "Restart " . showsPrec 11 cis
   showsPrec p (UnderlyingAction a) = showsPrec p a
 deriving instance ContractModel state => Eq (Action (WithCrashTolerance state))
+
+instance {-# OVERLAPPING #-} ContractModel state => HasActions (WithCrashTolerance state) where
+  getAllSymtokens (UnderlyingAction a) = getAllSymtokens a
+  getAllSymtokens _                    = mempty
 
 deriving instance Show (ContractInstanceKey state w s e p) => Show (ContractInstanceKey (WithCrashTolerance state) w s e p)
 deriving instance Eq (ContractInstanceKey state w s e p) => Eq (ContractInstanceKey (WithCrashTolerance state) w s e p)
