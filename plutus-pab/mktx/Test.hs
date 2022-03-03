@@ -7,6 +7,7 @@ module Main where
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Data.ByteString.Lazy qualified as BSL
+import Data.Default (def)
 import Ledger.Constraints.OffChain (MkTxError, ScriptLookups (..), UnbalancedTx, mkTx)
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Typed.TypeUtils (Any)
@@ -53,7 +54,7 @@ runTxTest generate protocol_parameters test_file = do
     case result of
         Right unbound_tx -> do
             let exp_file = test_file <.> "export"
-                exp_tx = export protocol_parameters C.Mainnet unbound_tx
+                exp_tx = export protocol_parameters C.Mainnet def unbound_tx
             if generate
             then B.writeFile exp_file (encode $ toJSON exp_tx)
             else do
