@@ -16,8 +16,8 @@ import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (catMaybes)
 import Plutus.ChainIndex qualified as CI
-import Plutus.ChainIndex.Effects (appendBlocks)
-import Plutus.ChainIndex.Lib
+import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward), EventsChan, RunRequirements,
+                              runChainIndexDuringSync)
 
 batchSize :: Int
 batchSize = 25000
