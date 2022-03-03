@@ -378,6 +378,19 @@ let
               )
             else __trace "nativePlutus is null" [ ];
 
+          plutus-example.ghcOptions =
+            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            then
+              (
+                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
+                in
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                  "-Werror"
+                ]
+              )
+            else __trace "nativePlutus is null" [ ];
 
           # Applying this globally is wrong. we should apply this only to ghcjs, but
           # it also needs to be applied to the plutus-tx plugin, so we can actually
@@ -430,7 +443,6 @@ let
             lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
               ++ [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
-          plutus-example.ghcOptions = [ "-Werror" ];
 
           # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
           # This will go away when we upgrade nixpkgs and things use ieee754 anyway.
