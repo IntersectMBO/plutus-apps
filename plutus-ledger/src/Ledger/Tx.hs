@@ -74,6 +74,8 @@ import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep,
 -- This datatype was created in order to be used in
 -- 'Ledger.Constraints.processConstraint', specifically with the constraints
 -- 'MustSpendPubKeyOutput' and 'MustSpendScriptOutput'.
+--
+-- TODO Add 'Either DatumHash Datum' field for 'PublicKeyChainIndexTxOut'.
 data ChainIndexTxOut =
     PublicKeyChainIndexTxOut { _ciTxOutAddress :: Address
                              , _ciTxOutValue   :: Value

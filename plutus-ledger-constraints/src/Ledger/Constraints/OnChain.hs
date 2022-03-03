@@ -8,7 +8,9 @@
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
-module Ledger.Constraints.OnChain where
+module Ledger.Constraints.OnChain
+    ( checkScriptContext
+    ) where
 
 import PlutusTx (ToData (toBuiltinData))
 import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)), Functor (fmap), Maybe (Just),
@@ -16,8 +18,8 @@ import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)),
 
 import Ledger qualified
 import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
-import Ledger.Constraints.TxConstraints (InputConstraint (InputConstraint, icTxOutRef),
-                                         OutputConstraint (OutputConstraint, ocDatum, ocValue),
+import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
+                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
                                          TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
                                          TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Value qualified as Value
@@ -31,9 +33,18 @@ import Plutus.V1.Ledger.Contexts qualified as V
 import Plutus.V1.Ledger.Interval (contains)
 import Plutus.V1.Ledger.Value (leq)
 
+{-# INLINABLE checkScriptContext #-}
+-- | Does the 'ScriptContext' satisfy the constraints?
+checkScriptContext :: forall i o. ToData o => TxConstraints i o -> ScriptContext -> Bool
+checkScriptContext TxConstraints{txConstraints, txOwnInputs, txOwnOutputs} ptx =
+    traceIfFalse "Ld" -- "checkScriptContext failed"
+    $ all (checkTxConstraint ptx) txConstraints
+    && all (checkOwnInputConstraint ptx) txOwnInputs
+    && all (checkOwnOutputConstraint ptx) txOwnOutputs
+
 {-# INLINABLE checkOwnInputConstraint #-}
-checkOwnInputConstraint :: ScriptContext -> InputConstraint a -> Bool
-checkOwnInputConstraint ScriptContext{scriptContextTxInfo} InputConstraint{icTxOutRef} =
+checkOwnInputConstraint :: ScriptContext -> ScriptInputConstraint a -> Bool
+checkOwnInputConstraint ScriptContext{scriptContextTxInfo} ScriptInputConstraint{icTxOutRef} =
     let checkInput TxInInfo{txInInfoOutRef} =
             txInInfoOutRef == icTxOutRef -- TODO: We should also check the redeemer but we can't right now because it's hashed
     in traceIfFalse "L0" -- "Input constraint"
@@ -43,9 +54,9 @@ checkOwnInputConstraint ScriptContext{scriptContextTxInfo} InputConstraint{icTxO
 checkOwnOutputConstraint
     :: ToData o
     => ScriptContext
-    -> OutputConstraint o
+    -> ScriptOutputConstraint o
     -> Bool
-checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} OutputConstraint{ocDatum, ocValue} =
+checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} ScriptOutputConstraint{ocDatum, ocValue} =
     let hsh = V.findDatumHash (Ledger.Datum $ toBuiltinData ocDatum) scriptContextTxInfo
         checkOutput TxOut{txOutValue, txOutDatumHash=Just svh} =
                Ada.fromValue txOutValue >= Ada.fromValue ocValue
@@ -115,12 +126,3 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustSatisfyAnyOf xs ->
         traceIfFalse "Ld" -- "MustSatisfyAnyOf"
         $ any (all (checkTxConstraint ctx)) xs
-
-{-# INLINABLE checkScriptContext #-}
--- | Does the 'ScriptContext' satisfy the constraints?
-checkScriptContext :: forall i o. ToData o => TxConstraints i o -> ScriptContext -> Bool
-checkScriptContext TxConstraints{txConstraints, txOwnInputs, txOwnOutputs} ptx =
-    traceIfFalse "Ld" -- "checkScriptContext failed"
-    $ all (checkTxConstraint ptx) txConstraints
-    && all (checkOwnInputConstraint ptx) txOwnInputs
-    && all (checkOwnOutputConstraint ptx) txOwnOutputs
