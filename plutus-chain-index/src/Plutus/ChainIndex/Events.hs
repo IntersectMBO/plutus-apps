@@ -20,7 +20,7 @@ import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward)
                               runChainIndexDuringSync)
 
 batchSize :: Int
-batchSize = 25000
+batchSize = 15000
 
 -- | 30s
 period :: Int
@@ -35,31 +35,36 @@ processEventsChan runReq eventsChan = void $ do
     go chan = do
       events :: [ChainSyncEvent] <- readEventsFromTChan chan
       case events of
-        backwardOrResume : forwardEvents -> do
-          print $ show $ length forwardEvents
+        firstBlock : rollForwardEvents -> do
+          print $ show $ length rollForwardEvents
           void $ runChainIndexDuringSync runReq $ do
             let
+              -- if the first block is 'RollForward' then process all events
+              rollForwardEvents' = case firstBlock of
+                (RollForward _ _) -> events
+                _                 -> rollForwardEvents
               getBlock = \case
                 (RollForward block _) -> Just block
                 _                     -> Nothing
-              blocks = catMaybes $ map getBlock forwardEvents
+              blocks = catMaybes $ map getBlock rollForwardEvents'
             CI.appendBlocks blocks
-            case backwardOrResume of
+            case firstBlock of
               (RollBackward point _) -> CI.rollback point
               (Resume point)         -> CI.resumeSync point
-              _                      -> error "impossible"
+              _                      -> pure () -- ignore forward block
         [] -> putStrLn "empty list of events"
       go chan
-
 
 -- | Read 'RollForward' events from the 'TChan' the until 'RollBackward' or 'Resume'.
 readEventsFromTChan :: EventsChan -> IO [ChainSyncEvent]
 readEventsFromTChan chan =
-    let go combined  = do
+    let
+      go combined 0 = pure combined
+      go combined n = do
             eventM <- atomically $ tryReadTChan chan
             case eventM of
-              Nothing    -> putStrLn "nothing here, waiting" >> threadDelay period >> go combined
+              Nothing    -> putStrLn "nothing here, waiting" >> threadDelay period >> go combined n
               Just event -> case event of
-                (RollForward _ _) -> go (event : combined)
-                _                 -> pure (event : combined)
-     in go []
+                (RollForward _ _) -> go (event : combined) (n - 1)
+                _                 -> putStrLn "not RollForward!!!" >> pure (event : combined)
+     in go [] batchSize
