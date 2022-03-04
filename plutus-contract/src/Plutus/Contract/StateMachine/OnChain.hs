@@ -29,11 +29,12 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Ledger (Address, ValidatorHash)
-import Ledger.Constraints
-import Ledger.Constraints.TxConstraints (OutputConstraint (..))
-import Ledger.Contexts (ScriptContext (..), TxInInfo (..), findOwnInput, ownHash)
-import Ledger.Tx (TxOut (..))
-import Ledger.Typed.Scripts
+import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
+                           TxConstraints (txOwnOutputs), checkScriptContext)
+import Ledger.Contexts (ScriptContext, TxInInfo (txInInfoResolved), findOwnInput, ownHash)
+import Ledger.Tx (TxOut (txOutValue))
+import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorType, ValidatorTypes, validatorAddress,
+                             validatorHash)
 import Ledger.Value (Value, isZero)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (check)
@@ -128,7 +129,7 @@ mkValidator (StateMachine step isFinal check threadToken) currentState input ptx
                     let txc =
                             newConstraints
                                 { txOwnOutputs =
-                                    [ OutputConstraint
+                                    [ ScriptOutputConstraint
                                         { ocDatum = newData
                                           -- Check that the thread token value is still there
                                         , ocValue = newValue <> threadTokenValueInner threadToken (ownHash ptx)

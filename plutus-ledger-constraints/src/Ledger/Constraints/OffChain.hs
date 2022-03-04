@@ -213,9 +213,9 @@ data UnbalancedTx =
     UnbalancedTx
         { unBalancedTxTx                  :: Tx
         , unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey)
-        -- ^ These are all the payment public keys that should be used to request the 
+        -- ^ These are all the payment public keys that should be used to request the
         -- signatories from the user's wallet. The signatories are what is required to
-        -- sign the transaction before submitting it to the blockchain. Transaction 
+        -- sign the transaction before submitting it to the blockchain. Transaction
         -- validation will fail if the transaction is not signed by the required wallet.
         , unBalancedTxUtxoIndex           :: Map TxOutRef TxOut
         -- ^ Utxo lookups that are used for adding inputs to the 'UnbalancedTx'.

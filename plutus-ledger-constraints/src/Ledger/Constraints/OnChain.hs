@@ -10,6 +10,8 @@
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 module Ledger.Constraints.OnChain
     ( checkScriptContext
+    , checkOwnInputConstraint
+    , checkOwnOutputConstraint
     ) where
 
 import PlutusTx (ToData (toBuiltinData))
