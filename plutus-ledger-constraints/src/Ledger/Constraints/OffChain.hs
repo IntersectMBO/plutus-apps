@@ -147,7 +147,7 @@ instance Monoid (ScriptLookups a) where
 --
 -- @
 -- typedValidatorLookups tv1 <> typedValidatorLookups tv2 <> ...
---     == typedValidatorLookups v1
+--     == typedValidatorLookups tv1
 -- @
 typedValidatorLookups :: TypedValidator a -> ScriptLookups a
 typedValidatorLookups inst =
