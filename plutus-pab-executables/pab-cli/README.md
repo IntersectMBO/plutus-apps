@@ -4,7 +4,7 @@ This CLI provides dApp developpers a way to run their PAB webserver, which conta
 
 The tool generates the correct configuration for each required component and ensures they are in sync.
 
-Use `nix-shell -p deployment.nix` to have access to this tool.
+Use `nix-shell deployment.nix` to have access to this tool.
 
 ## Usage
 
