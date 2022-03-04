@@ -28,7 +28,6 @@ import Control.Monad.Freer.Error (throwError)
 import Control.Monad.Freer.Extras.Log (logInfo)
 import Control.Monad.IO.Class (liftIO)
 import Data.Coerce (coerce)
-import Data.Either (fromRight)
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
@@ -58,13 +57,11 @@ app trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg =
         (Proxy @(API WalletId))
         (processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg) $
             (\funds -> createWallet (Ada.lovelaceOf <$> funds)) :<|>
-            (\w tx -> multiWallet (Wallet w) (submitTxn $ Right tx) >>= const (pure NoContent)) :<|>
+            (\w tx -> multiWallet (Wallet w) (submitTxn tx) >>= const (pure NoContent)) :<|>
             (getWalletInfo >=> maybe (throwError err404) pure ) :<|>
-            (\w -> fmap (fmap (fromRight (error "Cardano.Wallet.Mock.Server: Expecting a mock tx, not an Alonzo tx when submitting it.")))
-                 . multiWallet (Wallet w) . balanceTx) :<|>
+            (\w -> multiWallet (Wallet w) . balanceTx) :<|>
             (\w -> multiWallet (Wallet w) totalFunds) :<|>
-            (\w tx -> fmap (fromRight (error "Cardano.Wallet.Mock.Server: Expecting a mock tx, not an Alonzo tx when adding a signature."))
-                    $ multiWallet (Wallet w) (walletAddSignature $ Right tx))
+            (\w tx -> multiWallet (Wallet w) (walletAddSignature tx))
 
 main :: Trace IO WalletMsg -> LocalWalletSettings -> FilePath -> SlotConfig -> ChainIndexUrl -> Availability -> IO ()
 main trace LocalWalletSettings { baseUrl } serverSocket slotCfg (ChainIndexUrl chainUrl) availability = LM.runLogEffects trace $ do

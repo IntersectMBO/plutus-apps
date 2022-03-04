@@ -17,9 +17,9 @@
 module Wallet.Emulator.Chain where
 
 import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
-import Codec.Serialise (Serialise)
+-- import Codec.Serialise (Serialise)
 import Control.Applicative ((<|>))
-import Control.DeepSeq (NFData)
+-- import Control.DeepSeq (NFData)
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)

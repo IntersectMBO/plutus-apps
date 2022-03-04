@@ -22,6 +22,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
+import Data.These (partitionHereThere)
 import Data.Time.Units (Microsecond, fromMicroseconds)
 import Data.Yaml (decodeFileThrow)
 import GHC.Generics (Generic)
@@ -73,6 +74,7 @@ initialUtxoIndex config =
                zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
                    (repeat (Ada.adaValueOf 1000_000_000))
       initialTxs =
+        fst . partitionHereThere $
         view (chainState . txPool) $
         emulatorStateInitialDist $
         Map.mapKeys mockWalletPaymentPubKeyHash dist

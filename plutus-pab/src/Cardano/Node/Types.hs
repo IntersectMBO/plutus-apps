@@ -145,7 +145,6 @@ defaultPABServerConfig =
       , pscSocketPath = "./node-server.sock"
       , pscKeptBlocks = 100
       , pscSlotConfig = def
-      , pscFeeConfig  = def
       , pscNetworkId = testnetNetworkId
       , pscProtocolParametersJsonPath = Nothing
       , pscPassphrase = Nothing

@@ -99,7 +99,7 @@ import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Time.Units (Millisecond)
 import Ledger (Address, Blockchain, CardanoTx, PaymentPubKeyHash, TxId, TxOut (TxOut, txOutAddress, txOutValue),
-               eitherTx, txFee, txId)
+               eitherTx, getCardanoTxFee, getCardanoTxId, txId)
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
@@ -540,10 +540,10 @@ handleNodeClient slotCfg wallet = \case
             mp <- STM.readTVar _agentStates
             case Map.lookup wallet mp of
                 Nothing -> do
-                    let newState = initialStateFromWallet wallet & submittedFees . at (txId tx) ?~ txFee tx
+                    let newState = initialStateFromWallet wallet & submittedFees . at (getCardanoTxId tx) ?~ getCardanoTxFee tx
                     STM.writeTVar _agentStates (Map.insert wallet newState mp)
                 Just s' -> do
-                    let newState = s' & submittedFees . at (txId tx) ?~ txFee tx
+                    let newState = s' & submittedFees . at (getCardanoTxId tx) ?~ getCardanoTxFee tx
                     STM.writeTVar _agentStates (Map.insert wallet newState mp)
     GetClientSlot -> Chain.getCurrentSlot
     GetClientSlotConfig -> pure slotCfg

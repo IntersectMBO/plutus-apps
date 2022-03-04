@@ -5,7 +5,6 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeFamilies      #-}
 
 module Cardano.Protocol.Socket.Mock.Server where
@@ -16,6 +15,7 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.List (intersect)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
+import Data.These (These (..))
 import Data.Void (Void)
 
 import Control.Concurrent
@@ -152,7 +152,7 @@ handleCommand ::
 handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState slotCfg =
     liftIO (atomically $ readTQueue ccCommand) >>= \case
         AddTx tx     -> do
-            liftIO $ modifyMVar_ mvChainState (pure . over txPool (tx :))
+            liftIO $ modifyMVar_ mvChainState (pure . over txPool (This tx :))
         ModifySlot f -> liftIO $ do
             state <- liftIO $ takeMVar mvChainState
             (s, nextState') <- liftIO $ Chain.modifySlot f
@@ -478,7 +478,7 @@ txSubmissionServer state = txSubmissionState
         TxSubmission.LocalTxSubmissionServer {
           TxSubmission.recvMsgSubmitTx =
             \tx -> do
-                modifyMVar_ state (pure . over txPool (addTxToPool tx))
+                modifyMVar_ state (pure . over txPool (addTxToPool (This tx)))
                 return (TxSubmission.SubmitSuccess, txSubmissionState)
         , TxSubmission.recvMsgDone     = ()
         }

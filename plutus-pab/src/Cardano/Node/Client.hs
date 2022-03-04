@@ -13,6 +13,7 @@ import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class
 import Data.Proxy (Proxy (Proxy))
+import Ledger (theseTx)
 import Ledger.TimeSlot (SlotConfig)
 import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientM, client)
@@ -58,7 +59,7 @@ handleNodeClientClient slotCfg e = do
                   -- need to be sent via the wallet, not the mocked server node
                   -- (which is not actually running).
                   throwError TxSenderNotAvailable
-              Just handle -> liftIO $ MockClient.queueTx handle tx
+              Just handle -> liftIO $ theseTx (MockClient.queueTx handle) (const $ error "Cardano.Node.Client: Expecting a mock tx, not an Alonzo tx when publishing it.") tx
         GetClientSlot ->
             either (liftIO . MockClient.getCurrentSlot) (liftIO . Client.getCurrentSlot) chainSyncHandle
         GetClientSlotConfig -> pure slotCfg
