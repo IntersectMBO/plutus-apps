@@ -38,8 +38,8 @@ import GHC.Generics
     getHistory (new f d a) = [a]
     view (insertL bs (new f d a)) = IndexView [d (foldl' f a bs) (max (length bs) d)]
     getHistory (insertL bs (new f d a)) = take d bs
-    view (rewind n (new f d a)) = Nothing
-    view (rewind n (insertL bs (new f d a))) =
+    rewind n (new f d a) = Nothing
+    view <$> (rewind n (insertL bs (new f d a))) =
       | n <= length bs = IndexView [d a' ((max (length bs) d) - n)]
         where a' = head $ drop n $ scanl' f a bs
       | otherwise = nothing

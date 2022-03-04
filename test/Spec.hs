@@ -101,9 +101,10 @@ prop_insertRewindInverse (ObservedBuilder ix) =
   \bs ->
       let mix' = rewind (length bs) $ insertL bs ix
           -- This should always be Just.. because of the resize of `bs`
-          ix'  = fromJust mix'
-          v'   = view ix'
-       in property $ ix `matches` ix'
+          ix' = fromJust mix'
+          h   = take (ixDepth v - length bs) $ getHistory ix
+          h'  = getHistory ix'
+       in property $ h == h'
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
@@ -134,14 +135,6 @@ prop_insertSize (ObservedBuilder ix) b =
       if initialLength == ixDepth v
       then finalLength === initialLength
       else finalLength === initialLength + 1
-
-matches :: Eq a => Index a e -> Index a e -> Bool
-matches hl hr =
-  let hlAccumulator = getHistory hl
-      hrAccumulator = getHistory hr
-  in     hlAccumulator `isInfixOf` hrAccumulator
-      || hrAccumulator `isInfixOf` hlAccumulator
-      || hrAccumulator     ==      hlAccumulator
 
 main :: IO ()
 main = do
