@@ -233,7 +233,7 @@ mustIncludeDatum :: forall i o. Datum -> TxConstraints i o
 mustIncludeDatum = singleton . MustIncludeDatum
 
 {-# INLINABLE mustPayToTheScript #-}
--- | @mustPayToTheScript d v@ locks the value @v@ with a script alonside a
+-- | @mustPayToTheScript d v@ locks the value @v@ with a script alongside a
 -- datum @d@.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint creates a script
