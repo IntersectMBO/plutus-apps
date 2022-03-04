@@ -3,37 +3,52 @@ module Spec.Index where
 import           QuickSpec
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
+import Test.QuickCheck.Monadic
 import           Data.Maybe            (fromJust, isJust, isNothing)
 import           Data.List             (foldl')
+import Data.Functor.Identity (Identity, runIdentity)
 
 import Index
 
-{- | Properties of the `new` operation.
-       view (new f d a) =
-         | d > 0     = IndexView [d a 0]
-         | otherwise = Nothing
-       getHistory (new f d a) = []
--}
+data Conversion m a e = Conversion
+  { cView    :: Index a e -> m (IndexView a)
+  , cHistory :: Index a e -> m [a]
+  , cMonadic :: m Property -> Property
+  }
+
+conversion :: Conversion Identity a e
+conversion = Conversion
+  { cView = pure . view
+  , cHistory = pure . getHistory
+  , cMonadic = runIdentity
+  }
+
 prop_observeNew
-  :: (Eq a, Show a)
-  => Fun (a, b) a
+  :: forall e a m. (Eq a, Monad m)
+  => Conversion m a e
+  -> Fun (a, e) a
   -> a
   -> Property
-prop_observeNew f acc =
+prop_observeNew c f a =
   forAll (frequency [ (10, pure 0)
                     , (50, chooseInt (-100, 0))
                     , (50, chooseInt (1, 100)) ]) $
   \depth ->
     cover 30 (depth <  0) "Negative depth" $
-    cover 30 (depth >= 0) "Non negative depth" $
-    let newIx = new (applyFun2 f) depth acc
-    in  property $ if depth <= 0
-                   then isNothing newIx
-                   else view (fromJust newIx) == IndexView { ixDepth = depth
-                                                           , ixView  = acc
-                                                           , ixSize  = 1
-                                                           }
-                     && getHistory (fromJust newIx) == [acc]
+    cover 30 (depth >= 0) "Non-negative depth" $
+    let mix = new (applyFun2 f) depth a
+    in  if depth <= 0
+        -- Note: This is not testing construction of the monadic index
+        then property $ isNothing mix
+        else monadic (cMonadic c) $ do
+          let ix = fromJust mix
+          v <- run $ cView c ix
+          h <- run $ cHistory c ix
+          assert $ v == IndexView { ixDepth = depth
+                                  , ixView  = a
+                                  , ixSize  = 1
+                                  }
+                && h == [a]
 
 -- | Properties of the connection between rewind and depth
 --   Note: Cannot rewind if (ixDepth ix == 1)
