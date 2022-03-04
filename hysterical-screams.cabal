@@ -54,6 +54,7 @@ test-suite hysterical-screams-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Spec.Index
       Paths_hysterical_screams
   hs-source-dirs:
       test
