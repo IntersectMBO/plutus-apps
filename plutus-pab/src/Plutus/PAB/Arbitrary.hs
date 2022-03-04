@@ -61,9 +61,6 @@ instance Arbitrary Ledger.ValidationError where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary Ledger.EmApplyTxFailure where
-    arbitrary = pure $ Ledger.UtxosPredicateFailures []
-
 instance Arbitrary Ledger.ScriptError where
     arbitrary = genericArbitrary
     shrink = genericShrink

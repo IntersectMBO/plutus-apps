@@ -30,7 +30,6 @@ module Ledger.Index(
     ValidationErrorInPhase,
     ValidationPhase(..),
     EmulatorEra,
-    EmApplyTxFailure(..),
     InOutMatch(..),
     minFee,
     maxFee,
@@ -53,9 +52,7 @@ module Ledger.Index(
 import Prelude hiding (lookup)
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley.API (ApplyTxError)
 
 import Codec.Serialise (Serialise)
 import Control.DeepSeq (NFData)
@@ -65,12 +62,11 @@ import Control.Monad
 import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (String))
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Foldable (asum, fold, foldl', for_, traverse_)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Set qualified as Set
-import Data.String (fromString)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger.Blockchain
@@ -167,18 +163,8 @@ data ValidationError =
     --   the currency's minting policy.
     | TransactionFeeTooLow V.Value V.Value
     -- ^ The transaction fee is lower than the minimum acceptable fee.
-    | EmApplyTxFailure EmApplyTxFailure
+    | CardanoLedgerValidationError String
     deriving (Eq, Show, Generic)
-
-data EmApplyTxFailure =
-  ApplyTxFailed (ApplyTxError EmulatorEra)
-  | UtxosPredicateFailures [UtxosPredicateFailure EmulatorEra]
-  deriving (Eq, Show, Generic)
-
-instance FromJSON EmApplyTxFailure where
-    parseJSON _ = fail "EmApplyTxFailure does not support FromJSON"
-instance ToJSON EmApplyTxFailure where
-    toJSON v = String (fromString $ show v)
 
 instance FromJSON ValidationError
 instance ToJSON ValidationError

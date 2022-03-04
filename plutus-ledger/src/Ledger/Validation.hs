@@ -61,7 +61,7 @@ import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Ledger.Address qualified as P
 import Ledger.Crypto qualified as P
-import Ledger.Index (EmApplyTxFailure (..), EmulatorEra, ValidationError (..))
+import Ledger.Index (EmulatorEra, ValidationError (..))
 import Ledger.Index qualified as P
 import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
@@ -158,7 +158,7 @@ applyTx ::
   Tx EmulatorEra ->
   Either ValidationError (EmulatedLedgerState, Validated (Tx EmulatorEra))
 applyTx oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
-  (newMempool, vtx) <- first (EmApplyTxFailure . ApplyTxFailed) (C.Ledger.applyTx emulatorGlobals _ledgerEnv _memPoolState tx)
+  (newMempool, vtx) <- first (CardanoLedgerValidationError . show) (C.Ledger.applyTx emulatorGlobals _ledgerEnv _memPoolState tx)
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 
@@ -198,7 +198,7 @@ hasValidationErrors slotNo utxoState (C.Api.ShelleyTx _ tx) =
   where
     state = setSlot slotNo (initialState & memPoolState . _1 .~ utxoState)
     res = do
-      vtx <- first (EmApplyTxFailure . UtxosPredicateFailures) (constructValidated emulatorGlobals (utxoEnv slotNo) utxoState tx)
+      vtx <- first (CardanoLedgerValidationError . show) (constructValidated emulatorGlobals (utxoEnv slotNo) utxoState tx)
       applyTx state vtx
 
 evaluateTransactionFee :: [P.PaymentPubKeyHash] -> P.Tx -> Either P.ToCardanoError P.Value
