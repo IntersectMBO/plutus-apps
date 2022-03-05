@@ -164,6 +164,7 @@ data ValidationError =
     | TransactionFeeTooLow V.Value V.Value
     -- ^ The transaction fee is lower than the minimum acceptable fee.
     | CardanoLedgerValidationError String
+    -- ^ An error from Cardano.Ledger validation
     deriving (Eq, Show, Generic)
 
 instance FromJSON ValidationError

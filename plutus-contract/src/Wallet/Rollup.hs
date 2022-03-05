@@ -112,9 +112,11 @@ getAnnotatedTransactions = groupBy (equating (slotIndex . sequenceId)) . reverse
 handleChainEvent :: RollupState -> ChainEvent -> RollupState
 handleChainEvent s = \case
     SlotAdd _                           -> s & over currentSequenceId (set txIndexL 0 . over slotIndexL succ)
-    TxnValidate _ tx _                  -> Tx.onCardanoTx (addTx s . Valid) (const s) tx
-    TxnValidationFail Phase2 _ tx _ _ _ -> Tx.onCardanoTx (addTx s . Invalid) (const s) tx
+    TxnValidate _ tx _                  -> Tx.onCardanoTx (addTx s . Valid) cardanoTxErr tx
+    TxnValidationFail Phase2 _ tx _ _ _ -> Tx.onCardanoTx (addTx s . Invalid) cardanoTxErr tx
     _                                   -> s
+    where
+        cardanoTxErr _ = error "Wallet.Rollup.handleChainEvent: Expecting a mock tx, not an Alonzo tx"
 
 addTx :: RollupState -> OnChainTx -> RollupState
 addTx s tx =

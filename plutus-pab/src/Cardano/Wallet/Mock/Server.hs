@@ -57,11 +57,11 @@ app trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg =
         (Proxy @(API WalletId))
         (processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg) $
             (\funds -> createWallet (Ada.lovelaceOf <$> funds)) :<|>
-            (\w tx -> multiWallet (Wallet w) (submitTxn tx) >>= const (pure NoContent)) :<|>
+            (\w tx -> multiWallet (Wallet Nothing w) (submitTxn tx) >>= const (pure NoContent)) :<|>
             (getWalletInfo >=> maybe (throwError err404) pure ) :<|>
-            (\w -> multiWallet (Wallet w) . balanceTx) :<|>
-            (\w -> multiWallet (Wallet w) totalFunds) :<|>
-            (\w tx -> multiWallet (Wallet w) (walletAddSignature tx))
+            (\w -> multiWallet (Wallet Nothing w) . balanceTx) :<|>
+            (\w -> multiWallet (Wallet Nothing w) totalFunds) :<|>
+            (\w tx -> multiWallet (Wallet Nothing w) (walletAddSignature tx))
 
 main :: Trace IO WalletMsg -> LocalWalletSettings -> FilePath -> SlotConfig -> ChainIndexUrl -> Availability -> IO ()
 main trace LocalWalletSettings { baseUrl } serverSocket slotCfg (ChainIndexUrl chainUrl) availability = LM.runLogEffects trace $ do

@@ -163,7 +163,7 @@ getCardanoTxUnspentOutputsTx :: CardanoTx -> Map TxOutRef TxOut
 getCardanoTxUnspentOutputsTx = onCardanoTx unspentOutputsTx CardanoAPI.unspentOutputsTx
 
 getCardanoTxFee :: CardanoTx -> Value
-getCardanoTxFee = onCardanoTx txFee (const mempty) -- TODO: support CardanoTx
+getCardanoTxFee = onCardanoTx txFee (\_ -> error "Ledger.Tx.getCardanoTxFee: Expecting a mock tx, not an Alonzo tx")
 
 instance Pretty Tx where
     pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =

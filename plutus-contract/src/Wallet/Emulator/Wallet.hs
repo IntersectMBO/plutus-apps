@@ -55,7 +55,6 @@ import Ledger.CardanoWallet qualified as CW
 import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx))
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
-import Ledger.TimeSlot (SlotConfig)
 import Ledger.Tx qualified as Tx
 import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusTx)
 import Ledger.Value qualified as Value
@@ -264,7 +263,7 @@ handleWallet = \case
         slotConfig <- WAPI.getClientSlotConfig
         let utx = finalize slotConfig utx'
         -- Balance with dummy fee to get a better estimate of the number of inputs and outputs
-        -- Use a large value otherwise `evaluateMinFee` calculates a value 1 or 2 lovelace too few
+        -- Use a large value otherwise `evaluateTransactionFee` calculates a value 1 or 2 lovelace too few
         tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ Ada.lovelaceValueOf 1000000)
         let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
         theFee <- either (throwError . WAPI.ToCardanoError) pure $ evaluateTransactionFee requiredSigners tx
@@ -308,7 +307,7 @@ handleAddSignature tx = do
         addSignatureCardano :: PrivateKey -> SomeCardanoApiTx -> SomeCardanoApiTx
         addSignatureCardano privKey (Tx.SomeTx ctx AlonzoEraInCardanoMode)
             = Tx.SomeTx (addSignature privKey ctx) AlonzoEraInCardanoMode
-        addSignatureCardano _ ctx = ctx
+        addSignatureCardano _ _ = error "Wallet.Emulator.Wallet.handleAddSignature: Expected an Alonzo tx"
 
 ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
@@ -438,13 +437,11 @@ addCollateral
     -> Tx
     -> Eff effs Tx
 addCollateral mp vl tx = do
-    (spend, _) <- selectCoin (filter (hasOnlyAda . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
+    (spend, _) <- selectCoin (filter (Value.isAdaOnlyValue . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
     let addTxCollateral =
             let ins = Set.fromList (Tx.pubKeyTxIn . fst <$> spend)
             in over Tx.collateralInputs (Set.union ins)
     pure $ tx & addTxCollateral
-    where
-        hasOnlyAda v = v == (Ada.toValue . Ada.fromValue $ v)
 
 -- | @addInputs mp pk vl tx@ selects transaction outputs worth at least
 --   @vl@ from the UTXO map @mp@ and adds them as inputs to @tx@. A public

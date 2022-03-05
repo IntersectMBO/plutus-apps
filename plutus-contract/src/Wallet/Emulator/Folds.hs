@@ -245,10 +245,10 @@ utxoAtAddress addr =
     $ Fold (flip step) (AM.addAddress addr mempty) (view (AM.fundsAt addr))
     where
         step = \case
-            TxnValidate _ txn _                  -> onCardanoTx (AM.updateAddresses . Valid) (const id) txn
-            TxnValidationFail Phase2 _ txn _ _ _ -> onCardanoTx (AM.updateAddresses . Invalid) (const id) txn
+            TxnValidate _ txn _                  -> onCardanoTx (AM.updateAddresses . Valid) cardanoTxErr txn
+            TxnValidationFail Phase2 _ txn _ _ _ -> onCardanoTx (AM.updateAddresses . Invalid) cardanoTxErr txn
             _                                    -> id
-
+        cardanoTxErr _ = error "Wallet.Emulator.Folds.utxoAtAddress: Expecting a mock tx, not an Alonzo tx"
 
 -- | The total value of unspent outputs at an address
 valueAtAddress :: Address -> EmulatorEventFold Value
@@ -284,13 +284,15 @@ blockchain :: EmulatorEventFold [Block]
 blockchain =
     let step (currentBlock, otherBlocks) = \case
             SlotAdd _                            -> ([], currentBlock : otherBlocks)
-            TxnValidate _ txn _                  -> (add Valid txn currentBlock, otherBlocks)
+            TxnValidate _ txn _                  -> (add currentBlock Valid txn, otherBlocks)
             TxnValidationFail Phase1 _ _   _ _ _ -> (currentBlock, otherBlocks)
-            TxnValidationFail Phase2 _ txn _ _ _ -> (add Invalid txn currentBlock, otherBlocks)
+            TxnValidationFail Phase2 _ txn _ _ _ -> (add currentBlock Invalid txn, otherBlocks)
         initial = ([], [])
         extract (currentBlock, otherBlocks) =
             (currentBlock : otherBlocks)
-        add val txn currentBlock = onCardanoTx ((: currentBlock) . val) (const currentBlock) txn
+        add currentBlock val = onCardanoTx
+            ((: currentBlock) . val)
+            (\_ -> error "Wallet.Emulator.Folds: Expecting a mock tx, not an Alonzo tx")
     in preMapMaybe (preview (eteEvent . chainEvent))
         $ Fold step initial extract
 

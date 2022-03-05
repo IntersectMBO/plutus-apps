@@ -17,9 +17,7 @@
 module Wallet.Emulator.Chain where
 
 import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
--- import Codec.Serialise (Serialise)
 import Control.Applicative ((<|>))
--- import Control.DeepSeq (NFData)
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
@@ -35,7 +33,7 @@ import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), ScriptValidationEvent, Slot (..),
                SomeCardanoApiTx (SomeTx), Tx (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx,
-               getCardanoTxFee, getCardanoTxId, mergeCardanoTxWith, onCardanoTx)
+               getCardanoTxId, mergeCardanoTxWith, onCardanoTx)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig)
@@ -68,7 +66,7 @@ data ChainState = ChainState {
     _txPool           :: TxPool, -- ^ The pool of pending transactions.
     _index            :: Index.UtxoIndex, -- ^ The UTxO index, used for validation.
     _currentSlot      :: Slot -- ^ The current slot number
-} deriving (Show, Generic) -- , Serialise, NFData)
+} deriving (Show, Generic)
 
 emptyChainState :: ChainState
 emptyChainState = ChainState [] [] mempty 0
@@ -184,11 +182,13 @@ validateBlock slotCfg slot@(Slot s) idx txns =
 getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
 getCollateral idx = onCardanoTx
     (\tx -> fromRight (txFee tx) $ alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (txCollateral tx))
-    (\ctx -> getCardanoTxFee (CardanoApiTx ctx))
+    (\_ -> error "Wallet.Emulator.Chain.getCollateral: Expecting a mock tx, not an Alonzo tx")
 
 -- | Check whether the given transaction can be validated in the given slot.
 canValidateNow :: Slot -> CardanoTx -> Bool
-canValidateNow slot = onCardanoTx (Interval.member slot . txValidRange) (const False {- TODO: support CardanoTx -})
+canValidateNow slot = onCardanoTx
+    (Interval.member slot . txValidRange)
+    (\_ -> error "Wallet.Emulator.Chain.canValidateNow: Expecting a mock tx, not an Alonzo tx")
 
 mkValidationEvent :: Index.UtxoIndex -> CardanoTx -> Maybe Index.ValidationErrorInPhase -> [ScriptValidationEvent] -> ChainEvent
 mkValidationEvent idx t result events =
