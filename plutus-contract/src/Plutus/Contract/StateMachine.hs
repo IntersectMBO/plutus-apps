@@ -71,8 +71,8 @@ import Ledger.Constraints (ScriptLookups, TxConstraints, mintingPolicy, mustMint
                            mustSpendPubKeyOutput)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
-import Ledger.Constraints.TxConstraints (InputConstraint (InputConstraint, icRedeemer, icTxOutRef),
-                                         OutputConstraint (OutputConstraint, ocDatum, ocValue), txOwnInputs,
+import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
+                                         ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue), txOwnInputs,
                                          txOwnOutputs)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
@@ -522,7 +522,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                       -- Hide the thread token value from the client code
                     , stateValue = Ledger.txOutValue tyTxOutTxOut <> inv (SM.threadTokenValueOrZero scInstance)
                     }
-                inputConstraints = [InputConstraint{icRedeemer=input, icTxOutRef = Typed.tyTxOutRefRef ocsTxOutRef }]
+                inputConstraints = [ScriptInputConstraint{icRedeemer=input, icTxOutRef = Typed.tyTxOutRefRef ocsTxOutRef }]
 
             case smTransition oldState input of
                 Just (newConstraints, newState)  ->
@@ -534,7 +534,7 @@ mkStep client@StateMachineClient{scInstance} input = do
                         red = Ledger.Redeemer (PlutusTx.toBuiltinData (Scripts.validatorHash typedValidator, Burn))
                         unmint = if isFinal then mustMintValueWithRedeemer red (inv $ SM.threadTokenValueOrZero scInstance) else mempty
                         outputConstraints =
-                            [ OutputConstraint
+                            [ ScriptOutputConstraint
                                 { ocDatum = stateData newState
                                   -- Add the thread token value back to the output
                                 , ocValue = stateValue newState <> SM.threadTokenValueOrZero scInstance

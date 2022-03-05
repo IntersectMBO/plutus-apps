@@ -57,11 +57,11 @@
           )
         )
         (typebind
-          (tyvardecl InputConstraint (fun (type) (type)))
+          (tyvardecl ScriptInputConstraint (fun (type) (type)))
           (lam a (type) (all a (type) (fun a a)))
         )
         (typebind
-          (tyvardecl OutputConstraint (fun (type) (type)))
+          (tyvardecl ScriptOutputConstraint (fun (type) (type)))
           (lam a (type) (all a (type) (fun a a)))
         )
         (datatypebind
@@ -280,9 +280,9 @@
                   (fun
                     [ List TxConstraint ]
                     (fun
-                      [ List [ InputConstraint i ] ]
+                      [ List [ ScriptInputConstraint i ] ]
                       (fun
-                        [ List [ OutputConstraint o ] ]
+                        [ List [ ScriptOutputConstraint o ] ]
                         [ [ TxConstraints i ] o ]
                       )
                     )
@@ -416,9 +416,9 @@
                             [
                               [
                                 [ UTuple3 [ List TxConstraint ] ]
-                                [ List [ InputConstraint i ] ]
+                                [ List [ ScriptInputConstraint i ] ]
                               ]
-                              [ List [ OutputConstraint o ] ]
+                              [ List [ ScriptOutputConstraint o ] ]
                             ]
                           )
                         )
@@ -443,9 +443,9 @@
                                 {
                                   {
                                     { UTuple3 [ List TxConstraint ] }
-                                    [ List [ InputConstraint i ] ]
+                                    [ List [ ScriptInputConstraint i ] ]
                                   }
-                                  [ List [ OutputConstraint o ] ]
+                                  [ List [ ScriptOutputConstraint o ] ]
                                 }
                                 [
                                   {
@@ -457,10 +457,10 @@
                                     [ List TxConstraint ]
                                     (lam
                                       ds
-                                      [ List [ InputConstraint i ] ]
+                                      [ List [ ScriptInputConstraint i ] ]
                                       (lam
                                         ds
-                                        [ List [ OutputConstraint o ] ]
+                                        [ List [ ScriptOutputConstraint o ] ]
                                         [
                                           [
                                             [
@@ -485,12 +485,17 @@
                                                 [ List TxConstraint ]
                                                 (lam
                                                   ds
-                                                  [ List [ InputConstraint i ] ]
+                                                  [
+                                                    List
+                                                    [ ScriptInputConstraint i ]
+                                                  ]
                                                   (lam
                                                     ds
                                                     [
                                                       List
-                                                      [ OutputConstraint o ]
+                                                      [
+                                                        ScriptOutputConstraint o
+                                                      ]
                                                     ]
                                                     ds
                                                   )
@@ -508,25 +513,30 @@
                               [
                                 {
                                   [ { { TxConstraints_match i } o } w ]
-                                  [ List [ InputConstraint i ] ]
+                                  [ List [ ScriptInputConstraint i ] ]
                                 }
                                 (lam
                                   ds
                                   [ List TxConstraint ]
                                   (lam
                                     ds
-                                    [ List [ InputConstraint i ] ]
+                                    [ List [ ScriptInputConstraint i ] ]
                                     (lam
                                       ds
-                                      [ List [ OutputConstraint o ] ]
+                                      [ List [ ScriptOutputConstraint o ] ]
                                       [
                                         [
                                           [
                                             {
-                                              { foldr [ InputConstraint i ] }
-                                              [ List [ InputConstraint i ] ]
+                                              {
+                                                foldr
+                                                [ ScriptInputConstraint i ]
+                                              }
+                                              [
+                                                List [ ScriptInputConstraint i ]
+                                              ]
                                             }
-                                            { Cons [ InputConstraint i ] }
+                                            { Cons [ ScriptInputConstraint i ] }
                                           ]
                                           [
                                             {
@@ -534,18 +544,24 @@
                                                 { { TxConstraints_match i } o }
                                                 w
                                               ]
-                                              [ List [ InputConstraint i ] ]
+                                              [
+                                                List [ ScriptInputConstraint i ]
+                                              ]
                                             }
                                             (lam
                                               ds
                                               [ List TxConstraint ]
                                               (lam
                                                 ds
-                                                [ List [ InputConstraint i ] ]
+                                                [
+                                                  List
+                                                  [ ScriptInputConstraint i ]
+                                                ]
                                                 (lam
                                                   ds
                                                   [
-                                                    List [ OutputConstraint o ]
+                                                    List
+                                                    [ ScriptOutputConstraint o ]
                                                   ]
                                                   ds
                                                 )
@@ -563,42 +579,53 @@
                             [
                               {
                                 [ { { TxConstraints_match i } o } w ]
-                                [ List [ OutputConstraint o ] ]
+                                [ List [ ScriptOutputConstraint o ] ]
                               }
                               (lam
                                 ds
                                 [ List TxConstraint ]
                                 (lam
                                   ds
-                                  [ List [ InputConstraint i ] ]
+                                  [ List [ ScriptInputConstraint i ] ]
                                   (lam
                                     ds
-                                    [ List [ OutputConstraint o ] ]
+                                    [ List [ ScriptOutputConstraint o ] ]
                                     [
                                       [
                                         [
                                           {
-                                            { foldr [ OutputConstraint o ] }
-                                            [ List [ OutputConstraint o ] ]
+                                            {
+                                              foldr [ ScriptOutputConstraint o ]
+                                            }
+                                            [
+                                              List [ ScriptOutputConstraint o ]
+                                            ]
                                           }
-                                          { Cons [ OutputConstraint o ] }
+                                          { Cons [ ScriptOutputConstraint o ] }
                                         ]
                                         [
                                           {
                                             [
                                               { { TxConstraints_match i } o } w
                                             ]
-                                            [ List [ OutputConstraint o ] ]
+                                            [
+                                              List [ ScriptOutputConstraint o ]
+                                            ]
                                           }
                                           (lam
                                             ds
                                             [ List TxConstraint ]
                                             (lam
                                               ds
-                                              [ List [ InputConstraint i ] ]
+                                              [
+                                                List [ ScriptInputConstraint i ]
+                                              ]
                                               (lam
                                                 ds
-                                                [ List [ OutputConstraint o ] ]
+                                                [
+                                                  List
+                                                  [ ScriptOutputConstraint o ]
+                                                ]
                                                 ds
                                               )
                                             )
@@ -679,9 +706,9 @@
                               [
                                 [
                                   [ UTuple3 [ List TxConstraint ] ]
-                                  [ List [ InputConstraint i ] ]
+                                  [ List [ ScriptInputConstraint i ] ]
                                 ]
-                                [ List [ OutputConstraint o ] ]
+                                [ List [ ScriptOutputConstraint o ] ]
                               ]
                             )
                           )
@@ -730,9 +757,9 @@
                                   {
                                     {
                                       { UTuple3 [ List TxConstraint ] }
-                                      [ List [ InputConstraint i ] ]
+                                      [ List [ ScriptInputConstraint i ] ]
                                     }
-                                    [ List [ OutputConstraint o ] ]
+                                    [ List [ ScriptOutputConstraint o ] ]
                                   }
                                   [
                                     [
@@ -793,28 +820,28 @@
                                   [
                                     [
                                       {
-                                        { foldr [ InputConstraint i ] }
-                                        [ List [ InputConstraint i ] ]
+                                        { foldr [ ScriptInputConstraint i ] }
+                                        [ List [ ScriptInputConstraint i ] ]
                                       }
-                                      { Cons [ InputConstraint i ] }
+                                      { Cons [ ScriptInputConstraint i ] }
                                     ]
-                                    { Nil [ InputConstraint i ] }
+                                    { Nil [ ScriptInputConstraint i ] }
                                   ]
-                                  { Nil [ InputConstraint i ] }
+                                  { Nil [ ScriptInputConstraint i ] }
                                 ]
                               ]
                               [
                                 [
                                   [
                                     {
-                                      { foldr [ OutputConstraint o ] }
-                                      [ List [ OutputConstraint o ] ]
+                                      { foldr [ ScriptOutputConstraint o ] }
+                                      [ List [ ScriptOutputConstraint o ] ]
                                     }
-                                    { Cons [ OutputConstraint o ] }
+                                    { Cons [ ScriptOutputConstraint o ] }
                                   ]
-                                  { Nil [ OutputConstraint o ] }
+                                  { Nil [ ScriptOutputConstraint o ] }
                                 ]
-                                { Nil [ OutputConstraint o ] }
+                                { Nil [ ScriptOutputConstraint o ] }
                               ]
                             ]
                           )
@@ -1456,7 +1483,7 @@
                                                                 {
                                                                   Nil
                                                                   [
-                                                                    InputConstraint
+                                                                    ScriptInputConstraint
                                                                     i
                                                                   ]
                                                                 }
@@ -1464,7 +1491,7 @@
                                                               {
                                                                 Nil
                                                                 [
-                                                                  OutputConstraint
+                                                                  ScriptOutputConstraint
                                                                   o
                                                                 ]
                                                               }
@@ -6918,7 +6945,7 @@
                                                                                             {
                                                                                               Nil
                                                                                               [
-                                                                                                InputConstraint
+                                                                                                ScriptInputConstraint
                                                                                                 Void
                                                                                               ]
                                                                                             }
@@ -6926,7 +6953,7 @@
                                                                                           {
                                                                                             Nil
                                                                                             [
-                                                                                              OutputConstraint
+                                                                                              ScriptOutputConstraint
                                                                                               Void
                                                                                             ]
                                                                                           }
@@ -8159,7 +8186,7 @@
                                                                                                                   [
                                                                                                                     List
                                                                                                                     [
-                                                                                                                      InputConstraint
+                                                                                                                      ScriptInputConstraint
                                                                                                                       Void
                                                                                                                     ]
                                                                                                                   ]
@@ -8167,7 +8194,7 @@
                                                                                                                 [
                                                                                                                   List
                                                                                                                   [
-                                                                                                                    OutputConstraint
+                                                                                                                    ScriptOutputConstraint
                                                                                                                     Void
                                                                                                                   ]
                                                                                                                 ]
@@ -8372,7 +8399,7 @@
                                                                                                                                           [
                                                                                                                                             List
                                                                                                                                             [
-                                                                                                                                              InputConstraint
+                                                                                                                                              ScriptInputConstraint
                                                                                                                                               Void
                                                                                                                                             ]
                                                                                                                                           ]
@@ -8380,7 +8407,7 @@
                                                                                                                                         [
                                                                                                                                           List
                                                                                                                                           [
-                                                                                                                                            OutputConstraint
+                                                                                                                                            ScriptOutputConstraint
                                                                                                                                             Void
                                                                                                                                           ]
                                                                                                                                         ]
@@ -8624,7 +8651,7 @@
                                                                                                                                                                 [
                                                                                                                                                                   List
                                                                                                                                                                   [
-                                                                                                                                                                    InputConstraint
+                                                                                                                                                                    ScriptInputConstraint
                                                                                                                                                                     Void
                                                                                                                                                                   ]
                                                                                                                                                                 ]
@@ -8632,7 +8659,7 @@
                                                                                                                                                               [
                                                                                                                                                                 List
                                                                                                                                                                 [
-                                                                                                                                                                  OutputConstraint
+                                                                                                                                                                  ScriptOutputConstraint
                                                                                                                                                                   Void
                                                                                                                                                                 ]
                                                                                                                                                               ]
@@ -8673,7 +8700,7 @@
                                                                                                                                                             [
                                                                                                                                                               List
                                                                                                                                                               [
-                                                                                                                                                                InputConstraint
+                                                                                                                                                                ScriptInputConstraint
                                                                                                                                                                 Void
                                                                                                                                                               ]
                                                                                                                                                             ]
@@ -8682,7 +8709,7 @@
                                                                                                                                                               [
                                                                                                                                                                 List
                                                                                                                                                                 [
-                                                                                                                                                                  OutputConstraint
+                                                                                                                                                                  ScriptOutputConstraint
                                                                                                                                                                   Void
                                                                                                                                                                 ]
                                                                                                                                                               ]
@@ -8741,7 +8768,7 @@
                                                                                                                                                                     [
                                                                                                                                                                       List
                                                                                                                                                                       [
-                                                                                                                                                                        InputConstraint
+                                                                                                                                                                        ScriptInputConstraint
                                                                                                                                                                         Void
                                                                                                                                                                       ]
                                                                                                                                                                     ]
@@ -8749,7 +8776,7 @@
                                                                                                                                                                   [
                                                                                                                                                                     List
                                                                                                                                                                     [
-                                                                                                                                                                      OutputConstraint
+                                                                                                                                                                      ScriptOutputConstraint
                                                                                                                                                                       Void
                                                                                                                                                                     ]
                                                                                                                                                                   ]
@@ -8790,7 +8817,7 @@
                                                                                                                                                                 [
                                                                                                                                                                   List
                                                                                                                                                                   [
-                                                                                                                                                                    InputConstraint
+                                                                                                                                                                    ScriptInputConstraint
                                                                                                                                                                     Void
                                                                                                                                                                   ]
                                                                                                                                                                 ]
@@ -8799,7 +8826,7 @@
                                                                                                                                                                   [
                                                                                                                                                                     List
                                                                                                                                                                     [
-                                                                                                                                                                      OutputConstraint
+                                                                                                                                                                      ScriptOutputConstraint
                                                                                                                                                                       Void
                                                                                                                                                                     ]
                                                                                                                                                                   ]
@@ -8839,7 +8866,7 @@
                                                                                                                                                                   [
                                                                                                                                                                     List
                                                                                                                                                                     [
-                                                                                                                                                                      InputConstraint
+                                                                                                                                                                      ScriptInputConstraint
                                                                                                                                                                       Void
                                                                                                                                                                     ]
                                                                                                                                                                   ]
@@ -8847,7 +8874,7 @@
                                                                                                                                                                 [
                                                                                                                                                                   List
                                                                                                                                                                   [
-                                                                                                                                                                    OutputConstraint
+                                                                                                                                                                    ScriptOutputConstraint
                                                                                                                                                                     Void
                                                                                                                                                                   ]
                                                                                                                                                                 ]
@@ -8880,7 +8907,7 @@
                                                                                                                                                                     [
                                                                                                                                                                       List
                                                                                                                                                                       [
-                                                                                                                                                                        InputConstraint
+                                                                                                                                                                        ScriptInputConstraint
                                                                                                                                                                         Void
                                                                                                                                                                       ]
                                                                                                                                                                     ]
@@ -8889,7 +8916,7 @@
                                                                                                                                                                       [
                                                                                                                                                                         List
                                                                                                                                                                         [
-                                                                                                                                                                          OutputConstraint
+                                                                                                                                                                          ScriptOutputConstraint
                                                                                                                                                                           Void
                                                                                                                                                                         ]
                                                                                                                                                                       ]
@@ -8939,7 +8966,7 @@
                                                                                                                                                                                 [
                                                                                                                                                                                   List
                                                                                                                                                                                   [
-                                                                                                                                                                                    InputConstraint
+                                                                                                                                                                                    ScriptInputConstraint
                                                                                                                                                                                     Void
                                                                                                                                                                                   ]
                                                                                                                                                                                 ]
@@ -8948,7 +8975,7 @@
                                                                                                                                                                                   [
                                                                                                                                                                                     List
                                                                                                                                                                                     [
-                                                                                                                                                                                      OutputConstraint
+                                                                                                                                                                                      ScriptOutputConstraint
                                                                                                                                                                                       Void
                                                                                                                                                                                     ]
                                                                                                                                                                                   ]
@@ -8980,7 +9007,7 @@
                                                                                                                                                                 [
                                                                                                                                                                   List
                                                                                                                                                                   [
-                                                                                                                                                                    InputConstraint
+                                                                                                                                                                    ScriptInputConstraint
                                                                                                                                                                     Void
                                                                                                                                                                   ]
                                                                                                                                                                 ]
@@ -8996,7 +9023,7 @@
                                                                                                                                                                   [
                                                                                                                                                                     List
                                                                                                                                                                     [
-                                                                                                                                                                      InputConstraint
+                                                                                                                                                                      ScriptInputConstraint
                                                                                                                                                                       Void
                                                                                                                                                                     ]
                                                                                                                                                                   ]
@@ -9005,7 +9032,7 @@
                                                                                                                                                                     [
                                                                                                                                                                       List
                                                                                                                                                                       [
-                                                                                                                                                                        OutputConstraint
+                                                                                                                                                                        ScriptOutputConstraint
                                                                                                                                                                         Void
                                                                                                                                                                       ]
                                                                                                                                                                     ]
@@ -9016,14 +9043,14 @@
                                                                                                                                                                             {
                                                                                                                                                                               foldr
                                                                                                                                                                               [
-                                                                                                                                                                                InputConstraint
+                                                                                                                                                                                ScriptInputConstraint
                                                                                                                                                                                 Void
                                                                                                                                                                               ]
                                                                                                                                                                             }
                                                                                                                                                                             [
                                                                                                                                                                               List
                                                                                                                                                                               [
-                                                                                                                                                                                InputConstraint
+                                                                                                                                                                                ScriptInputConstraint
                                                                                                                                                                                 Void
                                                                                                                                                                               ]
                                                                                                                                                                             ]
@@ -9031,7 +9058,7 @@
                                                                                                                                                                           {
                                                                                                                                                                             Cons
                                                                                                                                                                             [
-                                                                                                                                                                              InputConstraint
+                                                                                                                                                                              ScriptInputConstraint
                                                                                                                                                                               Void
                                                                                                                                                                             ]
                                                                                                                                                                           }
@@ -9051,7 +9078,7 @@
                                                                                                                                                                             [
                                                                                                                                                                               List
                                                                                                                                                                               [
-                                                                                                                                                                                InputConstraint
+                                                                                                                                                                                ScriptInputConstraint
                                                                                                                                                                                 Void
                                                                                                                                                                               ]
                                                                                                                                                                             ]
@@ -9067,7 +9094,7 @@
                                                                                                                                                                               [
                                                                                                                                                                                 List
                                                                                                                                                                                 [
-                                                                                                                                                                                  InputConstraint
+                                                                                                                                                                                  ScriptInputConstraint
                                                                                                                                                                                   Void
                                                                                                                                                                                 ]
                                                                                                                                                                               ]
@@ -9076,7 +9103,7 @@
                                                                                                                                                                                 [
                                                                                                                                                                                   List
                                                                                                                                                                                   [
-                                                                                                                                                                                    OutputConstraint
+                                                                                                                                                                                    ScriptOutputConstraint
                                                                                                                                                                                     Void
                                                                                                                                                                                   ]
                                                                                                                                                                                 ]
@@ -9108,7 +9135,7 @@
                                                                                                                                                               [
                                                                                                                                                                 List
                                                                                                                                                                 [
-                                                                                                                                                                  OutputConstraint
+                                                                                                                                                                  ScriptOutputConstraint
                                                                                                                                                                   Void
                                                                                                                                                                 ]
                                                                                                                                                               ]
@@ -9124,7 +9151,7 @@
                                                                                                                                                                 [
                                                                                                                                                                   List
                                                                                                                                                                   [
-                                                                                                                                                                    InputConstraint
+                                                                                                                                                                    ScriptInputConstraint
                                                                                                                                                                     Void
                                                                                                                                                                   ]
                                                                                                                                                                 ]
@@ -9133,7 +9160,7 @@
                                                                                                                                                                   [
                                                                                                                                                                     List
                                                                                                                                                                     [
-                                                                                                                                                                      OutputConstraint
+                                                                                                                                                                      ScriptOutputConstraint
                                                                                                                                                                       Void
                                                                                                                                                                     ]
                                                                                                                                                                   ]
@@ -9144,14 +9171,14 @@
                                                                                                                                                                           {
                                                                                                                                                                             foldr
                                                                                                                                                                             [
-                                                                                                                                                                              OutputConstraint
+                                                                                                                                                                              ScriptOutputConstraint
                                                                                                                                                                               Void
                                                                                                                                                                             ]
                                                                                                                                                                           }
                                                                                                                                                                           [
                                                                                                                                                                             List
                                                                                                                                                                             [
-                                                                                                                                                                              OutputConstraint
+                                                                                                                                                                              ScriptOutputConstraint
                                                                                                                                                                               Void
                                                                                                                                                                             ]
                                                                                                                                                                           ]
@@ -9159,7 +9186,7 @@
                                                                                                                                                                         {
                                                                                                                                                                           Cons
                                                                                                                                                                           [
-                                                                                                                                                                            OutputConstraint
+                                                                                                                                                                            ScriptOutputConstraint
                                                                                                                                                                             Void
                                                                                                                                                                           ]
                                                                                                                                                                         }
@@ -9179,7 +9206,7 @@
                                                                                                                                                                           [
                                                                                                                                                                             List
                                                                                                                                                                             [
-                                                                                                                                                                              OutputConstraint
+                                                                                                                                                                              ScriptOutputConstraint
                                                                                                                                                                               Void
                                                                                                                                                                             ]
                                                                                                                                                                           ]
@@ -9195,7 +9222,7 @@
                                                                                                                                                                             [
                                                                                                                                                                               List
                                                                                                                                                                               [
-                                                                                                                                                                                InputConstraint
+                                                                                                                                                                                ScriptInputConstraint
                                                                                                                                                                                 Void
                                                                                                                                                                               ]
                                                                                                                                                                             ]
@@ -9204,7 +9231,7 @@
                                                                                                                                                                               [
                                                                                                                                                                                 List
                                                                                                                                                                                 [
-                                                                                                                                                                                  OutputConstraint
+                                                                                                                                                                                  ScriptOutputConstraint
                                                                                                                                                                                   Void
                                                                                                                                                                                 ]
                                                                                                                                                                               ]
@@ -9259,7 +9286,7 @@
                                                                                                                                       [
                                                                                                                                         List
                                                                                                                                         [
-                                                                                                                                          InputConstraint
+                                                                                                                                          ScriptInputConstraint
                                                                                                                                           Void
                                                                                                                                         ]
                                                                                                                                       ]
@@ -9268,7 +9295,7 @@
                                                                                                                                         [
                                                                                                                                           List
                                                                                                                                           [
-                                                                                                                                            OutputConstraint
+                                                                                                                                            ScriptOutputConstraint
                                                                                                                                             Void
                                                                                                                                           ]
                                                                                                                                         ]
@@ -9321,7 +9348,7 @@
                                                                                                               [
                                                                                                                 List
                                                                                                                 [
-                                                                                                                  InputConstraint
+                                                                                                                  ScriptInputConstraint
                                                                                                                   Void
                                                                                                                 ]
                                                                                                               ]
@@ -9330,7 +9357,7 @@
                                                                                                                 [
                                                                                                                   List
                                                                                                                   [
-                                                                                                                    OutputConstraint
+                                                                                                                    ScriptOutputConstraint
                                                                                                                     Void
                                                                                                                   ]
                                                                                                                 ]
@@ -9511,7 +9538,7 @@
                                                                                                                                       [
                                                                                                                                         List
                                                                                                                                         [
-                                                                                                                                          InputConstraint
+                                                                                                                                          ScriptInputConstraint
                                                                                                                                           Void
                                                                                                                                         ]
                                                                                                                                       ]
@@ -9520,7 +9547,7 @@
                                                                                                                                         [
                                                                                                                                           List
                                                                                                                                           [
-                                                                                                                                            OutputConstraint
+                                                                                                                                            ScriptOutputConstraint
                                                                                                                                             Void
                                                                                                                                           ]
                                                                                                                                         ]
@@ -9619,14 +9646,14 @@
                                                                                                                                   {
                                                                                                                                     foldr
                                                                                                                                     [
-                                                                                                                                      InputConstraint
+                                                                                                                                      ScriptInputConstraint
                                                                                                                                       Void
                                                                                                                                     ]
                                                                                                                                   }
                                                                                                                                   [
                                                                                                                                     List
                                                                                                                                     [
-                                                                                                                                      InputConstraint
+                                                                                                                                      ScriptInputConstraint
                                                                                                                                       Void
                                                                                                                                     ]
                                                                                                                                   ]
@@ -9634,7 +9661,7 @@
                                                                                                                                 {
                                                                                                                                   Cons
                                                                                                                                   [
-                                                                                                                                    InputConstraint
+                                                                                                                                    ScriptInputConstraint
                                                                                                                                     Void
                                                                                                                                   ]
                                                                                                                                 }
@@ -9654,7 +9681,7 @@
                                                                                                                                   [
                                                                                                                                     List
                                                                                                                                     [
-                                                                                                                                      InputConstraint
+                                                                                                                                      ScriptInputConstraint
                                                                                                                                       Void
                                                                                                                                     ]
                                                                                                                                   ]
@@ -9670,7 +9697,7 @@
                                                                                                                                     [
                                                                                                                                       List
                                                                                                                                       [
-                                                                                                                                        InputConstraint
+                                                                                                                                        ScriptInputConstraint
                                                                                                                                         Void
                                                                                                                                       ]
                                                                                                                                     ]
@@ -9679,7 +9706,7 @@
                                                                                                                                       [
                                                                                                                                         List
                                                                                                                                         [
-                                                                                                                                          OutputConstraint
+                                                                                                                                          ScriptOutputConstraint
                                                                                                                                           Void
                                                                                                                                         ]
                                                                                                                                       ]
@@ -9692,7 +9719,7 @@
                                                                                                                             {
                                                                                                                               Nil
                                                                                                                               [
-                                                                                                                                InputConstraint
+                                                                                                                                ScriptInputConstraint
                                                                                                                                 Void
                                                                                                                               ]
                                                                                                                             }
@@ -9705,14 +9732,14 @@
                                                                                                                                 {
                                                                                                                                   foldr
                                                                                                                                   [
-                                                                                                                                    OutputConstraint
+                                                                                                                                    ScriptOutputConstraint
                                                                                                                                     Void
                                                                                                                                   ]
                                                                                                                                 }
                                                                                                                                 [
                                                                                                                                   List
                                                                                                                                   [
-                                                                                                                                    OutputConstraint
+                                                                                                                                    ScriptOutputConstraint
                                                                                                                                     Void
                                                                                                                                   ]
                                                                                                                                 ]
@@ -9720,7 +9747,7 @@
                                                                                                                               {
                                                                                                                                 Cons
                                                                                                                                 [
-                                                                                                                                  OutputConstraint
+                                                                                                                                  ScriptOutputConstraint
                                                                                                                                   Void
                                                                                                                                 ]
                                                                                                                               }
@@ -9740,7 +9767,7 @@
                                                                                                                                 [
                                                                                                                                   List
                                                                                                                                   [
-                                                                                                                                    OutputConstraint
+                                                                                                                                    ScriptOutputConstraint
                                                                                                                                     Void
                                                                                                                                   ]
                                                                                                                                 ]
@@ -9756,7 +9783,7 @@
                                                                                                                                   [
                                                                                                                                     List
                                                                                                                                     [
-                                                                                                                                      InputConstraint
+                                                                                                                                      ScriptInputConstraint
                                                                                                                                       Void
                                                                                                                                     ]
                                                                                                                                   ]
@@ -9765,7 +9792,7 @@
                                                                                                                                     [
                                                                                                                                       List
                                                                                                                                       [
-                                                                                                                                        OutputConstraint
+                                                                                                                                        ScriptOutputConstraint
                                                                                                                                         Void
                                                                                                                                       ]
                                                                                                                                     ]
@@ -9778,7 +9805,7 @@
                                                                                                                           {
                                                                                                                             Nil
                                                                                                                             [
-                                                                                                                              OutputConstraint
+                                                                                                                              ScriptOutputConstraint
                                                                                                                               Void
                                                                                                                             ]
                                                                                                                           }
@@ -10986,7 +11013,7 @@
                                                                                                                                           [
                                                                                                                                             List
                                                                                                                                             [
-                                                                                                                                              InputConstraint
+                                                                                                                                              ScriptInputConstraint
                                                                                                                                               Void
                                                                                                                                             ]
                                                                                                                                           ]
@@ -10994,7 +11021,7 @@
                                                                                                                                         [
                                                                                                                                           List
                                                                                                                                           [
-                                                                                                                                            OutputConstraint
+                                                                                                                                            ScriptOutputConstraint
                                                                                                                                             Void
                                                                                                                                           ]
                                                                                                                                         ]
@@ -11046,7 +11073,7 @@
                                                                                                                                                             [
                                                                                                                                                               List
                                                                                                                                                               [
-                                                                                                                                                                InputConstraint
+                                                                                                                                                                ScriptInputConstraint
                                                                                                                                                                 Void
                                                                                                                                                               ]
                                                                                                                                                             ]
@@ -11054,7 +11081,7 @@
                                                                                                                                                           [
                                                                                                                                                             List
                                                                                                                                                             [
-                                                                                                                                                              OutputConstraint
+                                                                                                                                                              ScriptOutputConstraint
                                                                                                                                                               Void
                                                                                                                                                             ]
                                                                                                                                                           ]
@@ -11152,7 +11179,7 @@
                                                                                                                                                         [
                                                                                                                                                           List
                                                                                                                                                           [
-                                                                                                                                                            InputConstraint
+                                                                                                                                                            ScriptInputConstraint
                                                                                                                                                             Void
                                                                                                                                                           ]
                                                                                                                                                         ]
@@ -11161,7 +11188,7 @@
                                                                                                                                                           [
                                                                                                                                                             List
                                                                                                                                                             [
-                                                                                                                                                              OutputConstraint
+                                                                                                                                                              ScriptOutputConstraint
                                                                                                                                                               Void
                                                                                                                                                             ]
                                                                                                                                                           ]
@@ -11205,7 +11232,7 @@
                                                                                                                                                           [
                                                                                                                                                             List
                                                                                                                                                             [
-                                                                                                                                                              InputConstraint
+                                                                                                                                                              ScriptInputConstraint
                                                                                                                                                               Void
                                                                                                                                                             ]
                                                                                                                                                           ]
@@ -11213,7 +11240,7 @@
                                                                                                                                                         [
                                                                                                                                                           List
                                                                                                                                                           [
-                                                                                                                                                            OutputConstraint
+                                                                                                                                                            ScriptOutputConstraint
                                                                                                                                                             Void
                                                                                                                                                           ]
                                                                                                                                                         ]
@@ -11311,7 +11338,7 @@
                                                                                                                                                       [
                                                                                                                                                         List
                                                                                                                                                         [
-                                                                                                                                                          InputConstraint
+                                                                                                                                                          ScriptInputConstraint
                                                                                                                                                           Void
                                                                                                                                                         ]
                                                                                                                                                       ]
@@ -11320,7 +11347,7 @@
                                                                                                                                                         [
                                                                                                                                                           List
                                                                                                                                                           [
-                                                                                                                                                            OutputConstraint
+                                                                                                                                                            ScriptOutputConstraint
                                                                                                                                                             Void
                                                                                                                                                           ]
                                                                                                                                                         ]
@@ -11375,7 +11402,7 @@
                                                                                                                                       [
                                                                                                                                         List
                                                                                                                                         [
-                                                                                                                                          InputConstraint
+                                                                                                                                          ScriptInputConstraint
                                                                                                                                           Void
                                                                                                                                         ]
                                                                                                                                       ]
@@ -11384,7 +11411,7 @@
                                                                                                                                         [
                                                                                                                                           List
                                                                                                                                           [
-                                                                                                                                            OutputConstraint
+                                                                                                                                            ScriptOutputConstraint
                                                                                                                                             Void
                                                                                                                                           ]
                                                                                                                                         ]
