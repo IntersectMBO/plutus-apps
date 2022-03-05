@@ -66,7 +66,7 @@ app trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg =
 main :: Trace IO WalletMsg -> LocalWalletSettings -> FilePath -> SlotConfig -> ChainIndexUrl -> Availability -> IO ()
 main trace LocalWalletSettings { baseUrl } serverSocket slotCfg (ChainIndexUrl chainUrl) availability = LM.runLogEffects trace $ do
     chainIndexEnv <- buildEnv chainUrl defaultManagerSettings
-    let knownWallets = Map.fromList $ zip Wallet.knownWallets (Wallet.fromMockWallet <$> CW.knownMockWallets)
+    let knownWallets = Map.fromList $ zip (Wallet.getWalletId <$> Wallet.knownWallets) (Wallet.fromMockWallet <$> CW.knownMockWallets)
     mVarState <- liftIO $ newMVar knownWallets
     txSendHandle    <- liftIO $ MockClient.runTxSender serverSocket
     chainSyncHandle <- Left <$> (liftIO $ MockClient.runChainSync' serverSocket slotCfg)

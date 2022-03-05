@@ -12,6 +12,7 @@ module Spec.Auction
     , options
     , auctionTrace1
     , auctionTrace2
+    , AuctionModel
     , prop_Auction
     , prop_FinishAuction
     , prop_NoLockedFunds
@@ -158,7 +159,7 @@ data AuctionModel = AuctionModel
     , _winner     :: Wallet
     , _endSlot    :: Slot
     , _phase      :: Phase
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 data Phase = NotStarted | Bidding | AuctionOver
     deriving (Eq, Show)
@@ -174,7 +175,7 @@ instance ContractModel AuctionModel where
         SellerH :: ContractInstanceKey AuctionModel AuctionOutput SellerSchema AuctionError ()
         BuyerH  :: Wallet -> ContractInstanceKey AuctionModel AuctionOutput BuyerSchema AuctionError ()
 
-    data Action AuctionModel = Init Wallet | Bid Wallet Integer | WaitUntil Slot
+    data Action AuctionModel = Init Wallet | Bid Wallet Integer
         deriving (Eq, Show)
 
     initialState = AuctionModel
@@ -193,23 +194,23 @@ instance ContractModel AuctionModel where
     instanceContract _ BuyerH{} _ = buyer threadToken
 
     arbitraryAction s
-        | p /= NotStarted =
-            frequency $  [ (1, WaitUntil . step <$> choose (1, 10 :: Integer)) ]
-                      ++ [ (3, Bid w <$> chooseBid (lo,hi))
-                         | w <- [w2, w3, w4]
-                         , let (lo,hi) = validBidRange s w
-                         , lo <= hi ]
+        | p /= NotStarted = do
+            oneof [ Bid w <$> chooseBid (lo,hi)
+                  | w <- [w2, w3, w4]
+                  , let (lo,hi) = validBidRange s w
+                  , lo <= hi ]
         | otherwise = pure $ Init w1
         where
             p    = s ^. contractState . phase
-            slot = s ^. currentSlot
-            step n = slot + fromIntegral n
+
+    waitProbability s
+      | s ^. contractState . phase /= NotStarted
+      , all (uncurry (>) . validBidRange s) [w2, w3, w4] = 1
+      | otherwise = 0.1
 
     precondition s (Init _) = s ^. contractState . phase == NotStarted
     precondition s cmd      = s ^. contractState . phase /= NotStarted &&
         case cmd of
-            WaitUntil slot -> slot > s ^. currentSlot
-
             -- In order to place a bid, we need to satisfy the constraint where
             -- each tx output must have at least N Ada.
             Bid w bid      -> let (lo,hi) = validBidRange s w in
@@ -235,7 +236,6 @@ instance ContractModel AuctionModel where
                 phase .= Bidding
                 withdraw w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
                 wait 3
-            WaitUntil slot' -> waitUntil slot'
             Bid w bid -> do
                 current <- viewContractState currentBid
                 leader  <- viewContractState winner
@@ -247,7 +247,6 @@ instance ContractModel AuctionModel where
                 wait 2
 
     perform _ _ _ (Init _) = delay 3
-    perform _ _ _ (WaitUntil slot) = void $ Trace.waitUntilSlot slot
     perform handle _ _ (Bid w bid) = do
         -- FIXME: You cannot bid in certain slots when the off-chain code is busy, so to make the
         --        tests pass we send two identical bids in consecutive slots. The off-chain code is
@@ -260,9 +259,7 @@ instance ContractModel AuctionModel where
         delay 1
 
     shrinkAction _ (Init _)  = []
-    shrinkAction _ (WaitUntil (Slot n))  = [ WaitUntil (Slot n') | n' <- shrink n ]
-    shrinkAction s (Bid w v) =
-        WaitUntil (s ^. currentSlot + 1) : [ Bid w v' | v' <- shrink v ]
+    shrinkAction _ (Bid w v) = [ Bid w v' | v' <- shrink v ]
 
     monitoring _ (Bid _ bid) =
       classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOut <> Ledger.maxFee))
@@ -307,7 +304,7 @@ finishAuction = do
     action $ Init w1
     anyActions_
     slot <- viewModelState currentSlot
-    when (slot < 101) $ action $ WaitUntil 101
+    when (slot < 101) $ waitUntilDL 101
     assertModel "Locked funds are not zero" (symIsZero . lockedValue)
 
 prop_FinishAuction :: Property
@@ -325,10 +322,10 @@ noLockProof = defaultNLFP
       p <- viewContractState phase
       when (p == NotStarted) $ action $ Init w1
       slot <- viewModelState currentSlot
-      when (slot < 101) $ action $ WaitUntil 101
+      when (slot < 101) $ waitUntilDL 101
 
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = checkNoLockedFundsProof options noLockProof
+prop_NoLockedFunds = checkNoLockedFundsProof (set minLogLevel Critical options) noLockProof
 
 tests :: TestTree
 tests =
@@ -354,4 +351,6 @@ tests =
             withMaxSuccess 10 prop_FinishAuction
         , testProperty "NLFP fails" $
             expectFailure $ noShrinking prop_NoLockedFunds
+        , testProperty "prop_Reactive" $
+            withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
         ]

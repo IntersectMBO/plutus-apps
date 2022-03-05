@@ -23,11 +23,13 @@ module Plutus.Contract.Wallet(
     , ExportTxInput(..)
     , ExportTxRedeemer(..)
     , export
+    , finalize
     ) where
 
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Control.Applicative ((<|>))
+import Control.Lens ((&), (.~), (^.))
 import Control.Monad (join, (>=>))
 import Control.Monad.Error.Lens (throwing)
 import Control.Monad.Freer (Eff, Member)
@@ -49,6 +51,8 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
 import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequiredSignatories, unBalancedTxTx, unBalancedTxUtxoIndex),
                                     adjustUnbalancedTx, mkTx)
+import Ledger.Constraints.OffChain qualified as U
+import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
@@ -232,13 +236,23 @@ instance ToJSON ExportTxInput where
             , "assets" .= fmap (\(p, a, q) -> object ["policy_id" .= p, "asset_name" .= a, "quantity" .= q]) etxiAssets
             ]
 
-export :: C.ProtocolParameters -> C.NetworkId -> UnbalancedTx -> Either CardanoAPI.ToCardanoError ExportTx
-export params networkId UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBalancedTxRequiredSignatories} =
-    let requiredSigners = Map.keys unBalancedTxRequiredSignatories in
-    ExportTx
+export
+    :: C.ProtocolParameters
+    -> C.NetworkId
+    -> SlotConfig
+    -> UnbalancedTx
+    -> Either CardanoAPI.ToCardanoError ExportTx
+export params networkId slotConfig utx =
+    let UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBalancedTxRequiredSignatories} = finalize slotConfig utx
+        requiredSigners = Map.keys unBalancedTxRequiredSignatories
+     in ExportTx
         <$> mkPartialTx requiredSigners params networkId unBalancedTxTx
         <*> mkInputs networkId unBalancedTxUtxoIndex
         <*> mkRedeemers unBalancedTxTx
+
+finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
+finalize slotConfig utx =
+     utx & U.tx . Plutus.validRange .~ posixTimeRangeToContainedSlotRange slotConfig (utx ^. U.validityTimeRange)
 
 mkPartialTx
     :: [Plutus.PaymentPubKeyHash]

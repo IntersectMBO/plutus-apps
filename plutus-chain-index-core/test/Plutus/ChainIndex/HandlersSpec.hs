@@ -16,6 +16,7 @@ import Control.Monad.Freer.Extras.Beam (BeamEffect)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Tracer (nullTracer)
 import Data.Default (def)
+import Data.Maybe (isJust)
 import Data.Set qualified as S
 import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
@@ -25,12 +26,12 @@ import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
 import Ledger (outValue)
 import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), RunRequirements (..), appendBlock, citxOutputs,
-                          runChainIndexEffects, txFromTxId, utxoSetMembership, utxoSetWithCurrency)
-import Plutus.ChainIndex.Api (IsUtxoResponse (isUtxo), UtxosResponse (UtxosResponse))
+                          runChainIndexEffects, unspentTxOutFromRef, utxoSetWithCurrency)
+import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
-import Plutus.ChainIndex.Tx (_ValidTx, citxTxId)
-import Plutus.ChainIndex.Types (ChainSyncBlock (..), TxProcessOption (..))
+import Plutus.ChainIndex.Tx (_ValidTx)
+import Plutus.ChainIndex.Types (ChainSyncBlock (..))
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Test.Tasty (TestTree, testGroup)
@@ -40,36 +41,17 @@ import Util (utxoSetFromBlockAddrs)
 tests :: TestTree
 tests = do
   testGroup "chain-index handlers"
-    [ testGroup "txFromTxId"
-      [ testProperty "get tx from tx id" txFromTxIdSpec
-      ]
-    , testGroup "utxoSetAtAddress"
+    [ testGroup "utxoSetAtAddress"
       [ testProperty "each txOutRef should be unspent" eachTxOutRefAtAddressShouldBeUnspentSpec
+      ]
+    , testGroup "unspentTxOutFromRef"
+      [ testProperty "get unspent tx out from ref" eachTxOutRefAtAddressShouldHaveTxOutSpec
       ]
     , testGroup "utxoSetWithCurrency"
       [ testProperty "each txOutRef should be unspent" eachTxOutRefWithCurrencyShouldBeUnspentSpec
       , testProperty "should restrict to non-ADA currencies" cantRequestForTxOutRefsWithAdaSpec
       ]
-    , testGroup "BlockProcessOption"
-      [ testProperty "do not store txs" doNotStoreTxs
-      ]
     ]
-
--- | Tests we can correctly query a tx in the database using a tx id. We also
--- test with an non-existant tx id.
-txFromTxIdSpec :: Property
-txFromTxIdSpec = property $ do
-  (tip, block@(fstTx:_)) <- forAll $ Gen.evalTxGenState Gen.genNonEmptyBlock
-  unknownTxId <- forAll Gen.genRandomTxId
-  txs <- runChainIndexTest $ do
-      appendBlock (Block tip (map (, def) block))
-      tx <- txFromTxId (view citxTxId fstTx)
-      tx' <- txFromTxId unknownTxId
-      pure (tx, tx')
-
-  case txs of
-    (Just tx, Nothing) -> fstTx === tx
-    _                  -> Hedgehog.assert False
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns
@@ -84,6 +66,21 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
       utxoSetFromBlockAddrs block
 
   S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
+
+-- | After generating and appending a block in the chain index, verify that
+-- querying the chain index with each of the addresses in the block returns
+-- unspent 'TxOutRef's with presented 'TxOut's.
+eachTxOutRefAtAddressShouldHaveTxOutSpec :: Property
+eachTxOutRefAtAddressShouldHaveTxOutSpec = property $ do
+  ((tip, block), _) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
+
+  utxouts <- runChainIndexTest $ do
+      -- Append the generated block in the chain index
+      appendBlock (Block tip (map (, def) block))
+      utxos <- utxoSetFromBlockAddrs block
+      traverse unspentTxOutFromRef (concat utxos)
+
+  Hedgehog.assert $ and $ map isJust utxouts
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns
@@ -125,22 +122,6 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
       pure $ pageItems utxoRefs
 
   Hedgehog.assert $ null utxoRefs
-
--- | Do not store txs through BlockProcessOption.
--- The UTxO set must still be stored.
--- But cannot be fetched through addresses as addresses are not stored.
-doNotStoreTxs :: Property
-doNotStoreTxs = property $ do
-  ((tip, block), state) <- forAll $ Gen.runTxGenState Gen.genNonEmptyBlock
-  result <- runChainIndexTest $ do
-      appendBlock (Block tip (map (, TxProcessOption{tpoStoreTx=False}) block))
-      tx <- txFromTxId (view citxTxId (head block))
-      utxosFromAddr <- utxoSetFromBlockAddrs block
-      utxosStored <- traverse utxoSetMembership (S.toList (view Gen.txgsUtxoSet state))
-      pure (tx, concat utxosFromAddr, utxosStored)
-  case result of
-    (Nothing, [], utxosStored) -> Hedgehog.assert $ and (isUtxo <$> utxosStored)
-    _                          -> Hedgehog.assert False
 
 -- | Run a chain index test against an in-memory SQLite database.
 runChainIndexTest

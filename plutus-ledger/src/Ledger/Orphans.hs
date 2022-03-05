@@ -38,6 +38,7 @@ import Plutus.V1.Ledger.Bytes (bytes)
 import Plutus.V1.Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Plutus.V1.Ledger.Scripts (ScriptHash (..))
 import Plutus.V1.Ledger.Slot (Slot (Slot))
+import Plutus.V1.Ledger.Time (DiffMilliSeconds (DiffMilliSeconds))
 import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
@@ -156,6 +157,7 @@ deriving newtype instance OpenApi.ToSchema LedgerBytes
 deriving newtype instance OpenApi.ToSchema ValidatorHash
 deriving newtype instance OpenApi.ToSchema Signature
 deriving newtype instance OpenApi.ToSchema POSIXTime
+deriving newtype instance OpenApi.ToSchema DiffMilliSeconds
 deriving newtype instance OpenApi.ToSchema BuiltinData
 deriving newtype instance OpenApi.ToSchema AssetClass
 deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Extended a)
