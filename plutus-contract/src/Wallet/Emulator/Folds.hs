@@ -65,7 +65,7 @@ import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase (Phase1, Phase2))
-import Ledger.Tx (Address, CardanoTx, TxOut (txOutValue), TxOutTx (txOutTxOut), getCardanoTxFee, theseTx)
+import Ledger.Tx (Address, CardanoTx, TxOut (txOutValue), TxOutTx (txOutTxOut), getCardanoTxFee, onCardanoTx)
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
@@ -245,8 +245,8 @@ utxoAtAddress addr =
     $ Fold (flip step) (AM.addAddress addr mempty) (view (AM.fundsAt addr))
     where
         step = \case
-            TxnValidate _ txn _                  -> theseTx (AM.updateAddresses . Valid) (const id) txn
-            TxnValidationFail Phase2 _ txn _ _ _ -> theseTx (AM.updateAddresses . Invalid) (const id) txn
+            TxnValidate _ txn _                  -> onCardanoTx (AM.updateAddresses . Valid) (const id) txn
+            TxnValidationFail Phase2 _ txn _ _ _ -> onCardanoTx (AM.updateAddresses . Invalid) (const id) txn
             _                                    -> id
 
 
@@ -290,7 +290,7 @@ blockchain =
         initial = ([], [])
         extract (currentBlock, otherBlocks) =
             (currentBlock : otherBlocks)
-        add val txn currentBlock = theseTx ((: currentBlock) . val) (const currentBlock) txn
+        add val txn currentBlock = onCardanoTx ((: currentBlock) . val) (const currentBlock) txn
     in preMapMaybe (preview (eteEvent . chainEvent))
         $ Fold step initial extract
 

@@ -120,7 +120,6 @@ library
         strict-containers -any,
         template-haskell -any,
         text -any,
-        these -any,
         time -any,
         time-units -any,
         transformers -any,

@@ -15,13 +15,11 @@ import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
-import Data.RawJson (RawJson)
 import Data.Show.Generic (genericShow)
-import Data.These (These)
 import Data.Tuple.Nested ((/\))
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase)
+import Ledger.Tx (CardanoTx)
 import Plutus.V1.Ledger.Slot (Slot)
-import Plutus.V1.Ledger.Tx (Tx)
 import Plutus.V1.Ledger.TxId (TxId)
 import Plutus.V1.Ledger.Value (Value)
 import Type.Proxy (Proxy(Proxy))
@@ -30,8 +28,8 @@ import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
 data ChainEvent
-  = TxnValidate TxId (These Tx RawJson) (Array ScriptValidationEvent)
-  | TxnValidationFail ValidationPhase TxId (These Tx RawJson) ValidationError (Array ScriptValidationEvent) Value
+  = TxnValidate TxId CardanoTx (Array ScriptValidationEvent)
+  | TxnValidationFail ValidationPhase TxId CardanoTx ValidationError (Array ScriptValidationEvent) Value
   | SlotAdd Slot
 
 instance Show ChainEvent where
@@ -56,12 +54,12 @@ derive instance Generic ChainEvent _
 
 --------------------------------------------------------------------------------
 
-_TxnValidate :: Prism' ChainEvent { a :: TxId, b :: These Tx RawJson, c :: Array ScriptValidationEvent }
+_TxnValidate :: Prism' ChainEvent { a :: TxId, b :: CardanoTx, c :: Array ScriptValidationEvent }
 _TxnValidate = prism' (\{ a, b, c } -> (TxnValidate a b c)) case _ of
   (TxnValidate a b c) -> Just { a, b, c }
   _ -> Nothing
 
-_TxnValidationFail :: Prism' ChainEvent { a :: ValidationPhase, b :: TxId, c :: These Tx RawJson, d :: ValidationError, e :: Array ScriptValidationEvent, f :: Value }
+_TxnValidationFail :: Prism' ChainEvent { a :: ValidationPhase, b :: TxId, c :: CardanoTx, d :: ValidationError, e :: Array ScriptValidationEvent, f :: Value }
 _TxnValidationFail = prism' (\{ a, b, c, d, e, f } -> (TxnValidationFail a b c d e f)) case _ of
   (TxnValidationFail a b c d e f) -> Just { a, b, c, d, e, f }
   _ -> Nothing

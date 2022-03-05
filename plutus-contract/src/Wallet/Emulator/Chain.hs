@@ -31,12 +31,11 @@ import Data.Foldable (traverse_)
 import Data.List (partition, (\\))
 import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
-import Data.These (These (..), mergeTheseWith)
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx, OnChainTx (..), ScriptValidationEvent, Slot (..),
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), ScriptValidationEvent, Slot (..),
                SomeCardanoApiTx (SomeTx), Tx (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx,
-               getCardanoTxFee, getCardanoTxId, theseTx)
+               getCardanoTxFee, getCardanoTxId, mergeCardanoTxWith, onCardanoTx)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig)
@@ -166,12 +165,12 @@ validateBlock slotCfg slot@(Slot s) idx txns =
         -- successfully
         block = mapMaybe toOnChain processed
           where
-            toOnChain (_         , Just (Index.Phase1, _), _) = Nothing
-            toOnChain (This tx   , Just (Index.Phase2, _), _) = Just (Invalid tx)
-            toOnChain (These tx _, Just (Index.Phase2, _), _) = Just (Invalid tx)
-            toOnChain (This tx   , Nothing               , _) = Just (Valid tx)
-            toOnChain (These tx _, Nothing               , _) = Just (Valid tx)
-            toOnChain (That _    , _                     , _) = Nothing -- TODO: support CardanoTx
+            toOnChain (_            , Just (Index.Phase1, _), _) = Nothing
+            toOnChain (EmulatorTx tx, Just (Index.Phase2, _), _) = Just (Invalid tx)
+            toOnChain (Both tx _    , Just (Index.Phase2, _), _) = Just (Invalid tx)
+            toOnChain (EmulatorTx tx, Nothing               , _) = Just (Valid tx)
+            toOnChain (Both tx _    , Nothing               , _) = Just (Valid tx)
+            toOnChain (CardanoApiTx _, _                    , _) = Nothing -- TODO: support CardanoTx
 
         -- Also return an `EmulatorEvent` for each transaction that was
         -- processed
@@ -183,13 +182,13 @@ validateBlock slotCfg slot@(Slot s) idx txns =
     in ValidatedBlock block events rest
 
 getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
-getCollateral idx = theseTx
+getCollateral idx = onCardanoTx
     (\tx -> fromRight (txFee tx) $ alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (txCollateral tx))
-    (\ctx -> getCardanoTxFee (That ctx))
+    (\ctx -> getCardanoTxFee (CardanoApiTx ctx))
 
 -- | Check whether the given transaction can be validated in the given slot.
 canValidateNow :: Slot -> CardanoTx -> Bool
-canValidateNow slot = theseTx (Interval.member slot . txValidRange) (const False {- TODO: support CardanoTx -})
+canValidateNow slot = onCardanoTx (Interval.member slot . txValidRange) (const False {- TODO: support CardanoTx -})
 
 mkValidationEvent :: Index.UtxoIndex -> CardanoTx -> Maybe Index.ValidationErrorInPhase -> [ScriptValidationEvent] -> ChainEvent
 mkValidationEvent idx t result events =
@@ -206,7 +205,7 @@ validateEm
     -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
 validateEm h cUtxoIndex txn = do
     ctx@(Index.ValidationCtx idx _) <- S.get
-    let ((e, idx'), events) = txn & mergeTheseWith
+    let ((e, idx'), events) = txn & mergeCardanoTxWith
             (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
             (\tx -> ((validateL h cUtxoIndex tx, idx), []))
             (\((e1, utxo), sve1) ((e2, _), sve2) -> ((e1 <|> e2, utxo), sve1 ++ sve2))
@@ -224,7 +223,7 @@ addBlock blk st =
      & index %~ Index.insertBlock blk
      -- The block update may contain txs that are not in this client's
      -- `txPool` which will get ignored
-     & txPool %~ (\\ map (eitherTx This This) blk)
+     & txPool %~ (\\ map (eitherTx EmulatorTx EmulatorTx) blk)
 
 addTxToPool :: CardanoTx -> TxPool -> TxPool
 addTxToPool = (:)

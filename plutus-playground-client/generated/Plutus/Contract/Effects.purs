@@ -20,12 +20,11 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.RawJson (RawJson)
 import Data.Show.Generic (genericShow)
-import Data.These (These)
 import Data.Tuple.Nested ((/\))
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.TimeSlot (SlotConversionError)
-import Ledger.Tx (ChainIndexTxOut)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (RollbackState, Tip, TxOutState)
@@ -35,7 +34,7 @@ import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash, MintingPolicy, StakeValidator, Validator)
 import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Time (POSIXTime)
-import Plutus.V1.Ledger.Tx (Tx, TxOutRef)
+import Plutus.V1.Ledger.Tx (TxOutRef)
 import Plutus.V1.Ledger.TxId (TxId)
 import Plutus.V1.Ledger.Value (AssetClass)
 import Type.Proxy (Proxy(Proxy))
@@ -84,7 +83,7 @@ _ActiveEndpoint = _Newtype
 
 data BalanceTxResponse
   = BalanceTxFailed WalletAPIError
-  | BalanceTxSuccess (These Tx RawJson)
+  | BalanceTxSuccess CardanoTx
 
 derive instance Eq BalanceTxResponse
 
@@ -113,7 +112,7 @@ _BalanceTxFailed = prism' BalanceTxFailed case _ of
   (BalanceTxFailed a) -> Just a
   _ -> Nothing
 
-_BalanceTxSuccess :: Prism' BalanceTxResponse (These Tx RawJson)
+_BalanceTxSuccess :: Prism' BalanceTxResponse CardanoTx
 _BalanceTxSuccess = prism' BalanceTxSuccess case _ of
   (BalanceTxSuccess a) -> Just a
   _ -> Nothing
@@ -385,7 +384,7 @@ data PABReq
   | OwnPaymentPublicKeyHashReq
   | ChainIndexQueryReq ChainIndexQuery
   | BalanceTxReq UnbalancedTx
-  | WriteBalancedTxReq (These Tx RawJson)
+  | WriteBalancedTxReq CardanoTx
   | ExposeEndpointReq ActiveEndpoint
   | PosixTimeRangeToContainedSlotRangeReq (Interval POSIXTime)
   | YieldUnbalancedTxReq UnbalancedTx
@@ -500,7 +499,7 @@ _BalanceTxReq = prism' BalanceTxReq case _ of
   (BalanceTxReq a) -> Just a
   _ -> Nothing
 
-_WriteBalancedTxReq :: Prism' PABReq (These Tx RawJson)
+_WriteBalancedTxReq :: Prism' PABReq CardanoTx
 _WriteBalancedTxReq = prism' WriteBalancedTxReq case _ of
   (WriteBalancedTxReq a) -> Just a
   _ -> Nothing
@@ -674,7 +673,7 @@ _YieldUnbalancedTxResp = prism' YieldUnbalancedTxResp case _ of
 
 data WriteBalancedTxResponse
   = WriteBalancedTxFailed WalletAPIError
-  | WriteBalancedTxSuccess (These Tx RawJson)
+  | WriteBalancedTxSuccess CardanoTx
 
 derive instance Eq WriteBalancedTxResponse
 
@@ -703,7 +702,7 @@ _WriteBalancedTxFailed = prism' WriteBalancedTxFailed case _ of
   (WriteBalancedTxFailed a) -> Just a
   _ -> Nothing
 
-_WriteBalancedTxSuccess :: Prism' WriteBalancedTxResponse (These Tx RawJson)
+_WriteBalancedTxSuccess :: Prism' WriteBalancedTxResponse CardanoTx
 _WriteBalancedTxSuccess = prism' WriteBalancedTxSuccess case _ of
   (WriteBalancedTxSuccess a) -> Just a
   _ -> Nothing

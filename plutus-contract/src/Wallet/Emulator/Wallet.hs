@@ -41,7 +41,6 @@ import Data.Set qualified as Set
 import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
-import Data.These (These (..))
 import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
@@ -258,7 +257,7 @@ handleWallet = \case
         theFee <- either (throwError . WAPI.ToCardanoError) pure $ evaluateTransactionFee requiredSigners tx
         tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
         cTx <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners tx'
-        let txCTx = These tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
+        let txCTx = Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
         logInfo $ FinishedBalancing txCTx
         pure txCTx
 
@@ -291,7 +290,7 @@ handleAddSignature ::
     -> Eff effs CardanoTx
 handleAddSignature tx = do
     (PaymentPrivateKey privKey) <- gets ownPaymentPrivateKey
-    pure $ bimap (Ledger.addSignature' privKey) (addSignatureCardano privKey) tx
+    pure $ Tx.cardanoTxMap (Ledger.addSignature' privKey) (addSignatureCardano privKey) tx
     where
         addSignatureCardano :: PrivateKey -> SomeCardanoApiTx -> SomeCardanoApiTx
         addSignatureCardano privKey (Tx.SomeTx ctx AlonzoEraInCardanoMode)

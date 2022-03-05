@@ -185,7 +185,6 @@ library
         tagged -any,
         text -any,
         text-class -any,
-        these -any,
         time -any,
         time-units -any,
         transformers -any,

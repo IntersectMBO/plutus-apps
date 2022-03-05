@@ -22,7 +22,6 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
-import Data.These (partitionHereThere)
 import Data.Time.Units (Microsecond, fromMicroseconds)
 import Data.Yaml (decodeFileThrow)
 import GHC.Generics (Generic)
@@ -39,7 +38,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (Tx (..))
+import Ledger.Tx (Tx (..), onCardanoTx)
 import Plutus.PAB.Types (Config (..))
 import TxInject.RandomTx (generateTx)
 import Wallet.Emulator (chainState, mockWalletPaymentPubKeyHash, txPool)
@@ -74,7 +73,7 @@ initialUtxoIndex config =
                zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
                    (repeat (Ada.adaValueOf 1000_000_000))
       initialTxs =
-        fst . partitionHereThere $
+        concatMap (onCardanoTx pure (const [])) $
         view (chainState . txPool) $
         emulatorStateInitialDist $
         Map.mapKeys mockWalletPaymentPubKeyHash dist

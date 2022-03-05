@@ -95,7 +95,7 @@
                                 "getTxId": "e737f0a0768c51a1a6b8f9f93b15e3380f9d7b2099510ae1206996c94f3201b3"
                             },
                             {
-                                "This": {
+                                "contents": {
                                     "txInputs": [],
                                     "txFee": {
                                         "getValue": []
@@ -137,7 +137,8 @@
                                             true
                                         ]
                                     }
-                                }
+                                },
+                                "tag": "EmulatorTx"
                             },
                             {
                                 "contents": [

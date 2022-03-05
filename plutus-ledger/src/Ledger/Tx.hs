@@ -1,14 +1,15 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE RecordWildCards    #-}
 
 module Ledger.Tx
     ( module Export
@@ -23,8 +24,10 @@ module Ledger.Tx
     , ciTxOutValidator
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
-    , CardanoTx
-    , theseTx
+    , CardanoTx(..)
+    , onCardanoTx
+    , mergeCardanoTxWith
+    , cardanoTxMap
     , getCardanoTxId
     , getCardanoTxInputs
     , getCardanoTxOutRefs
@@ -56,7 +59,6 @@ import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.These (These (..))
 import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
 import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
@@ -118,29 +120,48 @@ instance Pretty ChainIndexTxOut where
     pretty ScriptChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
 
-type CardanoTx = These Tx SomeCardanoApiTx
+data CardanoTx
+    = EmulatorTx Tx
+    | CardanoApiTx SomeCardanoApiTx
+    | Both Tx SomeCardanoApiTx
+    deriving (Eq, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
-theseTx :: (Tx -> r) -> (SomeCardanoApiTx -> r) -> CardanoTx -> r
-theseTx l _ (This tx)    = l tx
-theseTx l _ (These tx _) = l tx
-theseTx _ r (That tx)    = r tx
+instance Pretty CardanoTx where
+    pretty = onCardanoTx pretty (pretty . getCardanoApiTxId)
+
+onCardanoTx :: (Tx -> r) -> (SomeCardanoApiTx -> r) -> CardanoTx -> r
+onCardanoTx l r = mergeCardanoTxWith l r const
+
+mergeCardanoTxWith :: (Tx -> a) -> (SomeCardanoApiTx -> a) -> (a -> a -> a) -> CardanoTx -> a
+mergeCardanoTxWith l _ _ (EmulatorTx tx)    = l tx
+mergeCardanoTxWith l r m (Both tx ctx)      = m (l tx) (r ctx)
+mergeCardanoTxWith _ r _ (CardanoApiTx ctx) = r ctx
+
+cardanoTxMap :: (Tx -> Tx) -> (SomeCardanoApiTx -> SomeCardanoApiTx) -> CardanoTx -> CardanoTx
+cardanoTxMap l _ (EmulatorTx tx)    = EmulatorTx (l tx)
+cardanoTxMap l r (Both tx ctx)      = Both (l tx) (r ctx)
+cardanoTxMap _ r (CardanoApiTx ctx) = CardanoApiTx (r ctx)
 
 getCardanoTxId :: CardanoTx -> TxId
-getCardanoTxId = theseTx txId (\(SomeTx (C.Tx body _) _) -> CardanoAPI.fromCardanoTxId $ C.getTxId body)
+getCardanoTxId = onCardanoTx txId getCardanoApiTxId
+
+getCardanoApiTxId :: SomeCardanoApiTx -> TxId
+getCardanoApiTxId (SomeTx (C.Tx body _) _) = CardanoAPI.fromCardanoTxId $ C.getTxId body
 
 getCardanoTxInputs :: CardanoTx -> Set TxIn
-getCardanoTxInputs = theseTx txInputs
+getCardanoTxInputs = onCardanoTx txInputs
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         Set.fromList $ fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
 
 getCardanoTxOutRefs :: CardanoTx -> [(TxOut, TxOutRef)]
-getCardanoTxOutRefs = theseTx txOutRefs CardanoAPI.txOutRefs
+getCardanoTxOutRefs = onCardanoTx txOutRefs CardanoAPI.txOutRefs
 
 getCardanoTxUnspentOutputsTx :: CardanoTx -> Map TxOutRef TxOut
-getCardanoTxUnspentOutputsTx = theseTx unspentOutputsTx CardanoAPI.unspentOutputsTx
+getCardanoTxUnspentOutputsTx = onCardanoTx unspentOutputsTx CardanoAPI.unspentOutputsTx
 
 getCardanoTxFee :: CardanoTx -> Value
-getCardanoTxFee = theseTx txFee (const mempty) -- TODO: support CardanoTx
+getCardanoTxFee = onCardanoTx txFee (const mempty) -- TODO: support CardanoTx
 
 instance Pretty Tx where
     pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =

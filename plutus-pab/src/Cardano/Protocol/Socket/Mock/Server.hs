@@ -15,7 +15,6 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.List (intersect)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
-import Data.These (These (..))
 import Data.Void (Void)
 
 import Control.Concurrent
@@ -50,7 +49,7 @@ import Cardano.Protocol.Socket.Type
 
 import Cardano.Chain (MockNodeServerChainState (..), addTxToPool, chainNewestFirst, channel, currentSlot, getChannel,
                       getTip, handleControlChain, tip, txPool)
-import Ledger (Block, Slot (..), Tx (..))
+import Ledger (Block, CardanoTx (..), Slot (..), Tx (..))
 import Ledger.TimeSlot (SlotConfig)
 import Wallet.Emulator.Chain qualified as Chain
 
@@ -152,7 +151,7 @@ handleCommand ::
 handleCommand trace CommandChannel {ccCommand, ccResponse} mvChainState slotCfg =
     liftIO (atomically $ readTQueue ccCommand) >>= \case
         AddTx tx     -> do
-            liftIO $ modifyMVar_ mvChainState (pure . over txPool (This tx :))
+            liftIO $ modifyMVar_ mvChainState (pure . over txPool (EmulatorTx tx :))
         ModifySlot f -> liftIO $ do
             state <- liftIO $ takeMVar mvChainState
             (s, nextState') <- liftIO $ Chain.modifySlot f
@@ -478,7 +477,7 @@ txSubmissionServer state = txSubmissionState
         TxSubmission.LocalTxSubmissionServer {
           TxSubmission.recvMsgSubmitTx =
             \tx -> do
-                modifyMVar_ state (pure . over txPool (addTxToPool (This tx)))
+                modifyMVar_ state (pure . over txPool (addTxToPool (EmulatorTx tx)))
                 return (TxSubmission.SubmitSuccess, txSubmissionState)
         , TxSubmission.recvMsgDone     = ()
         }

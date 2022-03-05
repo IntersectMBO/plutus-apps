@@ -22,7 +22,6 @@ import Data.Bifunctor (bimap)
 import Data.ByteArray qualified as BA
 import Data.OpenApi qualified as OpenApi
 import Data.Text qualified as Text
-import Data.These (These)
 import Data.Typeable (Proxy (Proxy), Typeable)
 import GHC.Exts (IsList (fromList))
 import GHC.Generics (Generic)
@@ -175,4 +174,3 @@ instance OpenApi.ToSchema Script where
     declareNamedSchema _ =
         pure $ OpenApi.NamedSchema (Just "Script") (OpenApi.toSchema (Proxy :: Proxy String))
 deriving newtype instance OpenApi.ToSchema ScriptHash
-deriving anyclass instance (OpenApi.ToSchema a, OpenApi.ToSchema b) => OpenApi.ToSchema (These a b)

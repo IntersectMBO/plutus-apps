@@ -13,9 +13,8 @@ module Wallet.Emulator.LogMessages(
 
 import Control.Lens.TH (makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.These (These (That))
 import GHC.Generics (Generic)
-import Ledger (Address, CardanoTx, getCardanoTxId, theseTx)
+import Ledger (Address, CardanoTx, getCardanoTxId)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
@@ -61,7 +60,7 @@ instance Pretty TxBalanceMsg where
         AddingInputsFor vl           -> "Adding inputs for" <+> pretty vl
         NoCollateralInputsAdded      -> "No collateral inputs added"
         AddingCollateralInputsFor vl -> "Adding collateral inputs for" <+> pretty vl
-        FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", theseTx pretty (pretty . getCardanoTxId . That) tx]
+        FinishedBalancing tx         -> hang 2 $ vsep ["Finished balancing:", pretty tx]
         SigningTx tx                 -> "Signing tx:" <+> pretty (getCardanoTxId tx)
         SubmittingTx tx              -> "Submitting tx:" <+> pretty (getCardanoTxId tx)
 

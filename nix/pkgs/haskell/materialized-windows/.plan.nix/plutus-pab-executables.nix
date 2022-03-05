@@ -203,7 +203,6 @@
             (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."primitive" or (errorHandler.buildDepError "primitive"))
-            (hsPkgs."these" or (errorHandler.buildDepError "these"))
             ];
           buildable = true;
           modules = [ "TxInject/RandomTx" ];

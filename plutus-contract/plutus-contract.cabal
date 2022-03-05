@@ -141,7 +141,6 @@ library
         streaming -any,
         template-haskell -any,
         text -any,
-        these -any,
         transformers -any,
         unordered-containers -any,
         uuid -any,
@@ -196,7 +195,6 @@ test-suite plutus-contract-test
         Spec.Plutus.Contract.Oracle
     build-depends:
         aeson -any,
-        aeson -any,
         base >=4.9 && <5,
         bytestring -any,
         cardano-api -any,
@@ -224,7 +222,6 @@ test-suite plutus-contract-test
         tasty-hunit -any,
         tasty-quickcheck -any,
         text -any,
-        these -any,
         transformers -any
 
     if !(impl(ghcjs) || os(ghcjs))

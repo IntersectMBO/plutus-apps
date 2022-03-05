@@ -386,8 +386,7 @@ executable tx-inject
         time-units -any,
         yaml -any,
         hedgehog -any,
-        primitive -any,
-        these -any
+        primitive -any
 
 executable sync-client
     import: lang

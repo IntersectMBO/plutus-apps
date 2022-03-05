@@ -45,7 +45,7 @@ import Data.Set qualified as Set
 import Ledger.AddressMap qualified as AM
 import Ledger.Blockchain (Block, OnChainTx (Valid))
 import Ledger.Slot (Slot)
-import Ledger.Tx (Tx)
+import Ledger.Tx (CardanoTx (..), Tx)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexError)
 import Streaming (Stream)
@@ -61,7 +61,6 @@ import Wallet.Emulator.MultiAgent (EmulatorState, EmulatorTimeEvent (EmulatorTim
 import Wallet.Emulator.Wallet (Wallet, mockWalletAddress)
 
 -- TODO: Move these two to 'Wallet.Emulator.XXX'?
-import Data.These (These (This))
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Trace (InitialDistribution, defaultDist, knownWallets)
 import Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
@@ -164,7 +163,7 @@ initialState :: EmulatorConfig -> EM.EmulatorState
 initialState EmulatorConfig{_initialChainState} =
     either
         (EM.emulatorStateInitialDist . Map.mapKeys EM.mockWalletPaymentPubKeyHash)
-        (EM.emulatorStatePool . map This)
+        (EM.emulatorStatePool . map EmulatorTx)
         _initialChainState
 
 data EmulatorErr =

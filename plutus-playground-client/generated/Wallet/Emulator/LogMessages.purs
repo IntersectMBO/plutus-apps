@@ -15,14 +15,12 @@ import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
-import Data.RawJson (RawJson)
 import Data.Show.Generic (genericShow)
-import Data.These (These)
 import Data.Tuple.Nested ((/\))
 import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Tx (CardanoTx)
 import Plutus.V1.Ledger.Address (Address)
 import Plutus.V1.Ledger.Slot (Slot)
-import Plutus.V1.Ledger.Tx (Tx)
 import Plutus.V1.Ledger.Value (Value)
 import Type.Proxy (Proxy(Proxy))
 import Wallet.Emulator.Error (WalletAPIError)
@@ -90,9 +88,9 @@ data TxBalanceMsg
   | AddingInputsFor Value
   | NoCollateralInputsAdded
   | AddingCollateralInputsFor Value
-  | FinishedBalancing (These Tx RawJson)
-  | SigningTx (These Tx RawJson)
-  | SubmittingTx (These Tx RawJson)
+  | FinishedBalancing CardanoTx
+  | SigningTx CardanoTx
+  | SubmittingTx CardanoTx
 
 instance Show TxBalanceMsg where
   show a = genericShow a
@@ -165,17 +163,17 @@ _AddingCollateralInputsFor = prism' AddingCollateralInputsFor case _ of
   (AddingCollateralInputsFor a) -> Just a
   _ -> Nothing
 
-_FinishedBalancing :: Prism' TxBalanceMsg (These Tx RawJson)
+_FinishedBalancing :: Prism' TxBalanceMsg CardanoTx
 _FinishedBalancing = prism' FinishedBalancing case _ of
   (FinishedBalancing a) -> Just a
   _ -> Nothing
 
-_SigningTx :: Prism' TxBalanceMsg (These Tx RawJson)
+_SigningTx :: Prism' TxBalanceMsg CardanoTx
 _SigningTx = prism' SigningTx case _ of
   (SigningTx a) -> Just a
   _ -> Nothing
 
-_SubmittingTx :: Prism' TxBalanceMsg (These Tx RawJson)
+_SubmittingTx :: Prism' TxBalanceMsg CardanoTx
 _SubmittingTx = prism' SubmittingTx case _ of
   (SubmittingTx a) -> Just a
   _ -> Nothing
