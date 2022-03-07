@@ -7,12 +7,12 @@ import Cardano.Api
 import Cardano.Api.Extras ()
 import Control.Monad ((>=>))
 import Data.Maybe qualified as Maybe
-import Options.Applicative
-import Plutus.ChainIndex.Tx
-import Plutus.Contract.CardanoAPI
+import Options.Applicative hiding (header)
 import Plutus.Streaming
+import Plutus.Streaming.ChainIndex
 import Streaming
 import Streaming.Prelude qualified as S
+import Text.Pretty.Simple (pPrint)
 
 --
 -- Options parsing
@@ -23,6 +23,7 @@ data Example
   | HowManyBlocksBeforeRollback
   | HowManyBlocksBeforeRollbackImpure
   | ComposePureAndImpure
+  | ChainIndex
   deriving (Show, Read)
 
 data Options
@@ -66,34 +67,15 @@ chainPointParser =
         )
 
 --
--- Example consumers
+-- Utilities
 --
 
-justBlocks ::
-  Monad m =>
-  Stream (Of SimpleChainSyncEvent) m b ->
-  Stream (Of (Either FromCardanoError [ChainIndexTx])) m ()
-justBlocks =
-  --
-  -- read the following back to front
-  --
+pPrintStream :: (Show a, MonadIO m) => Stream (Of a) m r -> m r
+pPrintStream = S.mapM_ pPrint
 
-  -- format
-  S.map fromCardanoBlock
-    -- filter out rollbacks (Do we have optics?)
-    . S.catMaybes
-    . S.map (\case RollForward bim _ -> Just bim; _ -> Nothing)
-    -- take 10 blocks
-    . S.take 10
-
-transactions ::
-  Monad m =>
-  Stream (Of SimpleChainSyncEvent) m () ->
-  Stream (Of SomeCardanoApiTx) m ()
-transactions =
-  S.concat . S.map (\case
-    RollForward bim _ -> fromCardanoBlockInMode bim
-    RollBackward _ _  -> [])
+--
+-- Example consumers
+--
 
 howManyBlocksBeforeRollback ::
   Monad m =>
@@ -132,24 +114,19 @@ composePureAndImpure ::
   Stream (Of SimpleChainSyncEvent) IO r ->
   IO ()
 composePureAndImpure =
-  (S.print . howManyBlocksBeforeRollbackImpure)
-    . (S.print . howManyBlocksBeforeRollback)
+  (pPrintStream . howManyBlocksBeforeRollbackImpure)
+    . (pPrintStream . howManyBlocksBeforeRollback)
     . S.copy
 
 --
 -- Main
 --
 
+deriving instance Show BlockHeader
+
 main :: IO ()
 main = do
-  options <-
-    execParser $
-      info
-        (optionsParser <**> helper)
-        ( fullDesc
-            <> progDesc "Print a greeting for TARGET"
-            <> header "hello - a test for optparse-applicative"
-        )
+  options <- execParser $ info (optionsParser <**> helper) mempty
 
   case options of
     Simple {optionsSocketPath, optionsChainPoint, optionsExample} -> do
@@ -159,20 +136,27 @@ main = do
         optionsChainPoint
         $ case optionsExample of
           Print ->
-            S.print >=> print
+            S.stdoutLn . S.map (
+              \case
+                RollForward (BlockInMode (Block header _txs) _era) _ct -> "RollForward, header: " <> show header
+                RollBackward cp _ct                                    -> "RollBackward, point: " <> show cp
+            ) . S.take 10 >=> print
           HowManyBlocksBeforeRollback ->
-            S.print . howManyBlocksBeforeRollback >=> print
+            pPrintStream . howManyBlocksBeforeRollback >=> print
           HowManyBlocksBeforeRollbackImpure ->
-            S.print . howManyBlocksBeforeRollbackImpure >=> print
+            pPrintStream . howManyBlocksBeforeRollbackImpure >=> print
           ComposePureAndImpure ->
             composePureAndImpure >=> print
+          ChainIndex ->
+            -- pPrintStream  . utxoState . S.print . S.map (fmap f) . S.copy . S.take 10 >=> print
+            pPrintStream  . utxoState . S.take 10 >=> print
     WithLedgerState {optionsNetworkConfigPath, optionsSocketPath, optionsChainPoint} ->
       withChainSyncEventStreamWithLedgerState
         optionsNetworkConfigPath
         optionsSocketPath
         Mainnet
         optionsChainPoint
-        (S.print . S.take 10 >=> print)
+        (pPrintStream . S.take 10 >=> print)
 
 deriving instance Show LedgerState
 
