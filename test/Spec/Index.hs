@@ -1,7 +1,6 @@
 module Spec.Index where
 
 import           QuickSpec
-import           Test.Tasty
 import           Test.Tasty.QuickCheck
 import Test.QuickCheck.Monadic
 import           Data.Maybe            (fromJust, isJust, isNothing)

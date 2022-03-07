@@ -44,6 +44,7 @@ library
       MultiParamTypeClasses
       FlexibleInstances
       GADTs
+  ghc-options: -Wall
   build-depends:
       QuickCheck
     , base >=4.7 && <5
@@ -68,7 +69,7 @@ test-suite hysterical-screams-test
       MultiParamTypeClasses
       FlexibleInstances
       GADTs
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       QuickCheck
     , base >=4.7 && <5

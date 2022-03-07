@@ -39,6 +39,8 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -Wall
 
 verbatim:
   Tested-With: GHC ==8.10.7
@@ -51,6 +53,7 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - hysterical-screams
     - QuickCheck

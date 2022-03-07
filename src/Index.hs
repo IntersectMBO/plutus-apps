@@ -21,7 +21,7 @@ import           Control.Monad   (replicateM)
 import           Data.Foldable   (foldl')
 import           Data.Maybe      (fromJust)
 import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
-                                  arbitrarySizedIntegral, choose, chooseInt,
+                                  arbitrarySizedIntegral, chooseInt,
                                   frequency, listOf, sized)
 import QuickSpec
 import GHC.Generics
@@ -58,7 +58,7 @@ data Index a e = New (a -> e -> a) Int a
                | Rewind Int (Index a e)
 
 instance (Show a, Show e) => Show (Index a e) where
-  show (New f depth acc) = "New <f> " <> show depth <> " " <> show acc
+  show (New _ depth acc) = "New <f> " <> show depth <> " " <> show acc
   show (Insert b ix) = "Insert " <> show b <> " (" <> show ix <> ")"
   show (Rewind n ix) = "Rewind " <> show n <> " (" <> show ix <> ")"
 
@@ -88,7 +88,7 @@ rewind = Rewind
 -- | Observations
 
 view :: Index a e -> Maybe (IndexView a)
-view (New f depth initial) =
+view (New _ depth initial) =
   if depth > 0
   then pure $ IndexView { ixDepth = depth
                         , ixView  = initial
@@ -190,9 +190,9 @@ generateGrammarIndex n ix = do
   b      <- arbitrary
   -- This should be correct by construction (the incorrect cases are not very
   -- interesting).
-  n      <- chooseInt (1, ixDepth . fromJust $ view ix)
+  d      <- chooseInt (1, ixDepth . fromJust $ view ix)
   nextIx <- frequency [ (80, pure            $ insert b ix)
-                      , (20, pure            $ rewind n ix)
+                      , (20, pure            $ rewind d ix)
                       ]
   generateGrammarIndex (n - 1) nextIx
 
@@ -200,10 +200,10 @@ instance Arbitrary a => Arbitrary (IndexView a) where
   arbitrary = sized $ \n -> do
     depth <- chooseInt (2, n)
     size  <- chooseInt (0, depth)
-    view  <- arbitrary
+    view'  <- arbitrary
     pure IndexView { ixDepth = depth
                    , ixSize  = size
-                   , ixView  = view
+                   , ixView  = view'
                    }
 
 -- | QuickSpec

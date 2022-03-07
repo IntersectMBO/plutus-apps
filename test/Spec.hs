@@ -1,4 +1,3 @@
-import           Data.Maybe              (fromJust, isJust, isNothing)
 import           Test.QuickCheck.Monadic
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
