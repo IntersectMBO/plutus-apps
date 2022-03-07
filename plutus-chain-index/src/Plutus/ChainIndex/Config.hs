@@ -41,7 +41,7 @@ data ChainIndexConfig = ChainIndexConfig
   , cicSecurityParam   :: Int -- ^ The number of blocks after which a transaction cannot be rolled back anymore
   , cicSlotConfig      :: SlotConfig
   , cicStoreFrom       :: BlockNo -- ^ Only store transactions from this block number onward
-  , cicAppendPeriod    :: Int -- ^ How often the appending of blocks should happen
+  , cicAppendPeriod    :: Int -- ^ How often the appending of blocks should happen (in microseconds)
   , cicAppendBatchSize :: Int -- ^ The number of blocks to collect before writing to the database
   }
   deriving stock (Show, Eq, Generic)
@@ -71,7 +71,7 @@ defaultConfig = ChainIndexConfig
         , scSlotLength   = 1000
         }
   , cicStoreFrom = BlockNo 0
-  , cicAppendPeriod    = 30_000_000
+  , cicAppendPeriod    = 30_000_000 -- 30s
   , cicAppendBatchSize = 15000
   }
 
