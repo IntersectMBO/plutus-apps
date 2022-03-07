@@ -76,40 +76,39 @@ data IndexView a = IndexView
 
 -- | Constructors
 
-new :: (a -> e -> a) -> Int -> a -> Maybe (Index a e)
-new f depth initial
-  | depth > 0 = Just $ New f depth initial
-  | otherwise = Nothing
+new :: (a -> e -> a) -> Int -> a -> Index a e
+new = New
 
 insert :: e -> Index a e -> Index a e
 insert = Insert
 
-rewind :: Int -> Index a e -> Maybe (Index a e)
-rewind n ix
-  | ixDepth (view ix) <= n = Nothing
-  | ixSize  (view ix) <  n = Nothing
-  | otherwise = Just $ Rewind n ix
+rewind :: Int -> Index a e -> Index a e
+rewind = Rewind
 
 -- | Observations
 
-view :: Index a e -> IndexView a
+view :: Index a e -> Maybe (IndexView a)
 view (New f depth initial) =
-  IndexView { ixDepth = depth
-            , ixView  = initial
-            , ixSize  = 1
-            }
-view (Insert e ix) =
+  if depth > 0
+  then pure $ IndexView { ixDepth = depth
+                        , ixView  = initial
+                        , ixSize  = 1
+                        }
+  else Nothing
+view (Insert e ix) = do
   let f = getFunction ix
-      v = view ix
-   in v { ixView = f (ixView v) e
-        , ixSize = min (ixDepth v) (ixSize v + 1)
-        }
-view (Rewind n ix) =
-  let h = getHistory ix
-      v = view ix
-  in v { ixSize = ixSize v - n
-       , ixView = head $ drop n h
-       }
+  v <- view ix
+  pure $ v { ixView = f (ixView v) e
+           , ixSize = min (ixDepth v) (ixSize v + 1)
+           }
+view (Rewind n ix) = do
+  h <- getHistory ix
+  v <- view ix
+  if length h > n
+  then Just $ v { ixSize = ixSize v - n
+                , ixView = head $ drop n h
+                }
+  else Nothing
 
 -- | Internal
 
@@ -118,14 +117,18 @@ getFunction (New f _ _)   = f
 getFunction (Insert _ ix) = getFunction ix
 getFunction (Rewind _ ix) = getFunction ix
 
-getHistory :: Index a e -> [a]
-getHistory (New _ _ i) = [i]
-getHistory (Insert e ix) =
+getHistory :: Index a e -> Maybe [a]
+getHistory (New _ _ i) = Just [i]
+getHistory (Insert e ix) = do
   let f = getFunction ix
-      h = getHistory  ix
-      v = view ix
-  in f (head h) e : take (ixDepth v - 1) h
-getHistory (Rewind n ix) = drop n $ getHistory ix
+  h <- getHistory ix
+  v <- view ix
+  pure $ f (head h) e : take (ixDepth v - 1) h
+getHistory (Rewind n ix) = do
+  h <- getHistory ix
+  if length h > n
+  then Just $ drop n h
+  else Nothing
 
 -- | Utility
 
@@ -154,8 +157,8 @@ instance ( CoArbitrary a
                        ]
     -- Construction can only fail due to NonPositive depth
     -- Tested with prop_hfNewReturns...
-    let newHf = fromJust $ new fn depth acc
-    pure . ObservedBuilder $ insertL bs newHf
+    let ix = new fn depth acc
+    pure . ObservedBuilder $ insertL bs ix 
 
 instance ( CoArbitrary a
          , CoArbitrary e
@@ -177,7 +180,7 @@ instance ( CoArbitrary a
                        ]
     f     <- arbitrary
     acc   <- arbitrary
-    let ix = fromJust $ new f depth acc
+    let ix = new f depth acc
     complexity <- arbitrarySizedIntegral
     generateGrammarIndex complexity ix
 
@@ -185,9 +188,11 @@ generateGrammarIndex :: Arbitrary e => Int -> Index a e -> Gen (GrammarBuilder a
 generateGrammarIndex 0 ix = pure $ GrammarBuilder ix
 generateGrammarIndex n ix = do
   b      <- arbitrary
-  n      <- chooseInt (1, ixDepth $ view ix)
+  -- This should be correct by construction (the incorrect cases are not very
+  -- interesting).
+  n      <- chooseInt (1, ixDepth . fromJust $ view ix)
   nextIx <- frequency [ (80, pure            $ insert b ix)
-                      , (20, pure . fromJust $ rewind n ix)
+                      , (20, pure            $ rewind n ix)
                       ]
   generateGrammarIndex (n - 1) nextIx
 
@@ -214,7 +219,7 @@ instance ( Ord a
          , Arbitrary e
          , CoArbitrary a
          , CoArbitrary e) => Observe (IxEvents e) (IndexView a) (Index a e) where
-  observe (IxEvents es) ix = view $ insertL es ix
+  observe (IxEvents es) ix = fromJust $ view $ insertL es ix
 
 ixSignature :: [Sig]
 ixSignature =
@@ -225,10 +230,10 @@ ixSignature =
   , monoObserve @(Maybe (Index Int Int))
   , monoObserve @(Maybe (Index Int [Int]))
   , mono @(IndexView Int)
-  , con "new" (new :: (Int -> String -> Int) -> Int -> Int -> Maybe (Index Int String))
+  , con "new" (new :: (Int -> String -> Int) -> Int -> Int -> Index Int String)
   , con "insert" (insert :: String -> Index Int String -> Index Int String)
-  , con "view" (view :: Index Int String -> IndexView Int)
-  , con "rewind" (rewind :: Int -> Index Int String -> Maybe (Index Int String))
-  , con "getHistory" (getHistory :: Index Int String -> [Int])
+  , con "view" (view :: Index Int String -> Maybe (IndexView Int))
+  , con "rewind" (rewind :: Int -> Index Int String -> Index Int String)
+  , con "getHistory" (getHistory :: Index Int String -> Maybe [Int])
   , withMaxTermSize 6
   ]
