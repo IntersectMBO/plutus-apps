@@ -164,7 +164,7 @@
     "plutus-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1640168705,
+        "lastModified": 1642505687,
         "narHash": "sha256-Pl3M9rMEoiEKRsTdDr4JwNnRo5Xs4uN66uVpOfaMCfE=",
         "owner": "input-output-hk",
         "repo": "plutus",
