@@ -23,8 +23,6 @@ ixProperties = testGroup "Basic model"
       withMaxSuccess 10000 $ Ix.prop_insertRewindInverse @Int @Int Ix.conversion
   , testProperty "Insert is folding the structure" $
       withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int Ix.conversion
-  , testProperty "Insert is increasing the length unless overflowing" $
-      withMaxSuccess 10000 $ Ix.prop_insertSize @Int @Int Ix.conversion
   ]
 
 

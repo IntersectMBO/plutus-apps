@@ -126,20 +126,3 @@ prop_observeInsert c (ObservedBuilder ix) bs =
                              , ixSize  = min (ixDepth v) (length bs + ixSize v)
                              , ixView  = foldl' (getFunction ix) (ixView v) bs
                              }
-
-prop_insertSize
-  :: forall e a m. Monad m
-  => Conversion m a e
-  -> ObservedBuilder a e
-  -> e
-  -> Property
-prop_insertSize c (ObservedBuilder ix) b =
-  let v             = fromJust $ view ix
-      initialLength = ixSize v
-   in cover 10 (initialLength == ixDepth v) "Overflowing" $
-      cover 30 (initialLength <  ixDepth v)  "Not filled" $
-      monadic (cMonadic c) $ do
-        finalLength <- ixSize . fromJust <$> run (cView c $ insert b ix)
-        if initialLength == ixDepth v
-        then assert $ finalLength == initialLength
-        else assert $ finalLength == initialLength + 1
