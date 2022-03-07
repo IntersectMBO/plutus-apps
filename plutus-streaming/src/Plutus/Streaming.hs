@@ -21,7 +21,7 @@ import Streaming.Prelude qualified as S
 data ChainSyncEvent a
   = RollForward a ChainTip
   | RollBackward ChainPoint ChainTip
-  deriving (Show)
+  deriving (Show, Functor)
 
 type SimpleChainSyncEvent = ChainSyncEvent (BlockInMode CardanoMode)
 

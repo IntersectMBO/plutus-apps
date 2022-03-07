@@ -28,14 +28,18 @@ library
     exposed-modules:
         Cardano.Api.Extras
         Plutus.Streaming
+        Plutus.Streaming.ChainIndex
     build-depends:
         base >=4.9 && <5,
         async,
         base16-bytestring,
         bytestring,
         cardano-api,
+        containers,
         contra-tracer,
+        data-default-class,
         lens,
+        plutus-chain-index-core,
         plutus-ledger,
         streaming,
         transformers,
@@ -50,12 +54,10 @@ executable main
     build-depends:
         plutus-streaming,
         base >=4.9 && <5,
-        aeson,
-        bytestring,
         cardano-api,
         optparse-applicative,
         plutus-chain-index-core,
-        -- pretty-simple,
+        pretty-simple,
         streaming,
 
     hs-source-dirs:   app
