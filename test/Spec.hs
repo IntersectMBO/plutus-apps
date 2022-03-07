@@ -8,8 +8,6 @@ import qualified Index                   as Ix
 import qualified Spec.Index              as Ix
 import qualified Index.Split             as S
 
-import qualified Debug.Trace             as Debug
-
 tests :: TestTree
 tests = testGroup "Index" [ixProperties]
 
@@ -18,15 +16,15 @@ ixProperties = testGroup "Basic model"
   [ testProperty "New: Positive or non-positive depth" $
       withMaxSuccess 10000 $ Ix.prop_observeNew @Int @Int Ix.conversion
   , testProperty "History length is always smaller than the max depth" $
-      withMaxSuccess 10000 $ Ix.prop_sizeLEDepth @Int @Int
+      withMaxSuccess 10000 $ Ix.prop_sizeLEDepth @Int @Int Ix.conversion
   , testProperty "Rewind: Connection with `ixDepth`" $
-      withMaxSuccess 10000 $ Ix.prop_rewindDepth @Int @Int
+      withMaxSuccess 10000 $ Ix.prop_rewindDepth @Int @Int Ix.conversion
   , testProperty "Relationship between Insert/Rewind" $
-      withMaxSuccess 10000 $ Ix.prop_insertRewindInverse @Int @Int
+      withMaxSuccess 10000 $ Ix.prop_insertRewindInverse @Int @Int Ix.conversion
   , testProperty "Insert is folding the structure" $
-      withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int
+      withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int Ix.conversion
   , testProperty "Insert is increasing the length unless overflowing" $
-      withMaxSuccess 10000 $ Ix.prop_insertSize @Int @Int
+      withMaxSuccess 10000 $ Ix.prop_insertSize @Int @Int Ix.conversion
   ]
 
 

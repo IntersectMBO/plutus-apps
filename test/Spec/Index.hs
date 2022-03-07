@@ -10,8 +10,6 @@ import Data.Functor.Identity (Identity, runIdentity)
 
 import Index
 
-import qualified Debug.Trace as Debug
-
 data Conversion m a e = Conversion
   { cView    :: Index a e -> m (Maybe (IndexView a))
   , cHistory :: Index a e -> m (Maybe [a])
@@ -56,9 +54,11 @@ prop_observeNew c f a =
 -- | Properties of the connection between rewind and depth
 --   Note: Cannot rewind if (ixDepth ix == 1)
 prop_rewindDepth
-  :: Show a => ObservedBuilder a b
+  :: forall e a m. (Monad m)
+  => Conversion m a e
+  -> ObservedBuilder a e
   -> Property
-prop_rewindDepth (ObservedBuilder ix) =
+prop_rewindDepth c (ObservedBuilder ix) =
   let v = fromJust $ view ix in
   ixDepth v >= 2 ==>
   forAll (frequency [ (20, chooseInt (ixDepth v, ixDepth v * 2))
@@ -70,25 +70,30 @@ prop_rewindDepth (ObservedBuilder ix) =
           "Depth is lower than max but there is not enough data."   $
     cover 40 (depth <= ixDepth v && depth <= ixSize v)
           "Depth is properly set."                                  $
-    let mv' = view $ rewind depth ix
-    in  if depth >= ixSize v
-        then property $ isNothing mv'
-        else property $ isJust    mv'
+    monadic (cMonadic c) $ do
+      mv <- run $ cView c (rewind depth ix)
+      if depth >= ixSize v
+        then assert $ isNothing mv
+        else assert $ isJust    mv
 
 -- | Property that validates the HF data structure.
 prop_sizeLEDepth
-  :: ObservedBuilder a b
+  :: forall e a m. (Monad m)
+  => Conversion m a e
+  -> ObservedBuilder a e
   -> Property
-prop_sizeLEDepth (ObservedBuilder ix) =
-  let v = fromJust $ view ix
-   in property $ ixSize v <= ixDepth v
+prop_sizeLEDepth c (ObservedBuilder ix) =
+  monadic (cMonadic c) $ do
+    (Just v) <- run $ cView c ix
+    assert $ ixSize v <= ixDepth v
 
 -- | Relation between Rewind and Inverse
 prop_insertRewindInverse
-  :: (Show a, Show b, Arbitrary b, Eq a)
-  => ObservedBuilder a b
+  :: forall e a m. (Monad m, Show e, Arbitrary e, Eq a)
+  => Conversion m a e
+  -> ObservedBuilder a e
   -> Property
-prop_insertRewindInverse (ObservedBuilder ix) =
+prop_insertRewindInverse c (ObservedBuilder ix) =
   let v = fromJust $ view ix
   -- rewind does not make sense for lesser depths.
    in ixDepth v >= 2 ==>
@@ -96,39 +101,45 @@ prop_insertRewindInverse (ObservedBuilder ix) =
   -- prefix after the insert/rewind play. We need input which is less
   -- than `hfDepth hf`
   forAll (resize (ixDepth v - 1) arbitrary) $
-  \bs ->
-      let ix' = rewind (length bs) $ insertL bs ix
-          -- This should always be Just.. because of the resize of `bs`
-          h   = take (ixDepth v - length bs) $ fromJust $ getHistory ix
-          h'  = fromJust $ getHistory ix'
-       in property $ h == h'
+  \bs -> monadic (cMonadic c) $ do
+    let ix' = rewind (length bs) $ insertL bs ix
+    Just v' <- run $ cView c ix
+    h  <- take (ixDepth v' - length bs) . fromJust <$> run (cHistory c ix)
+    h' <- fromJust <$> run (cHistory c ix')
+    assert $ h == h'
 
 -- | Generally this would not be a good property since it is very coupled
 --   to the implementation, but it will be useful when trying to certify that
 --   another implmentation is confirming.
 prop_observeInsert
-  :: (Eq a, Show a)
-  => ObservedBuilder a b
-  -> [b]
+  :: forall e a m. (Monad m, Eq a, Show a)
+  => Conversion m a e
+  -> ObservedBuilder a e
+  -> [e]
   -> Property
-prop_observeInsert (ObservedBuilder ix) bs =
-  let v = fromJust $ view ix
-   in view (insertL bs ix) ===
-        Just (IndexView { ixDepth = ixDepth v
-                        , ixSize  = min (ixDepth v) (length bs + ixSize v)
-                        , ixView  = foldl' (getFunction ix) (ixView v) bs
-                        })
+prop_observeInsert c (ObservedBuilder ix) bs =
+  monadic (cMonadic c) $ do
+    Just v  <- run $ cView c ix
+    let ix' = insertL bs ix
+    Just v' <- run $ cView c ix'
+    assert $ v' == IndexView { ixDepth = ixDepth v
+                             , ixSize  = min (ixDepth v) (length bs + ixSize v)
+                             , ixView  = foldl' (getFunction ix) (ixView v) bs
+                             }
 
 prop_insertSize
-  :: ObservedBuilder a b
-  -> b
+  :: forall e a m. Monad m
+  => Conversion m a e
+  -> ObservedBuilder a e
+  -> e
   -> Property
-prop_insertSize (ObservedBuilder ix) b =
+prop_insertSize c (ObservedBuilder ix) b =
   let v             = fromJust $ view ix
       initialLength = ixSize v
-      finalLength   = ixSize . fromJust . view $ insert b ix
    in cover 10 (initialLength == ixDepth v) "Overflowing" $
       cover 30 (initialLength <  ixDepth v)  "Not filled" $
-      if initialLength == ixDepth v
-      then finalLength === initialLength
-      else finalLength === initialLength + 1
+      monadic (cMonadic c) $ do
+        finalLength <- ixSize . fromJust <$> run (cView c $ insert b ix)
+        if initialLength == ixDepth v
+        then assert $ finalLength == initialLength
+        else assert $ finalLength == initialLength + 1
