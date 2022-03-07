@@ -89,14 +89,10 @@ runMain logConfig config = do
 
     putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config
     syncChainIndex config runReq syncHandler
-    putStrLn $ "setup trace"
 
     (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
-    putStrLn $ "log progress"
     withAsync (runLogEffects (convertLog PrettyObject trace) $ logProgress syncStatsChan) $ \_ -> do
-      putStrLn $ "starting processEventsChan"
-      withAsync (processEventsChan runReq eventsChan) $ \_ -> do
-        putStrLn $ "started processEventsChan"
+      withAsync (processEventsChan runReq eventsChan (Config.cicAppendPeriod config) (Config.cicAppendBatchSize config)) $ \_ -> do
 
         let port = show (Config.cicPort config)
         putStrLn $ "Starting webserver on port " <> port

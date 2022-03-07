@@ -14,39 +14,32 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (atomically, dupTChan, tryReadTChan)
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
+import Data.Functor ((<&>))
 import Data.Maybe (catMaybes)
 import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward), EventsChan, RunRequirements,
                               runChainIndexDuringSync)
 
-batchSize :: Int
-batchSize = 15000
-
--- | 30s
-period :: Int
-period = 30_000_000
-
-processEventsChan :: RunRequirements -> EventsChan -> IO ()
-processEventsChan runReq eventsChan = void $ do
+processEventsChan :: RunRequirements -> EventsChan -> Int -> Int -> IO ()
+processEventsChan runReq eventsChan period batchSize = void $ do
   chan <- liftIO $ atomically $ dupTChan eventsChan
-  putStrLn "started"
+  putStrLn "Starting processing of events"
   go chan
   where
     go chan = do
-      events :: [ChainSyncEvent] <- readEventsFromTChan chan
+      events :: [ChainSyncEvent] <- readEventsFromTChan chan period batchSize
       case events of
         firstBlock : rollForwardEvents -> do
-          print $ show $ length rollForwardEvents
           void $ runChainIndexDuringSync runReq $ do
             let
               -- if the first block is 'RollForward' then process all events
+              -- otherwise only the tail
               rollForwardEvents' = case firstBlock of
                 (RollForward _ _) -> events
                 _                 -> rollForwardEvents
-              getBlock = \case
+              blocks = catMaybes $ rollForwardEvents' <&> \case
                 (RollForward block _) -> Just block
                 _                     -> Nothing
-              blocks = catMaybes $ map getBlock rollForwardEvents'
             CI.appendBlocks blocks
             case firstBlock of
               (RollBackward point _) -> CI.rollback point
@@ -55,16 +48,21 @@ processEventsChan runReq eventsChan = void $ do
         [] -> putStrLn "empty list of events"
       go chan
 
--- | Read 'RollForward' events from the 'TChan' the until 'RollBackward' or 'Resume'.
-readEventsFromTChan :: EventsChan -> IO [ChainSyncEvent]
-readEventsFromTChan chan =
+-- | Read 'RollForward' events from the 'TChan' until either:
+-- 1. Collected the 'batchSize' number of events
+-- 2. 'RollBackward' or 'Resume' is met
+readEventsFromTChan :: EventsChan -> Int -> Int -> IO [ChainSyncEvent]
+readEventsFromTChan chan period batchSize =
     let
       go combined 0 = pure combined
       go combined n = do
             eventM <- atomically $ tryReadTChan chan
             case eventM of
-              Nothing    -> putStrLn "nothing here, waiting" >> threadDelay period >> go combined n
+              Nothing    -> do
+                -- the chain is empty, waiting
+                threadDelay period
+                go combined n
               Just event -> case event of
                 (RollForward _ _) -> go (event : combined) (n - 1)
-                _                 -> putStrLn "not RollForward!!!" >> pure (event : combined)
+                _                 -> pure (event : combined)
      in go [] batchSize
