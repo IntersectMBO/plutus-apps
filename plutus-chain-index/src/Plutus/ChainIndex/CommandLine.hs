@@ -20,20 +20,24 @@ import Plutus.ChainIndex.Config qualified as Config
 
 data CLIConfigOverrides =
   CLIConfigOverrides
-    { ccSocketPath :: Maybe String
-    , ccDbPath     :: Maybe String
-    , ccPort       :: Maybe Int
-    , ccNetworkId  :: Maybe Word32
+    { ccSocketPath      :: Maybe String
+    , ccDbPath          :: Maybe String
+    , ccPort            :: Maybe Int
+    , ccNetworkId       :: Maybe Word32
+    , ccAppendPeriod    :: Maybe Int
+    , ccAppendBatchSize :: Maybe Int
     }
     deriving (Eq, Ord, Show)
 
 -- | Apply the CLI soverrides to the 'ChainIndexConfig'
 applyOverrides :: CLIConfigOverrides -> ChainIndexConfig -> ChainIndexConfig
-applyOverrides CLIConfigOverrides{ccSocketPath, ccDbPath, ccPort, ccNetworkId} =
+applyOverrides CLIConfigOverrides{ccSocketPath, ccDbPath, ccPort, ccNetworkId, ccAppendPeriod, ccAppendBatchSize} =
   over Config.socketPath (maybe id const ccSocketPath)
   . over Config.dbPath (maybe id const ccDbPath)
   . over Config.port (maybe id const ccPort)
   . over Config.networkId (maybe id (const . Testnet . NetworkMagic) ccNetworkId)
+  . over Config.appendPeriod (maybe id const ccAppendPeriod)
+  . over Config.appendBatchSize (maybe id const ccAppendBatchSize)
 
 -- | Configuration
 data Command =
@@ -65,7 +69,7 @@ optParser =
 
 cliConfigOverridesParser :: Parser CLIConfigOverrides
 cliConfigOverridesParser =
-  CLIConfigOverrides <$> socketPathParser <*> dbPathParser <*> portParser <*> networkIDParser where
+  CLIConfigOverrides <$> socketPathParser <*> dbPathParser <*> portParser <*> networkIDParser <*> appendPeriodParser <*> appendBatchSizeParser where
     socketPathParser =
       option (Just <$> str) (long "socket-path" <> value Nothing <> help "Node socket path")
     dbPathParser =
@@ -74,6 +78,10 @@ cliConfigOverridesParser =
       option (Just <$> auto) (long "port" <> value Nothing <> help "Port")
     networkIDParser =
       option (Just <$> auto) (long "network-id" <> value Nothing <> help "Network ID")
+    appendPeriodParser =
+      option (Just <$> auto) (long "append-period" <> value Nothing <> help "Append period")
+    appendBatchSizeParser =
+      option (Just <$> auto) (long "append-batch-size" <> value Nothing <> help "Append batch size")
 
 loggingConfigParser :: Parser (Maybe FilePath)
 loggingConfigParser =
