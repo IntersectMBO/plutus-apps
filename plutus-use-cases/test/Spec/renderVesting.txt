@@ -101,11 +101,11 @@ Balances Carried Forward:
     Ada:      Lovelace:  100000000
 
 ==== Slot #1, Tx #0 ====
-TxId:       e36e1c8bd2906e1fc26fca72f0d8337b216cf70cf7bb82a7f69937c560bd66bc
+TxId:       8e385082317b2fb2af18e9cb5dc647eaf92df7e7d0d65e610f749ae3782d1e4c
 Fee:        Ada:      Lovelace:  10
 Mint:       -
 Signatures  PubKey: 98c77c40ccc536e0d433874dae97d4a0787b10b3...
-              Signature: 58406ebb3d3154ed21cdcbbcd49dd38dcb729fae...
+              Signature: 5840d0dfa54ddc31c27cd75508b75f2e60fcdce2...
 Inputs:
   ---- Input 0 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
@@ -124,7 +124,7 @@ Outputs:
     Ada:      Lovelace:  39999990
 
   ---- Output 1 ----
-  Destination:  Script: f8179bebfc0232059c82c5809cc6aca696a482a77d0acbccf1151aa4
+  Destination:  Script: 87287fdc5ae4aaa2072b64e0a51b409ea86061ed35d2e4eeef34c064
   Value:
     Ada:      Lovelace:  60000000
 
@@ -170,35 +170,35 @@ Balances Carried Forward:
   Value:
     Ada:      Lovelace:  100000000
 
-  Script: f8179bebfc0232059c82c5809cc6aca696a482a77d0acbccf1151aa4
+  Script: 87287fdc5ae4aaa2072b64e0a51b409ea86061ed35d2e4eeef34c064
   Value:
     Ada:      Lovelace:  60000000
 
 ==== Slot #2, Tx #0 ====
-TxId:       ae43ef9b7e669bae3d40eaf686532d1bd8f270b3ba8192c1d37af0cfe9e20008
-Fee:        Ada:      Lovelace:  5673
+TxId:       e79317c6eadebfe423196f4f00bd9fe56be099ce8a9e4ecf1767171154e78495
+Fee:        Ada:      Lovelace:  4677
 Mint:       -
 Signatures  PubKey: 8d9de88fbf445b7f6c3875a14daba94caee2ffcb...
-              Signature: 584001d04193fc1e67df62c88979a8d5afd78b34...
+              Signature: 5840aba3bc5d3da08e6b30b9442d87c50a624a0d...
 Inputs:
   ---- Input 0 ----
-  Destination:  Script: f8179bebfc0232059c82c5809cc6aca696a482a77d0acbccf1151aa4
+  Destination:  Script: 87287fdc5ae4aaa2072b64e0a51b409ea86061ed35d2e4eeef34c064
   Value:
     Ada:      Lovelace:  60000000
   Source:
-    Tx:     e36e1c8bd2906e1fc26fca72f0d8337b216cf70cf7bb82a7f69937c560bd66bc
+    Tx:     8e385082317b2fb2af18e9cb5dc647eaf92df7e7d0d65e610f749ae3782d1e4c
     Output #1
-    Script: 5911a30100003323233223232332232333222323...
+    Script: 590e860100003323232323232323232323232323...
 
 
 Outputs:
   ---- Output 0 ----
   Destination:  PaymentPubKeyHash: a2c20c77887ace1cd986193e4e75babd8993cfd5... (Wallet 872cb83b5ee40eb23bfdab1772660c822a48d491)
   Value:
-    Ada:      Lovelace:  9994327
+    Ada:      Lovelace:  9995323
 
   ---- Output 1 ----
-  Destination:  Script: f8179bebfc0232059c82c5809cc6aca696a482a77d0acbccf1151aa4
+  Destination:  Script: 87287fdc5ae4aaa2072b64e0a51b409ea86061ed35d2e4eeef34c064
   Value:
     Ada:      Lovelace:  50000000
 
@@ -226,7 +226,7 @@ Balances Carried Forward:
 
   PaymentPubKeyHash: a2c20c77887ace1cd986193e4e75babd8993cfd5... (Wallet 872cb83b5ee40eb23bfdab1772660c822a48d491)
   Value:
-    Ada:      Lovelace:  109994327
+    Ada:      Lovelace:  109995323
 
   PaymentPubKeyHash: a96a668ed7be83e332c872f51da7925b4472ca98... (Wallet bdf8dbca0cadeb365480c6ec29ec746a2b85274f)
   Value:
@@ -244,6 +244,6 @@ Balances Carried Forward:
   Value:
     Ada:      Lovelace:  100000000
 
-  Script: f8179bebfc0232059c82c5809cc6aca696a482a77d0acbccf1151aa4
+  Script: 87287fdc5ae4aaa2072b64e0a51b409ea86061ed35d2e4eeef34c064
   Value:
     Ada:      Lovelace:  50000000

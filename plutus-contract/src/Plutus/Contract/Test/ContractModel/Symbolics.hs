@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Plutus.Contract.Test.ContractModel.Symbolics where
 
@@ -6,6 +7,7 @@ import Ledger.Value (AssetClass, Value, assetClassValue, assetClassValueOf, isZe
 import PlutusTx.Monoid qualified as PlutusTx
 
 import Data.Aeson qualified as JSON
+import Data.Data
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -30,9 +32,9 @@ import Test.QuickCheck.StateModel hiding (Action, Actions, arbitraryAction, init
   inner monad.
 -}
 
-newtype AssetKey = AssetKey Int deriving (Ord, Eq, Show, Num, JSON.FromJSONKey, JSON.ToJSONKey)
+newtype AssetKey = AssetKey Int deriving (Ord, Eq, Show, Num, JSON.FromJSONKey, JSON.ToJSONKey, Data)
 -- | A symbolic token is a token that exists only during ContractModel generation time
-data SymToken = SymToken { symVar :: Var AssetKey, symVarIdx :: String } deriving (Ord, Eq)
+data SymToken = SymToken { symVar :: Var AssetKey, symVarIdx :: String } deriving (Ord, Eq, Data)
 -- | A symbolic value is a combination of a real value and a value associating symbolic
 -- tokens with an amount
 data SymValue = SymValue { symValMap :: Map SymToken Integer, actualValPart :: Value } deriving (Show)

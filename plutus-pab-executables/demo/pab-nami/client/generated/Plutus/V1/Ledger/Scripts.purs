@@ -80,7 +80,6 @@ _MintingPolicy = _Newtype
 data ScriptError
   = EvaluationError (Array String) String
   | EvaluationException String String
-  | MalformedScript String
 
 derive instance Eq ScriptError
 
@@ -91,7 +90,6 @@ instance EncodeJson ScriptError where
   encodeJson = defer \_ -> case _ of
     EvaluationError a b -> E.encodeTagged "EvaluationError" (a /\ b) (E.tuple (E.value >/\< E.value))
     EvaluationException a b -> E.encodeTagged "EvaluationException" (a /\ b) (E.tuple (E.value >/\< E.value))
-    MalformedScript a -> E.encodeTagged "MalformedScript" a E.value
 
 instance DecodeJson ScriptError where
   decodeJson = defer \_ -> D.decode
@@ -99,7 +97,6 @@ instance DecodeJson ScriptError where
     $ Map.fromFoldable
         [ "EvaluationError" /\ D.content (D.tuple $ EvaluationError </$\> D.value </*\> D.value)
         , "EvaluationException" /\ D.content (D.tuple $ EvaluationException </$\> D.value </*\> D.value)
-        , "MalformedScript" /\ D.content (MalformedScript <$> D.value)
         ]
 
 derive instance Generic ScriptError _
@@ -114,11 +111,6 @@ _EvaluationError = prism' (\{ a, b } -> (EvaluationError a b)) case _ of
 _EvaluationException :: Prism' ScriptError { a :: String, b :: String }
 _EvaluationException = prism' (\{ a, b } -> (EvaluationException a b)) case _ of
   (EvaluationException a b) -> Just { a, b }
-  _ -> Nothing
-
-_MalformedScript :: Prism' ScriptError String
-_MalformedScript = prism' MalformedScript case _ of
-  (MalformedScript a) -> Just a
   _ -> Nothing
 
 --------------------------------------------------------------------------------
