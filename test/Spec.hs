@@ -1,11 +1,8 @@
-import           Test.QuickCheck.Monadic
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
-import           Index                   (Index, IndexView (..))
-import qualified Index                   as Ix
-import qualified Spec.Index              as Ix
-import qualified Index.Split             as S
+import qualified Spec.Index            as Ix
+import qualified Spec.Split            as S
 
 tests :: TestTree
 tests = testGroup "Index" [ixProperties]
@@ -24,6 +21,19 @@ ixProperties = testGroup "Basic model"
       withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int Ix.conversion
   ]
 
+siProperties :: TestTree
+siProperties = testGroup "Split index"
+  [ testProperty "New: Positive or non-positive depth" $
+      withMaxSuccess 10000 $ Ix.prop_observeNew @Int @Int S.conversion
+  , testProperty "History length is always smaller than the max depth" $
+      withMaxSuccess 10000 $ Ix.prop_sizeLEDepth @Int @Int S.conversion
+  , testProperty "Rewind: Connection with `ixDepth`" $
+      withMaxSuccess 10000 $ Ix.prop_rewindDepth @Int @Int S.conversion
+  , testProperty "Relationship between Insert/Rewind" $
+      withMaxSuccess 10000 $ Ix.prop_insertRewindInverse @Int @Int S.conversion
+  , testProperty "Insert is folding the structure" $
+      withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int S.conversion
+  ]
 
 main :: IO ()
 main = do

@@ -24,6 +24,7 @@ data SplitIndex m a e = SplitIndex
   { siStoredIx :: m a
     -- ^ Combined view of `[e]` and `m a`
   , siEvents   :: [e]
+  , siBuffered :: [e]
   , siDepth    :: Int
   , siStore    :: a -> m a
   , siIndex    :: a -> [e] -> a
@@ -45,55 +46,61 @@ new findex fstore depth ix
   | otherwise    = Just $ SplitIndex
     { siStoredIx = ix
     , siEvents   = []
+    , siBuffered = []
     , siDepth    = depth
     , siStore    = fstore
     , siIndex    = findex
     }
 
 insert :: Monad m => e -> SplitIndex m a e -> m (SplitIndex m a e)
-insert e ix@SplitIndex{ siEvents, siDepth } = do
-  ix' <- if length siEvents > siDepth * storeEventsThreshold
+insert e ix@SplitIndex{siEvents, siDepth, siBuffered} = do
+  ix' <- if length siBuffered > siDepth * storeEventsThreshold
          then mergeEvents ix
          else pure        ix
-  pure ix' { siEvents = e : siEvents }
+  let (siEvents', siBuffered')
+        = if length siEvents == siDepth
+          then ( e : take (siDepth - 1) siEvents
+               , last siEvents : siBuffered )
+          else ( e : siEvents, siBuffered )
+  pure ix' { siEvents = siEvents'
+           , siBuffered = siBuffered'
+           }
 
 mergeEvents :: Monad m => SplitIndex m a e -> m (SplitIndex m a e)
-mergeEvents ix@SplitIndex { siEvents, siDepth, siStore, siIndex, siStoredIx } = do
-  let liveEs   = take siDepth siEvents
-      storedEs = drop siDepth siEvents
+mergeEvents ix@SplitIndex {siStore, siIndex, siStoredIx, siBuffered} = do
   six       <- siStoredIx
-  let six'   = siIndex six storedEs
+  let six'   = siIndex six siBuffered
   nextStore <- siStore six'
   pure $ ix { siStoredIx = pure nextStore
-            , siEvents = liveEs
+            , siBuffered = []
             }
 
 insertL :: Monad m => [e] -> SplitIndex m a e -> m (SplitIndex m a e)
 insertL es ix = foldlM (flip insert) ix es
 
+-- TODO: Do we actually need size < depth?
 size :: SplitIndex m a e -> Int
-size SplitIndex { siDepth, siEvents } =
-  min siDepth (length siEvents + 1)
+size SplitIndex {siEvents} =
+  length siEvents + 1
 
 rewind :: Int -> SplitIndex m a e -> Maybe (SplitIndex m a e)
-rewind n ix@SplitIndex { siEvents }
-  | length siEvents > n = Just $ ix { siEvents = drop n siEvents }
+rewind n ix@SplitIndex {siEvents}
+  | size ix > n = Just $ ix { siEvents = drop n siEvents }
   | otherwise           = Nothing
 
 view :: Monad m => SplitIndex m a e -> m (IndexView a)
-view SplitIndex{siStoredIx, siDepth, siEvents, siIndex} = do
+view ix@SplitIndex{siStoredIx, siDepth, siEvents, siIndex} = do
   v <- siStoredIx
-  let d = siDepth
-      s = length siEvents + 1
-  pure $ IndexView { ixDepth = d
+  pure $ IndexView { ixDepth = siDepth
                    , ixView  = siIndex v siEvents
-                   , ixSize  = s
+                   , ixSize  = size ix
                    }
 
 getHistory :: Monad m => SplitIndex m a e -> m [a]
-getHistory SplitIndex{siStoredIx, siIndex, siEvents} = do
+getHistory SplitIndex{siDepth, siStoredIx, siIndex, siEvents} = do
   storedIx <- siStoredIx
-  pure $ scanl' (\a e -> siIndex a [e]) storedIx siEvents
+  let es = scanl' (\a e -> siIndex a [e]) storedIx siEvents
+  pure $ take (min (siDepth + 1) (length es)) es
 
 getEvents :: SplitIndex m a e -> [e]
 getEvents SplitIndex{siEvents} = siEvents

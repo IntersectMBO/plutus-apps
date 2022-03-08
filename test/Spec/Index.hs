@@ -9,6 +9,8 @@ import Data.Functor.Identity (Identity, runIdentity)
 
 import Index
 
+import qualified Debug.Trace as Debug
+
 data Conversion m a e = Conversion
   { cView    :: Index a e -> m (Maybe (IndexView a))
   , cHistory :: Index a e -> m (Maybe [a])
@@ -88,7 +90,7 @@ prop_sizeLEDepth c (ObservedBuilder ix) =
 
 -- | Relation between Rewind and Inverse
 prop_insertRewindInverse
-  :: forall e a m. (Monad m, Show e, Arbitrary e, Eq a)
+  :: forall e a m. (Monad m, Show e, Show a, Arbitrary e, Eq a)
   => Conversion m a e
   -> ObservedBuilder a e
   -> Property

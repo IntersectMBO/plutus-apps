@@ -2,9 +2,7 @@
 
 module Spec.Split where
 
-import           Control.Monad           ((>=>))
 import           Data.Foldable           (foldl')
-import           Data.Functor            ((<&>))
 import           Test.QuickCheck         (Property)
 import           Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
