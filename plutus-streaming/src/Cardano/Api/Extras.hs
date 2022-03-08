@@ -32,3 +32,7 @@ deriving instance Show LedgerEvent
 deriving instance Show MIRDistributionDetails
 
 deriving instance Show PoolReapDetails
+
+deriving instance Show InitialLedgerStateError
+
+deriving instance Show GenesisConfigError

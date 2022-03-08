@@ -5,10 +5,12 @@ module Main where
 
 import Cardano.Api
 import Cardano.Api.Extras ()
+import Control.Monad.Except (runExceptT)
 import Data.Maybe qualified as Maybe
 import Options.Applicative hiding (header)
 import Plutus.Streaming
 import Plutus.Streaming.ChainIndex
+import Plutus.Streaming.LedgerState (ledgerState)
 import Streaming
 import Streaming.Prelude qualified as S
 import Text.Pretty.Simple (pPrint)
@@ -170,7 +172,7 @@ nthBlock = nthBlockAt ChainPointAtGenesis
 nthBlockAt :: ChainPoint -> Int -> IO (BlockInMode CardanoMode)
 nthBlockAt point n = do
   withSimpleChainSyncEventStream
-    "/tmp/node.socket"
+    "node.socket"
     Mainnet
     point
     ( fmap Maybe.fromJust
@@ -180,3 +182,13 @@ nthBlockAt point n = do
         . S.drop n
         . S.map (\case RollForward bim _ -> Just bim; _ -> Nothing)
     )
+
+testLedgerState :: IO ()
+testLedgerState = do
+  ils <- runExceptT (initialLedgerState "mainnet-config.json")
+  case ils of
+    (Left e) -> error $ show e
+    (Right (env, ls)) ->
+       withSimpleChainSyncEventStream "node.socket" Mainnet ChainPointAtGenesis $
+         void . S.print . ledgerState env ls QuickValidation
+
