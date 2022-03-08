@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Api.Extras where
 
@@ -21,3 +22,13 @@ instance IsString (Hash BlockHeader) where
           Left msg -> Left ("invalid hex " ++ show str ++ ", " ++ msg)
         where
           ttoken = proxyToAsType (Proxy :: Proxy a)
+
+deriving instance Show BlockHeader
+
+deriving instance Show LedgerState
+
+deriving instance Show LedgerEvent
+
+deriving instance Show MIRDistributionDetails
+
+deriving instance Show PoolReapDetails
