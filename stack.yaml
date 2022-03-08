@@ -151,7 +151,7 @@ extra-deps:
 - git: https://github.com/input-output-hk/goblins
   commit: cde90a2b27f79187ca8310b6549331e59595e7ba
 - git: https://github.com/input-output-hk/plutus
-  commit: 4127e9cd6e889824d724c30eae55033cb50cbf3e
+  commit: aa6c7bcb7b79357f4449c5bf62e8c0afec23b9d2
   subdirs:
     - plutus-core
     - plutus-ledger-api
