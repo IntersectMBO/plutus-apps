@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE NamedFieldPuns      #-}
@@ -20,6 +21,7 @@ import Control.Monad.Freer (run)
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as BSL
+import Data.Data
 import Data.Default (Default (..))
 import Data.Foldable
 import Data.Map (Map)
@@ -58,7 +60,7 @@ data CrowdfundingModel = CrowdfundingModel { _contributions       :: Map Wallet 
                                            , _ownerOnline         :: Bool
                                            , _collectDeadlineSlot :: Slot
                                            , _endSlot             :: Slot
-                                           } deriving (Show)
+                                           } deriving (Show, Data)
 
 makeLenses ''CrowdfundingModel
 
@@ -178,15 +180,13 @@ renderEmulatorLog trace =
 params :: Campaign
 params = theCampaign (TimeSlot.scSlotZeroTime def)
 
-deriving instance Eq (Action CrowdfundingModel)
-deriving instance Show (Action CrowdfundingModel)
-
 deriving instance Eq (ContractInstanceKey CrowdfundingModel w schema err params)
 deriving instance Show (ContractInstanceKey CrowdfundingModel w schema err params)
 
 instance ContractModel CrowdfundingModel where
   data Action CrowdfundingModel = CContribute Wallet Value
                                 | CStart
+                                deriving (Eq, Show, Data)
 
   data ContractInstanceKey CrowdfundingModel w schema err params where
     ContributorKey :: Wallet -> ContractInstanceKey CrowdfundingModel () CrowdfundingSchema ContractError ()

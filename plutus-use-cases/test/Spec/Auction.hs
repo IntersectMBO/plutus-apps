@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -24,6 +25,7 @@ import Control.Monad (void, when)
 import Control.Monad.Freer qualified as Freer
 import Control.Monad.Freer.Error qualified as Freer
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
+import Data.Data
 import Data.Default (Default (def))
 import Data.Monoid (Last (..))
 
@@ -164,10 +166,10 @@ data AuctionModel = AuctionModel
     , _winner     :: Wallet
     , _endSlot    :: Slot
     , _phase      :: Phase
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Data)
 
 data Phase = NotStarted | Bidding | AuctionOver
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 
 makeLenses 'AuctionModel
 
@@ -181,7 +183,7 @@ instance ContractModel AuctionModel where
         BuyerH  :: Wallet -> ContractInstanceKey AuctionModel AuctionOutput BuyerSchema AuctionError ()
 
     data Action AuctionModel = Init Wallet | Bid Wallet Integer
-        deriving (Eq, Show)
+        deriving (Eq, Show, Data)
 
     initialState = AuctionModel
         { _currentBid = 0

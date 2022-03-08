@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE OverloadedStrings  #-}
@@ -13,6 +14,7 @@ module Spec.SealedBidAuction where
 import Cardano.Crypto.Hash as Crypto
 import Control.Lens hiding (elements)
 import Control.Monad (when)
+import Data.Data
 import Data.Default (Default (def))
 
 import Ledger (Slot (..), Value)
@@ -51,10 +53,10 @@ data AuctionModel = AuctionModel
     , _endBidSlot        :: Slot
     , _payoutSlot        :: Slot
     , _phase             :: Phase }
-    deriving (Show)
+    deriving (Show, Data)
 
 data Phase = NotStarted | Bidding | AwaitingPayout | PayoutTime | AuctionOver
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 
 makeLenses 'AuctionModel
 
@@ -71,7 +73,7 @@ instance ContractModel AuctionModel where
                              | Bid Wallet Integer
                              | Reveal Wallet Integer
                              | Payout Wallet
-        deriving (Eq, Show)
+        deriving (Eq, Show, Data)
 
     initialState = AuctionModel
         { _currentBids       = []
