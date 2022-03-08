@@ -5,7 +5,6 @@ module Main where
 
 import Cardano.Api
 import Cardano.Api.Extras ()
-import Control.Monad ((>=>))
 import Data.Maybe qualified as Maybe
 import Options.Applicative hiding (header)
 import Plutus.Streaming
@@ -80,7 +79,7 @@ pPrintStream = S.mapM_ pPrint
 howManyBlocksBeforeRollback ::
   Monad m =>
   Stream (Of SimpleChainSyncEvent) m r ->
-  Stream (Of Int) m ()
+  Stream (Of Int) m r
 howManyBlocksBeforeRollback =
   S.scan
     ( \acc ->
@@ -90,12 +89,11 @@ howManyBlocksBeforeRollback =
     )
     0
     id
-    . S.take 100
 
 howManyBlocksBeforeRollbackImpure ::
   (Monad m, MonadIO m) =>
   Stream (Of SimpleChainSyncEvent) m r ->
-  Stream (Of Int) m ()
+  Stream (Of Int) m r
 howManyBlocksBeforeRollbackImpure =
   S.scanM
     ( \acc ->
@@ -108,63 +106,59 @@ howManyBlocksBeforeRollbackImpure =
     )
     (pure 0)
     pure
-    . S.take 100
 
-composePureAndImpure ::
-  Stream (Of SimpleChainSyncEvent) IO r ->
-  IO ()
-composePureAndImpure =
-  (pPrintStream . howManyBlocksBeforeRollbackImpure)
-    . (pPrintStream . howManyBlocksBeforeRollback)
-    . S.copy
+-- composePureAndImpure ::
+--   Stream (Of SimpleChainSyncEvent) IO r ->
+--   IO r
+-- composePureAndImpure =
+--   (pPrintStream . howManyBlocksBeforeRollbackImpure)
+--     . (pPrintStream . howManyBlocksBeforeRollback)
+--     . S.copy
 
 --
 -- Main
 --
-
-deriving instance Show BlockHeader
 
 main :: IO ()
 main = do
   options <- execParser $ info (optionsParser <**> helper) mempty
 
   case options of
-    Simple {optionsSocketPath, optionsChainPoint, optionsExample} -> do
+    Simple {optionsSocketPath, optionsChainPoint, optionsExample} ->
       withSimpleChainSyncEventStream
         optionsSocketPath
         Mainnet
         optionsChainPoint
-        $ case optionsExample of
-          Print ->
-            S.stdoutLn . S.map (
-              \case
-                RollForward (BlockInMode (Block header _txs) _era) _ct -> "RollForward, header: " <> show header
-                RollBackward cp _ct                                    -> "RollBackward, point: " <> show cp
-            ) . S.take 10 >=> print
-          HowManyBlocksBeforeRollback ->
-            pPrintStream . howManyBlocksBeforeRollback >=> print
-          HowManyBlocksBeforeRollbackImpure ->
-            pPrintStream . howManyBlocksBeforeRollbackImpure >=> print
-          ComposePureAndImpure ->
-            composePureAndImpure >=> print
-          ChainIndex ->
-            -- pPrintStream  . utxoState . S.print . S.map (fmap f) . S.copy . S.take 10 >=> print
-            pPrintStream  . utxoState . S.take 10 >=> print
+        (doSimple optionsExample)
+        >>= print
     WithLedgerState {optionsNetworkConfigPath, optionsSocketPath, optionsChainPoint} ->
       withChainSyncEventStreamWithLedgerState
         optionsNetworkConfigPath
         optionsSocketPath
         Mainnet
         optionsChainPoint
-        (pPrintStream . S.take 10 >=> print)
+        pPrintStream
+        >>= print
 
-deriving instance Show LedgerState
-
-deriving instance Show LedgerEvent
-
-deriving instance Show MIRDistributionDetails
-
-deriving instance Show PoolReapDetails
+doSimple ::
+  Example ->
+  Stream (Of SimpleChainSyncEvent) IO r ->
+  IO r
+doSimple Print =
+  S.print
+    . S.map
+      ( \case
+          RollForward (BlockInMode (Block header _txs) _era) _ct -> "RollForward, header: " <> show header
+          RollBackward cp _ct                                    -> "RollBackward, point: " <> show cp
+      )
+doSimple HowManyBlocksBeforeRollback =
+  S.print . howManyBlocksBeforeRollback
+doSimple HowManyBlocksBeforeRollbackImpure =
+  S.print . howManyBlocksBeforeRollbackImpure
+doSimple ComposePureAndImpure =
+  error "Not implemented"
+doSimple ChainIndex =
+  S.print . utxoState
 
 --
 -- Utilities for development

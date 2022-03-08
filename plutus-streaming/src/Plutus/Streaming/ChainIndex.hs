@@ -16,13 +16,11 @@ utxoState ::
 utxoState =
   S.scan step initial projection
   where
-    step index (RollForward block cardanoTip) =
+    step index (RollForward block _) =
       case CI.fromCardanoBlock block of
         Left err -> error ("FromCardanoError: " <> show err)
         Right txs ->
-          -- this is wrong, there's a tip-vs-point confusion here
-          -- TxUtxoBalance.fromBlock wants a tip but it's a point instead
-          let tip = CI.fromCardanoTip cardanoTip
+          let tip = CI.tipFromCardanoBlock block
               balance = TxUtxoBalance.fromBlock tip txs
            in case UtxoState.insert balance index of
                 Left err ->
