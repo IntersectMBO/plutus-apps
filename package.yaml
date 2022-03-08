@@ -28,6 +28,7 @@ default-extensions:
   - TypeApplications
   - PatternSynonyms
   - DeriveGeneric
+  - NamedFieldPuns
   - MultiParamTypeClasses
   - FlexibleInstances
   - GADTs
