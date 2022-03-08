@@ -277,6 +277,14 @@ emulatorStatePool :: Chain.TxPool -> EmulatorState
 emulatorStatePool tp = emptyEmulatorState
     & chainState . Chain.txPool .~ tp
 
+{- Note [Creating wallets with multiple outputs]
+
+Every transaction needs a collateral input, which is a wallet output that gets spent
+when the transaction fails to validate on chain (phase 2 validation). This output is required
+to be an Ada-only output. To make sure we always have an Ada-only output available during emulation,
+we create 10 Ada-only outputs per wallet here.
+-}
+
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
@@ -293,6 +301,7 @@ emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
             , txRedeemers = mempty
             , txData = mempty
             }
+    -- See [Creating wallets with multiple outputs]
     mkOutputs (key, vl) = mkOutput key <$> splitHeadinto10 (Wallet.splitOffAdaOnlyValue vl)
     splitHeadinto10 []       = []
     splitHeadinto10 (vl:vls) = replicate (fromIntegral count) (Ada.toValue . (`div` count) . Ada.fromValue $ vl) ++ vls

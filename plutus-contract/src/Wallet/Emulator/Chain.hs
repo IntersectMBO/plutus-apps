@@ -47,7 +47,7 @@ data ChainEvent =
     TxnValidate TxId CardanoTx [ScriptValidationEvent]
     -- ^ A transaction has been validated and added to the blockchain.
     | TxnValidationFail Index.ValidationPhase TxId CardanoTx Index.ValidationError [ScriptValidationEvent] Value
-    -- ^ A transaction failed to validate.
+    -- ^ A transaction failed to validate. The @Value@ indicates the amount of collateral stored in the transaction.
     | SlotAdd Slot
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)

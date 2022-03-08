@@ -122,6 +122,17 @@ instance Pretty ChainIndexTxOut where
     pretty ScriptChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
 
+
+{- Note [Why we have the Both constructor in CardanoTx]
+
+We want to do validation with both the emulator and with the cardano-ledger library, at least as long
+as we don't have Phase2 validation errors via the cardano-ledger library.
+
+To do that we need the required signers which are only available in UnbalancedTx during balancing.
+So during balancing we can create the SomeCardanoApiTx, while proper validation can only happen in
+Wallet.Emulator.Chain.validateBlock, since that's when we know the right Slot number. This means that
+we need both transaction types in the path from balancing to validateBlock. -}
+
 data CardanoTx
     = EmulatorTx Tx
     | CardanoApiTx SomeCardanoApiTx
