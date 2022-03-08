@@ -53,18 +53,25 @@ new findex fstore depth ix
     }
 
 insert :: Monad m => e -> SplitIndex m a e -> m (SplitIndex m a e)
-insert e ix@SplitIndex{siEvents, siDepth, siBuffered} = do
-  ix' <- if length siBuffered > siDepth * storeEventsThreshold
-         then mergeEvents ix
-         else pure        ix
-  let (siEvents', siBuffered')
-        = if length siEvents == siDepth
-          then ( e : take (siDepth - 1) siEvents
-               , last siEvents : siBuffered )
-          else ( e : siEvents, siBuffered )
-  pure ix' { siEvents = siEvents'
-           , siBuffered = siBuffered'
-           }
+insert e ix@SplitIndex{siEvents, siDepth, siBuffered}
+  | siDepth /= 1 = do
+    let (siEvents', siBuffered')
+          = if length siEvents == siDepth - 1
+            then ( e : take (siDepth - 2) siEvents
+                 , last siEvents : siBuffered )
+            else ( e : siEvents, siBuffered )
+    ix' <- if length siBuffered > siDepth * storeEventsThreshold
+           then mergeEvents ix
+           else pure        ix
+    pure ix' { siEvents = siEvents'
+             , siBuffered = siBuffered'
+             }
+  -- Special casing siDepth == 1 => siEvents is unused.
+  | otherwise = do
+    let siBuffered' = e : siBuffered
+    if length siBuffered' > siDepth * storeEventsThreshold
+    then mergeEvents ix
+    else pure        ix
 
 mergeEvents :: Monad m => SplitIndex m a e -> m (SplitIndex m a e)
 mergeEvents ix@SplitIndex {siStore, siIndex, siStoredIx, siBuffered} = do
