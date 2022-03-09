@@ -22,6 +22,7 @@ import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo)
 import Cardano.Ledger.Core qualified as Ledger
 
 import Cardano.Ledger.Alonzo.Data qualified as Alonzo
+import Cardano.Ledger.Alonzo.Language qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxBody qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
@@ -44,7 +45,8 @@ makeTransactionBody'
         txWithdrawals,
         txCertificates,
         txMintValue,
-        txScriptValidity
+        txScriptValidity,
+        txProtocolParams
     } =
     return $
       ShelleyTxBody ShelleyBasedEraAlonzo
@@ -80,7 +82,14 @@ makeTransactionBody'
           (case txMintValue of
              TxMintNone        -> mempty
              TxMintValue _ v _ -> toMaryValue v)
-          SNothing -- ignoring txProtocolParams in CardanoAPITemp
+          (case txProtocolParams of
+             BuildTxWith Nothing        -> SNothing
+             BuildTxWith (Just pparams) ->
+               Alonzo.hashScriptIntegrity
+                 (toLedgerPParams ShelleyBasedEraAlonzo pparams)
+                 languages
+                 redeemers
+                 datums)
           SNothing -- ignoring txMetadata and txAuxScripts in CardanoAPITemp
           SNothing) -- TODO alonzo: support optional network id in TxBodyContent
         scripts
@@ -124,6 +133,13 @@ makeTransactionBody'
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]
 
+    languages :: Set.Set Alonzo.Language
+    languages =
+      Set.fromList
+        [ toAlonzoLanguage (AnyPlutusScriptVersion v)
+        | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
+        ]
+
 toShelleyWithdrawal :: [(StakeAddress, Lovelace, a)] -> Shelley.Wdrl StandardCrypto
 toShelleyWithdrawal withdrawals =
     Shelley.Wdrl $
@@ -155,3 +171,7 @@ toAlonzoTxOutDataHash :: TxOutDatum CtxTx era
 toAlonzoTxOutDataHash TxOutDatumNone                         = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
 toAlonzoTxOutDataHash (TxOutDatum _ d)                       = let ScriptDataHash dh = hashScriptData d in SJust dh
+
+toAlonzoLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
+toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
+toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Alonzo.PlutusV2

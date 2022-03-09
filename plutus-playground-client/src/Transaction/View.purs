@@ -149,7 +149,7 @@ emulatorEventPane (ChainEvent (TxnValidate (TxId txId) _ _)) =
   div_
     [ text $ "Validating transaction: " <> txId.getTxId ]
 
-emulatorEventPane (ChainEvent (TxnValidationFail _ (TxId txId) _ error _)) =
+emulatorEventPane (ChainEvent (TxnValidationFail _ (TxId txId) _ error _ _)) =
   div [ class_ $ ClassName "error" ]
     [ text $ "Validation failed: " <> txId.getTxId
     , br_

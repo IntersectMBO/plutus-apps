@@ -44,7 +44,7 @@ gameParam = G.GameParam (mockWalletPaymentPubKeyHash w1) (TimeSlot.scSlotZeroTim
 
 tests :: TestTree
 tests =
-    testGroup "game state machine with secret arguments tests"
+    testGroup "game with secret arguments tests"
     [ checkPredicate "run a successful game trace"
         (walletFundsChange w2 (Ada.adaValueOf 8)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.gameInstance gameParam) (Ada.adaValueOf 0 ==)

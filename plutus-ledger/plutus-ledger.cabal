@@ -66,6 +66,7 @@ library
         Ledger.Typed.Tx
         Ledger.Typed.TypeUtils
         Ledger.Value
+        Ledger.Validation
     reexported-modules:
         Data.Aeson.Extras,
         Data.Either.Extras,
@@ -87,7 +88,6 @@ library
         base >=4.9 && <5,
         aeson -any,
         bytestring -any,
-        cardano-addresses -any,
         cardano-api -any,
         cardano-api:gen -any,
         cardano-crypto -any,
@@ -97,6 +97,7 @@ library
         cardano-ledger-core -any,
         cardano-ledger-shelley,
         cardano-ledger-shelley-ma -any,
+        cardano-slotting -any,
         cardano-wallet-core -any,
         deepseq -any,
         cborg -any,

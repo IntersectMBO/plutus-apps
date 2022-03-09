@@ -38,7 +38,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (Tx (..))
+import Ledger.Tx (Tx (..), onCardanoTx)
 import Plutus.PAB.Types (Config (..))
 import TxInject.RandomTx (generateTx)
 import Wallet.Emulator (chainState, mockWalletPaymentPubKeyHash, txPool)
@@ -73,6 +73,7 @@ initialUtxoIndex config =
                zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
                    (repeat (Ada.adaValueOf 1000_000_000))
       initialTxs =
+        concatMap (onCardanoTx pure (const [])) $
         view (chainState . txPool) $
         emulatorStateInitialDist $
         Map.mapKeys mockWalletPaymentPubKeyHash dist

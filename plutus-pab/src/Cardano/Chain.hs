@@ -23,12 +23,12 @@ import Data.Foldable (traverse_)
 import Data.Functor (void)
 import Data.Maybe (listToMaybe)
 import GHC.Generics (Generic)
-import Ledger (Block, Slot (..), Tx (..))
+import Ledger (Block, CardanoTx, Slot (..))
 import Ledger.Index qualified as Index
 import Ledger.TimeSlot (SlotConfig)
 import Wallet.Emulator.Chain qualified as EC
 
-type TxPool = [Tx]
+type TxPool = [CardanoTx]
 
 data MockNodeServerChainState = MockNodeServerChainState
   { _txPool      :: TxPool
@@ -119,7 +119,7 @@ logEvent e = case e of
     EC.TxnValidationFail{} -> logWarn e
     _                      -> logInfo e
 
-addTxToPool :: Tx -> TxPool -> TxPool
+addTxToPool :: CardanoTx -> TxPool -> TxPool
 addTxToPool = (:)
 
 -- | Fetch the currently stored chain by iterating over the channel until

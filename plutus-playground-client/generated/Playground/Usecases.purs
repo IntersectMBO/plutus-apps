@@ -855,7 +855,7 @@ contractDemos =
                                             {
                                                 "unTokenName": ""
                                             },
-                                            100
+                                            100000000
                                         ]
                                     ]
                                 ]
@@ -877,7 +877,7 @@ contractDemos =
                                             {
                                                 "unTokenName": ""
                                             },
-                                            100
+                                            100000000
                                         ]
                                     ]
                                 ]
@@ -2060,7 +2060,7 @@ contractDemos =
                                             {
                                                 "unTokenName": ""
                                             },
-                                            100
+                                            100000000
                                         ]
                                     ]
                                 ]
@@ -2082,7 +2082,7 @@ contractDemos =
                                             {
                                                 "unTokenName": ""
                                             },
-                                            100
+                                            100000000
                                         ]
                                     ]
                                 ]

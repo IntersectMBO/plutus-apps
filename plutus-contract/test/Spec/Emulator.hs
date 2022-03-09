@@ -26,7 +26,7 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, ScriptError (EvaluationError),
+import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, ScriptError (EvaluationError),
                Tx (txFee, txMint, txOutputs), TxOut (txOutValue), ValidationError (ScriptFailure), Validator, Value,
                mkValidatorScript, outputs, scriptTxIn, scriptTxOut, txOutRefs, unitDatum, unitRedeemer, unspentOutputs)
 import Ledger.Ada qualified as Ada
@@ -160,13 +160,13 @@ txnUpdateUtxo = property $ do
         -- submit the same txn twice, so it should be accepted the first time
         -- and rejected the second time.
         trace = do
-            Trace.liftWallet wallet1 (submitTxn $ Right txn)
-            Trace.liftWallet wallet1 (submitTxn $ Right txn)
+            Trace.liftWallet wallet1 (submitTxn $ EmulatorTx txn)
+            Trace.liftWallet wallet1 (submitTxn $ EmulatorTx txn)
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidate _ i1 _
-                , Chain.TxnValidationFail _ _ txi (Index.TxOutRefNotFound _) _
+                , Chain.TxnValidate _ (EmulatorTx i1) _
+                , Chain.TxnValidationFail _ _ (EmulatorTx txi) (Index.TxOutRefNotFound _) _ _
                 , Chain.SlotAdd _
                 ] -> i1 == txn && txi == txn
             _ -> False
@@ -176,7 +176,7 @@ validTrace :: Property
 validTrace = property $ do
     (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        trace = Trace.liftWallet wallet1 (submitTxn $ Right txn)
+        trace = Trace.liftWallet wallet1 (submitTxn $ EmulatorTx txn)
     checkPredicateInner options assertNoFailedTransactions trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
 validTrace2 :: Property
@@ -184,8 +184,8 @@ validTrace2 = property $ do
     (Mockchain m _ _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
         trace = do
-            Trace.liftWallet wallet1 (submitTxn $ Right txn)
-            Trace.liftWallet wallet1 (submitTxn $ Right txn)
+            Trace.liftWallet wallet1 (submitTxn $ EmulatorTx txn)
+            Trace.liftWallet wallet1 (submitTxn $ EmulatorTx txn)
         predicate = assertFailedTransaction (\_ _ _ -> True)
     checkPredicateInner options predicate trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
 
@@ -194,11 +194,11 @@ invalidTrace = property $ do
     (Mockchain m _ _, txn) <- forAll genChainTxn
     let invalidTxn = txn { txMint = Ada.adaValueOf 1 }
         options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
-        trace = Trace.liftWallet wallet1 (submitTxn $ Right invalidTxn)
+        trace = Trace.liftWallet wallet1 (submitTxn $ EmulatorTx invalidTxn)
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ txn (Index.ValueNotPreserved _ _) _
+                , Chain.TxnValidationFail _ _ (EmulatorTx txn) (Index.ValueNotPreserved _ _) _ _
                 , Chain.SlotAdd _
                 ] -> txn == invalidTxn
             _ -> False
@@ -227,20 +227,20 @@ invalidScript = property $ do
         -- may spend outputs belonging to one of the other two wallets.
         -- So we add all the wallets' signatures with 'signAll'.
         trace = do
-            Trace.liftWallet wallet1 (submitTxn $ Right (Gen.signAll scriptTxn))
+            Trace.liftWallet wallet1 (submitTxn $ EmulatorTx (Gen.signAll scriptTxn))
             _ <- Trace.nextSlot
-            Trace.liftWallet wallet1 (submitTxn $ Right invalidTxn)
+            Trace.liftWallet wallet1 (submitTxn $ EmulatorTx invalidTxn)
         pred = \case
             [ Chain.TxnValidate{}
                 , Chain.SlotAdd _
                 , Chain.TxnValidate{}
                 , Chain.SlotAdd _
-                , Chain.TxnValidationFail _ _ txn (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure")) _
+                , Chain.TxnValidationFail _ _ (EmulatorTx txn) (ScriptFailure (EvaluationError ["I always fail everything"] "CekEvaluationFailure")) _ _
                 , Chain.SlotAdd _
                 ] -> txn == invalidTxn
             _ -> False
 
-    checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn <> txFee invalidTxn)) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
+    checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn)) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
     where
         failValidator :: Validator
         failValidator = mkValidatorScript $$(PlutusTx.compile [|| wrapValidator validator ||])

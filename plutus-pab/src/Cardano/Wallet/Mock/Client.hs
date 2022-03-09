@@ -17,7 +17,7 @@ import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Proxy (Proxy (Proxy))
 import Ledger (PaymentPubKeyHash, Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Tx (CardanoTx, Tx)
+import Ledger.Tx (CardanoTx)
 import Servant ((:<|>) ((:<|>)))
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
 import Wallet.Effects (WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
@@ -25,11 +25,11 @@ import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Wallet (Wallet (Wallet, getWalletId), WalletId)
 
 createWallet :: Maybe Integer -> ClientM WalletInfo
-submitTxn :: Wallet -> Tx -> ClientM ()
+submitTxn :: Wallet -> CardanoTx -> ClientM ()
 ownPaymentPublicKey :: Wallet -> ClientM WalletInfo
-balanceTx :: Wallet -> UnbalancedTx -> ClientM (Either WalletAPIError Tx)
+balanceTx :: Wallet -> UnbalancedTx -> ClientM (Either WalletAPIError CardanoTx)
 totalFunds :: Wallet -> ClientM Value
-sign :: Wallet -> Tx -> ClientM Tx
+sign :: Wallet -> CardanoTx -> ClientM CardanoTx
 (createWallet, submitTxn, ownPaymentPublicKey, balanceTx, totalFunds, sign) =
   ( createWallet_
   , \(Wallet _ wid) tx -> void (submitTxn_ wid tx)
@@ -63,18 +63,16 @@ handleWalletClient wallet event = do
         runClient a = (sendM $ liftIO $ runClientM a clientEnv) >>= either throwError pure
 
         submitTxnH :: CardanoTx -> Eff effs ()
-        submitTxnH (Left _) = error "Cardano.Wallet.Mock.Client: Expecting a mock tx, not an Alonzo tx when submitting it."
-        submitTxnH (Right tx) = runClient (submitTxn wallet tx)
+        submitTxnH tx = runClient (submitTxn wallet tx)
 
         ownPaymentPubKeyHashH :: Eff effs PaymentPubKeyHash
         ownPaymentPubKeyHashH = wiPaymentPubKeyHash <$> runClient (ownPaymentPublicKey wallet)
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
-        balanceTxH utx = runClient (fmap (fmap Right) $ balanceTx wallet utx)
+        balanceTxH utx = runClient (balanceTx wallet utx)
 
         walletAddSignatureH :: CardanoTx -> Eff effs CardanoTx
-        walletAddSignatureH (Left _) = error "Cardano.Wallet.Mock.Client: Expecting a mock tx, not an Alonzo tx when adding a signature."
-        walletAddSignatureH (Right tx) = runClient $ fmap Right $ sign wallet tx
+        walletAddSignatureH tx = runClient $ sign wallet tx
 
         totalFundsH :: Eff effs Value
         totalFundsH = runClient (totalFunds wallet)

@@ -27,8 +27,7 @@ import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
 import Cardano.Node.Server qualified as NodeServer
 import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
-                           PABServerConfig (pscFeeConfig, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath),
-                           _AlonzoNode)
+                           PABServerConfig (pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath), _AlonzoNode)
 import Cardano.Protocol.Socket.Type (epochSlots)
 import Cardano.Wallet.Mock.Server qualified as WalletServer
 import Cardano.Wallet.Mock.Types (WalletMsg)
@@ -113,7 +112,6 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServer
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
         ws
-        (pscFeeConfig nodeServerConfig)
         (pscSocketPath nodeServerConfig)
         (pscSlotConfig nodeServerConfig)
         (ChainIndex.ciBaseUrl chainIndexConfig)

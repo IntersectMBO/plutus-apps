@@ -70,6 +70,6 @@ handleNodeClient
     :: (Members NodeClientEffs effs)
     => Eff (NodeClientEffect ': effs) ~> Eff effs
 handleNodeClient = interpret $ \case
-    PublishTx tx        -> queueTx tx >> logInfo (TxSubmit (txId tx) (txFee tx))
+    PublishTx tx        -> queueTx tx >> logInfo (TxSubmit (getCardanoTxId tx) (getCardanoTxFee tx))
     GetClientSlot       -> gets _clientSlot
     GetClientSlotConfig -> getSlotConfig

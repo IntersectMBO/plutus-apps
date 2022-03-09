@@ -18,17 +18,18 @@ import Data.Newtype (unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase)
+import Ledger.Tx (CardanoTx)
 import Plutus.V1.Ledger.Slot (Slot)
-import Plutus.V1.Ledger.Tx (Tx)
 import Plutus.V1.Ledger.TxId (TxId)
+import Plutus.V1.Ledger.Value (Value)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
 data ChainEvent
-  = TxnValidate TxId Tx (Array ScriptValidationEvent)
-  | TxnValidationFail ValidationPhase TxId Tx ValidationError (Array ScriptValidationEvent)
+  = TxnValidate TxId CardanoTx (Array ScriptValidationEvent)
+  | TxnValidationFail ValidationPhase TxId CardanoTx ValidationError (Array ScriptValidationEvent) Value
   | SlotAdd Slot
 
 instance Show ChainEvent where
@@ -37,7 +38,7 @@ instance Show ChainEvent where
 instance EncodeJson ChainEvent where
   encodeJson = defer \_ -> case _ of
     TxnValidate a b c -> E.encodeTagged "TxnValidate" (a /\ b /\ c) (E.tuple (E.value >/\< E.value >/\< E.value))
-    TxnValidationFail a b c d e -> E.encodeTagged "TxnValidationFail" (a /\ b /\ c /\ d /\ e) (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value >/\< E.value))
+    TxnValidationFail a b c d e f -> E.encodeTagged "TxnValidationFail" (a /\ b /\ c /\ d /\ e /\ f) (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value >/\< E.value >/\< E.value))
     SlotAdd a -> E.encodeTagged "SlotAdd" a E.value
 
 instance DecodeJson ChainEvent where
@@ -45,7 +46,7 @@ instance DecodeJson ChainEvent where
     $ D.sumType "ChainEvent"
     $ Map.fromFoldable
         [ "TxnValidate" /\ D.content (D.tuple $ TxnValidate </$\> D.value </*\> D.value </*\> D.value)
-        , "TxnValidationFail" /\ D.content (D.tuple $ TxnValidationFail </$\> D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
+        , "TxnValidationFail" /\ D.content (D.tuple $ TxnValidationFail </$\> D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
         , "SlotAdd" /\ D.content (SlotAdd <$> D.value)
         ]
 
@@ -53,14 +54,14 @@ derive instance Generic ChainEvent _
 
 --------------------------------------------------------------------------------
 
-_TxnValidate :: Prism' ChainEvent { a :: TxId, b :: Tx, c :: Array ScriptValidationEvent }
+_TxnValidate :: Prism' ChainEvent { a :: TxId, b :: CardanoTx, c :: Array ScriptValidationEvent }
 _TxnValidate = prism' (\{ a, b, c } -> (TxnValidate a b c)) case _ of
   (TxnValidate a b c) -> Just { a, b, c }
   _ -> Nothing
 
-_TxnValidationFail :: Prism' ChainEvent { a :: ValidationPhase, b :: TxId, c :: Tx, d :: ValidationError, e :: Array ScriptValidationEvent }
-_TxnValidationFail = prism' (\{ a, b, c, d, e } -> (TxnValidationFail a b c d e)) case _ of
-  (TxnValidationFail a b c d e) -> Just { a, b, c, d, e }
+_TxnValidationFail :: Prism' ChainEvent { a :: ValidationPhase, b :: TxId, c :: CardanoTx, d :: ValidationError, e :: Array ScriptValidationEvent, f :: Value }
+_TxnValidationFail = prism' (\{ a, b, c, d, e, f } -> (TxnValidationFail a b c d e f)) case _ of
+  (TxnValidationFail a b c d e f) -> Just { a, b, c, d, e, f }
   _ -> Nothing
 
 _SlotAdd :: Prism' ChainEvent Slot
