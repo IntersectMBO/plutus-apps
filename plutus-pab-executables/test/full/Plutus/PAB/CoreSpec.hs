@@ -45,8 +45,9 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Extras (tshow)
-import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxId, getCardanoTxOutRefs, pubKeyAddress, pubKeyHash,
-               pubKeyHashAddress, toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs, txOutputs)
+import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), getCardanoTxFee, getCardanoTxId, getCardanoTxOutRefs,
+               pubKeyAddress, pubKeyHash, pubKeyHashAddress, toPubKeyHash, txId, txOutAddress, txOutRefId, txOutRefs,
+               txOutputs)
 import Ledger qualified
 import Ledger.Ada (adaSymbol, adaToken, lovelaceValueOf)
 import Ledger.Ada qualified as Ada
@@ -274,7 +275,6 @@ valueAtTest :: IO ()
 valueAtTest = runScenario $ do
     let initialBalance = lovelaceValueOf 100_000_000_000
         payment = lovelaceValueOf 50_000_000
-        fee     = lovelaceValueOf 10 -- TODO: Calculate the fee from the tx
 
     initialValue <- Core.valueAt defaultWallet
 
@@ -286,7 +286,7 @@ valueAtTest = runScenario $ do
     void $ Core.waitForTxStatusChange $ getCardanoTxId tx
     finalValue <- Core.valueAt defaultWallet
     let difference = initialValue <> inv finalValue
-    assertEqual "defaultWallet should make a payment" difference (payment <> fee)
+    assertEqual "defaultWallet should make a payment" difference (payment <> getCardanoTxFee tx)
 
     -- Check that the funds are correctly registered in the newly created wallet
     vl2 <- Core.valueAt mockWallet

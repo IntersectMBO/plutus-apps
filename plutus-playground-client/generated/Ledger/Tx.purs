@@ -16,15 +16,63 @@ import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
+import Data.RawJson (RawJson)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Plutus.V1.Ledger.Address (Address)
 import Plutus.V1.Ledger.Scripts (DatumHash, Validator)
+import Plutus.V1.Ledger.Tx (Tx)
 import Plutus.V1.Ledger.Value (Value)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
+
+data CardanoTx
+  = EmulatorTx Tx
+  | CardanoApiTx RawJson
+  | Both Tx RawJson
+
+derive instance Eq CardanoTx
+
+instance Show CardanoTx where
+  show a = genericShow a
+
+instance EncodeJson CardanoTx where
+  encodeJson = defer \_ -> case _ of
+    EmulatorTx a -> E.encodeTagged "EmulatorTx" a E.value
+    CardanoApiTx a -> E.encodeTagged "CardanoApiTx" a E.value
+    Both a b -> E.encodeTagged "Both" (a /\ b) (E.tuple (E.value >/\< E.value))
+
+instance DecodeJson CardanoTx where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "CardanoTx"
+    $ Map.fromFoldable
+        [ "EmulatorTx" /\ D.content (EmulatorTx <$> D.value)
+        , "CardanoApiTx" /\ D.content (CardanoApiTx <$> D.value)
+        , "Both" /\ D.content (D.tuple $ Both </$\> D.value </*\> D.value)
+        ]
+
+derive instance Generic CardanoTx _
+
+--------------------------------------------------------------------------------
+
+_EmulatorTx :: Prism' CardanoTx Tx
+_EmulatorTx = prism' EmulatorTx case _ of
+  (EmulatorTx a) -> Just a
+  _ -> Nothing
+
+_CardanoApiTx :: Prism' CardanoTx RawJson
+_CardanoApiTx = prism' CardanoApiTx case _ of
+  (CardanoApiTx a) -> Just a
+  _ -> Nothing
+
+_Both :: Prism' CardanoTx { a :: Tx, b :: RawJson }
+_Both = prism' (\{ a, b } -> (Both a b)) case _ of
+  (Both a b) -> Just { a, b }
+  _ -> Nothing
+
+--------------------------------------------------------------------------------
 
 data ChainIndexTxOut
   = PublicKeyChainIndexTxOut

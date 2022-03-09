@@ -49,7 +49,6 @@ module Wallet.Emulator.Folds (
     , mkTxLogs
     ) where
 
-import Control.Applicative ((<|>))
 import Control.Foldl (Fold (Fold), FoldM (FoldM))
 import Control.Foldl qualified as L
 import Control.Lens hiding (Empty, Fold)
@@ -57,7 +56,7 @@ import Control.Monad ((>=>))
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error, throwError)
 import Data.Aeson qualified as JSON
-import Data.Foldable (fold, toList)
+import Data.Foldable (toList)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
@@ -66,7 +65,7 @@ import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase (Phase1, Phase2))
-import Ledger.Tx (Address, Tx, TxOut (txOutValue), TxOutTx (txOutTxOut))
+import Ledger.Tx (Address, CardanoTx, TxOut (txOutValue), TxOutTx (txOutTxOut), getCardanoTxFee, onCardanoTx)
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)
@@ -81,7 +80,7 @@ import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (Co
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate, _TxnValidationFail)
-import Wallet.Emulator.LogMessages (_BalancingUnbalancedTx, _ValidationFailed)
+import Wallet.Emulator.LogMessages (_BalancingUnbalancedTx)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorTimeEvent, chainEvent, eteEvent, instanceEvent,
                                    userThreadEvent, walletClientEvent, walletEvent')
 import Wallet.Emulator.NodeClient (_TxSubmit)
@@ -95,16 +94,15 @@ type EmulatorEventFold a = Fold EmulatorEvent a
 type EmulatorEventFoldM effs a = FoldM (Eff effs) EmulatorEvent a
 
 -- | Transactions that failed to validate, in the given validation phase (if specified).
-failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, Tx, ValidationError, [ScriptValidationEvent])]
+failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, CardanoTx, ValidationError, [ScriptValidationEvent], Value)]
 failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
     where
         f e = preview (eteEvent . chainEvent . _TxnValidationFail) e
-          <|> preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _ValidationFailed) e
-        filterPhase Nothing (_, i, t, v, e)   = Just (i, t, v, e)
-        filterPhase (Just p) (p', i, t, v, e) = if p == p' then Just (i, t, v, e) else Nothing
+        filterPhase Nothing (_, i, t, v, e, c)   = Just (i, t, v, e, c)
+        filterPhase (Just p) (p', i, t, v, e, c) = if p == p' then Just (i, t, v, e, c) else Nothing
 
 -- | Transactions that were validated
-validatedTransactions :: EmulatorEventFold [(TxId, Tx, [ScriptValidationEvent])]
+validatedTransactions :: EmulatorEventFold [(TxId, CardanoTx, [ScriptValidationEvent])]
 validatedTransactions = preMapMaybe (preview (eteEvent . chainEvent . _TxnValidate)) L.list
 
 -- | All scripts that are run during transaction validation
@@ -112,9 +110,9 @@ scriptEvents :: EmulatorEventFold [ScriptValidationEvent]
 scriptEvents = preMapMaybe (preview (eteEvent . chainEvent) >=> getEvent) (concat <$> L.list) where
     getEvent :: ChainEvent -> Maybe [ScriptValidationEvent]
     getEvent = \case
-        TxnValidate _ _ es           -> Just es
-        TxnValidationFail _ _ _ _ es -> Just es
-        SlotAdd _                    -> Nothing
+        TxnValidate _ _ es             -> Just es
+        TxnValidationFail _ _ _ _ es _ -> Just es
+        SlotAdd _                      -> Nothing
 
 -- | Unbalanced transactions that are sent to the wallet for balancing
 walletTxBalanceEvents :: EmulatorEventFold [UnbalancedTx]
@@ -238,7 +236,7 @@ instanceOutcome ::
     -> ContractInstanceTag
     -> EmulatorEventFoldM effs (Outcome e a)
 instanceOutcome con =
-    fmap (fromMaybe NotDone . fmap (fromResumableResult . instContractState)) . instanceState con
+    fmap (maybe NotDone (fromResumableResult . instContractState)) . instanceState con
 
 -- | Unspent outputs at an address
 utxoAtAddress :: Address -> EmulatorEventFold UtxoMap
@@ -247,10 +245,10 @@ utxoAtAddress addr =
     $ Fold (flip step) (AM.addAddress addr mempty) (view (AM.fundsAt addr))
     where
         step = \case
-            TxnValidate _ txn _                -> AM.updateAddresses (Valid txn)
-            TxnValidationFail Phase2 _ txn _ _ -> AM.updateAddresses (Invalid txn)
-            _                                  -> id
-
+            TxnValidate _ txn _                  -> onCardanoTx (AM.updateAddresses . Valid) cardanoTxErr txn
+            TxnValidationFail Phase2 _ txn _ _ _ -> onCardanoTx (AM.updateAddresses . Invalid) cardanoTxErr txn
+            _                                    -> id
+        cardanoTxErr _ = error "Wallet.Emulator.Folds.utxoAtAddress: Expecting a mock tx, not an Alonzo tx"
 
 -- | The total value of unspent outputs at an address
 valueAtAddress :: Address -> EmulatorEventFold Value
@@ -264,8 +262,11 @@ walletFunds = valueAtAddress . mockWalletAddress
 walletFees :: Wallet -> EmulatorEventFold Value
 walletFees w = fees <$> walletSubmittedFees <*> validatedTransactions <*> failedTransactions (Just Phase2)
     where
-        fees submitted txsV txsF = findFees (\(i, _, _) -> i) submitted txsV <> findFees (\(i, _, _, _) -> i) submitted txsF
-        findFees getId submitted = foldMap (\t -> fold (Map.lookup (getId t) submitted))
+        fees submitted txsV txsF =
+            findFees (\(i, _, _) -> i) (\(_, tx, _) -> getCardanoTxFee tx) submitted txsV
+            <>
+            findFees (\(i, _, _, _, _) -> i) (\(_, _, _, _, collateral) -> collateral) submitted txsF
+        findFees getId getFees submitted = foldMap (\t -> if Map.member (getId t) submitted then getFees t else mempty)
         walletSubmittedFees = L.handles (eteEvent . walletClientEvent w . _TxSubmit) L.map
 
 -- | Annotate the transactions that were validated by the node
@@ -282,13 +283,16 @@ chainEvents = preMapMaybe (preview (eteEvent . chainEvent)) L.list
 blockchain :: EmulatorEventFold [Block]
 blockchain =
     let step (currentBlock, otherBlocks) = \case
-            SlotAdd _                          -> ([], currentBlock : otherBlocks)
-            TxnValidate _ txn _                -> (Valid txn : currentBlock, otherBlocks)
-            TxnValidationFail Phase1 _ _   _ _ -> (currentBlock, otherBlocks)
-            TxnValidationFail Phase2 _ txn _ _ -> (Invalid txn : currentBlock, otherBlocks)
+            SlotAdd _                            -> ([], currentBlock : otherBlocks)
+            TxnValidate _ txn _                  -> (add currentBlock Valid txn, otherBlocks)
+            TxnValidationFail Phase1 _ _   _ _ _ -> (currentBlock, otherBlocks)
+            TxnValidationFail Phase2 _ txn _ _ _ -> (add currentBlock Invalid txn, otherBlocks)
         initial = ([], [])
         extract (currentBlock, otherBlocks) =
             (currentBlock : otherBlocks)
+        add currentBlock val = onCardanoTx
+            ((: currentBlock) . val)
+            (\_ -> error "Wallet.Emulator.Folds: Expecting a mock tx, not an Alonzo tx")
     in preMapMaybe (preview (eteEvent . chainEvent))
         $ Fold step initial extract
 

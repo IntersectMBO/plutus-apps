@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DerivingVia         #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
@@ -21,12 +22,14 @@ module Ledger.Index(
     initialise,
     Validation(..),
     runValidation,
+    lookup,
     lkpValue,
     lkpTxOut,
     lkpOutputs,
     ValidationError(..),
     ValidationErrorInPhase,
     ValidationPhase(..),
+    EmulatorEra,
     InOutMatch(..),
     minFee,
     maxFee,
@@ -48,6 +51,9 @@ module Ledger.Index(
 
 import Prelude hiding (lookup)
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Crypto (StandardCrypto)
+
 import Codec.Serialise (Serialise)
 import Control.DeepSeq (NFData)
 import Control.Lens (toListOf, view, (^.))
@@ -56,7 +62,7 @@ import Control.Monad
 import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Foldable (asum, fold, foldl', for_, traverse_)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
@@ -121,6 +127,8 @@ lookup i index = case Map.lookup i $ getIndex index of
     Just t  -> pure t
     Nothing -> throwError $ TxOutRefNotFound i
 
+type EmulatorEra = AlonzoEra StandardCrypto
+
 -- | A reason why a transaction is invalid.
 data ValidationError =
     InOutTypeMismatch TxIn TxOut
@@ -155,6 +163,8 @@ data ValidationError =
     --   the currency's minting policy.
     | TransactionFeeTooLow V.Value V.Value
     -- ^ The transaction fee is lower than the minimum acceptable fee.
+    | CardanoLedgerValidationError String
+    -- ^ An error from Cardano.Ledger validation
     deriving (Eq, Show, Generic)
 
 instance FromJSON ValidationError

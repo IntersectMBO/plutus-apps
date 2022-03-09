@@ -120,7 +120,7 @@ stage contract programJson simulatorWalletsJson = do
         playgroundDecode "[Expression schema]" . BSL.pack $ simulationJson
     simulatorWallets :: [SimulatorWallet] <-
         playgroundDecode "[SimulatorWallet]" simulatorWalletsJson
-    let config = Plutus.Trace.Playground.EmulatorConfig (Left $ toInitialDistribution simulatorWallets) def def
+    let config = Plutus.Trace.Playground.EmulatorConfig (Left $ toInitialDistribution simulatorWallets) def
         allWallets = simulatorWalletWallet <$> simulatorWallets
         final = run
             $ runError

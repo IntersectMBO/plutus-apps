@@ -16,51 +16,57 @@
 
 module Wallet.Emulator.Chain where
 
-import Codec.Serialise (Serialise)
-import Control.DeepSeq (NFData)
+import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
+import Control.Applicative ((<|>))
 import Control.Lens hiding (index)
 import Control.Monad.Freer
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
 import Control.Monad.Freer.State
 import Control.Monad.State qualified as S
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Either (fromRight)
 import Data.Foldable (traverse_)
 import Data.List (partition, (\\))
 import Data.Maybe (mapMaybe)
+import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, OnChainTx (..), ScriptValidationEvent, Slot (..), Tx (..), TxId, eitherTx, txId)
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), ScriptValidationEvent, Slot (..),
+               SomeCardanoApiTx (SomeTx), Tx (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx,
+               getCardanoTxId, mergeCardanoTxWith, onCardanoTx)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot (SlotConfig)
+import Ledger.Validation qualified as Validation
 import Plutus.Contract.Util (uncurry3)
 import Prettyprinter
 
+
 -- | Events produced by the blockchain emulator.
 data ChainEvent =
-    TxnValidate TxId Tx [ScriptValidationEvent]
+    TxnValidate TxId CardanoTx [ScriptValidationEvent]
     -- ^ A transaction has been validated and added to the blockchain.
-    | TxnValidationFail Index.ValidationPhase TxId Tx Index.ValidationError [ScriptValidationEvent]
-    -- ^ A transaction failed to validate.
+    | TxnValidationFail Index.ValidationPhase TxId CardanoTx Index.ValidationError [ScriptValidationEvent] Value
+    -- ^ A transaction failed to validate. The @Value@ indicates the amount of collateral stored in the transaction.
     | SlotAdd Slot
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
 instance Pretty ChainEvent where
     pretty = \case
-        TxnValidate i _ _           -> "TxnValidate" <+> pretty i
-        TxnValidationFail p i _ e _ -> "TxnValidationFail" <+> pretty p <+> pretty i <> colon <+> pretty e
-        SlotAdd sl                  -> "SlotAdd" <+> pretty sl
+        TxnValidate i _ _             -> "TxnValidate" <+> pretty i
+        TxnValidationFail p i _ e _ _ -> "TxnValidationFail" <+> pretty p <+> pretty i <> colon <+> pretty e
+        SlotAdd sl                    -> "SlotAdd" <+> pretty sl
 
 -- | A pool of transactions which have yet to be validated.
-type TxPool = [Tx]
+type TxPool = [CardanoTx]
 
 data ChainState = ChainState {
     _chainNewestFirst :: Blockchain, -- ^ The current chain, with the newest transactions first in the list.
     _txPool           :: TxPool, -- ^ The pool of pending transactions.
     _index            :: Index.UtxoIndex, -- ^ The UTxO index, used for validation.
     _currentSlot      :: Slot -- ^ The current slot number
-} deriving (Show, Generic, Serialise, NFData)
+} deriving (Show, Generic)
 
 emptyChainState :: ChainState
 emptyChainState = ChainState [] [] mempty 0
@@ -72,7 +78,7 @@ data ChainControlEffect r where
     ModifySlot :: (Slot -> Slot) -> ChainControlEffect Slot
 
 data ChainEffect r where
-    QueueTx :: Tx -> ChainEffect ()
+    QueueTx :: CardanoTx -> ChainEffect ()
     GetCurrentSlot :: ChainEffect Slot
     GetSlotConfig :: ChainEffect SlotConfig
 
@@ -84,7 +90,7 @@ processBlock = send ProcessBlock
 modifySlot :: Member ChainControlEffect effs => (Slot -> Slot) -> Eff effs Slot
 modifySlot = send . ModifySlot
 
-queueTx :: Member ChainEffect effs => Tx -> Eff effs ()
+queueTx :: Member ChainEffect effs => CardanoTx -> Eff effs ()
 queueTx tx = send (QueueTx tx)
 
 getSlotConfig :: Member ChainEffect effs => Eff effs SlotConfig
@@ -132,7 +138,7 @@ data ValidatedBlock = ValidatedBlock
     -- ^ The transactions that have been validated in this block.
     , vlbEvents :: [ChainEvent]
     -- ^ Transaction validation events for the transactions in this block.
-    , vlbRest   :: [Tx]
+    , vlbRest   :: TxPool
     -- ^ The transactions that haven't been validated because the current slot is
     --   not in their validation interval.
     }
@@ -140,7 +146,7 @@ data ValidatedBlock = ValidatedBlock
 -- | Validate a block given the current slot and UTxO index, returning the valid
 --   transactions, success/failure events, remaining transactions and the
 --   updated UTxO set.
-validateBlock :: SlotConfig -> Slot -> Index.UtxoIndex -> [Tx] -> ValidatedBlock
+validateBlock :: SlotConfig -> Slot -> Index.UtxoIndex -> TxPool -> ValidatedBlock
 validateBlock slotCfg slot@(Slot s) idx txns =
     let
         -- Select those transactions that can be validated in the
@@ -150,41 +156,65 @@ validateBlock slotCfg slot@(Slot s) idx txns =
         -- Validate eligible transactions, updating the UTXO index each time
         processed =
             flip S.evalState (Index.ValidationCtx idx slotCfg) $ for eligibleTxns $ \tx -> do
-                (err, events_) <- validateEm slot tx
+                (err, events_) <- validateEm slot cUtxoIndex tx
                 pure (tx, err, events_)
 
         -- The new block contains all transaction that were validated
         -- successfully
         block = mapMaybe toOnChain processed
           where
-            toOnChain (_ , Just (Index.Phase1, _), _) = Nothing
-            toOnChain (tx, Just (Index.Phase2, _), _) = Just (Invalid tx)
-            toOnChain (tx, Nothing               , _) = Just (Valid tx)
+            toOnChain (_            , Just (Index.Phase1, _), _) = Nothing
+            toOnChain (EmulatorTx tx, Just (Index.Phase2, _), _) = Just (Invalid tx)
+            toOnChain (Both tx _    , Just (Index.Phase2, _), _) = Just (Invalid tx)
+            toOnChain (EmulatorTx tx, Nothing               , _) = Just (Valid tx)
+            toOnChain (Both tx _    , Nothing               , _) = Just (Valid tx)
+            toOnChain (CardanoApiTx _, _                    , _) = Nothing -- TODO: support CardanoTx
 
         -- Also return an `EmulatorEvent` for each transaction that was
         -- processed
         nextSlot = Slot (s + 1)
-        events   = (uncurry3 mkValidationEvent <$> processed) ++ [SlotAdd nextSlot]
+        events   = (uncurry3 (mkValidationEvent idx) <$> processed) ++ [SlotAdd nextSlot]
+
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
 
     in ValidatedBlock block events rest
 
--- | Check whether the given transaction can be validated in the given slot.
-canValidateNow :: Slot -> Tx -> Bool
-canValidateNow slot tx = Interval.member slot (txValidRange tx)
+getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
+getCollateral idx = onCardanoTx
+    (\tx -> fromRight (txFee tx) $ alaf Ap foldMap (fmap txOutValue . (`Index.lookup` idx) . txInRef) (txCollateral tx))
+    (\_ -> error "Wallet.Emulator.Chain.getCollateral: Expecting a mock tx, not an Alonzo tx")
 
-mkValidationEvent :: Tx -> Maybe Index.ValidationErrorInPhase -> [ScriptValidationEvent] -> ChainEvent
-mkValidationEvent t result events =
+-- | Check whether the given transaction can be validated in the given slot.
+canValidateNow :: Slot -> CardanoTx -> Bool
+canValidateNow slot = onCardanoTx
+    (Interval.member slot . txValidRange)
+    (\_ -> error "Wallet.Emulator.Chain.canValidateNow: Expecting a mock tx, not an Alonzo tx")
+
+mkValidationEvent :: Index.UtxoIndex -> CardanoTx -> Maybe Index.ValidationErrorInPhase -> [ScriptValidationEvent] -> ChainEvent
+mkValidationEvent idx t result events =
     case result of
-        Nothing           -> TxnValidate (txId t) t events
-        Just (phase, err) -> TxnValidationFail phase (txId t) t err events
+        Nothing           -> TxnValidate (getCardanoTxId t) t events
+        Just (phase, err) -> TxnValidationFail phase (getCardanoTxId t) t err events (getCollateral idx t)
 
 -- | Validate a transaction in the current emulator state.
-validateEm :: S.MonadState Index.ValidationCtx m => Slot -> Tx -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
-validateEm h txn = do
-    ctx <- S.get
-    let ((e, idx'), events) = Index.runValidation (Index.validateTransaction h txn) ctx
+validateEm
+    :: S.MonadState Index.ValidationCtx m
+    => Slot
+    -> Validation.UTxOState Index.EmulatorEra
+    -> CardanoTx
+    -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
+validateEm h cUtxoIndex txn = do
+    ctx@(Index.ValidationCtx idx _) <- S.get
+    let ((e, idx'), events) = txn & mergeCardanoTxWith
+            (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
+            (\tx -> ((validateL h cUtxoIndex tx, idx), []))
+            (\((e1, utxo), sve1) ((e2, _), sve2) -> ((e1 <|> e2, utxo), sve1 ++ sve2))
     _ <- S.put ctx{Index.vctxIndex=idx'}
     pure (e, events)
+
+validateL :: Slot -> Validation.UTxOState Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
+validateL slot idx (SomeTx tx AlonzoEraInCardanoMode) = (,) Index.Phase1 <$> Validation.hasValidationErrors (fromIntegral slot) idx tx
+validateL _    _   _ = Nothing
 
 -- | Adds a block to ChainState, without validation.
 addBlock :: Block -> ChainState -> ChainState
@@ -193,9 +223,9 @@ addBlock blk st =
      & index %~ Index.insertBlock blk
      -- The block update may contain txs that are not in this client's
      -- `txPool` which will get ignored
-     & txPool %~ (\\ map (eitherTx id id) blk)
+     & txPool %~ (\\ map (eitherTx EmulatorTx EmulatorTx) blk)
 
-addTxToPool :: Tx -> TxPool -> TxPool
+addTxToPool :: CardanoTx -> TxPool -> TxPool
 addTxToPool = (:)
 
 makePrisms ''ChainEvent

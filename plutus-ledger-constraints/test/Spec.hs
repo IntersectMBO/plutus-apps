@@ -54,11 +54,9 @@ reduceByOne (Value.Value value) = do
 --   small pool of MPS hashes and token names.
 nonNegativeValue :: Hedgehog.MonadGen m => m Value
 nonNegativeValue =
-    let mpsHashes = ["ffff", "dddd", "cccc", "eeee", "1010"]
-        tokenNames = ["a", "b", "c", "d"]
-    in Value.singleton
-        <$> Gen.element mpsHashes
-        <*> Gen.element tokenNames
+    let tokenNames = ["a", "b", "c", "d"]
+    in Gen.someTokenValue
+        <$> Gen.element tokenNames
         <*> Gen.integral (Range.linear 0 10000)
 
 -- | Check that 'missingValueSpent' is the smallest value needed to
