@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -32,6 +33,7 @@ import Control.Monad.Freer.TH (makeEffect)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), ToJSONKey)
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (bimap, first, second)
+import Data.Data
 import Data.Default (Default (def))
 import Data.Foldable (Foldable (fold), find, foldl')
 import Data.Map qualified as Map
@@ -87,7 +89,7 @@ instance Show SigningProcess where
 
 -- | A wallet identifier
 data Wallet = Wallet { prettyWalletName :: Maybe String , getWalletId :: WalletId }
-    deriving (Generic)
+    deriving (Generic, Data)
     deriving anyclass (ToJSON, FromJSON, ToJSONKey)
 
 instance Eq Wallet where
@@ -124,9 +126,10 @@ instance Pretty Wallet where
 
 deriving anyclass instance OpenApi.ToSchema Wallet
 deriving anyclass instance OpenApi.ToSchema Cardano.Wallet.WalletId
+deriving instance Data Cardano.Wallet.WalletId
 
 newtype WalletId = WalletId { unWalletId :: Cardano.Wallet.WalletId }
-    deriving (Eq, Ord, Generic)
+    deriving (Eq, Ord, Generic, Data)
     deriving anyclass (ToJSONKey)
 
 instance Show WalletId where

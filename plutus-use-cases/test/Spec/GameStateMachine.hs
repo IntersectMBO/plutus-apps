@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DeriveFunctor        #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
@@ -31,6 +32,7 @@ import Control.Exception hiding (handle)
 import Control.Lens
 import Control.Monad
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
+import Data.Data
 import Data.Maybe
 import Test.QuickCheck as QC hiding (checkCoverage, (.&&.))
 import Test.Tasty hiding (after)
@@ -64,7 +66,7 @@ data GameModel = GameModel
     , _hasToken      :: Maybe Wallet
     , _currentSecret :: String
     }
-    deriving (Show)
+    deriving (Show, Data)
 
 makeLenses 'GameModel
 
@@ -81,7 +83,7 @@ instance ContractModel GameModel where
     data Action GameModel = Lock      Wallet String Integer
                           | Guess     Wallet String String Integer
                           | GiveToken Wallet
-        deriving (Eq, Show)
+        deriving (Eq, Show, Data)
 
     initialState = GameModel
         { _gameValue     = 0

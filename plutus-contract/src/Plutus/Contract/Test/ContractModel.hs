@@ -16,6 +16,7 @@ module Plutus.Contract.Test.ContractModel
       --
       -- $contractModel
       ContractModel(..)
+    , HasActions(..)
       -- ** Model state
     , ModelState
     , contractState
