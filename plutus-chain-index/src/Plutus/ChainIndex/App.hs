@@ -92,7 +92,7 @@ runMain logConfig config = do
 
     (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
     withAsync (runLogEffects (convertLog PrettyObject trace) $ logProgress syncStatsChan) $ \_ -> do
-      withAsync (processEventsChan runReq eventsChan (Config.cicAppendPeriod config) (Config.cicAppendBatchSize config)) $ \_ -> do
+      withAsync (processEventsChan runReq eventsChan (Config.cicAppendPeriod config) (Config.cicAppendBatchSize config) slotNo) $ \_ -> do
 
         let port = show (Config.cicPort config)
         putStrLn $ "Starting webserver on port " <> port

@@ -10,6 +10,7 @@
 
 module Plutus.ChainIndex.Events where
 
+import Cardano.Api qualified as C
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (atomically, dupTChan, tryReadTChan)
 import Control.Monad (void)
@@ -20,8 +21,8 @@ import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward), EventsChan, RunRequirements,
                               runChainIndexDuringSync)
 
-processEventsChan :: RunRequirements -> EventsChan -> Int -> Int -> IO ()
-processEventsChan runReq eventsChan period batchSize = void $ do
+processEventsChan :: RunRequirements -> EventsChan -> Int -> Int -> C.SlotNo -> IO ()
+processEventsChan runReq eventsChan period batchSize lastestNodeTip = void $ do
   chan <- liftIO $ atomically $ dupTChan eventsChan
   putStrLn "Starting processing of events"
   go chan
@@ -40,7 +41,7 @@ processEventsChan runReq eventsChan period batchSize = void $ do
               blocks = catMaybes $ rollForwardEvents' <&> \case
                 (RollForward block _) -> Just block
                 _                     -> Nothing
-            CI.appendBlocks blocks
+            CI.appendBlocks blocks lastestNodeTip
             case firstBlock of
               (RollBackward point _) -> CI.rollback point
               (Resume point)         -> CI.resumeSync point

@@ -26,6 +26,7 @@ module Plutus.ChainIndex.Effects(
     , getDiagnostics
     ) where
 
+import Cardano.Api qualified as C
 import Control.Monad.Freer.Extras.Pagination (PageQuery)
 import Control.Monad.Freer.TH (makeEffect)
 import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash, StakeValidator,
@@ -77,8 +78,8 @@ makeEffect ''ChainIndexQueryEffect
 
 data ChainIndexControlEffect r where
 
-    -- | Add new blocks to the chain index.
-    AppendBlocks :: [ChainSyncBlock] -> ChainIndexControlEffect ()
+    -- | Add new blocks to the chain index according to the depth.
+    AppendBlocks :: [ChainSyncBlock] -> C.SlotNo -> ChainIndexControlEffect ()
 
     -- | Roll back to a previous state (previous tip)
     Rollback    :: Point -> ChainIndexControlEffect ()

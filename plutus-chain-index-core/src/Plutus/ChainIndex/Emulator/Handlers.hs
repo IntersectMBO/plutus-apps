@@ -20,6 +20,7 @@ module Plutus.ChainIndex.Emulator.Handlers(
     , utxoIndex
     ) where
 
+import Cardano.Api qualified as C
 import Control.Lens (at, ix, makeLenses, over, preview, set, to, view, (&))
 import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, type (~>))
@@ -170,8 +171,8 @@ appendBlocks ::
     , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
     )
-    => [ChainSyncBlock] -> Eff effs ()
-appendBlocks blocks = do
+    => [ChainSyncBlock] -> C.SlotNo -> Eff effs ()
+appendBlocks blocks lastestNodeTip = do
     let
         processBlock (utxoIndexState, txs) (Block tip_ transactions) = do
             case UtxoState.insert (TxUtxoBalance.fromBlock tip_ (map fst transactions)) utxoIndexState of
@@ -198,7 +199,7 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlocks blocks -> appendBlocks blocks
+    AppendBlocks blocks lastestNodeTip -> appendBlocks blocks lastestNodeTip
     Rollback tip_ -> do
         oldState <- get @ChainIndexEmulatorState
         case TxUtxoBalance.rollback tip_ (view utxoIndex oldState) of

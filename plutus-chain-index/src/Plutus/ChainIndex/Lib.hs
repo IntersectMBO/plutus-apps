@@ -139,12 +139,13 @@ type ChainSyncHandler = ChainSyncEvent -> IO ()
 type EventsChan = TChan ChainSyncEvent
 
 -- | The default chain synchronisation event handler. Updates the in-memory state and the database.
-defaultChainSyncHandler :: RunRequirements -> ChainSyncHandler
-defaultChainSyncHandler runReq evt = void $ runChainIndexDuringSync runReq $ case evt of
-    (RollForward block _)  -> appendBlocks [block]
+defaultChainSyncHandler :: RunRequirements -> C.SlotNo -> ChainSyncHandler
+defaultChainSyncHandler runReq lastestNodeTip evt = void $ runChainIndexDuringSync runReq $ case evt of
+    (RollForward block _)  -> appendBlocks [block] lastestNodeTip
     (RollBackward point _) -> rollback point
     (Resume point)         -> resumeSync point
 
+-- | A chain synchronisation event handler that uses 'TChan' to store events for bulk processing.
 storeChainSyncHandler :: EventsChan -> ChainSyncHandler
 storeChainSyncHandler eventsChan = atomically . writeTChan eventsChan
 

@@ -243,8 +243,8 @@ appendBlocks ::
     , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
     )
-    => [ChainSyncBlock] -> Eff effs ()
-appendBlocks blocks = do
+    => [ChainSyncBlock] -> C.SlotNo -> Eff effs ()
+appendBlocks blocks lastestNodeTip = do
     let
         processBlock (utxoIndexState, txs, utxoStates) (Block tip_ transactions) = do
             let newUtxoState = TxUtxoBalance.fromBlock tip_ (map fst transactions)
@@ -278,7 +278,7 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlocks blocks -> appendBlocks blocks
+    AppendBlocks blocks lastestNodeTip -> appendBlocks blocks lastestNodeTip
     Rollback tip_ -> do
         oldIndex <- get @ChainIndexState
         case TxUtxoBalance.rollback tip_ oldIndex of
