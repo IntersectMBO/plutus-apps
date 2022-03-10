@@ -76,16 +76,9 @@ handleSyncAction action = do
   case result of
     Left err -> putStrLn $ "handleSyncAction failed with: " <> show err
     Right (Slot s, BlockNumber n) -> do
-      let recentSlot = 41511045 -- TODO: This is a relatively recent slot number
-                                -- we start logging from here to avoid spamming the terminal
-                                -- should be removed when we have better logging to report
-                                -- on the PAB sync status
       stdGen <- newStdGen
-      let logBlock = fst (randomR (0 :: Int, 10_000) stdGen) == 0
-      if  logBlock || (s >= recentSlot)
-        then do
-          putStrLn $ "Current block: " <> show n <> ". Current slot: " <> show s
-        else pure ()
+      when (fst (randomR (0 :: Int, 10_000) stdGen) == 0) $
+        putStrLn $ "Current block: " <> show n <> ". Current slot: " <> show s
   either (error . show) (const $ pure ()) result
 
 updateInstances :: IndexedBlock -> InstanceClientEnv -> STM ()
