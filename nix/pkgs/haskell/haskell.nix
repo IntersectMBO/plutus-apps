@@ -233,7 +233,15 @@ let
           };
         }
       )
-      ({ pkgs, config, ... }: {
+      ({ pkgs, config, ... }:
+        let plutus-tx-plugin-ghc-options = 
+              let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
+              in lib.optionals (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+                [
+                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+                  "-host-package-db ${attr}/package.conf.d"
+                ];
+        in {
         packages = {
           ghcjs.components.library.build-tools = let alex = pkgs.haskell-nix.tool compiler-nix-name "alex" {
             index-state = pkgs.haskell-nix.internalHackageIndexState;
@@ -244,159 +252,6 @@ let
           # This is important. We may be reinstalling lib:ghci, and if we do
           # it *must* have the ghci flag enabled (default is disabled).
           ghci.flags.ghci = true;
-
-          plutus-use-cases.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          plutus-tx-plugin.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  #                                              "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          plutus-tx-tests.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  #                                              "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          plutus-errors.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          plutus-benchmark.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-
-          plutus-ledger.components.library.build-tools = if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) then [ pkgs.pkgsCross.ghcjs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.buildGHC ] else [ ];
-          plutus-ledger.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          plutus-ledger-test.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          plutus-pab.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  # Let's not fail on this nonsense.
-                  #src/Plutus/PAB/Run.hs:32:1: error: [-Wdeprecations, -Werror=deprecations]
-                  #    Module ‘Data.Yaml’:
-                  #      GHCJS is not supported yet (will break at runtime once called).
-                  "-Wno-deprecations"
-                  "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          plutus-contract.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          plutus-example.ghcOptions =
-            if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-            then
-              (
-                let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-                in
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                  "-Werror"
-                ]
-              )
-            else __trace "nativePlutus is null" [ ];
-
-          # Applying this globally is wrong. we should apply this only to ghcjs, but
-          # it also needs to be applied to the plutus-tx plugin, so we can actually
-          # load it into ghcjs, otherwise we'll choke on the c++ dependency, which
-          # brings in R_X86_64_TLSLD (20) relocation.
-          # double-conversion.patches = [ ../../../contrib/double-conversion-2.0.2.0.patch ];
 
           cardano-wallet-core.patches = [ ../../patches/cardano-wallet-pr-3074.patch ];
 
@@ -434,15 +289,26 @@ let
             lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
               ++ [ "-Werror" ];
           plutus-chain-index-core.ghcOptions = [ "-Werror" ];
+          plutus-contract.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
+          plutus-ledger.components.library.build-tools = if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) then [ pkgs.pkgsCross.ghcjs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.buildGHC ] else [ ];
+          plutus-ledger.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
           plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
+          plutus-ledger-test.ghcOptions = plutus-tx-plugin-ghc-options;
           plutus-playground-server.ghcOptions = [ "-Werror" ];
-          plutus-pab-executables.ghcOptions =
-            # "-Wno-deprecations" works around
+          plutus-pab.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ] ++
+            # Let's not fail on this nonsense.
+            #src/Plutus/PAB/Run.hs:32:1: error: [-Wdeprecations, -Werror=deprecations]
             #    Module ‘Data.Yaml’:
             #      GHCJS is not supported yet (will break at runtime once called).
-            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
-              ++ [ "-Werror" ];
+            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations";
+          plutus-pab-executables.ghcOptions = [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
+          plutus-use-cases.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
+          plutus-example.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
+          plutus-tx-plugin.ghcOptions = plutus-tx-plugin-ghc-options;
+          plutus-tx-tests.ghcOptions = plutus-tx-plugin-ghc-options;
+          plutus-errors.ghcOptions = plutus-tx-plugin-ghc-options;
+          plutus-benchmark.ghcOptions = plutus-tx-plugin-ghc-options;
 
           # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
           # This will go away when we upgrade nixpkgs and things use ieee754 anyway.
