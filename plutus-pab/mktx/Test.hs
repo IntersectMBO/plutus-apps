@@ -126,4 +126,3 @@ main = do
     pparams <- readJSONFile ("mktx" </> "protocol-parameters.json")
     mapM_ (runTxTest generate pparams)
           (map (\x -> "mktx" </> "test" </> x <.> "json") testcases)
-    -- XXX test JSON construction/consistency

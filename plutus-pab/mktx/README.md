@@ -16,6 +16,58 @@ Module['onRuntimeInitialized'] = function() {
 
 Signing a transaction depends on the current protocol parameters. These have to be supplied as a JSON object. Make sure that you keep the values up to date. The data in the test program was taken from the `plutus-use-cases` project (`protocol-parameters.json`).
 
+## Example
+
+A Haskell program that creates an `UnbalancedTx`:
+
+```{.haskell}
+import qualified Ledger.Constraints as Constraints
+import qualified Ledger.Constraints.OffChain as OffChain
+import qualified PlutusTx.Builtins as Builtins
+import qualified Plutus.V1.Ledger.Value as Value
+
+unbalancedTx1 :: Either MkTxError UnbalancedTx
+unbalancedTx1 =
+  let value1 = Value.singleton "" "ADA" 10
+      data1 = Builtins.mkI 20
+      constraint1 = Constraints.mustPayToTheScript data1 value1
+      constraint2 = Constraints.mustSpendAtLeast value1
+      constraints :: UntypedConstraints
+      constraints = Constraints.mustSatisfyAnyOf [constraint1, constraint2]
+      lookups :: ScriptLookups Any
+      lookups     = mempty
+  in OffChain.mkTx lookups constraints
+```
+
+And an equivalent JavaScript program:
+
+```{.javascript}
+var value1 = [[{unCurrencySymbol: "" }, {unTokenName: "ADA"} , 10]];
+var data1 = "d87a9fd8799fd8799fd8799f4040ffffd8799fd8799f581c9a58345cbb583d61cac68ab8b90e95ba885dc803830e7b67f63546544141ffffffd8799f1a003040a6ffff";
+var constraint1 = plutus.constraints.mustPayToTheScript(data1, value1);
+var constraint2 = plutus.constraints.mustSpendAtLeast(value1);
+var constraints = plutus.constraints.mustSatisfyAnyOf([constraint1, constraint2]);
+var lookups = plutus.offchain.emptyScriptLookups();
+var unbalancedTx1 = plutus.offchain.mkTx(lookups, constraints);
+```
+
+## Manual Installation / Development
+
+You can open a nix shell to build the library using the command
+
+```
+$ nix-shell -A ghcjs.haskell.exes.plutus-pab.pab-mktx-lib ../release.nix
+```
+
+The you can find the appropriate cabal commands with
+
+```
+$ echo $configurePhase
+$ echo $buildPhase
+```
+
+Look for the part that starts with `$SETUP_HS`
+
 # Design
 
 This section gives an overview of some design decisions for this project.
@@ -48,7 +100,7 @@ In the initial version of this library, not all JavaScript types are very friend
 
 ## Error Handling
 
-A common way to represent actions that can fail in Haskell is with an `Either error success` result type, where `Left error` is for example used to indicate that a required lookup could not be found. However there is no standard way to represent `Either` in JavaScript, and no way to safely chain multiple "failable" actions. Morever, JavaScript being untyped, additional errors can occur, such as malformed JSON data for the inputs.
+A common way to represent actions that can fail in Haskell is with an `Either error success` result type, where `Left error` is for example used to indicate that a required lookup could not be found. However there is no standard way to represent `Either` in JavaScript, and no way to safely chain multiple "failable" actions. Moreover, JavaScript being untyped, additional errors can occur, such as malformed JSON data for the inputs.
 
 Therefore, we have chosen to not use `Either` return values, but instead raise a JavaScript exception on any error condition.
 
