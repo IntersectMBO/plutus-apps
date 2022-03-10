@@ -295,13 +295,19 @@ let
           plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
           plutus-ledger-test.ghcOptions = plutus-tx-plugin-ghc-options;
           plutus-playground-server.ghcOptions = [ "-Werror" ];
-          plutus-pab.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ] ++
+          plutus-pab.ghcOptions = plutus-tx-plugin-ghc-options ++
             # Let's not fail on this nonsense.
             #src/Plutus/PAB/Run.hs:32:1: error: [-Wdeprecations, -Werror=deprecations]
             #    Module ‘Data.Yaml’:
             #      GHCJS is not supported yet (will break at runtime once called).
-            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations";
-          plutus-pab-executables.ghcOptions = [ "-Werror" ];
+            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
+              ++ [ "-Werror" ];
+          plutus-pab-executables.ghcOptions =
+            # "-Wno-deprecations" works around
+            #    Module ‘Data.Yaml’:
+            #      GHCJS is not supported yet (will break at runtime once called).
+            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
+              ++ [ "-Werror" ];
           plutus-doc.ghcOptions = [ "-Werror" ];
           plutus-use-cases.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
           plutus-example.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
