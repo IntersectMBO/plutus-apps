@@ -234,93 +234,95 @@ let
         }
       )
       ({ pkgs, config, ... }:
-        let plutus-tx-plugin-ghc-options = 
-              let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
-              in lib.optionals (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
-                [
-                  "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
-                  "-host-package-db ${attr}/package.conf.d"
-                ];
-        in {
-        packages = {
-          ghcjs.components.library.build-tools = let alex = pkgs.haskell-nix.tool compiler-nix-name "alex" {
-            index-state = pkgs.haskell-nix.internalHackageIndexState;
-            version = "3.2.5";
-          }; in [ alex ];
-          ghcjs.flags.use-host-template-haskell = true;
+        let plutus-tx-plugin-ghc-options =
+          let attr = ghcjsPluginPkgs.haskell.project.hsPkgs.plutus-tx-plugin.components.library;
+          in
+          lib.optionals (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs)
+            [
+              "-host-package-db ${attr.passthru.configFiles}/${attr.passthru.configFiles.packageCfgDir}"
+              "-host-package-db ${attr}/package.conf.d"
+            ];
+        in
+        {
+          packages = {
+            ghcjs.components.library.build-tools = let alex = pkgs.haskell-nix.tool compiler-nix-name "alex" {
+              index-state = pkgs.haskell-nix.internalHackageIndexState;
+              version = "3.2.5";
+            }; in [ alex ];
+            ghcjs.flags.use-host-template-haskell = true;
 
-          # This is important. We may be reinstalling lib:ghci, and if we do
-          # it *must* have the ghci flag enabled (default is disabled).
-          ghci.flags.ghci = true;
+            # This is important. We may be reinstalling lib:ghci, and if we do
+            # it *must* have the ghci flag enabled (default is disabled).
+            ghci.flags.ghci = true;
 
-          cardano-wallet-core.patches = [ ../../patches/cardano-wallet-pr-3074.patch ];
+            cardano-wallet-core.patches = [ ../../patches/cardano-wallet-pr-3074.patch ];
 
-          plutus-contract.doHaddock = deferPluginErrors;
-          plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
+            plutus-contract.doHaddock = deferPluginErrors;
+            plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
 
-          plutus-use-cases.doHaddock = deferPluginErrors;
-          plutus-use-cases.flags.defer-plugin-errors = deferPluginErrors;
+            plutus-use-cases.doHaddock = deferPluginErrors;
+            plutus-use-cases.flags.defer-plugin-errors = deferPluginErrors;
 
-          plutus-ledger.doHaddock = deferPluginErrors;
-          plutus-ledger.flags.defer-plugin-errors = deferPluginErrors;
+            plutus-ledger.doHaddock = deferPluginErrors;
+            plutus-ledger.flags.defer-plugin-errors = deferPluginErrors;
 
-          plutus-example.doHaddock = deferPluginErrors;
-          plutus-example.flags.defer-plugin-errors = deferPluginErrors;
+            plutus-example.doHaddock = deferPluginErrors;
+            plutus-example.flags.defer-plugin-errors = deferPluginErrors;
 
-          # FIXME: Haddock mysteriously gives a spurious missing-home-modules warning
-          plutus-tx-plugin.doHaddock = false;
+            # FIXME: Haddock mysteriously gives a spurious missing-home-modules warning
+            plutus-tx-plugin.doHaddock = false;
 
-          # Relies on cabal-doctest, just turn it off in the Nix build
-          prettyprinter-configurable.components.tests.prettyprinter-configurable-doctest.buildable = lib.mkForce false;
+            # Relies on cabal-doctest, just turn it off in the Nix build
+            prettyprinter-configurable.components.tests.prettyprinter-configurable-doctest.buildable = lib.mkForce false;
 
-          plutus-pab-executables.components.tests.plutus-pab-test-full-long-running = {
-            platforms = lib.platforms.linux;
+            plutus-pab-executables.components.tests.plutus-pab-test-full-long-running = {
+              platforms = lib.platforms.linux;
+            };
+
+            # Broken due to warnings, unclear why the setting that fixes this for the build doesn't work here.
+            iohk-monitoring.doHaddock = false;
+
+            # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
+            playground-common.ghcOptions = [ "-Werror" ];
+            plutus-chain-index.ghcOptions =
+              # "-Wno-deprecations" works around
+              #    Module ‘Data.Yaml’:
+              #      GHCJS is not supported yet (will break at runtime once called).
+              lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
+                ++ [ "-Werror" ];
+            plutus-chain-index-core.ghcOptions = [ "-Werror" ];
+            plutus-contract.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
+            plutus-ledger.components.library.build-tools = if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) then [ pkgs.pkgsCross.ghcjs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.buildGHC ] else [ ];
+            plutus-ledger.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
+            plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
+            plutus-ledger-test.ghcOptions = plutus-tx-plugin-ghc-options;
+            plutus-playground-server.ghcOptions = [ "-Werror" ];
+            plutus-pab.ghcOptions = plutus-tx-plugin-ghc-options ++
+              # Let's not fail on this nonsense.
+              #src/Plutus/PAB/Run.hs:32:1: error: [-Wdeprecations, -Werror=deprecations]
+              #    Module ‘Data.Yaml’:
+              #      GHCJS is not supported yet (will break at runtime once called).
+              lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
+              ++ [ "-Werror" ];
+            plutus-pab-executables.ghcOptions =
+              # "-Wno-deprecations" works around
+              #    Module ‘Data.Yaml’:
+              #      GHCJS is not supported yet (will break at runtime once called).
+              lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
+                ++ [ "-Werror" ];
+            plutus-doc.ghcOptions = [ "-Werror" ];
+            plutus-use-cases.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
+            plutus-example.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
+            plutus-tx-plugin.ghcOptions = plutus-tx-plugin-ghc-options;
+            plutus-tx-tests.ghcOptions = plutus-tx-plugin-ghc-options;
+            plutus-errors.ghcOptions = plutus-tx-plugin-ghc-options;
+            plutus-benchmark.ghcOptions = plutus-tx-plugin-ghc-options;
+
+            # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
+            # This will go away when we upgrade nixpkgs and things use ieee754 anyway.
+            ieee.components.library.libs = lib.mkForce [ ];
           };
-
-          # Broken due to warnings, unclear why the setting that fixes this for the build doesn't work here.
-          iohk-monitoring.doHaddock = false;
-
-          # Werror everything. This is a pain, see https://github.com/input-output-hk/haskell.nix/issues/519
-          playground-common.ghcOptions = [ "-Werror" ];
-          plutus-chain-index.ghcOptions =
-            # "-Wno-deprecations" works around
-            #    Module ‘Data.Yaml’:
-            #      GHCJS is not supported yet (will break at runtime once called).
-            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
-              ++ [ "-Werror" ];
-          plutus-chain-index-core.ghcOptions = [ "-Werror" ];
-          plutus-contract.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
-          plutus-ledger.components.library.build-tools = if (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) then [ pkgs.pkgsCross.ghcjs.buildPackages.haskell-nix.compiler.${compiler-nix-name}.buildGHC ] else [ ];
-          plutus-ledger.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
-          plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
-          plutus-ledger-test.ghcOptions = plutus-tx-plugin-ghc-options;
-          plutus-playground-server.ghcOptions = [ "-Werror" ];
-          plutus-pab.ghcOptions = plutus-tx-plugin-ghc-options ++
-            # Let's not fail on this nonsense.
-            #src/Plutus/PAB/Run.hs:32:1: error: [-Wdeprecations, -Werror=deprecations]
-            #    Module ‘Data.Yaml’:
-            #      GHCJS is not supported yet (will break at runtime once called).
-            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
-              ++ [ "-Werror" ];
-          plutus-pab-executables.ghcOptions =
-            # "-Wno-deprecations" works around
-            #    Module ‘Data.Yaml’:
-            #      GHCJS is not supported yet (will break at runtime once called).
-            lib.optional (ghcjsPluginPkgs != null && pkgs.stdenv.hostPlatform.isGhcjs) "-Wno-deprecations"
-              ++ [ "-Werror" ];
-          plutus-doc.ghcOptions = [ "-Werror" ];
-          plutus-use-cases.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
-          plutus-example.ghcOptions = plutus-tx-plugin-ghc-options ++ [ "-Werror" ];
-          plutus-tx-plugin.ghcOptions = plutus-tx-plugin-ghc-options;
-          plutus-tx-tests.ghcOptions = plutus-tx-plugin-ghc-options;
-          plutus-errors.ghcOptions = plutus-tx-plugin-ghc-options;
-          plutus-benchmark.ghcOptions = plutus-tx-plugin-ghc-options;
-
-          # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
-          # This will go away when we upgrade nixpkgs and things use ieee754 anyway.
-          ieee.components.library.libs = lib.mkForce [ ];
-        };
-      })
+        })
       ({ pkgs, ... }:
         if (topLevelPkgs.stdenv.hostPlatform.isGhcjs) then {
           packages = {
