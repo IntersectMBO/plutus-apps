@@ -4,8 +4,8 @@
 {-# LANGUAGE DerivingStrategies       #-}
 {-# LANGUAGE FlexibleInstances        #-}
 {-# LANGUAGE OverloadedStrings        #-}
-{-# LANGUAGE StandaloneDeriving       #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
+{-# LANGUAGE StandaloneDeriving       #-}
 #if defined(__GHCJS__)
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-imports #-}
 
@@ -16,52 +16,52 @@
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
 
-import Data.Aeson (ToJSON(..), FromJSON(..), (.:))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:))
 import Data.ByteString.Lazy qualified as BSL
+import Data.Map (Map)
 import Data.Word (Word32)
 import GHC.Generics
+import Ledger (ChainIndexTxOut, CurrencySymbol, Datum (..), DatumHash (..), Interval (..), MintingPolicy,
+               MintingPolicyHash (..), POSIXTimeRange, PubKeyHash (..), Redeemer (..), TokenName, TxOutRef, Validator,
+               ValidatorHash (..), Value, getPubKeyHash, unitRedeemer)
 import Ledger.Constraints.OffChain (ScriptLookups (..), mkTx)
 import Ledger.Constraints.TxConstraints (InputConstraint (..), OutputConstraint (..), TxConstraint (..),
                                          TxConstraints (..), UntypedConstraints)
 import Ledger.Typed.TypeUtils (Any)
 import Plutus.Contract.Wallet (ExportTx, export)
+import Plutus.V1.Ledger.Ada qualified as Ada
 import System.Environment (getArgs)
 import System.Exit (die)
-import Data.Map (Map)
-import Ledger (unitRedeemer, getPubKeyHash, Redeemer(..), Datum(..), DatumHash(..), Value, POSIXTimeRange, Interval(..), PubKeyHash(..), DatumHash, ChainIndexTxOut, Datum, Redeemer, TokenName, TxOutRef, Validator, MintingPolicy, MintingPolicyHash(..), ValidatorHash(..), CurrencySymbol)
-import Plutus.V1.Ledger.Ada qualified as Ada
 
 #if defined(ghcjs_HOST_OS)
 -- hopefully the correct imports
+import Codec.Serialise qualified as S
+import Control.Exception (Exception, Handler (..), SomeException, catches, evaluate, throw, throwIO)
 import Data.ByteString (ByteString)
+import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Unsafe qualified as BSU
+import Data.JSString qualified as JSString
+import Data.JSString.Text
 import Data.Maybe
+import Data.Text (Text)
+import Data.Text qualified as T
+import Foreign.C
+import Foreign.Ptr
 import GHCJS.Foreign.Callback
 import GHCJS.Marshal
 import GHCJS.Types
-import qualified Data.JSString as JSString
-import Data.JSString.Text
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Unsafe as BSU
-import Foreign.Ptr
-import Foreign.C
-import PlutusTx.Builtins (BuiltinData, BuiltinByteString, builtinDataToData, dataToBuiltinData, fromBuiltin, toBuiltin)
-import Data.Maybe
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Codec.Serialise as S
-import Control.Exception (SomeException, Exception, throw, throwIO, catches, Handler(..), evaluate)
 import Plutus.V1.Ledger.Value qualified as Value
+import PlutusTx.Builtins (BuiltinByteString, BuiltinData, builtinDataToData, dataToBuiltinData, fromBuiltin, toBuiltin)
 
-import qualified Ledger.Constraints as Constraints
-import qualified Ledger.Constraints.TxConstraints as Constraints
-import qualified Ledger.Constraints.OffChain as OffChain
+import Data.Foldable qualified as F
 import Ledger.Address
+import Ledger.Constraints qualified as Constraints
+import Ledger.Constraints.OffChain qualified as OffChain
+import Ledger.Constraints.TxConstraints qualified as Constraints
 import Ledger.Typed.Scripts.Validators (TypedValidator)
-import qualified Data.Foldable as F
 #endif
 
 deriving instance Generic C.NetworkId
@@ -102,13 +102,13 @@ deriving instance FromJSON C.NetworkId
 main :: IO ()
 main = initAPI =<< exportApi api
 
--- XXX start move to API 
+-- XXX start move to API
 
-{- 
+{-
    a JavaScript result value
 
    we use a wrapper that throws `Left x` as an exception, while `Right x`
-   is returned normally 
+   is returned normally
  -}
 type JSResult = Either JSVal JSVal
 
@@ -140,7 +140,7 @@ foreign import javascript unsafe
   js_plutus_apps_convert_out_bytestring :: Ptr CChar -> Int -> IO JSVal
 
 -- this is really too low-level, should be in ghcjs-prim / base
-foreign import javascript unsafe 
+foreign import javascript unsafe
   "$r = plutus_apps_convert_in_bytestring($1);"
   js_plutus_apps_convert_in_bytestring :: JSVal -> IO JSVal
 
@@ -157,7 +157,7 @@ foreign import javascript unsafe
   "$r = $1 === null;"
   js_is_null :: JSVal -> Bool
 
-foreign import javascript unsafe 
+foreign import javascript unsafe
   "$r = plutus_apps_convert_in_maybe_int($1);"
   js_plutus_apps_convert_in_maybe_int :: JSVal -> IO JSVal
 
@@ -176,8 +176,8 @@ builtinDataJSData = JSData { convertIn = \v -> do
                                 pure $ case mb_bs of
                                   Just bs -> case S.deserialiseOrFail (BSL.fromStrict bs) of
                                     Right d -> Right (dataToBuiltinData d)
-                                    _       -> Left "Could not deserialize" 
-                                  Nothing -> Left "unexpected value for binary data"      
+                                    _       -> Left "Could not deserialize"
+                                  Nothing -> Left "unexpected value for binary data"
                            , describeIn = "a Uint8Array or hexadecimal encoded string"
                            , convertOut = convertOutBinaryData
                                           . BSL.toStrict
@@ -233,7 +233,7 @@ taggedAesonJSData name = JSData
                         if tvTag tv == name
                         then (case Aeson.fromJSON (tvVal tv) of
                                     Aeson.Success v -> Right v
-                                    Aeson.Error e -> Left e)
+                                    Aeson.Error e   -> Left e)
                         else Left ("tag mismatch, expected " <> T.unpack name <> " but got " <> T.unpack (tvTag tv))
                       _ -> Left "failed parsing tagged JSON value")
                 _ -> Left "invalid JSON value"
@@ -252,7 +252,7 @@ aesonJSData :: (Aeson.FromJSON a, Aeson.ToJSON a)
 aesonJSData name = customAesonJSData Aeson.parseJSON Aeson.toJSON name
 
 -- public JSON data (directly used by API user) with custom Aeson parser
-customAesonJSData :: (Aeson.Value -> Aeson.Parser a) 
+customAesonJSData :: (Aeson.Value -> Aeson.Parser a)
                   -> (a -> Aeson.Value)
                   -> Text
                   -> JSData a
@@ -263,7 +263,7 @@ customAesonJSData fromAeson toAeson name = JSData
                 Just val ->
                   case Aeson.parse fromAeson val of
                     Aeson.Success v -> Right v
-                    Aeson.Error e -> Left e
+                    Aeson.Error e   -> Left e
                 _ -> Left "invalid JSON object"
   , describeIn  = name <> " JSON object"
   , convertOut  = toJSVal . toAeson
@@ -347,8 +347,8 @@ redeemerJSData = JSData { convertIn = \v -> do
                           pure $ case mb_bs of
                             Just bs -> case S.deserialiseOrFail (BSL.fromStrict bs) of
                               Right d -> Right (Redeemer $ dataToBuiltinData d)
-                              _       -> Left "Could not deserialize" 
-                            Nothing -> Left "unexpected value for binary data"      
+                              _       -> Left "Could not deserialize"
+                            Nothing -> Left "unexpected value for binary data"
                       , describeIn = "a Uint8Array or hexadecimal encoded string"
                       , convertOut = convertOutBinaryData
                                     . BSL.toStrict
@@ -369,7 +369,7 @@ handleConvertIn jsd v = do
   mb_x <- convertIn jsd v
   case mb_x of
     Right x -> pure x
-    Left e -> throwIO (InvalidArgumentException $ T.unpack (describeIn jsd) ++ "\n" ++ e)
+    Left e  -> throwIO (InvalidArgumentException $ T.unpack (describeIn jsd) ++ "\n" ++ e)
 
 handleResult :: JSData r -> r -> IO JSResult
 handleResult jsd x =
@@ -598,7 +598,7 @@ mkTx' lookups constraints =
 exportTx :: C.ProtocolParameters -> C.NetworkId -> OffChain.UnbalancedTx -> ExportTx
 exportTx pparams networkid ubtx =
   case export pparams networkid ubtx of
-    Left err -> throw (InvalidArgumentException (show err))
+    Left err    -> throw (InvalidArgumentException (show err))
     Right exptx -> exptx
 
 unbalancedTxJSData :: JSData OffChain.UnbalancedTx
@@ -621,8 +621,8 @@ networkIdJSData = JSData { convertIn = \v -> do
                                     else C.Testnet . C.NetworkMagic . js_get_word $ v'))
                          , describeIn = "null for mainnet or a number for the testnet id"
                          , convertOut = \v -> case v of
-                                           C.Testnet (C.NetworkMagic x)  -> toJSVal x
-                                           C.Mainnet                     -> pure js_null
+                                           C.Testnet (C.NetworkMagic x) -> toJSVal x
+                                           C.Mainnet                    -> pure js_null
                          , describeOut = "null for mainnet or a number for the testnet id"
                          , dataName = "NetworkId"
                          }
@@ -633,8 +633,8 @@ datumJSData = JSData { convertIn = \v -> do
                           pure $ case mb_bs of
                             Just bs -> case S.deserialiseOrFail (BSL.fromStrict bs) of
                               Right d -> Right (Datum $ dataToBuiltinData d)
-                              _       -> Left "Could not deserialize" 
-                            Nothing -> Left "unexpected value for binary data"      
+                              _       -> Left "Could not deserialize"
+                            Nothing -> Left "unexpected value for binary data"
                       , describeIn = "a Uint8Array or hexadecimal encoded string"
                       , convertOut = convertOutBinaryData
                                     . BSL.toStrict
@@ -680,8 +680,8 @@ txConstraintsListJSData =
                                         if tvTag tv == "UntypedConstraints"
                                         then case Aeson.fromJSON (tvVal tv) of
                                                     Aeson.Success c -> Right c
-                                                    Aeson.Error e -> Left e
-                                        else Left ("tag mismatch, expected UntypedConstraints but got " <> T.unpack (tvTag tv))  
+                                                    Aeson.Error e   -> Left e
+                                        else Left ("tag mismatch, expected UntypedConstraints but got " <> T.unpack (tvTag tv))
                             in mapM convertSingle (F.toList vs)
                           _ -> Left "invalid JSON value"
            , describeIn = "an array of tagged UntypedConstraints values"
@@ -705,8 +705,8 @@ scriptLookupsListJSData =
                                         if tvTag tv == "ScriptLookups"
                                         then case Aeson.fromJSON (tvVal tv) of
                                                     Aeson.Success sl -> Right sl
-                                                    Aeson.Error e -> Left e
-                                        else Left ("tag mismatch, expected ScriptLookups but got " <> T.unpack (tvTag tv))  
+                                                    Aeson.Error e    -> Left e
+                                        else Left ("tag mismatch, expected ScriptLookups but got " <> T.unpack (tvTag tv))
                             in mapM convertSingle (F.toList vs)
                           _ -> Left "invalid JSON value"
            , describeIn = "an array of tagged ScriptLookups values"
@@ -835,20 +835,20 @@ foreign import javascript unsafe
   "$r = { error: true, value: $1};"
   js_error_val :: JSVal -> IO JSVal
 
-foreign import javascript unsafe 
+foreign import javascript unsafe
   "$r = plutus_apps_handle_errors_1($1);"
   js_handle_errors_1 :: JSVal -> IO JSVal
 
-foreign import javascript unsafe 
+foreign import javascript unsafe
   "$r = plutus_apps_handle_errors_2($1);"
   js_handle_errors_2 :: JSVal -> IO JSVal
 
-foreign import javascript unsafe 
+foreign import javascript unsafe
   "$r = plutus_apps_handle_errors_3($1);"
   js_handle_errors_3 :: JSVal -> IO JSVal
 
 
-foreign import javascript unsafe 
+foreign import javascript unsafe
   "$r = plutus_apps_handle_errors_4($1);"
   js_handle_errors_4 :: JSVal -> IO JSVal
 
