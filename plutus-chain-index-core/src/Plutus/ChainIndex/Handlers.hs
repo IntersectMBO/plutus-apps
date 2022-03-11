@@ -244,6 +244,7 @@ appendBlocks ::
     , Member (LogMsg ChainIndexLog) effs
     )
     => [ChainSyncBlock] -> Eff effs ()
+appendBlocks [] = pure ()
 appendBlocks blocks = do
     let
         processBlock (utxoIndexState, txs, utxoStates) (Block tip_ transactions) = do
@@ -264,7 +265,7 @@ appendBlocks blocks = do
       lbcResult -> do
         put $ UtxoState.reducedIndex lbcResult
         reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
-    insert $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) (reverse transactions)
+    insert $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
     insertUtxoDb (map fst transactions) utxoStates
 
 handleControl ::
@@ -335,9 +336,9 @@ insertUtxoDb txs utxoStates = do
         (tr, ur, umr) = foldl go ([], [], []) utxoStates
         txOuts = concatMap txOutsWithRef txs
     insert $ mempty
-        { tipRows = InsertRows $ reverse tr
-        , unspentOutputRows = InsertRows $ reverse ur
-        , unmatchedInputRows = InsertRows $ reverse umr
+        { tipRows = InsertRows tr
+        , unspentOutputRows = InsertRows ur
+        , unmatchedInputRows = InsertRows umr
         , utxoOutRefRows = InsertRows $ (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) <$> txOuts
         }
 

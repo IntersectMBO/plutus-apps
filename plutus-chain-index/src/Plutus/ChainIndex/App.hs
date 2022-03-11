@@ -22,13 +22,13 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.BM.Trace (Trace)
 import Control.Concurrent.Async (wait, withAsync)
-import Control.Concurrent.STM.TChan (newBroadcastTChanIO)
+import Control.Concurrent.STM.TBQueue (newTBQueueIO)
 import Plutus.ChainIndex.CommandLine (AppConfig (AppConfig, acCLIConfigOverrides, acCommand, acConfigPath, acLogConfigPath, acMinLogLevel),
                                       Command (DumpDefaultConfig, DumpDefaultLoggingConfig, StartChainIndex),
                                       applyOverrides, cmdWithHelpParser)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
-import Plutus.ChainIndex.Events (processEventsChan)
+import Plutus.ChainIndex.Events (processEventsQueue)
 import Plutus.ChainIndex.Lib (getTipSlot, storeChainSyncHandler, storeFromBlockNo, syncChainIndex, withRunRequirements)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
@@ -77,10 +77,10 @@ runMain logConfig config = do
     slotNo <- getTipSlot config
     print slotNo
 
-    -- Channel for processing events
-    eventsChan <- newBroadcastTChanIO
+    -- Queue for processing events
+    eventsQueue <- newTBQueueIO $ fromIntegral (Config.cicAppendQueueSize config)
     syncHandler
-      <- storeChainSyncHandler eventsChan
+      <- storeChainSyncHandler eventsQueue
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)
         & pure
 
@@ -88,7 +88,7 @@ runMain logConfig config = do
     syncChainIndex config runReq syncHandler
 
     (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
-    withAsync (processEventsChan trace runReq eventsChan (Config.cicAppendPeriod config) (Config.cicAppendBatchSize config)) $ \processAsync -> do
+    withAsync (processEventsQueue trace runReq eventsQueue (Config.cicAppendPeriod config)) $ \processAsync -> do
 
       let port = show (Config.cicPort config)
       putStrLn $ "Starting webserver on port " <> port

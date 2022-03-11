@@ -21,7 +21,7 @@ module Plutus.ChainIndex.Config(
   slotConfig,
   storeFrom,
   appendPeriod,
-  appendBatchSize
+  appendQueueSize
   ) where
 
 import Cardano.Api (BlockNo (BlockNo), NetworkId (Mainnet, Testnet))
@@ -42,7 +42,7 @@ data ChainIndexConfig = ChainIndexConfig
   , cicSlotConfig      :: SlotConfig
   , cicStoreFrom       :: BlockNo -- ^ Only store transactions from this block number onward
   , cicAppendPeriod    :: Int -- ^ How often the appending of blocks should happen (in microseconds)
-  , cicAppendBatchSize :: Int -- ^ The number of blocks to collect before writing to the database
+  , cicAppendQueueSize :: Int -- ^ The size of the queue and a number of blocks to collect before writing to the database
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -71,12 +71,12 @@ defaultConfig = ChainIndexConfig
         , scSlotLength   = 1000
         }
   , cicStoreFrom = BlockNo 0
-  , cicAppendPeriod    = 30_000_000 -- 30s
-  , cicAppendBatchSize = 15000
+  , cicAppendPeriod    = 5_000_000 -- 5s
+  , cicAppendQueueSize = 25000
   }
 
 instance Pretty ChainIndexConfig where
-  pretty ChainIndexConfig{cicSocketPath, cicDbPath, cicPort, cicNetworkId, cicSecurityParam, cicStoreFrom, cicAppendPeriod, cicAppendBatchSize} =
+  pretty ChainIndexConfig{cicSocketPath, cicDbPath, cicPort, cicNetworkId, cicSecurityParam, cicStoreFrom, cicAppendPeriod, cicAppendQueueSize} =
     vsep [ "Socket:" <+> pretty cicSocketPath
          , "Db:" <+> pretty cicDbPath
          , "Port:" <+> pretty cicPort
@@ -84,7 +84,7 @@ instance Pretty ChainIndexConfig where
          , "Security Param:" <+> pretty cicSecurityParam
          , "Store from:" <+> viaShow cicStoreFrom
          , "Append period:" <+> viaShow cicAppendPeriod
-         , "Append batch size:" <+> viaShow cicAppendBatchSize
+         , "Append queue size:" <+> viaShow cicAppendQueueSize
          ]
 
 makeLensesFor [
@@ -96,7 +96,7 @@ makeLensesFor [
   ("cicSlotConfig", "slotConfig"),
   ("cicStoreFrom", "storeFrom"),
   ("cicAppendPeriod", "appendPeriod"),
-  ("cicAppendBatchSize", "appendBatchSize")
+  ("cicAppendQueueSize", "appendQueueSize")
   ] 'ChainIndexConfig
 
 newtype DecodeConfigException = DecodeConfigException String

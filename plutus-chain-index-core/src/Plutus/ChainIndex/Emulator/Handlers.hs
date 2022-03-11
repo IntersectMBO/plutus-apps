@@ -171,6 +171,7 @@ appendBlocks ::
     , Member (LogMsg ChainIndexLog) effs
     )
     => [ChainSyncBlock] -> Eff effs ()
+appendBlocks [] = pure ()
 appendBlocks blocks = do
     let
         processBlock (utxoIndexState, txs) (Block tip_ transactions) = do
@@ -187,7 +188,7 @@ appendBlocks blocks = do
     put $ oldState
             & set utxoIndex newIndex
             & over diskState
-                (mappend $ foldMap (\(tx, opt) -> if tpoStoreTx opt then DiskState.fromTx tx else mempty) (reverse transactions))
+                (mappend $ foldMap (\(tx, opt) -> if tpoStoreTx opt then DiskState.fromTx tx else mempty) transactions)
 
 handleControl ::
     forall effs.

@@ -35,16 +35,14 @@ module Plutus.ChainIndex.Lib (
     -- ** Synchronisation handlers
     , ChainSyncHandler
     , ChainSyncEvent(..)
-    , EventsChan
+    , EventsQueue
     , defaultChainSyncHandler
     , storeChainSyncHandler
     , storeFromBlockNo
     , filterTxs
-    , writeChainSyncEventToChan
     , runChainIndexDuringSync
     -- * Utils
     , getTipSlot
-    , readAllEventsFromTChan
 ) where
 
 import Control.Concurrent.MVar (newMVar)
@@ -65,7 +63,7 @@ import Cardano.BM.Trace (Trace, logDebug, logError, nullTracer)
 
 import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
-import Control.Concurrent.STM (TChan, atomically, tryReadTChan, writeTChan)
+import Control.Concurrent.STM (TBQueue, atomically, writeTBQueue)
 import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequirements), getResumePoints,
                           runChainIndexEffects, tipBlockNo)
 import Plutus.ChainIndex qualified as CI
@@ -136,7 +134,7 @@ toCardanoChainSyncHandler runReq handler = \case
 
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
-type EventsChan = TChan ChainSyncEvent
+type EventsQueue = TBQueue ChainSyncEvent
 
 -- | The default chain synchronisation event handler. Updates the in-memory state and the database.
 defaultChainSyncHandler :: RunRequirements -> ChainSyncHandler
@@ -145,8 +143,8 @@ defaultChainSyncHandler runReq evt = void $ runChainIndexDuringSync runReq $ cas
     (RollBackward point _) -> rollback point
     (Resume point)         -> resumeSync point
 
-storeChainSyncHandler :: EventsChan -> ChainSyncHandler
-storeChainSyncHandler eventsChan = atomically . writeTChan eventsChan
+storeChainSyncHandler :: EventsQueue -> ChainSyncHandler
+storeChainSyncHandler eventsQueue = atomically . writeTBQueue eventsQueue
 
 -- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
 storeFromBlockNo :: CI.BlockNumber -> ChainSyncHandler -> ChainSyncHandler
@@ -180,18 +178,6 @@ getTipSlot config = do
     }
   pure slotNo
 
--- | Write 'ChainSyncEvent's from the 'ChainSyncHandler' to the 'TChan'.
-writeChainSyncEventToChan
-    :: (ChainSyncEvent -> a)
-    -> TChan a
-    -> ChainSyncHandler
-    -> IO ChainSyncHandler
-writeChainSyncEventToChan convert tchan handler = do
-    pure $ \case
-        evt -> do
-            atomically $ writeTChan tchan (convert evt)
-            handler evt
-
 -- | Synchronise the chain index with the node using the given handler.
 syncChainIndex :: Config.ChainIndexConfig -> RunRequirements -> ChainSyncHandler -> IO ()
 syncChainIndex config runReq syncHandler = do
@@ -216,13 +202,3 @@ runChainIndexDuringSync runReq effect = do
             pure Nothing
         Right result -> do
             pure (Just result)
-
--- | Read all elements from the 'TChan'.
-readAllEventsFromTChan :: TChan a -> IO [a]
-readAllEventsFromTChan chan =
-    let go combined = do
-            elementM <- atomically $ tryReadTChan chan
-            case elementM of
-              Nothing      -> pure combined
-              Just element -> go (element : combined)
-     in go []

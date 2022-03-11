@@ -14,14 +14,12 @@ import Cardano.BM.Tracing (ToObject)
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Extras (LogMsg, logInfo, logWarn)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Time.Units (Second, TimeUnit (fromMicroseconds))
-import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
 import Ledger (Slot (Slot))
 import Plutus.ChainIndex (Point (PointAtGenesis), tipAsPoint)
 import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward))
-import Prettyprinter (Pretty (pretty), comma, viaShow, (<+>))
+import Prettyprinter (Pretty (pretty), comma, (<+>))
 import Text.Printf (printf)
 
 data SyncStats = SyncStats
@@ -43,16 +41,13 @@ instance Monoid SyncStats where
 data SyncLog = SyncLog
     { syncStateSyncLog :: SyncState -- ^ State of the syncing
     , syncStatsSyncLog :: SyncStats -- ^ Stats of the syncing
-    , delaySyncLog     :: Second -- ^ Delay in seconds used to accumulate log events
     }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, ToObject)
 
 instance Pretty SyncLog where
   pretty = \case
-    SyncLog syncState
-            (SyncStats numRollForward numRollBackwards chainSyncPoint _)
-            seconds ->
+    SyncLog syncState (SyncStats numRollForward numRollBackwards chainSyncPoint _) ->
         let currentTipMsg NotSyncing = ""
             currentTipMsg _          = "Current tip is" <+> pretty chainSyncPoint
          in
@@ -62,9 +57,7 @@ instance Pretty SyncLog where
                 <+> "blocks"
                 <> comma
                 <+> pretty numRollBackwards
-                <+> "rollbacks in the last"
-                <+> viaShow seconds
-                <> "."
+                <+> "rollbacks."
                 <+> currentTipMsg syncState
 
 data SyncState = Synced | Syncing Double | NotSyncing
@@ -78,11 +71,11 @@ instance Pretty SyncState where
     NotSyncing  -> "Not syncing."
 
 -- | Log syncing summary.
-logProgress :: forall effs. (Member (LogMsg SyncLog) effs) => [ChainSyncEvent] -> Int -> Eff effs ()
-logProgress events delay = do
+logProgress :: forall effs. (Member (LogMsg SyncLog) effs) => [ChainSyncEvent] -> Eff effs ()
+logProgress events = do
     let syncStats = foldl (<>) mempty $ map convertEventToSyncStats events
     let syncState = getSyncStateFromStats syncStats
-    let syncLog = SyncLog syncState syncStats (fromMicroseconds $ toInteger delay)
+    let syncLog = SyncLog syncState syncStats
     case syncState of
       NotSyncing -> logWarn syncLog
       _          -> logInfo syncLog

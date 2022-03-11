@@ -60,7 +60,6 @@ library
         prettyprinter >=1.1.0.1,
         sqlite-simple -any,
         stm -any,
-        time-units -any,
         yaml -any,
 
 executable plutus-chain-index
