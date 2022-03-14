@@ -167,7 +167,6 @@ handleQuery = \case
 appendBlocks ::
     forall effs.
     ( Member (State ChainIndexEmulatorState) effs
-    , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
     )
     => [ChainSyncBlock] -> Eff effs ()
@@ -179,7 +178,7 @@ appendBlocks blocks = do
                 Left err -> do
                     let reason = InsertionFailed err
                     logError $ Err reason
-                    throwError reason
+                    return (utxoIndexState, txs)
                 Right InsertUtxoSuccess{newIndex, insertPosition} -> do
                     logDebug $ InsertionSuccess tip_ insertPosition
                     return (newIndex, transactions ++ txs)

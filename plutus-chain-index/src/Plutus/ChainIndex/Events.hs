@@ -22,6 +22,8 @@ import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward)
 import Plutus.ChainIndex.SyncStats (SyncLog, logProgress)
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 
+-- | 'processEventsQueue' reads events from 'TBQueue', collects enough 'RollForward's to
+-- append blocks at once.
 processEventsQueue :: Trace IO (PrettyObject SyncLog) -> RunRequirements -> EventsQueue -> Int -> IO ()
 processEventsQueue trace runReq eventsQueue period = void $ do
   putStrLn "Starting processing of events"

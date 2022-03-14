@@ -36,7 +36,6 @@ module Plutus.ChainIndex.Lib (
     , ChainSyncHandler
     , ChainSyncEvent(..)
     , EventsQueue
-    , defaultChainSyncHandler
     , storeChainSyncHandler
     , storeFromBlockNo
     , filterTxs
@@ -70,7 +69,7 @@ import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, fromCardanoTip, tipFromCardanoBlock)
 import Plutus.ChainIndex.Config qualified as Config
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
-import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect, appendBlocks, resumeSync, rollback)
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 
@@ -135,13 +134,6 @@ toCardanoChainSyncHandler runReq handler = \case
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
 type EventsQueue = TBQueue ChainSyncEvent
-
--- | The default chain synchronisation event handler. Updates the in-memory state and the database.
-defaultChainSyncHandler :: RunRequirements -> ChainSyncHandler
-defaultChainSyncHandler runReq evt = void $ runChainIndexDuringSync runReq $ case evt of
-    (RollForward block _)  -> appendBlocks [block]
-    (RollBackward point _) -> rollback point
-    (Resume point)         -> resumeSync point
 
 storeChainSyncHandler :: EventsQueue -> ChainSyncHandler
 storeChainSyncHandler eventsQueue = atomically . writeTBQueue eventsQueue
