@@ -261,6 +261,7 @@ let
             ghci.flags.ghci = true;
 
             cardano-wallet-core.patches = [ ../../patches/cardano-wallet-pr-3074.patch ];
+            cardano-config.components.library.build-tools = [ pkgs.buildPackages.buildPackages.gitReallyMinimal ];
 
             plutus-contract.doHaddock = deferPluginErrors;
             plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
