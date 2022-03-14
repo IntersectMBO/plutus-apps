@@ -8,9 +8,9 @@
   , config
   , ... }:
   {
-    flags = { use-ghc-stub = false; ghcjs-plugin = true; };
+    flags = { use-ghc-stub = false; };
     package = {
-      specVersion = "2.2";
+      specVersion = "3.0";
       identifier = { name = "plutus-tx-plugin"; version = "0.1.0.0"; };
       license = "Apache-2.0";
       copyright = "";
@@ -52,9 +52,7 @@
           then [
             (hsPkgs."plutus-ghc-stub" or (errorHandler.buildDepError "plutus-ghc-stub"))
             ]
-          else if flags.ghcjs-plugin
-            then [ (hsPkgs."ghcjs" or (errorHandler.buildDepError "ghcjs")) ]
-            else [ (hsPkgs."ghc" or (errorHandler.buildDepError "ghc")) ]);
+          else [ (hsPkgs."ghc" or (errorHandler.buildDepError "ghc")) ]);
         buildable = true;
         modules = [
           "PlutusTx/Compiler/Binders"
@@ -79,10 +77,11 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."flat" or (errorHandler.buildDepError "flat"))
             (hsPkgs."deepseq" or (errorHandler.buildDepError "deepseq"))
-            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
             (hsPkgs."integer-gmp" or (errorHandler.buildDepError "integer-gmp"))
             (hsPkgs."plutus-core" or (errorHandler.buildDepError "plutus-core"))
+            (hsPkgs."plutus-core".components.sublibs.plutus-core-testlib or (errorHandler.buildDepError "plutus-core:plutus-core-testlib"))
             (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
+            (hsPkgs."plutus-tx".components.sublibs.plutus-tx-testlib or (errorHandler.buildDepError "plutus-tx:plutus-tx-testlib"))
             (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
             (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
             (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
@@ -96,12 +95,12 @@
             (hsPkgs."ghc-prim" or (errorHandler.buildDepError "ghc-prim"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             ];
-          buildable = true;
+          buildable = if flags.use-ghc-stub then false else true;
           modules = [
-            "Budget/Lib"
             "Budget/Spec"
             "IsData/Spec"
             "Lift/Spec"
+            "Optimization/Spec"
             "Plugin/Spec"
             "Plugin/Basic/Spec"
             "Plugin/Data/Spec"
@@ -126,6 +125,7 @@
         "size" = {
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."plutus-tx".components.sublibs.plutus-tx-testlib or (errorHandler.buildDepError "plutus-tx:plutus-tx-testlib"))
             (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
             (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
             (hsPkgs."tagged" or (errorHandler.buildDepError "tagged"))

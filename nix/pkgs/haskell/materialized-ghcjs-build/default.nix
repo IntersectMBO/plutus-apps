@@ -593,6 +593,9 @@
         "network-byte-order".revision = (((hackage."network-byte-order")."0.1.6").revisions).default;
         "ekg-json".revision = (((hackage."ekg-json")."0.1.0.6").revisions).default;
         "OddWord".revision = (((hackage."OddWord")."1.0.2.0").revisions).default;
+        "extensible-effects".revision = (((hackage."extensible-effects")."5.0.0.1").revisions).default;
+        "extensible-effects".flags.dump-core = false;
+        "extensible-effects".flags.lib-werror = false;
         "rate-limit".revision = (((hackage."rate-limit")."1.4.2").revisions).default;
         "monad-control".revision = (((hackage."monad-control")."1.0.3.1").revisions).default;
         "semialign".revision = (((hackage."semialign")."1.1.0.1").revisions).default;
@@ -631,6 +634,7 @@
         "algebraic-graphs".revision = (((hackage."algebraic-graphs")."0.6").revisions).default;
         "wai-websockets".revision = (((hackage."wai-websockets")."3.0.1.2").revisions).default;
         "wai-websockets".flags.example = true;
+        "uniplate".revision = (((hackage."uniplate")."1.6.13").revisions).default;
         "blaze-html".revision = (((hackage."blaze-html")."0.9.1.2").revisions).default;
         "data-default-instances-dlist".revision = (((hackage."data-default-instances-dlist")."0.0.1").revisions).default;
         "quickcheck-arbitrary-adt".revision = (((hackage."quickcheck-arbitrary-adt")."0.3.1.0").revisions).default;
@@ -1062,10 +1066,7 @@
             flags = { "release" = lib.mkOverride 900 false; };
             };
           "plutus-tx-plugin" = {
-            flags = {
-              "use-ghc-stub" = lib.mkOverride 900 false;
-              "ghcjs-plugin" = lib.mkOverride 900 true;
-              };
+            flags = { "use-ghc-stub" = lib.mkOverride 900 false; };
             };
           "strict-stm" = {
             flags = {
@@ -1224,6 +1225,7 @@
           "pretty-simple".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-consensus-cardano".components.library.planned = lib.mkOverride 900 true;
           "typerep-map".components.sublibs."typerep-extra-impls".planned = lib.mkOverride 900 true;
+          "plutus-tx".components.sublibs."plutus-tx-testlib".planned = lib.mkOverride 900 true;
           "Cabal".components.library.planned = lib.mkOverride 900 true;
           "reflection".components.library.planned = lib.mkOverride 900 true;
           "authenticate-oauth".components.library.planned = lib.mkOverride 900 true;
@@ -1392,6 +1394,7 @@
           "word-array".components.library.planned = lib.mkOverride 900 true;
           "rate-limit".components.library.planned = lib.mkOverride 900 true;
           "mime-types".components.library.planned = lib.mkOverride 900 true;
+          "extensible-effects".components.library.planned = lib.mkOverride 900 true;
           "silently".components.library.planned = lib.mkOverride 900 true;
           "ekg-json".components.library.planned = lib.mkOverride 900 true;
           "concurrent-output".components.library.planned = lib.mkOverride 900 true;
@@ -1468,6 +1471,7 @@
           "beam-core".components.library.planned = lib.mkOverride 900 true;
           "generic-deriving".components.library.planned = lib.mkOverride 900 true;
           "free".components.library.planned = lib.mkOverride 900 true;
+          "plutus-core".components.sublibs."plutus-core-testlib".planned = lib.mkOverride 900 true;
           "unix-compat".components.library.planned = lib.mkOverride 900 true;
           "plutus-pab-executables".components.exes."tx-inject".planned = lib.mkOverride 900 true;
           "x509-store".components.library.planned = lib.mkOverride 900 true;
@@ -1664,6 +1668,7 @@
           "plutus-doc".components.exes."doc-doctests".planned = lib.mkOverride 900 true;
           "wai-websockets".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-arbitrary-adt".components.library.planned = lib.mkOverride 900 true;
+          "uniplate".components.library.planned = lib.mkOverride 900 true;
           "time-interval".components.library.planned = lib.mkOverride 900 true;
           "plutus-chain-index".components.exes."plutus-chain-index".planned = lib.mkOverride 900 true;
           "mtl".components.library.planned = lib.mkOverride 900 true;

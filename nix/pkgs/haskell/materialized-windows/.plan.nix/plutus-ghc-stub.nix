@@ -35,9 +35,7 @@
         depends = [
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."ghc-boot" or (errorHandler.buildDepError "ghc-boot"))
-          (hsPkgs."array" or (errorHandler.buildDepError "array"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-          (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
           (hsPkgs."template-haskell" or (errorHandler.buildDepError "template-haskell"))
           ];
         buildable = true;
@@ -60,7 +58,6 @@
           "MkId"
           "PrelNames"
           "TcRnMonad"
-          "CostCentre"
           ];
         hsSourceDirs = [ "src" ];
         };

@@ -147,5 +147,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/plutus-tx-plugin; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/plutus-tx-plugin; echo source root reset to $sourceRoot";
     }
