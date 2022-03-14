@@ -107,7 +107,7 @@ library
         plutus-ledger-api -any,
         plutus-ledger-constraints -any,
         plutus-tx -any,
-        plutus-tx-plugin -any
+        plutus-tx-plugin -any,
         freer-extras -any
     build-depends:
         cardano-api -any,
