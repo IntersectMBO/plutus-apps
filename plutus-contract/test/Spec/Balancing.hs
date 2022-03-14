@@ -15,12 +15,13 @@ import Ledger (Address, Validator, validatorHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
+import Ledger.Generators (someTokenValue)
 import Ledger.Scripts (mintingPolicyHash, unitDatum, unitRedeemer)
 import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Ledger.Value qualified as Value
 import Plutus.Contract as Con
-import Plutus.Contract.Test (assertAccumState, assertNoFailedTransactions, changeInitialWalletValue, checkPredicate,
-                             checkPredicateOptions, defaultCheckOptions, w1, w2)
+import Plutus.Contract.Test (assertAccumState, assertValidatedTransactionCount, changeInitialWalletValue,
+                             checkPredicate, checkPredicateOptions, defaultCheckOptions, w1, w2)
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
@@ -37,8 +38,8 @@ tests =
 
 balanceTxnMinAda :: TestTree
 balanceTxnMinAda =
-    let ee = Value.singleton "ee" "ee" 1
-        ff = Value.singleton "ff" "ff" 1
+    let ee = someTokenValue "ee" 1
+        ff = someTokenValue "ff" 1
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
         vHash = validatorHash someValidator
@@ -60,12 +61,12 @@ balanceTxnMinAda =
             void $ Trace.activateContractWallet w1 contract
             void $ Trace.waitNSlots 2
 
-    in checkPredicateOptions options "balancing doesn't create outputs with no Ada" assertNoFailedTransactions (void trace)
+    in checkPredicateOptions options "balancing doesn't create outputs with no Ada" (assertValidatedTransactionCount 2) (void trace)
 
 balanceTxnMinAda2 :: TestTree
 balanceTxnMinAda2 =
-    let vA n = Value.singleton "ee" "A" n
-        vB n = Value.singleton "ff" "B" n
+    let vA n = someTokenValue "A" n
+        vB n = someTokenValue "B" n
         mps  = MPS.mkForwardingMintingPolicy vHash
         vL n = Value.singleton (Value.mpsSymbol $ mintingPolicyHash mps) "L" n
         options = defaultCheckOptions
@@ -102,7 +103,7 @@ balanceTxnMinAda2 =
             void $ Trace.activateContractWallet w2 wallet2Contract
             void $ Trace.waitNSlots 10
 
-    in checkPredicateOptions options "balancing doesn't create outputs with no Ada (2)" assertNoFailedTransactions (void trace)
+    in checkPredicateOptions options "balancing doesn't create outputs with no Ada (2)" (assertValidatedTransactionCount 3) (void trace)
 
 balanceTxnNoExtraOutput :: TestTree
 balanceTxnNoExtraOutput =

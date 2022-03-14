@@ -44,7 +44,7 @@ let
     inherit checkMaterialization;
     sha256map = {
       "https://github.com/input-output-hk/iohk-monitoring-framework"."46f994e216a1f8b36fe4669b47b2a7011b0e153c" = "1il8fx3misp3650ryj368b3x95ksz01zz3x0z9k00807j93d0ka0";
-      "https://github.com/input-output-hk/plutus"."73f2d9d749d19de058996442b76e4d0068fc87ef" = "1mh84qldc7bg84884aqfwhhwx3f93jp5bdb240gs8ba6rbsa9s8p";
+      "https://github.com/input-output-hk/plutus"."4127e9cd6e889824d724c30eae55033cb50cbf3e" = "186w0x7vk8m8npmsfg9pdkxds0rlj6bmhr8nkgn96rkvaz5azjsb";
       "https://github.com/Quid2/flat"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
       "https://github.com/input-output-hk/servant-purescript"."44e7cacf109f84984cd99cd3faf185d161826963" = "10pb0yfp80jhb9ryn65a4rha2lxzsn2vlhcc6xphrrkf4x5lhzqc";
       "https://github.com/input-output-hk/purescript-bridge"."47a1f11825a0f9445e0f98792f79172efef66c00" = "0da1vn2l6iyfxcjk58qal1l4755v92zi6yppmjmqvxf1gacyf9px";
@@ -67,6 +67,8 @@ let
     # for windows. We can't use `modules` for these as `modules` are only applied
     # after cabal has been configured.
     cabalProjectLocal = lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
+      -- When cross compiling for windows we don't have a `ghc` package, so use
+      -- the `plutus-ghc-stub` package instead.
       package plutus-tx-plugin
         flags: +use-ghc-stub
 
@@ -200,6 +202,9 @@ let
           plutus-use-cases.package.buildable = false;
           plutus-example.package.buildable = false;
           web-ghc.package.buildable = false;
+          # These need R
+          plutus-core.components.benchmarks.cost-model-test.buildable = lib.mkForce false;
+          plutus-core.components.benchmarks.update-cost-model.buildable = lib.mkForce false;
         };
       })
       ({ pkgs, ... }:

@@ -78,7 +78,6 @@ import Plutus.ChainIndex (ChainIndexError)
 import Wallet.API (WalletAPIError)
 
 import Ledger.CardanoWallet qualified
-import Ledger.Fee (FeeConfig)
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Error (AssertionError)
 import Plutus.Contract.Error qualified
@@ -100,12 +99,11 @@ processEmulated :: forall effs.
     , Member (LogMsg EmulatorEvent') effs
     )
     => SlotConfig
-    -> FeeConfig
     -> Eff (MultiAgentEffect ': MultiAgentControlEffect ': ChainEffect ': ChainControlEffect ': effs)
     ~> Eff effs
-processEmulated slotCfg feeCfg act =
+processEmulated slotCfg act =
     act
-        & handleMultiAgent feeCfg
+        & handleMultiAgent
         & handleMultiAgentControl
         & reinterpret2 @ChainEffect @(State ChainState) @(LogMsg ChainEvent) (handleChain slotCfg)
         & interpret (Eff.handleZoomedState chainState)

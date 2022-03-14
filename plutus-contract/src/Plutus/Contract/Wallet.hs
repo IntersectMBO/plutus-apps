@@ -244,7 +244,7 @@ export
     -> Either CardanoAPI.ToCardanoError ExportTx
 export params networkId slotConfig utx =
     let UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBalancedTxRequiredSignatories} = finalize slotConfig utx
-        requiredSigners = fst <$> Map.toList unBalancedTxRequiredSignatories
+        requiredSigners = Map.keys unBalancedTxRequiredSignatories
      in ExportTx
         <$> mkPartialTx requiredSigners params networkId unBalancedTxTx
         <*> mkInputs networkId unBalancedTxUtxoIndex

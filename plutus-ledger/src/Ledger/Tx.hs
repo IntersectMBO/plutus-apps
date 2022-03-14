@@ -1,13 +1,15 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE RecordWildCards    #-}
 
 module Ledger.Tx
     ( module Export
@@ -22,11 +24,15 @@ module Ledger.Tx
     , ciTxOutValidator
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
-    , CardanoTx
+    , CardanoTx(..)
+    , onCardanoTx
+    , mergeCardanoTxWith
+    , cardanoTxMap
     , getCardanoTxId
     , getCardanoTxInputs
     , getCardanoTxOutRefs
     , getCardanoTxUnspentOutputsTx
+    , getCardanoTxFee
     , SomeCardanoApiTx(..)
     -- * Transactions
     , addSignature
@@ -74,6 +80,8 @@ import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep,
 -- This datatype was created in order to be used in
 -- 'Ledger.Constraints.processConstraint', specifically with the constraints
 -- 'MustSpendPubKeyOutput' and 'MustSpendScriptOutput'.
+--
+-- TODO Add 'Either DatumHash Datum' field for 'PublicKeyChainIndexTxOut'.
 data ChainIndexTxOut =
     PublicKeyChainIndexTxOut { _ciTxOutAddress :: Address
                              , _ciTxOutValue   :: Value
@@ -114,24 +122,59 @@ instance Pretty ChainIndexTxOut where
     pretty ScriptChainIndexTxOut {_ciTxOutAddress, _ciTxOutValue} =
                 hang 2 $ vsep ["-" <+> pretty _ciTxOutValue <+> "addressed to", pretty _ciTxOutAddress]
 
-type CardanoTx = Either SomeCardanoApiTx Tx
+
+{- Note [Why we have the Both constructor in CardanoTx]
+
+We want to do validation with both the emulator and with the cardano-ledger library, at least as long
+as we don't have Phase2 validation errors via the cardano-ledger library.
+
+To do that we need the required signers which are only available in UnbalancedTx during balancing.
+So during balancing we can create the SomeCardanoApiTx, while proper validation can only happen in
+Wallet.Emulator.Chain.validateBlock, since that's when we know the right Slot number. This means that
+we need both transaction types in the path from balancing to validateBlock. -}
+
+data CardanoTx
+    = EmulatorTx Tx
+    | CardanoApiTx SomeCardanoApiTx
+    | Both Tx SomeCardanoApiTx
+    deriving (Eq, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+
+instance Pretty CardanoTx where
+    pretty = onCardanoTx pretty (pretty . getCardanoApiTxId)
+
+onCardanoTx :: (Tx -> r) -> (SomeCardanoApiTx -> r) -> CardanoTx -> r
+onCardanoTx l r = mergeCardanoTxWith l r const
+
+mergeCardanoTxWith :: (Tx -> a) -> (SomeCardanoApiTx -> a) -> (a -> a -> a) -> CardanoTx -> a
+mergeCardanoTxWith l _ _ (EmulatorTx tx)    = l tx
+mergeCardanoTxWith l r m (Both tx ctx)      = m (l tx) (r ctx)
+mergeCardanoTxWith _ r _ (CardanoApiTx ctx) = r ctx
+
+cardanoTxMap :: (Tx -> Tx) -> (SomeCardanoApiTx -> SomeCardanoApiTx) -> CardanoTx -> CardanoTx
+cardanoTxMap l _ (EmulatorTx tx)    = EmulatorTx (l tx)
+cardanoTxMap l r (Both tx ctx)      = Both (l tx) (r ctx)
+cardanoTxMap _ r (CardanoApiTx ctx) = CardanoApiTx (r ctx)
 
 getCardanoTxId :: CardanoTx -> TxId
-getCardanoTxId (Left (SomeTx (C.Tx body _) _)) = CardanoAPI.fromCardanoTxId $ C.getTxId body
-getCardanoTxId (Right tx)                      = txId tx
+getCardanoTxId = onCardanoTx txId getCardanoApiTxId
+
+getCardanoApiTxId :: SomeCardanoApiTx -> TxId
+getCardanoApiTxId (SomeTx (C.Tx body _) _) = CardanoAPI.fromCardanoTxId $ C.getTxId body
 
 getCardanoTxInputs :: CardanoTx -> Set TxIn
-getCardanoTxInputs (Left (SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _)) =
-  Set.fromList $ fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns
-getCardanoTxInputs (Right tx) = txInputs tx
+getCardanoTxInputs = onCardanoTx txInputs
+    (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
+        Set.fromList $ fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
 
 getCardanoTxOutRefs :: CardanoTx -> [(TxOut, TxOutRef)]
-getCardanoTxOutRefs (Left tx)  = CardanoAPI.txOutRefs tx
-getCardanoTxOutRefs (Right tx) = txOutRefs tx
+getCardanoTxOutRefs = onCardanoTx txOutRefs CardanoAPI.txOutRefs
 
 getCardanoTxUnspentOutputsTx :: CardanoTx -> Map TxOutRef TxOut
-getCardanoTxUnspentOutputsTx (Left tx)  = CardanoAPI.unspentOutputsTx tx
-getCardanoTxUnspentOutputsTx (Right tx) = unspentOutputsTx tx
+getCardanoTxUnspentOutputsTx = onCardanoTx unspentOutputsTx CardanoAPI.unspentOutputsTx
+
+getCardanoTxFee :: CardanoTx -> Value
+getCardanoTxFee = onCardanoTx txFee (\_ -> error "Ledger.Tx.getCardanoTxFee: Expecting a mock tx, not an Alonzo tx")
 
 instance Pretty Tx where
     pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =

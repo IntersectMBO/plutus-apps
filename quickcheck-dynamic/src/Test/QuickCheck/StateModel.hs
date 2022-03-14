@@ -1,6 +1,7 @@
 -- This is a simple state modelling library for use with Haskell
 -- QuickCheck.
 
+{-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
@@ -26,11 +27,12 @@ module Test.QuickCheck.StateModel(
   , runActions
   , runActionsInState
   , lookUpVar
+  , lookUpVarMaybe
 ) where
 
 import Control.Monad
 
-import Data.Typeable
+import Data.Data
 
 import Test.QuickCheck as QC
 import Test.QuickCheck.DynamicLogic.SmartShrinking
@@ -71,12 +73,16 @@ infix 5 :==
 
 deriving instance Show EnvEntry
 
-lookUpVar :: Typeable a => Env -> Var a -> a
-lookUpVar [] v = error $ "Variable "++show v++" is not bound!"
-lookUpVar ((v' :== a) : env) v =
+lookUpVarMaybe :: Typeable a => Env -> Var a -> Maybe a
+lookUpVarMaybe [] _ = Nothing
+lookUpVarMaybe ((v' :== a) : env) v =
   case cast (v',a) of
-    Just (v'',a') | v==v'' -> a'
-    _                      -> lookUpVar env v
+    Just (v'',a') | v==v'' -> Just a'
+    _                      -> lookUpVarMaybe env v
+lookUpVar :: Typeable a => Env -> Var a -> a
+lookUpVar env v = case lookUpVarMaybe env v of
+  Nothing -> error $ "Variable "++show v++" is not bound!"
+  Just a  -> a
 
 data Any f where
   Some :: (Show a, Typeable a, Eq (f a)) => f a -> Any f
@@ -101,7 +107,7 @@ infix 5 :=
 deriving instance (forall a. Show (Action state a)) => Show (Step state)
 
 newtype Var a = Var Int
-  deriving (Eq, Ord, Show, Typeable)
+  deriving (Eq, Ord, Show, Typeable, Data)
 
 instance Eq (Step state) where
   (Var i := act) == (Var j := act') =

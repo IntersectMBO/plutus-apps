@@ -45,13 +45,12 @@ getInvokedEndpoints es =
 getCoverageReport :: [EmulatorEvent] -> CoverageReport
 getCoverageReport es =
   let extractLog e = case e of
-        ChainEvent (TxnValidate _ _ valEvs)           -> logOf . Ledger.sveResult <$> valEvs
-        ChainEvent (TxnValidationFail _ _ _ _ valEvs) -> logOf . Ledger.sveResult <$> valEvs
-        _                                             -> []
+        ChainEvent (TxnValidate _ _ valEvs)             -> logOf . Ledger.sveResult <$> valEvs
+        ChainEvent (TxnValidationFail _ _ _ _ valEvs _) -> logOf . Ledger.sveResult <$> valEvs
+        _                                               -> []
 
       logOf (Left (Ledger.EvaluationError lg _)) = lg
-      logOf (Left Ledger.EvaluationException{})  = []
-      logOf (Left Ledger.MalformedScript{})      = []
+      logOf (Left _)                             = []
       logOf (Right (_, lg))                      = lg
 
   in fold $ do

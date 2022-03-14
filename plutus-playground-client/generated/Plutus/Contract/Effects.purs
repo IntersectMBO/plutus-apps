@@ -24,7 +24,7 @@ import Data.Tuple.Nested ((/\))
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.TimeSlot (SlotConversionError)
-import Ledger.Tx (ChainIndexTxOut)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (RollbackState, Tip, TxOutState)
@@ -34,7 +34,7 @@ import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash, MintingPolicy, StakeValidator, Validator)
 import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Time (POSIXTime)
-import Plutus.V1.Ledger.Tx (Tx, TxOutRef)
+import Plutus.V1.Ledger.Tx (TxOutRef)
 import Plutus.V1.Ledger.TxId (TxId)
 import Plutus.V1.Ledger.Value (AssetClass)
 import Type.Proxy (Proxy(Proxy))
@@ -83,7 +83,7 @@ _ActiveEndpoint = _Newtype
 
 data BalanceTxResponse
   = BalanceTxFailed WalletAPIError
-  | BalanceTxSuccess (Either RawJson Tx)
+  | BalanceTxSuccess CardanoTx
 
 derive instance Eq BalanceTxResponse
 
@@ -93,14 +93,14 @@ instance Show BalanceTxResponse where
 instance EncodeJson BalanceTxResponse where
   encodeJson = defer \_ -> case _ of
     BalanceTxFailed a -> E.encodeTagged "BalanceTxFailed" a E.value
-    BalanceTxSuccess a -> E.encodeTagged "BalanceTxSuccess" a (E.either E.value E.value)
+    BalanceTxSuccess a -> E.encodeTagged "BalanceTxSuccess" a E.value
 
 instance DecodeJson BalanceTxResponse where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "BalanceTxResponse"
     $ Map.fromFoldable
         [ "BalanceTxFailed" /\ D.content (BalanceTxFailed <$> D.value)
-        , "BalanceTxSuccess" /\ D.content (BalanceTxSuccess <$> (D.either D.value D.value))
+        , "BalanceTxSuccess" /\ D.content (BalanceTxSuccess <$> D.value)
         ]
 
 derive instance Generic BalanceTxResponse _
@@ -112,7 +112,7 @@ _BalanceTxFailed = prism' BalanceTxFailed case _ of
   (BalanceTxFailed a) -> Just a
   _ -> Nothing
 
-_BalanceTxSuccess :: Prism' BalanceTxResponse (Either RawJson Tx)
+_BalanceTxSuccess :: Prism' BalanceTxResponse CardanoTx
 _BalanceTxSuccess = prism' BalanceTxSuccess case _ of
   (BalanceTxSuccess a) -> Just a
   _ -> Nothing
@@ -368,7 +368,7 @@ data PABReq
   | OwnPaymentPublicKeyHashReq
   | ChainIndexQueryReq ChainIndexQuery
   | BalanceTxReq UnbalancedTx
-  | WriteBalancedTxReq (Either RawJson Tx)
+  | WriteBalancedTxReq CardanoTx
   | ExposeEndpointReq ActiveEndpoint
   | PosixTimeRangeToContainedSlotRangeReq (Interval POSIXTime)
   | YieldUnbalancedTxReq UnbalancedTx
@@ -392,7 +392,7 @@ instance EncodeJson PABReq where
     OwnPaymentPublicKeyHashReq -> encodeJson { tag: "OwnPaymentPublicKeyHashReq", contents: jsonNull }
     ChainIndexQueryReq a -> E.encodeTagged "ChainIndexQueryReq" a E.value
     BalanceTxReq a -> E.encodeTagged "BalanceTxReq" a E.value
-    WriteBalancedTxReq a -> E.encodeTagged "WriteBalancedTxReq" a (E.either E.value E.value)
+    WriteBalancedTxReq a -> E.encodeTagged "WriteBalancedTxReq" a E.value
     ExposeEndpointReq a -> E.encodeTagged "ExposeEndpointReq" a E.value
     PosixTimeRangeToContainedSlotRangeReq a -> E.encodeTagged "PosixTimeRangeToContainedSlotRangeReq" a E.value
     YieldUnbalancedTxReq a -> E.encodeTagged "YieldUnbalancedTxReq" a E.value
@@ -413,7 +413,7 @@ instance DecodeJson PABReq where
         , "OwnPaymentPublicKeyHashReq" /\ pure OwnPaymentPublicKeyHashReq
         , "ChainIndexQueryReq" /\ D.content (ChainIndexQueryReq <$> D.value)
         , "BalanceTxReq" /\ D.content (BalanceTxReq <$> D.value)
-        , "WriteBalancedTxReq" /\ D.content (WriteBalancedTxReq <$> (D.either D.value D.value))
+        , "WriteBalancedTxReq" /\ D.content (WriteBalancedTxReq <$> D.value)
         , "ExposeEndpointReq" /\ D.content (ExposeEndpointReq <$> D.value)
         , "PosixTimeRangeToContainedSlotRangeReq" /\ D.content (PosixTimeRangeToContainedSlotRangeReq <$> D.value)
         , "YieldUnbalancedTxReq" /\ D.content (YieldUnbalancedTxReq <$> D.value)
@@ -483,7 +483,7 @@ _BalanceTxReq = prism' BalanceTxReq case _ of
   (BalanceTxReq a) -> Just a
   _ -> Nothing
 
-_WriteBalancedTxReq :: Prism' PABReq (Either RawJson Tx)
+_WriteBalancedTxReq :: Prism' PABReq CardanoTx
 _WriteBalancedTxReq = prism' WriteBalancedTxReq case _ of
   (WriteBalancedTxReq a) -> Just a
   _ -> Nothing
@@ -657,7 +657,7 @@ _YieldUnbalancedTxResp = prism' YieldUnbalancedTxResp case _ of
 
 data WriteBalancedTxResponse
   = WriteBalancedTxFailed WalletAPIError
-  | WriteBalancedTxSuccess (Either RawJson Tx)
+  | WriteBalancedTxSuccess CardanoTx
 
 derive instance Eq WriteBalancedTxResponse
 
@@ -667,14 +667,14 @@ instance Show WriteBalancedTxResponse where
 instance EncodeJson WriteBalancedTxResponse where
   encodeJson = defer \_ -> case _ of
     WriteBalancedTxFailed a -> E.encodeTagged "WriteBalancedTxFailed" a E.value
-    WriteBalancedTxSuccess a -> E.encodeTagged "WriteBalancedTxSuccess" a (E.either E.value E.value)
+    WriteBalancedTxSuccess a -> E.encodeTagged "WriteBalancedTxSuccess" a E.value
 
 instance DecodeJson WriteBalancedTxResponse where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "WriteBalancedTxResponse"
     $ Map.fromFoldable
         [ "WriteBalancedTxFailed" /\ D.content (WriteBalancedTxFailed <$> D.value)
-        , "WriteBalancedTxSuccess" /\ D.content (WriteBalancedTxSuccess <$> (D.either D.value D.value))
+        , "WriteBalancedTxSuccess" /\ D.content (WriteBalancedTxSuccess <$> D.value)
         ]
 
 derive instance Generic WriteBalancedTxResponse _
@@ -686,7 +686,7 @@ _WriteBalancedTxFailed = prism' WriteBalancedTxFailed case _ of
   (WriteBalancedTxFailed a) -> Just a
   _ -> Nothing
 
-_WriteBalancedTxSuccess :: Prism' WriteBalancedTxResponse (Either RawJson Tx)
+_WriteBalancedTxSuccess :: Prism' WriteBalancedTxResponse CardanoTx
 _WriteBalancedTxSuccess = prism' WriteBalancedTxSuccess case _ of
   (WriteBalancedTxSuccess a) -> Just a
   _ -> Nothing

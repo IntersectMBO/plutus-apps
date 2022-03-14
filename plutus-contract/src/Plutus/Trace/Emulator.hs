@@ -59,7 +59,6 @@ module Plutus.Trace.Emulator(
     , EmulatorConfig(..)
     , initialChainState
     , slotConfig
-    , feeConfig
     , runEmulatorStream
     , TraceConfig(..)
     , runEmulatorTrace
@@ -95,8 +94,8 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent,
                                    EmulatorEvent' (InstanceEvent, SchedulerEvent, UserThreadEvent, WalletEvent),
                                    EmulatorState (_chainState, _walletStates), MultiAgentControlEffect,
                                    MultiAgentEffect, _eteEmulatorTime, _eteEvent, schedulerEvent)
-import Wallet.Emulator.Stream (EmulatorConfig (_initialChainState), EmulatorErr, _slotConfig, feeConfig,
-                               foldEmulatorStreamM, initialChainState, initialDist, runTraceStream, slotConfig)
+import Wallet.Emulator.Stream (EmulatorConfig (_initialChainState), EmulatorErr, _slotConfig, foldEmulatorStreamM,
+                               initialChainState, initialDist, runTraceStream, slotConfig)
 import Wallet.Emulator.Stream qualified
 import Wallet.Emulator.Wallet (Entity, balances)
 import Wallet.Emulator.Wallet qualified as Wallet

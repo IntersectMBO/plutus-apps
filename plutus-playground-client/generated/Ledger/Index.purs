@@ -158,6 +158,7 @@ data ValidationError
   | SignatureMissing PubKeyHash
   | MintWithoutScript String
   | TransactionFeeTooLow Value Value
+  | CardanoLedgerValidationError String
 
 derive instance Eq ValidationError
 
@@ -181,6 +182,7 @@ instance EncodeJson ValidationError where
     SignatureMissing a -> E.encodeTagged "SignatureMissing" a E.value
     MintWithoutScript a -> E.encodeTagged "MintWithoutScript" a E.value
     TransactionFeeTooLow a b -> E.encodeTagged "TransactionFeeTooLow" (a /\ b) (E.tuple (E.value >/\< E.value))
+    CardanoLedgerValidationError a -> E.encodeTagged "CardanoLedgerValidationError" a E.value
 
 instance DecodeJson ValidationError where
   decodeJson = defer \_ -> D.decode
@@ -201,6 +203,7 @@ instance DecodeJson ValidationError where
         , "SignatureMissing" /\ D.content (SignatureMissing <$> D.value)
         , "MintWithoutScript" /\ D.content (MintWithoutScript <$> D.value)
         , "TransactionFeeTooLow" /\ D.content (D.tuple $ TransactionFeeTooLow </$\> D.value </*\> D.value)
+        , "CardanoLedgerValidationError" /\ D.content (CardanoLedgerValidationError <$> D.value)
         ]
 
 derive instance Generic ValidationError _
@@ -280,6 +283,11 @@ _MintWithoutScript = prism' MintWithoutScript case _ of
 _TransactionFeeTooLow :: Prism' ValidationError { a :: Value, b :: Value }
 _TransactionFeeTooLow = prism' (\{ a, b } -> (TransactionFeeTooLow a b)) case _ of
   (TransactionFeeTooLow a b) -> Just { a, b }
+  _ -> Nothing
+
+_CardanoLedgerValidationError :: Prism' ValidationError String
+_CardanoLedgerValidationError = prism' CardanoLedgerValidationError case _ of
+  (CardanoLedgerValidationError a) -> Just a
   _ -> Nothing
 
 --------------------------------------------------------------------------------

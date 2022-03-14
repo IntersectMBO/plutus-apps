@@ -5,13 +5,13 @@
             [
                 {
                     "txId": {
-                        "getTxId": "7423953d56c71e969089b20764496c924ee6b20afff93637bf34b1140a33d0ad"
+                        "getTxId": "0312c21da481701ccdc534cdc3d080111f688e5ba147eb5d74865fb180be287a"
                     },
                     "sequenceId": {
                         "slotIndex": 0,
                         "txIndex": 0
                     },
-                    "valid": false,
+                    "valid": true,
                     "tx": {
                         "txInputs": [],
                         "txFee": {
@@ -29,7 +29,7 @@
                                             {
                                                 "unTokenName": ""
                                             },
-                                            200
+                                            200000000
                                         ]
                                     ]
                                 ]
@@ -49,7 +49,7 @@
                                                     {
                                                         "unTokenName": ""
                                                     },
-                                                    100
+                                                    10000000
                                                 ]
                                             ]
                                         ]
@@ -78,7 +78,529 @@
                                                     {
                                                         "unTokenName": ""
                                                     },
-                                                    100
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                },
+                                "txOutDatumHash": null,
+                                "txOutAddress": {
+                                    "addressStakingCredential": null,
+                                    "addressCredential": {
+                                        "contents": {
+                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                        },
+                                        "tag": "PubKeyCredential"
+                                    }
+                                }
+                            },
+                            {
+                                "txOutValue": {
+                                    "getValue": [
+                                        [
+                                            {
+                                                "unCurrencySymbol": ""
+                                            },
+                                            [
+                                                [
+                                                    {
+                                                        "unTokenName": ""
+                                                    },
+                                                    10000000
                                                 ]
                                             ]
                                         ]
@@ -114,7 +636,62 @@
                             ]
                         }
                     },
-                    "balances": [],
+                    "balances": [
+                        [
+                            {
+                                "contents": {
+                                    "unPaymentPubKeyHash": {
+                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                    }
+                                },
+                                "tag": "OwnedByPaymentPubKey"
+                            },
+                            {
+                                "getValue": [
+                                    [
+                                        {
+                                            "unCurrencySymbol": ""
+                                        },
+                                        [
+                                            [
+                                                {
+                                                    "unTokenName": ""
+                                                },
+                                                100000000
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            }
+                        ],
+                        [
+                            {
+                                "contents": {
+                                    "unPaymentPubKeyHash": {
+                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                    }
+                                },
+                                "tag": "OwnedByPaymentPubKey"
+                            },
+                            {
+                                "getValue": [
+                                    [
+                                        {
+                                            "unCurrencySymbol": ""
+                                        },
+                                        [
+                                            [
+                                                {
+                                                    "unTokenName": ""
+                                                },
+                                                100000000
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            }
+                        ]
+                    ],
                     "dereferencedInputs": []
                 }
             ]
@@ -149,251 +726,639 @@
                 "_eteEvent": {
                     "contents": {
                         "contents": [
-                            "Phase2",
                             {
-                                "getTxId": "7423953d56c71e969089b20764496c924ee6b20afff93637bf34b1140a33d0ad"
+                                "getTxId": "0312c21da481701ccdc534cdc3d080111f688e5ba147eb5d74865fb180be287a"
                             },
                             {
-                                "txInputs": [],
-                                "txFee": {
-                                    "getValue": []
-                                },
-                                "txSignatures": [],
-                                "txMint": {
-                                    "getValue": [
-                                        [
-                                            {
-                                                "unCurrencySymbol": ""
-                                            },
+                                "contents": {
+                                    "txInputs": [],
+                                    "txFee": {
+                                        "getValue": []
+                                    },
+                                    "txSignatures": [],
+                                    "txMint": {
+                                        "getValue": [
                                             [
+                                                {
+                                                    "unCurrencySymbol": ""
+                                                },
                                                 [
-                                                    {
-                                                        "unTokenName": ""
-                                                    },
-                                                    200
+                                                    [
+                                                        {
+                                                            "unTokenName": ""
+                                                        },
+                                                        200000000
+                                                    ]
                                                 ]
                                             ]
                                         ]
-                                    ]
-                                },
-                                "txData": [],
-                                "txOutputs": [
-                                    {
-                                        "txOutValue": {
-                                            "getValue": [
-                                                [
-                                                    {
-                                                        "unCurrencySymbol": ""
-                                                    },
-                                                    [
-                                                        [
-                                                            {
-                                                                "unTokenName": ""
-                                                            },
-                                                            100
-                                                        ]
-                                                    ]
-                                                ]
-                                            ]
-                                        },
-                                        "txOutDatumHash": null,
-                                        "txOutAddress": {
-                                            "addressStakingCredential": null,
-                                            "addressCredential": {
-                                                "contents": {
-                                                    "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
-                                                },
-                                                "tag": "PubKeyCredential"
-                                            }
-                                        }
                                     },
-                                    {
-                                        "txOutValue": {
-                                            "getValue": [
-                                                [
-                                                    {
-                                                        "unCurrencySymbol": ""
-                                                    },
-                                                    [
-                                                        [
-                                                            {
-                                                                "unTokenName": ""
-                                                            },
-                                                            100
-                                                        ]
-                                                    ]
-                                                ]
-                                            ]
-                                        },
-                                        "txOutDatumHash": null,
-                                        "txOutAddress": {
-                                            "addressStakingCredential": null,
-                                            "addressCredential": {
-                                                "contents": {
-                                                    "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
-                                                },
-                                                "tag": "PubKeyCredential"
-                                            }
-                                        }
-                                    }
-                                ],
-                                "txMintScripts": [],
-                                "txRedeemers": [],
-                                "txCollateral": [],
-                                "txValidRange": {
-                                    "ivFrom": [
+                                    "txData": [],
+                                    "txOutputs": [
                                         {
-                                            "tag": "NegInf"
-                                        },
-                                        true
-                                    ],
-                                    "ivTo": [
-                                        {
-                                            "tag": "PosInf"
-                                        },
-                                        true
-                                    ]
-                                }
-                            },
-                            {
-                                "contents": [
-                                    {
-                                        "txInputs": [],
-                                        "txFee": {
-                                            "getValue": []
-                                        },
-                                        "txSignatures": [],
-                                        "txMint": {
-                                            "getValue": [
-                                                [
-                                                    {
-                                                        "unCurrencySymbol": ""
-                                                    },
+                                            "txOutValue": {
+                                                "getValue": [
                                                     [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
                                                         [
-                                                            {
-                                                                "unTokenName": ""
-                                                            },
-                                                            200
-                                                        ]
-                                                    ]
-                                                ]
-                                            ]
-                                        },
-                                        "txData": [],
-                                        "txOutputs": [
-                                            {
-                                                "txOutValue": {
-                                                    "getValue": [
-                                                        [
-                                                            {
-                                                                "unCurrencySymbol": ""
-                                                            },
                                                             [
-                                                                [
-                                                                    {
-                                                                        "unTokenName": ""
-                                                                    },
-                                                                    100
-                                                                ]
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
                                                             ]
                                                         ]
                                                     ]
-                                                },
-                                                "txOutDatumHash": null,
-                                                "txOutAddress": {
-                                                    "addressStakingCredential": null,
-                                                    "addressCredential": {
-                                                        "contents": {
-                                                            "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
-                                                        },
-                                                        "tag": "PubKeyCredential"
-                                                    }
-                                                }
+                                                ]
                                             },
-                                            {
-                                                "txOutValue": {
-                                                    "getValue": [
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
                                                         [
-                                                            {
-                                                                "unCurrencySymbol": ""
-                                                            },
                                                             [
-                                                                [
-                                                                    {
-                                                                        "unTokenName": ""
-                                                                    },
-                                                                    100
-                                                                ]
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
                                                             ]
                                                         ]
                                                     ]
-                                                },
-                                                "txOutDatumHash": null,
-                                                "txOutAddress": {
-                                                    "addressStakingCredential": null,
-                                                    "addressCredential": {
-                                                        "contents": {
-                                                            "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
-                                                        },
-                                                        "tag": "PubKeyCredential"
-                                                    }
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
                                                 }
                                             }
-                                        ],
-                                        "txMintScripts": [],
-                                        "txRedeemers": [],
-                                        "txCollateral": [],
-                                        "txValidRange": {
-                                            "ivFrom": [
-                                                {
-                                                    "tag": "NegInf"
-                                                },
-                                                true
-                                            ],
-                                            "ivTo": [
-                                                {
-                                                    "tag": "PosInf"
-                                                },
-                                                true
-                                            ]
-                                        }
-                                    },
-                                    {
-                                        "txOutValue": {
-                                            "getValue": [
-                                                [
-                                                    {
-                                                        "unCurrencySymbol": ""
-                                                    },
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
                                                     [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
                                                         [
-                                                            {
-                                                                "unTokenName": ""
-                                                            },
-                                                            100
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
                                                         ]
                                                     ]
                                                 ]
-                                            ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
                                         },
-                                        "txOutDatumHash": null,
-                                        "txOutAddress": {
-                                            "addressStakingCredential": null,
-                                            "addressCredential": {
-                                                "contents": {
-                                                    "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
-                                                },
-                                                "tag": "PubKeyCredential"
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "80a4f45b56b88d1139da23bc4c3c75ec6d32943c087f250b86193ca7"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "txOutValue": {
+                                                "getValue": [
+                                                    [
+                                                        {
+                                                            "unCurrencySymbol": ""
+                                                        },
+                                                        [
+                                                            [
+                                                                {
+                                                                    "unTokenName": ""
+                                                                },
+                                                                10000000
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            },
+                                            "txOutDatumHash": null,
+                                            "txOutAddress": {
+                                                "addressStakingCredential": null,
+                                                "addressCredential": {
+                                                    "contents": {
+                                                        "getPubKeyHash": "a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2"
+                                                    },
+                                                    "tag": "PubKeyCredential"
+                                                }
                                             }
                                         }
+                                    ],
+                                    "txMintScripts": [],
+                                    "txRedeemers": [],
+                                    "txCollateral": [],
+                                    "txValidRange": {
+                                        "ivFrom": [
+                                            {
+                                                "tag": "NegInf"
+                                            },
+                                            true
+                                        ],
+                                        "ivTo": [
+                                            {
+                                                "tag": "PosInf"
+                                            },
+                                            true
+                                        ]
                                     }
-                                ],
-                                "tag": "ValueContainsLessThanMinAda"
+                                },
+                                "tag": "EmulatorTx"
                             },
                             []
                         ],
-                        "tag": "TxnValidationFail"
+                        "tag": "TxnValidate"
                     },
                     "tag": "ChainEvent"
                 }
@@ -490,7 +1455,21 @@
         "fundsDistribution": [
             {
                 "simulatorWalletBalance": {
-                    "getValue": []
+                    "getValue": [
+                        [
+                            {
+                                "unCurrencySymbol": ""
+                            },
+                            [
+                                [
+                                    {
+                                        "unTokenName": ""
+                                    },
+                                    100000000
+                                ]
+                            ]
+                        ]
+                    ]
                 },
                 "simulatorWalletWallet": {
                     "getWallet": 1
@@ -498,7 +1477,21 @@
             },
             {
                 "simulatorWalletBalance": {
-                    "getValue": []
+                    "getValue": [
+                        [
+                            {
+                                "unCurrencySymbol": ""
+                            },
+                            [
+                                [
+                                    {
+                                        "unTokenName": ""
+                                    },
+                                    100000000
+                                ]
+                            ]
+                        ]
+                    ]
                 },
                 "simulatorWalletWallet": {
                     "getWallet": 2

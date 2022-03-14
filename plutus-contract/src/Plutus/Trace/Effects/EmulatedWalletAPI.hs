@@ -19,7 +19,7 @@ import Control.Monad.Freer.Extras (raiseEnd)
 import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.Text (Text)
-import Ledger.Tx (txId)
+import Ledger.Tx (getCardanoTxId)
 import Ledger.TxId (TxId)
 import Ledger.Value (Value)
 import Wallet.API (WalletAPIError, defaultSlotRange, payToPaymentPublicKeyHash)
@@ -45,9 +45,7 @@ payToWallet ::
 payToWallet source target amount = do
     ctx <- liftWallet source
          $ payToPaymentPublicKeyHash defaultSlotRange amount (EM.mockWalletPaymentPubKeyHash target)
-    case ctx of
-      Left _   -> error "Plutus.Trace.EmulatedWalletAPI.payToWallet: Expecting a mock tx, not an Alonzo tx"
-      Right tx -> pure $ txId tx
+    pure $ getCardanoTxId ctx
 
 -- | Handle the 'EmulatedWalletAPI' effect using the emulator's
 --   'MultiAgent' effect.

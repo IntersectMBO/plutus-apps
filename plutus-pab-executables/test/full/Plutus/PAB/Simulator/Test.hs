@@ -24,6 +24,6 @@ runSimulation = runSimulationWith simulatorHandlers
 -- | 'EffectHandlers' for running the PAB as a simulator (no connectivity to
 --   out-of-process services such as wallet backend, node, etc.)
 simulatorHandlers :: EffectHandlers (Builtin TestContracts) (SimulatorState (Builtin TestContracts))
-simulatorHandlers = mkSimulatorHandlers def def { scSlotLength = 1 } handler where
+simulatorHandlers = mkSimulatorHandlers def { scSlotLength = 1 } handler where
     handler :: SimulatorContractHandler (Builtin TestContracts)
     handler = interpret (contractHandler handleBuiltin)

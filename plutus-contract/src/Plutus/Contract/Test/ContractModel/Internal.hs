@@ -13,6 +13,8 @@
 {-# LANGUAGE AllowAmbiguousTypes        #-}
 {-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
@@ -37,6 +39,7 @@ module Plutus.Contract.Test.ContractModel.Internal
       --
       -- $contractModel
       ContractModel(..)
+    , HasActions(..)
       -- ** Model state
     , ModelState(..)
     , contractState
@@ -174,6 +177,7 @@ import Control.Monad.State (MonadState, State)
 import Control.Monad.State qualified as State
 import Control.Monad.Writer qualified as Writer
 import Data.Aeson qualified as JSON
+import Data.Data
 import Data.Foldable
 import Data.IORef
 import Data.List
@@ -185,7 +189,6 @@ import Data.Row.Records (labels')
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
-import Data.Typeable
 
 import Ledger.Ada qualified as Ada
 import Ledger.Index
@@ -227,6 +230,8 @@ import Control.Monad.Freer.Writer (Writer (..), runWriter, tell)
 import Data.Void
 import Plutus.Contract.Types (IsContract (..))
 import Prettyprinter
+
+import Data.Generics.Uniplate.Data (universeBi)
 
 -- | Key-value map where keys and values have three indices that can vary between different elements
 --   of the map. Used to store `ContractHandle`s, which are indexed over observable state, schema,
@@ -332,6 +337,7 @@ data ModelState state = ModelState
         { _currentSlot    :: Slot
         , _balanceChanges :: Map Wallet SymValue
         , _minted         :: SymValue
+        , _symTokens      :: Set SymToken
         , _assertions     :: [(String, Bool)]
         , _assertionsOk   :: Bool
         , _contractState  :: state
@@ -342,7 +348,7 @@ instance Functor ModelState where
   fmap f m = m { _contractState = f (_contractState m) }
 
 dummyModelState :: state -> ModelState state
-dummyModelState s = ModelState 1 Map.empty mempty [] True s
+dummyModelState s = ModelState 1 Map.empty mempty mempty mempty True s
 
 -- | The `Spec` monad is a state monad over the `ModelState` with reader and writer components to keep track
 --   of newly created symbolic tokens. It is used exclusively by the `nextState` function to model the effects
@@ -392,6 +398,12 @@ type SpecificationEmulatorTrace a =
 -- `ModelState` type, which in addition to @state@ tracks common features of the blockchain, like
 -- wallet balances and the current slot.
 
+class (Eq (Action state), Show (Action state)) => HasActions state where
+  getAllSymtokens :: Action state -> Set SymToken
+
+instance {-# OVERLAPPABLE #-} (Eq (Action state), Show (Action state), Data (Action state)) => HasActions state where
+  getAllSymtokens = Set.fromList . universeBi
+
 -- | A `ContractModel` instance captures everything that is needed to generate and run tests of a
 --   contract or set of contracts. It specifies among other things
 --
@@ -403,8 +415,7 @@ type SpecificationEmulatorTrace a =
 
 class ( Typeable state
       , Show state
-      , Show (Action state)
-      , Eq (Action state)
+      , HasActions state
       , (forall w s e p. Eq (ContractInstanceKey state w s e p))
       , (forall w s e p. Show (ContractInstanceKey state w s e p))
       ) => ContractModel state where
@@ -538,6 +549,7 @@ makeLensesFor [("_minted",         "mintedL")]         'ModelState
 makeLensesFor [("_tokenNameIndex", "tokenNameIndex")]  'ModelState
 makeLensesFor [("_assertions", "assertions")]          'ModelState
 makeLensesFor [("_assertionsOk", "assertionsOk")]      'ModelState
+makeLensesFor [("_symTokens", "symTokens")]            'ModelState
 
 -- | Get the current slot.
 --
@@ -621,7 +633,9 @@ runSpec :: Spec state ()
         -> Var AssetKey
         -> ModelState state
         -> ModelState state
-runSpec (Spec spec) v s = State.execState (runReaderT (fst <$> Writer.runWriterT spec) v) s
+runSpec (Spec spec) v s = flip State.execState s $ do
+  w <- runReaderT (snd <$> Writer.runWriterT spec) v
+  symTokens %= (Set.fromList w <>)
 
 -- | Check if a given action creates new symbolic tokens in a given `ModelState`
 createsTokens :: ContractModel state
@@ -819,8 +833,9 @@ instance ContractModel state => StateModel (ModelState state) where
     initialState = ModelState { _currentSlot      = 1
                               , _balanceChanges   = Map.empty
                               , _minted           = mempty
-                              , _assertions       = []
+                              , _assertions       = mempty
                               , _assertionsOk     = True
+                              , _symTokens        = mempty
                               , _contractState    = initialState
                               }
 
@@ -828,7 +843,9 @@ instance ContractModel state => StateModel (ModelState state) where
     nextState s (WaitUntil n) _          = runSpec (() <$ waitUntil n) (error "unreachable") s
     nextState s Unilateral{} _           = s
 
-    precondition s (ContractAction _ cmd) = (s ^. assertionsOk) && precondition s cmd
+    precondition s (ContractAction _ cmd) = getAllSymtokens cmd `Set.isSubsetOf` (s ^. symTokens)
+                                          && s ^. assertionsOk
+                                          && precondition s cmd
     precondition s (WaitUntil n)          = n > s ^. currentSlot
     precondition _ _                      = True
 
@@ -1559,7 +1576,13 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
         dist <- Freer.ask @InitialDistribution
         case outcome of
           Done envInner -> do
-            let lookup (SymToken outerVar idx) = fromJust . Map.lookup idx $ fold (Map.lookup (lookUpVar envOuter outerVar) envInner)
+            let lookupMaybe (SymToken outerVar idx) = do
+                  innerVar <- lookUpVarMaybe envOuter outerVar
+                  tokenMap <- Map.lookup innerVar envInner
+                  Map.lookup idx tokenMap
+                lookup st = case lookupMaybe st of
+                  Nothing  -> error $ "Trying to look up unknown symbolic token: " ++ show st ++ ",\nare you using a custom implementation of getAllSymtokens? If not, please report this as a bug."
+                  Just tok -> tok
                 dlt = toValue lookup sval
                 initialValue = fold (dist ^. at w)
                 finalValue = finalValue' P.+ fees
@@ -1799,7 +1822,7 @@ checkErrorWhitelistWithOptions opts copts whitelist acts = property $ go check a
     checkEvent _                                            = False
 
     checkEvents :: [ChainEvent] -> Bool
-    checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _) <- events ]
+    checkEvents events = all checkEvent [ f | (TxnValidationFail _ _ _ (ScriptFailure f) _ _) <- events ]
 
     go :: TracePredicate -> Actions m -> Property
     go check actions = monadic (flip State.evalState mempty) $ finalChecks opts copts (\ _ _ -> check) $ do

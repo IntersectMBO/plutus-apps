@@ -32,10 +32,10 @@ import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import GHC.Generics (Generic)
-import Ledger.Fee (FeeConfig)
 import Prettyprinter (Pretty (pretty), colon, (<+>))
 
 import Ledger hiding (to, value)
+import Ledger.Ada qualified as Ada
 import Ledger.AddressMap qualified as AM
 import Ledger.Index qualified as Index
 import Plutus.ChainIndex.Emulator qualified as ChainIndex
@@ -277,14 +277,22 @@ emulatorStatePool :: Chain.TxPool -> EmulatorState
 emulatorStatePool tp = emptyEmulatorState
     & chainState . Chain.txPool .~ tp
 
+{- Note [Creating wallets with multiple outputs]
+
+Every transaction needs a collateral input, which is a wallet output that gets spent
+when the transaction fails to validate on chain (phase 2 validation). This output is required
+to be an Ada-only output. To make sure we always have an Ada-only output available during emulation,
+we create 10 Ada-only outputs per wallet here.
+-}
+
 -- | Initialise the emulator state with a single pending transaction that
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
-emulatorStateInitialDist mp = emulatorStatePool [tx] where
+emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
     tx = Tx
             { txInputs = mempty
             , txCollateral = mempty
-            , txOutputs = uncurry (flip pubKeyHashTxOut . unPaymentPubKeyHash) <$> Map.toList mp
+            , txOutputs = Map.toList mp >>= mkOutputs
             , txMint = foldMap snd $ Map.toList mp
             , txFee = mempty
             , txValidRange = WAPI.defaultSlotRange
@@ -293,6 +301,14 @@ emulatorStateInitialDist mp = emulatorStatePool [tx] where
             , txRedeemers = mempty
             , txData = mempty
             }
+    -- See [Creating wallets with multiple outputs]
+    mkOutputs (key, vl) = mkOutput key <$> splitHeadinto10 (Wallet.splitOffAdaOnlyValue vl)
+    splitHeadinto10 []       = []
+    splitHeadinto10 (vl:vls) = replicate (fromIntegral count) (Ada.toValue . (`div` count) . Ada.fromValue $ vl) ++ vls
+        where
+            -- Make sure we don't make the outputs too small
+            count = min 10 $ Ada.fromValue vl `div` minAdaTxOut
+    mkOutput key vl = pubKeyHashTxOut vl (unPaymentPubKeyHash key)
 
 type MultiAgentEffs =
     '[ State EmulatorState
@@ -337,9 +353,8 @@ handleMultiAgentControl = interpret $ \case
 
 handleMultiAgent
     :: forall effs. Members MultiAgentEffs effs
-    => FeeConfig
-    -> Eff (MultiAgentEffect ': effs) ~> Eff effs
-handleMultiAgent feeCfg = interpret $ \case
+    => Eff (MultiAgentEffect ': effs) ~> Eff effs
+handleMultiAgent = interpret $ \case
     -- TODO: catch, log, and rethrow wallet errors?
     WalletAction wallet act ->  do
         let
@@ -357,7 +372,7 @@ handleMultiAgent feeCfg = interpret $ \case
             p6 = walletEvent wallet . Wallet._TxBalanceLog
         act
             & raiseEnd
-            & interpret (Wallet.handleWallet feeCfg)
+            & interpret Wallet.handleWallet
             & subsume
             & NC.handleNodeClient
             & interpret ChainIndex.handleQuery

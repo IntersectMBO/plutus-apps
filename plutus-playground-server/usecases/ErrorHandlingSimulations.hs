@@ -1,7 +1,7 @@
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module ErrorHandlingSimulations where
 
@@ -18,7 +18,7 @@ simulations = [throwCatch]
     wallet1 = WalletNumber 1
     wallet2 = WalletNumber 2
     simulationWallets =
-        simulatorWallet registeredKnownCurrencies 100 <$> [wallet1, wallet2]
+        simulatorWallet registeredKnownCurrencies 100_000_000 <$> [wallet1, wallet2]
     throwCatch =
         Simulation
             { simulationName = "Throw/Catch"

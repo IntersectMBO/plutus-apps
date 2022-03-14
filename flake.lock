@@ -165,11 +165,11 @@
     "plutus-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1640168705,
-        "narHash": "sha256-Pl3M9rMEoiEKRsTdDr4JwNnRo5Xs4uN66uVpOfaMCfE=",
+        "lastModified": 1646650254,
+        "narHash": "sha256-S8uvyld7ZpPsmxZlWJeRNAPd+mw3PafrtaiiuU8H3KA=",
         "owner": "input-output-hk",
         "repo": "plutus",
-        "rev": "cc72a56eafb02333c96f662581b57504f8f8992f",
+        "rev": "4127e9cd6e889824d724c30eae55033cb50cbf3e",
         "type": "github"
       },
       "original": {

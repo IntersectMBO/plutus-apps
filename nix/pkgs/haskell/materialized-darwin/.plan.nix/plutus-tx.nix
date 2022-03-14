@@ -10,7 +10,7 @@
   {
     flags = {};
     package = {
-      specVersion = "2.2";
+      specVersion = "3.0";
       identifier = { name = "plutus-tx"; version = "0.1.0.0"; };
       license = "Apache-2.0";
       copyright = "";
@@ -37,6 +37,7 @@
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           (hsPkgs."deepseq" or (errorHandler.buildDepError "deepseq"))
           (hsPkgs."template-haskell" or (errorHandler.buildDepError "template-haskell"))
+          (hsPkgs."th-compat" or (errorHandler.buildDepError "th-compat"))
           (hsPkgs."th-abstraction" or (errorHandler.buildDepError "th-abstraction"))
           (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
@@ -61,7 +62,6 @@
           "PlutusTx/Coverage"
           "PlutusTx/TH"
           "PlutusTx/Prelude"
-          "PlutusTx/Evaluation"
           "PlutusTx/Applicative"
           "PlutusTx/Base"
           "PlutusTx/Bool"
@@ -98,6 +98,28 @@
           ];
         hsSourceDirs = [ "src" ];
         };
+      sublibs = {
+        "plutus-tx-testlib" = {
+          depends = [
+            (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            (hsPkgs."flat" or (errorHandler.buildDepError "flat"))
+            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
+            (hsPkgs."plutus-core" or (errorHandler.buildDepError "plutus-core"))
+            (hsPkgs."plutus-core".components.sublibs.plutus-core-testlib or (errorHandler.buildDepError "plutus-core:plutus-core-testlib"))
+            (hsPkgs."plutus-tx" or (errorHandler.buildDepError "plutus-tx"))
+            (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
+            (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+            (hsPkgs."ghc-prim" or (errorHandler.buildDepError "ghc-prim"))
+            (hsPkgs."tagged" or (errorHandler.buildDepError "tagged"))
+            (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
+            ];
+          buildable = true;
+          modules = [ "PlutusTx/Test" ];
+          hsSourceDirs = [ "testlib" ];
+          };
+        };
       tests = {
         "plutus-tx-test" = {
           depends = [
@@ -118,7 +140,9 @@
           build-tools = [
             (hsPkgs.buildPackages.doctest.components.exes.doctest or (pkgs.buildPackages.doctest or (errorHandler.buildToolDepError "doctest:doctest")))
             ];
-          buildable = if system.isWindows then false else true;
+          buildable = if compiler.isGhcjs && true || system.isWindows
+            then false
+            else true;
           modules = [
             "Suites/Laws"
             "Suites/Laws/Eq"
@@ -147,5 +171,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/plutus-tx; echo source root reset to $sourceRoot";
+    postUnpack = "sourceRoot+=/plutus-tx; echo source root reset to \$sourceRoot";
     }

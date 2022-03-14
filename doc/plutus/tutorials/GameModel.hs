@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
@@ -17,6 +18,7 @@ module GameModel where
 import Control.Applicative
 import Control.Lens hiding (elements)
 import Control.Monad
+import Data.Data
 import System.Random
 
 -- START import Log
@@ -78,7 +80,7 @@ data GameModel = GameModel
     { _gameValue     :: Integer
     , _hasToken      :: Maybe Wallet
     , _currentSecret :: String }
-  deriving (Show)
+  deriving (Show, Data)
 
 makeLenses 'GameModel
 -- END GameModel
@@ -92,7 +94,7 @@ instance ContractModel GameModel where
     data Action GameModel = Lock      Wallet String Integer
                           | Guess     Wallet String String Integer
                           | GiveToken Wallet
-        deriving (Eq, Show)
+        deriving (Eq, Show, Data)
 -- END instance ContractModel and Action type
 
 -- START ContractInstanceKey

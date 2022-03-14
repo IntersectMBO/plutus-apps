@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
@@ -15,6 +16,7 @@ module Spec.Vesting (tests, prop_Vesting, prop_CheckNoLockedFundsProof, retrieve
 
 import Control.Lens hiding (elements)
 import Control.Monad (void, when)
+import Data.Data
 import Data.Default (Default (def))
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HUnit
@@ -58,7 +60,7 @@ data VestingModel =
                , _t2Slot       :: Slot -- ^ The time for the second tranche
                , _t1Amount     :: Value -- ^ The size of the first tranche
                , _t2Amount     :: Value -- ^ The size of the second tranche
-               } deriving (Show, Eq)
+               } deriving (Show, Eq, Data)
 
 makeLenses 'VestingModel
 
@@ -74,7 +76,7 @@ instance ContractModel VestingModel where
 
   data Action VestingModel = Vest Wallet
                            | Retrieve Wallet Value
-                           deriving (Eq, Show)
+                           deriving (Eq, Show, Data)
 
   initialState = VestingModel
     { _vestedAmount = mempty
