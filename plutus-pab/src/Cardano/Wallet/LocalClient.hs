@@ -94,7 +94,7 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
             case result of
                 Left err -> do
                     logWarn (WalletClientError $ show err)
-                    throwError err
+                    pure . Left $ err
                 Right _ -> pure result
 
         submitTxnH :: CardanoTx -> Eff effs ()
