@@ -20,11 +20,11 @@ module Index
 import           Control.Monad   (replicateM)
 import           Data.Foldable   (foldl')
 import           Data.Maybe      (fromJust)
+import           GHC.Generics
+import           QuickSpec
 import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
-                                  arbitrarySizedIntegral, chooseInt,
-                                  frequency, listOf, sized)
-import QuickSpec
-import GHC.Generics
+                                  arbitrarySizedIntegral, chooseInt, frequency,
+                                  listOf, shrinkNothing, sized)
 
 {- | Laws
   Constructors: new, insert, rewind
@@ -59,8 +59,8 @@ data Index a e = New (a -> e -> a) Int a
 
 instance (Show a, Show e) => Show (Index a e) where
   show (New _ depth acc) = "New <f> " <> show depth <> " " <> show acc
-  show (Insert b ix) = "Insert " <> show b <> " (" <> show ix <> ")"
-  show (Rewind n ix) = "Rewind " <> show n <> " (" <> show ix <> ")"
+  show (Insert b ix)     = "Insert " <> show b <> " (" <> show ix <> ")"
+  show (Rewind n ix)     = "Rewind " <> show n <> " (" <> show ix <> ")"
 
 newtype GrammarBuilder a e = GrammarBuilder (Index a e)
   deriving (Show)
@@ -134,6 +134,7 @@ getHistory (Rewind n ix) = do
 
 insertL :: [e] -> Index a e -> Index a e
 insertL es ix = foldl' (flip insert) ix es
+
 -- | QuickCheck
 
 instance ( CoArbitrary a
@@ -158,7 +159,7 @@ instance ( CoArbitrary a
     -- Construction can only fail due to NonPositive depth
     -- Tested with prop_hfNewReturns...
     let ix = new fn depth acc
-    pure . ObservedBuilder $ insertL bs ix 
+    pure . ObservedBuilder $ insertL bs ix
 
 instance ( CoArbitrary a
          , CoArbitrary e
@@ -168,6 +169,7 @@ instance ( CoArbitrary a
   arbitrary = do
     (ObservedBuilder ix) <- arbitrary
     pure ix
+  shrink = shrinkNothing
 
 instance ( CoArbitrary a
          , CoArbitrary e

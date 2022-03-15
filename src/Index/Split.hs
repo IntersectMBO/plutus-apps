@@ -1,6 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RankNTypes     #-}
-
 module Index.Split
   ( -- * API
     SplitIndex(..)
@@ -20,6 +17,8 @@ import           Data.List     (scanl')
 
 import           Index         (IndexView (..))
 
+import qualified Debug.Trace as Debug
+
 data SplitIndex m a e = SplitIndex
   { siStoredIx :: m a
     -- ^ Combined view of `[e]` and `m a`
@@ -30,6 +29,10 @@ data SplitIndex m a e = SplitIndex
   , siIndex    :: a -> [e] -> a
     -- ^ Not sure how reasonble this is for a SQL db, but will leave it as-is for now
   }
+
+instance (Show a, Show e) => Show (SplitIndex m a e) where
+  show SplitIndex{siEvents, siBuffered, siStoredIx} =
+    "{ Events: " <> show siEvents <> " Buffered: " <> show siBuffered <> " }"
 
 storeEventsThreshold :: Int
 storeEventsThreshold = 3
@@ -56,22 +59,23 @@ insert :: Monad m => e -> SplitIndex m a e -> m (SplitIndex m a e)
 insert e ix@SplitIndex{siEvents, siDepth, siBuffered}
   | siDepth /= 1 = do
     let (siEvents', siBuffered')
-          = if length siEvents == siDepth - 1
+          = if size ix == siDepth
             then ( e : take (siDepth - 2) siEvents
                  , last siEvents : siBuffered )
             else ( e : siEvents, siBuffered )
-    ix' <- if length siBuffered > siDepth * storeEventsThreshold
-           then mergeEvents ix
-           else pure        ix
-    pure ix' { siEvents = siEvents'
-             , siBuffered = siBuffered'
-             }
+    let ix' = ix { siEvents = siEvents'
+                 , siBuffered = siBuffered'
+                 }
+    if length siBuffered' > siDepth * storeEventsThreshold
+    then mergeEvents ix'
+    else pure        ix'
   -- Special casing siDepth == 1 => siEvents is unused.
   | otherwise = do
     let siBuffered' = e : siBuffered
+    let ix' = ix { siBuffered = e : siBuffered }
     if length siBuffered' > siDepth * storeEventsThreshold
-    then mergeEvents ix
-    else pure        ix
+    then mergeEvents ix'
+    else pure        ix'
 
 mergeEvents :: Monad m => SplitIndex m a e -> m (SplitIndex m a e)
 mergeEvents ix@SplitIndex {siStore, siIndex, siStoredIx, siBuffered} = do
@@ -93,21 +97,24 @@ size SplitIndex {siEvents} =
 rewind :: Int -> SplitIndex m a e -> Maybe (SplitIndex m a e)
 rewind n ix@SplitIndex {siEvents}
   | size ix > n = Just $ ix { siEvents = drop n siEvents }
-  | otherwise           = Nothing
+  | otherwise   = {-Debug.trace ("{ returing nothing from rewind " <> show (size ix) <> " " <> show n <> " }")  -} Nothing
 
 view :: Monad m => SplitIndex m a e -> m (IndexView a)
-view ix@SplitIndex{siStoredIx, siDepth, siEvents, siIndex} = do
-  v <- siStoredIx
+view ix@SplitIndex{siDepth} = do
+  h <- getHistory ix
   pure $ IndexView { ixDepth = siDepth
-                   , ixView  = siIndex v siEvents
+                   , ixView  = head h
                    , ixSize  = size ix
                    }
 
-getHistory :: Monad m => SplitIndex m a e -> m [a]
-getHistory SplitIndex{siDepth, siStoredIx, siIndex, siEvents} = do
+getHistory :: forall m e a. Monad m => SplitIndex m a e -> m [a]
+getHistory SplitIndex{siStoredIx, siIndex, siEvents, siBuffered} = do
   storedIx <- siStoredIx
-  let es = scanl' (\a e -> siIndex a [e]) storedIx siEvents
-  pure $ take (min (siDepth + 1) (length es)) es
+  let a  = foldr index storedIx siBuffered
+  pure $ scanr index a siEvents
+  where
+    index :: e -> a -> a
+    index e a = siIndex a [e]
 
 getEvents :: SplitIndex m a e -> [e]
 getEvents SplitIndex{siEvents} = siEvents

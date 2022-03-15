@@ -107,6 +107,7 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
     Just v' <- run $ cView c ix
     h  <- take (ixDepth v' - length bs) . fromJust <$> run (cHistory c ix)
     h' <- fromJust <$> run (cHistory c ix')
+    -- assert $ Debug.trace ("h = " <> show h <> ", h' = " <> show h' <> " bs = " <> show bs <> " ix: " <> show ix <> " ix': " <> show ix') $ h == h'
     assert $ h == h'
 
 -- | Generally this would not be a good property since it is very coupled
@@ -118,12 +119,19 @@ prop_observeInsert
   -> ObservedBuilder a e
   -> [e]
   -> Property
-prop_observeInsert c (ObservedBuilder ix) bs =
+prop_observeInsert c (ObservedBuilder ix) es =
   monadic (cMonadic c) $ do
     Just v  <- run $ cView c ix
-    let ix' = insertL bs ix
+    let ix' = insertL es ix
     Just v' <- run $ cView c ix'
-    assert $ v' == IndexView { ixDepth = ixDepth v
-                             , ixSize  = min (ixDepth v) (length bs + ixSize v)
-                             , ixView  = foldl' (getFunction ix) (ixView v) bs
-                             }
+    h <- run $ cHistory c ix'
+    let v'' = IndexView { ixDepth = ixDepth v
+                        , ixSize  = min (ixDepth v) (length es + ixSize v)
+                        , ixView  = foldl' (getFunction ix) (ixView v) es
+                        }
+    -- assert $ v' == IndexView { ixDepth = ixDepth v
+    --                          , ixSize  = min (ixDepth v) (length bs + ixSize v)
+    --                          , ixView  = foldl' (getFunction ix) (ixView v) bs
+    --                          }
+    -- assert $ Debug.trace ("History: " <> show h) True
+    assert $ {-Debug.trace ("v' = " <> show v' <> " v'' = " <> show v'') $-} v' == v'' 
