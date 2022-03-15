@@ -6,6 +6,7 @@ module Main where
 import Cardano.Api
 import Cardano.Api.Extras ()
 import Control.Monad.Except (runExceptT)
+import Data.Aeson qualified as Aeson
 import Data.Maybe qualified as Maybe
 import Options.Applicative hiding (header)
 import Plutus.Streaming
@@ -71,8 +72,8 @@ chainPointParser =
 -- Utilities
 --
 
-pPrintStream :: (Show a, MonadIO m) => Stream (Of a) m r -> m r
-pPrintStream = S.mapM_ pPrint
+printJson :: (MonadIO m, ToJSON a) => Stream (Of a) m r -> m r
+printJson = S.print . S.map Aeson.encode
 
 --
 -- Example consumers
@@ -139,7 +140,7 @@ main = do
         optionsSocketPath
         Mainnet
         optionsChainPoint
-        pPrintStream
+        S.print
         >>= print
 
 doSimple ::
@@ -172,7 +173,7 @@ nthBlock = nthBlockAt ChainPointAtGenesis
 nthBlockAt :: ChainPoint -> Int -> IO (BlockInMode CardanoMode)
 nthBlockAt point n = do
   withSimpleChainSyncEventStream
-    "node.socket"
+    "socket/node.socket"
     Mainnet
     point
     ( fmap Maybe.fromJust
@@ -182,13 +183,3 @@ nthBlockAt point n = do
         . S.drop n
         . S.map (\case RollForward bim _ -> Just bim; _ -> Nothing)
     )
-
-testLedgerState :: IO ()
-testLedgerState = do
-  ils <- runExceptT (initialLedgerState "mainnet-config.json")
-  case ils of
-    (Left e) -> error $ show e
-    (Right (env, ls)) ->
-       withSimpleChainSyncEventStream "node.socket" Mainnet ChainPointAtGenesis $
-         void . S.print . ledgerState env ls QuickValidation
-
