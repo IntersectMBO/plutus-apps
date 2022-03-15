@@ -13,11 +13,8 @@ module Index.Split
   ) where
 
 import           Data.Foldable (foldlM)
-import           Data.List     (scanl')
 
 import           Index         (IndexView (..))
-
-import qualified Debug.Trace as Debug
 
 data SplitIndex m a e = SplitIndex
   { siStoredIx :: m a
@@ -31,7 +28,7 @@ data SplitIndex m a e = SplitIndex
   }
 
 instance (Show a, Show e) => Show (SplitIndex m a e) where
-  show SplitIndex{siEvents, siBuffered, siStoredIx} =
+  show SplitIndex{siEvents, siBuffered} =
     "{ Events: " <> show siEvents <> " Buffered: " <> show siBuffered <> " }"
 
 storeEventsThreshold :: Int
@@ -97,7 +94,7 @@ size SplitIndex {siEvents} =
 rewind :: Int -> SplitIndex m a e -> Maybe (SplitIndex m a e)
 rewind n ix@SplitIndex {siEvents}
   | size ix > n = Just $ ix { siEvents = drop n siEvents }
-  | otherwise   = {-Debug.trace ("{ returing nothing from rewind " <> show (size ix) <> " " <> show n <> " }")  -} Nothing
+  | otherwise   = Nothing
 
 view :: Monad m => SplitIndex m a e -> m (IndexView a)
 view ix@SplitIndex{siDepth} = do
