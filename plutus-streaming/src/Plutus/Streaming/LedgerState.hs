@@ -1,5 +1,6 @@
 module Plutus.Streaming.LedgerState
   ( ledgerState,
+    ledgerState',
     LedgerState (..),
     LedgerEvent (..),
   )
@@ -15,6 +16,8 @@ import Unsafe.Coerce (unsafeCoerce)
 
 data LedgerStateEvents = LedgerStateEvents LedgerState [LedgerEvent]
 
+-- This terrible hack is because Cardano.Api does not export
+-- LedgerStateEvents
 applyBlock' ::
   Env ->
   LedgerState ->
@@ -25,13 +28,6 @@ applyBlock' = unsafeCoerce applyBlock
 
 type History a = Seq (SlotNo, a)
 
--- | This function works under the assumption that the stream of blocks it
--- receives is valid. The function will trigger an exception if
--- 1. a block it receives does not apply on top of the ledger state
--- 2. a rollback goes past the security parameter
--- FIXME, for the moment I kept this function pure but it requires us to do
--- some up-front IO to obtain the initial ledger state from the network
--- config file.
 ledgerState ::
   forall m r.
   Monad m =>
@@ -40,8 +36,25 @@ ledgerState ::
   ValidationMode ->
   Stream (Of SimpleChainSyncEvent) m r ->
   Stream (Of (LedgerState, [LedgerEvent])) m r
-ledgerState env ls0 vm =
-  S.scan step initialHistory projection
+ledgerState env ls0 vm = S.map snd . ledgerState' env ls0 vm
+
+-- | This function works under the assumption that the stream of blocks it
+-- receives is valid. The function will trigger an exception if
+-- 1. a block it receives does not apply on top of the ledger state
+-- 2. a rollback goes past the security parameter
+-- FIXME, for the moment I kept this function pure but it requires us to do
+-- some up-front IO to obtain the initial ledger state from the network
+-- config file.
+ledgerState' ::
+  forall m r.
+  Monad m =>
+  Env ->
+  LedgerState ->
+  ValidationMode ->
+  Stream (Of SimpleChainSyncEvent) m r ->
+  Stream (Of (SimpleChainSyncEvent, (LedgerState, [LedgerEvent]))) m r
+ledgerState' env ls0 vm =
+  S.scanned step initialHistory projection
   where
     step ::
       (History LedgerState, [LedgerEvent]) ->

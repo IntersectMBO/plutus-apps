@@ -1,10 +1,12 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Plutus.Streaming
   ( SimpleChainSyncEvent,
     withSimpleChainSyncEventStream,
     ChainSyncEventWithLedgerState,
     withChainSyncEventStreamWithLedgerState,
-    ChainSyncEvent(..),
-    EventStreamResult(..)
+    ChainSyncEvent (..),
+    EventStreamResult (..),
   )
 where
 
@@ -13,13 +15,20 @@ import Cardano.Api.ChainSync.Client
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Monad.Trans.Except (runExceptT)
+-- import Data.Aeson (ToJSON (..))
+import GHC.Generics (Generic)
 import Streaming
 import Streaming.Prelude qualified as S
 
 data ChainSyncEvent a
   = RollForward a ChainTip
   | RollBackward ChainPoint ChainTip
-  deriving (Show, Functor)
+  deriving (Show, Functor, Generic)
+
+-- deriving instance Generic ChainPoint
+
+-- instance ToJSON ChainPoint
+-- instance ToJSON a => ToJSON (ChainSyncEvent a)
 
 type SimpleChainSyncEvent = ChainSyncEvent (BlockInMode CardanoMode)
 

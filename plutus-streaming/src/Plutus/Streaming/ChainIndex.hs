@@ -1,4 +1,9 @@
-module Plutus.Streaming.ChainIndex where
+module Plutus.Streaming.ChainIndex (
+  utxoState,
+  utxoState',
+  UtxoState,
+  TxUtxoBalance
+) where
 
 import Plutus.ChainIndex (TxUtxoBalance)
 import Plutus.ChainIndex.Compatibility qualified as CI
@@ -14,7 +19,14 @@ utxoState ::
   Stream (Of SimpleChainSyncEvent) m r ->
   Stream (Of (UtxoState TxUtxoBalance)) m r
 utxoState =
-  S.scan step initial projection
+  S.map snd . utxoState'
+
+utxoState' ::
+  Monad m =>
+  Stream (Of SimpleChainSyncEvent) m r ->
+  Stream (Of (SimpleChainSyncEvent, UtxoState TxUtxoBalance)) m r
+utxoState' =
+  S.scanned step initial projection
   where
     step index (RollForward block _) =
       case CI.fromCardanoBlock block of
