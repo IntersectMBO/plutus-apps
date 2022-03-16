@@ -64,7 +64,7 @@ import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.Chain.Common (addrToBase58)
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Ledger.Core qualified as Ledger
 import Codec.Serialise (Serialise, deserialiseOrFail)
 import Codec.Serialise qualified as Codec
@@ -259,7 +259,7 @@ scriptDataFromCardanoTxBody C.ByronTxBody {} = (mempty, mempty)
 scriptDataFromCardanoTxBody (C.ShelleyTxBody _ _ _ C.TxBodyNoScriptData _ _) =
   (mempty, mempty)
 scriptDataFromCardanoTxBody
-  (C.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ (C.TxDats' dats) (C.Redeemers' reds)) _ _) =
+  (C.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ (Alonzo.TxDats' dats) (Alonzo.Redeemers' reds)) _ _) =
 
   let datums = Map.fromList
              $ fmap ( (\d -> (P.datumHash d, d))
@@ -349,13 +349,14 @@ toCardanoTxBody ::
     -> Either ToCardanoError (C.TxBody C.AlonzoEra)
 toCardanoTxBody sigs protocolParams networkId tx = do
     txBodyContent <- toCardanoTxBodyContent sigs protocolParams networkId tx
-    makeTransactionBody txBodyContent
+    makeTransactionBody mempty txBodyContent
 
-makeTransactionBody ::
-    C.TxBodyContent C.BuildTx C.AlonzoEra
+makeTransactionBody
+    :: Map Alonzo.RdmrPtr Alonzo.ExUnits
+    -> C.TxBodyContent C.BuildTx C.AlonzoEra
     -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-makeTransactionBody txBodyContent =
-  first (TxBodyError . C.displayError) $ makeTransactionBody' txBodyContent
+makeTransactionBody exUnits txBodyContent =
+  first (TxBodyError . C.displayError) $ makeTransactionBody' exUnits txBodyContent
 
 fromCardanoTxIn :: C.TxIn -> P.TxOutRef
 fromCardanoTxIn (C.TxIn txId (C.TxIx txIx)) = P.TxOutRef (fromCardanoTxId txId) (toInteger txIx)

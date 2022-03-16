@@ -41,7 +41,8 @@ balanceTxnMinAda =
     let ee = someTokenValue "ee" 1
         ff = someTokenValue "ff" 1
         options = defaultCheckOptions
-            & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
+            & changeInitialWalletValue w1 (\ada -> Value.scale 1000 (ee <> ff) <> Value.scale 100 ada)
+            & changeInitialWalletValue w2 (Value.scale 100)
         vHash = validatorHash someValidator
 
         contract :: Contract () EmptySchema ContractError ()
@@ -70,7 +71,8 @@ balanceTxnMinAda2 =
         mps  = MPS.mkForwardingMintingPolicy vHash
         vL n = Value.singleton (Value.mpsSymbol $ mintingPolicyHash mps) "L" n
         options = defaultCheckOptions
-            & changeInitialWalletValue w1 (<> vA 1 <> vB 2)
+            & changeInitialWalletValue w1 (\ada -> Value.scale 100 ada <> vA 1 <> vB 2)
+            & changeInitialWalletValue w2 (Value.scale 100)
         vHash = validatorHash someValidator
         payToWallet w = Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
         mkTx lookups constraints = Constraints.adjustUnbalancedTx . either (error . show) id $ Constraints.mkTx @Void lookups constraints
