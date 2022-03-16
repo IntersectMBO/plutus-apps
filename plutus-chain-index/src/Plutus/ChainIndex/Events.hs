@@ -23,10 +23,14 @@ import Plutus.ChainIndex.SyncStats (SyncLog, logProgress)
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 import System.Clock (Clock (Monotonic), diffTimeSpec, getTime)
 
+-- | How often do we check the queue
+period :: Int
+period = 5_000_000 -- 5s
+
 -- | 'processEventsQueue' reads events from 'TBQueue', collects enough 'RollForward's to
 -- append blocks at once.
-processEventsQueue :: Trace IO (PrettyObject SyncLog) -> RunRequirements -> EventsQueue -> Int -> IO ()
-processEventsQueue trace runReq eventsQueue period = void $ do
+processEventsQueue :: Trace IO (PrettyObject SyncLog) -> RunRequirements -> EventsQueue -> IO ()
+processEventsQueue trace runReq eventsQueue = void $ do
   putStrLn "Starting processing of events"
   go []
   where

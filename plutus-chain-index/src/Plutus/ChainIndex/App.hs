@@ -88,7 +88,7 @@ runMain logConfig config = do
     syncChainIndex config runReq syncHandler
 
     (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
-    withAsync (processEventsQueue trace runReq eventsQueue (Config.cicAppendPeriod config)) $ \processAsync -> do
+    withAsync (processEventsQueue trace runReq eventsQueue) $ \processAsync -> do
 
       let port = show (Config.cicPort config)
       putStrLn $ "Starting webserver on port " <> port

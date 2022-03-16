@@ -20,7 +20,6 @@ module Plutus.ChainIndex.Config(
   securityParam,
   slotConfig,
   storeFrom,
-  appendPeriod,
   appendQueueSize
   ) where
 
@@ -41,7 +40,6 @@ data ChainIndexConfig = ChainIndexConfig
   , cicSecurityParam   :: Int -- ^ The number of blocks after which a transaction cannot be rolled back anymore
   , cicSlotConfig      :: SlotConfig
   , cicStoreFrom       :: BlockNo -- ^ Only store transactions from this block number onward
-  , cicAppendPeriod    :: Int -- ^ How often the appending of blocks should happen (in microseconds)
   , cicAppendQueueSize :: Int -- ^ The size of the queue and a number of blocks to collect before writing to the database
   }
   deriving stock (Show, Eq, Generic)
@@ -71,19 +69,17 @@ defaultConfig = ChainIndexConfig
         , scSlotLength   = 1000
         }
   , cicStoreFrom = BlockNo 0
-  , cicAppendPeriod    = 5_000_000 -- 5s
   , cicAppendQueueSize = 15000
   }
 
 instance Pretty ChainIndexConfig where
-  pretty ChainIndexConfig{cicSocketPath, cicDbPath, cicPort, cicNetworkId, cicSecurityParam, cicStoreFrom, cicAppendPeriod, cicAppendQueueSize} =
+  pretty ChainIndexConfig{cicSocketPath, cicDbPath, cicPort, cicNetworkId, cicSecurityParam, cicStoreFrom, cicAppendQueueSize} =
     vsep [ "Socket:" <+> pretty cicSocketPath
          , "Db:" <+> pretty cicDbPath
          , "Port:" <+> pretty cicPort
          , "Network Id:" <+> viaShow cicNetworkId
          , "Security Param:" <+> pretty cicSecurityParam
          , "Store from:" <+> viaShow cicStoreFrom
-         , "Append period:" <+> viaShow cicAppendPeriod
          , "Append queue size:" <+> viaShow cicAppendQueueSize
          ]
 
@@ -95,7 +91,6 @@ makeLensesFor [
   ("cicSecurityParam", "securityParam"),
   ("cicSlotConfig", "slotConfig"),
   ("cicStoreFrom", "storeFrom"),
-  ("cicAppendPeriod", "appendPeriod"),
   ("cicAppendQueueSize", "appendQueueSize")
   ] 'ChainIndexConfig
 

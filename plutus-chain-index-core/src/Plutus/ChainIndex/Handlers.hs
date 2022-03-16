@@ -310,10 +310,10 @@ handleControl = \case
     GetDiagnostics -> diagnostics
 
 
--- Use a batch size of 400 so that we don't hit the sql too-many-variables
+-- Use a batch size of 200 so that we don't hit the sql too-many-variables
 -- limit.
 batchSize :: Int
-batchSize = 400
+batchSize = 200
 
 insertUtxoDb
     :: [ChainIndexTx]

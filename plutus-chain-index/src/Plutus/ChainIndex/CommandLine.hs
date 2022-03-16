@@ -24,19 +24,17 @@ data CLIConfigOverrides =
     , ccDbPath          :: Maybe String
     , ccPort            :: Maybe Int
     , ccNetworkId       :: Maybe Word32
-    , ccAppendPeriod    :: Maybe Int
     , ccAppendQueueSize :: Maybe Int
     }
     deriving (Eq, Ord, Show)
 
 -- | Apply the CLI soverrides to the 'ChainIndexConfig'
 applyOverrides :: CLIConfigOverrides -> ChainIndexConfig -> ChainIndexConfig
-applyOverrides CLIConfigOverrides{ccSocketPath, ccDbPath, ccPort, ccNetworkId, ccAppendPeriod, ccAppendQueueSize} =
+applyOverrides CLIConfigOverrides{ccSocketPath, ccDbPath, ccPort, ccNetworkId, ccAppendQueueSize} =
   over Config.socketPath (maybe id const ccSocketPath)
   . over Config.dbPath (maybe id const ccDbPath)
   . over Config.port (maybe id const ccPort)
   . over Config.networkId (maybe id (const . Testnet . NetworkMagic) ccNetworkId)
-  . over Config.appendPeriod (maybe id const ccAppendPeriod)
   . over Config.appendQueueSize (maybe id const ccAppendQueueSize)
 
 -- | Configuration
@@ -69,7 +67,7 @@ optParser =
 
 cliConfigOverridesParser :: Parser CLIConfigOverrides
 cliConfigOverridesParser =
-  CLIConfigOverrides <$> socketPathParser <*> dbPathParser <*> portParser <*> networkIDParser <*> appendPeriodParser <*> appendQueueSizeParser where
+  CLIConfigOverrides <$> socketPathParser <*> dbPathParser <*> portParser <*> networkIDParser <*> appendQueueSizeParser where
     socketPathParser =
       option (Just <$> str) (long "socket-path" <> value Nothing <> help "Node socket path")
     dbPathParser =
@@ -78,8 +76,6 @@ cliConfigOverridesParser =
       option (Just <$> auto) (long "port" <> value Nothing <> help "Port")
     networkIDParser =
       option (Just <$> auto) (long "network-id" <> value Nothing <> help "Network ID")
-    appendPeriodParser =
-      option (Just <$> auto) (long "append-period" <> value Nothing <> help "Append period")
     appendQueueSizeParser =
       option (Just <$> auto) (long "append-queue-size" <> value Nothing <> help "Append queue size")
 
