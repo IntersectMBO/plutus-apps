@@ -12,14 +12,17 @@ module Plutus.ChainIndex.SyncStats where
 
 import Cardano.BM.Tracing (ToObject)
 import Control.Monad.Freer (Eff, Member)
-import Control.Monad.Freer.Extras (LogMsg, logInfo, logWarn)
+import Control.Monad.Freer.Extras (LogMsg, logInfo)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Time.Units (Second, fromMicroseconds)
+import Data.Time.Units.Extra ()
 import GHC.Generics (Generic)
 import Ledger (Slot (Slot))
 import Plutus.ChainIndex (Point (PointAtGenesis), tipAsPoint)
 import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward))
-import Prettyprinter (Pretty (pretty), comma, (<+>))
+import Prettyprinter (Pretty (pretty), comma, viaShow, (<+>))
+import System.Clock (TimeSpec, toNanoSecs)
 import Text.Printf (printf)
 
 data SyncStats = SyncStats
@@ -39,25 +42,28 @@ instance Monoid SyncStats where
     mempty = SyncStats 0 0 mempty mempty
 
 data SyncLog = SyncLog
-    { syncStateSyncLog :: SyncState -- ^ State of the syncing
-    , syncStatsSyncLog :: SyncStats -- ^ Stats of the syncing
+    { syncStateSyncLog  :: SyncState -- ^ State of the syncing
+    , syncStatsSyncLog  :: SyncStats -- ^ Stats of the syncing
+    , syncPeriodSyncLog :: Second
     }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, ToObject)
 
 instance Pretty SyncLog where
   pretty = \case
-    SyncLog syncState (SyncStats numRollForward numRollBackwards chainSyncPoint _) ->
+    SyncLog syncState (SyncStats numRollForward numRollBackwards chainSyncPoint _) period ->
         let currentTipMsg NotSyncing = ""
             currentTipMsg _          = "Current tip is" <+> pretty chainSyncPoint
          in
             pretty syncState
-                <+> "Applied"
+                <+> "Processed"
                 <+> pretty numRollForward
                 <+> "blocks"
                 <> comma
                 <+> pretty numRollBackwards
-                <+> "rollbacks."
+                <+> "rollbacks in the last"
+                <+> viaShow period
+                <> "."
                 <+> currentTipMsg syncState
 
 data SyncState = Synced | Syncing Double | NotSyncing
@@ -71,13 +77,13 @@ instance Pretty SyncState where
     NotSyncing  -> "Not syncing."
 
 -- | Log syncing summary.
-logProgress :: forall effs. (Member (LogMsg SyncLog) effs) => [ChainSyncEvent] -> Eff effs ()
-logProgress events = do
+logProgress :: forall effs. (Member (LogMsg SyncLog) effs) => [ChainSyncEvent] -> TimeSpec -> Eff effs ()
+logProgress events period = do
     let syncStats = foldl (<>) mempty $ map convertEventToSyncStats events
     let syncState = getSyncStateFromStats syncStats
-    let syncLog = SyncLog syncState syncStats
+    let syncLog = SyncLog syncState syncStats (fromMicroseconds $ toNanoSecs period `div` 1000)
     case syncState of
-      NotSyncing -> logWarn syncLog
+      NotSyncing -> pure () -- logWarn syncLog
       _          -> logInfo syncLog
 
 -- | Get the 'SyncState' for a 'SyncState'.

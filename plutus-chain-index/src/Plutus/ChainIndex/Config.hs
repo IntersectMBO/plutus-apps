@@ -72,7 +72,7 @@ defaultConfig = ChainIndexConfig
         }
   , cicStoreFrom = BlockNo 0
   , cicAppendPeriod    = 5_000_000 -- 5s
-  , cicAppendQueueSize = 25000
+  , cicAppendQueueSize = 15000
   }
 
 instance Pretty ChainIndexConfig where
