@@ -843,6 +843,10 @@ instance ContractModel state => StateModel (ModelState state) where
     nextState s (WaitUntil n) _          = runSpec (() <$ waitUntil n) (error "unreachable") s
     nextState s Unilateral{} _           = s
 
+    -- Note that the order of the preconditions in this case matter - we want to run
+    -- `getAllSymtokens` last because its likely to be stricter than the user precondition
+    -- and so if the user relies on the lazyness of the Gen monad by using the precondition
+    -- to avoid duplicate checks in the precondition and generator we don't screw that up.
     precondition s (ContractAction _ cmd) = s ^. assertionsOk
                                           && precondition s cmd
                                           && getAllSymtokens cmd `Set.isSubsetOf` (s ^. symTokens)
