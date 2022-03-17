@@ -201,7 +201,7 @@ noLockProof :: NoLockedFundsProof PrismModel
 noLockProof = defaultNLFP
 
 prop_NoLock :: Property
-prop_NoLock = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
+prop_NoLock = checkNoLockedFundsProof noLockProof
 
 tests :: TestTree
 tests = testGroup "PRISM"

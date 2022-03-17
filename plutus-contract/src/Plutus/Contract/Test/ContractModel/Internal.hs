@@ -147,6 +147,8 @@ module Plutus.Contract.Test.ContractModel.Internal
     , checkNoLockedFundsProofFast
     , NoLockedFundsProofLight(..)
     , checkNoLockedFundsProofLight
+    , checkNoLockedFundsProofWithOptions
+    , checkNoLockedFundsProofFastWithOptions
     -- $checkNoPartiality
     , Whitelist
     , whitelistOk
@@ -1707,20 +1709,32 @@ defaultNLFP = NoLockedFundsProof { nlfpMainStrategy = return ()
 
 checkNoLockedFundsProof
   :: (ContractModel model)
-  => CheckOptions
-  -> NoLockedFundsProof model
+  => NoLockedFundsProof model
   -> Property
-checkNoLockedFundsProof options =
-  checkNoLockedFundsProof' prop
-  where
-    prop = propRunActionsWithOptions' options defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
+checkNoLockedFundsProof = checkNoLockedFundsProofWithOptions defaultCheckOptionsContractModel
 
 checkNoLockedFundsProofFast
+  :: (ContractModel model)
+  => NoLockedFundsProof model
+  -> Property
+checkNoLockedFundsProofFast = checkNoLockedFundsProofFastWithOptions defaultCheckOptionsContractModel
+
+checkNoLockedFundsProofWithOptions
   :: (ContractModel model)
   => CheckOptions
   -> NoLockedFundsProof model
   -> Property
-checkNoLockedFundsProofFast _ = checkNoLockedFundsProof' (const $ property True)
+checkNoLockedFundsProofWithOptions options =
+  checkNoLockedFundsProof' prop
+  where
+    prop = propRunActionsWithOptions' options defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
+
+checkNoLockedFundsProofFastWithOptions
+  :: (ContractModel model)
+  => CheckOptions
+  -> NoLockedFundsProof model
+  -> Property
+checkNoLockedFundsProofFastWithOptions _ = checkNoLockedFundsProof' (const $ property True)
 
 checkNoLockedFundsProof'
   :: (ContractModel model)

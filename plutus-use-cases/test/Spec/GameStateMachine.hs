@@ -307,7 +307,7 @@ noLockProof = defaultNLFP {
             when hasTok $ action (Guess w secret "" val)
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof noLockProof
 
 -- * Unit tests
 

@@ -598,10 +598,10 @@ noLockProofLight :: NoLockedFundsProofLight UniswapModel
 noLockProofLight = NoLockedFundsProofLight{nlfplMainStrategy = nlfpMainStrategy noLockProof}
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof noLockProof
 
 prop_CheckNoLockedFundsProofFast :: Property
-prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofFast defaultCheckOptionsContractModel noLockProof
+prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofFast noLockProof
 
 check_propUniswapWithCoverage :: IO ()
 check_propUniswapWithCoverage = do
