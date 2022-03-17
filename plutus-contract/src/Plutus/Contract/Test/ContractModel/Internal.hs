@@ -843,9 +843,9 @@ instance ContractModel state => StateModel (ModelState state) where
     nextState s (WaitUntil n) _          = runSpec (() <$ waitUntil n) (error "unreachable") s
     nextState s Unilateral{} _           = s
 
-    precondition s (ContractAction _ cmd) = getAllSymtokens cmd `Set.isSubsetOf` (s ^. symTokens)
-                                          && s ^. assertionsOk
+    precondition s (ContractAction _ cmd) = s ^. assertionsOk
                                           && precondition s cmd
+                                          && getAllSymtokens cmd `Set.isSubsetOf` (s ^. symTokens)
     precondition s (WaitUntil n)          = n > s ^. currentSlot
     precondition _ _                      = True
 
