@@ -557,6 +557,8 @@ Now this failure can no longer appear.
    silently increase them. So this failing test does expose this
    issue.
 
+.. _DesignIssue:
+
 A third infelicity in the model, and a design issue
 '''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -1129,17 +1131,497 @@ Exercises
    copy of ``Spec.Tutorial.Escrow2``.
 
 
-No Locked Funds
----------------
 
-Take the Escrow example with no Refund. Show NoLockedFunds proof: just
-complete the escrow and withdraw. But requires cooperation.
+Testing "No Locked Funds" with Dynamic Logic
+--------------------------------------------
 
-Wallet strategy. Can't work.
+So far, we have tested that a contract's actual transfers of tokens
+are consistent with the model. That is, *nothing goes wrong*--or to
+put it bluntly, nobody steals your money. This is an example of a
+*safety property*. But when we use smart contracts, this is not the
+only kind of property we care about. Very often, we *also* want to be
+certain that we can eventually reach some kind of *goal* state--an
+example of a *liveness property*. In particular, it would be bad if
+tokens were to be trapped in a contract for ever, with no possibility
+of recovering them. The Cardano model certainly allows this... imagine
+a UTXO whose verifier always returns ``False``\... and so it is our
+responsibility to ensure that contracts do not fall into this
+trap. Not only does nothing go wrong, but *something good is always
+possible*. Not only does no-one steal your money, but you can always
+recover it yourself.
 
-Add a Refund action to the contract. Now passes.
+We call these properties "no locked funds" properties, because that is
+usually what we want to test: that we can always reach a state in
+which all tokens have been recovered from the contracts under test. Of
+course, there is no *general* way to recover tokens held by a
+contract, so we cannot expect QuickCheck to find a way to reach this
+goal automatically; instead, we *specify a strategy* for recovering
+funds, and what we test is that the given strategy always works.
 
-EscrowStrict with bad payments: no locked funds fails.
+Writing and testing properties using Dynamic Logic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We specify this kind of property using *dynamic logic*.
+This part of the contract testing framework is inspired
+by `dynamic logic for reasoning about programs
+<http://en.wikipedia.org/wiki/Dynamic_logic_(modal_logic)>`_, but it
+can be thought of just as a way of writing *test scenarios*, in
+which we mix random generation, explicit actions, and assertions. We
+write such scenarios in the ``DL`` monad; for example, here is a scenario
+that first performs a random sequence of actions, then invokes a
+finishing strategy, and finally asserts that no tokens remain locked
+in contracts.
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START finishEscrow
+   :end-before: END finishEscrow
+
+Here ``assertModel`` lets us include an assertion about the contract
+model state, ``lockedValue`` is a function provided by the framework
+that computes the total value held by contracts, and ``symIsZero``
+checks that this is zero. The value is returned here as a
+``SymValue`` (and we will return to the need for this in a later
+section), but for now it can be thought of just as a normal Plutus ``Value``
+with an extra type wrapper.
+
+This scenario just tests that the given finishing strategy always
+succeeds in recovering all tokens from contracts, no matter what
+actions have been performed beforehand. The finishing strategy itself
+is written in the same monad. For example, if we think we should use a
+``Redeem`` action to recover the tokens, then we can define
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START badFinishingStrategy
+   :end-before: END badFinishingStrategy
+                
+Of course, since the strategy must work in any state, including the
+initial one, then we do have to check that the escrow has been
+initialised before we attempt to ``Redeem``.
+
+.. note::
+   
+   These test scenarios are very flexible, and can be used for other
+   purposes too. For example, we could write a test scenario that fixes
+   the escrow targets, thus undoing the generalization we made in the previous section:
+   
+   .. literalinclude:: Escrow3.hs
+      :start-after: START fixedTargets
+      :end-before: END fixedTargets
+   
+   Note that generated actions are always *appropriate for the current
+   state*, so here ``anyActions_`` will pick up generating the test case
+   from the point after the escrow targets are initialised.
+   
+   We can use dynamic logic to express everything from unit tests to full
+   random generation (by just specifying ``anyActions_`` as the
+   scenario). But for now, we focus on testing "no locked funds" properties.
+
+Now, dynamic logic just specifies a *generator* for tests to
+perform; we still need to specify *how* to perform those
+tests. Usually, we just reuse the existing property we have already
+written, which runs the test case on the emulator and performs the
+usual checks. In this case, we can define
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START prop_FinishEscrow
+   :end-before: END prop_FinishEscrow
+
+
+Then we can run the tests by passing the property to ``quickCheck``, as usual:
+
+   .. code-block:: text
+
+      > quickCheck prop_FinishEscrow
+      *** Failed! Falsified (after 1 test and 3 shrinks):
+      BadPrecondition
+        [Do $ Init [(Wallet 2,2)]]
+        [Action (Redeem (Wallet 1))]
+        (EscrowModel {_contributions = fromList [],
+                      _targets = fromList [(Wallet 2,Value (Map [(,Map [("",2000000)])]))],
+                      _phase = Running})
+      
+      BadPrecondition
+      [Do $ Var 0 := Init [(Wallet 2,2)]]
+      Some (Redeem (Wallet 1))
+   
+The property fails, which is not surprising: our "finishing strategy"
+is quite simplistic, and not yet expected to work. But let us inspect
+the error message. The test failed because of a bad precondition,
+after running the sequence
+
+  .. code-block:: text
+
+     Init [(Wallet 2,2)]
+
+So we set up a target to pay wallet 2 a sum of 2 Ada. Then we tried to
+apply our finishing strategy, which is just for wallet 1 to issue a
+``Redeem`` request:
+
+  .. code-block:: text
+
+     Redeem (Wallet 1)
+
+This wasn't possible, because the precondition of ``Redeem`` wasn't
+satisfied. The message also shows us the model state--we have set up
+the escrow targets successfully, but there are no contributions, and
+the ``Redeem`` precondition says that the contributions must cover the
+targets before ``Redeem`` is possible. So of course, it doesn't work.
+
+But the counterexample does show us what we need to do to *make*
+``Redeem`` possible: we need to pay in sufficient contributions to
+cover the targets. So that suggests a refined finishing strategy:
+
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START finishingStrategy
+   :end-before: END finishingStrategy
+
+We read the contributions and targets from the contract state, compute
+the remaining deficit, and if the deficit is positive, then we make a
+payment to cover it. After this, a ``Redeem`` should be
+successful. And indeed, testing the property passes: this finishing
+strategy works.
+
+  .. code-block:: text
+
+   >  quickCheck . withMaxSuccess 1000 $ prop_FinishEscrow
+   +++ OK, passed 1000 tests.
+   
+   Actions (51925 in total):
+   73.483% Pay
+   14.278% Redeem
+   10.315% WaitUntil
+    1.924% Init
+
+.. _StrictRedeem:
+
+Digression: revisiting a design decision
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In section :ref:`DesignIssue` above, we discussed the situation in
+which contributors pay in *more* to the escrow than is needed to meet
+the targets. The actual contract allows that, and so do we in our
+model; as a consequence we had to *specify* where the surplus funds
+end up on redemption (in the wallet that invokes ``Redeem``). But
+there is another approach we could have taken: we could simply have
+said that ``Redeem`` *requires* the contributions and targets to match
+exactly, by strengthening the precondition:
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START strongPrecondition
+   :end-before: END strongPrecondition
+
+This does make ``prop_Escrow`` pass:
+
+  .. code-block:: text
+
+   > quickCheck prop_Escrow
+   +++ OK, passed 100 tests.
+   
+   Actions (2845 in total):
+   82.81% Pay
+   13.78% WaitUntil
+    3.30% Init
+    0.11% Redeem
+   
+   Actions rejected by precondition (870 in total):
+   88.3% Redeem
+   10.8% Pay
+    0.9% Init                  
+                
+But should we be satisfied with this? There are warning signs in the
+statistics that QuickCheck collects:
+
+#. We have tested ``Redeem`` an extremely small number of times.
+#. A high proportion of generated ``Redeem`` actions were *discarded* by the precondition.
+
+The explanation for this is that we can now only include ``Redeem`` in
+a test case if the previous (random) payments have hit the target
+*exactly*, and this is very unlikely. Moreover, once we have overshot
+the target, then further random payments cannot help.
+
+We could add a stronger *precondition* to ``Pay``, that forbids
+payments taking us over the target, and that would result in a better
+distribution of actions. But it is not a *realistic* solution, because
+at the end of the day, there is no way to *prevent* someone making a
+payment to a script on the Cardano blockchain. *Making a payment to a
+contract does not require the contract's approval*.
+
+So there is a problem here, but when we test ``prop_Escrow``, then it
+is revealed only by careful inspection of the generated
+statistics--the property does not *fail*.
+
+On the other hand, when we test ``prop_FinishEscrow``, then it fails immediately:
+
+  .. code-block:: text
+
+   > quickCheck prop_FinishEscrow
+   *** Failed! Falsified (after 5 tests and 6 shrinks):
+   BadPrecondition
+     [Do $ Init [], 
+      Do $ Pay (Wallet 2) 2]
+     [Action (Redeem (Wallet 1))]
+     (EscrowModel {_contributions = fromList [(Wallet 2,Value (Map [(,Map [("",2000000)])]))],
+                   _targets = fromList [],
+                   _phase = Running})
+   
+   BadPrecondition
+   [Do $ Var 0 := Init [],Do $ Var 3 := Pay (Wallet 2) 2]
+   Some (Redeem (Wallet 1))
+
+The counterexample sets up an escrow with an empty list of targets
+(which may seem odd, but is allowed, and tells us that no particular
+targets are *needed* to make the property fail). Then it makes a
+payment to the escrow, thus overshooting the targets. Finally, we try
+to use the given finishing strategy--which just attempts to use
+``Redeem``, and fails because the strong precondition we wrote does
+not allow it.
+
+In this case, not only does the given finishing strategy fail, but the
+bug cannot be fixed: *there is no possible finishing strategy that
+works*. Once we have overshot the targets, there is no way to return
+to a state in which ``Redeem`` is possible! And that is why the
+contract authors did *not* follow this path: had they done so, then an
+attacker would be able to 'brick' an escrow contract just by making an
+unexpected payment to it.
+
+Fair's fair: Unilateral strategies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We saw above how to test that a finishing strategy succeeds in
+recovering all the tokens. But not all strategies are created
+equal. For example, suppose you use an escrow contract to buy an
+NFT. You place your funds in the escrow, but before the seller can
+place the NFT there, they get a better offer. Now the seller will
+never place the NFT in the escrow--and neither can the buyer--and so
+the buyer's funds *will* be locked for ever, even though there is a
+way (using the NFT) to recover them.
+
+This little story shows that there is a need for each wallet to be
+able to recover their "fair share" of the funds in the contract,
+without any other wallet's cooperation. And the contract model
+framework provides a way of testing this too.
+
+The idea is to provide *two* strategies, one that recovers all the
+tokens from contracts, and is also interpreted to define each wallet's
+"fair share", and a second strategy *that can be followed by any
+single wallet*, and recovers that wallet's tokens. We call this kind
+of strategy a *unilateral* strategy; it is defined in the ``DL`` monad
+in just the same way as the strategies we saw earlier, but only a
+single wallet is allowed to perform actions. Indeed, this is why we
+gave ``finishingStrategy`` a wallet as a parameter: it defines the
+unilateral strategy for that wallet. Since the strategy uses
+``Redeem``, which actually pays out *all* the targets, then we can
+reuse it as the general strategy too, just by choosing a wallet to
+perform it (and we chose wallet 1 above).
+
+The framework lets us package the general and unilateral strategies
+together, into a "no locked funds proof":
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START noLockProof
+   :end-before: END noLockProof
+
+.. note::
+
+   There are other components in a ``NoLockedFundsProof``, which we
+   will see later; we can ignore them for now, but we do need to take
+   suitable default values from ``defaultNLFP`` in the definition
+   above.
+
+and we can test them together using ``checkNoLockedFundsProof``
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START prop_NoLockedFunds
+   :end-before: END prop_NoLockedFunds
+
+.. code-block:: text
+                   
+      > quickCheck prop_NoLockedFunds
+      *** Failed! Falsified (after 1 test and 5 shrinks):
+      DLScript
+        [Do $ Init [(Wallet 4,2)]]
+      
+      Unilateral strategy for Wallet 4 should have gotten it at least
+        SymValue {symValMap = fromList [], actualValPart = Value (Map [(,Map [("",2000000)])])}
+      but it got
+        SymValue {symValMap = fromList [], actualValPart = Value (Map [])}
+
+The property actually fails, because if all we do is create a target
+that wallet 4 should receive 2 Ada, then wallet 4's unilateral
+strategy is unable to recover that--even though, when wallet 1 follows
+the strategy, then wallet 4 does receive the money.
+
+What happens here is that the *general* strategy, which is just the
+same strategy followed by wallet 1, *does* pay out to wallet 4, and so
+we *define* wallet 4's "fair share" to be 2 Ada. But this isn't really
+right, because since no Ada have been paid into the contract, then
+there are no tokens to disburse. Indeed, if anything, the "general"
+strategy is *unfair* to wallet 1, which has to stump up 2 Ada in this
+situation so that the escrow can be redeemed. So this test failure
+does reveal a fairness problem, even if the victim is really wallet 1
+rather than wallet 4.
+
+We will see how to fix this problem in the next section. In the
+meantime, to summarize, defining a ``NoLockedFundsProof`` requires us
+
+#. to define a general strategy that can recover *all* the tokens from
+   the contracts under test, and moreover implies a *fair share* of
+   the tokens for each wallet *in any state* (for example, a fair
+   share of the profits-so-far of any trading contract),
+
+#. to define a *unilateral strategy* for each wallet, that can recover
+   that wallet's fair share of the tokens from any state, without
+   cooperation from any other wallet.
+
+
+Fixing the contract: refunds
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+The fundamental problem with the finishing strategy we have developed
+so far, is that in order to recover tokens already held by the
+contract, we may need to pay in even more tokens! This seems a poor
+design. It would make far more sense, in the event that the contract
+is not followed to completion, to *refund* contributions to the
+wallets that made them. And indeed, the actual implementation of the
+contract supports a ``refund`` endpoint as well.
+
+To add refunds to our model, we need to add a new action
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START EscrowModel
+   :end-before: END EscrowModel
+
+and add it to ``nextState``, ``precondition``, ``perform``, and ``arbitraryAction``:
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START RefundModel
+   :end-before: END RefundModel
+
+(In the ``nextState`` clause, the first line uses a more complex lens
+to extract the contributions, select the value for wallet ``w``, if
+present, and then pass the resulting ``Maybe Value`` to ``fold``, thus
+returning zero if there was no contribution, and the value itself if
+there was). We also have to extend the ``testContract`` to include the
+refund endpoint:
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START testContract
+   :end-before: END testContract
+
+
+With these additions, ``prop_Escrow`` still passes, but
+now tests refunds as well:
+
+.. code-block:: text
+
+   > quickCheck prop_Escrow
+   +++ OK, passed 100 tests.
+   
+   Actions (2625 in total):
+   66.44% Pay
+   12.46% WaitUntil
+    9.64% Redeem
+    7.96% Refund
+    3.50% Init
+   
+   Actions rejected by precondition (478 in total):
+   85.8% Refund
+   12.6% Pay
+    1.7% Init
+
+We can see that ``Refund`` is tested almost as often as ``Redeem``,
+although many refunds are rejected by the precondition (which requires
+that there actually *is* a contribution to refund). This isn't a big
+deal, though, because the overall proportion of rejected actions is
+low (15%), and sufficiently many ``Refund`` actions are being tested.
+
+The payoff, though, is that we can now define a far better finishing
+strategy: the general strategy will just refund all the contributions,
+and the unilateral strategies will claim a refund for the 
+wallet concerned.
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START BetterStrategies
+   :end-before: END BetterStrategies
+
+.. note::
+
+   Here we use ``monitor`` to gather statistics on the number of
+   wallets receiving refunds during the finishing strategy, just to
+   make sure, for example, that it is not always zero. We place such
+   monitoring in the *general* strategy, not the wallet-specific ones,
+   because the general strategy is invoked exactly once per test,
+   while the wallet-specific ones may be invoked a variable--and
+   unpredictable--number of times. This makes statistics gathered in
+   the wallet-specific strategies harder to interpret.
+                
+We put these strategies together into a ``NoLockedFundsProof``:
+
+.. literalinclude:: Escrow3.hs
+   :start-after: START BetterNoLockProof
+   :end-before: END BetterNoLockProof
+
+and run tests:
+
+.. code-block:: text
+
+   > quickCheck prop_NoLockedFunds
+   +++ OK, passed 100 tests.
+   
+   Actions (31076 in total):
+   65.211% Pay
+   11.794% WaitUntil
+   10.117% Redeem
+    9.506% Refund
+    1.847% Init
+    1.525% Unilateral
+   
+   Refunded wallets (100 in total):
+   30% 2
+   23% 1
+   17% 4
+   16% 3
+   13% 0
+    1% 5
+
+Now the tests pass--each wallet can indeed recover its own fair share
+of tokens--and moreover we test each action fairly often, and the
+number of refunded wallets has a reasonable-looking distribution.
+    
+Exercises
+^^^^^^^^^
+You will find the code presented in this section in ``Spec.Tutorial.Escrow3``\.
+
+#. Strengthen the precondition of ``Redeem`` to require the
+   contributions and targets to match exactly, as discussed in
+   :ref:`StrictRedeem`. Verify that ``prop_Escrow`` passes and
+   ``prop_FinishEscrow`` fails. Now, *add a precondition to* ``Pay``
+   to disallow payments that take the contributions over the target.
+
+   #. Test ``prop_Escrow``, and make sure it passes; have you achieved
+      a better distribution of actions in tests?
+
+   #. Test ``prop_FinishEscrow``; does it pass now?
+
+#. The code provided uses the poor finishing strategy based on
+   ``Redeem``. Verify that ``prop_NoLockedFunds`` fails, and replace
+   the strategy with the better one described above (you will find the
+   code in comments in the file). Verify that ``prop_NoLockedFunds``
+   passes now.
+
+   Do not be surprised if testing ``prop_NoLockedFunds`` is
+   considerably slower than testing ``prop_FinishEscrow``. The latter
+   runs the emulator only once per test, while the former must run it
+   repeatedly to test each wallet's unilateral strategy.
+
+#. Sometimes a wallet which is targetted to *receive* funds might do
+   better to complete the contributions and redeem the escrow, rather
+   than refund its own contribution. Implement this idea as a
+   per-wallet strategy, and see whether ``prop_NoLockedFunds`` still
+   passes. Add a call of ``monitor`` to your strategy to gather
+   statistics on how often ``Redeem`` is used instead of ``Refund``.
+   
 
 Taking Time into Account
 ------------------------
