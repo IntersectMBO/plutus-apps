@@ -37,6 +37,7 @@ import Control.Arrow ((>>>))
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
+import Control.Exception (SomeException, handle)
 import Control.Lens (preview)
 import Control.Monad (forM_, void)
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
@@ -297,6 +298,7 @@ startSTMInstanceThread' stmState runAppBackend def instanceID =  do
     state <- liftIO $ STM.atomically stmState
     _ <- liftIO
         $ forkIO
+        $ handle (\e -> putStrLn $ "UNCAUGHT EXCEPTION KILLED INSTANCE THREAD: " <> show (e :: SomeException))
         $ runAppBackend instanceID
         $ runReader instanceID
         $ runReader state
