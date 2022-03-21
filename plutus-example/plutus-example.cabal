@@ -97,7 +97,6 @@ executable plutus-example
                       , directory
                       , filepath
                       , plutus-example
-x
 
 executable create-script-context
   import:               base, project-config

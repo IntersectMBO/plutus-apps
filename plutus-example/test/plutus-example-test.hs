@@ -25,3 +25,4 @@ plutusExampleTests = testGroup "plutus-example"
    --  , testProperty "prop_spending_plutus_script" Test.PlutusExample.Direct.TxInLockingPlutus.prop_spending_plutus_script
    --  , testProperty "prop_submit_api_spending_plutus_script" Test.PlutusExample.SubmitApi.TxInLockingPlutus.prop_submit_api_spending_plutus_script
    ]
+

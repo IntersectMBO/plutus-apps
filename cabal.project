@@ -1,5 +1,5 @@
 -- Bump this if you need newer packages.
-index-state: 2022-01-22T00:00:00Z
+index-state: 2022-02-22T20:47:03Z
 
 packages: doc
           freer-extras
@@ -30,6 +30,13 @@ test-show-details: streaming
 
 allow-newer:
   size-based:template-haskell
+
+constraints:
+     -- Because later versions of hedgehog introduce a change which break 'cardano-ledger':
+     -- Test/Cardano/Chain/Delegation/Model.hs:91:41: error:
+     --   • Could not deduce (TraversableB SignalSDELEG)
+     -- TODO: Try to remove on next `cardano-node` version upgrade.
+     hedgehog >= 1.0.2 && < 1.1
 
 -- These packages appear in our dependency tree and are very slow to build.
 -- Empirically, turning off optimization shaves off ~50% build time.
