@@ -30,9 +30,7 @@ period = 5_000_000 -- 5s
 -- | 'processEventsQueue' reads events from 'TBQueue', collects enough 'RollForward's to
 -- append blocks at once.
 processEventsQueue :: Trace IO (PrettyObject SyncLog) -> RunRequirements -> EventsQueue -> IO ()
-processEventsQueue trace runReq eventsQueue = void $ do
-  putStrLn "Starting processing of events"
-  go []
+processEventsQueue trace runReq eventsQueue = go []
   where
     go unprocessedEvents = do
       start <- getTime Monotonic
@@ -69,5 +67,5 @@ processEventsQueue trace runReq eventsQueue = void $ do
           end <- getTime Monotonic
           void $ runLogEffects (convertLog PrettyObject trace) $ logProgress processedEvents (diffTimeSpec end start)
           go restUnprocessedEvents
-        [] -> putStrLn "The queue can't be empty"
+        [] -> error "The queue can't be empty"
       go []
