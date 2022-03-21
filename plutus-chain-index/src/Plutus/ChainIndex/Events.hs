@@ -13,7 +13,7 @@ module Plutus.ChainIndex.Events where
 import Cardano.BM.Trace (Trace)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (atomically, flushTBQueue, isFullTBQueue)
-import Control.Monad (void, forever)
+import Control.Monad (forever, void)
 import Data.Functor ((<&>))
 import Data.Maybe (catMaybes)
 import Plutus.ChainIndex qualified as CI
@@ -21,7 +21,7 @@ import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward)
                               runChainIndexDuringSync)
 import Plutus.ChainIndex.SyncStats (SyncLog, logProgress)
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
-import System.Clock (Clock (Monotonic), diffTimeSpec, getTime, TimeSpec)
+import System.Clock (Clock (Monotonic), TimeSpec, diffTimeSpec, getTime)
 
 -- | How often do we check the queue
 period :: Int
