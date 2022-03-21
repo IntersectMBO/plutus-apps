@@ -201,7 +201,7 @@ import Ledger.Slot
 import Ledger.Value (AssetClass)
 import Plutus.Contract (Contract, ContractError, ContractInstanceId, Endpoint, endpoint)
 import Plutus.Contract.Schema (Input)
-import Plutus.Contract.Test
+import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Symbolics
 import Plutus.Contract.Test.Coverage
 import Plutus.Trace.Effects.EmulatorControl (discardWallets)
@@ -1750,7 +1750,9 @@ checkNoLockedFundsProof' run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
           let s0 = (stateAfter $ Actions as)
               s = stateAfter $ Actions (as ++ as') in
             foldl (QC..&&.) (counterexample "Main run prop" (run (toStateModelActions $ Actions $ as ++ as')) QC..&&. (counterexample "Main strategy" . counterexample (show . Actions $ as ++ as') $ prop s0 s))
-                            [ walletProp s0 as w bal | (w, bal) <- Map.toList (s ^. balanceChanges) ]
+                            [ walletProp s0 as w bal | (w, bal) <- Map.toList (s ^. balanceChanges)
+                                                     , not $ bal `symLeq` (s0 ^. balanceChange w) ]
+                                                     -- if the main strategy leaves w with <= the starting value, then doing nothing is a good wallet strategy.
     where
         nextVarIdx as = 1 + maximum ([0] ++ [ i | i <- varNumOf <$> as ])
         prop s0 s =
