@@ -49,6 +49,7 @@ module Wallet.Emulator.Folds (
     , mkTxLogs
     ) where
 
+import Control.Applicative ((<|>))
 import Control.Foldl (Fold (Fold), FoldM (FoldM))
 import Control.Foldl qualified as L
 import Control.Lens hiding (Empty, Fold)
@@ -80,7 +81,7 @@ import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg (Co
 import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
 import Prettyprinter.Render.Text (renderStrict)
 import Wallet.Emulator.Chain (ChainEvent (SlotAdd, TxnValidate, TxnValidationFail), _TxnValidate, _TxnValidationFail)
-import Wallet.Emulator.LogMessages (_BalancingUnbalancedTx)
+import Wallet.Emulator.LogMessages (_BalancingUnbalancedTx, _ValidationFailed)
 import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorTimeEvent, chainEvent, eteEvent, instanceEvent,
                                    userThreadEvent, walletClientEvent, walletEvent')
 import Wallet.Emulator.NodeClient (_TxSubmit)
@@ -98,6 +99,7 @@ failedTransactions :: Maybe ValidationPhase -> EmulatorEventFold [(TxId, Cardano
 failedTransactions phase = preMapMaybe (f >=> filterPhase phase) L.list
     where
         f e = preview (eteEvent . chainEvent . _TxnValidationFail) e
+          <|> preview (eteEvent . walletEvent' . _2 . _TxBalanceLog . _ValidationFailed) e
         filterPhase Nothing (_, i, t, v, e, c)   = Just (i, t, v, e, c)
         filterPhase (Just p) (p', i, t, v, e, c) = if p == p' then Just (i, t, v, e, c) else Nothing
 

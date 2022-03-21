@@ -41,9 +41,10 @@ import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), alonzoGenes
                             shelleyGenesisDefaults, toShelleyTxId, toShelleyTxOut)
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Alonzo (TxBody, TxOut)
+import Cardano.Ledger.Alonzo.Genesis (prices)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Cardano.Ledger.Alonzo.Tx (IsValid (IsValid), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..))
@@ -65,6 +66,8 @@ import Data.Bitraversable (bitraverse)
 import Data.Default (def)
 import Data.Functor.Identity (runIdentity)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Ratio ((%))
 import Data.Set qualified as Set
 import GHC.Records (HasField (..))
 import Ledger.Address qualified as P
@@ -75,7 +78,8 @@ import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Value qualified as P
 import Plutus.V1.Ledger.Ada qualified as P
-import Plutus.V1.Ledger.TxId qualified as P
+import Plutus.V1.Ledger.Api qualified as P
+import Plutus.V1.Ledger.Scripts qualified as P
 
 type CardanoLedgerError = Either P.ValidationErrorInPhase P.ToCardanoError
 
@@ -195,10 +199,19 @@ emulatorGlobals = mkShelleyGlobals
   2 -- maxMajorPV (maximum major protocol version)
 
 emulatorNes :: NewEpochState EmulatorEra
-emulatorNes = C.Ledger.initialState genesisDefaultsWithBigMaxTxSize alonzoGenesisDefaults
+emulatorNes = C.Ledger.initialState genesisDefaultsWithBigMaxTxSize alonzoGenesisDefaults {
+  prices = fromMaybe (error "emulatorNes: invalid ExecutionUnitPrices") (C.Api.toAlonzoPrices alonzoGenesisDefaultExecutionPrices)
+}
+  where
+    alonzoGenesisDefaultExecutionPrices :: C.Api.ExecutionUnitPrices
+    alonzoGenesisDefaultExecutionPrices =
+      C.Api.ExecutionUnitPrices {
+         C.Api.priceExecutionSteps  = 721 % 10000000,
+         C.Api.priceExecutionMemory = 577 % 10000
+      }
 
 emulatorPParams :: PParams EmulatorEra
-emulatorPParams = (esPp $ nesEs emulatorNes) { _maxTxSize = 262144 }
+emulatorPParams = esPp $ nesEs emulatorNes
 
 emulatorProtocolParameters :: C.Api.ProtocolParameters
 emulatorProtocolParameters = C.Api.fromLedgerPParams ShelleyBasedEraAlonzo emulatorPParams
@@ -228,11 +241,16 @@ getTxExUnits :: UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLe
 getTxExUnits utxo (C.Api.ShelleyTx _ tx) =
   case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits emulatorPParams tx utxo ei ss costmdls of
     Left e      -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . show $ e
-    Right rdmrs -> traverse (first (Left . (P.Phase2,) . P.CardanoLedgerValidationError . show)) rdmrs
+    Right rdmrs -> traverse (either toCardanoLedgerError Right) rdmrs
   where
     ss = systemStart emulatorGlobals
     ei = epochInfo emulatorGlobals
     costmdls = array (minBound, maxBound) . Map.toList $ getField @"_costmdls" emulatorPParams
+    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == "PT5" =
+      Right $ ExUnits 10000000 1000000000
+    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs) =
+      Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs "CekEvaluationFailure"))
+    toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError (show e))
 
 makeTransactionBody
   :: UTxO EmulatorEra

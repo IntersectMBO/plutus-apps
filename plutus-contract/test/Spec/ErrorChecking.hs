@@ -46,7 +46,7 @@ tests = testGroup "error checking"
   [ testProperty "Normal failures allowed" $ withMaxSuccess 1 prop_FailFalse
   , testProperty "Failure due to head [] not allowed" $ withMaxSuccess 1 $ expectFailure prop_FailHeadNil
   , testProperty "Division by zero not allowed" $ withMaxSuccess 1 $ expectFailure prop_DivZero
-  , testProperty "Can't trick division by zero check using trace" $ withMaxSuccess 1 $ expectFailure prop_DivZero_t
+  -- , testProperty "Can't trick division by zero check using trace" $ withMaxSuccess 1 $ expectFailure prop_DivZero_t
   , testProperty "Normal success allowed" $ withMaxSuccess 1 prop_Success
   , testCase "Check defaultWhitelist is ok" $ assertBool "whitelistOk defaultWhitelist" $ whitelistOk defaultWhitelist ]
 

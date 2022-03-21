@@ -190,7 +190,7 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                  Validity range:
                    [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
 Slot 20: W[1]: Finished balancing:
-                 Tx c7871bdd8654ada1e78da00b588873795b3abbebf4358646ca854166c48e964b:
+                 Tx 3a9e56f15a1bc8b33abdc5f53446cee4942a76371d35fa6c60641e55132b66ca:
                    {inputs:
                       - 57d469ad524f91ae272ad26336f835203a46a90fb8250a838ceeb8dbb3ed8f0c!1
                         <>
@@ -202,17 +202,17 @@ Slot 20: W[1]: Finished balancing:
                      - ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958!50
 
                    outputs:
-                     - Value (Map [(,Map [("",22496700)])]) addressed to
+                     - Value (Map [(,Map [("",20549376)])]) addressed to
                        PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
                    mint: Value (Map [])
-                   fee: Value (Map [(,Map [("",3300)])])
+                   fee: Value (Map [(,Map [("",1950624)])])
                    mps:
                    signatures:
                    validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 29})) True}
                    data:}
-Slot 20: W[1]: Signing tx: c7871bdd8654ada1e78da00b588873795b3abbebf4358646ca854166c48e964b
-Slot 20: W[1]: Submitting tx: c7871bdd8654ada1e78da00b588873795b3abbebf4358646ca854166c48e964b
-Slot 20: W[1]: TxSubmit: c7871bdd8654ada1e78da00b588873795b3abbebf4358646ca854166c48e964b
+Slot 20: W[1]: Signing tx: 3a9e56f15a1bc8b33abdc5f53446cee4942a76371d35fa6c60641e55132b66ca
+Slot 20: W[1]: Submitting tx: 3a9e56f15a1bc8b33abdc5f53446cee4942a76371d35fa6c60641e55132b66ca
+Slot 20: W[1]: TxSubmit: 3a9e56f15a1bc8b33abdc5f53446cee4942a76371d35fa6c60641e55132b66ca
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract instance stopped (no errors)
-Slot 20: TxnValidate c7871bdd8654ada1e78da00b588873795b3abbebf4358646ca854166c48e964b
+Slot 20: TxnValidate 3a9e56f15a1bc8b33abdc5f53446cee4942a76371d35fa6c60641e55132b66ca

@@ -70,6 +70,7 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.API qualified as WAPI
+
 import Wallet.Effects (NodeClientEffect,
                        WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
                        publishTx)
@@ -320,7 +321,7 @@ handleBalance utx' = do
     pure $ Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
     where
         handleError tx (Left (Left (ph, ve))) = do
-            logWarn $ ValidationFailed ph (Ledger.txId tx) (Tx.EmulatorTx tx) ve []
+            logWarn $ ValidationFailed ph (Ledger.txId tx) (Tx.EmulatorTx tx) ve (case ve of Ledger.ScriptFailure f -> [Ledger.ScriptValidationEvent undefined (Left f) undefined undefined]; _ -> []) mempty
             throwError $ WAPI.ValidationError ve
         handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
         handleError _ (Right v) = pure v
