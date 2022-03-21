@@ -44,7 +44,7 @@ instance Monoid SyncStats where
 data SyncLog = SyncLog
     { syncStateSyncLog  :: SyncState -- ^ State of the syncing
     , syncStatsSyncLog  :: SyncStats -- ^ Stats of the syncing
-    , syncPeriodSyncLog :: Second
+    , syncPeriodSyncLog :: Second -- ^ Period in seconds used to accumulate log events
     }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, ToObject)
