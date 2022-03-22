@@ -138,6 +138,9 @@
           "Ouroboros/Network/Protocol/LocalStateQuery/Server"
           "Ouroboros/Network/Protocol/LocalStateQuery/Type"
           "Ouroboros/Network/Protocol/LocalTxMonitor/Type"
+          "Ouroboros/Network/Protocol/LocalTxMonitor/Client"
+          "Ouroboros/Network/Protocol/LocalTxMonitor/Server"
+          "Ouroboros/Network/Protocol/LocalTxMonitor/Codec"
           "Ouroboros/Network/Protocol/TipSample/Type"
           "Ouroboros/Network/Protocol/TipSample/Client"
           "Ouroboros/Network/Protocol/TipSample/Server"
@@ -211,6 +214,9 @@
             "Ouroboros/Network/Protocol/LocalTxSubmission/Direct"
             "Ouroboros/Network/Protocol/LocalTxSubmission/Examples"
             "Ouroboros/Network/Protocol/LocalTxSubmission/Test"
+            "Ouroboros/Network/Protocol/LocalTxMonitor/Direct"
+            "Ouroboros/Network/Protocol/LocalTxMonitor/Examples"
+            "Ouroboros/Network/Protocol/LocalTxMonitor/Test"
             "Ouroboros/Network/Protocol/TipSample/Direct"
             "Ouroboros/Network/Protocol/TipSample/Examples"
             "Ouroboros/Network/Protocol/TipSample/Test"
@@ -359,11 +365,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "11";
+      url = "12";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "11";
+      url = "12";
       rev = "minimal";
       sha256 = "";
       };

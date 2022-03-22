@@ -38,6 +38,7 @@ import Cardano.Wallet.Primitive.Types (WalletName (WalletName))
 import Cardano.Wallet.Primitive.Types.Coin (Coin (Coin))
 import Cardano.Wallet.Shelley (SomeNetworkDiscriminant (SomeNetworkDiscriminant), serveWallet, setupTracers,
                                tracerSeverities)
+import Cardano.Wallet.Shelley.BlockchainSource (BlockchainSource (NodeSource))
 import Cardano.Wallet.Shelley.Launch (withSystemTempDir)
 import Cardano.Wallet.Shelley.Launch.Cluster (ClusterLog, Credential (KeyCredential), RunningNode (RunningNode),
                                               localClusterConfigFromEnv, moveInstantaneousRewardsTo, oneMillionAda,
@@ -175,6 +176,8 @@ runWith userContractHandler = withLocalClusterSetup $ \dir lo@LogOutputs{loClust
                 <$> getEKGURL
 
             void $ serveWallet
+                (NodeSource socketPath vData)
+                gp
                 (SomeNetworkDiscriminant $ Proxy @'Mainnet)
                 tracers
                 (SyncTolerance 10)
@@ -185,9 +188,7 @@ runWith userContractHandler = withLocalClusterSetup $ \dir lo@LogOutputs{loClust
                 Nothing
                 Nothing
                 tokenMetadataServer
-                socketPath
                 block0
-                (gp, vData)
                 (\u -> traceWith trCluster $ MsgBaseUrl (T.pack . show $ u)
                     ekgUrl prometheusUrl)
 
