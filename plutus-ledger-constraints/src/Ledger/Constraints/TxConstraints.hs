@@ -26,7 +26,7 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude (Bool (False, True), Foldable (foldMap), Functor (fmap), Integer, JoinSemiLattice ((\/)),
                          Maybe (Just, Nothing), Monoid (mempty), Semigroup ((<>)), any, concat, foldl, map, mapMaybe,
-                         not, null, ($), (.), (>>=), (||))
+                         not, null, ($), (.), (==), (>>=), (||))
 
 import Ledger.Address (PaymentPubKeyHash, StakePubKeyHash)
 import Plutus.V1.Ledger.Interval qualified as I
@@ -374,7 +374,7 @@ mustMintCurrencyWithRedeemer
     -> TokenName
     -> Integer
     -> TxConstraints i o
-mustMintCurrencyWithRedeemer mps red tn = singleton . MustMintValue mps red tn
+mustMintCurrencyWithRedeemer mps red tn a = if a == 0 then mempty else singleton $ MustMintValue mps red tn a
 
 {-# INLINABLE mustSpendAtLeast #-}
 -- | @mustSpendAtLeast v@ requires the sum of the transaction's inputs value to

@@ -43,11 +43,10 @@ import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Alonzo (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.Genesis (prices)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
+import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
-import Cardano.Ledger.Alonzo.Tx (IsValid (IsValid), ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..))
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Core (PParams, Tx)
@@ -80,6 +79,8 @@ import Ledger.Value qualified as P
 import Plutus.V1.Ledger.Ada qualified as P
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Scripts qualified as P
+import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.ErrorCodes (checkHasFailedError)
 
 type CardanoLedgerError = Either P.ValidationErrorInPhase P.ToCardanoError
 
@@ -170,6 +171,9 @@ initialState = EmulatedLedgerState
   , _previousBlocks = []
   }
 
+utxoEnv :: SlotNo -> C.Ledger.UtxoEnv EmulatorEra
+utxoEnv slotNo = C.Ledger.UtxoEnv slotNo emulatorPParams mempty (C.Ledger.GenDelegs mempty)
+
 applyTx ::
   EmulatedLedgerState ->
   Tx EmulatorEra ->
@@ -219,23 +223,14 @@ emulatorProtocolParameters = C.Api.fromLedgerPParams ShelleyBasedEraAlonzo emula
 hasValidationErrors :: SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
 hasValidationErrors slotNo utxo (C.Api.ShelleyTx _ tx) =
   case res of
-    Left e  -> Just e
+    Left e  -> Just (P.Phase1, e)
     Right _ -> Nothing
   where
     state = setSlot slotNo $ setUtxo utxo initialState
-    sysS = systemStart emulatorGlobals
-    ei = epochInfo emulatorGlobals
     res = do
-      sLst <- first ((P.Phase1,) . P.CardanoLedgerValidationError . show) $ collectTwoPhaseScriptInputs ei sysS emulatorPParams tx utxo
-      case evalScripts @EmulatorEra tx sLst of
-        Passes    -> pure ()
-        Fails err -> Left (P.Phase2, P.CardanoLedgerValidationError $ show err)
-      let vTx = ValidatedTx
-            (getField @"body" tx)
-            (getField @"wits" tx)
-            (IsValid True)
-            (getField @"auxiliaryData" tx)
-      first (P.Phase1,) $ applyTx state vTx
+      vtx <- first (P.CardanoLedgerValidationError . show) (constructValidated emulatorGlobals (utxoEnv slotNo) (fst (_memPoolState state)) tx)
+      applyTx state vtx
+
 
 getTxExUnits :: UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits utxo (C.Api.ShelleyTx _ tx) =
@@ -246,8 +241,8 @@ getTxExUnits utxo (C.Api.ShelleyTx _ tx) =
     ss = systemStart emulatorGlobals
     ei = epochInfo emulatorGlobals
     costmdls = array (minBound, maxBound) . Map.toList $ getField @"_costmdls" emulatorPParams
-    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == "PT5" =
-      Right $ ExUnits 10000000 1000000000
+    toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
+      Right $ ExUnits 10000000 10000000000
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs) =
       Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs "CekEvaluationFailure"))
     toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError (show e))

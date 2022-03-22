@@ -304,19 +304,13 @@ handleBalance utx' = do
     let utx = finalize slotConfig utx'
     let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
     cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
-    let calcFee fee = do
+    -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
+    let calcFee n fee = if n == (0 :: Int) then pure fee else do
             tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
-            handleError tx $ evaluateTransactionFee cUtxoIndex requiredSigners tx
-    -- Balance with dummy fee to get a better estimate of the number of inputs and outputs
-    -- Use a large value otherwise `evaluateTransactionFee` calculates a value 1 or 2 lovelace too few
-    let dummyFee = Ada.lovelaceValueOf 1000000
-    theFee <- calcFee dummyFee
-    -- If the calculated fee turns out to be bigger than the already large dummyFee we need to redo the calculations
-    -- because balancing might need more inputs
-    theFee' <- if Ada.fromValue theFee > Ada.fromValue dummyFee
-        then calcFee theFee
-        else pure theFee
-    tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee')
+            newFee <- handleError tx $ evaluateTransactionFee cUtxoIndex requiredSigners tx
+            if newFee /= fee then calcFee (n - 1) newFee else pure newFee
+    theFee <- calcFee 4 $ Ada.lovelaceValueOf 1000000
+    tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
     cTx <- handleError tx' $ fromPlutusTx cUtxoIndex requiredSigners tx'
     pure $ Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
     where
