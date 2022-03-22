@@ -11,7 +11,7 @@
     flags = { unexpected_thunks = false; };
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-cli"; version = "1.33.0"; };
+      identifier = { name = "cardano-cli"; version = "1.34.1"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
@@ -44,10 +44,11 @@
           (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
           (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
           (hsPkgs."cardano-binary" or (errorHandler.buildDepError "cardano-binary"))
-          (hsPkgs."cardano-config" or (errorHandler.buildDepError "cardano-config"))
+          (hsPkgs."cardano-git-rev" or (errorHandler.buildDepError "cardano-git-rev"))
           (hsPkgs."cardano-crypto" or (errorHandler.buildDepError "cardano-crypto"))
           (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
           (hsPkgs."cardano-crypto-wrapper" or (errorHandler.buildDepError "cardano-crypto-wrapper"))
+          (hsPkgs."cardano-data" or (errorHandler.buildDepError "cardano-data"))
           (hsPkgs."cardano-ledger-alonzo" or (errorHandler.buildDepError "cardano-ledger-alonzo"))
           (hsPkgs."cardano-ledger-byron" or (errorHandler.buildDepError "cardano-ledger-byron"))
           (hsPkgs."cardano-ledger-core" or (errorHandler.buildDepError "cardano-ledger-core"))
@@ -75,7 +76,6 @@
           (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
           (hsPkgs."cardano-ledger-shelley" or (errorHandler.buildDepError "cardano-ledger-shelley"))
           (hsPkgs."set-algebra" or (errorHandler.buildDepError "set-algebra"))
-          (hsPkgs."small-steps" or (errorHandler.buildDepError "small-steps"))
           (hsPkgs."split" or (errorHandler.buildDepError "split"))
           (hsPkgs."strict-containers" or (errorHandler.buildDepError "strict-containers"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
@@ -160,6 +160,7 @@
             (hsPkgs."cardano-node" or (errorHandler.buildDepError "cardano-node"))
             (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
             (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
+            (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
             (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
             (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
@@ -175,6 +176,7 @@
             "Test/Config/Mainnet"
             "Test/Cli/FilePermissions"
             "Test/Cli/ITN"
+            "Test/Cli/JSON"
             "Test/Cli/MultiAssetParsing"
             "Test/Cli/Pioneers/Exercise1"
             "Test/Cli/Pioneers/Exercise2"
@@ -278,11 +280,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "6";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "6";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       };

@@ -4,7 +4,7 @@ This is a very simple demo application featuring the use of a browser/light wall
 
 ## Context
 
-In this demo, we want to showcase a very minimal example of how to integrate the PAB with a light wallet. It uses the `PayToWallet` contract in the PAB which has *no* Plutus on-chain validation code. Therefore, we simply use the PAB to construct a partial/unbalanced transaction and make it available to a frontend application. It doesn't use a local Cardano node, nor the chain index. Here's an outline of the general interactions:
+In this demo, we want to showcase a very minimal example of how to integrate the PAB with a light wallet. It uses the `PayToWallet` contract in the PAB which has *no* Plutus on-chain validation code. Therefore, we simply use the PAB to construct a partial/unbalanced transaction and make it available to a frontend application. It doesn't use the local Cardano node, nor the chain index. Here's an outline of the general interactions:
 
 1. The frontend application should have access to a light/browser wallet (in this case, Nami)
 2. The frontend application activates the `PayToWallet` contract throught the PAB.
@@ -19,12 +19,6 @@ The instructions were tested inside the `plutus-apps`'s `nix-shell`.
 
 The demo contains two parts: the PAB application in `plutus-pab-executables/demo/pab-nami/pab` and the frontend application in `plutus-pab-executables/demo/pab-nami/client` which interacts with the PAB and the Nami wallet.
 
-The first thing to do is to go to the frontend application's directory:
-
-```
-$ cd plutus-pab-executables/demo/pab-nami/client
-```
-
 ### Setup Nami wallet
 
 1. Install the Nami wallet browser extension (currently, the Nami wallet is only available in Chrome-based browsers)
@@ -36,13 +30,17 @@ $ cd plutus-pab-executables/demo/pab-nami/client
 
 ### Run the PAB
 
-You have two options:
+Although this demo doesn't use a Cardano node directly, the PAB requires a connection to a Cardano Node socket. Follow the instructions [here](https://developers.cardano.org/docs/get-started/installing-cardano-node) to install and run a Cardano Testnet Node. *The node need not be synced for the demo to work.*
+
+Ensure that your `pscSocketPath` value in `plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml` is pointing to your Cardano Node socket.
+
+To run PAB, you have two options:
 
 1- Use `cabal`:
 
-```
-# Go to the root folder of the `plutus-apps` repository
+From a command line interface, make sure you're in the root folder of the `plutus-apps` repository, and run the following commands:
 
+```
 # 'Migrate' command to initialise the PAB database.
 $ cabal run plutus-pab-executables:exe:plutus-pab-nami-demo -- migrate --config plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml
 
@@ -50,18 +48,22 @@ $ cabal run plutus-pab-executables:exe:plutus-pab-nami-demo -- migrate --config 
 $ cabal run plutus-pab-executables:exe:plutus-pab-nami-demo -- webserver --config plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml
 ```
 
-
 2- Or use the script provided by `nix-shell`:
+
+Go to the frontend application's directory:
+
+```
+$ cd plutus-pab-executables/demo/pab-nami/client
+```
+and run the script
 
 ```
 $ pab-nami-demo-server
 ```
 
-From a command line interface, make sure you're in the root folder of the `plutus-apps` repository, and run the following commands:
-
 ### Run the demo frontend
 
-From another command line interface, run the following command to launch the frontend application:
+From another instance of `nix-shell`, run the following command to launch the frontend application:
 
 ```
 # Go the frontend application's directory (plutus-pab-executables/demo/pab-nami/client)
@@ -79,9 +81,12 @@ Open the browser with the frontend application's URL (`http://localhost:8009`) a
 [Possible errors]
 ====
 
+1. If your PAB gives an error like `plutus-pab-nami-demo: Network.Socket.connect: <socket: 15>: does not exist (No such file or directory)`, this means it can't connect to your Cardano Node. Ensure that your node is running and the `pscSocketPath` value in `plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml` is pointing to your Cardano Node socket!
+
 1. If you see `ERR_SSL_PROTOCOL_ERROR` or `SSL_ERROR_RX_RECORD_TOO_LONG`, then you probably tried to access the website through HTTPS. Use HTTP.
 
-2. If you see a blank page, check you're browser's console. If you see `window.cardano is undefined`, then that means that the Nami wallet browser extension was not correctly installed.
+1. If you see a blank page, check you're browser's console. If you see `window.cardano is undefined`, then that means that the Nami wallet browser extension was not correctly installed.
+
 ====
 
 From the Nami wallet interface, change to your *second* account, click on the `Receive` tab, copy the shown Cardano address and paste it in the application's form. Then, go back to your *first* account which contains your funds. Choose a lovelace amount (minimum of 2_000_000 Lovelace) and click on `Make payment`. The application should show the transaction id that was submitted to the Cardano testnet. After waiting for a bit, you should see the funds change in Nami wallet's interface.
