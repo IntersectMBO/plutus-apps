@@ -186,6 +186,7 @@
           "Ouroboros/Consensus/MiniProtocol/ChainSync/Server"
           "Ouroboros/Consensus/MiniProtocol/LocalStateQuery/Server"
           "Ouroboros/Consensus/MiniProtocol/LocalTxSubmission/Server"
+          "Ouroboros/Consensus/MiniProtocol/LocalTxMonitor/Server"
           "Ouroboros/Consensus/Network/NodeToClient"
           "Ouroboros/Consensus/Network/NodeToNode"
           "Ouroboros/Consensus/Node"
@@ -300,11 +301,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "11";
+      url = "12";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "11";
+      url = "12";
       rev = "minimal";
       sha256 = "";
       };

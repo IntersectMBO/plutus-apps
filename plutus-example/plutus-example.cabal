@@ -123,6 +123,7 @@ test-suite plutus-example-test
                       , bytestring
                       , cardano-api
                       , cardano-api:gen
+                      , cardano-cli
                       , cardano-ledger-alonzo
                       , cardano-ledger-core
                       , cardano-ledger-shelley
@@ -144,9 +145,7 @@ test-suite plutus-example-test
   other-modules:
 
                         Test.PlutusExample.Direct.ScriptContextEquality
-                        -- TODO: Re-enable when cardano-node is bumped to the latest master
-                        -- We are missing `waitUntilEpoch`.
-                        -- Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus
+                        Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus
                         Test.PlutusExample.Direct.ScriptContextEqualityMint
                         Test.PlutusExample.Direct.TxInLockingPlutus
                         Test.PlutusExample.Script.TxInLockingPlutus

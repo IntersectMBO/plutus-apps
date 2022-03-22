@@ -413,6 +413,7 @@ nodeToClientProtocols internalState =
     { localChainSyncProtocol = chainSync internalState
     , localTxSubmissionProtocol = txSubmission internalState
     , localStateQueryProtocol = doNothingResponderProtocol
+    , localTxMonitorProtocol = doNothingResponderProtocol
     }
 
 chainSync

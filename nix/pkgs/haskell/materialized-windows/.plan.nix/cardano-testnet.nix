@@ -11,7 +11,7 @@
     flags = {};
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-testnet"; version = "1.33.0"; };
+      identifier = { name = "cardano-testnet"; version = "1.34.1"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
@@ -37,6 +37,8 @@
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+          (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+          (hsPkgs."cardano-cli" or (errorHandler.buildDepError "cardano-cli"))
           (hsPkgs."cardano-node" or (errorHandler.buildDepError "cardano-node"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
           (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
@@ -50,6 +52,7 @@
           (hsPkgs."process" or (errorHandler.buildDepError "process"))
           (hsPkgs."random" or (errorHandler.buildDepError "random"))
           (hsPkgs."resourcet" or (errorHandler.buildDepError "resourcet"))
+          (hsPkgs."safe-exceptions" or (errorHandler.buildDepError "safe-exceptions"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
@@ -65,6 +68,7 @@
           "Testnet/List"
           "Testnet/Shelley"
           "Testnet/SubmitApi"
+          "Testnet/Utils"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -73,7 +77,7 @@
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."ansi-terminal" or (errorHandler.buildDepError "ansi-terminal"))
-            (hsPkgs."cardano-config" or (errorHandler.buildDepError "cardano-config"))
+            (hsPkgs."cardano-git-rev" or (errorHandler.buildDepError "cardano-git-rev"))
             (hsPkgs."cardano-testnet" or (errorHandler.buildDepError "cardano-testnet"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."hedgehog-extras" or (errorHandler.buildDepError "hedgehog-extras"))
@@ -100,35 +104,23 @@
         "cardano-testnet-tests" = {
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
-            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
-            (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
-            (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
             (hsPkgs."cardano-testnet" or (errorHandler.buildDepError "cardano-testnet"))
-            (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."hedgehog-extras" or (errorHandler.buildDepError "hedgehog-extras"))
             (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
+            (hsPkgs."process" or (errorHandler.buildDepError "process"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
+            (hsPkgs."tasty-expected-failure" or (errorHandler.buildDepError "tasty-expected-failure"))
             (hsPkgs."tasty-hedgehog" or (errorHandler.buildDepError "tasty-hedgehog"))
-            (hsPkgs."text" or (errorHandler.buildDepError "text"))
-            (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
             ];
           build-tools = [
             (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
             (hsPkgs.buildPackages.cardano-cli.components.exes.cardano-cli or (pkgs.buildPackages.cardano-cli or (errorHandler.buildToolDepError "cardano-cli:cardano-cli")))
             (hsPkgs.buildPackages.cardano-submit-api.components.exes.cardano-submit-api or (pkgs.buildPackages.cardano-submit-api or (errorHandler.buildToolDepError "cardano-submit-api:cardano-submit-api")))
-            (hsPkgs.buildPackages.plutus-example.components.exes.create-script-context or (pkgs.buildPackages.create-script-context or (errorHandler.buildToolDepError "plutus-example:create-script-context")))
             ];
           buildable = true;
-          modules = [
-            "Spec/Plutus/Direct/ScriptContextEquality"
-            "Spec/Plutus/Direct/ScriptContextEqualityMint"
-            "Spec/Plutus/Direct/TxInLockingPlutus"
-            "Spec/Plutus/Script/TxInLockingPlutus"
-            "Spec/Plutus/SubmitApi/TxInLockingPlutus"
-            ];
+          modules = [ "Spec/Shutdown" "Test/Util" ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
           };
@@ -136,11 +128,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "6";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "6";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       };

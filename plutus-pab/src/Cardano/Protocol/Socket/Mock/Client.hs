@@ -94,6 +94,7 @@ runChainSync socketPath slotConfig onNewBlock = do
           { localChainSyncProtocol = chainSync blockHandler
           , localTxSubmissionProtocol = doNothingInitiatorProtocol
           , localStateQueryProtocol = doNothingInitiatorProtocol
+          , localTxMonitorProtocol = doNothingInitiatorProtocol
           }
 
       chainSync :: (Block -> Slot -> IO ())
@@ -165,6 +166,7 @@ runTxSender socketPath = do
           { localChainSyncProtocol = doNothingInitiatorProtocol
           , localTxSubmissionProtocol = txSubmission sendQueue
           , localStateQueryProtocol = doNothingInitiatorProtocol
+          , localTxMonitorProtocol = doNothingInitiatorProtocol
           }
 
       txSubmission :: TQueue Tx
