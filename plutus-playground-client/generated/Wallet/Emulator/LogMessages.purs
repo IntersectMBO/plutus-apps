@@ -18,9 +18,11 @@ import Data.Newtype (unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase)
 import Ledger.Tx (CardanoTx)
 import Plutus.V1.Ledger.Address (Address)
 import Plutus.V1.Ledger.Slot (Slot)
+import Plutus.V1.Ledger.TxId (TxId)
 import Plutus.V1.Ledger.Value (Value)
 import Type.Proxy (Proxy(Proxy))
 import Wallet.Emulator.Error (WalletAPIError)
@@ -91,6 +93,7 @@ data TxBalanceMsg
   | FinishedBalancing CardanoTx
   | SigningTx CardanoTx
   | SubmittingTx CardanoTx
+  | ValidationFailed ValidationPhase TxId CardanoTx ValidationError (Array ScriptValidationEvent) Value
 
 instance Show TxBalanceMsg where
   show a = genericShow a
@@ -107,6 +110,7 @@ instance EncodeJson TxBalanceMsg where
     FinishedBalancing a -> E.encodeTagged "FinishedBalancing" a E.value
     SigningTx a -> E.encodeTagged "SigningTx" a E.value
     SubmittingTx a -> E.encodeTagged "SubmittingTx" a E.value
+    ValidationFailed a b c d e f -> E.encodeTagged "ValidationFailed" (a /\ b /\ c /\ d /\ e /\ f) (E.tuple (E.value >/\< E.value >/\< E.value >/\< E.value >/\< E.value >/\< E.value))
 
 instance DecodeJson TxBalanceMsg where
   decodeJson = defer \_ -> D.decode
@@ -122,6 +126,7 @@ instance DecodeJson TxBalanceMsg where
         , "FinishedBalancing" /\ D.content (FinishedBalancing <$> D.value)
         , "SigningTx" /\ D.content (SigningTx <$> D.value)
         , "SubmittingTx" /\ D.content (SubmittingTx <$> D.value)
+        , "ValidationFailed" /\ D.content (D.tuple $ ValidationFailed </$\> D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value </*\> D.value)
         ]
 
 derive instance Generic TxBalanceMsg _
@@ -176,4 +181,9 @@ _SigningTx = prism' SigningTx case _ of
 _SubmittingTx :: Prism' TxBalanceMsg CardanoTx
 _SubmittingTx = prism' SubmittingTx case _ of
   (SubmittingTx a) -> Just a
+  _ -> Nothing
+
+_ValidationFailed :: Prism' TxBalanceMsg { a :: ValidationPhase, b :: TxId, c :: CardanoTx, d :: ValidationError, e :: Array ScriptValidationEvent, f :: Value }
+_ValidationFailed = prism' (\{ a, b, c, d, e, f } -> (ValidationFailed a b c d e f)) case _ of
+  (ValidationFailed a b c d e f) -> Just { a, b, c, d, e, f }
   _ -> Nothing
