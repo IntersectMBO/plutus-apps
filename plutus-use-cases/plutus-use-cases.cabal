@@ -116,6 +116,7 @@ test-suite plutus-use-cases-test
         Spec.Tutorial.Escrow1
         Spec.Tutorial.Escrow2
         Spec.Tutorial.Escrow3
+        Spec.Tutorial.Escrow4
         Spec.Future
         Spec.Game
         Spec.GameStateMachine
@@ -143,6 +144,7 @@ test-suite plutus-use-cases-test
         plutus-contract -any,
         plutus-contract-certification -any,
         plutus-ledger -any,
+        plutus-ledger-api,
         plutus-ledger-constraints -any,
         plutus-use-cases -any,
         playground-common -any

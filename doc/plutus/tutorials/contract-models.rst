@@ -1626,12 +1626,539 @@ You will find the code presented in this section in ``Spec.Tutorial.Escrow3``\.
 Taking Time into Account
 ------------------------
 
-Add a deadline to the Escrow contract, and a refund
-action. Show that many actions fail (monitoring).
+In the last section we added refunds to our tests; now a client can
+pay into an escrow, and claim a refund of their contribution
+freely--but this doesn't really correspond to the intention of an
+escrow contract. In reality, an escrow contract should have a deadline
+for payments and redemption, with refunds permitted only after the
+deadline has passed. In fact, the *real* escrow contract, in
+``Plutus.Contracts.Escrow``, provides such a deadline: the main
+difference between this and the simplified contract we have tested so
+far, ``Plutus.Contracts.Tutorial.Escrow``, is that the latter omits
+the deadline and associated checks.
 
-Preconditions. Still fail.
-Adapting the generator.
-Adding a phase
+In this section, we'll switch to testing the real contract, which we
+can achieve just by changing the import in our model to be the real
+contract. (As usual, you can find the code presented in this section
+in ``Spec.Tutorial.Escrow4``\).
+
+Slots and POSIXTime
+^^^^^^^^^^^^^^^^^^^
+
+Just changing the import leads to a compiler warning: the
+``EscrowParams`` type, which is passed to the contract under test, has
+a new field ``escrowDeadline``, and so far, our code does not
+initialise it. We will generate the deadlines, so that they vary from
+test to test, but there is a slight mismatch to overcome first. In a
+contract model we measure time in *slots*, but the ``escrowDeadline``
+field is not a slot number, it is a ``POSIXTime``. So while we shall
+generate the deadline as a slot number (for convenience in the model),
+we must convert it to a ``POSIXTime`` before we can pass it to the
+contract under test.
+
+To do so, we need to know when slot 0 happens in POSIX time, and how
+long the duration of each slot is. These are defined in a
+``SlotConfig``, a type defined in ``Ledger.TimeSlot``. In principle
+the slot configuration might vary, but we will use the default values
+for testing (by using ``def`` from ``Data.Default`` as our
+configuration. Putting all this together, we can add a deadline to our
+``EscrowParams`` as follows:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START escrowParams
+   :end-before: END escrowParams
+
+
+.. note::
+
+   If you are familiar with the ``POSIXTime`` type from
+   ``Data.Time.Clock.POSIX``, then beware that *this is not the same
+   type*. That type has a resolution of picoseconds, while Plutus uses
+   its own ``POSIXTime`` type with a resolution of milliseconds.
+
+Initialising the deadline
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The deadline, like the escrow targets, is fixed for each test, so it
+makes sense to add the deadline as a new field to the ``Init``
+action--recall that it is the ``Init`` action that starts the contract
+instances under test, and so must supply the deadline as part of the
+``EscrowParams``. So we add the deadline slot to this action
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START Action
+   :end-before: END Action
+
+and pass it to the contracts in the ``startInstances`` method:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START startInstances
+   :end-before: END startInstances
+
+Just as we record the escrow targets in the model state, so we will
+need to include the deadline as part of the model, so we extend our
+model type
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START EscrowModel
+   :end-before: END EscrowModel
+
+and record the deadline in our model state transition:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START nextState
+   :end-before: END nextState
+
+It just remains to generate deadline slots (we choose positive
+integers), and shrink them (by reusing integer shrinking):
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START arbitraryAction
+   :end-before: END arbitraryAction
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START shrinkAction
+   :end-before: END shrinkAction
+
+Now we are ready to run tests.
+
+Modelling the passage of time
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We can now run tests, but they do not pass:
+
+.. code-block:: text
+
+   > quickCheck prop_Escrow
+   *** Failed! Assertion failed (after 5 tests and 7 shrinks):
+   Actions 
+    [Init (Slot {getSlot = 0}) [],
+     Pay (Wallet 1) 2]
+   Expected funds of W[1] to change by
+     Value (Map [(,Map [("",-2000000)])])
+   but they did not change
+   Test failed.
+   Emulator log:
+   [INFO] Slot 0: TxnValidate ee3a44b98e0325e19bc6be1e6f25cdb269301666a3473758296e96cd7ea9a851
+   [INFO] Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
+                    Contract instance started
+   [INFO] Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W[2]}:
+                    Contract instance started
+   ...
+   
+We tried to pay 2 Ada from wallet 1, but the payment did not take
+effect. Notice that the generated deadline is slot zero, though; in
+other words, the deadline passed before we started the test. This
+might seem surprising, since we *generated* the deadline as a positive
+integer (and zero does not count as positive), but it is the result of
+shrinking. If we don't want to test a deadline of slot zero, then we
+must strengthen the precondition of ``Init`` to prevent it.
+
+Noting that the contract instances do not start until slot one, let us
+require the deadline slot to be greater than that--at least slot
+two. When we add this to the precondition then tests still fail, but
+the shrunk counterexample is different:
+
+.. code-block:: text
+
+   > quickCheck prop_Escrow
+   *** Failed! Assertion failed (after 2 tests and 5 shrinks):
+   Actions 
+    [Init (Slot {getSlot = 2}) [],
+     WaitUntil (Slot {getSlot = 2}),
+     Pay (Wallet 3) 2]
+   Expected funds of W[3] to change by
+     Value (Map [(,Map [("",-2000000)])])
+   but they did not change
+   Test failed.
+
+This test case makes the problem easier to see: it
+
+#. first, initializes the deadline to slot 2
+
+#. then, *waits until* slot 2,
+
+#. and finally, attempts a payment, which does not go through.
+
+The second action, ``WaitUntil``, is one we have not seen in
+counterexamples previously; it only appears when *timing is important*
+to provoke a failure. In this case it's now clear what the problem is:
+*the contract does not allow payments after the deadline*. So the next
+step is to encode this in our model.
+
+.. note::
+
+   ``WaitUntil`` actions are inserted automatically into test cases by
+   the framework, to explore timing dependence. It is *possible* to
+   control the probability of a ``WaitUntil`` action, and the
+   distribution of the slots that we wait for, but it is often not
+   *necessary*--the default behaviour is often good enough.
+
+The contract model framework automatically keeps track of the current
+slot number for us, so we *could* write a precondition for ``Pay``
+that refers explicitly to the slot number. However, all that really
+matters is *whether or not the deadline has passed*--and probably
+other parts of the model will depend on this too. So it is simpler to
+check for this in one place, and then just refer to it elsewhere in
+the model.
+
+Now we can benefit from our choice earlier to introduce a ``phase``
+field in the model: hitherto it has only distinguished initialization
+from running the test, but now we can add a new phase: ``Refunding``
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START Phase
+   :end-before: END Phase
+
+The idea is that when the deadline passes, we move into the
+``Refunding`` phase, and we can refer to the current phase in
+preconditions. In fact, our preconditions *already* refer to the
+phase, so with this change then ``Pay`` and ``Redeem`` will be
+restricted to take place *before* the deadline. All we have to do is
+to adjust the precondition for ``Refund``, which should of course be
+restricted to *after* the deadline:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START precondition
+   :end-before: END precondition
+
+One question remains: *where do we change the phase?* Changing the
+phase changes the model state, but not in response to an ``Action``:
+it doesn't matter whether or not an action is performed on the
+deadline, the phase must change anyway. This means that *we cannot
+change the phase in the* ``nextState`` *function*, because this is
+invoked only when actions are performed. We need to be able to *change
+the contract state in response to the passage of time*. We can do this
+by defining the ``nextReactiveState`` method of the ``ContractModel``
+class.
+
+This method is called every time the slot number advances in the model
+(although not necessarily every slot--slot numbers can jump during a
+test). In this case all we need to do is compare the new slot number
+with the deadline, and move to the ``Refunding`` phase if appropriate:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START nextReactiveState
+   :end-before: END nextReactiveState
+
+Now ``prop_Escrow`` passes.
+
+Monitoring and the distribution of tests
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Testing ``prop_Escrow`` generates some interesting statistics:
+
+.. code-block:: text
+
+   > quickCheck prop_Escrow
+   +++ OK, passed 100 tests.
+   
+   Actions (2291 in total):
+   62.03% WaitUntil
+   27.37% Pay
+    3.71% Redeem
+    3.62% Init
+    3.27% Refund
+   
+   Actions rejected by precondition (11626 in total):
+   70.437% Pay
+   23.757% Refund
+    5.746% Redeem
+    0.060% Init
+
+In comparison with previous versions of this property, we can see from
+the first table that there are *many* more ``WaitUntil`` actions in
+these tests (previously they were around 10% of the tested
+actions). Moreover, we can see that many more generated actions were
+rejected by their precondition: we rejected over 11,000 actions, while
+generating 2291 that were included in tests. Rejecting so many actions
+is undesirable: not only does it waste testing time, but there is a
+risk that the *distribution* of accepted actions is quite different
+from that of generated actions, which can lead to ineffective testing.
+
+But why do we see this behaviour? It is because *once the deadline has
+passed, then neither* ``Pay`` *nor* ``Redeem`` *is possible*; when we
+generate these actions, then they will *always* be rejected by their
+preconditions. Moreover, *after the deadline then we can* ``Refund``
+*each wallet at most once*. Once the deadline has passed, and all the
+contributions have been refunded, then the preconditions allow no
+further actions--except ``WaitUntil``. And so, test case generation
+will choose ``WaitUntil``, over and over again, and this is why so
+many of them appear in our tests.
+
+The following tables tell us more about the passage of time in our tests:
+
+.. code-block:: text
+
+   Wait interval (1421 in total):
+   28.85% <10
+   25.83% 10-19
+   23.15% 20-29
+   15.76% 30-39
+    5.77% 40-49
+    0.63% 50-59
+   
+   Wait until (1421 in total):
+   14.07% 100-199
+   12.03% 1000-1999
+    9.29% 200-299
+    8.94% 300-399
+    7.67% 400-499
+    ...
+    2.32% 2000-2999
+    ...
+
+The first table shows us *how long* we waited at each individual
+occurrence of ``WaitUntil``: mostly under 30 slots, but up to 59 slots
+at a maximum. The second table shows us which slot numbers we waited
+until: we can see that many tests ran for several hundred slots, and
+indeed, some ran for over 2000 slots.
+
+Luckily, waiting is cheap, but since we are performing fewer useful
+actions in each test, then we should probably run more tests overall
+for the same level of confidence in our code.
+
+No locked funds?
+^^^^^^^^^^^^^^^^
+
+We still need to test that we can recover all tokens from the escrow,
+and do so fairly. Recall our previous finishing strategy:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START oldFinishingStrategy
+   :end-before: END oldFinishingStrategy
+
+If we just use this as it is, it will fail. As before, we begin by
+testing ``prop_FinishEscrow``, before we worry about unilateral
+strategies for individual wallets:
+
+  .. code-block:: text
+
+   > quickCheck prop_FinishEscrow
+   *** Failed! Falsified (after 5 tests and 5 shrinks):
+   BadPrecondition
+     [Do $ Init (Slot {getSlot = 3}) [], 
+      Do $ Pay (Wallet 3) 2]
+     [Action (Refund (Wallet 3))]
+     (EscrowModel {_contributions = fromList [(Wallet 3,Value (Map [(,Map [("",2000000)])]))],
+                   _targets = fromList [],
+                   _refundSlot = Slot {getSlot = 3},
+                   _phase = Running})
+
+In this test we set the deadline to slot 3, make a payment, and then
+the finishing strategy attempts to refund the payment... in slot
+two. It doesn't work: the precondition forbids a refund in that
+slot. So we have to adapt our finishing strategy, which must simply
+wait until the deadline before refunding the contributions.
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START finishingStrategy
+   :end-before: END finishingStrategy
+
+To wait until the deadline, we use ``waitUntilDL``; since this fails
+if we try to wait until a slot in the past, then we have to check the
+``currentSlot`` (maintained by the model) before we decide whether or
+not to wait.
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START waitUntilDeadline
+   :end-before: END waitUntilDeadline
+
+With this extended strategy, the property passes:
+
+  .. code-block:: text
+
+   > quickCheck prop_FinishEscrow
+   +++ OK, passed 100 tests.
+   
+   Actions (3588 in total):
+   68.87% WaitUntil
+   20.71% Pay
+    4.77% Refund
+    3.18% Redeem
+    2.48% Init
+   
+   Refunded wallets (100 in total):
+   67% 0
+   13% 2
+    7% 1
+    6% 3
+    6% 4
+    1% 5
+
+
+The strategy works, but the statistics we gathered on the number of
+wallets to be refunded in each test are a little suspect. *In two
+thirds of the tests, there were no refunds to be made!* This is not
+ideal, given that we are testing whether or not our refund strategy
+works.
+
+This leads us to wonder: *which phase of the test did we reach* before
+testing our finishing strategy? To find out, we can just add a couple
+of lines to the ``finishingStrategy`` code, to ``monitor`` the phase:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START monitoredFinishingStrategy
+   :end-before: END monitoredFinishingStrategy
+
+Testing the property again, we see
+
+  .. code-block:: text
+
+   Phase (100 in total):
+   68% Refunding
+   32% Running
+
+So in two thirds of our tests, we had already reached the
+``Refunding`` phase before the finishing strategy was invoked--which
+means, in many cases, that the addition we made to the strategy was
+not needed.
+
+While we certainly want to run *some* tests of the finishing strategy
+starting in the ``Refunding`` phase, two thirds seems far too
+many. How can we ensure that more tests invoke the strategy in the
+``Running`` phase? The simplest way is just to *choose longer
+deadlines*. There is no particular reason why QuickCheck's default
+positive integer distribution should be the right one for
+deadlines. The simplest way to increase the values chosen is just to
+apply QuickCheck's ``scale`` combinator to the generator concerned:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START weightedArbitraryAction
+   :end-before: END weightedArbitraryAction
+
+Here we scale the positive integer generator by multiplying the
+QuickCheck size parameter by ten before generating; the effect is to
+increase the range of values by a factor of ten.
+
+Is ten the right number? The only way to tell is to run tests and
+measure how often we reach the refunding stage:
+
+  .. code-block:: text
+
+   > quickCheck . withMaxSuccess 1000 $ prop_FinishFast
+   +++ OK, passed 1000 tests.
+   
+   Phase (1000 in total):
+   81.5% Running
+   18.5% Refunding
+   
+   Refunded wallets (1000 in total):
+   34.1% 0
+   18.5% 1
+   17.3% 2
+   13.5% 3
+   11.2% 4
+    5.4% 5
+
+It seems that we reach the refunding stage in around 20% of tests,
+which seems reasonable. Moreover the propertion of cases in which
+there are no refunds to be made is now lower--one third instead of two
+thirds. So this is a useful improvement.
+
+Finally, we also need to update the unilateral strategy for each
+wallet in the same way. Once we have done so, then
+``prop_NoLockedFunds`` passes again.
+ 
+Digression: testing the model alone for speed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We ran a thousand tests to measure the proportion that reach the
+refunding stage, because one hundred tests is rather few to estimate
+this percentage from. In fact even a thousand tests is rather few to
+get accurate results; repeating that thousand-test run ten times
+yielded a refunding-percentage ranging from 17.4% to 21.6%. Ideally
+one might run millions of tests to measure the distribution, so we can tune
+the generation more accurately. Yet running a thousand tests is already
+quite slow, because of the speed of the emulator.
+
+However, *it is not actually necessary to run the tests, to measure
+their distribution*! The measurements we are making *depend only on
+the model*, and so we can make them much more rapidly by taking the
+emulator out of the test. This is simple to do: recall we defined
+``prop_FinishEscrow`` by
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START prop_FinishEscrow
+   :end-before: END prop_FinishEscrow
+
+which *generates* a test case from the dynamic logic test scenario
+``finishEscrow``, and then *runs* it using ``prop_Escrow``. All we
+have to do to take out the emulator is to replace ``prop_Escrow`` by
+the property that is always ``True``:
+
+.. literalinclude:: Escrow4.hs
+   :start-after: START prop_FinishFast
+   :end-before: END prop_FinishFast
+
+This property generates tests in exactly the same way, and gathers
+statistics in the same way (and checks preconditions in the same
+way), but does not actually run the test on the emulator. In other
+words, it's an excellent test of the *model*, and can be used to tune
+it (or find bugs in it) without the cost of emulation.
+
+With this version, we can at least run 100,000 tests in a short time,
+and obtain much more accurate statistics:
+
+  .. code-block:: text
+
+   > quickCheck . withMaxSuccess 100000 $ prop_FinishFast
+   +++ OK, passed 100000 tests.
+   
+   Phase (100000 in total):
+   80.514% Running
+   19.486% Refunding
+   
+   Refunded wallets (100000 in total):
+   34.204% 0
+   18.387% 1
+   17.514% 2
+   14.877% 3
+   10.016% 4
+    5.002% 5
+
+The results confirm that the distribution of test cases is reasonably good.
+
+Exercises
+^^^^^^^^^
+
+You will find the code discussed in this section in ``Spec.Tutorial.Escrow4``.
+
+#. Run ``quickCheck prop_Escrow`` and observe the distributions
+   reported. You will see that, even though we have extended the
+   escrow deadlines, many actions are still rejected by their
+   preconditions. Adapt the *generator* for actions, so that it only
+   generates each action during the correct phase. How does that
+   affect the proportion of rejected actions?
+
+#. The supplied code still has a buggy ``walletStrategy``. Verify this
+   by checking that ``prop_NoLockedFunds`` fails, and inspect the
+   counterexample. Correct the ``walletStrategy``, and veryify that
+   ``prop_NoLockedFunds`` now passes.
+
+#. The code also contains a fast version of ``prop_NoLockedFunds``
+   that does not run the emulator. Use *this* property to test your
+   model, with and without the fix to the ``walletStrategy``. You
+   should find that the bug is found anyway (it is at the model
+   level), and that verifying that it has been fixed runs satisfyingly
+   faster.
+
+#. Modify the provided code to *remove* the scaling we applied to the
+   deadline generator, and test ``prop_FinishFast`` repeatedly to
+   judge the effect on the test case distribution. Reinsert the bug in
+   ``walletStrategy``, and use
+
+   .. code-block:: text
+
+      quickCheck . withMaxSuccess 10000 $ prop_NoLockedFundsFast
+
+   to find it. Run this repeatedly, and make an estimate of the number
+   of tests needed to find the bug. Reinsert the scaling, and repeat
+   your estimate. Hopefully this will help persuade you of the value
+   of tuning your test case distributions!
+                
+
+
 
 Crash Tolerance
 ---------------
