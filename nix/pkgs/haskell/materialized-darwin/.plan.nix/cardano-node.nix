@@ -11,7 +11,7 @@
     flags = { unexpected_thunks = false; systemd = true; };
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-node"; version = "1.33.0"; };
+      identifier = { name = "cardano-node"; version = "1.34.1"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
@@ -40,7 +40,7 @@
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           (hsPkgs."deepseq" or (errorHandler.buildDepError "deepseq"))
           (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
-          (hsPkgs."cardano-config" or (errorHandler.buildDepError "cardano-config"))
+          (hsPkgs."cardano-git-rev" or (errorHandler.buildDepError "cardano-git-rev"))
           (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
           (hsPkgs."cardano-crypto-wrapper" or (errorHandler.buildDepError "cardano-crypto-wrapper"))
           (hsPkgs."cardano-ledger-alonzo" or (errorHandler.buildDepError "cardano-ledger-alonzo"))
@@ -78,7 +78,6 @@
           (hsPkgs."ouroboros-consensus-shelley" or (errorHandler.buildDepError "ouroboros-consensus-shelley"))
           (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
           (hsPkgs."ouroboros-network-framework" or (errorHandler.buildDepError "ouroboros-network-framework"))
-          (hsPkgs."process" or (errorHandler.buildDepError "process"))
           (hsPkgs."psqueues" or (errorHandler.buildDepError "psqueues"))
           (hsPkgs."safe-exceptions" or (errorHandler.buildDepError "safe-exceptions"))
           (hsPkgs."scientific" or (errorHandler.buildDepError "scientific"))
@@ -89,6 +88,9 @@
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."tracer-transformers" or (errorHandler.buildDepError "tracer-transformers"))
+          (hsPkgs."trace-dispatcher" or (errorHandler.buildDepError "trace-dispatcher"))
+          (hsPkgs."trace-forward" or (errorHandler.buildDepError "trace-forward"))
+          (hsPkgs."trace-resources" or (errorHandler.buildDepError "trace-resources"))
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
           (hsPkgs."transformers-except" or (errorHandler.buildDepError "transformers-except"))
           (hsPkgs."typed-protocols" or (errorHandler.buildDepError "typed-protocols"))
@@ -101,9 +103,10 @@
         buildable = true;
         modules = [
           "Paths_cardano_node"
-          "Cardano/Node/Configuration/Socket"
           "Cardano/Node/Configuration/Logging"
+          "Cardano/Node/Configuration/NodeAddress"
           "Cardano/Node/Configuration/POM"
+          "Cardano/Node/Configuration/Socket"
           "Cardano/Node/Configuration/Topology"
           "Cardano/Node/Configuration/TopologyP2P"
           "Cardano/Node/Handlers/Shutdown"
@@ -119,14 +122,41 @@
           "Cardano/Node/Queries"
           "Cardano/Node/Run"
           "Cardano/Node/STM"
+          "Cardano/Node/Startup"
+          "Cardano/Node/TraceConstraints"
+          "Cardano/Node/Tracing"
           "Cardano/Node/Types"
+          "Cardano/Node/Tracing/API"
+          "Cardano/Node/Tracing/Compat"
+          "Cardano/Node/Tracing/Documentation"
+          "Cardano/Node/Tracing/Era/Byron"
+          "Cardano/Node/Tracing/Era/HardFork"
+          "Cardano/Node/Tracing/Era/Shelley"
+          "Cardano/Node/Tracing/StateRep"
+          "Cardano/Node/Tracing/Tracers"
+          "Cardano/Node/Tracing/Tracers/BlockReplayProgress"
+          "Cardano/Node/Tracing/Tracers/ChainDB"
+          "Cardano/Node/Tracing/Tracers/Consensus"
+          "Cardano/Node/Tracing/Tracers/Diffusion"
+          "Cardano/Node/Tracing/Tracers/KESInfo"
+          "Cardano/Node/Tracing/Tracers/StartLeadershipCheck"
+          "Cardano/Node/Tracing/Tracers/ForgingThreadStats"
+          "Cardano/Node/Tracing/Tracers/Resources"
+          "Cardano/Node/Tracing/Tracers/Peer"
+          "Cardano/Node/Tracing/Tracers/Startup"
+          "Cardano/Node/Tracing/Tracers/Shutdown"
+          "Cardano/Node/Tracing/Tracers/P2P"
+          "Cardano/Node/Tracing/Tracers/NonP2P"
+          "Cardano/Node/Tracing/Tracers/NodeToClient"
+          "Cardano/Node/Tracing/Tracers/NodeToNode"
+          "Cardano/Node/Tracing/Formatting"
+          "Cardano/Node/Tracing/Render"
           "Cardano/Tracing/Config"
-          "Cardano/Tracing/Constraints"
-          "Cardano/Tracing/Kernel"
           "Cardano/Tracing/Metrics"
           "Cardano/Tracing/Peer"
           "Cardano/Tracing/Render"
           "Cardano/Tracing/Startup"
+          "Cardano/Tracing/Shutdown"
           "Cardano/Tracing/Tracers"
           "Cardano/Tracing/OrphanInstances/Byron"
           "Cardano/Tracing/OrphanInstances/Common"
@@ -141,7 +171,7 @@
         "cardano-node" = {
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
-            (hsPkgs."cardano-config" or (errorHandler.buildDepError "cardano-config"))
+            (hsPkgs."cardano-git-rev" or (errorHandler.buildDepError "cardano-git-rev"))
             (hsPkgs."cardano-node" or (errorHandler.buildDepError "cardano-node"))
             (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
             (hsPkgs."optparse-applicative-fork" or (errorHandler.buildDepError "optparse-applicative-fork"))
@@ -184,11 +214,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "6";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "6";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       };
