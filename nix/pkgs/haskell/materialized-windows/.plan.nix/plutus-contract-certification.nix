@@ -17,8 +17,8 @@
         };
       license = "Apache-2.0";
       copyright = "";
-      maintainer = "maximilian.algehed@quviq.com";
-      author = "Ulf Norell";
+      maintainer = "";
+      author = "";
       homepage = "https://github.com/iohk/plutus-apps#readme";
       url = "";
       synopsis = "";

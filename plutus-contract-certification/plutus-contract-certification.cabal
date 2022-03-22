@@ -5,8 +5,6 @@ license: Apache-2.0
 license-files:
   LICENSE
   NOTICE
-maintainer: maximilian.algehed@quviq.com
-author: Ulf Norell
 homepage: https://github.com/iohk/plutus-apps#readme
 bug-reports: https://github.com/iohk/plutus-apps/issues
 description:
