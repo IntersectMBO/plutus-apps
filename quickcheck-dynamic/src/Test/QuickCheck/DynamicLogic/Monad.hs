@@ -8,6 +8,7 @@ module Test.QuickCheck.DynamicLogic.Monad
     , anyActions_
     , stopping
     , weight
+    , getSize
     , getModelStateDL
     , assert
     , assertModel
@@ -34,12 +35,12 @@ import Test.QuickCheck.DynamicLogic qualified as DL
 import Test.QuickCheck.DynamicLogic.Quantify
 import Test.QuickCheck.StateModel
 
-import Test.QuickCheck
+import Test.QuickCheck hiding (getSize)
 
 -- | The `DL` monad provides a nicer interface to dynamic logic formulae than the plain API.
---   It's a continuation monad producing a `DL.DynLogic` formula, with a state component threaded
+--   It's a continuation monad producing a `DL.DynFormula` formula, with a state component threaded
 --   through.
-newtype DL s a = DL { unDL :: s -> (a -> s -> DL.DynLogic s) -> DL.DynLogic s }
+newtype DL s a = DL { unDL :: s -> (a -> s -> DL.DynFormula s) -> DL.DynFormula s }
     deriving (Functor)
 
 instance Applicative (DL s) where
@@ -57,17 +58,22 @@ anyAction :: DL s ()
 anyAction = DL $ \ _ k -> DL.afterAny $ k ()
 
 anyActions :: Int -> DL s ()
-anyActions n = stopping <|> weight (1 / fromIntegral n)
-                        <|> (anyAction >> anyActions n)
+anyActions n = stopping <|> pure ()
+                        <|> (weight (fromIntegral n) >> anyAction >> anyActions n)
 
+-- average number of actions same as average length of a list
 anyActions_ :: DL s ()
-anyActions_ = stopping <|> (anyAction >> anyActions_)
+anyActions_ = do n <- getSize
+                 anyActions (n `div` 2 + 1)
 
 stopping :: DL s ()
 stopping = DL $ \ s k -> DL.toStop (k () s)
 
 weight :: Double -> DL s ()
 weight w = DL $ \ s k -> DL.weight w (k () s)
+
+getSize :: DL s Int
+getSize = DL $ \s k -> DL.withSize $ \n -> k n s
 
 getModelStateDL :: DL s s
 getModelStateDL = DL $ \ s k -> k s s
@@ -103,7 +109,7 @@ instance Alternative (DL s) where
 instance MonadFail (DL s) where
     fail = errorDL
 
-runDL :: s -> DL s () -> DL.DynLogic s
+runDL :: s -> DL s () -> DL.DynFormula s
 runDL s dl = unDL dl s $ \ _ _ -> DL.passTest
 
 forAllUniqueDL :: (DL.DynLogicModel s, Testable a) =>

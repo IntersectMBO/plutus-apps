@@ -93,6 +93,7 @@ module Plutus.Contract.Test.ContractModel.Internal
     , assertModel
     , stopping
     , weight
+    , getSize
     , monitor
 
     -- * Properties
@@ -218,7 +219,7 @@ import Test.QuickCheck.StateModel hiding (Action, Actions (..), arbitraryAction,
                                    pattern Actions, perform, precondition, shrinkAction, stateAfter)
 import Test.QuickCheck.StateModel qualified as StateModel
 
-import Test.QuickCheck hiding (ShrinkState, checkCoverage, (.&&.), (.||.))
+import Test.QuickCheck hiding (ShrinkState, checkCoverage, getSize, (.&&.), (.||.))
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Monadic (PropertyM, monadic)
 import Test.QuickCheck.Monadic qualified as QC
@@ -1201,7 +1202,7 @@ anyActions :: Int -> DL state ()
 anyActions = DL.anyActions
 
 -- | Generate a sequence of random actions using `arbitraryAction`. All actions satisfy their
---   `precondition`s. Actions are generated until the `stopping` stage is reached.
+--   `precondition`s. Actions may be generated until the `stopping` stage is reached; the expected length is size/2.
 anyActions_ :: DL state ()
 anyActions_ = DL.anyActions_
 
@@ -1215,15 +1216,16 @@ anyActions_ = DL.anyActions_
 --   Conversely, before the stopping phase, branches starting with `stopping`
 --   are avoided unless there are no other possible choices.
 --
---   For example, here is the definition of `anyActions_`:
+--   For example, here is the definition of `anyActions`:
 --
 -- @
--- `anyActions_` = `stopping` `Control.Applicative.<|>` (`anyAction` >> `anyActions_`)
+-- `anyActions` n = `stopping` `Control.Applicative.<|>` pure ()
+--                        `Control.Applicative.<|>` (`weight` (fromIntegral n) >> `anyAction` >> `anyActions` n)
 -- @
 --
---   The effect of this definition is that the second branch will be taken until the desired number
+--   The effect of this definition is that the second or third branch will be taken until the desired number
 --   of actions have been generated, at which point the `stopping` branch will be taken and
---   generation stops (or continues with whatever comes after the `anyActions_` call).
+--   generation stops (or continues with whatever comes after the `anyActions` call).
 --
 --   Now, it might not be possible, or too hard, to find a way to terminate a scenario. For
 --   instance, this scenario has no finite test cases:
@@ -1260,6 +1262,20 @@ stopping = DL.stopping
 --   (`action`/`anyAction`) or random generation (`forAllQ`), or they will have no effect.
 weight :: Double -> DL state ()
 weight = DL.weight
+
+-- | Sometimes test case generation should depend on QuickCheck's size
+--   parameter. This can be accessed using @getSize@. For example, @anyActions_@ is defined by
+--
+-- @
+-- anyActions_ = do n <- getSize
+--                  anyActions (n `div` 2 + 1)
+-- @
+--
+-- so that we generate a random number of actions, but on average half the size (which is about the same as
+-- the average random positive integer, or length of a list).
+
+getSize :: DL state Int
+getSize = DL.getSize
 
 -- | The `monitor` function allows you to collect statistics of your testing using QuickCheck
 --   functions like `Test.QuickCheck.label`, `Test.QuickCheck.collect`, `Test.QuickCheck.classify`,
