@@ -11,7 +11,7 @@
     flags = {};
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-api"; version = "1.33.0"; };
+      identifier = { name = "cardano-api"; version = "1.34.1"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
@@ -78,6 +78,7 @@
           (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
           (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
           (hsPkgs."scientific" or (errorHandler.buildDepError "scientific"))
+          (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
           (hsPkgs."small-steps" or (errorHandler.buildDepError "small-steps"))
           (hsPkgs."cardano-ledger-shelley" or (errorHandler.buildDepError "cardano-ledger-shelley"))
           (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
@@ -121,6 +122,7 @@
           "Cardano/Api/SerialiseBech32"
           "Cardano/Api/SerialiseCBOR"
           "Cardano/Api/SerialiseJSON"
+          "Cardano/Api/SerialiseLedgerCddl"
           "Cardano/Api/SerialiseRaw"
           "Cardano/Api/SerialiseTextEnvelope"
           "Cardano/Api/SerialiseUsing"
@@ -138,15 +140,12 @@
           "Cardano/Api/ValueParser"
           "Cardano/Api"
           "Cardano/Api/Byron"
-          "Cardano/Api/Crypto/Ed25519Bip32"
-          "Cardano/Api/Shelley"
           "Cardano/Api/ChainSync/Client"
           "Cardano/Api/ChainSync/ClientPipelined"
-          "Cardano/Api/Orphans"
-          "Cardano/Api/Protocol/Byron"
-          "Cardano/Api/Protocol/Cardano"
-          "Cardano/Api/Protocol/Shelley"
+          "Cardano/Api/Crypto/Ed25519Bip32"
           "Cardano/Api/Protocol/Types"
+          "Cardano/Api/Shelley"
+          "Cardano/Api/Orphans"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -239,11 +238,11 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "6";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       }) // {
-      url = "6";
+      url = "7";
       rev = "minimal";
       sha256 = "";
       };
