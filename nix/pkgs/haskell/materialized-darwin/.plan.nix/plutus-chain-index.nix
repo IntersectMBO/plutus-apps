@@ -44,6 +44,7 @@
           (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
           (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
           (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
+          (hsPkgs."clock" or (errorHandler.buildDepError "clock"))
           (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
           (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
           (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
@@ -59,6 +60,7 @@
         buildable = true;
         modules = [
           "Plutus/ChainIndex/App"
+          "Plutus/ChainIndex/Events"
           "Plutus/ChainIndex/CommandLine"
           "Plutus/ChainIndex/Config"
           "Plutus/ChainIndex/Lib"

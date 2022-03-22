@@ -279,11 +279,6 @@ instance HasDbType (RedeemerHash, Redeemer) where
     toDbValue (hash, redeemer) = RedeemerRow (toDbValue hash) (toDbValue redeemer)
     fromDbValue (RedeemerRow hash redeemer) = (fromDbValue hash, fromDbValue redeemer)
 
--- instance HasDbType (TxOutRef, TxOut) where
---     type DbType (TxOutRef, TxOut) = UtxoRow
---     toDbValue (outRef, txOut) = UtxoRow (toDbValue outRef) (toDbValue txOut)
---     fromDbValue (UtxoRow outRef txOut) = (fromDbValue outRef, fromDbValue txOut)
-
 instance HasDbType (Credential, TxOutRef) where
     type DbType (Credential, TxOutRef) = AddressRow
     toDbValue (cred, outRef) = AddressRow (toDbValue cred) (toDbValue outRef)
