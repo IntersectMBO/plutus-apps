@@ -69,7 +69,7 @@ defaultConfig = ChainIndexConfig
         , scSlotLength   = 1000
         }
   , cicStoreFrom = BlockNo 0
-  , cicAppendQueueSize = 15000
+  , cicAppendQueueSize = 500
   }
 
 instance Pretty ChainIndexConfig where

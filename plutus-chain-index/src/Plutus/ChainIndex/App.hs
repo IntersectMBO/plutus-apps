@@ -22,13 +22,13 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.BM.Trace (Trace)
 import Control.Concurrent.Async (wait, withAsync)
-import Control.Concurrent.STM.TBQueue (newTBQueueIO)
+import Control.Concurrent.STM.TBMQueue (newTBMQueueIO)
 import Plutus.ChainIndex.CommandLine (AppConfig (AppConfig, acCLIConfigOverrides, acCommand, acConfigPath, acLogConfigPath, acMinLogLevel),
                                       Command (DumpDefaultConfig, DumpDefaultLoggingConfig, StartChainIndex),
                                       applyOverrides, cmdWithHelpParser)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
-import Plutus.ChainIndex.Events (processEventsQueue)
+import Plutus.ChainIndex.Events (measureEventByTxs, processEventsQueue)
 import Plutus.ChainIndex.Lib (getTipSlot, storeChainSyncHandler, storeFromBlockNo, syncChainIndex, withRunRequirements)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
@@ -78,7 +78,7 @@ runMain logConfig config = do
     print slotNo
 
     -- Queue for processing events
-    eventsQueue <- newTBQueueIO $ fromIntegral (Config.cicAppendQueueSize config)
+    eventsQueue <- newTBMQueueIO (fromIntegral (Config.cicAppendQueueSize config)) measureEventByTxs
     syncHandler
       <- storeChainSyncHandler eventsQueue
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)

@@ -37,6 +37,7 @@ library
         Plutus.ChainIndex.Lib
         Plutus.ChainIndex.Logging
         Plutus.ChainIndex.SyncStats
+    other-modules: Control.Concurrent.STM.TBMQueue
     hs-source-dirs: src
     build-depends:
         plutus-ledger -any,
