@@ -21,10 +21,10 @@ module Plutus.ChainIndex.Handlers
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
 import Control.Lens (Lens', view)
+import Control.Monad (foldM)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
-import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, addRowsInBatches, combined, deleteRows,
-                                        selectList, selectOne, selectPage, updateRows)
+import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, combined, selectList, selectOne, selectPage)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
 import Control.Monad.Freer.Extras.Pagination (Page (Page), PageQuery (..))
 import Control.Monad.Freer.Reader (Reader, ask)
@@ -33,7 +33,6 @@ import Data.ByteString (ByteString)
 import Data.FingerTree qualified as FT
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
-import Data.Monoid (Ap (..))
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
@@ -234,6 +233,42 @@ getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
           let page = fmap fromDbValue txOutRefs'
           pure $ TxosResponse page
 
+appendBlocks ::
+    forall effs.
+    ( Member (State ChainIndexState) effs
+    , Member (Reader Depth) effs
+    , Member BeamEffect effs
+    , Member (LogMsg ChainIndexLog) effs
+    )
+    => [ChainSyncBlock] -> Eff effs ()
+appendBlocks [] = pure ()
+appendBlocks blocks = do
+    let
+        processBlock (utxoIndexState, txs, utxoStates) (Block tip_ transactions) = do
+            let newUtxoState = TxUtxoBalance.fromBlock tip_ (map fst transactions)
+            case UtxoState.insert newUtxoState utxoIndexState of
+                Left err -> do
+                    logError $ Err $ InsertionFailed err
+                    return (utxoIndexState, txs, utxoStates)
+                Right InsertUtxoSuccess{newIndex, insertPosition} -> do
+                    logDebug $ InsertionSuccess tip_ insertPosition
+                    return (newIndex, transactions ++ txs, newUtxoState : utxoStates)
+    oldIndex <- get @ChainIndexState
+    (newIndex, transactions, utxoStates) <- foldM processBlock (oldIndex, [], []) blocks
+    depth <- ask @Depth
+    reduceOldUtxoDbEffect <- case UtxoState.reduceBlockCount depth newIndex of
+      UtxoState.BlockCountNotReduced -> do
+        put newIndex
+        pure $ Combined []
+      lbcResult -> do
+        put $ UtxoState.reducedIndex lbcResult
+        pure $ reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
+    combined
+        [ reduceOldUtxoDbEffect
+        , insertRows $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
+        , insertUtxoDb (map fst transactions) utxoStates
+        ]
+
 handleControl ::
     forall effs.
     ( Member (State ChainIndexState) effs
@@ -245,25 +280,7 @@ handleControl ::
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
-    AppendBlock (Block tip_ transactions) -> do
-        oldIndex <- get @ChainIndexState
-        let txs = map fst transactions
-        let newUtxoState = TxUtxoBalance.fromBlock tip_ txs
-        case UtxoState.insert newUtxoState oldIndex of
-            Left err -> do
-                let reason = InsertionFailed err
-                logError $ Err reason
-                throwError reason
-            Right InsertUtxoSuccess{newIndex, insertPosition} -> do
-                depth <- ask @Depth
-                case UtxoState.reduceBlockCount depth newIndex of
-                  UtxoState.BlockCountNotReduced -> put newIndex
-                  lbcResult -> do
-                    put $ UtxoState.reducedIndex lbcResult
-                    reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
-                insert $ foldMap (\(tx, opt) -> if tpoStoreTx opt then fromTx tx else mempty) transactions
-                insertUtxoDb txs newUtxoState
-                logDebug $ InsertionSuccess tip_ insertPosition
+    AppendBlocks blocks -> appendBlocks blocks
     Rollback tip_ -> do
         oldIndex <- get @ChainIndexState
         case TxUtxoBalance.rollback tip_ oldIndex of
@@ -273,10 +290,10 @@ handleControl = \case
                 throwError reason
             Right RollbackResult{newTip, rolledBackIndex} -> do
                 put rolledBackIndex
-                rollbackUtxoDb $ tipAsPoint newTip
+                combined [rollbackUtxoDb $ tipAsPoint newTip]
                 logDebug $ RollbackSuccess newTip
     ResumeSync tip_ -> do
-        rollbackUtxoDb tip_
+        combined [rollbackUtxoDb tip_]
         newState <- restoreStateFromDb
         put newState
     CollectGarbage -> do
@@ -293,47 +310,54 @@ handleControl = \case
     GetDiagnostics -> diagnostics
 
 
--- Use a batch size of 400 so that we don't hit the sql too-many-variables
+-- Use a batch size of 200 so that we don't hit the sql too-many-variables
 -- limit.
 batchSize :: Int
-batchSize = 400
+batchSize = 200
 
-insertUtxoDb ::
-    ( Member BeamEffect effs
-    , Member (Error ChainIndexError) effs
-    )
-    => [ChainIndexTx]
-    -> UtxoState.UtxoState TxUtxoBalance
-    -> Eff effs ()
-insertUtxoDb _ (UtxoState.UtxoState _ TipAtGenesis) = throwError $ InsertionFailed UtxoState.InsertUtxoNoTip
-insertUtxoDb txs (UtxoState.UtxoState (TxUtxoBalance outputs inputs) tip)
-    = insert $ mempty
-        { tipRows = InsertRows $ catMaybes [toDbValue tip]
-        , unspentOutputRows = InsertRows $ UnspentOutputRow tipRowId . toDbValue <$> Set.toList outputs
-        , unmatchedInputRows = InsertRows $ UnmatchedInputRow tipRowId . toDbValue <$> Set.toList inputs
+insertUtxoDb
+    :: [ChainIndexTx]
+    -> [UtxoState.UtxoState TxUtxoBalance]
+    -> BeamEffect ()
+insertUtxoDb txs utxoStates =
+    let
+        go acc (UtxoState.UtxoState _ TipAtGenesis) = acc
+        go (tipRows, unspentRows, unmatchedRows) (UtxoState.UtxoState (TxUtxoBalance outputs inputs) tip) =
+            let
+                tipRowId = TipRowId (toDbValue (tipSlot tip))
+                newTips = catMaybes [toDbValue tip]
+                newUnspent = UnspentOutputRow tipRowId . toDbValue <$> Set.toList outputs
+                newUnmatched = UnmatchedInputRow tipRowId . toDbValue <$> Set.toList inputs
+            in
+            ( newTips ++ tipRows
+            , newUnspent ++ unspentRows
+            , newUnmatched ++ unmatchedRows)
+        (tr, ur, umr) = foldl go ([] :: [TipRow], [] :: [UnspentOutputRow], [] :: [UnmatchedInputRow]) utxoStates
+        txOuts = concatMap txOutsWithRef txs
+    in insertRows $ mempty
+        { tipRows = InsertRows tr
+        , unspentOutputRows = InsertRows ur
+        , unmatchedInputRows = InsertRows umr
         , utxoOutRefRows = InsertRows $ (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) <$> txOuts
         }
-        where
-            txOuts = concatMap txOutsWithRef txs
-            tipRowId = TipRowId (toDbValue (tipSlot tip))
 
-reduceOldUtxoDb :: Member BeamEffect effs => Tip -> Eff effs ()
-reduceOldUtxoDb TipAtGenesis = pure ()
-reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = do
+reduceOldUtxoDb :: Tip -> BeamEffect ()
+reduceOldUtxoDb TipAtGenesis = Combined []
+reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = Combined
     -- Delete all the tips before 'slot'
-    deleteRows $ delete (tipRows db) (\row -> _tipRowSlot row <. val_ slot)
+    [ DeleteRows $ delete (tipRows db) (\row -> _tipRowSlot row <. val_ slot)
     -- Assign all the older utxo changes to 'slot'
-    updateRows $ update
+    , UpdateRows $ update
         (unspentOutputRows db)
         (\row -> _unspentOutputRowTip row <-. TipRowId (val_ slot))
         (\row -> unTipRowId (_unspentOutputRowTip row) <. val_ slot)
-    updateRows $ update
+    , UpdateRows $ update
         (unmatchedInputRows db)
         (\row -> _unmatchedInputRowTip row <-. TipRowId (val_ slot))
         (\row -> unTipRowId (_unmatchedInputRowTip row) <. val_ slot)
     -- Among these older changes, delete the matching input/output pairs
     -- We're deleting only the outputs here, the matching input is deleted by a trigger (See Main.hs)
-    deleteRows $ delete
+    , DeleteRows $ delete
         (utxoOutRefRows db)
         (\utxoRow ->
             exists_ (filter_
@@ -341,7 +365,7 @@ reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = do
                     (unTipRowId (_unmatchedInputRowTip input) ==. val_ slot) &&.
                     (_utxoRowOutRef utxoRow ==. _unmatchedInputRowOutRef input))
                 (all_ (unmatchedInputRows db))))
-    deleteRows $ delete
+    , DeleteRows $ delete
         (unspentOutputRows db)
         (\output -> unTipRowId (_unspentOutputRowTip output) ==. val_ slot &&.
             exists_ (filter_
@@ -349,20 +373,22 @@ reduceOldUtxoDb (Tip (toDbValue -> slot) _ _) = do
                     (unTipRowId (_unmatchedInputRowTip input) ==. val_ slot) &&.
                     (_unspentOutputRowOutRef output ==. _unmatchedInputRowOutRef input))
                 (all_ (unmatchedInputRows db))))
+    ]
 
-rollbackUtxoDb :: Member BeamEffect effs => Point -> Eff effs ()
-rollbackUtxoDb PointAtGenesis = deleteRows $ delete (tipRows db) (const (val_ True))
-rollbackUtxoDb (Point (toDbValue -> slot) _) = do
-    deleteRows $ delete (tipRows db) (\row -> _tipRowSlot row >. val_ slot)
-    deleteRows $ delete (utxoOutRefRows db)
+rollbackUtxoDb :: Point -> BeamEffect ()
+rollbackUtxoDb PointAtGenesis = DeleteRows $ delete (tipRows db) (const (val_ True))
+rollbackUtxoDb (Point (toDbValue -> slot) _) = Combined
+    [ DeleteRows $ delete (tipRows db) (\row -> _tipRowSlot row >. val_ slot)
+    , DeleteRows $ delete (utxoOutRefRows db)
         (\utxoRow ->
             exists_ (filter_
                 (\output ->
                     (unTipRowId (_unspentOutputRowTip output) >. val_ slot) &&.
                     (_utxoRowOutRef utxoRow ==. _unspentOutputRowOutRef output))
                 (all_ (unspentOutputRows db))))
-    deleteRows $ delete (unspentOutputRows db) (\row -> unTipRowId (_unspentOutputRowTip row) >. val_ slot)
-    deleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
+    , DeleteRows $ delete (unspentOutputRows db) (\row -> unTipRowId (_unspentOutputRowTip row) >. val_ slot)
+    , DeleteRows $ delete (unmatchedInputRows db) (\row -> unTipRowId (_unmatchedInputRowTip row) >. val_ slot)
+    ]
 
 restoreStateFromDb :: Member BeamEffect effs => Eff effs ChainIndexState
 restoreStateFromDb = do
@@ -392,8 +418,8 @@ instance Semigroup (InsertRows te) where
 instance BeamableSqlite t => Monoid (InsertRows (TableEntity t)) where
     mempty = InsertRows []
 
-insert :: Member BeamEffect effs => Db InsertRows -> Eff effs ()
-insert = getAp . getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ Ap $ addRowsInBatches batchSize tbl rows) db
+insertRows :: Db InsertRows -> BeamEffect ()
+insertRows = getConst . zipTables Proxy (\tbl (InsertRows rows) -> Const $ AddRowsInBatches batchSize tbl rows) db
 
 fromTx :: ChainIndexTx -> Db InsertRows
 fromTx tx = mempty

@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE KindSignatures     #-}
 {-# LANGUAGE LambdaCase         #-}
@@ -115,6 +116,12 @@ data BeamEffect r where
   Combined
     :: [BeamEffect ()]
     -> BeamEffect ()
+
+instance Monoid (BeamEffect ()) where
+  mempty = Combined []
+
+instance Semigroup (BeamEffect ()) where
+  a <> b = Combined [a, b]
 
 handleBeam ::
   forall effs.

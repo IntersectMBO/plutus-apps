@@ -31,6 +31,7 @@ library
     import: lang
     exposed-modules:
         Plutus.ChainIndex.App
+        Plutus.ChainIndex.Events
         Plutus.ChainIndex.CommandLine
         Plutus.ChainIndex.Config
         Plutus.ChainIndex.Lib
@@ -50,6 +51,7 @@ library
         beam-migrate -any,
         cardano-api -any,
         contra-tracer -any,
+        clock -any,
         data-default -any,
         freer-simple -any,
         iohk-monitoring -any,

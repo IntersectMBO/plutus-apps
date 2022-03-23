@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
@@ -18,7 +19,8 @@ module Plutus.ChainIndex.Config(
   networkId,
   securityParam,
   slotConfig,
-  storeFrom
+  storeFrom,
+  appendQueueSize
   ) where
 
 import Cardano.Api (BlockNo (BlockNo), NetworkId (Mainnet, Testnet))
@@ -31,13 +33,14 @@ import Ouroboros.Network.Magic (NetworkMagic (NetworkMagic))
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
 
 data ChainIndexConfig = ChainIndexConfig
-  { cicSocketPath    :: String
-  , cicDbPath        :: String
-  , cicPort          :: Int
-  , cicNetworkId     :: NetworkId
-  , cicSecurityParam :: Int -- ^ The number of blocks after which a transaction cannot be rolled back anymore
-  , cicSlotConfig    :: SlotConfig
-  , cicStoreFrom     :: BlockNo -- ^ Only store transactions from this block number onward
+  { cicSocketPath      :: String
+  , cicDbPath          :: String
+  , cicPort            :: Int
+  , cicNetworkId       :: NetworkId
+  , cicSecurityParam   :: Int -- ^ The number of blocks after which a transaction cannot be rolled back anymore
+  , cicSlotConfig      :: SlotConfig
+  , cicStoreFrom       :: BlockNo -- ^ Only store transactions from this block number onward
+  , cicAppendQueueSize :: Int -- ^ The size of the queue and a number of blocks to collect before writing to the database
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -66,16 +69,18 @@ defaultConfig = ChainIndexConfig
         , scSlotLength   = 1000
         }
   , cicStoreFrom = BlockNo 0
+  , cicAppendQueueSize = 15000
   }
 
 instance Pretty ChainIndexConfig where
-  pretty ChainIndexConfig{cicSocketPath, cicDbPath, cicPort, cicNetworkId, cicSecurityParam, cicStoreFrom} =
+  pretty ChainIndexConfig{cicSocketPath, cicDbPath, cicPort, cicNetworkId, cicSecurityParam, cicStoreFrom, cicAppendQueueSize} =
     vsep [ "Socket:" <+> pretty cicSocketPath
          , "Db:" <+> pretty cicDbPath
          , "Port:" <+> pretty cicPort
          , "Network Id:" <+> viaShow cicNetworkId
          , "Security Param:" <+> pretty cicSecurityParam
          , "Store from:" <+> viaShow cicStoreFrom
+         , "Append queue size:" <+> viaShow cicAppendQueueSize
          ]
 
 makeLensesFor [
@@ -85,7 +90,8 @@ makeLensesFor [
   ("cicNetworkId", "networkId"),
   ("cicSecurityParam", "securityParam"),
   ("cicSlotConfig", "slotConfig"),
-  ("cicStoreFrom", "storeFrom")
+  ("cicStoreFrom", "storeFrom"),
+  ("cicAppendQueueSize", "appendQueueSize")
   ] 'ChainIndexConfig
 
 newtype DecodeConfigException = DecodeConfigException String

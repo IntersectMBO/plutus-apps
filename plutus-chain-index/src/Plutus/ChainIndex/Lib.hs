@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TupleSections      #-}
 {-| Using the chain index as a library.
@@ -34,10 +35,11 @@ module Plutus.ChainIndex.Lib (
     -- ** Synchronisation handlers
     , ChainSyncHandler
     , ChainSyncEvent(..)
-    , defaultChainSyncHandler
+    , EventsQueue
+    , storeChainSyncHandler
     , storeFromBlockNo
     , filterTxs
-    , writeChainSyncEventToChan
+    , runChainIndexDuringSync
     -- * Utils
     , getTipSlot
 ) where
@@ -60,14 +62,14 @@ import Cardano.BM.Trace (Trace, logDebug, logError, nullTracer)
 
 import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
-import Control.Concurrent.STM (TChan, atomically, writeTChan)
+import Control.Concurrent.STM (TBQueue, atomically, writeTBQueue)
 import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequirements), getResumePoints,
                           runChainIndexEffects, tipBlockNo)
 import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, fromCardanoTip, tipFromCardanoBlock)
 import Plutus.ChainIndex.Config qualified as Config
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
-import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect, appendBlock, resumeSync, rollback)
+import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 
@@ -131,13 +133,10 @@ toCardanoChainSyncHandler runReq handler = \case
 
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
+type EventsQueue = TBQueue ChainSyncEvent
 
--- | The default chain synchronisation event handler. Updates the in-memory state and the database.
-defaultChainSyncHandler :: RunRequirements -> ChainSyncHandler
-defaultChainSyncHandler runReq evt = void $ runChainIndexDuringSync runReq $ case evt of
-    (RollForward block _)  -> appendBlock block
-    (RollBackward point _) -> rollback point
-    (Resume point)         -> resumeSync point
+storeChainSyncHandler :: EventsQueue -> ChainSyncHandler
+storeChainSyncHandler eventsQueue = atomically . writeTBQueue eventsQueue
 
 -- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
 storeFromBlockNo :: CI.BlockNumber -> ChainSyncHandler -> ChainSyncHandler
@@ -170,18 +169,6 @@ getTipSlot config = do
     , C.localNodeSocketPath = Config.cicSocketPath config
     }
   pure slotNo
-
--- | Write 'ChainSyncEvent's from the 'ChainSyncHandler' to the 'TChan'.
-writeChainSyncEventToChan
-    :: (ChainSyncEvent -> a)
-    -> TChan a
-    -> ChainSyncHandler
-    -> IO ChainSyncHandler
-writeChainSyncEventToChan convert tchan handler = do
-    pure $ \case
-        evt -> do
-            atomically $ writeTChan tchan (convert evt)
-            handler evt
 
 -- | Synchronise the chain index with the node using the given handler.
 syncChainIndex :: Config.ChainIndexConfig -> RunRequirements -> ChainSyncHandler -> IO ()
