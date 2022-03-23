@@ -72,12 +72,14 @@ _MintingPolicyScript = prism' MintingPolicyScript case _ of
 
 --------------------------------------------------------------------------------
 
-newtype ScriptValidationEvent = ScriptValidationEvent
-  { sveScript :: String
-  , sveResult :: Either ScriptError (Tuple RawJson (Array String))
-  , sveRedeemer :: String
-  , sveType :: ScriptType
-  }
+data ScriptValidationEvent
+  = ScriptValidationEvent
+      { sveScript :: String
+      , sveResult :: Either ScriptError (Tuple RawJson (Array String))
+      , sveRedeemer :: String
+      , sveType :: ScriptType
+      }
+  | ScriptValidationResultOnlyEvent { sveResult :: Either ScriptError (Tuple RawJson (Array String)) }
 
 derive instance Eq ScriptValidationEvent
 
@@ -85,33 +87,47 @@ instance Show ScriptValidationEvent where
   show a = genericShow a
 
 instance EncodeJson ScriptValidationEvent where
-  encodeJson = defer \_ -> E.encode $ unwrap >$<
-    ( E.record
-        { sveScript: E.value :: _ String
-        , sveResult: (E.either E.value (E.tuple (E.value >/\< E.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
-        , sveRedeemer: E.value :: _ String
-        , sveType: E.value :: _ ScriptType
-        }
-    )
+  encodeJson = defer \_ -> case _ of
+    ScriptValidationEvent { sveScript, sveResult, sveRedeemer, sveType } -> encodeJson
+      { tag: "ScriptValidationEvent"
+      , sveScript: flip E.encode sveScript E.value
+      , sveResult: flip E.encode sveResult (E.either E.value (E.tuple (E.value >/\< E.value)))
+      , sveRedeemer: flip E.encode sveRedeemer E.value
+      , sveType: flip E.encode sveType E.value
+      }
+    ScriptValidationResultOnlyEvent { sveResult } -> encodeJson
+      { tag: "ScriptValidationResultOnlyEvent"
+      , sveResult: flip E.encode sveResult (E.either E.value (E.tuple (E.value >/\< E.value)))
+      }
 
 instance DecodeJson ScriptValidationEvent where
-  decodeJson = defer \_ -> D.decode $
-    ( ScriptValidationEvent <$> D.record "ScriptValidationEvent"
-        { sveScript: D.value :: _ String
-        , sveResult: (D.either D.value (D.tuple (D.value </\> D.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
-        , sveRedeemer: D.value :: _ String
-        , sveType: D.value :: _ ScriptType
-        }
-    )
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "ScriptValidationEvent"
+    $ Map.fromFoldable
+        [ "ScriptValidationEvent" /\
+            ( ScriptValidationEvent <$> D.object "ScriptValidationEvent"
+                { sveScript: D.value :: _ String
+                , sveResult: (D.either D.value (D.tuple (D.value </\> D.value))) :: _ (Either ScriptError (Tuple RawJson (Array String)))
+                , sveRedeemer: D.value :: _ String
+                , sveType: D.value :: _ ScriptType
+                }
+            )
+        , "ScriptValidationResultOnlyEvent" /\ (ScriptValidationResultOnlyEvent <$> D.object "ScriptValidationResultOnlyEvent" { sveResult: (D.either D.value (D.tuple (D.value </\> D.value))) :: _ (Either ScriptError (Tuple RawJson (Array String))) })
+        ]
 
 derive instance Generic ScriptValidationEvent _
 
-derive instance Newtype ScriptValidationEvent _
-
 --------------------------------------------------------------------------------
 
-_ScriptValidationEvent :: Iso' ScriptValidationEvent { sveScript :: String, sveResult :: Either ScriptError (Tuple RawJson (Array String)), sveRedeemer :: String, sveType :: ScriptType }
-_ScriptValidationEvent = _Newtype
+_ScriptValidationEvent :: Prism' ScriptValidationEvent { sveScript :: String, sveResult :: Either ScriptError (Tuple RawJson (Array String)), sveRedeemer :: String, sveType :: ScriptType }
+_ScriptValidationEvent = prism' ScriptValidationEvent case _ of
+  (ScriptValidationEvent a) -> Just a
+  _ -> Nothing
+
+_ScriptValidationResultOnlyEvent :: Prism' ScriptValidationEvent { sveResult :: Either ScriptError (Tuple RawJson (Array String)) }
+_ScriptValidationResultOnlyEvent = prism' ScriptValidationResultOnlyEvent case _ of
+  (ScriptValidationResultOnlyEvent a) -> Just a
+  _ -> Nothing
 
 --------------------------------------------------------------------------------
 
