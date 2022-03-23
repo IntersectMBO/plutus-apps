@@ -2158,6 +2158,315 @@ You will find the code discussed in this section in ``Spec.Tutorial.Escrow4``.
    of tuning your test case distributions!
                 
 
+Measuring coverage of on-chain code
+-----------------------------------
+
+It is always good practice to measure the source-code coverage of
+tests. Coverage information provides a sanity check that nothing has
+been missed altogether: while covering a line of code is no guarantee
+that a bug in that line will be revealed, *failing to cover* a line of
+code *does* guarantee that any bug there will *not* be found. For
+critical code, it is reasonable to aim for 100% coverage.
+
+Coverage of Haskell code can be measured using the `Haskell Program
+Coverage <https://wiki.haskell.org/Haskell_program_coverage>`_
+toolkit; we will not discuss this further here. But while this works
+well for measuring the coverage of *off-chain* code, it does not apply
+to *on-chain* code, because this is compiled using the Plutus compiler
+and executed on the blockchain, rather than by GHC. If we want to
+measure the coverage of *on-chain* code--which is the most critical
+code in a Plutus contract--then we need to use a separate tool. This
+is what we cover in this section.
+
+Adding a coverage index
+^^^^^^^^^^^^^^^^^^^^^^^
+
+In order to generate a coverage report, the framework needs to know
+
+#. what was covered by tests,
+   
+#. what should have been covered.
+
+Indeed, the most important part of a coverage report is often the
+parts that were *not* covered by tests. This latter information--what
+should be covered--is represented by a ``CoverageIndex`` that the
+Plutus compiler constructs. Since the Plutus compiler is invoked using
+Template Haskell in the code of the contract itself, then this is
+where we have to save, and export, the coverage index. That is, we
+must make additions to the code of a contract in order to enable
+coverage measurement.
+
+To do so, we first inspect the code, and find all the
+occurrences of ``PlutusTx.compile``. In the case of the escrow
+contract, they are in the definition of ``typedValidator``:
+
+ .. literalinclude:: EscrowImpl.hs
+   :start-after: START typedValidator
+   :end-before: END typedValidator
+
+The on-chain code consists of ``validate`` and ``wrap``. The latter is
+a library function, whose coverage we do not need to measure, so we
+just add (and export) a definition of a ``CoverageIndex`` that covers
+``validate``:
+
+  .. literalinclude:: EscrowImpl.hs
+   :start-after: START covIdx
+   :end-before: END covIdx
+
+It just remains to *import* the necessary types and functions
+
+ .. literalinclude:: EscrowImpl.hs
+   :start-after: START imports
+   :end-before: END imports
+
+and to supply GHC options that cause the Plutus compiler to generate
+coverage information:
+
+.. literalinclude:: EscrowImpl.hs
+   :start-after: START OPTIONS_GHC
+   :end-before: END OPTIONS_GHC
+
+With these additions, the contract implementation is ready for
+coverage measurement.
+
+Measuring coverage
+^^^^^^^^^^^^^^^^^^
+
+Once we have created a suitable ``CoverageIndex``, we must create a
+test that uses it. To do so, we need to
+
+#. Run the test using ``quickCheckWithCoverage``, and give it coverage options specifying the coverage index,
+
+#. Pass the (modified) coverage options that ``quickCheckWithCoverage`` constructs in to ``propRunActionsWithOptions`` (instead of ``propRunActions_``) when we run the action sequence, and
+
+#. (Ideally) visualize the resulting ``CoverageReport`` as annotated source code.
+
+Here is the code to do all this (we also need to import ``Plutus.Contract.Test.Coverage``):
+
+ .. literalinclude:: Escrow5.hs
+   :start-after: START check_propEscrowWithCoverage
+   :end-before: END check_propEscrowWithCoverage
+
+First we call ``quickCheckWithCoverage`` with options containing
+``covIdx``; it passes modified options to the rest of the property. We
+test the property 1000 times, so that we are very likely to cover all
+the reachable code in the tests. We cannot just reuse ``prop_Escrow``,
+because we must pass in the modified coverage options ``covopts`` when
+we run the actions, but otherwise this is just the same as
+``prop_Escrow``. The result returned by ``quickCheckWithCoverage`` is
+a ``CoverageReport``, which is difficult to interpret by itself, so we
+bind it to ``cr`` and then generate an HTML file ``Escrow.html`` using
+``writeCoverageReport``. 
+
+Running this does take a little while, because we run a large number of
+tests; on the other hand, diagnosing *why* a part of the code has not
+been covered can be very time-consuming, and is wasted effort if the
+reason is simply that we were unlucky when we ran the tests. It is
+worth waiting a few minutes for more accurate coverage data, before
+starting this kind of diagnosis.
+
+Quite a lot of output is generated, including lists of coverage items
+that were covered respectively not covered. We shall ignore these for
+now; the same information is presented much more readably in the
+generated HTML file. But note that we do see statistics on endpoint
+invocations:
+
+  .. code-block:: text
+
+   > check_propEscrowWithCoverage
+   +++ OK, passed 1000 tests:
+   63.1% Contract instance for W[4] at endpoint pay-escrow
+   62.5% Contract instance for W[1] at endpoint pay-escrow
+   62.5% Contract instance for W[2] at endpoint pay-escrow
+   61.2% Contract instance for W[3] at endpoint pay-escrow
+   60.8% Contract instance for W[5] at endpoint pay-escrow
+   29.1% Contract instance for W[5] at endpoint redeem-escrow
+   28.2% Contract instance for W[1] at endpoint redeem-escrow
+   27.4% Contract instance for W[3] at endpoint redeem-escrow
+   25.8% Contract instance for W[2] at endpoint redeem-escrow
+   25.6% Contract instance for W[4] at endpoint redeem-escrow
+    4.5% Contract instance for W[1] at endpoint refund-escrow
+    4.1% Contract instance for W[2] at endpoint refund-escrow
+    3.9% Contract instance for W[4] at endpoint refund-escrow
+    3.5% Contract instance for W[3] at endpoint refund-escrow
+    3.3% Contract instance for W[5] at endpoint refund-escrow
+   
+   ...
+
+This table tells us what percentage of test cases made a call to each
+endpoint from the given wallet; for example, 63.1% of test cases made
+(somewhere) a call to the ``pay-escrow`` endpoint from wallet 4. As we
+can see, the ``pay-escrow`` endpoint is called in most tests from each
+wallet, ``redeem-escrow`` is a bit rarer, and ``refund-escrow`` is
+used quite rarely. Most serious, of course, would be if one of the
+endpoints doesn't appear in this table at all.
+
+It is possible to supply coverage goals for each wallet/endpoint
+combination via an additional coverage option. We don't consider this
+further here, except to note that by default the framework expects
+each combination to appear in 20% of tests, and so we get warnings in
+this case:
+
+  .. code-block:: text
+
+      Only 4.5% Contract instance for W[1] at endpoint refund-escrow, but expected 20.0%
+      Only 4.1% Contract instance for W[2] at endpoint refund-escrow, but expected 20.0%
+      Only 3.5% Contract instance for W[3] at endpoint refund-escrow, but expected 20.0%
+      Only 3.9% Contract instance for W[4] at endpoint refund-escrow, but expected 20.0%
+      Only 3.3% Contract instance for W[5] at endpoint refund-escrow, but expected 20.0%
+
+These warnings can be eliminated by specifying more appropriate (lower)
+coverage goals for these endpoint calls.
+
+Interpreting the coverage annotations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Running the test above writes annotated source code to
+``Escrow.html``. The entire contents of the file are reproduced
+:ref:`here<CoverageReport>`. The report contains all of the
+on-chain code provided in the ``CoverageIndex``, together with a few
+lines of code around it for context. Off-chain code appears in grey,
+so it can be distinguished. On-chain code on a white background was
+covered by tests, and we know no more about it. Code on a red or green
+background was also covered, but it is a boolean expression, and only
+took one value (red for ``False``, green for ``True``). Orange code on
+a black background is on-chain code that was not covered at all--and
+thus may represent a gap in testing.
+
+Looking at the last section of code in the report,
+
+  .. raw:: html
+
+   <pre>
+      365    <span style=background-color:lightgray;color:gray >covIdx :: CoverageIndex</span>
+      366    <span style=background-color:lightgray;color:gray >covIdx = getCovIdx $$(</span><span style=background-color:black;color:orangered >PlutusTx.compile [|| val
+   </pre>
+
+we see that it is the construction of the coverage index, and
+parts of this code are labelled on-chain and uncovered. We can ignore
+this, it's simply an artefact of the way the code labelling is done
+(and could be avoided by putting the construction of the ``covIdx`` in a
+different module, without coverage enabled).
+
+More interesting is the second section of the report:
+
+  .. raw:: html
+
+   <pre>
+      201    <span style=background-color:lightgray;color:gray >{-# INLINABLE validate #-}</span>
+      202    <span style=background-color:lightgray;color:gray >validate :: EscrowParams DatumHash -&gt; PaymentPubKeyHash -&gt; Action -&gt; ScriptContext -&gt; Bool</span>
+      203    <span style=background-color:white;color:black >validate EscrowParams{escrowDeadline, escrowTargets} contributor action ScriptContext{scriptContextTxInfo} =</span><span style=background-color:lightgray;color:gray ></span>
+      204    <span style=background-color:white;color:black >    case action of</span><span style=background-color:lightgray;color:gray ></span>
+      205    <span style=background-color:white;color:black >        Redeem -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+      206    <span style=background-color:white;color:black >            traceIfFalse </span><span style=background-color:black;color:orangered >&quot;escrowDeadline-after&quot; </span><span style=background-color:white;color:black >(escrowDeadline `after` txInfoValidRange scriptContextTxInfo)</span><span style=background-color:lightgray;color:gray ></span>
+      207    <span style=background-color:white;color:black >            &amp;&amp; </span><span style=background-color:lightgreen;color:black >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;meetsTarget&quot; </span><span style=background-color:lightgreen;color:black >(all (meetsTarget scriptContextTxInfo) escrowTargets)</span><span style=background-color:white;color:black ></span><span style=background-color:lightgray;color:gray ></span>
+      208    <span style=background-color:white;color:black >        Refund -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+      209    <span style=background-color:white;color:black >            </span><span style=background-color:lightgreen;color:black >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;escrowDeadline-before&quot; </span><span style=background-color:lightgreen;color:black >((escrowDeadline - 1) `before` txInfoValidRange scriptContextTxInfo)</span><span style=background-color:lightgray;color:gray ></span>
+      210    <span style=background-color:lightgreen;color:black >            &amp;&amp; </span><span style=background-color:lightgreen;color:black >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;txSignedBy&quot; </span><span style=background-color:lightgreen;color:black >(scriptContextTxInfo `txSignedBy` unPaymentPubKeyHash contributor)</span><span style=background-color:lightgray;color:gray ></span>
+      211    <span style=background-color:lightgray;color:gray ></span>
+   </pre>
+
+This is the main validator, and while some of its code is coloured
+white, much of it is coloured green. This means the checks in this
+function always returned ``True`` in our tests; we have not tested the
+cases in which they return ``False``.
+
+This does indicate a weakness in our testing: since these checks
+always passed in our tests, then those tests would *also* have passed
+if the checks were removed completely (replaced by ``True``)--but the
+contract would have been quite wrong. We will return to this point
+later, when we discuss *negative testing*. For now, though, we just
+note that *if the checks had returned* ``False``, *then the
+transaction would have failed*--and the off-chain code is, of course,
+designed not to submit failing transactions. So, in a sense, we should
+expect this code to be coloured green--at least, when we test through
+well-designed off-chain endpoints, as we have been doing.
+
+This code fragment also contains some entirely uncovered code--the
+strings passed to ``traceIfFalse`` to be used as error messages if a
+check fails. Since correct off-chain code never submits failing
+transactions, then these error messages are never used--and hence the
+code is labelled as 'uncovered'. Again, this is not really a problem.
+
+The most interesting part of the report is the first section:
+
+  .. raw:: html
+
+   <pre>
+      190    <span style=background-color:lightgray;color:gray >meetsTarget :: TxInfo -&gt; EscrowTarget DatumHash -&gt; Bool</span>
+      191    <span style=background-color:white;color:black >meetsTarget ptx = \case</span><span style=background-color:lightgray;color:gray ></span>
+      192    <span style=background-color:white;color:black >    PaymentPubKeyTarget pkh vl -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+      193    <span style=background-color:white;color:black >        </span><span style=background-color:lightgreen;color:black >valuePaidTo ptx (unPaymentPubKeyHash pkh) `geq` vl</span><span style=background-color:white;color:black ></span><span style=background-color:lightgray;color:gray ></span>
+      194    <span style=background-color:white;color:black >    ScriptTarget validatorHash dataValue vl -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+      195    <span style=background-color:white;color:black >        </span><span style=background-color:black;color:orangered >case scriptOutputsAt </span><span style=background-color:black;color:orangered >validatorHash </span><span style=background-color:black;color:orangered >ptx </span><span style=background-color:black;color:orangered >of</span><span style=background-color:lightgray;color:gray ></span>
+      196    <span style=background-color:black;color:orangered >            [(dataValue&#39;, vl&#39;)] -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+      197    <span style=background-color:black;color:orangered >                </span><span style=background-color:black;color:orangered >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;dataValue&quot; </span><span style=background-color:black;color:orangered >(</span><span style=background-color:black;color:orangered >dataValue&#39; </span><span style=background-color:black;color:orangered >== </span><span style=background-color:black;color:orangered >dataValue)</span><span style=background-color:black;color:orangered ></span><span style=background-color:lightgray;color:gray ></span>
+      198    <span style=background-color:black;color:orangered >                &amp;&amp; </span><span style=background-color:black;color:orangered >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;value&quot; </span><span style=background-color:black;color:orangered >(</span><span style=background-color:black;color:orangered >vl&#39; </span><span style=background-color:black;color:orangered >`geq` </span><span style=background-color:black;color:orangered >vl)</span><span style=background-color:black;color:orangered ></span><span style=background-color:black;color:orangered ></span><span style=background-color:lightgray;color:gray ></span>
+      199    <span style=background-color:black;color:orangered >            _ -&gt; </span><span style=background-color:black;color:orangered >False</span><span style=background-color:lightgray;color:gray ></span>
+   </pre>
+
+This is the function that is used to check that each target payment is
+made when the escrow is redeemed, and as we see from the coverage
+report, there are two cases, of which only one has been tested. In
+fact the two cases handle payments to a wallet, and payments to a
+script, and the second kind of payment is *not tested at all* by our
+tests--yet it is handled by entirely different code in the on-chain
+function.
+
+**This exposes a serious deficiency in the tests developed so far**:
+they give us no evidence at all that target payments to a script work
+as intended. To test this code as well, we would need to add 'proxy'
+contracts to the tests, to act as recipients for such payments. We
+leave making this extension as an exercise for the reader.
+   
+.. _CoverageReport:
+
+The generated coverage report
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is the generated coverage report in its entirety:
+
+   .. raw:: html
+      :file: Escrow.html
+
+
+Debugging the Auction contract with model assertions
+----------------------------------------------------
+
+Notes.
+
+A real bug in Plutus.Contracts.Auction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Another example of a timing-dependent contract is the auction contract
+in ``Plutus.Contracts.Auction``. This module defines two contracts, a
+seller contract and a buyer contract. The seller puts up a ``Value``
+for sale, creating an auction UTXO containing the value, and buyers
+can then bid Ada for that value. When the auction deadline is reached,
+the highest bidder receives the auctioned value, and the seller
+receives the bid.
+
+``Spec.Auction`` contains a contract model for testing this
+contract. The value for sale is a custom token, wallet 1 is the
+seller, and the deadline is fixed at slot 101; the generated tests
+just consist of an ``Init`` action to start the auction, and ``Bid``
+actions by the other wallets. The model keeps track of the highest bid
+and bidder, and the current phase the auction is in: ``NotStarted``,
+``Bidding``, or ``AuctionOver``. We can test the contract with the
+model using ``prop_Auction``:
+
+
+Hmm.
+
+The Auction contract fails NoLockedFunds (although the model passes),
+so we find an interesting bug this way. But even more interesting is
+that the seller does not receive the full price. This is because of
+minAdaTx. A good way to discover this is to add an assertion in
+nextReactiveState. (Or perhaps in the strategy?) Useful to mention
+prop_SanityCheckAssertions, that can find this problem (since it is
+replicated in the model).
+
+
 
 
 Crash Tolerance
@@ -2169,11 +2478,6 @@ Strategy: wait until deadline.
 Testing crash tolerance. Strategy no longer works.
 
 
-Measuring coverage of on-chain code
------------------------------------
-
-Do coverage of Escrow, explain meanings. Motivate negative testing.
-Look at the real Escrow; note that payments to scripts are not tested.
 
    
 Negative testing
@@ -2212,12 +2516,3 @@ A larger example: the Uniswap contract
 
 Needs symbolic tokens, and wiggle room in "No Locked Funds"
 
-Notes
-=====
-
-   
-
-  
-  Precondition that there are no extra funds? Very small number of Redeems.
-  Model the actual behaviour. Much better distribution.
-  eeeeeeeeeeee

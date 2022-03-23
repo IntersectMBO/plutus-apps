@@ -38,7 +38,7 @@ import Data.IORef
 import Plutus.Contract.Test.Coverage.ReportCoverage qualified as ReportCoverage
 
 
--- | Get every endpoint name that has been invoced in the emulator events in `es`
+-- | Get every endpoint name that has been invoked in the emulator events in `es`
 -- indexed by `ContractInstanceTag`
 getInvokedEndpoints :: [EmulatorEvent] -> Map ContractInstanceTag (Set String)
 getInvokedEndpoints es =

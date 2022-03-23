@@ -13,7 +13,9 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:debug-context #-}
+{- START OPTIONS_GHC -}
 {-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
+{- END OPTIONS_GHC -}
 -- | A general-purpose escrow contract in Plutus
 module Plutus.Contracts.Escrow(
     -- $escrow
@@ -67,8 +69,10 @@ import Ledger.Value (Value, geq, lt)
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Typed
 import PlutusTx qualified
+{- START imports -}
 import PlutusTx.Code
 import PlutusTx.Coverage
+{- END imports -}
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
 import Prelude (Semigroup (..), foldMap)
@@ -209,13 +213,14 @@ validate EscrowParams{escrowDeadline, escrowTargets} contributor action ScriptCo
             traceIfFalse "escrowDeadline-before" ((escrowDeadline - 1) `before` txInfoValidRange scriptContextTxInfo)
             && traceIfFalse "txSignedBy" (scriptContextTxInfo `txSignedBy` unPaymentPubKeyHash contributor)
 
+{- START typedValidator -}
 typedValidator :: EscrowParams Datum -> Scripts.TypedValidator Escrow
 typedValidator escrow = go (Haskell.fmap Ledger.datumHash escrow) where
     go = Scripts.mkTypedValidatorParam @Escrow
         $$(PlutusTx.compile [|| validate ||])
         $$(PlutusTx.compile [|| wrap ||])
     wrap = Scripts.wrapValidator
-
+{- END typedValidator -}
 escrowContract
     :: EscrowParams Datum
     -> Contract () EscrowSchema EscrowError ()
@@ -362,5 +367,7 @@ payRedeemRefund params vl = do
     _ <- pay inst params vl
     go
 
+{- START covIdx -}
 covIdx :: CoverageIndex
 covIdx = getCovIdx $$(PlutusTx.compile [|| validate ||])
+{- END covIdx -}

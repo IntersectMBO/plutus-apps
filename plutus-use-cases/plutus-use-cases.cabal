@@ -117,6 +117,7 @@ test-suite plutus-use-cases-test
         Spec.Tutorial.Escrow2
         Spec.Tutorial.Escrow3
         Spec.Tutorial.Escrow4
+        Spec.Tutorial.Escrow5
         Spec.Future
         Spec.Game
         Spec.GameStateMachine
