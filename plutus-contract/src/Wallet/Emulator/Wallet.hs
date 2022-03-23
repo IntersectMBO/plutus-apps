@@ -315,7 +315,10 @@ handleBalance utx' = do
     pure $ Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
     where
         handleError tx (Left (Left (ph, ve))) = do
-            logWarn $ ValidationFailed ph (Ledger.txId tx) (Tx.EmulatorTx tx) ve (case ve of Ledger.ScriptFailure f -> [Ledger.ScriptValidationEvent undefined (Left f) undefined undefined]; _ -> []) mempty
+            let sves = case ve of
+                    Ledger.ScriptFailure f -> [Ledger.ResultOnlyEvent (Left f)]
+                    _                      -> []
+            logWarn $ ValidationFailed ph (Ledger.txId tx) (Tx.EmulatorTx tx) ve sves mempty
             throwError $ WAPI.ValidationError ve
         handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
         handleError _ (Right v) = pure v
