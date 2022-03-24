@@ -1,5 +1,5 @@
 -- Bump this if you need newer packages.
-index-state: 2022-02-22T20:47:03Z
+index-state: 2022-03-23T00:00:00Z
 
 packages: doc
           freer-extras
@@ -31,11 +31,7 @@ allow-newer:
   size-based:template-haskell
 
 constraints:
-     -- Because later versions of hedgehog introduce a change which break 'cardano-ledger':
-     -- Test/Cardano/Chain/Delegation/Model.hs:91:41: error:
-     --   • Could not deduce (TraversableB SignalSDELEG)
-     -- TODO: Try to remove on next `cardano-node` version upgrade.
-     hedgehog >= 1.0.2 && < 1.1
+  hedgehog >= 1.1 && < 1.2
 
 -- These packages appear in our dependency tree and are very slow to build.
 -- Empirically, turning off optimization shaves off ~50% build time.
@@ -67,13 +63,12 @@ package cardano-wallet-core-integration
 --   * <https://github.com/input-output-hk/iohk-monitoring-framework/commits/develop>
 -- (not master!)
 --
--- In particular we rely on the code from this PR:
---  * <https://github.com/input-output-hk/iohk-monitoring-framework/pull/622>
--- being merged.
+
+-- Follow this PR: https://github.com/input-output-hk/iohk-monitoring-framework/pull/627
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 46f994e216a1f8b36fe4669b47b2a7011b0e153c
+  tag: 23bb1280b0a82fb18224aa1e5ccbc4207020ccbf
   subdir:
     contra-tracer
     iohk-monitoring
@@ -90,7 +85,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 4127e9cd6e889824d724c30eae55033cb50cbf3e
+  tag: 70787f8b20648b910fff818bc0a458888d662f58
   subdir:
     plutus-core
     plutus-ledger-api
@@ -132,8 +127,8 @@ source-repository-package
 -- And it is indeed nice for plutus-apps to track stable releases of the node too.
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-wallet
-  tag: f6d4db733c4e47ee11683c343b440552f59beff7
+  location: git@github.com:MELD-labs/cardano-wallet.git
+  tag: c2a36cba7f7c9b3315eeec94d321a32db9c58d1c
   subdir:
     lib/cli
     lib/core
@@ -146,12 +141,12 @@ source-repository-package
     lib/test-utils
     lib/text-class
 
+-- Follow this PR: https://github.com/input-output-hk/cardano-node/pull/3700
 -- Should follow cardano-wallet.
--- Currently tracking v1.34.1.
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-node
-  tag: 73f9a746362695dc2cb63ba757fbcabb81733d23
+  location: https://github.com/MELD-labs/cardano-node
+  tag: 4d8710d5648849d60cc6f279cdc8f6106811c477
   subdir:
     cardano-api
     cardano-cli
@@ -159,8 +154,8 @@ source-repository-package
     cardano-node
     cardano-testnet
     trace-dispatcher
-    trace-forward
     trace-resources
+    trace-forward
 
 source-repository-package
   type: git
@@ -178,16 +173,16 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/hedgehog-extras
-  tag: edf6945007177a638fbeb8802397f3a6f4e47c14
-  --sha256: 0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9
+  tag: 967d79533c21e33387d0227a5f6cc185203fe658
 
 -- Should follow cardano-wallet.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5
+  tag: 7f3339e1f98946cc6189c4e4f3c6b3884cbefc1a
   subdir:
     eras/alonzo/impl
+    eras/babbage/impl
     eras/byron/chain/executable-spec
     eras/byron/crypto
     eras/byron/crypto/test
@@ -211,7 +206,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 4fac197b6f0d2ff60dc3486c593b68dc00969fbf
+  tag: 818845b9e53f5f24dd245e8b489541c26ad92586
   subdir:
     io-classes
     io-sim
@@ -235,7 +230,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 41545ba3ac6b3095966316a99883d678b5ab8da8
+  tag: 1587462ac8b2e50af2691f5ad93d3c2aa4674ed1
   subdir:
     base-deriving-via
     binary
@@ -265,8 +260,8 @@ source-repository-package
 -- Should follow cardano-wallet.
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-addresses
-  tag: 71006f9eb956b0004022e80aadd4ad50d837b621
+  location: git@github.com:MELD-labs/cardano-addresses.git
+  tag: fcf654cab181109a5c248dd17e07f2cf97c447a3
   subdir:
     command-line
     core
@@ -282,3 +277,35 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/Win32-network
   tag: 3825d3abf75f83f406c1f7161883c438dac7277d
+
+-- The origin ekg lib is forcing aeson >= 0.4 && < 1.6. Also have to use this PR o>
+source-repository-package
+  type: git
+  location: git@github.com:kk-anlm/ekg.git
+  tag: d13ab19a262d8945298c32477bd878c991d9bad9
+
+source-repository-package
+  type: git
+  location: https://github.com/vshabanov/ekg-json
+  tag: 00ebe7211c981686e65730b7144fbf5350462608
+
+source-repository-package
+  type: git
+  location: git@github.com:kk-anlm/blockfrost-haskell.git
+  tag: 84d56cb21f2162006c03ed7d5bd7a7f14556ff61
+  subdir:
+    blockfrost-api
+    blockfrost-client-core
+    blockfrost-client
+    blockfrost-pretty
+
+-- The newest commit allow attoparsec 0.14
+source-repository-package
+    type: git
+    location: https://github.com/snapframework/snap-server.git
+    tag: b9e82bbdd28768c2b8292e5aac5b6561a3edf975
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: 297cd9db5074339a2fb2e5ae7d0780debb670c63
