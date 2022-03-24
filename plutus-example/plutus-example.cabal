@@ -155,3 +155,7 @@ test-suite plutus-example-test
                         Test.PlutusExample.ScriptData
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+  build-tool-depends:   cardano-node:cardano-node
+                      , cardano-cli:cardano-cli
+  
