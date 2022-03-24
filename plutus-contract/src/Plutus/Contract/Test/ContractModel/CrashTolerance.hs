@@ -140,8 +140,11 @@ instance forall state.
       -- An action may start its own contract instances and we need to keep track of them
       aliveContractInstances %= ([Key k | StartContract (UnderlyingContractInstanceKey k) _ <- startInstances s (UnderlyingAction a)] ++)
     where
-      embed :: Spec state a -> Spec (WithCrashTolerance state) a
-      embed (Spec comp) = Spec (zoom (liftL _contractState underlyingModelState) comp)
+
+  nextReactiveState slot = embed $ nextReactiveState slot
+
+  monitoring (s,s') (UnderlyingAction a) = monitoring (_underlyingModelState <$> s,_underlyingModelState <$> s') a
+  monitoring _      _                    = id
 
   arbitraryAction s = frequency [ (10, UnderlyingAction <$> arbitraryAction (_underlyingModelState <$> s))
                                 , (1, Crash <$> QC.elements (s ^. contractState . aliveContractInstances))
@@ -153,3 +156,5 @@ instance forall state.
 liftL :: Functor t => (forall a. t a -> a) -> Lens' s a -> Lens' (t s) (t a)
 liftL extr l ft ts = getCompose . l (Compose . ft . (<$ ts)) $ extr ts
 
+embed :: Spec state a -> Spec (WithCrashTolerance state) a
+embed (Spec comp) = Spec (zoom (liftL _contractState underlyingModelState) comp)
