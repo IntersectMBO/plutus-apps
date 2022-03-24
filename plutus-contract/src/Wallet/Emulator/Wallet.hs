@@ -309,14 +309,15 @@ handleBalance utx' = do
             tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
             newFee <- handleError tx $ evaluateTransactionFee cUtxoIndex requiredSigners tx
             if newFee /= fee then calcFee (n - 1) newFee else pure newFee
-    theFee <- calcFee 4 $ Ada.lovelaceValueOf 1000000
+    -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
+    theFee <- calcFee 4 $ Ada.lovelaceValueOf 300000
     tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
     cTx <- handleError tx' $ fromPlutusTx cUtxoIndex requiredSigners tx'
     pure $ Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
     where
         handleError tx (Left (Left (ph, ve))) = do
             let sves = case ve of
-                    Ledger.ScriptFailure f -> [Ledger.ResultOnlyEvent (Left f)]
+                    Ledger.ScriptFailure f -> [Ledger.ScriptValidationResultOnlyEvent (Left f)]
                     _                      -> []
             logWarn $ ValidationFailed ph (Ledger.txId tx) (Tx.EmulatorTx tx) ve sves mempty
             throwError $ WAPI.ValidationError ve

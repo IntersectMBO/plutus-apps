@@ -462,7 +462,7 @@ data ScriptValidationEvent =
         , sveRedeemer :: Redeemer
         , sveType     :: ScriptType -- ^ What type of script it was
         }
-    | ResultOnlyEvent
+    | ScriptValidationResultOnlyEvent
         { sveResult   :: Either ScriptError (Api.ExBudget, [Text])
         }
     deriving stock (Eq, Show, Generic)
@@ -507,4 +507,4 @@ getScript UnappliedValidators ScriptValidationEvent{sveType} =
     case sveType of
         ValidatorScript (Validator script) _    -> script
         MintingPolicyScript (MintingPolicy mps) -> mps
-getScript _ ResultOnlyEvent{} = error "getScript: unexpected ResultOnlyEvent"
+getScript _ ScriptValidationResultOnlyEvent{} = error "getScript: unexpected ScriptValidationResultOnlyEvent"
