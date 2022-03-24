@@ -17,6 +17,10 @@ module Spec.Auction
     , prop_Auction
     , prop_FinishAuction
     , prop_NoLockedFunds
+    , prop_NoLockedFundsFast
+    , prop_Whitelist
+    , prop_CrashTolerance
+    , check_propAuctionWithCoverage
     ) where
 
 import Control.Lens hiding (elements)
@@ -41,6 +45,9 @@ import Ledger qualified
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Test.ContractModel
+import Plutus.Contract.Test.ContractModel.CrashTolerance
+import Plutus.Contract.Test.ContractModel.Symbolics (toSymValue)
+import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.Auction hiding (Bid)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Monoid (inv)
@@ -228,6 +235,12 @@ instance ContractModel AuctionModel where
         phase .= AuctionOver
         deposit w $ Ada.toValue Ledger.minAdaTxOut <> theToken
         deposit w1 $ Ada.lovelaceValueOf bid
+        {-
+        w1change <- viewModelState $ balanceChange w1  -- since the start of the test
+        assertSpec ("w1 final balance is wrong:\n  "++show w1change) $
+          w1change == toSymValue (inv theToken <> Ada.lovelaceValueOf bid) ||
+          w1change == mempty
+        -}
 
     -- This command is only for setting up the model state with theToken
     nextState cmd = do
@@ -322,12 +335,36 @@ noLockProof = defaultNLFP
   where
     strat = do
       p <- viewContractState phase
-      when (p == NotStarted) $ action $ Init w1
-      slot <- viewModelState currentSlot
-      when (slot < 101) $ waitUntilDL 101
+      when (p /= NotStarted) $ do
+        slot <- viewModelState currentSlot
+        when (slot < 101) $ waitUntilDL 101
 
 prop_NoLockedFunds :: Property
 prop_NoLockedFunds = checkNoLockedFundsProofWithOptions (set minLogLevel Critical options) noLockProof
+
+prop_NoLockedFundsFast :: Property
+prop_NoLockedFundsFast = checkNoLockedFundsProofFast noLockProof
+
+prop_Whitelist :: Actions AuctionModel -> Property
+prop_Whitelist = checkErrorWhitelist defaultWhitelist
+
+instance CrashTolerance AuctionModel where
+  available (Bid w _) alive = (Key $ BuyerH  w) `elem` alive
+  available (Init w)  alive = (Key $ SellerH)   `elem` alive
+
+  restartArguments _ BuyerH{}  = ()
+  restartArguments _ SellerH{} = ()
+
+prop_CrashTolerance :: Actions (WithCrashTolerance AuctionModel) -> Property
+prop_CrashTolerance = propRunActionsWithOptions (set minLogLevel Critical options) defaultCoverageOptions
+        (\ _ -> pure True)
+
+check_propAuctionWithCoverage :: IO ()
+check_propAuctionWithCoverage = do
+  cr <- quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+    withMaxSuccess 1000 $
+      propRunActionsWithOptions @AuctionModel (set minLogLevel Critical options) covopts (const (pure True))
+  writeCoverageReport "Auction" covIdx cr
 
 tests :: TestTree
 tests =

@@ -2429,11 +2429,189 @@ This is the generated coverage report in its entirety:
    .. raw:: html
       :file: Escrow.html
 
+Crashes, and how to tolerate them
+---------------------------------
+
+One awkward possibility, that we cannot avoid, is that a contract
+instance might crash during execution--for example, because of a power
+failure to the machine it is running on. We don't want anything to be
+lost permanently as a result--it should be possible to recover by
+restarting the contract instance, perhaps in a different state, and
+continue. Yet how should we test this? We need to deliberately crash
+and restart contracts in tests, and check that they still behave as
+the model says they should.
+
+The ``ContractModel`` framework provides a simple way to *extend* a
+contract model, so that it can test crash-tolerance too. If ``m`` is a
+``ContractModel`` instance, then so is ``WithCrashTolerance m``--and
+testing the latter model will insert actions to crash and restart
+contract instances at random. To define a property that runs these
+tests, all we have to do is include ``WithCrashTolerance`` in the type
+signature:
+
+ .. literalinclude:: Escrow6.hs
+   :start-after: START prop_CrashTolerance
+   :end-before: END prop_CrashTolerance
+
+(The actual code here is the same as ``prop_Escrow``, only the type is different).
+
+We do have to provide a little more information before we can run
+tests, though.
+
+#. Firstly, we cannot expect to include an action in a
+   test, when the contract(s) that should perform the action are not
+   running. We thus need to tell the framework whether or not an action
+   is *available*, given the contracts currently running.
+                
+#. Secondly, when we restart a contract it may need to take some
+   recovery action, and so we must be able to give it the necessary
+   information to recover. We achieve this by specifying
+   possibly-different contract parameters to use, when a contract is
+   restarted. These parameters may depend on the model state.
+
+We provide this information by defining an instance of the
+``CrashTolerance`` class:
+
+ .. literalinclude:: Escrow6.hs
+   :start-after: START CrashTolerance
+   :end-before: END CrashTolerance
+
+The ``available`` method returns ``True`` if an action is available,
+given a list of active contract keys ``alive``; since contract
+instance keys have varying types, then the list actually contains keys
+wrapped in an existential type, which is why the ``Key`` constructor
+appears there.
+
+The ``restartArguments`` method provides the parameter for restarting
+an escrow contract, which in this case can be just the same as when
+the contract was first started. We need to recover the targets from
+the model state, in which they are represented as a ``Map Wallet
+Value``, so we convert them back to a list and refactor the
+``escrowParams`` function so we can give ``escrowParams'`` a list of
+``(Wallet,Value)`` pairs, rather than a list of ``(Wallet,Int)``:
+
+ .. literalinclude:: Escrow6.hs
+   :start-after: START escrowParams
+   :end-before: END escrowParams
+
+It is possible to define the effect of crashing or restarting a
+contract instance on the *model* too, if need be, by defining
+additional methods in this class. In this case, though, crashing and
+restarting ought to be entirely transparent, so we can omit them.
+                
+Surprisingly, the tests do not pass!
+
+  .. code-block:: text
+
+   > quickCheck prop_CrashTolerance
+   *** Failed! Assertion failed (after 24 tests and 26 shrinks):
+   Actions 
+    [Init (Slot {getSlot = 6}) [(Wallet 1,2),(Wallet 4,2)],
+     Crash (WalletKey (Wallet 4)),
+     Restart (WalletKey (Wallet 4)),
+     Pay (Wallet 4) 4,
+     Redeem (Wallet 1)]
+   Expected funds of W[4] to change by
+     Value (Map [(,Map [("",-2000000)])])
+   but they changed by
+     Value (Map [(,Map [("",-4000000)])])
+   a discrepancy of
+     Value (Map [(,Map [("",-2000000)])])
+   Expected funds of W[1] to change by
+     Value (Map [(,Map [("",2000000)])])
+   but they did not change
+   Contract instance log failed to validate:
+   ...
+   Slot 5: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
+             Contract instance stopped with error: RedeemFailed NotEnoughFundsAtAddress
+   ...
+
+Here we simply set up targets with two beneficiaries, crash and
+restart wallet 4, pay sufficient contributions to cover the targets,
+and then try to redeem the escrow, which seems straightforward enough,
+and yet the redemption thinks there are not enough funds in the
+escrow, *even though we just paid them in*!
+
+This failure is a little tricky to debug. A clue is that the *payment*
+was made by a contract instance that has been restarted, while the
+*redemption* was made by a contract that has not. Do the payment and
+redemption actually refer to the same escrow? In fact the targets
+supplied to the contract instance are not necessarily exactly the
+same: the contract receives a *list* of targets, but in the model we
+represented them as a *map*--and converted the list of targets to a
+map, and back again, when we restarted the contract. That means the
+*order* of the targets might be different.
+
+Could that make a difference? To find out, we can just *sort* the
+targets before passing them to the contract instance, thus
+guaranteeing the same order every time:
+
+ .. literalinclude:: Escrow6.hs
+   :start-after: START betterEscrowParams
+   :end-before: END betterEscrowParams
+
+Once we do this, the tests pass. We can also see from the resulting
+statistics that quite a lot of crashing and restarting is going on:
+
+  .. code-block:: text
+
+   > quickCheck prop_CrashTolerance
+   +++ OK, passed 100 tests.
+   
+   Actions (2721 in total):
+   42.48% Pay
+   24.99% WaitUntil
+   13.08% Crash
+    9.52% Restart
+    6.06% Redeem
+    3.01% Init
+    0.85% Refund
+
+Perhaps it's debatable whether or not the behaviour we uncovered here
+is a *bug*, but it is certainly a feature--it was not obvious in
+advance that specifying the same targets in a different order would
+create an independent escrow, but that is what happens. So for
+example, if a buyer and seller using an escrow contract to exchange an
+NFT for Ada specify the two targets in different orders, then they
+would place their assets in independent escrow that cannot be redeemed
+until the refund deadline passes. Arguably a better designed contract
+would sort the targets by wallet, as we have done here, before
+creating any UTXOs, so that the problem cannot arise.
+
+Exercises
+^^^^^^^^^
+
+You will find the code discussed here in ``Spec.Tutorial.Escrow6``, *without* the addition of ``sortBy`` to ``escrowParams``.
+
+#. Run ``quickCheck prop_CrashTolerance`` to provoke a test
+   failure. Examine the counterexample and the test output, and make
+   sure you understand how the test fails. Run this test several
+   times: you will see the failure in several different forms, with
+   the same underlying cause. Make sure you understand how each
+   failure arises.
+
+   Why does ``quickCheck`` always report a test case with *two* target
+   payments--why isn't one target enough to reveal the problem?
+
+#. Add sorting to the model, and verify that the tests now pass.
+
+#. An alternative way to fix the model is *not* to convert the targets
+   to a ``Map`` in the model state, but just keep them as a list of
+   pairs, so that exactly the same list can be supplied to the
+   contract instances when they are restarted. Implement this change,
+   and verify that the tests still pass.
+
+   Which solution do you prefer? Arguably this one reflects the
+   *actual* design of the contract more closely, since the model makes
+   explicit that the order of the targets matters.
+
 
 Debugging the Auction contract with model assertions
 ----------------------------------------------------
 
 Notes.
+
+Adding the assertion to nextReactiveState makes the contract fail.
 
 A real bug in Plutus.Contracts.Auction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2466,16 +2644,8 @@ nextReactiveState. (Or perhaps in the strategy?) Useful to mention
 prop_SanityCheckAssertions, that can find this problem (since it is
 replicated in the model).
 
-
-
-
-Crash Tolerance
----------------
-
-Auction contract: pays out automatically.
-Strategy: wait until deadline.
-
-Testing crash tolerance. Strategy no longer works.
+Fails CrashTolerance too, because we cannot restart the seller (tries
+to recreate the auction).
 
 
 
