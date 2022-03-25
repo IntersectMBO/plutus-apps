@@ -78,7 +78,7 @@ runMain logConfig config = do
     print slotNo
 
     -- Queue for processing events
-    eventsQueue <- newTBMQueueIO (fromIntegral (Config.cicAppendQueueSize config)) measureEventByTxs
+    eventsQueue <- newTBMQueueIO (Config.cicAppendTransactionQueueSize config) measureEventByTxs
     syncHandler
       <- storeChainSyncHandler eventsQueue
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)
