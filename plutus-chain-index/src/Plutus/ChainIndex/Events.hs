@@ -12,10 +12,12 @@ module Plutus.ChainIndex.Events where
 
 import Cardano.BM.Trace (Trace)
 import Control.Concurrent (threadDelay)
-import Control.Concurrent.STM (atomically, flushTBQueue, isFullTBQueue)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TBMQueue (flushTBMQueue, isFullTBMQueue)
 import Control.Monad (forever, void)
 import Data.Functor ((<&>))
 import Data.Maybe (catMaybes)
+import Numeric.Natural (Natural)
 import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward), EventsQueue, RunRequirements,
                               runChainIndexDuringSync)
@@ -25,7 +27,19 @@ import System.Clock (Clock (Monotonic), TimeSpec, diffTimeSpec, getTime)
 
 -- | How often do we check the queue
 period :: Int
-period = 5_000_000 -- 5s
+period = 2_000_000 -- 2s
+
+-- | We estimate the size of the event with the number of the transactions in the block.
+-- By doing this we accumulate some number of blocks but with less than 'queueSize' number of transactions.
+-- This approach helps to process blocks with a constant memory usage.
+--
+-- Just accumulating 'queueSize' blocks doesn't work as a block can have any number of transactions.
+-- It works fine at the beginning of the chain but later blocks grow in their size and the memory
+-- usage grows tremendously.
+measureEventByTxs :: ChainSyncEvent -> Natural
+measureEventByTxs = \case
+  (RollForward (CI.Block _ transactions) _) -> fromIntegral $ length transactions
+  _                                         -> 1
 
 -- | 'processEventsQueue' reads events from 'TBQueue', collects enough 'RollForward's to
 -- append blocks at once.
@@ -35,8 +49,8 @@ processEventsQueue trace runReq eventsQueue = forever $ do
   eventsToProcess <- do
     let
       waitUntilEvents = do
-        isFull <- atomically $ isFullTBQueue eventsQueue
-        if isFull then atomically $ flushTBQueue eventsQueue
+        isFull <- atomically $ isFullTBMQueue eventsQueue
+        if isFull then atomically $ flushTBMQueue eventsQueue
         else threadDelay period >> waitUntilEvents
     waitUntilEvents
   processEvents start eventsToProcess

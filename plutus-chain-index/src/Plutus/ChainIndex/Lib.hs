@@ -62,7 +62,8 @@ import Cardano.BM.Trace (Trace, logDebug, logError, nullTracer)
 
 import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
-import Control.Concurrent.STM (TBQueue, atomically, writeTBQueue)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TBMQueue (TBMQueue, writeTBMQueue)
 import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequirements), getResumePoints,
                           runChainIndexEffects, tipBlockNo)
 import Plutus.ChainIndex qualified as CI
@@ -133,10 +134,10 @@ toCardanoChainSyncHandler runReq handler = \case
 
 -- | A handler for chain synchronisation events.
 type ChainSyncHandler = ChainSyncEvent -> IO ()
-type EventsQueue = TBQueue ChainSyncEvent
+type EventsQueue = TBMQueue ChainSyncEvent
 
 storeChainSyncHandler :: EventsQueue -> ChainSyncHandler
-storeChainSyncHandler eventsQueue = atomically . writeTBQueue eventsQueue
+storeChainSyncHandler eventsQueue = atomically . writeTBMQueue eventsQueue
 
 -- | Changes the given @ChainSyncHandler@ to only store transactions with a block number no smaller than the given one.
 storeFromBlockNo :: CI.BlockNumber -> ChainSyncHandler -> ChainSyncHandler

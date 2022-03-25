@@ -59,6 +59,7 @@
           ];
         buildable = true;
         modules = [
+          "Control/Concurrent/STM/TBMQueue"
           "Plutus/ChainIndex/App"
           "Plutus/ChainIndex/Events"
           "Plutus/ChainIndex/CommandLine"
