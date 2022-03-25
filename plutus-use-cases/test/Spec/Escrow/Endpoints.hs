@@ -29,8 +29,9 @@ import Prelude (Semigroup (..))
 
 import Plutus.Contracts.Escrow
 
-type EscrowTestSchema = Endpoint "badrefund-escrow" PaymentPubKeyHash .\/ EscrowSchema
+type EscrowTestSchema = {-Endpoint "badrefund-escrow" PaymentPubKeyHash .\/ -} EscrowSchema
 
+{-
 -- | 'badRefund' with an endpoint.
 badRefundEp ::
     forall w s.
@@ -58,3 +59,4 @@ badRefund inst pk = do
     handleError (\err -> logError $ "Caught error: " ++ unpack err) $
       adjustUnbalancedTx utx >>= void . submitUnbalancedTx
 
+-}

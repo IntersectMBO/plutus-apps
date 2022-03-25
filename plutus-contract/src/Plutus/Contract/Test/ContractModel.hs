@@ -145,6 +145,9 @@ module Plutus.Contract.Test.ContractModel
     , defaultWhitelist
     , checkErrorWhitelist
     , checkErrorWhitelistWithOptions
+    -- * Double satisfaction
+    , checkDoubleSatisfaction
+    , checkDoubleSatisfactionWithOptions
     ) where
 
 import Plutus.Contract.Test.ContractModel.Internal

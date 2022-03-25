@@ -7,7 +7,15 @@
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace, prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) where
+module Spec.Escrow( tests
+                  , redeemTrace
+                  , redeem2Trace
+                  , refundTrace
+                  , prop_Escrow
+                  , prop_Escrow_DoubleSatisfaction
+                  , prop_FinishEscrow
+                  , prop_NoLockedFunds
+                  , EscrowModel) where
 
 import Control.Lens hiding (both)
 import Control.Monad (void, when)
@@ -58,7 +66,7 @@ instance ContractModel EscrowModel where
   data Action EscrowModel = Pay Wallet Integer
                           | Redeem Wallet
                           | Refund Wallet
-                          | BadRefund Wallet Wallet
+                          -- | BadRefund Wallet Wallet
                           deriving (Eq, Show, Data)
 
   data ContractInstanceKey EscrowModel w s e params where
@@ -87,7 +95,7 @@ instance ContractModel EscrowModel where
       testContract = selectList [ void $ payEp modelParams
                                 , void $ redeemEp modelParams
                                 , void $ refundEp modelParams
-                                , void $ badRefundEp modelParams
+                                --, void $ badRefundEp modelParams
                                 ] >> testContract
 
   nextState a = void $ case a of
@@ -108,8 +116,8 @@ instance ContractModel EscrowModel where
       contributions %= Map.delete w
       deposit w v
       wait 1
-    BadRefund _ _ -> do
-      wait 2
+    -- BadRefund _ _ -> do
+    --   wait 2
 
   precondition s a = case a of
     Redeem _ -> (s ^. contractState . contributions . to fold) `geq` (s ^. contractState . targets . to fold)
@@ -118,8 +126,8 @@ instance ContractModel EscrowModel where
              && Nothing /= (s ^. contractState . contributions . at w)
     Pay _ v -> s ^. currentSlot + 1 < s ^. contractState . refundSlot
             && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
-    BadRefund w w' -> s ^. currentSlot < s ^. contractState . refundSlot - 2  -- why -2?
-                   || w /= w'
+    -- BadRefund w w' -> s ^. currentSlot < s ^. contractState . refundSlot - 2  -- why -2?
+    --                || w /= w'
 
   perform h _ _ a = case a of
     Pay w v        -> do
@@ -131,13 +139,13 @@ instance ContractModel EscrowModel where
     Refund w       -> do
       Trace.callEndpoint @"refund-escrow" (h $ WalletKey w) ()
       delay 1
-    BadRefund w w' -> do
-      Trace.callEndpoint @"badrefund-escrow" (h $ WalletKey w) (mockWalletPaymentPubKeyHash w')
-      delay 2
+    -- BadRefund w w' -> do
+    --   Trace.callEndpoint @"badrefund-escrow" (h $ WalletKey w) (mockWalletPaymentPubKeyHash w')
+    --   delay 2
 
   arbitraryAction s = frequency $ [ (prefer beforeRefund,  Pay <$> QC.elements testWallets <*> choose @Integer (10, 30))
-                                  , (prefer beforeRefund,  Redeem <$> QC.elements testWallets)
-                                  , (prefer afterRefund,   BadRefund <$> QC.elements testWallets <*> QC.elements testWallets) ] ++
+                                  , (prefer beforeRefund,  Redeem <$> QC.elements testWallets) ] ++
+                                  -- , (prefer afterRefund,   BadRefund <$> QC.elements testWallets <*> QC.elements testWallets) ] ++
                                   [ (prefer afterRefund,   Refund <$> QC.elements (s ^. contractState . contributions . to Map.keys))
                                   | Prelude.not . null $ s ^. contractState . contributions . to Map.keys ]
                   where
@@ -147,7 +155,7 @@ instance ContractModel EscrowModel where
                     prefer b = if b then 10 else 1
 
   monitoring _ (Redeem _) = classify True "Contains Redeem"
-  monitoring (_,_) (BadRefund w w') = tabulate "Bad refund attempts" [if w==w' then "early refund" else "steal refund"]
+  --monitoring (_,_) (BadRefund w w') = tabulate "Bad refund attempts" [if w==w' then "early refund" else "steal refund"]
   monitoring (s,s') _ = classify (redeemable s' && Prelude.not (redeemable s)) "Redeemable"
     where redeemable s = precondition s (Redeem undefined)
 
@@ -156,6 +164,9 @@ testWallets = [w1, w2, w3, w4, w5] -- removed five to increase collisions (, w6,
 
 prop_Escrow :: Actions EscrowModel -> Property
 prop_Escrow = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure True)
+
+prop_Escrow_DoubleSatisfaction :: Actions EscrowModel -> Property
+prop_Escrow_DoubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
 
 finishEscrow :: DL EscrowModel ()
 finishEscrow = do
@@ -250,8 +261,8 @@ tests = testGroup "escrow"
 
     , testProperty "QuickCheck ContractModel" $ withMaxSuccess 10 prop_Escrow
     , testProperty "QuickCheck NoLockedFunds" $ withMaxSuccess 10 prop_NoLockedFunds
+    , testProperty "QuickCheck double satisfaction fails" $ expectFailure (noShrinking prop_Escrow_DoubleSatisfaction)
     ]
-
     where
         startTime = TimeSlot.scSlotZeroTime def
 
