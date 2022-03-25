@@ -41,7 +41,6 @@ import Ledger.Validation qualified as Validation
 import Plutus.Contract.Util (uncurry3)
 import Prettyprinter
 
-
 -- | Events produced by the blockchain emulator.
 data ChainEvent =
     TxnValidate TxId CardanoTx [ScriptValidationEvent]
@@ -200,7 +199,7 @@ mkValidationEvent idx t result events =
 validateEm
     :: S.MonadState Index.ValidationCtx m
     => Slot
-    -> Validation.UTxOState Index.EmulatorEra
+    -> Validation.UTxO Index.EmulatorEra
     -> CardanoTx
     -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
 validateEm h cUtxoIndex txn = do
@@ -212,9 +211,9 @@ validateEm h cUtxoIndex txn = do
     _ <- S.put ctx{Index.vctxIndex=idx'}
     pure (e, events)
 
-validateL :: Slot -> Validation.UTxOState Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
-validateL slot idx (SomeTx tx AlonzoEraInCardanoMode) = (,) Index.Phase1 <$> Validation.hasValidationErrors (fromIntegral slot) idx tx
-validateL _    _   _ = Nothing
+validateL :: Slot -> Validation.UTxO Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
+validateL slot idx (SomeTx tx AlonzoEraInCardanoMode) = Validation.hasValidationErrors (fromIntegral slot) idx tx
+validateL _    _   _                                  = Nothing
 
 -- | Adds a block to ChainState, without validation.
 addBlock :: Block -> ChainState -> ChainState

@@ -104,6 +104,7 @@ writeScript fp prefix mode idx event@ScriptValidationEvent{sveResult} = do
     putStrLn $ "Writing script: " <> filename <> " (" <> either show (showStats byteSize . fst) sveResult <> ")"
     BSL.writeFile filename bytes
     pure (Sum byteSize, foldMap fst sveResult)
+writeScript _ _ _ _ _ = pure mempty
 
 showStats :: Int64 -> ExBudget -> String
 showStats byteSize (ExBudget exCPU exMemory) = "Size: " <> size <> "kB, Cost: " <> show exCPU <> ", " <> show exMemory

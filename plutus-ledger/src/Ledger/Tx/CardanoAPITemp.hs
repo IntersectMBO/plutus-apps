@@ -10,6 +10,7 @@ module Ledger.Tx.CardanoAPITemp (makeTransactionBody') where
 
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
+import Data.Maybe qualified as Maybe
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 
@@ -23,6 +24,7 @@ import Cardano.Ledger.Core qualified as Ledger
 
 import Cardano.Ledger.Alonzo.Data qualified as Alonzo
 import Cardano.Ledger.Alonzo.Language qualified as Alonzo
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxBody qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
@@ -33,8 +35,12 @@ import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Ledger.Shelley.Tx qualified as Shelley
 import Cardano.Ledger.Shelley.TxBody qualified as Shelley
 
-makeTransactionBody' :: TxBodyContent BuildTx AlonzoEra -> Either TxBodyError (TxBody AlonzoEra)
 makeTransactionBody'
+    :: Map.Map Alonzo.RdmrPtr Alonzo.ExUnits
+    -> TxBodyContent BuildTx AlonzoEra
+    -> Either TxBodyError (TxBody AlonzoEra)
+makeTransactionBody'
+    exUnits
     txbodycontent@TxBodyContent {
         txIns,
         txInsCollateral,
@@ -128,7 +134,7 @@ makeTransactionBody'
     redeemers =
       Alonzo.Redeemers $
         Map.fromList
-          [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
+          [ let ptr = toAlonzoRdmrPtr idx in (ptr, (toAlonzoData d, Maybe.fromMaybe (toAlonzoExUnits e) $ Map.lookup ptr exUnits))
           | (idx, AnyScriptWitness
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]

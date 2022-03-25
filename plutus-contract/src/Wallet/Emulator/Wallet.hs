@@ -27,7 +27,7 @@ import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
 import Control.Monad (foldM, (<=<))
 import Control.Monad.Freer (Eff, Member, Members, interpret, type (~>))
 import Control.Monad.Freer.Error (Error, runError, throwError)
-import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo)
+import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logInfo, logWarn)
 import Control.Monad.Freer.State (State, get, gets, put)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), ToJSONKey)
@@ -48,8 +48,7 @@ import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PrivateKey, PubKeyHash, SomeCardanoApiTx,
-               StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (getIndex), ValidatorHash,
-               Value)
+               StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (..), ValidatorHash, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -58,7 +57,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx))
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusTx)
+import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusIndex, fromPlutusTx)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -71,12 +70,13 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 import Wallet.API qualified as WAPI
+
 import Wallet.Effects (NodeClientEffect,
                        WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx),
                        publishTx)
 import Wallet.Emulator.Chain (ChainState (_index))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
-                                    TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SigningTx, SubmittingTx))
+                                    TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SigningTx, SubmittingTx, ValidationFailed))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
 
 
@@ -260,19 +260,9 @@ handleWallet = \case
         )
         => UnbalancedTx
         -> Eff effs (Either WalletAPIError CardanoTx)
-    balanceTxH utx' = runError $ do
-        logInfo $ BalancingUnbalancedTx utx'
-        utxo <- get >>= ownOutputs
-        slotConfig <- WAPI.getClientSlotConfig
-        let utx = finalize slotConfig utx'
-        -- Balance with dummy fee to get a better estimate of the number of inputs and outputs
-        -- Use a large value otherwise `evaluateTransactionFee` calculates a value 1 or 2 lovelace too few
-        tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ Ada.lovelaceValueOf 1000000)
-        let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
-        theFee <- either (throwError . WAPI.ToCardanoError) pure $ evaluateTransactionFee requiredSigners tx
-        tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-        cTx <- either (throwError . WAPI.ToCardanoError) pure $ fromPlutusTx requiredSigners tx'
-        let txCTx = Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
+    balanceTxH utx = runError $ do
+        logInfo $ BalancingUnbalancedTx utx
+        txCTx <- handleBalance utx
         logInfo $ FinishedBalancing txCTx
         pure txCTx
 
@@ -298,6 +288,41 @@ handleWallet = \case
         case balancedTxM of
             Left err         -> throwError err
             Right balancedTx -> walletAddSignatureH balancedTx >>= submitTxnH
+
+handleBalance ::
+    ( Member NodeClientEffect effs
+    , Member ChainIndexQueryEffect effs
+    , Member (State WalletState) effs
+    , Member (LogMsg TxBalanceMsg) effs
+    , Member (Error WAPI.WalletAPIError) effs
+    )
+    => UnbalancedTx
+    -> Eff effs CardanoTx
+handleBalance utx' = do
+    utxo <- get >>= ownOutputs
+    slotConfig <- WAPI.getClientSlotConfig
+    let utx = finalize slotConfig utx'
+    let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
+    cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
+    -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
+    let calcFee n fee = if n == (0 :: Int) then pure fee else do
+            tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
+            newFee <- handleError tx $ evaluateTransactionFee cUtxoIndex requiredSigners tx
+            if newFee /= fee then calcFee (n - 1) newFee else pure newFee
+    -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
+    theFee <- calcFee 4 $ Ada.lovelaceValueOf 300000
+    tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
+    cTx <- handleError tx' $ fromPlutusTx cUtxoIndex requiredSigners tx'
+    pure $ Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
+    where
+        handleError tx (Left (Left (ph, ve))) = do
+            let sves = case ve of
+                    Ledger.ScriptFailure f -> [Ledger.ScriptValidationResultOnlyEvent (Left f)]
+                    _                      -> []
+            logWarn $ ValidationFailed ph (Ledger.txId tx) (Tx.EmulatorTx tx) ve sves mempty
+            throwError $ WAPI.ValidationError ve
+        handleError _ (Left (Right ce)) = throwError $ WAPI.ToCardanoError ce
+        handleError _ (Right v) = pure v
 
 handleAddSignature ::
     Member (State WalletState) effs
