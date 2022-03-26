@@ -1722,6 +1722,8 @@ integers), and shrink them (by reusing integer shrinking):
 
 Now we are ready to run tests.
 
+ .. _Timing:
+ 
 Modelling the passage of time
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2609,45 +2611,378 @@ You will find the code discussed here in ``Spec.Tutorial.Escrow6``, *without* th
 Debugging the Auction contract with model assertions
 ----------------------------------------------------
 
-Notes.
+In this section, we'll apply the techniques we have seen so far to
+test another contract, and we'll see how they reveal some surprising
+behaviour.  The contract we take this time is the auction contract in
+``Plutus.Contracts.Auction``. This module actually defines *two*
+contracts, a seller contract and a buyer contract. The seller puts up
+a ``Value`` for sale, creating an auction UTXO containing the value,
+and buyers can then bid Ada for it. When the auction deadline is
+reached, the highest bidder receives the auctioned value, and the
+seller receives the bid.
 
-Adding the assertion to nextReactiveState makes the contract fail.
-
-A real bug in Plutus.Contracts.Auction
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Another example of a timing-dependent contract is the auction contract
-in ``Plutus.Contracts.Auction``. This module defines two contracts, a
-seller contract and a buyer contract. The seller puts up a ``Value``
-for sale, creating an auction UTXO containing the value, and buyers
-can then bid Ada for that value. When the auction deadline is reached,
-the highest bidder receives the auctioned value, and the seller
-receives the bid.
+Modelling the Auction contract
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``Spec.Auction`` contains a contract model for testing this
 contract. The value for sale is a custom token, wallet 1 is the
-seller, and the deadline is fixed at slot 101; the generated tests
-just consist of an ``Init`` action to start the auction, and ``Bid``
-actions by the other wallets. The model keeps track of the highest bid
-and bidder, and the current phase the auction is in: ``NotStarted``,
-``Bidding``, or ``AuctionOver``. We can test the contract with the
-model using ``prop_Auction``:
+seller, and the deadline used for testing is fixed at slot 101; the
+generated tests just consist of an ``Init`` action to start the
+auction, and a series of ``Bid`` actions by the other wallets.
+
+ .. literalinclude:: Auction.hs
+   :start-after: START Action
+   :end-before: END Action
+
+The model keeps track of the highest bid and bidder, and the current
+phase the auction is in:
+
+ .. literalinclude:: Auction.hs
+   :start-after: START model
+   :end-before: END model
+
+It is updated by the ``nextState`` method on each bid:
+
+ .. literalinclude:: Auction.hs
+   :start-after: START nextState
+   :end-before: END nextState
+
+Note that when a higher bid is received, the previous bid is returned
+to the bidder.
+
+We only allow bids that are larger than the previous one (which is why
+``nextState`` doesn't need to check this):
+
+ .. literalinclude:: Auction.hs
+   :start-after: START precondition
+   :end-before: END precondition
+
+The most interesting part of the model covers what happens when the
+auction deadline is reached: in contrast to the ``Escrow`` contract,
+the highest bid is paid to the seller automatically, and the buyer
+receives the token. We model this using the ``nextReactiveState``
+method introduced in section :ref:`Timing`
+
+ .. literalinclude:: Auction.hs
+   :start-after: START nextReactiveState
+   :end-before: END nextReactiveState
+                
+Finally we can define the property to test; in this case we have to
+supply some options to initialize wallet 1 with the token to be
+auctioned:
+
+ .. literalinclude:: Auction.hs
+   :start-after: START prop_Auction
+   :end-before: END prop_Auction
+
+The only important part here is ``options``, which is defined as follows:
+
+ .. literalinclude:: Auction.hs
+   :start-after: START options
+   :end-before: END options
+
+Unsurprisingly, the tests pass.
+
+  .. code-block:: text
+
+   > quickCheck prop_Auction
+   +++ OK, passed 100 tests.
+   
+   Actions (2348 in total):
+   85.82% Bid
+   10.35% WaitUntil
+    3.83% Init
+ 
+No locked funds?
+^^^^^^^^^^^^^^^^
+
+Now we have a basic working model of the auction contract, we can
+begin to test more subtle properties. To begin with, can we recover
+the funds held by the contract? The strategy to try is obvious: all we
+have to do is wait for the deadline to pass. So ``prop_FinishAuction``
+is very simple:
+
+ .. literalinclude:: Auction.hs
+   :start-after: START prop_FinishAuction
+   :end-before: END prop_FinishAuction
+
+This property passes too:
+
+  .. code-block:: text
+
+   > quickCheck prop_FinishAuction
+   +++ OK, passed 100 tests.
+   
+   Actions (3152 in total):
+   84.77% Bid
+   12.25% WaitUntil
+    2.98% Init
+
+Now, to supply a ``NoLockedFundsProof`` we need a general strategy for
+fund recovery, and a wallet-specific one. Since all we have to do is
+wait, we can use the *same* strategy as both.
+
+ .. literalinclude:: Auction.hs
+   :start-after: START noLockProof
+   :end-before: END noLockProof
+
+Surprisingly, *these tests fail*!
+
+  .. code-block:: text
+
+   > quickCheck prop_NoLockedFunds
+   *** Failed! Assertion failed (after 2 tests and 1 shrink):
+   DLScript
+     [Do $ Init, 
+      Do $ Bid (Wallet 3) 2000000]
+   
+   The ContractModel's Unilateral behaviour for Wallet 3 does not match the
+   actual behaviour for actions:
+   Actions 
+    [Var 0 := Init,
+     Var 1 := Bid (Wallet 3) 2000000,
+     Var 2 := Unilateral (Wallet 3),
+     Var 3 := WaitUntil (Slot {getSlot = 101})]
+   Expected funds of W[1] to change by
+     Value (Map [(363d...,Map [("token",-1)])])
+   but they changed by
+     Value (Map [(,Map [("",-2000000)]),(363d...,Map [("token",-1)])])
+   a discrepancy of
+     Value (Map [(,Map [("",-2000000)])])
+   Expected funds of W[3] to change by
+     Value (Map [(363d...,Map [("token",1)])])
+   but they changed by
+     Value (Map [(,Map [("",-2000000)])])
+   a discrepancy of
+     Value (Map [(,Map [("",-2000000)]),(363d...,Map [("token",-1)])])
+   Test failed.
+                
+This test just started the auction and submitted a bid from wallet 3,
+then *stopped all the other wallets* (this is what ``Unilateral
+(Wallet 3)`` does), before waiting until the auction deadline.  This
+resulted in a different distribution of funds from the one the model
+predicts.  Looking at the last part of the message, we see that we
+expected wallet 3 to get the token, *but it did not*; neither did it
+get its bid back. Wallet 1 did lose the token, though, and in addition
+lost the 2 Ada required to create the auction UTXO in the first place.
+
+What is going on? The strategy worked in the general case, but failed
+in the unilateral case, which tells us that *the buyer requires the
+cooperation of the seller* in order to recover the auctioned
+token. Why? Well, our description of the contract above was a little
+misleading: the proceeds of the auction *cannot* be paid out
+automatically just because the deadline passes; the Cardano blockchain
+won't do that. Instead, *someone must submit the payout
+transaction*. In the case of this contract, it's the seller: even
+though there is no *endpoint call* at the deadline, the seller's
+off-chain code continues running throughout the auction, and when the
+deadline comes it submits the payout transaction. So if the seller's
+contract is stopped, then no payout occurs.
+
+This is not a *very* serious bug, because the *on-chain* code allows
+anyone to submit the payout transaction, so the buyer could in
+principle do so. However, the existing off-chain code does not provide
+an endpoint for this, and so recovering the locked funds would require
+writing a new version of the off-chain code (or rolling a suitable
+transaction by hand).
+
+ .. _AuctionAssertion:
+ 
+Model assertions, and unexpected expectations.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Looking back at the failed test again, the *expected* wallet contents
+are actually a little *unexpected*:
+
+  .. code-block:: text
+                  
+   Actions 
+    [Var 0 := Init,
+     Var 1 := Bid (Wallet 3) 2000000,
+     Var 2 := Unilateral (Wallet 3),
+     Var 3 := WaitUntil (Slot {getSlot = 101})]
+   Expected funds of W[1] to change by
+     Value (Map [(363d...,Map [("token",-1)])])
+   but they changed by
+     Value (Map [(,Map [("",-2000000)]),(363d...,Map [("token",-1)])])
+   a discrepancy of
+     Value (Map [(,Map [("",-2000000)])])
+
+Notice that, even though wallet 3 made a bid of 2 Ada, we *expected*
+the seller to end up without the token, but *with no extra
+money*. Wouldn't we expect the seller to end up with 2 Ada?
+
+Because ``prop_Auction`` passed, then we know that in the absence of a
+``Unilateral`` then the model and the contract implementation agree on
+fund transfers. But does the model actually predict that the seller
+gets the winning bid? This can be a little hard to infer from the
+state transitions themselves; we can check that each action appears to
+do the right thing, but whether the end result is as expected is not
+necessarily immediately obvious.
+
+We can address this kind of problem by *adding assertions to the
+model*. The model tracks the change in each wallet's balance since the
+beginning of the test, so we can add an assertion, at the point where
+the auction ends, that checks that the seller loses the token and
+gains the winning bid. We just a little code to ``nextReactiveState``:
+
+ .. literalinclude:: Auction.hs
+   :start-after: START extendedNextReactiveState
+   :end-before: END extendedNextReactiveState
+
+If the boolean passed to ``assertSpec`` is ``False``, then the test
+fails with the first argument in the error message.
+
+ .. note::
+
+    We do have to allow for the possibility that the auction never
+    started, which is why we include in the assertion the possibility
+    that wallet 1's balance remains unchanged. Without this, the tests
+    fail.
+
+Now ``prop_Auction`` fails!
+
+  .. code-block:: text
+
+   > quickCheck prop_Auction
+   *** Failed! Falsified (after 27 tests and 24 shrinks):
+   Actions 
+    [Init,
+     Bid (Wallet 3) 2000000,
+     WaitUntil (Slot {getSlot = 100})]
+   assertSpec failed: w1 final balance is wrong:
+     SymValue {symValMap = fromList [], actualValPart = Value (Map [(363d...,Map [("token",-1)])])}
+                
+ .. note::
+
+    The balance change is actually a ``SymValue``, not a ``Value``,
+    but as you can see it *contains* a ``Value``, which is all we care
+    about right now. We will return to the purpose of the
+    ``symValMap`` in a later section.
+
+Even in this simple case, the seller does not receive the right
+amount: wallet 1 lost the token, but received no payment!
+
+The reason has to do with the minimum Ada in each UTXO. When the
+auction UTXO is created, the seller has to put in 2 Ada along with the
+token. When the auction ends, one might expect that 2 Ada to be
+returned to the seller. But it can't be: *it is needed to create the
+UTXO that delivers the token to the buyer*! Thus the seller receives 2
+Ada (from the buyer's bid) in this example, but this only makes up for
+the 2 Ada deposited in the auction UTXO, and the seller ends up giving
+away the token for nothing.
+
+This is quite surprising behaviour, and arguably, the contract should
+require that the buyer pay the seller 2 Ada *plus* the winning bid, so that
+the stated bid is equal to the seller's net receipts.
+
+  .. note::
+
+     Model assertions can be tested without running the emulator, by
+     using ``propSanityCheckAssertions`` instead of
+     ``propRunActions_``. This is very much faster, and enables very
+     thorough testing of the model. Since other tests check that the
+     implementation correponds to the model, then this still gives us
+     valuable information about the implementation.
+
+Crashing the auction
+^^^^^^^^^^^^^^^^^^^^
+
+Is the auction crash tolerant? To find out, we just declare that
+``Bid`` actions are available when the corresponding buyer contract is
+running, define the restart arguments, and the crash-tolerant property
+(which just replicates the definition of ``prop_Auction`` with a
+different type).
+
+ .. literalinclude:: Auction.hs
+   :start-after: START crashTolerance
+   :end-before: END crashTolerance
+
+Perhaps unsurprisingly, this property fails:
+
+  .. code-block:: text
+
+   > quickCheck prop_CrashTolerance
+   *** Failed! Assertion failed (after 17 tests and 11 shrinks):
+   Actions
+    [Init,
+     Crash SellerH,
+     WaitUntil (Slot {getSlot = 100})]
+   Expected funds of W[1] to change by
+     Value (Map [])
+   but they changed by
+     Value (Map [(,Map [("",-2000000)]),(363d3944282b3d16b239235a112c0f6e2f1195de5067f61c0dfc0f5f,Map [("token",-1)])])
+   a discrepancy of
+     Value (Map [(,Map [("",-2000000)]),(363d3944282b3d16b239235a112c0f6e2f1195de5067f61c0dfc0f5f,Map [("token",-1)])])
+   Test failed.
+
+We already know that the auction payout is initiated by the seller
+contract, so if that contract is not running, then no payout takes
+place. (Although there are no bids in this counterexample, a payout is
+still needed--to return the token to the seller). That is why this test fails.
+
+But this is actually not the only way the property can fail. The other
+failure (which generates some rather long contract logs) looks like
+this:
+
+  .. code-block:: text
+
+   > quickCheck prop_CrashTolerance
+   *** Failed! Assertion failed (after 13 tests and 9 shrinks):
+   Actions 
+    [Init,
+     Crash SellerH,
+     Restart SellerH]
+   Contract instance log failed to validate:
+   ... half a megabyte of output ...
+   Slot 6: 00000000-0000-4000-8000-000000000004 {Wallet W[1]}:
+             Contract instance stopped with error: StateMachineContractError (SMCContractError (WalletContractError (InsufficientFunds "Total: Value (Map [(,Map [(\"\",9999999997645750)])]) expected: Value (Map [(363d3944282b3d16b239235a112c0f6e2f1195de5067f61c0dfc0f5f,Map [(\"token\",1)])])")))
+   Test failed.
+
+In other words, after a crash, *the seller contract fails to
+restart*. This is simply because the seller tries to put the token up
+for auction when it starts, and *wallet 1 no longer holds the
+token*--it is already in an auction UTXO on the blockchain. So the
+seller contract fails with an ``InsufficientFunds`` error. To continue
+the auction, we would really need another endpoint to resume the
+seller, which the contract does not provide, or a parameter to the
+seller contract which specifies whether to start or continue an
+auction.
+
+Coverage of the Auction contract
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We can generate a coverage report for the ``Auction`` contract just as
+we did for the ``Escrow`` one. The interesting part of the report is:
+
+  .. raw:: html
+     :file: Auction.html
+
+The auction is defined as a Plutus state machine, which just repeats
+an ``auctionTransition`` over and over again. We can see that the
+state machine itself, and most of the transition code, is
+covered. However, the ``Bid`` transition has only been tested in the
+case where new bid is higher than the old one. Indeed, the tests are
+designed to respect that precondition. Moroever, the last clause in
+the ``case`` expression has not been tested at all--but this is quite
+OK, because it returns ``Nothing`` which the state machine library
+interprets to mean "reject the transaction". So the uncovered code
+*could* only be covered by failing transactions, which the off-chain
+code is designed not to submit.
 
 
-Hmm.
+Exercises
+^^^^^^^^^
 
-The Auction contract fails NoLockedFunds (although the model passes),
-so we find an interesting bug this way. But even more interesting is
-that the seller does not receive the full price. This is because of
-minAdaTx. A good way to discover this is to add an assertion in
-nextReactiveState. (Or perhaps in the strategy?) Useful to mention
-prop_SanityCheckAssertions, that can find this problem (since it is
-replicated in the model).
+The code discussed here is in ``Spec.Auction``.
 
-Fails CrashTolerance too, because we cannot restart the seller (tries
-to recreate the auction).
+#. Test the failing properties (``prop_NoLockedFunds`` and
+   ``prop_CrashTolerance``) and observe the failures.
 
-
+#. Add the model assertion discussed in :ref:`AuctionAssertion` to the
+   code, and ``quickCheck prop_SanityCheckAssertions`` to verify that
+   it fails. Change the assertion to say that the seller receives 2
+   Ada *less* than the bid, and verify that it now passes.
 
    
 Negative testing

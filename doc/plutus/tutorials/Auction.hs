@@ -68,6 +68,7 @@ params =
         , apEndTime = TimeSlot.scSlotZeroTime slotCfg + 100000
         }
 
+{- START options -}
 -- | The token that we are auctioning off.
 theToken :: Value
 theToken =
@@ -78,7 +79,7 @@ theToken =
 options :: CheckOptions
 options = defaultCheckOptionsContractModel
     & changeInitialWalletValue w1 ((<>) theToken)
-
+{- END options -}
 seller :: Contract AuctionOutput SellerSchema AuctionError ()
 seller = auctionSeller (apAsset params) (apEndTime params)
 
@@ -163,7 +164,7 @@ threadToken =
             Trace.waitNSlots 3
 
 -- * QuickCheck model
-
+{- START model -}
 data AuctionModel = AuctionModel
     { _currentBid :: Integer
     , _winner     :: Wallet
@@ -173,7 +174,7 @@ data AuctionModel = AuctionModel
 
 data Phase = NotStarted | Bidding | AuctionOver
     deriving (Eq, Show, Data)
-
+{- END model -}
 makeLenses 'AuctionModel
 
 deriving instance Eq (ContractInstanceKey AuctionModel w s e params)
@@ -185,8 +186,10 @@ instance ContractModel AuctionModel where
         SellerH :: ContractInstanceKey AuctionModel AuctionOutput SellerSchema AuctionError ()
         BuyerH  :: Wallet -> ContractInstanceKey AuctionModel AuctionOutput BuyerSchema AuctionError ()
 
+{- START Action -}
     data Action AuctionModel = Init | Bid Wallet Integer
         deriving (Eq, Show, Data)
+{- END Action -}
 
     initialState = AuctionModel
         { _currentBid = 0
@@ -216,7 +219,7 @@ instance ContractModel AuctionModel where
             b    = s ^. contractState . currentBid
             validBid = choose ((b+1) `max` Ada.getLovelace Ledger.minAdaTxOut,
                                b + Ada.getLovelace (Ada.adaOf 100))
-
+{- START precondition -}
     precondition s Init = s ^. contractState . phase == NotStarted
     precondition s (Bid w bid) =
       -- In order to place a bid, we need to satisfy the constraint where
@@ -224,7 +227,8 @@ instance ContractModel AuctionModel where
       s ^. contractState . phase /= NotStarted &&
       bid >= Ada.getLovelace (Ledger.minAdaTxOut) &&
       bid > s ^. contractState . currentBid
-
+{-END precondition -}
+{- START nextReactiveState -}
     nextReactiveState slot' = do
       end  <- viewContractState endSlot
       p    <- viewContractState phase
@@ -234,13 +238,28 @@ instance ContractModel AuctionModel where
         phase .= AuctionOver
         deposit w $ Ada.toValue Ledger.minAdaTxOut <> theToken
         deposit w1 $ Ada.lovelaceValueOf bid
+{- END nextReactiveState -}
+
         {-
+{- START extendedNextReactiveState -}
+    nextReactiveState slot' = do
+      end  <- viewContractState endSlot
+      p    <- viewContractState phase
+      when (slot' >= end && p == Bidding) $ do
+        w   <- viewContractState winner
+        bid <- viewContractState currentBid
+        phase .= AuctionOver
+        deposit w $ Ada.toValue Ledger.minAdaTxOut <> theToken
+        deposit w1 $ Ada.lovelaceValueOf bid
+        -- NEW!!!
         w1change <- viewModelState $ balanceChange w1  -- since the start of the test
         assertSpec ("w1 final balance is wrong:\n  "++show w1change) $
           w1change == toSymValue (inv theToken <> Ada.lovelaceValueOf bid) ||
           w1change == mempty
+{- END extendedNextReactiveState -}
         -}
 
+{- START nextState -}
     nextState cmd = do
         case cmd of
             Init -> do
@@ -257,6 +276,7 @@ instance ContractModel AuctionModel where
                     currentBid .= bid
                     winner     .= w
                 wait 2
+{- END nextState -}
 
     perform _      _ _ Init        = delay 3
     perform handle _ _ (Bid w bid) = do
@@ -273,12 +293,15 @@ instance ContractModel AuctionModel where
     shrinkAction _ Init      = []
     shrinkAction _ (Bid w v) = [ Bid w v' | v' <- shrink v ]
 
+{- START prop_Auction -}
 prop_Auction :: Actions AuctionModel -> Property
 prop_Auction script =
     propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions
         (\ _ -> pure True)  -- TODO: check termination
         script
+{- END prop_Auction -}
 
+{- START prop_FinishAuction -}
 finishAuction :: DL AuctionModel ()
 finishAuction = do
     anyActions_
@@ -293,14 +316,16 @@ finishingStrategy = do
 
 prop_FinishAuction :: Property
 prop_FinishAuction = forAllDL finishAuction prop_Auction
-
+{- END prop_FinishAuction -}
 -- | This does not hold! The Payout transition is triggered by the sellers off-chain code, so if the
 --   seller walks away the buyer will not get their token (unless going around the off-chain code
 --   and building a Payout transaction manually).
+{- START noLockProof -}
 noLockProof :: NoLockedFundsProof AuctionModel
 noLockProof = defaultNLFP
   { nlfpMainStrategy   = finishingStrategy
   , nlfpWalletStrategy = const finishingStrategy }
+{- END noLockProof -}
 
 prop_NoLockedFunds :: Property
 prop_NoLockedFunds = checkNoLockedFundsProofWithOptions (set minLogLevel Critical options) noLockProof
@@ -314,6 +339,7 @@ prop_SanityCheckAssertions = propSanityCheckAssertions
 prop_Whitelist :: Actions AuctionModel -> Property
 prop_Whitelist = checkErrorWhitelist defaultWhitelist
 
+{- START crashTolerance -}
 instance CrashTolerance AuctionModel where
   available (Bid w _) alive = (Key $ BuyerH  w) `elem` alive
   available Init      alive = True
@@ -325,6 +351,7 @@ prop_CrashTolerance :: Actions (WithCrashTolerance AuctionModel) -> Property
 prop_CrashTolerance =
   propRunActionsWithOptions (set minLogLevel Critical options) defaultCoverageOptions
         (\ _ -> pure True)
+{- END crashTolerance -}
 
 check_propAuctionWithCoverage :: IO ()
 check_propAuctionWithCoverage = do
