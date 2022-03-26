@@ -242,10 +242,10 @@ genValue = choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000)
 -- Dynamic Logic ----------------------------------------------------------
 
 prop_UnitTest :: Property
-prop_UnitTest = withMaxSuccess 1 $ forAllDL unitTest prop_Game
+prop_UnitTest = withMaxSuccess 1 $ forAllDL unitTest1 prop_Game
 
-unitTest :: DL GameModel ()
-unitTest = do
+unitTest1 :: DL GameModel ()
+unitTest1 = do
     val <- forAllQ $ chooseQ (5_000_000, 20_000_000)
     action $ Lock w1 "hello" val
     action $ GiveToken w2
@@ -253,7 +253,7 @@ unitTest = do
 
 unitTest2 :: DL GameModel ()
 unitTest2 = do
-    unitTest
+    unitTest1
     action $ GiveToken w3
     action $ Guess w3 "new secret" "hello" 4_000_000
 

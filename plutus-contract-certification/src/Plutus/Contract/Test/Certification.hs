@@ -4,7 +4,6 @@ module Plutus.Contract.Test.Certification where
 
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
-import Plutus.Contract.Test.Coverage
 import PlutusTx.Coverage
 import Test.Tasty as Tasty
 
