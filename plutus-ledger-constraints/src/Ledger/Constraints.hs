@@ -18,6 +18,7 @@ module Ledger.Constraints(
     , TC.mustSpendAtLeast
     , TC.mustSpendPubKeyOutput
     , TC.mustSpendScriptOutput
+    , TC.mustSpendScriptOutputWithMatchingDatumAndValue
     , TC.mustValidateIn
     , TC.mustBeSignedBy
     , TC.mustProduceAtLeast

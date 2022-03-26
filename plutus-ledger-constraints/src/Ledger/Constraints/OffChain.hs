@@ -10,6 +10,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PolyKinds                 #-}
 {-# LANGUAGE TemplateHaskell           #-}
+{-# LANGUAGE TupleSections             #-}
 {-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeOperators             #-}
@@ -74,7 +75,9 @@ import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icRedeemer, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
                                          TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
-                                         TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs))
+                                         TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
+                                         TxConstraintFuns (TxConstraintFuns),
+                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Orphans ()
 import Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, Validator, ValidatorHash,
@@ -367,9 +370,10 @@ processLookupsAndConstraints
     => ScriptLookups a
     -> TxConstraints (RedeemerType a) (DatumType a)
     -> m ()
-processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs} =
+processLookupsAndConstraints lookups TxConstraints{txConstraints, txOwnInputs, txOwnOutputs, txConstraintFuns = TxConstraintFuns txCnsFuns } =
         flip runReaderT lookups $ do
             traverse_ processConstraint txConstraints
+            traverse_ processConstraintFun txCnsFuns
             traverse_ addOwnInput txOwnInputs
             traverse_ addOwnOutput txOwnOutputs
             addMintingRedeemers
@@ -504,21 +508,25 @@ data MkTxError =
     | TypedValidatorMissing
     | DatumWrongHash DatumHash Datum
     | CannotSatisfyAny
+    | NoMatchingOutputFound ValidatorHash
+    | MultipleMatchingOutputsFound ValidatorHash
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
 instance Pretty MkTxError where
     pretty = \case
-        TypeCheckFailed e       -> "Type check failed:" <+> pretty e
-        TxOutRefNotFound t      -> "Tx out reference not found:" <+> pretty t
-        TxOutRefWrongType t     -> "Tx out reference wrong type:" <+> pretty t
-        DatumNotFound h         -> "No datum with hash" <+> pretty h <+> "was found"
-        MintingPolicyNotFound h -> "No minting policy with hash" <+> pretty h <+> "was found"
-        ValidatorHashNotFound h -> "No validator with hash" <+> pretty h <+> "was found"
-        OwnPubKeyMissing        -> "Own public key is missing"
-        TypedValidatorMissing   -> "Script instance is missing"
-        DatumWrongHash h d      -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
-        CannotSatisfyAny        -> "Cannot satisfy any of the required constraints"
+        TypeCheckFailed e              -> "Type check failed:" <+> pretty e
+        TxOutRefNotFound t             -> "Tx out reference not found:" <+> pretty t
+        TxOutRefWrongType t            -> "Tx out reference wrong type:" <+> pretty t
+        DatumNotFound h                -> "No datum with hash" <+> pretty h <+> "was found"
+        MintingPolicyNotFound h        -> "No minting policy with hash" <+> pretty h <+> "was found"
+        ValidatorHashNotFound h        -> "No validator with hash" <+> pretty h <+> "was found"
+        OwnPubKeyMissing               -> "Own public key is missing"
+        TypedValidatorMissing          -> "Script instance is missing"
+        DatumWrongHash h d             -> "Wrong hash for datum" <+> pretty d <> colon <+> pretty h
+        CannotSatisfyAny               -> "Cannot satisfy any of the required constraints"
+        NoMatchingOutputFound h        -> "No matching output found for validator hash" <+> pretty h
+        MultipleMatchingOutputsFound h -> "Multiple matching outputs found for validator hash" <+> pretty h
 
 lookupTxOutRef
     :: ( MonadReader (ScriptLookups a) m
@@ -575,12 +583,12 @@ getSignatories pkh =
 --   possible. Fails if a hash is missing from the lookups, or if an output
 --   of the wrong type is spent.
 processConstraint
-  :: ( MonadReader (ScriptLookups a) m
-     , MonadError MkTxError m
-     , MonadState ConstraintProcessingState m
-     )
-  => TxConstraint
-  -> m ()
+    :: ( MonadReader (ScriptLookups a) m
+        , MonadError MkTxError m
+        , MonadState ConstraintProcessingState m
+        )
+    => TxConstraint
+    -> m ()
 processConstraint = \case
     MustIncludeDatum dv ->
         let theHash = datumHash dv in
@@ -602,24 +610,17 @@ processConstraint = \case
           _ -> throwError (TxOutRefWrongType txo)
     MustSpendScriptOutput txo red -> do
         txout <- lookupTxOutRef txo
-        case txout of
-          Tx.ScriptChainIndexTxOut { Tx._ciTxOutValidator, Tx._ciTxOutDatum, Tx._ciTxOutValue } -> do
-            -- first check in the 'ChainIndexTx' for the validator, then
-            -- look for it in the 'slOtherScripts map.
-            validator <- either lookupValidator pure _ciTxOutValidator
-
-            -- first check in the 'ChainIndexTx' for the datum, then
-            -- look for it in the 'slOtherData' map.
-            dataValue <- either lookupDatum pure _ciTxOutDatum
-            let dvh = datumHash dataValue
-
+        mscriptTXO <- resolveScriptTxOut txout
+        case mscriptTXO of
+          Just (validator, datum, value) -> do
+            let dvh = datumHash datum
             -- TODO: When witnesses are properly segregated we can
             --       probably get rid of the 'slOtherData' map and of
             --       'lookupDatum'
-            let input = Tx.scriptTxIn txo validator red dataValue
+            let input = Tx.scriptTxIn txo validator red datum
             unbalancedTx . tx . Tx.inputs %= Set.insert input
-            unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just dataValue
-            valueSpentInputs <>= provided _ciTxOutValue
+            unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
+            valueSpentInputs <>= provided value
           _ -> throwError (TxOutRefWrongType txo)
 
     MustMintValue mpsHash red tn i -> do
@@ -663,3 +664,43 @@ processConstraint = \case
             tryNext (hs:qs) = do
                 traverse_ processConstraint hs `catchError` \_ -> put s >> tryNext qs
         tryNext xs
+
+processConstraintFun
+    :: ( MonadReader (ScriptLookups a) m
+        , MonadError MkTxError m
+        , MonadState ConstraintProcessingState m
+        )
+    => TxConstraintFun
+    -> m ()
+processConstraintFun = \case
+    MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red -> do
+        ScriptLookups{slTxOutputs} <- ask
+        let matches (Just (validator, datum, value)) = validatorHash validator == vh && datumPred datum && valuePred value
+            matches Nothing = False
+        opts <- filter (matches . snd) <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo) (Map.toList slTxOutputs)
+        case opts of
+            [] -> throwError $ NoMatchingOutputFound vh
+            [(ref, Just (validator, datum, value))] -> do
+                let dvh = datumHash datum
+                let input = Tx.scriptTxIn ref validator red datum
+                unbalancedTx . tx . Tx.inputs %= Set.insert input
+                unbalancedTx . tx . Tx.datumWitnesses . at dvh .= Just datum
+                valueSpentInputs <>= provided value
+            _ -> throwError $ MultipleMatchingOutputsFound vh
+
+resolveScriptTxOut
+    :: ( MonadReader (ScriptLookups a) m
+       , MonadError MkTxError m
+       )
+    => ChainIndexTxOut -> m (Maybe (Validator, Datum, Value))
+resolveScriptTxOut Tx.ScriptChainIndexTxOut { Tx._ciTxOutValidator, Tx._ciTxOutDatum, Tx._ciTxOutValue } = do
+    -- first check in the 'ChainIndexTx' for the validator, then
+    -- look for it in the 'slOtherScripts map.
+    validator <- either lookupValidator pure _ciTxOutValidator
+
+    -- first check in the 'ChainIndexTx' for the datum, then
+    -- look for it in the 'slOtherData' map.
+    dataValue <- either lookupDatum pure _ciTxOutDatum
+
+    pure $ Just (validator, dataValue, _ciTxOutValue)
+resolveScriptTxOut _ = pure Nothing

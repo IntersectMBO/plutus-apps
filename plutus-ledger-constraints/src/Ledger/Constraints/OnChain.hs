@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NoImplicitPrelude  #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE ViewPatterns       #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
@@ -23,7 +24,10 @@ import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
                                          TxConstraint (MustBeSignedBy, MustHashDatum, MustIncludeDatum, MustMintValue, MustPayToOtherScript, MustPayToPubKeyAddress, MustProduceAtLeast, MustSatisfyAnyOf, MustSpendAtLeast, MustSpendPubKeyOutput, MustSpendScriptOutput, MustValidateIn),
-                                         TxConstraints (TxConstraints, txConstraints, txOwnInputs, txOwnOutputs))
+                                         TxConstraintFun (MustSpendScriptOutputWithMatchingDatumAndValue),
+                                         TxConstraintFuns (TxConstraintFuns),
+                                         TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
+import Ledger.Credential (Credential (ScriptCredential))
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address qualified as Address
@@ -38,9 +42,10 @@ import Plutus.V1.Ledger.Value (leq)
 {-# INLINABLE checkScriptContext #-}
 -- | Does the 'ScriptContext' satisfy the constraints?
 checkScriptContext :: forall i o. ToData o => TxConstraints i o -> ScriptContext -> Bool
-checkScriptContext TxConstraints{txConstraints, txOwnInputs, txOwnOutputs} ptx =
+checkScriptContext TxConstraints{txConstraints, txConstraintFuns = TxConstraintFuns txCnsFuns, txOwnInputs, txOwnOutputs} ptx =
     traceIfFalse "Ld" -- "checkScriptContext failed"
     $ all (checkTxConstraint ptx) txConstraints
+    && all (checkTxConstraintFun ptx) txCnsFuns
     && all (checkOwnInputConstraint ptx) txOwnInputs
     && all (checkOwnOutputConstraint ptx) txOwnOutputs
 
@@ -128,3 +133,18 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
     MustSatisfyAnyOf xs ->
         traceIfFalse "Ld" -- "MustSatisfyAnyOf"
         $ any (all (checkTxConstraint ctx)) xs
+
+{-# INLINABLE checkTxConstraintFun #-}
+checkTxConstraintFun :: ScriptContext -> TxConstraintFun -> Bool
+checkTxConstraintFun ScriptContext{scriptContextTxInfo} = \case
+    MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred _ ->
+        let findDatum mdh = do
+                dh <- mdh
+                V.findDatum dh scriptContextTxInfo
+            isMatch (TxOut (Ledger.Address (ScriptCredential vh') _) val (findDatum -> Just d)) =
+                vh == vh' && valuePred val && datumPred d
+            isMatch _ = False
+        in
+        traceIfFalse "Le" -- "MustSpendScriptOutputWithMatchingDatumAndValue"
+        $ any (isMatch . txInInfoResolved) (txInfoInputs scriptContextTxInfo)
+
