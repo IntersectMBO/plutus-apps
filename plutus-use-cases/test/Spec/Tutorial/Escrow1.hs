@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -16,6 +17,7 @@ module Spec.Tutorial.Escrow1(prop_Escrow, EscrowModel) where
 
 import Control.Lens hiding (both, elements)
 import Control.Monad (void)
+import Data.Data
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -35,7 +37,7 @@ import Test.QuickCheck
 
 data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _targets       :: Map Wallet Value
-                               } deriving (Eq, Show)
+                               } deriving (Eq, Show, Data)
 
 makeLenses ''EscrowModel
 
@@ -45,7 +47,7 @@ deriving instance Show (ContractInstanceKey EscrowModel w s e params)
 instance ContractModel EscrowModel where
   data Action EscrowModel = Pay Wallet Integer
                           | Redeem Wallet
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 
   data ContractInstanceKey EscrowModel w s e params where
     WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError ()

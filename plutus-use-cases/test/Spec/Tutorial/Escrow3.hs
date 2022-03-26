@@ -18,6 +18,7 @@ module Spec.Tutorial.Escrow3(prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds,
 
 import Control.Lens hiding (both, elements)
 import Control.Monad (void, when)
+import Data.Data
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -38,9 +39,9 @@ import Test.QuickCheck
 data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _targets       :: Map Wallet Value
                                , _phase         :: Phase
-                               } deriving (Eq, Show)
+                               } deriving (Eq, Show, Data)
 
-data Phase = Initial | Running deriving (Eq, Show)
+data Phase = Initial | Running deriving (Eq, Show, Data)
 
 makeLenses ''EscrowModel
 
@@ -52,7 +53,7 @@ instance ContractModel EscrowModel where
                           | Redeem Wallet
                           | Pay Wallet Integer
                           | Refund Wallet
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 
   data ContractInstanceKey EscrowModel w s e params where
     WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError (EscrowParams Datum)
