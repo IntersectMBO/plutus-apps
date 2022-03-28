@@ -43,7 +43,7 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_,
                             (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxOut (..), TxOutRef (..))
+import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxOut (..), TxOutRef (..), fromTxOut)
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
                               UtxosResponse (UtxosResponse))
@@ -332,13 +332,17 @@ insertUtxoDb txs utxoStates =
             ( newTips ++ tipRows
             , newUnspent ++ unspentRows
             , newUnmatched ++ unmatchedRows)
+        txOutsToMaybeCiTxOuts (txOut, txOutRef) = case fromTxOut txOut of
+            Just ciTxOut -> Just (ciTxOut, txOutRef)
+            Nothing -> Nothing
         (tr, ur, umr) = foldl go ([] :: [TipRow], [] :: [UnspentOutputRow], [] :: [UnmatchedInputRow]) utxoStates
         txOuts = concatMap txOutsWithRef txs
+        ciTxOuts = catMaybes (txOutsToMaybeCiTxOuts <$> txOuts)
     in insertRows $ mempty
         { tipRows = InsertRows tr
         , unspentOutputRows = InsertRows ur
         , unmatchedInputRows = InsertRows umr
-        , utxoOutRefRows = InsertRows $ (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) <$> txOuts
+        , utxoOutRefRows = InsertRows $ (\(ciTxOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue ciTxOut)) <$> ciTxOuts
         }
 
 reduceOldUtxoDb :: Tip -> BeamEffect ()
