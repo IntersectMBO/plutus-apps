@@ -43,7 +43,7 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_,
                             (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxOut (..), TxOutRef (..))
+import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxOut (..), TxOutRef (..), fromTxOut)
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
                               UtxosResponse (UtxosResponse))
@@ -145,7 +145,7 @@ getUtxoutFromRef ::
   )
   => TxOutRef
   -> Eff effs (Maybe ChainIndexTxOut)
-getUtxoutFromRef = queryOne . queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut
+getUtxoutFromRef = (<$>) (fromTxOut =<<) . queryOne . queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut
 
 getUtxoSetAtAddress
   :: forall effs.
