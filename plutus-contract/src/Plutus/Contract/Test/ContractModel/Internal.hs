@@ -215,8 +215,8 @@ import PlutusTx.Coverage
 import PlutusTx.ErrorCodes
 import Streaming qualified as S
 import Test.QuickCheck.DynamicLogic.Monad qualified as DL
-import Test.QuickCheck.StateModel hiding (Action, Actions (..), arbitraryAction, initialState, monitoring, nextState,
-                                   pattern Actions, perform, precondition, shrinkAction, stateAfter)
+import Test.QuickCheck.StateModel hiding (Action, Actions (..), actionName, arbitraryAction, initialState, monitoring,
+                                   nextState, pattern Actions, perform, precondition, shrinkAction, stateAfter)
 import Test.QuickCheck.StateModel qualified as StateModel
 
 import Test.QuickCheck hiding (ShrinkState, checkCoverage, getSize, (.&&.), (.||.))
@@ -458,6 +458,10 @@ class ( Typeable state
     --   This is used in the `Arbitrary` instance for `Actions`s as well as by `anyAction` and
     --   `anyActions`.
     arbitraryAction :: ModelState state -> Gen (Action state)
+
+    -- | The name of an Action, used to report statistics.
+    actionName :: Action state -> String
+    actionName = head . words . show
 
     -- | The probability that we will generate a `WaitUntil` in a given state
     waitProbability :: ModelState state -> Double
@@ -816,6 +820,10 @@ instance ContractModel state => StateModel (ModelState state) where
         WaitUntil :: Slot -> StateModel.Action (ModelState state) ()
 
     type ActionMonad (ModelState state) = ContractMonad state
+
+    actionName (ContractAction _ act) = actionName act
+    actionName (Unilateral _)         = "Unilateral"
+    actionName (WaitUntil _)          = "WaitUntil"
 
     arbitraryAction s =
         -- TODO: do we need some way to control the distribution
