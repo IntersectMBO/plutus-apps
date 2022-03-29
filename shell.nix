@@ -1,6 +1,8 @@
 { system ? builtins.currentSystem
 , enableHaskellProfiling ? false
-, packages ? import ./. { inherit system enableHaskellProfiling; }
+, sourcesOverride ? { }
+, sources ? import ./nix/sources.nix { inherit system; } // sourcesOverride
+, packages ? import ./. { inherit system enableHaskellProfiling sources sourcesOverride; }
 }:
 let
   inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo docs webCommon;
@@ -11,13 +13,17 @@ let
   # This is stable as it doesn't mix dependencies with this code-base;
   # the fetched binaries are the "standard" builds that people test.
   # This should be fast as it mostly fetches Hydra caches without building much.
-  cardano-wallet = builtins.getFlake
-    (pkgs.fetchgit {
-      url = "https://github.com/input-output-hk/cardano-wallet";
-      rev = "f6d4db733c4e47ee11683c343b440552f59beff7";
-      sha256 = "0gb3zyv3q5v5sd8r29s02yc0brwq5a01is9c0n528391n2r8g1yy";
-    })
-    { };
+  cardano-wallet = (import sources.flake-compat {
+    inherit pkgs;
+    src = builtins.fetchTree
+      {
+        type = "github";
+        owner = "input-output-hk";
+        repo = "cardano-wallet";
+        rev = "f6d4db733c4e47ee11683c343b440552f59beff7";
+        narHash = "sha256-3oeHsrAhDSSKBSzpGIAqmOcFmBdAJ5FR02UXPLb/Yz0=";
+      };
+  }).defaultNix;
   cardano-node = import
     (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-node";
