@@ -32,6 +32,10 @@
       url = "github:justinwoo/easy-purescript-nix";
       flake = false;
     };
+    flake-compat = {
+      url = "github:input-output-hk/flake-compat/fixes";
+      flake = false;
+    };
     gitignore-nix = {
       url = "github:hercules-ci/gitignore.nix";
       flake = false;
