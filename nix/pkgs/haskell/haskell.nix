@@ -14,7 +14,7 @@
 , deferPluginErrors
 }:
 let
-  project = haskell-nix.cabalProject' ({ pkgs, ... }: {
+  project = haskell-nix.cabalProject' ({ pkgs, config, ... }: {
     inherit compiler-nix-name;
     # This is incredibly difficult to get right, almost everything goes wrong, see https://github.com/input-output-hk/haskell.nix/issues/496
     src = let root = ../../../.; in
@@ -52,7 +52,9 @@ let
       package prettyprinter-configurable
         tests: False
     '';
-    modules = [
+    modules = let
+      inherit (config) src;
+      in [
       ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
         packages = {
           # Things that need plutus-tx-plugin
