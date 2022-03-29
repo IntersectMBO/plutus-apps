@@ -106,7 +106,7 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
   let plutusRequiredTime = id @Integer 70000000
 
   datumFile <- HE.note $ base </> "scripts/plutus/data/42.datum"
-  redeemerFile <- HE.note $ base </> "scripts/plutus/data/42.redeemer"
+  redeemerFile <- HE.note $ base </> "plutus-example/example-scripts/42.redeemer"
 
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse

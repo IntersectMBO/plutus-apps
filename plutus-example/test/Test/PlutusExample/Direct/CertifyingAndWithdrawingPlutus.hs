@@ -131,8 +131,8 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
                              ]
 
   -- Plutus related
-  plutusStakingScript <- H.note $ base </> "scripts/plutus/scripts/guess-42-stake.plutus"
-  plutusStakingScriptRedeemer <- H.note $ base </> "scripts/plutus/data/42.redeemer"
+  plutusStakingScript <- H.note $ base </> "plutus-example/example-scripts/guess-42-stake.plutus"
+  plutusStakingScriptRedeemer <- H.note $ base </> "plutus-example/example-scripts/42.redeemer"
   scriptPaymentAddressWithStaking <- H.execCli [ "address", "build"
                                                , "--payment-verification-key-file", utxoVKeyFile
                                                , "--stake-script-file",  plutusStakingScript

@@ -94,7 +94,7 @@ prop_spending_plutus_script = H.integration . H.runFinallies . H.workspace "chai
   let scriptDatumHash = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
 
   datumFile <- H.note $ base </> "scripts/plutus/data/42.datum"
-  redeemerFile <- H.note $ base </> "scripts/plutus/data/42.redeemer"
+  redeemerFile <- H.note $ base </> "plutus-example/example-scripts/42.redeemer"
 
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse
