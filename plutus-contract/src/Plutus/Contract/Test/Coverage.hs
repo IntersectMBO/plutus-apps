@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Plutus.Contract.Test.Coverage
@@ -8,11 +10,13 @@ module Plutus.Contract.Test.Coverage
   , readCoverageRef
   ) where
 
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
+import GHC.Generics
 
 import Data.Text qualified as Text
 
@@ -79,4 +83,24 @@ instance NFData CovLoc where
 instance NFData CoverageAnnotation where
   rnf (CoverLocation loc) = rnf loc
   rnf (CoverBool loc b)   = rnf b `seq` rnf loc
-deriving instance NFData CoverageReport
+deriving anyclass instance NFData CoverageReport
+deriving instance Generic CoverageReport
+deriving anyclass instance ToJSON CoverageReport
+deriving anyclass instance FromJSON CoverageReport
+
+deriving anyclass instance ToJSON CoverageIndex
+deriving anyclass instance FromJSON CoverageIndex
+
+deriving anyclass instance ToJSON CoverageAnnotation
+deriving anyclass instance FromJSON CoverageAnnotation
+deriving anyclass instance ToJSONKey CoverageAnnotation
+deriving anyclass instance FromJSONKey CoverageAnnotation
+
+deriving anyclass instance ToJSON CovLoc
+deriving anyclass instance FromJSON CovLoc
+
+deriving anyclass instance ToJSON CoverageMetadata
+deriving anyclass instance FromJSON CoverageMetadata
+
+deriving anyclass instance ToJSON Metadata
+deriving anyclass instance FromJSON Metadata
