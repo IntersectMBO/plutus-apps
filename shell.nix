@@ -102,7 +102,7 @@ let
     cabal-install
     cardano-node.cardano-cli
     cardano-node.cardano-node
-    cardano-wallet.cardano-wallet
+    cardano-wallet.packages.${pkgs.system}.cardano-wallet
     cardano-repo-tool
     docs.build-and-serve-docs
     fixPngOptimization
