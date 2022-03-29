@@ -121,6 +121,11 @@ let
 
           plutus-example.doHaddock = deferPluginErrors;
           plutus-example.flags.defer-plugin-errors = deferPluginErrors;
+          plutus-example.preCheck = "
+            export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
+            export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
+            export CARDANO_NODE_SRC=${src}
+          ";
 
           # FIXME: Haddock mysteriously gives a spurious missing-home-modules warning
           plutus-tx-plugin.doHaddock = false;
