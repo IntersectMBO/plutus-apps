@@ -845,7 +845,7 @@ instance ContractModel state => StateModel (ModelState state) where
     shrinkAction _ _                    = []
 
     initialState = ModelState { _currentSlot      = 1
-                              , _balanceChanges   = Map.empty
+                              , _balanceChanges   = Map.fromList [(w,mempty) | w <- knownWallets]
                               , _minted           = mempty
                               , _assertions       = mempty
                               , _assertionsOk     = True
