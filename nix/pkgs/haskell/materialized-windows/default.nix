@@ -850,6 +850,7 @@
         small-steps = ./.plan.nix/small-steps.nix;
         cardano-crypto-wrapper = ./.plan.nix/cardano-crypto-wrapper.nix;
         network-mux = ./.plan.nix/network-mux.nix;
+        plutus-contract-certification = ./.plan.nix/plutus-contract-certification.nix;
         plutus-ghc-stub = ./.plan.nix/plutus-ghc-stub.nix;
         compact-map = ./.plan.nix/compact-map.nix;
         ouroboros-network-framework = ./.plan.nix/ouroboros-network-framework.nix;
@@ -1065,6 +1066,7 @@
               "asserts" = lib.mkOverride 900 false;
               };
             };
+          "plutus-contract-certification" = { flags = {}; };
           "plutus-ghc-stub" = { flags = {}; };
           "compact-map" = { flags = {}; };
           "ouroboros-network-framework" = { flags = {}; };
@@ -1434,6 +1436,7 @@
           "quickcheck-classes".components.library.planned = lib.mkOverride 900 true;
           "srcloc".components.library.planned = lib.mkOverride 900 true;
           "atomic-primops".components.library.planned = lib.mkOverride 900 true;
+          "plutus-contract-certification".components.library.planned = lib.mkOverride 900 true;
           "command".components.library.planned = lib.mkOverride 900 true;
           "array".components.library.planned = lib.mkOverride 900 true;
           "th-compat".components.library.planned = lib.mkOverride 900 true;

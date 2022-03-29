@@ -20,6 +20,7 @@ import Control.Monad
 import Plutus.Contract
 import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contract.Test hiding (not)
+import Plutus.Contract.Test.Certification
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.Symbolics
 import Plutus.Contract.Test.Coverage
@@ -507,6 +508,9 @@ noLockProof = defaultNLFP {
                 then action $ ClosePool w t1 t2
                 else action $ RemoveLiquidity w t1 t2 (unAmount . sum $ Map.lookup w liqs)
 
+noLockProofLight :: NoLockedFundsProofLight UniswapModel
+noLockProofLight = NoLockedFundsProofLight{nlfplMainStrategy = nlfpMainStrategy noLockProof}
+
 prop_CheckNoLockedFundsProof :: Property
 prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
 
@@ -515,8 +519,12 @@ prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofFast defaultCheckOptio
 
 check_propUniswapWithCoverage :: IO ()
 check_propUniswapWithCoverage = void $
-  quickCheckWithCoverage (set endpointCoverageReq epReqs $ set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
-    withMaxSuccess 1000 $ propRunActionsWithOptions @UniswapModel defaultCheckOptionsContractModel covopts (const (pure True))
+  quickCheckWithCoverage (stdArgs { maxSuccess = 1000 })
+                         (set endpointCoverageReq epReqs $ set coverageIndex covIdx $ defaultCoverageOptions)
+                         $ \covopts -> propRunActionsWithOptions @UniswapModel
+                                          defaultCheckOptionsContractModel
+                                          covopts
+                                          (const (pure True))
   where
     epReqs t ep
       | t == Trace.walletInstanceTag w1 = 0
@@ -562,3 +570,10 @@ runTestsWithCoverage = do
                             .&&. assertNoFailedTransactions)
                             Uniswap.uniswapTrace
                           ]
+
+-- | Certification.
+certification :: Certification UniswapModel
+certification = defaultCertification {
+    certNoLockedFundsLight = Just noLockProofLight,
+    certCoverageIndex      = covIdx
+  }
