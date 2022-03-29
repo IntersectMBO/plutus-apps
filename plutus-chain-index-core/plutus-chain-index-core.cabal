@@ -96,6 +96,7 @@ library
         unordered-containers -any,
         bytestring -any,
         text -any,
+        resource-pool -any,
         servant -any,
         servant-openapi3 -any,
         servant-server -any,

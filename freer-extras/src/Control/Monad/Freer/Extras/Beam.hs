@@ -1,31 +1,32 @@
-{-# LANGUAGE ConstraintKinds    #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE GADTs              #-}
-{-# LANGUAGE KindSignatures     #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE StrictData         #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeOperators      #-}
-{-# LANGUAGE ViewPatterns       #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE NumericUnderscores    #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE StrictData            #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 module Control.Monad.Freer.Extras.Beam where
 
 import Cardano.BM.Data.Tracer (ToObject (..))
 import Cardano.BM.Trace (Trace, logDebug)
 import Control.Concurrent (threadDelay)
-import Control.Exception (try)
+import Control.Exception (Exception, throw, try)
 import Control.Monad (guard)
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
-import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.TH (makeEffect)
@@ -33,6 +34,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.List.NonEmpty qualified as L
 import Data.Maybe (isJust, listToMaybe)
+import Data.Pool (Pool)
+import Data.Pool qualified as Pool
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Database.Beam (Beamable, DatabaseEntity, FromBackendRow, Identity, MonadIO (liftIO), Q, QBaseScope, QExpr,
@@ -57,6 +60,8 @@ newtype BeamError =
   SqlError Text
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON, ToObject)
+
+instance Exception BeamError
 
 instance Pretty BeamError where
   pretty = \case
@@ -126,8 +131,7 @@ instance Semigroup (BeamEffect ()) where
 handleBeam ::
   forall effs.
   ( LastMember IO effs
-  , Member (Error BeamError) effs
-  , Member (Reader Sqlite.Connection) effs
+  , Member (Reader (Pool Sqlite.Connection)) effs
   )
   => Trace IO BeamLog
   -> BeamEffect
@@ -176,30 +180,28 @@ handleBeam trace eff = runBeam trace $ execute eff
 runBeam ::
   forall effs.
   ( LastMember IO effs
-  , Member (Error BeamError) effs
-  , Member (Reader Sqlite.Connection) effs
+  , Member (Reader (Pool Sqlite.Connection)) effs
   )
   => Trace IO BeamLog
   -> SqliteM
   ~> Eff effs
 runBeam trace action = do
-  conn <- ask @Sqlite.Connection
-  loop conn ( 5 :: Int )
+  pool <- ask @(Pool Sqlite.Connection)
+  liftIO $ Pool.withResource pool $ \conn -> loop conn ( 5 :: Int )
   where
     loop conn retries = do
       let traceSql = logDebug trace . SqlLog
-      resultEither <- liftIO $ try $ Sqlite.withTransaction conn $ runBeamSqliteDebug traceSql conn action
+      resultEither <- try $ Sqlite.withTransaction conn $ runBeamSqliteDebug traceSql conn action
       case resultEither of
           -- 'Database.SQLite.Simple.ErrorError' corresponds to an SQL error or
           -- missing database. When this exception is raised, we suppose it's
           -- because the another transaction was already running.
           Left (Sqlite.SQLError Sqlite.ErrorError _ _) | retries > 0 -> do
-              liftIO $ threadDelay 100_000
+              threadDelay 100_000
               loop conn (retries - 1)
           -- We handle and rethrow errors other than
           -- 'Database.SQLite.Simple.ErrorError'.
-          Left e -> do
-              throwError $ SqlError $ Text.pack $ show e
+          Left e -> throw $ SqlError $ Text.pack $ show e
           Right v -> return v
 
 makeEffect ''BeamEffect

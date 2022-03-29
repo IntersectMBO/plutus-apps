@@ -50,6 +50,7 @@ import Control.Monad.Freer.Extras.Beam (BeamEffect, BeamLog (SqlLog))
 import Control.Monad.Freer.Extras.Log qualified as Log
 import Data.Default (def)
 import Data.Functor (void)
+import Data.Pool qualified as Pool
 import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
 import Database.Beam.Sqlite.Migrate qualified as Sqlite
@@ -77,13 +78,9 @@ import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEf
 -- | Generate the requirements to run the chain index effects given logging configuration and chain index configuration.
 withRunRequirements :: CM.Configuration -> Config.ChainIndexConfig -> (RunRequirements -> IO ()) -> IO ()
 withRunRequirements logConfig config cont = do
-  Sqlite.withConnection (Config.cicDbPath config) $ \conn -> do
-
-    (trace :: Trace IO (PrettyObject ChainIndexLog), _) <- setupTrace_ logConfig "chain-index"
-
-    -- Optimize Sqlite for write performance, halves the sync time.
-    -- https://sqlite.org/wal.html
-    Sqlite.execute_ conn "PRAGMA journal_mode=WAL"
+  pool <- Pool.createPool (Sqlite.open (Config.cicDbPath config) >>= setupConn) Sqlite.close 5 1_000_000 5
+  (trace :: Trace IO (PrettyObject ChainIndexLog), _) <- setupTrace_ logConfig "chain-index"
+  Pool.withResource pool $ \conn -> do
     Sqlite.runBeamSqliteDebug (logDebug (convertLog PrettyObject trace) . (BeamLogItem . SqlLog)) conn $ do
         autoMigrate Sqlite.migrationBackend checkedSqliteDb
 
@@ -97,8 +94,15 @@ withRunRequirements logConfig config cont = do
         \                                 AND input_row_out_ref = old.output_row_out_ref; \
         \END"
 
-    stateMVar <- newMVar mempty
-    cont $ RunRequirements trace stateMVar conn (Config.cicSecurityParam config)
+  stateMVar <- newMVar mempty
+  cont $ RunRequirements trace stateMVar pool (Config.cicSecurityParam config)
+
+  where
+    setupConn conn = do
+        -- Optimize Sqlite for write performance, halves the sync time.
+        -- https://sqlite.org/wal.html
+        Sqlite.execute_ conn "PRAGMA journal_mode=WAL;"
+        return conn
 
 -- | Generate the requirements to run the chain index effects given default configurations.
 withDefaultRunRequirements :: (RunRequirements -> IO ()) -> IO ()
