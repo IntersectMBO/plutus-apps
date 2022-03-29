@@ -1,0 +1,8 @@
+=== `plutus-contract-certification`
+
+This package defines interfaces for and implementation of contract certification.
+
+Noteworty modules:
+
+* `Contract.Test.Certification`: Has the core interfaces for certification
+* `Contract.Test.Certification.Run`: Functions for running the certification test

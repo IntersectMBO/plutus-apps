@@ -121,6 +121,7 @@ module Plutus.Contract.Test.ContractModel.Internal
     , checkCoverage
     , coverageIndex
     , quickCheckWithCoverage
+    , quickCheckWithCoverageAndResult
     -- ** Emulator properties
     , propRunActions_
     , propRunActions
@@ -144,6 +145,8 @@ module Plutus.Contract.Test.ContractModel.Internal
     , defaultNLFP
     , checkNoLockedFundsProof
     , checkNoLockedFundsProofFast
+    , NoLockedFundsProofLight(..)
+    , checkNoLockedFundsProofLight
     -- $checkNoPartiality
     , Whitelist
     , whitelistOk
@@ -1357,25 +1360,28 @@ makeLenses ''CoverageOptions
 -- * not to cover any source locations in the validator scripts.
 defaultCoverageOptions :: CoverageOptions
 defaultCoverageOptions = CoverageOptions { _checkCoverage = False
-                                         , _endpointCoverageReq = \ _ _ -> 20
+                                         , _endpointCoverageReq = \ _ _ -> 0
                                          , _coverageIndex = mempty
                                          , _coverageIORef = Nothing }
 
 -- | Run QuickCheck on a property that tracks coverage and print its coverage report.
-quickCheckWithCoverage :: QC.Testable prop => CoverageOptions -> (CoverageOptions -> prop) -> IO CoverageReport
-quickCheckWithCoverage copts prop = do
+quickCheckWithCoverage :: QC.Testable prop => QC.Args -> CoverageOptions -> (CoverageOptions -> prop) -> IO CoverageReport
+quickCheckWithCoverage qcargs opts prop = fst <$> quickCheckWithCoverageAndResult qcargs opts prop
+
+quickCheckWithCoverageAndResult :: QC.Testable prop => QC.Args -> CoverageOptions -> (CoverageOptions -> prop) -> IO (CoverageReport, Result)
+quickCheckWithCoverageAndResult qcargs copts prop = do
   copts <- case copts ^. coverageIORef of
     Nothing -> do
       ref <- newIORef mempty
       return $ copts { _coverageIORef = Just ref }
     _ -> return copts
-  QC.quickCheck $ prop $ copts { _checkCoverage = True }
+  res <- QC.quickCheckWithResult qcargs $ prop $ copts { _checkCoverage = True }
   case copts ^. coverageIORef of
     Nothing -> fail "Unreachable case in quickCheckWithCoverage"
     Just ref -> do
       report <- readIORef ref
-      putStrLn . show $ pprCoverageReport (copts ^. coverageIndex) report
-      return report
+      when (chatty qcargs) $ putStrLn . show $ pprCoverageReport (copts ^. coverageIndex) report
+      return (report, res)
 
 finalChecks :: ContractModel state
             => CheckOptions
@@ -1681,6 +1687,8 @@ data NoLockedFundsProof model = NoLockedFundsProof
     -- to the MainStrategy. This is useful if your contract contains rounding code that makes the order
     -- of operations have a small but predictable effect on the value collected by different wallets.
   }
+data NoLockedFundsProofLight model = NoLockedFundsProofLight
+  { nlfplMainStrategy :: DL model () }
 
 -- | The default skeleton of a NoLockedFundsProof - doesn't permit any overhead or error margin.
 defaultNLFP :: NoLockedFundsProof model
@@ -1752,6 +1760,19 @@ checkNoLockedFundsProof' run NoLockedFundsProof{nlfpMainStrategy   = mainStrat,
                    ++ show smacts
           in counterexample err (symLeq bal (bal' <> wig))
           QC..&&. counterexample err' (run smacts)
+
+checkNoLockedFundsProofLight
+  :: ContractModel model
+  => NoLockedFundsProofLight model
+  -> Property
+checkNoLockedFundsProofLight NoLockedFundsProofLight{nlfplMainStrategy = mainStrat} =
+  forAllDL anyActions_ $ \ (Actions as) ->
+    forAllUniqueDL (nextVarIdx as) (stateAfter $ Actions as) mainStrat $ \ (Actions as') ->
+      counterexample "Main run prop" (run (toStateModelActions $ Actions $ as ++ as'))
+  where
+    nextVarIdx as = 1 + maximum ([0] ++ [ i | Var i <- varOf <$> as ])
+    run = propRunActionsWithOptions' defaultCheckOptionsContractModel
+                                     defaultCoverageOptions (\ _ -> TracePredicate $ pure True)
 
 -- | A whitelist entry tells you what final log entry prefixes
 -- are acceptable for a given error
@@ -1831,5 +1852,4 @@ checkErrorWhitelistWithOptions opts copts whitelist acts = property $ go check a
     go :: TracePredicate -> Actions m -> Property
     go check actions = monadic (flip State.evalState mempty) $ finalChecks opts copts (\ _ _ -> check) $ do
                         QC.run initiateWallets
-
                         snd <$> runActionsInState StateModel.initialState (toStateModelActions actions)

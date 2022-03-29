@@ -61,6 +61,7 @@ let
           plutus-chain-index.package.buildable = false;
           plutus-chain-index-core.package.buildable = false;
           plutus-contract.package.buildable = false;
+          plutus-contract-certification.package.buildable = false;
           plutus-errors.package.buildable = false;
           plutus-ledger.package.buildable = false;
           plutus-ledger-constraints.package.buildable = false;

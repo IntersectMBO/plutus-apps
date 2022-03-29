@@ -89,5 +89,6 @@
       in
       {
         packages = topLevel.bitte-packages;
+        legacyPackages = topLevel;
       }));
 }
