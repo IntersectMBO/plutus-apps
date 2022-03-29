@@ -11,7 +11,7 @@ let
   # This is stable as it doesn't mix dependencies with this code-base;
   # the fetched binaries are the "standard" builds that people test.
   # This should be fast as it mostly fetches Hydra caches without building much.
-  cardano-wallet = import
+  cardano-wallet = builtins.getFlake
     (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-wallet";
       rev = "f6d4db733c4e47ee11683c343b440552f59beff7";
