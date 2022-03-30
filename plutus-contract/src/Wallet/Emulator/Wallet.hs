@@ -57,7 +57,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx))
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusIndex, fromPlutusTx)
+import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -81,7 +81,7 @@ import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
 
 
 newtype SigningProcess = SigningProcess {
-    unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> Tx -> Eff effs Tx
+    unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> CardanoTx -> Eff effs CardanoTx
 }
 
 instance Show SigningProcess where
@@ -194,10 +194,12 @@ makePrisms ''WalletEvent
 
 -- | The state used by the mock wallet environment.
 data WalletState = WalletState {
-    _mockWallet              :: MockWallet, -- ^ mock wallet with the user's private key
+    _mockWallet              :: MockWallet, -- ^ Mock wallet with the user's private key.
     _nodeClient              :: NodeClientState,
     _chainIndexEmulatorState :: ChainIndexEmulatorState,
-    _signingProcess          :: SigningProcess
+    _signingProcess          :: Maybe SigningProcess
+                                -- ^ Override the signing process.
+                                -- Used for testing multi-agent use cases.
     } deriving Show
 
 makeLenses ''WalletState
@@ -219,8 +221,7 @@ ownAddress = flip Ledger.pubKeyAddress Nothing
 -- | An empty wallet using the given private key.
 -- for that wallet as the sole watched address.
 fromMockWallet :: MockWallet -> WalletState
-fromMockWallet mw = WalletState mw emptyNodeClientState mempty sp where
-    sp = signWithPrivateKey (CW.paymentPrivateKey mw)
+fromMockWallet mw = WalletState mw emptyNodeClientState mempty Nothing
 
 -- | Empty wallet state for an emulator 'Wallet'. Returns 'Nothing' if the wallet
 --   is not known in the emulator.
@@ -266,7 +267,12 @@ handleWallet = \case
         logInfo $ FinishedBalancing txCTx
         pure txCTx
 
-    walletAddSignatureH :: (Member (State WalletState) effs, Member (LogMsg TxBalanceMsg) effs) => CardanoTx -> Eff effs CardanoTx
+    walletAddSignatureH ::
+        ( Member (State WalletState) effs
+        , Member (LogMsg TxBalanceMsg) effs
+        , Member (Error WalletAPIError) effs
+        )
+        => CardanoTx -> Eff effs CardanoTx
     walletAddSignatureH txCTx = do
         logInfo $ SigningTx txCTx
         handleAddSignature txCTx
@@ -294,7 +300,7 @@ handleBalance ::
     , Member ChainIndexQueryEffect effs
     , Member (State WalletState) effs
     , Member (LogMsg TxBalanceMsg) effs
-    , Member (Error WAPI.WalletAPIError) effs
+    , Member (Error WalletAPIError) effs
     )
     => UnbalancedTx
     -> Eff effs CardanoTx
@@ -330,17 +336,32 @@ handleBalance utx' = do
         handleError _ (Right v) = pure v
 
 handleAddSignature ::
-    Member (State WalletState) effs
+    ( Member (State WalletState) effs
+    , Member (Error WalletAPIError) effs
+    )
     => CardanoTx
     -> Eff effs CardanoTx
 handleAddSignature tx = do
-    (PaymentPrivateKey privKey) <- gets ownPaymentPrivateKey
-    pure $ Tx.cardanoTxMap (Ledger.addSignature' privKey) (addSignatureCardano privKey) tx
+    msp <- gets _signingProcess
+    case msp of
+        Nothing -> do
+            PaymentPrivateKey privKey <- gets ownPaymentPrivateKey
+            pure $ addSignature' privKey tx
+        Just (SigningProcess sp) -> do
+            let ctx = case tx of
+                    Tx.CardanoApiTx (Tx.SomeTx ctx' AlonzoEraInCardanoMode) -> ctx'
+                    Tx.Both _ (Tx.SomeTx ctx' AlonzoEraInCardanoMode) -> ctx'
+                    _ -> error "handleAddSignature: Need a Cardano API Tx from the Alonzo era to get the required signers"
+                reqSigners = getRequiredSigners ctx
+            sp reqSigners tx
+
+addSignature' :: PrivateKey -> CardanoTx -> CardanoTx
+addSignature' privKey = Tx.cardanoTxMap (Ledger.addSignature' privKey) addSignatureCardano
     where
-        addSignatureCardano :: PrivateKey -> SomeCardanoApiTx -> SomeCardanoApiTx
-        addSignatureCardano privKey (Tx.SomeTx ctx AlonzoEraInCardanoMode)
+        addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
+        addSignatureCardano (Tx.SomeTx ctx AlonzoEraInCardanoMode)
             = Tx.SomeTx (addSignature privKey ctx) AlonzoEraInCardanoMode
-        addSignatureCardano _ _ = error "Wallet.Emulator.Wallet.handleAddSignature: Expected an Alonzo tx"
+        addSignatureCardano _ = error "Wallet.Emulator.Wallet.addSignature': Expected an Alonzo tx"
 
 ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
@@ -580,9 +601,9 @@ signWallet wllt = SigningProcess $
 signTxnWithKey
     :: (Member (Error WAPI.WalletAPIError) r)
     => MockWallet
-    -> Tx
+    -> CardanoTx
     -> PaymentPubKeyHash
-    -> Eff r Tx
+    -> Eff r CardanoTx
 signTxnWithKey mw = signTxWithPrivateKey (CW.paymentPrivateKey mw)
 
 -- | Sign the transaction with the private key, if the hash is that of the
@@ -590,26 +611,26 @@ signTxnWithKey mw = signTxWithPrivateKey (CW.paymentPrivateKey mw)
 signTxWithPrivateKey
     :: (Member (Error WAPI.WalletAPIError) r)
     => PaymentPrivateKey
-    -> Tx
+    -> CardanoTx
     -> PaymentPubKeyHash
-    -> Eff r Tx
+    -> Eff r CardanoTx
 signTxWithPrivateKey (PaymentPrivateKey pk) tx pkh@(PaymentPubKeyHash pubK) = do
     let ownPaymentPubKey = Ledger.toPublicKey pk
     if Ledger.pubKeyHash ownPaymentPubKey == pubK
-    then pure (Ledger.addSignature' pk tx)
+    then pure (addSignature' pk tx)
     else throwError (WAPI.PaymentPrivateKeyNotFound pkh)
 
 -- | Sign the transaction with the given private keys,
 --   ignoring the list of public keys that the 'SigningProcess' is passed.
 signPrivateKeys :: [PaymentPrivateKey] -> SigningProcess
 signPrivateKeys signingKeys = SigningProcess $ \_ tx ->
-    pure (foldr (Ledger.addSignature' . unPaymentPrivateKey) tx signingKeys)
+    pure (foldr (addSignature' . unPaymentPrivateKey) tx signingKeys)
 
 data SigningProcessControlEffect r where
-    SetSigningProcess :: SigningProcess -> SigningProcessControlEffect ()
+    SetSigningProcess :: Maybe SigningProcess -> SigningProcessControlEffect ()
 makeEffect ''SigningProcessControlEffect
 
-type SigningProcessEffs = '[State SigningProcess, Error WAPI.WalletAPIError]
+type SigningProcessEffs = '[State (Maybe SigningProcess), Error WAPI.WalletAPIError]
 
 handleSigningProcessControl :: (Members SigningProcessEffs effs) => Eff (SigningProcessControlEffect ': effs) ~> Eff effs
 handleSigningProcessControl = interpret $ \case

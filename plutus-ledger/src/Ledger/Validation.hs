@@ -17,6 +17,7 @@ module Ledger.Validation(
   initialState,
   evaluateTransactionFee,
   evaluateMinLovelaceOutput,
+  getRequiredSigners,
   addSignature,
   hasValidationErrors,
   -- * Modifying the state
@@ -47,6 +48,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Core (PParams, Tx)
@@ -292,6 +294,10 @@ plutusTxToTxBodyContent
   -> Either P.ToCardanoError (C.Api.TxBodyContent C.Api.BuildTx C.Api.AlonzoEra)
 plutusTxToTxBodyContent requiredSigners =
   P.toCardanoTxBodyContent requiredSigners (Just emulatorProtocolParameters) emulatorNetworkId
+
+getRequiredSigners :: C.Api.Tx C.Api.AlonzoEra -> [P.PaymentPubKeyHash]
+getRequiredSigners (C.Api.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =
+  foldMap (pure . P.PaymentPubKeyHash . P.fromCardanoPaymentKeyHash . C.Api.PaymentKeyHash . C.Ledger.coerceKeyRole) rsq
 
 addSignature
   :: P.PrivateKey

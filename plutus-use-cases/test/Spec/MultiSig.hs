@@ -23,7 +23,7 @@ import Wallet.Emulator.Wallet (signPrivateKeys)
 tests :: TestTree
 tests = testGroup "multisig"
     [ checkPredicate "2 out of 5"
-        (assertFailedTransaction (\_ err _ -> case err of {ScriptFailure (EvaluationError ["not enough signatures"] _) -> True; _ -> False  }))
+        (assertFailedTransaction (\_ err _ -> case err of {ScriptFailure (EvaluationError ("not enough signatures":_) _) -> True; _ -> False  }))
         failingTrace
 
     , checkPredicate "3 out of 5"
@@ -40,7 +40,7 @@ failingTrace = do
     hdl <- Trace.activateContractWallet w1 theContract
     Trace.callEndpoint @"lock" hdl (multiSig, Ada.lovelaceValueOf 10)
     _ <- Trace.waitNSlots 1
-    Trace.setSigningProcess w1 (signPrivateKeys [CW.paymentPrivateKey (CW.knownMockWallet 1), CW.paymentPrivateKey (CW.knownMockWallet 2)])
+    Trace.setSigningProcess w1 (Just $ signPrivateKeys [CW.paymentPrivateKey (CW.knownMockWallet 1), CW.paymentPrivateKey (CW.knownMockWallet 2)])
     Trace.callEndpoint @"unlock" hdl (multiSig, fmap mockWalletPaymentPubKeyHash [w1, w2])
     void $ Trace.waitNSlots 1
 
@@ -51,7 +51,7 @@ succeedingTrace = do
     hdl <- Trace.activateContractWallet w1 theContract
     Trace.callEndpoint @"lock" hdl (multiSig, Ada.lovelaceValueOf 10)
     _ <- Trace.waitNSlots 1
-    Trace.setSigningProcess w1 (signPrivateKeys [CW.paymentPrivateKey (CW.knownMockWallet 1), CW.paymentPrivateKey (CW.knownMockWallet 2), CW.paymentPrivateKey (CW.knownMockWallet 3)])
+    Trace.setSigningProcess w1 (Just $ signPrivateKeys [CW.paymentPrivateKey (CW.knownMockWallet 1), CW.paymentPrivateKey (CW.knownMockWallet 2), CW.paymentPrivateKey (CW.knownMockWallet 3)])
     Trace.callEndpoint @"unlock" hdl (multiSig, fmap mockWalletPaymentPubKeyHash [w1, w2, w3])
     void $ Trace.waitNSlots 1
 

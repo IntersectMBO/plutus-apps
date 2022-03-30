@@ -63,7 +63,7 @@ are some modifications to be made)
 -}
 
 data EmulatorControl r where
-    SetSigningProcess :: Wallet -> SigningProcess -> EmulatorControl ()
+    SetSigningProcess :: Wallet -> Maybe SigningProcess -> EmulatorControl ()
     AgentState :: Wallet -> EmulatorControl WalletState
     FreezeContractInstance :: ContractInstanceId -> EmulatorControl ()
     ThawContractInstance :: ContractInstanceId -> EmulatorControl ()

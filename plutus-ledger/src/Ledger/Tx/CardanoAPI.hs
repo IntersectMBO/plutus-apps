@@ -31,6 +31,7 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoFee
   , fromCardanoValidityRange
   , fromCardanoScriptInEra
+  , fromCardanoPaymentKeyHash
   , fromCardanoScriptData
   , fromTxScriptValidity
   , scriptDataFromCardanoTxBody

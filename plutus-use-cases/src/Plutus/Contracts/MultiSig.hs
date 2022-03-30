@@ -77,9 +77,11 @@ typedValidator = Scripts.mkTypedValidatorParam @MultiSig
 -- | Lock some funds in a 'MultiSig' contract.
 lock :: AsContractError e => Promise () MultiSigSchema e ()
 lock = endpoint @"lock" $ \(ms, vl) -> do
-    let tx = Constraints.mustPayToTheScript () vl
     let inst = typedValidator ms
-    void $ submitTxConstraints inst tx
+    let tx = Constraints.mustPayToTheScript () vl
+        lookups = Constraints.typedValidatorLookups inst
+    mkTxConstraints lookups tx
+        >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
 
 -- | The @"unlock"@ endpoint, unlocking some funds with a list
 --   of signatures.
@@ -91,4 +93,5 @@ unlock = endpoint @"unlock" $ \(ms, pks) -> do
                 <> foldMap Constraints.mustBeSignedBy pks
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utx
-    void $ submitTxConstraintsWith lookups tx
+    mkTxConstraints lookups tx
+        >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
