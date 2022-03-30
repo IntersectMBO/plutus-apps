@@ -1,13 +1,13 @@
 module Spec.Index where
 
+import           Data.Functor.Identity   (Identity, runIdentity)
+import           Data.List               (foldl', isPrefixOf, scanl')
+import           Data.Maybe              (fromJust, isJust, isNothing, mapMaybe)
 import           QuickSpec
+import           Test.QuickCheck.Monadic
 import           Test.Tasty.QuickCheck
-import Test.QuickCheck.Monadic
-import           Data.Maybe            (fromJust, isJust, isNothing)
-import           Data.List             (foldl')
-import Data.Functor.Identity (Identity, runIdentity)
 
-import Index
+import           Index
 
 data Conversion m a e n = Conversion
   { cView          :: Index a e n -> m (Maybe (IndexView a))
@@ -128,3 +128,19 @@ prop_observeInsert c (ObservedBuilder ix) es =
                         , ixView  = foldl' ((fst .) . getFunction ix) (ixView v) es
                         }
     assert $ v' == v''
+
+-- | Notifications are accumulated as the folding function runs.
+prop_observeNotifications
+  :: forall e a n m. (Monad m, Show n, Eq n)
+  => Conversion m a e n
+  -> ObservedBuilder a e n
+  -> [e]
+  -> Property
+prop_observeNotifications c (ObservedBuilder ix) es =
+  monadic (cMonadic c) $ do
+    Just v  <- run $ cView c ix
+    let f        = getFunction ix
+        ix'      = insertL es ix
+        Just ns  = getNotifications ix'
+        ns'      = mapMaybe snd $ scanl' (\(a, _) e -> f a e) (ixView v, Nothing) es
+    assert $ reverse ns' `isPrefixOf` ns

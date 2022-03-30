@@ -9,6 +9,7 @@ module Index
   , view
   , getFunction
   , getHistory
+  , getNotifications
   -- * Helpers
   , insertL
   -- * Testing
@@ -19,7 +20,7 @@ module Index
 
 import           Control.Monad   (replicateM)
 import           Data.Foldable   (foldl')
-import           Data.Maybe      (fromJust)
+import           Data.Maybe      (fromJust, maybeToList)
 import           GHC.Generics
 import           QuickSpec
 import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
@@ -109,6 +110,15 @@ view (Rewind n ix) = do
                 , ixView = head $ drop n h
                 }
   else Nothing
+
+getNotifications :: Index a e n -> Maybe [n]
+getNotifications New{} = Just []
+getNotifications (Insert e ix) = do
+  let f = getFunction ix
+  v  <- view ix
+  ns <- getNotifications ix
+  pure $ maybeToList (snd (f (ixView v) e)) ++ ns
+getNotifications (Rewind _ _) = Just []
 
 -- | Internal
 
