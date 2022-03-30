@@ -53,19 +53,19 @@ import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
     depth >= size
 -}
 
-data Index a e = New (a -> e -> a) Int a
-               | Insert e (Index a e)
-               | Rewind Int (Index a e)
+data Index a e n = New (a -> e -> (a, Maybe n)) Int a
+                 | Insert e (Index a e n)
+                 | Rewind Int (Index a e n)
 
-instance (Show a, Show e) => Show (Index a e) where
+instance (Show a, Show e) => Show (Index a e n) where
   show (New _ depth acc) = "New <f> " <> show depth <> " " <> show acc
   show (Insert b ix)     = "Insert " <> show b <> " (" <> show ix <> ")"
   show (Rewind n ix)     = "Rewind " <> show n <> " (" <> show ix <> ")"
 
-newtype GrammarBuilder a e = GrammarBuilder (Index a e)
+newtype GrammarBuilder a e n = GrammarBuilder (Index a e n)
   deriving (Show)
 
-newtype ObservedBuilder a e = ObservedBuilder (Index a e)
+newtype ObservedBuilder a e n = ObservedBuilder (Index a e n)
   deriving (Show)
 
 data IndexView a = IndexView
@@ -76,18 +76,18 @@ data IndexView a = IndexView
 
 -- | Constructors
 
-new :: (a -> e -> a) -> Int -> a -> Index a e
+new :: (a -> e -> (a, Maybe n)) -> Int -> a -> Index a e n
 new = New
 
-insert :: e -> Index a e -> Index a e
+insert :: e -> Index a e n -> Index a e n
 insert = Insert
 
-rewind :: Int -> Index a e -> Index a e
+rewind :: Int -> Index a e n -> Index a e n
 rewind = Rewind
 
 -- | Observations
 
-view :: Index a e -> Maybe (IndexView a)
+view :: Index a e n -> Maybe (IndexView a)
 view (New _ depth initial) =
   if depth > 0
   then pure $ IndexView { ixDepth = depth
@@ -98,7 +98,7 @@ view (New _ depth initial) =
 view (Insert e ix) = do
   let f = getFunction ix
   v <- view ix
-  pure $ v { ixView = f (ixView v) e
+  pure $ v { ixView = fst $ f (ixView v) e
            , ixSize = min (ixDepth v) (ixSize v + 1)
            }
 view (Rewind n ix) = do
@@ -112,18 +112,18 @@ view (Rewind n ix) = do
 
 -- | Internal
 
-getFunction :: Index a e -> (a -> e -> a)
+getFunction :: Index a e n -> (a -> e -> (a, Maybe n))
 getFunction (New f _ _)   = f
 getFunction (Insert _ ix) = getFunction ix
 getFunction (Rewind _ ix) = getFunction ix
 
-getHistory :: Index a e -> Maybe [a]
+getHistory :: Index a e n -> Maybe [a]
 getHistory (New _ _ i) = Just [i]
 getHistory (Insert e ix) = do
   let f = getFunction ix
   h <- getHistory ix
   v <- view ix
-  pure $ f (head h) e : take (ixDepth v - 1) h
+  pure $ fst (f (head h) e) : take (ixDepth v - 1) h
 getHistory (Rewind n ix) = do
   h <- getHistory ix
   if length h > n
@@ -132,7 +132,7 @@ getHistory (Rewind n ix) = do
 
 -- | Utility
 
-insertL :: [e] -> Index a e -> Index a e
+insertL :: [e] -> Index a e n -> Index a e n
 insertL es ix = foldl' (flip insert) ix es
 
 -- | QuickCheck
@@ -140,7 +140,8 @@ insertL es ix = foldl' (flip insert) ix es
 instance ( CoArbitrary a
          , CoArbitrary e
          , Arbitrary a
-         , Arbitrary e ) => Arbitrary (ObservedBuilder a e) where
+         , Arbitrary e
+         , Arbitrary n ) => Arbitrary (ObservedBuilder a e n) where
   arbitrary = sized $ \n -> do
     depth <- frequency [ (05, pure 1)                       -- overfill
                        , (40, chooseInt (2, n + 2))         -- about filled
@@ -164,7 +165,8 @@ instance ( CoArbitrary a
 instance ( CoArbitrary a
          , CoArbitrary e
          , Arbitrary a
-         , Arbitrary e ) => Arbitrary (Index a e) where
+         , Arbitrary e
+         , Arbitrary n ) => Arbitrary (Index a e n) where
   -- Use the ObservedIndex instance as a generator for Indexes
   arbitrary = do
     (ObservedBuilder ix) <- arbitrary
@@ -174,7 +176,8 @@ instance ( CoArbitrary a
 instance ( CoArbitrary a
          , CoArbitrary e
          , Arbitrary a
-         , Arbitrary e ) => Arbitrary (GrammarBuilder a e) where
+         , Arbitrary e
+         , Arbitrary n ) => Arbitrary (GrammarBuilder a e n) where
   arbitrary = sized $ \n -> do
     depth <- frequency [ (05, pure 1)                       -- overfill
                        , (40, chooseInt (2, n + 2))         -- about filled
@@ -186,7 +189,7 @@ instance ( CoArbitrary a
     complexity <- arbitrarySizedIntegral
     generateGrammarIndex complexity ix
 
-generateGrammarIndex :: Arbitrary e => Int -> Index a e -> Gen (GrammarBuilder a e)
+generateGrammarIndex :: Arbitrary e => Int -> Index a e n -> Gen (GrammarBuilder a e n)
 generateGrammarIndex 0 ix = pure $ GrammarBuilder ix
 generateGrammarIndex n ix = do
   b      <- arbitrary
@@ -220,22 +223,22 @@ instance ( Ord a
          , Arbitrary a
          , Arbitrary e
          , CoArbitrary a
-         , CoArbitrary e) => Observe (IxEvents e) (IndexView a) (Index a e) where
+         , CoArbitrary e) => Observe (IxEvents e) (IndexView a) (Index a e n) where
   observe (IxEvents es) ix = fromJust $ view $ insertL es ix
 
 ixSignature :: [Sig]
 ixSignature =
-  [ monoObserve @(Index Int String)
-  , monoObserve @(Index Int Int)
-  , monoObserve @(Index Int [Int])
-  , monoObserve @(Maybe (Index Int String))
-  , monoObserve @(Maybe (Index Int Int))
-  , monoObserve @(Maybe (Index Int [Int]))
+  [ monoObserve @(Index Int String String)
+  , monoObserve @(Index Int Int String)
+  , monoObserve @(Index Int [Int] String)
+  , monoObserve @(Maybe (Index Int String String))
+  , monoObserve @(Maybe (Index Int Int String))
+  , monoObserve @(Maybe (Index Int [Int] String))
   , mono @(IndexView Int)
-  , con "new" (new :: (Int -> String -> Int) -> Int -> Int -> Index Int String)
-  , con "insert" (insert :: String -> Index Int String -> Index Int String)
-  , con "view" (view :: Index Int String -> Maybe (IndexView Int))
-  , con "rewind" (rewind :: Int -> Index Int String -> Index Int String)
-  , con "getHistory" (getHistory :: Index Int String -> Maybe [Int])
+  , con "new" (new :: (Int -> String -> (Int, Maybe String)) -> Int -> Int -> Index Int String String)
+  , con "insert" (insert :: String -> Index Int String String -> Index Int String String)
+  , con "view" (view :: Index Int String String -> Maybe (IndexView Int))
+  , con "rewind" (rewind :: Int -> Index Int String String -> Index Int String String)
+  , con "getHistory" (getHistory :: Index Int String String -> Maybe [Int])
   , withMaxTermSize 6
   ]

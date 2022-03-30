@@ -2,6 +2,7 @@
 
 module Spec.Split where
 
+import           Data.Maybe              (catMaybes)
 import           Test.QuickCheck         (Property)
 import           Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
@@ -11,16 +12,17 @@ import           Index.Split             (SplitIndex (..))
 import qualified Index.Split             as S
 import           Spec.Index              (Conversion (..))
 
-conversion :: (Show a, Show e) => Conversion (PropertyM IO) a e
+conversion :: (Show a, Show e, Show n) => Conversion (PropertyM IO) a e n
 conversion = Conversion
-  { cView    = view
-  , cHistory = history
-  , cMonadic = monadic
+  { cView          = view
+  , cHistory       = history
+  , cNotifications = undefined
+  , cMonadic       = monadic
   }
 
 view
-  :: (Show a, Show e)
-  => Index a e
+  :: (Show a, Show e, Show n)
+  => Index a e n
   -> PropertyM IO (Maybe (IndexView a))
 view ix = do
   mix <- run ix
@@ -31,8 +33,8 @@ view ix = do
       pure $ Just v
 
 history
-  :: (Show a, Show e)
-  => Index a e
+  :: (Show a, Show e, Show n)
+  => Index a e n
   -> PropertyM IO (Maybe [a])
 history ix = do
   mix <- run ix
@@ -48,15 +50,19 @@ monadic
 monadic = monadicIO
 
 run
-  :: forall m a e. (Show a, Show e, Monad m)
-  => Index a e
-  -> m (Maybe (SplitIndex m a e))
+  :: forall m a e n. (Show a, Show e, Show n, Monad m)
+  => Index a e n
+  -> m (Maybe (SplitIndex m a e n))
 run (Ix.New f d a) = pure $ S.new findex fstore d (pure a)
   where
-    findex :: a -> [e] -> a
-    findex a' es = foldr (flip f) a' es
+    findex :: a -> [e] -> (a, [n])
+    findex a' es = foldr convertIxF (a', []) es
     fstore :: a -> m a
     fstore a' = pure a'
+    convertIxF :: e -> (a, [n]) -> (a, [n])
+    convertIxF e (a', ns) =
+      let (a'', mn) = f a' e
+       in (a'', catMaybes [mn] ++ ns)
 run (Ix.Insert e ix) = do
   mix <- run ix
   case  mix of

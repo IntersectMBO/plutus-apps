@@ -9,23 +9,25 @@ import Data.Functor.Identity (Identity, runIdentity)
 
 import Index
 
-data Conversion m a e = Conversion
-  { cView    :: Index a e -> m (Maybe (IndexView a))
-  , cHistory :: Index a e -> m (Maybe [a])
-  , cMonadic :: m Property -> Property
+data Conversion m a e n = Conversion
+  { cView          :: Index a e n -> m (Maybe (IndexView a))
+  , cHistory       :: Index a e n -> m (Maybe [a])
+  , cNotifications :: Index a e n -> m [n]
+  , cMonadic       :: m Property -> Property
   }
 
-conversion :: Conversion Identity a e
+conversion :: Conversion Identity a e n
 conversion = Conversion
-  { cView = pure . view
-  , cHistory = pure . getHistory
-  , cMonadic = runIdentity
+  { cView          = pure . view
+  , cHistory       = pure . getHistory
+  , cNotifications = undefined
+  , cMonadic       = runIdentity
   }
 
 prop_observeNew
-  :: forall e a m. (Eq a, Monad m)
-  => Conversion m a e
-  -> Fun (a, e) a
+  :: forall e a n m. (Eq a, Monad m)
+  => Conversion m a e n
+  -> Fun (a, e) (a, Maybe n)
   -> a
   -> Property
 prop_observeNew c f a =
@@ -53,9 +55,9 @@ prop_observeNew c f a =
 -- | Properties of the connection between rewind and depth
 --   Note: Cannot rewind if (ixDepth ix == 1)
 prop_rewindDepth
-  :: forall e a m. (Monad m)
-  => Conversion m a e
-  -> ObservedBuilder a e
+  :: forall e a n m. (Monad m)
+  => Conversion m a e n
+  -> ObservedBuilder a e n
   -> Property
 prop_rewindDepth c (ObservedBuilder ix) =
   let v = fromJust $ view ix in
@@ -77,9 +79,9 @@ prop_rewindDepth c (ObservedBuilder ix) =
 
 -- | Property that validates the HF data structure.
 prop_sizeLEDepth
-  :: forall e a m. (Monad m)
-  => Conversion m a e
-  -> ObservedBuilder a e
+  :: forall e a n m. (Monad m)
+  => Conversion m a e n
+  -> ObservedBuilder a e n
   -> Property
 prop_sizeLEDepth c (ObservedBuilder ix) =
   monadic (cMonadic c) $ do
@@ -88,9 +90,9 @@ prop_sizeLEDepth c (ObservedBuilder ix) =
 
 -- | Relation between Rewind and Inverse
 prop_insertRewindInverse
-  :: forall e a m. (Monad m, Show e, Show a, Arbitrary e, Eq a)
-  => Conversion m a e
-  -> ObservedBuilder a e
+  :: forall e a n m. (Monad m, Show e, Show a, Arbitrary e, Eq a)
+  => Conversion m a e n
+  -> ObservedBuilder a e n
   -> Property
 prop_insertRewindInverse c (ObservedBuilder ix) =
   let v = fromJust $ view ix
@@ -111,9 +113,9 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
 --   to the implementation, but it will be useful when trying to certify that
 --   another implmentation is confirming.
 prop_observeInsert
-  :: forall e a m. (Monad m, Eq a, Show a)
-  => Conversion m a e
-  -> ObservedBuilder a e
+  :: forall e a n m. (Monad m, Eq a, Show a)
+  => Conversion m a e n
+  -> ObservedBuilder a e n
   -> [e]
   -> Property
 prop_observeInsert c (ObservedBuilder ix) es =
@@ -123,6 +125,6 @@ prop_observeInsert c (ObservedBuilder ix) es =
     Just v' <- run $ cView c ix'
     let v'' = IndexView { ixDepth = ixDepth v
                         , ixSize  = min (ixDepth v) (length es + ixSize v)
-                        , ixView  = foldl' (getFunction ix) (ixView v) es
+                        , ixView  = foldl' ((fst .) . getFunction ix) (ixView v) es
                         }
     assert $ v' == v''
