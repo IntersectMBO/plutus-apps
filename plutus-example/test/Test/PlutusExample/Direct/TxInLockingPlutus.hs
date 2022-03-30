@@ -41,6 +41,7 @@ import Hedgehog.Extras.Test.Process qualified as H
 import System.Directory qualified as IO
 import System.Environment qualified as IO
 import Test.Base qualified as H
+import Test.PlutusExample.Conf qualified as H
 import Test.Process qualified as H
 import Testnet.Cardano qualified as H
 import Testnet.Conf qualified as H
@@ -62,7 +63,7 @@ instance FromJSON Utxo where
 prop_spending_plutus_script :: Property
 prop_spending_plutus_script = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkPlutusConf tempAbsBasePath' Nothing
 
   H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
 

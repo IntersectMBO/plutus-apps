@@ -144,6 +144,7 @@ test-suite plutus-example-test
 
   other-modules:
 
+                        Test.PlutusExample.Conf
                         Test.PlutusExample.Direct.ScriptContextEquality
                         Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus
                         Test.PlutusExample.Direct.ScriptContextEqualityMint

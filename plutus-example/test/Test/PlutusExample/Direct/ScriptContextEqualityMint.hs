@@ -33,6 +33,7 @@ import System.Environment (getEnvironment)
 import System.FilePath ((</>))
 
 import Test.Base qualified as H
+import Test.PlutusExample.Conf qualified as H
 import Test.Process (execCreateScriptContext, execCreateScriptContext')
 import Test.Process qualified as H
 import Testnet.Cardano (defaultTestnetOptions, testnet)
@@ -49,7 +50,7 @@ millarCoin = BSC.unpack $ Base16.encode "MillarCoin"
 hprop_plutus_script_context_mint_equality :: Property
 hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkPlutusConf tempAbsBasePath' Nothing
 
   TC.TestnetRuntime { bftSprockets, testnetMagic } <- testnet defaultTestnetOptions conf
 

@@ -39,6 +39,7 @@ import Hedgehog.Extras.Test.File qualified as H
 import Hedgehog.Extras.Test.Process qualified as H
 import System.Info qualified as SYS
 import Test.Base qualified as H
+import Test.PlutusExample.Conf qualified as H
 import Test.Process qualified as H
 import Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..), defaultTestnetOptions, testnet)
 import Testnet.Cardano qualified as TC
@@ -62,7 +63,7 @@ hprop_plutus_certifying_withdrawing :: Property
 hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkPlutusConf tempAbsBasePath' Nothing
 
   let fastTestnetOptions = defaultTestnetOptions
                              { epochLength = 500
