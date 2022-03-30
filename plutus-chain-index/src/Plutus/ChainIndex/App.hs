@@ -9,15 +9,16 @@
 -}
 module Plutus.ChainIndex.App(main, runMain) where
 
+import Cardano.BM.Configuration.Model qualified as CM
 import Control.Exception (throwIO)
+import Control.Monad (void)
 import Data.Aeson qualified as A
 import Data.Foldable (for_)
 import Data.Function ((&))
 import Data.Yaml qualified as Y
 import Options.Applicative (execParser)
 import Prettyprinter (Pretty (pretty))
-
-import Cardano.BM.Configuration.Model qualified as CM
+import System.Posix.Process (forkProcess)
 
 import Cardano.BM.Setup (setupTrace_)
 import Cardano.BM.Trace (Trace)
@@ -73,6 +74,13 @@ runMain :: CM.Configuration -> Config.ChainIndexConfig -> IO ()
 runMain logConfig config = do
   withRunRequirements logConfig config $ \runReq -> do
 
+    void $ forkProcess $ do
+      let port = show (Config.cicPort config)
+      putStrLn $ "Starting webserver on port " <> port
+      putStrLn $ "A Swagger UI for the endpoints are available at "
+              <> "http://localhost:" <> port <> "/swagger/swagger-ui"
+      Server.serveChainIndexQueryServer (Config.cicPort config) runReq
+
     putStr "\nThe tip of the local node: "
     slotNo <- getTipSlot config
     print slotNo
@@ -83,17 +91,8 @@ runMain logConfig config = do
       <- storeChainSyncHandler eventsQueue
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)
         & pure
-
     putStrLn $ "Connecting to the node using socket: " <> Config.cicSocketPath config
     syncChainIndex config runReq syncHandler
 
     (trace :: Trace IO (PrettyObject SyncLog), _) <- setupTrace_ logConfig "chain-index"
-    withAsync (processEventsQueue trace runReq eventsQueue) $ \processAsync -> do
-
-      let port = show (Config.cicPort config)
-      putStrLn $ "Starting webserver on port " <> port
-      putStrLn $ "A Swagger UI for the endpoints are available at "
-              <> "http://localhost:" <> port <> "/swagger/swagger-ui"
-      Server.serveChainIndexQueryServer (Config.cicPort config) runReq
-      wait processAsync
-
+    withAsync (processEventsQueue trace runReq eventsQueue) wait

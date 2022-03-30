@@ -64,6 +64,7 @@ library
         stm -any,
         time-units -any,
         yaml -any,
+        unix -any
 
 executable plutus-chain-index
   main-is: Main.hs
