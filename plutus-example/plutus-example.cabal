@@ -118,7 +118,7 @@ test-suite plutus-example-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        cardano-prelude
-                      , aeson
+                      , aeson >= 2
                       , base16-bytestring
                       , bytestring
                       , cardano-api

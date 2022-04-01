@@ -152,7 +152,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node
-  tag: d69af27f1b8af70e9c14f7c9546538db51500162
+  tag: b04be2542c4066f8778386b724eecb8c73485b9c
   subdir:
     cardano-api
     cardano-cli
@@ -186,9 +186,11 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5
+  tag: 030c3b12f128f22b9d721a31b6b5ae1b75211d68
   subdir:
     eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
     eras/byron/chain/executable-spec
     eras/byron/crypto
     eras/byron/crypto/test
@@ -198,21 +200,23 @@ source-repository-package
     eras/shelley/impl
     eras/shelley/test-suite
     eras/shelley-ma/impl
-    libs/cardano-data
+    eras/shelley-ma/test-suite
     libs/cardano-ledger-core
     libs/cardano-ledger-pretty
     libs/cardano-protocol-tpraos
+    libs/cardano-data
     libs/compact-map
-    libs/non-integral
     libs/set-algebra
     libs/small-steps
     libs/small-steps-test
+    libs/non-integral
 
 -- Should follow cardano-wallet.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 4fac197b6f0d2ff60dc3486c593b68dc00969fbf
+  tag: 83744fe3b752fd8200de2ea1416e34c576c74f35
+  --sha256: 0v0a3q7xfz7x6rd1bz0scixixmcd9zvqa92lbdc17vgrbrq3dq58
   subdir:
     io-classes
     io-sim
@@ -236,7 +240,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 41545ba3ac6b3095966316a99883d678b5ab8da8
+  tag: 20bd513b7ac9dcf0749f0ceb1df3d6b07a1b57c8
   subdir:
     base-deriving-via
     binary
@@ -283,3 +287,6 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/Win32-network
   tag: 3825d3abf75f83f406c1f7161883c438dac7277d
+
+allow-newer:
+  *:aeson
