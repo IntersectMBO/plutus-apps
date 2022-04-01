@@ -76,5 +76,6 @@ test-suite freer-extras-test
         freer-extras -any,
         freer-simple -any,
         lens -any,
+        resource-pool -any,
         semigroups -any,
         sqlite-simple -any,
