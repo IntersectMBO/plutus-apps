@@ -8,7 +8,7 @@
 module defines an in-memory implementation of the disk state which can be
 used in the emulator.
 -}
-module Plutus.ChainIndex.Emulator.DiskState(
+module Plutus.ChainIndex.Indexer.Memory.DiskState(
     DiskState
     , dataMap
     , scriptMap
@@ -17,6 +17,8 @@ module Plutus.ChainIndex.Emulator.DiskState(
     , addressMap
     , assetClassMap
     , fromTx
+    , txCredentialMap
+    , txAssetClassMap
     , CredentialMap
     , unCredentialMap
     , AssetClassMap
@@ -24,20 +26,22 @@ module Plutus.ChainIndex.Emulator.DiskState(
     , diagnostics
 ) where
 
-import Control.Lens (At (..), Index, IxValue, Ixed (..), lens, makeLenses, view, (&), (.~), (^.))
-import Data.Bifunctor (Bifunctor (..))
+import Control.Lens (At (at), Index, IxValue, Ixed (ix), lens, makeLenses, view, (&), (.~), (^.))
+import Data.Bifunctor (Bifunctor (bimap))
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
+import Data.Semigroup.Generic (GenericSemigroupMonoid (GenericSemigroupMonoid))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Address (..), Script, ScriptHash, TxOut (..), TxOutRef)
+import Ledger (Address (Address, addressCredential), Script, ScriptHash, TxOut (TxOut, txOutAddress, txOutValue),
+               TxOutRef)
 import Ledger.Credential (Credential)
 import Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash)
 import Ledger.TxId (TxId)
-import Plutus.ChainIndex.Tx (ChainIndexTx (..), citxData, citxRedeemers, citxScripts, citxTxId, txOutsWithRef)
-import Plutus.ChainIndex.Types (Diagnostics (..))
+import Plutus.ChainIndex.Tx (ChainIndexTx, citxData, citxRedeemers, citxScripts, citxTxId, txOutsWithRef)
+import Plutus.ChainIndex.Types (Diagnostics (Diagnostics), numAddresses, numAssetClasses, numScripts,
+                                numUnmatchedInputs, numUnspentOutputs)
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 

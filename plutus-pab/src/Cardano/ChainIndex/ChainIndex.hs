@@ -53,7 +53,7 @@ processChainIndexEffects trace stateVar eff = do
         $ interpret (handleLogMsgTrace (toChainIndexServerMsg trace))
         $ Eff.runState emState
         $ interpret ChainIndex.handleQuery
-        $ interpret ChainIndex.handleControl eff
+        $ ChainIndex.handleChainIndexControl eff
   case resultE of
     Left e -> error (show e)
     Right (result, newEmState) -> do

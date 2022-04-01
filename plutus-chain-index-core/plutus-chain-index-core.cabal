@@ -7,10 +7,10 @@ license-files:
   NOTICE
 maintainer: sjoerd.visscher@iohk.io
 author: Sjoerd Visscher
-homepage: https://github.com/iohk/plutus#readme
-bug-reports: https://github.com/iohk/plutus/issues
+homepage: https://github.com/input-output-hk/plutus-apps#readme
+bug-reports: https://github.com/input-output-hk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+    Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 build-type: Simple
 
 source-repository head
@@ -30,30 +30,31 @@ common lang
 library
     import: lang
     exposed-modules:
+        Cardano.Protocol.Socket.Type
+        Cardano.Protocol.Socket.Client
         Plutus.ChainIndex
-        Plutus.ChainIndex.Api
         Plutus.ChainIndex.ChainIndexError
         Plutus.ChainIndex.ChainIndexLog
-        Plutus.ChainIndex.Client
-        Plutus.ChainIndex.DbSchema
+        Plutus.ChainIndex.Compatibility
         Plutus.ChainIndex.Effects
         Plutus.ChainIndex.Emulator
-        Plutus.ChainIndex.Emulator.DiskState
-        Plutus.ChainIndex.Emulator.Handlers
-        Plutus.ChainIndex.Emulator.Server
-        Plutus.ChainIndex.Handlers
-        Plutus.ChainIndex.Server
+        Plutus.ChainIndex.Indexer.Memory.DiskState
+        Plutus.ChainIndex.Indexer.Memory.Handlers
+        Plutus.ChainIndex.Indexer.Sqlite.DbSchema
+        Plutus.ChainIndex.Indexer.Sqlite.Handlers
+        Plutus.ChainIndex.Http.Api
+        Plutus.ChainIndex.Http.Client
+        Plutus.ChainIndex.Http.Server
+        Plutus.ChainIndex.Http.MemoryBackend.Server
+        Plutus.ChainIndex.Http.SqliteBackend.Server
         Plutus.ChainIndex.Tx
         Plutus.ChainIndex.TxIdState
         Plutus.ChainIndex.TxOutBalance
         Plutus.ChainIndex.TxUtxoBalance
         Plutus.ChainIndex.Types
         Plutus.ChainIndex.UtxoState
-        Plutus.Monitoring.Util
-        Cardano.Protocol.Socket.Type
-        Cardano.Protocol.Socket.Client
-        Plutus.ChainIndex.Compatibility
         Plutus.Contract.CardanoAPI
+        Plutus.Monitoring.Util
     hs-source-dirs: src
     build-depends:
         plutus-ledger -any,
@@ -116,9 +117,9 @@ test-suite plutus-chain-index-test
     hs-source-dirs: test
     other-modules:
         Generators
-        Plutus.ChainIndex.Emulator.DiskStateSpec
-        Plutus.ChainIndex.Emulator.HandlersSpec
-        Plutus.ChainIndex.HandlersSpec
+        Plutus.ChainIndex.Indexer.Memory.DiskStateSpec
+        Plutus.ChainIndex.Indexer.Memory.HandlersSpec
+        Plutus.ChainIndex.Indexer.Sqlite.HandlersSpec
         Util
     build-depends:
         plutus-ledger -any,
@@ -138,6 +139,7 @@ test-suite plutus-chain-index-test
         freer-simple -any,
         hedgehog -any,
         lens -any,
+        ouroboros-consensus -any,
         resource-pool -any,
         serialise -any,
         stm -any,

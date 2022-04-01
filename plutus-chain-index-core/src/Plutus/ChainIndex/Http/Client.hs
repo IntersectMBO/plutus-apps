@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
-module Plutus.ChainIndex.Client(
+module Plutus.ChainIndex.Http.Client(
     -- * HTTP Client handler
     handleChainIndexClient
     -- * Servant client functions
@@ -29,11 +29,11 @@ import Ledger (Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, Red
                StakeValidatorHash, Validator, ValidatorHash)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
 import Network.HTTP.Types.Status (Status (..))
-import Plutus.ChainIndex.Api (API, IsUtxoResponse, TxoAtAddressRequest (TxoAtAddressRequest), TxosResponse,
-                              UtxoAtAddressRequest (UtxoAtAddressRequest),
-                              UtxoWithCurrencyRequest (UtxoWithCurrencyRequest), UtxosResponse)
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect (..))
-import Plutus.ChainIndex.Types (Tip)
+import Plutus.ChainIndex.Http.Api (API, IsUtxoResponse, TxoAtAddressRequest (TxoAtAddressRequest), TxosResponse,
+                                   UtxoAtAddressRequest (UtxoAtAddressRequest),
+                                   UtxoWithCurrencyRequest (UtxoWithCurrencyRequest), UtxosResponse)
+import Plutus.ChainIndex.Types (Diagnostics, Tip)
 import Servant (NoContent, (:<|>) (..))
 import Servant.Client (ClientEnv, ClientError (..), ClientM, client, runClientM)
 import Servant.Client.Core.Response (ResponseF (..))
@@ -54,9 +54,10 @@ getUtxoSetAtAddress :: UtxoAtAddressRequest -> ClientM UtxosResponse
 getUtxoSetWithCurrency :: UtxoWithCurrencyRequest -> ClientM UtxosResponse
 getTxoSetAtAddress :: TxoAtAddressRequest -> ClientM TxosResponse
 getTip :: ClientM Tip
+getDiagnostics :: ClientM Diagnostics
 
-(healthCheck, (getDatum, getValidator, getMintingPolicy, getStakeValidator, getRedeemer), getUnspentTxOut, getIsUtxo, getUtxoSetAtAddress, getUtxoSetWithCurrency, getTxoSetAtAddress, getTip, collectGarbage) =
-    (healthCheck_, (getDatum_, getValidator_, getMintingPolicy_, getStakeValidator_, getRedeemer_), getUnspentTxOut_, getIsUtxo_, getUtxoSetAtAddress_, getUtxoSetWithCurrency_, getTxoSetAtAddress_, getTip_, collectGarbage_) where
+(healthCheck, (getDatum, getValidator, getMintingPolicy, getStakeValidator, getRedeemer), getUnspentTxOut, getIsUtxo, getUtxoSetAtAddress, getUtxoSetWithCurrency, getTxoSetAtAddress, getTip, getDiagnostics, collectGarbage) =
+    (healthCheck_, (getDatum_, getValidator_, getMintingPolicy_, getStakeValidator_, getRedeemer_), getUnspentTxOut_, getIsUtxo_, getUtxoSetAtAddress_, getUtxoSetWithCurrency_, getTxoSetAtAddress_, getTip_, getDiagnostics_, collectGarbage_) where
         healthCheck_
             :<|> (getDatum_ :<|> getValidator_ :<|> getMintingPolicy_ :<|> getStakeValidator_ :<|> getRedeemer_)
             :<|> getUnspentTxOut_
@@ -65,8 +66,8 @@ getTip :: ClientM Tip
             :<|> getUtxoSetWithCurrency_
             :<|> getTxoSetAtAddress_
             :<|> getTip_
-            :<|> collectGarbage_
-            :<|> _ = client (Proxy @API)
+            :<|> getDiagnostics_
+            :<|> collectGarbage_ = client (Proxy @API)
 
 -- | Handle 'ChainIndexQueryEffect' by making HTTP calls to a remote
 --   server.
@@ -105,3 +106,4 @@ handleChainIndexClient event = do
         UtxoSetWithCurrency pq a -> runClient (getUtxoSetWithCurrency $ UtxoWithCurrencyRequest (Just pq) a)
         TxoSetAtAddress pq a     -> runClient (getTxoSetAtAddress $ TxoAtAddressRequest (Just pq) a)
         GetTip                   -> runClient getTip
+        GetDiagnostics           -> runClient getDiagnostics

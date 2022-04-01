@@ -21,7 +21,7 @@ database schema for the data which we wish to store:
 
 -}
 
-module Plutus.ChainIndex.DbSchema where
+module Plutus.ChainIndex.Indexer.Sqlite.DbSchema where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import Data.ByteString (ByteString)
@@ -160,7 +160,7 @@ instance Table UtxoRowT where
     data PrimaryKey UtxoRowT f = UtxoRowOutRef (Columnar f ByteString) deriving (Generic, Beamable)
     primaryKey = UtxoRowOutRef . _utxoRowOutRef
 
-data Db f = Db
+data ChainIndexDb f = ChainIndexDb
     { datumRows          :: f (TableEntity DatumRowT)
     , scriptRows         :: f (TableEntity ScriptRowT)
     , redeemerRows       :: f (TableEntity RedeemerRowT)
@@ -183,13 +183,13 @@ type AllTables (c :: * -> Constraint) f =
     , c (f (TableEntity UnspentOutputRowT))
     , c (f (TableEntity UnmatchedInputRowT))
     )
-deriving via (GenericSemigroupMonoid (Db f)) instance AllTables Semigroup f => Semigroup (Db f)
-deriving via (GenericSemigroupMonoid (Db f)) instance AllTables Monoid f => Monoid (Db f)
+deriving via (GenericSemigroupMonoid (ChainIndexDb f)) instance AllTables Semigroup f => Semigroup (ChainIndexDb f)
+deriving via (GenericSemigroupMonoid (ChainIndexDb f)) instance AllTables Monoid f => Monoid (ChainIndexDb f)
 
-db :: DatabaseSettings Sqlite Db
-db = unCheckDatabase checkedSqliteDb
+chainIndexDb :: DatabaseSettings Sqlite ChainIndexDb
+chainIndexDb = unCheckDatabase checkedSqliteDb
 
-checkedSqliteDb :: CheckedDatabaseSettings Sqlite Db
+checkedSqliteDb :: CheckedDatabaseSettings Sqlite ChainIndexDb
 checkedSqliteDb = defaultMigratableDbSettings
     `withDbModification` dbModification
     { datumRows   = renameCheckedEntity (const "datums")

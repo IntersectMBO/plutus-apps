@@ -161,8 +161,10 @@ data ReduceBlockCountResult a
         , combinedState :: UtxoState a
         }
 
--- | Reduce the number of 'UtxoState's. The given number is the minimum, the index is reduced when it larger than twice that size.
--- The new index is prefixed with one 'UtxoState' that contains the combined state of the removed 'UtxoState's.
+-- | Reduce the number of 'UtxoState's. The given number is the minimum, the
+-- index is reduced when it larger than twice that size. The new index is
+-- prefixed with one 'UtxoState' that contains the combined state of the removed
+-- 'UtxoState's.
 reduceBlockCount :: Monoid a => Depth -> UtxoIndex a -> ReduceBlockCountResult a
 reduceBlockCount (Depth minCount) ix
     | utxoBlockCount ix <= 2 * minCount = BlockCountNotReduced

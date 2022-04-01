@@ -111,7 +111,7 @@ import Ledger.TxId (TxId)
 import Ledger.Value (Value)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown), TxOutStatus, TxStatus)
 import Plutus.ChainIndex qualified as ChainIndex
-import Plutus.ChainIndex.Api (UtxosResponse (page))
+import Plutus.ChainIndex.Http.Api (UtxosResponse (page))
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription), PABReq)
 import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg, ContractInstanceState)

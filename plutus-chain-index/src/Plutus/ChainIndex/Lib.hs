@@ -69,8 +69,8 @@ import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequi
 import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Compatibility (fromCardanoBlock, fromCardanoPoint, fromCardanoTip, tipFromCardanoBlock)
 import Plutus.ChainIndex.Config qualified as Config
-import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Indexer.Sqlite.DbSchema (chainIndexDb, checkedSqliteDb)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 
@@ -177,7 +177,7 @@ getTipSlot config = do
 -- | Synchronise the chain index with the node using the given handler.
 syncChainIndex :: Config.ChainIndexConfig -> RunRequirements -> ChainSyncHandler -> IO ()
 syncChainIndex config runReq syncHandler = do
-    Just resumePoints <- runChainIndexDuringSync runReq getResumePoints
+    Just resumePoints <- runChainIndexDuringSync runReq (getResumePoints chainIndexDb)
     void $ C.runChainSync
         (Config.cicSocketPath config)
         nullTracer

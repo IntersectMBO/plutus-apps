@@ -64,7 +64,7 @@ import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.SQLite.Simple qualified as Sqlite
 import Network.HTTP.Client (managerModifyRequest, newManager, setRequestIgnoreStatus)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Plutus.ChainIndex.Client qualified as ChainIndex
+import Plutus.ChainIndex.Http.Client qualified as ChainIndex
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers), PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance.BlockchainEnv qualified as BlockchainEnv

@@ -29,9 +29,9 @@ import Plutus.ChainIndex.CommandLine (AppConfig (AppConfig, acCLIConfigOverrides
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
 import Plutus.ChainIndex.Events (measureEventByTxs, processEventsQueue)
+import Plutus.ChainIndex.Http.SqliteBackend.Server qualified as Server
 import Plutus.ChainIndex.Lib (getTipSlot, storeChainSyncHandler, storeFromBlockNo, syncChainIndex, withRunRequirements)
 import Plutus.ChainIndex.Logging qualified as Logging
-import Plutus.ChainIndex.Server qualified as Server
 import Plutus.ChainIndex.SyncStats (SyncLog)
 import Plutus.Monitoring.Util (PrettyObject)
 

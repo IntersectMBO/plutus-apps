@@ -3,11 +3,11 @@
 {-# LANGUAGE MonoLocalBinds    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Plutus.ChainIndex.Emulator.DiskStateSpec (tests) where
+module Plutus.ChainIndex.Indexer.Memory.DiskStateSpec (tests) where
 
 import Control.Lens
 import Data.Set qualified as Set
-import Plutus.ChainIndex.Emulator.DiskState qualified as DiskState
+import Plutus.ChainIndex.Indexer.Memory.DiskState qualified as DiskState
 import Plutus.ChainIndex.Tx (txOutsWithRef)
 
 import Generators qualified as Gen

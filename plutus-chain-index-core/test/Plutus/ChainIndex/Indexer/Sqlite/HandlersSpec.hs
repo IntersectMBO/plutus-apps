@@ -7,7 +7,7 @@
 {-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeApplications   #-}
 
-module Plutus.ChainIndex.HandlersSpec (tests) where
+module Plutus.ChainIndex.Indexer.Sqlite.HandlersSpec (tests) where
 
 import Control.Concurrent.STM (newTVarIO)
 import Control.Lens (view)
@@ -27,13 +27,14 @@ import Database.SQLite.Simple qualified as Sqlite
 import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
 import Ledger (outValue)
-import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), RunRequirements (..), appendBlocks, citxOutputs,
-                          runChainIndexEffects, unspentTxOutFromRef, utxoSetWithCurrency)
-import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
-import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
+import Ouroboros.Consensus.Config (SecurityParam (SecurityParam))
+import Plutus.ChainIndex (ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
+                          RunRequirements (RunRequirements), appendBlocks, citxOutputs, runChainIndexEffects,
+                          unspentTxOutFromRef, utxoSetWithCurrency)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Http.Api (UtxosResponse (UtxosResponse))
+import Plutus.ChainIndex.Indexer.Sqlite.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Tx (_ValidTx)
-import Plutus.ChainIndex.Types (ChainSyncBlock (..))
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Test.Tasty (TestTree, testGroup)
@@ -64,7 +65,7 @@ eachTxOutRefAtAddressShouldBeUnspentSpec = property $ do
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlocks [(Block tip (map (, def) block))]
+      appendBlocks [Block tip (map (, def) block)]
       utxoSetFromBlockAddrs block
 
   S.fromList (concat utxoGroups) === view Gen.txgsUtxoSet state
@@ -78,11 +79,11 @@ eachTxOutRefAtAddressShouldHaveTxOutSpec = property $ do
 
   utxouts <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlocks [(Block tip (map (, def) block))]
+      appendBlocks [Block tip (map (, def) block)]
       utxos <- utxoSetFromBlockAddrs block
       traverse unspentTxOutFromRef (concat utxos)
 
-  Hedgehog.assert $ and $ map isJust utxouts
+  Hedgehog.assert $ all isJust utxouts
 
 -- | After generating and appending a block in the chain index, verify that
 -- querying the chain index with each of the addresses in the block returns
@@ -99,7 +100,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlocks [(Block tip (map (, def) block))]
+      appendBlocks [Block tip (map (, def) block)]
 
       forM assetClasses $ \ac -> do
         let pq = PageQuery 200 Nothing
@@ -117,7 +118,7 @@ cantRequestForTxOutRefsWithAdaSpec = property $ do
 
   utxoRefs <- runChainIndexTest $ do
       -- Append the generated block in the chain index
-      appendBlocks [(Block tip (map (, def) block))]
+      appendBlocks [Block tip (map (, def) block)]
 
       let pq = PageQuery 200 Nothing
       UtxosResponse _ utxoRefs <- utxoSetWithCurrency pq (AssetClass (Ada.adaSymbol, Ada.adaToken))
@@ -140,7 +141,7 @@ runChainIndexTest action = do
     Pool.withResource pool $ \conn ->
       Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
     stateTVar <- newTVarIO mempty
-    runChainIndexEffects (RunRequirements nullTracer stateTVar pool 10) action
+    runChainIndexEffects (RunRequirements nullTracer stateTVar pool (SecurityParam 10)) action
 
   case result of
     Left _  -> Hedgehog.failure

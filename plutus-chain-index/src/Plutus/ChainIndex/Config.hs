@@ -30,6 +30,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Numeric.Natural (Natural)
+import Ouroboros.Consensus.Config (SecurityParam (SecurityParam))
 import Ouroboros.Network.Magic (NetworkMagic (NetworkMagic))
 import Prettyprinter (Pretty (pretty), viaShow, vsep, (<+>))
 
@@ -38,7 +39,7 @@ data ChainIndexConfig = ChainIndexConfig
   , cicDbPath                     :: String
   , cicPort                       :: Int
   , cicNetworkId                  :: NetworkId
-  , cicSecurityParam              :: Int -- ^ The number of blocks after which a transaction cannot be rolled back anymore
+  , cicSecurityParam              :: SecurityParam -- ^ The number of blocks after which a transaction cannot be rolled back anymore
   , cicSlotConfig                 :: SlotConfig
   , cicStoreFrom                  :: BlockNo -- ^ Only store transactions from this block number onward
   , cicAppendTransactionQueueSize :: Natural -- ^ The size of the queue and a number of transactions to collect before writing to the database
@@ -55,6 +56,8 @@ deriving anyclass instance FromJSON NetworkMagic
 deriving anyclass instance ToJSON NetworkMagic
 deriving anyclass instance FromJSON BlockNo
 deriving anyclass instance ToJSON BlockNo
+deriving anyclass instance FromJSON SecurityParam
+deriving anyclass instance ToJSON SecurityParam
 
 -- | These settings work with the main testnet
 defaultConfig :: ChainIndexConfig
@@ -63,7 +66,7 @@ defaultConfig = ChainIndexConfig
   , cicDbPath     = "/tmp/chain-index.db"
   , cicPort       = 9083
   , cicNetworkId  = Testnet $ NetworkMagic 1097911063
-  , cicSecurityParam = 2160
+  , cicSecurityParam = SecurityParam 2160
   , cicSlotConfig =
       SlotConfig
         { scSlotZeroTime = 1596059091000
@@ -79,7 +82,7 @@ instance Pretty ChainIndexConfig where
          , "Db:" <+> pretty cicDbPath
          , "Port:" <+> pretty cicPort
          , "Network Id:" <+> viaShow cicNetworkId
-         , "Security Param:" <+> pretty cicSecurityParam
+         , "Security Param:" <+> viaShow cicSecurityParam
          , "Store from:" <+> viaShow cicStoreFrom
          , "Append transaction queue size:" <+> viaShow cicAppendTransactionQueueSize
          ]

@@ -337,7 +337,7 @@ handleMultiAgentControl = interpret $ \case
         act
             & raiseEnd
             & NC.handleNodeControl
-            & interpret ChainIndex.handleControl
+            & ChainIndex.handleChainIndexControl
             & Wallet.handleSigningProcessControl
             & handleObserveLog
             & interpret (mapLog (review p4))

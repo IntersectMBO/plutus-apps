@@ -4,52 +4,34 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
-module Plutus.ChainIndex.Server(
-    serveChainIndexQueryServer,
-    serveChainIndex) where
+module Plutus.ChainIndex.Http.Server
+    ( serveChainIndexServer
+    , serveChainIndex
+    ) where
 
 import Control.Monad ((>=>))
-import Control.Monad.Except qualified as E
 import Control.Monad.Freer (Eff, Member, type (~>))
-import Control.Monad.Freer.Error (Error, runError, throwError)
-import Control.Monad.Freer.Extras.Modify (raiseEnd)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Data.ByteString.Lazy qualified as BSL
+import Control.Monad.Freer.Error (Error, throwError)
 import Data.Default (Default (def))
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
-import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
 import Network.Wai.Handler.Warp qualified as Warp
-import Plutus.ChainIndex (RunRequirements, runChainIndexEffects)
-import Plutus.ChainIndex.Api (API, FromHashAPI, FullAPI, TxoAtAddressRequest (TxoAtAddressRequest),
-                              UtxoAtAddressRequest (UtxoAtAddressRequest),
-                              UtxoWithCurrencyRequest (UtxoWithCurrencyRequest), swagger)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as E
+import Plutus.ChainIndex.Http.Api (API, FromHashAPI, FullAPI, TxoAtAddressRequest (TxoAtAddressRequest),
+                                   UtxoAtAddressRequest (UtxoAtAddressRequest),
+                                   UtxoWithCurrencyRequest (UtxoWithCurrencyRequest), swagger)
 import Servant.API ((:<|>) (..))
 import Servant.API.ContentTypes (NoContent (..))
-import Servant.Server (Handler, ServerError, ServerT, err404, err500, errBody, hoistServer, serve)
+import Servant.Server (Handler, ServerError, ServerT, err404, hoistServer, serve)
 
-serveChainIndexQueryServer ::
+serveChainIndexServer ::
     Int -- ^ Port
-    -> RunRequirements
-    -> IO ()
-serveChainIndexQueryServer port runReq = do
-    let server = hoistServer (Proxy @API) (runChainIndexQuery runReq) serveChainIndex
-    Warp.run port (serve (Proxy @FullAPI) (server :<|> swagger))
-
-runChainIndexQuery ::
-    RunRequirements
     -> Eff '[Error ServerError, ChainIndexQueryEffect, ChainIndexControlEffect] ~> Handler
-runChainIndexQuery runReq action = do
-    result <- liftIO $ runChainIndexEffects runReq $ runError $ raiseEnd action
-    case result of
-        Right (Right a) -> pure a
-        Right (Left e) -> E.throwError e
-        Left e' ->
-            let err = err500 { errBody = BSL.fromStrict $ Text.encodeUtf8 $ Text.pack $ show e' } in
-            E.throwError err
+    -> IO ()
+serveChainIndexServer port action = do
+    let server = hoistServer (Proxy @API) action serveChainIndex
+    Warp.run port (serve (Proxy @FullAPI) (server :<|> swagger))
 
 serveChainIndex ::
     forall effs.
@@ -67,8 +49,8 @@ serveChainIndex =
     :<|> (\(UtxoWithCurrencyRequest pq c) -> E.utxoSetWithCurrency (fromMaybe def pq) c)
     :<|> (\(TxoAtAddressRequest pq c) -> E.txoSetAtAddress (fromMaybe def pq) c)
     :<|> E.getTip
-    :<|> E.collectGarbage *> pure NoContent
     :<|> E.getDiagnostics
+    :<|> E.collectGarbage *> pure NoContent
 
 serveFromHashApi ::
     forall effs.

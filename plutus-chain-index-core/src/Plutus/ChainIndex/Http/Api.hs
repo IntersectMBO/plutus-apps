@@ -1,11 +1,12 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Plutus.ChainIndex.Api
+module Plutus.ChainIndex.Http.Api
   ( API
   , FromHashAPI
   , FullAPI
@@ -137,10 +138,11 @@ data TxoAtAddressRequest = TxoAtAddressRequest
     deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
 
 -- | Response type for the txo-at-address endpoint.
-data TxosResponse = TxosResponse
+newtype TxosResponse = TxosResponse
     { paget :: Page TxOutRef
     }
-    deriving (Show, Eq, Generic, FromJSON, ToJSON, OpenApi.ToSchema)
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
 type API
     = "healthcheck" :> Description "Is the server alive?" :> Get '[JSON] NoContent
@@ -151,8 +153,8 @@ type API
     :<|> "utxo-with-currency" :> Description "Get all UTxOs with a currency." :> ReqBody '[JSON] UtxoWithCurrencyRequest :> Post '[JSON] UtxosResponse
     :<|> "txo-at-address" :> Description "Get TxOs at an address." :> ReqBody '[JSON] TxoAtAddressRequest :> Post '[JSON] TxosResponse
     :<|> "tip" :> Description "Get the current synced tip." :> Get '[JSON] Tip
-    :<|> "collect-garbage" :> Description "Collect chain index garbage to free up space." :> Put '[JSON] NoContent
     :<|> "diagnostics" :> Description "Get the current stats of the chain index." :> Get '[JSON] Diagnostics
+    :<|> "collect-garbage" :> Description "Collect chain index garbage to free up space." :> Put '[JSON] NoContent
 
 type FromHashAPI =
     "datum" :> Description "Get a datum from its hash." :> ReqBody '[JSON] DatumHash :> Post '[JSON] Datum

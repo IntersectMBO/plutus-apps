@@ -510,7 +510,7 @@ runChainIndexEffects action = do
                             $ runWriter @[LogMessage ChainIndexLog]
                             $ reinterpret @(LogMsg ChainIndexLog) @(Writer [LogMessage ChainIndexLog]) (handleLogWriter _singleton)
                             $ runState oldState
-                            $ interpret ChainIndex.handleControl
+                            $ ChainIndex.handleChainIndexControl
                             $ interpret ChainIndex.handleQuery action
                     case resultE of
                       Left e -> error (show e)
@@ -582,6 +582,7 @@ handleChainIndexEffect = runChainIndexEffects @t . \case
     UtxoSetWithCurrency pq ac -> ChainIndex.utxoSetWithCurrency pq ac
     TxoSetAtAddress pq addr   -> ChainIndex.txoSetAtAddress pq addr
     GetTip                    -> ChainIndex.getTip
+    GetDiagnostics            -> ChainIndex.getDiagnostics
 
 -- | Start a thread that prints log messages to the terminal when they come in.
 printLogMessages ::

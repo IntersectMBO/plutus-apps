@@ -58,6 +58,7 @@ library
         iohk-monitoring -any,
         lens -any,
         optparse-applicative -any,
+        ouroboros-consensus -any,
         ouroboros-network -any,
         prettyprinter >=1.1.0.1,
         resource-pool -any,

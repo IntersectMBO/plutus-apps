@@ -6,11 +6,11 @@
 
 module Main(main) where
 
-import Control.Lens
+import Control.Lens (view, (^.))
 import Control.Monad (foldM, forM_, join, replicateM)
 import Control.Monad.Freer (Eff, Member, runM, sendM)
 import Control.Monad.Freer.Error (Error, runError, throwError)
-import Data.Bifunctor (Bifunctor (..))
+import Data.Bifunctor (Bifunctor (first))
 import Data.Either (isRight)
 import Data.FingerTree qualified as FT
 import Data.Foldable (fold, toList)
@@ -22,20 +22,24 @@ import Hedgehog (Property, annotateShow, assert, failure, forAll, property, (/==
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (TxOutRef (TxOutRef, txOutRefId))
-import Plutus.ChainIndex.Emulator.DiskStateSpec qualified as DiskStateSpec
-import Plutus.ChainIndex.Emulator.HandlersSpec qualified as EmulatorHandlersSpec
-import Plutus.ChainIndex.HandlersSpec qualified as HandlersSpec
+import Plutus.ChainIndex.Indexer.Memory.DiskStateSpec qualified as DiskStateSpec
+import Plutus.ChainIndex.Indexer.Memory.HandlersSpec qualified as EmulatorHandlersSpec
+import Plutus.ChainIndex.Indexer.Sqlite.HandlersSpec qualified as HandlersSpec
 import Plutus.ChainIndex.Tx (citxTxId)
 import Plutus.ChainIndex.TxIdState (dropOlder, increaseDepth, transactionStatus)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.TxUtxoBalance qualified as TUB
-import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), RollbackState (..), Tip (..), TxConfirmedState (..),
-                                TxIdState (..), TxOutState (..), TxStatusFailure (..), TxUtxoBalance (..),
-                                TxValidity (..), liftTxOutStatus, tipAsPoint, txOutStatusTxOutState)
-import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..))
+import Plutus.ChainIndex.Types (BlockNumber (BlockNumber), Depth (Depth),
+                                RollbackState (Committed, TentativelyConfirmed, Unknown), Tip (Tip, TipAtGenesis),
+                                TxConfirmedState (timesConfirmed), TxIdState (txnsConfirmed, txnsDeleted),
+                                TxOutState (Spent, Unspent), TxStatusFailure (InvalidRollbackAttempt),
+                                TxUtxoBalance (_tubUnmatchedSpentInputs), TxValidity (TxValid), liftTxOutStatus,
+                                tipAsPoint, txOutStatusTxOutState)
+import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (InsertUtxoSuccess, insertPosition, newIndex),
+                                    RollbackResult (RollbackResult, rolledBackIndex))
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
-import Test.Tasty
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
 main :: IO ()

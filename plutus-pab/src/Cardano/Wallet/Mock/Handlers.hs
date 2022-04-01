@@ -52,7 +52,7 @@ import Ledger.CardanoWallet qualified as CW
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
-import Plutus.ChainIndex.Client qualified as ChainIndex
+import Plutus.ChainIndex.Http.Client qualified as ChainIndex
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Plutus.PAB.Types (PABError)

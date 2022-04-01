@@ -61,8 +61,8 @@ import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusIndex,
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
-import Plutus.ChainIndex.Api (UtxosResponse (page))
 import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffect)
+import Plutus.ChainIndex.Http.Api (UtxosResponse (page))
 import Plutus.Contract (WalletAPIError)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.Contract.Wallet (finalize)

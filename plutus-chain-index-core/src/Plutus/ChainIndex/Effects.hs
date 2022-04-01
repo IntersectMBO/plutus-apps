@@ -17,13 +17,13 @@ module Plutus.ChainIndex.Effects(
     , utxoSetWithCurrency
     , txoSetAtAddress
     , getTip
+    , getDiagnostics
     -- * Control effect
     , ChainIndexControlEffect(..)
     , appendBlocks
     , rollback
     , resumeSync
     , collectGarbage
-    , getDiagnostics
     ) where
 
 import Control.Monad.Freer.Extras.Pagination (PageQuery)
@@ -32,7 +32,7 @@ import Ledger (AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, R
                StakeValidatorHash, Validator, ValidatorHash)
 import Ledger.Credential (Credential)
 import Ledger.Tx (ChainIndexTxOut, TxOutRef)
-import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
+import Plutus.ChainIndex.Http.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Types (ChainSyncBlock, Diagnostics, Point, Tip)
 
 data ChainIndexQueryEffect r where
@@ -73,6 +73,8 @@ data ChainIndexQueryEffect r where
     -- | Get the tip of the chain index
     GetTip :: ChainIndexQueryEffect Tip
 
+    GetDiagnostics :: ChainIndexQueryEffect Diagnostics
+
 makeEffect ''ChainIndexQueryEffect
 
 data ChainIndexControlEffect r where
@@ -88,7 +90,5 @@ data ChainIndexControlEffect r where
 
     -- | Delete all data that is not covered by current UTxOs.
     CollectGarbage :: ChainIndexControlEffect ()
-
-    GetDiagnostics :: ChainIndexControlEffect Diagnostics
 
 makeEffect ''ChainIndexControlEffect

@@ -10,8 +10,8 @@ import Control.Monad.Freer (Eff, Member)
 import Ledger (Address (Address, addressCredential), TxOut (TxOut, txOutAddress), TxOutRef)
 import Ledger.Credential (Credential)
 import Plutus.ChainIndex (Page (pageItems), PageQuery (PageQuery), citxOutputs, utxoSetAtAddress)
-import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect)
+import Plutus.ChainIndex.Http.Api (UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Tx (ChainIndexTx, _ValidTx)
 
 -- | Get all address credentials from a block.

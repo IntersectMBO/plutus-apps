@@ -16,10 +16,10 @@
       copyright = "";
       maintainer = "sjoerd.visscher@iohk.io";
       author = "Sjoerd Visscher";
-      homepage = "https://github.com/iohk/plutus#readme";
+      homepage = "https://github.com/input-output-hk/plutus-apps#readme";
       url = "";
       synopsis = "";
-      description = "Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>";
+      description = "Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>";
       buildType = "Simple";
       isLocal = true;
       detailLevel = "FullDetails";
@@ -87,30 +87,31 @@
           ];
         buildable = true;
         modules = [
+          "Cardano/Protocol/Socket/Type"
+          "Cardano/Protocol/Socket/Client"
           "Plutus/ChainIndex"
-          "Plutus/ChainIndex/Api"
           "Plutus/ChainIndex/ChainIndexError"
           "Plutus/ChainIndex/ChainIndexLog"
-          "Plutus/ChainIndex/Client"
-          "Plutus/ChainIndex/DbSchema"
+          "Plutus/ChainIndex/Compatibility"
           "Plutus/ChainIndex/Effects"
           "Plutus/ChainIndex/Emulator"
-          "Plutus/ChainIndex/Emulator/DiskState"
-          "Plutus/ChainIndex/Emulator/Handlers"
-          "Plutus/ChainIndex/Emulator/Server"
-          "Plutus/ChainIndex/Handlers"
-          "Plutus/ChainIndex/Server"
+          "Plutus/ChainIndex/Indexer/Memory/DiskState"
+          "Plutus/ChainIndex/Indexer/Memory/Handlers"
+          "Plutus/ChainIndex/Indexer/Sqlite/DbSchema"
+          "Plutus/ChainIndex/Indexer/Sqlite/Handlers"
+          "Plutus/ChainIndex/Http/Api"
+          "Plutus/ChainIndex/Http/Client"
+          "Plutus/ChainIndex/Http/Server"
+          "Plutus/ChainIndex/Http/MemoryBackend/Server"
+          "Plutus/ChainIndex/Http/SqliteBackend/Server"
           "Plutus/ChainIndex/Tx"
           "Plutus/ChainIndex/TxIdState"
           "Plutus/ChainIndex/TxOutBalance"
           "Plutus/ChainIndex/TxUtxoBalance"
           "Plutus/ChainIndex/Types"
           "Plutus/ChainIndex/UtxoState"
-          "Plutus/Monitoring/Util"
-          "Cardano/Protocol/Socket/Type"
-          "Cardano/Protocol/Socket/Client"
-          "Plutus/ChainIndex/Compatibility"
           "Plutus/Contract/CardanoAPI"
+          "Plutus/Monitoring/Util"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -133,6 +134,7 @@
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
+            (hsPkgs."ouroboros-consensus" or (errorHandler.buildDepError "ouroboros-consensus"))
             (hsPkgs."resource-pool" or (errorHandler.buildDepError "resource-pool"))
             (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
             (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
@@ -143,9 +145,9 @@
           buildable = true;
           modules = [
             "Generators"
-            "Plutus/ChainIndex/Emulator/DiskStateSpec"
-            "Plutus/ChainIndex/Emulator/HandlersSpec"
-            "Plutus/ChainIndex/HandlersSpec"
+            "Plutus/ChainIndex/Indexer/Memory/DiskStateSpec"
+            "Plutus/ChainIndex/Indexer/Memory/HandlersSpec"
+            "Plutus/ChainIndex/Indexer/Sqlite/HandlersSpec"
             "Util"
             ];
           hsSourceDirs = [ "test" ];
