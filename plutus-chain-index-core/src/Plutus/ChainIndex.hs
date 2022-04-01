@@ -23,15 +23,13 @@ import Plutus.ChainIndex.Types as Export
 import Plutus.ChainIndex.UtxoState as Export
 
 import Cardano.BM.Trace (Trace)
-import Control.Concurrent.MVar (MVar, putMVar, takeMVar)
+import Control.Concurrent.MVar (MVar)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret)
 import Control.Monad.Freer.Error (handleError, runError, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect, handleBeam)
 import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.Extras.Modify (raiseEnd, raiseMUnderN)
 import Control.Monad.Freer.Reader (runReader)
-import Control.Monad.Freer.State (runState)
-import Control.Monad.IO.Class (liftIO)
 import Database.SQLite.Simple qualified as Sqlite
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 
@@ -60,9 +58,9 @@ handleChainIndexEffects
     -> Eff (ChainIndexQueryEffect ': ChainIndexControlEffect ': BeamEffect ': effs) a
     -> Eff effs (Either ChainIndexError a)
 handleChainIndexEffects RunRequirements{trace, stateMVar, conn, securityParam} action = do
-    state <- liftIO $ takeMVar stateMVar
-    (result, newState) <-
-        runState state
+    -- state <- liftIO $ takeMVar stateMVar
+    result <-
+        runReader stateMVar
         $ runReader conn
         $ runReader (Depth securityParam)
         $ runError @ChainIndexError
@@ -72,5 +70,5 @@ handleChainIndexEffects RunRequirements{trace, stateMVar, conn, securityParam} a
         $ interpret handleQuery
         -- Insert the 5 effects needed by the handlers of the 3 chain index effects between those 3 effects and 'effs'.
         $ raiseMUnderN @[_,_,_,_,_] @[_,_,_] action
-    liftIO $ putMVar stateMVar newState
+    -- liftIO $ putMVar stateMVar newState
     pure result
