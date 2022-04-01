@@ -47,14 +47,12 @@ library
         iohk-monitoring -any,
         lens -any,
         mtl -any,
-        monad-control -any,
         openapi3 -any,
         prettyprinter -any,
         resource-pool -any,
         sqlite-simple -any,
         streaming -any,
         text -any,
-        transformers-base -any
 
 test-suite freer-extras-test
     import: lang
