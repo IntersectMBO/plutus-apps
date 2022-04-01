@@ -18,7 +18,7 @@
       author = "Duncan Coutts, Marcin Szamotulski, Alexander Vieth";
       homepage = "";
       url = "";
-      synopsis = "A pure simlator for monadic concurrency with STM";
+      synopsis = "A pure simulator for monadic concurrency with STM";
       description = "";
       buildType = "Simple";
       isLocal = true;
@@ -37,15 +37,28 @@
           (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+          (hsPkgs."parallel" or (errorHandler.buildDepError "parallel"))
+          (hsPkgs."pretty-simple" or (errorHandler.buildDepError "pretty-simple"))
           (hsPkgs."psqueues" or (errorHandler.buildDepError "psqueues"))
+          (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."quiet" or (errorHandler.buildDepError "quiet"))
+          (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
+          (hsPkgs."syb" or (errorHandler.buildDepError "syb"))
           ];
         buildable = true;
         modules = [
+          "Control/Monad/IOSim/CommonTypes"
           "Control/Monad/IOSim/Internal"
+          "Control/Monad/IOSim/InternalTypes"
+          "Control/Monad/IOSim/STM"
+          "Control/Monad/IOSimPOR/Internal"
+          "Control/Monad/IOSimPOR/Types"
+          "Control/Monad/IOSimPOR/QuickCheckUtils"
+          "Control/Monad/IOSimPOR/Timeout"
           "Data/List/Trace"
           "Control/Monad/IOSim"
+          "Control/Monad/IOSim/Types"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -57,6 +70,7 @@
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
             (hsPkgs."io-sim" or (errorHandler.buildDepError "io-sim"))
+            (hsPkgs."parallel" or (errorHandler.buildDepError "parallel"))
             (hsPkgs."QuickCheck" or (errorHandler.buildDepError "QuickCheck"))
             (hsPkgs."strict-stm" or (errorHandler.buildDepError "strict-stm"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
@@ -64,7 +78,7 @@
             (hsPkgs."time" or (errorHandler.buildDepError "time"))
             ];
           buildable = true;
-          modules = [ "Test/IOSim" "Test/STM" ];
+          modules = [ "Test/IOSim" "Test/STM" "Test/Control/Monad/IOSimPOR" ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
           };

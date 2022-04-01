@@ -11,7 +11,7 @@
     flags = {};
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-api"; version = "1.34.1"; };
+      identifier = { name = "cardano-api"; version = "1.33.0"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";

@@ -8,7 +8,7 @@
   , config
   , ... }:
   {
-    flags = {};
+    flags = { nightly = false; };
     package = {
       specVersion = "1.10";
       identifier = { name = "ouroboros-network-testing"; version = "0.1.0.0"; };
@@ -40,6 +40,8 @@
           (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
           (hsPkgs."io-sim" or (errorHandler.buildDepError "io-sim"))
           (hsPkgs."psqueues" or (errorHandler.buildDepError "psqueues"))
+          (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
+          (hsPkgs."tasty-expected-failure" or (errorHandler.buildDepError "tasty-expected-failure"))
           (hsPkgs."cborg" or (errorHandler.buildDepError "cborg"))
           (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
           (hsPkgs."network-mux" or (errorHandler.buildDepError "network-mux"))

@@ -45,7 +45,6 @@
           (hsPkgs."cardano-ledger-byron" or (errorHandler.buildDepError "cardano-ledger-byron"))
           (hsPkgs."cardano-ledger-core" or (errorHandler.buildDepError "cardano-ledger-core"))
           (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
-          (hsPkgs."cardano-protocol-tpraos" or (errorHandler.buildDepError "cardano-protocol-tpraos"))
           (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."cborg" or (errorHandler.buildDepError "cborg"))
           (hsPkgs."compact-map" or (errorHandler.buildDepError "compact-map"))
@@ -58,7 +57,6 @@
           (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
           (hsPkgs."microlens" or (errorHandler.buildDepError "microlens"))
           (hsPkgs."nothunks" or (errorHandler.buildDepError "nothunks"))
-          (hsPkgs."primitive" or (errorHandler.buildDepError "primitive"))
           (hsPkgs."quiet" or (errorHandler.buildDepError "quiet"))
           (hsPkgs."set-algebra" or (errorHandler.buildDepError "set-algebra"))
           (hsPkgs."small-steps" or (errorHandler.buildDepError "small-steps"))
@@ -66,10 +64,10 @@
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
+          (hsPkgs."validation-selective" or (errorHandler.buildDepError "validation-selective"))
           ];
         buildable = true;
         modules = [
-          "Cardano/Ledger/Shelley/API/Types"
           "Cardano/Ledger/Chain"
           "Cardano/Ledger/Shelley"
           "Cardano/Ledger/Shelley/Constraints"
@@ -77,10 +75,10 @@
           "Cardano/Ledger/Shelley/API"
           "Cardano/Ledger/Shelley/API/ByronTranslation"
           "Cardano/Ledger/Shelley/API/Genesis"
-          "Cardano/Ledger/Shelley/API/Protocol"
           "Cardano/Ledger/Shelley/API/Validation"
           "Cardano/Ledger/Shelley/API/Wallet"
           "Cardano/Ledger/Shelley/API/Mempool"
+          "Cardano/Ledger/Shelley/API/Types"
           "Cardano/Ledger/Shelley/BlockChain"
           "Cardano/Ledger/Shelley/CompactAddr"
           "Cardano/Ledger/Shelley/Delegation/Certificates"
@@ -91,6 +89,7 @@
           "Cardano/Ledger/Shelley/LedgerState"
           "Cardano/Ledger/Shelley/Metadata"
           "Cardano/Ledger/Shelley/Orphans"
+          "Cardano/Ledger/Shelley/PoolRank"
           "Cardano/Ledger/Shelley/PParams"
           "Cardano/Ledger/Shelley/Rewards"
           "Cardano/Ledger/Shelley/RewardProvenance"

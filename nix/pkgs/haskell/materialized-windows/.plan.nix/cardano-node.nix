@@ -11,7 +11,7 @@
     flags = { unexpected_thunks = false; systemd = true; };
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-node"; version = "1.34.1"; };
+      identifier = { name = "cardano-node"; version = "1.33.0"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
@@ -40,6 +40,7 @@
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           (hsPkgs."deepseq" or (errorHandler.buildDepError "deepseq"))
           (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+          (hsPkgs."cardano-data" or (errorHandler.buildDepError "cardano-data"))
           (hsPkgs."cardano-git-rev" or (errorHandler.buildDepError "cardano-git-rev"))
           (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
           (hsPkgs."cardano-crypto-wrapper" or (errorHandler.buildDepError "cardano-crypto-wrapper"))
@@ -51,6 +52,7 @@
           (hsPkgs."cardano-protocol-tpraos" or (errorHandler.buildDepError "cardano-protocol-tpraos"))
           (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."cborg" or (errorHandler.buildDepError "cborg"))
+          (hsPkgs."compact-map" or (errorHandler.buildDepError "compact-map"))
           (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
           (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
@@ -94,7 +96,6 @@
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
           (hsPkgs."transformers-except" or (errorHandler.buildDepError "transformers-except"))
           (hsPkgs."typed-protocols" or (errorHandler.buildDepError "typed-protocols"))
-          (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
           (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
           ] ++ (pkgs.lib).optional (!system.isWindows) (hsPkgs."unix" or (errorHandler.buildDepError "unix"))) ++ (pkgs.lib).optional (system.isWindows) (hsPkgs."Win32" or (errorHandler.buildDepError "Win32"))) ++ (pkgs.lib).optionals (system.isLinux && flags.systemd) [
           (hsPkgs."lobemo-scribe-systemd" or (errorHandler.buildDepError "lobemo-scribe-systemd"))
@@ -132,6 +133,7 @@
           "Cardano/Node/Tracing/Era/Byron"
           "Cardano/Node/Tracing/Era/HardFork"
           "Cardano/Node/Tracing/Era/Shelley"
+          "Cardano/Node/Tracing/Peers"
           "Cardano/Node/Tracing/StateRep"
           "Cardano/Node/Tracing/Tracers"
           "Cardano/Node/Tracing/Tracers/BlockReplayProgress"

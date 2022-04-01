@@ -11,7 +11,7 @@
     flags = {};
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-testnet"; version = "1.34.1"; };
+      identifier = { name = "cardano-testnet"; version = "1.33.0"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
@@ -79,6 +79,8 @@
             (hsPkgs."ansi-terminal" or (errorHandler.buildDepError "ansi-terminal"))
             (hsPkgs."cardano-git-rev" or (errorHandler.buildDepError "cardano-git-rev"))
             (hsPkgs."cardano-testnet" or (errorHandler.buildDepError "cardano-testnet"))
+            (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
+            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."hedgehog-extras" or (errorHandler.buildDepError "hedgehog-extras"))
             (hsPkgs."optparse-applicative-fork" or (errorHandler.buildDepError "optparse-applicative-fork"))
@@ -120,7 +122,7 @@
             (hsPkgs.buildPackages.cardano-submit-api.components.exes.cardano-submit-api or (pkgs.buildPackages.cardano-submit-api or (errorHandler.buildToolDepError "cardano-submit-api:cardano-submit-api")))
             ];
           buildable = true;
-          modules = [ "Spec/Shutdown" "Test/Util" ];
+          modules = [ "Spec/Shutdown" "Spec/ShutdownOnSlotSynced" "Test/Util" ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
           };
