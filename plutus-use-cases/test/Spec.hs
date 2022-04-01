@@ -10,14 +10,14 @@ import Spec.Future qualified
 import Spec.Game qualified
 import Spec.GameStateMachine qualified
 import Spec.Governance qualified
-import Spec.SealedBidAuction qualified
-import Spec.SimpleEscrow qualified
--- import qualified Spec.MultiSig
+import Spec.MultiSig qualified
 import Spec.MultiSigStateMachine qualified
 import Spec.PingPong qualified
 import Spec.Prism qualified
 import Spec.PubKey qualified
 import Spec.Rollup qualified
+import Spec.SealedBidAuction qualified
+import Spec.SimpleEscrow qualified
 import Spec.Stablecoin qualified
 import Spec.TokenAccount qualified
 import Spec.Uniswap qualified
@@ -42,8 +42,7 @@ tests = localOption limit $ testGroup "use cases" [
     Spec.Vesting.tests,
     Spec.ErrorHandling.tests,
     Spec.Future.tests,
-    -- disable temporarily, because we need to adopt the signing API
-    -- Spec.MultiSig.tests,
+    Spec.MultiSig.tests,
     Spec.MultiSigStateMachine.tests,
     Spec.Currency.tests,
     Spec.PubKey.tests,
