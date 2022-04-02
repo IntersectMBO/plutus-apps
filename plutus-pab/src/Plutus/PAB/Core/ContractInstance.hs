@@ -410,5 +410,5 @@ respondToRequestsSTM ::
     -> Eff effs (STM (Response PABResp))
 respondToRequestsSTM instanceId currentState = do
     let rqs = Contract.requests @t currentState
-    logDebug @(ContractInstanceMsg t) $ HandlingRequests instanceId rqs
+    logInfo @(ContractInstanceMsg t) $ HandlingRequests instanceId rqs
     tryHandler' stmRequestHandler rqs
