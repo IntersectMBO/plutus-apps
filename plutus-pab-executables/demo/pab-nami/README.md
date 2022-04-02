@@ -70,7 +70,7 @@ From another instance of `nix-shell`, run the following command to launch the fr
 
 # This is a temporary measure for using function in Nami's non-public api.
 # This will be removed in the next iterations.
-$ git clone --depth 1 --branch v2.3.6 https://github.com/Berry-Pool/nami-wallet.git lib/nami-wallet
+$ git clone --depth 1 --branch 2.3.6 https://github.com/Berry-Pool/nami-wallet.git lib/nami-wallet
 
 # Install NPM and Spago dependencies and run the dev server
 $ npm start
