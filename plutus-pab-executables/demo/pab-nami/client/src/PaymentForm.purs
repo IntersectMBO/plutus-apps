@@ -22,24 +22,20 @@ import Web.Event.Event (Event)
 import Web.Event.Event as Event
 import Web.UIEvent.MouseEvent (toEvent)
 
-data Action
-  = HandleSubmit Event
+data Action = HandleSubmit Event
 
-type Payment
-  =
+type Payment =
   { recipientBech32Addr :: Address
   , lovelaceAmount :: Int
   }
 
-data AddressError
-  = RecipientAddrNotInBech32
+data AddressError = RecipientAddrNotInBech32
 
 data LovelaceAmountError
   = LovelaceAmountLowerThanMin
   | LovelaceAmountNotAnInt
 
-newtype PaymentForm (r :: Row Type -> Type) f
-  = PaymentForm
+newtype PaymentForm (r :: Row Type -> Type) f = PaymentForm
   ( r
       ( recipientBech32Addr :: f AddressError String Address
       , lovelaceAmount :: f LovelaceAmountError String Int
@@ -48,8 +44,7 @@ newtype PaymentForm (r :: Row Type -> Type) f
 
 derive instance newtypePaymentForm :: Newtype (PaymentForm r f) _
 
-type ChildSlots
-  = (formless :: F.Slot' PaymentForm Payment Unit)
+type ChildSlots = (formless :: F.Slot' PaymentForm Payment Unit)
 
 component :: CardanoWasm -> F.Component PaymentForm (Const Void) () Unit Payment AppM
 component cardanoWasm = F.component (const $ input cardanoWasm) spec

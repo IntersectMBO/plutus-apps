@@ -81,14 +81,11 @@ derive instance genericActionEvent :: Generic ActionEvent _
 instance showActionEvent :: Show ActionEvent where
   show = genericShow
 
-type Expression
-  = ContractCall RawJson
+type Expression = ContractCall RawJson
 
-type FormArgument
-  = Fix FormArgumentF
+type FormArgument = Fix FormArgumentF
 
-type Signatures
-  = Array (FunctionSchema FormSchema)
+type Signatures = Array (FunctionSchema FormSchema)
 
 toArgument :: Value -> FormSchema -> FormArgument
 toArgument initialValue = ana algebra

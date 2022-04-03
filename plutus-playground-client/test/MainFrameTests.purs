@@ -64,8 +64,7 @@ all =
     evalTests
 
 ------------------------------------------------------------
-type World
-  =
+type World =
   { gists :: Map GistId Gist
   , editorContents :: Maybe SourceCode
   , localStorage :: Map String String
@@ -83,8 +82,7 @@ _localStorage :: forall r a. Lens' { localStorage :: a | r } a
 _localStorage = prop (Proxy :: _ "localStorage")
 
 -- | A dummy implementation of `MonadApp`, for testing the main handleAction loop.
-newtype MockApp m a
-  = MockApp (StateT (Tuple World State) m a)
+newtype MockApp m a = MockApp (StateT (Tuple World State) m a)
 
 derive instance newtypeMockApp :: Newtype (MockApp m a) _
 

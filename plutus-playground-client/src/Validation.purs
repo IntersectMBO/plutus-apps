@@ -34,8 +34,7 @@ instance showValidationError :: Show ValidationError where
   show Unsupported = "Unsupported"
 
 ------------------------------------------------------------
-newtype WithPath a
-  = WithPath { path :: Array String, value :: a }
+newtype WithPath a = WithPath { path :: Array String, value :: a }
 
 derive instance eqWithPath :: Eq a => Eq (WithPath a)
 
