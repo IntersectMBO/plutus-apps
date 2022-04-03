@@ -62,7 +62,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
         , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
-  scriptPath <- H.eval $ projectBase </> "scripts/plutus/example-txin-locking-plutus-script.sh"
+  scriptPath <- H.eval $ projectBase </> "plutus-example/plutus/example-txin-locking-plutus-script.sh"
 
   H.exec_ execConfig H.bashPath
     [ "-x"

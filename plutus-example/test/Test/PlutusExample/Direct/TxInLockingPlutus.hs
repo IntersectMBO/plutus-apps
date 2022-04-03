@@ -83,18 +83,13 @@ prop_spending_plutus_script = H.integration . H.runFinallies . H.workspace "chai
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
 
-  plutusScriptFileInUse <- H.note $ base </> "scripts/plutus/scripts/always-succeeds-spending.plutus"
-
-  H.noteEachM_ . H.listDirectory $ base
-  H.noteEachM_ . H.listDirectory $ base </> "scripts"
-  H.noteEachM_ . H.listDirectory $ base </> "scripts/plutus"
-  H.noteEachM_ . H.listDirectory $ base </> "scripts/plutus/scripts"
+  plutusScriptFileInUse <- H.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
 
   -- This datum hash is the hash of the untyped 42
   let scriptDatumHash = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
 
-  datumFile <- H.note $ base </> "scripts/plutus/data/42.datum"
-  redeemerFile <- H.note $ base </> "plutus-example/example-scripts/42.redeemer"
+  datumFile <- H.note $ base </> "plutus-example/plutus/data/42.datum"
+  redeemerFile <- H.note $ base </> "plutus-example/plutus/data/42.redeemer"
 
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse

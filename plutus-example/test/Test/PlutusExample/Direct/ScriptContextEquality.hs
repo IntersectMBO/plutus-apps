@@ -85,12 +85,7 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   scriptDummyRedeemer <- H.note $ work </> "script-context-dummy.redeemer"
   scriptContextRedeemer <- H.note $ work </> "script-context.redeemer"
 
-  plutusContextEqualityScript <- H.note $ base </> "scripts/plutus/scripts/context-equivalance-test.plutus"
-
-  H.noteEachM_ . H.listDirectory $ base
-  H.noteEachM_ . H.listDirectory $ base </> "scripts"
-  H.noteEachM_ . H.listDirectory $ base </> "scripts/plutus"
-  H.noteEachM_ . H.listDirectory $ base </> "scripts/plutus/scripts"
+  plutusContextEqualityScript <- H.note $ base </> "plutus-example/plutus/scripts/context-equivalance-test.plutus"
 
   exampleStakeVKey <- H.note $ tempAbsPath </> "addresses/user1-stake.vkey"
   exampleCertificate <- H.note $ tempAbsPath </> "addresses/user1-stake.reg.cert"
@@ -104,7 +99,7 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   -- This datum hash is the hash of the typed 42. TODO: Have the cli create this
   let scriptDatumHash = "fcaa61fb85676101d9e3398a484674e71c45c3fd41b492682f3b0054f4cf3273"
 
-  typedDatumFile <- H.note $ base </> "scripts/plutus/data/typed-42.datum"
+  typedDatumFile <- H.note $ base </> "plutus-example/plutus/data/typed-42.datum"
 
 
   -- Step 1: Create a tx ouput with a datum hash at the script address. In order for a tx ouput to be locked

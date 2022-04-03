@@ -158,4 +158,5 @@ test-suite plutus-example-test
 
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
+                      , cardano-submit-api:cardano-submit-api
   

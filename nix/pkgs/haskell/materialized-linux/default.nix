@@ -805,6 +805,7 @@
         cardano-prelude-test = ./.plan.nix/cardano-prelude-test.nix;
         lobemo-backend-monitoring = ./.plan.nix/lobemo-backend-monitoring.nix;
         io-sim = ./.plan.nix/io-sim.nix;
+        cardano-submit-api = ./.plan.nix/cardano-submit-api.nix;
         cardano-git-rev = ./.plan.nix/cardano-git-rev.nix;
         hedgehog-extras = ./.plan.nix/hedgehog-extras.nix;
         plutus-chain-index = ./.plan.nix/plutus-chain-index.nix;
@@ -950,6 +951,7 @@
             };
           "lobemo-backend-monitoring" = { flags = {}; };
           "io-sim" = { flags = { "asserts" = lib.mkOverride 900 false; }; };
+          "cardano-submit-api" = { flags = {}; };
           "cardano-git-rev" = {
             flags = { "systemd" = lib.mkOverride 900 true; };
             };
@@ -1188,6 +1190,7 @@
           "indexed-traversable".components.library.planned = lib.mkOverride 900 true;
           "network-uri".components.library.planned = lib.mkOverride 900 true;
           "plutus-chain-index".components.library.planned = lib.mkOverride 900 true;
+          "cardano-submit-api".components.library.planned = lib.mkOverride 900 true;
           "katip".components.library.planned = lib.mkOverride 900 true;
           "lzma".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-consensus-byron".components.library.planned = lib.mkOverride 900 true;
@@ -1541,6 +1544,7 @@
           "nothunks".components.library.planned = lib.mkOverride 900 true;
           "plutus-doc".components.exes."doc-doctests".planned = lib.mkOverride 900 true;
           "plutus-tx-plugin".components.library.planned = lib.mkOverride 900 true;
+          "cardano-submit-api".components.exes."cardano-submit-api".planned = lib.mkOverride 900 true;
           "servant-options".components.library.planned = lib.mkOverride 900 true;
           "indexed-traversable-instances".components.library.planned = lib.mkOverride 900 true;
           "servant-openapi3".components.library.planned = lib.mkOverride 900 true;
