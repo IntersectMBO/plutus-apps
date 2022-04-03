@@ -166,5 +166,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/command-line; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/command-line; echo source root reset to $sourceRoot";
     }) // { cabal-generator = "hpack"; }

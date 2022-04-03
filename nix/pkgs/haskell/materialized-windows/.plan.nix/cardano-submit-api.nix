@@ -108,5 +108,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/cardano-submit-api; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/cardano-submit-api; echo source root reset to $sourceRoot";
     }

@@ -76,5 +76,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/libs/cardano-data; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/libs/cardano-data; echo source root reset to $sourceRoot";
     }

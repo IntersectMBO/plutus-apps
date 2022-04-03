@@ -66,5 +66,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/plugins/backend-ekg; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/plugins/backend-ekg; echo source root reset to $sourceRoot";
     }

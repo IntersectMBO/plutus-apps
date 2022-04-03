@@ -193,5 +193,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/trace-dispatcher; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/trace-dispatcher; echo source root reset to $sourceRoot";
     }

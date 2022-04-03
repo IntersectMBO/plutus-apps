@@ -62,5 +62,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/libs/set-algebra; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/libs/set-algebra; echo source root reset to $sourceRoot";
     }
