@@ -158,6 +158,7 @@ source-repository-package
     cardano-cli
     cardano-git-rev
     cardano-node
+    cardano-submit-api
     cardano-testnet
     trace-dispatcher
     trace-forward

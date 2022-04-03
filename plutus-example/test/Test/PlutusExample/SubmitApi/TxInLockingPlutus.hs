@@ -84,7 +84,7 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
   utxoVKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
 
-  plutusScriptFileInUse <- HE.note $ base </> "scripts/plutus/scripts/always-succeeds-spending.plutus"
+  plutusScriptFileInUse <- HE.note $ base </> "plutus-example/plutus/scripts/always-succeeds-spending.plutus"
 
   submitApiConfigFile <- HE.note configurationFile
   submitApiStdoutFile <- HE.note $ tempAbsPath </> "logs/submit-api.stdout"
@@ -105,8 +105,8 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
   let plutusRequiredSpace = id @Integer 70000000
   let plutusRequiredTime = id @Integer 70000000
 
-  datumFile <- HE.note $ base </> "scripts/plutus/data/42.datum"
-  redeemerFile <- HE.note $ base </> "plutus-example/example-scripts/42.redeemer"
+  datumFile <- HE.note $ base </> "plutus-example/plutus/data/42.datum"
+  redeemerFile <- HE.note $ base </> "plutus-example/plutus/data/42.redeemer"
 
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse
