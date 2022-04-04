@@ -30,8 +30,6 @@ import Control.Monad.Freer.Extras.Beam (BeamEffect, handleBeam)
 import Control.Monad.Freer.Extras.Log (LogMsg)
 import Control.Monad.Freer.Extras.Modify (raiseEnd, raiseMUnderN)
 import Control.Monad.Freer.Reader (runReader)
-import Control.Monad.Freer.State (runState)
-import Control.Monad.IO.Class (liftIO)
 import Data.Pool (Pool)
 import Database.SQLite.Simple qualified as Sqlite
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)

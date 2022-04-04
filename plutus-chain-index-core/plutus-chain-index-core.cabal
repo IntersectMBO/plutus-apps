@@ -138,6 +138,7 @@ test-suite plutus-chain-index-test
         freer-simple -any,
         hedgehog -any,
         lens -any,
+        resource-pool -any,
         serialise -any,
         sqlite-simple -any,
         tasty -any,
