@@ -172,6 +172,7 @@ library
         prettyprinter >=1.1.0.1,
         quickcheck-instances -any,
         random -any,
+        resource-pool -any,
         row-types -any,
         servant -any,
         servant-client -any,
