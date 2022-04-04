@@ -44,7 +44,6 @@ module Plutus.ChainIndex.Lib (
     , getTipSlot
 ) where
 
-import Control.Concurrent.MVar (newMVar)
 import Control.Monad.Freer (Eff)
 import Control.Monad.Freer.Extras.Beam (BeamEffect, BeamLog (SqlLog))
 import Control.Monad.Freer.Extras.Log qualified as Log
@@ -63,7 +62,7 @@ import Cardano.BM.Trace (Trace, logDebug, logError, nullTracer)
 
 import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
-import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM (atomically, newTVarIO)
 import Control.Concurrent.STM.TBMQueue (TBMQueue, writeTBMQueue)
 import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequirements), getResumePoints,
                           runChainIndexEffects, tipBlockNo)
@@ -94,8 +93,8 @@ withRunRequirements logConfig config cont = do
         \                                 AND input_row_out_ref = old.output_row_out_ref; \
         \END"
 
-  stateMVar <- newMVar mempty
-  cont $ RunRequirements trace stateMVar pool (Config.cicSecurityParam config)
+  stateTVar <- newTVarIO mempty
+  cont $ RunRequirements trace stateTVar pool (Config.cicSecurityParam config)
 
   where
     setupConn conn = do

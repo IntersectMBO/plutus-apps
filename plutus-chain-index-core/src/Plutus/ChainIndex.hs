@@ -23,7 +23,7 @@ import Plutus.ChainIndex.Types as Export
 import Plutus.ChainIndex.UtxoState as Export
 
 import Cardano.BM.Trace (Trace)
-import Control.Concurrent.MVar (MVar)
+import Control.Concurrent.STM.TVar (TVar)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret)
 import Control.Monad.Freer.Error (handleError, runError, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect, handleBeam)
@@ -37,7 +37,7 @@ import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEf
 -- | The required arguments to run the chain index effects.
 data RunRequirements = RunRequirements
     { trace         :: Trace IO (PrettyObject ChainIndexLog)
-    , stateMVar     :: MVar ChainIndexState
+    , stateTVar     :: TVar ChainIndexState
     , pool          :: Pool Sqlite.Connection
     , securityParam :: Int
     }
@@ -58,9 +58,9 @@ handleChainIndexEffects
     => RunRequirements
     -> Eff (ChainIndexQueryEffect ': ChainIndexControlEffect ': BeamEffect ': effs) a
     -> Eff effs (Either ChainIndexError a)
-handleChainIndexEffects RunRequirements{trace, stateMVar, pool, securityParam} action = do
+handleChainIndexEffects RunRequirements{trace, stateTVar, pool, securityParam} action = do
     result <-
-        runReader stateMVar
+        runReader stateTVar
         $ runReader pool
         $ runReader (Depth securityParam)
         $ runError @ChainIndexError
