@@ -140,6 +140,7 @@ test-suite plutus-chain-index-test
         lens -any,
         resource-pool -any,
         serialise -any,
+        stm -any,
         sqlite-simple -any,
         tasty -any,
         tasty-hedgehog -any,
