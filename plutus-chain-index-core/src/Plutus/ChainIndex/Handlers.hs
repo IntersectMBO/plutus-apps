@@ -36,7 +36,7 @@ import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
-import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, guard_,
+import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_,
                       limit_, not_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update, (&&.), (<-.), (<.), (==.),
@@ -197,12 +197,11 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
       tp           -> do
           let query =
                 fmap _assetClassRowOutRef
-                  $ filter_ (\row -> _assetClassRowAssetClass row ==. val_ assetClass)
-                  $ do
-                    utxo <- all_ (unspentOutputRows db)
-                    a <- all_ (assetClassRows db)
-                    guard_ (_assetClassRowOutRef a ==. _unspentOutputRowOutRef utxo)
-                    pure a
+                  $ filter_ (\row -> (_assetClassRowAssetClass row ==. val_ assetClass)
+                      &&. exists_ (filter_ (\utxo -> _assetClassRowOutRef row ==. _unspentOutputRowOutRef utxo) (all_ (unspentOutputRows db)))
+                      &&. not_ (exists_ (filter_ (\utxi -> _assetClassRowOutRef row ==. _unmatchedInputRowOutRef utxi) (all_ (unmatchedInputRows db))))
+                      )
+                  $ all_ (assetClassRows db)
 
           outRefs <- selectPage (fmap toDbValue pageQuery) query
           let page = fmap fromDbValue outRefs
