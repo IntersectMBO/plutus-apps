@@ -77,6 +77,7 @@
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
+            (hsPkgs."resource-pool" or (errorHandler.buildDepError "resource-pool"))
             (hsPkgs."semigroups" or (errorHandler.buildDepError "semigroups"))
             (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
             ];
