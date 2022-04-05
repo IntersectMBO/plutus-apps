@@ -1,14 +1,15 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE MonoLocalBinds    #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE MonoLocalBinds     #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TupleSections      #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Plutus.ChainIndex.HandlersSpec (tests) where
 
-import Control.Concurrent.MVar (newMVar)
+import Control.Concurrent.STM (newTVarIO)
 import Control.Lens (view)
 import Control.Monad (forM)
 import Control.Monad.Freer (Eff)
@@ -17,6 +18,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Tracer (nullTracer)
 import Data.Default (def)
 import Data.Maybe (isJust)
+import Data.Pool qualified as Pool
 import Data.Set qualified as S
 import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
@@ -133,10 +135,12 @@ runChainIndexTest
           ] a
   -> m a
 runChainIndexTest action = do
-  result <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
-    Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
-    stateMVar <- newMVar mempty
-    runChainIndexEffects (RunRequirements nullTracer stateMVar conn 10) action
+  result <- liftIO $ do
+    pool <- Pool.createPool (Sqlite.open ":memory:") Sqlite.close 1 1_000_000 1
+    Pool.withResource pool $ \conn ->
+      Sqlite.runBeamSqlite conn $ autoMigrate Sqlite.migrationBackend checkedSqliteDb
+    stateTVar <- newTVarIO mempty
+    runChainIndexEffects (RunRequirements nullTracer stateTVar pool 10) action
 
   case result of
     Left _  -> Hedgehog.failure

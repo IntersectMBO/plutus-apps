@@ -52,6 +52,7 @@
           (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
           (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
           (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
+          (hsPkgs."resource-pool" or (errorHandler.buildDepError "resource-pool"))
           (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
           (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
           (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))

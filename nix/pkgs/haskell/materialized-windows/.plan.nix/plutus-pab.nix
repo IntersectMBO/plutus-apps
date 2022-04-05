@@ -86,6 +86,7 @@
           (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
           (hsPkgs."quickcheck-instances" or (errorHandler.buildDepError "quickcheck-instances"))
           (hsPkgs."random" or (errorHandler.buildDepError "random"))
+          (hsPkgs."resource-pool" or (errorHandler.buildDepError "resource-pool"))
           (hsPkgs."row-types" or (errorHandler.buildDepError "row-types"))
           (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
           (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
