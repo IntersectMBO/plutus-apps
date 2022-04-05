@@ -118,7 +118,7 @@ getNotifications (Insert e ix) = do
   v  <- view ix
   ns <- getNotifications ix
   pure $ maybeToList (snd (f (ixView v) e)) ++ ns
-getNotifications (Rewind _ _) = Just []
+getNotifications (Rewind _ ix) = getNotifications ix
 
 -- | Internal
 

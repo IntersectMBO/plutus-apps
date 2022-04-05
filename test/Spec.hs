@@ -21,6 +21,8 @@ ixProperties = testGroup "Basic model"
       withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int @Int Ix.conversion
   , testProperty "Notifications are accumulated as the fold runs" $
       withMaxSuccess 10000 $ Ix.prop_observeNotifications @Int @Int @Int Ix.conversion
+  ,  testProperty "Notifications are not affected by rewind" $
+      withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int Ix.conversion
   ]
 
 siProperties :: TestTree
@@ -37,6 +39,8 @@ siProperties = testGroup "Split index"
       withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int @Int S.conversion
   , testProperty "Notifications are accumulated as the fold runs" $
       withMaxSuccess 10000 $ Ix.prop_observeNotifications @Int @Int @Int S.conversion
+  ,  testProperty "Notifications are not affected by rewind" $
+      withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int S.conversion
   ]
 
 main :: IO ()

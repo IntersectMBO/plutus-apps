@@ -144,3 +144,24 @@ prop_observeNotifications c (ObservedBuilder ix) es =
         ns'      = mapMaybe snd $ scanl' (\(a, _) e -> f a e) (ixView v, Nothing) es
     ns <- run $ cNotifications c ix'
     assert $ reverse ns' `isPrefixOf` ns
+
+-- | Relation between Rewind and Inverse
+prop_insertRewindNotifications
+  :: forall e a n m. (Monad m, Show e, Show a, Arbitrary e, Show n, Eq n)
+  => Conversion m a e n
+  -> ObservedBuilder a e n
+  -> Property
+prop_insertRewindNotifications c (ObservedBuilder ix) =
+  let v = fromJust $ view ix
+  -- rewind does not make sense for lesser depths.
+   in ixDepth v >= 2 ==>
+  -- if the history is not fully re-written, then we can get a common
+  -- prefix after the insert/rewind play. We need input which is less
+  -- than `hfDepth hf`
+  forAll (resize (ixDepth v - 1) arbitrary) $
+  \bs -> monadic (cMonadic c) $ do
+    let ix'  = insertL bs ix
+        ix'' = rewind (length bs) ix'
+    ns  <- run $ cNotifications c ix'
+    ns' <- run $ cNotifications c ix''
+    assert $ ns == ns'
