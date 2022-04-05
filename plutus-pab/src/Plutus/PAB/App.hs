@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE NumericUnderscores    #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes            #-}
@@ -53,12 +54,13 @@ import Data.Aeson (FromJSON, ToJSON, eitherDecode)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Coerce (coerce)
 import Data.Default (def)
+import Data.Pool (Pool)
+import Data.Pool qualified as Pool
 import Data.Text (Text, pack, unpack)
 import Data.Typeable (Typeable)
 import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
 import Database.Beam.Sqlite.Migrate qualified as Sqlite
-import Database.SQLite.Simple (open)
 import Database.SQLite.Simple qualified as Sqlite
 import Network.HTTP.Client (managerModifyRequest, newManager, setRequestIgnoreStatus)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -79,7 +81,7 @@ import Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
 import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (SMultiAgent), PABMultiAgentMsg (BeamLogItem, UserLog, WalletClient),
                                         WalletClientMsg)
 import Plutus.PAB.Timeout (Timeout (Timeout))
-import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
+import Plutus.PAB.Types (Config (Config), DbConfig (..),
                          DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
                          PABError (BeamEffectError, ChainIndexError, NodeClientError, RemoteWalletWithMockNodeError, WalletClientError, WalletError),
                          WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, developmentOptions,
@@ -96,7 +98,7 @@ import Wallet.Types (ContractInstanceId)
 -- | Application environment with a contract type `a`.
 data AppEnv a =
     AppEnv
-        { dbConnection          :: Sqlite.Connection
+        { dbPool                :: Pool Sqlite.Connection
         , walletClientEnv       :: Maybe ClientEnv -- ^ No 'ClientEnv' when in the remote client setting.
         , nodeClientEnv         :: ClientEnv
         , chainIndexEnv         :: ClientEnv
@@ -149,7 +151,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
               interpret (handleLogMsgTrace trace)
               . reinterpret (mapLog @_ @(PABLogMsg (Builtin a)) SMultiAgent)
               . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-              . interpret (Core.handleMappedReader @(AppEnv a) dbConnection)
+              . interpret (Core.handleMappedReader @(AppEnv a) dbPool)
               . flip handleError (throwError . BeamEffectError)
               . interpret (handleBeam (convertLog (SMultiAgent . BeamLogItem) trace))
               . reinterpretN @'[_, _, _, _, _] BeamEff.handleContractStore
@@ -158,7 +160,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             interpret (handleLogMsgTrace trace)
             . reinterpret (mapLog @_ @(PABLogMsg (Builtin a)) SMultiAgent)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
-            . interpret (Core.handleMappedReader @(AppEnv a) dbConnection)
+            . interpret (Core.handleMappedReader @(AppEnv a) dbPool)
             . flip handleError (throwError . BeamEffectError)
             . interpret (handleBeam (convertLog (SMultiAgent . BeamLogItem) trace))
             . reinterpretN @'[_, _, _, _, _] handleContractDefinition
@@ -261,7 +263,7 @@ mkEnv appTrace appConfig@Config { dbConfig
     walletClientEnv <- maybe (pure Nothing) (fmap Just . clientEnv) $ preview Wallet._LocalWalletConfig walletServerConfig
     nodeClientEnv <- clientEnv pscBaseUrl
     chainIndexEnv <- clientEnv (ChainIndex.ciBaseUrl chainIndexConfig)
-    dbConnection <- dbConnect appTrace dbConfig
+    dbPool <- dbConnect appTrace dbConfig
     txSendHandle <-
       case pscNodeMode of
         AlonzoNode -> pure Nothing
@@ -293,9 +295,9 @@ logDebugString trace = logDebug trace . SMultiAgent . UserLog
 -- | Initialize/update the database to hold our effects.
 migrate :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO ()
 migrate trace config = do
-    connection <- dbConnect trace config
+    pool <- dbConnect trace config
     logDebugString trace "Running beam migration"
-    runBeamMigration trace connection
+    Pool.withResource pool (runBeamMigration trace)
 
 runBeamMigration
   :: Trace IO (PABLogMsg (Builtin a))
@@ -305,10 +307,11 @@ runBeamMigration trace conn = Sqlite.runBeamSqliteDebug (logDebugString trace . 
   autoMigrate Sqlite.migrationBackend checkedSqliteDb
 
 -- | Connect to the database.
-dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO Sqlite.Connection
-dbConnect trace DbConfig {dbConfigFile} = do
+dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Sqlite.Connection)
+dbConnect trace DbConfig {dbConfigFile, dbConfigPoolSize} = do
+  pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close dbConfigPoolSize 5_000_000 5
   logDebugString trace $ "Connecting to DB: " <> dbConfigFile
-  open (unpack dbConfigFile)
+  return pool
 
 handleContractDefinition ::
   forall a effs. HasDefinitions a

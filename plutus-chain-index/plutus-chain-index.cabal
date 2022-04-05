@@ -57,6 +57,7 @@ library
         optparse-applicative -any,
         ouroboros-network -any,
         prettyprinter >=1.1.0.1,
+        resource-pool -any,
         sqlite-simple -any,
         stm -any,
         time-units -any,
