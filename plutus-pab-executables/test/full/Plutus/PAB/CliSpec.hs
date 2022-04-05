@@ -38,6 +38,7 @@ import Data.List (delete)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text qualified as Text
 import Data.Yaml (decodeFileThrow)
+import Database.SQLite.Simple qualified as Sqlite
 import GHC.Generics (Generic)
 import Ledger.Ada (lovelaceValueOf)
 import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), defaultManagerSettings, newManager,
@@ -57,7 +58,8 @@ import Plutus.PAB.Run.Cli (ConfigCommandArgs, runConfigCommand)
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ForkCommands, Migrate), allServices)
 import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, passphrase, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (psTypes))
-import Plutus.PAB.Types (Config (Config, chainIndexConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig))
+import Plutus.PAB.Types (Config (Config, chainIndexConfig, dbConfig, nodeServerConfig, pabWebserverConfig, walletServerConfig),
+                         DbConfig (..))
 import Plutus.PAB.Types qualified as PAB.Types
 import Plutus.PAB.Webserver.API (API)
 import Plutus.PAB.Webserver.Client (InstanceClient (callInstanceEndpoint),
@@ -234,48 +236,56 @@ time.
 
 restoreContractStateTests :: TestTree
 restoreContractStateTests =
+  let dbPath = Text.unpack . dbConfigFile . dbConfig in
   testGroup "restoreContractState scenarios"
     [ testCase "Can init,pong,ping in one PAB instance" $ do
         -- This isn't testing anything related to restoring state; but simply
         -- provides evidence that if the subsequent tests _fail_, then that is
         -- an genuine error.
         let pabConfig = defaultPabConfig
-        startPrimaryPab pabConfig
-        ci <- startPingPongContract pabConfig
 
-        runPabInstanceEndpoints pabConfig ci (map Succeed ["initialise", "pong", "ping"])
+        -- We use 'withConnection' here and in the tests below
+        -- to keep the in-memory sqlite db, otherwise the pool
+        -- closes the connection and the db gets destroyed
+        Sqlite.withConnection (dbPath pabConfig) $ \_ -> do
+          startPrimaryPab pabConfig
+          ci <- startPingPongContract pabConfig
+
+          runPabInstanceEndpoints pabConfig ci (map Succeed ["initialise", "pong", "ping"])
 
     , testCase "PingPong contract state is maintained across PAB instances" $ do
         -- We'll check the following: Init, Pong, <STOP>, <RESTART>, Ping works.
         let pabConfig = bumpConfig 50 "db1" defaultPabConfig
-        startPrimaryPab pabConfig
-        ci <- startPingPongContract pabConfig
+        Sqlite.withConnection (dbPath pabConfig) $ \_ -> do
+          startPrimaryPab pabConfig
+          ci <- startPingPongContract pabConfig
 
-        -- Run init, pong on one pab
-        runPabInstanceEndpoints pabConfig ci (map Succeed ["initialise", "pong"])
+          -- Run init, pong on one pab
+          runPabInstanceEndpoints pabConfig ci (map Succeed ["initialise", "pong"])
 
-        -- Then, check 'ping' works on a different PAB instance (that will
-        -- have restored from the same DB.)
-        let newConfig = bumpConfig 50 "db1" pabConfig
-        startSecondaryPab (secondaryConfig pabConfig newConfig)
+          -- Then, check 'ping' works on a different PAB instance (that will
+          -- have restored from the same DB.)
+          let newConfig = bumpConfig 50 "db1" pabConfig
+          startSecondaryPab (secondaryConfig pabConfig newConfig)
 
-        runPabInstanceEndpoints newConfig ci [Succeed "ping"]
+          runPabInstanceEndpoints newConfig ci [Succeed "ping"]
 
     , testCase "PingPong contract state is NOT maintained across PAB instances with different dbs" $ do
         -- Note: We bump the ports by 100 here because the two calls above.
         -- This should mean that no matter the order of these tests, there
         -- will be no clashes.
         let pabConfig = bumpConfig 100 "db2" defaultPabConfig
-        startPrimaryPab pabConfig
-        ci <- startPingPongContract pabConfig
+        Sqlite.withConnection (dbPath pabConfig) $ \_ -> do
+          startPrimaryPab pabConfig
+          ci <- startPingPongContract pabConfig
 
-        -- Run init, pong on one pab
-        runPabInstanceEndpoints pabConfig ci (map Succeed ["initialise", "pong"])
+          -- Run init, pong on one pab
+          runPabInstanceEndpoints pabConfig ci (map Succeed ["initialise", "pong"])
 
-        -- This time, "ping" should fail because we're using a different
-        -- in-memory db.
-        let newConfig = bumpConfig 10 "db3" pabConfig
-        startSecondaryPab (secondaryConfig pabConfig newConfig)
+          -- This time, "ping" should fail because we're using a different
+          -- in-memory db.
+          let newConfig = bumpConfig 10 "db3" pabConfig
+          startSecondaryPab (secondaryConfig pabConfig newConfig)
 
-        runPabInstanceEndpoints newConfig ci [Fail "ping"]
+          runPabInstanceEndpoints newConfig ci [Fail "ping"]
     ]

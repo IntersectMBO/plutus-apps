@@ -80,7 +80,7 @@ import Plutus.PAB.Monitoring.Monitoring (convertLog, handleLogMsgTrace)
 import Plutus.PAB.Monitoring.PABLogMsg (PABLogMsg (SMultiAgent), PABMultiAgentMsg (BeamLogItem, UserLog, WalletClient),
                                         WalletClientMsg)
 import Plutus.PAB.Timeout (Timeout (Timeout))
-import Plutus.PAB.Types (Config (Config), DbConfig (DbConfig, dbConfigFile),
+import Plutus.PAB.Types (Config (Config), DbConfig (..),
                          DevelopmentOptions (DevelopmentOptions, pabResumeFrom, pabRollbackHistory),
                          PABError (BeamEffectError, ChainIndexError, NodeClientError, RemoteWalletWithMockNodeError, WalletClientError, WalletError),
                          WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, developmentOptions,
@@ -306,8 +306,8 @@ runBeamMigration trace conn = Sqlite.runBeamSqliteDebug (logDebugString trace . 
 
 -- | Connect to the database.
 dbConnect :: Trace IO (PABLogMsg (Builtin a)) -> DbConfig -> IO (Pool Sqlite.Connection)
-dbConnect trace DbConfig {dbConfigFile} = do
-  pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close 5 1_000_000 5
+dbConnect trace DbConfig {dbConfigFile, dbConfigPoolSize} = do
+  pool <- Pool.createPool (Sqlite.open $ unpack dbConfigFile) Sqlite.close dbConfigPoolSize 5_000_000 5
   logDebugString trace $ "Connecting to DB: " <> dbConfigFile
   return pool
 
