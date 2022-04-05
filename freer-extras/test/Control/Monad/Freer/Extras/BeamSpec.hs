@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE ImpredicativeTypes   #-}
+{-# LANGUAGE NumericUnderscores   #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,6 +25,8 @@ import Control.Tracer (nullTracer)
 import Data.Int (Int16)
 import Data.Kind (Constraint)
 import Data.List (sort)
+import Data.Pool (Pool)
+import Data.Pool qualified as Pool
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set qualified as Set
 import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBackendRow, Generic, MonadIO (liftIO), Q,
@@ -182,27 +185,28 @@ selectAllPages pq q = do
 
 runBeamEffectInGenTestDb
     :: Set Int
-    -> Eff '[BeamEffect, Error BeamError, Reader Sqlite.Connection, IO] a
+    -> Eff '[BeamEffect, Error BeamError, Reader (Pool Sqlite.Connection), IO] a
     -> (a -> PropertyT IO ())
     -> PropertyT IO ()
 runBeamEffectInGenTestDb items effect runTest = do
-  result <- liftIO $ Sqlite.withConnection ":memory:" $ \conn -> do
-    Sqlite.runBeamSqlite conn $ do
+  pool <- liftIO $ Pool.createPool (Sqlite.open ":memory:") Sqlite.close 1 1_000_000 1
+  result <- liftIO $ do
+    Pool.withResource pool $ \conn -> Sqlite.runBeamSqlite conn $ do
       autoMigrate Sqlite.migrationBackend checkedSqliteDb
       runInsert $ insertOnConflict (testRows db) (insertValues $ IntegerRow . fromIntegral <$> Set.toList items) anyConflict onConflictDoNothing
-      liftIO $ runBeamEffect conn effect
+    runBeamEffect pool effect
 
   case result of
     Left _  -> Hedgehog.assert False
     Right r -> runTest r
 
 runBeamEffect
-    :: Sqlite.Connection
-    -> Eff '[BeamEffect, Error BeamError, Reader Sqlite.Connection, IO] a
+    :: Pool Sqlite.Connection
+    -> Eff '[BeamEffect, Error BeamError, Reader (Pool Sqlite.Connection), IO] a
     -> IO (Either BeamError a)
-runBeamEffect conn effect = do
+runBeamEffect pool effect = do
   effect
     & interpret (handleBeam nullTracer)
     & runError
-    & runReader conn
+    & runReader pool
     & runM

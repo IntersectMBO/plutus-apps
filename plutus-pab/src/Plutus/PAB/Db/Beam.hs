@@ -18,6 +18,7 @@ import Control.Monad.Freer.Extras.Beam (handleBeam)
 import Control.Monad.Freer.Extras.Modify qualified as Modify
 import Control.Monad.Freer.Reader (runReader)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Pool (Pool)
 import Data.Typeable (Typeable)
 import Database.SQLite.Simple (Connection)
 import Plutus.PAB.Db.Beam.ContractStore (handleContractStore)
@@ -37,14 +38,14 @@ runBeamStoreAction ::
     , HasDefinitions a
     , Typeable a
     )
-    => Connection
+    => Pool Connection
     -> Trace IO (PABLogMsg (Builtin a))
     -> Eff '[ContractStore (Builtin a), LogMsg (PABMultiAgentMsg (Builtin a)), DelayEffect, IO] b
     -> IO (Either PABError b)
-runBeamStoreAction connection trace =
+runBeamStoreAction pool trace =
     runM
     . runError
-    . runReader connection
+    . runReader pool
     . flip handleError (throwError . BeamEffectError)
     . interpret (handleBeam (convertLog (SMultiAgent . BeamLogItem) trace))
     . subsume @IO
