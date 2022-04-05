@@ -20,16 +20,15 @@ module Plutus.ChainIndex.Handlers
 
 import Cardano.Api qualified as C
 import Control.Applicative (Const (..))
-import Control.Concurrent.STM (TVar, atomically, readTVarIO, writeTVar)
 import Control.Lens (Lens', view)
-import Control.Monad (foldM, void)
-import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
+import Control.Monad (foldM)
+import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras.Beam (BeamEffect (..), BeamableSqlite, combined, selectList, selectOne, selectPage)
 import Control.Monad.Freer.Extras.Log (LogMsg, logDebug, logError, logWarn)
 import Control.Monad.Freer.Extras.Pagination (Page (Page), PageQuery (..))
 import Control.Monad.Freer.Reader (Reader, ask)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Freer.State (State, get, gets, put)
 import Data.ByteString (ByteString)
 import Data.FingerTree qualified as FT
 import Data.Map qualified as Map
@@ -70,11 +69,10 @@ getResumePoints
     . selectList . select . orderBy_ (desc_ . _tipRowSlot) . all_ $ tipRows db
 
 handleQuery ::
-    ( Member (Reader (TVar ChainIndexState)) effs
+    ( Member (State ChainIndexState) effs
     , Member BeamEffect effs
     , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
-    , LastMember IO effs
     ) => ChainIndexQueryEffect
     ~> Eff effs
 handleQuery = \case
@@ -85,7 +83,7 @@ handleQuery = \case
     StakeValidatorFromHash hash -> getScriptFromHash hash
     UnspentTxOutFromRef tor     -> getUtxoutFromRef tor
     UtxoSetMembership r -> do
-        utxoState <- (fmap UtxoState.utxoState) . liftIO . readTVarIO =<< ask @(TVar ChainIndexState)
+        utxoState <- gets @ChainIndexState UtxoState.utxoState
         case UtxoState.tip utxoState of
             TipAtGenesis -> throwError QueryFailedNoTip
             tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxoState))
@@ -151,16 +149,15 @@ getUtxoutFromRef = (<$>) (fromTxOut =<<) . queryOne . queryKeyValue utxoOutRefRo
 
 getUtxoSetAtAddress
   :: forall effs.
-    ( Member (Reader (TVar ChainIndexState)) effs
+    ( Member (State ChainIndexState) effs
     , Member BeamEffect effs
     , Member (LogMsg ChainIndexLog) effs
-    , LastMember IO effs
     )
   => PageQuery TxOutRef
   -> Credential
   -> Eff effs UtxosResponse
 getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
-  utxoState <- (fmap UtxoState.utxoState) . liftIO . readTVarIO =<< ask @(TVar ChainIndexState)
+  utxoState <- gets @ChainIndexState UtxoState.utxoState
 
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
@@ -183,16 +180,15 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
 
 getUtxoSetWithCurrency
   :: forall effs.
-    ( Member (Reader (TVar ChainIndexState)) effs
+    ( Member (State ChainIndexState) effs
     , Member BeamEffect effs
     , Member (LogMsg ChainIndexLog) effs
-    , LastMember IO effs
     )
   => PageQuery TxOutRef
   -> AssetClass
   -> Eff effs UtxosResponse
 getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
-  utxoState <- (fmap UtxoState.utxoState) . liftIO . readTVarIO =<< ask @(TVar ChainIndexState)
+  utxoState <- gets @ChainIndexState UtxoState.utxoState
 
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
@@ -215,16 +211,15 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
 
 getTxoSetAtAddress
   :: forall effs.
-    ( Member (Reader (TVar ChainIndexState)) effs
+    ( Member (State ChainIndexState) effs
     , Member BeamEffect effs
     , Member (LogMsg ChainIndexLog) effs
-    , LastMember IO effs
     )
   => PageQuery TxOutRef
   -> Credential
   -> Eff effs TxosResponse
 getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
-  utxoState <- (fmap UtxoState.utxoState) . liftIO . readTVarIO =<< ask @(TVar ChainIndexState)
+  utxoState <- gets @ChainIndexState UtxoState.utxoState
   case UtxoState.tip utxoState of
       TipAtGenesis -> do
           logWarn TipIsGenesis
@@ -240,11 +235,10 @@ getTxoSetAtAddress pageQuery (toDbValue -> cred) = do
 
 appendBlocks ::
     forall effs.
-    ( Member (Reader (TVar ChainIndexState)) effs
+    ( Member (State ChainIndexState) effs
     , Member (Reader Depth) effs
     , Member BeamEffect effs
     , Member (LogMsg ChainIndexLog) effs
-    , LastMember IO effs
     )
     => [ChainSyncBlock] -> Eff effs ()
 appendBlocks [] = pure ()
@@ -259,16 +253,15 @@ appendBlocks blocks = do
                 Right InsertUtxoSuccess{newIndex, insertPosition} -> do
                     logDebug $ InsertionSuccess tip_ insertPosition
                     return (newIndex, transactions ++ txs, newUtxoState : utxoStates)
-    indexStateVar <- ask @(TVar ChainIndexState)
-    oldIndex <- liftIO $ readTVarIO indexStateVar
+    oldIndex <- get @ChainIndexState
     (newIndex, transactions, utxoStates) <- foldM processBlock (oldIndex, [], []) blocks
     depth <- ask @Depth
     reduceOldUtxoDbEffect <- case UtxoState.reduceBlockCount depth newIndex of
       UtxoState.BlockCountNotReduced -> do
-        liftIO $ atomically $ writeTVar indexStateVar newIndex
+        put newIndex
         pure $ Combined []
       lbcResult -> do
-        liftIO $ atomically $ writeTVar indexStateVar (UtxoState.reducedIndex lbcResult)
+        put $ UtxoState.reducedIndex lbcResult
         pure $ reduceOldUtxoDb $ UtxoState._usTip $ UtxoState.combinedState lbcResult
     combined
         [ reduceOldUtxoDbEffect
@@ -278,34 +271,31 @@ appendBlocks blocks = do
 
 handleControl ::
     forall effs.
-    ( Member (Reader (TVar ChainIndexState)) effs
+    ( Member (State ChainIndexState) effs
     , Member (Reader Depth) effs
     , Member BeamEffect effs
     , Member (Error ChainIndexError) effs
     , Member (LogMsg ChainIndexLog) effs
-    , LastMember IO effs
     )
     => ChainIndexControlEffect
     ~> Eff effs
 handleControl = \case
     AppendBlocks blocks -> appendBlocks blocks
     Rollback tip_ -> do
-        indexStateVar <- ask @(TVar ChainIndexState)
-        oldIndex <- liftIO $ readTVarIO indexStateVar
+        oldIndex <- get @ChainIndexState
         case TxUtxoBalance.rollback tip_ oldIndex of
             Left err -> do
-                liftIO $ atomically $ writeTVar indexStateVar oldIndex
                 let reason = RollbackFailed err
                 logError $ Err reason
                 throwError reason
             Right RollbackResult{newTip, rolledBackIndex} -> do
-                liftIO $ atomically $ writeTVar indexStateVar rolledBackIndex
+                put rolledBackIndex
                 combined [rollbackUtxoDb $ tipAsPoint newTip]
                 logDebug $ RollbackSuccess newTip
     ResumeSync tip_ -> do
         combined [rollbackUtxoDb tip_]
         newState <- restoreStateFromDb
-        void $ ask @(TVar ChainIndexState) >>= \stateVar -> liftIO $ atomically $ writeTVar stateVar newState
+        put newState
     CollectGarbage -> do
         combined $
             [ DeleteRows $ truncateTable (datumRows db)
@@ -463,14 +453,13 @@ fromTx tx = mempty
 
 diagnostics ::
     ( Member BeamEffect effs
-    , Member (Reader (TVar ChainIndexState)) effs
-    , LastMember IO effs
+    , Member (State ChainIndexState) effs
     ) => Eff effs Diagnostics
 diagnostics = do
     numScripts <- selectOne . select $ aggregate_ (const countAll_) (all_ (scriptRows db))
     numAddresses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _addressRowCred <$> all_ (addressRows db)
     numAssetClasses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _assetClassRowAssetClass <$> all_ (assetClassRows db)
-    TxUtxoBalance outputs inputs <- (fmap (UtxoState._usTxUtxoData . UtxoState.utxoState)) . liftIO . readTVarIO =<< ask @(TVar ChainIndexState)
+    TxUtxoBalance outputs inputs <- UtxoState._usTxUtxoData . UtxoState.utxoState <$> get @ChainIndexState
 
 
     pure $ Diagnostics
