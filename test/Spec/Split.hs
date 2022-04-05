@@ -16,7 +16,7 @@ conversion :: (Show a, Show e, Show n) => Conversion (PropertyM IO) a e n
 conversion = Conversion
   { cView          = view
   , cHistory       = history
-  , cNotifications = undefined
+  , cNotifications = notifications
   , cMonadic       = monadic
   }
 
@@ -31,6 +31,16 @@ view ix = do
     Just ix' -> do
       v <- S.view ix'
       pure $ Just v
+
+notifications
+  :: (Show a, Show e, Show n)
+  => Index a e n
+  -> PropertyM IO [n]
+notifications ix = do
+  -- We should never call this on invalid indexes.
+  Just ix' <- run ix
+  S.getNotifications ix'
+
 
 history
   :: (Show a, Show e, Show n)

@@ -35,6 +35,8 @@ siProperties = testGroup "Split index"
       withMaxSuccess 10000 $ Ix.prop_insertRewindInverse @Int @Int @Int S.conversion
   , testProperty "Insert is folding the structure" $
       withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int @Int S.conversion
+  , testProperty "Notifications are accumulated as the fold runs" $
+      withMaxSuccess 10000 $ Ix.prop_observeNotifications @Int @Int @Int S.conversion
   ]
 
 main :: IO ()

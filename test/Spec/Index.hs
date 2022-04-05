@@ -20,7 +20,7 @@ conversion :: Conversion Identity a e n
 conversion = Conversion
   { cView          = pure . view
   , cHistory       = pure . getHistory
-  , cNotifications = undefined
+  , cNotifications = pure . fromJust . getNotifications
   , cMonadic       = runIdentity
   }
 
@@ -131,7 +131,7 @@ prop_observeInsert c (ObservedBuilder ix) es =
 
 -- | Notifications are accumulated as the folding function runs.
 prop_observeNotifications
-  :: forall e a n m. (Monad m, Show n, Eq n)
+  :: forall e a n m. (Monad m, Show n, Show e, Eq n)
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> [e]
@@ -141,6 +141,6 @@ prop_observeNotifications c (ObservedBuilder ix) es =
     Just v  <- run $ cView c ix
     let f        = getFunction ix
         ix'      = insertL es ix
-        Just ns  = getNotifications ix'
         ns'      = mapMaybe snd $ scanl' (\(a, _) e -> f a e) (ixView v, Nothing) es
+    ns <- run $ cNotifications c ix'
     assert $ reverse ns' `isPrefixOf` ns

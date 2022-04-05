@@ -10,6 +10,7 @@ module Index.Split
   , view
   , getHistory
   , getEvents
+  , getNotifications
   ) where
 
 import           Data.Foldable (foldlM)
@@ -54,7 +55,11 @@ new findex fstore depth ix
     , siIndex         = findex
     }
 
-insert :: Monad m => e -> SplitIndex m a e n -> m (SplitIndex m a e n)
+insert
+  :: forall m a e n. Monad m
+  => e
+  -> SplitIndex m a e n
+  -> m (SplitIndex m a e n)
 insert e ix@SplitIndex{siEvents, siDepth, siBuffered}
   | siDepth /= 1 = do
     let (siEvents', siBuffered')
@@ -62,24 +67,39 @@ insert e ix@SplitIndex{siEvents, siDepth, siBuffered}
             then ( e : take (siDepth - 2) siEvents
                  , last siEvents : siBuffered )
             else ( e : siEvents, siBuffered )
-    let ix' = ix { siEvents = siEvents'
-                 , siBuffered = siBuffered'
-                 }
+    ix' <- addNotifications $
+             ix { siEvents   = siEvents'
+                , siBuffered = siBuffered'
+                }
     if length siBuffered' > siDepth * storeEventsThreshold
     then mergeEvents ix'
     else pure        ix'
   -- Special casing siDepth == 1 => siEvents is unused.
   | otherwise = do
     let siBuffered' = e : siBuffered
-    let ix' = ix { siBuffered = e : siBuffered }
+    ix' <- addNotifications $
+             ix { siBuffered = e : siBuffered }
     if length siBuffered' > siDepth * storeEventsThreshold
     then mergeEvents ix'
     else pure        ix'
+  where
+    addNotifications :: Monad m => SplitIndex m a e n -> m (SplitIndex m a e n)
+    addNotifications ix'@SplitIndex{ siNotifications
+                                   , siIndex } = do
+      state <- mergedState ix
+      let ns = snd $ siIndex state [e]
+      pure $ ix' { siNotifications = ns ++ siNotifications }
+
+mergedState :: Monad m => SplitIndex m a e n -> m a
+mergedState SplitIndex{siIndex, siStoredIx, siEvents, siBuffered} = do
+  storedState <- siStoredIx
+  pure $ fst $ siIndex storedState (siEvents ++ siBuffered)
+
 
 mergeEvents :: Monad m => SplitIndex m a e n -> m (SplitIndex m a e n)
 mergeEvents ix@SplitIndex {siStore, siIndex, siStoredIx, siBuffered} = do
   six       <- siStoredIx
-  let six'   = fst $ siIndex six siBuffered
+  let six'  = fst $ siIndex six siBuffered
   nextStore <- siStore six'
   pure $ ix { siStoredIx = pure nextStore
             , siBuffered = []
@@ -105,6 +125,9 @@ view ix@SplitIndex{siDepth} = do
                    , ixView  = head h
                    , ixSize  = size ix
                    }
+
+getNotifications :: Monad m => SplitIndex m a e n -> m [n]
+getNotifications SplitIndex{siNotifications} = pure siNotifications
 
 getHistory :: forall m e a n. Monad m => SplitIndex m a e n -> m [a]
 getHistory SplitIndex{siStoredIx, siIndex, siEvents, siBuffered} = do

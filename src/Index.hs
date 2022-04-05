@@ -171,6 +171,7 @@ instance ( CoArbitrary a
     -- Tested with prop_hfNewReturns...
     let ix = new fn depth acc
     pure . ObservedBuilder $ insertL bs ix
+  shrink = shrinkNothing
 
 instance ( CoArbitrary a
          , CoArbitrary e
@@ -198,6 +199,7 @@ instance ( CoArbitrary a
     let ix = new f depth acc
     complexity <- arbitrarySizedIntegral
     generateGrammarIndex complexity ix
+  shrink = shrinkNothing
 
 generateGrammarIndex :: Arbitrary e => Int -> Index a e n -> Gen (GrammarBuilder a e n)
 generateGrammarIndex 0 ix = pure $ GrammarBuilder ix
@@ -220,6 +222,7 @@ instance Arbitrary a => Arbitrary (IndexView a) where
                    , ixSize  = size
                    , ixView  = view'
                    }
+  shrink = shrinkNothing
 
 -- | QuickSpec
 
