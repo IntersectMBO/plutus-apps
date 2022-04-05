@@ -461,7 +461,6 @@ diagnostics = do
     numAssetClasses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _assetClassRowAssetClass <$> all_ (assetClassRows db)
     TxUtxoBalance outputs inputs <- UtxoState._usTxUtxoData . UtxoState.utxoState <$> get @ChainIndexState
 
-
     pure $ Diagnostics
         { numScripts         = fromMaybe (-1) numScripts
         , numAddresses       = fromMaybe (-1) numAddresses
