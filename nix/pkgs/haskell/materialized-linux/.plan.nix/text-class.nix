@@ -77,5 +77,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/lib/text-class; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/lib/text-class; echo source root reset to $sourceRoot";
     }

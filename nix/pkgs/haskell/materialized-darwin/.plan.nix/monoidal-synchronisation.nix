@@ -65,5 +65,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/monoidal-synchronisation; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/monoidal-synchronisation; echo source root reset to $sourceRoot";
     }

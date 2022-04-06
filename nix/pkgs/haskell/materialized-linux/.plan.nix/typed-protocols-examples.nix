@@ -97,5 +97,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/typed-protocols-examples; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/typed-protocols-examples; echo source root reset to $sourceRoot";
     }

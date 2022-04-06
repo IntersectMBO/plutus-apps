@@ -21,8 +21,7 @@ import PlutusTx.AssocMap as AssocMap
 import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName, Value(Value))
 import Playground.Lenses (_currencySymbol, _tokenName)
 
-data ValueEvent
-  = SetBalance CurrencySymbol TokenName BigInt
+data ValueEvent = SetBalance CurrencySymbol TokenName BigInt
 
 derive instance genericValueEvent :: Generic ValueEvent _
 

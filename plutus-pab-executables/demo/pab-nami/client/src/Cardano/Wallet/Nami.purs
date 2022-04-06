@@ -25,11 +25,9 @@ import Data.Undefinable (Undefinable, toUndefinable)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff, liftAff)
 
-type WalletId
-  = { unWalletId :: String }
+type WalletId = { unWalletId :: String }
 
-data Pagination
-  = Pagination
+data Pagination = Pagination
   { paginationPage :: Int
   , paginationLimit :: Int
   }

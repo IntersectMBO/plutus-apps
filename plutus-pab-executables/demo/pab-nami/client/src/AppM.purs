@@ -9,8 +9,7 @@ import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 
-newtype AppM a
-  = AppM (ReaderT Env Aff a)
+newtype AppM a = AppM (ReaderT Env Aff a)
 
 derive instance newtypeAppM :: Newtype (AppM a) _
 
@@ -34,8 +33,7 @@ derive newtype instance monadThrowAppM :: MonadThrow Error AppM
 
 derive newtype instance monadErrorAppM :: MonadError Error AppM
 
-type Env
-  = CardanoWasm
+type Env = CardanoWasm
 
 runAppM :: forall a. Env -> AppM a -> Aff a
 runAppM env = flip runReaderT env <<< unwrap

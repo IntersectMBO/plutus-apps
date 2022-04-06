@@ -373,5 +373,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/ouroboros-network; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/ouroboros-network; echo source root reset to $sourceRoot";
     }

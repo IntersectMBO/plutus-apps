@@ -63,5 +63,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/plugins/backend-trace-forwarder; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/plugins/backend-trace-forwarder; echo source root reset to $sourceRoot";
     }

@@ -85,5 +85,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/lib/strict-non-empty-containers; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/lib/strict-non-empty-containers; echo source root reset to $sourceRoot";
     }

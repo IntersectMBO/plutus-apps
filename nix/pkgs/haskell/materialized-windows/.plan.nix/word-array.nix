@@ -81,5 +81,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/word-array; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/word-array; echo source root reset to $sourceRoot";
     }

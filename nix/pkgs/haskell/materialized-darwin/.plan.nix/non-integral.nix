@@ -61,5 +61,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/libs/non-integral; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/libs/non-integral; echo source root reset to $sourceRoot";
     }

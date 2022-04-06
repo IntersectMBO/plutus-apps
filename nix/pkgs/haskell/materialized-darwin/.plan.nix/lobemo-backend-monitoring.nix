@@ -102,5 +102,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/plugins/backend-monitoring; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/plugins/backend-monitoring; echo source root reset to $sourceRoot";
     }
