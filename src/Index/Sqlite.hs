@@ -1,8 +1,23 @@
-module Index.Sqlite where
+module Index.Sqlite
+  ( -- * API
+    PartialStore(..)
+  , SqliteIndex
+  , new
+  , S.insert
+  , S.insertL
+  , S.size
+  , S.rewind
+   -- * Observations
+  , S.view
+  , S.getHistory
+  , S.getEvents
+  , S.getNotifications
+  ) where
 
 import           Database.SQLite.Simple (Connection, open)
 
 import           Index.Split            (SplitIndex (..))
+import qualified Index.Split as S
 
 data PartialStore e =
   PartialStore { psConnection    :: Connection
@@ -32,5 +47,3 @@ new findex fstore depth db
       , siStore         = fstore
       , siIndex         = findex
       }
-
-
