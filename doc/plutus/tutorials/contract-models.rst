@@ -80,7 +80,7 @@ let us keep track of these targets in the model too. We define
 .. literalinclude:: Escrow.hs
    :start-after: START EscrowModel
    :end-before: END EscrowModel
-                  
+
 Note that we use `lenses <http://hackage.haskell.org/package/lens>`_
 to access the fields of the model. This is why the field names begin
 with an underscore; the ``makeLenses`` call creates lenses called just
@@ -295,7 +295,7 @@ quickly, since failed tests become much easier to understand.
 In this case, as in most others, we can just reuse the existing
 shrinking for those parts of an ``Action`` that make sense to
 shrink. There is no sensible way to shrink a wallet, really, so we
-just shrink the amount in a payment. 
+just shrink the amount in a payment.
 
 .. literalinclude:: Escrow.hs
    :start-after: START shrinkAction
@@ -338,7 +338,7 @@ failed test case:
 
    Prelude Spec.Tutorial.Escrow Test.QuickCheck Main> quickCheck prop_Escrow
    *** Failed! Assertion failed (after 7 tests and 2 shrinks):
-   Actions 
+   Actions
     [Redeem (Wallet 5)]
 
 Here we see what generated tests looks like: they are essentially
@@ -347,7 +347,7 @@ one ``Action``: wallet 5 just attempted to redeem the funds in the
 contract.
 
 The next lines of output tell us why the test failed:
-    
+
 .. code-block:: text
 
    Expected funds of W[2] to change by
@@ -367,7 +367,7 @@ so there is no money to disburse.
 
 The remaining output displays a log from the failing contract
 instance, and the emulator log, both containing the line
-   
+
 .. code-block:: text
 
     Contract instance stopped with error: RedeemFailed NotEnoughFundsAtAddress
@@ -435,7 +435,7 @@ we define ``precondition``, then it has to be defined for every form
 of ``Action``, so we just add a default branch that returns ``True``.
 
 .. note::
-   
+
    We can't use ``(>=)`` to compare ``Value``; there is no
    ``Ord`` instance. That is because some ``Value`` are incomparable,
    such as one Ada and one NFT, which would break our expectations about
@@ -456,7 +456,7 @@ model. Running tests again, we see:
 
    Prelude Spec.Tutorial.Escrow Test.QuickCheck Main> quickCheck prop_Escrow
    *** Failed! Assertion failed (after 4 tests and 5 shrinks):
-   Actions 
+   Actions
     [Pay (Wallet 2) 0]
 
 This time the test just consists of a single ``Pay`` action, making a
@@ -476,16 +476,16 @@ payment of zero (!) Ada to the the contract.
    ``Pay``.
 
 The next part of the output explains why the test failed:
-    
+
 .. code-block:: text
-                
+
    Expected funds of W[2] to change by
      Value (Map [])
    but they changed by
      Value (Map [(,Map [("",-2000000)])])
    a discrepancy of
      Value (Map [(,Map [("",-2000000)])])
-  
+
 In other words, the model expected that a payment of zero would not
 affect the funds held by the calling wallet, but in fact, the wallet
 lost 2 Ada.
@@ -494,7 +494,7 @@ Why did this happen? In this case, the emulator log that follows
 provides an explanation:
 
 .. code-block:: text
-     
+
    .
    .
    .
@@ -568,10 +568,10 @@ tests still fail, but now with a test case that combines payment and
 redemption:
 
 .. code-block:: text
-                
+
    Prelude Spec.Tutorial.Escrow Test.QuickCheck Main> quickCheck prop_Escrow
    *** Failed! Assertion failed (after 8 tests and 5 shrinks):
-   Actions 
+   Actions
     [Pay (Wallet 4) 11,
      Pay (Wallet 5) 20,
      Redeem (Wallet 5)]
@@ -621,7 +621,7 @@ of the emulator:
 
    Prelude Spec.Tutorial.Escrow Test.QuickCheck Main> quickCheck . withMaxSuccess 1000 $ prop_Escrow
    +++ OK, passed 1000 tests.
-   
+
 Analysing the distribution of tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -642,7 +642,7 @@ tests:
 
    Prelude Spec.Tutorial.Escrow Test.QuickCheck Main> quickCheck . withMaxSuccess 1000 $ prop_Escrow
    +++ OK, passed 1000 tests.
-   
+
    Actions (25363 in total):
    75.894% Pay
    12.771% Redeem
@@ -669,7 +669,7 @@ failed.
    Actions rejected by precondition (360 in total):
    87.8% Redeem
    12.2% Pay
-                
+
 We can see that 360 actions--in addition to the 25,000 that were
 included in tests--were generated, but *discarded* because their
 preconditions were not true. This does represent wasted generation
@@ -694,15 +694,15 @@ valid ``Redeem`` actions are now generated; the only discarded actions
 are ``Pay`` actions.
 
 .. code-block:: text
-                
+
    Prelude Spec.Tutorial.Escrow Test.QuickCheck Main> quickCheck . withMaxSuccess 1000 $ prop_Escrow
    +++ OK, passed 1000 tests.
-   
+
    Actions (25693 in total):
    76.717% Pay
    13.035% Redeem
    10.248% WaitUntil
-   
+
    Actions rejected by precondition (650 in total):
    100.0% Pay
 
@@ -729,20 +729,20 @@ section in ``Spec.Tutorial.Escrow1``, in the ``plutus-apps`` repo.
    ``nix`` shell, and starting ``ghci`` using
 
    .. code-block:: text
-                   
+
       cabal repl plutus-use-cases-test
 
    Then import QuickCheck and the contract model:
 
    .. code-block:: text
-                   
+
       import Test.QuickCheck
       import Spec.Tutorial.Escrow1
 
    and run tests using
 
    .. code-block:: text
-                   
+
       quickCheck prop_Escrow
 
    The tests should pass, and you should see tables showing the
@@ -755,7 +755,7 @@ section in ``Spec.Tutorial.Escrow1``, in the ``plutus-apps`` repo.
 #. Try removing the line
 
    .. code-block:: text
-                   
+
       deposit w leftoverValue
 
    from the ``nextState`` function, and verify that tests fail as
@@ -861,7 +861,7 @@ and the targets accordingly:
 We have to specify how to perform an ``Init`` action also, but in this
 case it exists only to initialise the model state with generated
 targets, so performing it need not do anything:
-                
+
 .. literalinclude:: Escrow2.hs
    :start-after: START perform
    :end-before: END perform
@@ -872,7 +872,7 @@ actions to the ``Running`` phase only:
 .. literalinclude:: Escrow2.hs
    :start-after: START precondition
    :end-before: END precondition
-             
+
 It only remains to *generate* ``Init`` actions, using the
 generator for targets that we saw above. We can take the phase into
 account, and generate an ``Init`` action only at the start of the test
@@ -914,14 +914,14 @@ escrow targets randomly, but we cannot yet run them successfully. If we try, we 
 .. code-block:: text
 
    *** Failed! Assertion failed (after 11 tests and 5 shrinks):
-   Actions 
+   Actions
     [Init [],
      Redeem (Wallet 1)]
    Contract instance log failed to validate:
    ...
    Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
              Contract instance stopped with error: RedeemFailed NotEnoughFundsAtAddress
-   ...             
+   ...
 
 Here we started a test with an empty list of targets, and tried to
 redeem the escrow, but failed because there were 'not enough
@@ -934,7 +934,7 @@ Recall the contract we are testing:
 .. literalinclude:: Escrow.hs
    :start-after: START testContract
    :end-before: END testContract
-                
+
 
 It invokes the contract endpoints with the fixed set of ``EscrowParams``
 we defined earlier. Clearly we need to parameterise the contract on
@@ -949,12 +949,12 @@ Now the question is: how do we pass this parameter to each ``testContract`` as w
 Recall the way we started contracts in the previous section. We
 defined the contracts to start at the beginning of a test in the
 ``initialInstances`` method:
-                
+
 .. literalinclude:: Escrow.hs
    :start-after: START initialInstances
    :end-before: END initialInstances
 
-                
+
 
 Each contract is specified by a ``StartContract``, containing not only
 a contract instance key, but also a *parameter*--in this case ``()``,
@@ -983,10 +983,10 @@ where the escrow parameters are now constructed from our generated targets:
 
 The effect of this is to start the contracts *just before* the
 ``Init`` action; in fact, using this mechanism, we can start contracts
-dynamically at any point in a test case.                
+dynamically at any point in a test case.
 
 .. note::
-                
+
    We should be careful to avoid reusing the same contract instance
    key more than once, though, since this may lead to confusing
    results.
@@ -995,7 +995,7 @@ dynamically at any point in a test case.
    ``perform`` method instead. The answer is the framework needs to track
    the running contract instances, and using ``startInstances`` makes
    this explicit.
-                
+
 The ``StartContract`` just specifies the ``ContractInstanceKey`` to be
 started; we define the actual contract to start in the
 ``instanceContract`` method, *which receives the contract parameter*
@@ -1014,7 +1014,7 @@ that ``StartContract`` accepts.
    :end-before: END ContractInstanceKey
 
 Now, at last, our extended model is complete.
-                
+
 Running our extended tests; another design issue
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1024,7 +1024,7 @@ of a failure:
 
 .. code-block:: text
 
-   Actions 
+   Actions
     [Init [(Wallet 5,0)],
      Redeem (Wallet 4)]
    Expected funds of W[4] to change by
@@ -1193,25 +1193,25 @@ is written in the same monad. For example, if we think we should use a
 .. literalinclude:: Escrow3.hs
    :start-after: START badFinishingStrategy
    :end-before: END badFinishingStrategy
-                
+
 Of course, since the strategy must work in any state, including the
 initial one, then we do have to check that the escrow has been
 initialised before we attempt to ``Redeem``.
 
 .. note::
-   
+
    These test scenarios are very flexible, and can be used for other
    purposes too. For example, we could write a test scenario that fixes
    the escrow targets, thus undoing the generalization we made in the previous section:
-   
+
    .. literalinclude:: Escrow3.hs
       :start-after: START fixedTargets
       :end-before: END fixedTargets
-   
+
    Note that generated actions are always *appropriate for the current
    state*, so here ``anyActions_`` will pick up generating the test case
    from the point after the escrow targets are initialised.
-   
+
    We can use dynamic logic to express everything from unit tests to full
    random generation (by just specifying ``anyActions_`` as the
    scenario). But for now, we focus on testing "no locked funds" properties.
@@ -1239,11 +1239,11 @@ Then we can run the tests by passing the property to ``quickCheck``, as usual:
         (EscrowModel {_contributions = fromList [],
                       _targets = fromList [(Wallet 2,Value (Map [(,Map [("",2000000)])]))],
                       _phase = Running})
-      
+
       BadPrecondition
       [Do $ Var 0 := Init [(Wallet 2,2)]]
       Some (Redeem (Wallet 1))
-   
+
 The property fails, which is not surprising: our "finishing strategy"
 is quite simplistic, and not yet expected to work. But let us inspect
 the error message. The test failed because of a bad precondition,
@@ -1286,7 +1286,7 @@ strategy works.
 
    >  quickCheck . withMaxSuccess 1000 $ prop_FinishEscrow
    +++ OK, passed 1000 tests.
-   
+
    Actions (51925 in total):
    73.483% Pay
    14.278% Redeem
@@ -1317,18 +1317,18 @@ This does make ``prop_Escrow`` pass:
 
    > quickCheck prop_Escrow
    +++ OK, passed 100 tests.
-   
+
    Actions (2845 in total):
    82.81% Pay
    13.78% WaitUntil
     3.30% Init
     0.11% Redeem
-   
+
    Actions rejected by precondition (870 in total):
    88.3% Redeem
    10.8% Pay
-    0.9% Init                  
-                
+    0.9% Init
+
 But should we be satisfied with this? There are warning signs in the
 statistics that QuickCheck collects:
 
@@ -1358,13 +1358,13 @@ On the other hand, when we test ``prop_FinishEscrow``, then it fails immediately
    > quickCheck prop_FinishEscrow
    *** Failed! Falsified (after 5 tests and 6 shrinks):
    BadPrecondition
-     [Do $ Init [], 
+     [Do $ Init [],
       Do $ Pay (Wallet 2) 2]
      [Action (Redeem (Wallet 1))]
      (EscrowModel {_contributions = fromList [(Wallet 2,Value (Map [(,Map [("",2000000)])]))],
                    _targets = fromList [],
                    _phase = Running})
-   
+
    BadPrecondition
    [Do $ Var 0 := Init [],Do $ Var 3 := Pay (Wallet 2) 2]
    Some (Redeem (Wallet 1))
@@ -1436,12 +1436,12 @@ and we can test them together using ``checkNoLockedFundsProof``
    :end-before: END prop_NoLockedFunds
 
 .. code-block:: text
-                   
+
       > quickCheck prop_NoLockedFunds
       *** Failed! Falsified (after 1 test and 5 shrinks):
       DLScript
         [Do $ Init [(Wallet 4,2)]]
-      
+
       Unilateral strategy for Wallet 4 should have gotten it at least
         SymValue {symValMap = fromList [], actualValPart = Value (Map [(,Map [("",2000000)])])}
       but it got
@@ -1477,7 +1477,7 @@ meantime, to summarize, defining a ``NoLockedFundsProof`` requires us
 
 Fixing the contract: refunds
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-     
+
 The fundamental problem with the finishing strategy we have developed
 so far, is that in order to recover tokens already held by the
 contract, we may need to pay in even more tokens! This seems a poor
@@ -1517,14 +1517,14 @@ now tests refunds as well:
 
    > quickCheck prop_Escrow
    +++ OK, passed 100 tests.
-   
+
    Actions (2625 in total):
    66.44% Pay
    12.46% WaitUntil
     9.64% Redeem
     7.96% Refund
     3.50% Init
-   
+
    Actions rejected by precondition (478 in total):
    85.8% Refund
    12.6% Pay
@@ -1538,7 +1538,7 @@ low (15%), and sufficiently many ``Refund`` actions are being tested.
 
 The payoff, though, is that we can now define a far better finishing
 strategy: the general strategy will just refund all the contributions,
-and the unilateral strategies will claim a refund for the 
+and the unilateral strategies will claim a refund for the
 wallet concerned.
 
 .. literalinclude:: Escrow3.hs
@@ -1555,7 +1555,7 @@ wallet concerned.
    while the wallet-specific ones may be invoked a variable--and
    unpredictable--number of times. This makes statistics gathered in
    the wallet-specific strategies harder to interpret.
-                
+
 We put these strategies together into a ``NoLockedFundsProof``:
 
 .. literalinclude:: Escrow3.hs
@@ -1568,7 +1568,7 @@ and run tests:
 
    > quickCheck prop_NoLockedFunds
    +++ OK, passed 100 tests.
-   
+
    Actions (31076 in total):
    65.211% Pay
    11.794% WaitUntil
@@ -1576,7 +1576,7 @@ and run tests:
     9.506% Refund
     1.847% Init
     1.525% Unilateral
-   
+
    Refunded wallets (100 in total):
    30% 2
    23% 1
@@ -1588,7 +1588,7 @@ and run tests:
 Now the tests pass--each wallet can indeed recover its own fair share
 of tokens--and moreover we test each action fairly often, and the
 number of refunded wallets has a reasonable-looking distribution.
-    
+
 Exercises
 ^^^^^^^^^
 You will find the code presented in this section in ``Spec.Tutorial.Escrow3``\.
@@ -1621,7 +1621,7 @@ You will find the code presented in this section in ``Spec.Tutorial.Escrow3``\.
    per-wallet strategy, and see whether ``prop_NoLockedFunds`` still
    passes. Add a call of ``monitor`` to your strategy to gather
    statistics on how often ``Redeem`` is used instead of ``Refund``.
-   
+
 
 Taking Time into Account
 ------------------------
@@ -1723,7 +1723,7 @@ integers), and shrink them (by reusing integer shrinking):
 Now we are ready to run tests.
 
  .. _Timing:
- 
+
 Modelling the passage of time
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1733,7 +1733,7 @@ We can now run tests, but they do not pass:
 
    > quickCheck prop_Escrow
    *** Failed! Assertion failed (after 5 tests and 7 shrinks):
-   Actions 
+   Actions
     [Init (Slot {getSlot = 0}) [],
      Pay (Wallet 1) 2]
    Expected funds of W[1] to change by
@@ -1747,7 +1747,7 @@ We can now run tests, but they do not pass:
    [INFO] Slot 1: 00000000-0000-4000-8000-000000000001 {Wallet W[2]}:
                     Contract instance started
    ...
-   
+
 We tried to pay 2 Ada from wallet 1, but the payment did not take
 effect. Notice that the generated deadline is slot zero, though; in
 other words, the deadline passed before we started the test. This
@@ -1765,7 +1765,7 @@ the shrunk counterexample is different:
 
    > quickCheck prop_Escrow
    *** Failed! Assertion failed (after 2 tests and 5 shrinks):
-   Actions 
+   Actions
     [Init (Slot {getSlot = 2}) [],
      WaitUntil (Slot {getSlot = 2}),
      Pay (Wallet 3) 2]
@@ -1854,14 +1854,14 @@ Testing ``prop_Escrow`` generates some interesting statistics:
 
    > quickCheck prop_Escrow
    +++ OK, passed 100 tests.
-   
+
    Actions (2291 in total):
    62.03% WaitUntil
    27.37% Pay
     3.71% Redeem
     3.62% Init
     3.27% Refund
-   
+
    Actions rejected by precondition (11626 in total):
    70.437% Pay
    23.757% Refund
@@ -1899,7 +1899,7 @@ The following tables tell us more about the passage of time in our tests:
    15.76% 30-39
     5.77% 40-49
     0.63% 50-59
-   
+
    Wait until (1421 in total):
    14.07% 100-199
    12.03% 1000-1999
@@ -1939,7 +1939,7 @@ strategies for individual wallets:
    > quickCheck prop_FinishEscrow
    *** Failed! Falsified (after 5 tests and 5 shrinks):
    BadPrecondition
-     [Do $ Init (Slot {getSlot = 3}) [], 
+     [Do $ Init (Slot {getSlot = 3}) [],
       Do $ Pay (Wallet 3) 2]
      [Action (Refund (Wallet 3))]
      (EscrowModel {_contributions = fromList [(Wallet 3,Value (Map [(,Map [("",2000000)])]))],
@@ -1972,14 +1972,14 @@ With this extended strategy, the property passes:
 
    > quickCheck prop_FinishEscrow
    +++ OK, passed 100 tests.
-   
+
    Actions (3588 in total):
    68.87% WaitUntil
    20.71% Pay
     4.77% Refund
     3.18% Redeem
     2.48% Init
-   
+
    Refunded wallets (100 in total):
    67% 0
    13% 2
@@ -2040,11 +2040,11 @@ measure how often we reach the refunding stage:
 
    > quickCheck . withMaxSuccess 1000 $ prop_FinishFast
    +++ OK, passed 1000 tests.
-   
+
    Phase (1000 in total):
    81.5% Running
    18.5% Refunding
-   
+
    Refunded wallets (1000 in total):
    34.1% 0
    18.5% 1
@@ -2061,7 +2061,7 @@ thirds. So this is a useful improvement.
 Finally, we also need to update the unilateral strategy for each
 wallet in the same way. Once we have done so, then
 ``prop_NoLockedFunds`` passes again.
- 
+
 Digression: testing the model alone for speed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2106,11 +2106,11 @@ and obtain much more accurate statistics:
 
    > quickCheck . withMaxSuccess 100000 $ prop_FinishFast
    +++ OK, passed 100000 tests.
-   
+
    Phase (100000 in total):
    80.514% Running
    19.486% Refunding
-   
+
    Refunded wallets (100000 in total):
    34.204% 0
    18.387% 1
@@ -2158,7 +2158,7 @@ You will find the code discussed in this section in ``Spec.Tutorial.Escrow4``.
    of tests needed to find the bug. Reinsert the scaling, and repeat
    your estimate. Hopefully this will help persuade you of the value
    of tuning your test case distributions!
-                
+
 
 Measuring coverage of on-chain code
 -----------------------------------
@@ -2186,7 +2186,7 @@ Adding a coverage index
 In order to generate a coverage report, the framework needs to know
 
 #. what was covered by tests,
-   
+
 #. what should have been covered.
 
 Indeed, the most important part of a coverage report is often the
@@ -2258,7 +2258,7 @@ we run the actions, but otherwise this is just the same as
 ``prop_Escrow``. The result returned by ``quickCheckWithCoverage`` is
 a ``CoverageReport``, which is difficult to interpret by itself, so we
 bind it to ``cr`` and then generate an HTML file ``Escrow.html`` using
-``writeCoverageReport``. 
+``writeCoverageReport``.
 
 Running this does take a little while, because we run a large number of
 tests; on the other hand, diagnosing *why* a part of the code has not
@@ -2292,7 +2292,7 @@ invocations:
     3.9% Contract instance for W[4] at endpoint refund-escrow
     3.5% Contract instance for W[3] at endpoint refund-escrow
     3.3% Contract instance for W[5] at endpoint refund-escrow
-   
+
    ...
 
 This table tells us what percentage of test cases made a call to each
@@ -2420,7 +2420,7 @@ they give us no evidence at all that target payments to a script work
 as intended. To test this code as well, we would need to add 'proxy'
 contracts to the tests, to act as recipients for such payments. We
 leave making this extension as an exercise for the reader.
-   
+
 .. _CoverageReport:
 
 The generated coverage report
@@ -2464,7 +2464,7 @@ tests, though.
    test, when the contract(s) that should perform the action are not
    running. We thus need to tell the framework whether or not an action
    is *available*, given the contracts currently running.
-                
+
 #. Secondly, when we restart a contract it may need to take some
    recovery action, and so we must be able to give it the necessary
    information to recover. We achieve this by specifying
@@ -2500,14 +2500,14 @@ It is possible to define the effect of crashing or restarting a
 contract instance on the *model* too, if need be, by defining
 additional methods in this class. In this case, though, crashing and
 restarting ought to be entirely transparent, so we can omit them.
-                
+
 Surprisingly, the tests do not pass!
 
   .. code-block:: text
 
    > quickCheck prop_CrashTolerance
    *** Failed! Assertion failed (after 24 tests and 26 shrinks):
-   Actions 
+   Actions
     [Init (Slot {getSlot = 6}) [(Wallet 1,2),(Wallet 4,2)],
      Crash (WalletKey (Wallet 4)),
      Restart (WalletKey (Wallet 4)),
@@ -2559,7 +2559,7 @@ statistics that quite a lot of crashing and restarting is going on:
 
    > quickCheck prop_CrashTolerance
    +++ OK, passed 100 tests.
-   
+
    Actions (2721 in total):
    42.48% Pay
    24.99% WaitUntil
@@ -2666,7 +2666,7 @@ method introduced in section :ref:`Timing`
  .. literalinclude:: Auction.hs
    :start-after: START nextReactiveState
    :end-before: END nextReactiveState
-                
+
 Finally we can define the property to test; in this case we have to
 supply some options to initialize wallet 1 with the token to be
 auctioned:
@@ -2687,12 +2687,12 @@ Unsurprisingly, the tests pass.
 
    > quickCheck prop_Auction
    +++ OK, passed 100 tests.
-   
+
    Actions (2348 in total):
    85.82% Bid
    10.35% WaitUntil
     3.83% Init
- 
+
 No locked funds?
 ^^^^^^^^^^^^^^^^
 
@@ -2712,7 +2712,7 @@ This property passes too:
 
    > quickCheck prop_FinishAuction
    +++ OK, passed 100 tests.
-   
+
    Actions (3152 in total):
    84.77% Bid
    12.25% WaitUntil
@@ -2733,12 +2733,12 @@ Surprisingly, *these tests fail*!
    > quickCheck prop_NoLockedFunds
    *** Failed! Assertion failed (after 2 tests and 1 shrink):
    DLScript
-     [Do $ Init, 
+     [Do $ Init,
       Do $ Bid (Wallet 3) 2000000]
-   
+
    The ContractModel's Unilateral behaviour for Wallet 3 does not match the
    actual behaviour for actions:
-   Actions 
+   Actions
     [Var 0 := Init,
      Var 1 := Bid (Wallet 3) 2000000,
      Var 2 := Unilateral (Wallet 3),
@@ -2756,7 +2756,7 @@ Surprisingly, *these tests fail*!
    a discrepancy of
      Value (Map [(,Map [("",-2000000)]),(363d...,Map [("token",-1)])])
    Test failed.
-                
+
 This test just started the auction and submitted a bid from wallet 3,
 then *stopped all the other wallets* (this is what ``Unilateral
 (Wallet 3)`` does), before waiting until the auction deadline.  This
@@ -2787,7 +2787,7 @@ writing a new version of the off-chain code (or rolling a suitable
 transaction by hand).
 
  .. _AuctionAssertion:
- 
+
 Model assertions, and unexpected expectations.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2795,8 +2795,8 @@ Looking back at the failed test again, the *expected* wallet contents
 are actually a little *unexpected*:
 
   .. code-block:: text
-                  
-   Actions 
+
+   Actions
     [Var 0 := Init,
      Var 1 := Bid (Wallet 3) 2000000,
      Var 2 := Unilateral (Wallet 3),
@@ -2846,13 +2846,13 @@ Now ``prop_Auction`` fails!
 
    > quickCheck prop_Auction
    *** Failed! Falsified (after 27 tests and 24 shrinks):
-   Actions 
+   Actions
     [Init,
      Bid (Wallet 3) 2000000,
      WaitUntil (Slot {getSlot = 100})]
    assertSpec failed: w1 final balance is wrong:
      SymValue {symValMap = fromList [], actualValPart = Value (Map [(363d...,Map [("token",-1)])])}
-                
+
  .. note::
 
     The balance change is actually a ``SymValue``, not a ``Value``,
@@ -2929,7 +2929,7 @@ this:
 
    > quickCheck prop_CrashTolerance
    *** Failed! Assertion failed (after 13 tests and 9 shrinks):
-   Actions 
+   Actions
     [Init,
      Crash SellerH,
      Restart SellerH]
@@ -2984,40 +2984,39 @@ The code discussed here is in ``Spec.Auction``.
    it fails. Change the assertion to say that the seller receives 2
    Ada *less* than the bid, and verify that it now passes.
 
-   
-Negative testing
-----------------
+Becoming Level 1 Certification Ready
+------------------------------------
 
-Part 1: Bad Actions
-^^^^^^^^^^^^^^^^^^^
+Level 1 certification of plutus smart contracts relies on the machinery
+we have discussed in this tutorial. First things first we are going to
+have a look at the :hsobj:`Plutus.Contract.Test.Certification` module.
 
-Idea: include Bad actions that violate preconditions. Precondition is
-inverse. nextState is identity.
+This module defines a type ``Certification`` paramtereized over a type
+``m`` that should be a ``ContractModel``. This is a record type that has
+fields for:
 
-Generation: apply Bad constructor if precondition fails.  Must ensure
-generators are not targetting preconditions precisely; remove
-conditions.
+#. a ``CoverageIndex``,
+#. two different types of ``NoLockedFundsProof``
+   (a standard full proof and a light proof that does not require you to provide
+   a per-wallet unilateral strategy),
+#. the ability to provide a specialized error whitelist,
+#. a way to specify that we have an instance of ``CrashTolerance`` for ``m``,
+#. unit tests in the form of a function from a ``CoverageRef`` to a ``TestTree``
+   (see :hsobj:`Plutus.Contract.Test.checkPredicateCoverage`
+   for how to construct one of these), and
+#. named dynamic logic unit tests.
 
-Expect to get bad payment? Introduce wellFormed, weaker precondition
-for Bad actions.
+Fortunately, understanding what we need to do to get certification-ready
+at this stage is simple. We just need to build a ``Certification`` object.
+For example of how to do this, check out :hsobj:`Spec.GameStateMachine.certification`
+and :hsobj:`Spec.Uniswap.certification`.
 
-What if we deal with surplus differently, by forbidding.
+You can run level 1 certification locally using the
+:hsobj:`Plutus.Contract.Test.Certification.Run.certify` function - but at
+this stage you may find it difficult to read the output of this function.
+Don't worry! A certification dashboard is on the way!
 
-Escrow, with preconditions that restrict Redeem and Pay. Negative
-testing shows Escrow contract permits wider behaviour.
+Exercises
+^^^^^^^^^
 
-Part 2: Bad Endpoints
-^^^^^^^^^^^^^^^^^^^^^
-
-Use the bad endpoints for Escrow as example.
-
-Dynamically created tokens
---------------------------
-
-Show how to test Escrow with generated tokens.
-
-A larger example: the Uniswap contract
---------------------------------------
-
-Needs symbolic tokens, and wiggle room in "No Locked Funds"
-
+#. Build a certification object for the ``Auction`` and ``Escrow`` contracts.

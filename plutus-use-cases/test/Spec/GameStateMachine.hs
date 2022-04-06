@@ -466,8 +466,7 @@ certification = defaultCertification {
     certNoLockedFunds      = Just noLockProof,
     certUnitTests          = Just unitTest,
     certCoverageIndex      = covIdx gameParam,
-    certCrashTolerance     = Just Instance,
-    certWhitelist          = Just defaultWhitelist
+    certCrashTolerance     = Just Instance
   }
   where
     unitTest ref =
