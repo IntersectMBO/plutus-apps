@@ -37,6 +37,7 @@ dependencies:
 - base >= 4.7 && < 5
 - QuickCheck
 - quickspec
+- sqlite-simple
 
 library:
   source-dirs: src
