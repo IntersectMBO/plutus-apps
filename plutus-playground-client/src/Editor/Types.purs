@@ -15,8 +15,7 @@ import Prelude (bottom, top)
 import Web.HTML.Event.DragEvent (DragEvent)
 import Web.UIEvent.MouseEvent (MouseEvent)
 
-newtype State
-  = State
+newtype State = State
   { keyBindings :: KeyBindings
   , feedbackPaneMinimised :: Boolean
   , lastCompiledCode :: Maybe SourceCode

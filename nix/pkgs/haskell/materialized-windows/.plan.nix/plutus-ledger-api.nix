@@ -117,5 +117,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/plutus-ledger-api; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/plutus-ledger-api; echo source root reset to $sourceRoot";
     }

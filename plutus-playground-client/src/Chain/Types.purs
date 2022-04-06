@@ -41,8 +41,7 @@ _FocusTx = prism' set get
 
   set = FocusTx <<< Just
 
-newtype AnnotatedBlockchain
-  = AnnotatedBlockchain (Array (Array AnnotatedTx))
+newtype AnnotatedBlockchain = AnnotatedBlockchain (Array (Array AnnotatedTx))
 
 derive instance newtypeAnnotatedBlockchain :: Newtype AnnotatedBlockchain _
 
@@ -52,8 +51,7 @@ _AnnotatedBlockchain = _Newtype
 _AnnotatedBlocks :: Traversal' AnnotatedBlockchain AnnotatedTx
 _AnnotatedBlocks = _AnnotatedBlockchain <<< traversed <<< traversed
 
-type State
-  =
+type State =
   { chainFocus :: Maybe TxId
   , chainFocusAppearing :: Boolean
   , chainFocusAge :: Ordering

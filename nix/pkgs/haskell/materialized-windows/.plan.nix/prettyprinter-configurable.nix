@@ -102,5 +102,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/prettyprinter-configurable; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/prettyprinter-configurable; echo source root reset to $sourceRoot";
     }

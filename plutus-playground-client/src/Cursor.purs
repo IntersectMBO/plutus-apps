@@ -38,8 +38,7 @@ import Data.Tuple (uncurry)
 import Test.QuickCheck.Arbitrary (class Arbitrary, arbitrary)
 import Test.QuickCheck.Gen (arrayOf)
 
-data Cursor a
-  = Cursor Int (Array a)
+data Cursor a = Cursor Int (Array a)
 
 derive instance eqCursor :: Eq a => Eq (Cursor a)
 

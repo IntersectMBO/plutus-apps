@@ -152,6 +152,6 @@ haskell.project.shellFor {
     ${utillinux}/bin/taskset -pc 0-1000 $$
   ''
   + ''
-    export WEB_COMMON_SRC=${webCommon}
+    export WEB_COMMON_SRC=${webCommon.cleanSrc}
   '';
 }

@@ -188,5 +188,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/iohk-monitoring; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/iohk-monitoring; echo source root reset to $sourceRoot";
     }

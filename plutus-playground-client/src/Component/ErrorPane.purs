@@ -9,8 +9,7 @@ import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (class_, classes, ref)
 import Icons (Icon(..), icon)
 
-data ErrorPaneAction
-  = CloseErrorPane
+data ErrorPaneAction = CloseErrorPane
 
 errorPane :: forall p i. String -> HTML p i
 errorPane error =

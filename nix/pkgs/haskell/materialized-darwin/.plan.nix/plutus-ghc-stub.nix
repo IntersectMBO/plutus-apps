@@ -72,5 +72,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/stubs/plutus-ghc-stub; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/stubs/plutus-ghc-stub; echo source root reset to $sourceRoot";
     }
