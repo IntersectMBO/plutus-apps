@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TupleSections      #-}
 {-| Using the chain index as a library.
@@ -61,7 +62,6 @@ import Cardano.BM.Trace (Trace, logDebug, logError, nullTracer)
 import Cardano.Protocol.Socket.Client qualified as C
 import Cardano.Protocol.Socket.Type (epochSlots)
 import Control.Concurrent.STM (TChan, atomically, newTVarIO, writeTChan)
-import Control.Concurrent.STM.TBMQueue (TBMQueue, writeTBMQueue)
 import Plutus.ChainIndex (ChainIndexLog (BeamLogItem), RunRequirements (RunRequirements), getResumePoints,
                           runChainIndexEffects, tipBlockNo)
 import Plutus.ChainIndex qualified as CI
