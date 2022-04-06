@@ -63,7 +63,7 @@ run
   :: forall m a e n. (Show a, Show e, Show n, Monad m)
   => Index a e n
   -> m (Maybe (SplitIndex m a e n))
-run (Ix.New f d a) = pure $ S.new findex fstore d (pure a)
+run (Ix.New f d a) = S.new findex fstore d a
   where
     findex :: a -> [e] -> (a, [n])
     findex a' es = foldr convertIxF (a', []) es

@@ -18,7 +18,7 @@ import           Data.Foldable (foldlM)
 import           Index         (IndexView (..))
 
 data SplitIndex m a e n = SplitIndex
-  { siStoredIx      :: m a
+  { siStoredIx      :: a
     -- ^ Combined view of `[e]` and `m a`
   , siEvents        :: [e]
   , siBuffered      :: [e]
@@ -41,11 +41,11 @@ new
   => (a -> [e] -> (a,[n]))
   -> (a -> m a)
   -> Int
-  -> m a
-  -> Maybe (SplitIndex m a e n)
+  -> a
+  -> m (Maybe (SplitIndex m a e n))
 new findex fstore depth ix
-  | depth <= 0        = Nothing
-  | otherwise         = Just $ SplitIndex
+  | depth <= 0        = pure Nothing
+  | otherwise         = pure . Just $ SplitIndex
     { siStoredIx      = ix
     , siEvents        = []
     , siBuffered      = []
@@ -92,16 +92,14 @@ insert e ix@SplitIndex{siEvents, siDepth, siBuffered}
 
 mergedState :: Monad m => SplitIndex m a e n -> m a
 mergedState SplitIndex{siIndex, siStoredIx, siEvents, siBuffered} = do
-  storedState <- siStoredIx
-  pure $ fst $ siIndex storedState (siEvents ++ siBuffered)
+  pure $ fst $ siIndex siStoredIx (siEvents ++ siBuffered)
 
 
 mergeEvents :: Monad m => SplitIndex m a e n -> m (SplitIndex m a e n)
 mergeEvents ix@SplitIndex {siStore, siIndex, siStoredIx, siBuffered} = do
-  six       <- siStoredIx
-  let six'  = fst $ siIndex six siBuffered
+  let six'  = fst $ siIndex siStoredIx siBuffered
   nextStore <- siStore six'
-  pure $ ix { siStoredIx = pure nextStore
+  pure $ ix { siStoredIx = nextStore
             , siBuffered = []
             }
 
@@ -131,8 +129,7 @@ getNotifications SplitIndex{siNotifications} = pure siNotifications
 
 getHistory :: forall m e a n. Monad m => SplitIndex m a e n -> m [a]
 getHistory SplitIndex{siStoredIx, siIndex, siEvents, siBuffered} = do
-  storedIx <- siStoredIx
-  let a  = foldr index storedIx siBuffered
+  let a  = foldr index siStoredIx siBuffered
   pure $ scanr index a siEvents
   where
     index :: e -> a -> a

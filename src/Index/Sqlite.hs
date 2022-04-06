@@ -22,9 +22,9 @@ new findex fstore depth db
   | otherwise  = do
     connection <- open db
     pure . Just $ SplitIndex
-      { siStoredIx      = pure $ PartialStore { psConnection = connection
-                                              , psPendingEvents = []
-                                              }
+      { siStoredIx      =  PartialStore { psConnection = connection
+                                        , psPendingEvents = []
+                                        }
       , siEvents        = []
       , siBuffered      = []
       , siNotifications = []
