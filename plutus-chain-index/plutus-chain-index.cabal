@@ -38,30 +38,29 @@ library
         Plutus.ChainIndex.SyncStats
     hs-source-dirs: src
     build-depends:
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-chain-index-core -any,
-        freer-extras -any
-    build-depends:
         aeson -any,
         async -any,
         base >=4.7 && <5,
-        beam-sqlite -any,
         beam-migrate -any,
+        beam-sqlite -any,
         cardano-api -any,
         contra-tracer -any,
         data-default -any,
+        freer-extras -any,
         freer-simple -any,
         iohk-monitoring -any,
         lens -any,
         optparse-applicative -any,
         ouroboros-network -any,
+        plutus-chain-index-core -any,
+        plutus-ledger -any,
+        plutus-ledger-api -any,
         prettyprinter >=1.1.0.1,
         resource-pool -any,
         sqlite-simple -any,
         stm -any,
         time-units -any,
-        yaml -any,
+        yaml -any
 
 executable plutus-chain-index
   main-is: Main.hs
