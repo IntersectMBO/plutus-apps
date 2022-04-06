@@ -72,5 +72,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/libs/cardano-protocol-tpraos; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/libs/cardano-protocol-tpraos; echo source root reset to $sourceRoot";
     }

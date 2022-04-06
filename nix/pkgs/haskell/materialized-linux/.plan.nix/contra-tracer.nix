@@ -50,5 +50,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/contra-tracer; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/contra-tracer; echo source root reset to $sourceRoot";
     }

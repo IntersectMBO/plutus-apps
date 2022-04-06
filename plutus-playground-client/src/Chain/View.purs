@@ -41,8 +41,7 @@ import Prologue (Ordering(..), Tuple, const, eq, pure, show, zero, ($), (<$>), (
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput(..), SequenceId(..))
 import Web.UIEvent.MouseEvent (MouseEvent)
 
-type NamingFn
-  = PubKeyHash -> Maybe String
+type NamingFn = PubKeyHash -> Maybe String
 
 chainView :: forall p. NamingFn -> State -> AnnotatedBlockchain -> HTML p Action
 chainView namingFn state annotatedBlockchain =

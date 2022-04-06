@@ -44,8 +44,7 @@ import Test.QuickCheck.Gen as Gen
 import ValueEditor (ValueEvent(..))
 import Web.HTML.Event.DragEvent (DragEvent)
 
-newtype State
-  = State
+newtype State = State
   { demoFilesMenuVisible :: Boolean
   , gistErrorPaneVisible :: Boolean
   , currentView :: View
@@ -80,30 +79,24 @@ instance showView :: Show View where
   show Simulations = "Simulation"
   show Transactions = "Transactions"
 
-type ChainSlot
-  = Array Tx
+type ChainSlot = Array Tx
 
-type Blockchain
-  = Array ChainSlot
+type Blockchain = Array ChainSlot
 
 type WebData = RemoteData String
 
-type WebCompilationResult
-  = WebData (Either InterpreterError (InterpreterResult CompilationResult))
+type WebCompilationResult = WebData (Either InterpreterError (InterpreterResult CompilationResult))
 
-type WebEvaluationResult
-  = WebData (Either PlaygroundError EvaluationResult)
+type WebEvaluationResult = WebData (Either PlaygroundError EvaluationResult)
 
-type FullSimulation
-  =
+type FullSimulation =
   { simulation :: Simulation
   , blockchainVisualisationState :: Chain.State
   , evaluationResult :: WebEvaluationResult
   }
 
 -- this synonym is defined in playground-common/src/Playground/Types.hs
-type SimulatorAction
-  = ContractCall FormArgument
+type SimulatorAction = ContractCall FormArgument
 
 data Query :: forall k. k -> Type
 data Query a
@@ -158,8 +151,7 @@ instance showDragAndDropEventType :: Show DragAndDropEventType where
   show DragLeave = "DragLeave"
   show Drop = "Drop"
 
-type ChildSlots
-  =
+type ChildSlots =
   ( editorSlot :: H.Slot Monaco.Query Monaco.Message Unit
   , balancesChartSlot :: H.Slot Chartist.Query Chartist.Message Unit
   )

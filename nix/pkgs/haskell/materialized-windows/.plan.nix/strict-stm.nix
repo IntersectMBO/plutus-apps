@@ -52,5 +52,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/strict-stm; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/strict-stm; echo source root reset to $sourceRoot";
     }

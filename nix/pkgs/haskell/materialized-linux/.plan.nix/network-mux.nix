@@ -161,5 +161,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/network-mux; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/network-mux; echo source root reset to $sourceRoot";
     }

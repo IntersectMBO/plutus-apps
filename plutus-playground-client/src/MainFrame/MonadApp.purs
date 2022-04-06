@@ -89,8 +89,7 @@ class Monad m <= MonadApp m where
   preventDefault :: forall e. IsEvent e => e -> m Unit
   scrollIntoView :: RefLabel -> m Unit
 
-newtype HalogenApp m a
-  = HalogenApp (HalogenM State HAction ChildSlots Void m a)
+newtype HalogenApp m a = HalogenApp (HalogenM State HAction ChildSlots Void m a)
 
 derive instance newtypeHalogenApp :: Newtype (HalogenApp m a) _
 

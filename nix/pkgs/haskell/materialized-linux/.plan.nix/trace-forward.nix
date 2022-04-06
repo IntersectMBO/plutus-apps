@@ -117,5 +117,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/trace-forward; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/trace-forward; echo source root reset to $sourceRoot";
     }

@@ -130,5 +130,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/eras/byron/ledger/impl/test; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/eras/byron/ledger/impl/test; echo source root reset to $sourceRoot";
     }

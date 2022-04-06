@@ -92,5 +92,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/ntp-client; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/ntp-client; echo source root reset to $sourceRoot";
     }

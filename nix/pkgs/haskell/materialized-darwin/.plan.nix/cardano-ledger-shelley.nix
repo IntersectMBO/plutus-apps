@@ -136,5 +136,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/eras/shelley/impl; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/eras/shelley/impl; echo source root reset to $sourceRoot";
     }

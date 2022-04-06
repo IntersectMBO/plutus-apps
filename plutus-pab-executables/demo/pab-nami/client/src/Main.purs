@@ -49,8 +49,7 @@ import PaymentForm (Payment, PaymentForm, ChildSlots)
 import PaymentForm as PaymentForm
 import Text.Pretty (class Pretty, pretty, text)
 
-type State
-  =
+type State =
   { cardanoWasm :: CardanoWasm
   , errors :: Set AppError
   , isLoadingWallet :: Boolean
@@ -105,8 +104,7 @@ initialState cardanoWasm = do
   , lastSubmittedTxId: Nothing
   }
 
-type ChildSlot
-  = (formless :: F.Slot PaymentForm (Const Void) ChildSlots Payment Unit)
+type ChildSlot = (formless :: F.Slot PaymentForm (Const Void) ChildSlots Payment Unit)
 
 render :: State -> HH.HTML (H.ComponentSlot ChildSlots AppM Action) Action
 render s =

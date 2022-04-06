@@ -12,8 +12,7 @@ import Schema (FormArgumentF)
 
 -- | This recursive type is isomorphic to `Data.Functor.Mu.Mu`, and
 -- only exists because we want `Encode`/`Decode` instances.
-newtype Fix f
-  = Fix (f (Fix f))
+newtype Fix f = Fix (f (Fix f))
 
 derive instance newtypeFix :: Newtype (Fix f) _
 

@@ -69,5 +69,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/lib/numeric; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/lib/numeric; echo source root reset to $sourceRoot";
     }

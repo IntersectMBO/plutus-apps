@@ -94,5 +94,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/lib/cli; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/lib/cli; echo source root reset to $sourceRoot";
     }

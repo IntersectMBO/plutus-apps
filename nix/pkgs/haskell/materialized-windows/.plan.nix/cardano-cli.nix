@@ -288,5 +288,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/cardano-cli; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/cardano-cli; echo source root reset to $sourceRoot";
     }

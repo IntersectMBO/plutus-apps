@@ -75,5 +75,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/libs/cardano-ledger-pretty; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/libs/cardano-ledger-pretty; echo source root reset to $sourceRoot";
     }
