@@ -40,6 +40,8 @@ data MkTxError
   | TypedValidatorMissing
   | DatumWrongHash DatumHash String
   | CannotSatisfyAny
+  | NoMatchingOutputFound String
+  | MultipleMatchingOutputsFound String
 
 derive instance Eq MkTxError
 
@@ -58,6 +60,8 @@ instance EncodeJson MkTxError where
     TypedValidatorMissing -> encodeJson { tag: "TypedValidatorMissing", contents: jsonNull }
     DatumWrongHash a b -> E.encodeTagged "DatumWrongHash" (a /\ b) (E.tuple (E.value >/\< E.value))
     CannotSatisfyAny -> encodeJson { tag: "CannotSatisfyAny", contents: jsonNull }
+    NoMatchingOutputFound a -> E.encodeTagged "NoMatchingOutputFound" a E.value
+    MultipleMatchingOutputsFound a -> E.encodeTagged "MultipleMatchingOutputsFound" a E.value
 
 instance DecodeJson MkTxError where
   decodeJson = defer \_ -> D.decode
@@ -73,6 +77,8 @@ instance DecodeJson MkTxError where
         , "TypedValidatorMissing" /\ pure TypedValidatorMissing
         , "DatumWrongHash" /\ D.content (D.tuple $ DatumWrongHash </$\> D.value </*\> D.value)
         , "CannotSatisfyAny" /\ pure CannotSatisfyAny
+        , "NoMatchingOutputFound" /\ D.content (NoMatchingOutputFound <$> D.value)
+        , "MultipleMatchingOutputsFound" /\ D.content (MultipleMatchingOutputsFound <$> D.value)
         ]
 
 derive instance Generic MkTxError _
@@ -127,6 +133,16 @@ _DatumWrongHash = prism' (\{ a, b } -> (DatumWrongHash a b)) case _ of
 _CannotSatisfyAny :: Prism' MkTxError Unit
 _CannotSatisfyAny = prism' (const CannotSatisfyAny) case _ of
   CannotSatisfyAny -> Just unit
+  _ -> Nothing
+
+_NoMatchingOutputFound :: Prism' MkTxError String
+_NoMatchingOutputFound = prism' NoMatchingOutputFound case _ of
+  (NoMatchingOutputFound a) -> Just a
+  _ -> Nothing
+
+_MultipleMatchingOutputsFound :: Prism' MkTxError String
+_MultipleMatchingOutputsFound = prism' MultipleMatchingOutputsFound case _ of
+  (MultipleMatchingOutputsFound a) -> Just a
   _ -> Nothing
 
 --------------------------------------------------------------------------------
