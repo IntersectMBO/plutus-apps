@@ -27,7 +27,7 @@ data PartialStore e =
 type SqliteIndex e n = SplitIndex IO (PartialStore e) e n
 
 new
-  :: (PartialStore e -> [e] -> (PartialStore e, [n]))
+  :: (PartialStore e -> [e] -> IO (PartialStore e, [n]))
   -> (PartialStore e -> IO (PartialStore e))
   -> Int
   -> FilePath

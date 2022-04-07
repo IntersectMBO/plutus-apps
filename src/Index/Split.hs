@@ -13,7 +13,7 @@ module Index.Split
   , getNotifications
   ) where
 
-import           Data.Foldable (foldlM)
+import           Data.Foldable (foldlM, foldrM)
 
 import           Index         (IndexView (..))
 
@@ -25,7 +25,7 @@ data SplitIndex m a e n = SplitIndex
   , siNotifications :: [n]
   , siDepth         :: Int
   , siStore         :: a -> m a
-  , siIndex         :: a -> [e] -> (a, [n])
+  , siIndex         :: a -> [e] -> m (a, [n])
     -- ^ Not sure how reasonble this is for a SQL db, but will leave it as-is for now
   }
 
@@ -38,7 +38,7 @@ storeEventsThreshold = 3
 
 new
   :: Monad m
-  => (a -> [e] -> (a,[n]))
+  => (a -> [e] -> m (a,[n]))
   -> (a -> m a)
   -> Int
   -> a
@@ -87,18 +87,18 @@ insert e ix@SplitIndex{siEvents, siDepth, siBuffered}
     addNotifications ix'@SplitIndex{ siNotifications
                                    , siIndex } = do
       state <- mergedState ix
-      let ns = snd $ siIndex state [e]
+      ns <- snd <$> siIndex state [e]
       pure $ ix' { siNotifications = ns ++ siNotifications }
 
 mergedState :: Monad m => SplitIndex m a e n -> m a
 mergedState SplitIndex{siIndex, siStoredIx, siEvents, siBuffered} = do
-  pure $ fst $ siIndex siStoredIx (siEvents ++ siBuffered)
+  fst <$> siIndex siStoredIx (siEvents ++ siBuffered)
 
 
 mergeEvents :: Monad m => SplitIndex m a e n -> m (SplitIndex m a e n)
 mergeEvents ix@SplitIndex {siStore, siIndex, siStoredIx, siBuffered} = do
-  let six'  = fst $ siIndex siStoredIx siBuffered
-  nextStore <- siStore six'
+  six <- fst <$> siIndex siStoredIx siBuffered
+  nextStore <- siStore six
   pure $ ix { siStoredIx = nextStore
             , siBuffered = []
             }
@@ -129,11 +129,13 @@ getNotifications SplitIndex{siNotifications} = pure siNotifications
 
 getHistory :: forall m e a n. Monad m => SplitIndex m a e n -> m [a]
 getHistory SplitIndex{siStoredIx, siIndex, siEvents, siBuffered} = do
-  let a  = foldr index siStoredIx siBuffered
-  pure $ scanr index a siEvents
+  bas <- foldrM index [siStoredIx] siBuffered
+  foldrM index [head bas] siEvents
   where
-    index :: e -> a -> a
-    index e a = fst $ siIndex a [e]
+    index :: e -> [a] -> m [a]
+    index e as = do
+      (a, _) <- siIndex (head as) [e]
+      pure (a : as)
 
 getEvents :: SplitIndex m a e n -> [e]
 getEvents SplitIndex{siEvents} = siEvents
