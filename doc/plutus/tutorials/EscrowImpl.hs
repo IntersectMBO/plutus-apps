@@ -17,7 +17,7 @@
 {-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
 {- END OPTIONS_GHC -}
 -- | A general-purpose escrow contract in Plutus
-module Plutus.Contracts.Escrow(
+module EscrowImpl(
     -- $escrow
     Escrow
     , EscrowError(..)

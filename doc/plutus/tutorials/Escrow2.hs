@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -14,10 +15,11 @@
 --  with generated escrow targets. See the "Parameterising Models and
 --  Dynamic Contract Instances" section of the tutorial.
 
-module Spec.Tutorial.Escrow2(prop_Escrow, EscrowModel) where
+module Escrow2(prop_Escrow, EscrowModel) where
 
 import Control.Lens hiding (both, elements)
 import Control.Monad (void)
+import Data.Data
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -39,10 +41,10 @@ import Test.QuickCheck
 data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _targets       :: Map Wallet Value
                                , _phase         :: Phase             -- NEW!
-                               } deriving (Eq, Show)
+                               } deriving (Eq, Show, Data)
 {- END ModelState -}
 
-data Phase = Initial | Running deriving (Eq, Show)
+data Phase = Initial | Running deriving (Eq, Show, Data)
 
 makeLenses ''EscrowModel
 
@@ -54,7 +56,7 @@ instance ContractModel EscrowModel where
   data Action EscrowModel = Init [(Wallet, Integer)]    -- NEW!
                           | Redeem Wallet
                           | Pay Wallet Integer
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 {- END Action -}
 
 {- START ContractInstanceKey -}
@@ -177,7 +179,7 @@ instance ContractModel EscrowModel where
                     ]
 
 {- START shrinkAction -}
-  shrinkAction s (Init tgts) = map Init (shrinkList (\(w,n)->(w,)<$>shrink n) tgts)
+  shrinkAction _ (Init tgts) = map Init (shrinkList (\(w,n)->(w,)<$>shrink n) tgts)
 {- END shrinkAction -}
   shrinkAction _ (Pay w n)   = [Pay w n' | n' <- shrink n]
   shrinkAction _ _           = []

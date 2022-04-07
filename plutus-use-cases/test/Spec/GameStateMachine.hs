@@ -214,7 +214,7 @@ prop_SanityCheckAssertions = propSanityCheckAssertions
 
 check_prop_Game_with_coverage :: IO ()
 check_prop_Game_with_coverage = do
-  cr <- quickCheckWithCoverage (set coverageIndex covIndex defaultCoverageOptions) $ \covopts ->
+  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIndex defaultCoverageOptions) $ \covopts ->
     propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))

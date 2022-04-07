@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -6,12 +7,15 @@
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-module Spec.Tutorial.Escrow(tests, prop_Escrow,
-                            --prop_FinishEscrow, prop_NoLockedFunds,
-                            EscrowModel) where
+module Escrow
+    ( tests
+    , prop_Escrow
+    , EscrowModel
+    ) where
 
 import Control.Lens hiding (both, elements)
 import Control.Monad (void)
+import Data.Data
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -35,7 +39,7 @@ import Test.Tasty.QuickCheck hiding ((.&&.))
 {- START EscrowModel -}
 data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _targets       :: Map Wallet Value
-                               } deriving (Eq, Show)
+                               } deriving (Eq, Show, Data)
 
 makeLenses ''EscrowModel
 {- END EscrowModel -}
@@ -53,7 +57,7 @@ instance ContractModel EscrowModel where
 {- START ActionType -}
   data Action EscrowModel = Pay Wallet Integer
                           | Redeem Wallet
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 {- END ActionType -}
 
                           -- | Refund Wallet
@@ -152,6 +156,7 @@ testContract = selectList [ void $ payEp escrowParams
       wait 1
 -}
 
+{-
 {- START precondition1 -}
   precondition s a = case a of
     Redeem _ -> (s ^. contractState . contributions . to fold)
@@ -159,6 +164,7 @@ testContract = selectList [ void $ payEp escrowParams
                 (s ^. contractState . targets . to fold)
     _        -> True
 {- END precondition1 -}
+-}
 {-
 {- START precondition2 -}
 precondition s a = case a of
@@ -189,10 +195,12 @@ precondition s a = case a of
       delay 1
 -}
 
+{-
 {- START arbitraryAction1 -}
   arbitraryAction _ = frequency $ [ (3, Pay <$> elements testWallets <*> choose (1, 30))
                                   , (1, Redeem <$> elements testWallets) ]
 {- END arbitraryAction1 -}
+-}
                                   {- ++
                                   [ (1, Refund <$> elements (s ^. contractState . contributions . to Map.keys))
                                   | Prelude.not . null $ s ^. contractState . contributions . to Map.keys ]

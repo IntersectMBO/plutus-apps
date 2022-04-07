@@ -130,12 +130,12 @@ runStandardProperty opts covIdx = liftIORep $ quickCheckWithCoverageAndResult
                                                  @m
                                                  defaultCheckOptionsContractModel
                                                  covopts
-                                               $ const (pure True)
+                                                 (\ _ -> pure True)
 
 checkNoLockedFunds :: ContractModel m => CertificationOptions -> NoLockedFundsProof m -> CertMonad QC.Result
 checkNoLockedFunds opts prf = lift $ quickCheckWithResult
                                        (mkQCArgs opts)
-                                       $ checkNoLockedFundsProof defaultCheckOptionsContractModel prf
+                                       $ checkNoLockedFundsProof prf
 
 checkNoLockedFundsLight :: ContractModel m => CertificationOptions -> NoLockedFundsProofLight m -> CertMonad QC.Result
 checkNoLockedFundsLight opts prf =

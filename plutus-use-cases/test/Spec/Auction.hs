@@ -47,7 +47,6 @@ import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
-import Plutus.Contract.Test.ContractModel.Symbolics (toSymValue)
 import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.Auction hiding (Bid)
 import Plutus.Trace.Emulator qualified as Trace
@@ -218,7 +217,7 @@ instance ContractModel AuctionModel where
                                b + Ada.getLovelace (Ada.adaOf 100))
 
     precondition s Init = s ^. contractState . phase == NotStarted
-    precondition s (Bid w bid) =
+    precondition s (Bid _ bid) =
       -- In order to place a bid, we need to satisfy the constraint where
       -- each tx output must have at least N Ada.
       s ^. contractState . phase /= NotStarted &&
@@ -316,7 +315,7 @@ prop_Whitelist = checkErrorWhitelist defaultWhitelist
 
 instance CrashTolerance AuctionModel where
   available (Bid w _) alive = (Key $ BuyerH  w) `elem` alive
-  available Init      alive = True
+  available Init      _     = True
 
   restartArguments _ BuyerH{}  = ()
   restartArguments _ SellerH{} = ()
@@ -328,7 +327,7 @@ prop_CrashTolerance =
 
 check_propAuctionWithCoverage :: IO ()
 check_propAuctionWithCoverage = do
-  cr <- quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
     withMaxSuccess 1000 $
       propRunActionsWithOptions @AuctionModel
         (set minLogLevel Critical options) covopts (const (pure True))

@@ -57,6 +57,7 @@
           (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
           (hsPkgs."hashable" or (errorHandler.buildDepError "hashable"))
           (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
+          (hsPkgs."html-entities" or (errorHandler.buildDepError "html-entities"))
           (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
           (hsPkgs."mmorph" or (errorHandler.buildDepError "mmorph"))
@@ -151,6 +152,7 @@
           ] ++ (pkgs.lib).optionals (!(compiler.isGhcjs && true || system.isGhcjs || system.isWindows)) [
           "Plutus/Contract/Test"
           "Plutus/Contract/Test/Coverage"
+          "Plutus/Contract/Test/Coverage/ReportCoverage"
           "Plutus/Contract/Test/ContractModel"
           "Plutus/Contract/Test/ContractModel/Internal"
           "Plutus/Contract/Test/ContractModel/Symbolics"

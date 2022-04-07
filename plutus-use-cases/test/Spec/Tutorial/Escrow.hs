@@ -25,7 +25,6 @@ import Data.Map qualified as Map
 
 import Ledger (Datum, minAdaTxOut)
 import Ledger.Ada qualified as Ada
-import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test
@@ -116,8 +115,8 @@ instance ContractModel EscrowModel where
 
   precondition s a = case a of
     Init tgts-> currentPhase == Initial
-             && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOut | (w,n) <- tgts]
---             && and [Ada.adaValueOf (fromInteger n) `gt` Ada.toValue 0 | (w,n) <- tgts]
+             && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOut | (_,n) <- tgts]
+--             && and [Ada.adaValueOf (fromInteger n) `gt` Ada.toValue 0 | (_,n) <- tgts]
     Redeem _ -> currentPhase == Running
              && (s ^. contractState . contributions . to fold) `geq` (s ^. contractState . targets . to fold)
 --             && (s ^. contractState . contributions . to fold) == (s ^. contractState . targets . to fold)
@@ -126,7 +125,6 @@ instance ContractModel EscrowModel where
             && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
             -- disallow payments that take us over the targets
             -- && ((s ^. contractState . contributions . to fold) <> Ada.adaValueOf (fromInteger v)) `leq` (s ^. contractState . targets . to fold)
-    _        -> True
     where currentPhase = s ^. contractState . phase
 
   perform h _ _ a = case a of
@@ -156,9 +154,9 @@ instance ContractModel EscrowModel where
                                   | Prelude.not . null $ s ^. contractState . contributions . to Map.keys ]
 
 
-  shrinkAction s (Init tgts) = map Init (shrinkList (\(w,n)->(w,)<$>shrink n) tgts)
-  shrinkAction s (Pay w n)   = [Pay w n' | n' <- shrink n]
-  shrinkAction s _           = []
+  shrinkAction _ (Init tgts) = map Init (shrinkList (\(w,n)->(w,)<$>shrink n) tgts)
+  shrinkAction _ (Pay w n)   = [Pay w n' | n' <- shrink n]
+  shrinkAction _ _           = []
 
 {-
   monitoring _ (Redeem _) = classify True "Contains Redeem"
@@ -207,12 +205,13 @@ prop_NoLockedFunds :: Property
 prop_NoLockedFunds = checkNoLockedFundsProof noLockProof
 
 instance CrashTolerance EscrowModel where
-  available (Init _) alive = True
+  available (Init _) _ = True
   available a alive = (Key $ WalletKey w) `elem` alive
     where w = case a of
                 Pay w _  -> w
                 Redeem w -> w
                 Refund w -> w
+                _        -> error "This case is unreachable"
 
   restartArguments s WalletKey{} = escrowParams' $ Map.toList (s ^. contractState . targets)
 
@@ -234,10 +233,12 @@ escrowParams tgts = escrowParams' [(w, Ada.adaValueOf (fromInteger n)) | (w,n) <
 escrowParams' :: [(Wallet,Value)] -> EscrowParams d
 escrowParams' tgts' =
   EscrowParams
-    { escrowTargets  = [ payToPaymentPubKeyTarget (mockWalletPaymentPubKeyHash w) v | (w,v) <- sortBy (compare `on` fst) tgts' ] }
+    { escrowTargets  = [ payToPaymentPubKeyTarget (mockWalletPaymentPubKeyHash w) v
+                       | (w,v) <- sortBy (compare `on` fst) tgts' ] }
 
 check_propEscrowWithCoverage :: IO ()
 check_propEscrowWithCoverage = do
-  cr <- quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
-    withMaxSuccess 1000 $ propRunActionsWithOptions @EscrowModel defaultCheckOptionsContractModel covopts (const (pure True))
+  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+    withMaxSuccess 1000 $ propRunActionsWithOptions @EscrowModel defaultCheckOptionsContractModel
+                                                    covopts (const (pure True))
   writeCoverageReport "Escrow" covIdx cr

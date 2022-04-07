@@ -14,12 +14,20 @@
 --  with generated escrow targets. See the "Parameterising Models and
 --  Dynamic Contract Instances" section of the tutorial.
 
-module Spec.Tutorial.Escrow6(prop_Escrow, prop_FinishEscrow, prop_FinishFast,
-                             prop_NoLockedFunds, prop_NoLockedFundsFast, prop_CrashTolerance,
-                             check_propEscrowWithCoverage, EscrowModel) where
+module Escrow6
+    ( prop_Escrow
+    , prop_FinishEscrow
+    , prop_FinishFast
+    , prop_NoLockedFunds
+    , prop_NoLockedFundsFast
+    , prop_CrashTolerance
+    , check_propEscrowWithCoverage
+    , EscrowModel
+    ) where
 
 import Control.Lens hiding (both, elements)
 import Control.Monad (void, when)
+import Data.Data
 import Data.Default
 import Data.Foldable
 import Data.Map (Map)
@@ -46,9 +54,9 @@ data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _targets       :: Map Wallet Value
                                , _refundSlot    :: Slot
                                , _phase         :: Phase
-                               } deriving (Eq, Show)
+                               } deriving (Eq, Show, Data)
 
-data Phase = Initial | Running | Refunding deriving (Eq, Show)
+data Phase = Initial | Running | Refunding deriving (Eq, Show, Data)
 
 makeLenses ''EscrowModel
 
@@ -60,7 +68,7 @@ instance ContractModel EscrowModel where
                           | Redeem Wallet
                           | Pay Wallet Integer
                           | Refund Wallet
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 
   data ContractInstanceKey EscrowModel w s e params where
     WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError (EscrowParams Datum)
@@ -240,7 +248,7 @@ prop_NoLockedFundsFast = checkNoLockedFundsProofFast noLockProof
 
 {- START CrashTolerance -}
 instance CrashTolerance EscrowModel where
-  available (Init _ _) alive = True
+  available (Init _ _) _     = True
   available a          alive = (Key $ WalletKey w) `elem` alive
     where w = case a of
                 Pay w _  -> w
@@ -260,6 +268,6 @@ prop_CrashTolerance = propRunActions_
 
 check_propEscrowWithCoverage :: IO ()
 check_propEscrowWithCoverage = do
-  cr <- quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
     withMaxSuccess 1000 $ propRunActionsWithOptions @EscrowModel defaultCheckOptionsContractModel covopts (const (pure True))
   writeCoverageReport "Escrow" covIdx cr

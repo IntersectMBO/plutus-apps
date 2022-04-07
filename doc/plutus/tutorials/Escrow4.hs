@@ -15,10 +15,11 @@
 --  with generated escrow targets. See the "Parameterising Models and
 --  Dynamic Contract Instances" section of the tutorial.
 
-module Spec.Tutorial.Escrow4(prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) where
+module Escrow4(prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) where
 
 import Control.Lens hiding (both, elements)
 import Control.Monad (void, when)
+import Data.Data
 import Data.Default
 import Data.Foldable
 import Data.Map (Map)
@@ -44,11 +45,11 @@ data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
                                , _targets       :: Map Wallet Value
                                , _refundSlot    :: Slot             -- NEW!!!
                                , _phase         :: Phase
-                               } deriving (Eq, Show)
+                               } deriving (Eq, Show, Data)
 {- END EscrowModel -}
 
 {- START Phase -}
-data Phase = Initial | Running | Refunding deriving (Eq, Show)
+data Phase = Initial | Running | Refunding deriving (Eq, Show, Data)
 {- END Phase -}
 
 makeLenses ''EscrowModel
@@ -63,7 +64,7 @@ instance ContractModel EscrowModel where
                           | Redeem Wallet
                           | Pay Wallet Integer
                           | Refund Wallet
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 {- END Action -}
 
   data ContractInstanceKey EscrowModel w s e params where
@@ -270,10 +271,12 @@ prop_FinishEscrow :: Property
 prop_FinishEscrow = forAllDL finishEscrow prop_Escrow
 {- END prop_FinishEscrow -}
 
+{-
 {- START prop_FinishFast -}
 prop_FinishFast :: Property
 prop_FinishFast = forAllDL finishEscrow $ const True
 {- END prop_FinishFast -}
+-}
 
 prop_NoLockedFunds :: Property
 prop_NoLockedFunds = checkNoLockedFundsProof noLockProof

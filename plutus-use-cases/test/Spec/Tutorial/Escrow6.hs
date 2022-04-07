@@ -23,8 +23,6 @@ import Control.Monad (void, when)
 import Data.Data
 import Data.Default
 import Data.Foldable
-import Data.Function
-import Data.List (sortBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
 
@@ -231,7 +229,7 @@ prop_NoLockedFundsFast :: Property
 prop_NoLockedFundsFast = checkNoLockedFundsProofFast noLockProof
 
 instance CrashTolerance EscrowModel where
-  available (Init _ _) alive = True
+  available (Init _ _) _ = True
   available a          alive = (Key $ WalletKey w) `elem` alive
     where w = case a of
                 Pay w _  -> w
@@ -248,6 +246,6 @@ prop_CrashTolerance = propRunActions_
 
 check_propEscrowWithCoverage :: IO ()
 check_propEscrowWithCoverage = do
-  cr <- quickCheckWithCoverage (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
     withMaxSuccess 1000 $ propRunActionsWithOptions @EscrowModel defaultCheckOptionsContractModel covopts (const (pure True))
   writeCoverageReport "Escrow" covIdx cr

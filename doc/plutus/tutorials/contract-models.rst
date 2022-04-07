@@ -9,7 +9,7 @@ Introduction
 
 In this tutorial we will see how to test Plutus contracts with
 *contract models*, using the framework provided by
-:hsobj:`Plutus.Contract.Test.ContractModel`. This framework generates
+:hsmod:`Plutus.Contract.Test.ContractModel`. This framework generates
 and runs tests on the Plutus emulator, where each test may involve a
 number of emulated wallets, each running a collection of Plutus
 contracts, all submitting transactions to an emulated blockchain.
@@ -35,7 +35,7 @@ Example: A Simple Escrow Contract
 
 We begin by showing how to construct a model for a simplified escrow
 contract, which can be found in
-:hsobj:`Plutus.Contracts.Tutorial.Escrow`. This contract enables a
+:hsmod:`Plutus.Contracts.Tutorial.Escrow`. This contract enables a
 group of wallets to make a predetermined exchange of tokens, for
 example selling an NFT for Ada. There are two endpoints, a ``pay``
 endpoint, and a ``redeem`` endpoint. Each wallet pays in its
@@ -46,7 +46,7 @@ predetermined payout using the ``redeem`` endpoint.
 For simplicity, we will begin by testing the contract for a fixed set
 of predetermined payouts. These are defined by the ``EscrowParams``, a
 type exported by the escrow contract, and which is actually passed to
-the on-chain validators. :hsobj:`Plutus.Contract.Test` provides ten
+the on-chain validators. :hsmod:`Plutus.Contract.Test` provides ten
 emulated wallets for use in tests, ``w1`` to ``w10``; in this case we
 will use five of them:
 
@@ -2970,7 +2970,6 @@ interprets to mean "reject the transaction". So the uncovered code
 *could* only be covered by failing transactions, which the off-chain
 code is designed not to submit.
 
-
 Exercises
 ^^^^^^^^^
 
@@ -2989,7 +2988,7 @@ Becoming Level 1 Certification Ready
 
 Level 1 certification of plutus smart contracts relies on the machinery
 we have discussed in this tutorial. First things first we are going to
-have a look at the :hsobj:`Plutus.Contract.Test.Certification` module.
+have a look at the :hsmod:`Plutus.Contract.Test.Certification` module.
 
 This module defines a type ``Certification`` paramtereized over a type
 ``m`` that should be a ``ContractModel``. This is a record type that has
@@ -3008,8 +3007,8 @@ fields for:
 
 Fortunately, understanding what we need to do to get certification-ready
 at this stage is simple. We just need to build a ``Certification`` object.
-For example of how to do this, check out :hsobj:`Spec.GameStateMachine.certification`
-and :hsobj:`Spec.Uniswap.certification`.
+For example of how to do this, check out ``Spec.GameStateMachine.certification``
+and ``Spec.Uniswap.certification``.
 
 You can run level 1 certification locally using the
 :hsobj:`Plutus.Contract.Test.Certification.Run.certify` function - but at

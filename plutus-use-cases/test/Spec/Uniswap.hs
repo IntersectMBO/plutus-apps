@@ -136,9 +136,6 @@ getAToken, getBToken :: SymToken -> SymToken -> SymToken
 getAToken = min
 getBToken = max
 
-actionName :: Show a => a -> String
-actionName act = head . words . show $ act
-
 -- | Create some sample tokens and distribute them to
 --   the emulated wallets
 setupTokens :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
@@ -314,10 +311,7 @@ instance ContractModel UniswapModel where
           wf (BadRemoveLiquidity _ t1 _ t2 _ _) = wfTokens t1 t2
           wf _                                  = error "Pattern match(es) are not exhaustive\nIn an equation for `wf'."
 
-          wfTokens t1 t2 = hasUniswapToken s
-                        && hasExchangeableToken t1 s
-                        && hasExchangeableToken t2 s
-                        && t1 /= t2
+          wfTokens t1 t2 = hasUniswapToken s && t1 /= t2
   precondition s (BadRemoveLiquidity w t1 a1 t2 a2 a) =
     precondition s (RemoveLiquidity w t1 t2 a) &&
     let p = s ^. contractState . pools . at (poolIndex t1 t2) . to fromJust in
@@ -605,7 +599,7 @@ prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofFast noLockProof
 
 check_propUniswapWithCoverage :: IO ()
 check_propUniswapWithCoverage = do
-  cr <- quickCheckWithCoverage (set endpointCoverageReq epReqs $ set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
+  cr <- quickCheckWithCoverage stdArgs (set endpointCoverageReq epReqs $ set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
     withMaxSuccess 1000 $ propRunActionsWithOptions @UniswapModel defaultCheckOptionsContractModel covopts (const (pure True))
   writeCoverageReport "Uniswap" covIdx cr
   where
