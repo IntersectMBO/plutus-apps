@@ -56,6 +56,8 @@ module Plutus.PAB.Core
     , instanceState
     , observableState
     , waitForState
+    , waitForInstanceState
+    , waitForInstanceStateWithResult
     , waitForTxStatusChange
     , waitForTxOutStatusChange
     , activeEndpoints
@@ -83,7 +85,7 @@ module Plutus.PAB.Core
     , timed
     ) where
 
-import Control.Applicative (Alternative ((<|>)))
+import Control.Applicative (Alternative ((<|>)), empty)
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
 import Control.Lens (view)
@@ -112,7 +114,8 @@ import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription), 
 import Plutus.Contract.Wallet (ExportTx)
 import Plutus.PAB.Core.ContractInstance (ContractInstanceMsg, ContractInstanceState)
 import Plutus.PAB.Core.ContractInstance qualified as ContractInstance
-import Plutus.PAB.Core.ContractInstance.STM (Activity (Active), BlockchainEnv, InstancesState, OpenEndpoint)
+import Plutus.PAB.Core.ContractInstance.STM (Activity (Active, Done, Stopped), BlockchainEnv, InstancesState,
+                                             OpenEndpoint)
 import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
 import Plutus.PAB.Effects.Contract (ContractDefinition, ContractEffect, ContractStore, PABContract (ContractDef),
                                     getState)
@@ -133,6 +136,7 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent' (WalletEvent), EmulatorTimeEve
 import Wallet.Emulator.Wallet (Wallet, WalletEvent (GenericLog, RequestHandlerLog, TxBalanceLog), mockWalletAddress)
 import Wallet.Types (ContractActivityStatus, ContractInstanceId, EndpointDescription (EndpointDescription),
                      NotificationError)
+import Wallet.Types qualified as Wallet
 
 -- | Effects that are available in 'PABAction's.
 type PABEffects t env =
@@ -505,6 +509,45 @@ waitForState extract instanceId = do
     liftIO $ STM.atomically $ do
         state <- stm
         maybe STM.retry pure (extract state)
+
+
+-- | Wait until the instance state of the instance satisfies a predicate and returns the activity status
+waitForInstanceState ::
+  forall t env.
+  (Instances.InstanceState -> STM (Maybe ContractActivityStatus)) ->
+  ContractInstanceId ->
+  PABAction t env ContractActivityStatus
+waitForInstanceState extract instanceId = do
+  is <- instanceStateInternal instanceId
+  liftIO $ STM.atomically $ do
+    ms <- extract is
+    case ms of
+     Nothing     -> empty
+     Just status -> pure status
+
+
+-- | Wait until the instance state is updated with a response form an invoked endpoint.
+-- Note that the waiting is performed only when a contract is expected to end with a Done status, i.e.,
+-- no open endpoints available after invocation.
+waitForInstanceStateWithResult :: forall t env. ContractInstanceId -> PABAction t env ContractActivityStatus
+waitForInstanceStateWithResult instanceId = do
+  -- retry query when waiting for a response from an invoked endpoint s.t.
+  -- contract is supposed to end with status Done
+  let parseStatus :: Activity -> ContractActivityStatus
+      parseStatus = \case
+        Active  -> Wallet.Active
+        Stopped -> Wallet.Stopped
+        Done _  -> Wallet.Done
+  let r_check :: Instances.InstanceState -> STM (Maybe ContractActivityStatus)
+      r_check Instances.InstanceState{Instances.issEndpoints, Instances.issStatus, Instances.issObservableState} = do
+        status <- STM.readTVar issStatus
+        ostate <- STM.readTVar issObservableState
+        currentEndpoints <- STM.readTVar issEndpoints
+        case (status, ostate) of
+          (Active, Just JSON.Null) | Map.null currentEndpoints ->
+                                     pure Nothing
+          _ -> pure $ Just $ parseStatus status
+  waitForInstanceState r_check instanceId
 
 -- | Wait for the transaction to be confirmed on the blockchain.
 waitForTxStatusChange :: forall t env. TxId -> PABAction t env TxStatus
