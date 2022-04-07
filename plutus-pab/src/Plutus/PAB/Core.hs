@@ -39,7 +39,7 @@ module Plutus.PAB.Core
     , EffectHandlers(..)
     , runPAB
     , runPAB'
-    , PABEnvironment(appEnv)
+    , PABEnvironment(..)
     -- * Contracts and instances
     , reportContractState
     , activateContract
