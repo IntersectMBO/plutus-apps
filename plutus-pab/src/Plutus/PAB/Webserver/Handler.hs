@@ -137,17 +137,17 @@ contractInstanceState
     => ContractInstanceId
     -> PABAction t env (ContractInstanceClientState (Contract.ContractDef t))
 contractInstanceState i = do
-    definition <- Contract.getDefinition @t i
-    instWithStatuses <- Core.instancesWithStatuses
-    case (definition, Map.lookup i instWithStatuses) of
-        (Just ContractActivationArgs{caWallet, caID}, Just s) -> do
-            let wallet = fromMaybe (knownWallet 1) caWallet
-            yieldedExportedTxs <- Core.yieldedExportTxs i
-            fmap ( fromInternalState caID i s wallet yieldedExportedTxs
-                 . fromResp
-                 . Contract.serialisableState (Proxy @t)
-                 ) $ Contract.getState @t i
-        _ -> throwError @PABError (ContractInstanceNotFound i)
+  definition <- Contract.getDefinition @t i
+  s <- Core.waitForInstanceStateWithResult i
+  case definition of
+    Just ContractActivationArgs{caWallet, caID} -> do
+      let wallet = fromMaybe (knownWallet 1) caWallet
+      yieldedExportedTxs <- Core.yieldedExportTxs i
+      fmap ( fromInternalState caID i s wallet yieldedExportedTxs
+             . fromResp
+             . Contract.serialisableState (Proxy @t)
+           ) $ Contract.getState @t i
+    _ -> throwError @PABError (ContractInstanceNotFound i)
 
 callEndpoint :: forall t env. ContractInstanceId -> String -> JSON.Value -> PABAction t env ()
 callEndpoint a b v = Core.callEndpointOnInstance a b v >>= traverse_ (throwError @PABError . EndpointCallError)
