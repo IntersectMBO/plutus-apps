@@ -19,7 +19,6 @@ module Plutus.PAB.Db.Memory.ContractStore(
 
 import Control.Concurrent.STM (TVar)
 import Control.Concurrent.STM qualified as STM
-import Control.Lens (at, set)
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
@@ -67,10 +66,10 @@ handleContractStore = \case
               -- adding new entry
               stateTVar <- STM.newTVar state
               let instState = InMemContractInstanceState{_contractDef = definition, _contractState = stateTVar}
-              STM.modifyTVar instancesTVar (set (at instanceId) (Just instState))
+              STM.modifyTVar instancesTVar (Map.insert instanceId instState)
             Just oldInstState -> do
               -- only update state
-              STM.writeTVar (_contractState oldInstState) state
+              STM.modifyTVar (_contractState oldInstState) (\_ -> state)
 
     Contract.GetState instanceId -> do
         instancesTVar <- unInMemInstances <$> ask @(InMemInstances t)
