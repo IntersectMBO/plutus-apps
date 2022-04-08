@@ -41,7 +41,6 @@ import Cardano.Wallet.LocalClient qualified as LocalWalletClient
 import Cardano.Wallet.Mock.Client qualified as WalletMockClient
 import Cardano.Wallet.RemoteClient qualified as RemoteWalletClient
 import Cardano.Wallet.Types qualified as Wallet
-import Control.Concurrent.STM qualified as STM
 import Control.Lens (preview, (^?!))
 import Control.Monad (void)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, reinterpret, reinterpret2, reinterpretN, type (~>))
@@ -132,7 +131,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
     EffectHandlers
         { initialiseEnvironment = do
             env <- liftIO $ mkEnv trace config
-            instancesState <- liftIO $ STM.atomically Instances.emptyInstancesState
+            instancesState <- liftIO Instances.emptyInstancesState
             blockchainEnv <- liftIO $ BlockchainEnv.startNodeClient config instancesState
             pure (instancesState, blockchainEnv, env)
 
