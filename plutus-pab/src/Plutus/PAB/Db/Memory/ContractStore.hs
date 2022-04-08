@@ -60,17 +60,17 @@ handleContractStore ::
 handleContractStore = \case
     Contract.PutState definition instanceId state -> do
         instancesTVar <- unInMemInstances <$> ask @(InMemInstances t)
+        instances <- liftIO $ STM.readTVarIO instancesTVar
         liftIO $ STM.atomically $ do
-          instances <- STM.readTVar instancesTVar
           case Map.lookup instanceId instances of
-              Nothing -> do
-                -- adding new entry
-                stateTVar <- STM.newTVar state
-                let instState = InMemContractInstanceState{_contractDef = definition, _contractState = stateTVar}
-                STM.modifyTVar instancesTVar (set (at instanceId) (Just instState))
-              Just oldInstState -> do
-                -- only update state
-                STM.writeTVar (_contractState oldInstState) state
+            Nothing -> do
+              -- adding new entry
+              stateTVar <- STM.newTVar state
+              let instState = InMemContractInstanceState{_contractDef = definition, _contractState = stateTVar}
+              STM.modifyTVar instancesTVar (set (at instanceId) (Just instState))
+            Just oldInstState -> do
+              -- only update state
+              STM.writeTVar (_contractState oldInstState) state
 
     Contract.GetState instanceId -> do
         instancesTVar <- unInMemInstances <$> ask @(InMemInstances t)
