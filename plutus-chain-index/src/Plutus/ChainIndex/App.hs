@@ -72,7 +72,7 @@ main = do
 runMain :: CM.Configuration -> Config.ChainIndexConfig -> IO ()
 runMain = runMainWithLog putStrLn
 
--- Run main with provided function to log startup logs. 
+-- Run main with provided function to log startup logs.
 runMainWithLog :: (String -> IO ()) -> CM.Configuration -> Config.ChainIndexConfig -> IO ()
 runMainWithLog logger logConfig config = do
   withRunRequirements logConfig config $ \runReq -> do
