@@ -4,13 +4,13 @@
 module Main where
 
 import Cardano.Api (Block (Block), BlockInMode (BlockInMode), CardanoMode, ChainPoint (ChainPoint, ChainPointAtGenesis),
-                    NetworkId (Mainnet), SlotNo (SlotNo), ToJSON)
+                    NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic), SlotNo (SlotNo), ToJSON)
 import Cardano.Api.Extras ()
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as Aeson
 import Data.Maybe qualified as Maybe
-import Options.Applicative (Alternative ((<|>)), Parser, auto, command, execParser, help, helper, info, long, metavar,
-                            option, progDesc, str, strOption, subparser, value, (<**>))
+import Options.Applicative (Alternative ((<|>)), Parser, auto, command, execParser, flag', help, helper, info, long,
+                            metavar, option, progDesc, str, strOption, subparser, value, (<**>))
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), SimpleChainSyncEvent,
                          withChainSyncEventStreamWithLedgerState, withSimpleChainSyncEventStream)
 import Plutus.Streaming.ChainIndex (utxoState)
@@ -32,12 +32,14 @@ data Example
 data Options
   = Simple
       { optionsSocketPath :: String,
+        optionsNetworkId  :: NetworkId,
         optionsChainPoint :: ChainPoint,
         optionsExample    :: Example
       }
   | WithLedgerState
       { optionsNetworkConfigPath :: String,
         optionsSocketPath        :: String,
+        optionsNetworkId         :: NetworkId,
         optionsChainPoint        :: ChainPoint
       }
   deriving (Show)
@@ -52,6 +54,7 @@ optionsParser =
     simple =
       Simple
         <$> strOption (long "socket-path" <> help "Node socket path")
+        <*> networkIdParser
         <*> chainPointParser
         <*> option auto (long "example" <> value Print)
 
@@ -59,7 +62,30 @@ optionsParser =
       WithLedgerState
         <$> strOption (long "network-config-path" <> help "Node config path")
         <*> strOption (long "socket-path" <> help "Node socket path")
+        <*> networkIdParser
         <*> chainPointParser
+
+networkIdParser :: Parser NetworkId
+networkIdParser =
+  pMainnet' <|> fmap Testnet testnetMagicParser
+  where
+    pMainnet' :: Parser NetworkId
+    pMainnet' =
+      flag'
+        Mainnet
+        ( long "mainnet"
+            <> help "Use the mainnet magic id."
+        )
+
+testnetMagicParser :: Parser NetworkMagic
+testnetMagicParser =
+  NetworkMagic
+    <$> option
+      auto
+      ( long "testnet-magic"
+          <> metavar "NATURAL"
+          <> help "Specify a testnet magic id."
+      )
 
 chainPointParser :: Parser ChainPoint
 chainPointParser =
@@ -128,18 +154,18 @@ main = do
   options <- execParser $ info (optionsParser <**> helper) mempty
 
   case options of
-    Simple {optionsSocketPath, optionsChainPoint, optionsExample} ->
+    Simple {optionsSocketPath, optionsNetworkId, optionsChainPoint, optionsExample} ->
       withSimpleChainSyncEventStream
         optionsSocketPath
-        Mainnet
+        optionsNetworkId
         optionsChainPoint
         (doSimple optionsExample)
         >>= print
-    WithLedgerState {optionsNetworkConfigPath, optionsSocketPath, optionsChainPoint} ->
+    WithLedgerState {optionsNetworkConfigPath, optionsNetworkId, optionsSocketPath, optionsChainPoint} ->
       withChainSyncEventStreamWithLedgerState
         optionsNetworkConfigPath
         optionsSocketPath
-        Mainnet
+        optionsNetworkId
         optionsChainPoint
         S.print
         >>= print
