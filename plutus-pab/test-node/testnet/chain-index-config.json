@@ -15,5 +15,6 @@
   },
   "cicStoreFrom": {
     "unBlockNo": 0
-  }
+  },
+  "cicAppendTransactionQueueSize": 500
 }
