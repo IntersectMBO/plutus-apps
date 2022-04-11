@@ -45,6 +45,7 @@ library
       NamedFieldPuns
       MultiParamTypeClasses
       FlexibleInstances
+      OverloadedStrings
       GADTs
   ghc-options: -Wall
   build-depends:
@@ -60,6 +61,7 @@ test-suite hysterical-screams-test
   other-modules:
       Spec.Index
       Spec.Split
+      Spec.Sqlite
       Paths_hysterical_screams
   hs-source-dirs:
       test
@@ -73,6 +75,7 @@ test-suite hysterical-screams-test
       NamedFieldPuns
       MultiParamTypeClasses
       FlexibleInstances
+      OverloadedStrings
       GADTs
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:

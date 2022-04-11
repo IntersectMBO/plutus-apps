@@ -31,6 +31,7 @@ default-extensions:
   - NamedFieldPuns
   - MultiParamTypeClasses
   - FlexibleInstances
+  - OverloadedStrings
   - GADTs
 
 dependencies:

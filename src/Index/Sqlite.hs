@@ -1,7 +1,6 @@
 module Index.Sqlite
   ( -- * API
-    PartialStore(..)
-  , SqliteIndex
+    SqliteIndex
   , new
   , S.insert
   , S.insertL
@@ -19,31 +18,26 @@ import           Database.SQLite.Simple (Connection, open)
 import           Index.Split            (SplitIndex (..))
 import qualified Index.Split as S
 
-data PartialStore e =
-  PartialStore { psConnection    :: Connection
-               , psPendingEvents :: [e]
-               }
-
-type SqliteIndex e n = SplitIndex IO (PartialStore e) e n
+type SqliteIndex a e n = SplitIndex IO Connection a e n
 
 new
-  :: (PartialStore e -> [e] -> IO (PartialStore e, [n]))
-  -> (PartialStore e -> IO (PartialStore e))
+  :: (a -> [e] -> (a, [n]))
+  -> (Connection -> a -> IO ())
+  -> (Connection -> IO a)
   -> Int
   -> FilePath
-  -> IO (Maybe (SqliteIndex e n))
-new findex fstore depth db
+  -> IO (Maybe (SqliteIndex a e n))
+new findex fstore fload depth db
   | depth <= 0 = pure Nothing
   | otherwise  = do
     connection <- open db
     pure . Just $ SplitIndex
-      { siStoredIx      =  PartialStore { psConnection = connection
-                                        , psPendingEvents = []
-                                        }
+      { siHandle        = connection
       , siEvents        = []
       , siBuffered      = []
       , siNotifications = []
       , siDepth         = depth
       , siStore         = fstore
+      , siLoad          = fload
       , siIndex         = findex
       }

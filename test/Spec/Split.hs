@@ -2,6 +2,8 @@
 
 module Spec.Split where
 
+import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
+import Control.Monad.IO.Class (liftIO)
 import           Data.Maybe              (catMaybes)
 import           Test.QuickCheck         (Property)
 import           Test.QuickCheck.Monadic (PropertyM, monadicIO)
@@ -12,7 +14,7 @@ import           Index.Split             (SplitIndex (..))
 import qualified Index.Split             as S
 import           Spec.Index              (Conversion (..))
 
-conversion :: (Show a, Show e, Show n) => Conversion (PropertyM IO) a e n
+conversion :: (Show s, Show e, Show n) => Conversion (PropertyM IO) s e n
 conversion = Conversion
   { cView          = view
   , cHistory       = history
@@ -21,14 +23,14 @@ conversion = Conversion
   }
 
 view
-  :: (Show a, Show e, Show n)
-  => Index a e n
-  -> PropertyM IO (Maybe (IndexView a))
+  :: (Show s, Show e, Show n)
+  => Index s e n
+  -> PropertyM IO (Maybe (IndexView s))
 view ix = do
   mix <- run ix
   case mix of
     Nothing  -> pure Nothing
-    Just ix' -> do
+    Just ix' -> liftIO $ do
       v <- S.view ix'
       pure $ Just v
 
@@ -39,7 +41,7 @@ notifications
 notifications ix = do
   -- We should never call this on invalid indexes.
   Just ix' <- run ix
-  S.getNotifications ix'
+  liftIO $ S.getNotifications ix'
 
 
 history
@@ -50,7 +52,7 @@ history ix = do
   mix <- run ix
   case mix of
     Nothing  -> pure Nothing
-    Just ix' -> do
+    Just ix' -> liftIO $ do
       h <- S.getHistory ix'
       pure $ Just h
 
@@ -60,16 +62,21 @@ monadic
 monadic = monadicIO
 
 run
-  :: forall m a e n. (Show a, Show e, Show n, Monad m)
-  => Index a e n
-  -> m (Maybe (SplitIndex m a e n))
-run (Ix.New f d a) = S.new findex fstore d a
+  :: forall s e n. (Show s, Show e, Show n)
+  => Index s e n
+  -> PropertyM IO (Maybe (SplitIndex IO (MVar s) s e n))
+run (Ix.New f depth store) = do
+  liftIO $ do
+    mstore <- newMVar store
+    S.new findex fstore fload depth mstore
   where
-    findex :: a -> [e] -> m (a, [n])
-    findex a' es = pure $ foldr convertIxF (a', []) es
-    fstore :: a -> m a
-    fstore a' = pure a'
-    convertIxF :: e -> (a, [n]) -> (a, [n])
+    findex :: s -> [e] -> (s, [n])
+    findex s es = foldr convertIxF (s, []) es
+    fstore :: MVar s -> s -> IO ()
+    fstore mv s = swapMVar mv s >> pure ()
+    fload  :: MVar s -> IO s
+    fload  = readMVar
+    convertIxF :: e -> (s, [n]) -> (s, [n])
     convertIxF e (a', ns) =
       let (a'', mn) = f a' e
        in (a'', catMaybes [mn] ++ ns)
@@ -77,12 +84,12 @@ run (Ix.Insert e ix) = do
   mix <- run ix
   case  mix of
     Nothing  -> pure Nothing
-    Just ix' -> do
+    Just ix' -> liftIO $ do
       nix <- S.insert e ix'
       pure $ Just nix
 run (Ix.Rewind n ix) = do
   mix <- run ix
   case mix of
     Nothing  -> pure Nothing
-    Just ix' -> pure $ S.rewind n ix'
+    Just ix' -> liftIO . pure $ S.rewind n ix'
 
