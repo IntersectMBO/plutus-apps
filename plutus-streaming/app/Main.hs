@@ -3,18 +3,19 @@
 
 module Main where
 
-import Cardano.Api
+import Cardano.Api (Block (Block), BlockInMode (BlockInMode), CardanoMode, ChainPoint (ChainPoint, ChainPointAtGenesis),
+                    NetworkId (Mainnet), SlotNo (SlotNo), ToJSON)
 import Cardano.Api.Extras ()
-import Control.Monad.Except (runExceptT)
+import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as Aeson
 import Data.Maybe qualified as Maybe
-import Options.Applicative hiding (header)
-import Plutus.Streaming
-import Plutus.Streaming.ChainIndex
-import Plutus.Streaming.LedgerState (ledgerState)
-import Streaming
+import Options.Applicative (Alternative ((<|>)), Parser, auto, command, execParser, help, helper, info, long, metavar,
+                            option, progDesc, str, strOption, subparser, value, (<**>))
+import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), SimpleChainSyncEvent,
+                         withChainSyncEventStreamWithLedgerState, withSimpleChainSyncEventStream)
+import Plutus.Streaming.ChainIndex (utxoState)
+import Streaming (Of, Stream)
 import Streaming.Prelude qualified as S
-import Text.Pretty.Simple (pPrint)
 
 --
 -- Options parsing
