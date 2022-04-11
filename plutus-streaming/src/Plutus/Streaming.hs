@@ -10,14 +10,22 @@ module Plutus.Streaming
   )
 where
 
-import Cardano.Api
-import Cardano.Api.ChainSync.Client
-import Control.Concurrent
-import Control.Concurrent.Async
+import Cardano.Api (BlockInMode, CardanoMode, ChainPoint, ChainSyncClient (ChainSyncClient), ChainTip,
+                    ConsensusModeParams (CardanoModeParams), EpochSlots (EpochSlots), LedgerEvent, LedgerState,
+                    LedgerStateError, LocalChainSyncClient (LocalChainSyncClient),
+                    LocalNodeClientProtocols (LocalNodeClientProtocols, localChainSyncClient, localStateQueryClient, localTxSubmissionClient),
+                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
+                    NetworkId, ValidationMode (QuickValidation), chainSyncClientWithLedgerState, connectToLocalNode,
+                    envSecurityParam, initialLedgerState)
+import Cardano.Api.ChainSync.Client (ClientStIdle (SendMsgDone, SendMsgFindIntersect, SendMsgRequestNext),
+                                     ClientStIntersect (ClientStIntersect, recvMsgIntersectFound, recvMsgIntersectNotFound),
+                                     ClientStNext (ClientStNext, recvMsgRollBackward, recvMsgRollForward))
+import Control.Concurrent (Chan, MVar, newChan, newEmptyMVar, putMVar, readChan, takeMVar, writeChan)
+import Control.Concurrent.Async (withAsync)
 import Control.Monad.Trans.Except (runExceptT)
 -- import Data.Aeson (ToJSON (..))
 import GHC.Generics (Generic)
-import Streaming
+import Streaming (Of, Stream)
 import Streaming.Prelude qualified as S
 
 data ChainSyncEvent a
@@ -64,8 +72,8 @@ withClientStream ::
   IO b
 withClientStream client consumer = do
   -- We use a MVar as a synchronisation point to learn if the client as
-  -- successfully found an intersection. He rely on the fact that
-  -- clientSyncChain will write into m, telling us whether it has found an
+  -- successfully found an intersection. We rely on the fact that
+  -- client will write into m, telling us whether or not it has found an
   -- intersection. If this doesn't happen we will be stuck waiting forever.
   -- FIXME I haven't even thought about exception safety here.
   m <- newEmptyMVar

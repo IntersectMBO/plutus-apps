@@ -3,11 +3,17 @@
 
 module Cardano.Api.Extras where
 
-import Cardano.Api
+import Cardano.Api (BlockHeader (BlockHeader),
+                    GenesisConfigError (NEAlonzoConfig, NEByronConfig, NECardanoConfig, NEError, NEShelleyConfig),
+                    HasTypeProxy (proxyToAsType), Hash,
+                    InitialLedgerStateError (ILSEConfigFile, ILSEGenesisFile, ILSELedgerConsensusConfig),
+                    LedgerEvent (MIRDistribution, PoolReRegistration, PoolReap, PoolRegistration, RewardsDistribution),
+                    LedgerState (LedgerState), MIRDistributionDetails (MIRDistributionDetails),
+                    PoolReapDetails (PoolReapDetails), SerialiseAsRawBytes (deserialiseFromRawBytes))
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as C8
-import Data.Proxy
-import Data.String
+import Data.Proxy (Proxy (Proxy))
+import Data.String (IsString (fromString))
 
 -- FIXME orphan instance
 -- https://github.com/input-output-hk/cardano-node/pull/3608
