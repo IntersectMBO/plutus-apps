@@ -1,8 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-import Cardano.Api
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
+                    ChainPoint (ChainPoint), Env,
+                    FoldBlocksError (FoldBlocksApplyBlockError, FoldBlocksInitialLedgerStateError),
+                    GenesisConfigError (NEAlonzoConfig, NEByronConfig, NECardanoConfig, NEError, NEShelleyConfig),
+                    InitialLedgerStateError (ILSEConfigFile, ILSEGenesisFile, ILSELedgerConsensusConfig), LedgerEvent,
+                    LedgerState, ValidationMode (FullValidation), foldBlocks)
 import Control.Monad.Except (runExceptT)
-import Data.Time.LocalTime
+import Data.Time.LocalTime (getZonedTime)
 
 deriving instance Show InitialLedgerStateError
 

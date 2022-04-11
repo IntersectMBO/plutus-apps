@@ -1,8 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-import Cardano.Api
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode),
+                    ChainPoint (ChainPoint, ChainPointAtGenesis),
+                    GenesisConfigError (NEAlonzoConfig, NEByronConfig, NECardanoConfig, NEError, NEShelleyConfig),
+                    InitialLedgerStateError (ILSEConfigFile, ILSEGenesisFile, ILSELedgerConsensusConfig), LedgerEvent,
+                    LedgerState, NetworkId (Mainnet), ValidationMode (FullValidation), initialLedgerState)
 import Control.Monad.Except (runExceptT)
-import Plutus.Streaming (ChainSyncEvent (..), EventStreamResult, SimpleChainSyncEvent, withSimpleChainSyncEventStream)
+import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), EventStreamResult, SimpleChainSyncEvent,
+                         withSimpleChainSyncEventStream)
 import Plutus.Streaming.LedgerState (ledgerState')
 import Streaming.Prelude qualified as S
 
@@ -20,8 +25,8 @@ main = do
         withSimpleChainSyncEventStream
           "/home/andrea/work/cardano-mainnet/socket/node.socket"
           Mainnet
-          ChainPointAtGenesis $
-          consume . ledgerState' env ls FullValidation
+          ChainPointAtGenesis
+          $ consume . ledgerState' env ls FullValidation
       print r
 
 consume ::

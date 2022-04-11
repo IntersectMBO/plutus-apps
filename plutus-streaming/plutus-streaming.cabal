@@ -19,9 +19,15 @@ common lang
         LambdaCase
         ScopedTypeVariables
         StandaloneDeriving
-    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities
+    ghc-options:
+        -Wall
+        -Widentities
+        -Wincomplete-record-updates
+        -Wincomplete-uni-patterns
+        -Wmissing-import-lists
+        -Wnoncanonical-monad-instances
+        -Wredundant-constraints
+        -Wunused-packages
 
 library
     import: lang
