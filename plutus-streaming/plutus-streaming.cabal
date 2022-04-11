@@ -38,7 +38,6 @@ library
         Plutus.Streaming.LedgerState
     build-depends:
         base >=4.9 && <5,
-        aeson,
         async,
         base16-bytestring,
         bytestring,
@@ -59,9 +58,7 @@ executable plutus-streaming-cli
         base >=4.9 && <5,
         aeson,
         cardano-api,
-        mtl,
         optparse-applicative,
-        pretty-simple,
         streaming,
 
     hs-source-dirs:   app
@@ -86,7 +83,6 @@ executable test-ledger-state-2
         plutus-streaming,
         base >=4.9 && <5,
         cardano-api,
-        mtl,
         streaming,
     hs-source-dirs:   app
     default-language: Haskell2010
@@ -95,11 +91,9 @@ executable test-ledger-state-3
     import: lang
     main-is: TestLedgerState3.hs
     build-depends:
-        plutus-streaming,
         base >=4.9 && <5,
         cardano-api,
         mtl,
-        streaming,
         time,
     hs-source-dirs:   app
     default-language: Haskell2010
