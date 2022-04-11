@@ -58,8 +58,10 @@ instance FromJSON Utxo where
 
 hprop_plutus_script_context_equality :: Property
 hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
-  projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
+    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   Testnet.Cardano.TestnetRuntime { bftSprockets, testnetMagic } <- testnet defaultTestnetOptions conf
 
@@ -76,7 +78,7 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
         }
 
   -- First we note all the relevant files
-  base <- H.note projectBase
+  H.note_ base
   work <- H.note tempAbsPath
 
   -- We get our UTxOs from here
