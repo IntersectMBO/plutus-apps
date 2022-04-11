@@ -62,8 +62,10 @@ instance FromJSON Utxo where
 
 prop_submit_api_spending_plutus_script :: Property
 prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
-  projectBase <- HE.note =<< HE.noteIO . IO.canonicalizePath =<< HE.getProjectBase
-  conf@TN.Conf { TN.tempBaseAbsPath, TN.tempAbsPath } <- HE.noteShowM $ TN.mkConf tempAbsBasePath' Nothing
+  base <- HE.note =<< HE.noteIO . IO.canonicalizePath =<< HE.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf@TN.Conf { TN.tempBaseAbsPath, TN.tempAbsPath } <- HE.noteShowM $
+    TN.mkConf (TN.ProjectBase base) (TN.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   TN.TestnetRuntime { TN.configurationFile, TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
 
@@ -79,7 +81,7 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
         , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
-  base <- HE.note projectBase
+  HE.note_ base
   work <- HE.note tempAbsPath
   utxoVKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"

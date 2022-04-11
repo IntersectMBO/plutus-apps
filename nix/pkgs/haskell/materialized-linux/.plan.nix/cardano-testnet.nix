@@ -79,6 +79,8 @@
             (hsPkgs."ansi-terminal" or (errorHandler.buildDepError "ansi-terminal"))
             (hsPkgs."cardano-git-rev" or (errorHandler.buildDepError "cardano-git-rev"))
             (hsPkgs."cardano-testnet" or (errorHandler.buildDepError "cardano-testnet"))
+            (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
+            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."hedgehog-extras" or (errorHandler.buildDepError "hedgehog-extras"))
             (hsPkgs."optparse-applicative-fork" or (errorHandler.buildDepError "optparse-applicative-fork"))

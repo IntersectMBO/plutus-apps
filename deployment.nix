@@ -22,8 +22,8 @@ let
     (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-node";
       # A standard release compatible with the cardano-wallet commit above is always preferred.
-      rev = "1.34.1";
-      sha256 = "1hh53whcj5y9kw4qpkiza7rmkniz18r493vv4dzl1a8r5fy3b2bv";
+      rev = "70372da0b4b1a6ca797f4699c91a271700580f6c";
+      sha256 = "102pj525ysvj27h9nb8gidxm1cmwp8vpdyfnpwm1ywz3zkpk2mjp";
     })
     { };
 

@@ -152,7 +152,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node
-  tag: 73f9a746362695dc2cb63ba757fbcabb81733d23
+  tag: 2b1d18c6c7b7142d9eebfec34da48840ed4409b6
   subdir:
     cardano-api
     cardano-cli
