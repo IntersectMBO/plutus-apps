@@ -22,8 +22,8 @@ import Cardano.Api.ChainSync.Client (ClientStIdle (SendMsgDone, SendMsgFindInter
                                      ClientStNext (ClientStNext, recvMsgRollBackward, recvMsgRollForward))
 import Control.Concurrent (Chan, MVar, newChan, newEmptyMVar, putMVar, readChan, takeMVar, writeChan)
 import Control.Concurrent.Async (withAsync)
+import Control.Exception (SomeException, catch)
 import Control.Monad.Trans.Except (runExceptT)
--- import Data.Aeson (ToJSON (..))
 import GHC.Generics (Generic)
 import Streaming (Of, Stream)
 import Streaming.Prelude qualified as S
@@ -32,11 +32,6 @@ data ChainSyncEvent a
   = RollForward a ChainTip
   | RollBackward ChainPoint ChainTip
   deriving (Show, Functor, Generic)
-
--- deriving instance Generic ChainPoint
-
--- instance ToJSON ChainPoint
--- instance ToJSON a => ToJSON (ChainSyncEvent a)
 
 type SimpleChainSyncEvent = ChainSyncEvent (BlockInMode CardanoMode)
 
@@ -121,6 +116,7 @@ runChainSyncStreamingClient socketPath networkId point mChan = do
   connectToLocalNode
     connectInfo
     localNodeClientProtocols
+    `catch` \(_ :: SomeException) -> putMVar mChan Nothing
 
 runChainSyncStreamingClientWithLedgerState ::
   FilePath ->
