@@ -55,7 +55,7 @@ jobs:
         npx playwright test
   
     - name: 'Upload Artifact'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: html-report
         path: plutus-playground-client/e2e-tests/html-report/index.html
