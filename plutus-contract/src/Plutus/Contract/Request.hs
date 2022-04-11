@@ -520,6 +520,7 @@ txsFromTxIds ::
     )
     => [TxId]
     -> Contract w s e [ChainIndexTx]
+txsFromTxIds [] = pure []
 txsFromTxIds txid = do
   cir <- pabReq (ChainIndexQueryReq $ E.TxsFromTxIds txid) E._ChainIndexQueryResp
   case cir of

@@ -166,6 +166,7 @@ library
         mtl -any,
         network-mux -any,
         openapi3 -any,
+        one-line-aeson-text -any,
         optparse-applicative -any,
         ouroboros-network -any,
         ouroboros-network-framework -any,
