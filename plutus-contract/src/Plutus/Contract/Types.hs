@@ -261,7 +261,8 @@ selectEither l r = (Left <$> l) `select` (Right <$> r)
 -- the ones appearing first in the input list. Therefore, the order of the
 -- list of promises is important.
 selectList :: [Promise w s e a] -> Contract w s e a
-selectList = awaitPromise . foldr1 select . reverse
+selectList [] = awaitPromise never
+selectList l  = awaitPromise . foldr1 select . reverse $ l
 
 -- | Write the current state of the contract to a checkpoint.
 checkpoint :: forall w s e a. (AsCheckpointError e, Aeson.FromJSON a, Aeson.ToJSON a) => Contract w s e a -> Contract w s e a

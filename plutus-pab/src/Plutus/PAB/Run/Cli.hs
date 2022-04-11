@@ -45,13 +45,15 @@ import Control.Monad.Freer.Extras.Log (logInfo)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, toJSON)
+import Data.Aeson.OneLine (renderValue)
 import Data.Foldable (traverse_)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
+import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import Data.Time.Units (Second)
 import Plutus.Contract.Resumable (responses)
@@ -232,14 +234,15 @@ runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Con
 -- Get the state of a contract
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ContractState contractInstanceId) = do
     connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
-    fmap (either (error . show) id)
+    outputState <- fmap (either (error . show) id)
         $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
-        $ interpret (LM.handleLogMsgTrace ccaTrace)
         $ do
             s <- Contract.getState @(Builtin a) contractInstanceId
             let outputState = Contract.serialisableState (Proxy @(Builtin a)) s
-            logInfo @(LM.AppMsg (Builtin a)) $ LM.PABMsg $ LM.SCoreMsg $ LM.FoundContract $ Just outputState
             drainLog
+            pure outputState
+    putStrLn $ T.unpack $ renderValue $ toJSON outputState
+
 
 -- Get all available contracts
 runConfigCommand _ ConfigCommandArgs{ccaTrace} ReportAvailableContracts = do
@@ -321,4 +324,3 @@ buildPABAction currentState cid ContractActivationArgs{caWallet, caID} = do
     let ciState = ContractInstanceState currentState (pure stmState)
         wallet = fromMaybe (Wallet.knownWallet 1) caWallet
     pure $ Core.activateContract' @(Builtin a) ciState cid wallet caID
-
