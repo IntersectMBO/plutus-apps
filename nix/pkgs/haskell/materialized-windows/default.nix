@@ -350,6 +350,7 @@
         "crypto-api".flags.all_cpolys = false;
         "haskell-lexer".revision = (((hackage."haskell-lexer")."1.1").revisions).default;
         "microlens".revision = (((hackage."microlens")."0.4.12.0").revisions).default;
+        "one-line-aeson-text".revision = (((hackage."one-line-aeson-text")."0.1.0.2").revisions).default;
         "ghc-heap".revision = (((hackage."ghc-heap")."8.10.4.20210212").revisions).default;
         "resourcet".revision = (((hackage."resourcet")."1.2.4.3").revisions).default;
         "vault".revision = (((hackage."vault")."0.3.1.5").revisions).default;
@@ -1257,6 +1258,7 @@
           "ouroboros-network".components.library.planned = lib.mkOverride 900 true;
           "profunctors".components.library.planned = lib.mkOverride 900 true;
           "exceptions".components.library.planned = lib.mkOverride 900 true;
+          "one-line-aeson-text".components.library.planned = lib.mkOverride 900 true;
           "mmorph".components.library.planned = lib.mkOverride 900 true;
           "safe-exceptions".components.library.planned = lib.mkOverride 900 true;
           "strict-containers".components.library.planned = lib.mkOverride 900 true;
