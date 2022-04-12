@@ -9,10 +9,10 @@ import Cardano.Api.Extras ()
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson qualified as Aeson
 import Data.Maybe qualified as Maybe
-import Options.Applicative (Alternative ((<|>)), Parser, auto, command, execParser, flag', help, helper, info, long,
-                            metavar, option, progDesc, str, strOption, subparser, value, (<**>))
+import Options.Applicative (Alternative ((<|>)), Parser, auto, execParser, flag', help, helper, info, long, metavar,
+                            option, str, strOption, value, (<**>))
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), SimpleChainSyncEvent,
-                         withChainSyncEventStreamWithLedgerState, withSimpleChainSyncEventStream)
+                         withSimpleChainSyncEventStream)
 import Plutus.Streaming.ChainIndex (utxoState)
 import Streaming (Of, Stream)
 import Streaming.Prelude qualified as S
@@ -29,41 +29,21 @@ data Example
   | ChainIndex
   deriving (Show, Read)
 
-data Options
-  = Simple
-      { optionsSocketPath :: String,
-        optionsNetworkId  :: NetworkId,
-        optionsChainPoint :: ChainPoint,
-        optionsExample    :: Example
-      }
-  | WithLedgerState
-      { optionsNetworkConfigPath :: String,
-        optionsSocketPath        :: String,
-        optionsNetworkId         :: NetworkId,
-        optionsChainPoint        :: ChainPoint
-      }
+data Options = Options
+  { optionsSocketPath :: String,
+    optionsNetworkId  :: NetworkId,
+    optionsChainPoint :: ChainPoint,
+    optionsExample    :: Example
+  }
   deriving (Show)
 
 optionsParser :: Parser Options
 optionsParser =
-  subparser
-    ( command "simple" (info simple (progDesc "simple"))
-        <> command "with-ledger-state" (info withLedgerState (progDesc "withLedgerSate"))
-    )
-  where
-    simple =
-      Simple
-        <$> strOption (long "socket-path" <> help "Node socket path")
-        <*> networkIdParser
-        <*> chainPointParser
-        <*> option auto (long "example" <> value Print)
-
-    withLedgerState =
-      WithLedgerState
-        <$> strOption (long "network-config-path" <> help "Node config path")
-        <*> strOption (long "socket-path" <> help "Node socket path")
-        <*> networkIdParser
-        <*> chainPointParser
+  Options
+    <$> strOption (long "socket-path" <> help "Node socket path")
+    <*> networkIdParser
+    <*> chainPointParser
+    <*> option auto (long "example" <> value Print)
 
 networkIdParser :: Parser NetworkId
 networkIdParser =
@@ -151,24 +131,15 @@ howManyBlocksBeforeRollbackImpure =
 
 main :: IO ()
 main = do
-  options <- execParser $ info (optionsParser <**> helper) mempty
+  Options {optionsSocketPath, optionsNetworkId, optionsChainPoint, optionsExample} <-
+    execParser $ info (optionsParser <**> helper) mempty
 
-  case options of
-    Simple {optionsSocketPath, optionsNetworkId, optionsChainPoint, optionsExample} ->
-      withSimpleChainSyncEventStream
-        optionsSocketPath
-        optionsNetworkId
-        optionsChainPoint
-        (doSimple optionsExample)
-        >>= print
-    WithLedgerState {optionsNetworkConfigPath, optionsNetworkId, optionsSocketPath, optionsChainPoint} ->
-      withChainSyncEventStreamWithLedgerState
-        optionsNetworkConfigPath
-        optionsSocketPath
-        optionsNetworkId
-        optionsChainPoint
-        S.print
-        >>= print
+  withSimpleChainSyncEventStream
+    optionsSocketPath
+    optionsNetworkId
+    optionsChainPoint
+    (doSimple optionsExample)
+    >>= print
 
 doSimple ::
   Example ->
