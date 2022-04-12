@@ -15,8 +15,8 @@ import Cardano.Api (BlockInMode, CardanoMode, ChainPoint, ChainSyncClient (Chain
 import Cardano.Api.ChainSync.Client (ClientStIdle (SendMsgDone, SendMsgFindIntersect, SendMsgRequestNext),
                                      ClientStIntersect (ClientStIntersect, recvMsgIntersectFound, recvMsgIntersectNotFound),
                                      ClientStNext (ClientStNext, recvMsgRollBackward, recvMsgRollForward))
-import Control.Concurrent (Chan, newChan, readChan, writeChan)
 import Control.Concurrent.Async (withAsync)
+import Control.Concurrent.STM (TChan, atomically, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Exception (Exception, throw)
 import GHC.Generics (Generic)
 import Streaming (Of, Stream)
@@ -45,7 +45,7 @@ withSimpleChainSyncEventStream ::
 withSimpleChainSyncEventStream socketPath networkId point consumer = do
   -- The chain-sync client runs in a different thread and it will send us
   -- block through this channel.
-  chan <- newChan
+  chan <- newBroadcastTChanIO
 
   let client = chainSyncStreamingClient point chan
 
@@ -80,7 +80,7 @@ withSimpleChainSyncEventStream socketPath networkId point consumer = do
   -- waiting on the channel we get a BlockedIndefinitelyOnMVar right away
   -- before the exception that killed the client
   withAsync clientThread $ \_ -> do
-    consumer $ S.repeatM $ readChan chan
+    consumer $ S.repeatM $ atomically (readTChan chan)
 
 -- | `chainSyncStreamingClient` is the client that connects to a local node
 -- and runs the chain-sync mini-protocol.
@@ -96,7 +96,7 @@ withSimpleChainSyncEventStream socketPath networkId point consumer = do
 -- note in `withSimpleChainSyncEventStream`
 chainSyncStreamingClient ::
   ChainPoint ->
-  Chan (ChainSyncEvent e) ->
+  TChan (ChainSyncEvent e) ->
   ChainSyncClient e ChainPoint ChainTip IO ()
 chainSyncStreamingClient point chan =
   ChainSyncClient $ pure $ SendMsgFindIntersect [point] onIntersect
@@ -117,10 +117,10 @@ chainSyncStreamingClient point chan =
           ClientStNext
             { recvMsgRollForward = \bim ct ->
                 ChainSyncClient $ do
-                  writeChan chan (RollForward bim ct)
+                  atomically $ writeTChan chan (RollForward bim ct)
                   sendRequestNext,
               recvMsgRollBackward = \cp ct ->
                 ChainSyncClient $ do
-                  writeChan chan (RollBackward cp ct)
+                  atomically $ writeTChan chan (RollBackward cp ct)
                   sendRequestNext
             }

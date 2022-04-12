@@ -45,6 +45,7 @@ library
         cardano-api,
         containers,
         plutus-chain-index-core,
+        stm,
         streaming,
         transformers,
         ouroboros-network,
