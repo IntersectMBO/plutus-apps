@@ -139,7 +139,6 @@ main = do
     optionsNetworkId
     optionsChainPoint
     (doSimple optionsExample)
-    >>= print
 
 doSimple ::
   Example ->
