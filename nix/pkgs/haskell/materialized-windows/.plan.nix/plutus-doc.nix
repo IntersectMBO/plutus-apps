@@ -57,6 +57,8 @@
             (hsPkgs."random" or (errorHandler.buildDepError "random"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
+            (hsPkgs."tasty-quickcheck" or (errorHandler.buildDepError "tasty-quickcheck"))
             ] ++ (pkgs.lib).optional (!(compiler.isGhcjs && true || system.isGhcjs)) (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"));
           build-tools = [
             (hsPkgs.buildPackages.doctest.components.exes.doctest or (pkgs.buildPackages.doctest or (errorHandler.buildToolDepError "doctest:doctest")))
@@ -73,6 +75,13 @@
             "HandlingBlockchainEvents"
             "HelloWorldApp"
             "WriteScriptsTo"
+            "Escrow"
+            "Escrow2"
+            "Escrow3"
+            "Escrow4"
+            "Escrow5"
+            "Escrow6"
+            "EscrowImpl"
             ];
           hsSourceDirs = [ "plutus/tutorials" "plutus/howtos" ];
           mainPath = (([

@@ -1,0 +1,43 @@
+<body ><h1 >Files</h1><ul ><li ><a href="#src/Plutus/Contracts/Escrow.hs" >src/Plutus/Contracts/Escrow.hs</a></li></ul><hr><h2 id="src/Plutus/Contracts/Escrow.hs" >src/Plutus/Contracts/Escrow.hs</h2><pre >.
+.
+.
+   186    <span style=background-color:lightgray;color:gray >--   spending transaction to be paid to target addresses. This may happen if</span>
+   187    <span style=background-color:lightgray;color:gray >--   the target address is also used as a change address for the spending</span>
+   188    <span style=background-color:lightgray;color:gray >--   transaction, and allowing the target to be exceed prevents outsiders from</span>
+   189    <span style=background-color:lightgray;color:gray >--   poisoning the contract by adding arbitrary outputs to the script address.</span>
+   190    <span style=background-color:lightgray;color:gray >meetsTarget :: TxInfo -&gt; EscrowTarget DatumHash -&gt; Bool</span>
+   191    <span style=background-color:white;color:black >meetsTarget ptx = \case</span><span style=background-color:lightgray;color:gray ></span>
+   192    <span style=background-color:white;color:black >    PaymentPubKeyTarget pkh vl -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+   193    <span style=background-color:white;color:black >        </span><span style=background-color:lightgreen;color:black >valuePaidTo ptx (unPaymentPubKeyHash pkh) `geq` vl</span><span style=background-color:white;color:black ></span><span style=background-color:lightgray;color:gray ></span>
+   194    <span style=background-color:white;color:black >    ScriptTarget validatorHash dataValue vl -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+   195    <span style=background-color:white;color:black >        </span><span style=background-color:black;color:orangered >case scriptOutputsAt </span><span style=background-color:black;color:orangered >validatorHash </span><span style=background-color:black;color:orangered >ptx </span><span style=background-color:black;color:orangered >of</span><span style=background-color:lightgray;color:gray ></span>
+   196    <span style=background-color:black;color:orangered >            [(dataValue&#39;, vl&#39;)] -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+   197    <span style=background-color:black;color:orangered >                </span><span style=background-color:black;color:orangered >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;dataValue&quot; </span><span style=background-color:black;color:orangered >(</span><span style=background-color:black;color:orangered >dataValue&#39; </span><span style=background-color:black;color:orangered >== </span><span style=background-color:black;color:orangered >dataValue)</span><span style=background-color:black;color:orangered ></span><span style=background-color:lightgray;color:gray ></span>
+   198    <span style=background-color:black;color:orangered >                &amp;&amp; </span><span style=background-color:black;color:orangered >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;value&quot; </span><span style=background-color:black;color:orangered >(</span><span style=background-color:black;color:orangered >vl&#39; </span><span style=background-color:black;color:orangered >`geq` </span><span style=background-color:black;color:orangered >vl)</span><span style=background-color:black;color:orangered ></span><span style=background-color:black;color:orangered ></span><span style=background-color:lightgray;color:gray ></span>
+   199    <span style=background-color:black;color:orangered >            _ -&gt; </span><span style=background-color:black;color:orangered >False</span><span style=background-color:lightgray;color:gray ></span>
+   200    <span style=background-color:lightgray;color:gray ></span>
+   201    <span style=background-color:lightgray;color:gray >{-# INLINABLE validate #-}</span>
+   202    <span style=background-color:lightgray;color:gray >validate :: EscrowParams DatumHash -&gt; PaymentPubKeyHash -&gt; Action -&gt; ScriptContext -&gt; Bool</span>
+   203    <span style=background-color:white;color:black >validate EscrowParams{escrowDeadline, escrowTargets} contributor action ScriptContext{scriptContextTxInfo} =</span><span style=background-color:lightgray;color:gray ></span>
+   204    <span style=background-color:white;color:black >    case action of</span><span style=background-color:lightgray;color:gray ></span>
+   205    <span style=background-color:white;color:black >        Redeem -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+   206    <span style=background-color:white;color:black >            traceIfFalse </span><span style=background-color:black;color:orangered >&quot;escrowDeadline-after&quot; </span><span style=background-color:white;color:black >(escrowDeadline `after` txInfoValidRange scriptContextTxInfo)</span><span style=background-color:lightgray;color:gray ></span>
+   207    <span style=background-color:white;color:black >            &amp;&amp; </span><span style=background-color:lightgreen;color:black >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;meetsTarget&quot; </span><span style=background-color:lightgreen;color:black >(all (meetsTarget scriptContextTxInfo) escrowTargets)</span><span style=background-color:white;color:black ></span><span style=background-color:lightgray;color:gray ></span>
+   208    <span style=background-color:white;color:black >        Refund -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+   209    <span style=background-color:white;color:black >            </span><span style=background-color:lightgreen;color:black >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;escrowDeadline-before&quot; </span><span style=background-color:lightgreen;color:black >((escrowDeadline - 1) `before` txInfoValidRange scriptContextTxInfo)</span><span style=background-color:lightgray;color:gray ></span>
+   210    <span style=background-color:lightgreen;color:black >            &amp;&amp; </span><span style=background-color:lightgreen;color:black >traceIfFalse </span><span style=background-color:black;color:orangered >&quot;txSignedBy&quot; </span><span style=background-color:lightgreen;color:black >(scriptContextTxInfo `txSignedBy` unPaymentPubKeyHash contributor)</span><span style=background-color:lightgray;color:gray ></span>
+   211    <span style=background-color:lightgray;color:gray ></span>
+   212    <span style=background-color:lightgray;color:gray >typedValidator :: EscrowParams Datum -&gt; Scripts.TypedValidator Escrow</span>
+   213    <span style=background-color:lightgray;color:gray >typedValidator escrow = go (Haskell.fmap Ledger.datumHash escrow) where</span>
+   214    <span style=background-color:lightgray;color:gray >    go = Scripts.mkTypedValidatorParam @Escrow</span>
+   215    <span style=background-color:lightgray;color:gray >        $$(PlutusTx.compile [|| validate ||])</span>
+.
+.
+.
+   361    <span style=background-color:lightgray;color:gray >    -- Pay the value &#39;vl&#39; into the contract</span>
+   362    <span style=background-color:lightgray;color:gray >    _ &lt;- pay inst params vl</span>
+   363    <span style=background-color:lightgray;color:gray >    go</span>
+   364    <span style=background-color:lightgray;color:gray ></span>
+   365    <span style=background-color:lightgray;color:gray >covIdx :: CoverageIndex</span>
+   366    <span style=background-color:lightgray;color:gray >covIdx = getCovIdx $$(</span><span style=background-color:black;color:orangered >PlutusTx.compile [|| validate ||])</span><span style=background-color:lightgray;color:gray ></span>
+</pre></body>

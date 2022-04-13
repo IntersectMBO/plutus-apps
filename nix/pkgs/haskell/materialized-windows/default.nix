@@ -376,6 +376,7 @@
         "blockfrost-api".revision = (((hackage."blockfrost-api")."0.3.1.0").revisions).default;
         "blockfrost-api".flags.production = false;
         "blockfrost-api".flags.buildfast = true;
+        "html-entities".revision = (((hackage."html-entities")."1.1.4.5").revisions).default;
         "cryptohash-sha1".revision = (((hackage."cryptohash-sha1")."0.11.101.0").revisions).default;
         "warp-tls".revision = (((hackage."warp-tls")."3.3.2").revisions).default;
         "digest".revision = (((hackage."digest")."0.0.1.3").revisions).default;
@@ -1672,6 +1673,7 @@
           "servant-websockets".components.library.planned = lib.mkOverride 900 true;
           "ouroboros-network-framework".components.exes."demo-connection-manager".planned = lib.mkOverride 900 true;
           "sqlite-simple".components.library.planned = lib.mkOverride 900 true;
+          "html-entities".components.library.planned = lib.mkOverride 900 true;
           "constraints-extras".components.library.planned = lib.mkOverride 900 true;
           "monad-logger".components.library.planned = lib.mkOverride 900 true;
           "OneTuple".components.library.planned = lib.mkOverride 900 true;

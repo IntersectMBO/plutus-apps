@@ -8,6 +8,7 @@ module Plutus.Contract.Test.Coverage
   , CoverageRef(..)
   , newCoverageRef
   , readCoverageRef
+  , writeCoverageReport
   ) where
 
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
@@ -34,9 +35,10 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent, EmulatorEvent' (..), EmulatorT
 import Wallet.Types
 
 import Data.IORef
+import Plutus.Contract.Test.Coverage.ReportCoverage qualified as ReportCoverage
 
 
--- | Get every endpoint name that has been invoced in the emulator events in `es`
+-- | Get every endpoint name that has been invoked in the emulator events in `es`
 -- indexed by `ContractInstanceTag`
 getInvokedEndpoints :: [EmulatorEvent] -> Map ContractInstanceTag (Set String)
 getInvokedEndpoints es =
@@ -71,6 +73,10 @@ newCoverageRef = CoverageRef <$> newIORef mempty
 
 readCoverageRef :: CoverageRef -> IO CoverageReport
 readCoverageRef (CoverageRef ioref) = readIORef ioref
+
+-- | Write a coverage report to name.html for the given index.
+writeCoverageReport :: String -> CoverageIndex -> CoverageReport -> IO ()
+writeCoverageReport = ReportCoverage.writeCoverageReport
 
 -- TODO: Move this to plutus core to avoid orhpan instance
 instance NFData CovLoc where

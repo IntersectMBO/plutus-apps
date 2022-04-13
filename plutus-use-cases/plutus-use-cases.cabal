@@ -34,6 +34,8 @@ library
         Plutus.Contracts.ErrorHandling
         Plutus.Contracts.Escrow
         Plutus.Contracts.SimpleEscrow
+        Plutus.Contracts.Tutorial.Escrow
+        Plutus.Contracts.Tutorial.EscrowStrict
         Plutus.Contracts.Future
         Plutus.Contracts.Game
         Plutus.Contracts.GameStateMachine
@@ -110,6 +112,13 @@ test-suite plutus-use-cases-test
         Spec.Escrow
         Spec.Escrow.Endpoints
         Spec.SimpleEscrow
+        Spec.Tutorial.Escrow
+        Spec.Tutorial.Escrow1
+        Spec.Tutorial.Escrow2
+        Spec.Tutorial.Escrow3
+        Spec.Tutorial.Escrow4
+        Spec.Tutorial.Escrow5
+        Spec.Tutorial.Escrow6
         Spec.Future
         Spec.Game
         Spec.GameStateMachine
@@ -122,6 +131,7 @@ test-suite plutus-use-cases-test
         Spec.Rollup
         Spec.Stablecoin
         Spec.Uniswap
+        Spec.Uniswap.Endpoints
         Spec.TokenAccount
         Spec.Vesting
     default-language: Haskell2010
@@ -136,8 +146,10 @@ test-suite plutus-use-cases-test
         plutus-contract -any,
         plutus-contract-certification -any,
         plutus-ledger -any,
+        plutus-ledger-api,
         plutus-ledger-constraints -any,
-        plutus-use-cases -any
+        plutus-use-cases -any,
+        playground-common -any
     build-depends:
         base >=4.9 && <5,
         bytestring -any,

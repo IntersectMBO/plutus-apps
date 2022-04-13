@@ -66,6 +66,8 @@
           "Plutus/Contracts/ErrorHandling"
           "Plutus/Contracts/Escrow"
           "Plutus/Contracts/SimpleEscrow"
+          "Plutus/Contracts/Tutorial/Escrow"
+          "Plutus/Contracts/Tutorial/EscrowStrict"
           "Plutus/Contracts/Future"
           "Plutus/Contracts/Game"
           "Plutus/Contracts/GameStateMachine"
@@ -159,8 +161,10 @@
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
             (hsPkgs."plutus-contract-certification" or (errorHandler.buildDepError "plutus-contract-certification"))
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
             (hsPkgs."plutus-ledger-constraints" or (errorHandler.buildDepError "plutus-ledger-constraints"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
+            (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
@@ -191,6 +195,13 @@
             "Spec/Escrow"
             "Spec/Escrow/Endpoints"
             "Spec/SimpleEscrow"
+            "Spec/Tutorial/Escrow"
+            "Spec/Tutorial/Escrow1"
+            "Spec/Tutorial/Escrow2"
+            "Spec/Tutorial/Escrow3"
+            "Spec/Tutorial/Escrow4"
+            "Spec/Tutorial/Escrow5"
+            "Spec/Tutorial/Escrow6"
             "Spec/Future"
             "Spec/Game"
             "Spec/GameStateMachine"
@@ -203,6 +214,7 @@
             "Spec/Rollup"
             "Spec/Stablecoin"
             "Spec/Uniswap"
+            "Spec/Uniswap/Endpoints"
             "Spec/TokenAccount"
             "Spec/Vesting"
             ];

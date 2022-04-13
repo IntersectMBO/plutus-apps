@@ -9,9 +9,9 @@
 
 module Test.QuickCheck.DynamicLogic
     ( module Test.QuickCheck.DynamicLogic.Quantify
-    , DynLogic, DynPred
+    , DynLogic, DynPred, DynFormula
     , DynLogicModel(..), DynLogicTest(..), TestStep(..)
-    , ignore, passTest, afterAny, after, (|||), forAllQ, weight, toStop
+    , ignore, passTest, afterAny, after, (|||), forAllQ, weight, withSize, toStop
     , done, errorDL, monitorDL, always
     , forAllScripts, forAllScripts_, withDLScript, withDLScriptPrefix, forAllMappedScripts, forAllMappedScripts_
     , forAllUniqueScripts, propPruningGeneratedScriptIsNoop
@@ -27,6 +27,7 @@ import Test.QuickCheck hiding (generate)
 import Test.QuickCheck.DynamicLogic.CanGenerate
 import Test.QuickCheck.DynamicLogic.Quantify
 import Test.QuickCheck.DynamicLogic.SmartShrinking
+import Test.QuickCheck.DynamicLogic.Utils qualified as QC
 import Test.QuickCheck.StateModel
 
 -- | Dynamic logic formulae.
@@ -52,47 +53,53 @@ data ChoiceType = Angelic | Demonic
 
 type DynPred s = s -> DynLogic s
 
+newtype DynFormula s = DynFormula {unDynFormula :: Int -> DynLogic s}
+  -- a DynFormula may depend on the QuickCheck size parameter
+
 -- API for building formulae
 
-ignore    :: DynLogic s
-passTest  :: DynLogic s
-afterAny  :: DynPred s -> DynLogic s
+ignore    :: DynFormula s
+passTest  :: DynFormula s
+afterAny  :: (s -> DynFormula s) -> DynFormula s
 after     :: (Show a, Typeable a, Eq (Action s a)) =>
-               Action s a -> DynPred s -> DynLogic s
-(|||)     :: DynLogic s -> DynLogic s -> DynLogic s
+               Action s a -> (s -> DynFormula s) -> DynFormula s
+(|||)     :: DynFormula s -> DynFormula s -> DynFormula s
 forAllQ   :: Quantifiable q =>
-               q -> (Quantifies q -> DynLogic s) -> DynLogic s
-weight    :: Double -> DynLogic s -> DynLogic s
-toStop    :: DynLogic s -> DynLogic s
+               q -> (Quantifies q -> DynFormula s) -> DynFormula s
+weight    :: Double -> DynFormula s -> DynFormula s
+withSize  :: (Int -> DynFormula s) -> DynFormula s
+toStop    :: DynFormula s -> DynFormula s
 
-done      :: DynPred s
-errorDL   :: String -> DynLogic s
+done      :: s -> DynFormula s
+errorDL   :: String -> DynFormula s
 
-monitorDL :: (Property -> Property) -> DynLogic s -> DynLogic s
+monitorDL :: (Property -> Property) -> DynFormula s -> DynFormula s
 
-always    :: DynPred s -> DynPred s
+always    :: (s -> DynFormula s) -> (s -> DynFormula s)
 
-ignore       = EmptySpec
-passTest     = Stop
-afterAny     = AfterAny
-after act    = After (Some act)
-(|||)        = Alt Angelic -- In formulae, we use only angelic
+ignore       = DynFormula . const $ EmptySpec
+passTest     = DynFormula . const $ Stop
+afterAny f   = DynFormula $ \n -> AfterAny $ \s -> unDynFormula  (f s) n
+after act f  = DynFormula $ \n -> After (Some act) $ \s -> unDynFormula (f s) n
+DynFormula f ||| DynFormula g  = DynFormula $ \n -> Alt Angelic (f n) (g n)
+                           -- In formulae, we use only angelic
                            -- choice. But it becomes demonic after one
                            -- step (that is, the choice has been made).
 forAllQ q f
     | isEmptyQ q' = ignore
-    | otherwise   = ForAll q' f
+    | otherwise   = DynFormula $ \n -> ForAll q' $ ($n) . unDynFormula . f
     where q' = quantify q
 
-weight       = Weight
-toStop       = Stopping
+weight w f   = DynFormula $ Weight w . unDynFormula f
+withSize f   = DynFormula $ \n -> unDynFormula (f n) n
+toStop (DynFormula f) = DynFormula $ Stopping . f
 
 done _       = passTest
-errorDL s    = After (Error s) (const ignore)
+errorDL s    = DynFormula . const $ After (Error s) (const EmptySpec)
 
-monitorDL    = Monitor
+monitorDL m (DynFormula f) = DynFormula $ Monitor m . f
 
-always p s   = Stopping (p s) ||| Weight 0.1 (p s) ||| AfterAny (always p)
+always p s   = withSize $ \n -> toStop (p s) ||| p s ||| weight (fromIntegral n) (afterAny (always p))
 
 data DynLogicTest s = BadPrecondition [TestStep s] [Any (Action s)] s
                     | Looping [TestStep s]
@@ -144,33 +151,39 @@ class StateModel s => DynLogicModel s where
     restricted _ = False
 
 forAllUniqueScripts :: (DynLogicModel s, Testable a) =>
-                          Int -> s -> DynLogic s -> (Actions s -> a) -> Property
-forAllUniqueScripts n s d k = case generate chooseUniqueNextStep d n s 500 [] of
+                          Int -> s -> DynFormula s -> (Actions s -> a) -> Property
+forAllUniqueScripts n s f k =
+  QC.withSize $ \sz -> let d = unDynFormula f sz in
+  case generate chooseUniqueNextStep d n s 500 [] of
   Nothing   -> counterexample "Generating Non-unique script in forAllUniqueScripts" False
   Just test -> validDLTest d test .&&. (applyMonitoring d test . property $ k (scriptFromDL test))
 
 forAllScripts :: (DynLogicModel s, Testable a) =>
-                   DynLogic s -> (Actions s -> a) -> Property
-forAllScripts d k = forAllMappedScripts id id d k
+                   DynFormula s -> (Actions s -> a) -> Property
+forAllScripts f k =
+    forAllMappedScripts id id f k
 
 forAllScripts_ :: (DynLogicModel s, Testable a) =>
-                   DynLogic s -> (Actions s -> a) -> Property
-forAllScripts_ d k =
+                   DynFormula s -> (Actions s -> a) -> Property
+forAllScripts_ f k =
+    QC.withSize $ \n -> let d = unDynFormula f n in
     forAll (sized $ generateDLTest d) $
         withDLScript d k
 
 forAllMappedScripts ::
   (DynLogicModel s, Testable a, Show rep) =>
-    (rep -> DynLogicTest s) -> (DynLogicTest s -> rep) -> DynLogic s -> (Actions s -> a) -> Property
-forAllMappedScripts to from d k =
+    (rep -> DynLogicTest s) -> (DynLogicTest s -> rep) -> DynFormula s -> (Actions s -> a) -> Property
+forAllMappedScripts to from f k =
+    QC.withSize $ \n -> let d = unDynFormula f n in
     forAllShrink (Smart 0 <$> (sized $ (from<$>) . generateDLTest d))
                  (shrinkSmart ((from<$>) . shrinkDLTest d . to)) $ \(Smart _ script) ->
         withDLScript d k (to script)
 
 forAllMappedScripts_ ::
   (DynLogicModel s, Testable a, Show rep) =>
-    (rep -> DynLogicTest s) -> (DynLogicTest s -> rep) -> DynLogic s -> (Actions s -> a) -> Property
-forAllMappedScripts_ to from d k =
+    (rep -> DynLogicTest s) -> (DynLogicTest s -> rep) -> DynFormula s -> (Actions s -> a) -> Property
+forAllMappedScripts_ to from f k =
+    QC.withSize $ \n -> let d = unDynFormula f n in
     forAll (sized $ (from<$>) . generateDLTest d) $
         withDLScript d k . to
 
@@ -178,11 +191,13 @@ withDLScript :: (DynLogicModel s, Testable a) => DynLogic s -> (Actions s -> a) 
 withDLScript d k test =
     validDLTest d test .&&. (applyMonitoring d test . property $ k (scriptFromDL test))
 
-withDLScriptPrefix :: (DynLogicModel s, Testable a) => DynLogic s -> (Actions s -> a) -> DynLogicTest s -> Property
-withDLScriptPrefix d k test =
-    validDLTest d test' .&&. (applyMonitoring d test' . property $ k (scriptFromDL test'))
-    where
+withDLScriptPrefix :: (DynLogicModel s, Testable a) => DynFormula s -> (Actions s -> a) -> DynLogicTest s -> Property
+withDLScriptPrefix f k test =
+    QC.withSize $ \n ->
+    let d = unDynFormula f n
         test' = unfailDLTest d test
+    in
+    validDLTest d test' .&&. (applyMonitoring d test' . property $ k (scriptFromDL test'))
 
 generateDLTest :: DynLogicModel s => DynLogic s -> Int -> Gen (DynLogicTest s)
 generateDLTest d size = generate chooseNextStep d 0 (initialStateFor d) size []

@@ -209,7 +209,7 @@ noLockProof = defaultNLFP {
                       | otherwise = return ()
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof noLockProof
 
 -- Tests
 

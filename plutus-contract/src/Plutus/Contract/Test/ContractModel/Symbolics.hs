@@ -37,7 +37,7 @@ newtype AssetKey = AssetKey Int deriving (Ord, Eq, Show, Num, JSON.FromJSONKey, 
 data SymToken = SymToken { symVar :: Var AssetKey, symVarIdx :: String } deriving (Ord, Eq, Data)
 -- | A symbolic value is a combination of a real value and a value associating symbolic
 -- tokens with an amount
-data SymValue = SymValue { symValMap :: Map SymToken Integer, actualValPart :: Value } deriving (Show)
+data SymValue = SymValue { symValMap :: Map SymToken Integer, actualValPart :: Value } deriving (Show, Data)
 
 instance Show SymToken where
   show (SymToken (Var i) n) = "tok" ++ show i ++ "." ++ n

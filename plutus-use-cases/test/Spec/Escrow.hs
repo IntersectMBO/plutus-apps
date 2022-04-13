@@ -166,7 +166,6 @@ finishingStrategy walletAlive = do
     slot <- viewContractState refundSlot
     when (now < slot+1) $ waitUntilDL $ slot+1
     contribs <- viewContractState contributions
-    monitor (classify (Map.null contribs) "no need for extra refund to recover funds")
     sequence_ [action $ Refund w | w <- testWallets, w `Map.member` contribs, walletAlive w]
 
 prop_FinishEscrow :: Property
@@ -178,7 +177,7 @@ noLockProof = defaultNLFP
   , nlfpWalletStrategy = finishingStrategy . (==) }
 
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
+prop_NoLockedFunds = checkNoLockedFundsProof noLockProof
 
 
 tests :: TestTree

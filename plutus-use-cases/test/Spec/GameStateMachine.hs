@@ -27,6 +27,7 @@ module Spec.GameStateMachine
   , prop_SanityCheckAssertions
   , prop_GameCrashTolerance
   , certification
+  , covIndex
   ) where
 
 import Control.Exception hiding (handle)
@@ -152,12 +153,15 @@ instance ContractModel GameModel where
     -- To generate a random test case we need to know how to generate a random
     -- command given the current model state.
     arbitraryAction s = oneof $
-        [ genLockAction ] ++
+        [ genLockAction | Nothing <- [tok] ] ++
         [ Guess w   <$> genGuess  <*> genGuess <*> genGuessAmount
-          | val > Ada.getLovelace Ledger.minAdaTxOut, Just w <- [tok] ] ++
+          | val > minOut, Just w <- [tok] ] ++
         [ GiveToken <$> genWallet | isJust tok ]
         where
-            genGuessAmount = frequency [(1, pure val), (1, pure $ Ada.getLovelace Ledger.minAdaTxOut), (8, choose (Ada.getLovelace Ledger.minAdaTxOut, val))]
+            genGuessAmount = frequency $ [(1, pure val)] ++
+                                         [(1, pure $ minOut)               | 2*minOut <= val] ++
+                                         [(8, choose (minOut, val-minOut)) | minOut <= val-minOut]
+            minOut = Ada.getLovelace Ledger.minAdaTxOut
             tok = s ^. contractState . hasToken
             val = s ^. contractState . gameValue
             genLockAction :: Gen (Action GameModel)
@@ -208,12 +212,16 @@ prop_SanityCheckModel = propSanityCheckModel @GameModel
 prop_SanityCheckAssertions :: Actions GameModel -> Property
 prop_SanityCheckAssertions = propSanityCheckAssertions
 
-check_prop_Game_with_coverage :: IO CoverageReport
-check_prop_Game_with_coverage =
-  quickCheckWithCoverage stdArgs (set coverageIndex (covIdx gameParam) defaultCoverageOptions) $ \covopts ->
+check_prop_Game_with_coverage :: IO ()
+check_prop_Game_with_coverage = do
+  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIndex defaultCoverageOptions) $ \covopts ->
     propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))
+  writeCoverageReport "GameStateMachine" covIndex cr
+
+covIndex :: CoverageIndex
+covIndex = covIdx gameParam
 
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions
@@ -299,7 +307,7 @@ noLockProof = defaultNLFP {
             when hasTok $ action (Guess w secret "" val)
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof defaultCheckOptionsContractModel noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProof noLockProof
 
 -- * Unit tests
 
@@ -458,8 +466,7 @@ certification = defaultCertification {
     certNoLockedFunds      = Just noLockProof,
     certUnitTests          = Just unitTest,
     certCoverageIndex      = covIdx gameParam,
-    certCrashTolerance     = Just Instance,
-    certWhitelist          = Just defaultWhitelist
+    certCrashTolerance     = Just Instance
   }
   where
     unitTest ref =

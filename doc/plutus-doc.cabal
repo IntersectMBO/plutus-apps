@@ -56,6 +56,13 @@ executable doc-doctests
       HandlingBlockchainEvents
       HelloWorldApp
       WriteScriptsTo
+      Escrow
+      Escrow2
+      Escrow3
+      Escrow4
+      Escrow5
+      Escrow6
+      EscrowImpl
     build-depends:
       base >=4.9 && <5,
       template-haskell >=2.13.0.0,
@@ -80,6 +87,8 @@ executable doc-doctests
       random -any,
       text -any,
       aeson -any,
+      tasty -any,
+      tasty-quickcheck -any
 
     if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any

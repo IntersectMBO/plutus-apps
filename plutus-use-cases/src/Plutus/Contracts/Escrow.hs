@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:debug-context #-}
+{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
 -- | A general-purpose escrow contract in Plutus
 module Plutus.Contracts.Escrow(
     -- $escrow
@@ -40,6 +41,8 @@ module Plutus.Contracts.Escrow(
     , EscrowSchema
     -- * Exposed for test endpoints
     , Action(..)
+    -- * Coverage
+    , covIdx
     ) where
 
 import Control.Lens (makeClassyPrisms, review, view)
@@ -64,6 +67,8 @@ import Ledger.Value (Value, geq, lt)
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Typed
 import PlutusTx qualified
+import PlutusTx.Code
+import PlutusTx.Coverage
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
 
 import Prelude (Semigroup (..), foldMap)
@@ -356,3 +361,6 @@ payRedeemRefund params vl = do
     -- Pay the value 'vl' into the contract
     _ <- pay inst params vl
     go
+
+covIdx :: CoverageIndex
+covIdx = getCovIdx $$(PlutusTx.compile [|| validate ||])

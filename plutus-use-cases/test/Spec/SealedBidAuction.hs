@@ -243,7 +243,7 @@ noLockProof = defaultNLFP
   , nlfpWalletStrategy = finishingStrategy }
 
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = checkNoLockedFundsProof options noLockProof
+prop_NoLockedFunds = checkNoLockedFundsProofWithOptions options noLockProof
 
 tests :: TestTree
 tests =

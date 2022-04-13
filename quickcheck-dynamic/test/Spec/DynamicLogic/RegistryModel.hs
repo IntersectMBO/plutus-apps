@@ -178,40 +178,40 @@ cleanUp = sequence
   [try (unregister name) :: IO (Either ErrorCall ())
    | name <- allNames++["x"]]
 
-propTest :: DynLogic RegState -> Property
+propTest :: DynFormula RegState -> Property
 propTest d = forAllScripts d prop_Registry
 
 -- Generate normal test cases
 
-normalTests :: DynPred s
+normalTests :: s -> DynFormula s
 normalTests _ = passTest ||| afterAny normalTests
 
-loopingTests :: DynPred s
+loopingTests :: s -> DynFormula s
 loopingTests _ = afterAny loopingTests
 
-canSpawn :: RegState -> DynLogic RegState
+canSpawn :: RegState -> DynFormula RegState
 canSpawn _ = after Spawn done
 
-canRegisterA :: DynPred RegState
+canRegisterA :: RegState -> DynFormula RegState
 canRegisterA s
   | null (tids s) = after Spawn canRegisterA
   | otherwise     = after (Successful $ Register "a" (head (tids s))) done
 
 -- test that the registry never contains more than k processes
 
-regLimit :: Int -> DynPred RegState
+regLimit :: Int -> RegState -> DynFormula RegState
 regLimit k s | length (regs s) > k = ignore   -- fail? yes, gets stuck at this point
              | otherwise           = passTest ||| afterAny (regLimit k)
 
 -- test that we can register a pid that is not dead, if we unregister the name first.
 
-canRegisterUndead :: RegState -> DynLogic RegState
+canRegisterUndead :: RegState -> DynFormula RegState
 canRegisterUndead s
   | null aliveTs = ignore
   | otherwise    = after (Successful (Register "x" (head aliveTs))) done
   where aliveTs = tids s \\ dead s
 
-canRegister :: DynPred RegState
+canRegister :: RegState -> DynFormula RegState
 canRegister s
   | length (regs s) == 5 = ignore  -- all names are in use
   | null (tids s) = after Spawn canRegister
@@ -220,23 +220,23 @@ canRegister s
                       after (Successful $ Register name tid)
                       done
 
-canRegisterName :: String -> RegState -> DynLogic RegState
+canRegisterName :: String -> RegState -> DynFormula RegState
 canRegisterName name s = forAllQ (elementsQ availableTids) $ \tid ->
                            after (Successful $ Register name tid) done
   where availableTids = tids s \\ map snd (regs s)
 
-canReregister :: RegState -> DynLogic RegState
+canReregister :: RegState -> DynFormula RegState
 canReregister s
   | null (regs s) = ignore
   | otherwise     = forAllQ (elementsQ $ map fst (regs s)) $ \name ->
                       after (Unregister name) (canRegisterName name)
 
-canRegisterName' :: String -> RegState -> DynLogic RegState
+canRegisterName' :: String -> RegState -> DynFormula RegState
 canRegisterName' name s = forAllQ (elementsQ availableTids) $ \tid ->
                             after (Successful $ Register name tid) done
   where availableTids = (tids s \\ map snd (regs s)) \\ dead s
 
-canReregister' :: DynPred RegState
+canReregister' :: RegState -> DynFormula RegState
 canReregister' s
   | null (regs s) = toStop $
                       if null availableTids then after Spawn canReregister'

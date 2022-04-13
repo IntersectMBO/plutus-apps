@@ -1,0 +1,91 @@
+<body ><h1 >Files</h1><ul ><li ><a href="#src/Plutus/Contracts/Auction.hs" >src/Plutus/Contracts/Auction.hs</a></li></ul><hr><h2 id="src/Plutus/Contracts/Auction.hs" >src/Plutus/Contracts/Auction.hs</h2><pre >.
+.
+.
+    71    <span style=background-color:lightgray;color:gray >        , highestBidder :: PaymentPubKeyHash</span>
+    72    <span style=background-color:lightgray;color:gray >        }</span>
+    73    <span style=background-color:lightgray;color:gray >    deriving stock (Haskell.Eq, Haskell.Show, Generic)</span>
+    74    <span style=background-color:lightgray;color:gray >    deriving anyclass (ToJSON, FromJSON)</span>
+    75    <span style=background-color:lightgray;color:gray ></span>
+    76    <span style=background-color:white;color:black >PlutusTx.unstableMakeIsData &#39;&#39;HighestBid</span><span style=background-color:lightgray;color:gray ></span>
+    77    <span style=background-color:lightgray;color:gray ></span>
+    78    <span style=background-color:lightgray;color:gray >-- | The states of the auction</span>
+    79    <span style=background-color:lightgray;color:gray >data AuctionState</span>
+    80    <span style=background-color:lightgray;color:gray >    = Ongoing HighestBid -- Bids can be submitted.</span>
+    81    <span style=background-color:lightgray;color:gray >    | Finished HighestBid -- The auction is finished</span>
+.
+.
+.
+   104    <span style=background-color:lightgray;color:gray >--   highest bidder is seller of the asset. So if nobody submits</span>
+   105    <span style=background-color:lightgray;color:gray >--   any bids, the seller gets the asset back after the auction has ended.</span>
+   106    <span style=background-color:lightgray;color:gray >initialState :: PaymentPubKeyHash -&gt; AuctionState</span>
+   107    <span style=background-color:lightgray;color:gray >initialState self = Ongoing HighestBid{highestBid = 0, highestBidder = self}</span>
+   108    <span style=background-color:lightgray;color:gray ></span>
+   109    <span style=background-color:white;color:black >PlutusTx.unstableMakeIsData &#39;&#39;AuctionState</span><span style=background-color:lightgray;color:gray ></span>
+   110    <span style=background-color:lightgray;color:gray ></span>
+   111    <span style=background-color:lightgray;color:gray >-- | Transition between auction states</span>
+   112    <span style=background-color:lightgray;color:gray >data AuctionInput</span>
+   113    <span style=background-color:lightgray;color:gray >    = Bid { newBid :: Ada, newBidder :: PaymentPubKeyHash } -- Increase the price</span>
+   114    <span style=background-color:lightgray;color:gray >    | Payout</span>
+.
+.
+.
+   124    <span style=background-color:lightgray;color:gray >auctionTransition</span>
+   125    <span style=background-color:lightgray;color:gray >    :: AuctionParams</span>
+   126    <span style=background-color:lightgray;color:gray >    -&gt; State AuctionState</span>
+   127    <span style=background-color:lightgray;color:gray >    -&gt; AuctionInput</span>
+   128    <span style=background-color:lightgray;color:gray >    -&gt; Maybe (TxConstraints Void Void, State AuctionState)</span>
+   129    <span style=background-color:white;color:black >auctionTransition AuctionParams{apOwner, apAsset, apEndTime} State{stateData=oldStateData, stateValue=oldStateValue} input =</span><span style=background-color:lightgray;color:gray ></span>
+   130    <span style=background-color:white;color:black >    case (oldStateData, input) of</span><span style=background-color:lightgray;color:gray ></span>
+   131    <span style=background-color:white;color:black ></span><span style=background-color:lightgray;color:gray ></span>
+   132    <span style=background-color:white;color:black >        (Ongoing HighestBid{highestBid, highestBidder}, Bid{newBid, newBidder}) | </span><span style=background-color:lightgreen;color:black >newBid &gt; highestBid </span><span style=background-color:white;color:black >-&gt; -- if the new bid is higher,</span><span style=background-color:lightgray;color:gray ></span>
+   133    <span style=background-color:white;color:black >            let constraints = if highestBid == 0 then mempty else</span><span style=background-color:lightgray;color:gray ></span>
+   134    <span style=background-color:white;color:black >                    Constraints.mustPayToPubKey highestBidder (Ada.toValue highestBid) -- we pay back the previous highest bid</span><span style=background-color:lightgray;color:gray ></span>
+   135    <span style=background-color:white;color:black >                    &lt;&gt; Constraints.mustValidateIn (Interval.to $ apEndTime - 1) -- but only if we haven&#39;t gone past &#39;apEndTime&#39;</span><span style=background-color:lightgray;color:gray ></span>
+   136    <span style=background-color:white;color:black >                newState =</span><span style=background-color:lightgray;color:gray ></span>
+   137    <span style=background-color:white;color:black >                    State</span><span style=background-color:lightgray;color:gray ></span>
+   138    <span style=background-color:white;color:black >                        { stateData = Ongoing HighestBid{highestBid = newBid, highestBidder = newBidder}</span><span style=background-color:lightgray;color:gray ></span>
+   139    <span style=background-color:white;color:black >                        , stateValue = Value.noAdaValue oldStateValue</span><span style=background-color:lightgray;color:gray ></span>
+   140    <span style=background-color:white;color:black >                                    &lt;&gt; Ada.toValue (Ada.fromValue oldStateValue - highestBid)</span><span style=background-color:lightgray;color:gray ></span>
+   141    <span style=background-color:white;color:black >                                    &lt;&gt; Ada.toValue newBid -- and lock the new bid in the script output</span><span style=background-color:lightgray;color:gray ></span>
+   142    <span style=background-color:white;color:black >                        }</span><span style=background-color:lightgray;color:gray ></span>
+   143    <span style=background-color:white;color:black >            in Just (constraints, newState)</span><span style=background-color:lightgray;color:gray ></span>
+   144    <span style=background-color:white;color:black ></span><span style=background-color:lightgray;color:gray ></span>
+   145    <span style=background-color:white;color:black >        (Ongoing h@HighestBid{highestBidder, highestBid}, Payout) -&gt;</span><span style=background-color:lightgray;color:gray ></span>
+   146    <span style=background-color:white;color:black >            let constraints =</span><span style=background-color:lightgray;color:gray ></span>
+   147    <span style=background-color:white;color:black >                    Constraints.mustValidateIn (Interval.from apEndTime) -- When the auction has ended,</span><span style=background-color:lightgray;color:gray ></span>
+   148    <span style=background-color:white;color:black >                    &lt;&gt; Constraints.mustPayToPubKey apOwner (Ada.toValue highestBid) -- the owner receives the payment</span><span style=background-color:lightgray;color:gray ></span>
+   149    <span style=background-color:white;color:black >                    &lt;&gt; Constraints.mustPayToPubKey highestBidder apAsset -- and the highest bidder the asset</span><span style=background-color:lightgray;color:gray ></span>
+   150    <span style=background-color:white;color:black >                newState = State { stateData = Finished h, stateValue = mempty }</span><span style=background-color:lightgray;color:gray ></span>
+   151    <span style=background-color:white;color:black >            in Just (constraints, newState)</span><span style=background-color:lightgray;color:gray ></span>
+   152    <span style=background-color:white;color:black ></span><span style=background-color:lightgray;color:gray ></span>
+   153    <span style=background-color:white;color:black >        -- Any other combination of &#39;AuctionState&#39; and &#39;AuctionInput&#39; is disallowed.</span><span style=background-color:lightgray;color:gray ></span>
+   154    <span style=background-color:white;color:black >        -- This rules out new bids that don&#39;t go over the current highest bid.</span><span style=background-color:lightgray;color:gray ></span>
+   155    <span style=background-color:white;color:black >        _ -&gt; </span><span style=background-color:black;color:orangered >Nothing</span><span style=background-color:lightgray;color:gray ></span>
+   156    <span style=background-color:lightgray;color:gray ></span>
+   157    <span style=background-color:lightgray;color:gray ></span>
+   158    <span style=background-color:lightgray;color:gray >{-# INLINABLE auctionStateMachine #-}</span>
+   159    <span style=background-color:lightgray;color:gray >auctionStateMachine :: (ThreadToken, AuctionParams) -&gt; AuctionMachine</span>
+   160    <span style=background-color:white;color:black >auctionStateMachine (threadToken, auctionParams) =</span><span style=background-color:lightgray;color:gray ></span>
+   161    <span style=background-color:white;color:black >    SM.mkStateMachine (Just threadToken) (auctionTransition auctionParams) isFinal</span><span style=background-color:lightgray;color:gray ></span>
+   162    <span style=background-color:white;color:black >  where</span><span style=background-color:lightgray;color:gray ></span>
+   163    <span style=background-color:white;color:black >    isFinal Finished{} = True</span><span style=background-color:lightgray;color:gray ></span>
+   164    <span style=background-color:white;color:black >    isFinal _          = False</span><span style=background-color:lightgray;color:gray ></span>
+   165    <span style=background-color:lightgray;color:gray ></span>
+   166    <span style=background-color:lightgray;color:gray >{-# INLINABLE mkValidator #-}</span>
+   167    <span style=background-color:lightgray;color:gray >mkValidator :: (ThreadToken, AuctionParams) -&gt; Scripts.ValidatorType AuctionMachine</span>
+   168    <span style=background-color:white;color:black >mkValidator = SM.mkValidator . auctionStateMachine</span><span style=background-color:lightgray;color:gray ></span>
+   169    <span style=background-color:lightgray;color:gray ></span>
+   170    <span style=background-color:lightgray;color:gray >-- | The script instance of the auction state machine. It contains the state</span>
+   171    <span style=background-color:lightgray;color:gray >--   machine compiled to a Plutus core validator script.</span>
+   172    <span style=background-color:lightgray;color:gray >typedValidator :: (ThreadToken, AuctionParams) -&gt; Scripts.TypedValidator AuctionMachine</span>
+   173    <span style=background-color:lightgray;color:gray >typedValidator = Scripts.mkTypedValidatorParam @AuctionMachine</span>
+.
+.
+.
+   365    <span style=background-color:lightgray;color:gray >            Transition _ (Ongoing s) -&gt; loop s</span>
+   366    <span style=background-color:lightgray;color:gray >            InitialState (Ongoing s) -&gt; loop s</span>
+   367    <span style=background-color:lightgray;color:gray >            _                        -&gt; logWarn CurrentStateNotFound</span>
+   368    <span style=background-color:lightgray;color:gray ></span>
+   369    <span style=background-color:lightgray;color:gray >covIdx :: CoverageIndex</span>
+   370    <span style=background-color:lightgray;color:gray >covIdx = getCovIdx $$(</span><span style=background-color:black;color:orangered >PlutusTx.compile [|| mkValidator ||])</span><span style=background-color:lightgray;color:gray ></span>
+</pre></body>

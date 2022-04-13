@@ -11,6 +11,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeOperators      #-}
+{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
 module Plutus.Contracts.Auction(
     AuctionState(..),
     AuctionInput(..),
@@ -23,7 +24,8 @@ module Plutus.Contracts.Auction(
     AuctionOutput(..),
     AuctionError(..),
     ThreadToken,
-    SM.getThreadToken
+    SM.getThreadToken,
+    covIdx
     ) where
 
 import Control.Lens (makeClassyPrisms)
@@ -45,6 +47,8 @@ import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachine
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.Contract.Util (loopM)
 import PlutusTx qualified
+import PlutusTx.Code
+import PlutusTx.Coverage
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
 
@@ -361,3 +365,6 @@ auctionBuyer currency params = do
             Transition _ (Ongoing s) -> loop s
             InitialState (Ongoing s) -> loop s
             _                        -> logWarn CurrentStateNotFound
+
+covIdx :: CoverageIndex
+covIdx = getCovIdx $$(PlutusTx.compile [|| mkValidator ||])
