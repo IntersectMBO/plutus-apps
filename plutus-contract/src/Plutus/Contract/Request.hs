@@ -33,13 +33,18 @@ module Plutus.Contract.Request(
     , mintingPolicyFromHash
     , stakeValidatorFromHash
     , redeemerFromHash
+    , txOutFromRef
+    , txFromTxId
     , unspentTxOutFromRef
     , utxoRefMembership
     , utxoRefsAt
     , utxoRefsWithCurrency
     , utxosAt
     , utxosTxOutTxFromTx
+    , utxosTxOutTxAt
+    , txsFromTxIds
     , txoRefsAt
+    , txsAt
     , getTip
     -- ** Waiting for changes to the UTXO set
     , fundsAtAddressGt
@@ -112,7 +117,7 @@ import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
 import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy, MintingPolicyHash, POSIXTime,
                PaymentPubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId, TxOutRef,
-               Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds)
+               Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds, txOutRefId)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -132,7 +137,7 @@ import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescriptio
                      EndpointValue (EndpointValue, unEndpointValue))
 
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
-import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse (page))
+import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse (page), paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
 import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _ResumableContractError, _WalletContractError))
 import Plutus.Contract.Resumable (prompt)
@@ -312,6 +317,18 @@ redeemerFromHash h = do
     E.RedeemerHashResponse r -> pure r
     r                        -> throwError $ review _ChainIndexContractError ("RedeemerHashResponse", r)
 
+txOutFromRef ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => TxOutRef
+    -> Contract w s e (Maybe ChainIndexTxOut)
+txOutFromRef ref = do
+  cir <- pabReq (ChainIndexQueryReq $ E.TxOutFromRef ref) E._ChainIndexQueryResp
+  case cir of
+    E.TxOutRefResponse r -> pure r
+    r                    -> throwError $ review _ChainIndexContractError ("TxOutRefResponse", r)
+
 unspentTxOutFromRef ::
     forall w s e.
     ( AsContractError e
@@ -323,6 +340,18 @@ unspentTxOutFromRef ref = do
   case cir of
     E.UnspentTxOutResponse r -> pure r
     r                        -> throwError $ review _ChainIndexContractError ("UnspentTxOutResponse", r)
+
+txFromTxId ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => TxId
+    -> Contract w s e (Maybe ChainIndexTx)
+txFromTxId txid = do
+  cir <- pabReq (ChainIndexQueryReq $ E.TxFromTxId txid) E._ChainIndexQueryResp
+  case cir of
+    E.TxIdResponse r -> pure r
+    r                -> throwError $ review _ChainIndexContractError ("TxIdResponse", r)
 
 utxoRefMembership ::
     forall w s e.
@@ -400,6 +429,46 @@ utxosAt addr = do
                 $ zip utxoRefs txOuts
       pure $ acc <> utxos
 
+-- | Get unspent transaction outputs with transaction from address.
+utxosTxOutTxAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Address
+    -> Contract w s e (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+utxosTxOutTxAt addr = do
+  snd <$> foldUtxoRefsAt (\acc page -> go acc (pageItems page)) (mempty, mempty) addr
+  where
+    go :: (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+       -> [TxOutRef]
+       -> Contract w s e (Map TxId ChainIndexTx, Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+    go acc [] = pure acc
+    go (lookupTx, oldResult) (ref:refs) = do
+      outM <- unspentTxOutFromRef ref
+      case outM of
+        Just out -> do
+          let txid = txOutRefId ref
+          -- Lookup the txid in the lookup table. If it's present, we don't need
+          -- to query the chain index again. If it's not, we query the chain
+          -- index and store the result in the lookup table.
+          case Map.lookup txid lookupTx of
+            Just tx -> do
+              let result = oldResult <> Map.singleton ref (out, tx)
+              go (lookupTx, result) refs
+            Nothing -> do
+              -- We query the chain index for the tx and store it in the lookup
+              -- table if it is found.
+              txM <- txFromTxId txid
+              case txM of
+                Just tx -> do
+                  let newLookupTx = lookupTx <> Map.singleton txid tx
+                  let result = oldResult <> Map.singleton ref (out, tx)
+                  go (newLookupTx, result) refs
+                Nothing ->
+                  go (lookupTx, oldResult) refs
+        Nothing -> go (lookupTx, oldResult) refs
+
+
 -- | Get the unspent transaction outputs from a 'ChainIndexTx'.
 utxosTxOutTxFromTx ::
     AsContractError e
@@ -411,6 +480,38 @@ utxosTxOutTxFromTx tx =
     mkOutRef txOutRef = do
       ciTxOutM <- unspentTxOutFromRef txOutRef
       pure $ ciTxOutM >>= \ciTxOut -> pure (txOutRef, (ciTxOut, tx))
+
+foldTxoRefsAt ::
+    forall w s e a.
+    ( AsContractError e
+    )
+    => (a -> Page TxOutRef -> Contract w s e a)
+    -> a
+    -> Address
+    -> Contract w s e a
+foldTxoRefsAt f ini addr = go ini (Just def)
+  where
+    go acc Nothing = pure acc
+    go acc (Just pq) = do
+      page <- paget <$> txoRefsAt pq addr
+      newAcc <- f acc page
+      go newAcc (nextPageQuery page)
+
+-- | Get the transactions at an address.
+txsAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Address
+    -> Contract w s e [ChainIndexTx]
+txsAt addr = do
+  foldTxoRefsAt f [] addr
+  where
+    f acc page = do
+      let txoRefs = pageItems page
+      let txIds = txOutRefId <$> txoRefs
+      txs <- txsFromTxIds txIds
+      pure $ acc <> txs
 
 -- | Get the transaction outputs at an address.
 txoRefsAt ::
@@ -425,6 +526,19 @@ txoRefsAt pq addr = do
   case cir of
     E.TxoSetAtResponse r -> pure r
     r                    -> throwError $ review _ChainIndexContractError ("TxoSetAtAddress", r)
+
+-- | Get the transactions for a list of transaction ids.
+txsFromTxIds ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => [TxId]
+    -> Contract w s e [ChainIndexTx]
+txsFromTxIds txid = do
+  cir <- pabReq (ChainIndexQueryReq $ E.TxsFromTxIds txid) E._ChainIndexQueryResp
+  case cir of
+    E.TxIdsResponse r -> pure r
+    r                 -> throwError $ review _ChainIndexContractError ("TxIdsResponse", r)
 
 getTip ::
     forall w s e.

@@ -146,9 +146,11 @@ fromTx tx =
 diagnostics :: DiskState -> Diagnostics
 diagnostics DiskState{_DataMap, _ScriptMap, _TxMap, _RedeemerMap, _AddressMap, _AssetClassMap} =
     Diagnostics
-        { numScripts = toInteger $ Map.size _ScriptMap
+        { numTransactions = toInteger $ Map.size _TxMap
+        , numScripts = toInteger $ Map.size _ScriptMap
         , numAddresses = toInteger $ Map.size $ _unCredentialMap _AddressMap
         , numAssetClasses = toInteger $ Map.size $ _unAssetClassMap _AssetClassMap
+        , someTransactions = take 10 $ fmap fst $ Map.toList _TxMap
         -- These 2 are filled in Handlers.hs
         , numUnmatchedInputs = 0
         , numUnspentOutputs = 0

@@ -264,11 +264,13 @@ liftTxOutStatus = void
 
 data Diagnostics =
     Diagnostics
-        { numScripts         :: Integer
+        { numTransactions    :: Integer
+        , numScripts         :: Integer
         , numAddresses       :: Integer
         , numAssetClasses    :: Integer
         , numUnspentOutputs  :: Int
         , numUnmatchedInputs :: Int
+        , someTransactions   :: [TxId]
         }
         deriving stock (Eq, Ord, Show, Generic)
         deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)

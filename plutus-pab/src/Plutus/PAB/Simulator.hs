@@ -576,11 +576,14 @@ handleChainIndexEffect = runChainIndexEffects @t . \case
     MintingPolicyFromHash h   -> ChainIndex.mintingPolicyFromHash h
     StakeValidatorFromHash h  -> ChainIndex.stakeValidatorFromHash h
     RedeemerFromHash h        -> ChainIndex.redeemerFromHash h
+    TxOutFromRef ref          -> ChainIndex.txOutFromRef ref
+    TxFromTxId txid           -> ChainIndex.txFromTxId txid
     UnspentTxOutFromRef ref   -> ChainIndex.unspentTxOutFromRef ref
     UtxoSetMembership ref     -> ChainIndex.utxoSetMembership ref
     UtxoSetAtAddress pq addr  -> ChainIndex.utxoSetAtAddress pq addr
     UtxoSetWithCurrency pq ac -> ChainIndex.utxoSetWithCurrency pq ac
     TxoSetAtAddress pq addr   -> ChainIndex.txoSetAtAddress pq addr
+    TxsFromTxIds txids        -> ChainIndex.txsFromTxIds txids
     GetTip                    -> ChainIndex.getTip
 
 -- | Start a thread that prints log messages to the terminal when they come in.
