@@ -131,6 +131,7 @@ import Plutus.V1.Ledger.Scripts (Validator)
 import Plutus.V1.Ledger.Scripts qualified as Ledger
 
 import Data.IORef
+import Plutus.Contract.Test.ContractModel.MissingLovelace (calculateDelta)
 import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Trace as X
 import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmulatorStream)
@@ -572,11 +573,12 @@ walletFundsExactChange :: Wallet -> Value -> TracePredicate
 walletFundsExactChange = walletFundsChangeImpl True
 
 walletFundsChangeImpl :: Bool -> Wallet -> Value -> TracePredicate
-walletFundsChangeImpl exact w dlt = TracePredicate $
-    flip postMapM (L.generalize $ (,) <$> Folds.walletFunds w <*> Folds.walletFees w) $ \(finalValue', fees) -> do
+walletFundsChangeImpl exact w dlt' = TracePredicate $
+    flip postMapM (L.generalize $ (,,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents <*> Folds.walletAdjustedTxEvents w) $ \(finalValue', fees, txOutCosts, walletTxOutCosts) -> do
         dist <- ask @InitialDistribution
         let initialValue = fold (dist ^. at w)
             finalValue = finalValue' P.+ if exact then mempty else fees
+            dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) w ((w, concat walletTxOutCosts) : txOutCosts)
             result = initialValue P.+ dlt == finalValue
         unless result $ do
             tell @(Doc Void) $ vsep $

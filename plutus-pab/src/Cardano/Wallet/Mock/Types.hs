@@ -57,7 +57,7 @@ import Servant.Client (ClientError)
 import Servant.Client.Internal.HttpClient (ClientEnv)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.Error (WalletAPIError)
-import Wallet.Emulator.LogMessages (TxBalanceMsg)
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.Wallet (Wallet, WalletId, WalletState (WalletState, _mockWallet), mockWalletPaymentPubKeyHash,
                                toMockWallet)
 
@@ -105,6 +105,7 @@ newtype Port = Port Int
 data WalletMsg = StartingWallet Port
                | ChainClientMsg Text
                | Balancing TxBalanceMsg
+               | RequestHandling RequestHandlerLogMsg
     deriving stock (Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -113,9 +114,11 @@ instance Pretty WalletMsg where
         StartingWallet port -> "Starting wallet server on port" <+> pretty port
         ChainClientMsg m    -> "Chain Client: " <+> pretty m
         Balancing m         -> pretty m
+        RequestHandling m   -> pretty m
 
 instance ToObject WalletMsg where
     toObject _ = \case
         StartingWallet port -> mkObjectStr "Starting wallet server" (Tagged @"port" port)
         ChainClientMsg m    -> mkObjectStr "Chain Client: " (Tagged @"msg" m)
         Balancing m         -> mkObjectStr "Balancing" (Tagged @"msg" m)
+        RequestHandling m   -> mkObjectStr "RequestHandling" (Tagged @"msg" m)

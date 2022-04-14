@@ -43,6 +43,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxInsCollateral
   , toCardanoTxInWitness
   , toCardanoTxOut
+  , toCardanoTxOutUnsafe
   , toCardanoTxOutDatumHash
   , toCardanoAddress
   , toCardanoMintValue
@@ -454,6 +455,16 @@ toCardanoTxOut networkId fromHash (P.TxOut addr value datumHash) =
             <*> toCardanoTxOutValue value
             <*> fromHash datumHash
 
+toCardanoTxOutUnsafe
+    :: C.NetworkId
+    -> (Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra))
+    -> P.TxOut
+    -> Either ToCardanoError (C.TxOut ctx C.AlonzoEra)
+toCardanoTxOutUnsafe networkId fromHash (P.TxOut addr value datumHash) =
+    C.TxOut <$> toCardanoAddress networkId addr
+            <*> toCardanoTxOutValueUnsafe value
+            <*> fromHash datumHash
+
 lookupDatum :: Map P.DatumHash P.Datum -> Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
 lookupDatum datums datumHash =
     case flip Map.lookup datums =<< datumHash of
@@ -539,6 +550,9 @@ toCardanoTxOutValue :: P.Value -> Either ToCardanoError (C.TxOutValue C.AlonzoEr
 toCardanoTxOutValue value = do
     when (Ada.fromValue value == mempty) (Left OutputHasZeroAda)
     C.TxOutValue C.MultiAssetInAlonzoEra <$> toCardanoValue value
+
+toCardanoTxOutValueUnsafe :: P.Value -> Either ToCardanoError (C.TxOutValue C.AlonzoEra)
+toCardanoTxOutValueUnsafe value = C.TxOutValue C.MultiAssetInAlonzoEra <$> toCardanoValue value
 
 fromCardanoTxOutDatumHash :: C.TxOutDatum C.CtxTx era -> Maybe P.DatumHash
 fromCardanoTxOutDatumHash C.TxOutDatumNone       = Nothing

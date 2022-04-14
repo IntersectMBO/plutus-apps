@@ -11,6 +11,7 @@ module Cardano.Node.Server
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.API (API)
 import Cardano.Node.Mock
+import Cardano.Node.Params qualified as Params
 import Cardano.Node.Types
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Server qualified as Server
@@ -20,7 +21,6 @@ import Control.Monad (void)
 import Control.Monad.Freer.Delay (delayThread, handleDelayEffect)
 import Control.Monad.Freer.Extras.Log (logInfo)
 import Control.Monad.IO.Class (liftIO)
-import Data.Default (def)
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
@@ -56,20 +56,20 @@ data Ctx = Ctx { serverHandler :: Server.ServerHandler
                }
 
 main :: Trace IO PABServerLogMsg -> PABServerConfig -> Availability -> IO ()
-main trace PABServerConfig { pscBaseUrl
-                            , pscKeptBlocks
+main trace nodeServerConfig@PABServerConfig { pscBaseUrl
                             , pscSlotConfig
+                            , pscKeptBlocks
                             , pscInitialTxWallets
                             , pscSocketPath } availability = LM.runLogEffects trace $ do
 
     -- make initial distribution of 1 billion Ada to all configured wallets
     let dist = Map.fromList $ zip (fromWalletNumber <$> pscInitialTxWallets) (repeat (Ada.adaValueOf 1000_000_000))
-    let params = def { pSlotConfig = pscSlotConfig }
     initialState <- initialChainState dist
     let appState = AppState
             { _chainState = initialState
             , _eventHistory = mempty
             }
+    params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
     serverHandler <- liftIO $ Server.runServerNode trace pscSocketPath pscKeptBlocks (_chainState appState) params
     serverState   <- liftIO $ newMVar appState
     handleDelayEffect $ delayThread (2 :: Second)

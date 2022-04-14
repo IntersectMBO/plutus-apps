@@ -77,7 +77,7 @@ badRemove us BadRemoveParams{..} = do
                    Constraints.mustMintValue (negate lVal)         <>
                    Constraints.mustSpendScriptOutput oref redeemer
 
-    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+    mkTxConstraints lookups tx >>= Contract.adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "removed liquidity from pool: " ++ show lp
 

@@ -153,7 +153,7 @@ validateBlock params slot@(Slot s) idx txns =
 
         -- Validate eligible transactions, updating the UTXO index each time
         processed =
-            flip S.evalState (Index.ValidationCtx idx $ pSlotConfig params) $ for eligibleTxns $ \tx -> do
+            flip S.evalState (Index.ValidationCtx idx params) $ for eligibleTxns $ \tx -> do
                 (err, events_) <- validateEm params slot cUtxoIndex tx
                 pure (tx, err, events_)
 

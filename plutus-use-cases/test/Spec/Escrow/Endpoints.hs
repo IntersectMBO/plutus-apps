@@ -56,5 +56,5 @@ badRefund inst pk = do
                           <> Constraints.unspentOutputs unspentOutputs
                            ) tx'
     handleError (\err -> logError $ "Caught error: " ++ unpack err) $
-      void $ submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+      adjustUnbalancedTx utx >>= void . submitUnbalancedTx
 

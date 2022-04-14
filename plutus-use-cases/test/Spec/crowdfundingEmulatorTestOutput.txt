@@ -17,6 +17,8 @@ Slot 1: 00000000-0000-4000-8000-000000000002 {Wallet W[3]}:
           Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 1.0e7]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
 Slot 1: 00000000-0000-4000-8000-000000000002 {Wallet W[3]}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",10000000)])])"
+Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
+          Contract instance started
 Slot 1: W[2]: Balancing an unbalanced transaction:
                 Tx:
                   Tx 306b5e396c66b8eaa1de5a42c0bc807177a9d323e5eb79745d85788c311a3c27:
@@ -59,14 +61,12 @@ Slot 1: W[2]: Finished balancing:
                   data:
                     "\128\164\244[V\184\141\DC19\218#\188L<u\236m2\148<\b\DEL%\v\134\EM<\167"}
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
-          Contract instance started
-Slot 1: W[2]: Signing tx: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
-Slot 1: W[2]: Submitting tx: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
-Slot 1: W[2]: TxSubmit: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
-Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Receive endpoint call on 'contribute' for Object (fromList [("contents",Array [Object (fromList [("getEndpointDescription",String "contribute")]),Object (fromList [("unEndpointValue",Object (fromList [("contribValue",Object (fromList [("getValue",Array [Array [Object (fromList [("unCurrencySymbol",String "")]),Array [Array [Object (fromList [("unTokenName",String "")]),Number 2500000.0]]]])]))]))])]),("tag",String "ExposeEndpointResp")])
 Slot 1: 00000000-0000-4000-8000-000000000003 {Wallet W[4]}:
           Contract log: String "Contributing Value (Map [(,Map [(\"\",2500000)])])"
+Slot 1: W[2]: Signing tx: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
+Slot 1: W[2]: Submitting tx: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
+Slot 1: W[2]: TxSubmit: a47338f2e04333d624ffb373332eb94ecbe1ab85f1e874b2eb1c916dbf57da84
 Slot 1: W[3]: Balancing an unbalanced transaction:
                 Tx:
                   Tx 96974388d9ba75c1992248ebf666f8821fd654a524a33bcfbbd9c4ce039b5b30:

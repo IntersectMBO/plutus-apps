@@ -71,6 +71,7 @@ module Plutus.Contract(
     , tell
     -- * Transactions
     , WalletAPIError
+    , Request.adjustUnbalancedTx
     , Request.submitTx
     , Request.submitTxConfirmed
     , Request.submitTxConstraints
