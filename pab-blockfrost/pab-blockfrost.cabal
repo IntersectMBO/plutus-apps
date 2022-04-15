@@ -48,13 +48,25 @@ library
     Plutus.Blockfrost.Utils
 
   hs-source-dirs:  src
+
+  --------------------
+  -- Local components
+  --------------------
   build-depends:
     , freer-extras
     , plutus-chain-index-core
     , plutus-ledger
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
     , plutus-ledger-api
     , plutus-tx
 
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
   build-depends:
     , aeson
     , aeson-qq
@@ -65,6 +77,7 @@ library
     , bytestring
     , cardano-api
     , containers
+    , extra
     , freer-simple
     , hex-text
     , mtl

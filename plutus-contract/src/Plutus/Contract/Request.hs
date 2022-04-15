@@ -32,6 +32,7 @@ module Plutus.Contract.Request(
     , waitNMilliSeconds
     -- ** Chain index queries
     , datumFromHash
+    , datumsAt
     , validatorFromHash
     , mintingPolicyFromHash
     , stakeValidatorFromHash
@@ -334,6 +335,34 @@ datumFromHash h = do
   case cir of
     E.DatumHashResponse r -> pure r
     r                     -> throwError $ review _ChainIndexContractError ("DatumHashResponse", r)
+
+
+
+-- | Get all the datums at an address w.r.t. a page query TxOutRef
+queryDatumsAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Address
+    -> PageQuery TxOutRef
+    -> Contract w s e (QueryResponse [Datum])
+queryDatumsAt addr pq = do
+  cir <- pabReq (ChainIndexQueryReq $ E.DatumsAtAddress pq $ addressCredential addr) E._ChainIndexQueryResp
+  case cir of
+    E.DatumsAtResponse r -> pure r
+    r                    -> throwError $ review _ChainIndexContractError ("DatumsAtResponse", r)
+
+
+-- | Get the all datums at an address whether or not the corresponding utxo have been consumed or not.
+datumsAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Address
+    -> Contract w s e [Datum]
+datumsAt addr =
+  concat <$> collectQueryResponse (queryDatumsAt addr)
+
 
 validatorFromHash ::
     forall w s e.
