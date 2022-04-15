@@ -237,6 +237,7 @@ chainIndexMatches q r = case (q, r) of
     (UtxoSetMembership{}, UtxoSetMembershipResponse{})       -> True
     (UtxoSetAtAddress{}, UtxoSetAtResponse{})                -> True
     (UnspentTxOutSetAtAddress{}, UnspentTxOutsAtResponse{})  -> True
+    (DatumsAtAddress{}, DatumsAtResponse{})                  -> True
     (UtxoSetWithCurrency{}, UtxoSetWithCurrencyResponse{})   -> True
     (TxoSetAtAddress{}, TxoSetAtResponse{})                  -> True
     (TxsFromTxIds{}, TxIdsResponse{})                        -> True
@@ -258,6 +259,7 @@ data ChainIndexQuery =
   | UtxoSetMembership TxOutRef
   | UtxoSetAtAddress (PageQuery TxOutRef) Credential
   | UnspentTxOutSetAtAddress (PageQuery TxOutRef) Credential
+  | DatumsAtAddress (PageQuery TxOutRef) Credential
   | UtxoSetWithCurrency (PageQuery TxOutRef) AssetClass
   | TxsFromTxIds [TxId]
   | TxoSetAtAddress (PageQuery TxOutRef) Credential
@@ -273,11 +275,12 @@ instance Pretty ChainIndexQuery where
         StakeValidatorFromHash h     -> "requesting stake validator from hash" <+> pretty h
         RedeemerFromHash h           -> "requesting redeemer from hash" <+> pretty h
         TxOutFromRef r               -> "requesting utxo from utxo reference" <+> pretty r
-        UnspentTxOutFromRef r        -> "requesting utxo from utxo reference" <+> pretty r
+        UnspentTxOutFromRef r        -> "requesting unspent utxos from utxo reference" <+> pretty r
         TxFromTxId i                 -> "requesting chain index tx from id" <+> pretty i
         UtxoSetMembership txOutRef   -> "whether tx output is part of the utxo set" <+> pretty txOutRef
         UtxoSetAtAddress _ c         -> "requesting utxos located at addresses with the credential" <+> pretty c
         UnspentTxOutSetAtAddress _ c -> "requesting unspent utxos located at addresses with the credential" <+> pretty c
+        DatumsAtAddress c            -> "requesting datums located at addresses with the credential" <+> pretty c
         UtxoSetWithCurrency _ ac     -> "requesting utxos containing the asset class" <+> pretty ac
         TxsFromTxIds i               -> "requesting chain index txs from ids" <+> pretty i
         TxoSetAtAddress _ c          -> "requesting txos located at addresses with the credential" <+> pretty c
@@ -298,6 +301,7 @@ data ChainIndexResponse =
   | UtxoSetMembershipResponse IsUtxoResponse
   | UtxoSetAtResponse UtxosResponse
   | UnspentTxOutsAtResponse (QueryResponse [(TxOutRef, ChainIndexTxOut)])
+  | DatumsAtResponse ((QueryResponse [Datum])
   | UtxoSetWithCurrencyResponse UtxosResponse
   | TxIdsResponse [ChainIndexTx]
   | TxoSetAtResponse TxosResponse
@@ -313,7 +317,7 @@ instance Pretty ChainIndexResponse where
         StakeValidatorHashResponse m -> "Chain index stake validator from hash response:" <+> pretty m
         RedeemerHashResponse r -> "Chain index redeemer from hash response:" <+> pretty r
         TxOutRefResponse t -> "Chain index utxo from utxo ref response:" <+> pretty t
-        UnspentTxOutResponse t -> "Chain index utxo from utxo ref response:" <+> pretty t
+        UnspentTxOutResponse t -> "Chain index unspent utxo from utxo ref response:" <+> pretty t
         TxIdResponse t -> "Chain index tx from tx id response:" <+> pretty (_citxTxId <$> t)
         UtxoSetMembershipResponse (IsUtxoResponse tip b) ->
                 "Chain index response whether tx output ref is part of the UTxO set:"
@@ -328,6 +332,7 @@ instance Pretty ChainIndexResponse where
             <+> hsep (fmap pretty $ pageItems txOutRefPage)
         UnspentTxOutsAtResponse (QueryResponse txouts _) ->
           "Chain index datums from address response:" <+> hsep (fmap pretty txouts)
+        DatumsAtResponse d -> "Chain index datums from address response:" <+> pretty d
         UtxoSetWithCurrencyResponse (UtxosResponse tip txOutRefPage) ->
                 "Chain index UTxO with asset class response:"
             <+> "Current tip is"

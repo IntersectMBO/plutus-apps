@@ -583,6 +583,7 @@ handleChainIndexEffect = runChainIndexEffects @t . \case
     UtxoSetMembership ref            -> ChainIndex.utxoSetMembership ref
     UtxoSetAtAddress pq addr         -> ChainIndex.utxoSetAtAddress pq addr
     UnspentTxOutSetAtAddress pq addr -> ChainIndex.unspentTxOutSetAtAddress pq addr
+    DatumsAtAddress pq addr          -> ChainIndex.datumsAtAddress pq addr
     UtxoSetWithCurrency pq ac        -> ChainIndex.utxoSetWithCurrency pq ac
     TxoSetAtAddress pq addr          -> ChainIndex.txoSetAtAddress pq addr
     TxsFromTxIds txids               -> ChainIndex.txsFromTxIds txids

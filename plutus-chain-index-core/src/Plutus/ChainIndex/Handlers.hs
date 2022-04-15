@@ -42,7 +42,7 @@ import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, al
                       limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
 import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, isJust_, isNothing_, leftJoin_, orderBy_,
-                            update, (&&.), (<-.), (<.), (==.), (>.))
+                            update, (&&.), (<-.), (<.), (/=.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
@@ -96,6 +96,7 @@ handleQuery = \case
             tp           -> pure (IsUtxoResponse tp (TxUtxoBalance.isUnspentOutput r utxoState))
     UtxoSetAtAddress pageQuery cred -> getUtxoSetAtAddress pageQuery cred
     UnspentTxOutSetAtAddress pageQuery cred -> getTxOutSetAtAddress pageQuery cred
+    DatumsAtAddress pageQuery cred -> getDatumsAtAddress pageQuery cred
     UtxoSetWithCurrency pageQuery assetClass ->
       getUtxoSetWithCurrency pageQuery assetClass
     TxoSetAtAddress pageQuery cred -> getTxoSetAtAddress pageQuery cred
@@ -157,6 +158,8 @@ queryList ::
     -> Eff effs [o]
 queryList = fmap (fmap fromDbValue) . selectList
 
+
+
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getTxOutFromRef ::
   forall effs.
@@ -171,6 +174,7 @@ getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   case mTx ^? _Just . to txOuts . ix (fromIntegral txOutRefIdx) of
     Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
     Just txout -> makeChainIndexTxOut txout
+
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getUtxoutFromRef ::
@@ -269,6 +273,47 @@ getTxOutSetAtAddress pageQuery cred = do
       mtxouts <- mapM getUtxoutFromRef (pageItems page)
       let txouts = [ (t, o) | (t, mo) <- List.zip (pageItems page) mtxouts, o <- maybeToList mo]
       pure $ QueryResponse txouts (nextPageQuery page)
+
+
+getDatumsAtAddress ::
+  forall effs.
+    ( Member (State ChainIndexState) effs
+    , Member BeamEffect effs
+    , Member (LogMsg ChainIndexLog) effs
+    )
+  => PageQuery TxOutRef
+  -> Credential
+  -> Eff effs (QueryResponse [Datum])
+getDatumsAtAddress pageQuery (toDbValue -> cred) = do
+  utxoState <- gets @ChainIndexState UtxoState.utxoState
+  case UtxoState.tip utxoState of
+    TipAtGenesis -> do
+      logWarn TipIsGenesis
+      pure (QueryResponse [] Nothing)
+
+    _             -> do
+      let emptyHash = (toDbValue $ DatumHash emptyByteString)
+          queryPage =
+            fmap _addressRowOutRef
+            $ filter_ (\row ->
+                         ( _addressRowCred row ==. val_ cred )
+                         &&. (_addressRowDatumHash row /=. val_ emptyHash) )
+            $ all_ (addressRows db)
+          queryAll =
+            select
+            $ filter_ (\row -> _addressRowCred row ==. val_ cred
+                       &&. (_addressRowDatumHash row /=. val_ emptyHash ) )
+            $ all_ (addressRows db)
+      pRefs <- selectPage (fmap toDbValue pageQuery) queryPage
+      let page = fmap fromDbValue pRefs
+      row_l <- List.filter (\(_, t, _) -> List.elem t (pageItems page)) <$> queryList queryAll
+      datums <- catMaybes <$> mapM f_map row_l
+      pure $ QueryResponse datums (nextPageQuery page)
+
+  where
+    f_map :: (Credential, TxOutRef, Maybe DatumHash) -> Eff effs (Maybe Datum)
+    f_map (_, _, Nothing) = pure Nothing
+    f_map (_, _, Just dh) = getDatumFromHash dh
 
 
 getUtxoSetWithCurrency

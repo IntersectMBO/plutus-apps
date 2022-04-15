@@ -100,6 +100,23 @@ getTxFromTxId i = do
         Nothing -> logWarn (TxNotFound i) >> pure Nothing
         _       -> pure result
 
+
+-- | Get the 'TxOut' for a 'TxOutRef'.
+getTxOutFromRef ::
+  forall effs.
+  ( Member (State ChainIndexEmulatorState) effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => TxOutRef
+  -> Eff effs (Maybe TxOut)
+getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
+  ds <- gets (view diskState)
+  -- Find the output in the tx matching the output ref
+  case preview (txMap . ix txOutRefId . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx)) ds of
+    Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
+    Just txout -> pure $ Just txout
+
+
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getTxOutFromRef ::
   forall effs.
@@ -221,7 +238,13 @@ handleQuery = \case
             mtxouts <- mapM getUtxoutFromRef (pageItems page)
             let txouts = [ (t, o) | (t, mo) <- List.zip (pageItems page) mtxouts, o <- maybeToList mo]
             pure $ QueryResponse txouts (nextPageQuery page)
-
+    DatumsAtAddress cred -> do
+      state <- get
+      let outRefs = Set.toList $ fromMaybe mempty $ view (diskState . addressMap . at cred) state
+          getHash h = gets (view $ diskState . dataMap . at h)
+      txouts <- catMaybes <$> mapM getTxOutFromRef outRefs
+      mdatum_l <- mapM getHash $ catMaybes $ map txOutDatumHash txouts
+      pure $ catMaybes mdatum_l
     UtxoSetWithCurrency pageQuery assetClass -> do
         state <- get
         let outRefs = view (diskState . assetClassMap . at assetClass) state

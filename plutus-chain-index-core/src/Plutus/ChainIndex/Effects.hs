@@ -17,6 +17,7 @@ module Plutus.ChainIndex.Effects(
     , utxoSetMembership
     , utxoSetAtAddress
     , unspentTxOutSetAtAddress
+    , datumsAtAddress
     , utxoSetWithCurrency
     , txoSetAtAddress
     , txsFromTxIds
@@ -76,6 +77,9 @@ data ChainIndexQueryEffect r where
     -- | Get the unspent txouts located at an address
     -- This is to avoid multiple queries from chain-index when using utxosAt
     UnspentTxOutSetAtAddress :: PageQuery TxOutRef -> Credential -> ChainIndexQueryEffect (QueryResponse [(TxOutRef, ChainIndexTxOut)])
+
+    -- | get the datums located at addresses with the given credential.
+    DatumsAtAddress :: Credential -> ChainIndexQueryEffect [Datum]
 
     -- | Unspent outputs containing a specific currency ('AssetClass').
     --

@@ -67,6 +67,8 @@ serveChainIndex =
     :<|> E.utxoSetMembership
     :<|> (\(UtxoAtAddressRequest pq c) -> E.utxoSetAtAddress (fromMaybe def pq) c)
     :<|> (\(QueryAtAddressRequest pq c) -> E.unspentTxOutSetAtAddress (fromMaybe def pq) c)
+    :<|> (\(QueryAtAddressRequest pq c) -> E.datumsAtAddress
+>>>>>>> 3c11b47cf (adding datum in address row to avoid recording transaction in db and facilitate retrival + add query datumsAtAddress)
     :<|> (\(UtxoWithCurrencyRequest pq c) -> E.utxoSetWithCurrency (fromMaybe def pq) c)
     :<|> E.txsFromTxIds
     :<|> (\(TxoAtAddressRequest pq c) -> E.txoSetAtAddress (fromMaybe def pq) c)
