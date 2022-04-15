@@ -16,6 +16,7 @@ To read more about Marlowe, see the :ref:`Marlowe tutorials<marlowe_tutorials>`.
    plutus/tutorials/index
    plutus/howtos/index
    plutus/troubleshooting
+   plutus/architecture/index
 
 .. toctree::
    :caption: Explore Marlowe

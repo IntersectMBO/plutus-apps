@@ -7,7 +7,6 @@
 {-# LANGUAGE ViewPatterns        #-}
 module BasicValidators where
 
-import PlutusCore.Default qualified as PLC
 import PlutusTx qualified
 import PlutusTx.Prelude (Bool (False, True), BuiltinData, Integer, Maybe (Just), Ord ((<=)), check, error, fold, ($))
 
@@ -22,7 +21,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Codec.Serialise (serialise)
 import Flat qualified
 
-import Prelude (IO, print, show)
+import Prelude (IO, print)
 import Prelude qualified as Haskell
 
 myKeyHash :: Ledger.PubKeyHash

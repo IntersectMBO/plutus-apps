@@ -53,9 +53,8 @@ import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Ledger (Datum (Datum), DatumHash, POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash),
-               ScriptContext (ScriptContext, scriptContextTxInfo), TxId, ValidatorHash, getCardanoTxId, interval,
-               scriptOutputsAt, txSignedBy, valuePaidTo)
+import Ledger (Datum (Datum), DatumHash, POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, ValidatorHash,
+               getCardanoTxId, interval, scriptOutputsAt, txSignedBy, valuePaidTo)
 import Ledger qualified
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints

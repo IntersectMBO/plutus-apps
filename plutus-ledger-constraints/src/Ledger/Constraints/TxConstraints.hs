@@ -374,7 +374,7 @@ mustMintValue :: forall i o. Value -> TxConstraints i o
 mustMintValue = mustMintValueWithRedeemer unitRedeemer
 
 {-# INLINABLE mustMintValueWithRedeemer #-}
--- | Same as 'mustMintCurrentWithRedeemer', but uses the minting policy hash,
+-- | Same as 'mustMintCurrencyWithRedeemer', but uses the minting policy hash,
 -- token name and amount provided by 'Value'.
 --
 -- Note that we can derive the 'MintingPolicyHash' from the 'Value'\'s currency
@@ -389,7 +389,7 @@ mustMintValueWithRedeemer red =
                     (AssocMap.toList mp)
 
 {-# INLINABLE mustMintCurrency #-}
--- | Same as 'mustMintCurrentWithRedeemer', but sets the redeemer to the unit
+-- | Same as 'mustMintCurrencyWithRedeemer', but sets the redeemer to the unit
 -- redeemer.
 mustMintCurrency
     :: forall i o

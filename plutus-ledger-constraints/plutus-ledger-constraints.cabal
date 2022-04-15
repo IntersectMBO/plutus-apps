@@ -12,7 +12,8 @@ description:
     Plutus transaction constraints library
 category: Language
 build-type: Simple
-extra-doc-files: README.md
+extra-doc-files:
+    README.md
 
 source-repository head
     type: git

@@ -22,7 +22,6 @@ import Data.Map qualified as Map
 
 import Ledger (minAdaTxOut)
 import Ledger.Ada qualified as Ada
-import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.Contract (selectList)
 import Plutus.Contract.Test (Wallet, mockWalletPaymentPubKeyHash, w1, w2, w3, w4, w5)

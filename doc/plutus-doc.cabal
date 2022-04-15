@@ -44,14 +44,15 @@ executable doc-doctests
     hs-source-dirs:
       plutus/tutorials
       plutus/howtos
+      plutus/architecture/constraints
     main-is: Main.hs
-    ghc-options: -Wno-unused-imports
     build-tool-depends: doctest:doctest -any
     other-modules:
       BasicPlutusTx
       BasicValidators
       BasicPolicies
       BasicApps
+      BasicAppConstraints
       GameModel
       HandlingBlockchainEvents
       HelloWorldApp
