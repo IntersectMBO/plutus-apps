@@ -67,7 +67,12 @@ We define the constraints with the following data types.
           }
 
 The `TxConstraints` can be combined with its `Semigroup` instance.
-Values of `TxConstraints` are constructed using smart constructors like `mustBeSignedBy`, `mustPayToTheScript`, `mustSpendAtLeast`, etc. which are available in Ledger.Constraints.TxConstraints_.
+Values of `TxConstraints` are created using smart constructors like `mustBeSignedBy`, `mustPayToTheScript`,
+`mustSpendAtLeast`, etc. which are available in Ledger.Constraints.TxConstraints_ (although `TxConstraints` itself is
+exported).
+
+Then, using those constraints, we can generate the on-chain validator function with
+Ledger.Constraints.checkScriptContext_ and create the transaction with Ledger.Constraints.mkTx_ as seen below.
 
 .. code-block:: haskell
 
@@ -107,63 +112,10 @@ Values of `TxConstraints` are constructed using smart constructors like `mustBeS
       -> TxConstraints (RedeemerType a) (DatumType a)
       -> Either MkTxError UnbalancedTx
 
-Example
--------
-
-Here's a complete example using constraints.
-We want to create a Plutus app that locks some Ada in a script output and splits them evenly between two recipients.
-
-Let's start by declaring the required imports.
-
-.. literalinclude:: BasicAppConstraints.hs
-   :start-after: BLOCK0
-   :end-before: BLOCK1
-
-We will then declare the ``SplitData`` datatype which describes the two recipients of the funds, and the total amount of the funds denoted in Ada.
-
-.. literalinclude:: BasicAppConstraints.hs
-   :start-after: BLOCK1
-   :end-before: BLOCK2
-
-Based on this datatype, we will start by creating a function which will generate constraints for:
-
-1- the validator script which will validate the spending of the script output based on ``SplitData``
-
-2- the transaction we will create to spend these script outputs
-
-.. literalinclude:: BasicAppConstraints.hs
-   :start-after: BLOCK2
-   :end-before: BLOCK3
-
-We can then define the validator script.
-
-.. literalinclude:: BasicAppConstraints.hs
-   :start-after: BLOCK3
-   :end-before: BLOCK4
-
-With this validator script, we can create two types of transactions:
-
-1- transactions which lock Ada to the script address
-
-2- transactions which unlock Ada that has been locked to the script address
-
-The function below handles case 1.
-Note that we only show the transaction creation step, i.e. not the balance, sign and submit steps.
-
-.. literalinclude:: BasicAppConstraints.hs
-   :start-after: BLOCK4
-   :end-before: BLOCK5
-
-Then with case 2, to unlock the funds, we can use the same constraints as the validator script.
-
-.. literalinclude:: BasicAppConstraints.hs
-   :start-after: BLOCK5
-   :end-before: BLOCK6
-
 Rationale
 ---------
 
-In order to write and interact with Plutus script on the Cardano blockchain, one needs to:
+In order to write and interact with a Plutus script on the Cardano blockchain, one needs to:
 
 * write a Plutus script which validates certain actions (like spending a transaction script output or minting a currency)
 * create and submit transactions which create or spend a transaction output with the script's address.
@@ -189,14 +141,14 @@ We have a number of requirements that we need to fulfil.
 Argument
 ^^^^^^^^
 
-For the `TxConstraints` defined above, it's data constructors should only contain the information needed by the Plutus script, i.e. to validate the transaction.
+For the `TxConstraints` defined above, its data constructors should only contain the information needed by the Plutus script, i.e. to validate the transaction.
 The arguments behind this design choice are that:
 
 * less information is needed to validate the spending of a transaction output, than to build the transaction itself
 * not all datatypes are permitted to be used in Plutus scripts (only builtin functions and data types from `plutus-tx` can be used)
 * the more data we include in Plutus scripts, the higher the execution cost. TODO: Is this true? Or is this only true if we *actually* use this additionnal data in the validation code?
 
-For example, let's take one the data constructors of `TxConstraint`: `MustSpendAtLeast Value`.
+To showcase this, let's take one the data constructors of `TxConstraint`: `MustSpendAtLeast Value`.
 When generating validation code, this constraint returns `True` when the sum of the transaction's input `Value` are greater than the provided `Value`.
 However, when using this constraint to generate a transaction, it will:
 
@@ -263,7 +215,8 @@ On the downside:
 Distinct isomorphic constraints
 """""""""""""""""""""""""""""""
 
-Instead of a single `TxConstraint` which is used for both Plutus scripts and creating transactions, we can create two distinct and isomorphic datatypes. TODO: Not sure if isomorphic is the right word here.
+Instead of a single `TxConstraint` which is used for both Plutus scripts and creating transactions, we can create two
+distinct datatypes.
 
 For example, we could replace `TxConstraint` with:
 

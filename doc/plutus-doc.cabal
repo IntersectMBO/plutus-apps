@@ -55,13 +55,12 @@ executable doc-doctests
   if (impl(ghcjs) || os(windows))
     buildable: False
 
-  hs-source-dirs:     plutus/tutorials plutus/howtos plutus/architecture/constraints
+  hs-source-dirs:     plutus/tutorials plutus/howtos
   main-is:            Main.hs
   ghc-options:        -Wno-unused-imports
   build-tool-depends: doctest:doctest
   other-modules:
     BasicApps
-    BasicAppConstraints
     BasicPlutusTx
     BasicPolicies
     BasicValidators
