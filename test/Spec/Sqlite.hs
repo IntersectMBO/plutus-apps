@@ -1,22 +1,26 @@
 module Spec.Sqlite where
 
-import           Control.Monad.IO.Class  (liftIO)
-import           Data.Maybe              (catMaybes)
-import           Database.SQLite.Simple  (Connection, query, execute_, execute, Only(..))
-import Database.SQLite.Simple.ToField
-import Database.SQLite.Simple.FromField
-import           Test.QuickCheck         (Property)
-import           Test.QuickCheck.Monadic (PropertyM, monadicIO)
-import qualified Test.QuickCheck.Monadic as M
+import           Control.Monad.IO.Class           (liftIO)
+import           Data.Default
+import           Data.Maybe                       (catMaybes)
+import           Database.SQLite.Simple           (Only (..), execute, execute_,
+                                                   query)
+import           Database.SQLite.Simple.FromField
+import           Database.SQLite.Simple.ToField
+import           Test.QuickCheck                  (Property)
+import           Test.QuickCheck.Monadic          (PropertyM, monadicIO)
+import qualified Test.QuickCheck.Monadic          as M
 
-import           Index                   (Index, IndexView (..))
-import qualified Index                   as Ix
-import           Index.Split             (SplitIndex(..))
-import           Index.Sqlite            (SqliteIndex)
-import qualified Index.Sqlite            as S
-import           Spec.Index              (Conversion (..))
+import           Index                            (Index, IndexView (..))
+import qualified Index                            as Ix
+import           Index.Split                      (SplitIndex (..))
+import           Index.Sqlite                     (SqliteIndex)
+import qualified Index.Sqlite                     as S
+import           Spec.Index                       (Conversion (..))
 
-conversion :: (Show e, Show n, Show a, ToField a, FromField a) => Conversion (PropertyM IO) a e n
+conversion
+  :: (Show e, Show n, Show a, Default a, ToField a, FromField a)
+  => Conversion (PropertyM IO) a e n
 conversion = Conversion
   { cView          = view
   , cHistory       = history
@@ -24,8 +28,11 @@ conversion = Conversion
   , cMonadic       = monadic
   }
 
+stateId :: Int
+stateId = 1
+
 view
-  :: (Show a, ToField a, FromField a, Show e, Show n)
+  :: (Show a, Default a, ToField a, FromField a, Show e, Show n)
   => Index a e n
   -> PropertyM IO (Maybe (IndexView a))
 view ix = do
@@ -33,11 +40,11 @@ view ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> do
-      v <- M.run $ S.view ix'
+      v <- M.run $ S.view stateId ix'
       pure $ Just v
 
 notifications
-  :: (Show a, ToField a, FromField a, Show e, Show n)
+  :: (Show a, Default a, ToField a, FromField a, Show e, Show n)
   => Index a e n
   -> PropertyM IO [n]
 notifications ix = do
@@ -46,7 +53,7 @@ notifications ix = do
   liftIO $ S.getNotifications ix'
 
 history
-  :: (Show a, ToField a, FromField a, Show e, Show n)
+  :: (Show a, Default a, ToField a, FromField a, Show e, Show n)
   => Index a e n
   -> PropertyM IO (Maybe [a])
 history ix = do
@@ -54,7 +61,7 @@ history ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      h <- S.getHistory ix'
+      h <- S.getHistory stateId ix'
       pure $ Just h
 
 monadic
@@ -63,11 +70,11 @@ monadic
 monadic = monadicIO
 
 run
-  :: forall a e n. (Show a, ToField a, FromField a, Show e, Show n)
+  :: forall a e n. (Show a, Default a, ToField a, FromField a, Show e, Show n)
   => Index a e n
-  -> PropertyM IO (Maybe (SqliteIndex a e n))
+  -> PropertyM IO (Maybe (SqliteIndex e n Int a))
 run (Ix.New f depth acc) = do
-  sqliteIndex <- liftIO $ S.new findex fstore fload depth ":memory:"
+  sqliteIndex <- liftIO $ S.new fquery foninsert fstore depth ":memory:"
   case sqliteIndex of
     Nothing -> pure Nothing
     Just ix -> do
@@ -76,18 +83,21 @@ run (Ix.New f depth acc) = do
       liftIO $ do
         execute_ c "DROP TABLE IF EXISTS index_property_tests"
         execute_ c "CREATE TABLE index_property_tests (id INTEGER PRIMARY KEY, accumulator INT)"
-        execute  c "INSERT INTO index_property_tests (id, accumulator) VALUES (?, ?)" (1 :: Int, acc)
+        execute  c "INSERT INTO index_property_tests (id, accumulator) VALUES (?, ?)" (stateId, acc)
       pure . Just $ ix
   where
-    findex :: a -> [e] -> (a, [n])
-    findex a es = foldr convertIxF (a, []) es
-    fstore :: Connection -> a -> IO ()
-    fstore c a =
-      execute c "UPDATE index_property_tests SET accumulator = ? WHERE id = ?" (a, 1 :: Int)
-    fload  :: Connection -> IO a
-    fload c = do
-      [[a]] <- query c "SELECT (accumulator) FROM index_property_tests WHERE id = ?" (Only 1 :: Only Int)
-      pure a
+    fstore     :: SqliteIndex e n Int a -> IO ()
+    fstore ix@SplitIndex{siHandle} = do
+      currentStore <- fquery ix stateId []
+      execute siHandle "UPDATE index_property_tests SET accumulator = ? WHERE id = ?" (currentStore, stateId)
+    fquery :: SqliteIndex e n Int a -> Int -> [e] -> IO a
+    fquery SplitIndex{siHandle, siBuffered} stateId' es = do
+      [[storedState]] <- query siHandle "SELECT (accumulator) FROM index_property_tests WHERE id = ?" (Only stateId')
+      pure . fst $ foldr convertIxF (storedState, []) (es ++ siBuffered)
+    foninsert :: e -> SqliteIndex e n Int a -> IO [n]
+    foninsert e ix@SplitIndex{siEvents} = do
+      currentState <- fquery ix stateId siEvents
+      pure $ catMaybes [snd $ f currentState e]
     convertIxF :: e -> (a, [n]) -> (a, [n])
     convertIxF e (a, ns) =
       let (a', mn) = f a e

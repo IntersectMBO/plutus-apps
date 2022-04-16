@@ -39,6 +39,7 @@ dependencies:
 - QuickCheck
 - quickspec
 - sqlite-simple
+- data-default
 
 library:
   source-dirs: src

@@ -9,25 +9,24 @@ module Index.Sqlite
    -- * Observations
   , S.view
   , S.getHistory
-  , S.getEvents
   , S.getNotifications
   ) where
 
 import           Database.SQLite.Simple (Connection, open)
 
 import           Index.Split            (SplitIndex (..))
-import qualified Index.Split as S
+import qualified Index.Split            as S
 
-type SqliteIndex a e n = SplitIndex IO Connection a e n
+type SqliteIndex e n q r = SplitIndex IO Connection e n q r
 
 new
-  :: (a -> [e] -> (a, [n]))
-  -> (Connection -> a -> IO ())
-  -> (Connection -> IO a)
+  :: (SqliteIndex e n q r -> q -> [e] -> IO r)
+  -> (e -> SqliteIndex e n q r -> IO [n])
+  -> (SqliteIndex e n q r -> IO ())
   -> Int
   -> FilePath
-  -> IO (Maybe (SqliteIndex a e n))
-new findex fstore fload depth db
+  -> IO (Maybe (SqliteIndex e n q r))
+new fquery foninsert fstore depth db
   | depth <= 0 = pure Nothing
   | otherwise  = do
     connection <- open db
@@ -38,6 +37,6 @@ new findex fstore fload depth db
       , siNotifications = []
       , siDepth         = depth
       , siStore         = fstore
-      , siLoad          = fload
-      , siIndex         = findex
+      , siQuery         = fquery
+      , siOnInsert      = foninsert
       }

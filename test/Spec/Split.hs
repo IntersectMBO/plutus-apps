@@ -1,9 +1,8 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Spec.Split where
 
-import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
-import Control.Monad.IO.Class (liftIO)
+import           Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
+import           Control.Monad.IO.Class  (liftIO)
+import           Data.Default
 import           Data.Maybe              (catMaybes)
 import           Test.QuickCheck         (Property)
 import           Test.QuickCheck.Monadic (PropertyM, monadicIO)
@@ -14,7 +13,7 @@ import           Index.Split             (SplitIndex (..))
 import qualified Index.Split             as S
 import           Spec.Index              (Conversion (..))
 
-conversion :: (Show s, Show e, Show n) => Conversion (PropertyM IO) s e n
+conversion :: (Show s, Show e, Show n, Default s) => Conversion (PropertyM IO) s e n
 conversion = Conversion
   { cView          = view
   , cHistory       = history
@@ -23,7 +22,7 @@ conversion = Conversion
   }
 
 view
-  :: (Show s, Show e, Show n)
+  :: (Show s, Show e, Show n, Default s)
   => Index s e n
   -> PropertyM IO (Maybe (IndexView s))
 view ix = do
@@ -31,11 +30,11 @@ view ix = do
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      v <- S.view ix'
+      v <- S.view () ix'
       pure $ Just v
 
 notifications
-  :: (Show a, Show e, Show n)
+  :: (Show a, Show e, Show n, Default a)
   => Index a e n
   -> PropertyM IO [n]
 notifications ix = do
@@ -45,15 +44,15 @@ notifications ix = do
 
 
 history
-  :: (Show a, Show e, Show n)
-  => Index a e n
-  -> PropertyM IO (Maybe [a])
+  :: (Show s, Show e, Show n, Default s)
+  => Index s e n
+  -> PropertyM IO (Maybe [s])
 history ix = do
   mix <- run ix
   case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
-      h <- S.getHistory ix'
+      h <- S.getHistory () ix'
       pure $ Just h
 
 monadic
@@ -61,28 +60,37 @@ monadic
   -> Property
 monadic = monadicIO
 
+{- | TODO: Make the case why this interpretation tests something useful.
+-}
 run
-  :: forall s e n. (Show s, Show e, Show n)
+  :: forall s e n. (Show s, Show e, Show n, Default s)
   => Index s e n
-  -> PropertyM IO (Maybe (SplitIndex IO (MVar s) s e n))
+  -> PropertyM IO (Maybe (SplitIndex IO (MVar s) e n () s))
 run (Ix.New f depth store) = do
   liftIO $ do
     mstore <- newMVar store
-    S.new findex fstore fload depth mstore
+    S.new fquery foninsert fstore depth mstore
   where
-    findex :: s -> [e] -> (s, [n])
-    findex s es = foldr convertIxF (s, []) es
-    fstore :: MVar s -> s -> IO ()
-    fstore mv s = swapMVar mv s >> pure ()
-    fload  :: MVar s -> IO s
-    fload  = readMVar
+    fquery :: SplitIndex IO (MVar s) e n () s -> () -> [e] -> IO s
+    fquery SplitIndex{siHandle, siBuffered} () es = do
+      oldState <- readMVar siHandle
+      pure . fst $ foldr convertIxF (oldState, []) (es ++ siBuffered)
+    fstore  :: SplitIndex IO (MVar s) e n () s -> IO ()
+    fstore ix@SplitIndex{siHandle} = do
+      newState <- fquery ix () []
+      _ <- swapMVar siHandle newState
+      pure ()
+    foninsert :: e -> SplitIndex IO (MVar s) e n () s -> IO [n]
+    foninsert e ix@SplitIndex{siEvents} = do
+      oldState <- fquery ix () siEvents
+      pure $ catMaybes [snd $ f oldState e]
     convertIxF :: e -> (s, [n]) -> (s, [n])
     convertIxF e (a', ns) =
       let (a'', mn) = f a' e
        in (a'', catMaybes [mn] ++ ns)
 run (Ix.Insert e ix) = do
   mix <- run ix
-  case  mix of
+  case mix of
     Nothing  -> pure Nothing
     Just ix' -> liftIO $ do
       nix <- S.insert e ix'
