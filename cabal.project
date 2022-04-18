@@ -285,3 +285,9 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/Win32-network
   tag: 3825d3abf75f83f406c1f7161883c438dac7277d
+
+-- Temporary indexing
+source-repository-package
+  type: git
+  location: https://github.com/raduom/hysterical-screams
+  tag: 211c478343eb7cf3651af22fb550c3b3f0d80bc7
