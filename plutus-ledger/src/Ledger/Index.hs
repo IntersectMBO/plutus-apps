@@ -38,6 +38,7 @@ module Ledger.Index(
     -- * Actual validation
     validateTransaction,
     validateTransactionOffChain,
+    checkValidInputs,
     -- * Script validation events
     ScriptType(..),
     ScriptValidationEvent(..),

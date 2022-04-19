@@ -62,9 +62,16 @@ test-suite plutus-ledger-constraints-test
     default-extensions: ImportQualifiedPost
     build-depends:
         base >=4.9 && <5,
+        bytestring -any,
+        containers -any,
+        data-default -any,
         hedgehog -any,
+        lens -any,
+        mtl -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         tasty -any,
         tasty-hedgehog -any,
+        template-haskell -any,
