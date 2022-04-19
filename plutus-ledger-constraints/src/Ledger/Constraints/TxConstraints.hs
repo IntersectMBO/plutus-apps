@@ -16,11 +16,12 @@
 -- | Constraints for transactions
 module Ledger.Constraints.TxConstraints where
 
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON))
+import Data.Aeson qualified as Aeson
 import Data.Bifunctor (Bifunctor (bimap))
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
-import Prettyprinter (Pretty (pretty, prettyList), hang, viaShow, vsep, (<+>))
+import Prettyprinter (Pretty (pretty, prettyList), defaultLayoutOptions, hang, layoutPretty, viaShow, vsep, (<+>))
 
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -37,6 +38,7 @@ import Plutus.V1.Ledger.Value (TokenName, Value, isZero)
 import Plutus.V1.Ledger.Value qualified as Value
 
 import Prelude qualified as Haskell
+import Prettyprinter.Render.String (renderShowS)
 
 -- | Constraints on transactions that want to spend script outputs
 data TxConstraint =
@@ -97,7 +99,32 @@ instance Pretty TxConstraint where
         MustSatisfyAnyOf xs ->
             hang 2 $ vsep ["must satisfy any of:", prettyList xs]
 
--- Constraint which specifies that the transaction must spend a transaction
+
+-- | Constraints on transactions that contain functions. These don't support conversion to and from JSON.
+data TxConstraintFun =
+    MustSpendScriptOutputWithMatchingDatumAndValue ValidatorHash (Datum -> Bool) (Value -> Bool) Redeemer
+    -- ^ The transaction must spend a script output from the given script address which matches the @Datum@ and @Value@ predicates.
+
+instance Haskell.Show TxConstraintFun where
+    showsPrec _ = renderShowS . layoutPretty defaultLayoutOptions . pretty
+
+instance Pretty TxConstraintFun where
+    pretty = \case
+        MustSpendScriptOutputWithMatchingDatumAndValue sh _ _ red ->
+            hang 2 $ vsep ["must spend script out from script hash: ", pretty sh, pretty red]
+
+newtype TxConstraintFuns = TxConstraintFuns [TxConstraintFun]
+    deriving stock (Haskell.Show, Generic)
+    deriving newtype (Semigroup, Monoid)
+
+-- We can't convert functons to JSON, so we have a @TxConstraintFuns@ wrapper to provide dummy To/FromJSON instances.
+instance ToJSON TxConstraintFuns where
+    toJSON _ = Aeson.Array Haskell.mempty
+
+instance FromJSON TxConstraintFuns where
+    parseJSON _ = Haskell.pure mempty
+
+-- | Constraint which specifies that the transaction must spend a transaction
 -- output from a target script.
 data ScriptInputConstraint a =
     ScriptInputConstraint
@@ -143,9 +170,10 @@ deriving stock instance (Haskell.Eq a) => Haskell.Eq (ScriptOutputConstraint a)
 -- | Restrictions placed on the allocation of funds to outputs of transactions.
 data TxConstraints i o =
     TxConstraints
-        { txConstraints :: [TxConstraint]
-        , txOwnInputs   :: [ScriptInputConstraint i]
-        , txOwnOutputs  :: [ScriptOutputConstraint o]
+        { txConstraints    :: [TxConstraint]
+        , txConstraintFuns :: TxConstraintFuns
+        , txOwnInputs      :: [ScriptInputConstraint i]
+        , txOwnOutputs     :: [ScriptOutputConstraint o]
         }
     deriving stock (Haskell.Show, Generic)
 
@@ -162,6 +190,7 @@ instance Semigroup (TxConstraints i o) where
     l <> r =
         TxConstraints
             { txConstraints = txConstraints l <> txConstraints r
+            , txConstraintFuns = txConstraintFuns l <> txConstraintFuns r
             , txOwnInputs = txOwnInputs l <> txOwnInputs r
             , txOwnOutputs = txOwnOutputs l <> txOwnOutputs r
             }
@@ -170,7 +199,7 @@ instance Haskell.Semigroup (TxConstraints i o) where
     (<>) = (<>) -- uses PlutusTx.Semigroup instance
 
 instance Monoid (TxConstraints i o) where
-    mempty = TxConstraints [] [] []
+    mempty = TxConstraints mempty mempty mempty mempty
 
 instance Haskell.Monoid (TxConstraints i o) where
     mappend = (<>)
@@ -178,7 +207,7 @@ instance Haskell.Monoid (TxConstraints i o) where
 
 deriving anyclass instance (ToJSON i, ToJSON o) => ToJSON (TxConstraints i o)
 deriving anyclass instance (FromJSON i, FromJSON o) => FromJSON (TxConstraints i o)
-deriving stock instance (Haskell.Eq i, Haskell.Eq o) => Haskell.Eq (TxConstraints i o)
+-- deriving stock instance (Haskell.Eq i, Haskell.Eq o) => Haskell.Eq (TxConstraints i o)
 
 {-# INLINABLE singleton #-}
 singleton :: TxConstraint -> TxConstraints i o
@@ -247,11 +276,8 @@ mustIncludeDatum = singleton . MustIncludeDatum
 -- @d@ and @v@ is part of the transaction's outputs.
 mustPayToTheScript :: forall i o. PlutusTx.ToData o => o -> Value -> TxConstraints i o
 mustPayToTheScript dt vl =
-    TxConstraints
-        { txConstraints = [MustIncludeDatum (Datum $ PlutusTx.toBuiltinData dt)]
-        , txOwnInputs = []
-        , txOwnOutputs = [ScriptOutputConstraint dt vl]
-        }
+    mempty { txOwnOutputs = [ScriptOutputConstraint dt vl] }
+    <> mustIncludeDatum (Datum (PlutusTx.toBuiltinData dt))
 
 {-# INLINABLE mustPayToPubKey #-}
 -- | @mustPayToPubKey pkh v@ is the same as
@@ -435,6 +461,25 @@ mustSpendPubKeyOutput = singleton . MustSpendPubKeyOutput
 -- transaction spends this @utxo@.
 mustSpendScriptOutput :: forall i o. TxOutRef -> Redeemer -> TxConstraints i o
 mustSpendScriptOutput txOutref = singleton . MustSpendScriptOutput txOutref
+
+{-# INLINABLE mustSpendScriptOutputWithMatchingDatumAndValue #-}
+-- | @mustSpendScriptOutputWithMatchingDatumAndValue validatorHash datumPredicate valuePredicate redeemer@
+-- must spend an output locked by the given validator script hash,
+-- which includes a @Datum@ that matches the given datum predicate and a @Value@ that matches the given value predicate.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint checks that there's exactly one output that matches the requirements,
+-- and then adds this as an input to the transaction with the given redeemer.
+--
+-- The outputs that will be considered need to be privided in the 'Ledger.Constraints.OffChain.ScriptLookups' with
+-- 'Ledger.Constraints.OffChain.unspentOutputs'.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that there's at least one input
+-- that matches the requirements.
+mustSpendScriptOutputWithMatchingDatumAndValue :: forall i o. ValidatorHash -> (Datum -> Bool) -> (Value -> Bool) -> Redeemer -> TxConstraints i o
+mustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red =
+    mempty {
+        txConstraintFuns = TxConstraintFuns [MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red ]
+    }
 
 {-# INLINABLE mustSatisfyAnyOf #-}
 mustSatisfyAnyOf :: forall i o. [TxConstraints i o] -> TxConstraints i o

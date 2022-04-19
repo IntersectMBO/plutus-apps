@@ -47,7 +47,11 @@ module Ledger.Generators(
     validateMockchain,
     signAll,
     knownPaymentPublicKeys,
-    someTokenValue
+    someTokenValue,
+    alwaysSucceedPolicy,
+    alwaysSucceedValidator,
+    alwaysSucceedValidatorHash,
+    UnitTest
     ) where
 
 import Cardano.Api qualified as C
@@ -86,6 +90,7 @@ import Ledger.Fee (FeeConfig (fcScriptsFeeFactor), calcFees)
 import Ledger.Index qualified as Index
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Contexts qualified as Contexts
@@ -248,6 +253,19 @@ genValidTransactionSpending' g feeCfg ins totalVal = do
                 -- this is somewhat crude (but technically valid)
             pure (signAll tx)
         else Gen.discard
+
+data UnitTest
+instance Scripts.ValidatorTypes UnitTest
+
+alwaysSucceedValidator :: Scripts.TypedValidator UnitTest
+alwaysSucceedValidator = Scripts.mkTypedValidator
+    $$(PlutusTx.compile [|| \_ _ _ -> True ||])
+    $$(PlutusTx.compile [|| wrap ||])
+    where
+        wrap = Scripts.wrapValidator
+
+alwaysSucceedValidatorHash :: Ledger.ValidatorHash
+alwaysSucceedValidatorHash = Scripts.validatorHash alwaysSucceedValidator
 
 alwaysSucceedPolicy :: MintingPolicy
 alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
