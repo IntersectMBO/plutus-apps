@@ -1,4 +1,4 @@
-{ haskell, makeWrapper, runCommand, extraPackagesFun ? ps: [ ] }:
+{ haskell, makeWrapper, runCommand, extraPackagesFun ? ps: [ ], writeScriptBin, bubblewrap }:
 let
   web-ghc-server = haskell.packages.web-ghc.components.exes.web-ghc-server;
 
@@ -9,6 +9,11 @@ let
     ps.plutus-contract
     ps.plutus-ledger
   ] ++ (extraPackagesFun ps));
+
+  runtimeGhcWrapped = writeScriptBin "runghc" ''
+    export PATH=${bubblewrap}/bin:${runtimeGhc}/bin
+    exec bwrap --ro-bind /nix /nix --proc /proc --dev /dev --ro-bind "''${@: -1}" "''${@: -1}" --unshare-all runghc "$@"
+  '';
 in
 runCommand "web-ghc" { buildInputs = [ makeWrapper ]; } ''
   # We need to provide the ghc interpreter with the location of the ghc lib dir and the package db
@@ -16,7 +21,7 @@ runCommand "web-ghc" { buildInputs = [ makeWrapper ]; } ''
   ln -s ${web-ghc-server}/bin/web-ghc-server $out/bin/web-ghc-server
   wrapProgram $out/bin/web-ghc-server \
     --set GHC_LIB_DIR "${runtimeGhc}/lib/ghc-${runtimeGhc.version}" \
-    --set GHC_BIN_DIR "${runtimeGhc}/bin" \
+    --set GHC_BIN_DIR "${runtimeGhcWrapped}/bin" \
     --set GHC_PACKAGE_PATH "${runtimeGhc}/lib/ghc-${runtimeGhc.version}/package.conf.d" \
     --set GHC_RTS "-M2G"
 ''
