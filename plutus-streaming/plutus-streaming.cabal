@@ -49,6 +49,7 @@ library
         streaming,
         transformers,
         ouroboros-network,
+        hysterical-screams
 
 executable plutus-streaming-cli
     import: lang
