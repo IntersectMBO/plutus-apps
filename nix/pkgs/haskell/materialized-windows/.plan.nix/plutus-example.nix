@@ -129,6 +129,7 @@
             (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
             (hsPkgs.buildPackages.cardano-cli.components.exes.cardano-cli or (pkgs.buildPackages.cardano-cli or (errorHandler.buildToolDepError "cardano-cli:cardano-cli")))
             (hsPkgs.buildPackages.cardano-submit-api.components.exes.cardano-submit-api or (pkgs.buildPackages.cardano-submit-api or (errorHandler.buildToolDepError "cardano-submit-api:cardano-submit-api")))
+            (hsPkgs.buildPackages.plutus-example.components.exes.create-script-context or (pkgs.buildPackages.create-script-context or (errorHandler.buildToolDepError "plutus-example:create-script-context")))
             ];
           buildable = true;
           modules = [
