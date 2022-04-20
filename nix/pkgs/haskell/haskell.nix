@@ -133,7 +133,7 @@ let
               export CARDANO_NODE_SRC=${src}
             ";
             plutus-example.components.tests.plutus-example-test.build-tools =
-              lib.mkForce (with pkgs.buildPackages; [jq coreutils shellcheck lsof]);
+              lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck lsof ]);
 
             # FIXME: Haddock mysteriously gives a spurious missing-home-modules warning
             plutus-tx-plugin.doHaddock = false;
