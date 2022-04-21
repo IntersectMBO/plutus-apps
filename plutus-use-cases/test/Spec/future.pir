@@ -149,15 +149,10 @@
                 (fun
                   (con bytestring)
                   (fun
-                    (con data)
+                    [ Maybe (con bytestring) ]
                     (fun
-                      [
-                        [
-                          (lam
-                            k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                          )
-                          (con bytestring)
-                        ]
+                      (con data)
+                      (fun
                         [
                           [
                             (lam
@@ -167,10 +162,20 @@
                             )
                             (con bytestring)
                           ]
-                          (con integer)
+                          [
+                            [
+                              (lam
+                                k
+                                (type)
+                                (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                              )
+                              (con bytestring)
+                            ]
+                            (con integer)
+                          ]
                         ]
-                      ]
-                      TxConstraint
+                        TxConstraint
+                      )
                     )
                   )
                 )
@@ -818,7 +823,7 @@
                 (termbind
                   (strict)
                   (vardecl
-                    wmustPayToOtherScript
+                    wmustPayToOtherScriptAddress
                     (all
                       i
                       (type)
@@ -960,7 +965,15 @@
                                                   c
                                                   [
                                                     [
-                                                      [ MustPayToOtherScript w ]
+                                                      [
+                                                        [
+                                                          MustPayToOtherScript w
+                                                        ]
+                                                        {
+                                                          Nothing
+                                                          (con bytestring)
+                                                        }
+                                                      ]
                                                       w
                                                     ]
                                                     w
@@ -8866,7 +8879,7 @@
                                                                                                                                                   [
                                                                                                                                                     {
                                                                                                                                                       {
-                                                                                                                                                        wmustPayToOtherScript
+                                                                                                                                                        wmustPayToOtherScriptAddress
                                                                                                                                                         Void
                                                                                                                                                       }
                                                                                                                                                       Void
@@ -8980,7 +8993,7 @@
                                                                                                                                                 [
                                                                                                                                                   {
                                                                                                                                                     {
-                                                                                                                                                      wmustPayToOtherScript
+                                                                                                                                                      wmustPayToOtherScriptAddress
                                                                                                                                                       Void
                                                                                                                                                     }
                                                                                                                                                     Void
@@ -11013,7 +11026,7 @@
                                                                                                                                                         [
                                                                                                                                                           {
                                                                                                                                                             {
-                                                                                                                                                              wmustPayToOtherScript
+                                                                                                                                                              wmustPayToOtherScriptAddress
                                                                                                                                                               Void
                                                                                                                                                             }
                                                                                                                                                             Void
@@ -11188,7 +11201,7 @@
                                                                                                                                                       [
                                                                                                                                                         {
                                                                                                                                                           {
-                                                                                                                                                            wmustPayToOtherScript
+                                                                                                                                                            wmustPayToOtherScriptAddress
                                                                                                                                                             Void
                                                                                                                                                           }
                                                                                                                                                           Void
