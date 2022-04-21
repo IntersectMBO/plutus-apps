@@ -647,8 +647,8 @@ processConstraint = \case
                                                    , txOutDatumHash=hash
                                                    } :)
         valueSpentOutputs <>= provided vl
-    MustPayToOtherScript vlh dv vl -> do
-        let addr = Address.scriptHashAddress vlh
+    MustPayToOtherScript vlh svhM dv vl -> do
+        let addr = Address.scriptValidatorHashAddress vlh svhM
             theHash = datumHash dv
         unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
         unbalancedTx . tx . Tx.outputs %= (Tx.scriptTxOut' vl addr dv :)

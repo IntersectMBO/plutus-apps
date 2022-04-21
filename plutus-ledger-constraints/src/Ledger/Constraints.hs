@@ -24,6 +24,7 @@ module Ledger.Constraints(
     , TC.mustProduceAtLeast
     , TC.mustIncludeDatum
     , TC.mustPayToOtherScript
+    , TC.mustPayToOtherScriptAddress
     , TC.mustHashDatum
     , TC.mustSatisfyAnyOf
     -- * Queries on constraints

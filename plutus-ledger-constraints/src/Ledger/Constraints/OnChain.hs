@@ -113,7 +113,7 @@ checkTxConstraint ctx@ScriptContext{scriptContextTxInfo} = \case
         in
         traceIfFalse "La" -- "MustPayToPubKey"
         $ vl `leq` V.valuePaidTo scriptContextTxInfo pk && any (checkOutput mdv) outs
-    MustPayToOtherScript vlh dv vl ->
+    MustPayToOtherScript vlh _ dv vl ->
         let outs = V.txInfoOutputs scriptContextTxInfo
             hsh = V.findDatumHash dv scriptContextTxInfo
             addr = Address.scriptHashAddress vlh
