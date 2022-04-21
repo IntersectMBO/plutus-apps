@@ -47,7 +47,6 @@ library
         plutus-chain-index-core,
         stm,
         streaming,
-        transformers,
         ouroboros-network,
         hysterical-screams
 
@@ -62,3 +61,4 @@ executable plutus-streaming-cli
         cardano-api,
         optparse-applicative,
         streaming,
+        text

@@ -3,17 +3,13 @@
 
 module Cardano.Api.Extras where
 
-import Cardano.Api (BlockHeader (BlockHeader),
-                    GenesisConfigError (NEAlonzoConfig, NEByronConfig, NECardanoConfig, NEError, NEShelleyConfig),
-                    HasTypeProxy (proxyToAsType), Hash,
-                    InitialLedgerStateError (ILSEConfigFile, ILSEGenesisFile, ILSELedgerConsensusConfig),
-                    LedgerEvent (MIRDistribution, PoolReRegistration, PoolReap, PoolRegistration, RewardsDistribution),
-                    LedgerState (LedgerState), MIRDistributionDetails (MIRDistributionDetails),
-                    PoolReapDetails (PoolReapDetails), SerialiseAsRawBytes (deserialiseFromRawBytes))
+import Cardano.Api (BlockHeader (BlockHeader), BlockNo, ChainPoint (ChainPoint, ChainPointAtGenesis),
+                    HasTypeProxy (proxyToAsType), Hash, SerialiseAsRawBytes (deserialiseFromRawBytes), ToJSON)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as C8
 import Data.Proxy (Proxy (Proxy))
 import Data.String (IsString (fromString))
+import GHC.Generics (Generic)
 
 -- FIXME orphan instance
 -- https://github.com/input-output-hk/cardano-node/pull/3608
@@ -29,16 +25,12 @@ instance IsString (Hash BlockHeader) where
         where
           ttoken = proxyToAsType (Proxy :: Proxy a)
 
-deriving instance Show BlockHeader
+deriving instance Generic ChainPoint
 
-deriving instance Show LedgerState
+instance ToJSON ChainPoint
 
-deriving instance Show LedgerEvent
+instance ToJSON BlockNo
 
-deriving instance Show MIRDistributionDetails
+deriving instance Generic BlockHeader
 
-deriving instance Show PoolReapDetails
-
-deriving instance Show InitialLedgerStateError
-
-deriving instance Show GenesisConfigError
+instance ToJSON BlockHeader

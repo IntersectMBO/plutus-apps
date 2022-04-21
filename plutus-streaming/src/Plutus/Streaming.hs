@@ -11,10 +11,11 @@ import Cardano.Api (BlockInMode, CardanoMode, ChainPoint, ChainSyncClient (Chain
                     LocalChainSyncClient (LocalChainSyncClient),
                     LocalNodeClientProtocols (LocalNodeClientProtocols, localChainSyncClient, localStateQueryClient, localTxSubmissionClient),
                     LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
-                    NetworkId, connectToLocalNode)
+                    NetworkId, ToJSON, connectToLocalNode)
 import Cardano.Api.ChainSync.Client (ClientStIdle (SendMsgDone, SendMsgFindIntersect, SendMsgRequestNext),
                                      ClientStIntersect (ClientStIntersect, recvMsgIntersectFound, recvMsgIntersectNotFound),
                                      ClientStNext (ClientStNext, recvMsgRollBackward, recvMsgRollForward))
+import Cardano.Api.Extras ()
 import Control.Concurrent.Async (withAsync)
 import Control.Concurrent.STM (TChan, atomically, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Exception (Exception, throw)
@@ -26,6 +27,8 @@ data ChainSyncEvent a
   = RollForward a ChainTip
   | RollBackward ChainPoint ChainTip
   deriving (Show, Functor, Generic)
+
+instance ToJSON a => ToJSON (ChainSyncEvent a)
 
 type SimpleChainSyncEvent = ChainSyncEvent (BlockInMode CardanoMode)
 
