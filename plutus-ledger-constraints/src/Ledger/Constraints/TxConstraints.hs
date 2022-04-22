@@ -331,16 +331,16 @@ mustPayWithDatumToPubKeyAddress
 mustPayWithDatumToPubKeyAddress pkh skh datum =
     singleton . MustPayToPubKeyAddress pkh (Just skh) (Just datum)
 
-{-# INLINABLE mustPayToOtherScriptAddress #-}
--- | @mustPayToOtherScriptAddress vh svh d v@ is the same as
+{-# INLINABLE mustPayToOtherScript #-}
+-- | @mustPayToOtherScript vh svh d v@ is the same as
 -- 'mustPayToOtherScript', but without the staking key hash.
-mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScriptAddress vh dv vl =
+mustPayToOtherScript :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
+mustPayToOtherScript vh dv vl =
     singleton (MustPayToOtherScript vh Nothing dv vl)
     <> singleton (MustIncludeDatum dv)
 
-{-# INLINABLE mustPayToOtherScript #-}
--- | @mustPayToOtherScript vh svh d v@ locks the value @v@ with the given script
+{-# INLINABLE mustPayToOtherScriptAddress #-}
+-- | @mustPayToOtherScriptAddress vh svh d v@ locks the value @v@ with the given script
 -- hash @vh@ alonside a datum @d@.
 --
 -- If used in 'Ledger.Constraints.OffChain', this constraint creates a script
@@ -350,9 +350,9 @@ mustPayToOtherScriptAddress vh dv vl =
 -- If used in 'Ledger.Constraints.OnChain', this constraint verifies that @d@ is
 -- part of the datum witness set and that the script transaction output with
 -- @vh@, @svh@, @d@ and @v@ is part of the transaction's outputs.
-mustPayToOtherScript :: forall i o. ValidatorHash -> Maybe StakeValidatorHash -> Datum -> Value -> TxConstraints i o
-mustPayToOtherScript vh svh dv vl =
-    singleton (MustPayToOtherScript vh svh dv vl)
+mustPayToOtherScriptAddress :: forall i o. ValidatorHash -> StakeValidatorHash -> Datum -> Value -> TxConstraints i o
+mustPayToOtherScriptAddress vh svh dv vl =
+    singleton (MustPayToOtherScript vh (Just svh) dv vl)
     <> singleton (MustIncludeDatum dv)
 
 {-# INLINABLE mustMintValue #-}

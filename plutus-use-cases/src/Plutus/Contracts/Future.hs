@@ -373,8 +373,8 @@ transition future@Future{ftDeliveryDate, ftPriceOracle} owners State{stateData=s
                     total = totalMargin accounts
                     FutureAccounts{ftoLongAccount, ftoShortAccount} = owners
                     payment = case vRole of
-                                Short -> Constraints.mustPayToOtherScriptAddress ftoLongAccount unitDatum total
-                                Long  -> Constraints.mustPayToOtherScriptAddress ftoShortAccount unitDatum total
+                                Short -> Constraints.mustPayToOtherScript ftoLongAccount unitDatum total
+                                Long  -> Constraints.mustPayToOtherScript ftoShortAccount unitDatum total
                     constraints = payment <> oracleConstraints
                 in Just ( constraints
                         , State
@@ -398,8 +398,8 @@ payoutsTx
 payoutsTx
     Payouts{payoutsShort, payoutsLong}
     FutureAccounts{ftoLongAccount, ftoShortAccount} =
-        Constraints.mustPayToOtherScriptAddress ftoLongAccount unitDatum payoutsLong
-        <> Constraints.mustPayToOtherScriptAddress ftoShortAccount unitDatum payoutsShort
+        Constraints.mustPayToOtherScript ftoLongAccount unitDatum payoutsLong
+        <> Constraints.mustPayToOtherScript ftoShortAccount unitDatum payoutsShort
 
 {-# INLINABLE payouts #-}
 -- | Compute the payouts for each role given the future data,

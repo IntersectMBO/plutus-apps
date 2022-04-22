@@ -46,13 +46,13 @@ balanceTxnMinAda =
 
         contract :: Contract () EmptySchema ContractError ()
         contract = do
-            let constraints1 = Constraints.mustPayToOtherScriptAddress vHash unitDatum (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
+            let constraints1 = Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 100 ff <> Ada.toValue Ledger.minAdaTxOut)
                 utx1 = either (error . show) id $ Constraints.mkTx @Void mempty constraints1
             submitTxConfirmed utx1
             utxo <- utxosAt someAddress
             let txOutRef = head (Map.keys utxo)
                 constraints2 = Constraints.mustSpendScriptOutput txOutRef unitRedeemer
-                    <> Constraints.mustPayToOtherScriptAddress vHash unitDatum (Value.scale 200 ee)
+                    <> Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 200 ee)
                 lookups2 = Constraints.unspentOutputs utxo <> Constraints.otherScript someValidator
                 utx2 = Constraints.adjustUnbalancedTx $ either (error . show) id $ Constraints.mkTx @Void lookups2 constraints2
             submitTxConfirmed utx2
@@ -80,7 +80,7 @@ balanceTxnMinAda2 =
             -- Make sure there is a utxo with 1 A, 1 B, and 4 ada at w2
             submitTxConfirmed $ mkTx mempty (payToWallet w2 (vA 1 <> vB 1 <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)))
             -- Make sure there is a UTxO with 1 B and datum () at the script
-            submitTxConfirmed $ mkTx mempty (Constraints.mustPayToOtherScriptAddress vHash unitDatum (vB 1))
+            submitTxConfirmed $ mkTx mempty (Constraints.mustPayToOtherScript vHash unitDatum (vB 1))
             -- utxo0 @ wallet2 = 1 A, 1 B, 4 Ada
             -- utxo1 @ script  = 1 B, 2 Ada
 
@@ -92,8 +92,8 @@ balanceTxnMinAda2 =
                         <> Constraints.otherScript someValidator
                         <> Constraints.mintingPolicy mps
                 constraints = Constraints.mustSpendScriptOutput txOutRef unitRedeemer                                        -- spend utxo1
-                            <> Constraints.mustPayToOtherScriptAddress vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
-                            <> Constraints.mustPayToOtherScriptAddress vHash (Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
+                            <> Constraints.mustPayToOtherScript vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
+                            <> Constraints.mustPayToOtherScript vHash (Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
                             <> Constraints.mustMintValue (vL 1) -- 1 L and 2 ada to wallet2
             submitTxConfirmed $ mkTx lookups constraints
 

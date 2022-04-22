@@ -169,7 +169,7 @@ mkTx = \case
     PaymentPubKeyTarget pkh vl ->
         Constraints.mustPayToPubKey pkh vl
     ScriptTarget vs ds vl ->
-        Constraints.mustPayToOtherScriptAddress vs ds vl
+        Constraints.mustPayToOtherScript vs ds vl
 
 data Action = Redeem | Refund
 

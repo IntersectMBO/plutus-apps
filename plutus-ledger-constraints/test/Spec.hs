@@ -48,6 +48,7 @@ tests = testGroup "all tests"
     [ testProperty "missing value spent" missingValueSpentProp
     , testProperty "mustPayToPubKeyAddress should create output addresses with stake pub key hash" mustPayToPubKeyAddressStakePubKeyNotNothingProp
     , testProperty "mustSpendScriptOutputWithMatchingDatumAndValue" testMustSpendScriptOutputWithMatchingDatumAndValue
+    , testProperty "mustPayToOtherScriptAddress should create output addresses with stake validator hash" mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
     ]
 
 -- | Reduce one of the elements in a 'Value' by one.
@@ -118,6 +119,27 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
             StakingHash (PubKeyCredential pkh) -> Just $ StakePubKeyHash pkh
             _                                  -> Nothing
 
+-- | The 'mustPayToOtherScriptAddress' should be able to set the stake validator hash to some value.
+mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp :: Property
+mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
+    pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
+    let svh = Ledger.StakeValidatorHash "00000000000000000000000000000000000000000000000000000000"
+        txE = mkTx @Void mempty (Constraints.mustPayToOtherScriptAddress Gen.alwaysSucceedValidatorHash svh Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
+    case txE of
+      Left _ ->
+          Hedgehog.failure
+      Right utx -> do
+          let outputs = txOutputs (OC.unBalancedTxTx utx)
+          let stakingCreds = mapMaybe stakeValidatorHash outputs
+          Hedgehog.assert $ not $ null stakingCreds
+          forM_ stakingCreds ((===) svh)
+  where
+      stakeValidatorHash :: TxOut -> Maybe Ledger.StakeValidatorHash
+      stakeValidatorHash TxOut { txOutAddress } = do
+          stakeCred <- addressStakingCredential txOutAddress
+          case stakeCred of
+            StakingHash (ScriptCredential (Ledger.ValidatorHash svh)) -> Just $ Ledger.StakeValidatorHash svh
+            _                                                         -> Nothing
 
 -- | Make a transaction with the given constraints and check the validity of the inputs of that transaction.
 testScriptInputs
