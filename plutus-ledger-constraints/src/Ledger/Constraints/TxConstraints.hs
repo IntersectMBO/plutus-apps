@@ -332,8 +332,8 @@ mustPayWithDatumToPubKeyAddress pkh skh datum =
     singleton . MustPayToPubKeyAddress pkh (Just skh) (Just datum)
 
 {-# INLINABLE mustPayToOtherScript #-}
--- | @mustPayToOtherScript vh svh d v@ is the same as
--- 'mustPayToOtherScript', but without the staking key hash.
+-- | @mustPayToOtherScript vh d v@ is the same as
+-- 'mustPayToOtherScriptAddress', but without the staking key hash.
 mustPayToOtherScript :: forall i o. ValidatorHash -> Datum -> Value -> TxConstraints i o
 mustPayToOtherScript vh dv vl =
     singleton (MustPayToOtherScript vh Nothing dv vl)
