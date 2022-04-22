@@ -149,15 +149,10 @@
                 (fun
                   (con bytestring)
                   (fun
-                    (con data)
+                    [ Maybe (con bytestring) ]
                     (fun
-                      [
-                        [
-                          (lam
-                            k (type) (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                          )
-                          (con bytestring)
-                        ]
+                      (con data)
+                      (fun
                         [
                           [
                             (lam
@@ -167,10 +162,20 @@
                             )
                             (con bytestring)
                           ]
-                          (con integer)
+                          [
+                            [
+                              (lam
+                                k
+                                (type)
+                                (lam v (type) [ List [ [ Tuple2 k ] v ] ])
+                              )
+                              (con bytestring)
+                            ]
+                            (con integer)
+                          ]
                         ]
-                      ]
-                      TxConstraint
+                        TxConstraint
+                      )
                     )
                   )
                 )
@@ -960,7 +965,15 @@
                                                   c
                                                   [
                                                     [
-                                                      [ MustPayToOtherScript w ]
+                                                      [
+                                                        [
+                                                          MustPayToOtherScript w
+                                                        ]
+                                                        {
+                                                          Nothing
+                                                          (con bytestring)
+                                                        }
+                                                      ]
                                                       w
                                                     ]
                                                     w
