@@ -155,7 +155,7 @@ contractInstanceUpdates contractInstanceId pending = do
     Core.PABRunner{Core.runPABAction} <- Core.pabRunner
     liftIO $ do
         connection <- WS.acceptRequest pending
-        handle disconnect . WS.withPingThread connection 30 (pure ()) $ fmap (either (error . show) id) . runPABAction $ sendContractInstanceUpdatesToClient contractInstanceId connection
+        handle disconnect . WS.withPingThread connection 10 (pure ()) $ fmap (either (error . show) id) . runPABAction $ sendContractInstanceUpdatesToClient contractInstanceId connection
   where
     disconnect :: SomeException -> IO ()
     disconnect _ = pure ()
