@@ -823,7 +823,7 @@
                 (termbind
                   (strict)
                   (vardecl
-                    wmustPayToOtherScriptAddress
+                    wmustPayToOtherScript
                     (all
                       i
                       (type)
@@ -8879,7 +8879,7 @@
                                                                                                                                                   [
                                                                                                                                                     {
                                                                                                                                                       {
-                                                                                                                                                        wmustPayToOtherScriptAddress
+                                                                                                                                                        wmustPayToOtherScript
                                                                                                                                                         Void
                                                                                                                                                       }
                                                                                                                                                       Void
@@ -8993,7 +8993,7 @@
                                                                                                                                                 [
                                                                                                                                                   {
                                                                                                                                                     {
-                                                                                                                                                      wmustPayToOtherScriptAddress
+                                                                                                                                                      wmustPayToOtherScript
                                                                                                                                                       Void
                                                                                                                                                     }
                                                                                                                                                     Void
@@ -11026,7 +11026,7 @@
                                                                                                                                                         [
                                                                                                                                                           {
                                                                                                                                                             {
-                                                                                                                                                              wmustPayToOtherScriptAddress
+                                                                                                                                                              wmustPayToOtherScript
                                                                                                                                                               Void
                                                                                                                                                             }
                                                                                                                                                             Void
@@ -11201,7 +11201,7 @@
                                                                                                                                                       [
                                                                                                                                                         {
                                                                                                                                                           {
-                                                                                                                                                            wmustPayToOtherScriptAddress
+                                                                                                                                                            wmustPayToOtherScript
                                                                                                                                                             Void
                                                                                                                                                           }
                                                                                                                                                           Void
