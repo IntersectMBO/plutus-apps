@@ -18,6 +18,7 @@ module Ledger.TimeSlot(
 , posixTimeRangeToContainedSlotRange
 , posixTimeToEnclosingSlot
 , currentSlot
+, utcTimeToPOSIXTime
 ) where
 
 import Codec.Serialise (Serialise)
@@ -138,8 +139,14 @@ currentSlot :: SlotConfig -> IO Slot
 currentSlot sc = timeToSlot <$> Time.getPOSIXTime
     where
       timeToSlot = posixTimeToEnclosingSlot sc
-                 . POSIXTime
-                 . (* 1000) -- Convert to ms
-                 . Haskell.floor
-                 . Time.nominalDiffTimeToSeconds
+                 . nominalDiffTimeToPOSIXTime
 
+utcTimeToPOSIXTime :: Time.UTCTime -> POSIXTime
+utcTimeToPOSIXTime = nominalDiffTimeToPOSIXTime . Time.utcTimeToPOSIXSeconds
+
+nominalDiffTimeToPOSIXTime :: Time.NominalDiffTime -> POSIXTime
+nominalDiffTimeToPOSIXTime
+  = POSIXTime
+  . Haskell.truncate
+  . (Haskell.* 1000) -- Convert to ms
+  . Time.nominalDiffTimeToSeconds

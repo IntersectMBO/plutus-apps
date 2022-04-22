@@ -201,7 +201,7 @@ genesisDefaultsWithBigMaxTxSize = shelleyGenesisDefaults {
 emulatorGlobals :: Globals
 emulatorGlobals = mkShelleyGlobals
   genesisDefaultsWithBigMaxTxSize
-  (fixedEpochInfo (EpochSize 432000) (mkSlotLength 8)) -- Not sure about these values, probably not relevant for the emulator.
+  (fixedEpochInfo (EpochSize 432000) (mkSlotLength 1000))
   2 -- maxMajorPV (maximum major protocol version)
 
 emulatorNes :: NewEpochState EmulatorEra
