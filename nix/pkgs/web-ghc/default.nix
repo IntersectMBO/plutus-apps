@@ -1,4 +1,4 @@
-{ haskell, makeWrapper, runCommand, extraPackagesFun ? ps: [ ], writeScriptBin, bubblewrap, lib, util-linux }:
+{ haskell, makeWrapper, runCommand, extraPackagesFun ? ps: [ ], writeShellScriptBin, bubblewrap, lib, util-linux }:
 let
   web-ghc-server = haskell.packages.web-ghc.components.exes.web-ghc-server;
 
@@ -10,10 +10,10 @@ let
     ps.plutus-ledger
   ] ++ (extraPackagesFun ps));
 
-  runtimeGhcWrapped = writeScriptBin "runghc" ''
+  runtimeGhcWrapped = writeShellScriptBin "runghc" ''
     export PATH=${lib.makeBinPath [ bubblewrap runtimeGhc util-linux ]}
     exec setpriv --ambient-caps -all -- \
-      bwrap --ro-bind /nix /nix --proc /proc --dev /dev --ro-bind "''${@: -1}" "''${@: -1}" --unshare-all -- \
+      bwrap --ro-bind /nix /nix --ro-bind /proc /proc --dev /dev --ro-bind "''${@: -1}" "''${@: -1}" --unshare-all -- \
       runghc "$@"
   '';
 in
