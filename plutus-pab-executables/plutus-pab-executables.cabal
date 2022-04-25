@@ -8,10 +8,10 @@ license-files:
 
 maintainer:    jann.mueller@iohk.io
 author:        Jann Müller
-homepage:      https://github.com/iohk/plutus#readme
-bug-reports:   https://github.com/iohk/plutus/issues
+homepage:      https://github.com/iohk/plutus-apps#readme
+bug-reports:   https://github.com/iohk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+    Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 
 build-type:    Simple
 
@@ -153,7 +153,7 @@ executable plutus-uniswap
         , data-default -any
         , freer-simple
         , plutus-contract
-        , plutus-ledger-api
+        , plutus-ledger-api >= 1.0.0
         , plutus-pab
         , plutus-use-cases
         , prettyprinter
@@ -185,7 +185,7 @@ executable plutus-pab-local-cluster
         , playground-common
         , plutus-contract
         , plutus-ledger
-        , plutus-ledger-api
+        , plutus-ledger-api >= 1.0.0
         , plutus-ledger-constraints
         , plutus-pab
         , plutus-pab-executables
@@ -296,7 +296,7 @@ test-suite plutus-pab-test-full
         text -any,
         prettyprinter -any,
         row-types -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         playground-common -any,
         yaml -any,
         iohk-monitoring -any,

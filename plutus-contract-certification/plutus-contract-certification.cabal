@@ -38,7 +38,7 @@ library
         containers -any,
         lens -any,
         plutus-contract -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         QuickCheck -any,
         stm -any,
         tasty -any,

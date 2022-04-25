@@ -76,12 +76,12 @@ library
         bytestring -any,
         containers -any,
         mtl -any,
-        plutus-core -any,
-        plutus-tx -any,
+        plutus-core >= 1.0.0,
+        plutus-tx >= 1.0.0,
         plutus-contract -any,
         playground-common -any,
         plutus-ledger -any,
-        plutus-ledger-api -any,
+        plutus-ledger-api >= 1.0.0,
         plutus-ledger-constraints -any,
         template-haskell -any,
         lens -any,
@@ -94,7 +94,7 @@ library
         openapi3 -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -142,11 +142,11 @@ test-suite plutus-use-cases-test
                  -- See Plutus Tx readme
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     build-depends:
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         plutus-contract -any,
         plutus-contract-certification -any,
         plutus-ledger -any,
-        plutus-ledger-api,
+        plutus-ledger-api >= 1.0.0,
         plutus-ledger-constraints -any,
         plutus-use-cases -any,
         playground-common -any
@@ -172,7 +172,7 @@ test-suite plutus-use-cases-test
         streaming -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0
 
 -- runs emulator traces from plutus-use-cases-tests and
 -- writes all applied validator scripts to a folder
@@ -228,8 +228,8 @@ executable plutus-use-cases-scripts
         freer-simple -any,
         foldl -any,
         streaming -any,
-        plutus-ledger-api -any,
-        plutus-tx -any,
+        plutus-ledger-api >= 1.0.0,
+        plutus-tx >= 1.0.0,
         plutus-contract -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
@@ -239,4 +239,4 @@ executable plutus-use-cases-scripts
         cardano-api -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0

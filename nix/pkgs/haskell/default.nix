@@ -7,6 +7,7 @@
 , checkMaterialization
 , gitignore-nix
 , libsodium-vrf
+, libsecp256k1
 , z3
 , enableHaskellProfiling
 }:
@@ -34,7 +35,7 @@ let
   baseProject =
     { deferPluginErrors }:
     import ./haskell.nix {
-      inherit lib haskell-nix libsodium-vrf z3;
+      inherit lib haskell-nix libsodium-vrf libsecp256k1 z3;
       inherit checkMaterialization compiler-nix-name gitignore-nix;
       inherit enableHaskellProfiling;
       inherit deferPluginErrors;

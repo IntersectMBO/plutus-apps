@@ -78,9 +78,9 @@ library
                       , ouroboros-consensus
                       , ouroboros-network
                       , plutus-ledger
-                      , plutus-ledger-api
-                      , plutus-tx
-                      , plutus-tx-plugin
+                      , plutus-ledger-api >= 1.0.0
+                      , plutus-tx >= 1.0.0
+                      , plutus-tx-plugin >= 1.0.0
                       , serialise
                       , strict-containers
                       , transformers
@@ -135,7 +135,7 @@ test-suite plutus-example-test
                       , hedgehog-extras
                       , plutus-example
                       , plutus-ledger
-                      , plutus-ledger-api
+                      , plutus-ledger-api >= 1.0.0
                       , tasty
                       , tasty-hedgehog
                       , text
@@ -160,4 +160,4 @@ test-suite plutus-example-test
                       , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
                       , plutus-example:create-script-context
-  
+

@@ -6,6 +6,7 @@
 , gitignore-nix
 , z3
 , libsodium-vrf
+, libsecp256k1
 , checkMaterialization
 , compiler-nix-name
 , enableHaskellProfiling
@@ -168,7 +169,7 @@ let
 
             # See https://github.com/input-output-hk/iohk-nix/pull/488
             cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
-            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
+            cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf libsecp256k1 ] ];
           };
         })
       ] ++ lib.optional enableHaskellProfiling {

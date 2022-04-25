@@ -8,10 +8,10 @@ license-files:
 
 maintainer:    jann.mueller@iohk.io
 author:        Jann Müller
-homepage:      https://github.com/iohk/plutus#readme
-bug-reports:   https://github.com/iohk/plutus/issues
+homepage:      https://github.com/iohk/plutus-apps#readme
+bug-reports:   https://github.com/iohk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+    Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 
 build-type:    Simple
 
@@ -124,10 +124,10 @@ library
         , plutus-chain-index-core
         , plutus-contract
         , plutus-ledger
-        , plutus-ledger-api
+        , plutus-ledger-api >= 1.0.0
         , plutus-ledger-constraints
-        , plutus-tx
-        , plutus-tx-plugin
+        , plutus-tx >= 1.0.0
+        , plutus-tx-plugin >= 1.0.0
     build-depends:
         QuickCheck -any,
         aeson -any,
@@ -225,7 +225,7 @@ test-suite plutus-pab-test-light
         plutus-pab,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         quickcheck-instances -any,
         tasty -any,
         tasty-hunit -any,
