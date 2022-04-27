@@ -243,8 +243,12 @@ export
     -> UnbalancedTx
     -> Either CardanoAPI.ToCardanoError ExportTx
 export params networkId slotConfig utx =
-    let UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBalancedTxRequiredSignatories} = finalize slotConfig utx
-        requiredSigners = Map.keys unBalancedTxRequiredSignatories
+    let UnbalancedTx
+            { unBalancedTxTx
+            , unBalancedTxUtxoIndex
+            , unBalancedTxRequiredSignatories
+            } = finalize slotConfig utx
+        requiredSigners = Set.toList unBalancedTxRequiredSignatories
      in ExportTx
         <$> mkPartialTx requiredSigners params networkId unBalancedTxTx
         <*> mkInputs networkId unBalancedTxUtxoIndex
@@ -252,7 +256,9 @@ export params networkId slotConfig utx =
 
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
 finalize slotConfig utx =
-     utx & U.tx . Plutus.validRange .~ posixTimeRangeToContainedSlotRange slotConfig (utx ^. U.validityTimeRange)
+     utx & U.tx
+         . Plutus.validRange
+         .~ posixTimeRangeToContainedSlotRange slotConfig (utx ^. U.validityTimeRange)
 
 mkPartialTx
     :: [Plutus.PaymentPubKeyHash]
