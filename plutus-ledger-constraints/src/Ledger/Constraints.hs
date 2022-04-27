@@ -17,6 +17,7 @@ module Ledger.Constraints(
     , TC.mustMintValueWithRedeemer
     , TC.mustSpendAtLeast
     , TC.mustSpendPubKeyOutput
+    , TC.mustSpendOutputFromTheScript
     , TC.mustSpendScriptOutput
     , TC.mustSpendScriptOutputWithMatchingDatumAndValue
     , TC.mustValidateIn

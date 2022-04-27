@@ -7,14 +7,11 @@
 -- | Functions for working with the contract interface using typed transactions.
 module Plutus.Contract.Typed.Tx where
 
-import Ledger.Constraints (TxConstraints)
-import Ledger.Constraints.TxConstraints (addTxIn)
-
-import Data.Foldable (foldl')
-import Data.Map qualified as Map
-
 import Ledger (TxOutRef)
+import Ledger.Constraints (TxConstraints, mustSpendOutputFromTheScript)
 import Ledger.Tx (ChainIndexTxOut)
+
+import Data.Map qualified as Map
 
 -- | Given the pay to script address of the 'Validator', collect from it
 --   all the outputs that match a predicate, using the 'RedeemerValue'.
@@ -37,4 +34,4 @@ collectFromScript ::
     -> i
     -> TxConstraints i o
 collectFromScript utxo redeemer =
-    foldl' (\b a -> addTxIn a redeemer b) mempty (Map.keys utxo)
+    foldMap (flip mustSpendOutputFromTheScript redeemer) $ Map.keys utxo
