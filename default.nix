@@ -17,10 +17,7 @@
       stackage = sources.stackage-nix;
     };
   }
-, packages ? import ./nix { inherit system sources crossSystem config sourcesOverride haskellNix checkMaterialization enableHaskellProfiling; }
-  # Whether to check that the pinned shas for haskell.nix are correct. We want this to be
-  # false, generally, since it does more work, but we set it to true in the CI
-, checkMaterialization ? false
+, packages ? import ./nix { inherit system sources crossSystem config sourcesOverride haskellNix enableHaskellProfiling; }
   # Whether to build our Haskell packages (and their dependencies) with profiling enabled.
 , enableHaskellProfiling ? false
 }:
