@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: plutus-ledger
-version: 0.1.0.0
+version: 1.0.0
 license: Apache-2.0
 license-files:
   LICENSE
@@ -68,15 +68,10 @@ library
         Ledger.Value
         Ledger.Validation
     reexported-modules:
-        Data.Aeson.Extras,
-        Data.Either.Extras,
-        Plutus.V1.Ledger.Ada as Ledger.Ada,
         Plutus.V1.Ledger.Bytes as Ledger.Bytes,
         Plutus.V1.Ledger.Credential as Ledger.Credential,
         Plutus.V1.Ledger.DCert as Ledger.DCert,
         Plutus.V1.Ledger.Interval as Ledger.Interval,
-        Plutus.V1.Ledger.Slot as Ledger.Slot,
-        Plutus.V1.Ledger.TxId as Ledger.TxId,
         Plutus.V1.Ledger.Time as Ledger.Time,
         -- The rest of the plutus-ledger-api modules are reexported from within
         -- the Haskell modules and not in the current cabal file.
