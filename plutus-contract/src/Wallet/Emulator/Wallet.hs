@@ -308,7 +308,7 @@ handleBalance utx' = do
     utxo <- get >>= ownOutputs
     slotConfig <- WAPI.getClientSlotConfig
     let utx = finalize slotConfig utx'
-    let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
+    let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
     cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
     -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
     let calcFee n fee = do

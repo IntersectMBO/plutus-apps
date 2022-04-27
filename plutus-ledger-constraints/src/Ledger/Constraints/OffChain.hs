@@ -68,6 +68,7 @@ import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), M
 import PlutusTx.Numeric qualified as N
 
 import Data.Semigroup (First (First, getFirst))
+import Data.Set (Set)
 import Ledger qualified
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -104,7 +105,7 @@ data ScriptLookups a =
         -- ^ Validators of scripts other than "our script"
         , slOtherData            :: Map DatumHash Datum
         -- ^ Datums that we might need
-        , slPaymentPubKeyHashes  :: Map PaymentPubKeyHash PaymentPubKey
+        , slPaymentPubKeyHashes  :: Set PaymentPubKeyHash
         -- ^ Public keys that we might need
         , slTypedValidator       :: Maybe (TypedValidator a)
         -- ^ The script instance with the typed validator hash & actual compiled program
@@ -184,8 +185,8 @@ otherData dt =
 
 -- | A script lookups value with a payment public key
 paymentPubKey :: PaymentPubKey -> ScriptLookups a
-paymentPubKey ppk@(PaymentPubKey pk) =
-    mempty { slPaymentPubKeyHashes = Map.singleton (PaymentPubKeyHash $ pubKeyHash pk) ppk }
+paymentPubKey (PaymentPubKey pk) =
+    mempty { slPaymentPubKeyHashes = Set.singleton (PaymentPubKeyHash $ pubKeyHash pk) }
 
 -- | A script lookups value with a payment public key hash.
 --
@@ -215,7 +216,7 @@ ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
 data UnbalancedTx =
     UnbalancedTx
         { unBalancedTxTx                  :: Tx
-        , unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey)
+        , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
         -- ^ These are all the payment public keys that should be used to request the
         -- signatories from the user's wallet. The signatories are what is required to
         -- sign the transaction before submitting it to the blockchain. Transaction
@@ -249,7 +250,7 @@ instance Pretty UnbalancedTx where
     pretty (UnbalancedTx utx rs utxo vr) =
         vsep
         [ hang 2 $ vsep ["Tx:", pretty utx]
-        , hang 2 $ vsep $ "Requires signatures:" : (pretty . fst <$> Map.toList rs)
+        , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         , hang 2 $ vsep ["Validity range:", pretty vr]
         ]
@@ -568,25 +569,14 @@ lookupValidator vh =
     let err = throwError (ValidatorHashNotFound vh) in
     asks slOtherScripts >>= maybe err pure . view (at vh)
 
--- | Get the 'Map.Map PaymentPubKeyHash (Maybe PaymentPubKey)' for a payment pub
---   key hash, associating the pub key hash with the public key (if known).
---   This value that can be added to the 'unBalancedTxRequiredSignatories' field.
-getSignatories
-    :: ( MonadReader (ScriptLookups a) m
-       )
-    => PaymentPubKeyHash
-    -> m (Map.Map PaymentPubKeyHash (Maybe PaymentPubKey))
-getSignatories pkh =
-    asks (Map.singleton pkh . Map.lookup pkh . slPaymentPubKeyHashes)
-
 -- | Modify the 'UnbalancedTx' so that it satisfies the constraints, if
 --   possible. Fails if a hash is missing from the lookups, or if an output
 --   of the wrong type is spent.
 processConstraint
     :: ( MonadReader (ScriptLookups a) m
-        , MonadError MkTxError m
-        , MonadState ConstraintProcessingState m
-        )
+       , MonadError MkTxError m
+       , MonadState ConstraintProcessingState m
+       )
     => TxConstraint
     -> m ()
 processConstraint = \case
@@ -595,9 +585,8 @@ processConstraint = \case
         unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
     MustValidateIn timeRange ->
         unbalancedTx . validityTimeRange %= (timeRange /\)
-    MustBeSignedBy pk -> do
-        sigs <- getSignatories pk
-        unbalancedTx . requiredSignatories <>= sigs
+    MustBeSignedBy pk ->
+        unbalancedTx . requiredSignatories <>= Set.singleton pk
     MustSpendAtLeast vl -> valueSpentInputs <>= required vl
     MustProduceAtLeast vl -> valueSpentOutputs <>= required vl
     MustSpendPubKeyOutput txo -> do
