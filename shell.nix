@@ -129,7 +129,6 @@ let
     spago
     spago2nix
     stylish-haskell
-    updateMaterialized
     updateClientDeps
   ]);
 
