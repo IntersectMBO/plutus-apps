@@ -133,10 +133,22 @@ data ScriptInputConstraint a =
         , icTxOutRef :: TxOutRef -- ^ The UTXO to be spent by the target script
         } deriving stock (Haskell.Show, Generic, Haskell.Functor)
 
-addTxIn :: TxOutRef -> i -> TxConstraints i o -> TxConstraints i o
-addTxIn outRef red tc =
-    let ic = ScriptInputConstraint{icRedeemer = red, icTxOutRef = outRef}
-    in tc { txOwnInputs = ic : txOwnInputs tc }
+{-# INLINABLE mustSpendOutputFromTheScript #-}
+-- | @mustSpendOutputFromTheScript txOutRef red@ spends the transaction output
+-- @txOutRef@ with a script address using the redeemer @red@.
+--
+-- If used in 'Ledger.Constraints.OffChain', this constraint spends a script
+-- output @txOutRef@ with redeemer @red@.
+-- The script address is derived from the typed validator that is provided in
+-- the 'Ledger.Constraints.OffChain.ScriptLookups' with
+-- 'Ledger.Constraints.OffChain.typedValidatorLookups'.
+--
+-- If used in 'Ledger.Constraints.OnChain', this constraint verifies that the
+-- spend script transaction output with @red@ is part of the transaction's
+-- inputs.
+mustSpendOutputFromTheScript :: TxOutRef -> i -> TxConstraints i o
+mustSpendOutputFromTheScript txOutRef red =
+    mempty { txOwnInputs = [ScriptInputConstraint red txOutRef] }
 
 instance (Pretty a) => Pretty (ScriptInputConstraint a) where
     pretty ScriptInputConstraint{icRedeemer, icTxOutRef} =
