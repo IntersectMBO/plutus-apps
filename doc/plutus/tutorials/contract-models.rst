@@ -22,7 +22,7 @@ application, generic properties such as that no funds remain locked in
 contracts for ever, and indeed both positive and negative
 tests---where positive tests check that the contracts allow the
 intended usages, and negative tests check that they do *not* allow
-unintended ones.
+the unintended ones.
 
 The `ContractModel` framework is quite rich in features, but we will
 introduce them gradually and explain how they can best be used.
@@ -161,7 +161,8 @@ should run in, and the third line tells the framework which contract
 to run for each key--in this case, the same ``testContract`` in each
 wallet. ``Spec.Tutorial.Escrow`` does not actually export a complete
 concrete, only contract endpoints, so for the purposes of the test we
-just define a contract that invokes those endpoints repeatedly:
+just define a contract that allows us to invoke those endpoints
+repeatedly:
 
 .. literalinclude:: Escrow.hs
    :start-after: START testContract
@@ -432,7 +433,7 @@ contains the "contract state", which is the state we have defined
 ourselves, the ``EscrowModel``. The *lens* ``contractState
 . contributions . to fold`` extracts the ``EscrowModel``, extracts the
 ``contributions`` field from it, and then combines all the :hsobj:`Ledger.Value`
-using |fold|_. When we apply it to ``s`` using |^.|_, then we get
+using |fold|_. When we apply it to ``s`` using |^.|_, we get
 the total value of all contributions. Likewise, the second lens
 application computes the combined value of all the targets. If the
 contributions exceed the targets, then the ``Redeem`` is allowed;
