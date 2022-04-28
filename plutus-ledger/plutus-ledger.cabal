@@ -99,7 +99,6 @@ library
         cardano-ledger-shelley,
         cardano-ledger-shelley-ma -any,
         cardano-slotting -any,
-        cardano-wallet-core -any,
         deepseq -any,
         cborg -any,
         containers -any,
