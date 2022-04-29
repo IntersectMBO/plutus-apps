@@ -105,7 +105,11 @@ instance FromHttpApiData Wallet where
   parseUrlPiece = pure . Wallet Nothing <=< parseUrlPiece
 
 toMockWallet :: MockWallet -> Wallet
-toMockWallet mw = Wallet (CW.mwPrintAs mw) . WalletId . CW.mwWalletId $ mw
+toMockWallet mw =
+  Wallet (CW.mwPrintAs mw)
+  . WalletId
+  . Cardano.Wallet.WalletId
+  . CW.mwWalletId $ mw
 
 knownWallets :: [Wallet]
 knownWallets = toMockWallet <$> CW.knownMockWallets
@@ -152,7 +156,8 @@ fromBase16 s = bimap show WalletId (fromText s)
 
 -- | The 'MockWallet' whose ID is the given wallet ID (if it exists)
 walletToMockWallet :: Wallet -> Maybe MockWallet
-walletToMockWallet (Wallet _ wid) = find ((==) wid . WalletId . CW.mwWalletId) CW.knownMockWallets
+walletToMockWallet (Wallet _ wid) =
+  find ((==) wid . WalletId . Cardano.Wallet.WalletId . CW.mwWalletId) CW.knownMockWallets
 
 -- | The public key of a mock wallet.  (Fails if the wallet is not a mock wallet).
 mockWalletPaymentPubKey :: Wallet -> PaymentPubKey
