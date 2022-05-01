@@ -61,7 +61,8 @@ import Database.Beam.Migrate.Simple (autoMigrate)
 import Database.Beam.Sqlite qualified as Sqlite
 import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.SQLite.Simple qualified as Sqlite
-import Network.HTTP.Client (managerModifyRequest, newManager, setRequestIgnoreStatus)
+import Network.HTTP.Client (ManagerSettings (managerResponseTimeout), managerModifyRequest, newManager,
+                            responseTimeoutMicro, setRequestIgnoreStatus)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Plutus.ChainIndex.Client qualified as ChainIndex
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers), PABAction)
@@ -276,7 +277,8 @@ mkEnv appTrace appConfig@Config { dbConfig
 
     mkManager =
         newManager $
-        tlsManagerSettings {managerModifyRequest = pure . setRequestIgnoreStatus}
+        tlsManagerSettings { managerModifyRequest = pure . setRequestIgnoreStatus
+                           , managerResponseTimeout = responseTimeoutMicro 60_000_000 }
 
     readPP path = do
       bs <- BSL.readFile path
