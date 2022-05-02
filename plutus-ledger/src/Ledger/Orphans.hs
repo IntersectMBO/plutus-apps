@@ -13,19 +13,25 @@ import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Crypto qualified as C
 import Cardano.Ledger.Hashes qualified as Hashes
 import Cardano.Ledger.SafeHash qualified as C
+import Codec.Serialise.Class (Serialise)
 import Control.Lens ((&), (.~), (?~))
 import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage)
 import Crypto.Hash qualified as Crypto
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
+import Data.Aeson.Types qualified as JSON
 import Data.Bifunctor (bimap)
 import Data.ByteArray qualified as BA
+import Data.Hashable (Hashable)
 import Data.OpenApi qualified as OpenApi
+import Data.Scientific (floatingOrInteger, scientific)
 import Data.Text qualified as Text
 import Data.Typeable (Proxy (Proxy), Typeable)
 import GHC.Exts (IsList (fromList))
 import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Ada (Ada (Lovelace))
+import Ledger.Ada (Ada (Lovelace))
+import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
+import Ledger.Slot (Slot (Slot))
 import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinData), Credential,
                              CurrencySymbol (CurrencySymbol), Data, Datum (Datum), DatumHash (DatumHash), Extended,
                              Interval, LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
@@ -35,11 +41,9 @@ import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinDat
                              TxId (TxId), TxOut, TxOutRef, UpperBound, Validator (Validator),
                              ValidatorHash (ValidatorHash), Value (Value), fromBytes)
 import Plutus.V1.Ledger.Bytes (bytes)
-import Plutus.V1.Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Plutus.V1.Ledger.Scripts (ScriptHash (..))
-import Plutus.V1.Ledger.Slot (Slot (Slot))
 import Plutus.V1.Ledger.Time (DiffMilliSeconds (DiffMilliSeconds))
-import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType)
+import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, TxIn, TxInType)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap
@@ -158,7 +162,7 @@ deriving newtype instance OpenApi.ToSchema ValidatorHash
 deriving newtype instance OpenApi.ToSchema Signature
 deriving newtype instance OpenApi.ToSchema POSIXTime
 deriving newtype instance OpenApi.ToSchema DiffMilliSeconds
-deriving newtype instance OpenApi.ToSchema BuiltinData
+deriving instance OpenApi.ToSchema BuiltinData
 deriving newtype instance OpenApi.ToSchema AssetClass
 deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Extended a)
 deriving instance
@@ -176,3 +180,24 @@ instance OpenApi.ToSchema Script where
     declareNamedSchema _ =
         pure $ OpenApi.NamedSchema (Just "Script") (OpenApi.toSchema (Proxy :: Proxy String))
 deriving newtype instance OpenApi.ToSchema ScriptHash
+
+-- 'POSIXTime' instances
+
+-- | Custom `FromJSON` instance which allows to parse a JSON number to a
+-- 'POSIXTime' value. The parsed JSON value MUST be an 'Integer' or else the
+-- parsing fails.
+instance JSON.FromJSON POSIXTime where
+  parseJSON v@(JSON.Number n) =
+      either (\_ -> JSON.prependFailure "parsing POSIXTime failed, " (JSON.typeMismatch "Integer" v))
+             (return . POSIXTime)
+             (floatingOrInteger n :: Either Double Integer)
+  parseJSON invalid =
+      JSON.prependFailure "parsing POSIXTime failed, " (JSON.typeMismatch "Number" invalid)
+
+-- | Custom 'ToJSON' instance which allows to simply convert a 'POSIXTime'
+-- value to a JSON number.
+instance JSON.ToJSON POSIXTime where
+  toJSON (POSIXTime n) = JSON.Number $ scientific n 0
+
+deriving newtype instance Serialise POSIXTime
+deriving newtype instance Hashable POSIXTime

@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts         #-}
 {-# LANGUAGE GADTs                    #-}
 {-# LANGUAGE NamedFieldPuns           #-}
+{-# LANGUAGE TypeApplications         #-}
 -- Code temporarily copied over from cardano-api,
 -- until https://github.com/input-output-hk/cardano-node/pull/2936 or something similar gets merged.
 module Ledger.Tx.CardanoAPITemp (makeTransactionBody') where
@@ -90,12 +91,12 @@ makeTransactionBody'
              TxMintValue _ v _ -> toMaryValue v)
           (case txProtocolParams of
              BuildTxWith Nothing        -> SNothing
-             BuildTxWith (Just pparams) ->
-               Alonzo.hashScriptIntegrity
-                 (toLedgerPParams ShelleyBasedEraAlonzo pparams)
-                 languages
-                 redeemers
-                 datums)
+             BuildTxWith (Just pparams) -> undefined)
+               -- Alonzo.hashScriptIntegrity
+               --   (toLedgerPParams ShelleyBasedEraAlonzo pparams)
+               --   languages
+               --   redeemers
+               --   datums)
           SNothing -- ignoring txMetadata and txAuxScripts in CardanoAPITemp
           SNothing) -- TODO alonzo: support optional network id in TxBodyContent
         scripts
@@ -124,7 +125,8 @@ makeTransactionBody'
 
     scriptdata :: [ScriptData]
     scriptdata = List.nub $
-      [ d | TxOut _ _ (TxOutDatum ScriptDataInAlonzoEra d) <- txOuts ]
+      [ d | TxOut _ _ (TxOutDatumInTx ScriptDataInAlonzoEra d) _ <- txOuts ]
+      ++ [ d | TxOut _ _ (TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra d) _ <- txOuts ]
       ++ [ d | (_, AnyScriptWitness
                       (PlutusScriptWitness
                         _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
@@ -156,19 +158,19 @@ toShelleyWithdrawal withdrawals =
 toShelleyTxOut :: forall era ledgerera.
                  (ShelleyLedgerEra era ~ ledgerera, IsShelleyBasedEra era)
                => TxOut CtxTx era -> Ledger.TxOut ledgerera
-toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
+toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
+toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
+toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
+toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
+toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)
 
@@ -176,7 +178,8 @@ toAlonzoTxOutDataHash :: TxOutDatum CtxTx era
                       -> StrictMaybe (Alonzo.DataHash StandardCrypto)
 toAlonzoTxOutDataHash TxOutDatumNone                         = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
-toAlonzoTxOutDataHash (TxOutDatum _ d)                       = let ScriptDataHash dh = hashScriptData d in SJust dh
+toAlonzoTxOutDataHash (TxOutDatumInTx _ d)                   = let ScriptDataHash dh = hashScriptData d in SJust dh
+toAlonzoTxOutDataHash (TxOutDatumInline _ d)                 = let ScriptDataHash dh = hashScriptData d in SJust dh
 
 toAlonzoLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1

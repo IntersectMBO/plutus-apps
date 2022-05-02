@@ -93,14 +93,15 @@ import Data.Set qualified as Set
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Ledger.Ada qualified as Ada
 import Ledger.Address qualified as P
 import Ledger.Scripts qualified as P
+import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
-import Plutus.V1.Ledger.Ada qualified as Ada
+import Ledger.Tx.Internal qualified as P
 import Plutus.V1.Ledger.Api qualified as Api
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Credential qualified as Credential
-import Plutus.V1.Ledger.Slot qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
@@ -399,7 +400,7 @@ fromCardanoTxInWitness
         (P.Datum $ fromCardanoScriptData datum)
 fromCardanoTxInWitness
     (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV2InAlonzo C.PlutusScriptV2
+        (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
             script
             (C.ScriptDatumForTxIn datum)
             redeemer
@@ -456,7 +457,7 @@ toCardanoTxOut networkId fromHash (P.TxOut addr value datumHash) =
 lookupDatum :: Map P.DatumHash P.Datum -> Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
 lookupDatum datums datumHash =
     case flip Map.lookup datums =<< datumHash of
-        Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
+        Just datum -> pure $ C.TxOutDatumInTx C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
         Nothing    -> toCardanoTxOutDatumHash datumHash
 
 fromCardanoAddress :: C.AddressInEra era -> Either FromCardanoError P.Address
@@ -542,7 +543,8 @@ toCardanoTxOutValue value = do
 fromCardanoTxOutDatumHash :: C.TxOutDatum C.CtxTx era -> Maybe P.DatumHash
 fromCardanoTxOutDatumHash C.TxOutDatumNone       = Nothing
 fromCardanoTxOutDatumHash (C.TxOutDatumHash _ h) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
-fromCardanoTxOutDatumHash (C.TxOutDatum _ d)     = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
+fromCardanoTxOutDatumHash (C.TxOutDatumInTx _ d) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
+fromCardanoTxOutDatumHash (C.TxOutDatumInline _ d) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 
 toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra)
 toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone
@@ -645,7 +647,7 @@ toCardanoScriptData = C.fromPlutusData . Api.builtinDataToData
 fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe P.Script
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InAlonzo (C.PlutusScript C.PlutusScriptV1 script)) =
     Just $ fromCardanoPlutusScript script
-fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InAlonzo (C.PlutusScript C.PlutusScriptV2 script)) =
+fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InBabbage (C.PlutusScript C.PlutusScriptV2 script)) =
     Just $ fromCardanoPlutusScript script
 fromCardanoScriptInEra (C.ScriptInEra _ C.SimpleScript{}) = Nothing
 
