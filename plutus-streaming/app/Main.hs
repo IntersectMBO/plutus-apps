@@ -7,11 +7,17 @@ module Main where
 import Cardano.Api (Block (Block), BlockInMode (BlockInMode), ChainPoint (ChainPoint, ChainPointAtGenesis),
                     NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic), SlotNo (SlotNo))
 import Cardano.Api.Extras ()
+import Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
 import Data.Aeson.Text qualified as Aeson
 import Data.Text.Lazy qualified as TL
+import Index.Sqlite (SqliteIndex, insert)
+import Index.TxIdStatus (openIx)
+import Ledger.TxId (TxId)
 import Options.Applicative (Alternative ((<|>)), Parser, auto, execParser, flag', help, helper, info, long, metavar,
                             option, str, strOption, (<**>))
-import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), withSimpleChainSyncEventStream)
+import Plutus.ChainIndex.Types (TxConfirmedState)
+import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), SimpleChainSyncEvent,
+                         withSimpleChainSyncEventStream)
 import Streaming.Prelude qualified as S
 
 --
@@ -66,20 +72,36 @@ chainPointParser =
 -- Main
 --
 
+type TxIndex = SqliteIndex SimpleChainSyncEvent () TxId TxConfirmedState
+
+-- | Process a chain sync event that we receive from the alonzo node client
+processChainSyncEvent
+  :: SimpleChainSyncEvent
+  -> MVar TxIndex
+  -> IO ()
+processChainSyncEvent event mix = do
+  currentIx <- takeMVar mix
+  nextIx <- insert event currentIx
+  putMVar mix nextIx
+
 main :: IO ()
 main = do
   Options {optionsSocketPath, optionsNetworkId, optionsChainPoint} <-
     execParser $ info (optionsParser <**> helper) mempty
+  ix  <- openIx "txs.db"
+  mix <- newMVar ix
 
   withSimpleChainSyncEventStream
     optionsSocketPath
     optionsNetworkId
     optionsChainPoint
     $ S.stdoutLn
-      . S.map
-        ( \case
-            RollForward (BlockInMode (Block header _txs) _era) _ct ->
-              "RollForward, header: " <> TL.unpack (Aeson.encodeToLazyText header)
-            RollBackward cp _ct ->
-              "RollBackward, point: " <> TL.unpack (Aeson.encodeToLazyText cp)
+      . S.mapM
+        ( \evt -> do
+            case evt of
+              RollForward (BlockInMode (Block header transactions) _era) _ct -> do
+                _ <- processChainSyncEvent evt mix
+                pure $ "RollForward, header: " <> TL.unpack (Aeson.encodeToLazyText header) <> " Transactions: " <> show (length transactions)
+              RollBackward cp _ct ->
+                pure $ "RollBackward, point: " <> TL.unpack (Aeson.encodeToLazyText cp)
         )
