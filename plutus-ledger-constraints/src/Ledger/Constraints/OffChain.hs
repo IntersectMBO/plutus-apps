@@ -69,6 +69,7 @@ import PlutusTx.Numeric qualified as N
 
 import Data.Semigroup (First (First, getFirst))
 import Ledger qualified
+import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
 import Ledger.Address qualified as Address
@@ -89,7 +90,6 @@ import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, Red
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError)
 import Ledger.Typed.Tx qualified as Typed
-import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Time (POSIXTimeRange)
 import Plutus.V1.Ledger.Value (Value)
 import Plutus.V1.Ledger.Value qualified as Value

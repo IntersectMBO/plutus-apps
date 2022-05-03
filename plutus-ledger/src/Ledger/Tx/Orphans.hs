@@ -55,6 +55,13 @@ deriving anyclass instance FromJSONKey DatumHash
 deriving newtype instance Hashable DatumHash
 deriving newtype instance Serialise DatumHash
 
+deriving anyclass instance ToJSON StakeValidatorHash
+deriving anyclass instance FromJSON StakeValidatorHash
+deriving anyclass instance ToJSONKey StakeValidatorHash
+deriving anyclass instance FromJSONKey StakeValidatorHash
+deriving newtype instance Hashable StakeValidatorHash
+deriving newtype instance Serialise StakeValidatorHash
+
 deriving anyclass instance ToJSON ValidatorHash
 deriving anyclass instance FromJSON ValidatorHash
 deriving anyclass instance ToJSONKey ValidatorHash
