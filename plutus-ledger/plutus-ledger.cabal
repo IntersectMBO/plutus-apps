@@ -98,6 +98,7 @@ library
         cardano-crypto -any,
         cardano-crypto-class -any,
         cardano-ledger-alonzo -any,
+        cardano-ledger-babbage -any,
         cardano-ledger-byron -any,
         cardano-ledger-core -any,
         cardano-ledger-shelley,

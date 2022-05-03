@@ -122,13 +122,13 @@ mkTypedValidator ::
     -> TypedValidator a
 mkTypedValidator vc wrapper =
     let val = Scripts.mkValidatorScript $ wrapper `applyCode` vc
-        hsh = Scripts.validatorHash val
+        hsh = Scripts.plutusV1ValidatorHash val
         mps = MPS.mkForwardingMintingPolicy hsh
     in TypedValidator
         { tvValidator         = val
         , tvValidatorHash     = hsh
         , tvForwardingMPS     = mps
-        , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
+        , tvForwardingMPSHash = Scripts.plutusV1MintingPolicyHash mps
         }
 
 -- | Make a 'TypedValidator' from the 'CompiledCode' of a parameterized validator script and its wrapper.
@@ -159,14 +159,14 @@ validatorScript = tvValidator
 -- | Make a 'TypedValidator' (with no type constraints) from an untyped 'Validator' script.
 unsafeMkTypedValidator :: Scripts.Validator -> TypedValidator Any
 unsafeMkTypedValidator vl =
-    let vh = Scripts.validatorHash vl
+    let vh = Scripts.plutusV1ValidatorHash vl
         mps = MPS.mkForwardingMintingPolicy vh
     in
     TypedValidator
         { tvValidator         = vl
         , tvValidatorHash     = vh
         , tvForwardingMPS     = mps
-        , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
+        , tvForwardingMPSHash = Scripts.plutusV1MintingPolicyHash mps
         }
 
 -- | The minting policy that forwards all checks to the instance's

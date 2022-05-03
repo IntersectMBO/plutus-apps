@@ -38,8 +38,8 @@ module Ledger.Tx
     , addSignature
     , addSignature'
     , pubKeyTxOut
-    , scriptTxOut
-    , scriptTxOut'
+    , plutusV1ScriptTxOut
+    , plutusV1ScriptTxOut'
     , updateUtxo
     , txOutRefs
     , unspentOutputsTx
@@ -61,7 +61,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
+import Ledger.Address (Address, PaymentPubKey, StakePubKey, plutusV1ScriptAddress, pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Scripts (datumHash)
@@ -221,12 +221,12 @@ unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
 
 -- | Create a transaction output locked by a validator script hash
 --   with the given data script attached.
-scriptTxOut' :: Value -> Address -> Datum -> TxOut
-scriptTxOut' v a ds = TxOut a v (Just (datumHash ds))
+plutusV1ScriptTxOut' :: Value -> Address -> Datum -> TxOut
+plutusV1ScriptTxOut' v a ds = TxOut a v (Just (datumHash ds))
 
 -- | Create a transaction output locked by a validator script and with the given data script attached.
-scriptTxOut :: Value -> Validator -> Datum -> TxOut
-scriptTxOut v vs = scriptTxOut' v (scriptAddress vs)
+plutusV1ScriptTxOut :: Value -> Validator -> Datum -> TxOut
+plutusV1ScriptTxOut v vs = plutusV1ScriptTxOut' v (plutusV1ScriptAddress vs)
 
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
 pubKeyTxOut :: Value -> PaymentPubKey -> Maybe StakePubKey -> TxOut

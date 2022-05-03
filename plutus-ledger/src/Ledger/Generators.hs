@@ -83,7 +83,7 @@ import Ledger (Ada, CurrencySymbol, Interval, MintingPolicy, OnChainTx (Valid), 
                Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
                TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (txOutValue), TxOutRef (TxOutRef),
                UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature',
-               mkMintingPolicyScript, pubKeyTxIn, pubKeyTxOut, scriptCurrencySymbol, toPublicKey, txId)
+               mkMintingPolicyScript, plutusV1ScriptCurrencySymbol, pubKeyTxIn, pubKeyTxOut, toPublicKey, txId)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
@@ -271,7 +271,7 @@ alwaysSucceedPolicy :: MintingPolicy
 alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
 
 someTokenValue :: TokenName -> Integer -> Value
-someTokenValue = Value.singleton (scriptCurrencySymbol alwaysSucceedPolicy)
+someTokenValue = Value.singleton (plutusV1ScriptCurrencySymbol alwaysSucceedPolicy)
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.

@@ -42,7 +42,7 @@ import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinDat
                              TxId (TxId), TxOut, TxOutRef, UpperBound, Validator (Validator),
                              ValidatorHash (ValidatorHash), Value (Value), fromBytes)
 import Plutus.V1.Ledger.Bytes (bytes)
-import Plutus.V1.Ledger.Scripts (ScriptHash (..))
+import Plutus.V1.Ledger.Scripts (ScriptError, ScriptHash (..))
 import Plutus.V1.Ledger.Time (DiffMilliSeconds (DiffMilliSeconds))
 import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, TxIn, TxInType)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
@@ -203,3 +203,6 @@ instance JSON.ToJSON POSIXTime where
 
 deriving newtype instance Serialise POSIXTime
 deriving newtype instance Hashable POSIXTime
+
+deriving anyclass instance JSON.ToJSON ScriptError
+deriving anyclass instance JSON.FromJSON ScriptError

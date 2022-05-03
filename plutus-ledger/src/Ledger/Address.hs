@@ -12,7 +12,8 @@ module Ledger.Address
     , paymentPubKeyHash
     , pubKeyHashAddress
     , pubKeyAddress
-    , scriptAddress
+    , plutusV1ScriptAddress
+    , plutusV2ScriptAddress
     , scriptValidatorHashAddress
     ) where
 
@@ -24,7 +25,8 @@ import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash)
 import Ledger.Orphans ()
-import Ledger.Scripts (StakeValidatorHash (..), Validator, ValidatorHash (..), validatorHash)
+import Ledger.Scripts (StakeValidatorHash (..), Validator, ValidatorHash (..), plutusV1ValidatorHash,
+                       plutusV2ValidatorHash)
 import Plutus.V1.Ledger.Address as Export hiding (pubKeyHashAddress)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import PlutusTx qualified
@@ -83,10 +85,15 @@ pubKeyAddress (PaymentPubKey pk) skh =
     Address (PubKeyCredential (pubKeyHash pk))
             (fmap (StakingHash . PubKeyCredential . pubKeyHash . unStakePubKey) skh)
 
-{-# INLINABLE scriptAddress #-}
--- | The address that should be used by a transaction output locked by the given validator script.
-scriptAddress :: Validator -> Address
-scriptAddress validator = Address (ScriptCredential (validatorHash validator)) Nothing
+{-# INLINABLE plutusV1ScriptAddress #-}
+-- | The address that should be used by a transaction output locked by the given Plutus V2 validator script.
+plutusV1ScriptAddress :: Validator -> Address
+plutusV1ScriptAddress validator = Address (ScriptCredential (plutusV1ValidatorHash validator)) Nothing
+
+{-# INLINABLE plutusV2ScriptAddress #-}
+-- | The address that should be used by a transaction output locked by the given Plutus V2 validator script.
+plutusV2ScriptAddress :: Validator -> Address
+plutusV2ScriptAddress validator = Address (ScriptCredential (plutusV2ValidatorHash validator)) Nothing
 
 {-# INLINABLE scriptValidatorHashAddress #-}
 -- | The address that should be used by a transaction output locked by the given validator script

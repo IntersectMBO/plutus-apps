@@ -282,7 +282,7 @@ checkMintingAuthorised tx =
 
         mpsScriptHashes = Scripts.MintingPolicyHash . V.unCurrencySymbol <$> mintedCurrencies
 
-        lockingScripts = mintingPolicyHash <$> Set.toList (txMintScripts tx)
+        lockingScripts = plutusV1MintingPolicyHash <$> Set.toList (txMintScripts tx)
 
         mintedWithoutScript = filter (\c -> c `notElem` lockingScripts) mpsScriptHashes
     in
@@ -293,7 +293,7 @@ checkMintingScripts tx = do
     txinfo <- mkTxInfo tx
     iforM_ (Set.toList (txMintScripts tx)) $ \i vl -> do
         let cs :: V.CurrencySymbol
-            cs = V.mpsSymbol $ mintingPolicyHash vl
+            cs = V.mpsSymbol $ plutusV1MintingPolicyHash vl
             ctx :: Context
             ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
             ptr :: RedeemerPtr
@@ -333,7 +333,7 @@ matchInputOutput :: ValidationMonad m
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
     (Just (ConsumeScriptAddress v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
-        unless (validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
+        unless (plutusV1ValidatorHash v == vh) $ throwError $ InvalidScriptHash v vh
 
         pure $ ScriptMatch (txInRef txin) v r d
     (Just ConsumePublicKeyAddress, _, Address{addressCredential=PubKeyCredential pkh}) ->
