@@ -73,9 +73,9 @@ import GHC.Generics (Generic)
 import Ledger.Blockchain
 import Ledger.Crypto
 import Ledger.Orphans ()
-import Ledger.Scripts
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (txId)
+import Plutus.Script.Utils.V1.Scripts
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address
@@ -84,6 +84,7 @@ import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
+import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Slot qualified as Slot
 import Plutus.V1.Ledger.Tx

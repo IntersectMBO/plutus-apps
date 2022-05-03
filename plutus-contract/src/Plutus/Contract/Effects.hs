@@ -89,8 +89,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.String (fromString)
 import GHC.Generics (Generic)
-import Ledger (Address, AssetClass, Datum, DatumHash, MintingPolicy, MintingPolicyHash, PaymentPubKeyHash, Redeemer,
-               RedeemerHash, StakeValidator, StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
+import Ledger (PaymentPubKeyHash)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Credential (Credential)
 import Ledger.Scripts (Validator)
@@ -103,6 +102,9 @@ import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (Txo
                               UtxosResponse (UtxosResponse))
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
 import Plutus.ChainIndex.Types (Tip, TxOutStatus, TxStatus)
+import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
+                             StakeValidator, StakeValidatorHash, TxId, TxOutRef, ValidatorHash)
+import Plutus.V1.Ledger.Value (AssetClass)
 import Prettyprinter (Pretty (pretty), hsep, indent, viaShow, vsep, (<+>))
 import Wallet.API (WalletAPIError)
 import Wallet.Types (ContractInstanceId, EndpointDescription, EndpointValue)

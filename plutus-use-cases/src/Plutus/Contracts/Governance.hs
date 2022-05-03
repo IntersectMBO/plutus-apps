@@ -38,7 +38,7 @@ import Data.Semigroup (Sum (..))
 import Data.String (fromString)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Ledger (MintingPolicyHash, POSIXTime, PaymentPubKeyHash, TokenName)
+import Ledger (POSIXTime, PaymentPubKeyHash, TokenName)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
@@ -48,6 +48,7 @@ import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
+import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude
@@ -142,7 +143,7 @@ typedValidator = Scripts.mkTypedValidatorParam @GovernanceMachine
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 client :: Params -> SM.StateMachineClient GovState GovInput
 client params = SM.mkStateMachineClient $ SM.StateMachineInstance (machine params) (typedValidator params)

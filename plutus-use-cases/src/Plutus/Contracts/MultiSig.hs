@@ -28,10 +28,10 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts as V
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Tx
+import Plutus.V1.Ledger.Contexts as V
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), foldMap)
 
@@ -71,7 +71,7 @@ typedValidator = Scripts.mkTypedValidatorParam @MultiSig
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 
 -- | Lock some funds in a 'MultiSig' contract.

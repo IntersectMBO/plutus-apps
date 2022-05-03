@@ -29,29 +29,27 @@ module Plutus.Contracts.Currency(
     ) where
 
 import Control.Lens
-import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
-
-import Plutus.Contract as Contract
-import Plutus.Contract.Wallet (getUnspentOutput)
-
-import Ledger (CurrencySymbol, PaymentPubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress,
-               scriptCurrencySymbol)
-import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts qualified as V
-import Ledger.Scripts
-import PlutusTx qualified
-
-import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value (TokenName, Value)
-import Ledger.Value qualified as Value
-
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Semigroup (Last (..))
 import GHC.Generics (Generic)
+import Plutus.V1.Ledger.Contexts qualified as V
+import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
+
+import Ledger (CurrencySymbol, PaymentPubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress)
+import Ledger.Constraints qualified as Constraints
+import Ledger.Scripts
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (TokenName, Value)
+import Ledger.Value qualified as Value
+import Plutus.Contract as Contract
+import Plutus.Contract.Wallet (getUnspentOutput)
+import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
+import Schema (ToSchema)
+
 import Prelude (Semigroup (..))
 import Prelude qualified as Haskell
-import Schema (ToSchema)
 
 {- HLINT ignore "Use uncurry" -}
 
@@ -107,7 +105,7 @@ checkPolicy c@(OneShotCurrency (refHash, refIdx) _) _ ctx@V.ScriptContext{V.scri
 
 curPolicy :: OneShotCurrency -> MintingPolicy
 curPolicy cur = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \c -> Scripts.wrapMintingPolicy (checkPolicy c) ||])
+    $$(PlutusTx.compile [|| \c -> Scripts.mkUntypedMintingPolicy (checkPolicy c) ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode cur
 

@@ -174,7 +174,7 @@ typedValidator = Scripts.mkTypedValidatorParam @AuctionMachine
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 -- | The machine client of the auction state machine. It contains the script instance
 --   with the on-chain code, and the Haskell definition of the state machine for
@@ -368,3 +368,4 @@ auctionBuyer currency params = do
 
 covIdx :: CoverageIndex
 covIdx = getCovIdx $$(PlutusTx.compile [|| mkValidator ||])
+

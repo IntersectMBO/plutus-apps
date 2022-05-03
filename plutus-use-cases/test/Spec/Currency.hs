@@ -3,9 +3,9 @@
 module Spec.Currency(tests, currencyTrace) where
 
 import Control.Monad (void)
-import Ledger qualified
 import Plutus.Contract
 import Plutus.Contract.Test
+import Plutus.V1.Ledger.Scripts qualified as Ledger
 
 import Plutus.Contracts.Currency (OneShotCurrency)
 import Plutus.Contracts.Currency qualified as Cur

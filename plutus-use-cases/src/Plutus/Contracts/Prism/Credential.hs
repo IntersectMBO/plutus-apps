@@ -20,12 +20,14 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Contexts (ScriptContext (..), txSignedBy)
-import Ledger.Scripts (MintingPolicy, mintingPolicyHash, mkMintingPolicyScript)
+import Ledger.Scripts (MintingPolicy, mkMintingPolicyScript)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contracts.TokenAccount (Account (..))
+import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash)
+import Plutus.V1.Ledger.Api (ScriptContext (..))
+import Plutus.V1.Ledger.Contexts (txSignedBy)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
@@ -58,7 +60,7 @@ validateMint CredentialAuthority{unCredentialAuthority} _ ScriptContext{scriptCo
 
 policy :: CredentialAuthority -> MintingPolicy
 policy credential = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \c -> Scripts.wrapMintingPolicy (validateMint c) ||])
+    $$(PlutusTx.compile [|| \c -> Scripts.mkUntypedMintingPolicy (validateMint c) ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode credential
 

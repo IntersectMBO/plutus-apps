@@ -32,12 +32,13 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace), fromValue)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
-import Ledger.Contexts (ScriptContext (..), ScriptPurpose (..))
-import Ledger.Contexts qualified as Validation
-import Ledger.Scripts (MintingPolicy, mintingPolicyHash, mkMintingPolicyScript)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.V1.Scripts (MintingPolicy, mintingPolicyHash)
+import Plutus.V1.Ledger.Api (ScriptContext (..), ScriptPurpose (..))
+import Plutus.V1.Ledger.Contexts qualified as Validation
+import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Prelude qualified as Haskell
@@ -65,7 +66,7 @@ validateSTO _ _ _ = error ()
 
 policy :: STOData -> MintingPolicy
 policy stoData = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \c -> Scripts.wrapMintingPolicy (validateSTO c) ||]) `PlutusTx.applyCode` PlutusTx.liftCode stoData
+    $$(PlutusTx.compile [|| \c -> Scripts.mkUntypedMintingPolicy (validateSTO c) ||]) `PlutusTx.applyCode` PlutusTx.liftCode stoData
 
 -- | A 'Value' of a number of coins issued in the STO
 coins :: STOData -> Integer -> Value

@@ -15,16 +15,16 @@ module Plutus.Contracts.Swap(
     swapValidator
     ) where
 
-import Ledger (POSIXTime, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
-import Ledger qualified
+import Ledger (POSIXTime, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Ada (Ada)
 import Ledger.Ada qualified as Ada
-import Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
-import Ledger.Contexts qualified as Validation
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Plutus.Contract.Oracle (Observation (..), SignedMessage)
 import Plutus.Contract.Oracle qualified as Oracle
+import Plutus.V1.Ledger.Api (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..), Validator)
+import Plutus.V1.Ledger.Contexts qualified as Validation
+import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
 import PlutusTx.Prelude
 
@@ -175,7 +175,7 @@ swapValidator swp = Ledger.mkValidatorScript $
     $$(PlutusTx.compile [|| validatorParam ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode swp
-    where validatorParam s = Scripts.wrapValidator (mkValidator s)
+    where validatorParam s = Scripts.mkUntypedValidator (mkValidator s)
 
 {- Note [Swap Transactions]
 

@@ -118,7 +118,7 @@ This tells the compiler what the Haskell types for the redeemer and datum are, s
 
 We can then write a nice version of our validator that *only* uses the Haskell types!
 This is what we would write if we completely forgot about all the concerns about ``Data``, returning errors, and so on.
-To turn this into a validator like we saw before, we can use :hsobj:`Ledger.Typed.Scripts.Validators.wrapValidator`.
+To turn this into a validator like we saw before, we can use :hsobj:`Plutus.Script.Utils.V1.Typed.Scripts.Validators.mkUntypedValidator`.
 This takes advantage of the information we provided in our ``ScriptType`` instance to automatically work out how to decode the arguments.
 
 .. literalinclude:: BasicValidators.hs
