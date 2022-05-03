@@ -56,24 +56,6 @@ newtype Passphrase =
 instance Show Passphrase where
   show _ = "<passphrase>"
 
-deriving anyclass instance ToJSON PubKeyHash
-deriving anyclass instance FromJSON PubKeyHash
-deriving anyclass instance JSON.FromJSONKey PubKeyHash
-deriving anyclass instance JSON.ToJSONKey PubKeyHash
-deriving anyclass instance Newtype PubKeyHash
-deriving newtype instance Serialise PubKeyHash
-deriving newtype instance Hashable PubKeyHash
-
-deriving anyclass instance Serialise LedgerBytes
-deriving anyclass instance JSON.FromJSONKey LedgerBytes
-deriving anyclass instance JSON.ToJSONKey LedgerBytes
-
-instance ToJSON LedgerBytes where
-    toJSON = JSON.String . JSON.encodeByteString . KB.bytes
-
-instance FromJSON LedgerBytes where
-    parseJSON v = KB.fromBytes <$> JSON.decodeByteString v
-
 -- | A message with a cryptographic signature.
 newtype Signature = Signature { getSignature :: PlutusTx.BuiltinByteString }
     deriving stock (Eq, Ord, Generic)

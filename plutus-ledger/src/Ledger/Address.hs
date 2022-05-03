@@ -16,12 +16,13 @@ module Ledger.Address
     , scriptValidatorHashAddress
     ) where
 
+import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Hashable (Hashable)
 import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
-import Ledger.Crypto (PrivateKey, PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash)
+import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash)
 import Ledger.Orphans ()
 import Ledger.Scripts (StakeValidatorHash (..), Validator, ValidatorHash (..), validatorHash)
 import Plutus.V1.Ledger.Address as Export hiding (pubKeyHashAddress)
@@ -31,7 +32,7 @@ import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty)
 
-newtype PaymentPrivateKey = PaymentPrivateKey { unPaymentPrivateKey :: PrivateKey }
+newtype PaymentPrivateKey = PaymentPrivateKey { unPaymentPrivateKey :: Crypto.XPrv }
 
 newtype PaymentPubKey = PaymentPubKey { unPaymentPubKey :: PubKey }
     deriving stock (Eq, Ord, Generic)

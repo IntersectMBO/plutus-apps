@@ -32,6 +32,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
+import Ledger.Tx.Internal (Tx)
 import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinData), Credential,
                              CurrencySymbol (CurrencySymbol), Data, Datum (Datum), DatumHash (DatumHash), Extended,
                              Interval, LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
@@ -162,6 +163,7 @@ deriving newtype instance OpenApi.ToSchema ValidatorHash
 deriving newtype instance OpenApi.ToSchema Signature
 deriving newtype instance OpenApi.ToSchema POSIXTime
 deriving newtype instance OpenApi.ToSchema DiffMilliSeconds
+deriving stock instance Generic BuiltinData
 deriving instance OpenApi.ToSchema BuiltinData
 deriving newtype instance OpenApi.ToSchema AssetClass
 deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Extended a)

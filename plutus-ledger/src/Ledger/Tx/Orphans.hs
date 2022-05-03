@@ -18,25 +18,56 @@ import Codec.Serialise (Serialise (decode, encode))
 import Data.Aeson (FromJSON (parseJSON), FromJSONKey, ToJSON (toJSON), ToJSONKey, (.:))
 import Data.Aeson qualified as JSON
 import Data.Aeson.Extras qualified as JSON
+import Data.ByteString qualified as BS
 import Data.Hashable (Hashable)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as E
 import PlutusCore.Data qualified as PLC
 
+import Data.String (IsString (fromString))
 import PlutusTx qualified as PlutusTx
+import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Prelude qualified as PlutusTx
 
-import Plutus.V1.Ledger.Api (LedgerBytes)
+import Control.Newtype.Generics (Newtype)
 
-import Plutus.V1.Ledger.Address
+import Plutus.V1.Ledger.Api
+
+import Plutus.V1.Ledger.Bytes qualified as Bytes
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx
 import Plutus.V1.Ledger.Value
+
+deriving newtype instance Serialise LedgerBytes
+deriving anyclass instance FromJSONKey LedgerBytes
+deriving anyclass instance ToJSONKey LedgerBytes
+
+instance ToJSON LedgerBytes where
+    toJSON = JSON.String . JSON.encodeByteString . Bytes.bytes
+
+instance FromJSON LedgerBytes where
+    parseJSON v = Bytes.fromBytes <$> JSON.decodeByteString v
 
 deriving anyclass instance ToJSON DatumHash
 deriving anyclass instance FromJSON DatumHash
 deriving anyclass instance ToJSONKey DatumHash
 deriving anyclass instance FromJSONKey DatumHash
-deriving anyclass instance Hashable DatumHash
-deriving via LedgerBytes instance Serialise DatumHash
+deriving newtype instance Hashable DatumHash
+deriving newtype instance Serialise DatumHash
+
+deriving anyclass instance ToJSON ValidatorHash
+deriving anyclass instance FromJSON ValidatorHash
+deriving anyclass instance ToJSONKey ValidatorHash
+deriving anyclass instance FromJSONKey ValidatorHash
+deriving newtype instance Hashable ValidatorHash
+deriving newtype instance Serialise ValidatorHash
+
+deriving anyclass instance ToJSON MintingPolicyHash
+deriving anyclass instance FromJSON MintingPolicyHash
+deriving anyclass instance ToJSONKey MintingPolicyHash
+deriving anyclass instance FromJSONKey MintingPolicyHash
+deriving newtype instance Hashable MintingPolicyHash
+deriving newtype instance Serialise MintingPolicyHash
 
 deriving anyclass instance ToJSON RedeemerPtr
 deriving anyclass instance FromJSON RedeemerPtr
@@ -52,9 +83,30 @@ deriving anyclass instance ToJSON TxIn
 deriving anyclass instance FromJSON TxIn
 deriving anyclass instance Serialise TxIn
 
+deriving anyclass instance ToJSON PubKeyHash
+deriving anyclass instance FromJSON PubKeyHash
+deriving anyclass instance FromJSONKey PubKeyHash
+deriving anyclass instance ToJSONKey PubKeyHash
+deriving anyclass instance Newtype PubKeyHash
+deriving newtype instance Serialise PubKeyHash
+deriving newtype instance Hashable PubKeyHash
+
+deriving anyclass instance ToJSON Credential
+deriving anyclass instance FromJSON Credential
+deriving anyclass instance Hashable Credential
+deriving anyclass instance Serialise Credential
+
+deriving anyclass instance ToJSON StakingCredential
+deriving anyclass instance FromJSON StakingCredential
+deriving anyclass instance Hashable StakingCredential
+deriving anyclass instance Serialise StakingCredential
+
 deriving anyclass instance ToJSON Address
 deriving anyclass instance FromJSON Address
 deriving anyclass instance Serialise Address
+
+deriving anyclass instance ToJSON MintingPolicy
+deriving anyclass instance FromJSON MintingPolicy
 
 instance ToJSON CurrencySymbol where
   toJSON c =
@@ -74,12 +126,61 @@ instance FromJSON CurrencySymbol where
       bytes <- JSON.decodeByteString raw
       pure $ CurrencySymbol $ PlutusTx.toBuiltin bytes
 
+deriving anyclass instance Hashable CurrencySymbol
 deriving newtype instance Serialise CurrencySymbol
 
 deriving anyclass instance ToJSON Value
 deriving anyclass instance FromJSON Value
 deriving anyclass instance Hashable Value
 deriving newtype instance Serialise Value
+
+-- Orphan instances for 'PlutusTx.Map' to make this work
+instance (ToJSON v, ToJSON k) => ToJSON (Map.Map k v) where
+    toJSON = JSON.toJSON . Map.toList
+
+instance (FromJSON v, FromJSON k) => FromJSON (Map.Map k v) where
+    parseJSON v = Map.fromList <$> JSON.parseJSON v
+
+deriving anyclass instance (Hashable k, Hashable v) => Hashable (Map.Map k v)
+deriving anyclass instance (Serialise k, Serialise v) => Serialise (Map.Map k v)
+
+{- note [Roundtripping token names]
+How to properly roundtrip a token name that is not valid UTF-8 through PureScript
+without a big rewrite of the API?
+We prefix it with a zero byte so we can recognize it when we get a bytestring value back,
+and we serialize it base16 encoded, with 0x in front so it will look as a hex string.
+(Browsers don't render the zero byte.)
+-}
+
+
+
+instance ToJSON TokenName where
+    toJSON = JSON.object . pure . (,) "unTokenName" . JSON.toJSON .
+        fromTokenName
+            (\bs -> Text.cons '\NUL' (asBase16 bs))
+            (\t -> case Text.take 1 t of "\NUL" -> Text.concat ["\NUL\NUL", t]; _ -> t)
+      where
+        -- copied from 'Plutus.V1.Ledger.Value' because not exported
+        asBase16 :: BS.ByteString -> Text.Text
+        asBase16 bs = Text.concat ["0x", Bytes.encodeByteString bs]
+
+        fromTokenName :: (BS.ByteString -> r) -> (Text.Text -> r) -> TokenName -> r
+        fromTokenName handleBytestring handleText (TokenName bs) = either (\_ -> handleBytestring $ PlutusTx.fromBuiltin bs) handleText $ E.decodeUtf8' (PlutusTx.fromBuiltin bs)
+
+instance FromJSON TokenName where
+    parseJSON =
+        JSON.withObject "TokenName" $ \object -> do
+        raw <- object .: "unTokenName"
+        fromJSONText raw
+        where
+            fromText = tokenName . E.encodeUtf8 . Text.pack . fromString . Text.unpack
+            fromJSONText t = case Text.take 3 t of
+                "\NUL0x"       -> either fail (pure . tokenName) . JSON.tryDecode . Text.drop 3 $ t
+                "\NUL\NUL\NUL" -> pure . fromText . Text.drop 2 $ t
+                _              -> pure . fromText $ t
+
+deriving anyclass instance Hashable TokenName
+deriving newtype instance Serialise TokenName
 
 deriving anyclass instance ToJSON TxOut
 deriving anyclass instance FromJSON TxOut

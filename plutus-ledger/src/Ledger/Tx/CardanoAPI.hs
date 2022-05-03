@@ -438,7 +438,7 @@ toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
         <*> pure zeroExecutionUnits
 
 fromCardanoTxOut :: C.TxOut C.CtxTx era -> Either FromCardanoError P.TxOut
-fromCardanoTxOut (C.TxOut addr value datumHash) =
+fromCardanoTxOut (C.TxOut addr value datumHash refScripts) =
     P.TxOut
     <$> fromCardanoAddress addr
     <*> pure (fromCardanoTxOutValue value)
@@ -453,6 +453,7 @@ toCardanoTxOut networkId fromHash (P.TxOut addr value datumHash) =
     C.TxOut <$> toCardanoAddress networkId addr
             <*> toCardanoTxOutValue value
             <*> fromHash datumHash
+            <*> pure C.ReferenceScriptNone
 
 lookupDatum :: Map P.DatumHash P.Datum -> Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
 lookupDatum datums datumHash =

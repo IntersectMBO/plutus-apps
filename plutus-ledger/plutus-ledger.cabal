@@ -84,6 +84,7 @@ library
         Ledger.Tx.CardanoAPITemp
         Codec.CBOR.Extras
         Data.Time.Units.Extra
+        Prettyprinter.Extras
 
 
     build-depends:

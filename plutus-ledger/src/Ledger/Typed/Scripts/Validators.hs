@@ -35,6 +35,7 @@ import PlutusTx
 import PlutusTx.Prelude (check)
 
 import Ledger.Scripts qualified as Scripts
+import Ledger.Tx.Orphans ()
 import Plutus.V1.Ledger.Address (Address (..), scriptHashAddress)
 import Plutus.V1.Ledger.Contexts qualified as Validation
 

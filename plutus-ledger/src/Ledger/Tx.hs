@@ -49,6 +49,7 @@ module Ledger.Tx
 
 import Cardano.Api qualified as C
 import Cardano.Crypto.Hash (SHA256, digest)
+import Cardano.Crypto.Wallet qualified as Crypto
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise (Serialise (encode))
 import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
@@ -60,17 +61,19 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger.Address (PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
-import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
+import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress, scriptAddress)
+import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Scripts (datumHash)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal as Export
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId (TxId), Validator,
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, Validator,
                              ValidatorHash, Value, addressCredential, toBuiltin)
 import Plutus.V1.Ledger.Tx as Export
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
+
+type PrivateKey = Crypto.XPrv
 
 -- | Transaction output that comes from a chain index query.
 --

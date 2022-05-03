@@ -1,4 +1,6 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TypeFamilies       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -26,6 +28,7 @@ module Ledger.Scripts (
 import Cardano.Api qualified as Script
 import Cardano.Api.Shelley qualified as Script
 import Codec.Serialise (serialise)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 import Plutus.V1.Ledger.Scripts as Export
@@ -76,3 +79,6 @@ toCardanoApiScript =
     . SBS.toShort
     . BSL.toStrict
     . serialise
+
+deriving anyclass instance ToJSON ScriptError
+deriving anyclass instance FromJSON ScriptError

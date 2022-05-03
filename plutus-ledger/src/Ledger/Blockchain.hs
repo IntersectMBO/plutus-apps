@@ -53,11 +53,10 @@ import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
 import Data.OpenApi qualified as OpenApi
+import Ledger.Tx (Tx, TxId, TxIn, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx), collateralInputs,
+                  inputs, txOutDatum, txOutPubKey, txOutValue, txOutputs, updateUtxoCollateral, validValuesTx)
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx (Tx, TxIn, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx), collateralInputs,
-                            inputs, txOutDatum, txOutPubKey, txOutValue, txOutputs, updateUtxoCollateral, validValuesTx)
-import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value (Value)
 
 -- | Block identifier (usually a hash)

@@ -85,6 +85,7 @@ import Ledger (Ada, CurrencySymbol, Interval, MintingPolicy, OnChainTx (Valid), 
                UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature',
                mkMintingPolicyScript, pubKeyTxIn, pubKeyTxOut, scriptCurrencySymbol, toPublicKey, txId)
 import Ledger qualified
+import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Fee (FeeConfig (fcScriptsFeeFactor), calcFees)
 import Ledger.Index qualified as Index
@@ -92,7 +93,6 @@ import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
-import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script

@@ -13,23 +13,22 @@
 module Ledger.Tx.Internal where
 
 import Codec.CBOR.Write qualified as Write
-import Codec.Serialise (Serialise)
+import Codec.Serialise (Serialise, encode)
 import Control.DeepSeq (NFData)
 import Control.Lens
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteArray qualified as BA
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
-import Plutus.V1.Ledger.Interval
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx
 import Plutus.V1.Ledger.Value as V
+import PlutusTx.Lattice
 
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx {
@@ -147,3 +146,38 @@ validValuesTx Tx{..}
   = all (nonNegative . txOutValue) txOutputs  && nonNegative txFee
     where
       nonNegative i = V.geq i mempty
+
+-- | A transaction without witnesses for its inputs.
+data TxStripped = TxStripped {
+    txStrippedInputs  :: Set.Set TxOutRef,
+    -- ^ The inputs to this transaction, as transaction output references only.
+    txStrippedOutputs :: [TxOut],
+    -- ^ The outputs of this transation.
+    txStrippedMint    :: !Value,
+    -- ^ The 'Value' minted by this transaction.
+    txStrippedFee     :: !Value
+    -- ^ The fee for this transaction.
+    } deriving (Show, Eq, Generic, Serialise)
+
+strip :: Tx -> TxStripped
+strip Tx{..} = TxStripped i txOutputs txMint txFee where
+    i = Set.map txInRef txInputs
+
+-- | A 'TxOut' along with the 'Tx' it comes from, which may have additional information e.g.
+-- the full data script that goes with the 'TxOut'.
+data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON)
+
+txOutTxDatum :: TxOutTx -> Maybe Datum
+txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
+
+-- | The transaction output references consumed by a transaction.
+spentOutputs :: Tx -> Set.Set TxOutRef
+spentOutputs = Set.map txInRef . txInputs
+
+-- | Update a map of unspent transaction outputs and signatures
+--   for a failed transaction using its collateral inputs.
+updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.map txInRef . txCollateral $ tx)
+
