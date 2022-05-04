@@ -26,6 +26,7 @@ module Plutus.Contracts.Governance (
     , typedValidator
     , mkValidator
     , GovState(..)
+    , Law(..)
     , Voting(..)
     , GovError
     ) where
@@ -58,7 +59,7 @@ import Prelude qualified as Haskell
 -- * After a certain period of time the voting ends and the proposal is rejected or accepted.
 
 newtype Law = Law { unLaw :: BuiltinByteString }
-    deriving stock (Haskell.Show, Generic)
+    deriving stock (Haskell.Eq, Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
 -- | The parameters for the proposal contract.

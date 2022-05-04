@@ -86,10 +86,11 @@ source-repository-package
     plugins/backend-trace-forwarder
 
 -- Should follow cardano-node.
+-- ccf5bcb99ffe054dc8cd5626723f64e02708dbae
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: ccf5bcb99ffe054dc8cd5626723f64e02708dbae
+  tag: 5cc518f1202930ad52b8ba838af32af084c0e754
   subdir:
     plutus-core
     plutus-ledger-api

@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia        #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Ledger.Scripts.Orphans where

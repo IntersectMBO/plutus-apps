@@ -11,12 +11,12 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Ledger (Address, Validator, validatorHash)
+import Ledger (Address, Validator)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Generators (someTokenValue)
-import Ledger.Scripts (mintingPolicyHash, unitDatum, unitRedeemer)
+import Ledger.Scripts (plutusV1ValidatorHash, plutusV1MintingPolicyHash, unitDatum, unitRedeemer)
 import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Ledger.Value qualified as Value
 import Plutus.Contract as Con
@@ -42,7 +42,7 @@ balanceTxnMinAda =
         ff = someTokenValue "ff" 1
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
-        vHash = validatorHash someValidator
+        vHash = plutusV1ValidatorHash someValidator
 
         contract :: Contract () EmptySchema ContractError ()
         contract = do
@@ -71,7 +71,7 @@ balanceTxnMinAda2 =
         vL n = Value.singleton (Value.mpsSymbol $ mintingPolicyHash mps) "L" n
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (<> vA 1 <> vB 2)
-        vHash = validatorHash someValidator
+        vHash = plutusV1ValidatorHash someValidator
         payToWallet w = Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
         mkTx lookups constraints = Constraints.adjustUnbalancedTx . either (error . show) id $ Constraints.mkTx @Void lookups constraints
 

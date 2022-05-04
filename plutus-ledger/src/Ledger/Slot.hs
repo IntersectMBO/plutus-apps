@@ -13,6 +13,7 @@
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
 
 -- | Slots and slot ranges.
 module Ledger.Slot(
@@ -30,10 +31,11 @@ import Prelude qualified as Haskell
 import Prettyprinter (Pretty (pretty), (<+>))
 
 
-import PlutusTx qualified as PlutusTx
+import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude
 
+import Data.Data (Data)
 import Plutus.V1.Ledger.Interval
 
 {- HLINT ignore "Redundant if" -}
@@ -41,7 +43,7 @@ import Plutus.V1.Ledger.Interval
 -- | The slot number. This is a good proxy for time, since on the Cardano blockchain
 -- slots pass at a constant rate.
 newtype Slot = Slot { getSlot :: Integer }
-    deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+    deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic, Data)
     deriving anyclass (FromJSON, FromJSONKey, ToJSON, ToJSONKey, NFData)
     deriving newtype (AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, Eq, Ord, Enum, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
     deriving newtype (Haskell.Num, Haskell.Enum, Haskell.Real, Haskell.Integral, Serialise, Hashable)

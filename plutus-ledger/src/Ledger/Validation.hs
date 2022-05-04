@@ -58,6 +58,7 @@ import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
 import Cardano.Ledger.BaseTypes (Globals (..), mkTxIxPartial)
+import Cardano.Ledger.BaseTypes qualified as BT
 import Cardano.Ledger.Core (PParams, Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, NewEpochState, TxId,
@@ -201,9 +202,14 @@ emulatorNetworkId = C.Api.Testnet $ C.Api.NetworkMagic 1
 -- TODO: the larger maxTxSize should only be used when needed.
 genesisDefaultsWithBigMaxTxSize :: C.Ledger.ShelleyGenesis EmulatorEra
 genesisDefaultsWithBigMaxTxSize = shelleyGenesisDefaults {
-  C.Ledger.sgProtocolParams = (C.Ledger.sgProtocolParams shelleyGenesisDefaults) {
-    C.Ledger._maxTxSize = 256 * 1024
-  }
+  C.Ledger.sgProtocolParams = (C.Ledger.sgProtocolParams shelleyGenesisDefaults)
+      { -- Is is mandatory to specify the protocol version in order to use
+        -- builtin functions in a Plutus script. Protocol major version 5 is
+        -- for Alonzo. If omitted, the validation of a transaction will fail
+        -- with something like: "Forbidden builtin function".
+        C.Ledger._protocolVersion = BT.ProtVer 5 0
+      , C.Ledger._maxTxSize = 256 * 1024
+      }
 }
 
 {-| A sensible default 'Globals' value for the emulator
