@@ -104,6 +104,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Index qualified as UtxoIndex
+import Ledger.Slot (Slot)
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength))
 import Ledger.Value (Value, flattenValue)
 import Plutus.ChainIndex.Emulator (ChainIndexControlEffect, ChainIndexEmulatorState, ChainIndexError, ChainIndexLog,
@@ -122,7 +123,6 @@ import Plutus.PAB.Monitoring.PABLogMsg (PABMultiAgentMsg (EmulatorMsg, UserLog, 
 import Plutus.PAB.Types (PABError (ContractInstanceNotFound, WalletError, WalletNotFound))
 import Plutus.PAB.Webserver.Types (ContractActivationArgs)
 import Plutus.Trace.Emulator.System (appendNewTipBlock)
-import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Tx (TxOutRef)
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text qualified as Render

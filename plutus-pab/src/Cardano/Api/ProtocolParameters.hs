@@ -10,7 +10,7 @@ import Data.Ratio ((%))
 instance Default ProtocolParameters where
     def = ProtocolParameters
         { protocolParamProtocolVersion = (5,0)
-        , protocolParamDecentralization = 3 % 5
+        , protocolParamDecentralization = Just $ 3 % 5
         , protocolParamExtraPraosEntropy = Nothing
         , protocolParamMaxBlockHeaderSize = 1100
         , protocolParamMaxBlockBodySize = 65536

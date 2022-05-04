@@ -21,9 +21,8 @@ import Ledger.Constraints (MkTxError)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Slot (Slot)
-import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType, TxOut, TxOutRef)
+import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxOut, TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
-import Ledger.TxId (TxId)
 import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
@@ -270,7 +269,7 @@ instance Arbitrary PABReq where
             ]
 
 instance Arbitrary Address where
-    arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary <*> arbitrary, Ledger.scriptAddress <$> arbitrary]
+    arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary <*> arbitrary, Ledger.plutusV1ScriptAddress <$> arbitrary]
 
 instance Arbitrary ValidatorHash where
     arbitrary = ValidatorHash <$> arbitrary
