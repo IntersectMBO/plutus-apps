@@ -47,12 +47,11 @@ import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPubKey (PaymentPubKey), pubKeyAddress)
+import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), pubKeyAddress)
 import Ledger.Generators qualified as Gen
 import Ledger.Interval qualified as Interval
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx (Address, TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef))
-import Ledger.TxId (TxId (TxId))
+import Ledger.Tx (TxId (TxId), TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef))
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOutputs (ValidTx), txOutRefs)
