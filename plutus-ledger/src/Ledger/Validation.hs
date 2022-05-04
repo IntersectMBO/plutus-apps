@@ -1,10 +1,11 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TupleSections      #-}
+{-# LANGUAGE TypeApplications   #-}
 {-| Transaction validation using 'cardano-ledger-specs'
 -}
 module Ledger.Validation(
@@ -38,15 +39,20 @@ module Ledger.Validation(
   emulatorGlobals
   ) where
 
-import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), makeSignedTransaction, shelleyGenesisDefaults,
+import Cardano.Api.Shelley (ExecutionUnitPrices (ExecutionUnitPrices, priceExecutionMemory, priceExecutionSteps),
+                            ExecutionUnits (ExecutionUnits, executionMemory, executionSteps),
+                            ShelleyBasedEra (ShelleyBasedEraAlonzo), makeSignedTransaction, shelleyGenesisDefaults,
                             toShelleyTxId, toShelleyTxOut)
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Alonzo (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.Genesis (prices)
+import Cardano.Ledger.Alonzo.Genesis qualified as Alonzo
+import Cardano.Ledger.Alonzo.Language qualified as Alonzo
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits), unCostModels)
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
@@ -79,8 +85,10 @@ import Ledger.Index qualified as P
 import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Value qualified as P
+import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Scripts qualified as P
+import PlutusCore qualified as Plutus
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.ErrorCodes (checkHasFailedError)
 
@@ -207,7 +215,7 @@ emulatorGlobals = mkShelleyGlobals
   2 -- maxMajorPV (maximum major protocol version)
 
 emulatorNes :: NewEpochState EmulatorEra
-emulatorNes = C.Ledger.initialState genesisDefaultsWithBigMaxTxSize undefined {
+emulatorNes = C.Ledger.initialState genesisDefaultsWithBigMaxTxSize alonzoGenesisDefaults {
   prices = fromMaybe (error "emulatorNes: invalid ExecutionUnitPrices") (C.Api.toAlonzoPrices alonzoGenesisDefaultExecutionPrices)
 }
   where
@@ -333,3 +341,68 @@ fromPaymentPrivateKey xprv txBody
       (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
   where
     notUsed = undefined -- hack so we can reuse code from cardano-api
+
+-- | Reasonable starting defaults for constructing an 'AlonzoGenesis'.
+--
+-- Copied from cardano-node (https://github.com/input-output-hk/cardano-node/commit/eb0975b7119e07871e3bcca8c6c390d3c796ce06)
+-- because it was deleted.
+--
+-- TODO: We may need to find an alternative implementation.
+alonzoGenesisDefaults :: Alonzo.AlonzoGenesis
+alonzoGenesisDefaults =
+  let cModel = case Plutus.defaultCostModelParams of
+                 Just costModelParams ->
+                   if Alonzo.isCostModelParamsWellFormed costModelParams
+                   then
+                     case Alonzo.mkCostModel Alonzo.PlutusV1 costModelParams of
+                       Left err -> error $ "alonzoGenesisDefaults: " ++ err
+                       Right m  -> Alonzo.CostModels $ Map.singleton Alonzo.PlutusV1 m
+                   else error "alonzoGenesisDefaults: defaultCostModel is invalid"
+                 Nothing ->
+                   error "alonzoGenesisDefaults: Could not extract cost model \
+                         \params from defaultCostModel"
+      --TODO: we need a better validation story. We also ought to wrap the
+      -- genesis type in the API properly.
+      prices' = case C.Api.toAlonzoPrices alonzoGenesisDefaultExecutionPrices of
+                  Nothing -> error "alonzoGenesisDefaults: invalid prices"
+                  Just p  -> p
+  in Alonzo.AlonzoGenesis
+       { Alonzo.coinsPerUTxOWord     = C.Api.toShelleyLovelace $ C.Api.Lovelace 34482
+       , Alonzo.costmdls             = cModel
+       , Alonzo.prices               = prices'
+       , Alonzo.maxTxExUnits         = C.Api.toAlonzoExUnits alonzoGenesisDefaultMaxTxExecutionUnits
+       , Alonzo.maxBlockExUnits      = C.Api.toAlonzoExUnits alonzoGenesisDefaultMaxBlockExecutionUnits
+       , Alonzo.maxValSize           = alonzoGenesisDefaultMaxValueSize
+       , Alonzo.collateralPercentage = alonzoGenesisDefaultCollateralPercent
+       , Alonzo.maxCollateralInputs  = alonzoGenesisDefaultMaxCollateralInputs
+       }
+ where
+  alonzoGenesisDefaultExecutionPrices :: ExecutionUnitPrices
+  alonzoGenesisDefaultExecutionPrices =
+      ExecutionUnitPrices {
+         priceExecutionSteps  = 1 % 10,
+         priceExecutionMemory = 1 % 10
+      }
+
+  alonzoGenesisDefaultMaxTxExecutionUnits :: ExecutionUnits
+  alonzoGenesisDefaultMaxTxExecutionUnits =
+      ExecutionUnits {
+        executionSteps  = 500_000_000_000,
+        executionMemory = 500_000_000_000
+      }
+
+  alonzoGenesisDefaultMaxBlockExecutionUnits :: ExecutionUnits
+  alonzoGenesisDefaultMaxBlockExecutionUnits =
+      ExecutionUnits {
+        executionSteps  = 500_000_000_000,
+        executionMemory = 500_000_000_000
+      }
+
+  alonzoGenesisDefaultMaxValueSize :: Natural
+  alonzoGenesisDefaultMaxValueSize = 4000
+
+  alonzoGenesisDefaultCollateralPercent :: Natural
+  alonzoGenesisDefaultCollateralPercent = 1
+
+  alonzoGenesisDefaultMaxCollateralInputs :: Natural
+  alonzoGenesisDefaultMaxCollateralInputs = 5
