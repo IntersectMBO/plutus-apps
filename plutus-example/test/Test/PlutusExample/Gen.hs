@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs      #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Test.PlutusExample.Gen where
 
@@ -29,8 +30,9 @@ genPlutusTxOut = do
   alonzoTxOut <-
     TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
           <*> genTxOutValue AlonzoEra
-          <*> genTxOutDatumHash AlonzoEra
-  Gen.just . return . Alonzo.txInfoOut
+          <*> genTxOutDatumHashTxContext AlonzoEra
+          <*> genReferenceScript AlonzoEra
+  Gen.just . return . \case { Right v -> Just v; _ -> Nothing } . Alonzo.txInfoOut
     $ toShelleyTxOut ShelleyBasedEraAlonzo (toCtxUTxOTxOut alonzoTxOut)
 
 genMyCustomRedeemer :: Gen MyCustomRedeemer
@@ -49,12 +51,12 @@ genMyCustomRedeemer =
 genTxInfoIn :: Gen Plutus.TxInInfo
 genTxInfoIn = do
   txinput <- genTxIn
-  txout <- genTxOut AlonzoEra
+  txout <- genTxOutTxContext AlonzoEra
   lUTxO <- genLedgerUTxO ShelleyBasedEraAlonzo (txinput, txout)
-  let mTxInfoIn = Alonzo.txInfoIn lUTxO (toShelleyTxIn txinput)
-  case mTxInfoIn of
-    Just txin -> return txin
-    Nothing   -> error $ "Utxo: " ++ show lUTxO ++ "\n" ++ "Txin: " ++ show txinput
+  let eTxInfoIn = Alonzo.txInfoIn lUTxO (toShelleyTxIn txinput)
+  case eTxInfoIn of
+    Right txin -> return txin
+    Left e     -> error $ "Error: " ++ show e ++ "\n" ++ "Utxo: " ++ show lUTxO ++ "\n" ++ "Txin: " ++ show txinput
 
 genReqSigners :: Gen Plutus.PubKeyHash
 genReqSigners = do

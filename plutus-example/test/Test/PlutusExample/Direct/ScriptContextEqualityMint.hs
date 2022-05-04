@@ -35,7 +35,7 @@ import System.FilePath ((</>))
 import Test.Base qualified as H
 import Test.Process (execCreateScriptContext, execCreateScriptContext')
 import Test.Process qualified as H
-import Testnet.Cardano (defaultTestnetOptions, testnet)
+import Testnet.Cardano (bftSprockets, defaultTestnetOptions, testnet)
 import Testnet.Cardano qualified as TC
 import Testnet.Conf qualified as H
 
@@ -53,13 +53,13 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
     H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
-  TC.TestnetRuntime { bftSprockets, testnetMagic } <- testnet defaultTestnetOptions conf
+  tr@TC.TestnetRuntime { testnetMagic } <- testnet defaultTestnetOptions conf
 
   env <- H.evalIO getEnvironment
 
   execConfig <- H.noteShow H.ExecConfig
         { H.execConfigEnv = Last $ Just $
-          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
+          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ bftSprockets tr)
           ]
           -- The environment must be passed onto child process on Windows in order to
           -- successfully start that process.
@@ -106,7 +106,7 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxo1Json
   txin <- H.noteShow $ head $ Map.keys utxo1
-  TxOut _ txoutVal _ <- H.nothingFailM . H.noteShow $ Map.lookup txin utxo1
+  TxOut _ txoutVal _ _ <- H.nothingFailM . H.noteShow $ Map.lookup txin utxo1
   let Lovelace lovelaceAtTxin = txOutValueToLovelace txoutVal
   lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
 
@@ -263,7 +263,7 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
   dummyUtxoJson <- H.leftFailM . H.readJsonFile $ work </> "dummyaddress.json"
   UTxO dummyUtxo <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) dummyUtxoJson
 
-  let allValues = mconcat . map (\(TxOut _ val _) -> txOutValueToValue val) $ Map.elems dummyUtxo
+  let allValues = mconcat . map (\(TxOut _ val _ _) -> txOutValueToValue val) $ Map.elems dummyUtxo
       millarAssetId = AssetId (fromString policyId) $ fromString "MillarCoin"
 
   -- There should be a multi asset value at the dummy address

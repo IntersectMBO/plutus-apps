@@ -28,6 +28,7 @@ import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Short qualified as SBS
+import Data.Either as E
 import Data.Map.Strict qualified as Map
 import Data.Maybe as M
 import Data.Sequence.Strict qualified as Seq
@@ -261,8 +262,8 @@ txToCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEraAlonz
       sPurpose = case scriptsNeeded of
                    [(p ,_)] -> Alonzo.transScriptPurpose p
                    needed   -> Prelude.error $ "More than one redeemer ptr: " <> show needed
-      mTxIns = Prelude.map (Alonzo.txInfoIn ledgerUTxO) . Set.toList $ Alonzo.inputs txBody
-      mTouts = Prelude.map Alonzo.txInfoOut $ seqToList $ Alonzo.outputs txBody
+      eTxIns = Prelude.map (Alonzo.txInfoIn ledgerUTxO) . Set.toList $ Alonzo.inputs txBody
+      eTouts = Prelude.map Alonzo.txInfoOut $ seqToList $ Alonzo.outputs txBody
       minted = Alonzo.transValue $ Alonzo.mint txBody
       txfee = Alonzo.transValue . toMaryValue . lovelaceToValue . fromShelleyLovelace $ Alonzo.txfee txBody
       Alonzo.TxDats datumHashMap = Alonzo.txdats witness
@@ -274,12 +275,12 @@ txToCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEraAlonz
     first IntervalConvError
       $ Alonzo.transVITime (toLedgerPParams sbe pparams) eInfo sStart $ Alonzo.txvldt txBody
 
-  tOuts <- if Prelude.all M.isJust mTouts
-           then return $ catMaybes mTouts
-           else Prelude.error "Tx Outs not all Just"
-  txins <- if Prelude.all M.isJust mTxIns
-           then return $ catMaybes mTxIns
-           else Prelude.error "Tx Ins not all Just"
+  tOuts <- if Prelude.all E.isRight eTouts
+           then return $ E.rights eTouts
+           else Prelude.error "Tx Outs not all Right"
+  txins <- if Prelude.all E.isRight eTxIns
+           then return $ E.rights eTxIns
+           else Prelude.error "Tx Ins not all Right"
   Right $ MyCustomRedeemer tOuts txins minted valRange txfee datumHashes txcerts txsignatories (Just sPurpose)
  where
   seqToList (x Seq.:<| rest) = x : seqToList rest
