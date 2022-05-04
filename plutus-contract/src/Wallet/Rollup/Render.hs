@@ -38,10 +38,10 @@ import Ledger (Address, Blockchain, PaymentPubKey, PaymentPubKeyHash, Tx (Tx), T
                txSignatures)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Ada qualified as Ada
+import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Scripts (Datum (getDatum), Script, Validator, ValidatorHash (ValidatorHash), unValidatorScript)
 import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
 import Ledger.Value qualified as Value
-import Plutus.V1.Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx

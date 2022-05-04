@@ -55,6 +55,20 @@ deriving anyclass instance FromJSONKey DatumHash
 deriving newtype instance Hashable DatumHash
 deriving newtype instance Serialise DatumHash
 
+deriving anyclass instance ToJSON RedeemerHash
+deriving anyclass instance FromJSON RedeemerHash
+deriving anyclass instance ToJSONKey RedeemerHash
+deriving anyclass instance FromJSONKey RedeemerHash
+deriving newtype instance Hashable RedeemerHash
+deriving newtype instance Serialise RedeemerHash
+
+deriving anyclass instance ToJSON ScriptHash
+deriving anyclass instance FromJSON ScriptHash
+deriving anyclass instance ToJSONKey ScriptHash
+deriving anyclass instance FromJSONKey ScriptHash
+deriving newtype instance Hashable ScriptHash
+deriving newtype instance Serialise ScriptHash
+
 deriving anyclass instance ToJSON StakeValidatorHash
 deriving anyclass instance FromJSON StakeValidatorHash
 deriving anyclass instance ToJSONKey StakeValidatorHash
@@ -112,9 +126,6 @@ deriving anyclass instance ToJSON Address
 deriving anyclass instance FromJSON Address
 deriving anyclass instance Serialise Address
 
-deriving anyclass instance ToJSON MintingPolicy
-deriving anyclass instance FromJSON MintingPolicy
-
 instance ToJSON CurrencySymbol where
   toJSON c =
     JSON.object
@@ -140,6 +151,11 @@ deriving anyclass instance ToJSON Value
 deriving anyclass instance FromJSON Value
 deriving anyclass instance Hashable Value
 deriving newtype instance Serialise Value
+
+deriving anyclass instance ToJSON AssetClass
+deriving anyclass instance FromJSON AssetClass
+deriving anyclass instance Hashable AssetClass
+deriving newtype instance Serialise AssetClass
 
 -- Orphan instances for 'PlutusTx.Map' to make this work
 instance (ToJSON v, ToJSON k) => ToJSON (Map.Map k v) where
@@ -225,6 +241,15 @@ deriving anyclass instance Serialise Datum
 deriving anyclass instance ToJSON Redeemer
 deriving anyclass instance FromJSON Redeemer
 deriving anyclass instance Serialise Redeemer
+
+deriving anyclass instance ToJSON MintingPolicy
+deriving anyclass instance FromJSON MintingPolicy
+
+deriving anyclass instance ToJSON StakeValidator
+deriving anyclass instance FromJSON StakeValidator
+
+deriving newtype instance ToJSON Context
+deriving newtype instance FromJSON Context
 
 deriving via (JSON.JSONViaSerialise PLC.Data) instance ToJSON PLC.Data
 deriving via (JSON.JSONViaSerialise PLC.Data) instance FromJSON PLC.Data

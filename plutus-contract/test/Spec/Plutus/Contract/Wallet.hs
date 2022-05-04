@@ -47,10 +47,11 @@ exportTxGen = do
 exportTxInputGen :: (Hedgehog.GenBase m ~ Identity, MonadFail m, MonadGen m) => m ExportTxInput
 exportTxInputGen = do
     C.TxIn txId txIx <- Hedgehog.fromGenT Gen.genTxIn
-    C.TxOut addressInEra txOutValue txOutDatum <- Hedgehog.fromGenT (Gen.genTxOut C.AlonzoEra)
-    let datumToScriptDataHash C.TxOutDatumNone       = Nothing
-        datumToScriptDataHash (C.TxOutDatumHash _ h) = Just h
-        datumToScriptDataHash (C.TxOutDatum _ d)     = Just $ C.hashScriptData d
+    C.TxOut addressInEra txOutValue txOutDatum _ <- Hedgehog.fromGenT (Gen.genTxOutTxContext C.AlonzoEra)
+    let datumToScriptDataHash C.TxOutDatumNone         = Nothing
+        datumToScriptDataHash (C.TxOutDatumHash _ h)   = Just h
+        datumToScriptDataHash (C.TxOutDatumInTx _ d)   = Just $ C.hashScriptData d
+        datumToScriptDataHash (C.TxOutDatumInline _ d) = Just $ C.hashScriptData d
     pure $ ExportTxInput
         txId
         txIx

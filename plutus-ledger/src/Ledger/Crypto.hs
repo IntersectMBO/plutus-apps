@@ -61,6 +61,7 @@ newtype Signature = Signature { getSignature :: PlutusTx.BuiltinByteString }
     deriving stock (Eq, Ord, Generic)
     deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, NFData, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
     deriving (Show, Pretty) via LedgerBytes
+makeLift ''Signature
 
 instance ToJSON Signature where
   toJSON signature =
@@ -101,6 +102,7 @@ newtype PrivateKey = PrivateKey { getPrivateKey :: LedgerBytes }
     deriving newtype (PlutusTx.Eq, PlutusTx.Ord, Serialise, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
     deriving (Show, Pretty) via LedgerBytes
     deriving Hashable via PlutusTx.BuiltinByteString
+makeLift ''PrivateKey
 
 -- | Compute the hash of a public key.
 pubKeyHash :: PubKey -> PubKeyHash

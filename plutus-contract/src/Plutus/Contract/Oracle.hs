@@ -32,6 +32,7 @@ module Plutus.Contract.Oracle(
   , signObservation'
   ) where
 
+import Cardano.Crypto.Wallet qualified as Crypto (XPrv)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
@@ -218,7 +219,7 @@ signObservation time vl = signMessage Observation{obsValue=vl, obsTime=time}
 
 -- | Encode a message of type @a@ as a @Data@ value and sign the
 --   hash of the datum.
-signMessage' :: ToData a => a -> PrivateKey -> SignedMessage a
+signMessage' :: ToData a => a -> Crypto.XPrv -> SignedMessage a
 signMessage' msg pk =
   let dt = Datum (toBuiltinData msg)
       DatumHash msgHash = Scripts.datumHash dt
@@ -230,7 +231,7 @@ signMessage' msg pk =
         }
 
 -- | Encode an observation of a value of type @a@ that was made at the given time
-signObservation' :: ToData a => POSIXTime -> a -> PrivateKey -> SignedMessage (Observation a)
+signObservation' :: ToData a => POSIXTime -> a -> Crypto.XPrv -> SignedMessage (Observation a)
 signObservation' time vl = signMessage' Observation{obsValue=vl, obsTime=time}
 
 makeLift ''SignedMessage
