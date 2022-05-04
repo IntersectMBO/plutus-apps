@@ -48,16 +48,21 @@ library
         Ledger
         Ledger.Ada
         Ledger.Address
+        Ledger.Address.Orphans
         Ledger.AddressMap
+        Ledger.Builtins.Orphans
         Ledger.Blockchain
         Ledger.CardanoWallet
+        Ledger.Credential.Orphans
         Ledger.Contexts
         Ledger.Crypto
+        Ledger.Crypto.Orphans
         Ledger.Fee
         Ledger.Generators
         Ledger.Orphans
         Ledger.Index
         Ledger.Scripts
+        Ledger.Scripts.Orphans
         Ledger.Slot
         Ledger.TimeSlot
         Ledger.Tokens
@@ -72,6 +77,7 @@ library
         Ledger.Typed.Tx
         Ledger.Typed.TypeUtils
         Ledger.Value
+        Ledger.Value.Orphans
         Ledger.Validation
     reexported-modules:
         Plutus.V1.Ledger.Bytes as Ledger.Bytes,
