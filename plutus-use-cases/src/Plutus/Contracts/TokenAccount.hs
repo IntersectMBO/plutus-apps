@@ -137,7 +137,7 @@ address :: Account -> Address
 address = Scripts.validatorAddress . typedValidator
 
 validatorHash :: Account -> ValidatorHash
-validatorHash = Ledger.Scripts.validatorHash . Scripts.validatorScript . typedValidator
+validatorHash = Ledger.Scripts.plutusV1ValidatorHash . Scripts.validatorScript . typedValidator
 
 -- | A transaction that pays the given value to the account
 payTx
