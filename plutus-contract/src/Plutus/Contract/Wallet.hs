@@ -291,6 +291,6 @@ mkMintingRedeemers :: Plutus.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRed
 mkMintingRedeemers Plutus.Tx{Plutus.txRedeemers, Plutus.txMintScripts} = traverse extract $ Map.toList txRedeemers where
     indexedMintScripts = Map.fromList $ zip [0..] $ Set.toList txMintScripts
     extract (Plutus.RedeemerPtr Plutus.Mint idx, redeemer) = do
-        redeemerPolicyId <- maybe (Left CardanoAPI.MissingMintingPolicy) (Right . Plutus.mintingPolicyHash) (Map.lookup idx indexedMintScripts)
+        redeemerPolicyId <- maybe (Left CardanoAPI.MissingMintingPolicy) (Right . Plutus.plutusV1MintingPolicyHash) (Map.lookup idx indexedMintScripts)
         pure MintingRedeemer{redeemer, redeemerPolicyId}
     extract (Plutus.RedeemerPtr tag _, _) = Left (CardanoAPI.ScriptPurposeNotSupported tag)

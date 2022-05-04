@@ -34,5 +34,5 @@ collectFromScriptFilter
     -> Redeemer
     -> UntypedConstraints
 collectFromScriptFilter flt am vls (Redeemer red) =
-    let mp'  = fromMaybe mempty $ am ^. at (Address.scriptAddress vls)
+    let mp'  = fromMaybe mempty $ am ^. at (Address.plutusV1ScriptAddress vls)
     in Typed.collectFromScriptFilter @PlutusTx.BuiltinData @PlutusTx.BuiltinData flt mp' red
