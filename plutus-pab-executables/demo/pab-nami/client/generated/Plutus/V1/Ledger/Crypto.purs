@@ -22,35 +22,6 @@ import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
-newtype PubKey = PubKey { getPubKey :: String }
-
-derive instance Eq PubKey
-
-derive instance Ord PubKey
-
-instance Show PubKey where
-  show a = genericShow a
-
-instance EncodeJson PubKey where
-  encodeJson = defer \_ -> E.encode $ unwrap >$<
-    ( E.record
-        { getPubKey: E.value :: _ String }
-    )
-
-instance DecodeJson PubKey where
-  decodeJson = defer \_ -> D.decode $ (PubKey <$> D.record "PubKey" { getPubKey: D.value :: _ String })
-
-derive instance Generic PubKey _
-
-derive instance Newtype PubKey _
-
---------------------------------------------------------------------------------
-
-_PubKey :: Iso' PubKey { getPubKey :: String }
-_PubKey = _Newtype
-
---------------------------------------------------------------------------------
-
 newtype PubKeyHash = PubKeyHash { getPubKeyHash :: String }
 
 derive instance Eq PubKeyHash
@@ -77,32 +48,3 @@ derive instance Newtype PubKeyHash _
 
 _PubKeyHash :: Iso' PubKeyHash { getPubKeyHash :: String }
 _PubKeyHash = _Newtype
-
---------------------------------------------------------------------------------
-
-newtype Signature = Signature { getSignature :: String }
-
-instance Show Signature where
-  show a = genericShow a
-
-derive instance Eq Signature
-
-derive instance Ord Signature
-
-instance EncodeJson Signature where
-  encodeJson = defer \_ -> E.encode $ unwrap >$<
-    ( E.record
-        { getSignature: E.value :: _ String }
-    )
-
-instance DecodeJson Signature where
-  decodeJson = defer \_ -> D.decode $ (Signature <$> D.record "Signature" { getSignature: D.value :: _ String })
-
-derive instance Generic Signature _
-
-derive instance Newtype Signature _
-
---------------------------------------------------------------------------------
-
-_Signature :: Iso' Signature { getSignature :: String }
-_Signature = _Newtype

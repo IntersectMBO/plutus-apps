@@ -20,11 +20,10 @@ import Data.RawJson (RawJson)
 import Data.Set (Set)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
+import Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash)
-import Plutus.V1.Ledger.Slot (Slot)
-import Plutus.V1.Ledger.Tx (TxIn, TxOut)
-import Plutus.V1.Ledger.TxId (TxId)
+import Plutus.V1.Ledger.Tx (TxId, TxIn, TxOut)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E

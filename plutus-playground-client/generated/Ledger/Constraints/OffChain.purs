@@ -19,11 +19,12 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Address (PaymentPubKey, PaymentPubKeyHash)
+import Ledger.Tx.Internal (Tx)
 import Ledger.Typed.Tx (ConnectionError)
 import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash)
 import Plutus.V1.Ledger.Time (POSIXTime)
-import Plutus.V1.Ledger.Tx (Tx, TxOut, TxOutRef)
+import Plutus.V1.Ledger.Tx (TxOut, TxOutRef)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E

@@ -1,5 +1,4 @@
 {
-    "warnings": [],
     "result": {
         "functionSchema": [
             {
@@ -13,8 +12,8 @@
         ],
         "knownCurrencies": [
             {
-                "hash": "",
                 "friendlyName": "Ada",
+                "hash": "",
                 "knownTokens": [
                     {
                         "unTokenName": ""
@@ -22,5 +21,6 @@
                 ]
             }
         ]
-    }
+    },
+    "warnings": []
 }
