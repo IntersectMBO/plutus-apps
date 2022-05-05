@@ -206,7 +206,8 @@ parseAlonzoEraInCardanoModeTx =
                      (C.AsTx C.AsAlonzoEra)
 
 -- TODO Uncomment the implementation once Cardano.Api adds a FromJSON instance
--- for 'EraInMode BabbageEra CardanoMode'
+-- for 'EraInMode BabbageEra CardanoMode':
+-- https://github.com/input-output-hk/cardano-node/pull/3837
 parseBabbageEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
 parseBabbageEraInCardanoModeTx =
     undefined
