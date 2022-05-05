@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingVia    #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 

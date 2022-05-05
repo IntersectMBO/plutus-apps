@@ -86,7 +86,9 @@ source-repository-package
     plugins/backend-trace-forwarder
 
 -- Should follow cardano-node.
--- ccf5bcb99ffe054dc8cd5626723f64e02708dbae
+-- Normally, it should follow "ccf5bcb99ffe054dc8cd5626723f64e02708dbae", but
+-- there were bug fixes that we actually need in order to make everything work.
+-- This actually follows the release/1.0.0 branch.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus

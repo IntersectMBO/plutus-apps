@@ -16,7 +16,7 @@ module Plutus.Contracts.Swap(
     swapValidator
     ) where
 
-import Ledger (POSIXTime, Validator, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger (POSIXTime, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
 import Ledger.Ada (Ada)
 import Ledger.Ada qualified as Ada
 import Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
