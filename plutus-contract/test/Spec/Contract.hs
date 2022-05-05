@@ -371,7 +371,7 @@ errorContract = do
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
 someAddress :: Address
-someAddress = Ledger.scriptAddress someValidator
+someAddress = Ledger.plutusV1ScriptAddress someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
