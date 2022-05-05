@@ -51,6 +51,7 @@
           "Control/Monad/Class/MonadThrow"
           "Control/Monad/Class/MonadTime"
           "Control/Monad/Class/MonadTimer"
+          "Control/Monad/Class/MonadTest"
           ];
         hsSourceDirs = [ "src" ];
         };

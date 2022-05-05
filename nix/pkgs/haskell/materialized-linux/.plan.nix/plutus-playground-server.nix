@@ -16,10 +16,10 @@
       copyright = "";
       maintainer = "kris.jenkins@tweag.io";
       author = "Kris Jenkins";
-      homepage = "https://github.com/iohk/plutus#readme";
+      homepage = "https://github.com/iohk/plutus-apps#readme";
       url = "";
       synopsis = "";
-      description = "Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>";
+      description = "Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>";
       buildType = "Simple";
       isLocal = true;
       detailLevel = "FullDetails";

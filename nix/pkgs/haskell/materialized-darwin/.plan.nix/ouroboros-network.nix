@@ -57,6 +57,7 @@
           (hsPkgs."iproute" or (errorHandler.buildDepError "iproute"))
           (hsPkgs."nothunks" or (errorHandler.buildDepError "nothunks"))
           (hsPkgs."network" or (errorHandler.buildDepError "network"))
+          (hsPkgs."pretty-simple" or (errorHandler.buildDepError "pretty-simple"))
           (hsPkgs."psqueues" or (errorHandler.buildDepError "psqueues"))
           (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
           (hsPkgs."random" or (errorHandler.buildDepError "random"))
@@ -273,6 +274,8 @@
             (hsPkgs."iproute" or (errorHandler.buildDepError "iproute"))
             (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
             (hsPkgs."network" or (errorHandler.buildDepError "network"))
+            (hsPkgs."pipes" or (errorHandler.buildDepError "pipes"))
+            (hsPkgs."pretty-simple" or (errorHandler.buildDepError "pretty-simple"))
             (hsPkgs."process" or (errorHandler.buildDepError "process"))
             (hsPkgs."psqueues" or (errorHandler.buildDepError "psqueues"))
             (hsPkgs."random" or (errorHandler.buildDepError "random"))
@@ -325,6 +328,9 @@
             "Test/Ouroboros/Network/PeerSelection/PeerGraph"
             "Test/Ouroboros/Network/NodeToNode/Version"
             "Test/Ouroboros/Network/NodeToClient/Version"
+            "Test/Ouroboros/Network/ShrinkCarefully"
+            "Test/Ouroboros/Network/Testnet"
+            "Test/Ouroboros/Network/Testnet/Simulation/Node"
             "Test/Mux"
             "Test/Pipe"
             "Test/Socket"

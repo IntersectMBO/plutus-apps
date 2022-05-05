@@ -29,11 +29,14 @@
       extraSrcFiles = [
         "README.md"
         "cbits/crypto_vrf.h"
-        "cbits/crypto_vrf_ietfdraft03.h"
-        "cbits/vrf_ietfdraft03.h"
+        "cbits/vrf03/crypto_vrf_ietfdraft03.h"
+        "cbits/vrf03/vrf_ietfdraft03.h"
+        "cbits/vrf10_batchcompat/crypto_vrf_ietfdraft10.h"
+        "cbits/vrf10_batchcompat/vrf_ietfdraft10.h"
         "cbits/private/common.h"
         "cbits/private/quirks.h"
         "cbits/private/ed25519_ref10.h"
+        "cbits/private/hash_to_curve.h"
         "cbits/private/ed25519_ref10_fe_25_5.h"
         "cbits/private/ed25519_ref10_fe_51.h"
         "cbits/private/fe_25_5/constants.h"
@@ -63,14 +66,24 @@
           (pkgconfPkgs."libsodium" or (errorHandler.pkgConfDepError "libsodium"))
           ];
         buildable = true;
-        modules = [ "Cardano/Crypto/VRF/Praos" ];
+        modules = [
+          "Cardano/Crypto/VRF/Praos"
+          "Cardano/Crypto/VRF/PraosBatchCompat"
+          "Cardano/Crypto/RandomBytes"
+          ];
         cSources = (pkgs.lib).optionals (!flags.external-libsodium-vrf) [
           "cbits/crypto_vrf.c"
-          "cbits/convert.c"
-          "cbits/keypair.c"
-          "cbits/prove.c"
-          "cbits/verify.c"
-          "cbits/vrf.c"
+          "cbits/vrf03/convert.c"
+          "cbits/vrf03/keypair.c"
+          "cbits/vrf03/prove.c"
+          "cbits/vrf03/verify.c"
+          "cbits/vrf03/vrf.c"
+          "cbits/vrf10_batchcompat/convert.c"
+          "cbits/vrf10_batchcompat/verify.c"
+          "cbits/vrf10_batchcompat/keypair.c"
+          "cbits/vrf10_batchcompat/prove.c"
+          "cbits/vrf10_batchcompat/vrf.c"
+          "cbits/private/hash_to_curve.c"
           "cbits/private/ed25519_ref10.c"
           ];
         hsSourceDirs = [ "src" ];

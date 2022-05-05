@@ -58,6 +58,7 @@
           (hsPkgs."partial-order" or (errorHandler.buildDepError "partial-order"))
           (hsPkgs."quiet" or (errorHandler.buildDepError "quiet"))
           (hsPkgs."scientific" or (errorHandler.buildDepError "scientific"))
+          (hsPkgs."set-algebra" or (errorHandler.buildDepError "set-algebra"))
           (hsPkgs."non-integral" or (errorHandler.buildDepError "non-integral"))
           (hsPkgs."primitive" or (errorHandler.buildDepError "primitive"))
           (hsPkgs."small-steps" or (errorHandler.buildDepError "small-steps"))
@@ -65,10 +66,12 @@
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
+          (hsPkgs."validation-selective" or (errorHandler.buildDepError "validation-selective"))
           ];
         buildable = true;
         modules = [
           "Cardano/Ledger/Address"
+          "Cardano/Ledger/CompactAddress"
           "Cardano/Ledger/AuxiliaryData"
           "Cardano/Ledger/BaseTypes"
           "Cardano/Ledger/BHeaderView"
@@ -87,6 +90,7 @@
           "Cardano/Ledger/Serialization"
           "Cardano/Ledger/Slot"
           "Cardano/Ledger/TxIn"
+          "Cardano/Ledger/UnifiedMap"
           "Cardano/Ledger/Val"
           ];
         hsSourceDirs = [ "src" ];
