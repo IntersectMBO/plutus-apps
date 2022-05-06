@@ -28,8 +28,11 @@ tests :: TestTree
 tests =
     testGroup
         "Plutus.Cardano.Wallet"
-        [ testProperty "ExportTx FromJSON and ToJSON inverse property" jsonInvProp
-        ]
+        -- TODO: Reenable once we update `cardano-node` with the following PR merged:
+        -- https://github.com/input-output-hk/cardano-node/pull/3837
+        []
+        -- [ testProperty "ExportTx FromJSON and ToJSON inverse property" jsonInvProp
+        -- ]
 
 jsonInvProp :: Property
 jsonInvProp = Hedgehog.property $ do
