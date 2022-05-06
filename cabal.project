@@ -135,7 +135,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/ak3n/cw
-  tag: 43585c99409f758307487040683cd877827d3817
+  tag: 538375cb3efa0c66604ff0b13b6ecc0c4a694d64
   subdir:
     lib/cli
     lib/core
