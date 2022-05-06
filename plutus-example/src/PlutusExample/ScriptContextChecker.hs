@@ -30,7 +30,6 @@ import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Short qualified as SBS
 import Data.Either as E
 import Data.Map.Strict qualified as Map
-import Data.Maybe as M
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 import GHC.Records (HasField (..))
@@ -298,6 +297,7 @@ obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraBabbage f = f
 
 testScriptContextToScriptData :: MyCustomRedeemer -> ScriptData
 testScriptContextToScriptData = fromPlutusData . PlutusTx.builtinDataToData . toBuiltinData
