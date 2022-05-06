@@ -245,9 +245,11 @@ runApp
     storageBackend
     trace
     contractHandler
-    config@Config{pabWebserverConfig=WebserverConfig{endpointTimeout},nodeServerConfig=PABServerConfig{pscSlotConfig}} =
-      (setSlotConfig pscSlotConfig >>)
-        . Core.runPAB (Timeout endpointTimeout) (appEffectHandlers storageBackend config trace contractHandler)
+    config@Config{pabWebserverConfig=WebserverConfig{endpointTimeout},nodeServerConfig=PABServerConfig{pscSlotConfig}}
+    app =
+      do
+        setSlotConfig pscSlotConfig
+        Core.runPAB (Timeout endpointTimeout) (appEffectHandlers storageBackend config trace contractHandler) app
 
 type App a b = PABAction (Builtin a) (AppEnv a) b
 
