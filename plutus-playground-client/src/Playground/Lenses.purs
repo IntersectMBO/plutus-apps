@@ -9,8 +9,7 @@ import Data.Lens.Record (prop)
 import Data.Newtype (class Newtype)
 import Type.Proxy (Proxy(..))
 import Ledger.Index (UtxoIndex, _UtxoIndex)
-import Plutus.V1.Ledger.Tx (TxOut, TxOutRef)
-import Plutus.V1.Ledger.TxId (TxId)
+import Plutus.V1.Ledger.Tx (TxOut, TxOutRef, TxId)
 import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName, _CurrencySymbol, _TokenName)
 
 _currencySymbol :: Lens' CurrencySymbol String
