@@ -153,7 +153,6 @@ executable plutus-uniswap
         , data-default -any
         , freer-simple
         , plutus-contract
-        , plutus-ledger-api >= 1.0.0
         , plutus-ledger >= 1.0.0
         , plutus-pab
         , plutus-use-cases
