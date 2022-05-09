@@ -3,6 +3,8 @@
 
 module Spec.Plutus.Contract.Wallet
     ( tests
+    -- TODO: remove export, added to silence the warnings
+    , jsonInvProp
     ) where
 
 import Cardano.Api qualified as C
@@ -22,7 +24,7 @@ import Ledger.Tx.CardanoAPI (fromCardanoPolicyId, fromCardanoTxId)
 import Plutus.Contract.Wallet (ExportTx (ExportTx), ExportTxInput (ExportTxInput, etxiAssets, etxiId, etxiTxIx),
                                ExportTxRedeemer (MintingRedeemer, SpendingRedeemer))
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+-- import Test.Tasty.Hedgehog (testProperty)
 
 tests :: TestTree
 tests =
