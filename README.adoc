@@ -50,6 +50,78 @@ The generated Haskell API documentation (haddocks) are here:
 
 - https://hydra.iohk.io/job/Cardano/plutus/linux.docs.plutus-report/latest/download-by-type/doc-pdf/plutus[Plutus Technical Report] (draft)
 
+== Versioning and releases
+
+https://pvp.haskell.org/[PVP] reminder:
+
+* _Two_ major-version components, A.B
+** In this doc: “first-major-version”, “second-major-version”
+* _One_ minor-version component C
+* Any number of (meaningless but higher) patch-version components
+
+=== Versioning
+
+The core `plutus-apps` packages are versioned as follows:
+
+* Package versioning follows the https://pvp.haskell.org/[PVP] on a best-effort basis (i.e. we will generally try to but we won't guarantee it).
+** The first-major-version component indicates the "era" which for our purposes means which major version of the *Cardano node* the tools are compatible with.
+** The second-major-version component is used for releases which are major versions according to the PVP, but which are still compatible with the current "era".
+** The minor-version and below are used as normal.
+* Packages which are used downstream should all have the same version.
+* Other packages which are not used downstream (e.g. `plutus-playground-server`, `plutus-playground-client`, `quickcheck-dynamic`, etc.) can remain unversioned.
+
+In principle we could just have a single major version, but using two makes it easier to avoid mistakes and clearly expresses the state of the repository.
+
+=== Branching
+
+There are two protected branches in `plutus-apps`:
+
+* `main` branch
+** Most development should be done in this branch
+** Should always target a stable version of `cardano-node` which is compatible with the current Cardano mainnet.
+** The version of transitive dependencies (`plutus`, `cardano-ledger`, `ouroboros-network`, etc.) should be pinned to the ones from `cardano-node` (or better, `cardano-wallet`)
+** Changes will be backported form `main` to `next-node`
+* `next-node` branch: should always target the next node release.
+** This branch will eventually be merged in `main` after the Cardano mainnet HF.
+
+=== Dependency update
+
+The dependency update policy is dependent on the protected branch.
+
+For `cardano-node`, we define major-version-bound the range of versions which are compatible with a specific era.
+For example, for the Alonzo era, that would be `>= 1.29 && < 1.35`. For the Vasil era, that would be `>= 1.35 && < 1.36`.
+
+Independently of the protected branch:
+
+* It should always use the same first-major-version of `plutus` as the one used by the `plutus` dependency of `cardano-node`
+* It should always be safe to upgrade to a new second-major-version of `plutus`: at worst this will lead to some code breakage.
+* It should, unless specified otherwise, use the same version for transitive dependencies (`cardano-ledger`, `ouroboros-network`, etc.) with `cardano-node`
+* It should pin the major version of `cardano-node` for all packages
+* It should pin the first and second-major version of `plutus` for all packages
+
+`main` branch:
+
+* It should not update `cardano-node` to a new major-version. In other words, it should use a `cardano-node` version which is compatible with the current Cardano mainnet
+* It should use a `cardano-wallet` version which is compatible with the current `cardano-node` version
+
+`next-node` branch:
+
+* It may update the `cardano-node` to a new major-version. In other words, it may use a `cardano-node` version which is incompatible with the current Cardano mainnet
+* It may use a `cardano-wallet` version which is incompatible with the current `cardano-node` version
+
+=== Version ranges
+
+Packages which depend on `plutus-apps` packages should use version ranges to control which version of those packages they build against.
+
+* Packages in `plutus-apps` which are used downstream should pin the major-version of each other (e.g. `plutus-pab-1.0.1` should depend on `plutus-contract ^>= 1.0`).
+* Downstream packages should pin at least the first-major-version of `plutus-apps` packages.
+** Upgrading to a new second-major-version should always be safe for working on the current mainnet, with at most code breakage (following the PVP). Users may of course want to pin this version as well to avoid such breakage.
+* Downstream packages pulling in `plutus-apps` packages via `source-repository-package` stanzas should always take tagged commits.
+
+=== Releases
+
+Currently there is no release process beyond bumping the package versions and making a tag/branch as appropriate.
+
 == Working with the project
 
 === How to submit an issue

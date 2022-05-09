@@ -37,6 +37,7 @@ flag defer-plugin-errors
 
 library
     import: lang
+    ghc-options: -O2 +RTS -T -N -qn8 -A1G -RTS
     exposed-modules:
         Data.Row.Extras
         Data.Text.Extras
@@ -133,6 +134,7 @@ library
         mmorph -any,
         mtl -any,
         prettyprinter >=1.1.0.1,
+        pretty -any,
         profunctors -any,
         quickcheck-dynamic -any,
         row-types >= 1.0.1.0,
@@ -150,7 +152,8 @@ library
         openapi3 -any,
         cardano-wallet-core -any,
         text-class -any,
-        uniplate -any
+        uniplate -any,
+        stm -any
 
     if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any
@@ -163,6 +166,12 @@ library
             Plutus.Contract.Test
             Plutus.Contract.Test.Coverage
             Plutus.Contract.Test.Coverage.ReportCoverage
+            Plutus.Contract.Test.Coverage.Analysis
+            Plutus.Contract.Test.Coverage.Analysis.Common
+            Plutus.Contract.Test.Coverage.Analysis.DeBruijn
+            Plutus.Contract.Test.Coverage.Analysis.Interpreter
+            Plutus.Contract.Test.Coverage.Analysis.Pretty
+            Plutus.Contract.Test.Coverage.Analysis.Types
             Plutus.Contract.Test.ContractModel
             Plutus.Contract.Test.ContractModel.Internal
             Plutus.Contract.Test.ContractModel.Symbolics
@@ -225,7 +234,15 @@ test-suite plutus-contract-test
         tasty-hunit -any,
         tasty-quickcheck -any,
         text -any,
-        transformers -any
+        transformers -any,
+        plutus-core -any,
+        pretty -any,
+        prettyprinter -any,
+        utf8-string -any,
+        deepseq -any,
+        stm -any,
+        serialise -any,
+        splitmix -any
 
     if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any
