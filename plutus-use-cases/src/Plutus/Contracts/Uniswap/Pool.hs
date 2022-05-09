@@ -101,7 +101,6 @@ lpTicker LiquidityPool{..}  = TokenName hash
       ((x1, y1), (x2, y2))
         | cA < cB   = ((csA, tokA), (csB, tokB))
         | otherwise = ((csB, tokB), (csA, tokA))
-
       h1   = sha2_256 $ unTokenName y1
       h2   = sha2_256 $ unTokenName y2
       h3   = sha2_256 $ unCurrencySymbol x1
