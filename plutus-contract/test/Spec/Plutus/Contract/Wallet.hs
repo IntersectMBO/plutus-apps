@@ -29,7 +29,7 @@ tests =
     testGroup
         "Plutus.Cardano.Wallet"
         -- TODO: Reenable once we update `cardano-node` with the following PR merged:
-        -- https://github.com/input-output-hk/cardano-node/pull/3837
+        -- https://github.com/input-output-hk/cardano-node/pull/3847
         []
         -- [ testProperty "ExportTx FromJSON and ToJSON inverse property" jsonInvProp
         -- ]
