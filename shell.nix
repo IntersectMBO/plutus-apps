@@ -1,5 +1,5 @@
 { system ? builtins.currentSystem
-, enableHaskellProfiling ? false
+, enableHaskellProfiling ? true
 , sourcesOverride ? { }
 , sources ? import ./nix/sources.nix { inherit system; } // sourcesOverride
 , packages ? import ./. { inherit system enableHaskellProfiling sources sourcesOverride; }

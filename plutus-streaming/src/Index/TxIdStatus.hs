@@ -10,6 +10,8 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromJust)
 import Data.Monoid (Last (Last), Sum (Sum, getSum))
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
 import Database.SQLite.Simple (execute, execute_)
 import Index.Split (SplitIndex (SplitIndex, siBuffered, siHandle))
 import Index.Sqlite (SqliteIndex)
@@ -26,7 +28,7 @@ type TxStatusIndex = SqliteIndex SimpleChainSyncEvent () TxId TxConfirmedState
 
 openIx :: FilePath -> IO TxStatusIndex
 openIx path =
-  fromJust <$> Ix.new query onInsert store 3000 path
+  fromJust <$> Ix.new query onInsert store 2000 path
 
 -- Ignore notifications for now
 onInsert :: SimpleChainSyncEvent -> TxStatusIndex -> IO [()]
