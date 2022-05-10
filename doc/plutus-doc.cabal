@@ -69,11 +69,11 @@ executable doc-doctests
       bytestring -any,
       data-default -any,
       flat -any,
-      plutus-core -any,
+      plutus-core >= 1.0.0,
       plutus-chain-index-core -any,
-      plutus-tx -any,
+      plutus-tx >= 1.0.0,
       plutus-ledger -any,
-      plutus-ledger-api -any,
+      plutus-ledger-api >= 1.0.0,
       plutus-ledger-constraints -any,
       plutus-contract -any,
       playground-common -any,
@@ -91,4 +91,4 @@ executable doc-doctests
       tasty-quickcheck -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0

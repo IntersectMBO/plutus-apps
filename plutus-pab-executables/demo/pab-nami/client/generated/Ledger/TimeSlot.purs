@@ -19,7 +19,7 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
-import Plutus.V1.Ledger.Slot (Slot)
+import Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D

@@ -183,7 +183,7 @@ contributionScript = Scripts.validatorScript . typedValidator
 
 -- | The address of a [[Campaign]]
 campaignAddress :: Campaign -> Ledger.ValidatorHash
-campaignAddress = Scripts.validatorHash . contributionScript
+campaignAddress = Scripts.plutusV1ValidatorHash . contributionScript
 
 -- | The crowdfunding contract for the 'Campaign'.
 crowdfunding :: Campaign -> Contract () CrowdfundingSchema ContractError ()

@@ -22,6 +22,7 @@
 module Wallet.Emulator.Wallet where
 
 import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
+import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
 import Control.Monad (foldM, (<=<))
@@ -47,8 +48,8 @@ import GHC.Generics (Generic)
 import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
-               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PrivateKey, PubKeyHash, SomeCardanoApiTx,
-               StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (..), ValidatorHash, Value)
+               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash, SomeCardanoApiTx, StakePubKey,
+               Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (..), ValidatorHash, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -360,7 +361,7 @@ handleAddSignature tx = do
                 reqSigners = getRequiredSigners ctx
             sp reqSigners tx
 
-addSignature' :: PrivateKey -> CardanoTx -> CardanoTx
+addSignature' :: Crypto.XPrv -> CardanoTx -> CardanoTx
 addSignature' privKey = Tx.cardanoTxMap (Ledger.addSignature' privKey) addSignatureCardano
     where
         addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx

@@ -28,7 +28,8 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, ScriptError (EvaluationError),
                Tx (txFee, txMint, txOutputs), TxOut (txOutValue), ValidationError (ScriptFailure), Validator, Value,
-               mkValidatorScript, outputs, scriptTxIn, scriptTxOut, txOutRefs, unitDatum, unitRedeemer, unspentOutputs)
+               mkValidatorScript, outputs, plutusV1ScriptTxOut, scriptTxIn, txOutRefs, unitDatum, unitRedeemer,
+               unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain))
 import Ledger.Generators qualified as Gen
@@ -210,7 +211,7 @@ invalidScript = property $ do
 
     -- modify one of the outputs to be a script output
     index <- forAll $ Gen.int (Range.linear 0 ((length $ txOutputs txn1) - 1))
-    let scriptTxn = txn1 & outputs . element index %~ \o -> scriptTxOut (txOutValue o) failValidator unitDatum
+    let scriptTxn = txn1 & outputs . element index %~ \o -> plutusV1ScriptTxOut (txOutValue o) failValidator unitDatum
     Hedgehog.annotateShow scriptTxn
     let outToSpend = txOutRefs scriptTxn !! index
     let totalVal = txOutValue (fst outToSpend)

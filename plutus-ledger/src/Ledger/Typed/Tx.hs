@@ -27,19 +27,16 @@
 module Ledger.Typed.Tx where
 
 import Control.Lens (preview)
-import Ledger.Address (PaymentPubKey, StakePubKey)
+import Ledger.Address (Address, PaymentPubKey, StakePubKey)
 import Ledger.Scripts (Datum (Datum), DatumHash, Redeemer (Redeemer), datumHash)
-import Ledger.Tx (Address, ChainIndexTxOut, TxIn (TxIn, txInRef, txInType),
+import Ledger.Tx (ChainIndexTxOut, TxIn (TxIn, txInRef, txInType),
                   TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress),
                   TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue), TxOutRef, _ScriptChainIndexTxOut,
                   pubKeyTxOut)
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, validatorAddress, validatorScript)
 import Plutus.V1.Ledger.Value qualified as Value
 
-import PlutusTx (BuiltinData, FromData, ToData, builtinDataToData, dataToBuiltinData, fromBuiltinData, toBuiltinData)
-
-import Codec.Serialise (deserialise, serialise)
-import Data.ByteString.Lazy qualified as BSL
+import PlutusTx (BuiltinData, FromData, ToData, builtinDataToData, fromBuiltinData, toBuiltinData)
 
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (Object), object, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
@@ -166,12 +163,6 @@ data ConnectionError =
     | UnknownRef
     deriving stock (Show, Eq, Ord, Generic)
     deriving anyclass (ToJSON, FromJSON)
-
--- TODO: these should probably live somewhere else
-instance ToJSON BuiltinData where
-    toJSON d = toJSON (BSL.toStrict (serialise (builtinDataToData d)))
-instance FromJSON BuiltinData where
-    parseJSON v = dataToBuiltinData . deserialise . BSL.fromStrict <$> parseJSON v
 
 instance Pretty ConnectionError where
     pretty = \case

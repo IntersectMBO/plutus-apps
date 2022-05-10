@@ -103,11 +103,11 @@ library
     hs-source-dirs: src
     build-depends:
         plutus-chain-index-core -any,
-        plutus-core -any,
+        plutus-core >= 1.0.0,
         plutus-ledger -any,
-        plutus-ledger-api -any,
+        plutus-ledger-api >= 1.0.0,
         plutus-ledger-constraints -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         freer-extras -any
     build-depends:
         cardano-api -any,
@@ -156,7 +156,7 @@ library
         stm -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -222,9 +222,9 @@ test-suite plutus-contract-test
         plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-ledger -any,
-        plutus-ledger-api -any,
+        plutus-ledger-api >= 1.0.0,
         plutus-ledger-constraints -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         QuickCheck -any,
         row-types -any,
         semigroupoids -any,
@@ -245,4 +245,4 @@ test-suite plutus-contract-test
         splitmix -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0

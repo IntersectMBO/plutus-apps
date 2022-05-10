@@ -92,7 +92,7 @@ instance Scripts.ValidatorTypes Game where
 
 -- | The address of the game (the hash of its validator script)
 gameAddress :: GameParam -> Address
-gameAddress = Ledger.scriptAddress . gameValidator
+gameAddress = Ledger.plutusV1ScriptAddress . gameValidator
 
 -- | The validator script of the game.
 gameValidator :: GameParam -> Validator

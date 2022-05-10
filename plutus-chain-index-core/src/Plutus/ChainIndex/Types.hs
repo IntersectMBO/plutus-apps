@@ -61,7 +61,7 @@ import Ledger (TxOutRef (..))
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
-import Ledger.TxId (TxId)
+import Ledger.Tx (TxId)
 import PlutusTx.Lattice (MeetSemiLattice (..))
 import Prettyprinter (Pretty (..), comma, (<+>))
 import Prettyprinter.Extras (PrettyShow (..))

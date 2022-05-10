@@ -4,8 +4,7 @@ module Ledger.Typed.Scripts(
     , MintingPolicy
     ) where
 
-import Ledger.Scripts hiding (mintingPolicyHash, stakeValidatorHash, validatorHash)
-
+import Ledger.Scripts
 import Ledger.Typed.Scripts.MonetaryPolicies as Export hiding (forwardToValidator)
 import Ledger.Typed.Scripts.StakeValidators as Export hiding (forwardToValidator)
 import Ledger.Typed.Scripts.Validators as Export

@@ -10,9 +10,9 @@ module Ledger.Fee(
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import GHC.Generics (Generic)
+import Ledger.Ada (Ada)
+import Ledger.Ada qualified as Ada
 import Ledger.Index (minFee)
-import Plutus.V1.Ledger.Ada (Ada)
-import Plutus.V1.Ledger.Ada qualified as Ada
 
 -- | Datatype to configure the fee in a transaction.
 --

@@ -123,8 +123,8 @@ import Streaming (Stream)
 import Streaming.Prelude (Of ((:>)))
 
 import Data.Aeson qualified as A
+import Ledger.Slot (getSlot)
 import Ledger.TimeSlot (SlotConfig)
-import Plutus.V1.Ledger.Slot (getSlot)
 import Plutus.V1.Ledger.Value (Value, flattenValue)
 
 -- | A very simple effect for interpreting the output printing done by the

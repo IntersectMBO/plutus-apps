@@ -89,7 +89,7 @@ gameValidator = Scripts.validatorScript gameInstance
 
 -- | The address of the game (the hash of its validator script)
 gameAddress :: Address
-gameAddress = Ledger.scriptAddress gameValidator
+gameAddress = Ledger.plutusV1ScriptAddress gameValidator
 
 -- | Parameters for the "lock" endpoint
 data LockParams = LockParams

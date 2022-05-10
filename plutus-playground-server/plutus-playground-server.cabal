@@ -7,10 +7,10 @@ license-files:
   NOTICE
 maintainer: kris.jenkins@tweag.io
 author: Kris Jenkins
-homepage: https://github.com/iohk/plutus#readme
-bug-reports: https://github.com/iohk/plutus/issues
+homepage: https://github.com/iohk/plutus-apps#readme
+bug-reports: https://github.com/iohk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+    Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 build-type: Simple
 data-files:
     usecases/Crowdfunding.hs
@@ -76,7 +76,7 @@ library
         plutus-contract -any,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         regex-compat -any,
         plutus-contract -any,
         row-types -any,
@@ -92,7 +92,7 @@ library
         web-ghc -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0
 
 library plutus-playground-usecases
     hs-source-dirs: usecases
@@ -129,7 +129,7 @@ library plutus-playground-usecases
         mtl -any,
         playground-common -any,
         plutus-contract -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         plutus-ledger -any,
         plutus-ledger-constraints -any,
         row-types -any,
@@ -137,7 +137,7 @@ library plutus-playground-usecases
         transformers -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -186,7 +186,7 @@ executable plutus-playground-server
         monad-logger -any,
         mtl -any,
         optparse-applicative -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         plutus-playground-server -any,
         plutus-playground-usecases -any,
         purescript-bridge -any,
@@ -204,7 +204,7 @@ executable plutus-playground-server
         web-ghc -any
 
     if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        build-depends: plutus-tx-plugin >= 1.0.0
 
 test-suite plutus-playground-server-test
     type: exitcode-stdio-1.0

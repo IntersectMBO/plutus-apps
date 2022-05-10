@@ -17,12 +17,11 @@ module Cardano.BM.Data.Tracer.Extras(
 
 import Cardano.BM.Data.Tracer (ToObject (..))
 import Data.Aeson (ToJSON (..), Value (String))
-import Data.HashMap.Strict (HashMap)
-import Data.HashMap.Strict qualified as HM
+import Data.Aeson.Key qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson
 import Data.Proxy (Proxy (..))
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.UUID (UUID)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Ledger.Tx (Tx)
@@ -41,32 +40,32 @@ import Wallet.Types (EndpointDescription)
 newtype PrettyToObject a = PrettyToObject { unPrettyToObject :: a }
 
 instance Pretty a => ToObject (PrettyToObject a) where
-    toObject _ = HM.singleton "string" . String . Render.renderStrict . layoutPretty defaultLayoutOptions . pretty . unPrettyToObject
+    toObject _ = Aeson.singleton "string" . String . Render.renderStrict . layoutPretty defaultLayoutOptions . pretty . unPrettyToObject
 
-toStructuredLog' :: forall s a. (KnownSymbol s, ToJSON a) => Tagged s a -> HashMap Text Value
+toStructuredLog' :: forall s a. (KnownSymbol s, ToJSON a) => Tagged s a -> Aeson.KeyMap Value
 toStructuredLog' (Tagged a) =
-    let k = Text.pack (symbolVal (Proxy @s))
+    let k = Aeson.fromString $ symbolVal (Proxy @s)
         v = toJSON a
-    in HM.singleton k v
+    in Aeson.singleton k v
 
 -- | Types that can be turned into structured log messages
 class StructuredLog a where
-    toStructuredLog :: a -> HashMap Text Value
+    toStructuredLog :: a -> Aeson.KeyMap Value
 
 instance StructuredLog () where
-    toStructuredLog _ = HM.empty
+    toStructuredLog _ = Aeson.empty
 
 instance (StructuredLog a, StructuredLog b) =>
     StructuredLog (a, b) where
-        toStructuredLog (a, b) = HM.union (toStructuredLog a) (toStructuredLog b)
+        toStructuredLog (a, b) = Aeson.union (toStructuredLog a) (toStructuredLog b)
 
 instance (StructuredLog a, StructuredLog b, StructuredLog c) =>
     StructuredLog (a, b, c) where
-        toStructuredLog (a, b, c) = HM.union (toStructuredLog a) (toStructuredLog (b, c))
+        toStructuredLog (a, b, c) = Aeson.union (toStructuredLog a) (toStructuredLog (b, c))
 
 instance (StructuredLog a, StructuredLog b, StructuredLog c, StructuredLog d) =>
     StructuredLog (a, b, c, d) where
-        toStructuredLog (a, b, c, d) = HM.union (toStructuredLog a) (toStructuredLog (b, c, d))
+        toStructuredLog (a, b, c, d) = Aeson.union (toStructuredLog a) (toStructuredLog (b, c, d))
 
 instance (StructuredLog a, StructuredLog b) =>
     StructuredLog (Either a b) where
@@ -87,10 +86,10 @@ deriving via (Tagged "value" V.Value) instance StructuredLog V.Value
 deriving via (Tagged "endpoint" EndpointDescription) instance StructuredLog EndpointDescription
 instance ToJSON v => StructuredLog (PartiallyDecodedResponse v) where
     toStructuredLog PartiallyDecodedResponse{hooks, observableState} =
-        HM.fromList [("hooks", toJSON hooks), ("state", toJSON observableState)]
+        Aeson.fromList [("hooks", toJSON hooks), ("state", toJSON observableState)]
 instance ToJSON v => StructuredLog (Response v) where
     toStructuredLog Response{rspRqID, rspItID, rspResponse} =
-        HM.fromList
+        Aeson.fromList
             [ ("requestID", toJSON rspRqID)
             , ("iterationID", toJSON rspItID)
             , ("response", toJSON rspResponse)
@@ -100,6 +99,6 @@ instance (KnownSymbol s, ToJSON a) => StructuredLog (Tagged s a) where
     toStructuredLog = toStructuredLog'
 
 -- | A structured log object with a textual description and additional fields.
-mkObjectStr :: StructuredLog k => Text -> k -> HashMap Text Value
+mkObjectStr :: StructuredLog k => Text -> k -> Aeson.KeyMap Value
 mkObjectStr str rest =
-    HM.insert "string" (String str) (toStructuredLog rest)
+    Aeson.insert "string" (String str) (toStructuredLog rest)

@@ -96,9 +96,11 @@ tests = testGroup "all tests" [
         testProperty "slot to time range has lower bound <= upper bound"
           slotToTimeRangeHasLowerAndUpperBoundsProp
         ],
-    testGroup "SomeCardanoApiTx" [
-        testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
-        ],
+    -- TODO: Reenable once we update `cardano-node` with the following PR merged:
+    -- https://github.com/input-output-hk/cardano-node/pull/3837
+    -- testGroup "SomeCardanoApiTx" [
+    --     testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
+    --     ],
     Ledger.Tx.CardanoAPISpec.tests,
     testGroup "Signing" [
         testProperty "signed payload verifies with public key" signAndVerifyTest

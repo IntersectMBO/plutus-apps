@@ -110,7 +110,7 @@ uniswapScript :: Uniswap -> Validator
 uniswapScript = Scripts.validatorScript . uniswapInstance
 
 uniswapAddress :: Uniswap -> Ledger.Address
-uniswapAddress = Ledger.scriptAddress . uniswapScript
+uniswapAddress = Ledger.plutusV1ScriptAddress . uniswapScript
 
 uniswap :: CurrencySymbol -> Uniswap
 uniswap cs = Uniswap $ mkCoin cs uniswapTokenName
@@ -134,7 +134,7 @@ covIdx :: CoverageIndex
 covIdx = computeRefinedCoverageIndex cc
 
 liquidityCurrency :: Uniswap -> CurrencySymbol
-liquidityCurrency = scriptCurrencySymbol . liquidityPolicy
+liquidityCurrency = plutusV1ScriptCurrencySymbol . liquidityPolicy
 
 poolStateCoin :: Uniswap -> Coin PoolState
 poolStateCoin = flip mkCoin poolStateTokenName . liquidityCurrency

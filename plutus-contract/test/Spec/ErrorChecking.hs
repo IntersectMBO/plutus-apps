@@ -137,8 +137,8 @@ contract :: Contract () Schema ContractError ()
 contract = selectList [failFalseC, failHeadNilC, divZeroC, divZeroTraceC, successC]
   where
     run validator = void $ do
-      let addr = scriptAddress (validatorScript validator)
-          hash = validatorHash (validatorScript validator)
+      let addr = plutusV1ScriptAddress (validatorScript validator)
+          hash = plutusV1ValidatorHash (validatorScript validator)
           tx = mustPayToOtherScript hash (Datum $ toBuiltinData ()) (Ada.adaValueOf 10)
       r <- submitTx tx
       awaitTxConfirmed (getCardanoTxId r)

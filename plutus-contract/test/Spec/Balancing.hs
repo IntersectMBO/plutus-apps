@@ -11,12 +11,12 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Ledger (Address, Validator, validatorHash)
+import Ledger (Address, Validator)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Generators (someTokenValue)
-import Ledger.Scripts (mintingPolicyHash, unitDatum, unitRedeemer)
+import Ledger.Scripts (plutusV1MintingPolicyHash, plutusV1ValidatorHash, unitDatum, unitRedeemer)
 import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Ledger.Value qualified as Value
 import Plutus.Contract as Con
@@ -42,7 +42,7 @@ balanceTxnMinAda =
         ff = someTokenValue "ff" 1
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
-        vHash = validatorHash someValidator
+        vHash = plutusV1ValidatorHash someValidator
 
         contract :: Contract () EmptySchema ContractError ()
         contract = do
@@ -68,10 +68,10 @@ balanceTxnMinAda2 =
     let vA n = someTokenValue "A" n
         vB n = someTokenValue "B" n
         mps  = MPS.mkForwardingMintingPolicy vHash
-        vL n = Value.singleton (Value.mpsSymbol $ mintingPolicyHash mps) "L" n
+        vL n = Value.singleton (Value.mpsSymbol $ plutusV1MintingPolicyHash mps) "L" n
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (<> vA 1 <> vB 2)
-        vHash = validatorHash someValidator
+        vHash = plutusV1ValidatorHash someValidator
         payToWallet w = Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
         mkTx lookups constraints = Constraints.adjustUnbalancedTx . either (error . show) id $ Constraints.mkTx @Void lookups constraints
 
@@ -107,7 +107,7 @@ balanceTxnMinAda2 =
 
 balanceTxnNoExtraOutput :: TestTree
 balanceTxnNoExtraOutput =
-    let vL n = Value.singleton (Ledger.scriptCurrencySymbol coinMintingPolicy) "coinToken" n
+    let vL n = Value.singleton (Ledger.plutusV1ScriptCurrencySymbol coinMintingPolicy) "coinToken" n
         mkTx lookups constraints = either (error . show) id $ Constraints.mkTx @Void lookups constraints
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
@@ -130,7 +130,7 @@ balanceTxnNoExtraOutput =
     in checkPredicate "balancing doesn't create extra output" tracePred (void trace)
 
 someAddress :: Address
-someAddress = Ledger.scriptAddress someValidator
+someAddress = Ledger.plutusV1ScriptAddress someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])

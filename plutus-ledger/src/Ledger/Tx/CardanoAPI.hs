@@ -64,6 +64,7 @@ import Cardano.Api.Byron qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.BM.Data.Tracer (ToObject)
 import Cardano.Chain.Common (addrToBase58)
+import Cardano.Ledger.Alonzo.Language qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Ledger.Core qualified as Ledger
@@ -93,14 +94,14 @@ import Data.Set qualified as Set
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Ledger.Ada qualified as Ada
 import Ledger.Address qualified as P
 import Ledger.Scripts qualified as P
+import Ledger.Slot qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
-import Plutus.V1.Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Api qualified as Api
+import Ledger.Tx.Internal qualified as P
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Credential qualified as Credential
-import Plutus.V1.Ledger.Slot qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
@@ -124,6 +125,7 @@ instance Eq SomeCardanoApiTx where
   (SomeTx tx1 C.AllegraEraInCardanoMode) == (SomeTx tx2 C.AllegraEraInCardanoMode) = tx1 == tx2
   (SomeTx tx1 C.MaryEraInCardanoMode) == (SomeTx tx2 C.MaryEraInCardanoMode)       = tx1 == tx2
   (SomeTx tx1 C.AlonzoEraInCardanoMode) == (SomeTx tx2 C.AlonzoEraInCardanoMode)   = tx1 == tx2
+  (SomeTx tx1 C.BabbageEraInCardanoMode) == (SomeTx tx2 C.BabbageEraInCardanoMode) = tx1 == tx2
   _ == _                                                                           = False
 
 deriving instance Show SomeCardanoApiTx
@@ -141,6 +143,7 @@ instance Serialise SomeCardanoApiTx where
       encodedMode C.AllegraEraInCardanoMode = Encoding (TkSimple 4)
       encodedMode C.MaryEraInCardanoMode    = Encoding (TkSimple 5)
       encodedMode C.AlonzoEraInCardanoMode  = Encoding (TkSimple 6)
+      encodedMode C.BabbageEraInCardanoMode = Encoding (TkSimple 7)
   decode = do
     w <- decodeSimple
     case w of
@@ -149,6 +152,7 @@ instance Serialise SomeCardanoApiTx where
       4 -> decodeTx C.AsAllegraEra C.AllegraEraInCardanoMode
       5 -> decodeTx C.AsMaryEra C.MaryEraInCardanoMode
       6 -> decodeTx C.AsAlonzoEra C.AlonzoEraInCardanoMode
+      7 -> decodeTx C.AsBabbageEra C.BabbageEraInCardanoMode
       _ -> fail "Unexpected value while decoding Cardano.Api.EraInMode"
     where
       decodeTx :: C.IsCardanoEra era => C.AsType era -> C.EraInMode era C.CardanoMode -> Decoder s SomeCardanoApiTx
@@ -173,6 +177,7 @@ instance FromJSON SomeCardanoApiTx where
             <|> parseAllegraEraInCardanoModeTx v
             <|> parseMaryEraInCardanoModeTx v
             <|> parseAlonzoEraInCardanoModeTx v
+            <|> parseBabbageEraInCardanoModeTx v
             <|> parseEraInCardanoModeFail v
 
 parseByronInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
@@ -199,6 +204,15 @@ parseAlonzoEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
 parseAlonzoEraInCardanoModeTx =
   parseSomeCardanoTx "Failed to parse AlonzoEra 'tx' field from SomeCardanoApiTx"
                      (C.AsTx C.AsAlonzoEra)
+
+-- TODO Uncomment the implementation once Cardano.Api adds a FromJSON instance
+-- for 'EraInMode BabbageEra CardanoMode':
+-- https://github.com/input-output-hk/cardano-node/pull/3837
+parseBabbageEraInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
+parseBabbageEraInCardanoModeTx =
+    undefined
+  -- parseSomeCardanoTx "Failed to parse BabbageEra 'tx' field from SomeCardanoApiTx"
+  --                    (C.AsTx C.AsBabbageEra)
 
 parseEraInCardanoModeFail :: Aeson.Value -> Parser SomeCardanoApiTx
 parseEraInCardanoModeFail _ = fail "Unable to parse 'eraInMode'"
@@ -247,9 +261,11 @@ unspentOutputsTx tx = Map.fromList $ swap <$> txOutRefs tx
 -- @True@ or @False@ depending on script validity. If the @era@ does not support
 -- scripts, always return @True@.
 fromTxScriptValidity :: C.TxScriptValidity era -> Bool
-fromTxScriptValidity C.TxScriptValidityNone                                                      = True
-fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptValid)   = True
-fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptInvalid) = False
+fromTxScriptValidity C.TxScriptValidityNone                                                       = True
+fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptValid)    = True
+fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptInvalid)  = False
+fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInBabbageEra C.ScriptValid)   = True
+fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInBabbageEra C.ScriptInvalid) = False
 
 -- | Given a 'C.TxBody from a 'C.Tx era', return the datums and redeemers along
 -- with their hashes.
@@ -294,21 +310,28 @@ fromLedgerScript
   :: C.ShelleyBasedEra era
   -> Ledger.Script (C.ShelleyLedgerEra era)
   -> Maybe (P.ScriptHash, P.Script)
-fromLedgerScript C.ShelleyBasedEraShelley _     = Nothing
-fromLedgerScript C.ShelleyBasedEraAllegra _     = Nothing
-fromLedgerScript C.ShelleyBasedEraMary _        = Nothing
-fromLedgerScript C.ShelleyBasedEraAlonzo script = fromAlonzoLedgerScript script
+fromLedgerScript C.ShelleyBasedEraShelley _      = Nothing
+fromLedgerScript C.ShelleyBasedEraAllegra _      = Nothing
+fromLedgerScript C.ShelleyBasedEraMary _         = Nothing
+fromLedgerScript C.ShelleyBasedEraAlonzo script  = fromLedgerPlutusScript script
+fromLedgerScript C.ShelleyBasedEraBabbage script = fromLedgerPlutusScript script
 
--- | Convert a script the Alonzo era to a Plutus script along with it's hash.
-fromAlonzoLedgerScript :: Alonzo.Script a -> Maybe (P.ScriptHash, P.Script)
-fromAlonzoLedgerScript Alonzo.TimelockScript {} = Nothing
-fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
-  let script = fmap (\s -> (P.scriptHash s, s))
+-- | Convert a `cardano-ledger` Plutus script from the Alonzo era and onwards to
+-- a 'Script' along with it's hash.
+fromLedgerPlutusScript :: Alonzo.Script a -> Maybe (P.ScriptHash, P.Script)
+fromLedgerPlutusScript Alonzo.TimelockScript {} = Nothing
+fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV1 bs) =
+  let script = fmap (\s -> (P.plutusV1ScriptHash s, s))
              $ deserialiseOrFail
              $ BSL.fromStrict
              $ SBS.fromShort bs
    in either (const Nothing) Just script
-
+fromLedgerPlutusScript (Alonzo.PlutusScript Alonzo.PlutusV2 bs) =
+  let script = fmap (\s -> (P.plutusV2ScriptHash s, s))
+             $ deserialiseOrFail
+             $ BSL.fromStrict
+             $ SBS.fromShort bs
+   in either (const Nothing) Just script
 
 toCardanoTxBodyContent
     :: [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
@@ -327,7 +350,10 @@ toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
     pure $ C.TxBodyContent
         { txIns = txIns
         , txInsCollateral = txInsCollateral
+        , txInsReference = C.TxInsReferenceNone -- TODO Change when finally supporting Babbage era txs
         , txOuts = txOuts
+        , txTotalCollateral = C.TxTotalCollateralNone -- TODO Change when going to Babbage era txs
+        , txReturnCollateral = C.TxReturnCollateralNone -- TODO Change when going to Babbage era txs
         , txFee = txFee'
         , txValidityRange = txValidityRange
         , txMintValue = txMintValue
@@ -399,7 +425,7 @@ fromCardanoTxInWitness
         (P.Datum $ fromCardanoScriptData datum)
 fromCardanoTxInWitness
     (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV2InAlonzo C.PlutusScriptV2
+        (C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
             script
             (C.ScriptDatumForTxIn datum)
             redeemer
@@ -409,6 +435,17 @@ fromCardanoTxInWitness
         (P.Redeemer $ fromCardanoScriptData redeemer)
         (P.Datum $ fromCardanoScriptData datum)
 fromCardanoTxInWitness (C.ScriptWitness _ C.SimpleScriptWitness{}) = pure P.ConsumeSimpleScriptAddress
+fromCardanoTxInWitness
+    (C.ScriptWitness _
+        (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
+            script
+            (C.ScriptDatumForTxIn datum)
+            redeemer
+            _))
+    = pure $ P.ConsumeScriptAddress
+        (P.Validator $ fromCardanoPlutusScript script)
+        (P.Redeemer $ fromCardanoScriptData redeemer)
+        (P.Datum $ fromCardanoScriptData datum)
 
 toCardanoTxInWitness :: P.TxInType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.AlonzoEra)
 toCardanoTxInWitness P.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
@@ -433,11 +470,13 @@ toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
     C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
         <$> toCardanoPlutusScript script
         <*> pure C.NoScriptDatumForMint
-        <*> pure (C.fromPlutusData $ Api.toData redeemer)
+        <*> pure (C.fromPlutusData $ P.toData redeemer)
         <*> pure zeroExecutionUnits
 
+-- TODO Handle reference script once 'P.TxOut' supports it (or when we use
+-- exclusively 'C.TxOut' in all the codebase).
 fromCardanoTxOut :: C.TxOut C.CtxTx era -> Either FromCardanoError P.TxOut
-fromCardanoTxOut (C.TxOut addr value datumHash) =
+fromCardanoTxOut (C.TxOut addr value datumHash _) =
     P.TxOut
     <$> fromCardanoAddress addr
     <*> pure (fromCardanoTxOutValue value)
@@ -452,11 +491,12 @@ toCardanoTxOut networkId fromHash (P.TxOut addr value datumHash) =
     C.TxOut <$> toCardanoAddress networkId addr
             <*> toCardanoTxOutValue value
             <*> fromHash datumHash
+            <*> pure C.ReferenceScriptNone
 
 lookupDatum :: Map P.DatumHash P.Datum -> Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
 lookupDatum datums datumHash =
     case flip Map.lookup datums =<< datumHash of
-        Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
+        Just datum -> pure $ C.TxOutDatumInTx C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
         Nothing    -> toCardanoTxOutDatumHash datumHash
 
 fromCardanoAddress :: C.AddressInEra era -> Either FromCardanoError P.Address
@@ -542,7 +582,8 @@ toCardanoTxOutValue value = do
 fromCardanoTxOutDatumHash :: C.TxOutDatum C.CtxTx era -> Maybe P.DatumHash
 fromCardanoTxOutDatumHash C.TxOutDatumNone       = Nothing
 fromCardanoTxOutDatumHash (C.TxOutDatumHash _ h) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
-fromCardanoTxOutDatumHash (C.TxOutDatum _ d)     = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
+fromCardanoTxOutDatumHash (C.TxOutDatumInTx _ d) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
+fromCardanoTxOutDatumHash (C.TxOutDatumInline _ d) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 
 toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra)
 toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone
@@ -557,9 +598,10 @@ fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
 
 toCardanoMintValue :: P.Redeemers -> P.Value -> Set.Set P.MintingPolicy -> Either ToCardanoError (C.TxMintValue C.BuildTx C.AlonzoEra)
 toCardanoMintValue redeemers value mps =
-    C.TxMintValue C.MultiAssetInAlonzoEra
+    let indexedMps = Prelude.zip [0..] $ Set.toList mps
+     in C.TxMintValue C.MultiAssetInAlonzoEra
         <$> toCardanoValue value
-        <*> (C.BuildTxWith . Map.fromList <$> traverse (\(idx, mp) -> (,) <$> (toCardanoPolicyId . P.mintingPolicyHash) mp <*> toCardanoMintWitness redeemers idx mp) (Prelude.zip [0..] $ Set.toList mps))
+        <*> (C.BuildTxWith . Map.fromList <$> traverse (\(idx, mp) -> (,) <$> (toCardanoPolicyId . P.plutusV1MintingPolicyHash) mp <*> toCardanoMintWitness redeemers idx mp) indexedMps)
 
 fromCardanoValue :: C.Value -> P.Value
 fromCardanoValue (C.valueToList -> list) = foldMap toValue list
@@ -636,16 +678,18 @@ fromCardanoSlotNo (C.SlotNo w64) = P.Slot (toInteger w64)
 toCardanoSlotNo :: P.Slot -> C.SlotNo
 toCardanoSlotNo (P.Slot i) = C.SlotNo (fromInteger i)
 
-fromCardanoScriptData :: C.ScriptData -> Api.BuiltinData
-fromCardanoScriptData = Api.dataToBuiltinData . C.toPlutusData
+fromCardanoScriptData :: C.ScriptData -> P.BuiltinData
+fromCardanoScriptData = P.dataToBuiltinData . C.toPlutusData
 
-toCardanoScriptData :: Api.BuiltinData -> C.ScriptData
-toCardanoScriptData = C.fromPlutusData . Api.builtinDataToData
+toCardanoScriptData :: P.BuiltinData -> C.ScriptData
+toCardanoScriptData = C.fromPlutusData . P.builtinDataToData
 
 fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe P.Script
 fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InAlonzo (C.PlutusScript C.PlutusScriptV1 script)) =
     Just $ fromCardanoPlutusScript script
-fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InAlonzo (C.PlutusScript C.PlutusScriptV2 script)) =
+fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InBabbage (C.PlutusScript C.PlutusScriptV1 script)) =
+    Just $ fromCardanoPlutusScript script
+fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InBabbage (C.PlutusScript C.PlutusScriptV2 script)) =
     Just $ fromCardanoPlutusScript script
 fromCardanoScriptInEra (C.ScriptInEra _ C.SimpleScript{}) = Nothing
 

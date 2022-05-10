@@ -68,7 +68,7 @@ library
         plutus-ledger-constraints -any,
         row-types -any,
         prettyprinter -any,
-        plutus-tx -any,
+        plutus-tx >= 1.0.0,
         purescript-bridge -any,
         recursion-schemes < 5.2,
         servant >= 0.16,

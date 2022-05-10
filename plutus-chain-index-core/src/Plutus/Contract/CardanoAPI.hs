@@ -32,6 +32,7 @@ fromCardanoBlock (C.BlockInMode (C.Block C.BlockHeader {} txs) eraInMode) =
     C.AllegraEraInCardanoMode -> traverse (fromCardanoTx eraInMode) txs
     C.MaryEraInCardanoMode    -> traverse (fromCardanoTx eraInMode) txs
     C.AlonzoEraInCardanoMode  -> traverse (fromCardanoTx eraInMode) txs
+    C.BabbageEraInCardanoMode -> traverse (fromCardanoTx eraInMode) txs
 
 -- | Convert a Cardano API tx of any given era to a Plutus chain index tx.
 fromCardanoTx

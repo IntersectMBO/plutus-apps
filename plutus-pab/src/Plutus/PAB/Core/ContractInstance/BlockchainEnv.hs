@@ -111,6 +111,7 @@ processChainSyncEvent instancesState blockchainEnv event = do
         C.AllegraEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
         C.MaryEraInCardanoMode    -> processBlock instancesState header blockchainEnv transactions era
         C.AlonzoEraInCardanoMode  -> processBlock instancesState header blockchainEnv transactions era
+        C.BabbageEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
     RollBackward chainPoint _ -> runRollback blockchainEnv chainPoint
 
 data SyncActionFailure

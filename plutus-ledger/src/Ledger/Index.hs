@@ -70,14 +70,15 @@ import Data.OpenApi.Schema qualified as OpenApi
 import Data.Set qualified as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import Ledger.Ada (Ada)
+import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
 import Ledger.Crypto
 import Ledger.Orphans ()
 import Ledger.Scripts
+import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx (txId)
-import Plutus.V1.Ledger.Ada (Ada)
-import Plutus.V1.Ledger.Ada qualified as Ada
+import Ledger.Tx
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api qualified as Api
 import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
@@ -85,9 +86,6 @@ import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Slot qualified as Slot
-import Plutus.V1.Ledger.Tx
-import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value qualified as V
 import PlutusTx (toBuiltinData)
 import PlutusTx.Numeric qualified as P
@@ -284,7 +282,7 @@ checkMintingAuthorised tx =
 
         mpsScriptHashes = Scripts.MintingPolicyHash . V.unCurrencySymbol <$> mintedCurrencies
 
-        lockingScripts = mintingPolicyHash <$> Set.toList (txMintScripts tx)
+        lockingScripts = plutusV1MintingPolicyHash <$> Set.toList (txMintScripts tx)
 
         mintedWithoutScript = filter (\c -> c `notElem` lockingScripts) mpsScriptHashes
     in
@@ -295,7 +293,7 @@ checkMintingScripts tx = do
     txinfo <- mkTxInfo tx
     iforM_ (Set.toList (txMintScripts tx)) $ \i vl -> do
         let cs :: V.CurrencySymbol
-            cs = V.mpsSymbol $ mintingPolicyHash vl
+            cs = V.mpsSymbol $ plutusV1MintingPolicyHash vl
             ctx :: Context
             ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
             ptr :: RedeemerPtr
@@ -335,7 +333,7 @@ matchInputOutput :: ValidationMonad m
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
     (Just (ConsumeScriptAddress v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
-        unless (validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
+        unless (plutusV1ValidatorHash v == vh) $ throwError $ InvalidScriptHash v vh
 
         pure $ ScriptMatch (txInRef txin) v r d
     (Just ConsumePublicKeyAddress, _, Address{addressCredential=PubKeyCredential pkh}) ->

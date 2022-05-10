@@ -13,6 +13,7 @@ let
   haskell = pkgs.callPackage ./haskell {
     inherit gitignore-nix sources;
     inherit enableHaskellProfiling;
+    libsecp256k1 = pkgs.secp256k1;
 
     # This ensures that the utility scripts produced in here will run on the current system, not
     # the build system, so we can run e.g. the darwin ones on linux
