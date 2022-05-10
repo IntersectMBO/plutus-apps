@@ -48,17 +48,18 @@ module EscrowImpl(
     ) where
 
 import Control.Lens (makeClassyPrisms, review, view)
-import Control.Monad (void)
+import Control.Monad (Monad ((>>)), void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Ledger (Datum (..), DatumHash, POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, ValidatorHash,
-               getCardanoTxId, interval, scriptOutputsAt, txSignedBy, valuePaidTo)
+import Ledger (Datum (Datum), DatumHash, POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash),
+               ScriptContext (ScriptContext, scriptContextTxInfo), TxId, ValidatorHash, getCardanoTxId, interval,
+               scriptOutputsAt, txSignedBy, valuePaidTo)
 import Ledger qualified
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoValidRange))
 import Ledger.Interval (after, before, from)
 import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
@@ -66,16 +67,19 @@ import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, geq, lt)
 
-import Plutus.Contract
+import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint, Promise,
+                        awaitTime, currentTime, endpoint, mapError, mkTxConstraints, ownPaymentPubKeyHash, promiseMap,
+                        selectList, submitUnbalancedTx, type (.\/), utxosAt, waitNSlots)
 import Plutus.Contract.Typed.Tx qualified as Typed
 import PlutusTx qualified
 {- START imports -}
-import PlutusTx.Code
-import PlutusTx.Coverage
+import PlutusTx.Code qualified as PlutusTx
+import PlutusTx.Coverage qualified as PlutusTx
 {- END imports -}
-import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..), check, foldMap)
+import PlutusTx.Prelude (Bool (False), Either (Left, Right), all, either, foldl, id, mempty, traceIfFalse, ($), (&&),
+                         (+), (-), (.), (<$>), (==), (>=))
 
-import Prelude (Semigroup (..), foldMap)
+import Prelude (Semigroup ((<>)), foldMap)
 import Prelude qualified as Haskell
 
 type EscrowSchema =
@@ -368,6 +372,6 @@ payRedeemRefund params vl = do
     go
 
 {- START covIdx -}
-covIdx :: CoverageIndex
-covIdx = getCovIdx $$(PlutusTx.compile [|| validate ||])
+covIdx :: PlutusTx.CoverageIndex
+covIdx = PlutusTx.getCovIdx $$(PlutusTx.compile [|| validate ||])
 {- END covIdx -}

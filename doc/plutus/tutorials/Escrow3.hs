@@ -16,28 +16,30 @@
 
 module Escrow3(prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) where
 
-import Control.Lens hiding (both, elements)
+import Control.Lens (At (at), makeLenses, to, (%=), (.=), (^.))
 import Control.Monad (void, when)
-import Data.Data
-import Data.Foldable
+import Data.Data (Data)
+import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
 
 import Ledger (Datum, minAdaTxOut)
 import Ledger.Ada qualified as Ada
-import Ledger.Value
-import Plutus.Contract
-import Plutus.Contract.Test
-import Plutus.Contract.Test.ContractModel
+import Ledger.Value qualified as Value
+import Plutus.Contract (Contract, selectList)
+import Plutus.Contract.Test (Wallet, mockWalletPaymentPubKeyHash, w1, w2, w3, w4, w5)
+import Plutus.Contract.Test.ContractModel qualified as CM
 
-import Plutus.Contracts.Tutorial.Escrow hiding (Action (..))
+import Plutus.Contracts.Tutorial.Escrow (EscrowError, EscrowParams (EscrowParams, escrowTargets), EscrowSchema, payEp,
+                                         payToPaymentPubKeyTarget, redeemEp, refundEp)
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Monoid (inv)
 
-import Test.QuickCheck
+import Test.QuickCheck (Arbitrary (shrink), Gen, Property, choose, elements, frequency, infiniteListOf, shrinkList,
+                        sublistOf, tabulate)
 
-data EscrowModel = EscrowModel { _contributions :: Map Wallet Value
-                               , _targets       :: Map Wallet Value
+data EscrowModel = EscrowModel { _contributions :: Map Wallet Value.Value
+                               , _targets       :: Map Wallet Value.Value
                                , _phase         :: Phase
                                } deriving (Eq, Show, Data)
 
@@ -45,10 +47,10 @@ data Phase = Initial | Running deriving (Eq, Show, Data)
 
 makeLenses ''EscrowModel
 
-deriving instance Eq (ContractInstanceKey EscrowModel w s e params)
-deriving instance Show (ContractInstanceKey EscrowModel w s e params)
+deriving instance Eq (CM.ContractInstanceKey EscrowModel w s e params)
+deriving instance Show (CM.ContractInstanceKey EscrowModel w s e params)
 
-instance ContractModel EscrowModel where
+instance CM.ContractModel EscrowModel where
 {- START EscrowModel -}
   data Action EscrowModel = Init [(Wallet, Integer)]
                           | Redeem Wallet
@@ -58,7 +60,7 @@ instance ContractModel EscrowModel where
 {- END EscrowModel -}
 
   data ContractInstanceKey EscrowModel w s e params where
-    WalletKey :: Wallet -> ContractInstanceKey EscrowModel () EscrowSchema EscrowError (EscrowParams Datum)
+    WalletKey :: Wallet -> CM.ContractInstanceKey EscrowModel () EscrowSchema EscrowError (EscrowParams Datum)
 
   initialState = EscrowModel { _contributions = Map.empty
                              , _targets       = Map.empty
@@ -68,7 +70,7 @@ instance ContractModel EscrowModel where
   initialInstances = []
 
   startInstances _ (Init wns) =
-    [StartContract (WalletKey w) (escrowParams wns) | w <- testWallets]
+    [CM.StartContract (WalletKey w) (escrowParams wns) | w <- testWallets]
   startInstances _ _ = []
 
   instanceWallet (WalletKey w) = w
@@ -80,35 +82,35 @@ instance ContractModel EscrowModel where
       phase   .= Running
       targets .= Map.fromList [(w, Ada.adaValueOf (fromInteger n)) | (w,n) <- wns]
     Pay w v -> do
-      withdraw w (Ada.adaValueOf $ fromInteger v)
+      CM.withdraw w (Ada.adaValueOf $ fromInteger v)
       contributions %= Map.insertWith (<>) w (Ada.adaValueOf $ fromInteger v)
-      wait 1
+      CM.wait 1
     Redeem w -> do
-      targets <- viewContractState targets
-      contribs <- viewContractState contributions
-      sequence_ [ deposit w v | (w, v) <- Map.toList targets ]
+      targets <- CM.viewContractState targets
+      contribs <- CM.viewContractState contributions
+      sequence_ [ CM.deposit w v | (w, v) <- Map.toList targets ]
       -- omit next two lines to disable disbursement of the surplus
       let leftoverValue = fold contribs <> inv (fold targets)
-      deposit w leftoverValue
+      CM.deposit w leftoverValue
       contributions .= Map.empty
-      wait 1
+      CM.wait 1
     Refund w -> do
-      v <- viewContractState $ contributions . at w . to fold
+      v <- CM.viewContractState $ contributions . at w . to fold
       contributions %= Map.delete w
-      deposit w v
-      wait 1
+      CM.deposit w v
+      CM.wait 1
 
   precondition s a = case a of
     Init tgts   -> currentPhase == Initial
-                && and [Ada.adaValueOf (fromInteger n) `geq` Ada.toValue minAdaTxOut | (_,n) <- tgts]
+                && and [Ada.adaValueOf (fromInteger n) `Value.geq` Ada.toValue minAdaTxOut | (_,n) <- tgts]
     Redeem _    -> currentPhase == Running
-                && fold (s ^. contractState . contributions) `geq` fold (s ^. contractState . targets)
+                && fold (s ^. CM.contractState . contributions) `Value.geq` fold (s ^. CM.contractState . targets)
              --   && fold (s ^. contractState . contributions) == fold (s ^. contractState . targets)
     Pay _ v     -> currentPhase == Running
-                && Ada.adaValueOf (fromInteger v) `geq` Ada.toValue minAdaTxOut
+                && Ada.adaValueOf (fromInteger v) `Value.geq` Ada.toValue minAdaTxOut
     Refund w    -> currentPhase == Running
-                && w `Map.member` (s ^. contractState . contributions)
-    where currentPhase = s ^. contractState . phase
+                && w `Map.member` (s ^. CM.contractState . contributions)
+    where currentPhase = s ^. CM.contractState . phase
 
 {-
 {- START strongPrecondition -}
@@ -123,13 +125,13 @@ precondition s (Redeem _) =
       return ()
     Pay w v        -> do
       Trace.callEndpoint @"pay-escrow" (h $ WalletKey w) (Ada.adaValueOf $ fromInteger v)
-      delay 1
+      CM.delay 1
     Redeem w       -> do
       Trace.callEndpoint @"redeem-escrow" (h $ WalletKey w) ()
-      delay 1
+      CM.delay 1
     Refund w       -> do
       Trace.callEndpoint @"refund-escrow" (h $ WalletKey w) ()
-      delay 1
+      CM.delay 1
 
 {-
 {-START RefundModel -}
@@ -156,12 +158,12 @@ precondition s (Redeem _) =
       -}
 
   arbitraryAction s
-    | s ^.contractState . phase == Initial
+    | s ^. CM.contractState . phase == Initial
       = Init <$> arbitraryTargets
     | otherwise
       = frequency $ [ (3, Pay <$> elements testWallets <*> choose (1, 30)) ] ++
                     [ (1, Redeem <$> elements testWallets)
-                    | (s ^. contractState . contributions . to fold) `geq` (s ^. contractState . targets . to fold)
+                    | (s ^. CM.contractState . contributions . to fold) `Value.geq` (s ^. CM.contractState . targets . to fold)
                     ] ++
                     [ (1, Refund <$> elements testWallets) ]
 
@@ -187,8 +189,8 @@ testContract params = selectList [ void $ payEp params
                                  ] >> testContract params
 {- END testContract -}
 
-prop_Escrow :: Actions EscrowModel -> Property
-prop_Escrow = propRunActions_
+prop_Escrow :: CM.Actions EscrowModel -> Property
+prop_Escrow = CM.propRunActions_
 
 
 escrowParams :: [(Wallet, Integer)] -> EscrowParams d
@@ -240,11 +242,11 @@ noLockProof = defaultNLFP
 {- END noLockProof -}
 -}
 
-finishEscrow :: DL EscrowModel ()
+finishEscrow :: CM.DL EscrowModel ()
 finishEscrow = do
-    anyActions_
+    CM.anyActions_
     finishingStrategy
-    assertModel "Locked funds are not zero" (symIsZero . lockedValue)
+    CM.assertModel "Locked funds are not zero" (CM.symIsZero . CM.lockedValue)
 
 {-
 {- START betterFinishingStrategy -}
@@ -258,19 +260,19 @@ finishingStrategy walletActive = do
 
 {- START prop_FinishEscrow -}
 prop_FinishEscrow :: Property
-prop_FinishEscrow = forAllDL finishEscrow prop_Escrow
+prop_FinishEscrow = CM.forAllDL finishEscrow prop_Escrow
 {- END prop_FinishEscrow -}
 
 {- START BetterNoLockProof -}
-noLockProof :: NoLockedFundsProof EscrowModel
-noLockProof = defaultNLFP
-  { nlfpMainStrategy   = finishingStrategy
-  , nlfpWalletStrategy = walletStrategy    }
+noLockProof :: CM.NoLockedFundsProof EscrowModel
+noLockProof = CM.defaultNLFP
+  { CM.nlfpMainStrategy   = finishingStrategy
+  , CM.nlfpWalletStrategy = walletStrategy    }
 {- END BetterNoLockProof -}
 
 {- START prop_NoLockedFunds -}
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = checkNoLockedFundsProof noLockProof
+prop_NoLockedFunds = CM.checkNoLockedFundsProof noLockProof
 {- END prop_NoLockedFunds -}
 
 {-
@@ -283,14 +285,14 @@ fixedTargets = do
 -}
 
 {- START BetterStrategies -}
-finishingStrategy :: DL EscrowModel ()
+finishingStrategy :: CM.DL EscrowModel ()
 finishingStrategy = do
-    contribs <- viewContractState contributions
-    monitor (tabulate "Refunded wallets" [show . Map.size $ contribs])
-    sequence_ [action $ Refund w | w <- testWallets, w `Map.member` contribs]
+    contribs <- CM.viewContractState contributions
+    CM.monitor (tabulate "Refunded wallets" [show . Map.size $ contribs])
+    sequence_ [CM.action $ Refund w | w <- testWallets, w `Map.member` contribs]
 
-walletStrategy :: Wallet -> DL EscrowModel ()
+walletStrategy :: Wallet -> CM.DL EscrowModel ()
 walletStrategy w = do
-    contribs <- viewContractState contributions
-    when (w `Map.member` contribs) $ action $ Refund w
+    contribs <- CM.viewContractState contributions
+    when (w `Map.member` contribs) $ CM.action $ Refund w
 {- END BetterStrategies -}
