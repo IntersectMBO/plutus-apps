@@ -16,5 +16,5 @@
   "https://github.com/input-output-hk/servant-purescript"."44e7cacf109f84984cd99cd3faf185d161826963" = "10pb0yfp80jhb9ryn65a4rha2lxzsn2vlhcc6xphrrkf4x5lhzqc";
   "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" = "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx";
   "https://github.com/Quid2/flat"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
-  "https://github.com/raduom/hysterical-screams"."ab9e9c778fc2a61d8bfdb78922e2f38e09d2f4cc" = "02m28w7h8h6jqv5w71arg07dsgh0gml8qckrhkn8vysbcr4g93dy";
+  "https://github.com/raduom/hysterical-screams"."5b3c58d3af7c9274bcf1c641195a303d99aa3594" = "0xx5qsi15p1l1fn4p5sxsi8077fn5a9z1g4qijbmkqqpn5k5q7n3";
 }
