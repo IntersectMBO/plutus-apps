@@ -10,7 +10,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromJust)
 import Data.Monoid (Last (Last), Sum (Sum, getSum))
-import Data.Sequence (Seq)
+import Data.Sequence (Seq, ViewL (..))
 import Data.Sequence qualified as Seq
 import Database.SQLite.Simple (execute, execute_)
 import Index.Split (SplitIndex (SplitIndex, siBuffered, siHandle))
@@ -35,7 +35,7 @@ onInsert :: SimpleChainSyncEvent -> TxStatusIndex -> IO [()]
 onInsert _ _ = pure []
 
 -- No one will query this for now.
-query :: TxStatusIndex -> TxId -> [SimpleChainSyncEvent] -> IO TxConfirmedState
+query :: TxStatusIndex -> TxId -> Seq SimpleChainSyncEvent -> IO TxConfirmedState
 query = undefined
 
 store :: TxStatusIndex -> IO ()
@@ -73,7 +73,7 @@ getTxs (BlockInMode (Block header transactions) era) =
     go (BlockHeader _ _ blockNo) txs era' =
       (blockNo, _citxTxId <$> catMaybes (either (const Nothing) Just . fromCardanoTx era' <$> txs))
 
-foldTxs :: [(BlockNo, [TxId])] -> Map TxId TxConfirmedState
+foldTxs :: Seq (BlockNo, [TxId]) -> Map TxId TxConfirmedState
 foldTxs bs = snd $ foldl go (0, Map.empty) bs
   where
     go :: (Int, Map TxId TxConfirmedState)
