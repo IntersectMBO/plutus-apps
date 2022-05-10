@@ -62,6 +62,8 @@ import PlutusTx.Prelude hiding (Semigroup (..), dropWhile, flip, unless)
 import Prelude as Haskell (Int, Semigroup (..), String, div, dropWhile, flip, show, (^))
 import Text.Printf (printf)
 
+import Ledger.Ada qualified as Ada
+
 data Uniswapping
 instance Scripts.ValidatorTypes Uniswapping where
     type instance RedeemerType Uniswapping = UniswapAction
@@ -203,7 +205,7 @@ start = do
     let c    = mkCoin cs uniswapTokenName
         us   = uniswap cs
         inst = uniswapInstance us
-        tx   = mustPayToTheScript (Factory []) $ unitValue c
+        tx   = mustPayToTheScript (Factory []) $ unitValue c <> Ada.adaValueOf 2
 
     mkTxConstraints (Constraints.typedValidatorLookups inst) tx
       >>= adjustUnbalancedTx >>= submitTxConfirmed
@@ -226,17 +228,17 @@ create us CreateParams{..} = do
         usDat2   = Pool lp liquidity
         psC      = poolStateCoin us
         lC       = mkCoin (liquidityCurrency us) $ lpTicker lp
-        usVal    = unitValue $ usCoin us
-        lpVal    = valueOf cpCoinA cpAmountA <> valueOf cpCoinB cpAmountB <> unitValue psC
+        usVal    = Ada.adaValueOf 2 <> unitValue (usCoin us)
+        lpVal    = valueOf cpCoinA cpAmountA <> valueOf cpCoinB cpAmountB <> unitValue psC <> Ada.adaValueOf 2
 
         lookups  = Constraints.typedValidatorLookups usInst        <>
                    Constraints.otherScript usScript                <>
                    Constraints.mintingPolicy (liquidityPolicy us) <>
                    Constraints.unspentOutputs (Map.singleton oref o)
 
-        tx       = Constraints.mustPayToTheScript usDat1 usVal                                     <>
-                   Constraints.mustPayToTheScript usDat2 lpVal                                     <>
-                   Constraints.mustMintValue (unitValue psC <> valueOf lC liquidity)              <>
+        tx       = Constraints.mustPayToTheScript usDat1 usVal                                            <>
+                   Constraints.mustPayToTheScript usDat2 lpVal                                            <>
+                   Constraints.mustMintValue (unitValue psC <> valueOf lC liquidity)                      <>
                    Constraints.mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData $ Create lp)
 
     mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
@@ -254,7 +256,7 @@ close us CloseParams{..} = do
         usC      = usCoin us
         psC      = poolStateCoin us
         lC       = mkCoin (liquidityCurrency us) $ lpTicker lp
-        usVal    = unitValue usC
+        usVal    = Ada.adaValueOf 2 <> unitValue usC
         psVal    = unitValue psC
         lVal     = valueOf lC liquidity
         redeemer = Redeemer $ PlutusTx.toBuiltinData Close
@@ -292,7 +294,7 @@ remove us RemoveParams{..} = do
         inA          = amountOf inVal rpCoinA
         inB          = amountOf inVal rpCoinB
         (outA, outB) = calculateRemoval inA inB liquidity rpDiff
-        val          = psVal <> valueOf rpCoinA outA <> valueOf rpCoinB outB
+        val          = Ada.adaValueOf 2 <> psVal <> valueOf rpCoinA outA <> valueOf rpCoinB outB
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Remove
 
         lookups  = Constraints.typedValidatorLookups usInst          <>
@@ -332,7 +334,7 @@ add us AddParams{..} = do
         lC           = mkCoin (liquidityCurrency us) $ lpTicker lp
         psVal        = unitValue psC
         lVal         = valueOf lC delL
-        val          = psVal <> valueOf apCoinA newA <> valueOf apCoinB newB
+        val          = Ada.adaValueOf 2 <> psVal <> valueOf apCoinA newA <> valueOf apCoinB newB
         redeemer     = Redeemer $ PlutusTx.toBuiltinData Add
 
         lookups  = Constraints.typedValidatorLookups usInst             <>
@@ -374,7 +376,7 @@ swap us SwapParams{..} = do
     logInfo @String $ printf "oldA = %d, oldB = %d, old product = %d, newA = %d, newB = %d, new product = %d" oldA oldB (unAmount oldA * unAmount oldB) newA newB (unAmount newA * unAmount newB)
 
     let inst    = uniswapInstance us
-        val     = valueOf spCoinA newA <> valueOf spCoinB newB <> unitValue (poolStateCoin us)
+        val     = Ada.adaValueOf 2 <> valueOf spCoinA newA <> valueOf spCoinB newB <> unitValue (poolStateCoin us)
 
         lookups = Constraints.typedValidatorLookups inst                 <>
                   Constraints.otherScript (Scripts.validatorScript inst) <>

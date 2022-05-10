@@ -144,7 +144,7 @@ setupTokens = do
     ownPK <- Contract.ownFirstPaymentPubKeyHash
     cur   <- Currency.mintContract ownPK [(fromString tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
     let cs = Currency.currencySymbol cur
-        v  = mconcat [Value.singleton cs (fromString tn) amount | tn <- tokenNames]
+        v  = Ada.adaValueOf 4 <> mconcat [Value.singleton cs (fromString tn) amount | tn <- tokenNames]
 
     forM_ wallets $ \w -> do
         let pkh = mockWalletPaymentPubKeyHash w
@@ -288,7 +288,7 @@ instance ContractModel UniswapModel where
                    , start <- [StartContract . WalletKey, StartContract . BadReqKey] ]
 
   precondition s Start                        = not $ hasUniswapToken s
-  precondition _ SetupTokens                  = True
+  precondition s SetupTokens                  = null (s ^. contractState . exchangeableTokens)
   precondition s (CreatePool _ t1 a1 t2 a2)   = hasUniswapToken s
                                                 && not (hasOpenPool s t1 t2)
                                                 && t1 /= t2
@@ -326,8 +326,8 @@ instance ContractModel UniswapModel where
     SetupTokens -> do
       -- Give 1000000 A, B, C, and D token to w1, w2, w3, w4
       -- The tokens will be given to each wallet in a UTxO that needs
-      -- to have minAdaTxOut
-      withdraw w1 $ Ada.toValue ((fromInteger . toInteger . length $ wallets) * Ledger.minAdaTxOut)
+      -- to have 2 ada each
+      withdraw w1 $ Ada.adaValueOf ((fromInteger . toInteger . length $ wallets) * 4)
       -- Create the tokens
       ts <- forM tokenNames $ \t -> do
         tok <- createToken t
@@ -335,7 +335,7 @@ instance ContractModel UniswapModel where
         return tok
       -- Give the tokens to the wallets
       forM_ wallets $ \ w -> do
-        deposit w $ Ada.toValue Ledger.minAdaTxOut
+        deposit w (Ada.adaValueOf 4)
         deposit w $ mconcat [ symAssetClassValue t 1000000 | t <- ts ]
       exchangeableTokens %= (Set.fromList ts <>)
       wait 21
@@ -631,8 +631,7 @@ tests = testGroup "uniswap" [
                        "setupTokens contract should be still running"
         .&&. assertNoFailedTransactions)
         Uniswap.uniswapTrace
-    -- TODO: turned off until there is an option to turn off cardano-ledger validation
-    -- , testProperty "prop_Uniswap" $ withMaxSuccess 20 prop_Uniswap
+    , testProperty "prop_Uniswap" $ withMaxSuccess 20 prop_Uniswap
     , testProperty "prop_UniswapAssertions" $ withMaxSuccess 1000 (propSanityCheckAssertions @UniswapModel)
     , testProperty "prop_NLFP" $ withMaxSuccess 250 prop_CheckNoLockedFundsProofFast
     ]
