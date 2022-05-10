@@ -107,7 +107,7 @@ view (Rewind n ix) = do
   v <- view ix
   if length h > n
   then Just $ v { ixSize = ixSize v - n
-                , ixView = head $ drop n h
+                , ixView = h !! max 0 n
                 }
   else Nothing
 

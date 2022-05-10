@@ -51,6 +51,7 @@ library
   build-depends:
       QuickCheck
     , base >=4.7 && <5
+    , containers
     , data-default
     , quickspec
     , sqlite-simple

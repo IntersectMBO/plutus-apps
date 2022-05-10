@@ -13,6 +13,8 @@ module Index.Sqlite
   ) where
 
 import           Database.SQLite.Simple (Connection, open)
+import Data.Sequence (Seq(..))
+import qualified Data.Sequence as Seq
 
 import           Index.Split            (SplitIndex (..))
 import qualified Index.Split            as S
@@ -20,7 +22,7 @@ import qualified Index.Split            as S
 type SqliteIndex e n q r = SplitIndex IO Connection e n q r
 
 new
-  :: (SqliteIndex e n q r -> q -> [e] -> IO r)
+  :: (SqliteIndex e n q r -> q -> Seq e -> IO r)
   -> (e -> SqliteIndex e n q r -> IO [n])
   -> (SqliteIndex e n q r -> IO ())
   -> Int
@@ -32,8 +34,8 @@ new fquery foninsert fstore depth db
     connection <- open db
     pure . Just $ SplitIndex
       { siHandle        = connection
-      , siEvents        = []
-      , siBuffered      = []
+      , siEvents        = Seq.empty
+      , siBuffered      = Seq.empty
       , siNotifications = []
       , siDepth         = depth
       , siStore         = fstore

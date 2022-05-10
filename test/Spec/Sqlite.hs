@@ -3,6 +3,8 @@ module Spec.Sqlite where
 import           Control.Monad.IO.Class           (liftIO)
 import           Data.Default
 import           Data.Maybe                       (catMaybes)
+import           Data.Sequence                    (Seq, (><))
+import qualified Data.Sequence as Seq
 import           Database.SQLite.Simple           (Only (..), execute, execute_,
                                                    query)
 import           Database.SQLite.Simple.FromField
@@ -55,7 +57,7 @@ notifications ix = do
 history
   :: (Show a, Default a, ToField a, FromField a, Show e, Show n)
   => Index a e n
-  -> PropertyM IO (Maybe [a])
+  -> PropertyM IO (Maybe (Seq a))
 history ix = do
   mix <- run ix
   case mix of
@@ -88,12 +90,12 @@ run (Ix.New f depth acc) = do
   where
     fstore     :: SqliteIndex e n Int a -> IO ()
     fstore ix@SplitIndex{siHandle} = do
-      currentStore <- fquery ix stateId []
+      currentStore <- fquery ix stateId Seq.empty
       execute siHandle "UPDATE index_property_tests SET accumulator = ? WHERE id = ?" (currentStore, stateId)
-    fquery :: SqliteIndex e n Int a -> Int -> [e] -> IO a
+    fquery :: SqliteIndex e n Int a -> Int -> Seq e -> IO a
     fquery SplitIndex{siHandle, siBuffered} stateId' es = do
       [[storedState]] <- query siHandle "SELECT (accumulator) FROM index_property_tests WHERE id = ?" (Only stateId')
-      pure . fst $ foldr convertIxF (storedState, []) (es ++ siBuffered)
+      pure . fst $ foldr convertIxF (storedState, []) (es >< siBuffered)
     foninsert :: e -> SqliteIndex e n Int a -> IO [n]
     foninsert e ix@SplitIndex{siEvents} = do
       currentState <- fquery ix stateId siEvents

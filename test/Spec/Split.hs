@@ -4,6 +4,8 @@ import           Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)
 import           Control.Monad.IO.Class  (liftIO)
 import           Data.Default
 import           Data.Maybe              (catMaybes)
+import           Data.Sequence           (Seq, (><))
+import qualified Data.Sequence as Seq
 import           Test.QuickCheck         (Property)
 import           Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
@@ -46,7 +48,7 @@ notifications ix = do
 history
   :: (Show s, Show e, Show n, Default s)
   => Index s e n
-  -> PropertyM IO (Maybe [s])
+  -> PropertyM IO (Maybe (Seq s))
 history ix = do
   mix <- run ix
   case mix of
@@ -71,13 +73,13 @@ run (Ix.New f depth store) = do
     mstore <- newMVar store
     S.new fquery foninsert fstore depth mstore
   where
-    fquery :: SplitIndex IO (MVar s) e n () s -> () -> [e] -> IO s
+    fquery :: SplitIndex IO (MVar s) e n () s -> () -> Seq e -> IO s
     fquery SplitIndex{siHandle, siBuffered} () es = do
       oldState <- readMVar siHandle
-      pure . fst $ foldr convertIxF (oldState, []) (es ++ siBuffered)
+      pure . fst $ foldr convertIxF (oldState, []) (es >< siBuffered)
     fstore  :: SplitIndex IO (MVar s) e n () s -> IO ()
     fstore ix@SplitIndex{siHandle} = do
-      newState <- fquery ix () []
+      newState <- fquery ix () Seq.empty
       _ <- swapMVar siHandle newState
       pure ()
     foninsert :: e -> SplitIndex IO (MVar s) e n () s -> IO [n]
