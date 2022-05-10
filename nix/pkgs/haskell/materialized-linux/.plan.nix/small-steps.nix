@@ -44,6 +44,7 @@
           (hsPkgs."strict-containers" or (errorHandler.buildDepError "strict-containers"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
+          (hsPkgs."validation-selective" or (errorHandler.buildDepError "validation-selective"))
           ];
         buildable = true;
         modules = [

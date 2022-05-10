@@ -46,7 +46,7 @@ wrapMintingPolicy f r p = check $ f (unsafeFromBuiltinData r) (unsafeFromBuiltin
 mkForwardingMintingPolicy :: ValidatorHash -> MintingPolicy
 mkForwardingMintingPolicy vshsh =
     mkMintingPolicyScript
-    $ ($$(PlutusTx.compile [|| \(hsh :: ValidatorHash) -> wrapMintingPolicy (forwardToValidator hsh) ||]))
+    $ $$(PlutusTx.compile [|| \(hsh :: ValidatorHash) -> wrapMintingPolicy (forwardToValidator hsh) ||])
        `PlutusTx.applyCode` PlutusTx.liftCode vshsh
 
 {-# INLINABLE forwardToValidator #-}

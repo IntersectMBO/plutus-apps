@@ -11,9 +11,9 @@
     flags = { release = false; };
     package = {
       specVersion = "1.12";
-      identifier = { name = "cardano-addresses"; version = "3.7.0"; };
+      identifier = { name = "cardano-addresses"; version = "3.9.0"; };
       license = "Apache-2.0";
-      copyright = "2021 IOHK";
+      copyright = "2021-2022 IOHK";
       maintainer = "operations@iohk.io";
       author = "IOHK";
       homepage = "https://github.com/input-output-hk/cardano-addresses#readme";
@@ -52,6 +52,7 @@
           (hsPkgs."extra" or (errorHandler.buildDepError "extra"))
           (hsPkgs."fmt" or (errorHandler.buildDepError "fmt"))
           (hsPkgs."hashable" or (errorHandler.buildDepError "hashable"))
+          (hsPkgs."hw-aeson" or (errorHandler.buildDepError "hw-aeson"))
           (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))

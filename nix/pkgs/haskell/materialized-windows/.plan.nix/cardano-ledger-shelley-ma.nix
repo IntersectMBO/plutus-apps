@@ -41,10 +41,10 @@
           (hsPkgs."cardano-data" or (errorHandler.buildDepError "cardano-data"))
           (hsPkgs."cardano-ledger-core" or (errorHandler.buildDepError "cardano-ledger-core"))
           (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
-          (hsPkgs."cardano-protocol-tpraos" or (errorHandler.buildDepError "cardano-protocol-tpraos"))
           (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."cborg" or (errorHandler.buildDepError "cborg"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+          (hsPkgs."compact-map" or (errorHandler.buildDepError "compact-map"))
           (hsPkgs."data-default-class" or (errorHandler.buildDepError "data-default-class"))
           (hsPkgs."deepseq" or (errorHandler.buildDepError "deepseq"))
           (hsPkgs."groups" or (errorHandler.buildDepError "groups"))
@@ -53,10 +53,10 @@
           (hsPkgs."primitive" or (errorHandler.buildDepError "primitive"))
           (hsPkgs."cardano-ledger-shelley" or (errorHandler.buildDepError "cardano-ledger-shelley"))
           (hsPkgs."small-steps" or (errorHandler.buildDepError "small-steps"))
-          (hsPkgs."set-algebra" or (errorHandler.buildDepError "set-algebra"))
           (hsPkgs."strict-containers" or (errorHandler.buildDepError "strict-containers"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
+          (hsPkgs."validation-selective" or (errorHandler.buildDepError "validation-selective"))
           ];
         buildable = true;
         modules = [

@@ -178,6 +178,7 @@
             (hsPkgs."quickcheck-instances" or (errorHandler.buildDepError "quickcheck-instances"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
             (hsPkgs."tasty-quickcheck" or (errorHandler.buildDepError "tasty-quickcheck"))
+            (hsPkgs."these" or (errorHandler.buildDepError "these"))
             (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
             (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
             (hsPkgs."io-sim" or (errorHandler.buildDepError "io-sim"))

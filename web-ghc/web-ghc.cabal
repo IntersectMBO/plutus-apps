@@ -7,10 +7,10 @@ license-files:
   NOTICE
 maintainer: david.smith@tweag.io
 author: David Smith
-homepage: https://github.com/iohk/plutus#readme
-bug-reports: https://github.com/iohk/plutus/issues
+homepage: https://github.com/iohk/plutus-apps#readme
+bug-reports: https://github.com/iohk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus/web-ghc#readme>
+    Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps/web-ghc#readme>
 build-type: Simple
 data-files:
 

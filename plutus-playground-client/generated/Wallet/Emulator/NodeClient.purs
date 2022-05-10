@@ -17,7 +17,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Plutus.V1.Ledger.TxId (TxId)
+import Plutus.V1.Ledger.Tx (TxId)
 import Plutus.V1.Ledger.Value (Value)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D

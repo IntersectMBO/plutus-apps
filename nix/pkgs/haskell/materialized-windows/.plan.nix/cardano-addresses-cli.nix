@@ -11,9 +11,9 @@
     flags = { release = false; };
     package = {
       specVersion = "1.12";
-      identifier = { name = "cardano-addresses-cli"; version = "3.7.0"; };
+      identifier = { name = "cardano-addresses-cli"; version = "3.9.0"; };
       license = "Apache-2.0";
-      copyright = "2021 IOHK";
+      copyright = "2021-2022 IOHK";
       maintainer = "operations@iohk.io";
       author = "IOHK";
       homepage = "https://github.com/input-output-hk/cardano-addresses#readme";
@@ -68,6 +68,7 @@
           "Command/Key/Hash"
           "Command/Key/Inspect"
           "Command/Key/Public"
+          "Command/Key/WalletId"
           "Command/RecoveryPhrase"
           "Command/RecoveryPhrase/Generate"
           "Command/Script"
@@ -78,6 +79,7 @@
           "Options/Applicative/Credential"
           "Options/Applicative/Derivation"
           "Options/Applicative/Discrimination"
+          "Options/Applicative/Format"
           "Options/Applicative/MnemonicSize"
           "Options/Applicative/Public"
           "Options/Applicative/Script"
@@ -138,6 +140,7 @@
             "Command/Key/HashSpec"
             "Command/Key/InspectSpec"
             "Command/Key/PublicSpec"
+            "Command/Key/WalletIdSpec"
             "Command/KeySpec"
             "Command/RecoveryPhrase/GenerateSpec"
             "Command/RecoveryPhraseSpec"

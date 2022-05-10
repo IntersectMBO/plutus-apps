@@ -12,7 +12,7 @@ import PlutusTx
 import PlutusTx.Lift
 import PlutusTx.Prelude
 
-import Ledger hiding (validatorHash)
+import Ledger
 import Ledger.Ada
 import Ledger.Typed.Scripts
 import Ledger.Value

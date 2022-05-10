@@ -32,7 +32,8 @@ import Cardano.Wallet.Api.Types (ApiMnemonicT (ApiMnemonicT), ApiT (ApiT), ApiWa
                                  postData)
 import Cardano.Wallet.Api.Types qualified as Wallet.Types
 import Cardano.Wallet.Logging (stdoutTextTracer, trMessageText)
-import Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (Mainnet), Passphrase (Passphrase))
+import Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (Mainnet))
+import Cardano.Wallet.Primitive.Passphrase.Types (Passphrase (Passphrase))
 import Cardano.Wallet.Primitive.SyncProgress (SyncTolerance (SyncTolerance))
 import Cardano.Wallet.Primitive.Types (WalletName (WalletName))
 import Cardano.Wallet.Primitive.Types.Coin (Coin (Coin))

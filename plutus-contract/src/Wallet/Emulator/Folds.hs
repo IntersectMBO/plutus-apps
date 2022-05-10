@@ -62,11 +62,12 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
 import Ledger (Block, OnChainTx (Invalid, Valid), TxId)
+import Ledger.Address (Address)
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase (Phase1, Phase2))
-import Ledger.Tx (Address, CardanoTx, TxOut (txOutValue), TxOutTx (txOutTxOut), getCardanoTxFee, onCardanoTx)
+import Ledger.Tx (CardanoTx, TxOut (txOutValue), TxOutTx (txOutTxOut), getCardanoTxFee, onCardanoTx)
 import Ledger.Value (Value)
 import Plutus.Contract (Contract)
 import Plutus.Contract.Effects (PABReq, PABResp, _BalanceTxReq)

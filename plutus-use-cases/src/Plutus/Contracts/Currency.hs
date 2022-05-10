@@ -34,8 +34,8 @@ import PlutusTx.Prelude hiding (Monoid (..), Semigroup (..))
 import Plutus.Contract as Contract
 import Plutus.Contract.Wallet (getUnspentOutput)
 
-import Ledger (CurrencySymbol, PaymentPubKeyHash, TxId, TxOutRef (..), getCardanoTxId, pubKeyHashAddress,
-               scriptCurrencySymbol)
+import Ledger (CurrencySymbol, PaymentPubKeyHash, TxId, TxOutRef (..), getCardanoTxId, plutusV1ScriptCurrencySymbol,
+               pubKeyHashAddress)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Contexts qualified as V
 import Ledger.Scripts
@@ -129,7 +129,7 @@ mintedValue :: OneShotCurrency -> Value
 mintedValue cur = currencyValue (currencySymbol cur) cur
 
 currencySymbol :: OneShotCurrency -> CurrencySymbol
-currencySymbol = scriptCurrencySymbol . curPolicy
+currencySymbol = plutusV1ScriptCurrencySymbol . curPolicy
 
 newtype CurrencyError =
     CurContractError ContractError

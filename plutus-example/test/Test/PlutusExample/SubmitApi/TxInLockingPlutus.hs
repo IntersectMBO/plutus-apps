@@ -67,13 +67,13 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
   conf@TN.Conf { TN.tempBaseAbsPath, TN.tempAbsPath } <- HE.noteShowM $
     TN.mkConf (TN.ProjectBase base) (TN.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
-  TN.TestnetRuntime { TN.configurationFile, TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
+  tr@TN.TestnetRuntime { TN.configurationFile, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
 
   env <- H.evalIO IO.getEnvironment
 
   execConfig <- H.noteShow H.ExecConfig
         { H.execConfigEnv = Last $ Just $
-          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
+          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ TN.bftSprockets tr)
           ]
           -- The environment must be passed onto child process on Windows in order to
           -- successfully start that process.
@@ -96,7 +96,7 @@ prop_submit_api_spending_plutus_script = Test.integration . HE.runFinallies . HE
     { TN.tempBaseAbsPath
     , TN.base
     , TN.configFile = submitApiConfigFile
-    , TN.sprocket = head bftSprockets
+    , TN.sprocket = head $ TN.bftSprockets tr
     , TN.testnetMagic
     , TN.stdoutFile = submitApiStdoutFile
     , TN.stderrFile = submitApiStderrFile

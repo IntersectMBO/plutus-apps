@@ -435,7 +435,7 @@ initialState ft =
     Running (Margins{ftsShortMargin=im, ftsLongMargin=im})
 
 futureAddress :: Future -> FutureAccounts -> Address
-futureAddress ft fo = Ledger.scriptAddress (validator ft fo)
+futureAddress ft fo = Ledger.plutusV1ScriptAddress (validator ft fo)
 
 {-# INLINABLE violatingRole #-}
 -- | The role that violated its margin requirements
@@ -584,7 +584,7 @@ escrowParams
     -> EscrowParams Datum
 escrowParams client future ftos FutureSetup{longPK, shortPK, contractStart} =
     let
-        address = Ledger.validatorHash $ Scripts.validatorScript $ SM.typedValidator $ SM.scInstance client
+        address = Ledger.plutusV1ValidatorHash $ Scripts.validatorScript $ SM.typedValidator $ SM.scInstance client
         dataScript  = Ledger.Datum $ PlutusTx.toBuiltinData $ initialState future
         targets =
             [ Escrow.payToScriptTarget address

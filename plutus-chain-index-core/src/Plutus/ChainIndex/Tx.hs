@@ -44,8 +44,8 @@ import GHC.Generics (Generic)
 import Ledger (Address, Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
                OnChainTx (..), Redeemer (..), RedeemerHash, Script, ScriptHash (..), SlotRange, SomeCardanoApiTx,
                Tx (..), TxId, TxIn (txInType), TxInType (..), TxOut (txOutAddress), TxOutRef (..),
-               Validator (getValidator), ValidatorHash (ValidatorHash), datumHash, mintingPolicyHash, redeemerHash,
-               txId, validatorHash)
+               Validator (getValidator), ValidatorHash (ValidatorHash), datumHash, plutusV1MintingPolicyHash,
+               plutusV1ValidatorHash, redeemerHash, txId)
 import Prettyprinter
 
 -- | List of outputs of a transaction. There are no outputs if the transaction
@@ -157,14 +157,14 @@ fromOnChainTx = \case
 mintingPolicies :: Set MintingPolicy -> Map ScriptHash Script
 mintingPolicies = Map.fromList . fmap withHash . Set.toList
   where
-    withHash mp = let (MintingPolicyHash mph) = mintingPolicyHash mp
+    withHash mp = let (MintingPolicyHash mph) = plutusV1MintingPolicyHash mp
                    in (ScriptHash mph, getMintingPolicy mp)
 
 validators :: Set TxIn -> (Map ScriptHash Script, Map DatumHash Datum, Map RedeemerHash Redeemer)
 validators = foldMap (maybe mempty withHash . txInType) . Set.toList
   where
     withHash (ConsumeScriptAddress val red dat) =
-      let (ValidatorHash vh) = validatorHash val
+      let (ValidatorHash vh) = plutusV1ValidatorHash val
        in ( Map.singleton (ScriptHash vh) (getValidator val)
           , Map.singleton (datumHash dat) dat
           , Map.singleton (redeemerHash red) red

@@ -57,8 +57,8 @@ library
     hs-source-dirs: src
     build-depends:
         plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-tx -any,
+        plutus-ledger-api >= 1.0.0,
+        plutus-tx >= 1.0.0,
         freer-extras -any,
     build-depends:
         aeson -any,
@@ -122,8 +122,8 @@ test-suite plutus-chain-index-test
         Util
     build-depends:
         plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-tx -any,
+        plutus-ledger-api >= 1.0.0,
+        plutus-tx >= 1.0.0,
         plutus-chain-index-core -any
     build-depends:
         base >=4.9 && <5,

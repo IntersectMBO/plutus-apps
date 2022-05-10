@@ -11,7 +11,7 @@
     flags = { defer-plugin-errors = false; };
     package = {
       specVersion = "3.0";
-      identifier = { name = "plutus-ledger"; version = "0.1.0.0"; };
+      identifier = { name = "plutus-ledger"; version = "1.0.0"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "michael.peyton-jones@iohk.io";
@@ -34,6 +34,7 @@
       "library" = {
         depends = [
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
+          (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."array" or (errorHandler.buildDepError "array"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
@@ -42,6 +43,7 @@
           (hsPkgs."cardano-crypto" or (errorHandler.buildDepError "cardano-crypto"))
           (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
           (hsPkgs."cardano-ledger-alonzo" or (errorHandler.buildDepError "cardano-ledger-alonzo"))
+          (hsPkgs."cardano-ledger-babbage" or (errorHandler.buildDepError "cardano-ledger-babbage"))
           (hsPkgs."cardano-ledger-byron" or (errorHandler.buildDepError "cardano-ledger-byron"))
           (hsPkgs."cardano-ledger-core" or (errorHandler.buildDepError "cardano-ledger-core"))
           (hsPkgs."cardano-ledger-shelley" or (errorHandler.buildDepError "cardano-ledger-shelley"))
@@ -53,6 +55,7 @@
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
           (hsPkgs."cryptonite" or (errorHandler.buildDepError "cryptonite"))
           (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
+          (hsPkgs."flat" or (errorHandler.buildDepError "flat"))
           (hsPkgs."hashable" or (errorHandler.buildDepError "hashable"))
           (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
           (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
@@ -60,6 +63,7 @@
           (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
           (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
           (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+          (hsPkgs."newtype-generics" or (errorHandler.buildDepError "newtype-generics"))
           (hsPkgs."ouroboros-consensus-shelley" or (errorHandler.buildDepError "ouroboros-consensus-shelley"))
           (hsPkgs."plutus-tx-plugin" or (errorHandler.buildDepError "plutus-tx-plugin"))
           (hsPkgs."prettyprinter" or (errorHandler.buildDepError "prettyprinter"))
@@ -67,6 +71,7 @@
           (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
           (hsPkgs."scientific" or (errorHandler.buildDepError "scientific"))
           (hsPkgs."strict-containers" or (errorHandler.buildDepError "strict-containers"))
+          (hsPkgs."tagged" or (errorHandler.buildDepError "tagged"))
           (hsPkgs."template-haskell" or (errorHandler.buildDepError "template-haskell"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
@@ -81,23 +86,35 @@
         buildable = true;
         modules = [
           "Ledger/Tx/CardanoAPITemp"
+          "Codec/CBOR/Extras"
           "Data/Time/Units/Extra"
+          "Prettyprinter/Extras"
+          "Data/Aeson/Extras"
           "Ledger"
+          "Ledger/Ada"
           "Ledger/Address"
+          "Ledger/Address/Orphans"
           "Ledger/AddressMap"
+          "Ledger/Builtins/Orphans"
           "Ledger/Blockchain"
           "Ledger/CardanoWallet"
+          "Ledger/Credential/Orphans"
           "Ledger/Contexts"
           "Ledger/Crypto"
+          "Ledger/Crypto/Orphans"
           "Ledger/Fee"
           "Ledger/Generators"
           "Ledger/Orphans"
           "Ledger/Index"
           "Ledger/Scripts"
+          "Ledger/Scripts/Orphans"
+          "Ledger/Slot"
           "Ledger/TimeSlot"
           "Ledger/Tokens"
           "Ledger/Tx"
           "Ledger/Tx/CardanoAPI"
+          "Ledger/Tx/Internal"
+          "Ledger/Tx/Orphans"
           "Ledger/Typed/Scripts"
           "Ledger/Typed/Scripts/MonetaryPolicies"
           "Ledger/Typed/Scripts/StakeValidators"
@@ -105,6 +122,7 @@
           "Ledger/Typed/Tx"
           "Ledger/Typed/TypeUtils"
           "Ledger/Value"
+          "Ledger/Value/Orphans"
           "Ledger/Validation"
           ];
         hsSourceDirs = [ "src" ];

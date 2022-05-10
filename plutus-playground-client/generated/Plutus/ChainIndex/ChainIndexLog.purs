@@ -24,8 +24,7 @@ import Data.Tuple.Nested ((/\))
 import Ledger.Tx.CardanoAPI (FromCardanoError)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.Types (Tip)
-import Plutus.V1.Ledger.Tx (TxOut, TxOutRef)
-import Plutus.V1.Ledger.TxId (TxId)
+import Plutus.V1.Ledger.Tx (TxId, TxOut, TxOutRef)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E

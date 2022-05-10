@@ -22,8 +22,8 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Blockchain (BlockId)
-import Plutus.V1.Ledger.Slot (Slot)
-import Plutus.V1.Ledger.TxId (TxId)
+import Ledger.Slot (Slot)
+import Plutus.V1.Ledger.Tx (TxId)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E

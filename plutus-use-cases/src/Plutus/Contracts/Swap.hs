@@ -6,6 +6,7 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
@@ -16,7 +17,6 @@ module Plutus.Contracts.Swap(
     ) where
 
 import Ledger (POSIXTime, PaymentPubKey, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
-import Ledger qualified
 import Ledger.Ada (Ada)
 import Ledger.Ada qualified as Ada
 import Ledger.Contexts (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
@@ -25,6 +25,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Plutus.Contract.Oracle (Observation (..), SignedMessage)
 import Plutus.Contract.Oracle qualified as Oracle
+import Plutus.V1.Ledger.Api qualified as Ledger
 import PlutusTx qualified
 import PlutusTx.Prelude
 
@@ -41,10 +42,19 @@ import PlutusTx.Prelude
 data Swap = Swap
     { swapNotionalAmt     :: !Ada
     , swapObservationTime :: !POSIXTime
-    , swapFixedRate       :: !Rational -- ^ Interest rate fixed at the beginning of the contract
-    , swapFloatingRate    :: !Rational -- ^ Interest rate whose value will be observed (by an oracle) on the day of the payment
-    , swapMargin          :: !Ada -- ^ Margin deposited at the beginning of the contract to protect against default (one party failing to pay)
-    , swapOracle          :: !PaymentPubKey -- ^ Public key of the oracle (see note [Oracles] in [[Plutus.Contracts]])
+    , swapFixedRate       :: !Rational
+    -- ^ Interest rate fixed at the beginning of the contract
+    , swapFloatingRate    :: !Rational
+    -- ^ Interest rate whose value will be observed (by an oracle) on the day
+    -- of the payment
+    , swapMargin          :: !Ada
+    -- ^ Margin deposited at the beginning of the contract to protect against
+    -- default (one party failing to pay)
+    , swapOracle          :: PaymentPubKey
+    -- ^ Public key of the oracle (see note [Oracles] in [[Plutus.Contracts]]).
+    -- Unsure why, but this field needs to be non-strict, otherwise GHC will try
+    -- to unbox the datatype, which will result in a compilation error such as
+    -- "GHC Core to PLC plugin: E042:Error: Unsupported feature: Type constructor: GHC.Prim.Addr#"
     }
 
 PlutusTx.makeLift ''Swap
@@ -65,6 +75,7 @@ PlutusTx.makeLift ''SwapOwners
 
 type SwapOracleMessage = SignedMessage (Observation Rational)
 
+{-# INLINABLE mkValidator #-}
 mkValidator :: Swap -> SwapOwners -> SwapOracleMessage -> ScriptContext -> Bool
 mkValidator Swap{..} SwapOwners{..} redeemer p@ScriptContext{scriptContextTxInfo=txInfo} =
     let

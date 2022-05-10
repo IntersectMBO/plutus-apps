@@ -34,6 +34,7 @@
       "library" = {
         depends = [
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
+          (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           (hsPkgs."cardano-binary" or (errorHandler.buildDepError "cardano-binary"))
           (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
@@ -74,6 +75,7 @@
             ];
           buildable = true;
           modules = [
+            "Test/Compact/Common"
             "Test/Compact/SplitMap"
             "Test/Compact/KeyMap"
             "Test/Compact/VMap"

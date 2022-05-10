@@ -21,13 +21,16 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo)
 
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Era qualified as Ledger
 
 import Cardano.Ledger.Alonzo.Data qualified as Alonzo
 import Cardano.Ledger.Alonzo.Language qualified as Alonzo
+import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxBody qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
+import Cardano.Ledger.Babbage.TxBody qualified as Babbage
 
 import Cardano.Ledger.ShelleyMA.TxBody qualified as Allegra
 
@@ -61,7 +64,7 @@ makeTransactionBody'
           (case txInsCollateral of
              TxInsCollateralNone     -> Set.empty
              TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut ShelleyBasedEraAlonzo) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
@@ -90,9 +93,10 @@ makeTransactionBody'
              TxMintValue _ v _ -> toMaryValue v)
           (case txProtocolParams of
              BuildTxWith Nothing        -> SNothing
-             BuildTxWith (Just pparams) ->
+             BuildTxWith (Just pparams) -> do
+               let x = toLedgerPParams ShelleyBasedEraAlonzo pparams
                Alonzo.hashScriptIntegrity
-                 (toLedgerPParams ShelleyBasedEraAlonzo pparams)
+                 x
                  languages
                  redeemers
                  datums)
@@ -124,7 +128,7 @@ makeTransactionBody'
 
     scriptdata :: [ScriptData]
     scriptdata = List.nub $
-      [ d | TxOut _ _ (TxOutDatum ScriptDataInAlonzoEra d) <- txOuts ]
+      [ d | TxOut _ _ (TxOutDatumInTx ScriptDataInAlonzoEra d) _ <- txOuts ]
       ++ [ d | (_, AnyScriptWitness
                       (PlutusScriptWitness
                         _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
@@ -155,28 +159,46 @@ toShelleyWithdrawal withdrawals =
 
 toShelleyTxOut :: forall era ledgerera.
                  (ShelleyLedgerEra era ~ ledgerera, IsShelleyBasedEra era)
-               => TxOut CtxTx era -> Ledger.TxOut ledgerera
-toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
+               => ShelleyBasedEra era -> TxOut CtxTx era -> Ledger.TxOut ledgerera
+toShelleyTxOut _ (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)
+toShelleyTxOut era (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
+    let cEra = shelleyBasedToCardanoEra era
+     in Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
+                      (toBabbageTxOutDatum txoutdata)
+                      (refScriptToShelleyScript cEra refScript)
+
 
 toAlonzoTxOutDataHash :: TxOutDatum CtxTx era
                       -> StrictMaybe (Alonzo.DataHash StandardCrypto)
 toAlonzoTxOutDataHash TxOutDatumNone                         = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
-toAlonzoTxOutDataHash (TxOutDatum _ d)                       = let ScriptDataHash dh = hashScriptData d in SJust dh
+toAlonzoTxOutDataHash (TxOutDatumInTx _ d)                   = let ScriptDataHash dh = hashScriptData d in SJust dh
+toAlonzoTxOutDataHash (TxOutDatumInline _ d)                 = let ScriptDataHash dh = hashScriptData d in SJust dh
+
+toBabbageTxOutDatum
+  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => TxOutDatum CtxTx era -> Babbage.Datum (ShelleyLedgerEra era)
+toBabbageTxOutDatum  TxOutDatumNone = Babbage.NoDatum
+toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
+toBabbageTxOutDatum (TxOutDatumInTx _ d) = let ScriptDataHash dh = hashScriptData d in Babbage.DatumHash dh
+toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
+
+scriptDataToInlineDatum :: ScriptData -> Babbage.Datum ledgerera
+scriptDataToInlineDatum = Babbage.Datum . Alonzo.dataToBinaryData . toAlonzoData
 
 toAlonzoLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1

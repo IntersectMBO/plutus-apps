@@ -22,7 +22,7 @@ import Data.Tuple.Nested ((/\))
 import Foreign.Object as FO
 import PlutusTx.AssocMap as AssocMap
 import Plutus.V1.Ledger.Interval (Extended(..), Interval(..), LowerBound(..), UpperBound(..))
-import Plutus.V1.Ledger.Slot (Slot)
+import Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value (CurrencySymbol(..), Value(..))
 import Matryoshka (Algebra, ana, cata)

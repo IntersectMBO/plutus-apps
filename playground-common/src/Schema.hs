@@ -46,10 +46,11 @@ module Schema
 import Crypto.Hash (Digest, SHA256)
 import Data.Aeson (FromJSON, ToJSON, toJSON)
 import Data.Aeson qualified as JSON
+import Data.Aeson.Key qualified as Key
+import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Bifunctor (first)
 import Data.Eq.Deriving (deriveEq1)
 import Data.Functor.Foldable (Fix (Fix), cata)
-import Data.HashMap.Strict qualified as HashMap
 import Data.Map qualified
 import Data.Proxy (Proxy)
 import Data.Text (Text)
@@ -138,7 +139,7 @@ formArgumentToJson = cata algebra
     algebra (FormTupleF (Just a) (Just b)) = justJSON [a, b]
     algebra (FormTupleF _ _) = Nothing
     algebra (FormObjectF vs) =
-        JSON.Object . HashMap.fromList . map (first Text.pack) <$>
+        JSON.Object . KeyMap.fromList . map (first (Key.fromText . Text.pack)) <$>
         traverse sequence vs
     algebra (FormValueF v) = justJSON v
     algebra (FormPOSIXTimeRangeF v) = justJSON v

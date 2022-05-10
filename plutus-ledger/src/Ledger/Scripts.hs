@@ -1,26 +1,19 @@
-{-# LANGUAGE TypeFamilies #-}
-
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
-{-|
-This module re-exports the module 'Plutus.V1.Ledger.Scripts', but with
-additional functionality.
-
-This module contains orphan instances of 'Cardano.Api.HasTextEnvelope', since
-the Cardano Node CLI expects serialised binary values to be wrapped with a
-'Cardano.Api.TextEnvelope'.
--}
 module Ledger.Scripts (
     module Export
     , datumHash
     , redeemerHash
-    , validatorHash
-    , mintingPolicyHash
-    , stakeValidatorHash
-    , toCardanoApiScript
-    , scriptHash
     , dataHash
     , toCardanoAPIData
+    , plutusV1ScriptHash
+    , plutusV2ScriptHash
+    , plutusV1ValidatorHash
+    , plutusV2ValidatorHash
+    , plutusV1MintingPolicyHash
+    , plutusV2MintingPolicyHash
+    , plutusV1StakeValidatorHash
+    , plutusV2StakeValidatorHash
+    , toCardanoApiPlutusV1Script
+    , toCardanoApiPlutusV2Script
     ) where
 
 import Cardano.Api qualified as Script
@@ -37,15 +30,6 @@ datumHash = DatumHash . dataHash . getDatum
 redeemerHash :: Redeemer -> RedeemerHash
 redeemerHash = RedeemerHash . dataHash . getRedeemer
 
-validatorHash :: Validator -> ValidatorHash
-validatorHash = ValidatorHash . getScriptHash . scriptHash . getValidator
-
-mintingPolicyHash :: MintingPolicy -> MintingPolicyHash
-mintingPolicyHash = MintingPolicyHash . getScriptHash . scriptHash . getMintingPolicy
-
-stakeValidatorHash :: StakeValidator -> StakeValidatorHash
-stakeValidatorHash = StakeValidatorHash . getScriptHash . scriptHash . getStakeValidator
-
 -- | Hash a 'Builtins.BuiltinData'
 dataHash :: Builtins.BuiltinData -> Builtins.BuiltinByteString
 dataHash =
@@ -59,19 +43,79 @@ dataHash =
 toCardanoAPIData :: Builtins.BuiltinData -> Script.ScriptData
 toCardanoAPIData = Script.fromPlutusData . builtinDataToData
 
--- | Hash a 'Script'
-scriptHash :: Script -> ScriptHash
-scriptHash =
+plutusV1ValidatorHash :: Validator -> ValidatorHash
+plutusV1ValidatorHash =
+    ValidatorHash
+  . getScriptHash
+  . plutusV1ScriptHash
+  . getValidator
+
+plutusV2ValidatorHash :: Validator -> ValidatorHash
+plutusV2ValidatorHash =
+    ValidatorHash
+  . getScriptHash
+  . plutusV2ScriptHash
+  . getValidator
+
+plutusV1MintingPolicyHash :: MintingPolicy -> MintingPolicyHash
+plutusV1MintingPolicyHash =
+    MintingPolicyHash
+  . getScriptHash
+  . plutusV1ScriptHash
+  . getMintingPolicy
+
+plutusV2MintingPolicyHash :: MintingPolicy -> MintingPolicyHash
+plutusV2MintingPolicyHash =
+    MintingPolicyHash
+  . getScriptHash
+  . plutusV2ScriptHash
+  . getMintingPolicy
+
+plutusV1StakeValidatorHash :: StakeValidator -> StakeValidatorHash
+plutusV1StakeValidatorHash =
+    StakeValidatorHash
+  . getScriptHash
+  . plutusV1ScriptHash
+  . getStakeValidator
+
+plutusV2StakeValidatorHash :: StakeValidator -> StakeValidatorHash
+plutusV2StakeValidatorHash =
+    StakeValidatorHash
+  . getScriptHash
+  . plutusV2ScriptHash
+  . getStakeValidator
+
+-- | Hash a Plutus V1 'Script'
+plutusV1ScriptHash :: Script -> ScriptHash
+plutusV1ScriptHash =
     ScriptHash
     . toBuiltin
     . Script.serialiseToRawBytes
     . Script.hashScript
-    . toCardanoApiScript
+    . toCardanoApiPlutusV1Script
 
--- | Convert a 'Script' to a 'cardano-api' script
-toCardanoApiScript :: Script -> Script.Script Script.PlutusScriptV1
-toCardanoApiScript =
+-- | Hash a Plutus V2 'Script'
+plutusV2ScriptHash :: Script -> ScriptHash
+plutusV2ScriptHash =
+    ScriptHash
+    . toBuiltin
+    . Script.serialiseToRawBytes
+    . Script.hashScript
+    . toCardanoApiPlutusV2Script
+
+-- | Convert a 'Script' to a 'cardano-api' Plutus V1 script
+toCardanoApiPlutusV1Script :: Script -> Script.Script Script.PlutusScriptV1
+toCardanoApiPlutusV1Script =
     Script.PlutusScript Script.PlutusScriptV1
+    . Script.PlutusScriptSerialised
+    . SBS.toShort
+    . BSL.toStrict
+    . serialise
+
+-- | Convert a 'Script' to a 'cardano-api' Plutus V2 script
+toCardanoApiPlutusV2Script :: Script -> Script.Script Script.PlutusScriptV2
+toCardanoApiPlutusV2Script =
+    Script.PlutusScript Script.PlutusScriptV2
     . Script.PlutusScriptSerialised
     . SBS.toShort
     . BSL.toStrict

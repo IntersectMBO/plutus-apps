@@ -11,7 +11,7 @@
     flags = {};
     package = {
       specVersion = "3.0";
-      identifier = { name = "cardano-testnet"; version = "1.34.1"; };
+      identifier = { name = "cardano-testnet"; version = "1.33.0"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
@@ -40,6 +40,7 @@
           (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
           (hsPkgs."cardano-cli" or (errorHandler.buildDepError "cardano-cli"))
           (hsPkgs."cardano-node" or (errorHandler.buildDepError "cardano-node"))
+          (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
           (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
@@ -107,14 +108,19 @@
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."cardano-testnet" or (errorHandler.buildDepError "cardano-testnet"))
+            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."cardano-cli" or (errorHandler.buildDepError "cardano-cli"))
+            (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
+            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
             (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."hedgehog-extras" or (errorHandler.buildDepError "hedgehog-extras"))
-            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
             (hsPkgs."process" or (errorHandler.buildDepError "process"))
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
             (hsPkgs."tasty-expected-failure" or (errorHandler.buildDepError "tasty-expected-failure"))
             (hsPkgs."tasty-hedgehog" or (errorHandler.buildDepError "tasty-hedgehog"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
             ];
           build-tools = [
             (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
@@ -122,7 +128,13 @@
             (hsPkgs.buildPackages.cardano-submit-api.components.exes.cardano-submit-api or (pkgs.buildPackages.cardano-submit-api or (errorHandler.buildToolDepError "cardano-submit-api:cardano-submit-api")))
             ];
           buildable = true;
-          modules = [ "Spec/Shutdown" "Test/Util" ];
+          modules = [
+            "Spec/Cli/KesPeriodInfo"
+            "Spec/Node/Shutdown"
+            "Spec/ShutdownOnSlotSynced"
+            "Testnet/Properties/Cli/KesPeriodInfo"
+            "Test/Util"
+            ];
           hsSourceDirs = [ "test" ];
           mainPath = [ "Main.hs" ];
           };

@@ -20,6 +20,7 @@ import PlutusTx.Prelude (AdditiveSemigroup ((+)), Bool (False, True), Eq ((==)),
                          Ord ((<=), (>=)), all, any, elem, isJust, isNothing, maybe, snd, traceIfFalse, ($), (&&), (.))
 
 import Ledger qualified
+import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
 import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConstraint, icTxOutRef),
                                          ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
@@ -29,7 +30,6 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Credential (Credential (ScriptCredential))
 import Ledger.Value qualified as Value
-import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address qualified as Address
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo),
                                   TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),

@@ -7,7 +7,7 @@ module Ledger.Value
   , isAdaOnlyValue
   ) where
 
-import Plutus.V1.Ledger.Ada qualified as Ada
+import Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value as Export
 import PlutusTx.Prelude (Bool, Eq (..), (-))
 

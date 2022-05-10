@@ -40,6 +40,7 @@
           (hsPkgs."bech32" or (errorHandler.buildDepError "bech32"))
           (hsPkgs."bech32-th" or (errorHandler.buildDepError "bech32-th"))
           (hsPkgs."binary" or (errorHandler.buildDepError "binary"))
+          (hsPkgs."blockfrost-api" or (errorHandler.buildDepError "blockfrost-api"))
           (hsPkgs."blockfrost-client" or (errorHandler.buildDepError "blockfrost-client"))
           (hsPkgs."blockfrost-client-core" or (errorHandler.buildDepError "blockfrost-client-core"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
@@ -50,11 +51,13 @@
           (hsPkgs."cardano-crypto-class" or (errorHandler.buildDepError "cardano-crypto-class"))
           (hsPkgs."cardano-crypto-wrapper" or (errorHandler.buildDepError "cardano-crypto-wrapper"))
           (hsPkgs."cardano-wallet-launcher" or (errorHandler.buildDepError "cardano-wallet-launcher"))
+          (hsPkgs."cardano-ledger-babbage" or (errorHandler.buildDepError "cardano-ledger-babbage"))
           (hsPkgs."cardano-ledger-byron" or (errorHandler.buildDepError "cardano-ledger-byron"))
           (hsPkgs."cardano-ledger-core" or (errorHandler.buildDepError "cardano-ledger-core"))
           (hsPkgs."cardano-ledger-shelley" or (errorHandler.buildDepError "cardano-ledger-shelley"))
           (hsPkgs."cardano-ledger-shelley-ma" or (errorHandler.buildDepError "cardano-ledger-shelley-ma"))
           (hsPkgs."cardano-ledger-alonzo" or (errorHandler.buildDepError "cardano-ledger-alonzo"))
+          (hsPkgs."cardano-protocol-tpraos" or (errorHandler.buildDepError "cardano-protocol-tpraos"))
           (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."cardano-wallet-cli" or (errorHandler.buildDepError "cardano-wallet-cli"))
           (hsPkgs."cardano-wallet-core" or (errorHandler.buildDepError "cardano-wallet-core"))
@@ -114,6 +117,7 @@
           "Cardano/Wallet/Shelley/Compatibility/Ledger"
           "Cardano/Wallet/Shelley/Network"
           "Cardano/Wallet/Shelley/Network/Blockfrost"
+          "Cardano/Wallet/Shelley/Network/Discriminant"
           "Cardano/Wallet/Shelley/Network/Node"
           "Cardano/Wallet/Shelley/Transaction"
           "Cardano/Wallet/Shelley/Launch"
@@ -205,12 +209,14 @@
             (hsPkgs."cardano-ledger-alonzo" or (errorHandler.buildDepError "cardano-ledger-alonzo"))
             (hsPkgs."cardano-ledger-byron" or (errorHandler.buildDepError "cardano-ledger-byron"))
             (hsPkgs."cardano-ledger-core" or (errorHandler.buildDepError "cardano-ledger-core"))
+            (hsPkgs."cardano-numeric" or (errorHandler.buildDepError "cardano-numeric"))
             (hsPkgs."cardano-wallet" or (errorHandler.buildDepError "cardano-wallet"))
             (hsPkgs."cardano-wallet-core" or (errorHandler.buildDepError "cardano-wallet-core"))
             (hsPkgs."cardano-wallet-launcher" or (errorHandler.buildDepError "cardano-wallet-launcher"))
             (hsPkgs."cardano-wallet-test-utils" or (errorHandler.buildDepError "cardano-wallet-test-utils"))
             (hsPkgs."cardano-ledger-shelley-ma" or (errorHandler.buildDepError "cardano-ledger-shelley-ma"))
             (hsPkgs."cardano-ledger-alonzo" or (errorHandler.buildDepError "cardano-ledger-alonzo"))
+            (hsPkgs."cborg" or (errorHandler.buildDepError "cborg"))
             (hsPkgs."pretty-simple" or (errorHandler.buildDepError "pretty-simple"))
             (hsPkgs."strict-containers" or (errorHandler.buildDepError "strict-containers"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
@@ -248,6 +254,7 @@
             "Cardano/Wallet/Shelley/LaunchSpec"
             "Cardano/Wallet/Shelley/Launch/BlockfrostSpec"
             "Cardano/Wallet/Shelley/NetworkSpec"
+            "Cardano/Wallet/Shelley/Network/BlockfrostSpec"
             "Cardano/Wallet/Shelley/TransactionSpec"
             "Spec"
             ];

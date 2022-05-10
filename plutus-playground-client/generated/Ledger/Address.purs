@@ -17,7 +17,8 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Plutus.V1.Ledger.Crypto (PubKey, PubKeyHash)
+import Ledger.Crypto (PubKey)
+import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
