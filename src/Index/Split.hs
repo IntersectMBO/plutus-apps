@@ -1,3 +1,5 @@
+{-# LANGUAGE Strict #-}
+
 module Index.Split
   ( -- * API
     SplitIndex(..)
@@ -65,11 +67,11 @@ insert
   -> m (SplitIndex m h e n q r)
 insert e ix@SplitIndex{siOnInsert, siNotifications, siEvents, siDepth, siBuffered}
   | siDepth /= 1 = do
-    let topEvents :> lastEvent = Seq.viewr siEvents
-        (siEvents', siBuffered')
+    let (siEvents', siBuffered')
           = if size ix == siDepth
-            then ( e :<| topEvents
-                 , lastEvent :<| siBuffered )
+            then let topEvents :> lastEvent = Seq.viewr siEvents
+                  in ( e :<| topEvents
+                     , lastEvent :<| siBuffered )
             else ( e :<| siEvents, siBuffered )
     ns  <- siOnInsert e ix
     let ix' = ix { siEvents   = siEvents'
