@@ -15,37 +15,38 @@
 
 module GameModel where
 
-import Control.Applicative
-import Control.Lens hiding (elements)
-import Control.Monad
-import Data.Data
-import System.Random
+import Control.Applicative ((<|>))
+import Control.Lens (makeLenses, set, (^.))
+import Control.Monad (when)
+import Data.Data (Data)
+import System.Random (Random)
 
 -- START import Log
-import Control.Monad.Freer.Extras.Log (LogLevel (..))
+import Control.Monad.Freer.Extras.Log (LogLevel)
 -- END import Log
 
-import Data.Maybe
-import Test.QuickCheck
+import Data.Maybe (fromJust, isJust, isNothing)
+import Test.QuickCheck (Arbitrary, Gen, Property, arbitrary, choose, elements, frequency, getNonNegative, label, oneof,
+                        shrink, tabulate, withMaxSuccess)
 
 -- START import Contract.Test
-import Plutus.Contract.Test
+import Plutus.Contract.Test (Wallet, minLogLevel, mockWalletPaymentPubKeyHash, w1, w2, w3)
 -- END import Contract.Test
 
 -- START import ContractModel
-import Plutus.Contract.Test.ContractModel
+import Plutus.Contract.Test.ContractModel qualified as CM
 -- END import ContractModel
 
-import Plutus.Contract.Test.ContractModel as ContractModel
-import Test.QuickCheck.StateModel hiding (Action, Actions)
+-- END import ContractModel
+import Test.QuickCheck.StateModel (Var (Var))
 
 -- START import Game
-import Plutus.Contracts.GameStateMachine as G
+import Plutus.Contracts.GameStateMachine qualified as G
 -- END import Game
 
 -- START import Ada
 import Ledger.Ada qualified as Ada
-import Ledger.Value
+import Ledger.Value qualified as Value
 -- END import Ada
 
 -- START import Scripts
@@ -53,11 +54,11 @@ import Ledger.Typed.Scripts qualified as Scripts
 -- END import Scripts
 
 -- START import Emulator
-import Plutus.Trace.Emulator as Trace
+import Plutus.Trace.Emulator qualified as Trace
 -- END import Emulator
 
 -- START import Contract.Security
-import Plutus.Contract.Secrets
+import Plutus.Contract.Secrets (secretArg)
 -- END import Contract.Security
 
 -- START import TimeSlot
@@ -85,11 +86,11 @@ data GameModel = GameModel
 makeLenses 'GameModel
 -- END GameModel
 
-deriving instance Eq (ContractInstanceKey GameModel w schema err param)
-deriving instance Show (ContractInstanceKey GameModel w schema err param)
+deriving instance Eq (CM.ContractInstanceKey GameModel w schema err param)
+deriving instance Show (CM.ContractInstanceKey GameModel w schema err param)
 
 -- START instance ContractModel and Action type
-instance ContractModel GameModel where
+instance CM.ContractModel GameModel where
 
     data Action GameModel = Lock      Wallet String Integer
                           | Guess     Wallet String String Integer
@@ -99,7 +100,7 @@ instance ContractModel GameModel where
 
 -- START ContractInstanceKey
     data ContractInstanceKey GameModel w schema err param where
-        WalletKey :: Wallet -> ContractInstanceKey GameModel () G.GameStateMachineSchema G.GameError ()
+        WalletKey :: Wallet -> CM.ContractInstanceKey GameModel () G.GameStateMachineSchema G.GameError ()
 -- END ContractInstanceKey
 
 -- START initialState
@@ -111,7 +112,7 @@ instance ContractModel GameModel where
 -- END initialState
 
 -- START initialHandleSpecs
-    initialInstances = (`StartContract` ()) . WalletKey <$> wallets
+    initialInstances = (`CM.StartContract` ()) . WalletKey <$> wallets
 
     instanceContract _ WalletKey{} _ = G.contract
 
@@ -121,54 +122,57 @@ instance ContractModel GameModel where
 -- START perform
     perform handle _ s cmd = case cmd of
         Lock w new val -> do
-            callEndpoint @"lock" (handle $ WalletKey w)
-                LockArgs { lockArgsGameParam = gameParam
-                         , lockArgsSecret    = secretArg new
-                         , lockArgsValue     = Ada.lovelaceValueOf val
-                         }
-            delay 2
+            Trace.callEndpoint @"lock" (handle $ WalletKey w)
+                G.LockArgs
+                    { G.lockArgsGameParam = gameParam
+                    , G.lockArgsSecret    = secretArg new
+                    , G.lockArgsValue     = Ada.lovelaceValueOf val
+                    }
+            CM.delay 2
         Guess w old new val -> do
-            callEndpoint @"guess" (handle $ WalletKey w)
-                GuessArgs{ guessArgsGameParam     = gameParam
-                         , guessArgsOldSecret     = old
-                         , guessArgsNewSecret     = secretArg new
-                         , guessArgsValueTakenOut = Ada.lovelaceValueOf val }
-            delay 1
+            Trace.callEndpoint @"guess" (handle $ WalletKey w)
+                G.GuessArgs
+                    { G.guessArgsGameParam     = gameParam
+                    , G.guessArgsOldSecret     = old
+                    , G.guessArgsNewSecret     = secretArg new
+                    , G.guessArgsValueTakenOut = Ada.lovelaceValueOf val
+                    }
+            CM.delay 1
         GiveToken w' -> do
-            let w = fromJust (s ^. contractState . hasToken)
-            payToWallet w w' guessTokenVal
-            delay 1
+            let w = fromJust (s ^. CM.contractState . hasToken)
+            Trace.payToWallet w w' guessTokenVal
+            CM.delay 1
 -- END perform
 
     -- 'nextState' descibes how each command affects the state of the model
     nextState (Lock w secret val) = do
-        wasUnlocked <- (Nothing ==) <$> viewContractState hasToken
+        wasUnlocked <- (Nothing ==) <$> CM.viewContractState hasToken
         when wasUnlocked $ do
-          hasToken      $= Just w
-          currentSecret $= secret
-          gameValue     $= val
-          mint guessTokenVal
-          deposit  w guessTokenVal
-        withdraw w $ Ada.lovelaceValueOf val
-        wait 2
+          hasToken      CM.$= Just w
+          currentSecret CM.$= secret
+          gameValue     CM.$= val
+          CM.mint guessTokenVal
+          CM.deposit  w guessTokenVal
+        CM.withdraw w $ Ada.lovelaceValueOf val
+        CM.wait 2
 
 -- START nextState Guess
     nextState (Guess w old new val) = do
-        correctGuess <- (old ==)    <$> viewContractState currentSecret
-        holdsToken   <- (Just w ==) <$> viewContractState hasToken
-        enoughAda    <- (val <=)    <$> viewContractState gameValue
+        correctGuess <- (old ==)    <$> CM.viewContractState currentSecret
+        holdsToken   <- (Just w ==) <$> CM.viewContractState hasToken
+        enoughAda    <- (val <=)    <$> CM.viewContractState gameValue
         when (correctGuess && holdsToken && enoughAda) $ do
-            currentSecret $= new
-            gameValue     $~ subtract val
-            deposit w $ Ada.lovelaceValueOf val
-        wait 1
+            currentSecret CM.$= new
+            gameValue     CM.$~ subtract val
+            CM.deposit w $ Ada.lovelaceValueOf val
+        CM.wait 1
 -- END nextState Guess
 
     nextState (GiveToken w) = do
-        w0 <- fromJust <$> viewContractState hasToken
-        transfer w0 w guessTokenVal
-        hasToken $= Just w
-        wait 1
+        w0 <- fromJust <$> CM.viewContractState hasToken
+        CM.transfer w0 w guessTokenVal
+        hasToken CM.$= Just w
+        CM.wait 1
 
 -- START arbitraryAction
     arbitraryAction s = oneof $
@@ -179,8 +183,8 @@ instance ContractModel GameModel where
           [ (1, Guess <$> genWallet <*> genGuess <*> genGuess <*> genValue) ] ] ++
         [ GiveToken <$> genWallet ]
         where
-            tok = s ^. contractState . hasToken
-            val = s ^. contractState . gameValue
+            tok = s ^. CM.contractState . hasToken
+            val = s ^. CM.contractState . gameValue
 -- END arbitraryAction
 
 -- START precondition
@@ -189,8 +193,8 @@ instance ContractModel GameModel where
             Guess w _ _ v -> tok == Just w && v <= val
             GiveToken w   -> isJust tok
         where
-            tok = s ^. contractState . hasToken
-            val = s ^. contractState . gameValue
+            tok = s ^. CM.contractState . hasToken
+            val = s ^. CM.contractState . gameValue
 -- END precondition
 
 -- START shrinkAction
@@ -207,20 +211,20 @@ instance ContractModel GameModel where
 -- START monitoring
     monitoring (s, _) (Guess w guess new v) =
         tabulate "Guesses" [if guess == secret then "Right" else "Wrong"]
-        where secret = s ^. contractState . currentSecret
+        where secret = s ^. CM.contractState . currentSecret
     monitoring _ _ = id
 -- END monitoring
 
 -- START prop_Game
-prop_Game :: Actions GameModel -> Property
-prop_Game actions = propRunActions_ actions
+prop_Game :: CM.Actions GameModel -> Property
+prop_Game actions = CM.propRunActions_ actions
 -- END prop_Game
 
 -- START propGame'
-propGame' :: LogLevel -> Actions GameModel -> Property
-propGame' l s = propRunActionsWithOptions
-                    (set minLogLevel l defaultCheckOptionsContractModel)
-                    defaultCoverageOptions
+propGame' :: LogLevel -> CM.Actions GameModel -> Property
+propGame' l s = CM.propRunActionsWithOptions
+                    (set minLogLevel l CM.defaultCheckOptionsContractModel)
+                    CM.defaultCoverageOptions
                     (\ _ -> pure True)
                     s
 -- END propGame'
@@ -247,64 +251,64 @@ guesses = ["hello", "secret", "hunter2", "*******"]
 -- Dynamic Logic ----------------------------------------------------------
 
 prop_UnitTest :: Property
-prop_UnitTest = withMaxSuccess 1 $ forAllDL unitTest prop_Game
+prop_UnitTest = withMaxSuccess 1 $ CM.forAllDL unitTest prop_Game
 
 -- START propDL
-propDL :: DL GameModel () -> Property
-propDL dl = forAllDL dl prop_Game
+propDL :: CM.DL GameModel () -> Property
+propDL dl = CM.forAllDL dl prop_Game
 -- END propDL
 
 -- START unitTest
-unitTest :: DL GameModel ()
+unitTest :: CM.DL GameModel ()
 unitTest = do
-    val <- forAllQ $ chooseQ (3, 20)
-    action $ Lock w1 "hello" val
-    action $ GiveToken w2
-    action $ Guess w2 "hello" "new secret" 3
+    val <- CM.forAllQ $ CM.chooseQ (3, 20)
+    CM.action $ Lock w1 "hello" val
+    CM.action $ GiveToken w2
+    CM.action $ Guess w2 "hello" "new secret" 3
 -- END unitTest
 
 -- START badUnitTest
-badUnitTest :: DLTest GameModel
+badUnitTest :: CM.DLTest GameModel
 badUnitTest =
-    BadPrecondition
-      [Witness (1 :: Integer),
-       Do $ NoBind (Var 1) $ Lock w1 "hello" 1,
-       Do $ NoBind (Var 2) $ GiveToken w2]
-      [Action (NoBind (Var 3) (Guess w2 "hello" "new secret" 3))]
+    CM.BadPrecondition
+      [CM.Witness (1 :: Integer),
+       CM.Do $ CM.NoBind (Var 1) $ Lock w1 "hello" 1,
+       CM.Do $ CM.NoBind (Var 2) $ GiveToken w2]
+      [CM.Action (CM.NoBind (Var 3) (Guess w2 "hello" "new secret" 3))]
       (GameModel {_gameValue = 1, _hasToken = Just w2, _currentSecret = "hello"})
 -- END badUnitTest
 
-unitTest2 :: DL GameModel ()
+unitTest2 :: CM.DL GameModel ()
 unitTest2 = do
     unitTest
-    action $ GiveToken w3
-    action $ Guess w3 "new secret" "hello" 4
+    CM.action $ GiveToken w3
+    CM.action $ Guess w3 "new secret" "hello" 4
 
-unitTestFail :: DL GameModel ()
+unitTestFail :: CM.DL GameModel ()
 unitTestFail = do
-    action $ Lock w1 "hello" 8
-    action $ GiveToken w2
-    action $ Guess w2 "hola" "new secret" 3
+    CM.action $ Lock w1 "hello" 8
+    CM.action $ GiveToken w2
+    CM.action $ Guess w2 "hola" "new secret" 3
 
 -- START noLockedFunds
-noLockedFunds :: DL GameModel ()
+noLockedFunds :: CM.DL GameModel ()
 noLockedFunds = do
-    (w0, funds, pass) <- forAllQ (elementsQ wallets, chooseQ (1, 10000), elementsQ guesses)
-    action $ Lock w0 pass funds
-    anyActions_
-    w      <- forAllQ $ elementsQ wallets
-    secret <- viewContractState currentSecret
-    val    <- viewContractState gameValue
+    (w0, funds, pass) <- CM.forAllQ (CM.elementsQ wallets, CM.chooseQ (1, 10000), CM.elementsQ guesses)
+    CM.action $ Lock w0 pass funds
+    CM.anyActions_
+    w      <- CM.forAllQ $ CM.elementsQ wallets
+    secret <- CM.viewContractState currentSecret
+    val    <- CM.viewContractState gameValue
     when (val > 0) $ do
-        monitor $ label "Unlocking funds"
-        action $ GiveToken w
-        action $ Guess w secret "" val
-    assertModel "Locked funds should be zero" $ symIsZero . lockedValue
+        CM.monitor $ label "Unlocking funds"
+        CM.action $ GiveToken w
+        CM.action $ Guess w secret "" val
+    CM.assertModel "Locked funds should be zero" $ CM.symIsZero . CM.lockedValue
 -- END noLockedFunds
 
 -- | Check that we can always get the money out of the guessing game (by guessing correctly).
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = forAllDL noLockedFunds prop_Game
+prop_NoLockedFunds = CM.forAllDL noLockedFunds prop_Game
 
 -- | Wallets and game token.
 
@@ -314,7 +318,7 @@ wallets = [w1, w2, w3]
 -- END wallets
 
 -- START guessTokenVal
-guessTokenVal :: Value
+guessTokenVal :: Value.Value
 guessTokenVal =
     let sym = Scripts.forwardingMintingPolicyHash $ G.typedValidator gameParam
     in G.token sym "guess"
@@ -322,7 +326,7 @@ guessTokenVal =
 
 -- START testLock v1
 testLock :: Property
-testLock = prop_Game $ actionsFromList [Lock w1 "hunter2" 0]
+testLock = prop_Game $ CM.actionsFromList [Lock w1 "hunter2" 0]
 -- END testLock v1
 
 testLockWithMaxSuccess :: ()
@@ -330,13 +334,13 @@ testLockWithMaxSuccess = ()
  where
 -- START testLock withMaxSuccess
  testLock :: Property
- testLock = withMaxSuccess 1 . prop_Game $ actionsFromList [Lock w1 "hunter2" 0]
+ testLock = withMaxSuccess 1 . prop_Game $ CM.actionsFromList [Lock w1 "hunter2" 0]
 -- END testLock withMaxSuccess
 
 -- START testDoubleLock
 testDoubleLock :: Property
 testDoubleLock = prop_Game $
-  actionsFromList
+  CM.actionsFromList
     [Lock w1 "*******" 0,
      Lock w1 "secret" 0]
 -- END testDoubleLock
@@ -345,10 +349,10 @@ anyActionsDef :: ()
 anyActionsDef = ()
  where
 -- START anyActions
- anyActions :: Int -> DL s ()
- anyActions n = stopping
-            <|> weight (1 / fromIntegral n)
-            <|> (anyAction >> anyActions n)
+ anyActions :: Int -> CM.DL s ()
+ anyActions n = CM.stopping
+            <|> CM.weight (1 / fromIntegral n)
+            <|> (CM.anyAction >> anyActions n)
 -- END anyActions
 
 -- Code for preliminary versions
@@ -356,7 +360,7 @@ anyActionsDef = ()
 v1_model :: ()
 v1_model = ()
   where
-    arbitraryAction :: ModelState GameModel -> Gen (Action GameModel)
+    arbitraryAction :: CM.ModelState GameModel -> Gen (CM.Action GameModel)
 -- START arbitraryAction v1
     arbitraryAction s = oneof $
         [ Lock      <$> genWallet <*> genGuess <*> genValue              ] ++
@@ -364,94 +368,103 @@ v1_model = ()
         [ GiveToken <$> genWallet                                        ]
 -- END arbitraryAction v1
 
-    nextState :: Action GameModel -> Spec GameModel ()
+    nextState :: CM.Action GameModel -> CM.Spec GameModel ()
 -- START nextState Lock v1
     nextState (Lock w secret val) = do
-        hasToken      $= Just w
-        currentSecret $= secret
-        gameValue     $= val
-        mint guessTokenVal
-        deposit  w guessTokenVal
-        withdraw w $ Ada.lovelaceValueOf val
+        hasToken      CM.$= Just w
+        currentSecret CM.$= secret
+        gameValue     CM.$= val
+        CM.mint guessTokenVal
+        CM.deposit  w guessTokenVal
+        CM.withdraw w $ Ada.lovelaceValueOf val
 -- END nextState Lock v1
 -- START nextState Guess v1
     nextState (Guess w old new val) = do
-        correctGuess <- (old ==)    <$> viewContractState currentSecret
-        holdsToken   <- (Just w ==) <$> viewContractState hasToken
-        enoughAda    <- (val <=)    <$> viewContractState gameValue
+        correctGuess <- (old ==)    <$> CM.viewContractState currentSecret
+        holdsToken   <- (Just w ==) <$> CM.viewContractState hasToken
+        enoughAda    <- (val <=)    <$> CM.viewContractState gameValue
         when (correctGuess && holdsToken && enoughAda) $ do
-            currentSecret $= new
-            gameValue     $~ subtract val
-            deposit w $ Ada.lovelaceValueOf val
+            currentSecret CM.$= new
+            gameValue     CM.$~ subtract val
+            CM.deposit w $ Ada.lovelaceValueOf val
 -- END nextState Guess v1
 -- START nextState GiveToken v1
     nextState (GiveToken w) = do
-        w0 <- fromJust <$> viewContractState hasToken
-        transfer w0 w guessTokenVal
-        hasToken $= Just w
+        w0 <- fromJust <$> CM.viewContractState hasToken
+        CM.transfer w0 w guessTokenVal
+        hasToken CM.$= Just w
 -- END nextState GiveToken v1
 
-    precondition :: ModelState GameModel -> Action GameModel -> Bool
+    precondition :: CM.ModelState GameModel -> CM.Action GameModel -> Bool
 -- START precondition v1
     precondition s (GiveToken _) = isJust tok
         where
-            tok = s ^. contractState . hasToken
+            tok = s ^. CM.contractState . hasToken
     precondition s _             = True
 -- END precondition v1
 
-    perform :: HandleFun GameModel -> (SymToken -> AssetClass) -> ModelState GameModel -> Action GameModel -> SpecificationEmulatorTrace ()
+    perform
+        :: CM.HandleFun GameModel
+        -> (CM.SymToken -> Value.AssetClass)
+        -> CM.ModelState GameModel
+        -> CM.Action GameModel
+        -> CM.SpecificationEmulatorTrace ()
 -- START perform v1
     perform handle _ s cmd = case cmd of
         Lock w new val -> do
-            callEndpoint @"lock" (handle $ WalletKey w)
-                         LockArgs{ lockArgsGameParam = gameParam
-                                 , lockArgsSecret = secretArg new
-                                 , lockArgsValue = Ada.lovelaceValueOf val}
+            Trace.callEndpoint @"lock" (handle $ WalletKey w)
+                G.LockArgs
+                    { G.lockArgsGameParam = gameParam
+                    , G.lockArgsSecret = secretArg new
+                    , G.lockArgsValue = Ada.lovelaceValueOf val
+                    }
         Guess w old new val -> do
-            callEndpoint @"guess" (handle $ WalletKey w)
-                GuessArgs{ guessArgsGameParam = gameParam
-                         , guessArgsOldSecret = old
-                         , guessArgsNewSecret = secretArg new
-                         , guessArgsValueTakenOut = Ada.lovelaceValueOf val}
+            Trace.callEndpoint @"guess" (handle $ WalletKey w)
+                G.GuessArgs
+                    { G.guessArgsGameParam = gameParam
+                    , G.guessArgsOldSecret = old
+                    , G.guessArgsNewSecret = secretArg new
+                    , G.guessArgsValueTakenOut = Ada.lovelaceValueOf val
+                    }
         GiveToken w' -> do
-            let w = fromJust (s ^. contractState . hasToken)
-            payToWallet w w' guessTokenVal
+            let w = fromJust (s ^. CM.contractState . hasToken)
+            Trace.payToWallet w w' guessTokenVal
             return ()
 -- END perform v1
 
 v2_model :: ()
 v2_model = ()
   where
-    nextState :: Action GameModel -> Spec GameModel ()
+    nextState :: CM.Action GameModel -> CM.Spec GameModel ()
 -- START nextState Lock v2
     nextState (Lock w secret val) = do
-        hasToken      $= Just w
-        currentSecret $= secret
-        gameValue     $= val
-        mint guessTokenVal
-        deposit  w guessTokenVal
-        withdraw w $ Ada.lovelaceValueOf val
-        wait 2
+        hasToken      CM.$= Just w
+        currentSecret CM.$= secret
+        gameValue     CM.$= val
+        CM.mint guessTokenVal
+        CM.deposit  w guessTokenVal
+        CM.withdraw w $ Ada.lovelaceValueOf val
+        CM.wait 2
 -- END nextState Lock v2
 -- START nextState Guess partial
     nextState (Guess w old new val) = do
-        correctGuess <- (old ==)    <$> viewContractState currentSecret
+        correctGuess <- (old ==)    <$> CM.viewContractState currentSecret
         -- ...
 -- END nextState Guess partial
         return ()
     nextState _ = return ()
 
-    precondition :: ModelState GameModel -> Action GameModel -> Bool
+    precondition :: CM.ModelState GameModel -> CM.Action GameModel -> Bool
 -- START precondition v2
     precondition s cmd = case cmd of
             Lock {}     -> isNothing tok
             Guess {}    -> True
             GiveToken _ -> isJust tok
         where
-            tok = s ^. contractState . hasToken
+            tok = s ^. CM.contractState . hasToken
 -- END precondition v2
 
-    arbitraryAction :: ModelState GameModel -> Gen (Action GameModel)
+    arbitraryAction :: CM.ModelState GameModel -> Gen (CM.Action GameModel)
 -- START arbitaryAction v2
     arbitraryAction s = oneof $
         [ Lock      <$> genWallet <*> genGuess <*> genValue ] ++
@@ -459,142 +472,147 @@ v2_model = ()
         | Just w <- [tok] ] ++
         [ GiveToken <$> genWallet ]
         where
-            tok = s ^. contractState . hasToken
-            val = s ^. contractState . gameValue
+            tok = s ^. CM.contractState . hasToken
+            val = s ^. CM.contractState . gameValue
 -- END arbitaryAction v2
 
 v3_model :: ()
 v3_model = ()
   where
-    precondition :: ModelState GameModel -> Action GameModel -> Bool
+    precondition :: CM.ModelState GameModel -> CM.Action GameModel -> Bool
 -- START precondition v3
     precondition s cmd = case cmd of
             Lock {}       -> isNothing tok
             Guess w _ _ _ -> tok == Just w
             GiveToken _   -> isJust tok
         where
-            tok = s ^. contractState . hasToken
+            tok = s ^. CM.contractState . hasToken
 -- END precondition v3
 
 unitTest_v1 :: ()
 unitTest_v1 = ()
  where
 -- START unitTest v1
- unitTest :: DL GameModel ()
+ unitTest :: CM.DL GameModel ()
  unitTest = do
-     action $ Lock w1 "hello" 10
-     action $ GiveToken w2
-     action $ Guess w2 "hello" "new secret" 3
+     CM.action $ Lock w1 "hello" 10
+     CM.action $ GiveToken w2
+     CM.action $ Guess w2 "hello" "new secret" 3
 -- END unitTest v1
 
 unitTest_v2 :: ()
 unitTest_v2 = ()
  where
 -- START unitTest v2
- unitTest :: DL GameModel ()
+ unitTest :: CM.DL GameModel ()
  unitTest = do
-     val <- forAllQ $ chooseQ (1, 20)
-     action $ Lock w1 "hello" val
-     action $ GiveToken w2
-     action $ Guess w2 "hello" "new secret" 3
+     val <- CM.forAllQ $ CM.chooseQ (1, 20)
+     CM.action $ Lock w1 "hello" val
+     CM.action $ GiveToken w2
+     CM.action $ Guess w2 "hello" "new secret" 3
 -- END unitTest v2
 
 noLockedFunds_v1 :: ()
 noLockedFunds_v1 = ()
  where
 -- START noLockedFunds v1
- noLockedFunds :: DL GameModel ()
+ noLockedFunds :: CM.DL GameModel ()
  noLockedFunds = do
-     anyActions_
-     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
+     CM.anyActions_
+     CM.assertModel "Locked funds should be zero" $ CM.symIsZero . CM.lockedValue
 -- END noLockedFunds v1
 
 noLockedFunds_v2 :: ()
 noLockedFunds_v2 = ()
  where
 -- START noLockedFunds v2
- noLockedFunds :: DL GameModel ()
+ noLockedFunds :: CM.DL GameModel ()
  noLockedFunds = do
-     anyActions_
-     w      <- forAllQ $ elementsQ wallets
-     secret <- viewContractState currentSecret
-     val    <- viewContractState gameValue
-     action $ Guess w "" secret val
-     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
+     CM.anyActions_
+     w      <- CM.forAllQ $ CM.elementsQ wallets
+     secret <- CM.viewContractState currentSecret
+     val    <- CM.viewContractState gameValue
+     CM.action $ Guess w "" secret val
+     CM.assertModel "Locked funds should be zero" $ CM.symIsZero . CM.lockedValue
 -- END noLockedFunds v2
 
 noLockedFunds_v3 :: ()
 noLockedFunds_v3 = ()
  where
 -- START noLockedFunds v3
- noLockedFunds :: DL GameModel ()
+ noLockedFunds :: CM.DL GameModel ()
  noLockedFunds = do
-     anyActions_
-     w      <- forAllQ $ elementsQ wallets
-     secret <- viewContractState currentSecret
-     val    <- viewContractState gameValue
+     CM.anyActions_
+     w      <- CM.forAllQ $ CM.elementsQ wallets
+     secret <- CM.viewContractState currentSecret
+     val    <- CM.viewContractState gameValue
      when (val > 0) $ do
-         action $ Guess w "" secret val
-     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
+         CM.action $ Guess w "" secret val
+     CM.assertModel "Locked funds should be zero" $ CM.symIsZero . CM.lockedValue
 -- END noLockedFunds v3
 
 noLockedFunds_v4 :: ()
 noLockedFunds_v4 = ()
  where
 -- START noLockedFunds v4
- noLockedFunds :: DL GameModel ()
+ noLockedFunds :: CM.DL GameModel ()
  noLockedFunds = do
-     anyActions_
-     w      <- forAllQ $ elementsQ wallets
-     secret <- viewContractState currentSecret
-     val    <- viewContractState gameValue
+     CM.anyActions_
+     w      <- CM.forAllQ $ CM.elementsQ wallets
+     secret <- CM.viewContractState currentSecret
+     val    <- CM.viewContractState gameValue
      when (val > 0) $ do
-         action $ GiveToken w
-         action $ Guess w "" secret val
-     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
+         CM.action $ GiveToken w
+         CM.action $ Guess w "" secret val
+     CM.assertModel "Locked funds should be zero" $ CM.symIsZero . CM.lockedValue
 -- END noLockedFunds v4
 
 noLockedFunds_v5 :: ()
 noLockedFunds_v5 = ()
  where
 -- START noLockedFunds v5
- noLockedFunds :: DL GameModel ()
+ noLockedFunds :: CM.DL GameModel ()
  noLockedFunds = do
-     anyActions_
-     w      <- forAllQ $ elementsQ wallets
-     secret <- viewContractState currentSecret
-     val    <- viewContractState gameValue
+     CM.anyActions_
+     w      <- CM.forAllQ $ CM.elementsQ wallets
+     secret <- CM.viewContractState currentSecret
+     val    <- CM.viewContractState gameValue
      when (val > 0) $ do
-         monitor $ label "Unlocking funds"
-         action $ GiveToken w
-         action $ Guess w secret "" val
-     assertModel "Locked funds should be zero" $ symIsZero . lockedValue
+         CM.monitor $ label "Unlocking funds"
+         CM.action $ GiveToken w
+         CM.action $ Guess w secret "" val
+     CM.assertModel "Locked funds should be zero" $ CM.symIsZero . CM.lockedValue
 -- END noLockedFunds v5
 
-typeSignatures :: forall state. ContractModel state => state -> state
+typeSignatures :: forall state. CM.ContractModel state => state -> state
 typeSignatures = id
  where
 -- START nextState type
- nextState :: Action state -> Spec state ()
+ nextState :: CM.Action state -> CM.Spec state ()
 -- END nextState type
- nextState = ContractModel.nextState
+ nextState = CM.nextState
 -- START precondition type
- precondition :: ModelState state -> Action state -> Bool
+ precondition :: CM.ModelState state -> CM.Action state -> Bool
 -- END precondition type
- precondition = ContractModel.precondition
+ precondition = CM.precondition
 -- START perform type
- perform :: HandleFun state -> (SymToken -> AssetClass) -> ModelState state -> Action state -> SpecificationEmulatorTrace ()
+ perform
+     :: CM.HandleFun state
+     -> (CM.SymToken -> Value.AssetClass)
+     -> CM.ModelState state
+     -> CM.Action state
+     -> CM.SpecificationEmulatorTrace ()
 -- END perform type
- perform = ContractModel.perform
+ perform = CM.perform
 -- START shrinkAction type
- shrinkAction :: ModelState state -> Action state -> [Action state]
+ shrinkAction :: CM.ModelState state -> CM.Action state -> [CM.Action state]
 -- END shrinkAction type
- shrinkAction = ContractModel.shrinkAction
+ shrinkAction = CM.shrinkAction
 -- START monitoring type
- monitoring :: (ModelState state, ModelState state) -> Action state -> Property -> Property
+ monitoring :: (CM.ModelState state, CM.ModelState state) -> CM.Action state -> Property -> Property
 -- END monitoring type
- monitoring = ContractModel.monitoring
+ monitoring = CM.monitoring
 -- START chooseQ type
- chooseQ :: (Arbitrary a, Random a, Ord a) => (a, a) -> Quantification a
+ chooseQ :: (Arbitrary a, Random a, Ord a) => (a, a) -> CM.Quantification a
 -- END chooseQ type
- chooseQ = ContractModel.chooseQ
+ chooseQ = CM.chooseQ

@@ -25,7 +25,6 @@ module Ledger.CardanoWallet(
     ) where
 
 import Cardano.Crypto.Wallet qualified as Crypto
-import Cardano.Wallet.Primitive.Types qualified as CW
 import Codec.Serialise (serialise)
 import Crypto.Hash qualified as Crypto
 import Data.Aeson (FromJSON, ToJSON)
@@ -58,7 +57,7 @@ instance Hashable MockPrivateKey where
 -- | Emulated wallet with a key and a passphrase
 data MockWallet =
     MockWallet
-        { mwWalletId   :: CW.WalletId
+        { mwWalletId   :: Crypto.Digest Crypto.Blake2b_160
         , mwPaymentKey :: MockPrivateKey
         , mwStakeKey   :: Maybe MockPrivateKey
         , mwPrintAs    :: Maybe String
@@ -84,8 +83,8 @@ fromSeedInternal seedGen bs = MockWallet{mwWalletId, mwPaymentKey, mwStakeKey, m
     missing = max 0 (32 - BS.length bs)
     bs' = bs <> BS.replicate missing 0
     k = seedGen bs'
-    mwWalletId = CW.WalletId
-        $ fromMaybe (error "Ledger.CardanoWallet.fromSeed: digestFromByteString")
+    mwWalletId =
+        fromMaybe (error "Ledger.CardanoWallet.fromSeed: digestFromByteString")
         $ Crypto.digestFromByteString
         $ Crypto.hashWith Crypto.Blake2b_160
         $ getLedgerBytes

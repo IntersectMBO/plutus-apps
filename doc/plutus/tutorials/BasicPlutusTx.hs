@@ -8,13 +8,13 @@ module BasicPlutusTx where
 
 import PlutusCore.Default qualified as PLC
 -- Main Plutus Tx module.
-import PlutusTx
+import PlutusTx qualified
 -- Additional support for lifting.
-import PlutusTx.Lift
+import PlutusTx.Lift (liftCode, makeLift)
 -- Builtin functions.
-import PlutusTx.Builtins
+import PlutusTx.Builtins qualified as Builtins
 -- The Plutus Tx Prelude, discussed further below.
-import PlutusTx.Prelude
+import PlutusTx.Prelude qualified as PlutusTx
 
 -- Setup for doctest examples.
 
@@ -26,15 +26,15 @@ import PlutusTx.Prelude
 -- >>> import Prettyprinter
 
 -- BLOCK2
-integerOne :: CompiledCode Integer
+integerOne :: PlutusTx.CompiledCode Builtins.Integer
 {- 'compile' turns the 'TExpQ Integer' into a
   'TExpQ (CompiledCode Integer)' and the splice
   inserts it into the program. -}
-integerOne = $$(compile
+integerOne = $$(PlutusTx.compile
     {- The quote has type 'TExpQ Integer'.
       We always use unbounded integers in Plutus Core, so we have to pin
       down this numeric literal to an ``Integer`` rather than an ``Int``. -}
-    [|| (1 :: Integer) ||])
+    [|| (1 :: Builtins.Integer) ||])
 
 {- |
 >>> pretty $ getPlc integerOne
@@ -43,8 +43,8 @@ integerOne = $$(compile
 )
 -}
 -- BLOCK3
-integerIdentity :: CompiledCode (Integer -> Integer)
-integerIdentity = $$(compile [|| \(x:: Integer) -> x ||])
+integerIdentity :: PlutusTx.CompiledCode (Builtins.Integer -> Builtins.Integer)
+integerIdentity = $$(PlutusTx.compile [|| \(x:: Builtins.Integer) -> x ||])
 
 {- |
 >>> pretty $ getPlc integerIdentity
@@ -60,25 +60,25 @@ integerIdentity = $$(compile [|| \(x:: Integer) -> x ||])
   you may be able to get away with omitting it, it is good practice to
   always include it. -}
 {-# INLINABLE plusOne #-}
-plusOne :: Integer -> Integer
+plusOne :: Builtins.Integer -> Builtins.Integer
 {- 'addInteger' comes from 'PlutusTx.Builtins', and is
   mapped to the builtin integer addition function in Plutus Core. -}
-plusOne x = x `addInteger` 1
+plusOne x = x `Builtins.addInteger` 1
 
 {-# INLINABLE myProgram #-}
-myProgram :: Integer
+myProgram :: Builtins.Integer
 myProgram =
     let
         -- Local functions do not need to be marked as 'INLINABLE'.
-        plusOneLocal :: Integer -> Integer
-        plusOneLocal x = x `addInteger` 1
+        plusOneLocal :: Builtins.Integer -> Builtins.Integer
+        plusOneLocal x = x `Builtins.addInteger` 1
 
         localTwo = plusOneLocal 1
         externalTwo = plusOne 1
-    in localTwo `addInteger` externalTwo
+    in localTwo `Builtins.addInteger` externalTwo
 
-functions :: CompiledCode Integer
-functions = $$(compile [|| myProgram ||])
+functions :: PlutusTx.CompiledCode Builtins.Integer
+functions = $$(PlutusTx.compile [|| myProgram ||])
 
 {- We’ve used the CK evaluator for Plutus Core to evaluate the program
   and check that the result was what we expected. -}
@@ -87,37 +87,37 @@ functions = $$(compile [|| myProgram ||])
 (con 4)
 -}
 -- BLOCK5
-matchMaybe :: CompiledCode (Maybe Integer -> Integer)
-matchMaybe = $$(compile [|| \(x:: Maybe Integer) -> case x of
-    Just n  -> n
-    Nothing -> 0
+matchMaybe :: PlutusTx.CompiledCode (PlutusTx.Maybe Builtins.Integer -> Builtins.Integer)
+matchMaybe = $$(PlutusTx.compile [|| \(x:: PlutusTx.Maybe Builtins.Integer) -> case x of
+    PlutusTx.Just n  -> n
+    PlutusTx.Nothing -> 0
   ||])
 -- BLOCK6
 -- | Either a specific end date, or "never".
-data EndDate = Fixed Integer | Never
+data EndDate = Fixed Builtins.Integer | Never
 
 -- | Check whether a given time is past the end date.
-pastEnd :: CompiledCode (EndDate -> Integer -> Bool)
-pastEnd = $$(compile [|| \(end::EndDate) (current::Integer) -> case end of
-    Fixed n -> n `lessThanEqualsInteger` current
-    Never   -> False
+pastEnd :: PlutusTx.CompiledCode (EndDate -> Builtins.Integer -> PlutusTx.Bool)
+pastEnd = $$(PlutusTx.compile [|| \(end::EndDate) (current::Builtins.Integer) -> case end of
+    Fixed n -> n `Builtins.lessThanEqualsInteger` current
+    Never   -> PlutusTx.False
   ||])
 -- BLOCK7
 -- | Check whether a given time is past the end date.
-pastEnd' :: CompiledCode (EndDate -> Integer -> Bool)
-pastEnd' = $$(compile [|| \(end::EndDate) (current::Integer) -> case end of
-    Fixed n -> n < current
-    Never   -> False
+pastEnd' :: PlutusTx.CompiledCode (EndDate -> Builtins.Integer -> PlutusTx.Bool)
+pastEnd' = $$(PlutusTx.compile [|| \(end::EndDate) (current::Builtins.Integer) -> case end of
+    Fixed n -> n PlutusTx.< current
+    Never   -> PlutusTx.False
   ||])
 -- BLOCK8
-addOne :: CompiledCode (Integer -> Integer)
-addOne = $$(compile [|| \(x:: Integer) -> x `addInteger` 1 ||])
+addOne :: PlutusTx.CompiledCode (Builtins.Integer -> Builtins.Integer)
+addOne = $$(PlutusTx.compile [|| \(x:: Builtins.Integer) -> x `Builtins.addInteger` 1 ||])
 -- BLOCK9
-addOneToN :: Integer -> CompiledCode Integer
+addOneToN :: Builtins.Integer -> PlutusTx.CompiledCode Builtins.Integer
 addOneToN n =
     addOne
     -- 'applyCode' applies one 'CompiledCode' to another.
-    `applyCode`
+    `PlutusTx.applyCode`
     -- 'liftCode' lifts the argument 'n' into a
     -- 'CompiledCode Integer'.
     liftCode n
@@ -164,12 +164,12 @@ addOneToN n =
 -- 'makeLift' generates instances of 'Lift' automatically.
 makeLift ''EndDate
 
-pastEndAt :: EndDate -> Integer -> CompiledCode Bool
+pastEndAt :: EndDate -> Builtins.Integer -> PlutusTx.CompiledCode PlutusTx.Bool
 pastEndAt end current =
     pastEnd
-    `applyCode`
+    `PlutusTx.applyCode`
     liftCode end
-    `applyCode`
+    `PlutusTx.applyCode`
     liftCode current
 
 {- |

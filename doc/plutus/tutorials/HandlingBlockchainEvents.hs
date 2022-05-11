@@ -2,9 +2,10 @@
 module HandlingBlockchainEvents() where
 
 import Data.List.NonEmpty (NonEmpty)
-import Ledger
+import Ledger (Address, TxId, TxOutRef)
 import Plutus.ChainIndex (ChainIndexTx, TxStatus)
-import Plutus.Contract as Contract
+import Plutus.Contract (AsContractError, Contract)
+import Plutus.Contract qualified as Contract
 
 -- BLOCK0
 {-| Wait until one or more unspent outputs are produced at an address.
