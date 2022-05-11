@@ -9,11 +9,12 @@ import Data.Default (Default (def))
 import Ledger.TimeSlot (SlotConfig (..))
 
 
-data Params = Params {
-  pSlotConfig     :: SlotConfig,
-  pProtocolParams :: C.Api.ProtocolParameters,
-  pNetworkId      :: C.Api.NetworkId
-}
+data Params = Params
+  { pSlotConfig     :: SlotConfig
+  , pProtocolParams :: C.Api.ProtocolParameters
+  , pNetworkId      :: C.Api.NetworkId
+  }
+  deriving (Eq, Show)
 
 instance Default Params where
   def = Params def

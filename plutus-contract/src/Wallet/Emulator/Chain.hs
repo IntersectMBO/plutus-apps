@@ -31,7 +31,7 @@ import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), ScriptValidationEvent, Slot (..),
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), ScriptValidationEvent, Slot (..),
                SomeCardanoApiTx (SomeTx), Tx (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx,
                getCardanoTxId, mergeCardanoTxWith, onCardanoTx)
 import Ledger.Index qualified as Index
@@ -79,7 +79,7 @@ data ChainControlEffect r where
 data ChainEffect r where
     QueueTx :: CardanoTx -> ChainEffect ()
     GetCurrentSlot :: ChainEffect Slot
-    GetSlotConfig :: ChainEffect SlotConfig
+    GetParams :: ChainEffect Params
 
 -- | Make a new block
 processBlock :: Member ChainControlEffect effs => Eff effs Block
@@ -92,8 +92,8 @@ modifySlot = send . ModifySlot
 queueTx :: Member ChainEffect effs => CardanoTx -> Eff effs ()
 queueTx tx = send (QueueTx tx)
 
-getSlotConfig :: Member ChainEffect effs => Eff effs SlotConfig
-getSlotConfig = send GetSlotConfig
+getParams :: Member ChainEffect effs => Eff effs Params
+getParams = send GetParams
 
 getCurrentSlot :: Member ChainEffect effs => Eff effs Slot
 getCurrentSlot = send GetCurrentSlot
@@ -125,11 +125,11 @@ logEvent e = case e of
     TxnValidationFail{} -> logWarn e
     TxnValidate{}       -> logInfo e
 
-handleChain :: (Members ChainEffs effs) => SlotConfig -> ChainEffect ~> Eff effs
-handleChain slotConfig = \case
+handleChain :: (Members ChainEffs effs) => Params -> ChainEffect ~> Eff effs
+handleChain params = \case
     QueueTx tx     -> modify $ over txPool (addTxToPool tx)
     GetCurrentSlot -> gets _currentSlot
-    GetSlotConfig  -> pure slotConfig
+    GetParams      -> pure params
 
 -- | The result of validating a block.
 data ValidatedBlock = ValidatedBlock

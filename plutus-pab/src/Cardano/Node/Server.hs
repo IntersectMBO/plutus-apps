@@ -20,12 +20,14 @@ import Control.Monad (void)
 import Control.Monad.Freer.Delay (delayThread, handleDelayEffect)
 import Control.Monad.Freer.Extras.Log (logInfo)
 import Control.Monad.IO.Class (liftIO)
+import Data.Default (def)
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Units (Millisecond, Second)
 import Ledger.Ada qualified as Ada
+import Ledger.Params (Params (..))
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.PAB.Arbitrary ()
@@ -36,15 +38,15 @@ import Wallet.Emulator.Wallet (fromWalletNumber)
 
 app ::
     Trace IO PABServerLogMsg
- -> SlotConfig
+ -> Params
  -> Client.TxSendHandle
  -> MVar AppState
  -> Application
-app trace slotCfg clientHandler stateVar =
+app trace params clientHandler stateVar =
     serve (Proxy @API) $
     hoistServer
         (Proxy @API)
-        (liftIO . processChainEffects trace slotCfg (Just clientHandler) stateVar)
+        (liftIO . processChainEffects trace params (Just clientHandler) stateVar)
         (healthcheck :<|> consumeEventHistory stateVar)
 
 data Ctx = Ctx { serverHandler :: Server.ServerHandler
@@ -81,7 +83,7 @@ main trace PABServerConfig { pscBaseUrl
     runSlotCoordinator ctx
 
     logInfo $ StartingPABServer $ baseUrlPort pscBaseUrl
-    liftIO $ Warp.runSettings warpSettings $ app trace pscSlotConfig clientHandler serverState
+    liftIO $ Warp.runSettings warpSettings $ app trace (def { pSlotConfig = pscSlotConfig }) clientHandler serverState
 
         where
             warpSettings = Warp.defaultSettings & Warp.setPort (baseUrlPort pscBaseUrl) & Warp.setBeforeMainLoop (available availability)

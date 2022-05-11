@@ -86,7 +86,7 @@ import Plutus.PAB.Types (Config (Config), DbConfig (..),
                          WebserverConfig (WebserverConfig), chainIndexConfig, dbConfig, developmentOptions,
                          endpointTimeout, nodeServerConfig, pabWebserverConfig, walletServerConfig)
 import Servant.Client (ClientEnv, ClientError, mkClientEnv)
-import Wallet.API (NodeClientEffect)
+import Wallet.API (NodeClientEffect, pSlotConfig)
 import Wallet.Effects (WalletEffect)
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Error (WalletAPIError)
@@ -173,7 +173,7 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . reinterpret (Core.handleMappedReader @(AppEnv a) @(Maybe MockClient.TxSendHandle) txSendHandle)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv nodeClientEnv)
-            . reinterpretN @'[_, _, _, _] (handleNodeClientClient @IO $ pscSlotConfig $ nodeServerConfig config)
+            . reinterpretN @'[_, _, _, _] (handleNodeClientClient @IO $ def { pSlotConfig = pscSlotConfig $ nodeServerConfig config })
 
             -- handle 'ChainIndexEffect'
             . flip handleError (throwError . ChainIndexError)

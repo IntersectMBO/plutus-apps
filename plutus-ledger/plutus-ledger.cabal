@@ -52,8 +52,9 @@ library
         Ledger.Crypto
         Ledger.Fee
         Ledger.Generators
-        Ledger.Orphans
         Ledger.Index
+        Ledger.Orphans
+        Ledger.Params
         Ledger.Scripts
         Ledger.TimeSlot
         Ledger.Tokens

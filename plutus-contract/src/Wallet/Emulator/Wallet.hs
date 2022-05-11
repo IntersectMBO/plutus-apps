@@ -44,7 +44,7 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
-import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
+import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (..),
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PrivateKey, PubKeyHash, SomeCardanoApiTx,
@@ -311,8 +311,8 @@ handleBalance ::
     -> Eff effs CardanoTx
 handleBalance utx' = do
     utxo <- get >>= ownOutputs
-    slotConfig <- WAPI.getClientSlotConfig
-    let utx = finalize slotConfig utx'
+    Params { pSlotConfig } <- WAPI.getClientParams
+    let utx = finalize pSlotConfig utx'
     let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
     cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
     -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop

@@ -29,13 +29,14 @@ module Wallet.API(
     NodeClientEffect,
     publishTx,
     getClientSlot,
-    getClientSlotConfig,
+    getClientParams,
     PubKey(..),
     PubKeyHash(..),
     signTxAndSubmit,
     signTxAndSubmit_,
     payToPaymentPublicKeyHash,
     payToPaymentPublicKeyHash_,
+    Params(..),
     -- * Slot ranges
     Interval(..),
     Slot,
@@ -63,13 +64,13 @@ import Control.Monad.Freer.Extras.Log (LogMsg, logWarn)
 import Data.Default (Default (def))
 import Data.Text (Text)
 import Data.Void (Void)
-import Ledger (CardanoTx, Interval (Interval, ivFrom, ivTo), PaymentPubKeyHash, PubKey (PubKey, getPubKey),
+import Ledger (CardanoTx, Interval (Interval, ivFrom, ivTo), Params (..), PaymentPubKeyHash, PubKey (PubKey, getPubKey),
                PubKeyHash (PubKeyHash, getPubKeyHash), Slot, SlotRange, Value, after, always, before, contains,
                interval, isEmpty, member, singleton, width)
 import Ledger.Constraints qualified as Constraints
 import Ledger.TimeSlot qualified as TimeSlot
-import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientSlot, getClientSlotConfig,
-                       ownPaymentPubKeyHash, publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
+import Wallet.Effects (NodeClientEffect, WalletEffect, balanceTx, getClientParams, getClientSlot, ownPaymentPubKeyHash,
+                       publishTx, submitTxn, walletAddSignature, yieldUnbalancedTx)
 import Wallet.Error (WalletAPIError (PaymentMkTxError))
 import Wallet.Error qualified
 

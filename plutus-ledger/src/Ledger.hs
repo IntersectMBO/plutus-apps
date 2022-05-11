@@ -15,6 +15,7 @@ import Ledger.Orphans ()
 import Ledger.Address as Export
 import Ledger.Contexts as Export
 import Ledger.Crypto as Export
+import Ledger.Params as Export
 import Ledger.Scripts as Export
 import Ledger.Tx as Export
 import Ledger.Value as Export (noAdaValue)

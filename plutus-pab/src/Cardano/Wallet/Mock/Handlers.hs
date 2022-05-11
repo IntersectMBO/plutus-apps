@@ -50,7 +50,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.TimeSlot (SlotConfig)
+import Ledger.Params (Params)
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Client qualified as ChainIndex
@@ -155,17 +155,17 @@ processWalletEffects ::
     -> ChainSyncHandle -- ^ node client
     -> ClientEnv          -- ^ chain index client
     -> MVar Wallets   -- ^ wallets state
-    -> SlotConfig
+    -> Params
     -> Eff (WalletEffects IO) a -- ^ wallet effect
     -> m a
-processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg action = do
+processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState params action = do
     oldState <- liftIO $ takeMVar mVarState
     result <- liftIO $ runWalletEffects trace
                                         txSendHandle
                                         chainSyncHandle
                                         chainIndexEnv
                                         oldState
-                                        slotCfg
+                                        params
                                         action
     case result of
         Left e -> do
@@ -182,13 +182,13 @@ runWalletEffects ::
     -> ChainSyncHandle -- ^ node client
     -> ClientEnv -- ^ chain index client
     -> Wallets -- ^ current state
-    -> SlotConfig
+    -> Params
     -> Eff (WalletEffects IO) a -- ^ wallet effect
     -> IO (Either ServerError (a, Wallets))
-runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets slotCfg action =
+runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets params action =
     reinterpret handleMultiWallet action
     & interpret (LM.handleLogMsgTrace trace)
-    & reinterpret2 (NodeClient.handleNodeClientClient slotCfg)
+    & reinterpret2 (NodeClient.handleNodeClientClient params)
     & runReader chainSyncHandle
     & runReader (Just txSendHandle)
     & reinterpret ChainIndex.handleChainIndexClient
