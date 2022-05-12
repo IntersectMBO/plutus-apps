@@ -211,7 +211,7 @@ import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndp
 import Plutus.Trace.Emulator.Types (unContractInstanceTag)
 import Plutus.V1.Ledger.Scripts
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Coverage hiding (_coverageIndex)
+import PlutusTx.Coverage
 import PlutusTx.ErrorCodes
 import Streaming qualified as S
 import Test.QuickCheck.DynamicLogic.Monad qualified as DL
@@ -1375,7 +1375,7 @@ instance GetModelState (DL state) where
 data CoverageOptions = CoverageOptions { _checkCoverage       :: Bool
                                        , _endpointCoverageReq :: ContractInstanceTag -> String -> Double
                                        , _coverageIndex       :: CoverageIndex
-                                       , _coverageIORef       :: Maybe (IORef CoverageData)
+                                       , _coverageIORef       :: Maybe (IORef CoverageReport)
                                        }
 
 makeLenses ''CoverageOptions
@@ -1405,9 +1405,8 @@ quickCheckWithCoverageAndResult qcargs copts prop = do
   case copts ^. coverageIORef of
     Nothing -> fail "Unreachable case in quickCheckWithCoverage"
     Just ref -> do
-      covdata <- readIORef ref
-      let report = CoverageReport (copts ^. coverageIndex) covdata
-      when (chatty qcargs) $ putStrLn . show $ pretty report
+      report <- readIORef ref
+      when (chatty qcargs) $ putStrLn . show $ pprCoverageReport (copts ^. coverageIndex) report
       return (report, res)
 
 finalChecks :: ContractModel state
@@ -1473,6 +1472,7 @@ addEndpointCoverage copts keys es pm
                          , e <- eps ]
     endpointCovers `deepseq`
       (QC.monitor . foldr (.) id $ endpointCovers)
+    QC.monitor QC.checkCoverage
     return x
   | otherwise = pm
 
@@ -1531,7 +1531,8 @@ propRunActions = propRunActionsWithOptions defaultCheckOptionsContractModel defa
 -- options :: `Map` `Wallet` `Value` -> `Slot` -> `Control.Monad.Freer.Extras.Log.LogLevel` -> `CheckOptions`
 -- options dist slot logLevel =
 --     `defaultCheckOptions` `&` `emulatorConfig` . `Plutus.Trace.Emulator.initialChainState` `.~` `Left` dist
---                           `&` `minLogLevel`                        `.~` logLevel
+--                         `&` `maxSlot`                            `.~` slot
+--                         `&` `minLogLevel`                        `.~` logLevel
 -- @
 --
 propRunActionsWithOptions ::

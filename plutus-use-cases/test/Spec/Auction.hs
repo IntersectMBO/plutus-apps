@@ -331,7 +331,7 @@ check_propAuctionWithCoverage = do
     withMaxSuccess 1000 $
       propRunActionsWithOptions @AuctionModel
         (set minLogLevel Critical options) covopts (const (pure True))
-  writeCoverageReport "Auction" cr
+  writeCoverageReport "Auction" covIdx cr
 
 tests :: TestTree
 tests =

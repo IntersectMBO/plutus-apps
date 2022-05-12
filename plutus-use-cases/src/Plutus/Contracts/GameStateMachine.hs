@@ -26,8 +26,6 @@ module Plutus.Contracts.GameStateMachine(
     contract
     , typedValidator
     , GameParam(..)
-    , GameState(..)
-    , GameInput(..)
     , GuessToken
     , mkValidator
     , mintingPolicy
@@ -36,6 +34,7 @@ module Plutus.Contracts.GameStateMachine(
     , GameStateMachineSchema
     , GameError
     , token
+    , covIdx
     ) where
 
 import Control.Lens (makeClassyPrisms)
@@ -55,6 +54,8 @@ import Plutus.Contract.Secrets (SecretArgument, escape_sha2_256, extractSecret)
 import Plutus.Contract.StateMachine (State (State, stateData, stateValue), Void)
 import Plutus.Contract.StateMachine qualified as SM
 import PlutusTx qualified
+import PlutusTx.Code (getCovIdx)
+import PlutusTx.Coverage (CoverageIndex)
 import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), sha2_256, toBuiltin,
                          traceIfFalse, ($), (&&), (-), (.), (<$>), (<>), (==), (>>))
 import Schema (ToSchema)
@@ -227,6 +228,11 @@ typedValidator = Scripts.mkTypedValidatorParam @GameStateMachine
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.wrapValidator
+
+-- TODO: Ideas welcome for how to make this interface suck less.
+-- Doing it this way actually generates coverage locations that we don't care about(!)
+covIdx :: GameParam -> CoverageIndex
+covIdx gp = getCovIdx ($$(PlutusTx.compile [|| mkValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode gp)
 
 mintingPolicy :: GameParam -> Scripts.MintingPolicy
 mintingPolicy gp = Scripts.forwardingMintingPolicy $ typedValidator gp
