@@ -18,10 +18,9 @@ import Language.PureScript.Bridge (BridgePart, Language (Haskell), PSType, SumTy
 import Language.PureScript.Bridge.Builder (BridgeData)
 import Language.PureScript.Bridge.PSTypes (psInt, psNumber, psString)
 import Language.PureScript.Bridge.TypeParameters (A)
-import Ledger (Address, BlockId, CardanoTx, ChainIndexTxOut, DatumHash, MintingPolicy, OnChainTx, PaymentPubKey,
-               PaymentPubKeyHash, PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash,
-               StakeValidator, Tx, TxId, TxIn, TxInType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase,
-               Validator)
+import Ledger (Address, BlockId, CardanoTx, ChainIndexTxOut, OnChainTx, PaymentPubKey, PaymentPubKeyHash, PubKey,
+               PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash, Tx, TxId, TxIn, TxInType,
+               TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase)
 import Ledger.Ada (Ada)
 import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
@@ -50,6 +49,7 @@ import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg, Co
                                     UserThreadMsg)
 import Plutus.Trace.Scheduler (Priority, SchedulerLog, StopReason, ThreadEvent, ThreadId)
 import Plutus.Trace.Tag (Tag)
+import Plutus.V1.Ledger.Api (DatumHash, MintingPolicy, StakeValidator, Validator)
 import Schema (FormArgumentF, FormSchema)
 import Wallet.API (WalletAPIError)
 import Wallet.Emulator.Types qualified as EM

@@ -25,6 +25,7 @@ import Control.DeepSeq
 import Control.Lens
 
 import Ledger qualified
+import Plutus.V1.Ledger.Scripts qualified as Ledger
 
 import PlutusTx.Coverage
 

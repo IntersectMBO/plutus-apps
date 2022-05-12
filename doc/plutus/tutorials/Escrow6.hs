@@ -32,12 +32,13 @@ import Data.Foldable (fold)
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (Datum, POSIXTime (POSIXTime), Slot (Slot, getSlot), minAdaTxOut)
+import Ledger (POSIXTime (POSIXTime), Slot (Slot, getSlot), minAdaTxOut)
 import Ledger.Ada qualified as Ada
 import Ledger.Value qualified as Value
 import Plutus.Contract (Contract, selectList)
 import Plutus.Contract.Test (Wallet, mockWalletPaymentPubKeyHash, w1, w2, w3, w4, w5)
 import Plutus.Contract.Test.ContractModel qualified as CM
+import Plutus.V1.Ledger.Api (Datum)
 
 import Plutus.Trace.Emulator qualified as Trace
 import PlutusTx.Monoid (inv)
@@ -45,7 +46,8 @@ import PlutusTx.Monoid (inv)
 import Data.Default (Default (def))
 import Ledger.TimeSlot (SlotConfig (scSlotLength), scSlotZeroTime)
 import Plutus.Contract.Test.ContractModel (SomeContractInstanceKey (Key), coverageIndex, currentSlot,
-                                           defaultCoverageOptions)
+                                           defaultCheckOptionsContractModel, defaultCoverageOptions,
+                                           propRunActionsWithOptions, quickCheckWithCoverage)
 import Plutus.Contract.Test.ContractModel.CrashTolerance (CrashTolerance (available, restartArguments),
                                                           WithCrashTolerance)
 import Plutus.Contract.Test.Coverage (writeCoverageReport)

@@ -37,12 +37,12 @@ import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts (ScriptContext (..), TxInfo (..))
-import Ledger.Contexts qualified as Validation
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
+import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
+import Plutus.V1.Ledger.Contexts qualified as Validation
 
 import Plutus.Contract
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
@@ -252,7 +252,7 @@ typedValidator = Scripts.mkTypedValidatorParam @MultiSigSym
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 client :: Params -> SM.StateMachineClient MSState Input
 client params = SM.mkStateMachineClient $ SM.StateMachineInstance (machine params) (typedValidator params)

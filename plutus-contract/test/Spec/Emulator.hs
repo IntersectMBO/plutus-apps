@@ -26,18 +26,19 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, ScriptError (EvaluationError),
-               Tx (txFee, txMint, txOutputs), TxOut (txOutValue), ValidationError (ScriptFailure), Validator, Value,
-               mkValidatorScript, outputs, scriptTxIn, scriptTxOut, txOutRefs, unitDatum, unitRedeemer, unspentOutputs)
+import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, Tx (txFee, txMint, txOutputs),
+               TxOut (txOutValue), ValidationError (ScriptFailure), Value, outputs, scriptTxIn, scriptTxOut, txOutRefs,
+               unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain))
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
-import Ledger.Typed.Scripts (wrapValidator)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
+import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), Validator, mkValidatorScript, unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
@@ -243,7 +244,7 @@ invalidScript = property $ do
     checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn)) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
     where
         failValidator :: Validator
-        failValidator = mkValidatorScript $$(PlutusTx.compile [|| wrapValidator validator ||])
+        failValidator = mkValidatorScript $$(PlutusTx.compile [|| mkUntypedValidator validator ||])
         validator :: () -> () -> ScriptContext -> Bool
         validator _ _ _ = PlutusTx.traceError "I always fail everything"
 

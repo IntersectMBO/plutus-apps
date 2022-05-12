@@ -31,10 +31,8 @@ import Data.Maybe (catMaybes, fromMaybe)
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger (Address (addressCredential), ChainIndexTxOut (..), MintingPolicy (MintingPolicy),
-               MintingPolicyHash (MintingPolicyHash), StakeValidator (StakeValidator),
-               StakeValidatorHash (StakeValidatorHash), TxId, TxOut (txOutAddress), TxOutRef (..),
-               Validator (Validator), ValidatorHash (ValidatorHash), txOutDatumHash, txOutValue)
+import Ledger (Address (addressCredential), ChainIndexTxOut (..), TxId, TxOut (txOutAddress), TxOutRef (..),
+               txOutDatumHash, txOutValue)
 import Ledger.Scripts (ScriptHash (ScriptHash))
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
                               UtxosResponse (UtxosResponse))
@@ -50,7 +48,10 @@ import Plutus.ChainIndex.Types (ChainSyncBlock (..), Diagnostics (..), Point (Po
                                 TxProcessOption (..), TxUtxoBalance (..))
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex, tip, utxoState)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential))
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), MintingPolicy (MintingPolicy),
+                             MintingPolicyHash (MintingPolicyHash), StakeValidator (StakeValidator),
+                             StakeValidatorHash (StakeValidatorHash), Validator (Validator),
+                             ValidatorHash (ValidatorHash))
 
 data ChainIndexEmulatorState =
     ChainIndexEmulatorState

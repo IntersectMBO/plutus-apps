@@ -58,6 +58,8 @@ import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
 import Plutus.Contract.Request qualified as Contract
 import Plutus.Contract.Types (Contract)
+import Plutus.Script.Utils.V1.Scripts qualified as Plutus
+import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import Plutus.V1.Ledger.TxId (TxId (TxId))
 import PlutusTx qualified

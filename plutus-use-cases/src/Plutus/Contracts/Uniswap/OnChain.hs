@@ -22,6 +22,7 @@ import Ledger.Value (AssetClass (..), symbols)
 import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateInitialLiquidity, calculateRemoval,
                                       checkSwap, lpTicker)
 import Plutus.Contracts.Uniswap.Types
+import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash)
 import PlutusTx qualified
 import PlutusTx.Prelude
 

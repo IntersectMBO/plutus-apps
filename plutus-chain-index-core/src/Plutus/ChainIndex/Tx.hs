@@ -41,11 +41,12 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
-import Ledger (Address, Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
-               OnChainTx (..), Redeemer (..), RedeemerHash, Script, ScriptHash (..), SlotRange, SomeCardanoApiTx,
-               Tx (..), TxId, TxIn (txInType), TxInType (..), TxOut (txOutAddress), TxOutRef (..),
-               Validator (getValidator), ValidatorHash (ValidatorHash), datumHash, mintingPolicyHash, redeemerHash,
-               txId, validatorHash)
+import Ledger (Address, OnChainTx (..), SlotRange, SomeCardanoApiTx, Tx (..), TxId, TxIn (txInType), TxInType (..),
+               TxOut (txOutAddress), TxOutRef (..), txId)
+import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHash, validatorHash)
+import Plutus.V1.Ledger.Scripts (Datum, DatumHash, MintingPolicy (getMintingPolicy),
+                                 MintingPolicyHash (MintingPolicyHash), Redeemer (..), RedeemerHash, Script,
+                                 ScriptHash (..), Validator (getValidator), ValidatorHash (ValidatorHash))
 import Prettyprinter
 
 -- | List of outputs of a transaction. There are no outputs if the transaction

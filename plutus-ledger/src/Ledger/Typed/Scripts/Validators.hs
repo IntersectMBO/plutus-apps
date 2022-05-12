@@ -1,18 +1,16 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE TypeFamilies       #-}
 
 {-# OPTIONS_GHC -fno-specialise #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 
 module Ledger.Typed.Scripts.Validators
     ( ValidatorTypes(..)
     , ValidatorType
-    , WrappedValidatorType
-    , wrapValidator
     , TypedValidator
     , mkTypedValidator
     , mkTypedValidatorParam
@@ -23,26 +21,27 @@ module Ledger.Typed.Scripts.Validators
     , forwardingMintingPolicy
     , forwardingMintingPolicyHash
     , generalise
+
     ) where
 
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Kind
-import Data.Void
+import Data.Kind (Type)
+import Data.Void (Void)
 import GHC.Generics (Generic)
 
-import PlutusCore.Default (DefaultUni)
-import PlutusTx
-import PlutusTx.Prelude (check)
-
-import Ledger.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Address (Address (..), scriptHashAddress)
+import Plutus.V1.Ledger.Address (Address, scriptHashAddress)
 import Plutus.V1.Ledger.Contexts qualified as Validation
+import Plutus.V1.Ledger.Scripts qualified as Scripts
+import PlutusCore.Default (DefaultUni)
+import PlutusTx (BuiltinData, CompiledCode, Lift, applyCode, liftCode)
 
-import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Ledger.Typed.TypeUtils (Any)
+import Plutus.Script.Utils.V1.Scripts qualified as ScriptUtils
+import Plutus.Script.Utils.V1.Typed.Scripts (UntypedValidator)
+import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 
--- | A class that associates a type standing for a connection type with two types, the type of the redeemer
--- and the data script for that connection type.
+-- | A class that associates a type standing for a connection type with two types, the type of the
+-- redeemer and the data script for that connection type.
 class ValidatorTypes (a :: Type) where
     -- | The type of the redeemers of this connection type.
     type RedeemerType a :: Type
@@ -63,31 +62,6 @@ instance ValidatorTypes Void where
 instance ValidatorTypes Any where
     type RedeemerType Any = BuiltinData
     type DatumType Any = BuiltinData
-
-{- Note [Scripts returning Bool]
-It used to be that the signal for validation failure was a script being `error`. This is nice for the validator, since
-you can determine whether the script evaluation is error-or-not without having to look at what the result actually
-*is* if there is one.
-
-However, from the script author's point of view, it would be nicer to return a Bool, since otherwise you end up doing a
-lot of `if realCondition then () else error ()` which is rubbish.
-
-So we changed the result type to be Bool. But now we have to answer the question of how the validator knows what the
-result value is. All *sorts* of terms can be True or False in disguise. The easiest way to tell is by reducing it
-to the previous problem: apply a function which does a pattern match and returns error in the case of False and ()
-otherwise. Then, as before, we just check for error in the overall evaluation.
--}
-
-type WrappedValidatorType = BuiltinData -> BuiltinData -> BuiltinData -> ()
-
-{-# INLINABLE wrapValidator #-}
-wrapValidator
-    :: forall d r
-    . (UnsafeFromData d, UnsafeFromData r)
-    => (d -> r -> Validation.ScriptContext -> Bool)
-    -> WrappedValidatorType
--- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
-wrapValidator f d r p = check $ f (unsafeFromBuiltinData d) (unsafeFromBuiltinData r) (unsafeFromBuiltinData p)
 
 -- | A typed validator script with its 'ValidatorScript' and 'Address'.
 data TypedValidator (a :: Type) =
@@ -116,18 +90,18 @@ generalise TypedValidator{tvValidator, tvValidatorHash, tvForwardingMPS, tvForwa
 mkTypedValidator ::
     CompiledCode (ValidatorType a)
     -- ^ Validator script (compiled)
-    -> CompiledCode (ValidatorType a -> WrappedValidatorType)
+    -> CompiledCode (ValidatorType a -> UntypedValidator)
     -- ^ A wrapper for the compiled validator
     -> TypedValidator a
 mkTypedValidator vc wrapper =
     let val = Scripts.mkValidatorScript $ wrapper `applyCode` vc
-        hsh = Scripts.validatorHash val
+        hsh = ScriptUtils.validatorHash val
         mps = MPS.mkForwardingMintingPolicy hsh
     in TypedValidator
         { tvValidator         = val
         , tvValidatorHash     = hsh
         , tvForwardingMPS     = mps
-        , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
+        , tvForwardingMPSHash = ScriptUtils.mintingPolicyHash mps
         }
 
 -- | Make a 'TypedValidator' from the 'CompiledCode' of a parameterized validator script and its wrapper.
@@ -135,7 +109,7 @@ mkTypedValidatorParam
     :: forall a param. Lift DefaultUni param
     => CompiledCode (param -> ValidatorType a)
     -- ^ Validator script (compiled)
-    -> CompiledCode (ValidatorType a -> WrappedValidatorType)
+    -> CompiledCode (ValidatorType a -> UntypedValidator)
     -- ^ A wrapper for the compiled validator
     -> param
     -- ^ The extra paramater for the validator script
@@ -158,14 +132,14 @@ validatorScript = tvValidator
 -- | Make a 'TypedValidator' (with no type constraints) from an untyped 'Validator' script.
 unsafeMkTypedValidator :: Scripts.Validator -> TypedValidator Any
 unsafeMkTypedValidator vl =
-    let vh = Scripts.validatorHash vl
+    let vh = ScriptUtils.validatorHash vl
         mps = MPS.mkForwardingMintingPolicy vh
     in
     TypedValidator
         { tvValidator         = vl
         , tvValidatorHash     = vh
         , tvForwardingMPS     = mps
-        , tvForwardingMPSHash = Scripts.mintingPolicyHash mps
+        , tvForwardingMPSHash = ScriptUtils.mintingPolicyHash mps
         }
 
 -- | The minting policy that forwards all checks to the instance's
