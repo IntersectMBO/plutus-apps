@@ -4,7 +4,7 @@ Fee:        -
 Mint:       Ada:      Lovelace:  1000000000
 Signatures  -
 Inputs:
-
+  
 
 
 Outputs:
@@ -837,15 +837,6 @@ Inputs:
     Tx:     ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
     Output #20
 
-
-  ---- Input 1 ----
-  Destination:  Script: 102c7955ae5b2204e8c6f72824b4175a738277ddba4467ab4d2e467a
-  Value:
-    Ada:      Lovelace:  8000000
-  Source:
-    Tx:     7bc71cf23fb7a99c2daf65ce1d46883eb611c34bad9ade4e30628a388b42eed8
-    Output #2
-    Script: 59d6880100003323232332232323232323232323...
 
   ---- Input 2 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)

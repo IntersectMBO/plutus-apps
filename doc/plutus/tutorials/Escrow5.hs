@@ -235,5 +235,5 @@ check_propEscrowWithCoverage = do
     withMaxSuccess 1000 $
       CM.propRunActionsWithOptions @EscrowModel CM.defaultCheckOptionsContractModel covopts
         (const (pure True))
-  writeCoverageReport "Escrow" cr
+  writeCoverageReport "Escrow" covIdx cr
 {- END check_propEscrowWithCoverage -}

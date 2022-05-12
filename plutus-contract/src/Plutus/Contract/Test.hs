@@ -143,7 +143,7 @@ import Wallet.Emulator.Folds (EmulatorFoldErr (..), Outcome (..), describeError,
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream (filterLogLevel, foldEmulatorStreamM, initialChainState, initialDist)
 
-type TestEffects = '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void), Writer CoverageData]
+type TestEffects = '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void), Writer CoverageReport]
 newtype TracePredicateF a = TracePredicate (forall effs. Members TestEffects effs => FoldM (Eff effs) EmulatorEvent a)
   deriving (Functor)
 instance Applicative TracePredicateF where
@@ -231,7 +231,7 @@ checkPredicateInner :: forall m.
     -> EmulatorTrace ()
     -> (String -> m ()) -- ^ Print out debug information in case of test failures
     -> (Bool -> m ()) -- ^ assert
-    -> (CoverageData -> m ())
+    -> (CoverageReport -> m ())
     -> m ()
 checkPredicateInner opts@CheckOptions{_emulatorConfig} predicate action annot assert cover =
     checkPredicateInnerStream opts predicate (S.void $ runEmulatorStream _emulatorConfig action) annot assert cover
@@ -243,17 +243,17 @@ checkPredicateInnerStream :: forall m.
     -> (forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ())
     -> (String -> m ()) -- ^ Print out debug information in case of test failures
     -> (Bool -> m ()) -- ^ assert
-    -> (CoverageData -> m ())
+    -> (CoverageReport -> m ())
     -> m ()
 checkPredicateInnerStream CheckOptions{_minLogLevel, _emulatorConfig} (TracePredicate predicate) theStream annot assert cover = do
     let dist = _emulatorConfig ^. initialChainState . to initialDist
         consumedStream :: Eff (TestEffects :++: '[m]) Bool
         consumedStream = S.fst' <$> foldEmulatorStreamM (liftA2 (&&) predicate generateCoverage) theStream
 
-        generateCoverage = flip postMapM (L.generalize Folds.emulatorLog) $ (True <$) . tell @CoverageData . getCoverageData
+        generateCoverage = flip postMapM (L.generalize Folds.emulatorLog) $ (True <$) . tell @CoverageReport . getCoverageReport
 
     result <- runM
-                $ interpretM @(Writer CoverageData) @m (\case { Tell r -> cover r })
+                $ interpretM @(Writer CoverageReport) @m (\case { Tell r -> cover r })
                 $ interpretM @(Writer (Doc Void)) @m (\case { Tell d -> annot $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
                 $ runError
                 $ runReader dist

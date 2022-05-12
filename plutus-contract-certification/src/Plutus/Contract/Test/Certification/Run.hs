@@ -24,6 +24,7 @@ module Plutus.Contract.Test.Certification.Run
   , certRes_standardCrashToleranceResult
   , certRes_unitTestResults
   , certRes_coverageReport
+  , certRes_coverageIndexReport
   , certRes_whitelistOk
   , certRes_whitelistResult
   , certRes_DLTests
@@ -92,6 +93,7 @@ data CertificationReport m = CertificationReport {
     _certRes_standardCrashToleranceResult :: Maybe QC.Result,
     _certRes_unitTestResults              :: [Tasty.Result],
     _certRes_coverageReport               :: CoverageReport,
+    _certRes_coverageIndexReport          :: CoverageIndex,
     _certRes_whitelistOk                  :: Maybe Bool,
     _certRes_whitelistResult              :: Maybe QC.Result,
     _certRes_DLTests                      :: [(String, QC.Result)]
@@ -118,7 +120,7 @@ liftIORep io = do
 runCertMonad :: CertMonad (CertificationReport m) -> IO (CertificationReport m)
 runCertMonad m = do
   (rep, cov) <- runWriterT m
-  return $ rep & certRes_coverageReport %~ (<> cov)
+  return $ rep { _certRes_coverageReport = cov }
 
 runStandardProperty :: forall m. ContractModel m => CertificationOptions -> CoverageIndex -> CertMonad QC.Result
 runStandardProperty opts covIdx = liftIORep $ quickCheckWithCoverageAndResult
@@ -151,7 +153,7 @@ runUnitTests t = liftIORep $ do
       rs <- atomically $ mapM waitForDone (IntMap.elems status)
       return $ \ _ -> return rs
     cov <- readCoverageRef ref
-    return (CoverageReport mempty cov, res)
+    return (cov, res)
   where
     waitForDone tv = do
       s <- readTVar tv
@@ -219,7 +221,8 @@ certifyWithOptions opts Certification{..} = runCertMonad $ do
                                  _certRes_noLockedFundsResult          = noLock,
                                  _certRes_noLockedFundsLightResult     = noLockLight,
                                  _certRes_unitTestResults              = unitTests,
-                                 _certRes_coverageReport               = CoverageReport certCoverageIndex mempty,
+                                 _certRes_coverageReport               = mempty,
+                                 _certRes_coverageIndexReport          = certCoverageIndex,
                                  _certRes_whitelistOk                  = whitelistOk <$> certWhitelist,
                                  _certRes_whitelistResult              = wlRes,
                                  _certRes_DLTests                      = dlRes }
