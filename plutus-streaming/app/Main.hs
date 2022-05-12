@@ -11,7 +11,7 @@ import Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
 import Data.Aeson.Text qualified as Aeson
 import Data.Text.Lazy qualified as TL
 import Index.Sqlite (SqliteIndex, insert)
-import Index.TxIdStatus (openIx)
+import Index.TxIdStatus (TxStatusIndex, openIx)
 import Ledger.TxId (TxId)
 import Options.Applicative (Alternative ((<|>)), Parser, auto, execParser, flag', help, helper, info, long, metavar,
                             option, str, strOption, (<**>))
@@ -72,12 +72,10 @@ chainPointParser =
 -- Main
 --
 
-type TxIndex = SqliteIndex SimpleChainSyncEvent () TxId TxConfirmedState
-
 -- | Process a chain sync event that we receive from the alonzo node client
 processChainSyncEvent
   :: SimpleChainSyncEvent
-  -> MVar TxIndex
+  -> MVar TxStatusIndex
   -> IO ()
 processChainSyncEvent event mix = do
   currentIx <- takeMVar mix

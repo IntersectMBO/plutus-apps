@@ -24,7 +24,7 @@ import Plutus.ChainIndex.Types (BlockNumber (BlockNumber),
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Streaming (ChainSyncEvent (RollForward), SimpleChainSyncEvent)
 
-type TxStatusIndex = SqliteIndex SimpleChainSyncEvent () TxId TxConfirmedState
+type TxStatusIndex = SqliteIndex SimpleChainSyncEvent () TxId (Maybe TxConfirmedState)
 
 openIx :: FilePath -> IO TxStatusIndex
 openIx path =
@@ -35,20 +35,20 @@ onInsert :: SimpleChainSyncEvent -> TxStatusIndex -> IO [()]
 onInsert _ _ = pure []
 
 -- No one will query this for now.
-query :: TxStatusIndex -> TxId -> Seq SimpleChainSyncEvent -> IO TxConfirmedState
-query = undefined
+query :: TxStatusIndex -> TxId -> Seq SimpleChainSyncEvent -> IO (Maybe TxConfirmedState)
+query _ _ _ = pure Nothing
 
 store :: TxStatusIndex -> IO ()
 store SplitIndex{siHandle, siBuffered} = do
   let bufferedTxs = foldTxs $ getTxs . getBlocks <$> siBuffered
   execute_ siHandle "CREATE TABLE IF NOT EXISTS tx_state (txid TEXT PRIMARY KEY, confirmations INTEGER)"
-  execute_ siHandle "BEGIN"
-  forM_ (Map.assocs bufferedTxs) $
-    \(txid, v) -> execute siHandle "INSERT INTO tx_state (txid, confirmations) VALUES (?, ?)" (show txid, getSum $ timesConfirmed v)
+  -- execute_ siHandle "BEGIN"
+  -- forM_ (Map.assocs bufferedTxs) $
+  --   \(txid, v) -> execute siHandle "INSERT INTO tx_state (txid, confirmations) VALUES (?, ?)" (show txid, getSum $ timesConfirmed v)
   -- This will really work your SSD to death, and it is not very useful, since
   -- all txs that are persisted are settled.
   -- execute siHandle "UPDATE tx_state SET confirmations = confirmations + ?" (Only $ Map.size bufferedTxs)
-  execute_ siHandle "COMMIT"
+  -- execute_ siHandle "COMMIT"
 
 getBlocks :: SimpleChainSyncEvent -> BlockInMode CardanoMode
 getBlocks (RollForward block _tip) = block
