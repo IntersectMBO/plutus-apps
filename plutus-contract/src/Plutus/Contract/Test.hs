@@ -119,7 +119,6 @@ import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, s
 import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Prelude qualified as P
 
-import Ledger (Validator)
 import Ledger qualified
 import Ledger.Address (Address)
 import Ledger.Generators (GeneratorModel, Mockchain (..))
@@ -127,6 +126,8 @@ import Ledger.Generators qualified as Gen
 import Ledger.Index (ScriptValidationEvent, ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
+import Plutus.V1.Ledger.Scripts (Validator)
+import Plutus.V1.Ledger.Scripts qualified as Ledger
 
 import Data.IORef
 import Plutus.Contract.Test.Coverage

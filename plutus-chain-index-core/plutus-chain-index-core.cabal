@@ -58,6 +58,7 @@ library
     build-depends:
         plutus-ledger -any,
         plutus-ledger-api -any,
+        plutus-script-utils -any,
         plutus-tx -any,
         freer-extras -any,
     build-depends:

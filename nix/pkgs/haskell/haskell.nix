@@ -59,6 +59,7 @@ let
             plutus-pab.package.buildable = false;
             plutus-pab-executables.package.buildable = false;
             plutus-playground-server.package.buildable = false; # Would also require libpq
+            plutus-script-utils.package.buildable = false;
             plutus-tx-plugin.package.buildable = false;
             plutus-use-cases.package.buildable = false;
             plutus-example.package.buildable = false;
@@ -110,6 +111,9 @@ let
             plutus-ledger.doHaddock = deferPluginErrors;
             plutus-ledger.flags.defer-plugin-errors = deferPluginErrors;
 
+            plutus-script-utils.doHaddock = deferPluginErrors;
+            plutus-script-utils.flags.defer-plugin-errors = deferPluginErrors;
+
             plutus-example.doHaddock = deferPluginErrors;
             plutus-example.flags.defer-plugin-errors = deferPluginErrors;
             plutus-example.preCheck = "
@@ -140,14 +144,15 @@ let
             plutus-chain-index.ghcOptions = [ "-Werror" ];
             plutus-chain-index-core.ghcOptions = [ "-Werror" ];
             plutus-contract.ghcOptions = [ "-Werror" ];
+            plutus-doc.ghcOptions = [ "-Werror" ];
+            plutus-example.ghcOptions = [ "-Werror" ];
             plutus-ledger.ghcOptions = [ "-Werror" ];
             plutus-ledger-constraints.ghcOptions = [ "-Werror" ];
             plutus-playground-server.ghcOptions = [ "-Werror" ];
             plutus-pab.ghcOptions = [ "-Werror" ];
             plutus-pab-executables.ghcOptions = [ "-Werror" ];
-            plutus-doc.ghcOptions = [ "-Werror" ];
+            plutus-script-utils.ghcOptions = [ "-Werror" ];
             plutus-use-cases.ghcOptions = [ "-Werror" ];
-            plutus-example.ghcOptions = [ "-Werror" ];
 
             # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
             # This will go away when we upgrade nixpkgs and things use ieee754 anyway.

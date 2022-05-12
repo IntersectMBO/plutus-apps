@@ -23,7 +23,7 @@ import Data.List (sortBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (Datum, minAdaTxOut)
+import Ledger (minAdaTxOut)
 import Ledger.Ada qualified as Ada
 import Ledger.Value
 import Plutus.Contract hiding (currentSlot)
@@ -31,6 +31,7 @@ import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.Coverage
+import Plutus.V1.Ledger.Api (Datum)
 
 import Plutus.Contracts.Tutorial.Escrow hiding (Action (..))
 import Plutus.Trace.Emulator qualified as Trace

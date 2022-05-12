@@ -10,14 +10,14 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
-module Ledger.Typed.TypeUtils(
-    Any
+module Ledger.Typed.TypeUtils
+    ( Any
     , HListF(..)
     , hfOut
     ) where
 
 import Data.Aeson (ToJSON)
-import Data.Kind
+import Data.Kind (Type)
 import GHC.Generics (Generic)
 
 data Any
@@ -33,3 +33,5 @@ data HListF (f :: Type -> Type) (l :: [Type]) where
 hfOut :: forall o f (ts :: [Type]) . (forall a . f a -> o) -> HListF f ts -> [o]
 hfOut _ HNilF         = []
 hfOut f (HConsF e es) = f e : hfOut f es
+
+

@@ -7,10 +7,10 @@ license-files:
   NOTICE
 maintainer: kris.jenkins@tweag.io
 author: Kris Jenkins
-homepage: https://github.com/iohk/plutus#readme
-bug-reports: https://github.com/iohk/plutus/issues
+homepage: https://github.com/input-output-hk/plutus-apps#readme
+bug-reports: https://github.com/input-output-hk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+    Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 build-type: Simple
 data-files:
     usecases/Crowdfunding.hs
@@ -75,7 +75,9 @@ library
         playground-common -any,
         plutus-contract -any,
         plutus-ledger -any,
+        plutus-ledger-api -any,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         plutus-tx -any,
         regex-compat -any,
         plutus-contract -any,
@@ -131,7 +133,9 @@ library plutus-playground-usecases
         plutus-contract -any,
         plutus-tx -any,
         plutus-ledger -any,
+        plutus-ledger-api -any,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         row-types -any,
         text -any,
         transformers -any
@@ -198,7 +202,9 @@ executable plutus-playground-server
         transformers -any,
         plutus-contract -any,
         plutus-ledger -any,
+        plutus-ledger-api -any,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         row-types -any,
         warp -any,
         web-ghc -any

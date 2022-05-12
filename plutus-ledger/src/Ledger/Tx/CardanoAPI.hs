@@ -94,12 +94,13 @@ import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Ledger.Address qualified as P
-import Ledger.Scripts qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
+import Plutus.Script.Utils.V1.Scripts qualified as P
 import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api qualified as Api
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Credential qualified as Credential
+import Plutus.V1.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Slot qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value

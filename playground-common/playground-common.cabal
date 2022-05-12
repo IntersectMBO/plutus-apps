@@ -65,6 +65,7 @@ library
         plutus-chain-index-core -any,
         plutus-contract -any,
         plutus-ledger -any,
+        plutus-ledger-api -any,
         plutus-ledger-constraints -any,
         row-types -any,
         prettyprinter -any,

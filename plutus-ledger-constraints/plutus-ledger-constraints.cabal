@@ -52,6 +52,7 @@ library
         prettyprinter -any,
         plutus-ledger -any,
         plutus-ledger-api -any,
+        plutus-script-utils -any,
         plutus-tx -any,
         transformers -any,
 
@@ -70,7 +71,9 @@ test-suite plutus-ledger-constraints-test
         lens -any,
         mtl -any,
         plutus-ledger -any,
+        plutus-ledger-api -any,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         plutus-tx -any,
         plutus-tx-plugin -any,
         tasty -any,

@@ -76,6 +76,7 @@ executable doc-doctests
       plutus-ledger -any,
       plutus-ledger-api -any,
       plutus-ledger-constraints -any,
+      plutus-script-utils -any,
       plutus-contract -any,
       playground-common -any,
       plutus-use-cases -any,

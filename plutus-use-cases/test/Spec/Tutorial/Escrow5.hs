@@ -25,7 +25,7 @@ import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Ledger (Datum, Slot (..), minAdaTxOut)
+import Ledger (Slot (..), minAdaTxOut)
 import Ledger.Ada qualified as Ada
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Value (Value, geq)
@@ -33,6 +33,7 @@ import Plutus.Contract (Contract, selectList)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.Coverage
+import Plutus.V1.Ledger.Api (Datum)
 import Plutus.V1.Ledger.Time
 
 import Plutus.Contracts.Escrow hiding (Action (..))

@@ -33,6 +33,9 @@ import Ledger.Tx (Tx (txOutputs), TxOut (TxOut, txOutAddress))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (CurrencySymbol, Value (Value))
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.V1.Generators qualified as Gen
+import Plutus.V1.Ledger.Api qualified as Ledger
+import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Builtins.Internal (BuiltinByteString (..))
@@ -124,7 +127,7 @@ mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp :: Property
 mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp = property $ do
     pkh <- forAll $ Ledger.paymentPubKeyHash <$> Gen.element Gen.knownPaymentPublicKeys
     let svh = Ledger.StakeValidatorHash "00000000000000000000000000000000000000000000000000000000"
-        txE = mkTx @Void mempty (Constraints.mustPayToOtherScriptAddress Gen.alwaysSucceedValidatorHash svh Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
+        txE = mkTx @Void mempty (Constraints.mustPayToOtherScriptAddress alwaysSucceedValidatorHash svh Ledger.unitDatum (Ada.toValue Ledger.minAdaTxOut))
     case txE of
       Left _ ->
           Hedgehog.failure
@@ -165,18 +168,31 @@ testScriptInputs lookups txc = property $ do
 
 
 txOut0 :: Ledger.ChainIndexTxOut
-txOut0 = Ledger.ScriptChainIndexTxOut (Ledger.Address (ScriptCredential Gen.alwaysSucceedValidatorHash) Nothing) (Left Gen.alwaysSucceedValidatorHash) (Right Ledger.unitDatum) mempty
+txOut0 = Ledger.ScriptChainIndexTxOut (Ledger.Address (ScriptCredential alwaysSucceedValidatorHash) Nothing) (Left alwaysSucceedValidatorHash) (Right Ledger.unitDatum) mempty
 
 txOutRef0 :: Ledger.TxOutRef
 txOutRef0 = Ledger.TxOutRef (Ledger.TxId "") 0
 
-validator1 :: Scripts.TypedValidator Gen.UnitTest
-validator1 = Scripts.mkTypedValidator
-    ($$(PlutusTx.compile [|| \vh _ _ -> checkScriptContext @() @() (constraints1 vh) ||])
-        `PlutusTx.applyCode` PlutusTx.liftCode Gen.alwaysSucceedValidatorHash)
+data UnitTest
+instance Scripts.ValidatorTypes UnitTest
+
+alwaysSucceedValidator :: Scripts.TypedValidator UnitTest
+alwaysSucceedValidator = Scripts.mkTypedValidator
+    $$(PlutusTx.compile [|| \_ _ _ -> True ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
+
+alwaysSucceedValidatorHash :: Ledger.ValidatorHash
+alwaysSucceedValidatorHash = Scripts.validatorHash alwaysSucceedValidator
+
+validator1 :: Scripts.TypedValidator UnitTest
+validator1 = Scripts.mkTypedValidator
+    ($$(PlutusTx.compile [|| \vh _ _ -> checkScriptContext @() @() (constraints1 vh) ||])
+        `PlutusTx.applyCode` PlutusTx.liftCode alwaysSucceedValidatorHash)
+    $$(PlutusTx.compile [|| wrap ||])
+    where
+        wrap = Scripts.mkUntypedValidator
 
 validatorHash1 :: Ledger.ValidatorHash
 validatorHash1 = Scripts.validatorHash validator1
@@ -200,11 +216,11 @@ constraints1 vh =
         Ledger.unitRedeemer
     <> Constraints.mustSpendScriptOutput txOutRef1 Ledger.unitRedeemer
 
-lookups1 :: ScriptLookups Gen.UnitTest
+lookups1 :: ScriptLookups UnitTest
 lookups1
     = Constraints.unspentOutputs utxo1
-    <> Constraints.otherScript (Scripts.validatorScript Gen.alwaysSucceedValidator)
+    <> Constraints.otherScript (Scripts.validatorScript alwaysSucceedValidator)
     <> Constraints.otherScript (Scripts.validatorScript validator1)
 
 testMustSpendScriptOutputWithMatchingDatumAndValue :: Property
-testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 Gen.alwaysSucceedValidatorHash)
+testMustSpendScriptOutputWithMatchingDatumAndValue = testScriptInputs lookups1 (constraints1 alwaysSucceedValidatorHash)

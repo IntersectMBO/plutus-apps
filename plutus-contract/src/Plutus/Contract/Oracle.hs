@@ -45,7 +45,7 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (Passphrase, PrivateKey, PubKey (..), Signature (..))
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts (Datum (Datum), DatumHash (DatumHash))
-import Ledger.Scripts qualified as Scripts
+import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Time (POSIXTime)

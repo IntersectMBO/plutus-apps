@@ -45,7 +45,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
-import Ledger (Address, Datum (Datum), POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Validator, Value)
+import Ledger (Address, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
@@ -54,6 +54,7 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract (ToSchema)
 import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, collectFromScript, endpoint, fundsAtAddressGeq,
                         logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
+import Plutus.V1.Ledger.Scripts (Datum (Datum), Validator)
 import PlutusTx qualified
 import PlutusTx.Code (getCovIdx)
 import PlutusTx.Coverage (CoverageIndex)
@@ -102,7 +103,7 @@ gameInstance :: GameParam -> Scripts.TypedValidator Game
 gameInstance = Scripts.mkTypedValidatorParam @Game
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||]) where
-        wrap = Scripts.wrapValidator @HashedString @ClearString
+        wrap = Scripts.mkUntypedValidator @HashedString @ClearString
 
 -- | The validation function (Datum -> Redeemer -> ScriptContext -> Bool)
 --

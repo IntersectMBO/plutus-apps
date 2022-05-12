@@ -30,10 +30,10 @@ oneAtATimePolicy _ ctx =
     in Value.valueOf minted ownSymbol tname PlutusTx.== 1
 
 -- We can use 'compile' to turn a minting policy into a compiled Plutus Core program,
--- just as for validator scripts. We also provide a 'wrapMintingPolicy' function
+-- just as for validator scripts. We also provide a 'mkUntypedMintingPolicy' function
 -- to handle the boilerplate.
 oneAtATimeCompiled :: PlutusTx.CompiledCode (PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> ())
-oneAtATimeCompiled = $$(PlutusTx.compile [|| Typed.wrapMintingPolicy oneAtATimePolicy ||])
+oneAtATimeCompiled = $$(PlutusTx.compile [|| Typed.mkUntypedMintingPolicy oneAtATimePolicy ||])
 -- BLOCK2
 singleSignerPolicy :: Ledger.ScriptContext -> PlutusTx.Bool
 singleSignerPolicy ctx = Ledger.txSignedBy (Ledger.scriptContextTxInfo ctx) key

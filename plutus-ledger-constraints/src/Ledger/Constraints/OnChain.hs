@@ -37,6 +37,7 @@ import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxI
                                   TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue))
 import Plutus.V1.Ledger.Contexts qualified as V
 import Plutus.V1.Ledger.Interval (contains)
+import Plutus.V1.Ledger.Scripts qualified as Ledger
 import Plutus.V1.Ledger.Value (leq)
 
 {-# INLINABLE checkScriptContext #-}
