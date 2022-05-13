@@ -35,11 +35,11 @@ siProperties = testGroup "Split index"
   , testProperty "Rewind: Connection with `ixDepth`" $
       withMaxSuccess 10000 $ Ix.prop_rewindDepth @Int @Int @Int S.conversion
   , testProperty "Relationship between Insert/Rewind" $
-      withMaxSuccess 10000 $ Ix.prop_insertRewindInverse @Int @Int @Int S.conversion
+      withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int @Int S.conversion
   , testProperty "Insert is folding the structure" $
-      withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int @Int S.conversion
+      withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int @Int S.conversion
   , testProperty "Notifications are accumulated as the fold runs" $
-      withMaxSuccess 10000 $ Ix.prop_observeNotifications @Int @Int @Int S.conversion
+      withMaxSuccess 1000 $ Ix.prop_observeNotifications @Int @Int @Int S.conversion
   ,  testProperty "Notifications are not affected by rewind" $
       withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int S.conversion
   ]
@@ -53,11 +53,11 @@ sqProperties = testGroup "Sqlite index"
   , testProperty "Rewind: Connection with `ixDepth`" $
       withMaxSuccess 10000 $ Ix.prop_rewindDepth @Int @Int @Int Sqlite.conversion
   , testProperty "Relationship between Insert/Rewind" $
-      withMaxSuccess 10000 $ Ix.prop_insertRewindInverse @Int @Int @Int Sqlite.conversion
+      withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int @Int Sqlite.conversion
   , testProperty "Insert is folding the structure" $
-      withMaxSuccess 10000 $ Ix.prop_observeInsert @Int @Int @Int Sqlite.conversion
+      withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int @Int Sqlite.conversion
   , testProperty "Notifications are accumulated as the fold runs" $
-      withMaxSuccess 10000 $ Ix.prop_observeNotifications @Int @Int @Int Sqlite.conversion
+      withMaxSuccess 1000 $ Ix.prop_observeNotifications @Int @Int @Int Sqlite.conversion
   ,  testProperty "Notifications are not affected by rewind" $
       withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int Sqlite.conversion
   ]

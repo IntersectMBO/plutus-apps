@@ -41,6 +41,7 @@ dependencies:
 - sqlite-simple
 - data-default
 - containers
+- vector
 
 library:
   source-dirs: src

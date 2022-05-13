@@ -31,6 +31,7 @@ library
       Index
       Index.Split
       Index.Sqlite
+      Index.VSplit
   other-modules:
       Paths_hysterical_screams
   hs-source-dirs:
