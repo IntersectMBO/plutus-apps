@@ -10,7 +10,6 @@ module Cardano.Wallet.RemoteClientSpec
     ( tests
     ) where
 
-import Cardano.Api.ProtocolParameters (ProtocolParameters)
 import Cardano.Wallet.RemoteClient (handleWalletClient)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer (Eff, interpret, runM, type (~>))

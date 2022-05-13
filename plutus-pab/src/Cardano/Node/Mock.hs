@@ -91,7 +91,7 @@ runChainEffects trace params clientHandler stateVar eff = do
             runChain = interpret (mapLog ProcessingChainEvent)
                      . reinterpret (handleChain params)
                      . interpret (mapLog ProcessingChainEvent)
-                     . reinterpret (handleControlChain $ pSlotConfig params)
+                     . reinterpret (handleControlChain params)
 
             mergeState = interpret (handleZoomedState chainState)
 

@@ -25,7 +25,6 @@ import Data.Maybe (listToMaybe)
 import GHC.Generics (Generic)
 import Ledger (Block, CardanoTx, Params, Slot (..))
 import Ledger.Index qualified as Index
-import Ledger.TimeSlot (SlotConfig)
 import Wallet.Emulator.Chain qualified as EC
 
 type TxPool = [CardanoTx]
@@ -83,15 +82,15 @@ handleControlChain ::
      , Member (LogMsg EC.ChainEvent) effs
      , LastMember m effs
      , MonadIO m )
-  => SlotConfig -> EC.ChainControlEffect ~> Eff effs
-handleControlChain slotCfg = \case
+  => Params -> EC.ChainControlEffect ~> Eff effs
+handleControlChain params = \case
     EC.ProcessBlock -> do
         st <- get
         let pool  = st ^. txPool
             slot  = st ^. currentSlot
             idx   = st ^. index
             EC.ValidatedBlock block events rest =
-                EC.validateBlock slotCfg slot idx pool
+                EC.validateBlock params slot idx pool
 
         let st' = st & txPool .~ rest
                      & tip    ?~ block

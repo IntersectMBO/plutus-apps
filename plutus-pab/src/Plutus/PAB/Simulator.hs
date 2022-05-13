@@ -484,7 +484,7 @@ runChainEffects params action = do
                                 $ runWriter @[LogMessage Chain.ChainEvent]
                                 $ reinterpret @(LogMsg Chain.ChainEvent) @(Writer [LogMessage Chain.ChainEvent]) (handleLogWriter _singleton)
                                 $ runState oldState
-                                $ interpret (Chain.handleControlChain $ pSlotConfig params)
+                                $ interpret (Chain.handleControlChain params)
                                 $ interpret (Chain.handleChain params) action
                         STM.writeTVar _chainState newState
                         pure (a, logs)

@@ -64,12 +64,13 @@ main trace PABServerConfig { pscBaseUrl
 
     -- make initial distribution of 1 billion Ada to all configured wallets
     let dist = Map.fromList $ zip (fromWalletNumber <$> pscInitialTxWallets) (repeat (Ada.adaValueOf 1000_000_000))
+    let params = def { pSlotConfig = pscSlotConfig }
     initialState <- initialChainState dist
     let appState = AppState
             { _chainState = initialState
             , _eventHistory = mempty
             }
-    serverHandler <- liftIO $ Server.runServerNode trace pscSocketPath pscKeptBlocks (_chainState appState) pscSlotConfig
+    serverHandler <- liftIO $ Server.runServerNode trace pscSocketPath pscKeptBlocks (_chainState appState) params
     serverState   <- liftIO $ newMVar appState
     handleDelayEffect $ delayThread (2 :: Second)
     clientHandler <- liftIO $ Client.runTxSender pscSocketPath
@@ -83,7 +84,7 @@ main trace PABServerConfig { pscBaseUrl
     runSlotCoordinator ctx
 
     logInfo $ StartingPABServer $ baseUrlPort pscBaseUrl
-    liftIO $ Warp.runSettings warpSettings $ app trace (def { pSlotConfig = pscSlotConfig }) clientHandler serverState
+    liftIO $ Warp.runSettings warpSettings $ app trace params clientHandler serverState
 
         where
             warpSettings = Warp.defaultSettings & Warp.setPort (baseUrlPort pscBaseUrl) & Warp.setBeforeMainLoop (available availability)

@@ -73,7 +73,7 @@ import Control.Monad.Freer.Extras qualified as Eff
 import Control.Monad.Freer.Extras.Log (LogMsg, mapLog)
 import Control.Monad.Freer.State (State)
 
-import Ledger (Params (..), addSignature)
+import Ledger (Params, addSignature)
 import Plutus.ChainIndex (ChainIndexError)
 import Wallet.API (WalletAPIError)
 
@@ -107,6 +107,6 @@ processEmulated params act =
         & reinterpret2 @ChainEffect @(State ChainState) @(LogMsg ChainEvent) (handleChain params)
         & interpret (Eff.handleZoomedState chainState)
         & interpret (mapLog (review chainEvent))
-        & reinterpret2 @ChainControlEffect @(State ChainState) @(LogMsg ChainEvent) (handleControlChain $ pSlotConfig params)
+        & reinterpret2 @ChainControlEffect @(State ChainState) @(LogMsg ChainEvent) (handleControlChain params)
         & interpret (Eff.handleZoomedState chainState)
         & interpret (mapLog (review chainEvent))

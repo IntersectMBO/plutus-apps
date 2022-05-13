@@ -311,14 +311,14 @@ handleBalance ::
     -> Eff effs CardanoTx
 handleBalance utx' = do
     utxo <- get >>= ownOutputs
-    Params { pSlotConfig } <- WAPI.getClientParams
+    params@Params { pSlotConfig } <- WAPI.getClientParams
     let utx = finalize pSlotConfig utx'
     let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
-    cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
+    cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
     -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
     let calcFee n fee = do
             tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
-            newFee <- handleError tx $ evaluateTransactionFee cUtxoIndex requiredSigners tx
+            newFee <- handleError tx $ evaluateTransactionFee params cUtxoIndex requiredSigners tx
             if newFee /= fee
                 then if n == (0 :: Int)
                     -- If we don't reach a fixed point, pick the larger fee
@@ -328,7 +328,7 @@ handleBalance utx' = do
     -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
     theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
     tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-    cTx <- handleError tx' $ fromPlutusTx cUtxoIndex requiredSigners tx'
+    cTx <- handleError tx' $ fromPlutusTx params cUtxoIndex requiredSigners tx'
     pure $ Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
     where
         handleError tx (Left (Left (ph, ve))) = do
