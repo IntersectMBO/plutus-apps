@@ -42,6 +42,8 @@ dependencies:
 - data-default
 - containers
 - vector
+- primitive
+- lens
 
 library:
   source-dirs: src

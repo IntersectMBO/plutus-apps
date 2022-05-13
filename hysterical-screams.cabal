@@ -54,8 +54,11 @@ library
     , base >=4.7 && <5
     , containers
     , data-default
+    , lens
+    , primitive
     , quickspec
     , sqlite-simple
+    , vector
   default-language: Haskell2010
 
 test-suite hysterical-screams-test
@@ -87,8 +90,11 @@ test-suite hysterical-screams-test
     , containers
     , data-default
     , hysterical-screams
+    , lens
+    , primitive
     , quickspec
     , sqlite-simple
     , tasty
     , tasty-quickcheck
+    , vector
   default-language: Haskell2010
