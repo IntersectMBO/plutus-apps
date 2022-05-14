@@ -4,11 +4,13 @@
 module Index.VSplit
   ( SplitIndex(..)
   , new
+  , newBoxed
+  , newUnboxed
   , insert
   , insertL
   , size
   , rewind
-  -- * Accessors to SplitIndex
+  -- * Accessors
   , handle
   , storage
   , notifications
@@ -32,6 +34,8 @@ import Data.List (tails)
 import Data.Foldable (toList, foldlM)
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as VU
 
 import Index (IndexView(..))
 
@@ -139,6 +143,45 @@ new query' store' onInsert' k' handle' vector
     , _query         = query'
     , _onInsert      = onInsert'
     }
+
+type BoxedIndex m h e n q r =
+  SplitIndex m h V.Vector e n q r
+
+newBoxed
+  :: Monad m
+  => PrimMonad m
+  => (BoxedIndex m h e n q r -> q -> [e] -> m r)
+  -> (BoxedIndex m h e n q r -> m ())
+  -> (BoxedIndex m h e n q r -> e -> m [n])
+  -> Int
+  -> Int
+  -> h
+  -> m (Maybe (BoxedIndex m h e n q r))
+newBoxed query' store' onInsert' k' size' handle'
+  | size' > 0  = pure Nothing
+  | otherwise = do
+    v <- VGM.new (k' + size')
+    new query' store' onInsert' k' handle' v
+
+type UnboxedIndex m h e n q r =
+  SplitIndex m h VU.Vector e n q r
+
+newUnboxed
+  :: Monad m
+  => PrimMonad m
+  => VGM.MVector VU.MVector e
+  => (UnboxedIndex m h e n q r -> q -> [e] -> m r)
+  -> (UnboxedIndex m h e n q r -> m ())
+  -> (UnboxedIndex m h e n q r -> e -> m [n])
+  -> Int
+  -> Int
+  -> h
+  -> m (Maybe (UnboxedIndex m h e n q r))
+newUnboxed query' store' onInsert' k' size' handle'
+  | size' > 0  = pure Nothing
+  | otherwise = do
+    v <- VGM.new (k' + size')
+    new query' store' onInsert' k' handle' v
 
 insert
   :: forall m h v e n q r.
