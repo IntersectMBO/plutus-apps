@@ -75,16 +75,18 @@ import Ledger.Ada qualified as Ada
 import Ledger.Blockchain
 import Ledger.Crypto
 import Ledger.Orphans ()
-import Ledger.Scripts
 import Ledger.Slot qualified as Slot
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx
+import Plutus.Script.Utils.V1.Scripts
+import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api qualified as Api
 import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
 import Plutus.V1.Ledger.Contexts qualified as Validation
 import Plutus.V1.Ledger.Credential (Credential (..))
 import Plutus.V1.Ledger.Interval qualified as Interval
+import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value qualified as V
 import PlutusTx (toBuiltinData)
@@ -282,7 +284,7 @@ checkMintingAuthorised tx =
 
         mpsScriptHashes = Scripts.MintingPolicyHash . V.unCurrencySymbol <$> mintedCurrencies
 
-        lockingScripts = plutusV1MintingPolicyHash <$> Set.toList (txMintScripts tx)
+        lockingScripts = PV1.mintingPolicyHash <$> Set.toList (txMintScripts tx)
 
         mintedWithoutScript = filter (\c -> c `notElem` lockingScripts) mpsScriptHashes
     in
@@ -293,7 +295,7 @@ checkMintingScripts tx = do
     txinfo <- mkTxInfo tx
     iforM_ (Set.toList (txMintScripts tx)) $ \i vl -> do
         let cs :: V.CurrencySymbol
-            cs = V.mpsSymbol $ plutusV1MintingPolicyHash vl
+            cs = V.mpsSymbol $ PV1.mintingPolicyHash vl
             ctx :: Context
             ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
             ptr :: RedeemerPtr
@@ -333,7 +335,7 @@ matchInputOutput :: ValidationMonad m
 matchInputOutput txid mp txin txo = case (txInType txin, txOutDatumHash txo, txOutAddress txo) of
     (Just (ConsumeScriptAddress v r d), Just dh, Address{addressCredential=ScriptCredential vh}) -> do
         unless (datumHash d == dh) $ throwError $ InvalidDatumHash d dh
-        unless (plutusV1ValidatorHash v == vh) $ throwError $ InvalidScriptHash v vh
+        unless (PV1.validatorHash v == vh) $ throwError $ InvalidScriptHash v vh
 
         pure $ ScriptMatch (txInRef txin) v r d
     (Just ConsumePublicKeyAddress, _, Address{addressCredential=PubKeyCredential pkh}) ->

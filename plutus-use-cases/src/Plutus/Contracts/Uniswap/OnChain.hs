@@ -15,19 +15,23 @@ module Plutus.Contracts.Uniswap.OnChain
     , validateLiquidityMinting
     ) where
 
-import Ledger
+import Ledger ()
 import Ledger.Constraints.OnChain as Constraints
 import Ledger.Constraints.TxConstraints as Constraints
 import Ledger.Value (AssetClass (..), symbols)
 import Plutus.Contracts.Uniswap.Pool (calculateAdditionalLiquidity, calculateInitialLiquidity, calculateRemoval,
                                       checkSwap, lpTicker)
 import Plutus.Contracts.Uniswap.Types
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ScriptContext (..), TokenName, TxInInfo (txInInfoResolved),
+                             TxInfo (txInfoInputs, txInfoMint), TxOut (txOutDatumHash, txOutValue), Value)
+import Plutus.V1.Ledger.Contexts qualified as PV1
+import Plutus.V1.Ledger.Tx (txOutDatum)
 import PlutusTx qualified
 import PlutusTx.Prelude
 
 {-# INLINABLE findOwnInput' #-}
 findOwnInput' :: ScriptContext -> TxInInfo
-findOwnInput' ctx = fromMaybe (error ()) (findOwnInput ctx)
+findOwnInput' ctx = fromMaybe (error ()) (PV1.findOwnInput ctx)
 
 {-# INLINABLE valueWithin #-}
 valueWithin :: TxInInfo -> Value
@@ -51,8 +55,8 @@ validateSwap LiquidityPool{..} c ctx =
 
     ownOutput :: TxOut
     ownOutput = case [ o
-                     | o <- getContinuingOutputs ctx
-                     , txOutDatumHash o == Just (snd $ ownHashes ctx)
+                     | o <- PV1.getContinuingOutputs ctx
+                     , txOutDatumHash o == Just (snd $ PV1.ownHashes ctx)
                      ] of
         [o] -> o
         _   -> traceError "expected exactly one output to the same liquidity pool"
@@ -108,7 +112,7 @@ validateCreate Uniswap{..} c lps lp@LiquidityPool{..} ctx =
         valueOf lpCoinA outA <> valueOf lpCoinB outB <> unitValue c)
   where
     poolOutput :: TxOut
-    poolOutput = case [o | o <- getContinuingOutputs ctx, isUnity (txOutValue o) c] of
+    poolOutput = case [o | o <- PV1.getContinuingOutputs ctx, isUnity (txOutValue o) c] of
         [o] -> o
         _   -> traceError "expected exactly one pool output"
 
@@ -161,7 +165,7 @@ validateClosePool us ctx = hasFactoryInput
     hasFactoryInput :: Bool
     hasFactoryInput =
         traceIfFalse "Uniswap factory input expected" $
-        isUnity (valueSpent info) (usCoin us)
+        isUnity (PV1.valueSpent info) (usCoin us)
 
 {-# INLINABLE validateRemove #-}
 -- | See 'Plutus.Contracts.Uniswap.OffChain.remove'.
@@ -183,7 +187,7 @@ validateRemove c lp liquidity ctx =
     ownInput = findOwnInput' ctx
 
     output :: TxOut
-    output = case getContinuingOutputs ctx of
+    output = case PV1.getContinuingOutputs ctx of
         [o] -> o
         _   -> traceError "expected exactly one Uniswap output"
 
@@ -225,7 +229,7 @@ validateAdd c lp liquidity ctx =
 
     ownOutput :: TxOut
     ownOutput = case [ o
-                     | o <- getContinuingOutputs ctx
+                     | o <- PV1.getContinuingOutputs ctx
                      , isUnity (txOutValue o) c
                      ] of
         [o] -> o
@@ -254,7 +258,7 @@ validateAdd c lp liquidity ctx =
 
 {-# INLINABLE findPoolDatum #-}
 findPoolDatum :: TxInfo -> DatumHash -> (LiquidityPool, Amount Liquidity)
-findPoolDatum info h = case findDatum h info of
+findPoolDatum info h = case PV1.findDatum h info of
     Just (Datum d) -> case PlutusTx.unsafeFromBuiltinData d of
         (Pool lp a) -> (lp, a)
         _           -> traceError "error decoding data"
@@ -288,4 +292,4 @@ validateLiquidityMinting Uniswap{..} tn _ ctx
     _      -> traceError "pool state minting without Uniswap input"
   where
     lpC :: Coin PoolState
-    lpC = mkCoin (ownCurrencySymbol ctx) tn
+    lpC = mkCoin (PV1.ownCurrencySymbol ctx) tn

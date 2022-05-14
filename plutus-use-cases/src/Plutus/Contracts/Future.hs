@@ -47,8 +47,11 @@ import Control.Monad (void)
 import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (Address, Datum (..), POSIXTime, PaymentPubKey, PaymentPubKeyHash, Validator, ValidatorHash)
-import Ledger qualified
+
+import PlutusTx qualified
+import PlutusTx.Prelude
+
+import Ledger (Address, POSIXTime, PaymentPubKey, PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
@@ -60,8 +63,9 @@ import Plutus.Contract
 import Plutus.Contract.Oracle (Observation (..), SignedMessage (..))
 import Plutus.Contract.Oracle qualified as Oracle
 import Plutus.Contract.Util (loopM)
-import PlutusTx qualified
-import PlutusTx.Prelude
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Scripts (validatorHash)
+import Plutus.V1.Ledger.Api (Datum (Datum), Validator, ValidatorHash)
 
 import Plutus.Contract.StateMachine (AsSMContractError, State (..), StateMachine (..), Void)
 import Plutus.Contract.StateMachine qualified as SM
@@ -313,7 +317,7 @@ typedValidator future ftos =
                 `PlutusTx.applyCode`
                     PlutusTx.liftCode ftos
         validatorParam f g = SM.mkValidator (futureStateMachine f g)
-        wrap = Scripts.wrapValidator @FutureState @FutureAction
+        wrap = Scripts.mkUntypedValidator @FutureState @FutureAction
 
     in Scripts.mkTypedValidator @(SM.StateMachine FutureState FutureAction)
         val
@@ -435,7 +439,7 @@ initialState ft =
     Running (Margins{ftsShortMargin=im, ftsLongMargin=im})
 
 futureAddress :: Future -> FutureAccounts -> Address
-futureAddress ft fo = Ledger.plutusV1ScriptAddress (validator ft fo)
+futureAddress ft fo = mkValidatorAddress (validator ft fo)
 
 {-# INLINABLE violatingRole #-}
 -- | The role that violated its margin requirements
@@ -584,8 +588,8 @@ escrowParams
     -> EscrowParams Datum
 escrowParams client future ftos FutureSetup{longPK, shortPK, contractStart} =
     let
-        address = Ledger.plutusV1ValidatorHash $ Scripts.validatorScript $ SM.typedValidator $ SM.scInstance client
-        dataScript  = Ledger.Datum $ PlutusTx.toBuiltinData $ initialState future
+        address = validatorHash $ Scripts.validatorScript $ SM.typedValidator $ SM.scInstance client
+        dataScript  = Datum $ PlutusTx.toBuiltinData $ initialState future
         targets =
             [ Escrow.payToScriptTarget address
                 dataScript

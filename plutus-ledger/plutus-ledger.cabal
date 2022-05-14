@@ -54,7 +54,6 @@ library
         Ledger.Blockchain
         Ledger.CardanoWallet
         Ledger.Credential.Orphans
-        Ledger.Contexts
         Ledger.Crypto
         Ledger.Crypto.Orphans
         Ledger.Fee
@@ -71,8 +70,6 @@ library
         Ledger.Tx.Internal
         Ledger.Tx.Orphans
         Ledger.Typed.Scripts
-        Ledger.Typed.Scripts.MonetaryPolicies
-        Ledger.Typed.Scripts.StakeValidators
         Ledger.Typed.Scripts.Validators
         Ledger.Typed.Tx
         Ledger.Typed.TypeUtils
@@ -124,8 +121,8 @@ library
         mtl -any,
         newtype-generics -any,
         ouroboros-consensus-shelley -any,
-        plutus-tx-plugin >= 1.0.0,
         prettyprinter -any,
+        plutus-script-utils -any,
         plutus-tx >= 1.0.0,
         serialise -any,
         scientific -any,

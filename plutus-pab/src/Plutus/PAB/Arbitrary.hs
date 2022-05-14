@@ -12,20 +12,21 @@ import Control.Monad (replicateM)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
-import Ledger (ValidatorHash (ValidatorHash))
 import Ledger qualified
-import Ledger.Address (Address (..), PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKeyHash)
-import Ledger.Bytes (LedgerBytes)
-import Ledger.Bytes qualified as LedgerBytes
+import Ledger.Address (PaymentPubKey, PaymentPubKeyHash, StakePubKey, StakePubKeyHash)
 import Ledger.Constraints (MkTxError)
-import Ledger.Crypto (PubKey, PubKeyHash, Signature)
+import Ledger.Crypto (PubKey, Signature)
 import Ledger.Interval (Extended, Interval, LowerBound, UpperBound)
 import Ledger.Slot (Slot)
-import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxId, TxIn, TxInType, TxOut, TxOutRef)
+import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxId)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.V1.Ledger.Api (Address (..), LedgerBytes, PubKeyHash, TxOut, TxOutRef, ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Bytes qualified as LedgerBytes
+import Plutus.V1.Ledger.Tx (TxIn, TxInType)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude qualified as PlutusTx
@@ -192,7 +193,7 @@ instance Arbitrary PlutusTx.Data where
         arbitraryMap n = do
            -- NOTE: A pair always has at least 2 constructors/nodes so we divide by 2
           (n', m) <- segmentRange ((n - 1) `div` 2)
-          PlutusTx.Map <$> replicateM m (arbitraryPair $ n')
+          PlutusTx.Map <$> replicateM m (arbitraryPair n')
 
         arbitraryPair n = do
           (,) <$> arbitraryData half <*> arbitraryData half
@@ -269,7 +270,7 @@ instance Arbitrary PABReq where
             ]
 
 instance Arbitrary Address where
-    arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary <*> arbitrary, Ledger.plutusV1ScriptAddress <$> arbitrary]
+    arbitrary = oneof [Ledger.pubKeyAddress <$> arbitrary <*> arbitrary, mkValidatorAddress <$> arbitrary]
 
 instance Arbitrary ValidatorHash where
     arbitrary = ValidatorHash <$> arbitrary

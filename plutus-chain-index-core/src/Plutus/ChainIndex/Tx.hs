@@ -41,11 +41,14 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
-import Ledger (Address, Datum, DatumHash, MintingPolicy (getMintingPolicy), MintingPolicyHash (MintingPolicyHash),
-               OnChainTx (..), Redeemer (..), RedeemerHash, Script, ScriptHash (..), SlotRange, SomeCardanoApiTx,
-               Tx (..), TxId, TxIn (txInType), TxInType (..), TxOut (txOutAddress), TxOutRef (..),
-               Validator (getValidator), ValidatorHash (ValidatorHash), datumHash, plutusV1MintingPolicyHash,
-               plutusV1ValidatorHash, redeemerHash, txId)
+import Ledger (OnChainTx (..), SlotRange, SomeCardanoApiTx, Tx (..), txId)
+import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHash, validatorHash)
+import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy (getMintingPolicy),
+                             MintingPolicyHash (MintingPolicyHash), Redeemer, RedeemerHash, Script, TxId,
+                             TxOut (txOutAddress), TxOutRef (TxOutRef), Validator (getValidator),
+                             ValidatorHash (ValidatorHash))
+import Plutus.V1.Ledger.Scripts (ScriptHash (ScriptHash))
+import Plutus.V1.Ledger.Tx (TxIn (txInType), TxInType (ConsumeScriptAddress))
 import Prettyprinter
 
 -- | List of outputs of a transaction. There are no outputs if the transaction
@@ -157,14 +160,14 @@ fromOnChainTx = \case
 mintingPolicies :: Set MintingPolicy -> Map ScriptHash Script
 mintingPolicies = Map.fromList . fmap withHash . Set.toList
   where
-    withHash mp = let (MintingPolicyHash mph) = plutusV1MintingPolicyHash mp
+    withHash mp = let (MintingPolicyHash mph) = mintingPolicyHash mp
                    in (ScriptHash mph, getMintingPolicy mp)
 
 validators :: Set TxIn -> (Map ScriptHash Script, Map DatumHash Datum, Map RedeemerHash Redeemer)
 validators = foldMap (maybe mempty withHash . txInType) . Set.toList
   where
     withHash (ConsumeScriptAddress val red dat) =
-      let (ValidatorHash vh) = plutusV1ValidatorHash val
+      let (ValidatorHash vh) = validatorHash val
        in ( Map.singleton (ScriptHash vh) (getValidator val)
           , Map.singleton (datumHash dat) dat
           , Map.singleton (redeemerHash red) red

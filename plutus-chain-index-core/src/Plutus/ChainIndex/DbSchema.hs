@@ -36,12 +36,14 @@ import Database.Beam (Beamable, Columnar, Database, DatabaseSettings, FromBacken
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, renameCheckedEntity,
                               unCheckDatabase)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (AssetClass, BlockId (..), ChainIndexTxOut (..), Datum, DatumHash (..), MintingPolicy,
-               MintingPolicyHash (..), Redeemer, RedeemerHash (..), Script, ScriptHash (..), Slot, StakeValidator,
-               StakeValidatorHash (..), TxId (..), TxOut, TxOutRef (..), Validator, ValidatorHash (..))
+import Ledger (BlockId (..), ChainIndexTxOut (..), Slot)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (BlockNumber (..), Tip (..))
-import Plutus.V1.Ledger.Api (Credential)
+import Plutus.V1.Ledger.Api (Credential, Datum, DatumHash (..), MintingPolicy, MintingPolicyHash (..), Redeemer,
+                             RedeemerHash (..), Script, StakeValidator, StakeValidatorHash (..), TxId (..), TxOut,
+                             TxOutRef (..), Validator, ValidatorHash (..))
+import Plutus.V1.Ledger.Scripts (ScriptHash (..))
+import Plutus.V1.Ledger.Value (AssetClass)
 import PlutusTx.Builtins qualified as PlutusTx
 
 data DatumRowT f = DatumRow

@@ -27,12 +27,13 @@ module Starter where
 --   * redeem
 
 import Control.Monad (void)
-import Ledger (Address, ScriptContext)
+import Ledger (Address)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value)
 import Playground.Contract
 import Plutus.Contract
+import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..))
 
@@ -63,7 +64,7 @@ starterInstance :: Scripts.TypedValidator Starter
 starterInstance = Scripts.mkTypedValidator @Starter
     $$(PlutusTx.compile [|| validateSpend ||])
     $$(PlutusTx.compile [|| wrap ||]) where
-        wrap = Scripts.wrapValidator @MyDatum @MyRedeemer
+        wrap = Scripts.mkUntypedValidator @MyDatum @MyRedeemer
 
 -- | The schema of the contract, with two endpoints.
 type Schema =

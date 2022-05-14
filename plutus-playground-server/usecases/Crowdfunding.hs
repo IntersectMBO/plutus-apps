@@ -26,11 +26,9 @@ import Control.Monad (void)
 import Data.Default (Default (def))
 import Data.Text (Text)
 import Ledger (POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (..), TxInfo (..),
-               Validator, getCardanoTxId)
+               getCardanoTxId)
 import Ledger qualified
-import Ledger.Contexts qualified as V
 import Ledger.Interval qualified as Interval
-import Ledger.Scripts qualified as Scripts
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (Value)
@@ -38,6 +36,8 @@ import Playground.Contract
 import Plutus.Contract
 import Plutus.Contract.Constraints qualified as Constraints
 import Plutus.Contract.Typed.Tx qualified as Typed
+import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.V1.Ledger.Contexts qualified as PV1
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..))
 import Prelude (Semigroup (..))
@@ -106,7 +106,7 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 {-# INLINABLE validRefund #-}
 validRefund :: Campaign -> PaymentPubKeyHash -> TxInfo -> Bool
@@ -114,14 +114,14 @@ validRefund campaign contributor txinfo =
     -- Check that the transaction falls in the refund range of the campaign
     (refundRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the contributor
-    && (txinfo `V.txSignedBy` unPaymentPubKeyHash contributor)
+    && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash contributor)
 
 validCollection :: Campaign -> TxInfo -> Bool
 validCollection campaign txinfo =
     -- Check that the transaction falls in the collection range of the campaign
     (collectionRange campaign `Interval.contains` txInfoValidRange txinfo)
     -- Check that the transaction is signed by the campaign owner
-    && (txinfo `V.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
+    && (txinfo `PV1.txSignedBy` unPaymentPubKeyHash (campaignOwner campaign))
 
 -- | The validator script is of type 'CrowdfundingValidator', and is
 -- additionally parameterized by a 'Campaign' definition. This argument is
@@ -138,12 +138,12 @@ mkValidator c con act p = case act of
 -- | The validator script that determines whether the campaign owner can
 --   retrieve the funds or the contributors can claim a refund.
 --
-contributionScript :: Campaign -> Validator
+contributionScript :: Campaign -> PV1.Validator
 contributionScript = Scripts.validatorScript . typedValidator
 
 -- | The address of a [[Campaign]]
 campaignAddress :: Campaign -> Ledger.ValidatorHash
-campaignAddress = Scripts.plutusV1ValidatorHash . contributionScript
+campaignAddress = PV1.validatorHash . contributionScript
 
 -- | The crowdfunding contract for the 'Campaign'.
 crowdfunding :: AsContractError e => Campaign -> Contract () CrowdfundingSchema e ()

@@ -26,19 +26,20 @@ import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, ScriptContext, ScriptError (EvaluationError),
-               Tx (txFee, txMint, txOutputs), TxOut (txOutValue), ValidationError (ScriptFailure), Validator, Value,
-               mkValidatorScript, outputs, plutusV1ScriptTxOut, scriptTxIn, txOutRefs, unitDatum, unitRedeemer,
-               unspentOutputs)
+import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, Tx (txFee, txMint, txOutputs),
+               ValidationError (ScriptFailure), outputs, scriptTxIn, txOutRefs, unspentOutputs)
 import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain))
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
-import Ledger.Typed.Scripts (wrapValidator)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
+import Plutus.Script.Utils.V1.Scripts (mkUntypedValidator)
+import Plutus.Script.Utils.V1.Tx (scriptTxOut)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
+import Plutus.V1.Ledger.Api (ScriptContext, TxOut (txOutValue), Validator, Value, mkValidatorScript)
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum, unitRedeemer)
 import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
@@ -211,7 +212,10 @@ invalidScript = property $ do
 
     -- modify one of the outputs to be a script output
     index <- forAll $ Gen.int (Range.linear 0 ((length $ txOutputs txn1) - 1))
-    let scriptTxn = txn1 & outputs . element index %~ \o -> plutusV1ScriptTxOut (txOutValue o) failValidator unitDatum
+    let scriptTxn =
+            txn1
+          & outputs
+          . element index %~ \o -> scriptTxOut failValidator (txOutValue o) unitDatum
     Hedgehog.annotateShow scriptTxn
     let outToSpend = txOutRefs scriptTxn !! index
     let totalVal = txOutValue (fst outToSpend)
@@ -244,7 +248,7 @@ invalidScript = property $ do
     checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn)) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
     where
         failValidator :: Validator
-        failValidator = mkValidatorScript $$(PlutusTx.compile [|| wrapValidator validator ||])
+        failValidator = mkValidatorScript $$(PlutusTx.compile [|| mkUntypedValidator validator ||])
         validator :: () -> () -> ScriptContext -> Bool
         validator _ _ _ = PlutusTx.traceError "I always fail everything"
 

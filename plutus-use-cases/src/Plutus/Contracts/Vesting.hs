@@ -33,11 +33,9 @@ import Data.Map qualified as Map
 import Prelude (Semigroup (..))
 
 import GHC.Generics (Generic)
-import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
+import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts (ScriptContext (..), TxInfo (..))
-import Ledger.Contexts qualified as Validation
 import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (ValidatorTypes (..))
@@ -46,6 +44,8 @@ import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Typed
+import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..), Validator)
+import Plutus.V1.Ledger.Contexts qualified as Validation
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), fold)
 import Prelude qualified as Haskell
@@ -152,7 +152,7 @@ typedValidator = Scripts.mkTypedValidatorParam @Vesting
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 contractAddress :: VestingParams -> Address
 contractAddress = Scripts.validatorAddress . typedValidator

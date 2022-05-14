@@ -38,8 +38,6 @@ module Ledger.Tx
     , addSignature
     , addSignature'
     , pubKeyTxOut
-    , plutusV1ScriptTxOut
-    , plutusV1ScriptTxOut'
     , updateUtxo
     , txOutRefs
     , unspentOutputsTx
@@ -61,13 +59,13 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger.Address (Address, PaymentPubKey, StakePubKey, plutusV1ScriptAddress, pubKeyAddress)
+import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
-import Ledger.Scripts (datumHash)
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal as Export
+import Plutus.Script.Utils.V1.Scripts (datumHash)
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, Validator,
                              ValidatorHash, Value, addressCredential, toBuiltin)
 import Plutus.V1.Ledger.Tx as Export
@@ -218,15 +216,6 @@ txOutRefs t = mkOut <$> zip [0..] (txOutputs t) where
 unspentOutputsTx :: Tx -> Map TxOutRef TxOut
 unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
     f (idx, o) = (TxOutRef (txId t) idx, o)
-
--- | Create a transaction output locked by a validator script hash
---   with the given data script attached.
-plutusV1ScriptTxOut' :: Value -> Address -> Datum -> TxOut
-plutusV1ScriptTxOut' v a ds = TxOut a v (Just (datumHash ds))
-
--- | Create a transaction output locked by a validator script and with the given data script attached.
-plutusV1ScriptTxOut :: Value -> Validator -> Datum -> TxOut
-plutusV1ScriptTxOut v vs = plutusV1ScriptTxOut' v (plutusV1ScriptAddress vs)
 
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
 pubKeyTxOut :: Value -> PaymentPubKey -> Maybe StakePubKey -> TxOut

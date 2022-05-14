@@ -12,8 +12,6 @@ module Ledger.Address
     , paymentPubKeyHash
     , pubKeyHashAddress
     , pubKeyAddress
-    , plutusV1ScriptAddress
-    , plutusV2ScriptAddress
     , scriptValidatorHashAddress
     ) where
 
@@ -25,8 +23,7 @@ import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger.Crypto (PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash)
 import Ledger.Orphans ()
-import Ledger.Scripts (StakeValidatorHash (..), Validator, ValidatorHash (..), plutusV1ValidatorHash,
-                       plutusV2ValidatorHash)
+import Ledger.Scripts (StakeValidatorHash (..), ValidatorHash (..))
 import Plutus.V1.Ledger.Address as Export hiding (pubKeyHashAddress)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import PlutusTx qualified
@@ -71,8 +68,6 @@ paymentPubKeyHash (PaymentPubKey pk) = PaymentPubKeyHash (pubKeyHash pk)
 {-# INLINABLE pubKeyHashAddress #-}
 -- | The address that should be targeted by a transaction output locked by the
 -- given public payment key (with it's public stake key).
---
--- TODO: This should be moved to Plutus.V1(or V2).Ledger.Address with the newtypes.
 pubKeyHashAddress :: PaymentPubKeyHash -> Maybe StakePubKeyHash -> Address
 pubKeyHashAddress (PaymentPubKeyHash pkh) skh =
     Address (PubKeyCredential pkh)
@@ -84,16 +79,6 @@ pubKeyAddress :: PaymentPubKey -> Maybe StakePubKey -> Address
 pubKeyAddress (PaymentPubKey pk) skh =
     Address (PubKeyCredential (pubKeyHash pk))
             (fmap (StakingHash . PubKeyCredential . pubKeyHash . unStakePubKey) skh)
-
-{-# INLINABLE plutusV1ScriptAddress #-}
--- | The address that should be used by a transaction output locked by the given Plutus V2 validator script.
-plutusV1ScriptAddress :: Validator -> Address
-plutusV1ScriptAddress validator = Address (ScriptCredential (plutusV1ValidatorHash validator)) Nothing
-
-{-# INLINABLE plutusV2ScriptAddress #-}
--- | The address that should be used by a transaction output locked by the given Plutus V2 validator script.
-plutusV2ScriptAddress :: Validator -> Address
-plutusV2ScriptAddress validator = Address (ScriptCredential (plutusV2ValidatorHash validator)) Nothing
 
 {-# INLINABLE scriptValidatorHashAddress #-}
 -- | The address that should be used by a transaction output locked by the given validator script

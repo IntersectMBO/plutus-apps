@@ -9,11 +9,12 @@ import Control.Lens
 import Data.Maybe (fromMaybe)
 
 import Data.Map (Map)
-import Ledger (Redeemer (..), TxOutRef, Validator)
 import Ledger.Address qualified as Address
 import Ledger.Constraints.TxConstraints (UntypedConstraints)
 import Ledger.Tx (ChainIndexTxOut)
 import Plutus.Contract.Typed.Tx qualified as Typed
+import Plutus.Script.Utils.V1.Address qualified as Address
+import Plutus.V1.Ledger.Api (Redeemer (Redeemer), TxOutRef, Validator)
 import PlutusTx qualified
 
 -- | A set of constraints for a transaction that collects script outputs
@@ -34,5 +35,5 @@ collectFromScriptFilter
     -> Redeemer
     -> UntypedConstraints
 collectFromScriptFilter flt am vls (Redeemer red) =
-    let mp'  = fromMaybe mempty $ am ^. at (Address.plutusV1ScriptAddress vls)
+    let mp'  = fromMaybe mempty $ am ^. at (Address.mkValidatorAddress vls)
     in Typed.collectFromScriptFilter @PlutusTx.BuiltinData @PlutusTx.BuiltinData flt mp' red

@@ -119,7 +119,6 @@ import Plutus.Contract.Types (Contract (..), IsContract (..), ResumableResult, s
 import PlutusTx (CompiledCode, FromData (..), getPir)
 import PlutusTx.Prelude qualified as P
 
-import Ledger (Validator)
 import Ledger qualified
 import Ledger.Address (Address)
 import Ledger.Generators (GeneratorModel, Mockchain (..))
@@ -127,6 +126,7 @@ import Ledger.Generators qualified as Gen
 import Ledger.Index (ScriptValidationEvent, ValidationError)
 import Ledger.Slot (Slot)
 import Ledger.Value (Value)
+import Plutus.V1.Ledger.Scripts qualified as PV1
 
 import Data.IORef
 import Plutus.Contract.Test.Coverage
@@ -693,10 +693,10 @@ assertAccumState contract inst p nm = TracePredicate $
 
 -- | Assert that the size of a 'Validator' is below
 --   the maximum.
-reasonable :: Validator -> Integer -> HUnit.Assertion
+reasonable :: PV1.Validator -> Integer -> HUnit.Assertion
 reasonable = reasonable' putStrLn
 
-reasonable' :: (String -> IO ()) -> Validator -> Integer -> HUnit.Assertion
+reasonable' :: (String -> IO ()) -> PV1.Validator -> Integer -> HUnit.Assertion
 reasonable' logger (Ledger.unValidatorScript -> s) maxSize = do
     let sz = Ledger.scriptSize s
         msg = "Script too big! Max. size: " <> show maxSize <> ". Actual size: " <> show sz

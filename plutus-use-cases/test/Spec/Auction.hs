@@ -35,9 +35,9 @@ import Data.Monoid (Last (..))
 
 import Ledger (Ada, Slot (..), Value)
 import Ledger.Ada qualified as Ada
-import Ledger.Generators (someTokenValue)
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test hiding (not)
+import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Streaming.Prelude qualified as S
 import Wallet.Emulator.Folds qualified as Folds
 import Wallet.Emulator.Stream qualified as Stream

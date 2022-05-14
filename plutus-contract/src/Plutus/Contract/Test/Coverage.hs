@@ -25,6 +25,7 @@ import Control.DeepSeq
 import Control.Lens
 
 import Ledger qualified
+import Plutus.V1.Ledger.Scripts qualified as PV1
 
 import PlutusTx.Coverage
 
@@ -55,9 +56,9 @@ getCoverageReport es =
         ChainEvent (TxnValidationFail _ _ _ _ valEvs _) -> logOf . Ledger.sveResult <$> valEvs
         _                                               -> []
 
-      logOf (Left (Ledger.EvaluationError lg _)) = lg
-      logOf (Left _)                             = []
-      logOf (Right (_, lg))                      = lg
+      logOf (Left (PV1.EvaluationError lg _)) = lg
+      logOf (Left _)                          = []
+      logOf (Right (_, lg))                   = lg
 
   in fold $ do
     event <- es

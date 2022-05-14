@@ -19,12 +19,12 @@ import Data.Default (Default (def))
 import Ledger (Slot (..), Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Generators (someTokenValue)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Secrets
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contracts.SealedBidAuction
+import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Trace.Emulator qualified as Trace
 
 import Test.QuickCheck hiding ((.&&.))
