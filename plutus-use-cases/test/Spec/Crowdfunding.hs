@@ -78,12 +78,12 @@ tests = testGroup "crowdfunding"
             slotCfg <- Trace.getSlotConfig
             void (Trace.activateContractWallet w1 $ theContract $ TimeSlot.scSlotZeroTime slotCfg)
 
-    , checkPredicateOptions defaultCheckOptions "make contribution"
+    , checkPredicate "make contribution"
         (walletFundsChange w1 (Ada.adaValueOf (-10)))
         $ let contribution = Ada.adaValueOf 10
           in makeContribution w1 contribution >> void Trace.nextSlot
 
-    , checkPredicate "make contributions and collect"
+    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "make contributions and collect"
         (walletFundsChange w1 (Ada.adaValueOf 22.5))
         successfulCampaign
 

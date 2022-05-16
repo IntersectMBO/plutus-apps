@@ -1,11 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 -- | The set of parameters, like protocol parameters and slot configuration.
 module Ledger.Params(
-  Params(..)
+  Params(..),
+  slotConfigL,
+  protocolParamsL,
+  networkIdL
 ) where
 
 import Cardano.Api.Shelley
+import Control.Lens (makeLensesFor)
 import Data.Default (Default (def))
 import Data.Map (fromList)
 import Data.Maybe (fromMaybe)
@@ -19,6 +24,12 @@ data Params = Params
   , pNetworkId      :: NetworkId
   }
   deriving (Eq, Show)
+
+makeLensesFor
+  [ ("pSlotConfig", "slotConfigL")
+  , ("pProtocolParams", "protocolParamsL")
+  , ("pNetworkId", "networkIdL") ]
+  ''Params
 
 instance Default Params where
   def = Params def def (Testnet $ NetworkMagic 1)

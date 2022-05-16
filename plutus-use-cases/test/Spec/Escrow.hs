@@ -183,7 +183,7 @@ prop_NoLockedFunds = checkNoLockedFundsProof noLockProof
 tests :: TestTree
 tests = testGroup "escrow"
     [ let con = void $ payEp @() @EscrowSchema @EscrowError (escrowParams startTime) in
-      checkPredicate "can pay"
+      checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can pay"
         ( assertDone con (Trace.walletInstanceTag w1) (const True) "escrow pay not done"
         .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
         )
@@ -197,7 +197,7 @@ tests = testGroup "escrow"
                                            @EscrowError
                                            (escrowParams startTime))
                                     (redeemEp (escrowParams startTime)) in
-      checkPredicate "can redeem"
+      checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can redeem"
         ( assertDone con (Trace.walletInstanceTag w3) (const True) "escrow redeem not done"
           .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
           .&&. walletFundsChange w2 (Ada.adaValueOf 10)
@@ -205,7 +205,7 @@ tests = testGroup "escrow"
         )
         redeemTrace
 
-    , checkPredicate "can redeem even if more money than required has been paid in"
+    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can redeem even if more money than required has been paid in"
 
           -- in this test case we pay in a total of 40 lovelace (10 more than required), for
           -- the same contract as before, requiring 10 lovelace to go to wallet 1 and 20 to
@@ -235,7 +235,7 @@ tests = testGroup "escrow"
                             @EscrowError
                             (escrowParams startTime))
              <> void (refundEp (escrowParams startTime)) in
-      checkPredicate "can refund"
+      checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can refund"
         ( walletFundsChange w1 mempty
           .&&. assertDone con (Trace.walletInstanceTag w1) (const True) "refund should succeed")
         refundTrace

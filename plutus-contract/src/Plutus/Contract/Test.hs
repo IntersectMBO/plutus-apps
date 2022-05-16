@@ -71,6 +71,7 @@ module Plutus.Contract.Test(
     , minLogLevel
     , emulatorConfig
     , changeInitialWalletValue
+    , allowBigTransactions
     -- * Etc
     , goldenPir
     ) where
@@ -108,6 +109,7 @@ import Test.Tasty.Golden (goldenVsString)
 import Test.Tasty.HUnit qualified as HUnit
 import Test.Tasty.Providers (TestTree)
 
+import Cardano.Api.Shelley (ExecutionUnits (..), ProtocolParameters (..))
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Tx (Tx, onCardanoTx)
@@ -131,7 +133,7 @@ import Ledger.Value (Value)
 import Data.IORef
 import Plutus.Contract.Test.Coverage
 import Plutus.Contract.Trace as X
-import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, runEmulatorStream)
+import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmulatorStream)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
                                     ContractInstanceTag, UserThreadMsg)
 import PlutusTx.Coverage
@@ -183,6 +185,13 @@ defaultCheckOptions =
 changeInitialWalletValue :: Wallet -> (Value -> Value) -> CheckOptions -> CheckOptions
 changeInitialWalletValue wallet = over (emulatorConfig . initialChainState . _Left . ix wallet)
 
+allowBigTransactions :: CheckOptions -> CheckOptions
+allowBigTransactions = over (emulatorConfig . params . Ledger.protocolParamsL) fixParams
+    where
+        fixParams pp = pp
+            { protocolParamMaxTxSize = 256 * 1024
+            , protocolParamMaxTxExUnits = Just (ExecutionUnits {executionSteps = 100000000000, executionMemory = 100000000})
+            }
 
 -- | Check if the emulator trace meets the condition
 checkPredicate ::

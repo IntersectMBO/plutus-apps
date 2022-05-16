@@ -314,25 +314,25 @@ prop_CheckNoLockedFundsProof = checkNoLockedFundsProof noLockProof
 tests :: TestTree
 tests =
     testGroup "game state machine with secret arguments tests"
-    [ checkPredicate "run a successful game trace"
+    [ checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "run a successful game trace"
         (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 3 <> guessTokenVal)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))
         successTrace
 
-    , checkPredicate "run a 2nd successful game trace"
+    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "run a 2nd successful game trace"
         (walletFundsChange w2 (Ada.adaValueOf 3)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 0 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8))
         .&&. walletFundsChange w3 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 5 <> guessTokenVal))
         successTrace2
 
-    , checkPredicate "run a successful game trace where we try to leave 1 Ada in the script address"
+    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "run a successful game trace where we try to leave 1 Ada in the script address"
         (walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> guessTokenVal)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.toValue Ledger.minAdaTxOut ==))
         traceLeaveOneAdaInScript
 
-    , checkPredicate "run a failed trace"
+    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "run a failed trace"
         (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> guessTokenVal)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 8 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))
