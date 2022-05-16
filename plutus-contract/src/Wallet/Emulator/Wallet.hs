@@ -22,6 +22,7 @@
 module Wallet.Emulator.Wallet where
 
 import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
+import Cardano.Api.Shelley (protocolParamCollateralPercent)
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
 import Control.Monad (foldM, (<=<))
@@ -78,7 +79,6 @@ import Wallet.Emulator.Chain (ChainState (_index))
 import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
                                     TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SigningTx, SubmittingTx, ValidationFailed))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
-
 
 newtype SigningProcess = SigningProcess {
     unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> CardanoTx -> Eff effs CardanoTx
@@ -407,7 +407,8 @@ lookupValue outputRef@TxIn {txInRef} = do
 -- | Balance an unbalanced transaction by adding missing inputs and outputs
 handleBalanceTx ::
     forall effs.
-    ( Member (State WalletState) effs
+    ( Member NodeClientEffect effs
+    , Member (State WalletState) effs
     , Member ChainIndexQueryEffect effs
     , Member (Error WAPI.WalletAPIError) effs
     , Member (LogMsg TxBalanceMsg) effs
@@ -416,6 +417,7 @@ handleBalanceTx ::
     -> UnbalancedTx
     -> Eff effs Tx
 handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
+    Params { pProtocolParams } <- WAPI.getClientParams
     let filteredUnbalancedTxTx = removeEmptyOutputs unBalancedTxTx
     let txInputs = Set.toList $ Tx.txInputs filteredUnbalancedTxTx
     ownPaymentPubKey <- gets ownPaymentPublicKey
@@ -425,7 +427,8 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
     let fees = txFee filteredUnbalancedTxTx
         left = txMint filteredUnbalancedTxTx <> fold inputValues
         right = fees <> foldMap (view Tx.outValue) (filteredUnbalancedTxTx ^. Tx.outputs)
-        remainingFees = fees PlutusTx.- fold collateral -- TODO: add collateralPercent
+        collFees = Ada.toValue $ (Ada.fromValue fees * maybe 100 fromIntegral (protocolParamCollateralPercent pProtocolParams)) `Ada.divide` 100
+        remainingCollFees = collFees PlutusTx.- fold collateral
         balance = left PlutusTx.- right
         (neg, pos) = adjustBalanceWithMissingLovelace $ Value.split balance
 
@@ -449,13 +452,13 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
                         txOutRef `notElem` inputsOutRefs
                 addInputs filteredUtxo ownPaymentPubKey ownStakePubKey neg tx'
 
-    if remainingFees `Value.leq` PlutusTx.zero
+    if remainingCollFees `Value.leq` PlutusTx.zero
     then do
         logDebug NoCollateralInputsAdded
         pure tx''
     else do
-        logDebug $ AddingCollateralInputsFor remainingFees
-        addCollateral utxo remainingFees tx''
+        logDebug $ AddingCollateralInputsFor remainingCollFees
+        addCollateral utxo remainingCollFees tx''
 
 -- | Adjust the left and right balance of an unbalanced 'Tx' with the missing
 -- lovelace considering the minimum lovelace per transaction output constraint
