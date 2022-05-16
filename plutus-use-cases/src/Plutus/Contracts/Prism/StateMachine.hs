@@ -89,7 +89,7 @@ typedValidator ::
 typedValidator credentialData =
     let val = $$(PlutusTx.compile [|| validator ||]) `PlutusTx.applyCode` PlutusTx.liftCode credentialData
         validator d = StateMachine.mkValidator (credentialStateMachine d)
-        wrap = Scripts.wrapValidator @IDState @IDAction
+        wrap = Scripts.mkUntypedValidator @IDState @IDAction
     in Scripts.mkTypedValidator @(StateMachine IDState IDAction) val $$(PlutusTx.compile [|| wrap ||])
 
 machineClient ::

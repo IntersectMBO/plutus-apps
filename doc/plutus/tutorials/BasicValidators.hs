@@ -15,6 +15,7 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Typed.Scripts qualified as Typed
 import Ledger.Value qualified as Value
+import Plutus.V1.Ledger.Api qualified as Ledger
 
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
@@ -92,17 +93,17 @@ validateDateTyped :: EndDate -> Date -> Ledger.ScriptContext -> Bool
 validateDateTyped endDate date _ = beforeEnd date endDate
 
 validateDateWrapped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-validateDateWrapped = Typed.wrapValidator validateDateTyped
+validateDateWrapped = Typed.mkUntypedValidator validateDateTyped
 -- BLOCK7
 dateInstance :: Typed.TypedValidator DateValidator
 dateInstance = Typed.mkTypedValidator @DateValidator
     -- The first argument is the compiled validator.
     $$(PlutusTx.compile [|| validateDateTyped ||])
     -- The second argument is a compiled wrapper.
-    -- Unfortunately we can't just inline wrapValidator here for technical reasons.
+    -- Unfortunately we can't just inline mkUntypedValidator here for technical reasons.
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Typed.wrapValidator
+        wrap = Typed.mkUntypedValidator
 
 dateValidatorHash :: Ledger.ValidatorHash
 dateValidatorHash = Typed.validatorHash dateInstance

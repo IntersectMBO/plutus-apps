@@ -39,7 +39,6 @@ library
         Plutus.Contracts.Future
         Plutus.Contracts.Game
         Plutus.Contracts.GameStateMachine
-        Plutus.Contracts.GameStateMachine.Coverage
         Plutus.Contracts.Governance
         Plutus.Contracts.MultiSig
         Plutus.Contracts.MultiSigStateMachine
@@ -84,13 +83,13 @@ library
         plutus-ledger -any,
         plutus-ledger-api -any,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         template-haskell -any,
         lens -any,
         text -any,
         prettyprinter -any,
         hashable -any,
         freer-simple -any,
-        streaming -any,
         semigroups -any,
         openapi3 -any
 
@@ -149,12 +148,12 @@ test-suite plutus-use-cases-test
         plutus-ledger -any,
         plutus-ledger-api,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         plutus-use-cases -any,
         playground-common -any
     build-depends:
         base >=4.9 && <5,
         bytestring -any,
-        cardano-crypto-class -any,
         containers -any,
         data-default -any,
         freer-extras -any,
@@ -213,7 +212,6 @@ executable plutus-use-cases-scripts
     build-depends:
         base >= 4.9 && <5,
         bytestring -any,
-        cardano-crypto-class -any,
         containers -any,
         data-default -any,
         freer-extras -any,
@@ -236,6 +234,7 @@ executable plutus-use-cases-scripts
         plutus-ledger-constraints -any,
         plutus-use-cases -any,
         plutus-contract-certification -any,
+        plutus-script-utils -any,
         optparse-applicative -any,
         cardano-api -any
 

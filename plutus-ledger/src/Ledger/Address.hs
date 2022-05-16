@@ -23,9 +23,10 @@ import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger.Crypto (PrivateKey, PubKey (PubKey), PubKeyHash (PubKeyHash), pubKeyHash)
 import Ledger.Orphans ()
-import Ledger.Scripts (StakeValidatorHash (..), Validator, ValidatorHash (..), validatorHash)
+import Plutus.Script.Utils.V1.Scripts (validatorHash)
 import Plutus.V1.Ledger.Address as Export hiding (pubKeyHashAddress)
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
+import Plutus.V1.Ledger.Scripts (StakeValidatorHash (..), Validator, ValidatorHash (..))
 import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude qualified as PlutusTx

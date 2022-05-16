@@ -16,11 +16,12 @@ import Hedgehog (MonadGen, Property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (MintingPolicyHash, TxOutRef (TxOutRef))
+import Ledger (TxOutRef (TxOutRef))
 import Ledger.Scripts qualified as Script
 import Ledger.Tx.CardanoAPI (fromCardanoPolicyId, fromCardanoTxId)
 import Plutus.Contract.Wallet (ExportTx (ExportTx), ExportTxInput (ExportTxInput, etxiAssets, etxiId, etxiTxIx),
                                ExportTxRedeemer (MintingRedeemer, SpendingRedeemer))
+import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 

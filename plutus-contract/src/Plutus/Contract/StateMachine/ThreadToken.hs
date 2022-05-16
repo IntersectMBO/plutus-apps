@@ -23,12 +23,12 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 import Ledger (CurrencySymbol, TxOutRef (..))
-import Ledger.Contexts qualified as V
 import Ledger.Scripts
-import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (TokenName (..), Value (..))
 import Ledger.Value qualified as Value
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (..))
+import Plutus.Script.Utils.V1.Typed.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Contexts qualified as V
 import PlutusTx qualified
 import Prelude qualified as Haskell
 
@@ -67,7 +67,7 @@ checkPolicy (TxOutRef refHash refIdx) (vHash, mintingPolarity) ctx@V.ScriptConte
 
 curPolicy :: TxOutRef -> MintingPolicy
 curPolicy outRef = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \r -> Scripts.wrapMintingPolicy (checkPolicy r) ||])
+    $$(PlutusTx.compile [|| \r -> Scripts.mkUntypedMintingPolicy (checkPolicy r) ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode outRef
 

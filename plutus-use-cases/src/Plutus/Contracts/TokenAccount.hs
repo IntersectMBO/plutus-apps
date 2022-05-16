@@ -49,18 +49,19 @@ import Plutus.Contract (AsContractError (_ContractError), Contract, ContractErro
 import Plutus.Contract.Constraints (ScriptLookups, TxConstraints)
 import PlutusTx qualified
 
-import Ledger (Address, PaymentPubKeyHash, ValidatorHash)
+import Ledger (PaymentPubKeyHash)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts qualified as V
-import Ledger.Scripts qualified
 import Ledger.Tx (CardanoTx)
-import Ledger.Typed.Scripts (ValidatorTypes)
-import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
+import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Typed.Tx qualified as TypedTx
 import Plutus.Contracts.Currency qualified as Currency
+import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Api (Address, ValidatorHash)
+import Plutus.V1.Ledger.Contexts qualified as V
 
 import Prettyprinter.Extras (PrettyShow (PrettyShow))
 
@@ -131,13 +132,13 @@ typedValidator = Scripts.mkTypedValidatorParam @TokenAccount
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 address :: Account -> Address
 address = Scripts.validatorAddress . typedValidator
 
 validatorHash :: Account -> ValidatorHash
-validatorHash = Ledger.Scripts.validatorHash . Scripts.validatorScript . typedValidator
+validatorHash = Scripts.validatorHash . Scripts.validatorScript . typedValidator
 
 -- | A transaction that pays the given value to the account
 payTx

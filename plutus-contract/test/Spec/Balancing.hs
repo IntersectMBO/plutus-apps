@@ -11,19 +11,20 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Ledger (Address, Validator, validatorHash)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Generators (someTokenValue)
-import Ledger.Scripts (mintingPolicyHash, unitDatum, unitRedeemer)
-import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Ledger.Value qualified as Value
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertAccumState, assertValidatedTransactionCount, changeInitialWalletValue,
                              checkPredicate, checkPredicateOptions, defaultCheckOptions, w1, w2)
+import Plutus.Script.Utils.V1.Generators (someTokenValue)
+import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, scriptCurrencySymbol, validatorHash)
+import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Scripts (Datum (Datum))
+import Plutus.V1.Ledger.Api (Address, Validator)
+import Plutus.V1.Ledger.Scripts (Datum (Datum), unitDatum, unitRedeemer)
+import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
@@ -107,7 +108,7 @@ balanceTxnMinAda2 =
 
 balanceTxnNoExtraOutput :: TestTree
 balanceTxnNoExtraOutput =
-    let vL n = Value.singleton (Ledger.scriptCurrencySymbol coinMintingPolicy) "coinToken" n
+    let vL n = Value.singleton (scriptCurrencySymbol coinMintingPolicy) "coinToken" n
         mkTx lookups constraints = either (error . show) id $ Constraints.mkTx @Void lookups constraints
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
@@ -141,4 +142,4 @@ mkPolicy _ _ = True
 
 coinMintingPolicy :: Ledger.MintingPolicy
 coinMintingPolicy = Ledger.mkMintingPolicyScript
-    $$(PlutusTx.compile [|| MPS.wrapMintingPolicy mkPolicy ||])
+    $$(PlutusTx.compile [|| MPS.mkUntypedMintingPolicy mkPolicy ||])

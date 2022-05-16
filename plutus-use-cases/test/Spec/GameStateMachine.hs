@@ -28,7 +28,6 @@ module Spec.GameStateMachine
   , prop_GameCrashTolerance
   , certification
   , covIndex
-  , gameParam
   ) where
 
 import Control.Exception hiding (handle)
@@ -37,7 +36,6 @@ import Control.Monad
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.Data
 import Data.Maybe
-import Prettyprinter
 import Test.QuickCheck as QC hiding (checkCoverage, (.&&.))
 import Test.Tasty hiding (after)
 import Test.Tasty.HUnit qualified as HUnit
@@ -55,8 +53,7 @@ import Plutus.Contract.Test.Certification
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.Coverage
-import Plutus.Contracts.GameStateMachine as G hiding (Guess)
-import Plutus.Contracts.GameStateMachine.Coverage
+import Plutus.Contracts.GameStateMachine as G
 import Plutus.Trace.Emulator as Trace
 import PlutusTx qualified
 import PlutusTx.Coverage
@@ -221,7 +218,10 @@ check_prop_Game_with_coverage = do
     propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))
-  writeCoverageReport "GameStateMachine" cr
+  writeCoverageReport "GameStateMachine" covIndex cr
+
+covIndex :: CoverageIndex
+covIndex = covIdx gameParam
 
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions
@@ -360,7 +360,7 @@ runTestsWithCoverage = do
   defaultMain (coverageTests ref)
     `catch` \(e :: SomeException) -> do
                 report <- readCoverageRef ref
-                putStrLn . show $ pretty (CoverageReport covIndex report)
+                putStrLn . show $ pprCoverageReport (covIdx gameParam) report
                 throwIO e
   where
     coverageTests ref = testGroup "game state machine tests"
@@ -465,7 +465,7 @@ certification :: Certification GameModel
 certification = defaultCertification {
     certNoLockedFunds      = Just noLockProof,
     certUnitTests          = Just unitTest,
-    certCoverageIndex      = covIndex,
+    certCoverageIndex      = covIdx gameParam,
     certCrashTolerance     = Just Instance
   }
   where

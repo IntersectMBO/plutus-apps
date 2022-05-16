@@ -253,7 +253,7 @@ typedValidator = Scripts.mkTypedValidatorParam @AuctionMachine
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 data AuctionError =
     StateMachineContractError SM.SMContractError -- ^ State machine operation failed

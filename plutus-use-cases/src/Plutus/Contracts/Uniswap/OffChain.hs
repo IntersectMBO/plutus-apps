@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
-{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:coverage-all #-}
+{-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
 
 module Plutus.Contracts.Uniswap.OffChain
     ( poolStateCoinFromUniswapCurrency, liquidityCoin
@@ -47,11 +47,13 @@ import Ledger.Constraints as Constraints
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
 import Plutus.Contract as Contract
-import Plutus.Contract.Test.Coverage.Analysis
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap.OnChain (mkUniswapValidator, validateLiquidityMinting)
 import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
+import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
+import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer), Validator,
+                                 mkMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Code
 import PlutusTx.Coverage
@@ -104,7 +106,7 @@ uniswapInstance us = Scripts.mkTypedValidator @Uniswapping
     c :: Coin PoolState
     c = poolStateCoin us
 
-    wrap = Scripts.wrapValidator @UniswapDatum @UniswapAction
+    wrap = Scripts.mkUntypedValidator @UniswapDatum @UniswapAction
 
 uniswapScript :: Uniswap -> Validator
 uniswapScript = Scripts.validatorScript . uniswapInstance
@@ -117,21 +119,13 @@ uniswap cs = Uniswap $ mkCoin cs uniswapTokenName
 
 liquidityPolicy :: Uniswap -> MintingPolicy
 liquidityPolicy us = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \u t -> Scripts.wrapMintingPolicy (validateLiquidityMinting u t) ||])
+    $$(PlutusTx.compile [|| \u t -> Scripts.mkUntypedMintingPolicy (validateLiquidityMinting u t) ||])
         `PlutusTx.applyCode` PlutusTx.liftCode us
         `PlutusTx.applyCode` PlutusTx.liftCode poolStateTokenName
 
-cc :: CompiledCode
-        (Uniswap
-         -> Coin PoolState
-         -> UniswapDatum
-         -> UniswapAction
-         -> ScriptContext
-         -> ())
-cc = $$(PlutusTx.compile [|| \u s r d c -> check $ mkUniswapValidator u s r d c ||])
-
 covIdx :: CoverageIndex
-covIdx = computeRefinedCoverageIndex cc
+covIdx = getCovIdx $$(PlutusTx.compile [|| \u t -> Scripts.mkUntypedMintingPolicy (validateLiquidityMinting u t) ||]) <>
+         getCovIdx $$(PlutusTx.compile [|| mkUniswapValidator ||])
 
 liquidityCurrency :: Uniswap -> CurrencySymbol
 liquidityCurrency = scriptCurrencySymbol . liquidityPolicy

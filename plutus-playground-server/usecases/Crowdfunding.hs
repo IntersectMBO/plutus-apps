@@ -26,11 +26,9 @@ import Control.Monad (void)
 import Data.Default (Default (def))
 import Data.Text (Text)
 import Ledger (POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), ScriptContext (..), TxInfo (..),
-               Validator, getCardanoTxId)
+               getCardanoTxId)
 import Ledger qualified
-import Ledger.Contexts qualified as V
 import Ledger.Interval qualified as Interval
-import Ledger.Scripts qualified as Scripts
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (Value)
@@ -38,6 +36,9 @@ import Playground.Contract
 import Plutus.Contract
 import Plutus.Contract.Constraints qualified as Constraints
 import Plutus.Contract.Typed.Tx qualified as Typed
+import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Api (Validator)
+import Plutus.V1.Ledger.Contexts qualified as V
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Applicative (..), Semigroup (..))
 import Prelude (Semigroup (..))
@@ -106,7 +107,7 @@ typedValidator = Scripts.mkTypedValidatorParam @Crowdfunding
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 {-# INLINABLE validRefund #-}
 validRefund :: Campaign -> PaymentPubKeyHash -> TxInfo -> Bool
@@ -142,7 +143,7 @@ contributionScript :: Campaign -> Validator
 contributionScript = Scripts.validatorScript . typedValidator
 
 -- | The address of a [[Campaign]]
-campaignAddress :: Campaign -> Ledger.ValidatorHash
+campaignAddress :: Campaign -> ValidatorHash
 campaignAddress = Scripts.validatorHash . contributionScript
 
 -- | The crowdfunding contract for the 'Campaign'.
