@@ -19,7 +19,6 @@ module Plutus.PAB.Db.Beam.ContractStore
   where
 
 import Control.Lens
-import Control.Monad (join)
 import Control.Monad.Freer (Eff, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Extras (LogMsg)
@@ -140,14 +139,13 @@ handleContractStore = \case
               let cd = getContract @a caID
               fromResponse @a instanceId cd resp
 
-    join
-      $ fmap extractState
-      $ selectOne
+    c <- selectOne
       $ select
       $ do
           inst <- all_ (_contractInstances db)
           guard_ (inst ^. contractInstanceId ==. val_ (uuidStr instanceId))
           pure inst
+    extractState c
 
   PutStopInstance instanceId ->
     updateRows

@@ -254,4 +254,3 @@ logNewMessages
         )
         (const $ pure ())
         _finalState
-

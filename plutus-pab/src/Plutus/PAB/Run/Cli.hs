@@ -14,7 +14,7 @@
 {-# LANGUAGE StrictData            #-}
 {-# LANGUAGE TypeApplications      #-}
 
-module Plutus.PAB.Run.Cli (ConfigCommandArgs(..), runConfigCommand) where
+module Plutus.PAB.Run.Cli where -- (ConfigCommandArgs(..), runConfigCommand) where
 
 -----------------------------------------------------------------------------------------------------------------------
 -- Command interpretation
@@ -41,21 +41,22 @@ import Control.Monad (forM, forM_, forever, void, when)
 import Control.Monad.Freer (Eff, LastMember, Member, interpret, runM)
 import Control.Monad.Freer.Delay (DelayEffect, delayThread, handleDelayEffect)
 import Control.Monad.Freer.Error (throwError)
-import Control.Monad.Freer.Extras.Log (logInfo)
+import Control.Monad.Freer.Extras.Log (LogMsg, logInfo)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON, toJSON)
 import Data.Aeson.OneLine (renderValue)
+import Data.Bifunctor qualified as Bifunctor
 import Data.Foldable (traverse_)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
-import Data.Set qualified as Set
 import Data.Text qualified as T
 import Data.Text.Extras (tshow)
 import Data.Time.Units (Second)
+import Data.Typeable (Typeable)
 import Plutus.Contract.Resumable (responses)
 import Plutus.Contract.State (State (State, record))
 import Plutus.Contract.State qualified as State
@@ -64,29 +65,87 @@ import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance (ContractInstanceState (ContractInstanceState), updateState)
 import Plutus.PAB.Core.ContractInstance.STM (InstanceState, emptyInstanceState)
 import Plutus.PAB.Db.Beam qualified as Beam
+import Plutus.PAB.Db.FS (runFSStoreAction)
+import Plutus.PAB.Db.FS.Types (ContractStoreDir (ContractStoreDir))
+import Plutus.PAB.Db.Memory.ContractStore (initialInMemInstances)
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions, SomeBuiltinState, getResponse)
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
 import Plutus.PAB.Run.Command (ConfigCommand (ChainIndex, ContractState, ForkCommands, Migrate, MockWallet, PABWebserver, ReportActiveContracts, ReportAvailableContracts, ReportContractHistory, StartNode))
-import Plutus.PAB.Types (Config (Config, dbConfig, pabWebserverConfig), chainIndexConfig, nodeServerConfig,
-                         walletServerConfig)
+import Plutus.PAB.Types (Config (Config, contractStoreConfig, pabWebserverConfig),
+                         ContractStoreBackend (FSContractStore, InMemoryContractStore, SqliteContractStore),
+                         ContractStoreConfig (UseFSStore, UseInMemoryStore, UseSqliteStore), PABError, SqliteConfig,
+                         SqliteConnectionPool, chainIndexConfig, nodeServerConfig, walletServerConfig)
 import Plutus.PAB.Webserver.Server qualified as PABServer
 import Plutus.PAB.Webserver.Types (ContractActivationArgs (ContractActivationArgs, caID, caWallet))
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, pretty)
 import Prettyprinter.Render.Text (renderStrict)
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitWith)
+import System.IO (hPutStrLn, stderr)
 import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Types qualified as Wallet
 
 data ConfigCommandArgs a =
     ConfigCommandArgs
-        { ccaTrace          :: Trace IO (LM.AppMsg (Builtin a))  -- ^ PAB Tracer logging instance
-        , ccaLoggingConfig  :: Configuration -- ^ Monitoring configuration
-        , ccaPABConfig      :: Config        -- ^ PAB Configuration
-        , ccaAvailability   :: Availability  -- ^ Token for signaling service availability
-        , ccaStorageBackend :: App.StorageBackend -- ^ Wheter to use the beam-sqlite or in-memory backend
+        { ccaTrace         :: Trace IO (LM.AppMsg (Builtin a))  -- ^ PAB Tracer logging instance
+        , ccaLoggingConfig :: Configuration -- ^ Monitoring configuration
+        , ccaPABConfig     :: Config        -- ^ PAB Configuration
+        , ccaAvailability  :: Availability  -- ^ Token for signaling service availability
+        , ccaInMemoryStore :: Bool -- ^ Allows to override contract store setup
         }
+
+toPABMsg :: Trace m (LM.AppMsg (Builtin a)) -> Trace m (LM.PABLogMsg (Builtin a))
+toPABMsg = LM.convertLog LM.PABMsg
+
+withSQLite :: Trace IO (LM.AppMsg (Builtin a)) -> SqliteConfig -> (SqliteConnectionPool -> IO b) -> IO b
+withSQLite trace sqliteConfig h = do
+  let
+    trace' = toPABMsg trace
+  pool <- App.dbConnect trace' sqliteConfig
+  h pool
+
+withSQLite' :: Trace IO (LM.AppMsg (Builtin a)) -> ContractStoreConfig -> (SqliteConnectionPool -> IO b) -> IO b
+withSQLite' trace (UseSqliteStore sqliteConfig) h = withSQLite trace sqliteConfig h
+withSQLite' _ _ _                          = do
+  hPutStrLn stderr "Given command is only supported for SQLite contract store"
+  exitWith $ ExitFailure 1
+
+withPersistentContractsStore :: Trace IO (LM.AppMsg (Builtin a)) -> ContractStoreConfig -> (SqliteConnectionPool -> IO b) -> (ContractStoreDir (Builtin a) -> IO b) -> IO b
+withPersistentContractsStore trace (UseSqliteStore sqliteConfig) sqliteAction _ = withSQLite trace sqliteConfig sqliteAction
+withPersistentContractsStore _ (UseFSStore dir) _ fsAction = fsAction (ContractStoreDir dir)
+withPersistentContractsStore _ UseInMemoryStore _ _ = do
+  hPutStrLn stderr "Given command is only supported for persistent contract stores."
+  exitWith $ ExitFailure 1
+
+runPersistentStoreAction
+  :: (ToJSON a, FromJSON a, HasDefinitions a, Typeable a)
+  => Trace IO (LM.AppMsg (Builtin a))
+  -> ContractStoreConfig
+  -> Eff '[Contract.ContractStore (Builtin a), LogMsg (LM.PABMultiAgentMsg (Builtin a)), DelayEffect, IO] b
+  -> IO (Either PABError b)
+runPersistentStoreAction trace config action = withPersistentContractsStore trace config runSqlite runFS
+  where
+    runSqlite conn = Beam.runBeamStoreAction
+        conn
+        (LM.convertLog LM.PABMsg trace)
+        action
+    runFS contractStoreDir = runFSStoreAction
+      contractStoreDir
+      (LM.convertLog LM.PABMsg trace)
+      action
+
+logPersistentStoreAction
+  :: forall a b
+  . (ToJSON a, FromJSON a, ToJSON b, HasDefinitions a, Typeable a)
+  => Trace IO (LM.AppMsg (Builtin a))
+  -> ContractStoreConfig
+  -> Eff '[Contract.ContractStore (Builtin a), LogMsg (LM.PABMultiAgentMsg (Builtin a)), DelayEffect, IO] b
+  -> IO ()
+logPersistentStoreAction trace config action = do
+  (res :: Either PABError b) <- runPersistentStoreAction trace config action
+  putStrLn $ T.unpack $ renderValue $ toJSON (Bifunctor.first (error . show) res :: Either String b)
+
 
 -- | Interpret a 'Command' in 'Eff' using the provided tracer and configurations
 --
@@ -106,8 +165,8 @@ runConfigCommand :: forall a.
     -> IO ()
 
 -- Run the database migration
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Migrate =
-    App.migrate (toPABMsg ccaTrace) dbConfig
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{contractStoreConfig}} Migrate =
+  withSQLite' ccaTrace contractStoreConfig $ App.migrate (toPABMsg ccaTrace)
 
 -- Run mock wallet service
 runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet =
@@ -143,8 +202,8 @@ runConfigCommand
     contractHandler
     ConfigCommandArgs { ccaTrace
                       , ccaPABConfig =
-                          config@Config { pabWebserverConfig, nodeServerConfig, dbConfig }
-                      , ccaAvailability, ccaStorageBackend
+                          config@Config { pabWebserverConfig, nodeServerConfig }
+                      , ccaAvailability, ccaInMemoryStore
                       } PABWebserver = do
 
     when (isJust $ preview _AlonzoNode $ pscNodeMode nodeServerConfig) $ do
@@ -159,22 +218,48 @@ runConfigCommand
                 $ LM.SCoreMsg
                 $ LM.ConnectingToAlonzoNode nodeServerConfig slotNo
 
-    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
+    let
+      -- Use Contract store override flag
+      config' = if ccaInMemoryStore
+        then config { contractStoreConfig = UseInMemoryStore }
+        else config
+
+      readContracts = do
+        cIds   <- Map.toList <$> Contract.getActiveContracts @(Builtin a)
+        forM cIds $ \(cid, args) -> do
+           s <- Contract.getState @(Builtin a) cid
+           let priorContract :: (SomeBuiltinState a, Wallet.ContractInstanceId, ContractActivationArgs a)
+               priorContract = (s, cid, args)
+           pure priorContract
+
     -- Restore the running contracts by first collecting up enough details about the
     -- previous contracts to re-start them
-    previousContracts <-
-        Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
-        $ interpret (LM.handleLogMsgTrace ccaTrace)
-        $ do
-            cIds   <- Map.toList <$> Contract.getActiveContracts @(Builtin a)
-            forM cIds $ \(cid, args) -> do
-                s <- Contract.getState @(Builtin a) cid
-                let priorContract :: (SomeBuiltinState a, Wallet.ContractInstanceId, ContractActivationArgs a)
-                    priorContract = (s, cid, args)
-                pure priorContract
+    previousContracts <- case contractStoreConfig config' of
+      UseSqliteStore sqliteConfig -> do
+        connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) sqliteConfig
+        -- Restore the running contracts by first collecting up enough details about the
+        -- previous contracts to re-start them
+        Beam.runBeamStoreAction
+          connection
+          (LM.convertLog LM.PABMsg ccaTrace)
+          readContracts
+      UseFSStore dir ->
+        runFSStoreAction
+          (ContractStoreDir dir)
+          (LM.convertLog LM.PABMsg ccaTrace)
+          readContracts
+      UseInMemoryStore -> pure $ Right []
+
+    -- TODO paluh:
+    -- Currently we don't share the contract instance state with the main thread.
+    -- Fix in memory store (turn it into simple filesystem store / contract instance per json file)
+    contractStore <- case contractStoreConfig config' of
+       UseSqliteStore cfg -> SqliteContractStore <$> App.dbConnect (toPABMsg ccaTrace) cfg
+       UseFSStore dir     -> pure $ FSContractStore (ContractStoreDir dir)
+       UseInMemoryStore   ->  InMemoryContractStore <$> initialInMemInstances @(Builtin a)
 
     -- Then, start the server
-    result <- App.runApp ccaStorageBackend (toPABMsg ccaTrace) contractHandler config
+    result <- App.runApp contractStore (toPABMsg ccaTrace) contractHandler config
       $ do
           env <- ask @(Core.PABEnvironment (Builtin a) (App.AppEnv a))
 
@@ -232,17 +317,10 @@ runConfigCommand _ ConfigCommandArgs{ccaAvailability, ccaTrace, ccaPABConfig=Con
         ccaAvailability
 
 -- Get the state of a contract
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ContractState contractInstanceId) = do
-    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
-    outputState <- fmap (either (error . show) id)
-        $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
-        $ do
-            s <- Contract.getState @(Builtin a) contractInstanceId
-            let outputState = Contract.serialisableState (Proxy @(Builtin a)) s
-            drainLog
-            pure outputState
-    putStrLn $ T.unpack $ renderValue $ toJSON outputState
-
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{contractStoreConfig}} (ContractState contractInstanceId) =
+  logPersistentStoreAction ccaTrace contractStoreConfig $ do
+    s <- Contract.getState @(Builtin a) contractInstanceId
+    pure $ Contract.serialisableState (Proxy @(Builtin a)) s
 
 -- Get all available contracts
 runConfigCommand _ ConfigCommandArgs{ccaTrace} ReportAvailableContracts = do
@@ -258,36 +336,15 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace} ReportAvailableContracts = do
                     render = renderStrict . layoutPretty defaultLayoutOptions
 
 -- Get all active contracts
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} ReportActiveContracts = do
-    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
-    fmap (either (error . show) id)
-        $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
-        $ interpret (LM.handleLogMsgTrace ccaTrace)
-        $ do
-            logInfo @(LM.AppMsg (Builtin a)) LM.ActiveContractsMsg
-            instancesById <- Contract.getActiveContracts @(Builtin a)
-            let idsByDefinition = Map.fromListWith (<>) $ fmap (\(inst, ContractActivationArgs{caID}) -> (caID, Set.singleton inst)) $ Map.toList instancesById
-            traverse_ (\(e, s) -> logInfo @(LM.AppMsg (Builtin a)) $ LM.ContractInstances e (Set.toList s)) $ Map.toAscList idsByDefinition
-            drainLog
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{contractStoreConfig}} ReportActiveContracts = do
+  logPersistentStoreAction ccaTrace contractStoreConfig $ Contract.getActiveContracts @(Builtin a)
 
 -- Get history of a specific contract
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} (ReportContractHistory contractInstanceId) = do
-    connection <- App.dbConnect (LM.convertLog LM.PABMsg ccaTrace) dbConfig
-    fmap (either (error . show) id)
-        $ Beam.runBeamStoreAction connection (LM.convertLog LM.PABMsg ccaTrace)
-        $ interpret (LM.handleLogMsgTrace ccaTrace)
-        $ do
-            logInfo @(LM.AppMsg (Builtin a)) LM.ContractHistoryMsg
-            s <- Contract.getState @(Builtin a) contractInstanceId
-            let State.ContractResponse{State.newState=State{record}} = Contract.serialisableState (Proxy @(Builtin a)) s
-            traverse_ logStep (responses record)
-            drainLog
-  where
-      logStep response = logInfo @(LM.AppMsg (Builtin a)) $
-          LM.ContractHistoryItem contractInstanceId (snd <$> response)
-
-toPABMsg :: Trace m (LM.AppMsg (Builtin a)) -> Trace m (LM.PABLogMsg (Builtin a))
-toPABMsg = LM.convertLog LM.PABMsg
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{contractStoreConfig}} (ReportContractHistory contractInstanceId) =
+  logPersistentStoreAction ccaTrace contractStoreConfig $ do
+    s <- Contract.getState @(Builtin a) contractInstanceId
+    let State.ContractResponse{State.newState=State{record}} = Contract.serialisableState (Proxy @(Builtin a)) s
+    pure $ responses record
 
 toChainIndexLog :: Trace m (LM.AppMsg (Builtin a)) -> Trace m LM.ChainIndexServerMsg
 toChainIndexLog = LM.convertLog $ LM.PABMsg . LM.SChainIndexServerMsg

@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
@@ -26,7 +25,6 @@ import Wallet.Types (ContractInstanceId (..))
 
 import Plutus.ChainIndex.Compatibility (fromCardanoPoint)
 import Plutus.ChainIndex.Types (Point (..))
-import Plutus.PAB.App (StorageBackend (..))
 import Plutus.PAB.Run.Command
 
 data AppOpts = AppOpts { minLogLevel     :: Maybe Severity
@@ -36,7 +34,7 @@ data AppOpts = AppOpts { minLogLevel     :: Maybe Severity
                        , rollbackHistory :: Maybe Int
                        , resumeFrom      :: Point
                        , runEkgServer    :: Bool
-                       , storageBackend  :: StorageBackend
+                       , inMemoryStore   :: Bool
                        , cmd             :: ConfigCommand
                        }
 
@@ -59,12 +57,11 @@ ekgFlag =
         True
         (short 'e' <> long "ekg" <> help "Enable the EKG server")
 
-inMemoryFlag :: Parser StorageBackend
-inMemoryFlag =
-    flag
-        BeamSqliteBackend
-        InMemoryBackend
-        (short 'm' <> long "memory" <> help "Use the memory-backed backend. If false, the beam backend is used.")
+inMemoryFlag :: Parser Bool
+inMemoryFlag = flag
+    False
+    True
+    (short 'm' <> long "memory" <> help "Use the memory-backed backend. If false, the beam backend is used.")
 
 commandLineParser :: Parser AppOpts
 commandLineParser =
@@ -249,4 +246,3 @@ reportContractHistoryParser =
     info
         (ReportContractHistory <$> contractIdParser)
         (fullDesc <> progDesc "Show the state history of a smart contract.")
-

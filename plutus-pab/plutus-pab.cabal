@@ -90,6 +90,10 @@ library
         Plutus.PAB.Db.Schema
         Plutus.PAB.Db.Beam.ContractStore
         Plutus.PAB.Db.Memory.ContractStore
+        Plutus.PAB.Db.Memory.Types
+        Plutus.PAB.Db.FS.ContractStore
+        Plutus.PAB.Db.FS.Types
+        Plutus.PAB.Db.FS
         Plutus.PAB.Effects.Contract
         Plutus.PAB.Effects.Contract.Builtin
         Plutus.PAB.Effects.TimeEffect
@@ -184,6 +188,7 @@ library
         servant-websockets -any,
         sqlite-simple -any,
         stm -any,
+        strict -any,
         tagged -any,
         text -any,
         text-class -any,

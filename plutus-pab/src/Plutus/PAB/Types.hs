@@ -20,16 +20,20 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Pool (Pool)
 import Data.Text (Text)
 import Data.Time.Units (Second)
 import Data.UUID (UUID)
 import Data.UUID.Extras qualified as UUID
+import Database.SQLite.Simple qualified as Sqlite
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, Tx, TxId, eitherTx, txId)
 import Ledger.Index (UtxoIndex (UtxoIndex))
 import Ledger.Index qualified as UtxoIndex
 import Plutus.ChainIndex.Types (Point (..))
 import Plutus.Contract.Types (ContractError)
+import Plutus.PAB.Db.FS.Types (ContractStoreDir)
+import Plutus.PAB.Db.Memory.Types (InMemInstances)
 import Plutus.PAB.Instances ()
 import Prettyprinter (Pretty, line, pretty, viaShow, (<+>))
 import Servant.Client (BaseUrl (BaseUrl), ClientError, Scheme (Http))
@@ -45,6 +49,7 @@ data PABError
     | WalletClientError ClientError
     | NodeClientError ClientError
     | BeamEffectError BeamError
+    | FSContractStoreError String
     | RandomTxClientError ClientError
     | ChainIndexError ClientError
     | WalletError WalletAPIError
@@ -68,6 +73,7 @@ instance Pretty PABError where
         FileNotFound fp            -> "File not found:" <+> pretty fp
         ContractNotFound fp        -> "Contract not found:" <+> pretty fp
         ContractInstanceNotFound i -> "Contract instance not found:" <+> pretty i
+        FSContractStoreError msg   -> "FS contract store error:" <+> pretty msg
         PABContractError e         -> "Contract error:" <+> pretty e
         WalletClientError e        -> "Wallet client error:" <+> viaShow e
         NodeClientError e          -> "Node client error:" <+> viaShow e
@@ -91,31 +97,40 @@ instance Pretty PABError where
         RemoteWalletWithMockNodeError   -> "The remote wallet can't be used with the mock node."
         TxSenderNotAvailable         -> "Cannot send a transaction when connected to the real node."
 
-data DbConfig =
-    DbConfig
-        { dbConfigFile     :: Text
-        -- ^ The path to the sqlite database file. May be absolute or relative.
-        , dbConfigPoolSize :: Int
-        -- ^ Max number of concurrent sqlite database connections.
-        }
+data SqliteConfig = SqliteConfig
+    { sqliteConfigFile     :: Text
+    -- ^ The path to the sqlite database file. May be absolute or relative.
+    , sqliteConfigPoolSize :: Int
+    -- ^ Max number of concurrent sqlite database connections.
+    }
     deriving (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
--- | Default database config uses an in-memory sqlite database that is shared
--- between all threads in the process.
-defaultDbConfig :: DbConfig
-defaultDbConfig
-  = DbConfig
-      { dbConfigFile = "file::memory:?cache=shared"
-      , dbConfigPoolSize = 20
-      }
+data ContractStoreConfig
+  = UseInMemoryStore
+  | UseFSStore FilePath
+  | UseSqliteStore SqliteConfig
+     deriving (Show, Eq, Generic)
+     deriving anyclass (ToJSON, FromJSON)
 
-instance Default DbConfig where
-  def = defaultDbConfig
+type SqliteConnectionPool = Pool Sqlite.Connection
+
+data ContractStoreBackend t
+  = InMemoryContractStore (InMemInstances t)
+  | SqliteContractStore SqliteConnectionPool
+  | FSContractStore (ContractStoreDir t)
+
+-- Default contract store config uses an in-memory sqlite database that is shared
+-- between all threads in the process.
+defaultContractStoreConfig :: ContractStoreConfig
+defaultContractStoreConfig = UseInMemoryStore
+
+instance Default ContractStoreConfig where
+  def = defaultContractStoreConfig
 
 data Config =
     Config
-        { dbConfig                :: DbConfig
+        { contractStoreConfig     :: ContractStoreConfig
         , walletServerConfig      :: Wallet.WalletConfig
         , nodeServerConfig        :: PABServerConfig
         , pabWebserverConfig      :: WebserverConfig
@@ -128,7 +143,7 @@ data Config =
 defaultConfig :: Config
 defaultConfig =
   Config
-    { dbConfig = def
+    { contractStoreConfig = def
     , walletServerConfig = def
     , nodeServerConfig = def
     , pabWebserverConfig = def

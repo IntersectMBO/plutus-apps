@@ -659,4 +659,3 @@ handleTimeEffect = \case
     SystemTime -> do
         Instances.BlockchainEnv{Instances.beCurrentSlot} <- asks @(PABEnvironment t env) blockchainEnv
         liftIO $ STM.readTVarIO beCurrentSlot
-

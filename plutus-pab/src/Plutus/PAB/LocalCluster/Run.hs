@@ -65,14 +65,14 @@ import Plutus.ChainIndex.App qualified as ChainIndex
 import Plutus.ChainIndex.Config qualified as CI
 import Plutus.ChainIndex.Logging qualified as ChainIndex.Logging
 import Plutus.ChainIndex.Types (Point (..))
-import Plutus.PAB.App (StorageBackend (BeamSqliteBackend))
 import Plutus.PAB.Effects.Contract.Builtin (BuiltinHandler, HasDefinitions)
 import Plutus.PAB.Run qualified as PAB.Run
 import Plutus.PAB.Run.Command (ConfigCommand (Migrate, PABWebserver))
-import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, logConfigPath, minLogLevel, resumeFrom, rollbackHistory, runEkgServer, storageBackend))
+import Plutus.PAB.Run.CommandParser (AppOpts (AppOpts, cmd, configPath, inMemoryStore, logConfigPath, minLogLevel, resumeFrom, rollbackHistory, runEkgServer))
 import Plutus.PAB.Run.CommandParser qualified as PAB.Command
-import Plutus.PAB.Types (Config (chainIndexConfig, dbConfig, nodeServerConfig, walletServerConfig),
-                         DbConfig (dbConfigFile))
+import Plutus.PAB.Types (Config (chainIndexConfig, contractStoreConfig, nodeServerConfig, walletServerConfig),
+                         ContractStoreConfig (UseSqliteStore),
+                         SqliteConfig (SqliteConfig, sqliteConfigFile, sqliteConfigPoolSize))
 import Plutus.PAB.Types qualified as PAB.Config
 import Prettyprinter (Pretty)
 import Servant qualified
@@ -245,12 +245,16 @@ launchPAB
     -> ChainIndexPort -- ^ Port of the chain index
     -> IO ()
 launchPAB userContractHandler passPhrase dir walletUrl (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
-    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = Nothing, resumeFrom = PointAtGenesis, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
+    let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = Nothing, resumeFrom = PointAtGenesis, runEkgServer = False, inMemoryStore = False, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
         networkID = NetworkIdWrapper CAPI.Mainnet
         config =
             PAB.Config.defaultConfig
                 { nodeServerConfig = def{pscSocketPath=nodeSocketFile socketPath,pscNodeMode=AlonzoNode,pscNetworkId=networkID}
-                , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
+                , contractStoreConfig = UseSqliteStore $
+                    SqliteConfig
+                      { sqliteConfigFile = T.pack (dir </> "plutus-pab.db")
+                      , sqliteConfigPoolSize = 10
+                      }
                 , chainIndexConfig = def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
                 , walletServerConfig = set (Wallet.Config.walletSettingsL . Wallet.Config.baseUrlL) (WalletUrl walletUrl) def
                 }
@@ -314,4 +318,3 @@ instance HasSeverityAnnotation TestsLog where
         MsgSettingUpFaucet -> Notice
         MsgBaseUrl {}      -> Notice
         MsgCluster msg     -> getSeverityAnnotation msg
-

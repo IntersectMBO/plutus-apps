@@ -34,8 +34,8 @@ import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions)
 import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
 import Plutus.PAB.Monitoring.PABLogMsg (AppMsg)
-import Plutus.PAB.Run.Cli (ConfigCommandArgs (ConfigCommandArgs), ccaAvailability, ccaLoggingConfig, ccaPABConfig,
-                           ccaStorageBackend, ccaTrace, runConfigCommand)
+import Plutus.PAB.Run.Cli (ConfigCommandArgs (ConfigCommandArgs, ccaInMemoryStore), ccaAvailability, ccaLoggingConfig,
+                           ccaPABConfig, ccaTrace, runConfigCommand)
 import Plutus.PAB.Run.CommandParser
 import Plutus.PAB.Types (Config (Config), DevelopmentOptions (pabResumeFrom, pabRollbackHistory),
                          PABError (MissingConfigFileOption), developmentOptions, nodeServerConfig)
@@ -75,7 +75,7 @@ runWithOpts :: forall a.
     -> Maybe Config -- ^ Optional config override to use in preference to the one in AppOpts
     -> AppOpts
     -> IO ()
-runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resumeFrom, logConfigPath, passphrase, runEkgServer, cmd, configPath, storageBackend } = do
+runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resumeFrom, logConfigPath, passphrase, runEkgServer, cmd, configPath, inMemoryStore } = do
     -- Parse config files and initialize logging
     logConfig <- maybe defaultConfig loadConfig logConfigPath
     for_ minLogLevel $ \ll -> CM.setMinSeverity logConfig ll
@@ -114,7 +114,7 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resum
                            , developmentOptions = mkDevOpts developmentOptions
                            }
                 , ccaAvailability = serviceAvailability
-                , ccaStorageBackend = storageBackend
+                , ccaInMemoryStore = inMemoryStore
                 }
 
     -- execute parsed pab command and handle errors on faliure
