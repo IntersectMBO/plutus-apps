@@ -16,14 +16,13 @@ import Cardano.Ledger.Era qualified as Ledger
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
 import Gen.Cardano.Api.Typed
-import Ledger qualified as Plutus
-import Plutus.V1.Ledger.DCert qualified as Plutus
+import Plutus.V1.Ledger.Api qualified as Plutus hiding (singleton)
+import Plutus.V1.Ledger.Interval qualified as Plutus
 import PlutusExample.ScriptContextChecker
 
 import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-
 
 genPlutusTxOut :: Gen Plutus.TxOut
 genPlutusTxOut = do

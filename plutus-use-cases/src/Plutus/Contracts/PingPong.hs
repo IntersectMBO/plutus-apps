@@ -107,7 +107,7 @@ typedValidator = Scripts.mkTypedValidator @(SM.StateMachine PingPongState Input)
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator @PingPongState @Input
+        wrap = Scripts.mkUntypedValidator @PingPongState @Input
 
 machineInstance :: SM.StateMachineInstance PingPongState Input
 machineInstance = SM.StateMachineInstance machine typedValidator

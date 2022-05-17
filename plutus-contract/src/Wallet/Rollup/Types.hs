@@ -14,8 +14,10 @@ import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Map (Map)
 import Data.OpenApi.Schema qualified as OpenApi
 import GHC.Generics
-import Ledger
-import Ledger.Credential (Credential (..))
+import Ledger (PaymentPubKeyHash (PaymentPubKeyHash), Tx)
+import Plutus.V1.Ledger.Api (Address (Address, addressCredential), Credential (PubKeyCredential, ScriptCredential),
+                             TxId, TxOut (TxOut, txOutAddress), ValidatorHash, Value)
+import Plutus.V1.Ledger.Tx (TxIn)
 import Prettyprinter (Pretty, pretty, viaShow)
 
 data TxKey =

@@ -65,7 +65,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, Slot, TxOutRef, Value, plutusV1ScriptCurrencySymbol)
+import Ledger (POSIXTime, Slot, TxOutRef, Value)
 import Ledger qualified
 import Ledger.Constraints (ScriptLookups, TxConstraints, mintingPolicy, mustMintValueWithRedeemer, mustPayToTheScript,
                            mustSpendPubKeyOutput)
@@ -92,6 +92,7 @@ import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue
 import Plutus.Contract.StateMachine.OnChain qualified as SM
 import Plutus.Contract.StateMachine.ThreadToken (ThreadToken (ThreadToken), curPolicy, ttOutRef)
 import Plutus.Contract.Wallet (getUnspentOutput)
+import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
 import PlutusTx qualified
 import PlutusTx.Monoid (inv)
 
@@ -373,7 +374,7 @@ runStep = runStepWith mempty mempty
 getThreadToken :: AsSMContractError e => Contract w schema e ThreadToken
 getThreadToken = mapError (review _SMContractError) $ do
     txOutRef <- getUnspentOutput
-    pure $ ThreadToken txOutRef (plutusV1ScriptCurrencySymbol (curPolicy txOutRef))
+    pure $ ThreadToken txOutRef (scriptCurrencySymbol (curPolicy txOutRef))
 
 -- | Initialise a state machine
 runInitialise ::

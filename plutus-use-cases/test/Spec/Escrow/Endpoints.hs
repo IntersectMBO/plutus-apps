@@ -11,13 +11,14 @@ import Data.Text (unpack)
 
 import Control.Monad (void)
 
-import Ledger (Datum (..), PaymentPubKeyHash)
-import Ledger qualified
+import Ledger (PaymentPubKeyHash)
 import Ledger.Constraints qualified as Constraints
 import Ledger.Interval (from)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.V1.Scripts qualified as Ledger
+import Plutus.V1.Ledger.Api (Datum (Datum))
 
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Typed

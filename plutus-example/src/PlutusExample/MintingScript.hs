@@ -18,8 +18,9 @@ import Codec.Serialise
 import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Short qualified as SBS
 
-import Ledger hiding (singleton)
-import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.V1.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Contexts (ScriptContext)
+import Plutus.V1.Ledger.Scripts (Script, Validator (Validator), mkMintingPolicyScript, unMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 
@@ -30,11 +31,10 @@ import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 mkPolicy :: BuiltinData -> ScriptContext -> Bool
 mkPolicy _redeemer _ctx = True
 
-
 policy :: Scripts.MintingPolicy
-policy = mkMintingPolicyScript
-    $$(PlutusTx.compile [|| Scripts.wrapMintingPolicy mkPolicy ||])
-
+policy = mkMintingPolicyScript $$(PlutusTx.compile [|| wrap ||])
+ where
+     wrap = Scripts.mkUntypedMintingPolicy mkPolicy
 
 plutusScript :: Script
 plutusScript =

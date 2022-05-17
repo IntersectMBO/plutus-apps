@@ -46,7 +46,7 @@ import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger qualified as Plutus
+import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
 import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequiredSignatories, unBalancedTxTx, unBalancedTxUtxoIndex),
@@ -58,7 +58,10 @@ import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
 import Plutus.Contract.Request qualified as Contract
 import Plutus.Contract.Types (Contract)
+import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
+import Plutus.V1.Ledger.Tx qualified as PV1
 import PlutusTx qualified
 import Wallet.API qualified as WAPI
 import Wallet.Effects (WalletEffect, balanceTx, yieldUnbalancedTx)
@@ -256,14 +259,14 @@ export params networkId slotConfig utx =
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
 finalize slotConfig utx =
      utx & U.tx
-         . Plutus.validRange
+         . P.validRange
          .~ posixTimeRangeToContainedSlotRange slotConfig (utx ^. U.validityTimeRange)
 
 mkPartialTx
-    :: [Plutus.PaymentPubKeyHash]
+    :: [P.PaymentPubKeyHash]
     -> C.ProtocolParameters
     -> C.NetworkId
-    -> Plutus.Tx
+    -> P.Tx
     -> Either CardanoAPI.ToCardanoError (C.Tx C.AlonzoEra)
 mkPartialTx requiredSigners params networkId =
       fmap (C.makeSignedTransaction [])
@@ -284,19 +287,19 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
         <*> sequence (CardanoAPI.toCardanoScriptDataHash <$> txOutDatumHash)
         <*> pure otherQuantities
 
-mkRedeemers :: Plutus.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
+mkRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
 mkRedeemers tx = (++) <$> mkSpendingRedeemers tx <*> mkMintingRedeemers tx
 
-mkSpendingRedeemers :: Plutus.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
-mkSpendingRedeemers Plutus.Tx{Plutus.txInputs} = fmap join (traverse extract $ Set.toList txInputs) where
-    extract Plutus.TxIn{Plutus.txInType=Just (Plutus.ConsumeScriptAddress _ redeemer _), Plutus.txInRef} =
+mkSpendingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
+mkSpendingRedeemers P.Tx{P.txInputs} = fmap join (traverse extract $ Set.toList txInputs) where
+    extract PV1.TxIn{PV1.txInType=Just (PV1.ConsumeScriptAddress _ redeemer _), PV1.txInRef} =
         pure [SpendingRedeemer{redeemer, redeemerOutRef=txInRef}]
     extract _ = pure []
 
-mkMintingRedeemers :: Plutus.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
-mkMintingRedeemers Plutus.Tx{Plutus.txRedeemers, Plutus.txMintScripts} = traverse extract $ Map.toList txRedeemers where
+mkMintingRedeemers :: P.Tx -> Either CardanoAPI.ToCardanoError [ExportTxRedeemer]
+mkMintingRedeemers P.Tx{P.txRedeemers, P.txMintScripts} = traverse extract $ Map.toList txRedeemers where
     indexedMintScripts = Map.fromList $ zip [0..] $ Set.toList txMintScripts
-    extract (Plutus.RedeemerPtr Plutus.Mint idx, redeemer) = do
-        redeemerPolicyId <- maybe (Left CardanoAPI.MissingMintingPolicy) (Right . Plutus.plutusV1MintingPolicyHash) (Map.lookup idx indexedMintScripts)
+    extract (PV1.RedeemerPtr PV1.Mint idx, redeemer) = do
+        redeemerPolicyId <- maybe (Left CardanoAPI.MissingMintingPolicy) (Right . PV1.mintingPolicyHash) (Map.lookup idx indexedMintScripts)
         pure MintingRedeemer{redeemer, redeemerPolicyId}
-    extract (Plutus.RedeemerPtr tag _, _) = Left (CardanoAPI.ScriptPurposeNotSupported tag)
+    extract (PV1.RedeemerPtr tag _, _) = Left (CardanoAPI.ScriptPurposeNotSupported tag)

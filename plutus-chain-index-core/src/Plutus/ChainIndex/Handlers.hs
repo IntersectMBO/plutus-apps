@@ -43,7 +43,7 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_,
                             (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxId, TxOut (..), TxOutRef (..))
+import Ledger (ChainIndexTxOut (..), TxId)
 import Ledger.Ada qualified as Ada
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
@@ -59,7 +59,7 @@ import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..
                                 TxProcessOption (..), TxUtxoBalance (..), tipAsPoint)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..), UtxoIndex)
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
-import Plutus.V1.Ledger.Api (Credential (..))
+import Plutus.V1.Ledger.Api (Address (..), Credential (..), Datum, DatumHash (..), TxOut (..), TxOutRef (..))
 
 type ChainIndexState = UtxoIndex TxUtxoBalance
 

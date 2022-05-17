@@ -45,11 +45,10 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
-import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
-               PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
+import Ledger (CardanoTx, ChainIndexTxOut, PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
-               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash, SomeCardanoApiTx, StakePubKey,
-               Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (..), ValidatorHash, Value)
+               PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), SomeCardanoApiTx, StakePubKey,
+               Tx (txFee, txMint), UtxoIndex (..))
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -67,6 +66,8 @@ import Plutus.ChainIndex.Emulator (ChainIndexEmulatorState, ChainIndexQueryEffec
 import Plutus.Contract (WalletAPIError)
 import Plutus.Contract.Checkpoint (CheckpointLogMsg)
 import Plutus.Contract.Wallet (finalize)
+import Plutus.V1.Ledger.Api (Address (addressCredential), PubKeyHash, TxOutRef, ValidatorHash, Value)
+import Plutus.V1.Ledger.Tx (TxIn (TxIn, txInRef))
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty))
 import Servant.API (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))

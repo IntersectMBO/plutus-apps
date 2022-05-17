@@ -126,6 +126,7 @@ library
         , plutus-ledger
         , plutus-ledger-api >= 1.0.0
         , plutus-ledger-constraints
+        , plutus-script-utils
         , plutus-tx >= 1.0.0
         , plutus-tx-plugin >= 1.0.0
     build-depends:

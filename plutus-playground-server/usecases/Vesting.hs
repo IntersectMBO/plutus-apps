@@ -20,12 +20,10 @@ import Data.Default (Default (def))
 import Data.Map qualified as Map
 import Data.Text qualified as T
 
-import Ledger (Address, POSIXTime, POSIXTimeRange, PaymentPubKeyHash (unPaymentPubKeyHash), Validator)
+import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts (ScriptContext (..), TxInfo (..))
-import Ledger.Contexts qualified as Validation
 import Ledger.Interval qualified as Interval
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx qualified as Tx
@@ -36,6 +34,9 @@ import Playground.Contract
 import Plutus.Contract
 import Plutus.Contract.Test
 import Plutus.Contract.Typed.Tx qualified as Typed
+import Plutus.V1.Ledger.Api (Address, POSIXTime, POSIXTimeRange, Validator)
+import Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Plutus.V1.Ledger.Contexts qualified as Validation
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), fold)
 import Prelude as Haskell (Semigroup (..), show)
@@ -141,9 +142,9 @@ typedValidator = Scripts.mkTypedValidatorParam @Vesting
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
-contractAddress :: VestingParams -> Ledger.Address
+contractAddress :: VestingParams -> Address
 contractAddress = Scripts.validatorAddress . typedValidator
 
 vestingContract :: VestingParams -> Contract () VestingSchema T.Text ()
