@@ -190,7 +190,7 @@ Slot 20: W[1]: Balancing an unbalanced transaction:
                  Validity range:
                    [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
 Slot 20: W[1]: Finished balancing:
-                 Tx a628528ca9676c6d0ba356e5e86d325b7cd707a3b30835ed34eb385bb107b9e1:
+                 Tx 2613d95ba3509d7d84926b4c401732edd770e3a77b8ca2f52e2e81a517436b5a:
                    {inputs:
                       - 498320559c9cc22aa41787f53b156445468912f5d6ccb91513ef5305c7fe1a7a!1
                         <>
@@ -202,17 +202,17 @@ Slot 20: W[1]: Finished balancing:
                      - ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958!50
 
                    outputs:
-                     - Value (Map [(,Map [("",18303835)])]) addressed to
+                     - Value (Map [(,Map [("",22199419)])]) addressed to
                        PubKeyCredential: a2c20c77887ace1cd986193e4e75babd8993cfd56995cd5cfce609c2 (no staking credential)
                    mint: Value (Map [])
-                   fee: Value (Map [(,Map [("",4196165)])])
+                   fee: Value (Map [(,Map [("",300581)])])
                    mps:
                    signatures:
                    validity range: Interval {ivFrom = LowerBound (Finite (Slot {getSlot = 20})) True, ivTo = UpperBound (Finite (Slot {getSlot = 29})) True}
                    data:}
-Slot 20: W[1]: Signing tx: a628528ca9676c6d0ba356e5e86d325b7cd707a3b30835ed34eb385bb107b9e1
-Slot 20: W[1]: Submitting tx: a628528ca9676c6d0ba356e5e86d325b7cd707a3b30835ed34eb385bb107b9e1
-Slot 20: W[1]: TxSubmit: a628528ca9676c6d0ba356e5e86d325b7cd707a3b30835ed34eb385bb107b9e1
+Slot 20: W[1]: Signing tx: 2613d95ba3509d7d84926b4c401732edd770e3a77b8ca2f52e2e81a517436b5a
+Slot 20: W[1]: Submitting tx: 2613d95ba3509d7d84926b4c401732edd770e3a77b8ca2f52e2e81a517436b5a
+Slot 20: W[1]: TxSubmit: 2613d95ba3509d7d84926b4c401732edd770e3a77b8ca2f52e2e81a517436b5a
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract instance stopped (no errors)
-Slot 20: TxnValidationFail Phase1 a628528ca9676c6d0ba356e5e86d325b7cd707a3b30835ed34eb385bb107b9e1: CardanoLedgerValidationError "ApplyTxError [UtxowFailure (WrappedShelleyEraFailure (UtxoFailure (ExUnitsTooBigUTxO (WrapExUnits {unWrapExUnits = ExUnits' {exUnitsMem' = 10000000, exUnitsSteps' = 10000000000}}) (WrapExUnits {unWrapExUnits = ExUnits' {exUnitsMem' = 30000000, exUnitsSteps' = 30000000000}}))))]"
+Slot 20: TxnValidate 2613d95ba3509d7d84926b4c401732edd770e3a77b8ca2f52e2e81a517436b5a

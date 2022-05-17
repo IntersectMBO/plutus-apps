@@ -48,6 +48,9 @@ makeLenses ''EscrowModel
 modelParams :: EscrowParams d
 modelParams = escrowParams $ TimeSlot.scSlotZeroTime def
 
+options :: CheckOptions
+options = defaultCheckOptionsContractModel & allowBigTransactions
+
 deriving instance Eq (ContractInstanceKey EscrowModel w s e params)
 deriving instance Show (ContractInstanceKey EscrowModel w s e params)
 
@@ -152,7 +155,7 @@ testWallets :: [Wallet]
 testWallets = [w1, w2, w3, w4, w5] -- removed five to increase collisions (, w6, w7, w8, w9, w10])
 
 prop_Escrow :: Actions EscrowModel -> Property
-prop_Escrow = propRunActions_
+prop_Escrow = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure True)
 
 finishEscrow :: DL EscrowModel ()
 finishEscrow = do
@@ -177,13 +180,13 @@ noLockProof = defaultNLFP
   , nlfpWalletStrategy = finishingStrategy . (==) }
 
 prop_NoLockedFunds :: Property
-prop_NoLockedFunds = checkNoLockedFundsProof noLockProof
+prop_NoLockedFunds = checkNoLockedFundsProofWithOptions options noLockProof
 
 
 tests :: TestTree
 tests = testGroup "escrow"
     [ let con = void $ payEp @() @EscrowSchema @EscrowError (escrowParams startTime) in
-      checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can pay"
+      checkPredicateOptions options "can pay"
         ( assertDone con (Trace.walletInstanceTag w1) (const True) "escrow pay not done"
         .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
         )
@@ -197,7 +200,7 @@ tests = testGroup "escrow"
                                            @EscrowError
                                            (escrowParams startTime))
                                     (redeemEp (escrowParams startTime)) in
-      checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can redeem"
+      checkPredicateOptions options "can redeem"
         ( assertDone con (Trace.walletInstanceTag w3) (const True) "escrow redeem not done"
           .&&. walletFundsChange w1 (Ada.adaValueOf (-10))
           .&&. walletFundsChange w2 (Ada.adaValueOf 10)
@@ -205,7 +208,7 @@ tests = testGroup "escrow"
         )
         redeemTrace
 
-    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can redeem even if more money than required has been paid in"
+    , checkPredicateOptions options "can redeem even if more money than required has been paid in"
 
           -- in this test case we pay in a total of 40 lovelace (10 more than required), for
           -- the same contract as before, requiring 10 lovelace to go to wallet 1 and 20 to
@@ -235,7 +238,7 @@ tests = testGroup "escrow"
                             @EscrowError
                             (escrowParams startTime))
              <> void (refundEp (escrowParams startTime)) in
-      checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can refund"
+      checkPredicateOptions options "can refund"
         ( walletFundsChange w1 mempty
           .&&. assertDone con (Trace.walletInstanceTag w1) (const True) "refund should succeed")
         refundTrace

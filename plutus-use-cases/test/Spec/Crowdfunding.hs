@@ -83,7 +83,7 @@ tests = testGroup "crowdfunding"
         $ let contribution = Ada.adaValueOf 10
           in makeContribution w1 contribution >> void Trace.nextSlot
 
-    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "make contributions and collect"
+    , checkPredicate "make contributions and collect"
         (walletFundsChange w1 (Ada.adaValueOf 22.5))
         successfulCampaign
 

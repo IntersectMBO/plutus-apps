@@ -234,9 +234,9 @@ getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
     costmdls = array (minBound, maxBound) . Map.toList $ getField @"_costmdls" $ emulatorPParams params
     -- Failing transactions throw a checkHasFailedError error, but we don't want to deal with those yet.
     -- We might be able to do that in the future.
-    -- But for now just return a huge execution budget so it will run later where we do handle failing transactions.
+    -- But for now just return a zero execution cost so it will run later where we do handle failing transactions.
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
-      Right $ ExUnits 10000000 10000000000
+      Right $ ExUnits 0 0
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs) =
       Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs "CekEvaluationFailure"))
     toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError (show e))
