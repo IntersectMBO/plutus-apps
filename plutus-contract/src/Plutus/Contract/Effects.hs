@@ -343,7 +343,7 @@ data WriteBalancedTxResponse =
 instance Pretty WriteBalancedTxResponse where
   pretty = \case
     WriteBalancedTxFailed e   -> "WriteBalancedTxFailed:" <+> pretty e
-    WriteBalancedTxSuccess tx -> "WriteBalancedTxFailed:" <+> pretty (getCardanoTxId tx)
+    WriteBalancedTxSuccess tx -> "WriteBalancedTxSuccess:" <+> pretty (getCardanoTxId tx)
 
 writeBalancedTxResponse :: Iso' WriteBalancedTxResponse (Either WalletAPIError CardanoTx)
 writeBalancedTxResponse = iso f g where
