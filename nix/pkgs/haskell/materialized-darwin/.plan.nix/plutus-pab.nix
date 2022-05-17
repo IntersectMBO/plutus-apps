@@ -98,6 +98,7 @@
           (hsPkgs."servant-websockets" or (errorHandler.buildDepError "servant-websockets"))
           (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
           (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
+          (hsPkgs."strict" or (errorHandler.buildDepError "strict"))
           (hsPkgs."tagged" or (errorHandler.buildDepError "tagged"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."text-class" or (errorHandler.buildDepError "text-class"))
@@ -153,6 +154,10 @@
           "Plutus/PAB/Db/Schema"
           "Plutus/PAB/Db/Beam/ContractStore"
           "Plutus/PAB/Db/Memory/ContractStore"
+          "Plutus/PAB/Db/Memory/Types"
+          "Plutus/PAB/Db/FS/ContractStore"
+          "Plutus/PAB/Db/FS/Types"
+          "Plutus/PAB/Db/FS"
           "Plutus/PAB/Effects/Contract"
           "Plutus/PAB/Effects/Contract/Builtin"
           "Plutus/PAB/Effects/TimeEffect"
