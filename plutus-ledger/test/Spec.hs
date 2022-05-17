@@ -92,9 +92,10 @@ tests = testGroup "all tests" [
         testProperty "slotRange to timeRange inverse property" slotToTimeInverseProp,
         testProperty "timeRange to slotRange inverse property" timeToSlotInverseProp,
         testProperty "slot to time range inverse to slot range"
-          slotToTimeRangeBoundsInverseProp,
+            slotToTimeRangeBoundsInverseProp,
         testProperty "slot to time range has lower bound <= upper bound"
-          slotToTimeRangeHasLowerAndUpperBoundsProp
+            slotToTimeRangeHasLowerAndUpperBoundsProp,
+        testProperty "POSIX time to UTC time inverse property" posixTimeToUTCTimeInverseProp
         ],
     testGroup "SomeCardanoApiTx" [
         testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
@@ -287,6 +288,16 @@ timeToSlotInverseProp = property $ do
         Interval.contains
             timeRange
             (TimeSlot.slotRangeToPOSIXTimeRange sc (TimeSlot.posixTimeRangeToContainedSlotRange sc timeRange))
+
+-- | Left inverse property between 'posixTimeToUTCTime' and
+-- 'utcTimeToPOSIXTime' from a 'POSIXTime'.
+posixTimeToUTCTimeInverseProp :: Property
+posixTimeToUTCTimeInverseProp = property $ do
+    sc <- forAll Gen.genSlotConfig
+    posixTime <- forAll $ Gen.genPOSIXTime sc
+    let posixTime' = TimeSlot.utcTimeToPOSIXTime (TimeSlot.posixTimeToUTCTime posixTime)
+    Hedgehog.footnoteShow (posixTime, posixTime')
+    Hedgehog.assert $ posixTime' == posixTime
 
 -- | 'POSIXTimeRange' from 'Slot' should have lower bound lower or equal than upper bound
 slotToTimeRangeHasLowerAndUpperBoundsProp :: Property

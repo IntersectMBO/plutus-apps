@@ -186,6 +186,9 @@ defaultCheckOptions =
 changeInitialWalletValue :: Wallet -> (Value -> Value) -> CheckOptions -> CheckOptions
 changeInitialWalletValue wallet = over (emulatorConfig . initialChainState . _Left . ix wallet)
 
+-- | Set higher limits on transaction size and execution units.
+-- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.
+-- Note that if you need this your Plutus script will probably not validate on Mainnet.
 allowBigTransactions :: CheckOptions -> CheckOptions
 allowBigTransactions = over (emulatorConfig . params . Ledger.protocolParamsL) fixParams
     where
