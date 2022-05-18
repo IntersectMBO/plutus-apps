@@ -38,6 +38,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 
+import Ledger.Params (pSlotConfig)
 import Plutus.Contract (Contract (..))
 import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
 import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI, handleEmulatedWalletAPI)
@@ -110,7 +111,7 @@ handlePlaygroundTrace ::
 handlePlaygroundTrace conf contract action = do
     _ <- flip handleError (throwError . EmulatedWalletError)
             . reinterpret handleEmulatedWalletAPI
-            . interpret (handleWaiting @_ @effs (_slotConfig conf))
+            . interpret (handleWaiting @_ @effs (pSlotConfig $ _params conf))
             . subsume
             . interpret (handleRunContractPlayground @w @s @e @_ @effs contract)
             $ raiseEnd action

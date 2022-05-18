@@ -61,6 +61,9 @@ import PlutusTx.Coverage
 gameParam :: G.GameParam
 gameParam = G.GameParam (mockWalletPaymentPubKeyHash w1) (TimeSlot.scSlotZeroTime def)
 
+options :: CheckOptions
+options = defaultCheckOptionsContractModel & allowBigTransactions
+
 --
 -- * QuickCheck model
 
@@ -201,7 +204,7 @@ instance CrashTolerance GameModel where
 
 -- | The main property. 'propRunActions_' checks that balances match the model after each test.
 prop_Game :: Actions GameModel -> Property
-prop_Game = propRunActions_
+prop_Game = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure True)
 
 prop_GameWhitelist :: Actions GameModel -> Property
 prop_GameWhitelist = checkErrorWhitelist defaultWhitelist
@@ -230,7 +233,7 @@ propGame' l = propRunActionsWithOptions
                 (\ _ -> pure True)
 
 prop_GameCrashTolerance :: Actions (WithCrashTolerance GameModel) -> Property
-prop_GameCrashTolerance = propRunActions_
+prop_GameCrashTolerance = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure True)
 
 wallets :: [Wallet]
 wallets = [w1, w2, w3]
@@ -307,32 +310,32 @@ noLockProof = defaultNLFP {
             when hasTok $ action (Guess w secret "" val)
 
 prop_CheckNoLockedFundsProof :: Property
-prop_CheckNoLockedFundsProof = checkNoLockedFundsProof noLockProof
+prop_CheckNoLockedFundsProof = checkNoLockedFundsProofWithOptions options noLockProof
 
 -- * Unit tests
 
 tests :: TestTree
 tests =
     testGroup "game state machine with secret arguments tests"
-    [ checkPredicate "run a successful game trace"
+    [ checkPredicateOptions options "run a successful game trace"
         (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 3 <> guessTokenVal)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 5 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))
         successTrace
 
-    , checkPredicate "run a 2nd successful game trace"
+    , checkPredicateOptions options "run a 2nd successful game trace"
         (walletFundsChange w2 (Ada.adaValueOf 3)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 0 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8))
         .&&. walletFundsChange w3 (Ada.toValue Ledger.minAdaTxOut <> Ada.adaValueOf 5 <> guessTokenVal))
         successTrace2
 
-    , checkPredicate "run a successful game trace where we try to leave 1 Ada in the script address"
+    , checkPredicateOptions options "run a successful game trace where we try to leave 1 Ada in the script address"
         (walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> guessTokenVal)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.toValue Ledger.minAdaTxOut ==))
         traceLeaveOneAdaInScript
 
-    , checkPredicate "run a failed trace"
+    , checkPredicateOptions options "run a failed trace"
         (walletFundsChange w2 (Ada.toValue Ledger.minAdaTxOut <> guessTokenVal)
         .&&. valueAtAddress (Scripts.validatorAddress $ G.typedValidator gameParam) (Ada.adaValueOf 8 ==)
         .&&. walletFundsChange w1 (Ada.toValue (-Ledger.minAdaTxOut) <> Ada.adaValueOf (-8)))

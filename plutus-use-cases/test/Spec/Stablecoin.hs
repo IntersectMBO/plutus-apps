@@ -12,7 +12,7 @@ module Spec.Stablecoin(
     ) where
 
 
-import Control.Lens (preview)
+import Control.Lens (preview, (&))
 import Control.Monad (void)
 import Data.Maybe (listToMaybe, mapMaybe)
 import Prelude hiding (Rational, negate)
@@ -76,14 +76,14 @@ initialFee = Ada.lovelaceValueOf 100_000 -- Defined as 1% of initialDeposit
 
 tests :: TestTree
 tests = testGroup "Stablecoin"
-    [ checkPredicate "mint reservecoins"
+    [ checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "mint reservecoins"
         (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee))
         .&&. assertNoFailedTransactions
         .&&. walletFundsChange user (Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee))
         )
         $ initialise >>= mintReserveCoins (RC 10_000_000) one
 
-    , checkPredicate "mint reservecoins and stablecoins"
+    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "mint reservecoins and stablecoins"
         (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
         .&&. assertNoFailedTransactions
         .&&. walletFundsChange user (Stablecoin.stableCoins coin 5_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
@@ -94,7 +94,7 @@ tests = testGroup "Stablecoin"
             -- Mint 50 stablecoins at a rate of 1 Ada: 1 USD
             void $ mintStableCoins (SC 5_000_000) one hdl
 
-    , checkPredicate "mint reservecoins, stablecoins and redeem stablecoin at a different price"
+    , checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "mint reservecoins, stablecoins and redeem stablecoin at a different price"
         (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
         .&&. assertNoFailedTransactions
         .&&. walletFundsChange user (Stablecoin.stableCoins coin 3_000_000 <> Stablecoin.reserveCoins coin 10_000_000 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 1_090_000))
@@ -102,7 +102,7 @@ tests = testGroup "Stablecoin"
         stablecoinTrace
 
     , let expectedLogMsg = "New state is invalid: MaxReserves {allowed = BC {unBC = Rational 20000000 1}, actual = BC {unBC = Rational 20173235 1}}. The transition is not allowed." in
-      checkPredicate "Cannot exceed the maximum reserve ratio"
+      checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "Cannot exceed the maximum reserve ratio"
         (valueAtAddress stablecoinAddress (== (initialDeposit <> initialFee <> Ada.lovelaceValueOf 5_050_000))
         .&&. assertNoFailedTransactions
         .&&. assertInstanceLog (Trace.walletInstanceTag w1) ((==) (Just expectedLogMsg) . listToMaybe . reverse . mapMaybe (preview (eteEvent . cilMessage . _ContractLog)))

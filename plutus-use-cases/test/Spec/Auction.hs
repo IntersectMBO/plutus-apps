@@ -77,6 +77,7 @@ theToken =
 options :: CheckOptions
 options = defaultCheckOptionsContractModel
     & changeInitialWalletValue w1 ((<>) theToken)
+    & allowBigTransactions
 
 seller :: Contract AuctionOutput SellerSchema AuctionError ()
 seller = auctionSeller (apAsset params) (apEndTime params)

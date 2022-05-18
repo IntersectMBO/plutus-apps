@@ -22,13 +22,12 @@ module Wallet.Effects(
     , NodeClientEffect(..)
     , publishTx
     , getClientSlot
-    , getClientSlotConfig
+    , getClientParams
     ) where
 
 import Control.Monad.Freer.TH (makeEffect)
-import Ledger (CardanoTx, PaymentPubKeyHash, Slot, Value)
+import Ledger (CardanoTx, Params, PaymentPubKeyHash, Slot, Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.TimeSlot (SlotConfig)
 import Wallet.Error (WalletAPIError)
 
 data WalletEffect r where
@@ -44,5 +43,5 @@ makeEffect ''WalletEffect
 data NodeClientEffect r where
     PublishTx :: CardanoTx -> NodeClientEffect ()
     GetClientSlot :: NodeClientEffect Slot
-    GetClientSlotConfig :: NodeClientEffect SlotConfig
+    GetClientParams :: NodeClientEffect Params
 makeEffect ''NodeClientEffect

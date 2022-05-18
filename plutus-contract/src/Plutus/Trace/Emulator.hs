@@ -58,7 +58,7 @@ module Plutus.Trace.Emulator(
     -- * Running traces
     , EmulatorConfig(..)
     , initialChainState
-    , slotConfig
+    , params
     , runEmulatorStream
     , TraceConfig(..)
     , runEmulatorTrace
@@ -94,8 +94,8 @@ import Wallet.Emulator.MultiAgent (EmulatorEvent,
                                    EmulatorEvent' (InstanceEvent, SchedulerEvent, UserThreadEvent, WalletEvent),
                                    EmulatorState (_chainState, _walletStates), MultiAgentControlEffect,
                                    MultiAgentEffect, _eteEmulatorTime, _eteEvent, schedulerEvent)
-import Wallet.Emulator.Stream (EmulatorConfig (_initialChainState), EmulatorErr, _slotConfig, foldEmulatorStreamM,
-                               initialChainState, initialDist, runTraceStream, slotConfig)
+import Wallet.Emulator.Stream (EmulatorConfig (_initialChainState, _params), EmulatorErr, foldEmulatorStreamM,
+                               initialChainState, initialDist, params, runTraceStream)
 import Wallet.Emulator.Stream qualified
 import Wallet.Emulator.Wallet (Entity, balances)
 import Wallet.Emulator.Wallet qualified as Wallet
@@ -123,6 +123,7 @@ import Streaming (Stream)
 import Streaming.Prelude (Of ((:>)))
 
 import Data.Aeson qualified as A
+import Ledger.Params (Params (..))
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.V1.Ledger.Slot (getSlot)
 import Plutus.V1.Ledger.Value (Value, flattenValue)
@@ -208,7 +209,7 @@ interpretEmulatorTrace conf action =
         $ runThreads
         $ do
             raise $ launchSystemThreads wallets
-            handleEmulatorTrace (_slotConfig conf) action'
+            handleEmulatorTrace (pSlotConfig $ _params conf) action'
 
 -- | Options for how to set up and print the trace.
 data TraceConfig = TraceConfig
