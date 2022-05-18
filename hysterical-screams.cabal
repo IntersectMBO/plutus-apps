@@ -68,6 +68,7 @@ test-suite hysterical-screams-test
       Spec.Index
       Spec.Split
       Spec.Sqlite
+      Spec.VSplit
       Paths_hysterical_screams
   hs-source-dirs:
       test

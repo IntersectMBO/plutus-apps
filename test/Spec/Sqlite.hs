@@ -57,7 +57,7 @@ notifications ix = do
 history
   :: (Show a, Default a, ToField a, FromField a, Show e, Show n)
   => Index a e n
-  -> PropertyM IO (Maybe (Seq a))
+  -> PropertyM IO (Maybe [a])
 history ix = do
   mix <- run ix
   case mix of

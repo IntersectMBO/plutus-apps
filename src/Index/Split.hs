@@ -14,8 +14,8 @@ module Index.Split
   , getNotifications
   ) where
 
-import           Data.Foldable (foldlM)
-import           Data.Sequence (Seq(..), ViewL(..), ViewR(..))
+import           Data.Foldable (foldlM, toList)
+import           Data.Sequence (Seq (..), ViewR (..))
 import qualified Data.Sequence as Seq
 
 import           Index         (IndexView (..))
@@ -112,7 +112,7 @@ rewind n ix@SplitIndex {siEvents}
 
 view :: (Monad m, MonadFail m) => q -> SplitIndex m h e n q r -> m (IndexView r)
 view query ix@SplitIndex{siDepth} = do
-  h :< _ <- Seq.viewl <$> getHistory query ix
+  h : _ <- getHistory query ix
   pure $ IndexView { ixDepth = siDepth
                    , ixView  = h
                    , ixSize  = size ix
@@ -121,6 +121,7 @@ view query ix@SplitIndex{siDepth} = do
 getNotifications :: Monad m => SplitIndex m h e n q r -> m [n]
 getNotifications SplitIndex{siNotifications} = pure siNotifications
 
-getHistory :: forall m h e n q r. Monad m => q -> SplitIndex m h e n q r -> m (Seq r)
-getHistory query ix@SplitIndex{siQuery, siEvents} =
-  traverse (siQuery ix query) $ Seq.tails siEvents
+getHistory :: forall m h e n q r. Monad m => q -> SplitIndex m h e n q r -> m [r]
+getHistory query ix@SplitIndex{siQuery, siEvents} = do
+  xs <- traverse (siQuery ix query) $ Seq.tails siEvents
+  pure $ toList xs

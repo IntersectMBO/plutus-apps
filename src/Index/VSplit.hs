@@ -30,8 +30,8 @@ module Index.VSplit
 import Control.Lens.Operators
 import qualified Control.Lens.TH as Lens
 import Control.Monad.Primitive (PrimState, PrimMonad)
+import Data.Foldable (foldlM)
 import Data.List (tails)
-import Data.Foldable (toList, foldlM)
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import qualified Data.Vector as V
@@ -42,7 +42,8 @@ import Index (IndexView(..))
 data Storage v m e = Storage
   { _events :: (VG.Mutable v) (PrimState m) e
   , _cursor :: Int
-  , _stSize :: Int
+  , _eSize  :: Int
+  , _bSize  :: Int
   , _k      :: Int
   }
 $(Lens.makeLenses ''Storage)
@@ -53,59 +54,59 @@ maxSize
   -> Int
 maxSize store = store ^. events & VGM.length
 
-bufferSize
-  :: VGM.MVector (VG.Mutable v) e
-  => Storage v m e
-  -> Int
-bufferSize store = maxSize store - store ^. k
-
 isStorageFull
   :: VGM.MVector (VG.Mutable v) e
   => Storage v m e
   -> Bool
-isStorageFull store = maxSize store == store ^. stSize
+isStorageFull store = maxSize store == store ^. eSize + store ^. bSize
 
 getBuffer
   :: forall v m e.
      VGM.MVector (VG.Mutable v) e
-  => Foldable (VG.Mutable v (PrimState m))
+  => PrimMonad m
+  => Show e
   => Storage v m e
-  -> [e]
-getBuffer storage =
-  getInterval (storage ^. cursor) (bufferSize storage) storage
+  -> m [e]
+getBuffer store =
+  let bufferEnd   = store ^. cursor - store ^. eSize
+      bufferStart = bufferEnd - store ^. bSize
+  in  reverse <$> getInterval bufferStart (store ^. bSize) store
 
 getEvents
   :: forall v m e.
      VGM.MVector (VG.Mutable v) e
-  => Foldable (VG.Mutable v (PrimState m))
+  => PrimMonad m
+  => Show e
   => Storage v m e
-  -> [e]
-getEvents storage =
-  let c  = storage ^. cursor
-      k' = storage ^. k
-  in  getInterval (c - k') c storage
+  -> m [e]
+getEvents store =
+  let c   = store ^. cursor
+      esz = store ^. eSize
+  in  reverse <$> getInterval (c - esz) esz store
 
 getInterval
   :: forall v m e.
      VGM.MVector (VG.Mutable v) e
-  => Foldable (VG.Mutable v (PrimState m))
+  => PrimMonad m
+  => Show e
   => Int
   -> Int
   -> Storage v m e
-  -> [e]
+  -> m [e]
 getInterval start size' store
-  -- k overflows to the begining
-  | start < 0 =
-    getInterval (maxSize store + start) (- start) store
-    ++ getInterval 0 (size' + start) store
+  | size' == 0 = pure []
+  -- k underflows to the begining
+  | start < 0 = do
+    getInterval (maxSize store + start) size' store
   -- buffer overflows to the start
-  | start + size' >= maxSize store =
-    let endSize   = start + size' `rem` maxSize store
+  | start + size' > maxSize store =
+    let endSize   = (start + size') `rem` maxSize store
         startSize = size' - endSize
-    in  getInterval start startSize store
-        ++ getInterval 0 endSize store
+    in  (++) <$> getInterval start startSize store
+             <*> getInterval 0 endSize store
   -- normal case
-  | otherwise = toList $ VGM.slice start size' (store ^. events)
+  | otherwise = do
+    VGM.foldr' (:) [] $ VGM.slice start size' (store ^. events)
 
 data SplitIndex m h v e n q r = SplitIndex
   { _handle        :: h
@@ -128,14 +129,15 @@ new
   -> (VG.Mutable v) (PrimState m) e
   -> m (Maybe (SplitIndex m h v e n q r))
 new query' store' onInsert' k' handle' vector
-  | k' <= 0                 = pure Nothing
+  | k' < 0                  = pure Nothing
   -- The vector has to accomodate at least k + 1 elements.
   | k' >= VGM.length vector = pure Nothing
   | otherwise = pure . Just $ SplitIndex
     { _handle        = handle'
     , _storage       = Storage { _events = vector
                                , _cursor = 0
-                               , _stSize = 0
+                               , _eSize  = 0
+                               , _bSize  = 0
                                , _k      = k'
                                }
     , _notifications = []
@@ -158,7 +160,7 @@ newBoxed
   -> h
   -> m (Maybe (BoxedIndex m h e n q r))
 newBoxed query' store' onInsert' k' size' handle'
-  | size' > 0  = pure Nothing
+  | k' < 0 || size' <= 0 = pure Nothing
   | otherwise = do
     v <- VGM.new (k' + size')
     new query' store' onInsert' k' handle' v
@@ -178,7 +180,7 @@ newUnboxed
   -> h
   -> m (Maybe (UnboxedIndex m h e n q r))
 newUnboxed query' store' onInsert' k' size' handle'
-  | size' > 0  = pure Nothing
+  | k' < 0 || size' <= 0  = pure Nothing
   | otherwise = do
     v <- VGM.new (k' + size')
     new query' store' onInsert' k' handle' v
@@ -192,18 +194,25 @@ insert
   -> SplitIndex m h v e n q r
   -> m (SplitIndex m h v e n q r)
 insert e ix = do
-  -- o | ix ^. storage . k /= 1 = do
     let es = ix ^. storage . events
         c  = ix ^. storage . cursor
+        vs = VGM.length es
     VGM.unsafeWrite es c e
     ns <- (ix ^. onInsert) ix e
-    let ix' = (storage . stSize) %~ (+1)   $
-              (storage . cursor) %~ (+1)   $
-              notifications      %~ (++ns) $ ix
+    let ix' = storage            %~ updateSizes                $
+              (storage . cursor) %~ (\c' -> (c' + 1) `rem` vs) $
+              notifications      %~ (ns++)                     $ ix
     if isStorageFull (ix' ^. storage)
     then storeEvents ix'
     else pure        ix'
-  -- o | otherwise      = undefined
+
+  where
+    updateSizes :: Storage v m e -> Storage v m e
+    updateSizes st =
+        -- Event sizes increase by one upto K
+        eSize %~ (\sz -> min (sz + 1) (st ^. k))                        $
+        -- The buffer only grows when the event buffer is full
+        bSize %~ (\sz -> if st ^. eSize == st ^. k then sz + 1 else sz) $ st
 
 storeEvents
   :: Monad m
@@ -213,9 +222,8 @@ storeEvents
 storeEvents ix = do
   -- TODO: Change store to store :: h -> [e] -> m () (?)
   ix & ix ^. store
-  let sz = bufferSize $ ix ^. storage
   pure $
-    (storage . stSize) %~ (\s -> s - sz) $ ix
+    (storage . bSize) .~ 0 $ ix
 
 insertL
   :: Monad m
@@ -229,8 +237,7 @@ insertL es ix = foldlM (flip insert) ix es
 size
   :: SplitIndex m h v e n q r
   -> Int
-size ix = min (ix ^. storage . k)
-              (ix ^. storage . stSize)
+size ix = 1 + (ix ^. storage . eSize)
 
 rewind
   :: VGM.MVector (VG.Mutable v) e
@@ -238,13 +245,14 @@ rewind
   -> SplitIndex m h v e n q r
   -> Maybe (SplitIndex m h v e n q r)
 rewind n ix
-  | size ix > n = Just $
-    (storage . cursor) %~ (\c -> adjust (c - n)) $ ix
+  | ix ^. storage . eSize >= n = Just $
+    (storage . cursor) %~ (\c -> adjust (c - n)) $
+    (storage . eSize ) %~ (\sz -> sz - n)        $ ix
   | otherwise = Nothing
     where
       adjust :: Int -> Int
       adjust p
-        | p < 0     = maxSize (ix ^. storage) - p
+        | p < 0     = maxSize (ix ^. storage) + p
         | otherwise = p
 
 getNotifications
@@ -253,26 +261,26 @@ getNotifications
 getNotifications ix = ix ^. notifications
 
 getHistory
-  :: Monad m
+  :: PrimMonad m
   => VGM.MVector (VG.Mutable v) e
-  => Foldable (VG.Mutable v (PrimState m))
+  => Show e
   => SplitIndex m h v e n q r
   -> q
   -> m [r]
 getHistory ix q = do
-  let es = getEvents (ix ^. storage)
+  es <- getEvents (ix ^. storage)
   traverse ((ix ^. query) ix q) $ tails es
 
 view
-  :: Monad m
+  :: PrimMonad m
   => VGM.MVector (VG.Mutable v) e
-  => Foldable (VG.Mutable v (PrimState m))
+  => Show e
   => SplitIndex m h v e n q r
   -> q
   -> m (IndexView r)
 view ix q = do
   hs <- getHistory ix q
-  pure $ IndexView { ixDepth = ix ^. storage . k
+  pure $ IndexView { ixDepth = ix ^. storage . k + 1
                    , ixView  = head hs
                    , ixSize  = size ix
                    }

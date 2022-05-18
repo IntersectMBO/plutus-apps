@@ -2,8 +2,6 @@ module Spec.Index where
 
 import           Data.Functor.Identity   (Identity, runIdentity)
 import           Data.List               (foldl', isPrefixOf, scanl')
-import           Data.Sequence           (Seq)
-import qualified Data.Sequence as Seq
 import           Data.Maybe              (fromJust, isJust, isNothing, mapMaybe)
 import           QuickSpec
 import           Test.QuickCheck.Monadic
@@ -13,7 +11,7 @@ import           Index
 
 data Conversion m a e n = Conversion
   { cView          :: Index a e n -> m (Maybe (IndexView a))
-  , cHistory       :: Index a e n -> m (Maybe (Seq a))
+  , cHistory       :: Index a e n -> m (Maybe [a])
   , cNotifications :: Index a e n -> m [n]
   , cMonadic       :: m Property -> Property
   }
@@ -21,14 +19,14 @@ data Conversion m a e n = Conversion
 conversion :: Conversion Identity a e n
 conversion = Conversion
   { cView          = pure . view
-  , cHistory       =
-      \ix -> pure $ Seq.fromList <$> getHistory ix
+  , cHistory       = pure . getHistory
   , cNotifications = pure . fromJust . getNotifications
   , cMonadic       = runIdentity
   }
 
 prop_observeNew
   :: forall e a n m. (Eq a, Monad m)
+  => Show a
   => Conversion m a e n
   -> Fun (a, e) (a, Maybe n)
   -> a
@@ -53,7 +51,7 @@ prop_observeNew c f a =
                                       , ixView  = a
                                       , ixSize  = 1
                                       })
-              && h == Just (Seq.singleton a)
+              && h == Just [a]
 
 -- | Properties of the connection between rewind and depth
 --   Note: Cannot rewind if (ixDepth ix == 1)
@@ -83,6 +81,7 @@ prop_rewindDepth c (ObservedBuilder ix) =
 -- | Property that validates the HF data structure.
 prop_sizeLEDepth
   :: forall e a n m. (Monad m)
+  => Show a
   => Conversion m a e n
   -> ObservedBuilder a e n
   -> Property
@@ -108,7 +107,8 @@ prop_insertRewindInverse c (ObservedBuilder ix) =
   \bs -> monadic (cMonadic c) $ do
     let ix' = rewind (length bs) $ insertL bs ix
     Just v' <- run $ cView c ix
-    h  <- Seq.take (ixDepth v' - length bs) . fromJust <$> run (cHistory c ix)
+    h  <- take (ixDepth v' - length bs) . fromJust <$> run (cHistory c ix)
+    -- h  <- fromJust <$> run (cHistory c ix)
     h' <- fromJust <$> run (cHistory c ix')
     assert $ h == h'
 
