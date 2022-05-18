@@ -9,8 +9,8 @@ import           Data.Maybe              (catMaybes)
 import           Test.QuickCheck         (Property)
 import           Test.QuickCheck.Monadic (PropertyM, monadicIO)
 
-import qualified Data.Vector as V
-import Control.Lens.Operators
+import           Control.Lens.Operators
+import qualified Data.Vector             as V
 
 import           Index                   (Index, IndexView (..))
 import qualified Index                   as Ix
@@ -18,7 +18,7 @@ import           Index.VSplit            (SplitIndex (..))
 import qualified Index.VSplit            as S
 import           Spec.Index              (Conversion (..))
 
-conversion 
+conversion
   :: Show s
   => Show e
   => Show n

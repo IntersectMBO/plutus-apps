@@ -5,9 +5,10 @@ import qualified Spec.Index            as Ix
 import qualified Spec.Split            as S
 import qualified Spec.Sqlite           as Sqlite
 import qualified Spec.VSplit           as V
+import qualified Spec.VSqlite          as VS
 
 tests :: TestTree
-tests = testGroup "Index" [ixProperties, siProperties, sqProperties, viProperties]
+tests = testGroup "Index" [ixProperties, siProperties, sqProperties, viProperties, vsProperties]
 
 ixProperties :: TestTree
 ixProperties = testGroup "Basic model"
@@ -67,20 +68,37 @@ viProperties :: TestTree
 viProperties = testGroup "Vector index"
   [ testProperty "New: Positive or non-positive depth" $
       withMaxSuccess 10000 $ Ix.prop_observeNew @Int @Int @Int V.conversion
-                , testProperty "History length is always smaller than the max depth" $
+  , testProperty "History length is always smaller than the max depth" $
       withMaxSuccess 10000 $ Ix.prop_sizeLEDepth @Int @Int @Int V.conversion
-         , testProperty "Rewind: Connection with `ixDepth`" $
+  , testProperty "Rewind: Connection with `ixDepth`" $
       withMaxSuccess 10000 $ Ix.prop_rewindDepth @Int @Int @Int V.conversion
-        , testProperty "Relationship between Insert/Rewind" $
+  , testProperty "Relationship between Insert/Rewind" $
       withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int @Int V.conversion
-        , testProperty "Insert is folding the structure" $
+  , testProperty "Insert is folding the structure" $
       withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int @Int V.conversion
-        , testProperty "Notifications are accumulated as the fold runs" $
+  , testProperty "Notifications are accumulated as the fold runs" $
       withMaxSuccess 1000 $ Ix.prop_observeNotifications @Int @Int @Int V.conversion
-        ,  testProperty "Notifications are not affected by rewind" $
+  ,  testProperty "Notifications are not affected by rewind" $
       withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int V.conversion
   ]
 
+vsProperties :: TestTree
+vsProperties = testGroup "SQLite vector index"
+  [ testProperty "New: Positive or non-positive depth" $
+      withMaxSuccess 10000 $ Ix.prop_observeNew @Int @Int @Int VS.conversion
+  , testProperty "History length is always smaller than the max depth" $
+      withMaxSuccess 10000 $ Ix.prop_sizeLEDepth @Int @Int @Int VS.conversion
+  , testProperty "Rewind: Connection with `ixDepth`" $
+      withMaxSuccess 10000 $ Ix.prop_rewindDepth @Int @Int @Int VS.conversion
+  , testProperty "Relationship between Insert/Rewind" $
+      withMaxSuccess 1000 $ Ix.prop_insertRewindInverse @Int @Int @Int VS.conversion
+  , testProperty "Insert is folding the structure" $
+      withMaxSuccess 1000 $ Ix.prop_observeInsert @Int @Int @Int VS.conversion
+  , testProperty "Notifications are accumulated as the fold runs" $
+      withMaxSuccess 1000 $ Ix.prop_observeNotifications @Int @Int @Int VS.conversion
+  ,  testProperty "Notifications are not affected by rewind" $
+      withMaxSuccess 1000 $ Ix.prop_insertRewindNotifications @Int @Int @Int VS.conversion
+  ]
 main :: IO ()
 main = do
   -- quickSpec ixSignature

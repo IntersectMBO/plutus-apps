@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell  #-}
 
 module Index.VSplit
   ( SplitIndex(..)
@@ -18,7 +18,7 @@ module Index.VSplit
   , query
   , onInsert
   -- * Storage
-  , Storage
+  , Storage(..)
   , getBuffer
   , getEvents
   -- * Observations
@@ -27,17 +27,17 @@ module Index.VSplit
   , view
   ) where
 
-import Control.Lens.Operators
-import qualified Control.Lens.TH as Lens
-import Control.Monad.Primitive (PrimState, PrimMonad)
-import Data.Foldable (foldlM)
-import Data.List (tails)
-import qualified Data.Vector.Generic as VG
+import           Control.Lens.Operators
+import qualified Control.Lens.TH             as Lens
+import           Control.Monad.Primitive     (PrimMonad, PrimState)
+import           Data.Foldable               (foldlM)
+import           Data.List                   (tails)
+import qualified Data.Vector                 as V
+import qualified Data.Vector.Generic         as VG
 import qualified Data.Vector.Generic.Mutable as VGM
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as VU
+import qualified Data.Vector.Unboxed         as VU
 
-import Index (IndexView(..))
+import           Index                       (IndexView (..))
 
 data Storage v m e = Storage
   { _events :: (VG.Mutable v) (PrimState m) e
