@@ -38,7 +38,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Quantity (Quantity (Quantity))
 import Data.Text (pack)
 import Data.Text.Class (fromText)
-import Ledger (CardanoTx (..))
+import Ledger (CardanoTx (..), Params (..))
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
@@ -112,8 +112,8 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = do
-            slotConfig <- WAPI.getClientSlotConfig
-            case export protocolParams networkId slotConfig utx of
+            Params { pSlotConfig } <- WAPI.getClientParams
+            case export protocolParams networkId pSlotConfig utx of
                 Left err -> do
                     logWarn $ BalanceTxError $ show $ pretty err
                     throwOtherError $ pretty err

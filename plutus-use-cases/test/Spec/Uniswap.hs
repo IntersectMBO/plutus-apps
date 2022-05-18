@@ -90,7 +90,10 @@ open :: Getter PoolModel Bool
 open = to $ \ p -> p ^. coinAAmount > 0 -- If one is bigger than zero the other one is too
 
 prop_Uniswap :: Actions UniswapModel -> Property
-prop_Uniswap = propRunActions_
+prop_Uniswap = propRunActionsWithOptions
+  (defaultCheckOptionsContractModel & allowBigTransactions)
+  defaultCoverageOptions
+  (\ _ -> pure True)
 
 deriving instance Eq (ContractInstanceKey UniswapModel w s e params)
 deriving instance Show (ContractInstanceKey UniswapModel w s e params)
@@ -617,7 +620,7 @@ prop_Whitelist = checkErrorWhitelist defaultWhitelist
 
 tests :: TestTree
 tests = testGroup "uniswap" [
-    checkPredicate "can create a liquidity pool and add liquidity"
+    checkPredicateOptions (defaultCheckOptions & allowBigTransactions) "can create a liquidity pool and add liquidity"
         (assertNotDone Uniswap.setupTokens
                        (Trace.walletInstanceTag w1)
                        "setupTokens contract should be still running"

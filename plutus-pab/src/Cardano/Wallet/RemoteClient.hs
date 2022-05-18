@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TypeApplications  #-}
@@ -66,8 +67,8 @@ handleWalletClient config cidM event = do
             throwError $ RemoteClientFunctionNotYetSupported "Cardano.Wallet.RemoteClient.BalanceTx"
 
         YieldUnbalancedTx utx -> do
-            slotConfig <- WAPI.getClientSlotConfig
-            case export protocolParams networkId slotConfig utx of
+            WAPI.Params { WAPI.pSlotConfig } <- WAPI.getClientParams
+            case export protocolParams networkId pSlotConfig utx of
                 Left err -> throwOtherError $ Text.pack $ show err
                 Right ex -> do
                   case cidM of

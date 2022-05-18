@@ -46,6 +46,7 @@ import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, isJust)
@@ -74,6 +75,7 @@ import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, prett
 import Prettyprinter.Render.Text (renderStrict)
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitWith)
+import Wallet.API (pSlotConfig)
 import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Types qualified as Wallet
 
@@ -113,7 +115,7 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServer
         (toWalletLog ccaTrace)
         ws
         (pscSocketPath nodeServerConfig)
-        (pscSlotConfig nodeServerConfig)
+        (def { pSlotConfig = pscSlotConfig nodeServerConfig })
         (ChainIndex.ciBaseUrl chainIndexConfig)
         ccaAvailability
 

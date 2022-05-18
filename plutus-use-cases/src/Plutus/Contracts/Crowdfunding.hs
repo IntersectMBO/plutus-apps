@@ -165,9 +165,7 @@ validCollection campaign txinfo =
 -- additionally parameterized by a 'Campaign' definition. This argument is
 -- provided by the Plutus client, using 'PlutusTx.applyCode'.
 -- As a result, the 'Campaign' definition is part of the script address,
--- and different campaigns have different addresses. The Campaign{..} syntax
--- means that all fields of the 'Campaign' value are in scope
--- (for example 'campaignDeadline' in l. 70).
+-- and different campaigns have different addresses.
 mkValidator :: Campaign -> PaymentPubKeyHash -> CampaignAction -> ScriptContext -> Bool
 mkValidator c con act ScriptContext{scriptContextTxInfo} = case act of
     -- the "refund" branch
