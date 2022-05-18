@@ -65,7 +65,6 @@ import Database.SQLite.Simple qualified as Sqlite
 import Network.HTTP.Client (managerModifyRequest, newManager, setRequestIgnoreStatus)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Plutus.ChainIndex.Client qualified as ChainIndex
-import Plutus.Contract.Unsafe (getSlotConfig, setSlotConfig, unsafeGetSlotConfig)
 import Plutus.PAB.Core (EffectHandlers (EffectHandlers), PABAction)
 import Plutus.PAB.Core qualified as Core
 import Plutus.PAB.Core.ContractInstance.BlockchainEnv qualified as BlockchainEnv
@@ -247,16 +246,8 @@ runApp
     contractStoreBackend
     trace
     contractHandler
-    config@Config{pabWebserverConfig=WebserverConfig{endpointTimeout},nodeServerConfig=PABServerConfig{pscSlotConfig}}
-    app =
-      do
-        putStrLn "Plutus.PAB.App.runApp: Slot configuration debugging:"
-        putStrLn $ "  pscSlotConfig = " <> show pscSlotConfig
-        setSlotConfig pscSlotConfig
-        getSlotConfig >>= putStrLn . ("  getSlotConfig = " <>) . show
-        setSlotConfig pscSlotConfig
-        putStrLn $ "  unsafeGetSlotConfig = " <> show unsafeGetSlotConfig
-        Core.runPAB (Timeout endpointTimeout) (appEffectHandlers contractStoreBackend config trace contractHandler) app
+    config@Config{pabWebserverConfig=WebserverConfig{endpointTimeout}}
+    app = Core.runPAB (Timeout endpointTimeout) (appEffectHandlers contractStoreBackend config trace contractHandler) app
 
 type App a b = PABAction (Builtin a) (AppEnv a) b
 

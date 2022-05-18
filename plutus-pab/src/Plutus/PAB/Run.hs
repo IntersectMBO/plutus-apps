@@ -19,7 +19,7 @@ import Cardano.BM.Configuration.Model qualified as CM
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.BM.Plugin (loadPlugin)
 import Cardano.BM.Setup (setupTrace_)
-import Cardano.Node.Types (pscPassphrase)
+import Cardano.Node.Types (PABServerConfig (PABServerConfig, pscSlotConfig), pscPassphrase)
 import Control.Applicative (Alternative ((<|>)))
 import Control.Concurrent.Availability (newToken)
 import Control.Monad (when)
@@ -30,6 +30,7 @@ import Data.Foldable (for_)
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Text.Extras (tshow)
 import Data.Yaml (decodeFileThrow)
+import Plutus.Contract.Unsafe (getSlotConfig, setSlotConfig, unsafeGetSlotConfig)
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog)
 import Plutus.PAB.Effects.Contract.Builtin (Builtin, BuiltinHandler, HasDefinitions)
 import Plutus.PAB.Monitoring.Config (defaultConfig, loadConfig)
@@ -93,6 +94,17 @@ runWithOpts userContractHandler mc AppOpts { minLogLevel, rollbackHistory, resum
           case configPath of
             Nothing -> pure $ Left MissingConfigFileOption
             Just p  -> do Right <$> (liftIO $ decodeFileThrow p)
+
+    case pabConfig of
+      Right config -> do
+                        let Config{nodeServerConfig=PABServerConfig{pscSlotConfig}} = config
+                        putStrLn "Plutus.PAB.App.runApp: Slot configuration debugging:"
+                        putStrLn $ "  pscSlotConfig = " <> show pscSlotConfig
+                        setSlotConfig pscSlotConfig
+                        getSlotConfig >>= putStrLn . ("  getSlotConfig = " <>) . show
+                        setSlotConfig pscSlotConfig
+                        putStrLn $ "  unsafeGetSlotConfig = " <> show unsafeGetSlotConfig
+      Left _       -> pure ()
 
     let mkNodeServerConfig nodeServerConfig =
             nodeServerConfig
