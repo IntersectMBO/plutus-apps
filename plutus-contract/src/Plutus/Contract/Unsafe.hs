@@ -10,7 +10,6 @@ module Plutus.Contract.Unsafe (
 ) where
 
 
-import Data.Default (def)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Ledger.TimeSlot (SlotConfig (..))
 import System.IO.Unsafe (unsafePerformIO)
@@ -19,7 +18,7 @@ import System.IO.Unsafe (unsafePerformIO)
 {-# NOINLINE slotConfigRef #-}
 
 slotConfigRef :: IORef SlotConfig
-slotConfigRef = unsafePerformIO $ newIORef def
+slotConfigRef = unsafePerformIO . newIORef $ error "Plutus.Contract.Unsafe.slotConfigRef not set prior to usage."
 
 
 setSlotConfig :: SlotConfig
@@ -30,8 +29,6 @@ setSlotConfig = writeIORef slotConfigRef
 getSlotConfig :: IO SlotConfig
 getSlotConfig = readIORef slotConfigRef
 
-
-{-# NOINLINE unsafeGetSlotConfig #-}
 
 unsafeGetSlotConfig :: SlotConfig
 unsafeGetSlotConfig = unsafePerformIO getSlotConfig
