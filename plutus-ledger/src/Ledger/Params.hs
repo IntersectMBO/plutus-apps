@@ -6,11 +6,12 @@ module Ledger.Params(
   Params(..),
   slotConfigL,
   protocolParamsL,
-  networkIdL
+  networkIdL,
+  allowBigTransactions
 ) where
 
 import Cardano.Api.Shelley
-import Control.Lens (makeLensesFor)
+import Control.Lens (makeLensesFor, over)
 import Data.Default (Default (def))
 import Data.Map (fromList)
 import Data.Maybe (fromMaybe)
@@ -30,6 +31,17 @@ makeLensesFor
   , ("pProtocolParams", "protocolParamsL")
   , ("pNetworkId", "networkIdL") ]
   ''Params
+
+-- | Set higher limits on transaction size and execution units.
+-- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.
+-- Note that if you need this your Plutus script will probably not validate on Mainnet.
+allowBigTransactions :: Params -> Params
+allowBigTransactions = over protocolParamsL fixParams
+  where
+    fixParams pp = pp
+      { protocolParamMaxTxSize = 256 * 1024
+      , protocolParamMaxTxExUnits = Just (ExecutionUnits {executionSteps = 100000000000, executionMemory = 100000000})
+      }
 
 instance Default Params where
   def = Params def def (Testnet $ NetworkMagic 1)
