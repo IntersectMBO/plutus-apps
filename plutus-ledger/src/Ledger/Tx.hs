@@ -58,7 +58,6 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
-import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Address (Address, PaymentPubKey, StakePubKey, plutusV1ScriptAddress, pubKeyAddress)
@@ -166,10 +165,10 @@ getCardanoTxId = onCardanoTx txId getCardanoApiTxId
 getCardanoApiTxId :: SomeCardanoApiTx -> TxId
 getCardanoApiTxId (SomeTx (C.Tx body _) _) = CardanoAPI.fromCardanoTxId $ C.getTxId body
 
-getCardanoTxInputs :: CardanoTx -> Set TxIn
-getCardanoTxInputs = onCardanoTx txInputs
+getCardanoTxInputs :: CardanoTx -> [TxIn]
+getCardanoTxInputs = onCardanoTx (\tx -> map (fillTxInputWitnesses tx) $ txInputs tx)
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
-        Set.fromList $ fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
+        fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
 
 getCardanoTxOutRefs :: CardanoTx -> [(TxOut, TxOutRef)]
 getCardanoTxOutRefs = onCardanoTx txOutRefs CardanoAPI.txOutRefs
@@ -181,17 +180,20 @@ getCardanoTxFee :: CardanoTx -> Value
 getCardanoTxFee = onCardanoTx txFee (\_ -> error "Ledger.Tx.getCardanoTxFee: Expecting a mock tx, not an Alonzo tx")
 
 instance Pretty Tx where
-    pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =
+    pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintingScripts, txScripts, txData, txWithdrawals, txCertificates} =
         let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList txInputs)))
-                , hang 2 (vsep ("collateral inputs:" : fmap pretty (Set.toList txCollateral)))
+                [ hang 2 (vsep ("inputs:" : fmap pretty txInputs))
+                , hang 2 (vsep ("collateral inputs:" : fmap pretty txCollateral))
                 , hang 2 (vsep ("outputs:" : fmap pretty txOutputs))
                 , "mint:" <+> pretty txMint
                 , "fee:" <+> pretty txFee
-                , hang 2 (vsep ("mps:": fmap pretty (Set.toList txMintScripts)))
+                , hang 2 (vsep ("mps:": fmap pretty (Map.assocs txMintingScripts)))
                 , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList txSignatures)))
                 , "validity range:" <+> viaShow txValidRange
-                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList txData) ))
+                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList txData)))
+                , hang 2 (vsep ("attached scripts:": fmap pretty (Map.keys txScripts)))
+                , hang 2 (vsep ("withdrawals:": fmap pretty txWithdrawals))
+                , hang 2 (vsep ("certificates:": fmap pretty txCertificates))
                 ]
             txid = txId t
         in nest 2 $ vsep ["Tx" <+> pretty txid <> colon, braces (vsep lines')]
@@ -207,7 +209,7 @@ txId tx = TxId $ toBuiltin
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.
 updateUtxo :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
-updateUtxo tx unspent = (unspent `Map.withoutKeys` spentOutputs tx) `Map.union` unspentOutputsTx tx
+updateUtxo tx unspent = (unspent `Map.withoutKeys` Set.fromList (spentOutputs tx)) `Map.union` unspentOutputsTx tx
 
 -- | A list of a transaction's outputs paired with a 'TxOutRef's referring to them.
 txOutRefs :: Tx -> [(TxOut, TxOutRef)]
