@@ -46,6 +46,7 @@ library
         bytestring,
         cardano-api,
         containers,
+        lens,
         hysterical-screams,
         plutus-chain-index-core,
         plutus-ledger,
@@ -60,6 +61,8 @@ executable plutus-streaming-cli
     import: lang
     hs-source-dirs:   app
     main-is:          Main.hs
+    ghc-options:
+        -rtsopts=all
     build-depends:
         plutus-streaming,
         base >=4.9 && <5,

@@ -10,12 +10,10 @@ import Cardano.Api.Extras ()
 import Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
 import Data.Aeson.Text qualified as Aeson
 import Data.Text.Lazy qualified as TL
-import Index.Sqlite (SqliteIndex, insert)
 import Index.TxIdStatus (TxStatusIndex, openIx)
-import Ledger.TxId (TxId)
+import Index.VSqlite (insert)
 import Options.Applicative (Alternative ((<|>)), Parser, auto, execParser, flag', help, helper, info, long, metavar,
                             option, str, strOption, (<**>))
-import Plutus.ChainIndex.Types (TxConfirmedState)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), SimpleChainSyncEvent,
                          withSimpleChainSyncEventStream)
 import Streaming.Prelude qualified as S

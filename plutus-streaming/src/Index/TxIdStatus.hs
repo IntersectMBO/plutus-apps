@@ -5,6 +5,7 @@ module Index.TxIdStatus where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), BlockNo (BlockNo), CardanoMode)
 import Cardano.Api qualified as C
+import Control.Lens.Operators
 import Control.Monad (forM_)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -13,9 +14,9 @@ import Data.Monoid (Last (Last), Sum (Sum, getSum))
 import Data.Sequence (Seq, ViewL (..))
 import Data.Sequence qualified as Seq
 import Database.SQLite.Simple (execute, execute_)
-import Index.Split (SplitIndex (SplitIndex, siBuffered, siHandle))
-import Index.Sqlite (SqliteIndex)
-import Index.Sqlite qualified as Ix
+import Index.VSplit (SplitIndex, getBuffer, handle, storage)
+import Index.VSqlite (SqliteIndex)
+import Index.VSqlite qualified as Ix
 import Ledger.TxId (TxId)
 import Plutus.ChainIndex.Tx (ChainIndexTx (_citxTxId))
 import Plutus.ChainIndex.Types (BlockNumber (BlockNumber),
@@ -28,27 +29,29 @@ type TxStatusIndex = SqliteIndex SimpleChainSyncEvent () TxId (Maybe TxConfirmed
 
 openIx :: FilePath -> IO TxStatusIndex
 openIx path =
-  fromJust <$> Ix.new query onInsert store 2000 path
+  fromJust <$> Ix.newBoxed query store onInsert 2000 2000 path
 
 -- Ignore notifications for now
-onInsert :: SimpleChainSyncEvent -> TxStatusIndex -> IO [()]
+onInsert :: TxStatusIndex -> SimpleChainSyncEvent -> IO [()]
 onInsert _ _ = pure []
 
 -- No one will query this for now.
-query :: TxStatusIndex -> TxId -> Seq SimpleChainSyncEvent -> IO (Maybe TxConfirmedState)
+query :: TxStatusIndex -> TxId -> [SimpleChainSyncEvent] -> IO (Maybe TxConfirmedState)
 query _ _ _ = pure Nothing
 
 store :: TxStatusIndex -> IO ()
-store SplitIndex{siHandle, siBuffered} = do
-  let bufferedTxs = foldTxs $ getTxs . getBlocks <$> siBuffered
-  execute_ siHandle "CREATE TABLE IF NOT EXISTS tx_state (txid TEXT PRIMARY KEY, confirmations INTEGER)"
-  -- execute_ siHandle "BEGIN"
+store ix = do
+  -- bufferedEvents <- getBuffer (ix ^. storage)
+  let c           = ix ^. handle
+      -- bufferedTxs = foldTxs $ getTxs . getBlocks <$> bufferedEvents
+  execute_ c "CREATE TABLE IF NOT EXISTS tx_state (txid TEXT PRIMARY KEY, confirmations INTEGER)"
+  -- execute_ handle "BEGIN"
   -- forM_ (Map.assocs bufferedTxs) $
-  --   \(txid, v) -> execute siHandle "INSERT INTO tx_state (txid, confirmations) VALUES (?, ?)" (show txid, getSum $ timesConfirmed v)
+  --   \(txid, v) -> execute handle "INSERT INTO tx_state (txid, confirmations) VALUES (?, ?)" (show txid, getSum $ timesConfirmed v)
   -- This will really work your SSD to death, and it is not very useful, since
   -- all txs that are persisted are settled.
-  -- execute siHandle "UPDATE tx_state SET confirmations = confirmations + ?" (Only $ Map.size bufferedTxs)
-  -- execute_ siHandle "COMMIT"
+  -- execute handle "UPDATE tx_state SET confirmations = confirmations + ?" (Only $ Map.size bufferedTxs)
+  -- execute_ handle "COMMIT"
 
 getBlocks :: SimpleChainSyncEvent -> BlockInMode CardanoMode
 getBlocks (RollForward block _tip) = block
@@ -73,7 +76,7 @@ getTxs (BlockInMode (Block header transactions) era) =
     go (BlockHeader _ _ blockNo) txs era' =
       (blockNo, _citxTxId <$> catMaybes (either (const Nothing) Just . fromCardanoTx era' <$> txs))
 
-foldTxs :: Seq (BlockNo, [TxId]) -> Map TxId TxConfirmedState
+foldTxs :: [(BlockNo, [TxId])] -> Map TxId TxConfirmedState
 foldTxs bs = snd $ foldl go (0, Map.empty) bs
   where
     go :: (Int, Map TxId TxConfirmedState)
