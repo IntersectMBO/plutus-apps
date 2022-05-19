@@ -235,7 +235,6 @@ import Plutus.Contract.Types (IsContract (..))
 import Prettyprinter
 
 import Data.Generics.Uniplate.Data (universeBi)
-import Ledger.TimeSlot (SlotConfig)
 
 -- | Key-value map where keys and values have three indices that can vary between different elements
 --   of the map. Used to store `ContractHandle`s, which are indexed over observable state, schema,
