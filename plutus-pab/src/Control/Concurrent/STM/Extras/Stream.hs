@@ -7,10 +7,9 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
-{-# LANGUAGE TypeApplications    #-}
 
 module Control.Concurrent.STM.Extras.Stream
-  ( STMStream
+  ( STMStream(STMStream)
   , readOne
   , readN
   , foldM

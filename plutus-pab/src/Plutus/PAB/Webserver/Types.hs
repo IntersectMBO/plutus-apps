@@ -109,7 +109,7 @@ data InstanceStatusToClient
 -- | Data sent to the client through the combined websocket API
 data CombinedWSStreamToClient
     = InstanceUpdate ContractInstanceId InstanceStatusToClient
-    | SlotChange Slot -- ^ New slot number
+    | SlotChange {current :: !Slot, tip :: !Slot} -- ^ New slot number
     deriving stock (Generic, Eq, Show)
     deriving anyclass (ToJSON, FromJSON)
 

@@ -49,6 +49,7 @@ module Plutus.PAB.Core.ContractInstance.STM(
     , InstanceClientEnv(..)
     ) where
 
+import Cardano.Api qualified as C
 import Control.Applicative (Alternative (empty))
 import Control.Concurrent.STM (STM, TMVar, TVar)
 import Control.Concurrent.STM qualified as STM
@@ -154,6 +155,7 @@ data BlockchainEnv =
         , beTxOutChanges    :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
         , beCurrentBlock    :: TVar BlockNumber -- ^ Current block.
         , beSlotConfig      :: TimeSlot.SlotConfig
+        , beTip             :: TVar C.ChainTip
         }
 
 -- | Initialise an empty 'BlockchainEnv' value
@@ -165,6 +167,7 @@ emptyBlockchainEnv rollbackHistory slotConfig =
         <*> STM.newTVar mempty
         <*> STM.newTVar (BlockNumber 0)
         <*> pure slotConfig
+        <*> STM.newTVar C.ChainTipAtGenesis
 
 -- | Wait until the current slot is greater than or equal to the
 --   target slot, then return the current slot.

@@ -24,10 +24,11 @@ module Plutus.PAB.Webserver.WebSocket
     , observableStateChange
     ) where
 
+import Cardano.Api (ChainTip (..), SlotNo (..))
 import Control.Concurrent.Async (Async, async, waitAnyCancel)
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
-import Control.Concurrent.STM.Extras.Stream (STMStream, foldM, singleton, unfold)
+import Control.Concurrent.STM.Extras.Stream (STMStream (STMStream), foldM, singleton, unfold)
 import Control.Exception (SomeException, handle)
 import Control.Monad (forever, void)
 import Control.Monad.Freer.Error (throwError)
@@ -43,7 +44,7 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (PubKeyHash)
-import Ledger.Slot (Slot)
+import Ledger.Slot (Slot (Slot))
 import Network.WebSockets qualified as WS
 import Network.WebSockets.Connection (Connection, PendingConnection)
 import Plutus.Contract.Effects (ActiveEndpoint)
@@ -92,15 +93,41 @@ combinedWSStreamToClient WSState{wsInstances} blockchainEnv instancesState = do
     instances <- unfold (STM.readTVar wsInstances)
     let mkInstanceStream instanceId = InstanceUpdate instanceId <$> instanceUpdates instanceId instancesState
     fold
-        [ SlotChange <$> slotChange blockchainEnv
+        [ uncurry SlotChange <$> filterNewTip (slotChange blockchainEnv)
         , foldMap mkInstanceStream instances
         ]
 
 initialWSState :: STM WSState
 initialWSState = WSState <$> STM.newTVar mempty <*> STM.newTVar mempty
 
-slotChange :: BlockchainEnv -> STMStream Slot
-slotChange = unfold . Instances.currentSlot
+slotChange :: BlockchainEnv -> STMStream (Slot, Slot)
+slotChange env =
+  unfold
+    $ do
+      tip' <- STM.readTVar $ Instances.beTip env
+      let
+        tip =
+           Slot . fromIntegral
+             $ case tip' of
+               ChainTipAtGenesis       -> 0
+               ChainTip (SlotNo s) _ _ -> s
+      current <- Instances.currentSlot env
+      pure (current, tip)
+
+filterNewTip :: STMStream (Slot, Slot) -> STMStream (Slot, Slot)
+filterNewTip =
+  let
+    go lastVl (STMStream s) =
+      do
+        (next, ms) <- s
+        case ms of
+          Nothing -> pure (next, Nothing)
+          Just s' ->
+            if Just (snd next) /= fmap snd lastVl
+               then pure (next, Just $ STMStream $ go (Just next) s')
+               else go lastVl s'
+  in
+    STMStream . go Nothing
 
 observableStateChange :: ContractInstanceId -> InstancesState -> STMStream JSON.Value
 observableStateChange contractInstanceId instancesState =

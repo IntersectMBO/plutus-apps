@@ -116,17 +116,20 @@ processChainSyncEvent
 processChainSyncEvent instancesState blockchainEnv event = do
   case event of
     Resume _ -> Right <$> blockAndSlot blockchainEnv
-    RollForward (BlockInMode (C.Block header transactions) era) _ ->
-      case era of
-        -- Unfortunately, we need to pattern match again all eras because
-        -- 'processBlock' has the constraints 'C.IsCardanoEra era', but not
-        -- 'C.BlockInMode'.
-        C.ByronEraInCardanoMode   -> processBlock instancesState header blockchainEnv transactions era
-        C.ShelleyEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
-        C.AllegraEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
-        C.MaryEraInCardanoMode    -> processBlock instancesState header blockchainEnv transactions era
-        C.AlonzoEraInCardanoMode  -> processBlock instancesState header blockchainEnv transactions era
+    RollForward (BlockInMode (C.Block header transactions) era) tip ->
+      do
+        beTip blockchainEnv `STM.writeTVar` tip
+        case era of
+          -- Unfortunately, we need to pattern match again all eras because
+          -- 'processBlock' has the constraints 'C.IsCardanoEra era', but not
+          -- 'C.BlockInMode'.
+          C.ByronEraInCardanoMode   -> processBlock instancesState header blockchainEnv transactions era
+          C.ShelleyEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
+          C.AllegraEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
+          C.MaryEraInCardanoMode    -> processBlock instancesState header blockchainEnv transactions era
+          C.AlonzoEraInCardanoMode  -> processBlock instancesState header blockchainEnv transactions era
     RollBackward chainPoint _ -> runRollback blockchainEnv chainPoint
+
 
 data SyncActionFailure
   = RollbackFailure RollbackFailed
