@@ -7,7 +7,7 @@
 module Spec.TimeValidity(tests) where
 
 import Cardano.Api.Shelley (ProtocolParameters, protocolParamProtocolVersion)
-import Control.Lens hiding (contains, now, to, (.>))
+import Control.Lens hiding (contains, from, now, (.>))
 import Control.Monad (void)
 import Data.Map qualified as Map
 import Data.Void (Void)
@@ -28,9 +28,10 @@ import Plutus.Script.Utils.V1.Scripts (ValidatorHash, validatorHash)
 import Plutus.Trace qualified as Trace
 import Plutus.V1.Ledger.Api (Address, POSIXTime, POSIXTimeRange, ScriptContext, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P
-import Plutus.V1.Ledger.Interval (contains, to)
+import Plutus.V1.Ledger.Interval (contains, from)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), unitDatum, unitRedeemer)
 import PlutusTx qualified
+import PlutusTx.Prelude qualified as TxP
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
 import Wallet.Emulator.Stream (params)
@@ -59,7 +60,7 @@ protocolV5 =
                 tx2 =
                     mconcat [Constraints.mustSpendScriptOutput oref unitRedeemer | oref <- orefs]
                     <> Constraints.mustIncludeDatum unitDatum
-                    <> Constraints.mustValidateIn (to $ now + 2000)
+                    <> Constraints.mustValidateIn (from $ now + 1000)
             ledgerTx2 <- submitTxConstraintsWith @Void lookups tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
@@ -87,7 +88,7 @@ defaultProtocolParams =
                 tx2 =
                     mconcat [Constraints.mustSpendScriptOutput oref unitRedeemer | oref <- orefs]
                     <> Constraints.mustIncludeDatum unitDatum
-                    <> Constraints.mustValidateIn (to $ now + 2000)
+                    <> Constraints.mustValidateIn (from $ now + 1000)
             ledgerTx2 <- submitTxConstraintsWith @Void lookups tx2
             awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
@@ -98,30 +99,30 @@ defaultProtocolParams =
     in checkPredicateOptions defaultCheckOptions "tx valid time interval is supported in protocol v6+" (assertValidatedTransactionCount 2) (void trace)
 
 deadline :: POSIXTime
-deadline = 1596059095000 -- (milliseconds) transaction's valid range must be before this
+deadline = 1596059092000 -- (milliseconds) transaction's valid range must be after this
 
 {-# INLINEABLE mkValidator #-}
-mkValidator :: POSIXTime -> () -> () -> ScriptContext -> Bool
-mkValidator dl _ _ ctx = to dl `contains` range
+mkValidator :: P.POSIXTime -> () -> () -> P.ScriptContext -> Bool
+mkValidator dl _ _ ctx = from dl `contains` range -- TxP.traceError (TxP.decodeUtf8 (disp range ""))
     where
     info :: TxInfo
     info = P.scriptContextTxInfo ctx
 
-    range :: POSIXTimeRange
+    range :: P.POSIXTimeRange
     range = P.txInfoValidRange info
 
-instance Scripts.ValidatorTypes POSIXTime where
-    type instance RedeemerType POSIXTime = ()
-    type instance DatumType POSIXTime = ()
+instance Scripts.ValidatorTypes P.POSIXTime where
+    type instance RedeemerType P.POSIXTime = ()
+    type instance DatumType P.POSIXTime = ()
 
-typedValidator :: POSIXTime -> Scripts.TypedValidator POSIXTime
-typedValidator = Scripts.mkTypedValidatorParam @POSIXTime
+typedValidator :: POSIXTime -> Scripts.TypedValidator P.POSIXTime
+typedValidator = Scripts.mkTypedValidatorParam @P.POSIXTime
     $$(PlutusTx.compile [||mkValidator||])
     $$(PlutusTx.compile [|| wrap ||])
     where
         wrap = Scripts.mkUntypedValidator
 
-validatorScript :: POSIXTime -> Validator
+validatorScript :: P.POSIXTime -> Validator
 validatorScript = Scripts.validatorScript . typedValidator
 
 valHash :: ValidatorHash
@@ -129,3 +130,45 @@ valHash = Scripts.validatorHash $ typedValidator deadline
 
 scrAddress :: Ledger.Address
 scrAddress = Ledger.scriptHashAddress valHash
+
+-------------------------------------------------------------------------------
+-- Disp like Show (Good for debuging time interval emulator issue, can remove once resolved)
+-------------------------------------------------------------------------------
+
+class Disp a where
+    disp :: a -> TxP.BuiltinByteString -> TxP.BuiltinByteString
+
+instance Disp a => Disp (P.Interval a) where
+    disp (P.Interval lb ub) end =
+        "Interval(" `TxP.appendByteString` disp lb (44 `TxP.consByteString` disp ub (41 `TxP.consByteString` end))
+
+-- not showing the [ ( difference
+instance Disp a => Disp (P.LowerBound a) where
+    disp (P.LowerBound x _) end = disp x end
+
+instance Disp a => Disp (P.UpperBound a) where
+    disp (P.UpperBound x _) end = disp x end
+
+instance Disp a => Disp (P.Extended a) where
+    disp (P.Finite x) end = disp x end
+    disp P.NegInf     end = "NegInf" `TxP.appendByteString` end
+    disp P.PosInf     end = "PosInf" `TxP.appendByteString` end
+
+instance Disp P.POSIXTime where
+    disp (P.POSIXTime i) = disp i
+
+instance Disp Integer where
+    disp n end
+        | n TxP.< 0     = 45 `TxP.consByteString` go (TxP.negate n) end
+        | n TxP.== 0    = 48 `TxP.consByteString` TxP.emptyByteString
+        | otherwise = go n end
+      where
+        go :: Integer -> TxP.BuiltinByteString -> TxP.BuiltinByteString
+        go m acc
+            | m TxP.== 0 = acc
+            | otherwise  =
+                  let
+                    m' = m `TxP.divide` 10
+                    r  = m `TxP.modulo` 10
+                  in
+                    go m' TxP.$ TxP.consByteString (r TxP.+ 48) acc
