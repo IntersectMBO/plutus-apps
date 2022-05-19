@@ -65,6 +65,7 @@ module Plutus.Contract.Request(
     , awaitTxOutStatusChange
     -- ** Contract instances
     , ownInstanceId
+    , slotConfig
     -- ** Exposing endpoints
     , HasEndpoint
     , EndpointDescription(..)
@@ -127,7 +128,7 @@ import Plutus.Contract.Util (loopM)
 import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
-                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
                                 PABResp (ExposeEndpointResp))
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Logging (logDebug)
@@ -135,6 +136,7 @@ import Plutus.Contract.Schema (Input, Output)
 import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescription),
                      EndpointValue (EndpointValue, unEndpointValue))
 
+import Ledger.TimeSlot (SlotConfig)
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse (paget), UtxosResponse (page))
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
@@ -669,7 +671,12 @@ awaitTxOutStatusChange ref = snd <$> pabReq (AwaitTxOutStatusChangeReq ref) E._A
 
 -- | Get the 'ContractInstanceId' of this instance.
 ownInstanceId :: forall w s e. (AsContractError e) => Contract w s e ContractInstanceId
-ownInstanceId = pabReq OwnContractInstanceIdReq E._OwnContractInstanceIdResp
+ownInstanceId = pabReq E.OwnContractInstanceIdReq E._OwnContractInstanceIdResp
+
+
+-- | Get the 'ContractInstanceId' of this instance.
+slotConfig :: forall w s e. (AsContractError e) => Contract w s e SlotConfig
+slotConfig = pabReq E.GetSlotConfigReq E._GetSlotConfigResp
 
 type HasEndpoint l a s =
   ( HasType l (EndpointValue a) (Input s)

@@ -262,6 +262,7 @@ instance Arbitrary PABReq where
             [ AwaitSlotReq <$> arbitrary
             , pure CurrentSlotReq
             , pure OwnContractInstanceIdReq
+            , pure GetSlotConfigReq
             , ExposeEndpointReq <$> arbitrary
             , pure OwnPaymentPublicKeyHashReq
             -- TODO This would need an Arbitrary Tx instance:

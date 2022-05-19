@@ -34,6 +34,7 @@ module Plutus.Contract.Trace
     , handlePendingTransactions
     , handleChainIndexQueries
     , handleOwnInstanceIdQueries
+    , handleGetSlotConfig
     , handleYieldedUnbalancedTx
     -- * Initial distributions of emulated chains
     , InitialDistribution
@@ -67,6 +68,7 @@ import Plutus.Contract.Trace.RequestHandler qualified as RequestHandler
 import Ledger.Ada qualified as Ada
 import Ledger.Value (Value)
 
+import Ledger.TimeSlot (SlotConfig)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator (Wallet)
@@ -183,12 +185,21 @@ handleOwnPaymentPubKeyHashQueries =
     generalise (preview E._OwnPaymentPublicKeyHashReq) E.OwnPaymentPublicKeyHashResp RequestHandler.handleOwnPaymentPubKeyHash
 
 handleOwnInstanceIdQueries ::
-    ( Member (LogObserve (LogMessage Text)) effs
-    , Member (Reader ContractInstanceId) effs
-    )
-    => RequestHandler effs PABReq PABResp
+     ( Member (LogObserve (LogMessage Text)) effs
+     , Member (Reader ContractInstanceId) effs
+     )
+     => RequestHandler effs PABReq PABResp
 handleOwnInstanceIdQueries =
     generalise (preview E._OwnContractInstanceIdReq) E.OwnContractInstanceIdResp RequestHandler.handleOwnInstanceIdQueries
+
+
+handleGetSlotConfig ::
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member (Reader SlotConfig) effs
+    )
+    => RequestHandler effs PABReq PABResp
+handleGetSlotConfig =
+    generalise (preview E._GetSlotConfigReq) E.GetSlotConfigResp RequestHandler.handleGetSlotConfig
 
 handleYieldedUnbalancedTx ::
     ( Member (LogObserve (LogMessage Text)) effs

@@ -422,8 +422,8 @@ waitNSlots = Core.waitNSlots
 
 type Simulation t a = Core.PABAction t (SimulatorState t) a
 
-runSimulationWith :: SimulatorEffectHandlers t -> Simulation t a -> IO (Either PABError a)
-runSimulationWith = Core.runPAB def
+runSimulationWith :: SlotConfig -> SimulatorEffectHandlers t -> Simulation t a -> IO (Either PABError a)
+runSimulationWith slotConfig = Core.runPAB slotConfig def
 
 -- | Handle a 'LogMsg' effect in terms of a "larger" 'State' effect from which we have a setter.
 logIntoTQueue ::

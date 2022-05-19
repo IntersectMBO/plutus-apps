@@ -106,6 +106,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Ledger (Address (addressCredential), TxOutRef)
 import Ledger.Address (PaymentPubKeyHash)
+import Ledger.TimeSlot (SlotConfig)
 import Ledger.Tx (CardanoTx, ciTxOutValue)
 import Ledger.TxId (TxId)
 import Ledger.Value (Value)
@@ -180,6 +181,7 @@ data PABEnvironment t env =
         , blockchainEnv   :: BlockchainEnv
         , appEnv          :: env
         , effectHandlers  :: EffectHandlers t env
+        , slotConfig      :: SlotConfig
         }
 
 -- | Top-level entry point. Run a 'PABAction', using the 'EffectHandlers' to
@@ -187,11 +189,12 @@ data PABEnvironment t env =
 --   with external services.
 runPAB ::
     forall t env a.
-    Timeout
+    SlotConfig
+    -> Timeout
     -> EffectHandlers t env
     -> PABAction t env a
     -> IO (Either PABError a)
-runPAB endpointTimeout effectHandlers action = runM $ runError $ do
+runPAB slotConfig endpointTimeout effectHandlers action = runM $ runError $ do
     let EffectHandlers { initialiseEnvironment
                        , onStartup
                        , onShutdown
@@ -201,7 +204,7 @@ runPAB endpointTimeout effectHandlers action = runM $ runError $ do
                        , handleContractDefinitionEffect
                        } = effectHandlers
     (instancesState, blockchainEnv, appEnv) <- initialiseEnvironment
-    let env = PABEnvironment{instancesState, blockchainEnv, appEnv, effectHandlers, endpointTimeout}
+    let env = PABEnvironment{instancesState, blockchainEnv, appEnv, effectHandlers, endpointTimeout, slotConfig}
 
     runReader env $ interpret (handleTimeEffect @t @env)
                   $ handleLogMessages
@@ -359,6 +362,7 @@ type ContractInstanceEffects t env effs =
     ': TimeEffect
     ': Reader BlockchainEnv
     ': Reader InstancesState
+    ': Reader SlotConfig
     ': Reader (PABEnvironment t env)
     ': Reader Wallet
     ': effs
@@ -371,13 +375,14 @@ handleAgentThread ::
     -> Eff (ContractInstanceEffects t env '[IO]) a
     -> PABAction t env a
 handleAgentThread wallet cidM action = do
-    PABEnvironment{effectHandlers, blockchainEnv, instancesState} <- ask @(PABEnvironment t env)
+    PABEnvironment{effectHandlers, blockchainEnv, instancesState, slotConfig} <- ask @(PABEnvironment t env)
     let EffectHandlers{handleContractStoreEffect, handleContractEffect, handleServicesEffects} = effectHandlers
     let action' :: Eff (ContractInstanceEffects t env (IO ': PABEffects t env)) a = Modify.raiseEnd action
 
     subsume @IO
         $ runReader wallet
         $ subsume @(Reader (PABEnvironment t env))
+        $ runReader slotConfig
         $ runReader instancesState
         $ runReader blockchainEnv
         $ interpret (handleTimeEffect @t @env @IO)

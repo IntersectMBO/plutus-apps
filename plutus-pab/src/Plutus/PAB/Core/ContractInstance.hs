@@ -66,6 +66,7 @@ import Wallet.Effects (NodeClientEffect, WalletEffect)
 import Wallet.Emulator.LogMessages (TxBalanceMsg)
 import Wallet.Emulator.Wallet qualified as Wallet
 
+import Ledger.TimeSlot (SlotConfig)
 import Plutus.ChainIndex (ChainIndexQueryEffect, RollbackState (Unknown))
 import Plutus.PAB.Core.ContractInstance.STM (Activity (Done, Stopped), BlockchainEnv,
                                              InstanceState (InstanceState, issStop), InstancesState,
@@ -253,6 +254,7 @@ stmRequestHandler ::
     , Member NodeClientEffect effs
     , Member (LogMsg RequestHandlerLogMsg) effs
     , Member (LogObserve (LogMessage Text.Text)) effs
+    , Member (Reader SlotConfig) effs
     , Member (Reader ContractInstanceId) effs
     , Member (Reader BlockchainEnv) effs
     , Member (Reader InstanceState) effs
@@ -266,6 +268,7 @@ stmRequestHandler = fmap sequence (wrapHandler (fmap pure nonBlockingRequests) <
         <> RequestHandler.handleChainIndexQueries @effs
         <> RequestHandler.handleUnbalancedTransactions @effs
         <> RequestHandler.handlePendingTransactions @effs
+        <> RequestHandler.handleGetSlotConfig @effs
         <> RequestHandler.handleOwnInstanceIdQueries @effs
         <> RequestHandler.handleCurrentSlotQueries @effs
         <> RequestHandler.handleCurrentTimeQueries @effs
@@ -331,6 +334,7 @@ type AppBackendConstraints t m effs =
     , Member (LogObserve (LogMessage Text.Text)) effs
     , Member (LogMsg TxBalanceMsg) effs
     , Member (Reader BlockchainEnv) effs
+    , Member (Reader SlotConfig) effs
     , Member (ContractEffect t) effs
     , Member (ContractStore t) effs
     )
@@ -400,6 +404,7 @@ respondToRequestsSTM ::
     , Member (LogMsg RequestHandlerLogMsg) effs
     , Member (LogObserve (LogMessage Text.Text)) effs
     , Member (LogMsg (ContractInstanceMsg t)) effs
+    , Member (Reader SlotConfig) effs
     , Member (Reader ContractInstanceId) effs
     , Member (Reader BlockchainEnv) effs
     , Member (Reader InstanceState) effs

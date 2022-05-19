@@ -46,6 +46,7 @@ import Data.Foldable (foldlM, traverse_)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Row
+import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Playground.Schema (endpointsToSchemas)
 import Playground.Types (FunctionSchema)
@@ -222,7 +223,7 @@ updateBuiltin' silent i oldState oldW resp = do
             unless silent $ logNewMessages @a i k
             let newW = oldW <> (_lastState $ _resumableResult $ Emulator.cisiSuspState oldState)
             pure (SomeBuiltinState k newW)
-        _      -> throwError $ ContractCommandError 0 "failed to update contract"
+        _      -> throwError $ ContractCommandError 0 $ "failed to update contract: " <> T.pack (show i)
 
 logNewMessages ::
     forall b w s e a effs.
