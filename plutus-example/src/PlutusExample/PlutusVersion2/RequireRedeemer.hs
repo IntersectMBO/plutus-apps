@@ -8,12 +8,9 @@ module PlutusExample.PlutusVersion2.RequireRedeemer
   ) where
 
 import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
-import Prelude hiding (($), (&&))
-
 import Codec.Serialise
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-
 import Plutus.Script.Utils.V2.Scripts.Validators as Scripts
 import Plutus.V2.Ledger.Api qualified as Plutus
 import Plutus.V2.Ledger.Contexts as V2
@@ -22,6 +19,7 @@ import PlutusTx.Builtins
 import PlutusTx.Eq as PlutusTx
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 import PlutusTx.Prelude qualified as PlutusPrelude
+import Prelude hiding (($), (&&))
 
 -- serialiseData is a PlutusV2 builtin
 

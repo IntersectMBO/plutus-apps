@@ -19,15 +19,12 @@ module PlutusExample.PlutusVersion1.RedeemerContextScripts
   , testScriptContextToScriptData
   ) where
 
-import Prelude hiding (($))
-
 import Cardano.Api
 import Cardano.Api.Shelley
-
 import Codec.Serialise
 import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Short qualified as SBS
-
+import Data.Maybe as M
 import Plutus.Script.Utils.V1.Scripts.MonetaryPolicies as Scripts
 import Plutus.Script.Utils.V1.Scripts.Validators as Scripts
 import Plutus.V1.Ledger.Api qualified as Plutus
@@ -36,6 +33,7 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 import PlutusTx.Prelude qualified as P
+import Prelude hiding (($))
 
 -- Description
 -- PV1CustomRedeemer mimics the ScriptContext. PV1CustomRedeemer is built via reading
