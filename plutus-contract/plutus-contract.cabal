@@ -194,6 +194,7 @@ test-suite plutus-contract-test
         Spec.Rows
         Spec.State
         Spec.ThreadToken
+        Spec.TimeValidity
         Spec.Secrets
         Spec.Plutus.Contract.Wallet
         Spec.Plutus.Contract.Oracle
