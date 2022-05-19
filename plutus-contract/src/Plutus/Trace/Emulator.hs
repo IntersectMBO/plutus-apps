@@ -171,7 +171,7 @@ handleEmulatorTrace slotCfg action = do
             . interpret (handleWaiting @_ @effs slotCfg)
             . interpret (handleAssert @_ @effs)
             . interpret (handleRunContract @_ @effs)
-            . interpret (handleStartContract @_ @effs)
+            . interpret (handleStartContract @_ @effs slotCfg)
             $ raiseEnd action
     void $ exit @effs @EmulatorMessage
 

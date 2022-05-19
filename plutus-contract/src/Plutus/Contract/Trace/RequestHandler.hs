@@ -26,6 +26,7 @@ module Plutus.Contract.Trace.RequestHandler(
     , handleUnbalancedTransactions
     , handlePendingTransactions
     , handleChainIndexQueries
+    , handleGetSlotConfig
     , handleOwnInstanceIdQueries
     , handleYieldedUnbalancedTx
     ) where
@@ -49,6 +50,7 @@ import Plutus.Contract.Resumable (Request (Request, itID, rqID, rqRequest),
 import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logWarn, surroundDebug)
 import Ledger (POSIXTime, POSIXTimeRange, PaymentPubKeyHash, Slot, SlotRange)
 import Ledger.Constraints.OffChain (UnbalancedTx)
+import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
@@ -237,11 +239,20 @@ handleChainIndexQueries = RequestHandler $ \chainIndexQuery ->
         TxoSetAtAddress pq c       -> TxoSetAtResponse <$> ChainIndexEff.txoSetAtAddress pq c
         GetTip                     -> GetTipResponse <$> ChainIndexEff.getTip
 
-handleOwnInstanceIdQueries ::
+handleGetSlotConfig ::
     forall effs a.
     ( Member (LogObserve (LogMessage Text)) effs
-    , Member (Reader ContractInstanceId) effs
+    , Member (Reader SlotConfig) effs
     )
+    => RequestHandler effs a SlotConfig
+handleGetSlotConfig = RequestHandler $ \_ ->
+    surroundDebug @Text "handleGetSlotConfig" ask
+
+handleOwnInstanceIdQueries ::
+     forall effs a.
+     ( Member (LogObserve (LogMessage Text)) effs
+     , Member (Reader ContractInstanceId) effs
+     )
     => RequestHandler effs a ContractInstanceId
 handleOwnInstanceIdQueries = RequestHandler $ \_ ->
     surroundDebug @Text "handleOwnInstanceIdQueries" ask

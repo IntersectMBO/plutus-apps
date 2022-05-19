@@ -51,6 +51,7 @@ import Data.Profunctor (Profunctor (..))
 import Data.Proxy (Proxy (..))
 import Data.Row.Internal qualified as V
 import GHC.TypeLits qualified
+import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract (Contract, HasEndpoint)
 import Plutus.Contract.Effects (ActiveEndpoint, PABResp (ExposeEndpointResp), _ExposeEndpointReq)
 import Plutus.Contract.Resumable (Request (rqRequest), Requests (..))
@@ -137,7 +138,7 @@ handleRunContract = \case
 
 -- | Handle the 'StartContract' effect by starting each contract instance in an
 --   emulator thread.
-handleStartContract :: forall effs effs2.
+handleStartContract :: forall effs effs2 r.
     ( Member (State EmulatorThreads) effs2
     , Member (Error EmulatorRuntimeError) effs2
     , Member MultiAgentEffect effs2
@@ -145,10 +146,10 @@ handleStartContract :: forall effs effs2.
     , Member ContractInstanceIdEff effs
     , Member (Yield (EmSystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     )
-    => StartContract
-    ~> Eff effs
-handleStartContract = \case
-    ActivateContract w c t -> handleActivate @_ @_ @_ @effs @effs2 w t (void (toContract c))
+    =>
+    SlotConfig -> StartContract r -> Eff effs r
+handleStartContract s (ActivateContract w c t) = do
+  handleActivate @_ @_ @_ @effs @effs2 w s t (void (toContract c))
 
 handleGetContractState ::
     forall w s e effs effs2.
@@ -192,13 +193,14 @@ handleActivate :: forall w s e effs effs2.
     , Monoid w
     )
     => Wallet
+    -> SlotConfig
     -> ContractInstanceTag
     -> Contract w s e ()
     -> Eff effs (ContractHandle w s e)
-handleActivate wllt tag con = do
+handleActivate wllt slt tag con = do
     i <- nextId
     let handle = ContractHandle{chContract=con, chInstanceId = i, chInstanceTag = tag}
-    void $ startContractThread @w @s @e @effs @effs2 wllt handle
+    void $ startContractThread @w @s @e @effs @effs2 wllt slt handle
     pure handle
 
 runningContractInstanceTag :: Tag
@@ -220,14 +222,15 @@ startContractThread ::
     , Monoid w
     )
     => Wallet
+    -> SlotConfig
     -> ContractHandle w s e
     -> Eff effs (Maybe EmulatorMessage)
-startContractThread wallet handle =
+startContractThread wallet slotConfig handle =
     fork @effs2 @EmulatorMessage runningContractInstanceTag Normal
         (interpret (mapYieldEm @_ @effs2)
             $ handleMultiAgentEffects wallet
             $ interpret (mapLog InstanceEvent)
-            $ contractThread handle)
+            $ contractThread slotConfig handle)
 
 mapYieldEm ::
     forall effs effs2 c.

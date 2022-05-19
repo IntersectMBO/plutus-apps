@@ -87,8 +87,6 @@ getContractInstance contractStore contractInstanceId = do
   content <- handleIO (L.readFile contractFilePath) fsHandler
   hoistEither $ first FSContractStoreError $ eitherDecode content
 
--- FIXME: paluh
--- add errors to the deps
 note :: a -> Maybe b -> Either a b
 note err Nothing = Left err
 note _ (Just a)  = Right a

@@ -96,7 +96,7 @@ handleEmulatorControl slotCfg = \case
         -- see note [Freeze and Thaw]
         void $ mkSysCall @effs2 @EmulatorMessage Normal (Right $ Thaw threadId)
     ChainState -> gets (view EM.chainState)
-    GetSlotConfig -> return slotCfg
+    GetSlotConfig -> pure slotCfg
     DiscardWallets discard -> modify @EmulatorState $ over EM.walletStates (Map.filterWithKey (\ k _ -> not $ discard k))
 
 makeEffect ''EmulatorControl

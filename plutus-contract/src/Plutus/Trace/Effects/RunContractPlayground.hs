@@ -35,6 +35,7 @@ import Control.Monad.Freer.State (State, gets, modify)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.Aeson qualified as JSON
 import Data.Map (Map)
+import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract (Contract (..), ContractInstanceId, EndpointDescription (..))
 import Plutus.Contract.Effects (PABResp (ExposeEndpointResp))
 import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, nextId)
@@ -60,7 +61,7 @@ wallet runs exactly one instance of this contract. As a result,
 -}
 
 data RunContractPlayground r where
-    LaunchContract :: Wallet -> RunContractPlayground ()
+    LaunchContract :: Wallet -> SlotConfig -> RunContractPlayground ()
     CallEndpoint :: Wallet -> String -> JSON.Value -> RunContractPlayground ()
 
 makeEffect ''RunContractPlayground
@@ -87,7 +88,7 @@ handleRunContractPlayground ::
     ~> Eff effs
 handleRunContractPlayground contract = \case
     CallEndpoint wallet ep vl -> handleCallEndpoint @effs @effs2 wallet ep vl
-    LaunchContract wllt       -> handleLaunchContract @w @s @e @effs @effs2 contract wllt
+    LaunchContract wllt slt   -> handleLaunchContract @w @s @e @effs @effs2 contract wllt slt
 
 handleLaunchContract ::
     forall w s e effs effs2.
@@ -106,11 +107,12 @@ handleLaunchContract ::
     )
     => Contract w s e ()
     -> Wallet
+    -> SlotConfig
     -> Eff effs ()
-handleLaunchContract contract wllt = do
+handleLaunchContract contract wllt slt = do
     i <- nextId
     let handle = ContractHandle{chContract=contract, chInstanceId = i, chInstanceTag = walletInstanceTag wllt}
-    void $ startContractThread @w @s @e @effs @effs2 wllt handle
+    void $ startContractThread @w @s @e @effs @effs2 wllt slt handle
     modify @(Map Wallet ContractInstanceId) (set (at wllt) (Just i))
 
 handleCallEndpoint ::

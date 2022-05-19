@@ -52,6 +52,7 @@ import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Set qualified as Set
 import Data.Text qualified as T
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
+import Ledger.TimeSlot (SlotConfig)
 import Ledger.Tx (Address, TxIn (txInRef), TxOut (TxOut, txOutAddress), TxOutRef, txId)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (ChainIndexTx, _citxOutputs, _citxTxId),
                           ChainIndexTxOutputs (InvalidTx, ValidTx), RollbackState (Committed),
@@ -89,6 +90,7 @@ import Wallet.Types (ContractInstanceId)
 type ContractInstanceThreadEffs w s e effs =
     State (ContractInstanceStateInternal w s e ())
     ': Reader ContractInstanceId
+    ': Reader SlotConfig
     ': LogMsg ContractInstanceMsg
     ': EmulatorAgentThreadEffs effs
 
@@ -103,11 +105,13 @@ contractThread :: forall w s e effs.
     , JSON.ToJSON w
     , Monoid w
     )
-    => ContractHandle w s e
+    => SlotConfig
+    -> ContractHandle w s e
     -> Eff (EmulatorAgentThreadEffs effs) ()
-contractThread ContractHandle{chInstanceId, chContract, chInstanceTag} = do
+contractThread slotConfig ContractHandle{chInstanceId, chContract, chInstanceTag } = do
     ask @ThreadId >>= registerInstance chInstanceId
     interpret (mapLog (\m -> ContractInstanceLog m chInstanceId chInstanceTag))
+        $ runReader slotConfig
         $ runReader chInstanceId
         $ evalState (emptyInstanceState chContract)
         $ do
@@ -243,7 +247,7 @@ waitForNextMessage isLogShowed = do
 
 handleBlockchainQueries ::
     RequestHandler
-        (Reader ContractInstanceId ': EmulatedWalletEffects)
+        (Reader ContractInstanceId ': Reader SlotConfig ': EmulatedWalletEffects)
         PABReq
         PABResp
 handleBlockchainQueries =
@@ -252,6 +256,7 @@ handleBlockchainQueries =
     <> RequestHandler.handleChainIndexQueries
     <> RequestHandler.handleOwnPaymentPubKeyHashQueries
     <> RequestHandler.handleOwnInstanceIdQueries
+    <> RequestHandler.handleGetSlotConfig
     <> RequestHandler.handleSlotNotifications
     <> RequestHandler.handleCurrentSlotQueries
     <> RequestHandler.handleTimeNotifications
@@ -421,6 +426,7 @@ addResponse e = do
 
 type ContractInstanceRequests effs =
         Reader ContractInstanceId
+         ': Reader SlotConfig
          ': EmulatedWalletEffects' effs
 
 -- | Respond to a specific event
@@ -428,6 +434,7 @@ respondToEvent ::
     forall w s e effs.
     ( Member (State (ContractInstanceStateInternal w s e ())) effs
     , Members EmulatedWalletEffects effs
+    , Member (Reader SlotConfig) effs
     , Member (Reader ContractInstanceId) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Monoid w
@@ -443,18 +450,19 @@ respondToEvent e = respondToRequest @w @s @e True $ RequestHandler $ \h -> do
 --   contract, if any.
 respondToRequest :: forall w s e effs.
     ( Member (State (ContractInstanceStateInternal w s e ())) effs
+    , Member (Reader SlotConfig) effs
     , Member (Reader ContractInstanceId) effs
     , Member (LogMsg ContractInstanceMsg) effs
     , Members EmulatedWalletEffects effs
     , Monoid w
     )
     => Bool -- ^ Flag on whether to log 'NoRequestsHandled' messages.
-    -> RequestHandler (Reader ContractInstanceId ': EmulatedWalletEffects) PABReq PABResp
+    -> RequestHandler (Reader ContractInstanceId ': Reader SlotConfig ': EmulatedWalletEffects) PABReq PABResp
     -- ^ How to respond to the requests.
     -> Eff effs (Maybe (Response PABResp))
 respondToRequest isLogShowed f = do
     hks <- getHooks @w @s @e
-    let hdl :: (Eff (Reader ContractInstanceId ': EmulatedWalletEffects) (Maybe (Response PABResp))) = tryHandler (wrapHandler f) hks
+    let hdl :: (Eff (Reader ContractInstanceId ': Reader SlotConfig ': EmulatedWalletEffects) (Maybe (Response PABResp))) = tryHandler (wrapHandler f) hks
         hdl' :: (Eff (ContractInstanceRequests effs) (Maybe (Response PABResp))) = raiseEnd hdl
 
         response_ :: Eff effs (Maybe (Response PABResp)) =
@@ -466,6 +474,7 @@ respondToRequest isLogShowed f = do
                     $ subsume @NodeClientEffect
                     $ subsume @(Error WAPI.WalletAPIError)
                     $ subsume @WalletEffect
+                    $ subsume @(Reader SlotConfig)
                     $ subsume @(Reader ContractInstanceId) hdl'
     response <- response_
     traverse_ (addResponse @w @s @e) response

@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeFamilies      #-}
@@ -149,7 +150,7 @@ interpretPlaygroundTrace :: forall w s e effs a.
     -> [Wallet] -- ^ Wallets that should be simulated in the emulator
     -> PlaygroundTrace a
     -> Eff effs ()
-interpretPlaygroundTrace conf contract wallets action =
+interpretPlaygroundTrace conf@EmulatorConfig {_slotConfig} contract wallets action =
     evalState @EmulatorThreads mempty
         $ evalState @(Map Wallet ContractInstanceId) Map.empty
         $ handleDeterministicIds
@@ -161,5 +162,5 @@ interpretPlaygroundTrace conf contract wallets action =
                 $ handlePlaygroundTrace conf contract
                 $ do
                     void Waiting.nextSlot
-                    traverse_ RunContractPlayground.launchContract wallets
+                    traverse_ (flip RunContractPlayground.launchContract _slotConfig) wallets
                     action

@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     -- * Plutus application backend request effect types
@@ -16,6 +17,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _CurrentTimeReq,
     _AwaitTxStatusChangeReq,
     _AwaitTxOutStatusChangeReq,
+    _GetSlotConfigReq,
     _OwnContractInstanceIdReq,
     _OwnPaymentPublicKeyHashReq,
     _ChainIndexQueryReq,
@@ -48,6 +50,7 @@ module Plutus.Contract.Effects( -- TODO: Move to Requests.Internal
     _AwaitTxStatusChangeResp,
     _AwaitTxStatusChangeResp',
     _AwaitTxOutStatusChangeResp,
+    _GetSlotConfigResp,
     _OwnContractInstanceIdResp,
     _OwnPaymentPublicKeyHashResp,
     _ChainIndexQueryResp,
@@ -94,7 +97,7 @@ import Ledger.Credential (Credential)
 import Ledger.Scripts (Validator)
 import Ledger.Slot (Slot, SlotRange)
 import Ledger.Time (POSIXTime, POSIXTimeRange)
-import Ledger.TimeSlot (SlotConversionError)
+import Ledger.TimeSlot (SlotConfig (..), SlotConversionError)
 import Ledger.Tx (CardanoTx, ChainIndexTxOut, getCardanoTxId, onCardanoTx)
 import Plutus.ChainIndex (Page (pageItems), PageQuery)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
@@ -115,6 +118,7 @@ data PABReq =
     | AwaitTxOutStatusChangeReq TxOutRef
     | CurrentSlotReq
     | CurrentTimeReq
+    | GetSlotConfigReq
     | OwnContractInstanceIdReq
     | OwnPaymentPublicKeyHashReq
     | ChainIndexQueryReq ChainIndexQuery
@@ -136,6 +140,7 @@ instance Pretty PABReq where
     CurrentTimeReq                          -> "Current time"
     AwaitTxStatusChangeReq txid             -> "Await tx status change:" <+> pretty txid
     AwaitTxOutStatusChangeReq ref           -> "Await txout status change:" <+> pretty ref
+    GetSlotConfigReq                        -> "Get slot config"
     OwnContractInstanceIdReq                -> "Own contract instance ID"
     OwnPaymentPublicKeyHashReq              -> "Own public key"
     ChainIndexQueryReq q                    -> "Chain index query:" <+> pretty q
@@ -155,6 +160,7 @@ data PABResp =
     | AwaitTxOutStatusChangeResp TxOutRef TxOutStatus
     | CurrentSlotResp Slot
     | CurrentTimeResp POSIXTime
+    | GetSlotConfigResp SlotConfig
     | OwnContractInstanceIdResp ContractInstanceId
     | OwnPaymentPublicKeyHashResp PaymentPubKeyHash
     | ChainIndexQueryResp ChainIndexResponse
@@ -176,6 +182,7 @@ instance Pretty PABResp where
     CurrentTimeResp s                        -> "Current time:" <+> pretty s
     AwaitTxStatusChangeResp txid status      -> "Status of" <+> pretty txid <+> "changed to" <+> pretty status
     AwaitTxOutStatusChangeResp ref status    -> "Status of" <+> pretty ref <+> "changed to" <+> pretty status
+    GetSlotConfigResp env                    -> "Gent env: " <+> pretty env
     OwnContractInstanceIdResp i              -> "Own contract instance ID:" <+> pretty i
     OwnPaymentPublicKeyHashResp k            -> "Own public key:" <+> pretty k
     ChainIndexQueryResp rsp                  -> pretty rsp
@@ -195,6 +202,7 @@ matches a b = case (a, b) of
   (CurrentTimeReq, CurrentTimeResp{})                      -> True
   (AwaitTxStatusChangeReq i, AwaitTxStatusChangeResp i' _) -> i == i'
   (AwaitTxOutStatusChangeReq i, AwaitTxOutStatusChangeResp i' _) -> i == i'
+  (GetSlotConfigReq, GetSlotConfigResp{})                                -> True
   (OwnContractInstanceIdReq, OwnContractInstanceIdResp{})  -> True
   (OwnPaymentPublicKeyHashReq, OwnPaymentPublicKeyHashResp{})                    -> True
   (ChainIndexQueryReq r, ChainIndexQueryResp r')           -> chainIndexMatches r r'
