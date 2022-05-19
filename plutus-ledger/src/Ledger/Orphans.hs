@@ -25,10 +25,14 @@ import Data.Text qualified as Text
 import Data.Typeable (Proxy (Proxy), Typeable)
 import GHC.Exts (IsList (fromList))
 import GHC.Generics (Generic)
+import Ledger.Ada (Ada (Lovelace))
+import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
+import Ledger.Slot (Slot (Slot))
+import Ledger.Tx.Internal (Certificate, Tx, TxInput, TxInputType, Withdrawal)
 import Plutus.V1.Ledger.Ada (Ada (Lovelace))
 import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinData), Credential,
-                             CurrencySymbol (CurrencySymbol), Data, Datum (Datum), DatumHash (DatumHash), Extended,
-                             Interval, LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
+                             CurrencySymbol (CurrencySymbol), DCert, Data, Datum (Datum), DatumHash (DatumHash),
+                             Extended, Interval, LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
                              Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script, StakeValidator (StakeValidator),
                              StakeValidatorHash (StakeValidatorHash), StakingCredential, TokenName (TokenName),
@@ -125,12 +129,15 @@ instance OpenApi.ToSchema Data where
 deriving instance OpenApi.ToSchema ann => OpenApi.ToSchema (Kind ann)
 deriving newtype instance OpenApi.ToSchema Ada
 deriving instance OpenApi.ToSchema Tx
+deriving instance OpenApi.ToSchema Certificate
+deriving instance OpenApi.ToSchema DCert
+deriving instance OpenApi.ToSchema TxInput
 deriving instance OpenApi.ToSchema ScriptTag
 deriving instance OpenApi.ToSchema RedeemerPtr
 deriving instance OpenApi.ToSchema TxOutRef
-deriving instance OpenApi.ToSchema TxInType
-deriving instance OpenApi.ToSchema TxIn
+deriving instance OpenApi.ToSchema TxInputType
 deriving instance OpenApi.ToSchema TxOut
+deriving instance OpenApi.ToSchema Withdrawal
 deriving newtype instance OpenApi.ToSchema Validator
 deriving newtype instance OpenApi.ToSchema TxId
 deriving newtype instance OpenApi.ToSchema Slot
