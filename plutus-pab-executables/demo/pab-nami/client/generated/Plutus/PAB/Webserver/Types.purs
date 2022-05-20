@@ -80,7 +80,10 @@ _ChainReport = _Newtype
 
 data CombinedWSStreamToClient
   = InstanceUpdate ContractInstanceId InstanceStatusToClient
-  | SlotChange Slot
+  | SlotChange
+      { current :: Slot
+      , tip :: Slot
+      }
 
 instance Show CombinedWSStreamToClient where
   show a = genericShow a
@@ -88,14 +91,23 @@ instance Show CombinedWSStreamToClient where
 instance EncodeJson CombinedWSStreamToClient where
   encodeJson = defer \_ -> case _ of
     InstanceUpdate a b -> E.encodeTagged "InstanceUpdate" (a /\ b) (E.tuple (E.value >/\< E.value))
-    SlotChange a -> E.encodeTagged "SlotChange" a E.value
+    SlotChange { current, tip } -> encodeJson
+      { tag: "SlotChange"
+      , current: flip E.encode current E.value
+      , tip: flip E.encode tip E.value
+      }
 
 instance DecodeJson CombinedWSStreamToClient where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "CombinedWSStreamToClient"
     $ Map.fromFoldable
         [ "InstanceUpdate" /\ D.content (D.tuple $ InstanceUpdate </$\> D.value </*\> D.value)
-        , "SlotChange" /\ D.content (SlotChange <$> D.value)
+        , "SlotChange" /\
+            ( SlotChange <$> D.object "SlotChange"
+                { current: D.value :: _ Slot
+                , tip: D.value :: _ Slot
+                }
+            )
         ]
 
 derive instance Generic CombinedWSStreamToClient _
@@ -107,7 +119,7 @@ _InstanceUpdate = prism' (\{ a, b } -> (InstanceUpdate a b)) case _ of
   (InstanceUpdate a b) -> Just { a, b }
   _ -> Nothing
 
-_SlotChange :: Prism' CombinedWSStreamToClient Slot
+_SlotChange :: Prism' CombinedWSStreamToClient { current :: Slot, tip :: Slot }
 _SlotChange = prism' SlotChange case _ of
   (SlotChange a) -> Just a
   _ -> Nothing
