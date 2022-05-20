@@ -6,8 +6,8 @@
 {-# LANGUAGE TypeFamilies        #-}
 module Spec.TimeValidity(tests) where
 
-import Cardano.Api.Shelley (ProtocolParameters, protocolParamProtocolVersion)
-import Control.Lens hiding (contains, from, now, (.>))
+import Cardano.Api.Shelley (protocolParamProtocolVersion)
+import Control.Lens hiding (contains, from, (.>))
 import Control.Monad (void)
 import Data.Map qualified as Map
 import Data.Void (Void)
@@ -18,30 +18,26 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Value qualified as Value
 import Plutus.Contract as Con
-import Plutus.Contract.Logging (logInfo)
-import Plutus.Contract.Test (assertAccumState, assertFailedTransaction, assertValidatedTransactionCount,
-                             changeInitialWalletValue, checkPredicate, checkPredicateOptions, defaultCheckOptions,
-                             emulatorConfig, w1, w2)
-import Plutus.Script.Utils.V1.Generators (someTokenValue)
-import Plutus.Script.Utils.V1.Scripts (ValidatorHash, validatorHash)
+import Plutus.Contract.Test (assertFailedTransaction, assertValidatedTransactionCount, checkPredicateOptions,
+                             defaultCheckOptions, emulatorConfig, w1)
+import Plutus.Script.Utils.V1.Scripts (ValidatorHash)
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Address, POSIXTime, POSIXTimeRange, ScriptContext, TxInfo, Validator)
+import Plutus.V1.Ledger.Api (POSIXTime, TxInfo, Validator)
 import Plutus.V1.Ledger.Api qualified as P
-import Plutus.V1.Ledger.Interval (from, member)
-import Plutus.V1.Ledger.Scripts (Datum (Datum), unitDatum, unitRedeemer)
+import Plutus.V1.Ledger.Interval (contains, from)
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError), unitDatum, unitRedeemer)
 import PlutusTx qualified
-import PlutusTx.Prelude qualified as TxP
+import PlutusTx.Prelude qualified as P
 import Prelude hiding (not)
-import Wallet.Emulator qualified as EM
 import Wallet.Emulator.Stream (params)
 
 tests :: TestTree
 tests =
     testGroup "time validity"
-        [ protocolV5,
-          defaultProtocolParams
+        [ protocolV5
+        , protocolV6
+        , defaultProtocolParams
         ]
 
 contract :: Contract () Empty ContractError ()
@@ -72,7 +68,14 @@ protocolV5 :: TestTree
 protocolV5 = checkPredicateOptions
     (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (5, 0) }))
     "tx valid time interval is not supported in protocol v5"
-    (assertFailedTransaction (\_ _ _ -> True))
+    (assertFailedTransaction (\_ err _ -> case err of {Ledger.ScriptFailure (EvaluationError ("Invalid range":_) _) -> True; _ -> False  }))
+    (void trace)
+
+protocolV6 :: TestTree
+protocolV6 = checkPredicateOptions
+    (defaultCheckOptions & over (emulatorConfig . params . Ledger.protocolParamsL) (\pp -> pp { protocolParamProtocolVersion = (6, 0) }))
+    "tx valid time interval is supported in protocol v6"
+    (assertValidatedTransactionCount 2)
     (void trace)
 
 defaultProtocolParams :: TestTree
@@ -87,7 +90,7 @@ deadline = 1596059092000 -- (milliseconds) transaction's valid range must be aft
 
 {-# INLINEABLE mkValidator #-}
 mkValidator :: P.POSIXTime -> () -> () -> P.ScriptContext -> Bool
-mkValidator dl _ _ ctx = if dl `member` range then TxP.traceError "Invalid range" else True
+mkValidator dl _ _ ctx = (from dl `contains` range) || P.traceError "Invalid range"
     where
     info :: TxInfo
     info = P.scriptContextTxInfo ctx
@@ -95,12 +98,12 @@ mkValidator dl _ _ ctx = if dl `member` range then TxP.traceError "Invalid range
     range :: P.POSIXTimeRange
     range = P.txInfoValidRange info
 
-instance Scripts.ValidatorTypes P.POSIXTime where
-    type instance RedeemerType P.POSIXTime = ()
-    type instance DatumType P.POSIXTime = ()
 
-typedValidator :: POSIXTime -> Scripts.TypedValidator P.POSIXTime
-typedValidator = Scripts.mkTypedValidatorParam @P.POSIXTime
+data UnitTest
+instance Scripts.ValidatorTypes UnitTest
+
+typedValidator :: POSIXTime -> Scripts.TypedValidator UnitTest
+typedValidator = Scripts.mkTypedValidatorParam @UnitTest
     $$(PlutusTx.compile [||mkValidator||])
     $$(PlutusTx.compile [|| wrap ||])
     where
