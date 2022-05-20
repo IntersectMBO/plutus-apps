@@ -65,7 +65,7 @@ module Plutus.Contract.Request(
     , awaitTxOutStatusChange
     -- ** Contract instances
     , ownInstanceId
-    , slotConfig
+    , getSlotConfig
     -- ** Exposing endpoints
     , HasEndpoint
     , EndpointDescription(..)
@@ -675,8 +675,8 @@ ownInstanceId = pabReq E.OwnContractInstanceIdReq E._OwnContractInstanceIdResp
 
 
 -- | Get the 'ContractInstanceId' of this instance.
-slotConfig :: forall w s e. (AsContractError e) => Contract w s e SlotConfig
-slotConfig = pabReq E.GetSlotConfigReq E._GetSlotConfigResp
+getSlotConfig :: forall w s e. (AsContractError e) => Contract w s e SlotConfig
+getSlotConfig = pabReq E.GetSlotConfigReq E._GetSlotConfigResp
 
 type HasEndpoint l a s =
   ( HasType l (EndpointValue a) (Input s)
