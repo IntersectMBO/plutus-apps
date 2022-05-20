@@ -42,7 +42,7 @@ import Control.Lens (preview)
 import Control.Monad (forM_, void)
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Error (Error)
-import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logInfo)
+import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug, logInfo)
 import Control.Monad.Freer.Reader (Reader, ask, runReader)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Aeson (Value)
@@ -415,5 +415,5 @@ respondToRequestsSTM ::
     -> Eff effs (STM (Response PABResp))
 respondToRequestsSTM instanceId currentState = do
     let rqs = Contract.requests @t currentState
-    logInfo @(ContractInstanceMsg t) $ HandlingRequests instanceId rqs
+    logDebug @(ContractInstanceMsg t) $ HandlingRequests instanceId rqs
     tryHandler' stmRequestHandler rqs
