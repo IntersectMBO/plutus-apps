@@ -42,12 +42,13 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (First (..))
 import Data.Proxy (Proxy (..))
-import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (CardanoTx, getCardanoTxCollateralInputs, getCardanoTxId, getCardanoTxInputs, getCardanoTxOutputs,
-                  spentOutputs, unspentOutputsTx, updateUtxo, updateUtxoCollateral)
+import Ledger.Tx (CardanoTx, Tx, TxId, TxIn, TxInput, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx),
+                  collateralInputs, fillTxInputWitnesses, getCardanoTxCollateralInputs, getCardanoTxId,
+                  getCardanoTxInputs, getCardanoTxOutputs, inputs, spentOutputs, txId, txOutDatum, txOutPubKey,
+                  txOutValue, txOutputs, unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
@@ -100,8 +101,8 @@ eitherTx :: (CardanoTx -> r) -> (CardanoTx -> r) -> OnChainTx -> r
 eitherTx ifInvalid _ (Invalid tx) = ifInvalid tx
 eitherTx _ ifValid (Valid tx)     = ifValid tx
 
-consumableInputs :: OnChainTx -> Set.Set TxIn
-consumableInputs = eitherTx getCardanoTxCollateralInputs getCardanoTxInputs
+consumableInputs :: OnChainTx -> [TxIn]
+consumableInputs = eitherTx (\tx -> fmap (fillTxInputWitnesses tx) $ view collateralInputs tx) (\tx -> fmap (fillTxInputWitnesses tx) $ view inputs tx)
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'
 outputsProduced :: OnChainTx -> [TxOut]
