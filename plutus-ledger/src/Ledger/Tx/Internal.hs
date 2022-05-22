@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
@@ -27,7 +26,7 @@ import Ledger.Crypto
 import Ledger.DCert.Orphans ()
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
-import Plutus.V1.Ledger.Api (BuiltinByteString, DCert, StakingCredential)
+import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert)
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx (TxIn (..), TxInType (..), TxOut (txOutValue), TxOutRef, txOutDatum)
 import Plutus.V1.Ledger.Value as V
@@ -55,7 +54,7 @@ instance Pretty TxInput where
 
 -- | Stake withdrawal, if applicable the script should be included in txScripts.
 data Withdrawal = Withdrawal
-  { withdrawalCredential :: StakingCredential         -- ^ staking credential
+  { withdrawalCredential :: Credential         -- ^ staking credential
   , withdrawalAmount     :: Integer                   -- ^ amount of withdrawal in Lovelace, must withdraw all eligible amount
   , withdrawalRedeemer   :: Maybe Redeemer            -- ^ redeemer for script credential
   }
@@ -90,7 +89,7 @@ data Tx = Tx {
     txValidRange     :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
     txMintingScripts :: Map MintingPolicyHash Redeemer,
-    -- ^ The scripts that must be run to check minting conditions.
+    -- ^ The scripts that must be run to check minting conditions matched with their redeemers.
     txWithdrawals    :: [Withdrawal],
     -- ^ Withdrawals, contains redeemers.
     txCertificates   :: [Certificate],
@@ -189,9 +188,6 @@ metadata = lens g s where
 lookupSignature :: PubKey -> Tx -> Maybe Signature
 lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
 
-lookupDatum :: Tx -> DatumHash -> Maybe Datum
-lookupDatum Tx{txData} h = Map.lookup h txData
-
 -- | Get MintingPolicy scripts for MintingPolicyHash'es included in the transaction,
 -- Nothing means the transaction misses given script witness.
 lookupMintingScripts :: Tx -> [Maybe MintingPolicy]
@@ -200,21 +196,21 @@ lookupMintingScripts Tx{txMintingScripts, txScripts} =
     where
         toScriptHash (MintingPolicyHash b) = ScriptHash b
 
-lookupScript :: Tx -> ScriptHash -> Maybe Script
-lookupScript Tx{txScripts} hash  = Map.lookup hash txScripts
+lookupScript :: Map ScriptHash Script -> ScriptHash -> Maybe Script
+lookupScript txScripts hash  = Map.lookup hash txScripts
 
-lookupValidator :: Tx -> ValidatorHash -> Maybe Validator
-lookupValidator tx = fmap Validator . lookupScript tx . toScriptHash
+lookupValidator :: Map ScriptHash Script -> ValidatorHash -> Maybe Validator
+lookupValidator txScripts = fmap Validator . lookupScript txScripts . toScriptHash
     where
         toScriptHash (ValidatorHash b) = ScriptHash b
 
-lookupMintingPolicy :: Tx -> MintingPolicyHash -> Maybe MintingPolicy
-lookupMintingPolicy tx = fmap MintingPolicy . lookupScript tx . toScriptHash
+lookupMintingPolicy :: Map ScriptHash Script -> MintingPolicyHash -> Maybe MintingPolicy
+lookupMintingPolicy txScripts = fmap MintingPolicy . lookupScript txScripts . toScriptHash
     where
         toScriptHash (MintingPolicyHash b) = ScriptHash b
 
-lookupStakeValidator :: Tx -> StakeValidatorHash -> Maybe StakeValidator
-lookupStakeValidator tx = fmap StakeValidator . lookupScript tx . toScriptHash
+lookupStakeValidator :: Map ScriptHash Script -> StakeValidatorHash -> Maybe StakeValidator
+lookupStakeValidator txScripts = fmap StakeValidator . lookupScript txScripts . toScriptHash
     where
         toScriptHash (StakeValidatorHash b) = ScriptHash b
 
@@ -223,8 +219,8 @@ fillTxInputWitnesses tx (TxInput outRef inType) = case inType of
     TxConsumePublicKeyAddress -> TxIn outRef (Just ConsumePublicKeyAddress)
     TxConsumeSimpleScriptAddress -> TxIn outRef (Just ConsumeSimpleScriptAddress)
     TxConsumeScriptAddress redeemer validatorHash datumHash -> TxIn outRef $ do
-        datum <- lookupDatum tx datumHash
-        validator <- lookupValidator tx validatorHash
+        datum <- Map.lookup datumHash (txData tx)
+        validator <- lookupValidator (txScripts tx) validatorHash
         Just $ ConsumeScriptAddress validator redeemer datum
 
 
@@ -260,7 +256,7 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
     deriving anyclass (Serialise, ToJSON, FromJSON)
 
 txOutTxDatum :: TxOutTx -> Maybe Datum
-txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
+txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= (`Map.lookup` txData tx)
 
 -- | The transaction output references consumed by a transaction.
 spentOutputs :: Tx -> [TxOutRef]
