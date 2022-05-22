@@ -44,17 +44,16 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Monoid (First (..))
 import Data.Proxy (Proxy (..))
-import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (spentOutputs, txId, unspentOutputsTx, updateUtxo)
+import Ledger.Tx (Tx, TxId, TxIn, TxInput, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx),
+                  collateralInputs, fillTxInputWitnesses, inputs, spentOutputs, txId, txOutDatum, txOutPubKey,
+                  txOutValue, txOutputs, unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
 import Data.OpenApi qualified as OpenApi
-import Ledger.Tx (Tx, TxId, TxIn, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx), collateralInputs,
-                  inputs, txOutDatum, txOutPubKey, txOutValue, txOutputs, updateUtxoCollateral, validValuesTx)
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Value (Value)
@@ -101,8 +100,8 @@ eitherTx :: (Tx -> r) -> (Tx -> r) -> OnChainTx -> r
 eitherTx ifInvalid _ (Invalid tx) = ifInvalid tx
 eitherTx _ ifValid (Valid tx)     = ifValid tx
 
-consumableInputs :: OnChainTx -> Set.Set TxIn
-consumableInputs = eitherTx (view collateralInputs) (view inputs)
+consumableInputs :: OnChainTx -> [TxIn]
+consumableInputs = eitherTx (\tx -> fmap (fillTxInputWitnesses tx) $ view collateralInputs tx) (\tx -> fmap (fillTxInputWitnesses tx) $ view inputs tx)
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'
 outputsProduced :: OnChainTx -> [TxOut]
