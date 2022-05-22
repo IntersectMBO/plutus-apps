@@ -8,6 +8,7 @@
 {-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -Wno-orphans        #-}
+{-# LANGUAGE LambdaCase         #-}
 
 {-|
 
@@ -339,7 +340,8 @@ toCardanoTxBodyContent
     -> C.NetworkId -- ^ Network ID
     -> L.Tx
     -> Either ToCardanoError (C.TxBodyContent C.BuildTx C.AlonzoEra)
-toCardanoTxBodyContent sigs protocolParams networkId tx@L.Tx{..} = do
+toCardanoTxBodyContent sigs protocolParams networkId
+  tx@L.Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txMintingScripts, txWithdrawals, txCertificates, txSignatures, txScripts, txData} = do
     txIns <- traverse (toCardanoTxInBuild tx) txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
     txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
@@ -347,6 +349,7 @@ toCardanoTxBodyContent sigs protocolParams networkId tx@L.Tx{..} = do
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue tx
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInAlonzoEra <$> traverse toCardanoPaymentKeyHash sigs
+    withdrawals <- toWithdrawals txScripts networkId txWithdrawals
     pure $ C.TxBodyContent
         { txIns = txIns
         , txInsCollateral = txInsCollateral
@@ -363,10 +366,39 @@ toCardanoTxBodyContent sigs protocolParams networkId tx@L.Tx{..} = do
         -- unused:
         , txMetadata = C.TxMetadataNone
         , txAuxScripts = C.TxAuxScriptsNone
-        , txWithdrawals = C.TxWithdrawalsNone
+        , txWithdrawals = withdrawals
         , txCertificates = C.TxCertificatesNone
         , txUpdateProposal = C.TxUpdateProposalNone
         }
+
+toWithdrawals :: Map L.ScriptHash P.Script
+  -> C.NetworkId
+  -> [L.Withdrawal]
+  -> Either ToCardanoError (C.TxWithdrawals C.BuildTx C.AlonzoEra)
+toWithdrawals txScripts networkId = \case
+  [] -> pure C.TxWithdrawalsNone
+  xs -> C.TxWithdrawals C.WithdrawalsInAlonzoEra <$> mapM toWithdraw xs
+
+  where
+    toWithdraw L.Withdrawal{withdrawalCredential, withdrawalAmount, withdrawalRedeemer} = do
+      saddr <- toCardanoStakeAddress networkId withdrawalCredential
+      witness <- toStakeWitness withdrawalRedeemer withdrawalCredential
+      pure (saddr, C.Lovelace withdrawalAmount, witness)
+
+    toStakeWitness withdrawalRedeemer cred = case cred of
+      P.PubKeyCredential _pkh -> pure $ C.BuildTxWith $ C.KeyWitness C.KeyWitnessForStakeAddr
+      P.ScriptCredential _vh -> case (,) <$> withdrawalRedeemer <*> L.lookupValidator txScripts _vh of
+        Just (redeemer, P.Validator script) -> C.BuildTxWith . C.ScriptWitness C.ScriptWitnessForStakeAddr <$> toCardanoScriptWitness C.NoScriptDatumForStake redeemer script
+        Nothing                    -> Left MissingStakeValidator
+
+toCardanoStakeAddress :: C.NetworkId -> P.Credential -> Either ToCardanoError C.StakeAddress
+toCardanoStakeAddress networkId credential =
+  C.StakeAddress (C.toShelleyNetwork networkId) . C.toShelleyStakeCredential <$> toCardanoStakingCredential credential
+
+toCardanoStakingCredential :: P.Credential -> Either ToCardanoError C.StakeCredential
+toCardanoStakingCredential (P.PubKeyCredential pubKeyHash) = C.StakeCredentialByKey <$> toCardanoStakeKeyHash pubKeyHash
+toCardanoStakingCredential (P.ScriptCredential validatorHash) = C.StakeCredentialByScript <$> toCardanoScriptHash validatorHash
+
 
 toCardanoTxBody ::
     [L.PaymentPubKeyHash] -- ^ Required signers of the transaction
@@ -455,8 +487,8 @@ toCardanoTxInWitness tx
         validatorHash
         datumHash)
     = do
-      (P.Datum datum) <- maybe (Left MissingDatum) pure $ L.lookupDatum tx datumHash
-      (P.Validator validator) <- maybe (Left MissingInputValidator) pure $ L.lookupValidator tx validatorHash
+      (P.Datum datum) <- maybe (Left MissingDatum) pure $ Map.lookup datumHash (L.txData tx)
+      (P.Validator validator) <- maybe (Left MissingInputValidator) pure $ L.lookupValidator (L.txScripts tx) validatorHash
       C.ScriptWitness C.ScriptWitnessForSpending <$>
         (C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
         <$> toCardanoPlutusScript validator
@@ -465,12 +497,22 @@ toCardanoTxInWitness tx
         <*> pure zeroExecutionUnits
         )
 
+
+
 toCardanoMintWitness :: P.Redeemer -> Maybe P.MintingPolicy -> Either ToCardanoError (C.ScriptWitness C.WitCtxMint C.AlonzoEra)
 toCardanoMintWitness _ Nothing = Left MissingMintingPolicy
-toCardanoMintWitness redeemer (Just (P.MintingPolicy script)) = do
+toCardanoMintWitness redeemer (Just (P.MintingPolicy script)) = toCardanoScriptWitness C.NoScriptDatumForMint redeemer script
+
+-- toCardanoStakeWitness :: P.Redeemer -> P.StakeValidator -> Either ToCardanoError (C.ScriptWitness C.WitCtxStake C.AlonzoEra)
+toCardanoScriptWitness :: P.ToData a =>
+  C.ScriptDatum witctx
+  -> a
+  -> P.Script
+  -> Either ToCardanoError (C.ScriptWitness witctx C.AlonzoEra)
+toCardanoScriptWitness datum redeemer script = do
     C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
         <$> toCardanoPlutusScript script
-        <*> pure C.NoScriptDatumForMint
+        <*> pure datum
         <*> pure (C.fromPlutusData $ P.toData redeemer)
         <*> pure zeroExecutionUnits
 
@@ -597,20 +639,13 @@ fromCardanoMintValue :: C.TxMintValue build era -> P.Value
 fromCardanoMintValue C.TxMintNone              = mempty
 fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
 
--- toCardanoMintValue :: P.Redeemers -> P.Value -> Set.Set P.MintingPolicy -> Either ToCardanoError (C.TxMintValue C.BuildTx C.AlonzoEra)
--- toCardanoMintValue redeemers value mps =
---     let indexedMps = Prelude.zip [0..] $ Set.toList mps
---      in C.TxMintValue C.MultiAssetInAlonzoEra
---         <$> toCardanoValue value
---         <*> (C.BuildTxWith . Map.fromList <$> traverse (\(idx, mp) -> (,) <$> (toCardanoPolicyId . L.plutusV1MintingPolicyHash) mp <*> toCardanoMintWitness redeemers idx mp) indexedMps)
-
 toCardanoMintValue :: L.Tx -> Either ToCardanoError (C.TxMintValue C.BuildTx C.AlonzoEra)
 toCardanoMintValue tx@L.Tx{..} =
     let indexedMps = Map.assocs txMintingScripts
      in C.TxMintValue C.MultiAssetInAlonzoEra
         <$> toCardanoValue txMint
         <*> (C.BuildTxWith . Map.fromList <$> traverse (\(mph, rd) ->
-          (,) <$> toCardanoPolicyId mph <*> toCardanoMintWitness rd (L.lookupMintingPolicy tx mph)) indexedMps)
+          (,) <$> toCardanoPolicyId mph <*> toCardanoMintWitness rd (L.lookupMintingPolicy (L.txScripts tx) mph)) indexedMps)
 
 fromCardanoValue :: C.Value -> P.Value
 fromCardanoValue (C.valueToList -> list) = foldMap toValue list
@@ -738,6 +773,7 @@ data ToCardanoError
     | MissingInputValidator
     | MissingDatum
     | MissingMintingPolicy
+    | MissingStakeValidator
     | ScriptPurposeNotSupported P.ScriptTag
     | Tag String ToCardanoError
     deriving stock (Show, Eq, Generic)
@@ -753,7 +789,8 @@ instance Pretty ToCardanoError where
     pretty SimpleScriptsNotSupportedToCardano = "Simple scripts are not supported"
     pretty MissingInputValidator              = "Missing input validator."
     pretty MissingDatum                       = "Missing required datum."
-    pretty MissingMintingPolicy               = "Missing minting policy"
+    pretty MissingMintingPolicy               = "Missing minting policy."
+    pretty MissingStakeValidator              = "Missing stake validator."
     pretty (ScriptPurposeNotSupported p)      = "Script purpose not supported:" <+> viaShow p
     pretty (Tag t err)                        = pretty t <> colon <+> pretty err
 
