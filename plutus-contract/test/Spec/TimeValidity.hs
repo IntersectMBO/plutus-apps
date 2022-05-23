@@ -44,8 +44,9 @@ contract :: Contract () Empty ContractError ()
 contract = do
     now <- Con.currentTime
     logInfo @String $ "now: " ++ show now
-    let tx1 = Constraints.mustPayToOtherScript valHash unitDatum $ Ada.lovelaceValueOf 25000000
-    ledgerTx1 <- submitTx tx1
+    let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
+        tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25000000)
+    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
     utxos <- utxosAt scrAddress
     let orefs = fst <$> Map.toList utxos
@@ -53,7 +54,7 @@ contract = do
             Constraints.otherScript (validatorScript deadline)
             <> Constraints.unspentOutputs utxos
         tx2 =
-            mconcat [Constraints.mustSpendScriptOutput oref unitRedeemer | oref <- orefs]
+            foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs
             <> Constraints.mustIncludeDatum unitDatum
             <> Constraints.mustValidateIn (from $ now + 1000)
     ledgerTx2 <- submitTxConstraintsWith @Void lookups tx2
