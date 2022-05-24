@@ -66,6 +66,9 @@ library
                         PlutusExample.ScriptContextChecker
                         PlutusExample.Sum
                         PlutusExample.Loop
+                        PlutusExample.DeadlinePolicy
+                        PlutusExample.WitnessPolicy
+                        PlutusExample.TokenNamePolicy
 
   build-depends:        aeson
                       , bytestring
