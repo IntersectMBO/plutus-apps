@@ -60,6 +60,7 @@ let
             plutus-pab-executables.package.buildable = false;
             plutus-playground-server.package.buildable = false; # Would also require libpq
             plutus-script-utils.package.buildable = false;
+            plutus-tx-constraints.package.buildale = false;
             plutus-tx-plugin.package.buildable = false;
             plutus-use-cases.package.buildable = false;
             plutus-example.package.buildable = false;
@@ -152,6 +153,7 @@ let
             plutus-pab.ghcOptions = [ "-Werror" ];
             plutus-pab-executables.ghcOptions = [ "-Werror" ];
             plutus-script-utils.ghcOptions = [ "-Werror" ];
+            plutus-tx-constraints.ghcOptions = [ "-Werror" ];
             plutus-use-cases.ghcOptions = [ "-Werror" ];
 
             # Honestly not sure why we need this, it has a mysterious unused dependency on "m"
