@@ -67,7 +67,14 @@ library
                         PlutusExample.PlutusVersion1.RedeemerContextScripts
                         PlutusExample.PlutusVersion1.Sum
 
+                        PlutusExample.PlutusVersion2.AlwaysFails
+                        PlutusExample.PlutusVersion2.AlwaysSucceeds
+                        PlutusExample.PlutusVersion2.CustomDatumRedeemerGuess
+                        PlutusExample.PlutusVersion2.DatumRedeemerGuess
+                        PlutusExample.PlutusVersion2.Loop
+                        PlutusExample.PlutusVersion2.MintingScript
                         PlutusExample.PlutusVersion2.RequireRedeemer
+                        PlutusExample.PlutusVersion2.Sum
 
                         PlutusExample.ScriptContextChecker
 

@@ -1,0 +1,61 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeFamilies      #-}
+
+module PlutusExample.PlutusVersion2.DatumRedeemerGuess
+  ( guessScript
+  , guessScriptStake
+  , datumRedeemerGuessScriptShortBs
+  ) where
+
+import Prelude hiding (($), (&&), (==))
+
+import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
+
+import Codec.Serialise
+import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short qualified as SBS
+
+import Plutus.V1.Ledger.Scripts qualified as Plutus
+import PlutusTx (toBuiltinData)
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
+
+{-# INLINABLE mkValidator #-}
+mkValidator :: BuiltinData -> BuiltinData -> BuiltinData  -> ()
+mkValidator datum redeemer _txContext
+  |    datum    == toBuiltinData (42 :: Integer)
+    && redeemer == toBuiltinData (42 :: Integer) = ()
+  | otherwise = traceError "Incorrect datum. Expected 42."
+
+validator :: Plutus.Validator
+validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
+
+script :: Plutus.Script
+script = Plutus.unValidatorScript validator
+
+datumRedeemerGuessScriptShortBs :: SBS.ShortByteString
+datumRedeemerGuessScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
+
+guessScript :: PlutusScript PlutusScriptV2
+guessScript = PlutusScriptSerialised datumRedeemerGuessScriptShortBs
+
+{-# INLINEABLE mkValidatorStake #-}
+mkValidatorStake :: BuiltinData -> BuiltinData -> ()
+mkValidatorStake redeemer _txContext
+  | redeemer == toBuiltinData (42 :: Integer) = ()
+  | otherwise = traceError "Incorrect datum. Expected 42."
+
+validatorStake :: Plutus.StakeValidator
+validatorStake = Plutus.mkStakeValidatorScript $$(PlutusTx.compile [||mkValidatorStake||])
+
+scriptStake :: Plutus.Script
+scriptStake = Plutus.unStakeValidatorScript validatorStake
+
+datumRedeemerGuessScriptStakeShortBs :: SBS.ShortByteString
+datumRedeemerGuessScriptStakeShortBs = SBS.toShort . LBS.toStrict $ serialise scriptStake
+
+guessScriptStake :: PlutusScript PlutusScriptV2
+guessScriptStake = PlutusScriptSerialised datumRedeemerGuessScriptStakeShortBs
