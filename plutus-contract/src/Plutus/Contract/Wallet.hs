@@ -53,7 +53,8 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequ
                                     adjustUnbalancedTx, mkTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
-import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
+import Ledger.Tx (CardanoTx, SomeCardanoApiTx (CardanoApiEmulatorEraTx), TxOutRef, getCardanoTxInputs, onCardanoTx,
+                  txInRef)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
 import Plutus.Contract.Request qualified as Contract
@@ -252,9 +253,9 @@ export params networkId slotConfig utx =
             } = finalize slotConfig utx
         requiredSigners = Set.toList unBalancedTxRequiredSignatories
      in ExportTx
-        <$> mkPartialTx requiredSigners params networkId unBalancedTxTx
+        <$> onCardanoTx (mkPartialTx requiredSigners params networkId) (\(CardanoApiEmulatorEraTx tx) -> Right tx) unBalancedTxTx
         <*> mkInputs networkId unBalancedTxUtxoIndex
-        <*> mkRedeemers unBalancedTxTx
+        <*> onCardanoTx mkRedeemers (const $ Right []) unBalancedTxTx
 
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
 finalize slotConfig utx =

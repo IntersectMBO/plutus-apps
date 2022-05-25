@@ -31,6 +31,7 @@ module Ledger.Constraints.OffChain(
     -- * Constraints resolution
     , SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)
+    , cardanoTx
     , tx
     , requiredSignatories
     , utxoIndex
@@ -47,7 +48,7 @@ module Ledger.Constraints.OffChain(
     , missingValueSpent
     ) where
 
-import Control.Lens (At (at), iforM_, makeLensesFor, over, use, view, (%=), (.=), (<>=))
+import Control.Lens (At (at), Traversal', iforM_, makeLensesFor, over, use, view, (%=), (.=), (<>=))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -216,7 +217,7 @@ ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
 --   Plutus contracts] in 'Plutus.Contract.Wallet'.
 data UnbalancedTx =
     UnbalancedTx
-        { unBalancedTxTx                  :: Tx
+        { unBalancedTxTx                  :: Tx.CardanoTx
         , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
         -- ^ These are all the payment public keys that should be used to request the
         -- signatories from the user's wallet. The signatories are what is required to
@@ -238,14 +239,17 @@ data UnbalancedTx =
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
 makeLensesFor
-    [ ("unBalancedTxTx", "tx")
+    [ ("unBalancedTxTx", "cardanoTx")
     , ("unBalancedTxRequiredSignatories", "requiredSignatories")
     , ("unBalancedTxUtxoIndex", "utxoIndex")
     , ("unBalancedTxValidityTimeRange", "validityTimeRange")
     ] ''UnbalancedTx
 
+tx :: Traversal' UnbalancedTx Tx
+tx = cardanoTx . Tx.emulatorTx
+
 emptyUnbalancedTx :: UnbalancedTx
-emptyUnbalancedTx = UnbalancedTx mempty mempty mempty top
+emptyUnbalancedTx = UnbalancedTx (Tx.EmulatorTx mempty) mempty mempty top
 
 instance Pretty UnbalancedTx where
     pretty (UnbalancedTx utx rs utxo vr) =
