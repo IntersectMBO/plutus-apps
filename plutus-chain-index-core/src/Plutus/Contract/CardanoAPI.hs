@@ -23,15 +23,7 @@ import Plutus.ChainIndex.Tx qualified as ChainIndex.Tx
 
 fromCardanoBlock :: C.BlockInMode C.CardanoMode -> Either FromCardanoError [ChainIndexTx]
 fromCardanoBlock (C.BlockInMode (C.Block C.BlockHeader {} txs) eraInMode) =
-  case eraInMode of
-    -- Unfortunately, we need to pattern match again all eras because
-    -- 'fromCardanoTx' has the constraints 'C.IsCardanoEra era', but not
-    -- 'C.BlockInMode'.
-    C.ByronEraInCardanoMode   -> traverse (fromCardanoTx eraInMode) txs
-    C.ShelleyEraInCardanoMode -> traverse (fromCardanoTx eraInMode) txs
-    C.AllegraEraInCardanoMode -> traverse (fromCardanoTx eraInMode) txs
-    C.MaryEraInCardanoMode    -> traverse (fromCardanoTx eraInMode) txs
-    C.AlonzoEraInCardanoMode  -> traverse (fromCardanoTx eraInMode) txs
+  Export.withIsCardanoEra eraInMode (traverse (fromCardanoTx eraInMode) txs)
 
 -- | Convert a Cardano API tx of any given era to a Plutus chain index tx.
 fromCardanoTx

@@ -42,7 +42,7 @@ import Plutus.ChainIndex.Compatibility (fromCardanoBlockHeader, fromCardanoPoint
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.UtxoState (viewTip)
-import Plutus.Contract.CardanoAPI (fromCardanoTx)
+import Plutus.Contract.CardanoAPI (fromCardanoTx, withIsCardanoEra)
 import System.Random
 
 -- | Connect to the node and write node updates to the blockchain
@@ -102,15 +102,7 @@ processChainSyncEvent instancesState blockchainEnv event = do
   case event of
     Resume _ -> Right <$> blockAndSlot blockchainEnv
     RollForward (BlockInMode (C.Block header transactions) era) _ ->
-      case era of
-        -- Unfortunately, we need to pattern match again all eras because
-        -- 'processBlock' has the constraints 'C.IsCardanoEra era', but not
-        -- 'C.BlockInMode'.
-        C.ByronEraInCardanoMode   -> processBlock instancesState header blockchainEnv transactions era
-        C.ShelleyEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
-        C.AllegraEraInCardanoMode -> processBlock instancesState header blockchainEnv transactions era
-        C.MaryEraInCardanoMode    -> processBlock instancesState header blockchainEnv transactions era
-        C.AlonzoEraInCardanoMode  -> processBlock instancesState header blockchainEnv transactions era
+      withIsCardanoEra era (processBlock instancesState header blockchainEnv transactions era)
     RollBackward chainPoint _ -> runRollback blockchainEnv chainPoint
 
 data SyncActionFailure
