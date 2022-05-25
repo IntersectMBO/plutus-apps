@@ -100,13 +100,12 @@ source-repository-package
     plugins/backend-trace-forwarder
 
 -- Should follow cardano-node.
--- Normally, it should follow "ccf5bcb99ffe054dc8cd5626723f64e02708dbae", but
--- there were bug fixes that we actually need in order to make everything work.
--- This actually follows the release/1.0.0 branch.
+-- But in case there are failures with the plutus version, update to the latest
+-- commit hash of the release/1.0.0 plutus branch.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 5cc518f1202930ad52b8ba838af32af084c0e754
+  tag: fec94223a985e34d3b270460c8f150002f41b85b
   subdir:
     plutus-core
     plutus-ledger-api
@@ -164,11 +163,12 @@ source-repository-package
 
 -- Should follow cardano-wallet.
 -- More precisally, this should be a version compatible with the current
--- Cardano mainnet (>=1.35)
+-- Cardano mainnet (>=1.35).
+-- Current version is dated to 2022/05/24.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node
-  tag: 65422ff373f2f88a563afa746a9a16d211ffdc7c
+  tag: 67f30e25f23a7bd5e500e0da2366f8a2ca4b6932
   subdir:
     cardano-api
     cardano-cli
@@ -200,7 +200,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1db68a3ec0a2dcb5751004beb22b906162474f23
+  tag: c415253fff9a5ce9d7575230fc9098bcfee97653
   subdir:
     eras/alonzo/impl
     eras/babbage/impl
@@ -217,7 +217,7 @@ source-repository-package
     libs/cardano-ledger-core
     libs/cardano-ledger-pretty
     libs/cardano-protocol-tpraos
-    libs/compact-map
+    libs/vector-map
     libs/non-integral
     libs/set-algebra
     libs/small-steps
@@ -227,10 +227,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ad47441e9e399495579d7dd05ccaf96b46a487b2
+  tag: ea202b7b21983140d1944ccfde8750b891b59699
   subdir:
-    io-classes
-    io-sim
     monoidal-synchronisation
     network-mux
     ntp-client
@@ -242,7 +240,23 @@ source-repository-package
     ouroboros-network
     ouroboros-network-framework
     ouroboros-network-testing
+
+-- Should follow cardano-node.
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/io-sim
+  tag: 606de33fa2f467d108fb1efb86daeb3348bf34e3
+  subdir:
+    io-classes
+    io-sim
     strict-stm
+
+-- Should follow cardano-node.
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/typed-protocols
+  tag: 91c3fba44d68439df207796171cd6f867354b76b
+  subdir:
     typed-protocols
     typed-protocols-cborg
     typed-protocols-examples
@@ -251,13 +265,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 394c4637c24d82325bd04ceb99c8e8df5617e663
+  tag: 631cb6cf1fa01ab346233b610a38b3b4cba6e6ab
   subdir:
     base-deriving-via
     binary
     binary/test
     cardano-crypto-class
     cardano-crypto-praos
+    cardano-crypto-tests
     measures
     orphans-deriving-via
     slotting
