@@ -218,7 +218,7 @@ invalidScript = property $ do
     let totalVal = txOutValue (fst outToSpend)
 
     -- try and spend the script output
-    invalidTxn <- forAll $ Gen.genValidTransactionSpending (Set.fromList [scriptTxIn (snd outToSpend) failValidator unitRedeemer unitDatum]) totalVal
+    invalidTxn <- forAll $ Gen.genValidTransactionSpending [TxInputWitnessed (snd outToSpend) (ConsumeScriptAddress failValidator unitRedeemer unitDatum)] totalVal
     Hedgehog.annotateShow invalidTxn
 
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
