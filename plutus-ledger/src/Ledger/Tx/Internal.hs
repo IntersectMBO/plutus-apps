@@ -24,6 +24,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
+import Ledger.Scripts (plutusV1MintingPolicyHash)
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
 import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert)
@@ -214,6 +215,7 @@ lookupStakeValidator txScripts = fmap StakeValidator . lookupScript txScripts . 
     where
         toScriptHash (StakeValidatorHash b) = ScriptHash b
 
+-- | Translate TxInput to TxIn taking script and datum witnesses from Tx.
 fillTxInputWitnesses :: Tx -> TxInput -> TxIn
 fillTxInputWitnesses tx (TxInput outRef inType) = case inType of
     TxConsumePublicKeyAddress -> TxIn outRef (Just ConsumePublicKeyAddress)
@@ -223,6 +225,13 @@ fillTxInputWitnesses tx (TxInput outRef inType) = case inType of
         validator <- lookupValidator (txScripts tx) validatorHash
         Just $ ConsumeScriptAddress validator redeemer datum
 
+-- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly.
+addMintingPolicy :: MintingPolicy -> Redeemer -> Tx -> Tx
+addMintingPolicy vl@(MintingPolicy script) rd tx@Tx{txMintingScripts, txScripts} = tx
+    {txMintingScripts = Map.insert mph rd txMintingScripts,
+     txScripts = Map.insert (ScriptHash b) script txScripts}
+    where
+        mph@(MintingPolicyHash b) = plutusV1MintingPolicyHash vl
 
 -- | Check that all values in a transaction are non-negative.
 validValuesTx :: Tx -> Bool
@@ -266,4 +275,5 @@ spentOutputs = map txInputRef . txInputs
 --   for a failed transaction using its collateral inputs.
 updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
 updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map txInputRef . txCollateral $ tx)
+
 

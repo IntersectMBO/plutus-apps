@@ -47,9 +47,9 @@ import Data.Proxy (Proxy (..))
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (Tx, TxId, TxIn, TxInput, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx),
-                  collateralInputs, fillTxInputWitnesses, inputs, spentOutputs, txId, txOutDatum, txOutPubKey,
-                  txOutValue, txOutputs, unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
+import Ledger.Tx (Tx, TxId, TxIn, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx), collateralInputs,
+                  fillTxInputWitnesses, inputs, spentOutputs, txId, txOutDatum, txOutPubKey, txOutValue, txOutputs,
+                  unspentOutputsTx, updateUtxo, updateUtxoCollateral, validValuesTx)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
