@@ -12,11 +12,11 @@ import Wallet.Emulator (Wallet)
 -- | Returns the calculated delta between initial and final values. Might be false positive.
 --
 -- The tests check if a wallet's funds are equal to some expected value at the end.
--- Unfortunately because of the adjustion of transactions, the outputs' costs change
+-- Unfortunately, because of the adjustion of transactions, the outputs' costs change
 -- and it's hard to track these changes in the tests layer.
 --
 -- This function tries to check if the difference between final and initial values ('realDelta')
--- is might be a result of combination of operations between output's costs and the expected delta.
+-- is a result of combination of operations between output's costs and the expected delta.
 calculateDelta
   :: Value
   -- ^ Expected delta of the test
