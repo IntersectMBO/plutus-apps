@@ -47,7 +47,7 @@ calculateDelta expectedDelta initialValue finalValue w (Set.toList . Set.fromLis
 
     missingDelta =
       -- We check if 'realDelta' is a result of combination of operations between initial delta and outputs' costs
-      -- by checking if 'realDelta''s is divisable by any delta without a reminder.
+      -- by checking if 'realDelta''s is divisible by any delta without a reminder.
       if or [(P.abs realDelta) `mod` d == 0 | d <- deltas, d /= 0] then
         -- if yes, we return a sum of 'realDelta''s ada with non-ada value of the expected delta
         let missingAda = Ada.toValue realDelta
