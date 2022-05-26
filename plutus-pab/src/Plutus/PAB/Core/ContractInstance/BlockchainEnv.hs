@@ -10,9 +10,9 @@ module Plutus.PAB.Core.ContractInstance.BlockchainEnv(
   , processChainSyncEvent
   ) where
 
-import Cardano.Api (BlockInMode (..), ChainPoint (..), ConsensusModeParams (CardanoModeParams), EpochSlots (..),
-                    LocalNodeConnectInfo (..), NetworkId, QueryInMode (QuerySystemStart), chainTipToChainPoint,
-                    queryNodeLocalState)
+import Cardano.Api (BlockHeader (BlockHeader), BlockInMode (..), ChainPoint (..),
+                    ConsensusModeParams (CardanoModeParams), EpochSlots (..), LocalNodeConnectInfo (..), NetworkId,
+                    QueryInMode (QuerySystemStart), getBlockHeader, queryNodeLocalState)
 import Cardano.Api qualified as C
 import Cardano.Node.Types (NodeMode (..))
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (..))
@@ -20,7 +20,7 @@ import Cardano.Protocol.Socket.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
-import Ledger (Address (..), Block, BlockId, Slot (..), TxId (..))
+import Ledger (Address (..), Block, Slot (..), TxId (..))
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                              emptyBlockchainEnv)
@@ -37,7 +37,6 @@ import Data.Aeson.OneLine (renderValue)
 import Data.Foldable (foldl')
 import Data.Maybe (catMaybes, maybeToList)
 import Data.Text qualified as T
-import GHC.IORef (IORef, newIORef, readIORef, writeIORef)
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.ChainIndex (BlockNumber (..), ChainIndexTx (..), ChainIndexTxOutputs (..), Depth (..),
                           InsertUtxoFailed (..), InsertUtxoSuccess (..), Point (..), ReduceBlockCountResult (..),
@@ -62,19 +61,16 @@ startNodeClient ::
   -> InstancesState -- ^ In-memory state of running contract instances
   -> IO BlockchainEnv
 startNodeClient socket mode rollbackHistory slotConfig networkId resumePoint instancesState = do
-    ref <- newIORef Nothing
-    let
-      handleSyncAction' = handleSyncAction ref
     env <- STM.atomically $ emptyBlockchainEnv rollbackHistory slotConfig
     case mode of
       MockNode -> do
         void $ MockClient.runChainSync socket slotConfig
-            (\chainSyncEvent slot -> handleSyncAction' Nothing $ processMockBlock instancesState env chainSyncEvent slot)
+            (\chainSyncEvent slot -> handleSyncAction Nothing $ processMockBlock instancesState env chainSyncEvent slot)
       AlonzoNode -> do
         ensureSocket socket networkId
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
-          (\chainSyncEvent -> handleSyncAction' (Just chainSyncEvent) $ processChainSyncEvent instancesState env chainSyncEvent)
+          (\chainSyncEvent -> handleSyncAction (Just chainSyncEvent) $ processChainSyncEvent instancesState env chainSyncEvent)
 
     pure env
 
@@ -89,24 +85,25 @@ ensureSocket localNodeSocketPath localNodeNetworkId =
 
 -- | Deal with sync action failures from running this STM action. For now, we
 -- deal with them by simply calling `error`; i.e. the application exits.
-handleSyncAction :: IORef (Maybe BlockId) -> Maybe ChainSyncEvent -> STM (Either SyncActionFailure (Slot, BlockNumber)) -> IO ()
-handleSyncAction prevBlockIdRef event action = do
+handleSyncAction :: Maybe ChainSyncEvent -> STM (Either SyncActionFailure (Slot, BlockNumber)) -> IO ()
+handleSyncAction event action = do
   result <- STM.atomically action
   let
-    point (Resume p)        = Just (fromCardanoPoint p)
-    point (RollForward _ t) = Just (fromCardanoPoint $ chainTipToChainPoint t)
-    point _                 = Nothing
-  h <- readIORef prevBlockIdRef
+    toPoint (Resume p)                        = fromCardanoPoint p
+    toPoint (RollForward (BlockInMode b _) _) =
+      let
+        BlockHeader s h _ = getBlockHeader b
+      in
+        fromCardanoPoint $ ChainPoint s h
+    toPoint (RollBackward p _)                = fromCardanoPoint p
   case result of
     Left err -> putStrLn $ "handleSyncAction failed with: " <> show err
-    Right (Slot s, _) -> if s `mod` 1000 == 0
-      then case event >>= point of
-        Just p@(Point _ h') | h /= Just h' -> do
-          writeIORef prevBlockIdRef (Just h')
-          putStrLn $ T.unpack $ renderValue $ toJSON p
-        _ -> pure ()
-      else
-        pure ()
+    Right (Slot s, BlockNumber n) -> do
+      when ((n `mod` 100) == 0) $ do
+        putStrLn $ "slot = " <> show s <> "; block = " <> show n
+        case event of
+          Just e  -> putStrLn $ T.unpack $ renderValue $ toJSON (toPoint e)
+          Nothing -> pure ()
   either (error . show) (const $ pure ()) result
 
 updateInstances :: IndexedBlock -> InstanceClientEnv -> STM ()
