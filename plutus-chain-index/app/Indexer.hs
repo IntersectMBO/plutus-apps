@@ -1,11 +1,12 @@
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE LambdaCase     #-}
+{-# LANGUAGE TupleSections  #-}
 
 module Main where
 
-import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, ChainPoint,
-                    NetworkId (Mainnet), SlotNo, chainPointToSlotNo)
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), BlockNo (BlockNo), CardanoMode,
+                    ChainPoint, NetworkId (Mainnet), SlotNo, chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.BM.Trace (nullTracer)
 import Cardano.Index.Datum (DatumIndex)
@@ -13,7 +14,7 @@ import Cardano.Index.Datum qualified as Ix
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (Resume, RollBackward, RollForward), runChainSync)
 import Control.Concurrent (threadDelay)
 import Control.Lens.Operators ((^.))
-import Control.Monad (forever)
+import Control.Monad (forever, when)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (findIndex)
 import Data.Map (assocs)
@@ -52,14 +53,15 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) =
        -> [(SlotNo, (DatumHash, Datum))]
     go era' tx =
       let hashes = either (const []) (assocs . _citxData) $ fromCardanoTx era' tx
-      in  map (\h -> (slotNo, h)) hashes
+      in  map (slotNo,) hashes
 
 processBlock :: IORef DatumIndex -> ChainSyncEvent -> IO ()
 processBlock ixref = \case
   -- Not supported
   Resume point         -> putStrLn ("resume " <> show point) >> pure ()
-  RollForward blk@(BlockInMode (Block (BlockHeader slotNo _ blockNo) _txs) _era) _tip -> do
-    putStrLn $ show slotNo <> " / " <> show blockNo
+  RollForward blk@(BlockInMode (Block (BlockHeader slotNo _ blockNo@(BlockNo b)) _txs) _era) _tip -> do
+    when (b `rem` 1000 == 0) $
+      putStrLn $ show slotNo <> " / " <> show blockNo
     ix     <- readIORef ixref
     nextIx <- Ix.insert (getDatums blk) ix
     writeIORef ixref nextIx
@@ -76,7 +78,7 @@ rollbackToPoint point ixref = do
     rollbackOffset :: [Ix.Event] -> DatumIndex -> Maybe DatumIndex
     rollbackOffset events ix = do
       slot   <- chainPointToSlotNo point
-      offset <- findIndex (any (\(s, _) -> s < slot)) $ events
+      offset <- findIndex (any (\(s, _) -> s < slot)) events
       Ix.rewind offset ix
 
 main :: IO ()
