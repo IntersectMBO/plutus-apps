@@ -244,7 +244,7 @@ getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
 makeTransactionBody
   :: P.Params
   -> UTxO EmulatorEra
-  -> C.Api.TxBodyContent C.Api.BuildTx C.Api.AlonzoEra
+  -> P.CardanoBuildTx
   -> Either CardanoLedgerError (C.Api.TxBody C.Api.AlonzoEra)
 makeTransactionBody params utxo txBodyContent = do
   txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody mempty txBodyContent
@@ -284,7 +284,7 @@ plutusTxToTxBodyContent
   :: P.Params
   -> [P.PaymentPubKeyHash]
   -> P.Tx
-  -> Either P.ToCardanoError (C.Api.TxBodyContent C.Api.BuildTx C.Api.AlonzoEra)
+  -> Either P.ToCardanoError P.CardanoBuildTx
 plutusTxToTxBodyContent params requiredSigners =
   P.toCardanoTxBodyContent requiredSigners (Just $ P.pProtocolParams params) (P.pNetworkId params)
 

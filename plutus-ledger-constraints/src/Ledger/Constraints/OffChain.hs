@@ -46,9 +46,18 @@ module Ledger.Constraints.OffChain(
     , provided
     , required
     , missingValueSpent
+    , ConstraintProcessingState(..)
+    , unbalancedTx
+    , valueSpentOutputs
+    , processConstraintFun
+    , addOwnInput
+    , addOwnOutput
+    , addMintingRedeemers
+    , addMissingValueSpent
+    , updateUtxoIndex
     ) where
 
-import Control.Lens (At (at), Traversal', iforM_, makeLensesFor, over, use, view, (%=), (.=), (<>=))
+import Control.Lens (At (at), Traversal', _Right, iforM_, makeLensesFor, over, use, view, (%=), (.=), (<>=))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -85,6 +94,7 @@ import Ledger.Orphans ()
 import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError)
@@ -217,7 +227,7 @@ ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
 --   Plutus contracts] in 'Plutus.Contract.Wallet'.
 data UnbalancedTx =
     UnbalancedTx
-        { unBalancedTxTx                  :: Tx.CardanoTx
+        { unBalancedTxTx                  :: Either C.CardanoBuildTx Tx.Tx
         , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
         -- ^ These are all the payment public keys that should be used to request the
         -- signatories from the user's wallet. The signatories are what is required to
@@ -246,10 +256,10 @@ makeLensesFor
     ] ''UnbalancedTx
 
 tx :: Traversal' UnbalancedTx Tx
-tx = cardanoTx . Tx.emulatorTx
+tx = cardanoTx . _Right
 
 emptyUnbalancedTx :: UnbalancedTx
-emptyUnbalancedTx = UnbalancedTx (Tx.EmulatorTx mempty) mempty mempty top
+emptyUnbalancedTx = UnbalancedTx (Right mempty) mempty mempty top
 
 instance Pretty UnbalancedTx where
     pretty (UnbalancedTx utx rs utxo vr) =

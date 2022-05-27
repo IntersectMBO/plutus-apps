@@ -1,12 +1,14 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GADTs              #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE OverloadedLists    #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE ViewPatterns       #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DerivingStrategies   #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE OverloadedLists      #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ViewPatterns         #-}
 
 {-# OPTIONS_GHC -Wno-orphans        #-}
 
@@ -16,7 +18,8 @@ Interface to the transaction types from 'cardano-api'
 
 -}
 module Ledger.Tx.CardanoAPI(
-  SomeCardanoApiTx(..)
+  CardanoBuildTx
+  , SomeCardanoApiTx(..)
   , withIsCardanoEra
   , txOutRefs
   , unspentOutputsTx
@@ -108,6 +111,20 @@ import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
+
+type CardanoBuildTx = C.TxBodyContent C.BuildTx C.AlonzoEra
+
+instance ToJSON CardanoBuildTx where
+  toJSON = error "TODO: ToJSON CardanoBuildTx"
+
+instance FromJSON CardanoBuildTx where
+  parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"
+
+instance OpenApi.ToSchema CardanoBuildTx where
+  declareNamedSchema = error "TODO: OpenApi.ToSchema CardanoBuildTx"
+
+instance Pretty CardanoBuildTx where
+  pretty = viaShow
 
 instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where
   declareNamedSchema _ = do
@@ -326,7 +343,7 @@ toCardanoTxBodyContent
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
     -> C.NetworkId -- ^ Network ID
     -> P.Tx
-    -> Either ToCardanoError (C.TxBodyContent C.BuildTx C.AlonzoEra)
+    -> Either ToCardanoError CardanoBuildTx
 toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
@@ -365,7 +382,7 @@ toCardanoTxBody sigs protocolParams networkId tx = do
 
 makeTransactionBody
     :: Map Alonzo.RdmrPtr Alonzo.ExUnits
-    -> C.TxBodyContent C.BuildTx C.AlonzoEra
+    -> CardanoBuildTx
     -> Either ToCardanoError (C.TxBody C.AlonzoEra)
 makeTransactionBody exUnits txBodyContent =
   first (TxBodyError . C.displayError) $ makeTransactionBody' exUnits txBodyContent

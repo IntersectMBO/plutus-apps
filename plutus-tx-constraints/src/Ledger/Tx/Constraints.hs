@@ -53,9 +53,9 @@ module Ledger.Tx.Constraints(
     , OC.ownStakePubKeyHash
     ) where
 
+import Ledger.Constraints.OnChain (checkScriptContext)
+import Ledger.Constraints.TxConstraints qualified as TC
 import Ledger.Tx.Constraints.OffChain qualified as OC
-import Ledger.Tx.Constraints.OnChain (checkScriptContext)
-import Ledger.Tx.Constraints.TxConstraints qualified as TC
 
 -- $constraints
 -- This module defines 'Ledger.Tx.Constraints.TxConstraints.TxConstraints', a list

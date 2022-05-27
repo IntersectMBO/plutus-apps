@@ -38,12 +38,11 @@ library
     exposed-modules:
         Ledger.Tx.Constraints
         Ledger.Tx.Constraints.OffChain
-        Ledger.Tx.Constraints.OnChain
-        Ledger.Tx.Constraints.TxConstraints
 
     build-depends:
         base >=4.9 && <5,
         aeson -any,
+        cardano-api -any,
         containers -any,
         lens -any,
         mtl -any,
@@ -51,6 +50,7 @@ library
         prettyprinter -any,
         plutus-ledger -any,
         plutus-ledger-api -any,
+        plutus-ledger-constraints -any,
         plutus-script-utils -any,
         plutus-tx -any,
         transformers -any,
