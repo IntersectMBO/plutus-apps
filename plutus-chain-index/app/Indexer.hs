@@ -4,17 +4,21 @@
 
 module Main where
 
-import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
-                    NetworkId (Mainnet), SlotNo)
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode, ChainPoint,
+                    NetworkId (Mainnet), SlotNo, chainPointToSlotNo)
 import Cardano.Api qualified as C
 import Cardano.BM.Trace (nullTracer)
 import Cardano.Index.Datum (DatumIndex)
 import Cardano.Index.Datum qualified as Ix
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (Resume, RollBackward, RollForward), runChainSync)
 import Control.Concurrent (threadDelay)
+import Control.Lens.Operators ((^.))
 import Control.Monad (forever)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.List (findIndex)
 import Data.Map (assocs)
+import Data.Maybe (fromMaybe)
+import Index.VSplit qualified as Ix
 import Ledger.TimeSlot (SlotConfig (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
@@ -59,8 +63,21 @@ processBlock ixref = \case
     ix     <- readIORef ixref
     nextIx <- Ix.insert (getDatums blk) ix
     writeIORef ixref nextIx
-  -- Ignore this, for now.
-  RollBackward point tip -> putStrLn ("rollback " <> show point <> " " <> show tip) >> pure ()
+  RollBackward point _tip -> rollbackToPoint point ixref
+
+rollbackToPoint
+  :: ChainPoint -> IORef DatumIndex -> IO ()
+rollbackToPoint point ixref = do
+  ix     <- readIORef ixref
+  events <- Ix.getEvents (ix ^. Ix.storage)
+  let ix' = fromMaybe ix $ rollbackOffset events ix
+  writeIORef ixref ix'
+  where
+    rollbackOffset :: [Ix.Event] -> DatumIndex -> Maybe DatumIndex
+    rollbackOffset events ix = do
+      slot   <- chainPointToSlotNo point
+      offset <- findIndex (any (\(s, _) -> s < slot)) $ events
+      Ix.rewind offset ix
 
 main :: IO ()
 main = do

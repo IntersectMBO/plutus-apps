@@ -103,3 +103,5 @@ executable plutus-indexer
     plutus-chain-index-core -any,
     plutus-script-utils -any,
     containers -any,
+    lens -any,
+    hysterical-screams -any,

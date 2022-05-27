@@ -5,8 +5,11 @@
 module Cardano.Index.Datum
   ( -- * DatumIndex
     DatumIndex
+  , Event
+  , Query
+  , Result
+  , Notification
   , open
-  , Ix.insert
   ) where
 
 import Codec.Serialise (deserialiseOrFail, serialise)
