@@ -21,18 +21,15 @@ import Cardano.Api.Byron
 import Cardano.Api.Shelley
 import Cardano.Api.Shelley qualified as Api
 
-import Codec.Serialise
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except.Extra
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as LB
-import Data.ByteString.Short qualified as SBS
 import Data.Either as E
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
-import GHC.Records (HasField (..))
 
 import Cardano.CLI.Environment
 import Cardano.CLI.Shelley.Run.Query
@@ -42,181 +39,34 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
-import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.TxIn qualified as Ledger
 
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Monad.Trans.Except
+import Ledger qualified as Plutus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras qualified as Consensus
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
 import Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
 import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api qualified as Plutus
 import PlutusTx qualified
-import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.IsData.Class
-import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
-import PlutusTx.Prelude qualified as P
+import PlutusTx.Prelude hiding (Eq, Semigroup (..), unless, (.))
 
--- Description
--- MyCustomRedeemer mimics the ScriptContext. MyCustomRedeemer is built via reading
--- the transaction containing the script and the script itself just compares MyCustomRedeemer
--- to the ScriptContext to be sure they are equivalent.
--- The overall aim is to make sure what is provided via ScriptContext (i.e. the transaction)
--- is what it's supposed to be. We check this by creating MyCustomRedeemer based on
--- the actual transaction which is created via the create-script-context executable.
+import PlutusExample.PlutusVersion1.RedeemerContextScripts
 
-newtype MyCustomDatum = MyCustomDatum Integer
 
-data MyCustomRedeemer
-  = MyCustomRedeemer
-      { mCrOutputs       :: [Plutus.TxOut]
-      , mCrInputs        :: [Plutus.TxInInfo]
-      , mCrMint          :: Plutus.Value
-      , mCrValidRange    :: Plutus.POSIXTimeRange
-      , mCrFee           :: Plutus.Value
-      , mCrDatums        :: [(Plutus.DatumHash, Plutus.Datum)]
-      , mCrCerts         :: [Plutus.DCert]
-      , mCrSignatories   :: [Plutus.PubKeyHash]
-      , mCrScriptPurpose :: Maybe Plutus.ScriptPurpose
-      } deriving (Prelude.Eq, Show)
+data AnyCustomRedeemer
+  = AnyPV1CustomRedeemer PV1CustomRedeemer
+  deriving (Show, Eq)
 
-PlutusTx.unstableMakeIsData ''MyCustomDatum
-PlutusTx.unstableMakeIsData ''MyCustomRedeemer
-
-{-# INLINABLE mkValidator #-}
-mkValidator :: MyCustomDatum-> MyCustomRedeemer -> Plutus.ScriptContext -> Bool
-mkValidator _datum (MyCustomRedeemer txouts txins minted txValidRange _fee datumsAndHashes certs signatories mPurpose) scriptContext =
-  -- Minted field is equivalent
-  Plutus.txInfoMint txInfo P.== minted P.&&
-  -- Validity range is equivalent
-  Plutus.txInfoValidRange txInfo P.== txValidRange P.&&
-  -- Datums and datum hashes are equivalent
-  Plutus.txInfoData txInfo P.== datumsAndHashes P.&&
-  -- Required tx signers are equivalent
-  Plutus.txInfoSignatories txInfo P.== signatories P.&&
-  -- Payment tx out is equivalent
-  AMap.member paymentOutputFromRedeemer scriptContextOutputsMap P.&&
-  -- Txins are equivalent
-  (AMap.member txinA scriptContextTxinsMap P.&& AMap.member txinB scriptContextTxinsMap) P.&&
-  -- Check if tx inputs are equivalent
-  AMap.member singleRedeemerCert scriptContextCertsMap P.&&
-  -- Check if the script purposes are equivalent
-  case mPurpose of
-    Just sPurp -> sPurp P.== sPurpose
-    Nothing    -> PlutusTx.Prelude.error ()
- where
-   scriptContextCertsMap :: AMap.Map Plutus.DCert Integer
-   scriptContextCertsMap = AMap.fromList P.$ P.zip (Plutus.txInfoDCert txInfo) [1]
-
-   singleRedeemerCert :: Plutus.DCert
-   singleRedeemerCert = P.head certs
-
-   txinA :: Plutus.TxInInfo
-   txinA = P.head redeemerTxins
-
-   txinB :: Plutus.TxInInfo
-   txinB = P.head $ P.reverse redeemerTxins
-
-   redeemerTxins :: [Plutus.TxInInfo]
-   redeemerTxins = txins
-
-   scriptContextTxins :: [Plutus.TxInInfo]
-   scriptContextTxins = Plutus.txInfoInputs txInfo
-
-   scriptContextTxinsMap :: AMap.Map Plutus.TxInInfo Integer
-   scriptContextTxinsMap = AMap.fromList P.$ P.zip scriptContextTxins [1,2 :: Integer]
-
-   -- This is paid to the dummy address. We can't compute the change address amount
-   -- because the redeemer we computed is based on an older tx which affects the fee
-   -- and therefore the change address amount.
-   paymentOutputFromRedeemer :: Plutus.Value
-   paymentOutputFromRedeemer = P.head $ P.reverse redeemerValues
-
-   redeemerValues :: [Plutus.Value]
-   redeemerValues = P.map Plutus.txOutValue txouts
-
-   scriptContextOutputValues :: [Plutus.Value]
-   scriptContextOutputValues = P.map Plutus.txOutValue $ Plutus.txInfoOutputs txInfo
-
-   scriptContextOutputsMap :: AMap.Map Plutus.Value Integer
-   scriptContextOutputsMap = AMap.fromList P.$ P.zip scriptContextOutputValues [1,2 :: Integer]
-
-   txInfo :: Plutus.TxInfo
-   txInfo = Plutus.scriptContextTxInfo scriptContext
-
-   sPurpose :: Plutus.ScriptPurpose
-   sPurpose = Plutus.scriptContextPurpose scriptContext
-
-validator :: Plutus.Validator
-validator = Plutus.mkValidatorScript
-    $$(PlutusTx.compile [|| wrap ||])
-  where
-    wrap = Scripts.mkUntypedValidator mkValidator
-
-script :: Plutus.Script
-script = Plutus.unValidatorScript validator
-
-scriptContextCheckAsShortBs :: SBS.ShortByteString
-scriptContextCheckAsShortBs = SBS.toShort . LB.toStrict $ serialise script
-
-scriptContextCheckScript :: PlutusScript PlutusScriptV1
-scriptContextCheckScript = PlutusScriptSerialised scriptContextCheckAsShortBs
-
-------------------------------------------------------
-
-sampleTestScriptContextDataJSON :: LB.ByteString
-sampleTestScriptContextDataJSON =
-  Aeson.encode
-    . scriptDataToJson ScriptDataJsonDetailedSchema
-    . customRedeemerToScriptData
-    $ MyCustomRedeemer
-        dummyTxOuts
-        dummyTxIns
-        dummyLedgerVal
-        dummyPOSIXTimeRange
-        dummyLedgerVal
-        dummyDatumHashes
-        dummyCerts
-        dummySignatories
-        dummyScriptPurpose
-
-customRedeemerToScriptData :: MyCustomRedeemer -> ScriptData
-customRedeemerToScriptData cRedeem =
+-- We convert our custom redeemer to ScriptData so we can include it
+-- in our transaction.
+customRedeemerToScriptData :: AnyCustomRedeemer -> ScriptData
+customRedeemerToScriptData (AnyPV1CustomRedeemer cRedeem) =
   fromPlutusData $ PlutusTx.builtinDataToData $ toBuiltinData cRedeem
-
-customRedeemerFromScriptData :: ScriptData -> Either String MyCustomRedeemer
-customRedeemerFromScriptData sDat =
-  let bIData = PlutusTx.dataToBuiltinData $ toPlutusData sDat
-  in case fromBuiltinData bIData of
-      Just mCRedeem -> Right mCRedeem
-      Nothing       -> Left "Could not decode MyCustomRedeemer from ScriptData"
-
-dummyCerts :: [Plutus.DCert]
-dummyCerts = []
-
-dummyTxIns :: [Plutus.TxInInfo]
-dummyTxIns = []
-
-dummySignatories :: [Plutus.PubKeyHash]
-dummySignatories = []
-
-dummyDatumHashes :: [(Plutus.DatumHash, Plutus.Datum)]
-dummyDatumHashes = []
-
-dummyLedgerVal :: Plutus.Value
-dummyLedgerVal = Alonzo.transValue $ toMaryValue Prelude.mempty
-
-dummyTxOuts :: [Plutus.TxOut]
-dummyTxOuts = []
-
-dummyPOSIXTimeRange :: Plutus.POSIXTimeRange
-dummyPOSIXTimeRange = Plutus.from $ Plutus.POSIXTime 42
-
-dummyScriptPurpose :: Maybe Plutus.ScriptPurpose
-dummyScriptPurpose = Nothing
 
 data ScriptContextError = NoScriptsInByronEra
                         | NoScriptsInEra
@@ -232,16 +82,16 @@ data ScriptContextError = NoScriptsInByronEra
                         | EraMismatch !Consensus.EraMismatch
                         deriving Show
 
-txToCustomRedeemer
+createAnyCustomRedeemer
   :: ShelleyBasedEra era
   -> ProtocolParameters
   -> UTxO era
   -> EpochInfo (Either TransactionValidityError)
   -> SystemStart
   -> Api.Tx era
-  -> Either ScriptContextError MyCustomRedeemer
-txToCustomRedeemer _ _ _ _ _ (ByronTx _) = Left NoScriptsInByronEra
-txToCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEraAlonzo ledgerTx) = do
+  -> Either ScriptContextError AnyCustomRedeemer
+createAnyCustomRedeemer _ _ _ _ _ (ByronTx _) = Left NoScriptsInByronEra
+createAnyCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEraAlonzo ledgerTx) = do
   let txBody = Alonzo.body ledgerTx
       witness = Alonzo.wits ledgerTx
       Alonzo.TxWitness _ _ _ _ _rdmrs = witness
@@ -257,7 +107,6 @@ txToCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEraAlonz
       txfee = Alonzo.transValue . toMaryValue . lovelaceToValue . fromShelleyLovelace $ Alonzo.txfee txBody
       Alonzo.TxDats datumHashMap = Alonzo.txdats witness
       datumHashes = Prelude.map Alonzo.transDataPair $ Map.toList datumHashMap
-      _txid = Alonzo.txInfoId . toShelleyTxId $ getTxIdShelley ShelleyBasedEraAlonzo txBody
       txcerts = Prelude.map Alonzo.transDCert . seqToList $ Alonzo.txcerts txBody
       txsignatories = Prelude.map Alonzo.transKeyHash . Set.toList $ Alonzo.reqSignerHashes txBody
   valRange <-
@@ -270,39 +119,25 @@ txToCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEraAlonz
   txins <- if Prelude.all E.isRight eTxIns
            then return $ E.rights eTxIns
            else Prelude.error "Tx Ins not all Right"
-  Right $ MyCustomRedeemer tOuts txins minted valRange txfee datumHashes txcerts txsignatories (Just sPurpose)
+  Right . AnyPV1CustomRedeemer $ PV1CustomRedeemer tOuts txins minted valRange txfee datumHashes txcerts txsignatories (Just sPurpose)
  where
   seqToList (x Seq.:<| rest) = x : seqToList rest
   seqToList Seq.Empty        = []
 
-txToCustomRedeemer _ _ _ _ _ (ShelleyTx _ _) = Left NoScriptsInEra
+createAnyCustomRedeemer _ _ _ _ _ (ShelleyTx _ _) = Left NoScriptsInEra
 
-
-obtainLedgerEraClassConstraints
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> ( HasField "_protocolVersion" (Alonzo.PParams ledgerera) ProtVer
-       => a) -> a
-obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraBabbage f = f
-
-testScriptContextToScriptData :: MyCustomRedeemer -> ScriptData
-testScriptContextToScriptData = fromPlutusData . PlutusTx.builtinDataToData . toBuiltinData
-
-readCustomRedeemerFromTx
+createAnyCustomRedeemerFromTxFp
   :: FilePath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> ExceptT ScriptContextError IO MyCustomRedeemer
-readCustomRedeemerFromTx fp (AnyConsensusModeParams cModeParams) network = do
+  -> ExceptT ScriptContextError IO AnyCustomRedeemer
+createAnyCustomRedeemerFromTxFp fp (AnyConsensusModeParams cModeParams) network = do
   InAnyCardanoEra cEra alonzoTx
     <- firstExceptT ReadTxBodyError
          . newExceptT
          $ readFileTextEnvelopeAnyOf
              [ FromSomeType (AsTx AsAlonzoEra) (InAnyCardanoEra AlonzoEra)
+             -- TODO: Babbage Era -- Update with Babbage
              ]
              fp
 
@@ -343,17 +178,18 @@ readCustomRedeemerFromTx fp (AnyConsensusModeParams cModeParams) network = do
                     cModeParams
                     localNodeConnInfo
                     utxoQinMode
-      hoistEither $ txToCustomRedeemer sbe pparams
+      hoistEither $ createAnyCustomRedeemer sbe pparams
                                        utxo eInfo sStart alonzoTx
     _ -> Prelude.error "Please specify --cardano-mode on cli."
 
-txToRedeemer
+createAnyCustomRedeemerBsFromTxFp
   :: FilePath
   -> AnyConsensusModeParams
   -> NetworkId
   -> ExceptT ScriptContextError IO LB.ByteString
-txToRedeemer txFp anyCmodeParams nid = do
-  testScrContext <- readCustomRedeemerFromTx txFp anyCmodeParams nid
+createAnyCustomRedeemerBsFromTxFp txFp anyCmodeParams nid = do
+  AnyPV1CustomRedeemer testScrContext <- createAnyCustomRedeemerFromTxFp txFp anyCmodeParams nid
+
   return . Aeson.encode . scriptDataToJson ScriptDataJsonDetailedSchema
                         $ testScriptContextToScriptData testScrContext
 
@@ -370,54 +206,46 @@ fromPlutusTxId (Plutus.TxId builtInBs) =
     Just txidHash -> toShelleyTxId txidHash
     Nothing       -> Prelude.error "Could not derserialize txid"
 
--- Minting script that checks the minting value, validty interval and
--- required signers in the ScriptContext is equivalent to what's in the
--- redeemer.
 
-{-# INLINABLE mkPolicy #-}
-mkPolicy :: MyCustomRedeemer -> Plutus.ScriptContext -> Bool
-mkPolicy (MyCustomRedeemer _ _ minted txValidRange _fee _ _ signatories mPurpose) scriptContext =
-  -- Minted value is equivalent
-  minted P.== Plutus.txInfoMint txInfo P.&&
-  -- Validity range is equivalent
-  Plutus.txInfoValidRange txInfo P.== txValidRange P.&&
-  -- Required signers are equivalent
-  AMap.member singleSignatory scriptContextSignatoriesMap P.&&
+sampleTestV1ScriptContextDataJSON :: LB.ByteString
+sampleTestV1ScriptContextDataJSON =
+  Aeson.encode
+    . scriptDataToJson ScriptDataJsonDetailedSchema
+    . customRedeemerToScriptData
+    . AnyPV1CustomRedeemer
+    $ PV1CustomRedeemer
+        dummyTxOuts
+        dummyTxIns
+        dummyLedgerVal
+        dummyPOSIXTimeRange
+        dummyLedgerVal
+        dummyDatumHashes
+        dummyCerts
+        dummySignatories
+        dummyScriptPurpose
 
-  case mPurpose of
-    Just sPurp -> sPurp P.== sPurpose
-    Nothing    -> PlutusTx.Prelude.error ()
- where
-   sPurpose :: Plutus.ScriptPurpose
-   sPurpose = Plutus.scriptContextPurpose scriptContext
 
-   scriptContextSignatoriesMap :: AMap.Map Plutus.PubKeyHash Integer
-   scriptContextSignatoriesMap = AMap.fromList P.$ P.zip (Plutus.txInfoSignatories txInfo) [1]
+dummyCerts :: [Plutus.DCert]
+dummyCerts = []
 
-   singleSignatory :: Plutus.PubKeyHash
-   singleSignatory = P.head signatories
+dummyTxIns :: [Plutus.TxInInfo]
+dummyTxIns = []
 
-   txInfo :: Plutus.TxInfo
-   txInfo = Plutus.scriptContextTxInfo scriptContext
+dummySignatories :: [Plutus.PubKeyHash]
+dummySignatories = []
 
-policy :: Scripts.MintingPolicy
-policy = Plutus.mkMintingPolicyScript $$(PlutusTx.compile [|| wrap ||])
- where
-   wrap = Scripts.mkUntypedMintingPolicy mkPolicy
+dummyDatumHashes :: [(Plutus.DatumHash, Plutus.Datum)]
+dummyDatumHashes = []
 
-plutusMintingScript :: Plutus.Script
-plutusMintingScript =
-  Plutus.unMintingPolicyScript policy
+dummyLedgerVal :: Plutus.Value
+dummyLedgerVal = Alonzo.transValue $ toMaryValue Prelude.mempty
 
-mintingValidator :: Plutus.Validator
-mintingValidator =
-  Plutus.Validator $ Plutus.unMintingPolicyScript policy
+dummyTxOuts :: [Plutus.TxOut]
+dummyTxOuts = []
 
-scriptAsCbor :: LB.ByteString
-scriptAsCbor = serialise mintingValidator
+dummyPOSIXTimeRange :: Plutus.POSIXTimeRange
+dummyPOSIXTimeRange = Plutus.from $ Plutus.POSIXTime 42
 
-customApiExamplePlutusMintingScript :: PlutusScript PlutusScriptV1
-customApiExamplePlutusMintingScript = PlutusScriptSerialised . SBS.toShort $ LB.toStrict scriptAsCbor
+dummyScriptPurpose :: Maybe Plutus.ScriptPurpose
+dummyScriptPurpose = Nothing
 
-mintingScriptShortBs :: SBS.ShortByteString
-mintingScriptShortBs = SBS.toShort . LB.toStrict $ scriptAsCbor
