@@ -5,7 +5,7 @@
 module Main where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
-                    NetworkId (Mainnet))
+                    NetworkId (Mainnet), SlotNo)
 import Cardano.Api qualified as C
 import Cardano.BM.Trace (nullTracer)
 import Cardano.Index.Datum (DatumIndex)
@@ -15,7 +15,6 @@ import Control.Concurrent (threadDelay)
 import Control.Monad (forever)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Map (assocs)
-import Data.Maybe (catMaybes)
 import Ledger.TimeSlot (SlotConfig (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
@@ -34,8 +33,8 @@ slotConfig =
 networkId :: NetworkId
 networkId = Mainnet
 
-getDatums :: BlockInMode CardanoMode -> [(DatumHash, Datum)]
-getDatums (BlockInMode (Block _ txs) era) =
+getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
+getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) =
   case era of
     C.ByronEraInCardanoMode   -> concatMap (go era) txs
     C.ShelleyEraInCardanoMode -> concatMap (go era) txs
@@ -46,10 +45,10 @@ getDatums (BlockInMode (Block _ txs) era) =
     go :: C.IsCardanoEra era
        => C.EraInMode era C.CardanoMode
        -> C.Tx era
-       -> [(DatumHash, Datum)]
+       -> [(SlotNo, (DatumHash, Datum))]
     go era' tx =
-      concat $ assocs . _citxData <$> catMaybes [either (const Nothing) Just (fromCardanoTx era' tx)]
-
+      let hashes = either (const []) (assocs . _citxData) $ fromCardanoTx era' tx
+      in  map (\h -> (slotNo, h)) hashes
 
 processBlock :: IORef DatumIndex -> ChainSyncEvent -> IO ()
 processBlock ixref = \case
