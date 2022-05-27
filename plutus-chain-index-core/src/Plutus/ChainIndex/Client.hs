@@ -7,17 +7,23 @@ module Plutus.ChainIndex.Client(
     handleChainIndexClient
     -- * Servant client functions
     , healthCheck
+    , collectGarbage
+
     , getDatum
     , getValidator
     , getMintingPolicy
     , getStakeValidator
+    , getRedeemer
+
+    , getTxOut
+    , getTx
     , getUnspentTxOut
     , getIsUtxo
     , getUtxoSetAtAddress
     , getUtxoSetWithCurrency
+    , getTxs
     , getTxoSetAtAddress
     , getTip
-    , collectGarbage
     ) where
 
 import Control.Monad.Freer (Eff, LastMember, Member, sendM, type (~>))
