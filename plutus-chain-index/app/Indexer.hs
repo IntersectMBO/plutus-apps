@@ -1,21 +1,25 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ExplicitForAll #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs          #-}
+{-# LANGUAGE LambdaCase     #-}
 
 module Main where
 
-import Cardano.Api (NetworkId(Mainnet), BlockInMode(BlockInMode), Block(Block), CardanoMode, ChainTip, ChainPoint)
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
+                    NetworkId (Mainnet))
 import Cardano.Api qualified as C
 import Cardano.BM.Trace (nullTracer)
-import Data.Maybe (catMaybes)
-import Data.Map (assocs)
-import Ledger.TimeSlot (SlotConfig(..))
-import Cardano.Protocol.Socket.Client (ChainSyncEvent(Resume, RollForward, RollBackward), runChainSync)
 import Cardano.Index.Datum (DatumIndex)
 import Cardano.Index.Datum qualified as Ix
-import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
+import Cardano.Protocol.Socket.Client (ChainSyncEvent (Resume, RollBackward, RollForward), runChainSync)
+import Control.Concurrent (threadDelay)
+import Control.Monad (forever)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.Map (assocs)
+import Data.Maybe (catMaybes)
+import Ledger.TimeSlot (SlotConfig (..))
+import Plutus.ChainIndex.Tx (ChainIndexTx (..))
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
-import Plutus.ChainIndex.Tx (ChainIndexTx(..))
+import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 
 -- Connecting to cardano node.
 
@@ -47,21 +51,25 @@ getDatums (BlockInMode (Block _ txs) era) =
       concat $ assocs . _citxData <$> catMaybes [either (const Nothing) Just (fromCardanoTx era' tx)]
 
 
-processBlock :: DatumIndex -> ChainSyncEvent -> IO ()
-processBlock ix = \case
+processBlock :: IORef DatumIndex -> ChainSyncEvent -> IO ()
+processBlock ixref = \case
   -- Not supported
-  Resume _         -> pure ()
-  RollForward blk _  -> Ix.insert ix $ getDatums blk
+  Resume point         -> putStrLn ("resume " <> show point) >> pure ()
+  RollForward blk@(BlockInMode (Block (BlockHeader slotNo _ blockNo) _txs) _era) _tip -> do
+    putStrLn $ show slotNo <> " / " <> show blockNo
+    ix     <- readIORef ixref
+    nextIx <- Ix.insert (getDatums blk) ix
+    writeIORef ixref nextIx
   -- Ignore this, for now.
-  RollBackward _ _ -> pure ()
+  RollBackward point tip -> putStrLn ("rollback " <> show point <> " " <> show tip) >> pure ()
 
 main :: IO ()
 main = do
-  ix <- Ix.open "datum.sqlite" 2000
+  tix <- Ix.open "datum.sqlite" 2000 >>= newIORef
   _ <- runChainSync "/tmp/node.sock"
                     nullTracer
                     slotConfig
                     networkId
                     []
-                    (processBlock ix)
-  pure ()
+                    (processBlock tix)
+  forever $ threadDelay 1000000000
