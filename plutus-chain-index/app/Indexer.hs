@@ -6,7 +6,8 @@
 module Main where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), BlockNo (BlockNo), CardanoMode,
-                    ChainPoint, NetworkId (Mainnet), SlotNo, chainPointToSlotNo)
+                    ChainPoint (ChainPoint), Hash, NetworkId (Mainnet), SlotNo (SlotNo), chainPointToSlotNo,
+                    deserialiseFromRawBytesHex, proxyToAsType)
 import Cardano.Api qualified as C
 import Cardano.BM.Trace (nullTracer)
 import Cardano.Index.Datum (DatumIndex)
@@ -18,14 +19,15 @@ import Control.Monad (forever, when)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (findIndex)
 import Data.Map (assocs)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe)
+import Data.Proxy (Proxy (Proxy))
+import Data.Text (pack)
+import Data.Text.Encoding (encodeUtf8)
 import Index.VSplit qualified as Ix
 import Ledger.TimeSlot (SlotConfig (..))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
-
--- Connecting to cardano node.
 
 -- We only care about the mainnet
 slotConfig :: SlotConfig
@@ -37,6 +39,16 @@ slotConfig =
 
 networkId :: NetworkId
 networkId = Mainnet
+
+closeToGoguen :: ChainPoint
+closeToGoguen =
+  ChainPoint
+    (SlotNo 39795032)
+    (fromJust $ parseHash "3e6f6450f85962d651654ee66091980b2332166f5505fd10b97b0520c9efac90")
+
+parseHash :: String -> Maybe (Hash BlockHeader)
+parseHash hash =
+  deserialiseFromRawBytesHex (proxyToAsType Proxy) (encodeUtf8 $ pack hash)
 
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
 getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) =
@@ -57,15 +69,17 @@ getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) =
 
 processBlock :: IORef DatumIndex -> ChainSyncEvent -> IO ()
 processBlock ixref = \case
-  -- Not supported
+  -- Not really supported
   Resume point         -> putStrLn ("resume " <> show point) >> pure ()
   RollForward blk@(BlockInMode (Block (BlockHeader slotNo _ blockNo@(BlockNo b)) _txs) _era) _tip -> do
     when (b `rem` 1000 == 0) $
       putStrLn $ show slotNo <> " / " <> show blockNo
     ix     <- readIORef ixref
-    nextIx <- Ix.insert (getDatums blk) ix
-    writeIORef ixref nextIx
-  RollBackward point _tip -> rollbackToPoint point ixref
+    ix' <- Ix.insert (getDatums blk) ix
+    writeIORef ixref ix'
+  RollBackward point tip -> do
+    putStrLn ("rollback to " <> show tip)
+    rollbackToPoint point ixref
 
 rollbackToPoint
   :: ChainPoint -> IORef DatumIndex -> IO ()
@@ -83,11 +97,11 @@ rollbackToPoint point ixref = do
 
 main :: IO ()
 main = do
-  tix <- Ix.open "datum.sqlite" 2000 >>= newIORef
+  tix <- Ix.open "datum.sqlite" 2160 >>= newIORef
   _ <- runChainSync "/tmp/node.sock"
                     nullTracer
                     slotConfig
                     networkId
-                    []
+                    [closeToGoguen]
                     (processBlock tix)
   forever $ threadDelay 1000000000

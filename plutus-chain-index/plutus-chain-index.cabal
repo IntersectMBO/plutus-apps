@@ -105,3 +105,4 @@ executable plutus-indexer
     containers -any,
     lens -any,
     hysterical-screams -any,
+    text -any,

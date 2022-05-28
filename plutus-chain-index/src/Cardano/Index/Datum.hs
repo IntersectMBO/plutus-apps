@@ -70,6 +70,7 @@ open dbPath k = do
 query :: DatumIndex -> Query -> [Event] -> IO Result
 query ix hsh es = (memoryResult <|>) <$> sqliteResult
   where
+    -- TODO: Consider buffered events
     memoryResult :: Result
     memoryResult = snd . snd <$> find ((== hsh) . fst . snd) (concat es)
     sqliteResult :: IO Result
@@ -82,12 +83,11 @@ store ix = do
   let c = ix ^. Ix.handle
   SQL.execute_ c "BEGIN"
   Ix.getBuffer (ix ^. Ix.storage) >>=
-    mapM_ (SQL.execute c "INSERT INTO kv_datumhash_datum (datumHash, datum) VALUES (?, ?)") . map unpack . concat
+    mapM_ (SQL.execute c "INSERT INTO kv_datumhsh_datum (slotNo, datumHash, datum) VALUES (?, ?,?) ON CONFLICT(datumHash) DO UPDATE SET slotNo = ?") . map unpack . concat
   SQL.execute_ c "COMMIT"
   where
-    unpack :: (SlotNo, (DatumHash, Datum)) -> (SlotNo, DatumHash, Datum)
-    unpack (s, (h, d)) = (s, h, d)
-
+    unpack :: (SlotNo, (DatumHash, Datum)) -> (SlotNo, DatumHash, Datum, SlotNo)
+    unpack (s, (h, d)) = (s, h, d, s)
 
 onInsert :: DatumIndex -> Event -> IO [Notification]
 onInsert _ _ = pure []
