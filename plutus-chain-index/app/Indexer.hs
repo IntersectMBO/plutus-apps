@@ -40,6 +40,9 @@ slotConfig =
 networkId :: NetworkId
 networkId = Mainnet
 
+-- We don't generally need to sync blocks earlier than the Goguen era (other than
+-- testing for memory leaks) so we may want to start synchronising from a slot that
+-- is closer to Goguen era.
 closeToGoguen :: ChainPoint
 closeToGoguen =
   ChainPoint
@@ -74,7 +77,7 @@ processBlock ixref = \case
   RollForward blk@(BlockInMode (Block (BlockHeader slotNo _ blockNo@(BlockNo b)) _txs) _era) _tip -> do
     when (b `rem` 1000 == 0) $
       putStrLn $ show slotNo <> " / " <> show blockNo
-    ix     <- readIORef ixref
+    ix  <- readIORef ixref
     ix' <- Ix.insert (getDatums blk) ix
     writeIORef ixref ix'
   RollBackward point tip -> do

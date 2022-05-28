@@ -68,11 +68,13 @@ open dbPath k = do
   pure ix
 
 query :: DatumIndex -> Query -> [Event] -> IO Result
-query ix hsh es = (memoryResult <|>) <$> sqliteResult
+query ix hsh es = memoryResult <|> sqliteResult
   where
     -- TODO: Consider buffered events
-    memoryResult :: Result
-    memoryResult = snd . snd <$> find ((== hsh) . fst . snd) (concat es)
+    memoryResult :: IO Result
+    memoryResult = do
+      bufferedEvents <- Ix.getBuffer (ix ^. Ix.storage)
+      pure $ snd . snd <$> find ((== hsh) . fst . snd) (concat $ es ++ bufferedEvents)
     sqliteResult :: IO Result
     sqliteResult = do
       result <- SQL.query (ix ^. Ix.handle) "SELECT datum from kv_datumhsh_datum WHERE datumHash = ?" (Only hsh)
