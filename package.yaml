@@ -33,6 +33,7 @@ default-extensions:
   - FlexibleInstances
   - OverloadedStrings
   - GADTs
+  - Strict
 
 dependencies:
 - base >= 4.7 && < 5

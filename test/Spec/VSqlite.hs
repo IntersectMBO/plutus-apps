@@ -1,3 +1,5 @@
+{-# LANGUAGE Strict #-}
+
 module Spec.VSqlite where
 
 import           Control.Lens.Operators

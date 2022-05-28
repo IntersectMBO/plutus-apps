@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -49,6 +49,7 @@ library
       FlexibleInstances
       OverloadedStrings
       GADTs
+      Strict
   ghc-options: -Wall
   build-depends:
       QuickCheck
@@ -86,6 +87,7 @@ test-suite hysterical-screams-test
       FlexibleInstances
       OverloadedStrings
       GADTs
+      Strict
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       QuickCheck

@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE Strict  #-}
 
 module Index.VSplit
   ( SplitIndex(..)
