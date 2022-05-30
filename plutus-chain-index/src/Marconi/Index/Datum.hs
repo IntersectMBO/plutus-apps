@@ -72,6 +72,12 @@ open dbPath (Depth k) = do
 
 -- | This function is used to query the data stored in the indexer as a whole:
 --   data that can still change (through rollbacks), buffered data and stored data.
+--
+--   Here is a query that takes into account all received events:
+--   > getEvents (ix ^. storage) >>= query ix <hash>
+--
+--   Here is a query that only takes into account stored events:
+--   > query ix <hash> []
 query
   :: DatumIndex -- ^ The indexer
   -> Query      -- ^ The query is a `DatumHash`
@@ -94,7 +100,7 @@ store ix = do
   let c = ix ^. Ix.handle
   SQL.execute_ c "BEGIN"
   Ix.getBuffer (ix ^. Ix.storage) >>=
-    mapM_ (SQL.execute c "INSERT INTO kv_datumhsh_datum (slotNo, datumHash, datum) VALUES (?, ?,?) ON CONFLICT(datumHash) DO UPDATE SET slotNo = ?") . map unpack . concat
+    mapM_ (SQL.execute c "INSERT INTO kv_datumhsh_datum (slotNo, datumHash, datum) VALUES (?,?,?) ON CONFLICT(datumHash) DO UPDATE SET slotNo = ?") . map unpack . concat
   SQL.execute_ c "COMMIT"
   where
     unpack :: (SlotNo, (DatumHash, Datum)) -> (SlotNo, DatumHash, Datum, SlotNo)
