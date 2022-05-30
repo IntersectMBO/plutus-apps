@@ -37,7 +37,7 @@ library
         Plutus.ChainIndex.Lib
         Plutus.ChainIndex.Logging
         Plutus.ChainIndex.SyncStats
-        Cardano.Index.Datum
+        Marconi.Index.Datum
     other-modules:
         Control.Concurrent.STM.TBMQueue
     hs-source-dirs: src

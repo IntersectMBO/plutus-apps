@@ -10,8 +10,6 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
                     deserialiseFromRawBytesHex, proxyToAsType)
 import Cardano.Api qualified as C
 import Cardano.BM.Trace (nullTracer)
-import Cardano.Index.Datum (DatumIndex)
-import Cardano.Index.Datum qualified as Ix
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (Resume, RollBackward, RollForward), runChainSync)
 import Control.Concurrent (threadDelay)
 import Control.Lens.Operators ((^.))
@@ -25,6 +23,8 @@ import Data.Text (pack)
 import Data.Text.Encoding (encodeUtf8)
 import Index.VSplit qualified as Ix
 import Ledger.TimeSlot (SlotConfig (..))
+import Marconi.Index.Datum (DatumIndex)
+import Marconi.Index.Datum qualified as Ix
 import Options.Applicative (Parser, execParser, fullDesc, header, help, helper, info, long, metavar, progDesc,
                             strOption, (<**>))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))

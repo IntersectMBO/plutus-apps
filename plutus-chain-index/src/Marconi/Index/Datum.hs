@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Index.Datum
+module Marconi.Index.Datum
   ( -- * DatumIndex
     DatumIndex
   , Event
