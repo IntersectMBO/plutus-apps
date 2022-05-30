@@ -47,7 +47,7 @@ module Ledger.Constraints.OffChain(
     , missingValueSpent
     ) where
 
-import Control.Lens (At (at), iforM_, makeLensesFor, mapAccumLOf, use, view, (%=), (.=), (<>=))
+import Control.Lens (At (at), alaf, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -56,6 +56,7 @@ import Control.Monad.State (MonadState (get, put), execStateT, gets)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
 import Data.Functor ((<&>))
+import Data.Functor.Compose (Compose (Compose))
 import Data.List (elemIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -401,19 +402,13 @@ mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
 adjustUnbalancedTx :: Params -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
-adjustUnbalancedTx params utx =
-    let (acc, res) = mapAccumLOf (tx . Tx.outputs . traverse) step (Right []) utx
-    in (flip (,) res) <$> acc
+adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) adjustTxOut
   where
-    step acc txOut = case (acc, adjustTxOut txOut) of
-        (Left _, _)                       -> (acc, txOut) -- acc is an error, do nothing
-        (Right _, Left e)                 -> (Left e, txOut) -- failed somewhere, return error as acc
-        (Right acc', Right (ada, txOut')) -> (Right $ ada:acc', txOut')
-    adjustTxOut :: TxOut -> Either Tx.ToCardanoError (Ada.Ada, TxOut)
+    adjustTxOut :: TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
     adjustTxOut txOut = fromPlutusTxOutUnsafe params txOut <&> \txOut' ->
         let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
             missingLovelace = max 0 (minAdaTxOut' - Ada.fromValue (txOutValue txOut))
-        in (missingLovelace, txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
+        in ([missingLovelace], txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
 
 -- | Add the remaining balance of the total value that the tx must spend.
 --   See note [Balance of value spent]
