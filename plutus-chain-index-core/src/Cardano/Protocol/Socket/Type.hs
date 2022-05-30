@@ -103,7 +103,7 @@ maximumMiniProtocolLimits =
 
 -- | Protocol versions
 nodeToClientVersion :: NodeToClientVersion
-nodeToClientVersion = NodeToClientV_4
+nodeToClientVersion = NodeToClientV_13
 
 -- | A temporary definition of the protocol version. This will be moved as an
 -- argument to the client connection function in a future PR (the network magic
@@ -150,6 +150,7 @@ codecConfig :: CodecConfig (CardanoBlock StandardCrypto)
 codecConfig =
   CardanoCodecConfig
     (Byron.ByronCodecConfig epochSlots)
+    Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig
     Shelley.ShelleyCodecConfig

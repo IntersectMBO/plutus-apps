@@ -51,10 +51,11 @@ import Ledger.Address (Address, PaymentPubKey (PaymentPubKey), pubKeyAddress)
 import Ledger.Generators qualified as Gen
 import Ledger.Interval qualified as Interval
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx (TxId (TxId), TxIn (TxIn), TxOut (TxOut), TxOutRef (TxOutRef))
+import Ledger.Tx (TxId (TxId), TxIn (TxIn), TxOutRef (TxOutRef))
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
-import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOutputs (ValidTx), txOutRefs)
+import Plutus.ChainIndex.Tx (ChainIndexTx (ChainIndexTx), ChainIndexTxOutputs (ValidTx), OutputDatum (NoOutputDatum),
+                             ReferenceScript (ReferenceScriptNone), txOutRefs)
 import Plutus.ChainIndex.TxIdState qualified as TxIdState
 import Plutus.ChainIndex.TxOutBalance qualified as TxOutBalance
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
@@ -182,7 +183,7 @@ genTx = do
 
     tx <- pure (ChainIndexTx txId)
         <*> pure (Set.fromList $ fmap (flip TxIn Nothing) allInputs)
-        <*> pure (ValidTx $ (\(addr, vl) -> TxOut addr vl Nothing) <$> newOutputs)
+        <*> pure (ValidTx (\(addr, vl) -> TxOut addr vl NoOutputDatum ReferenceScriptNone) <$> newOutputs)
         <*> pure Interval.always
 
         -- TODO: generate datums, scripts, etc.

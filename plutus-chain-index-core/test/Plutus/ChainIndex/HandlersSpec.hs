@@ -8,7 +8,7 @@
 module Plutus.ChainIndex.HandlersSpec (tests) where
 
 import Control.Concurrent.STM (newTVarIO)
-import Control.Lens (view)
+import Control.Lens (to, view)
 import Control.Monad (forM)
 import Control.Monad.Freer (Eff)
 import Control.Monad.Freer.Extras.Beam (BeamEffect)
@@ -24,7 +24,6 @@ import Database.Beam.Sqlite.Migrate qualified as Sqlite
 import Database.SQLite.Simple qualified as Sqlite
 import Generators qualified as Gen
 import Hedgehog (MonadTest, Property, assert, failure, forAll, property, (===))
-import Ledger (outValue)
 import Ledger.Ada qualified as Ada
 import Plutus.ChainIndex (ChainSyncBlock (Block), Page (pageItems), PageQuery (PageQuery),
                           RunRequirements (RunRequirements), TxProcessOption (TxProcessOption, tpoStoreTx),
@@ -33,7 +32,7 @@ import Plutus.ChainIndex (ChainSyncBlock (Block), Page (pageItems), PageQuery (P
 import Plutus.ChainIndex.Api (UtxosResponse (UtxosResponse), isUtxo)
 import Plutus.ChainIndex.DbSchema (checkedSqliteDb)
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect, ChainIndexQueryEffect)
-import Plutus.ChainIndex.Tx (_ValidTx)
+import Plutus.ChainIndex.Tx (ChainIndexTxOut (citoValue), _ValidTx)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
@@ -116,7 +115,7 @@ eachTxOutRefWithCurrencyShouldBeUnspentSpec = property $ do
         fmap (\(c, t, _) -> AssetClass (c, t))
              $ filter (\(c, t, _) -> not $ Ada.adaSymbol == c && Ada.adaToken == t)
              $ flattenValue
-             $ view (traverse . citxOutputs . _ValidTx . traverse . outValue) block
+             $ view (traverse . citxOutputs . _ValidTx . traverse . to citoValue) block
 
   utxoGroups <- runChainIndexTest $ do
       -- Append the generated block in the chain index
