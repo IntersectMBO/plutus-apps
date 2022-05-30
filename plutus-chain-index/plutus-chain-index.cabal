@@ -106,3 +106,4 @@ executable plutus-indexer
     lens -any,
     hysterical-screams -any,
     text -any,
+    optparse-applicative -any,

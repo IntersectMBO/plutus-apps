@@ -25,9 +25,38 @@ import Data.Text (pack)
 import Data.Text.Encoding (encodeUtf8)
 import Index.VSplit qualified as Ix
 import Ledger.TimeSlot (SlotConfig (..))
+import Options.Applicative (Parser, execParser, fullDesc, header, help, helper, info, long, metavar, progDesc,
+                            strOption, (<**>))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
+
+{- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
+     against the mainnet (meant to be used for testing).
+
+     In case you want to access the results of the datumhash indexer you need to query
+     the resulting database:
+     $ sqlite3 datums.sqlite
+     > select slotNo, datumHash, datum from kv_datumhsh_datum where slotNo = 39920450;
+     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
+-}
+
+-- Options
+data Options = Options
+  { socketPath :: FilePath
+  , dbPath     :: FilePath
+  }
+
+options :: Parser Options
+options = Options
+      <$> strOption
+          ( long "socket"
+         <> metavar "SOCKET"
+         <> help "Path to node socket." )
+      <*> strOption
+          ( long "database"
+         <> metavar "DATABASE"
+         <> help "Path to database." )
 
 -- We only care about the mainnet
 slotConfig :: SlotConfig
@@ -100,11 +129,17 @@ rollbackToPoint point ixref = do
 
 main :: IO ()
 main = do
-  tix <- Ix.open "datum.sqlite" 2160 >>= newIORef
-  _ <- runChainSync "/tmp/node.sock"
+  options' <- execParser opts
+  tix <- Ix.open (dbPath options') 2160 >>= newIORef
+  _ <- runChainSync (socketPath options')
                     nullTracer
                     slotConfig
                     networkId
                     [closeToGoguen]
                     (processBlock tix)
   forever $ threadDelay 1000000000
+  where
+    opts = info (options <**> helper)
+             ( fullDesc
+            <> progDesc "Synchronise datums with mainnet"
+            <> header "indexer - an indexing proof of concept" )
