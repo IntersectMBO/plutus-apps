@@ -16,6 +16,7 @@ packages: doc
           plutus-playground-server
           plutus-script-utils
           plutus-use-cases
+          plutus-streaming
           quickcheck-dynamic
           web-ghc
 
