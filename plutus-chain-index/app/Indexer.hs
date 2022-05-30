@@ -130,7 +130,7 @@ rollbackToPoint point ixref = do
 main :: IO ()
 main = do
   options' <- execParser opts
-  tix <- Ix.open (dbPath options') 2160 >>= newIORef
+  tix <- Ix.open (dbPath options') (Ix.Depth 2160) >>= newIORef
   _ <- runChainSync (socketPath options')
                     nullTracer
                     slotConfig

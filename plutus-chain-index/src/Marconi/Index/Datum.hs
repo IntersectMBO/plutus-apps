@@ -9,6 +9,7 @@ module Marconi.Index.Datum
   , Query
   , Result
   , Notification
+  , Depth(..)
   , open
   ) where
 
@@ -36,6 +37,8 @@ type Notification = ()
 
 type DatumIndex = SqliteIndex Event Notification Query Result
 
+newtype Depth = Depth Int
+
 instance FromField DatumHash where
   fromField f = fromString <$> fromField f
 
@@ -59,15 +62,21 @@ instance ToField SlotNo where
 
 open
   :: FilePath
-  -> Int
+  -> Depth
   -> IO DatumIndex
-open dbPath k = do
+open dbPath (Depth k) = do
   ix <- fromJust <$> Ix.newBoxed query store onInsert k ((k + 1) * 2) dbPath
   let c = ix ^. Ix.handle
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS kv_datumhsh_datum (datumHash TEXT PRIMARY KEY, datum BLOB, slotNo INT)"
   pure ix
 
-query :: DatumIndex -> Query -> [Event] -> IO Result
+-- | This function is used to query the data stored in the indexer as a whole:
+--   data that can still change (through rollbacks), buffered data and stored data.
+query
+  :: DatumIndex -- ^ The indexer
+  -> Query      -- ^ The query is a `DatumHash`
+  -> [Event]    -- ^ The list of events that we want to query on top of whatever is settled.
+  -> IO Result  -- ^ The result is an optional datum.
 query ix hsh es = memoryResult <|> sqliteResult
   where
     -- TODO: Consider buffered events
