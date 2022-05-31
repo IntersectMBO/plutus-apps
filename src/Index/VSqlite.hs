@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Index.VSqlite
   ( -- * API
     SqliteIndex

@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Spec.VSplit where
 
 import           Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar)

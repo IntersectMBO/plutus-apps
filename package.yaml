@@ -31,14 +31,15 @@ default-extensions:
   - NamedFieldPuns
   - MultiParamTypeClasses
   - FlexibleInstances
+  - FlexibleContexts
   - OverloadedStrings
   - GADTs
   - Strict
+  - TemplateHaskell
 
 dependencies:
 - base >= 4.7 && < 5
 - QuickCheck
-- quickspec
 - sqlite-simple
 - data-default
 - containers

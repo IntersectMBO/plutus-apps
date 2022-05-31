@@ -3,7 +3,6 @@ module Spec.Index where
 import           Data.Functor.Identity   (Identity, runIdentity)
 import           Data.List               (foldl', isPrefixOf, scanl')
 import           Data.Maybe              (fromJust, isJust, isNothing, mapMaybe)
-import           QuickSpec
 import           Test.QuickCheck.Monadic
 import           Test.Tasty.QuickCheck
 

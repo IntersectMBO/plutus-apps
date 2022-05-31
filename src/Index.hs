@@ -15,14 +15,15 @@ module Index
   -- * Testing
   , ObservedBuilder (..)
   , GrammarBuilder (..)
-  , ixSignature
+  -- , ixSignature
   ) where
 
 import           Control.Monad   (replicateM)
 import           Data.Foldable   (foldl')
 import           Data.Maybe      (fromJust, maybeToList)
+import           Data.Typeable   (Typeable)
 import           GHC.Generics
-import           QuickSpec
+-- import           QuickSpec
 import           Test.QuickCheck (Arbitrary (..), CoArbitrary (..), Gen,
                                   arbitrarySizedIntegral, chooseInt, frequency,
                                   listOf, shrinkNothing, sized)
@@ -226,32 +227,32 @@ instance Arbitrary a => Arbitrary (IndexView a) where
 
 -- | QuickSpec
 
-newtype IxEvents e = IxEvents [e]
-  deriving (Eq, Ord, Typeable)
+-- newtype IxEvents e = IxEvents [e]
+--   deriving (Eq, Ord, Typeable)
 
-instance Arbitrary e => Arbitrary (IxEvents e) where
-  arbitrary = IxEvents <$> listOf arbitrary
+-- instance Arbitrary e => Arbitrary (IxEvents e) where
+--   arbitrary = IxEvents <$> listOf arbitrary
 
-instance ( Ord a
-         , Arbitrary a
-         , Arbitrary e
-         , CoArbitrary a
-         , CoArbitrary e) => Observe (IxEvents e) (IndexView a) (Index a e n) where
-  observe (IxEvents es) ix = fromJust $ view $ insertL es ix
+-- instance ( Ord a
+--          , Arbitrary a
+--          , Arbitrary e
+--          , CoArbitrary a
+--          , CoArbitrary e) => Observe (IxEvents e) (IndexView a) (Index a e n) where
+--   observe (IxEvents es) ix = fromJust $ view $ insertL es ix
 
-ixSignature :: [Sig]
-ixSignature =
-  [ monoObserve @(Index Int String String)
-  , monoObserve @(Index Int Int String)
-  , monoObserve @(Index Int [Int] String)
-  , monoObserve @(Maybe (Index Int String String))
-  , monoObserve @(Maybe (Index Int Int String))
-  , monoObserve @(Maybe (Index Int [Int] String))
-  , mono @(IndexView Int)
-  , con "new" (new :: (Int -> String -> (Int, Maybe String)) -> Int -> Int -> Index Int String String)
-  , con "insert" (insert :: String -> Index Int String String -> Index Int String String)
-  , con "view" (view :: Index Int String String -> Maybe (IndexView Int))
-  , con "rewind" (rewind :: Int -> Index Int String String -> Index Int String String)
-  , con "getHistory" (getHistory :: Index Int String String -> Maybe [Int])
-  , withMaxTermSize 6
-  ]
+-- ixSignature :: [Sig]
+-- ixSignature =
+--   [ monoObserve @(Index Int String String)
+--   , monoObserve @(Index Int Int String)
+--   , monoObserve @(Index Int [Int] String)
+--   , monoObserve @(Maybe (Index Int String String))
+--   , monoObserve @(Maybe (Index Int Int String))
+--   , monoObserve @(Maybe (Index Int [Int] String))
+--   , mono @(IndexView Int)
+--   , con "new" (new :: (Int -> String -> (Int, Maybe String)) -> Int -> Int -> Index Int String String)
+--   , con "insert" (insert :: String -> Index Int String String -> Index Int String String)
+--   , con "view" (view :: Index Int String String -> Maybe (IndexView Int))
+--   , con "rewind" (rewind :: Int -> Index Int String String -> Index Int String String)
+--   , con "getHistory" (getHistory :: Index Int String String -> Maybe [Int])
+--   , withMaxTermSize 6
+--   ]

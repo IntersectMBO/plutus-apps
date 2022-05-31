@@ -1,5 +1,3 @@
-{-# LANGUAGE Strict #-}
-
 module Index.Sqlite
   ( -- * API
     SqliteIndex
