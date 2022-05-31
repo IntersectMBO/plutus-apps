@@ -46,18 +46,18 @@ contract = do
     logInfo @String $ "now: " ++ show now
     let lookups1 = Constraints.typedValidatorLookups $ typedValidator deadline
         tx1 = Constraints.mustPayToTheScript () (Ada.lovelaceValueOf 25000000)
-    ledgerTx1 <- submitTxConstraintsWith @UnitTest lookups1 tx1
+    ledgerTx1 <- submitTxConstraintsWith lookups1 tx1
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
     utxos <- utxosAt scrAddress
     let orefs = fst <$> Map.toList utxos
-        lookups =
+        lookups2 =
             Constraints.otherScript (validatorScript deadline)
             <> Constraints.unspentOutputs utxos
         tx2 =
             foldMap (\oref -> Constraints.mustSpendScriptOutput oref unitRedeemer) orefs
             <> Constraints.mustIncludeDatum unitDatum
             <> Constraints.mustValidateIn (from $ now + 1000)
-    ledgerTx2 <- submitTxConstraintsWith @Void lookups tx2
+    ledgerTx2 <- submitTxConstraintsWith @Void lookups2 tx2
     awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
 
 trace :: Trace.EmulatorTrace ()

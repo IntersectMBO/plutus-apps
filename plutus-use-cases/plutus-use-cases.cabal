@@ -75,9 +75,9 @@ library
         aeson -any,
         bytestring -any,
         containers -any,
-        mtl -any,
         plutus-core -any,
         plutus-tx -any,
+        plutus-tx-plugin -any,
         plutus-contract -any,
         playground-common -any,
         plutus-ledger -any,
@@ -90,11 +90,10 @@ library
         prettyprinter -any,
         hashable -any,
         freer-simple -any,
+        streaming -any,
         semigroups -any,
-        openapi3 -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+        openapi3 -any,
+        freer-simple -any
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors

@@ -487,7 +487,7 @@ splitOffAdaOnlyValue vl = if Value.isAdaOnlyValue vl || ada < Ledger.minAdaTxOut
         ada = Ada.fromValue vl - Ledger.minAdaTxOut
 
 addOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Tx -> Tx
-addOutput pk sk vl tx = tx & over Tx.outputs (pkos ++) where
+addOutput pk sk vl tx = tx & over Tx.outputs (++ pkos) where
     pkos = (\v -> Tx.pubKeyTxOut v pk sk) <$> splitOffAdaOnlyValue vl
 
 addCollateral

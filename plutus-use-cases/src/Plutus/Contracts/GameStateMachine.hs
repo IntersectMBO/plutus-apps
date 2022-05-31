@@ -63,6 +63,7 @@ import Schema (ToSchema)
 
 import Prelude qualified as Haskell
 
+
 -- | Datatype for creating a parameterized validator.
 data GameParam = GameParam
     { gameParamPayeePkh  :: PaymentPubKeyHash
