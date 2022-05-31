@@ -305,4 +305,4 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/raduom/hysterical-screams
-  tag: f3bbd38a19f99de5c8ddc650c94330b2d09a865b
+  tag: 4c523469e9efd3f0d10d17da3304923b7b0e0674
