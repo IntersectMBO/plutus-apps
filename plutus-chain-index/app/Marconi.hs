@@ -8,13 +8,12 @@
 
 module Main where
 
-import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), BlockNo (BlockNo), CardanoMode,
+import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
                     ChainPoint (ChainPoint),
                     EraInMode (AllegraEraInCardanoMode, AlonzoEraInCardanoMode, ByronEraInCardanoMode, MaryEraInCardanoMode, ShelleyEraInCardanoMode),
                     Hash, IsCardanoEra, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx,
                     chainPointToSlotNo, deserialiseFromRawBytesHex, proxyToAsType)
 import Control.Lens.Operators ((^.))
-import Control.Monad (when)
 import Data.ByteString.Char8 qualified as C8
 import Data.List (findIndex)
 import Data.Map (assocs)
@@ -26,6 +25,7 @@ import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI (withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Ix
+import Marconi.Logging (logging)
 import Options.Applicative (Parser, auto, execParser, flag', help, helper, info, long, metavar, option, str, strOption,
                             (<**>), (<|>))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
@@ -117,12 +117,9 @@ main = do
       initial = Ix.open optionsDatabasePath (Ix.Depth 2160)
 
       step :: DatumIndex -> ChainSyncEvent (BlockInMode CardanoMode) -> IO DatumIndex
-      step index (RollForward blk@(BlockInMode (Block (BlockHeader slotNo _ blockNo@(BlockNo b)) _txs) _era) _ct) = do
-        when (b `rem` 1000 == 0) $
-          putStrLn $ show slotNo <> " / " <> show blockNo
+      step index (RollForward blk _ct) =
         Ix.insert (getDatums blk) index
       step index (RollBackward cp _ct) = do
-        putStrLn ("rollback to " <> show cp)
         events <- Ix.getEvents (index ^. Ix.storage)
         return $
           fromMaybe index $ do
@@ -133,7 +130,8 @@ main = do
       finish :: DatumIndex -> IO ()
       finish _index = pure () -- Nothing to do here, perhaps we should use this to close the database?
   withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint $
-    S.foldM_ step initial finish
+    S.foldM_ step initial finish .
+    logging
 
 -- FIXME Orphan instance. Remove when get access to https://github.com/input-output-hk/cardano-node/pull/3619
 instance IsString (Hash BlockHeader) where
