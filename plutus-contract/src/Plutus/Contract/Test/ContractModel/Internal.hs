@@ -1611,7 +1611,7 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
     walletFundsChange w sval = TracePredicate $
       -- see Note [The Env contract]
       flip postMapM ((,) <$> Folds.instanceOutcome @() (toContract getEnvContract) envContractInstanceTag
-                         <*> L.generalize ((,,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents <*> Folds.walletAdjustedTxEvents w)) $ \(outcome, (finalValue', fees, txOutCosts, walletTxOutCosts)) -> do
+                         <*> L.generalize ((,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents)) $ \(outcome, (finalValue', fees, allWalletsTxOutCosts)) -> do
         dist <- Freer.ask @InitialDistribution
         case outcome of
           Done envInner -> do
@@ -1631,7 +1631,7 @@ checkBalances s envOuter = Map.foldrWithKey (\ w sval p -> walletFundsChange w s
                 initialValue = fold (dist ^. at w)
                 dlt' = toValue lookup sval
                 finalValue = finalValue' P.+ fees
-                dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) w ((w, concat walletTxOutCosts) : txOutCosts)
+                dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) allWalletsTxOutCosts
                 result = initialValue P.+ dlt == finalValue
             unless result $ do
                 tell @(Doc Void) $ vsep $

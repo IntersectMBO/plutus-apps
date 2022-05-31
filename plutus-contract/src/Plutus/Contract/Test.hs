@@ -574,11 +574,11 @@ walletFundsExactChange = walletFundsChangeImpl True
 
 walletFundsChangeImpl :: Bool -> Wallet -> Value -> TracePredicate
 walletFundsChangeImpl exact w dlt' = TracePredicate $
-    flip postMapM (L.generalize $ (,,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents <*> Folds.walletAdjustedTxEvents w) $ \(finalValue', fees, txOutCosts, walletTxOutCosts) -> do
+    flip postMapM (L.generalize $ (,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents) $ \(finalValue', fees, allWalletsTxOutCosts) -> do
         dist <- ask @InitialDistribution
         let initialValue = fold (dist ^. at w)
             finalValue = finalValue' P.+ if exact then mempty else fees
-            dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) w ((w, concat walletTxOutCosts) : txOutCosts)
+            dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) allWalletsTxOutCosts
             result = initialValue P.+ dlt == finalValue
         unless result $ do
             tell @(Doc Void) $ vsep $

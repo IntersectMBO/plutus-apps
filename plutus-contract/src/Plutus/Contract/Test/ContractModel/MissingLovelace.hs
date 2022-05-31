@@ -3,11 +3,9 @@ module Plutus.Contract.Test.ContractModel.MissingLovelace
   ( calculateDelta
   ) where
 
-import Data.Set qualified as Set
 import Ledger.Ada qualified as Ada
 import Ledger.Value (Value, noAdaValue)
 import PlutusTx.Prelude qualified as P
-import Wallet.Emulator (Wallet)
 
 -- | Returns the calculated delta between initial and final values. Might be false positive.
 --
@@ -17,6 +15,12 @@ import Wallet.Emulator (Wallet)
 --
 -- This function tries to check if the difference between final and initial values ('realDelta')
 -- is a result of combination of operations between output's costs and the expected delta.
+--
+-- There is a risk when expected delta has only ada part and expected delta /= realDelta
+-- and realDelta is divisible by some delta from deltas, then we will return realDelta's ada.
+-- Which means that the test will pass but without strong confidence in wallets' funds consistency.
+-- For example, we expected -n, but there is n among deltas and realDelta is n,
+-- it is divisible by n, then the test will pass. So please be careful.
 calculateDelta
   :: Value
   -- ^ Expected delta of the test
@@ -24,24 +28,19 @@ calculateDelta
   -- ^ Initial value of the wallet before the test
   -> Ada.Ada
   -- ^ Final value of the wallet after the test
-  -> Wallet
-  -- ^ Testing wallet
-  -> [(Wallet, [Ada.Ada])]
+  -> [Ada.Ada]
   -- ^ Missing lovelace costs of outputs from 'AdjustingUnbalancedTx' logs
   -> Value
-calculateDelta expectedDelta initialValue finalValue w (Set.toList . Set.fromList -> txOutCosts) =
+calculateDelta expectedDelta initialValue finalValue allWalletsTxOutCosts =
   let
     expectedAda = Ada.fromValue expectedDelta
 
     -- the list of deltas: combinations (+/-) between outputs' costs,
     -- the expected delta and the wallet's output costs.
-    deltas =
-      let wTxOutCosts = concatMap snd $ filter ((== w) . fst) txOutCosts
-          allWalletsTxOutCosts = concatMap snd txOutCosts
-      in map P.abs $ concat
-        [ [ P.abs val P.- P.abs wCost
-          , P.abs val P.+ P.abs wCost ] | val <- [expectedAda, 0] ++ wTxOutCosts
-                                        , wCost <- allWalletsTxOutCosts ]
+    deltas = map P.abs $ concat
+      [ [ P.abs val P.- P.abs wCost
+        , P.abs val P.+ P.abs wCost ] | val <- [expectedAda, 0] ++ allWalletsTxOutCosts
+                                      , wCost <- allWalletsTxOutCosts ]
 
     realDelta = finalValue P.- initialValue
 
