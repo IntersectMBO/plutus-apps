@@ -275,6 +275,6 @@ prop_CrashTolerance = CM.propRunActions_
 
 check_propEscrowWithCoverage :: IO ()
 check_propEscrowWithCoverage = do
-  cr <- CM.quickCheckWithCoverage stdArgs (set coverageIndex covIdx defaultCoverageOptions) $ \covopts ->
+  cr <- CM.quickCheckWithCoverage stdArgs (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
     withMaxSuccess 1000 $ CM.propRunActionsWithOptions @EscrowModel CM.defaultCheckOptionsContractModel covopts (const (pure True))
   writeCoverageReport "Escrow" covIdx cr

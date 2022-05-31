@@ -28,7 +28,8 @@ module Test.QuickCheck.StateModel(
   , runActionsInState
   , lookUpVar
   , lookUpVarMaybe
-) where
+  , invertLookupVarMaybe
+  ) where
 
 import Control.Monad
 
@@ -79,10 +80,18 @@ lookUpVarMaybe ((v' :== a) : env) v =
   case cast (v',a) of
     Just (v'',a') | v==v'' -> Just a'
     _                      -> lookUpVarMaybe env v
+
 lookUpVar :: Typeable a => Env -> Var a -> a
 lookUpVar env v = case lookUpVarMaybe env v of
   Nothing -> error $ "Variable "++show v++" is not bound!"
   Just a  -> a
+
+invertLookupVarMaybe :: (Typeable a, Eq a) => Env -> a -> Maybe (Var a)
+invertLookupVarMaybe [] _ = Nothing
+invertLookupVarMaybe ((v :== a) : env) a' =
+  case cast (v, a) of
+    Just (v', a'') | a' == a'' -> Just v'
+    _                          -> invertLookupVarMaybe env a'
 
 data Any f where
   Some :: (Show a, Typeable a, Eq (f a)) => f a -> Any f
