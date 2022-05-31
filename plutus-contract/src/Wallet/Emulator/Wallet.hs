@@ -53,7 +53,7 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx))
+import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Tx qualified as Tx

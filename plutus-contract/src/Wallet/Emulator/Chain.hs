@@ -212,7 +212,6 @@ validateEm params h cUtxoIndex txn = do
 
 validateL :: Params -> Slot -> Validation.UTxO Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
 validateL params slot idx (CardanoApiEmulatorEraTx tx) = Validation.hasValidationErrors params (fromIntegral slot) idx tx
-validateL _      _    _   _                            = Nothing
 
 -- | Adds a block to ChainState, without validation.
 addBlock :: Block -> ChainState -> ChainState

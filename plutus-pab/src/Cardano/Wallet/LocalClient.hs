@@ -112,8 +112,8 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = do
-            Params { pSlotConfig } <- WAPI.getClientParams
-            case export protocolParams networkId pSlotConfig utx of
+            params <- WAPI.getClientParams
+            case export params { pProtocolParams = protocolParams, pNetworkId = networkId } utx of
                 Left err -> do
                     logWarn $ BalanceTxError $ show $ pretty err
                     throwOtherError $ pretty err

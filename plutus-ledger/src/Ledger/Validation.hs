@@ -20,6 +20,7 @@ module Ledger.Validation(
   getRequiredSigners,
   addSignature,
   hasValidationErrors,
+  makeTransactionBody,
   -- * Modifying the state
   makeBlock,
   setSlot,

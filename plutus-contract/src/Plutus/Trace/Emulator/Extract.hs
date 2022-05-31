@@ -11,7 +11,6 @@ module Plutus.Trace.Emulator.Extract(
 ) where
 
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
 import Control.Foldl qualified as L
 import Control.Monad.Freer (run)
 import Data.Aeson qualified as Aeson
@@ -24,7 +23,6 @@ import Flat (flat)
 import Ledger.Constraints.OffChain (UnbalancedTx (..))
 import Ledger.Index (ScriptValidationEvent (..), ValidatorMode (..), getScript)
 import Ledger.Params (Params (..))
-import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Wallet (export)
 import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)
@@ -69,7 +67,6 @@ writeScriptsTo
     -> IO (Sum Int64, ExBudget) -- Total size and 'ExBudget' of extracted scripts
 writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
     let stream = Trace.runEmulatorStream emulatorCfg trace
-        slotCfg = pSlotConfig $ _params emulatorCfg
         getEvents :: Folds.EmulatorEventFold a -> a
         getEvents theFold = S.fst' $ run $ foldEmulatorStreamM (L.generalize theFold) stream
     createDirectoryIfMissing True scPath
@@ -80,9 +77,10 @@ writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
             bs <- BSL.readFile protocolParamsJSON
             case Aeson.eitherDecode bs of
                 Left err -> putStrLn err
-                Right params ->
-                    traverse_
-                        (uncurry $ writeTransaction params networkId slotCfg scPath prefix)
+                Right pp ->
+                    let params = (_params emulatorCfg) { pProtocolParams = pp, pNetworkId = networkId }
+                    in traverse_
+                        (uncurry $ writeTransaction params scPath prefix)
                         (zip [1::Int ..] $ getEvents Folds.walletTxBalanceEvents)
             pure mempty
         MkTxLogs -> do
@@ -113,17 +111,15 @@ showStats byteSize (ExBudget exCPU exMemory) = "Size: " <> size <> "kB, Cost: " 
         size = printf ("%.1f"::String) (fromIntegral byteSize / 1024.0 :: Double)
 
 writeTransaction
-    :: C.ProtocolParameters
-    -> C.NetworkId
-    -> SlotConfig
+    :: Params
     -> FilePath
     -> String
     -> Int
     -> UnbalancedTx
     -> IO ()
-writeTransaction params networkId slotConfig fp prefix idx tx = do
+writeTransaction params fp prefix idx tx = do
     let filename1 = fp </> prefix <> "-" <> show idx <> ".json"
-    case export params networkId slotConfig tx of
+    case export params tx of
         Left err ->
             putStrLn $ "Export tx failed for " <> filename1 <> ". Reason: " <> show (pretty err)
         Right exportTx -> do
