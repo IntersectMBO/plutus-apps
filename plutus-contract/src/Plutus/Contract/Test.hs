@@ -131,8 +131,8 @@ import Plutus.V1.Ledger.Scripts (Validator)
 import Plutus.V1.Ledger.Scripts qualified as Ledger
 
 import Data.IORef
-import Plutus.Contract.Test.ContractModel.MissingLovelace (calculateDelta)
 import Plutus.Contract.Test.Coverage
+import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
 import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmulatorStream)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),

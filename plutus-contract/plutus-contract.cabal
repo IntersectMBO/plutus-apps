@@ -169,7 +169,7 @@ library
             Plutus.Contract.Test.ContractModel.Internal
             Plutus.Contract.Test.ContractModel.Symbolics
             Plutus.Contract.Test.ContractModel.CrashTolerance
-            Plutus.Contract.Test.ContractModel.MissingLovelace
+            Plutus.Contract.Test.MissingLovelace
         build-depends:
             tasty -any,
             tasty-hunit -any,

@@ -220,7 +220,7 @@ import Test.QuickCheck.StateModel hiding (Action, Actions (..), actionName, arbi
                                    nextState, pattern Actions, perform, precondition, shrinkAction, stateAfter)
 import Test.QuickCheck.StateModel qualified as StateModel
 
-import Plutus.Contract.Test.ContractModel.MissingLovelace (calculateDelta)
+import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Test.QuickCheck hiding (ShrinkState, checkCoverage, getSize, (.&&.), (.||.))
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Monadic (PropertyM, monadic)

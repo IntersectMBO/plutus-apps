@@ -1,5 +1,5 @@
 {-# LANGUAGE ViewPatterns #-}
-module Plutus.Contract.Test.ContractModel.MissingLovelace
+module Plutus.Contract.Test.MissingLovelace
   ( calculateDelta
   ) where
 
