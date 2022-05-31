@@ -37,40 +37,35 @@ library
         Plutus.ChainIndex.Lib
         Plutus.ChainIndex.Logging
         Plutus.ChainIndex.SyncStats
-        Marconi.Index.Datum
     other-modules:
         Control.Concurrent.STM.TBMQueue
     hs-source-dirs: src
     build-depends:
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-chain-index-core -any,
-        plutus-script-utils -any,
-        freer-extras -any
+        plutus-ledger,
+        plutus-ledger-api,
+        plutus-chain-index-core,
+        freer-extras
     build-depends:
-        aeson -any,
-        async -any,
+        aeson,
+        async,
         base >=4.7 && <5,
-        beam-sqlite -any,
-        beam-migrate -any,
-        cardano-api -any,
-        contra-tracer -any,
-        clock -any,
-        data-default -any,
-        freer-simple -any,
-        iohk-monitoring -any,
-        lens -any,
-        optparse-applicative -any,
-        ouroboros-network -any,
+        beam-sqlite,
+        beam-migrate,
+        cardano-api,
+        contra-tracer,
+        clock,
+        data-default,
+        freer-simple,
+        iohk-monitoring,
+        lens,
+        optparse-applicative,
+        ouroboros-network,
         prettyprinter >=1.1.0.1,
-        resource-pool -any,
-        sqlite-simple -any,
-        stm -any,
-        time-units -any,
-        yaml -any,
-        serialise -any,
-        hysterical-screams -any,
-        bytestring -any,
+        resource-pool,
+        sqlite-simple,
+        stm,
+        time-units,
+        yaml,
 
 executable plutus-chain-index
   main-is: Main.hs
@@ -83,11 +78,13 @@ executable plutus-chain-index
         -Wno-missing-import-lists -Wredundant-constraints -O0
   build-depends:
     base >=4.9 && <5,
-    plutus-chain-index -any
+    plutus-chain-index
 
-executable plutus-indexer
-  main-is: Indexer.hs
+executable marconi
+  main-is: Marconi.hs
   hs-source-dirs: app
+  other-modules:
+    Marconi.Index.Datum
   default-language: Haskell2010
   default-extensions: ImportQualifiedPost
   ghc-options:
@@ -96,17 +93,21 @@ executable plutus-indexer
         -Wno-missing-import-lists -Wredundant-constraints -O0
   build-depends:
     base >=4.9 && <5,
-    bytestring -any,
-    cardano-api -any,
-    containers -any,
-    hysterical-screams -any,
-    iohk-monitoring -any,
-    lens -any,
-    optparse-applicative -any,
-    plutus-chain-index -any,
-    plutus-chain-index-core -any,
-    plutus-ledger -any,
-    plutus-script-utils -any,
-    plutus-streaming -any,
-    streaming -any,
-    text -any,
+    bytestring,
+    cardano-api,
+    containers,
+    hysterical-screams,
+    hysterical-screams,
+    iohk-monitoring,
+    lens,
+    optparse-applicative,
+    plutus-chain-index,
+    plutus-chain-index-core,
+    plutus-ledger,
+    plutus-script-utils,
+    plutus-streaming,
+    serialise,
+    sqlite-simple,
+    streaming,
+    text,
+    time,
