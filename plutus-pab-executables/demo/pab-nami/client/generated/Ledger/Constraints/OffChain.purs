@@ -3,12 +3,15 @@ module Ledger.Constraints.OffChain where
 
 import Prelude
 
+import Cardano.Api.Eras (AlonzoEra)
+import Cardano.Api.TxBody (BuildTx, TxBodyContent)
 import Control.Lazy (defer)
 import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
 import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
+import Data.Either (Either)
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
@@ -149,7 +152,7 @@ _MultipleMatchingOutputsFound = prism' MultipleMatchingOutputsFound case _ of
 --------------------------------------------------------------------------------
 
 newtype UnbalancedTx = UnbalancedTx
-  { unBalancedTxTx :: Tx
+  { unBalancedTxTx :: Either (TxBodyContent BuildTx AlonzoEra) Tx
   , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
   , unBalancedTxUtxoIndex :: Map TxOutRef TxOut
   , unBalancedTxValidityTimeRange :: Interval POSIXTime
@@ -163,7 +166,7 @@ instance Show UnbalancedTx where
 instance EncodeJson UnbalancedTx where
   encodeJson = defer \_ -> E.encode $ unwrap >$<
     ( E.record
-        { unBalancedTxTx: E.value :: _ Tx
+        { unBalancedTxTx: (E.either E.value E.value) :: _ (Either (TxBodyContent BuildTx AlonzoEra) Tx)
         , unBalancedTxRequiredSignatories: E.value :: _ (Set PaymentPubKeyHash)
         , unBalancedTxUtxoIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef TxOut)
         , unBalancedTxValidityTimeRange: E.value :: _ (Interval POSIXTime)
@@ -173,7 +176,7 @@ instance EncodeJson UnbalancedTx where
 instance DecodeJson UnbalancedTx where
   decodeJson = defer \_ -> D.decode $
     ( UnbalancedTx <$> D.record "UnbalancedTx"
-        { unBalancedTxTx: D.value :: _ Tx
+        { unBalancedTxTx: (D.either D.value D.value) :: _ (Either (TxBodyContent BuildTx AlonzoEra) Tx)
         , unBalancedTxRequiredSignatories: D.value :: _ (Set PaymentPubKeyHash)
         , unBalancedTxUtxoIndex: (D.dictionary D.value D.value) :: _ (Map TxOutRef TxOut)
         , unBalancedTxValidityTimeRange: D.value :: _ (Interval POSIXTime)
@@ -186,5 +189,5 @@ derive instance Newtype UnbalancedTx _
 
 --------------------------------------------------------------------------------
 
-_UnbalancedTx :: Iso' UnbalancedTx { unBalancedTxTx :: Tx, unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash, unBalancedTxUtxoIndex :: Map TxOutRef TxOut, unBalancedTxValidityTimeRange :: Interval POSIXTime }
+_UnbalancedTx :: Iso' UnbalancedTx { unBalancedTxTx :: Either (TxBodyContent BuildTx AlonzoEra) Tx, unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash, unBalancedTxUtxoIndex :: Map TxOutRef TxOut, unBalancedTxValidityTimeRange :: Interval POSIXTime }
 _UnbalancedTx = _Newtype
