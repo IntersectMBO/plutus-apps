@@ -266,7 +266,7 @@ emptyUnbalancedTx = UnbalancedTx (Right mempty) mempty mempty top
 instance Pretty UnbalancedTx where
     pretty (UnbalancedTx utx rs utxo vr) =
         vsep
-        [ hang 2 $ vsep ["Tx:", pretty utx]
+        [ hang 2 $ vsep ["Tx:", either pretty pretty utx]
         , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         , hang 2 $ vsep ["Validity range:", pretty vr]
