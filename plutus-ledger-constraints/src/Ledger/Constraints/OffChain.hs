@@ -49,6 +49,7 @@ module Ledger.Constraints.OffChain(
     , ConstraintProcessingState(..)
     , unbalancedTx
     , valueSpentOutputs
+    , params
     , processConstraintFun
     , addOwnInput
     , addOwnOutput
@@ -64,6 +65,7 @@ import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
 import Control.Monad.State (MonadState (get, put), execStateT, gets)
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.List (elemIndex)
 import Data.Map (Map)
@@ -317,6 +319,7 @@ data ConstraintProcessingState =
         , cpsValueSpentBalancesOutputs :: ValueSpentBalances
         -- ^ Balance of the values produced and required for the transaction's
         --   outputs
+        , cpsParams                    :: Ledger.Params
         }
 
 missingValueSpent :: ValueSpentBalances -> Value
@@ -336,6 +339,7 @@ makeLensesFor
     , ("cpsMintRedeemers", "mintRedeemers")
     , ("cpsValueSpentBalancesInputs", "valueSpentInputs")
     , ("cpsValueSpentBalancesOutputs", "valueSpentOutputs")
+    , ("cpsParams", "params")
     ] ''ConstraintProcessingState
 
 initialState :: ConstraintProcessingState
@@ -344,6 +348,7 @@ initialState = ConstraintProcessingState
     , cpsMintRedeemers = mempty
     , cpsValueSpentBalancesInputs = ValueSpentBalances mempty mempty
     , cpsValueSpentBalancesOutputs = ValueSpentBalances mempty mempty
+    , cpsParams = def
     }
 
 provided :: Value -> ValueSpentBalances

@@ -45,6 +45,7 @@ library
         base >=4.9 && <5,
         aeson -any,
         containers -any,
+        data-default -any,
         lens -any,
         mtl -any,
         openapi3 -any,

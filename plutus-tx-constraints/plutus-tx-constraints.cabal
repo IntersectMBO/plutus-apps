@@ -51,7 +51,6 @@ library
         plutus-ledger -any,
         plutus-ledger-api -any,
         plutus-ledger-constraints -any,
-        plutus-script-utils -any,
         plutus-tx -any,
         transformers -any,
 
@@ -63,6 +62,7 @@ test-suite plutus-tx-constraints-test
     default-extensions: ImportQualifiedPost
     build-depends:
         base >=4.9 && <5,
+        cardano-api -any,
         bytestring -any,
         containers -any,
         data-default -any,

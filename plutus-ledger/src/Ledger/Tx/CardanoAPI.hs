@@ -1,14 +1,13 @@
-{-# LANGUAGE DeriveAnyClass       #-}
-{-# LANGUAGE DerivingStrategies   #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE OverloadedLists      #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE RankNTypes           #-}
-{-# LANGUAGE RecordWildCards      #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE ViewPatterns         #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedLists    #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -Wno-orphans        #-}
 
@@ -49,6 +48,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxInWitness
   , toCardanoTxOut
   , toCardanoTxOutDatumHash
+  , toCardanoTxOutValue
   , toCardanoAddress
   , toCardanoMintValue
   , toCardanoValue
@@ -56,8 +56,9 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoValidityRange
   , toCardanoScriptInEra
   , toCardanoPaymentKeyHash
-  , toCardanoScriptHash
+  , toCardanoScriptData
   , toCardanoScriptDataHash
+  , toCardanoScriptHash
   , toCardanoTxId
   , ToCardanoError(..)
   , FromCardanoError(..)
