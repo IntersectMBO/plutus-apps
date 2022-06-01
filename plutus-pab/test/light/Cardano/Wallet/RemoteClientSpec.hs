@@ -24,6 +24,7 @@ import Hedgehog qualified
 import Ledger (Params (..), Slot)
 import Ledger.Constraints.OffChain (emptyUnbalancedTx)
 import Ledger.Generators qualified as Gen
+import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract (WalletAPIError)
 import Plutus.PAB.Core.ContractInstance.STM (InstancesState, emptyInstanceState, emptyInstancesState, insertInstance,
                                              instanceState, yieldedExportTxs)

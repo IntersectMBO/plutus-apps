@@ -29,6 +29,7 @@ import Ledger.Constraints.OffChain qualified as OC
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential), StakingCredential (StakingHash))
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
 import Ledger.Generators qualified as Gen
+import Ledger.Params ()
 import Ledger.Tx (Tx (txOutputs), TxOut (TxOut, txOutAddress))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (CurrencySymbol, Value (Value))

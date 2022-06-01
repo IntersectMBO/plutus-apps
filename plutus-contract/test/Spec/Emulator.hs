@@ -33,6 +33,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Generators (Mockchain (Mockchain))
 import Ledger.Generators qualified as Gen
 import Ledger.Index qualified as Index
+import Ledger.Params ()
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)
@@ -139,7 +140,7 @@ txnValidFrom =
         .&&. walletFundsChange wallet2 five
         )
         $ do
-            Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ range five pubKey2
+            Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def range five pubKey2
             void $ Trace.waitUntilSlot 6
 
 selectCoinProp :: Property
@@ -285,24 +286,24 @@ payToPaymentPubKeyScript2 =
 pubKeyTransactions :: EmulatorTrace ()
 pubKeyTransactions = do
     let five = Ada.adaValueOf 5
-    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always five pubKey2
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def W.always five pubKey2
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ W.always five pubKey3
+    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ def W.always five pubKey3
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ W.always five pubKey1
+    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ def W.always five pubKey1
     void Trace.nextSlot
 
 pubKeyTransactions2 :: EmulatorTrace ()
 pubKeyTransactions2 = do
     let payment1 = initialBalance P.- Ada.adaValueOf 10
         payment2 = initialBalance P.+ Ada.adaValueOf 10
-    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always payment1 pubKey2
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def W.always payment1 pubKey2
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ W.always payment2 pubKey3
+    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ def W.always payment2 pubKey3
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ W.always payment2 pubKey1
+    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ def W.always payment2 pubKey1
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always (Ada.adaValueOf 20) pubKey2
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def W.always (Ada.adaValueOf 20) pubKey2
     void Trace.nextSlot
 
 genChainTxn :: Hedgehog.MonadGen m => m (Mockchain, Tx)

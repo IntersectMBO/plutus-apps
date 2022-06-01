@@ -258,7 +258,7 @@ handleBlockchainQueries =
     <> RequestHandler.handleCurrentTimeQueries
     <> RequestHandler.handleTimeToSlotConversions
     <> RequestHandler.handleYieldedUnbalancedTx
-
+    <> RequestHandler.handleAdjustUnbalancedTx
 
 decodeEvent ::
     forall effs.

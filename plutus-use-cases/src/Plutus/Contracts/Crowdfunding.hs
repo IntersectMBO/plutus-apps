@@ -207,7 +207,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
-        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) $ campaignCollectionDeadline cmp
 
@@ -224,7 +224,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
         logInfo @Text "Claiming refund"
         void $ mkTxConstraints (Constraints.typedValidatorLookups inst
                              <> Constraints.unspentOutputs utxo) tx'
-            >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+            >>= adjustUnbalancedTx >>= submitUnbalancedTx
     else pure ()
 
 -- | The campaign owner's branch of the contract for a given 'Campaign'. It
@@ -248,7 +248,7 @@ scheduleCollection cmp = endpoint @"schedule collection" $ \() -> do
     logInfo @Text "Collecting funds"
     void $ mkTxConstraints (Constraints.typedValidatorLookups inst
                          <> Constraints.unspentOutputs unspentOutputs) tx
-        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Call the "schedule collection" endpoint and instruct the campaign owner's
 --   wallet (wallet 1) to start watching the campaign address.

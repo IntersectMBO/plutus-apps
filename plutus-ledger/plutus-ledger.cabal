@@ -52,6 +52,7 @@ library
         Ledger.Fee
         Ledger.Generators
         Ledger.Index
+        Ledger.Index.Internal
         Ledger.Orphans
         Ledger.Params
         Ledger.TimeSlot

@@ -21,7 +21,7 @@ import Data.Semigroup qualified as Semigroup
 import Data.Void (Void)
 import Ledger
 import Ledger.Ada (adaSymbol, adaToken)
-import Ledger.Constraints
+import Ledger.Constraints hiding (adjustUnbalancedTx)
 import Ledger.Value as Value
 import Plutus.Contract as Contract hiding (throwError)
 import Plutus.Contracts.Currency qualified as Currency
@@ -74,7 +74,7 @@ setupTokens = do
         let pkh = mockWalletPaymentPubKeyHash w
         when (pkh /= ownPK) $ do
             mkTxConstraints @Void mempty (mustPayToPubKey pkh v)
-              >>= submitTxConfirmed . adjustUnbalancedTx
+              >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     tell $ Just $ Semigroup.Last cur
 
