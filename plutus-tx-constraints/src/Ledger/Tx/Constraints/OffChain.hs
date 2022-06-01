@@ -194,7 +194,7 @@ processConstraint = \case
 
         -- valueSpentOutputs <>= P.provided vl
 
-        networkId <- use (P.params . networkIdL)
+        networkId <- use (P.paramsL . networkIdL)
         out <- throwLeft ToCardanoError $ C.TxOut
             <$> C.toCardanoAddress networkId (pubKeyHashAddress pk mskh)
             <*> C.toCardanoTxOutValue vl
