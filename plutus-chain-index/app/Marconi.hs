@@ -12,6 +12,7 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
                     EraInMode (AllegraEraInCardanoMode, AlonzoEraInCardanoMode, ByronEraInCardanoMode, MaryEraInCardanoMode, ShelleyEraInCardanoMode),
                     Hash, IsCardanoEra, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx,
                     chainPointToSlotNo, deserialiseFromRawBytesHex, proxyToAsType)
+import Control.Exception (catch)
 import Control.Lens.Operators ((^.))
 import Data.ByteString.Char8 qualified as C8
 import Data.List (findIndex)
@@ -29,7 +30,8 @@ import Options.Applicative (Parser, auto, execParser, flag', help, helper, info,
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
-import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), withChainSyncEventStream)
+import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
+                         withChainSyncEventStream)
 import Streaming.Prelude qualified as S
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
@@ -129,9 +131,15 @@ main = do
 
       finish :: DatumIndex -> IO ()
       finish _index = pure () -- Nothing to do here, perhaps we should use this to close the database?
-  withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint $
-    S.foldM_ step initial finish .
-    logging
+  withChainSyncEventStream
+    optionsSocketPath
+    optionsNetworkId
+    optionsChainPoint
+    (S.foldM_ step initial finish . logging)
+    `catch` \NoIntersectionFound ->
+      putStrLn $
+        "No intersection found when looking for the chain point " <> show optionsChainPoint <> ". "
+          <> "Please check the slot number and the block hash do belong to the chain"
 
 maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
 maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
