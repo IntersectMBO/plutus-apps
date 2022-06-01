@@ -8,7 +8,8 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
 import Control.Monad (when)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.List qualified as List
-import Data.Time (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
+import Data.Time (NominalDiffTime, UTCTime, defaultTimeLocale, diffUTCTime, formatTime, getCurrentTime,
+                  getCurrentTimeZone, utcToZonedTime)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward))
 import Streaming (Of, Stream, effect)
 import Streaming.Prelude qualified as S
@@ -63,6 +64,11 @@ logging s = effect $ do
     printMessage statsRef cp ct = do
       SyncStats {syncStatsAppliedBlocks, syncStatsLastAppliedBlocks, syncStatsLastRollback, syncStatsLastMessage} <- readIORef statsRef
 
+      now <- getCurrentTime
+      timeZone <- getCurrentTimeZone
+
+      let showTime = formatTime defaultTimeLocale "%F %T" . utcToZonedTime timeZone
+
       let syncStatus = case (cp, ct) of
             (_, ChainTipAtGenesis) ->
               NotSynchronising
@@ -99,9 +105,7 @@ logging s = effect $ do
 
       let rollbackMsg = case syncStatsLastRollback of
             Nothing -> ""
-            Just t  -> " Last rollback was on " <> show t <> "."
-
-      now <- getCurrentTime
+            Just t  -> " Last rollback was on " <> showTime t <> "."
 
       let shouldPrint = case syncStatsLastMessage of
             Nothing -> True
@@ -112,7 +116,7 @@ logging s = effect $ do
       when shouldPrint $ do
         modifyIORef' statsRef $ \stats -> stats {syncStatsLastMessage = Just now}
         putStrLn $
-          "[" <> show now <> "]"
+          "[" <> showTime now <> "]"
             <> " Processed "
             <> show syncStatsAppliedBlocks
             <> " blocks."
