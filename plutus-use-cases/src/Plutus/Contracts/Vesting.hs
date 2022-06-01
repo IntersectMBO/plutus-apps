@@ -189,7 +189,7 @@ vestFundsC
 vestFundsC vesting = mapError (review _VestingError) $ do
     let tx = payIntoContract (totalAmount vesting)
     mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) tx
-      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
+      >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
 
@@ -227,5 +227,5 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
                 -- transaction.
     mkTxConstraints (Constraints.typedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) tx
-      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
+      >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness

@@ -81,7 +81,7 @@ lock = endpoint @"lock" $ \(ms, vl) -> do
     let tx = Constraints.mustPayToTheScript () vl
         lookups = Constraints.typedValidatorLookups inst
     mkTxConstraints lookups tx
-        >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 -- | The @"unlock"@ endpoint, unlocking some funds with a list
 --   of signatures.
@@ -94,4 +94,4 @@ unlock = endpoint @"unlock" $ \(ms, pks) -> do
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utx
     mkTxConstraints lookups tx
-        >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= void . submitUnbalancedTx

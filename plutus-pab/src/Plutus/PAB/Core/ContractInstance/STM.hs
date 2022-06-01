@@ -59,7 +59,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
-import Ledger (Address, Slot, TxId, TxOutRef)
+import Ledger (Address, Params (pSlotConfig), Slot, TxId, TxOutRef)
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.ChainIndex (BlockNumber (BlockNumber), ChainIndexTx, TxIdState, TxOutBalance, TxOutStatus, TxStatus,
@@ -153,18 +153,18 @@ data BlockchainEnv =
         , beTxChanges       :: TVar (UtxoIndex TxIdState) -- ^ Map holding metadata which determines the status of transactions.
         , beTxOutChanges    :: TVar (UtxoIndex TxOutBalance) -- ^ Map holding metadata which determines the status of transaction outputs.
         , beCurrentBlock    :: TVar BlockNumber -- ^ Current block.
-        , beSlotConfig      :: TimeSlot.SlotConfig
+        , beParams          :: Params -- ^ The set of parameters, like protocol parameters and slot configuration.
         }
 
 -- | Initialise an empty 'BlockchainEnv' value
-emptyBlockchainEnv :: Maybe Int -> TimeSlot.SlotConfig -> STM BlockchainEnv
-emptyBlockchainEnv rollbackHistory slotConfig =
+emptyBlockchainEnv :: Maybe Int -> Params -> STM BlockchainEnv
+emptyBlockchainEnv rollbackHistory params =
     BlockchainEnv rollbackHistory
         <$> STM.newTVar 0
         <*> STM.newTVar mempty
         <*> STM.newTVar mempty
         <*> STM.newTVar (BlockNumber 0)
-        <*> pure slotConfig
+        <*> pure params
 
 -- | Wait until the current slot is greater than or equal to the
 --   target slot, then return the current slot.
@@ -177,9 +177,10 @@ awaitSlot targetSlot BlockchainEnv{beCurrentSlot} = do
 -- | Wait until the current time is greater than or equal to the
 -- target time, then return the current time.
 awaitTime :: POSIXTime -> BlockchainEnv -> STM POSIXTime
-awaitTime targetTime be@BlockchainEnv{beSlotConfig} = do
-    let targetSlot = TimeSlot.posixTimeToEnclosingSlot beSlotConfig targetTime
-    TimeSlot.slotToEndPOSIXTime beSlotConfig <$> awaitSlot targetSlot be
+awaitTime targetTime be@BlockchainEnv{beParams} = do
+    let slotConfig = pSlotConfig beParams
+    let targetSlot = TimeSlot.posixTimeToEnclosingSlot slotConfig targetTime
+    TimeSlot.slotToEndPOSIXTime slotConfig <$> awaitSlot targetSlot be
 
 -- | Wait for an endpoint response.
 awaitEndpointResponse :: Request ActiveEndpoint -> InstanceState -> STM (EndpointValue Value)

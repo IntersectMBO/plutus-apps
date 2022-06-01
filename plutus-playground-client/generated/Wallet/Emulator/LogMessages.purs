@@ -18,8 +18,10 @@ import Data.Newtype (unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Constraints.OffChain (UnbalancedTx)
-import Ledger.Index (ScriptValidationEvent, ValidationError, ValidationPhase)
+import Ledger.Index (ScriptValidationEvent)
+import Ledger.Index.Internal (ValidationError, ValidationPhase)
 import Ledger.Tx (CardanoTx)
+import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Address (Address)
 import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.TxId (TxId)
@@ -35,6 +37,7 @@ data RequestHandlerLogMsg
   | StartWatchingContractAddresses
   | HandleTxFailed WalletAPIError
   | UtxoAtFailed Address
+  | AdjustingUnbalancedTx (Array Ada)
 
 instance Show RequestHandlerLogMsg where
   show a = genericShow a
@@ -45,6 +48,7 @@ instance EncodeJson RequestHandlerLogMsg where
     StartWatchingContractAddresses -> encodeJson { tag: "StartWatchingContractAddresses", contents: jsonNull }
     HandleTxFailed a -> E.encodeTagged "HandleTxFailed" a E.value
     UtxoAtFailed a -> E.encodeTagged "UtxoAtFailed" a E.value
+    AdjustingUnbalancedTx a -> E.encodeTagged "AdjustingUnbalancedTx" a E.value
 
 instance DecodeJson RequestHandlerLogMsg where
   decodeJson = defer \_ -> D.decode
@@ -54,6 +58,7 @@ instance DecodeJson RequestHandlerLogMsg where
         , "StartWatchingContractAddresses" /\ pure StartWatchingContractAddresses
         , "HandleTxFailed" /\ D.content (HandleTxFailed <$> D.value)
         , "UtxoAtFailed" /\ D.content (UtxoAtFailed <$> D.value)
+        , "AdjustingUnbalancedTx" /\ D.content (AdjustingUnbalancedTx <$> D.value)
         ]
 
 derive instance Generic RequestHandlerLogMsg _
@@ -78,6 +83,11 @@ _HandleTxFailed = prism' HandleTxFailed case _ of
 _UtxoAtFailed :: Prism' RequestHandlerLogMsg Address
 _UtxoAtFailed = prism' UtxoAtFailed case _ of
   (UtxoAtFailed a) -> Just a
+  _ -> Nothing
+
+_AdjustingUnbalancedTx :: Prism' RequestHandlerLogMsg (Array Ada)
+_AdjustingUnbalancedTx = prism' AdjustingUnbalancedTx case _ of
+  (AdjustingUnbalancedTx a) -> Just a
   _ -> Nothing
 
 --------------------------------------------------------------------------------

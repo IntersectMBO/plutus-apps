@@ -19,6 +19,7 @@ import Data.RawJson (RawJson)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Constraints.OffChain (MkTxError)
+import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Plutus.Contract.Checkpoint (CheckpointError)
 import Plutus.Contract.Effects (ChainIndexResponse)
 import Type.Proxy (Proxy(Proxy))
@@ -60,6 +61,7 @@ data ContractError
   | ChainIndexContractError String ChainIndexResponse
   | EmulatorAssertionContractError AssertionError
   | ConstraintResolutionContractError MkTxError
+  | TxToCardanoConvertContractError ToCardanoError
   | ResumableContractError MatchingError
   | CCheckpointContractError CheckpointError
   | EndpointDecodeContractError
@@ -80,6 +82,7 @@ instance EncodeJson ContractError where
     ChainIndexContractError a b -> E.encodeTagged "ChainIndexContractError" (a /\ b) (E.tuple (E.value >/\< E.value))
     EmulatorAssertionContractError a -> E.encodeTagged "EmulatorAssertionContractError" a E.value
     ConstraintResolutionContractError a -> E.encodeTagged "ConstraintResolutionContractError" a E.value
+    TxToCardanoConvertContractError a -> E.encodeTagged "TxToCardanoConvertContractError" a E.value
     ResumableContractError a -> E.encodeTagged "ResumableContractError" a E.value
     CCheckpointContractError a -> E.encodeTagged "CCheckpointContractError" a E.value
     EndpointDecodeContractError { eeEndpointDescription, eeEndpointValue, eeErrorMessage } -> encodeJson
@@ -98,6 +101,7 @@ instance DecodeJson ContractError where
         , "ChainIndexContractError" /\ D.content (D.tuple $ ChainIndexContractError </$\> D.value </*\> D.value)
         , "EmulatorAssertionContractError" /\ D.content (EmulatorAssertionContractError <$> D.value)
         , "ConstraintResolutionContractError" /\ D.content (ConstraintResolutionContractError <$> D.value)
+        , "TxToCardanoConvertContractError" /\ D.content (TxToCardanoConvertContractError <$> D.value)
         , "ResumableContractError" /\ D.content (ResumableContractError <$> D.value)
         , "CCheckpointContractError" /\ D.content (CCheckpointContractError <$> D.value)
         , "EndpointDecodeContractError" /\
@@ -132,6 +136,11 @@ _EmulatorAssertionContractError = prism' EmulatorAssertionContractError case _ o
 _ConstraintResolutionContractError :: Prism' ContractError MkTxError
 _ConstraintResolutionContractError = prism' ConstraintResolutionContractError case _ of
   (ConstraintResolutionContractError a) -> Just a
+  _ -> Nothing
+
+_TxToCardanoConvertContractError :: Prism' ContractError ToCardanoError
+_TxToCardanoConvertContractError = prism' TxToCardanoConvertContractError case _ of
+  (TxToCardanoConvertContractError a) -> Just a
   _ -> Nothing
 
 _ResumableContractError :: Prism' ContractError MatchingError

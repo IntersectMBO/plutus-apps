@@ -21,10 +21,11 @@ module Plutus.PAB.Run.Cli (ConfigCommandArgs(..), runConfigCommand) where
 -----------------------------------------------------------------------------------------------------------------------
 
 import Cardano.Api qualified as C
-import Cardano.Api.NetworkId.Extra (unNetworkIdWrapper)
+import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
 import Cardano.BM.Configuration (Configuration)
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
+import Cardano.Node.Params qualified as Params
 import Cardano.Node.Server qualified as NodeServer
 import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
                            PABServerConfig (pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath), _AlonzoNode)
@@ -46,7 +47,6 @@ import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (logErrorN, runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, isJust)
@@ -75,7 +75,6 @@ import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, prett
 import Prettyprinter.Render.Text (renderStrict)
 import Servant qualified
 import System.Exit (ExitCode (ExitFailure), exitWith)
-import Wallet.API (pSlotConfig)
 import Wallet.Emulator.Wallet qualified as Wallet
 import Wallet.Types qualified as Wallet
 
@@ -110,12 +109,13 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Mi
     App.migrate (toPABMsg ccaTrace) dbConfig
 
 -- Run mock wallet service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet =
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet = do
+    params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
         ws
         (pscSocketPath nodeServerConfig)
-        (def { pSlotConfig = pscSlotConfig nodeServerConfig })
+        params
         (ChainIndex.ciBaseUrl chainIndexConfig)
         ccaAvailability
 
