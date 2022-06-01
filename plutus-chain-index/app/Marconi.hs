@@ -4,7 +4,6 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE TupleSections     #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Main where
 
@@ -19,15 +18,14 @@ import Data.List (findIndex)
 import Data.Map (assocs)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Proxy (Proxy (Proxy))
-import Data.String (IsString (fromString))
 import Index.VSplit qualified as Ix
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI (withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Ix
 import Marconi.Logging (logging)
-import Options.Applicative (Parser, auto, execParser, flag', help, helper, info, long, metavar, option, str, strOption,
-                            (<**>), (<|>))
+import Options.Applicative (Parser, auto, execParser, flag', help, helper, info, long, maybeReader, metavar, option,
+                            readerError, strOption, (<**>), (<|>))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
@@ -86,7 +84,9 @@ chainPointParser =
   pure chainPointCloseToGoguen
     <|> ( ChainPoint
             <$> option (SlotNo <$> auto) (long "slot-no" <> metavar "SLOT-NO")
-            <*> option str (long "block-hash" <> metavar "BLOCK-HASH")
+            <*> option
+              (maybeReader maybeParseHashBlockHeader <|> readerError "Malformed block hash")
+              (long "block-hash" <> metavar "BLOCK-HASH")
         )
   where
     -- We don't generally need to sync blocks earlier than the Goguen era (other than
@@ -95,7 +95,7 @@ chainPointParser =
     chainPointCloseToGoguen =
       ChainPoint
         (SlotNo 39795032)
-        (fromString "3e6f6450f85962d651654ee66091980b2332166f5505fd10b97b0520c9efac90")
+        (fromJust $ maybeParseHashBlockHeader "3e6f6450f85962d651654ee66091980b2332166f5505fd10b97b0520c9efac90")
 
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
 getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) = withIsCardanoEra era $ concatMap (go era) txs
@@ -133,6 +133,5 @@ main = do
     S.foldM_ step initial finish .
     logging
 
--- FIXME Orphan instance. Remove when get access to https://github.com/input-output-hk/cardano-node/pull/3619
-instance IsString (Hash BlockHeader) where
-  fromString = fromJust . deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
+maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
+maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
