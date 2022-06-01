@@ -94,7 +94,7 @@ logging s = effect $ do
 
       let syncMsg = case syncStatus of
             NotSynchronising -> " Not synchronising."
-            Synchronising p  -> printf " Synchornising (%0.2f%%)." p
+            Synchronising p  -> printf " Synchronising (%0.2f%%)." p
             Synchronised     -> " Synchronised."
 
       let rollbackMsg = case syncStatsLastRollback of
