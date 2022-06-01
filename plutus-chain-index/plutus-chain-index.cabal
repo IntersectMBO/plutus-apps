@@ -98,7 +98,6 @@ executable marconi
     cardano-api,
     containers,
     hysterical-screams,
-    hysterical-screams,
     iohk-monitoring,
     lens,
     optparse-applicative,
