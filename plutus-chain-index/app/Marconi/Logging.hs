@@ -7,7 +7,6 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
                     SlotNo (SlotNo))
 import Control.Monad (when)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
-import Data.List qualified as List
 import Data.Time (NominalDiffTime, UTCTime, defaultTimeLocale, diffUTCTime, formatTime, getCurrentTime,
                   getCurrentTimeZone, utcToZonedTime)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward))
@@ -16,14 +15,12 @@ import Streaming.Prelude qualified as S
 import Text.Printf (printf)
 
 data SyncStats = SyncStats
-  { -- | Number of applied blocks
-    syncStatsAppliedBlocks     :: !Int,
-    -- | Timestamp of last few blocks for computing a progress rate
-    syncStatsLastAppliedBlocks :: [UTCTime],
+  { -- | Number of applied blocks since last message
+    syncStatsAppliedBlocks :: !Int,
     -- | Number of rollbacks
-    syncStatsLastRollback      :: !(Maybe UTCTime),
+    syncStatsLastRollback  :: !(Maybe UTCTime),
     -- | Timestamp of last printed message
-    syncStatsLastMessage       :: !(Maybe UTCTime)
+    syncStatsLastMessage   :: !(Maybe UTCTime)
   }
 
 data SyncState = NotSynchronising | Synchronising Double | Synchronised
@@ -33,28 +30,17 @@ logging ::
   Stream (Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r ->
   Stream (Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
 logging s = effect $ do
-  stats <- newIORef (SyncStats 0 [] Nothing Nothing)
+  stats <- newIORef (SyncStats 0 Nothing Nothing)
   return $ S.chain (update stats) s
   where
-    -- This approach keeps a list of the timestamps of the last numBlocks
-    -- to compute an average rate of processed blocks. A list might not be
-    -- the most efficient structure but UTCTime is also not the most
-    -- efficient type.
-    numBlocks :: Int
-    numBlocks = 10
-
     minSecondsBetweenMsg :: NominalDiffTime
     minSecondsBetweenMsg = 10
 
     update :: IORef SyncStats -> ChainSyncEvent (BlockInMode CardanoMode) -> IO ()
     update statsRef (RollForward bim ct) = do
       let cp = case bim of (BlockInMode (Block (BlockHeader slotNo hash _blockNo) _txs) _eim) -> ChainPoint slotNo hash
-      now <- getCurrentTime
       modifyIORef' statsRef $ \stats ->
-        stats
-          { syncStatsAppliedBlocks = syncStatsAppliedBlocks stats + 1,
-            syncStatsLastAppliedBlocks = take numBlocks (now : syncStatsLastAppliedBlocks stats)
-          }
+        stats {syncStatsAppliedBlocks = syncStatsAppliedBlocks stats + 1}
       printMessage statsRef cp ct
     update statsRef (RollBackward cp ct) = do
       now <- getCurrentTime
@@ -62,12 +48,22 @@ logging s = effect $ do
       printMessage statsRef cp ct
 
     printMessage statsRef cp ct = do
-      SyncStats {syncStatsAppliedBlocks, syncStatsLastAppliedBlocks, syncStatsLastRollback, syncStatsLastMessage} <- readIORef statsRef
+      SyncStats {syncStatsAppliedBlocks, syncStatsLastRollback, syncStatsLastMessage} <- readIORef statsRef
 
       now <- getCurrentTime
       timeZone <- getCurrentTimeZone
 
       let showTime = formatTime defaultTimeLocale "%F %T" . utcToZonedTime timeZone
+
+      let timeSinceLastMsg = diffUTCTime now <$> syncStatsLastMessage
+
+      let blocksMsg = case timeSinceLastMsg of
+            Nothing -> ""
+            Just t -> " Processed " <> show syncStatsAppliedBlocks <> " blocks in the last " <> formatTime defaultTimeLocale "%s" t <> " seconds."
+
+      let rollbackMsg = case syncStatsLastRollback of
+            Nothing -> ""
+            Just t  -> " Last rollback was on " <> showTime t <> "."
 
       let syncStatus = case (cp, ct) of
             (_, ChainTipAtGenesis) ->
@@ -83,44 +79,26 @@ logging s = effect $ do
               let pct = (100 :: Double) * fromIntegral chainPointSlot / fromIntegral chainTipSlot
                in Synchronising pct
 
-      let rate = case syncStatsLastAppliedBlocks of
-            _ : _ : _ ->
-              let timespan = diffUTCTime (List.head syncStatsLastAppliedBlocks) (List.last syncStatsLastAppliedBlocks)
-               in Just (fromIntegral numBlocks / realToFrac timespan :: Double)
-            _ ->
-              Nothing
-
-      let currentTipMsg = case syncStatus of
-            NotSynchronising -> ""
-            _                -> " Current point is " <> show cp <> "."
-
-      let rateMsg = case rate of
-            Nothing -> ""
-            Just r  -> " Current rate: " <> printf "%.2g" r <> " blocks/s."
-
       let syncMsg = case syncStatus of
             NotSynchronising -> " Not synchronising."
             Synchronising p  -> printf " Synchronising (%0.2f%%)." p
             Synchronised     -> " Synchronised."
 
-      let rollbackMsg = case syncStatsLastRollback of
-            Nothing -> ""
-            Just t  -> " Last rollback was on " <> showTime t <> "."
+      let currentTipMsg = case syncStatus of
+            NotSynchronising -> ""
+            _                -> " Current point is " <> show cp <> "."
 
-      let shouldPrint = case syncStatsLastMessage of
+      let shouldPrint = case timeSinceLastMsg of
             Nothing -> True
             Just t
-              | diffUTCTime now t > minSecondsBetweenMsg -> True
+              | t > minSecondsBetweenMsg -> True
               | otherwise -> False
 
       when shouldPrint $ do
-        modifyIORef' statsRef $ \stats -> stats {syncStatsLastMessage = Just now}
         putStrLn $
           "[" <> showTime now <> "]"
-            <> " Processed "
-            <> show syncStatsAppliedBlocks
-            <> " blocks."
-            <> rateMsg
+            <> blocksMsg
             <> rollbackMsg
             <> syncMsg
             <> currentTipMsg
+        modifyIORef' statsRef $ \stats -> stats {syncStatsAppliedBlocks = 0, syncStatsLastMessage = Just now}
