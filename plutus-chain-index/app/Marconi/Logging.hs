@@ -4,9 +4,10 @@ module Marconi.Logging (logging) where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
                     ChainPoint (ChainPoint, ChainPointAtGenesis), ChainTip (ChainTip, ChainTipAtGenesis),
-                    SlotNo (SlotNo))
+                    SlotNo (SlotNo), serialiseToRawBytesHexText)
 import Control.Monad (when)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.Text qualified as T
 import Data.Time (NominalDiffTime, UTCTime, defaultTimeLocale, diffUTCTime, formatTime, getCurrentTime,
                   getCurrentTimeZone, utcToZonedTime)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward))
@@ -86,7 +87,7 @@ logging s = effect $ do
 
       let currentTipMsg = case syncStatus of
             NotSynchronising -> ""
-            _                -> " Current point is " <> show cp <> "."
+            _                -> " Current point is " <> prettyChainPoint cp <> "."
 
       let shouldPrint = case timeSinceLastMsg of
             Nothing -> True
@@ -102,3 +103,7 @@ logging s = effect $ do
             <> syncMsg
             <> currentTipMsg
         modifyIORef' statsRef $ \stats -> stats {syncStatsAppliedBlocks = 0, syncStatsLastMessage = Just now}
+
+prettyChainPoint :: ChainPoint -> String
+prettyChainPoint ChainPointAtGenesis = "genesis"
+prettyChainPoint (ChainPoint (SlotNo wo) hash) = "slotNo " <> show wo <> " hash " <> T.unpack (serialiseToRawBytesHexText hash)
