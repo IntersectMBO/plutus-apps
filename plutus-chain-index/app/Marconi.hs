@@ -24,7 +24,7 @@ import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI (withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Ix
-import Marconi.Logging (logging)
+import Marconi.Logging (logging, prettyChainPoint)
 import Options.Applicative (Parser, auto, execParser, flag', help, helper, info, long, maybeReader, metavar, option,
                             readerError, strOption, (<**>), (<|>))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
@@ -138,7 +138,7 @@ main = do
     (S.foldM_ step initial finish . logging)
     `catch` \NoIntersectionFound ->
       putStrLn $
-        "No intersection found when looking for the chain point " <> show optionsChainPoint <> ". "
+        "No intersection found when looking for the chain point " <> prettyChainPoint optionsChainPoint <> ". "
           <> "Please check the slot number and the block hash do belong to the chain"
 
 maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)

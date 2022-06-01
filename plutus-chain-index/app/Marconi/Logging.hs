@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Marconi.Logging (logging) where
+module Marconi.Logging (logging, prettyChainPoint) where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
                     ChainPoint (ChainPoint, ChainPointAtGenesis), ChainTip (ChainTip, ChainTipAtGenesis),
