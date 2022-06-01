@@ -17,7 +17,7 @@ Interface to the transaction types from 'cardano-api'
 
 -}
 module Ledger.Tx.CardanoAPI(
-  CardanoBuildTx
+  CardanoBuildTx(..)
   , SomeCardanoApiTx(..)
   , withIsCardanoEra
   , txOutRefs
@@ -113,7 +113,8 @@ import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
 
-type CardanoBuildTx = C.TxBodyContent C.BuildTx C.AlonzoEra
+newtype CardanoBuildTx = CardanoBuildTx { getCardanoBuildTx :: C.TxBodyContent C.BuildTx C.AlonzoEra }
+  deriving (Eq, Show)
 
 instance ToJSON CardanoBuildTx where
   toJSON = error "TODO: ToJSON CardanoBuildTx"
@@ -125,7 +126,7 @@ instance OpenApi.ToSchema CardanoBuildTx where
   declareNamedSchema = error "TODO: OpenApi.ToSchema CardanoBuildTx"
 
 instance Pretty CardanoBuildTx where
-  pretty = viaShow
+  pretty (CardanoBuildTx txBodyContent) = viaShow txBodyContent
 
 instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where
   declareNamedSchema _ = do
@@ -353,7 +354,7 @@ toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInAlonzoEra <$> traverse toCardanoPaymentKeyHash sigs
-    pure $ C.TxBodyContent
+    pure $ CardanoBuildTx $ C.TxBodyContent
         { txIns = txIns
         , txInsCollateral = txInsCollateral
         , txOuts = txOuts
@@ -385,7 +386,7 @@ makeTransactionBody
     :: Map Alonzo.RdmrPtr Alonzo.ExUnits
     -> CardanoBuildTx
     -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-makeTransactionBody exUnits txBodyContent =
+makeTransactionBody exUnits (CardanoBuildTx txBodyContent) =
   first (TxBodyError . C.displayError) $ makeTransactionBody' exUnits txBodyContent
 
 fromCardanoTxIn :: C.TxIn -> P.TxOutRef

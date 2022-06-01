@@ -51,7 +51,7 @@ module Ledger.Tx.Constraints.OffChain(
     ) where
 
 import Cardano.Api qualified as C
-import Control.Lens (Traversal', _Left, makeLensesFor, use, (<>=))
+import Control.Lens (Lens', Traversal', _Left, coerced, makeLensesFor, use, (<>=))
 import Control.Monad.Except (MonadError (throwError), runExcept)
 import Control.Monad.Reader (MonadReader, ReaderT (runReaderT))
 import Control.Monad.State (MonadState, execStateT)
@@ -77,14 +77,17 @@ import Ledger.Constraints.OffChain (UnbalancedTx (..), cpsUnbalancedTx, unbalanc
 import Ledger.Constraints.OffChain qualified as P
 
 makeLensesFor
-    [ ("txOuts", "txOuts")
+    [ ("txOuts", "txOuts'")
     ] ''C.TxBodyContent
+
+txOuts :: Lens' C.CardanoBuildTx [C.TxOut C.CtxTx C.AlonzoEra]
+txOuts = coerced . txOuts'
 
 tx :: Traversal' UnbalancedTx C.CardanoBuildTx
 tx = P.cardanoTx . _Left
 
 emptyCardanoBuildTx :: Params -> C.CardanoBuildTx
-emptyCardanoBuildTx Params { pProtocolParams }= C.TxBodyContent
+emptyCardanoBuildTx Params { pProtocolParams }= C.CardanoBuildTx $ C.TxBodyContent
     { C.txIns = mempty
     , C.txInsCollateral = C.TxInsCollateral C.CollateralInAlonzoEra mempty
     , C.txOuts = mempty

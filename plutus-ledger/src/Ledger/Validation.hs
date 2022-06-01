@@ -260,7 +260,7 @@ evaluateTransactionFee
   -> Either CardanoLedgerError P.Value
 evaluateTransactionFee params utxo requiredSigners tx = do
   txBodyContent <- first Right $ plutusTxToTxBodyContent params requiredSigners tx
-  let nkeys = C.Api.estimateTransactionKeyWitnessCount txBodyContent
+  let nkeys = C.Api.estimateTransactionKeyWitnessCount (P.getCardanoBuildTx txBodyContent)
   txBody <- makeTransactionBody params utxo txBodyContent
   case C.Api.evaluateTransactionFee (P.pProtocolParams params) txBody nkeys 0 of
     C.Api.Lovelace fee -> pure $ P.lovelaceValueOf fee
