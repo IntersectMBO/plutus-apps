@@ -29,6 +29,9 @@ module Ledger.Validation(
   -- * Conversion from Plutus types
   fromPlutusTx,
   fromPlutusIndex,
+  fromPlutusTxOut,
+  fromPlutusTxOutUnsafe,
+  fromPlutusTxOutRef,
   -- * Lenses
   ledgerEnv,
   memPoolState,
@@ -70,8 +73,8 @@ import Data.Set qualified as Set
 import GHC.Records (HasField (..))
 import Ledger.Address qualified as P
 import Ledger.Crypto qualified as P
-import Ledger.Index (EmulatorEra)
-import Ledger.Index qualified as P
+import Ledger.Index.Internal (EmulatorEra)
+import Ledger.Index.Internal qualified as P
 import Ledger.Params qualified as P
 import Ledger.TimeSlot qualified as P
 import Ledger.Tx qualified as P
@@ -264,11 +267,11 @@ evaluateTransactionFee params utxo requiredSigners tx = do
   case C.Api.evaluateTransactionFee (P.pProtocolParams params) txBody nkeys 0 of
     C.Api.Lovelace fee -> pure $ P.lovelaceValueOf fee
 
-evaluateMinLovelaceOutput :: P.Params -> TxOut EmulatorEra -> P.Value
+evaluateMinLovelaceOutput :: P.Params -> TxOut EmulatorEra -> P.Ada
 evaluateMinLovelaceOutput params = toPlutusValue . C.Ledger.evaluateMinLovelaceOutput (emulatorPParams params)
-
-toPlutusValue :: Coin -> P.Value
-toPlutusValue (Coin c) = P.lovelaceValueOf c
+  where
+    toPlutusValue :: Coin -> P.Ada
+    toPlutusValue (Coin c) = P.lovelaceOf c
 
 fromPlutusTx
   :: P.Params
@@ -306,7 +309,7 @@ addSignature privKey (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isV
 
 fromPlutusIndex :: P.Params -> P.UtxoIndex -> Either CardanoLedgerError (UTxO EmulatorEra)
 fromPlutusIndex params (P.UtxoIndex m) = first Right $
-  UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef (fromPlutusTxOut params)) (Map.toList m)
+  UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef (fromPlutusTxOutUnsafe params)) (Map.toList m)
 
 fromPlutusTxOutRef :: P.TxOutRef -> Either P.ToCardanoError (TxIn StandardCrypto)
 fromPlutusTxOutRef (P.TxOutRef txId i) = TxIn <$> fromPlutusTxId txId <*> pure (fromInteger i)
@@ -316,6 +319,11 @@ fromPlutusTxId = fmap toShelleyTxId . P.toCardanoTxId
 
 fromPlutusTxOut :: P.Params -> P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
 fromPlutusTxOut params = fmap (toShelleyTxOut ShelleyBasedEraAlonzo) . P.toCardanoTxOut (P.pNetworkId params) P.toCardanoTxOutDatumHash
+
+
+-- | Like 'fromPlutusTxOut', but ignores the check for zeros in txOuts.
+fromPlutusTxOutUnsafe :: P.Params -> P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
+fromPlutusTxOutUnsafe params = fmap (toShelleyTxOut ShelleyBasedEraAlonzo) . P.toCardanoTxOutUnsafe (P.pNetworkId params) P.toCardanoTxOutDatumHash
 
 fromPaymentPrivateKey :: P.PrivateKey -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.AlonzoEra
 fromPaymentPrivateKey xprv txBody

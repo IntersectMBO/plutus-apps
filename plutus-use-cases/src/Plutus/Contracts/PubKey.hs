@@ -74,7 +74,7 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
         tx = Constraints.mustPayToTheScript () vl
 
     ledgerTx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
-        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     _ <- awaitTxConfirmed (getCardanoTxId ledgerTx)
     let refs = Map.keys

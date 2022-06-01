@@ -3915,7 +3915,7 @@
                   )
                   (termbind
                     (strict)
-                    (vardecl minAdaTxOut (con integer))
+                    (vardecl minTxOut (con integer))
                     (con integer 2000000)
                   )
                   (termbind
@@ -7892,7 +7892,7 @@
                                                                                                                                               emptyByteString
                                                                                                                                             ]
                                                                                                                                           ]
-                                                                                                                                          minAdaTxOut
+                                                                                                                                          minTxOut
                                                                                                                                         ]
                                                                                                                                       ]
                                                                                                                                     ]
@@ -14768,7 +14768,7 @@
                                                                                                                                                                                         emptyByteString
                                                                                                                                                                                       ]
                                                                                                                                                                                     ]
-                                                                                                                                                                                    minAdaTxOut
+                                                                                                                                                                                    minTxOut
                                                                                                                                                                                   ]
                                                                                                                                                                                 ]
                                                                                                                                                                               ]

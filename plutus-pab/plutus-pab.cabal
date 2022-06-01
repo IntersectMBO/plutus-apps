@@ -62,6 +62,7 @@ library
         Cardano.Node.API
         Cardano.Node.Client
         Cardano.Node.Mock
+        Cardano.Node.Params
         Cardano.Node.Server
         Cardano.Node.Types
         Cardano.Protocol.Socket.Mock.Client
@@ -145,6 +146,7 @@ library
         cardano-wallet-core -any,
         cardano-wallet-core-integration -any,
         cardano-wallet-launcher -any,
+        cardano-ledger-core -any,
         containers -any,
         contra-tracer -any,
         cryptonite -any,

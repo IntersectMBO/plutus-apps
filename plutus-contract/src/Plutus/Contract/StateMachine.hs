@@ -81,9 +81,9 @@ import Ledger.Typed.Tx qualified as Typed
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (ChainIndexTx (_citxInputs))
 import Plutus.Contract (AsContractError (_ConstraintResolutionContractError, _ContractError), Contract, ContractError,
-                        Promise, awaitPromise, isSlot, isTime, logWarn, mapError, never, ownPaymentPubKeyHash,
-                        promiseBind, select, submitTxConfirmed, utxoIsProduced, utxoIsSpent, utxosAt,
-                        utxosTxOutTxFromTx)
+                        Promise, adjustUnbalancedTx, awaitPromise, isSlot, isTime, logWarn, mapError, never,
+                        ownPaymentPubKeyHash, promiseBind, select, submitTxConfirmed, utxoIsProduced, utxoIsSpent,
+                        utxosAt, utxosTxOutTxFromTx)
 import Plutus.Contract.Request (mkTxContract)
 import Plutus.Contract.StateMachine.MintingPolarity (MintingPolarity (Burn, Mint))
 import Plutus.Contract.StateMachine.OnChain (State (State, stateData, stateValue),
@@ -438,7 +438,7 @@ runInitialiseWith customLookups customConstraints StateMachineClient{scInstance}
             <> Constraints.unspentOutputs utxo
             <> customLookups
     utx <- mapError (review _ConstraintResolutionContractError) (mkTxContract lookups constraints)
-    let adjustedUtx = Constraints.adjustUnbalancedTx utx
+    adjustedUtx <- adjustUnbalancedTx utx
     unless (utx == adjustedUtx) $
       logWarn @Text $ "Plutus.Contract.StateMachine.runInitialise: "
                     <> "Found a transaction output value with less than the minimum amount of Ada. Adjusting ..."
@@ -488,7 +488,7 @@ runGuardedStepWith userLookups userConstraints smc input guard = mapError (revie
         utx <- either (throwing _ConstraintResolutionContractError)
                       pure
                       (Constraints.mkTx (lookups <> userLookups) (smtConstraints <> userConstraints))
-        let adjustedUtx = Constraints.adjustUnbalancedTx utx
+        adjustedUtx <- adjustUnbalancedTx utx
         unless (utx == adjustedUtx) $
           logWarn @Text $ "Plutus.Contract.StateMachine.runStep: "
                        <> "Found a transaction output value with less than the minimum amount of Ada. Adjusting ..."

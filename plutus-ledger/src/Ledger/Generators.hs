@@ -83,6 +83,7 @@ import Ledger qualified
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Fee (FeeConfig (fcScriptsFeeFactor), calcFees)
 import Ledger.Index qualified as Index
+import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
 import Ledger.Value qualified as Value
@@ -129,7 +130,7 @@ constantFee = def { fcScriptsFeeFactor = 0 }
 data Mockchain = Mockchain {
     mockchainInitialTxPool :: [Tx],
     mockchainUtxo          :: Map TxOutRef TxOut,
-    mockchainSlotConfig    :: SlotConfig
+    mockchainParams        :: Params
     } deriving Show
 
 -- | The empty mockchain.
@@ -149,7 +150,7 @@ genMockchain' gm = do
     pure Mockchain {
         mockchainInitialTxPool = [txn],
         mockchainUtxo = Map.fromList $ first (TxOutRef tid) <$> zip [0..] ot,
-        mockchainSlotConfig = slotCfg
+        mockchainParams = def { pSlotConfig = slotCfg }
         }
 
 -- | Generate a mockchain using the default 'GeneratorModel'.
@@ -379,10 +380,10 @@ assertValid tx mc = Hedgehog.assert $ isNothing $ validateMockchain mc tx
 
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> Tx -> Maybe Index.ValidationError
-validateMockchain (Mockchain txPool _ slotCfg) tx = result where
+validateMockchain (Mockchain txPool _ params) tx = result where
     h      = 1
     idx    = Index.initialise [map Valid txPool]
-    result = fmap snd $ fst $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx slotCfg)
+    result = fmap snd $ fst $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx params)
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
      parts equals the original value. Each part should contain the required
@@ -410,8 +411,8 @@ genTxInfo :: MonadGen m => Mockchain -> m TxInfo
 genTxInfo chain = do
     tx <- genValidTransaction chain
     let idx = UtxoIndex $ mockchainUtxo chain
-    let slotCfg = mockchainSlotConfig chain
-    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx slotCfg)
+    let params = mockchainParams chain
+    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx params)
     either (const Gen.discard) pure res
 
 genScriptPurposeSpending :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose

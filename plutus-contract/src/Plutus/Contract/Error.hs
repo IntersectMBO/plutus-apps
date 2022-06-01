@@ -27,6 +27,7 @@ import Prettyprinter (Pretty (pretty), viaShow, (<+>))
 
 import Data.Aeson qualified as JSON
 import Ledger.Constraints.OffChain (MkTxError)
+import Plutus.Contract.CardanoAPI (ToCardanoError)
 import Plutus.Contract.Checkpoint (AsCheckpointError (_CheckpointError), CheckpointError)
 import Plutus.Contract.Effects (ChainIndexResponse)
 import Wallet.Error (WalletAPIError)
@@ -61,6 +62,7 @@ data ContractError =
   | ChainIndexContractError T.Text ChainIndexResponse
   | EmulatorAssertionContractError AssertionError -- TODO: Why do we need this constructor
   | ConstraintResolutionContractError MkTxError
+  | TxToCardanoConvertContractError ToCardanoError
   | ResumableContractError MatchingError
   | CCheckpointContractError CheckpointError
   | EndpointDecodeContractError
@@ -86,6 +88,7 @@ instance Pretty ContractError where
         <+> pretty actualResp
     EmulatorAssertionContractError a    -> "Emulator assertion error:" <+> pretty a
     ConstraintResolutionContractError e -> "Constraint resolution error:" <+> pretty e
+    TxToCardanoConvertContractError e   -> "To Cardano transaction conversation error:" <+> pretty e
     ResumableContractError e            -> "Resumable error:" <+> pretty e
     CCheckpointContractError e          -> "Checkpoint error:" <+> pretty e
     EndpointDecodeContractError (EndpointDescription ed) (EndpointValue ev) err
