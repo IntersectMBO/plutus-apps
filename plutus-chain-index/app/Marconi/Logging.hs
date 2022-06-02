@@ -7,13 +7,16 @@ module Marconi.Logging (logging) where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
                     ChainPoint (ChainPoint), ChainTip (ChainTip), SlotNo (SlotNo, unSlotNo))
+import Cardano.BM.Trace (Trace, logInfo)
 import Control.Monad (when)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.Text (Text)
 import Data.Time (NominalDiffTime, UTCTime, defaultTimeLocale, diffUTCTime, formatTime, getCurrentTime,
                   getCurrentTimeZone, utcToZonedTime)
 import Marconi.Orphans ()
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward))
-import Prettyprinter (Pretty (pretty), (<+>))
+import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
 import Streaming (Of, Stream, effect)
 import Streaming.Prelude qualified as S
 import Text.Printf (printf)
@@ -31,9 +34,10 @@ data SyncState = NotSynchronising | Synchronising SlotNo SlotNo Double | Synchro
   deriving (Show)
 
 logging ::
+  Trace IO Text ->
   Stream (Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r ->
   Stream (Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
-logging s = effect $ do
+logging tracer s = effect $ do
   stats <- newIORef (SyncStats 0 Nothing Nothing)
   return $ S.chain (update stats) s
   where
@@ -93,9 +97,5 @@ logging s = effect $ do
               | otherwise -> False
 
       when shouldPrint $ do
-        print $
-          "[" <> pretty (showTime now) <> "]"
-            <+> blocksMsg
-            <+> rollbackMsg
-            <+> syncMsg
+        logInfo tracer $ renderStrict $ layoutPretty defaultLayoutOptions $ blocksMsg <+> rollbackMsg <+> syncMsg
         modifyIORef' statsRef $ \stats -> stats {syncStatsAppliedBlocks = 0, syncStatsLastMessage = Just now}

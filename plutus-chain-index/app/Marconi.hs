@@ -13,6 +13,8 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
                     EraInMode (AllegraEraInCardanoMode, AlonzoEraInCardanoMode, ByronEraInCardanoMode, MaryEraInCardanoMode, ShelleyEraInCardanoMode),
                     Hash, IsCardanoEra, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx,
                     chainPointToSlotNo, deserialiseFromRawBytesHex, proxyToAsType)
+import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Tracing (defaultConfigStdout)
 import Control.Exception (catch)
 import Control.Lens.Operators ((^.))
 import Data.ByteString.Char8 qualified as C8
@@ -133,15 +135,19 @@ main = do
 
       finish :: DatumIndex -> IO ()
       finish _index = pure () -- Nothing to do here, perhaps we should use this to close the database?
-  withChainSyncEventStream
-    optionsSocketPath
-    optionsNetworkId
-    optionsChainPoint
-    (S.foldM_ step initial finish . logging)
-    `catch` \NoIntersectionFound ->
-      print $
-        "No intersection found when looking for the chain point" <+> pretty optionsChainPoint <> "."
-          <+> "Please check the slot number and the block hash do belong to the chain"
+
+  c <- defaultConfigStdout
+
+  withTrace c "marconi" $ \trace ->
+    withChainSyncEventStream
+      optionsSocketPath
+      optionsNetworkId
+      optionsChainPoint
+      (S.foldM_ step initial finish . logging trace)
+      `catch` \NoIntersectionFound ->
+        print $
+          "No intersection found when looking for the chain point" <+> pretty optionsChainPoint <> "."
+            <+> "Please check the slot number and the block hash do belong to the chain"
 
 maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
 maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack
