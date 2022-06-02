@@ -12,8 +12,9 @@ import Cardano.Api qualified as C
 import Cardano.BM.Trace (nullTracer)
 import Cardano.Protocol.Socket.Client (ChainSyncEvent (Resume, RollBackward, RollForward), runChainSync)
 import Control.Concurrent (threadDelay)
-import Control.Lens.Operators ((^.))
+import Control.Lens.Operators ((&), (<&>), (^.))
 import Control.Monad (forever, when)
+import Data.Foldable (toList)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (findIndex)
 import Data.Map (assocs)
@@ -22,12 +23,13 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Text (pack)
 import Data.Text.Encoding (encodeUtf8)
 import Index.VSplit qualified as Ix
+import Ledger (Address, TxIn (..), TxOut (..), TxOutRef (..))
 import Ledger.TimeSlot (SlotConfig (..))
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Ix
 import Options.Applicative (Parser, execParser, fullDesc, header, help, helper, info, long, metavar, progDesc,
                             strOption, (<**>))
-import Plutus.ChainIndex.Tx (ChainIndexTx (..))
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOutputs (..))
 import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 
@@ -85,19 +87,49 @@ parseHash hash =
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
 getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) =
   case era of
-    C.ByronEraInCardanoMode   -> concatMap (go era) txs
-    C.ShelleyEraInCardanoMode -> concatMap (go era) txs
-    C.AllegraEraInCardanoMode -> concatMap (go era) txs
-    C.MaryEraInCardanoMode    -> concatMap (go era) txs
-    C.AlonzoEraInCardanoMode  -> concatMap (go era) txs
-  where
-    go :: C.IsCardanoEra era
-       => C.EraInMode era C.CardanoMode
-       -> C.Tx era
-       -> [(SlotNo, (DatumHash, Datum))]
-    go era' tx =
-      let hashes = either (const []) (assocs . _citxData) $ fromCardanoTx era' tx
+    C.ByronEraInCardanoMode   -> concatMap (getDatum slotNo era) txs
+    C.ShelleyEraInCardanoMode -> concatMap (getDatum slotNo era) txs
+    C.AllegraEraInCardanoMode -> concatMap (getDatum slotNo era) txs
+    C.MaryEraInCardanoMode    -> concatMap (getDatum slotNo era) txs
+    C.AlonzoEraInCardanoMode  -> concatMap (getDatum slotNo era) txs
+
+getDatum
+  :: C.IsCardanoEra era
+  => SlotNo
+  -> C.EraInMode era C.CardanoMode
+  -> C.Tx era
+  -> [(SlotNo, (DatumHash, Datum))]
+getDatum slotNo era tx =
+      let hashes = either (const []) (assocs . _citxData) $ fromCardanoTx era tx
       in  map (slotNo,) hashes
+
+getOutputs
+  :: C.IsCardanoEra era
+  => C.EraInMode era C.CardanoMode
+  -> C.Tx era
+  -> Maybe [(Address, TxOutRef)]
+getOutputs era tx = do
+  tx' <- either (const Nothing) Just $ fromCardanoTx era tx
+  pure $ outputs (_citxOutputs tx')
+    &  zip ([0..] :: [Integer])
+   <&> (\(ix, out) -> (txOutAddress out, TxOutRef { txOutRefId  = _citxTxId tx'
+                                                  , txOutRefIdx = ix
+                                                  }))
+  where
+    outputs :: ChainIndexTxOutputs -> [TxOut]
+    outputs InvalidTx      = []
+    outputs (ValidTx outs) = outs
+
+getInputs
+  :: C.IsCardanoEra era
+  => C.EraInMode era C.CardanoMode
+  -> C.Tx era
+  -> Maybe [TxOutRef]
+getInputs era tx = do
+  tx' <- either (const Nothing) Just $ fromCardanoTx era tx
+  pure $ _citxInputs tx'
+     &  toList
+    <&> txInRef
 
 processBlock :: IORef DatumIndex -> ChainSyncEvent -> IO ()
 processBlock ixref = \case

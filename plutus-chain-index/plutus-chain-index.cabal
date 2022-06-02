@@ -37,6 +37,11 @@ library
         Plutus.ChainIndex.Lib
         Plutus.ChainIndex.Logging
         Plutus.ChainIndex.SyncStats
+<<<<<<< HEAD
+=======
+        Marconi.Index.Datum
+        Marconi.Index.Utxo
+>>>>>>> ce504b9ba (Extract inputs and output from block)
     other-modules:
         Control.Concurrent.STM.TBMQueue
     hs-source-dirs: src
