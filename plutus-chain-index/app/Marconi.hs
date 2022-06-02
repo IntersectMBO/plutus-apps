@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
 
 module Main where
@@ -24,7 +25,7 @@ import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI (withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Ix
-import Marconi.Logging (logging, prettyChainPoint)
+import Marconi.Logging (logging)
 import Options.Applicative (Parser, auto, execParser, flag', help, helper, info, long, maybeReader, metavar, option,
                             readerError, strOption, (<**>), (<|>))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..))
@@ -32,6 +33,7 @@ import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
+import Prettyprinter (pretty, (<+>))
 import Streaming.Prelude qualified as S
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
@@ -137,9 +139,9 @@ main = do
     optionsChainPoint
     (S.foldM_ step initial finish . logging)
     `catch` \NoIntersectionFound ->
-      putStrLn $
-        "No intersection found when looking for the chain point " <> prettyChainPoint optionsChainPoint <> ". "
-          <> "Please check the slot number and the block hash do belong to the chain"
+      print $
+        "No intersection found when looking for the chain point" <+> pretty optionsChainPoint <> "."
+          <+> "Please check the slot number and the block hash do belong to the chain"
 
 maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
 maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack

@@ -1,16 +1,19 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Marconi.Logging (logging, prettyChainPoint) where
+module Marconi.Logging (logging) where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
-                    ChainPoint (ChainPoint, ChainPointAtGenesis), ChainTip (ChainTip, ChainTipAtGenesis),
-                    SlotNo (SlotNo), serialiseToRawBytesHexText)
+                    ChainPoint (ChainPoint), ChainTip (ChainTip), SlotNo (SlotNo, unSlotNo))
 import Control.Monad (when)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
-import Data.Text qualified as T
 import Data.Time (NominalDiffTime, UTCTime, defaultTimeLocale, diffUTCTime, formatTime, getCurrentTime,
                   getCurrentTimeZone, utcToZonedTime)
+import Marconi.Orphans ()
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward))
+import Prettyprinter (Pretty (pretty), (<+>))
 import Streaming (Of, Stream, effect)
 import Streaming.Prelude qualified as S
 import Text.Printf (printf)
@@ -24,7 +27,7 @@ data SyncStats = SyncStats
     syncStatsLastMessage   :: !(Maybe UTCTime)
   }
 
-data SyncState = NotSynchronising | Synchronising Double | Synchronised
+data SyncState = NotSynchronising | Synchronising SlotNo SlotNo Double | Synchronised
   deriving (Show)
 
 logging ::
@@ -59,35 +62,29 @@ logging s = effect $ do
       let timeSinceLastMsg = diffUTCTime now <$> syncStatsLastMessage
 
       let blocksMsg = case timeSinceLastMsg of
-            Nothing -> ""
-            Just t -> " Processed " <> show syncStatsAppliedBlocks <> " blocks in the last " <> formatTime defaultTimeLocale "%s" t <> " seconds."
+            Nothing -> mempty
+            Just t -> "Processed" <+> pretty syncStatsAppliedBlocks <+> "blocks in the last" <+> pretty (formatTime defaultTimeLocale "%s" t) <+> "seconds."
 
       let rollbackMsg = case syncStatsLastRollback of
-            Nothing -> ""
-            Just t  -> " Last rollback was on " <> showTime t <> "."
+            Nothing -> mempty
+            Just t  -> "Last rollback was on" <+> pretty (showTime t) <> "."
 
       let syncStatus = case (cp, ct) of
-            (_, ChainTipAtGenesis) ->
-              NotSynchronising
-            (ChainPointAtGenesis, _) ->
-              Synchronising 0
             (ChainPoint (SlotNo chainPointSlot) _, ChainTip (SlotNo chainTipSlot) _header _blockNo)
               -- TODO: MAGIC number here. Is there a better number?
               -- 100 represents the number of slots before the
               -- node where we consider the chain-index to be synced.
               | chainTipSlot - chainPointSlot < 100 -> Synchronised
-            (ChainPoint (SlotNo chainPointSlot) _, ChainTip (SlotNo chainTipSlot) _header _blockNo) ->
-              let pct = (100 :: Double) * fromIntegral chainPointSlot / fromIntegral chainTipSlot
-               in Synchronising pct
+            (ChainPoint chainPointSlotNo _, ChainTip chainTipSlotNo _header _blockNo) ->
+              let pct = (100 :: Double) * fromIntegral (unSlotNo chainPointSlotNo) / fromIntegral (unSlotNo chainTipSlotNo)
+               in Synchronising chainPointSlotNo chainTipSlotNo pct
+            _ ->
+              NotSynchronising
 
       let syncMsg = case syncStatus of
-            NotSynchronising -> " Not synchronising."
-            Synchronising p  -> printf " Synchronising (%0.2f%%)." p
-            Synchronised     -> " Synchronised."
-
-      let currentTipMsg = case syncStatus of
-            NotSynchronising -> ""
-            _                -> " Current point is " <> prettyChainPoint cp <> "."
+            NotSynchronising -> "Starting."
+            Synchronising chainPointSlot chainTipSlot p -> pretty (printf "Synchronising. Current slot %d out of %d (%0.2f%%)" (unSlotNo chainPointSlot) (unSlotNo chainTipSlot) p :: String)
+            Synchronised -> "Synchronised. Chain tip is" <+> pretty ct
 
       let shouldPrint = case timeSinceLastMsg of
             Nothing -> True
@@ -96,14 +93,9 @@ logging s = effect $ do
               | otherwise -> False
 
       when shouldPrint $ do
-        putStrLn $
-          "[" <> showTime now <> "]"
-            <> blocksMsg
-            <> rollbackMsg
-            <> syncMsg
-            <> currentTipMsg
+        print $
+          "[" <> pretty (showTime now) <> "]"
+            <+> blocksMsg
+            <+> rollbackMsg
+            <+> syncMsg
         modifyIORef' statsRef $ \stats -> stats {syncStatsAppliedBlocks = 0, syncStatsLastMessage = Just now}
-
-prettyChainPoint :: ChainPoint -> String
-prettyChainPoint ChainPointAtGenesis = "genesis"
-prettyChainPoint (ChainPoint (SlotNo wo) hash) = "slotNo " <> show wo <> " hash " <> T.unpack (serialiseToRawBytesHexText hash)
