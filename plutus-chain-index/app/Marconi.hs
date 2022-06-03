@@ -14,6 +14,7 @@ import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (Block
                     Hash, IsCardanoEra, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx,
                     chainPointToSlotNo, deserialiseFromRawBytesHex, proxyToAsType)
 import Cardano.BM.Setup (withTrace)
+import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
 import Control.Exception (catch)
 import Control.Lens.Operators ((^.))
@@ -35,7 +36,8 @@ import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
-import Prettyprinter (pretty, (<+>))
+import Prettyprinter (defaultLayoutOptions, layoutPretty, pretty, (<+>))
+import Prettyprinter.Render.Text (renderStrict)
 import Streaming.Prelude qualified as S
 
 -- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
@@ -135,7 +137,6 @@ main = do
 
       finish :: DatumIndex -> IO ()
       finish _index = pure () -- Nothing to do here, perhaps we should use this to close the database?
-
   c <- defaultConfigStdout
 
   withTrace c "marconi" $ \trace ->
@@ -145,9 +146,11 @@ main = do
       optionsChainPoint
       (S.foldM_ step initial finish . logging trace)
       `catch` \NoIntersectionFound ->
-        print $
-          "No intersection found when looking for the chain point" <+> pretty optionsChainPoint <> "."
-            <+> "Please check the slot number and the block hash do belong to the chain"
+        logError trace $
+          renderStrict $
+            layoutPretty defaultLayoutOptions $
+              "No intersection found when looking for the chain point" <+> pretty optionsChainPoint <> "."
+                <+> "Please check the slot number and the block hash do belong to the chain"
 
 maybeParseHashBlockHeader :: String -> Maybe (Hash BlockHeader)
 maybeParseHashBlockHeader = deserialiseFromRawBytesHex (proxyToAsType Proxy) . C8.pack

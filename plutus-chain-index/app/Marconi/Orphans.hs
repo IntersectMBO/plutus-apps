@@ -10,11 +10,11 @@ import Prettyprinter (Pretty (pretty), (<+>))
 
 instance Pretty ChainTip where
   pretty ChainTipAtGenesis   = "ChainTipAtGenesis"
-  pretty (ChainTip sn ha bn) = "ChainTip(pretty sn <+> "," <+> pretty ha <+> "," <+> pretty bn <> ")"
+  pretty (ChainTip sn ha bn) = "ChainTip(" <> pretty sn <> "," <+> pretty ha <> "," <+> pretty bn <> ")"
 
 instance Pretty ChainPoint where
   pretty ChainPointAtGenesis = "ChainPointAtGenesis"
-  pretty (ChainPoint sn ha)  = "ChainPoint(pretty sn <+> "," <+> pretty ha <> ")"
+  pretty (ChainPoint sn ha)  = "ChainPoint(" <> pretty sn <> "," <+> pretty ha <> ")"
 
 instance Pretty (Hash BlockHeader) where
   pretty hash = "BlockHash" <+> pretty (serialiseToRawBytesHexText hash)
