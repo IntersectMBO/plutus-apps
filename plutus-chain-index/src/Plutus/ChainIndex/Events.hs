@@ -34,7 +34,7 @@ period = 2_000_000 -- 2s
 -- This approach helps to process blocks with a constant memory usage.
 --
 -- However, once we are in sync with the node, we want to process every block
--- instead of batches of blocks so that we can update the database as quickly
+-- instead of batches of blocks so that we can update the database as frequently
 -- as possible.
 --
 -- Just accumulating 'queueSize' blocks doesn't work as a block can have any number of transactions.
@@ -45,7 +45,7 @@ measureEventQueueSizeByTxs maxQueueSize (RollForward (CI.Block syncTip transacti
     let syncState = getSyncState (tipAsPoint syncTip) (tipAsPoint nodeTip)
         txLen = fromIntegral $ length transactions
      in if isSyncStateSynced syncState
-           then max (maxQueueSize + 1) txLen
+           then maxQueueSize + 1
            else txLen
 measureEventQueueSizeByTxs maxQueueSize _ = maxQueueSize + 1 -- to handle resume and rollback asap
 

@@ -58,8 +58,17 @@ startNodeClient ::
   -> InstancesState -- ^ In-memory state of running contract instances
   -> IO BlockchainEnv
 startNodeClient config instancesState = do
-    let Config { nodeServerConfig = PABServerConfig{pscSocketPath = socket, pscSlotConfig = slotConfig, pscNodeMode, pscNetworkId = NetworkIdWrapper networkId}
-               , developmentOptions = DevelopmentOptions{pabRollbackHistory, pabResumeFrom = resumePoint} } = config
+    let Config { nodeServerConfig =
+                   PABServerConfig { pscSocketPath = socket
+                                   , pscSlotConfig = slotConfig
+                                   , pscNodeMode
+                                   , pscNetworkId = NetworkIdWrapper networkId
+                                   }
+               , developmentOptions =
+                   DevelopmentOptions { pabRollbackHistory
+                                      , pabResumeFrom = resumePoint
+                                      }
+               } = config
     params <- Params.fromPABServerConfig $ nodeServerConfig config
     env <- STM.atomically $ emptyBlockchainEnv pabRollbackHistory params
     case pscNodeMode of
@@ -70,9 +79,15 @@ startNodeClient config instancesState = do
       AlonzoNode -> do
         let resumePoints = maybeToList $ toCardanoPoint resumePoint
         void $ Client.runChainSync socket nullTracer slotConfig networkId resumePoints
-            (\block -> do slot <- TimeSlot.currentSlot slotConfig
-                          STM.atomically $ STM.writeTVar (beCurrentSlot env) slot
-                          handleSyncAction $ processChainSyncEvent instancesState env block
+            (\block -> do
+                -- We store the actual current slot in `BlockchainEnv`. Thus,
+                -- at every new block from the local node, we request for the
+                -- current slot number and store it. The actual current slot is
+                -- useful/necessary for blocking contract actions like `awaitSlot`.
+                slot <- TimeSlot.currentSlot slotConfig
+                STM.atomically $ STM.writeTVar (beCurrentSlot env) slot
+
+                handleSyncAction $ processChainSyncEvent instancesState env block
             )
     pure env
 
@@ -90,7 +105,10 @@ handleSyncAction action = do
   either (error . show) (const $ pure ()) result
 
 updateInstances :: IndexedBlock -> InstanceClientEnv -> STM ()
-updateInstances IndexedBlock{ibUtxoSpent, ibUtxoProduced} InstanceClientEnv{ceUtxoSpentRequests, ceUtxoProducedRequests} = do
+updateInstances
+    IndexedBlock{ibUtxoSpent, ibUtxoProduced}
+    InstanceClientEnv{ceUtxoSpentRequests, ceUtxoProducedRequests} = do
+
   forM_ (Map.intersectionWith (,) ibUtxoSpent ceUtxoSpentRequests) $ \(onChainTx, requests) ->
     traverse (\OpenTxOutSpentRequest{osrSpendingTx} -> STM.tryPutTMVar osrSpendingTx onChainTx) requests
   forM_ (Map.intersectionWith (,) ibUtxoProduced ceUtxoProducedRequests) $ \(txns, requests) ->
@@ -193,7 +211,15 @@ updateTransactionState
   -> BlockchainEnv
   -> t (TxId, TxOutBalance, TxValidity)
   -> STM (Either SyncActionFailure (Slot, BlockNumber))
-updateTransactionState tip env@BlockchainEnv{beRollbackHistory, beTxChanges, beTxOutChanges, beLastSyncedBlockNo} xs = do
+updateTransactionState
+    tip
+    env@BlockchainEnv{ beRollbackHistory
+                     , beTxChanges
+                     , beTxOutChanges
+                     , beLastSyncedBlockNo
+                     }
+    xs = do
+
     txIdStateIndex <- STM.readTVar beTxChanges
     let txIdState = _usTxUtxoData $ utxoState txIdStateIndex
     txUtxoBalanceIndex <- STM.readTVar beTxOutChanges
@@ -205,7 +231,9 @@ updateTransactionState tip env@BlockchainEnv{beRollbackHistory, beTxChanges, beT
         txUtxoBalanceInsert = insert (UtxoState txUtxoBalance' tip) txUtxoBalanceIndex
 
     case (txIdStateInsert, txUtxoBalanceInsert) of
-      (Right InsertUtxoSuccess{newIndex=newTxIdState}, Right InsertUtxoSuccess{newIndex=newTxOutBalance}) -> do -- TODO: Get tx out status another way
+      (Right InsertUtxoSuccess{newIndex=newTxIdState}
+        , Right InsertUtxoSuccess{newIndex=newTxOutBalance}) -> do -- TODO: Get tx out status another way
+
         STM.writeTVar beTxChanges    $ trimIx beRollbackHistory newTxIdState
         STM.writeTVar beTxOutChanges $ trimIx beRollbackHistory newTxOutBalance
         STM.writeTVar beLastSyncedBlockNo (succ blockNumber)
@@ -235,7 +263,12 @@ insertNewTx blockNumber TxIdState{txnsConfirmed, txnsDeleted} (txi, _, txValidit
 
 -- | Go through the transactions in a block, updating the 'BlockchainEnv'
 --   when any interesting addresses or transactions have changed.
-processMockBlock :: InstancesState -> BlockchainEnv -> Block -> Slot -> STM (Either SyncActionFailure (Slot, BlockNumber))
+processMockBlock
+    :: InstancesState
+    -> BlockchainEnv
+    -> Block
+    -> Slot
+    -> STM (Either SyncActionFailure (Slot, BlockNumber))
 processMockBlock
   instancesState
   env@BlockchainEnv{beCurrentSlot, beLastSyncedBlockSlot, beLastSyncedBlockNo}
