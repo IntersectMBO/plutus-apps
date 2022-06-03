@@ -176,6 +176,17 @@ processAwaitSlotRequestsSTM =
     maybeToHandler (extract Contract.Effects._AwaitSlotReq)
     >>> (RequestHandler $ \targetSlot_ -> fmap AwaitSlotResp . InstanceState.awaitSlot targetSlot_ <$> ask)
 
+processAwaitTimeRequestsSTM ::
+    forall effs.
+    ( Member (Reader BlockchainEnv) effs
+    )
+    => RequestHandler effs PABReq (STM PABResp)
+processAwaitTimeRequestsSTM =
+    maybeToHandler (extract Contract.Effects._AwaitTimeReq) >>>
+        (RequestHandler $ \time ->
+            fmap AwaitTimeResp . InstanceState.awaitTime time <$> ask
+        )
+
 processTxStatusChangeRequestsSTM ::
     forall effs.
     ( Member (Reader BlockchainEnv) effs
@@ -235,15 +246,6 @@ processEndpointRequestsSTM =
     maybeToHandler (traverse (extract Contract.Effects._ExposeEndpointReq))
     >>> (RequestHandler $ \q@Request{rqID, itID, rqRequest} -> fmap (Response rqID itID) (fmap (ExposeEndpointResp (aeDescription rqRequest)) . InstanceState.awaitEndpointResponse q <$> ask))
 
-processAwaitTimeRequestsSTM ::
-    forall effs.
-    ( Member (Reader BlockchainEnv) effs
-    )
-    => RequestHandler effs PABReq (STM PABResp)
-processAwaitTimeRequestsSTM =
-    maybeToHandler (extract Contract.Effects._AwaitTimeReq)
-    >>> (RequestHandler $ \time -> fmap AwaitTimeResp . InstanceState.awaitTime time <$> ask)
-
 -- | 'RequestHandler' that uses TVars to wait for events
 stmRequestHandler ::
     forall effs.
@@ -274,10 +276,10 @@ stmRequestHandler = fmap sequence (wrapHandler (fmap pure nonBlockingRequests) <
     -- requests that wait for changes to happen
     blockingRequests =
         wrapHandler (processAwaitSlotRequestsSTM @effs)
+        <> wrapHandler (processAwaitTimeRequestsSTM @effs)
         <> wrapHandler (processTxStatusChangeRequestsSTM @effs)
         <> wrapHandler (processTxOutStatusChangeRequestsSTM @effs)
         <> processEndpointRequestsSTM @effs
-        <> wrapHandler (processAwaitTimeRequestsSTM @effs)
         <> processUtxoSpentRequestsSTM @effs
         <> processUtxoProducedRequestsSTM @effs
 

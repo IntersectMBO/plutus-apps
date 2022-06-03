@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
@@ -21,7 +20,8 @@ import Numeric.Natural (Natural)
 import Plutus.ChainIndex qualified as CI
 import Plutus.ChainIndex.Lib (ChainSyncEvent (Resume, RollBackward, RollForward), EventsQueue, RunRequirements,
                               runChainIndexDuringSync)
-import Plutus.ChainIndex.SyncStats (SyncLog, logProgress)
+import Plutus.ChainIndex.SyncStats (SyncLog, getSyncState, isSyncStateSynced, logProgress)
+import Plutus.ChainIndex.Types (tipAsPoint)
 import Plutus.Monitoring.Util (PrettyObject (PrettyObject), convertLog, runLogEffects)
 import System.Clock (Clock (Monotonic), TimeSpec, diffTimeSpec, getTime)
 
@@ -33,13 +33,21 @@ period = 2_000_000 -- 2s
 -- By doing this we accumulate some number of blocks but with less than 'queueSize' number of transactions.
 -- This approach helps to process blocks with a constant memory usage.
 --
+-- However, once we are in sync with the node, we want to process every block
+-- instead of batches of blocks so that we can update the database as quickly
+-- as possible.
+--
 -- Just accumulating 'queueSize' blocks doesn't work as a block can have any number of transactions.
 -- It works fine at the beginning of the chain but later blocks grow in their size and the memory
 -- usage grows tremendously.
-measureEventByTxs :: ChainSyncEvent -> Natural
-measureEventByTxs = \case
-  (RollForward (CI.Block _ transactions) _) -> fromIntegral $ length transactions
-  _                                         -> 1
+measureEventQueueSizeByTxs :: Natural -> ChainSyncEvent -> Natural
+measureEventQueueSizeByTxs maxQueueSize (RollForward (CI.Block syncTip transactions) nodeTip) =
+    let syncState = getSyncState (tipAsPoint syncTip) (tipAsPoint nodeTip)
+        txLen = fromIntegral $ length transactions
+     in if isSyncStateSynced syncState
+           then max (maxQueueSize + 1) txLen
+           else txLen
+measureEventQueueSizeByTxs maxQueueSize _ = maxQueueSize + 1 -- to handle resume and rollback asap
 
 -- | 'processEventsQueue' reads events from 'TBQueue', collects enough 'RollForward's to
 -- append blocks at once.
@@ -56,17 +64,18 @@ processEventsQueue trace runReq eventsQueue = forever $ do
   processEvents start eventsToProcess
   where
     processEvents :: TimeSpec -> [ChainSyncEvent] -> IO ()
-    processEvents start events = case events of
-      (Resume resumePoint) : (RollBackward backwardPoint _) : restEvents -> do
-        void $ runChainIndexDuringSync runReq $ do
-          CI.rollback backwardPoint
-          CI.resumeSync resumePoint
-        processEvents start restEvents
-      rollForwardEvents -> do
-          let
-            blocks = catMaybes $ rollForwardEvents <&> \case
-              (RollForward block _) -> Just block
-              _                     -> Nothing
-          void $ runChainIndexDuringSync runReq $ CI.appendBlocks blocks
-          end <- getTime Monotonic
-          void $ runLogEffects (convertLog PrettyObject trace) $ logProgress events (diffTimeSpec end start)
+    processEvents start events =
+        case events of
+          (Resume resumePoint) : (RollBackward backwardPoint _) : restEvents -> do
+            void $ runChainIndexDuringSync runReq $ do
+              CI.rollback backwardPoint
+              CI.resumeSync resumePoint
+            processEvents start restEvents
+          rollForwardEvents -> do
+              let
+                blocks = catMaybes $ rollForwardEvents <&> \case
+                  (RollForward block _) -> Just block
+                  _                     -> Nothing
+              void $ runChainIndexDuringSync runReq $ CI.appendBlocks blocks
+              end <- getTime Monotonic
+              void $ runLogEffects (convertLog PrettyObject trace) $ logProgress events (diffTimeSpec end start)

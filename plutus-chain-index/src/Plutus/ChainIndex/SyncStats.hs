@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -70,6 +69,18 @@ data SyncState = Synced | Syncing Double | NotSyncing
     deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, ToObject)
 
+isSyncStateSynced :: SyncState -> Bool
+isSyncStateSynced Synced = True
+isSyncStateSynced _      = False
+
+isSyncStateNotSyncing :: SyncState -> Bool
+isSyncStateNotSyncing NotSyncing = True
+isSyncStateNotSyncing _          = False
+
+isSyncStateSyncing :: SyncState -> Bool
+isSyncStateSyncing (Syncing _) = True
+isSyncStateSyncing _           = False
+
 instance Pretty SyncState where
   pretty = \case
     Synced      -> "Still in sync."
@@ -94,7 +105,11 @@ logProgress events period = do
 -- Find a better way to calculate this percentage.
 getSyncStateFromStats :: SyncStats -> SyncState
 getSyncStateFromStats (SyncStats _ _ chainSyncPoint nodePoint) =
-    case (chainSyncPoint, nodePoint) of
+    getSyncState chainSyncPoint nodePoint
+
+getSyncState :: CI.Point -> CI.Point -> SyncState
+getSyncState chainIndexSyncPoint nodePoint =
+    case (chainIndexSyncPoint, nodePoint) of
         (_, PointAtGenesis) -> NotSyncing
         (CI.PointAtGenesis, CI.Point _ _) -> Syncing 0
         (CI.Point (Slot chainSyncSlot) _, CI.Point (Slot nodeSlot) _)
