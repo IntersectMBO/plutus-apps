@@ -41,8 +41,7 @@ import Test.QuickCheck.Monadic
 
 class (forall a. Show (Action state a),
        Monad (ActionMonad state),
-       Show state,
-       Typeable state) =>
+       Show state) =>
         StateModel state where
   data Action state a
   type ActionMonad state :: * -> *
@@ -108,7 +107,7 @@ instance Eq (Any f) where
   _ == _ = False
 
 data Step state where
-  (:=) :: (Show a, Typeable a, Eq (Action state a), Typeable (Action state a), Show (Action state a)) =>
+  (:=) :: (Show a, Typeable a, Eq (Action state a), Show (Action state a)) =>
             Var a -> Action state a -> Step state
 
 infix 5 :=
@@ -120,7 +119,7 @@ newtype Var a = Var Int
 
 instance Eq (Step state) where
   (Var i := act) == (Var j := act') =
-    (i==j) && Some act == Some act'
+    (i == j) && Some act == Some act'
 
 -- Action sequences use Smart shrinking, but this is invisible to
 -- client code because the extra Smart constructor is concealed by a
@@ -151,7 +150,7 @@ instance (forall a. Show (Action state a)) => Show (Actions state) where
                   foldr (.) (showsPrec 0 (last as) . ("]"++))
                     [showsPrec 0 a . (",\n  "++) | a <- init as]
 
-instance (Typeable state, StateModel state) => Arbitrary (Actions state) where
+instance (StateModel state) => Arbitrary (Actions state) where
   arbitrary = do (as,rejected) <- arbActions initialState 1
                  return $ Actions_ rejected (Smart 0 as)
     where
@@ -207,7 +206,7 @@ stateAfter (Actions actions) = loop initialState actions
     loop s ((var := act) : as) = loop (nextState s act var) as
 
 runActions :: StateModel state =>
-                Actions state -> PropertyM (ActionMonad state) (state,Env)
+                Actions state -> PropertyM (ActionMonad state) (state, Env)
 runActions = runActionsInState initialState
 
 runActionsInState :: StateModel state =>
