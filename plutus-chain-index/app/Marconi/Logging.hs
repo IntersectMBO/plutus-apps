@@ -67,7 +67,11 @@ logging tracer s = effect $ do
 
       let blocksMsg = case timeSinceLastMsg of
             Nothing -> mempty
-            Just t -> "Processed" <+> pretty syncStatsAppliedBlocks <+> "blocks in the last" <+> pretty (formatTime defaultTimeLocale "%s" t) <+> "seconds."
+            Just t -> "Processed" 
+                   <+> pretty syncStatsAppliedBlocks 
+                   <+> "blocks in the last"
+                   <+> pretty (formatTime defaultTimeLocale "%s" t) 
+                   <+> "seconds."
 
       let rollbackMsg = case syncStatsLastRollback of
             Nothing -> mempty

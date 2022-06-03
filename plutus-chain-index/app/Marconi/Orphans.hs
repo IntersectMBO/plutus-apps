@@ -9,18 +9,18 @@ import Cardano.Api (BlockHeader, BlockNo (BlockNo), ChainPoint (..), ChainTip (C
 import Prettyprinter (Pretty (pretty), (<+>))
 
 instance Pretty ChainTip where
-  pretty ChainTipAtGenesis   = "genesis"
-  pretty (ChainTip sn ha bn) = "slotNo" <+> pretty sn <+> "hash" <+> pretty ha <+> "blockNo" <+> pretty bn
+  pretty ChainTipAtGenesis   = "ChainTipAtGenesis"
+  pretty (ChainTip sn ha bn) = "ChainTip(pretty sn <+> "," <+> pretty ha <+> "," <+> pretty bn <> ")"
 
 instance Pretty ChainPoint where
-  pretty ChainPointAtGenesis = "genesis"
-  pretty (ChainPoint sn ha)  = "slotNo" <+> pretty sn <+> "hash" <+> pretty ha
+  pretty ChainPointAtGenesis = "ChainPointAtGenesis"
+  pretty (ChainPoint sn ha)  = "ChainPoint(pretty sn <+> "," <+> pretty ha <> ")"
 
 instance Pretty (Hash BlockHeader) where
-  pretty hash = pretty $ serialiseToRawBytesHexText hash
+  pretty hash = "BlockHash" <+> pretty (serialiseToRawBytesHexText hash)
 
 instance Pretty SlotNo where
-  pretty (SlotNo wo) = pretty wo
+  pretty (SlotNo n) = "Slot" <+> pretty n
 
 instance Pretty BlockNo where
-  pretty (BlockNo bn) = pretty bn
+  pretty (BlockNo bn) = "BlockNo" <+> pretty bn
