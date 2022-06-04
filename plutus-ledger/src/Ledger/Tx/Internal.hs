@@ -24,7 +24,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
-import Ledger.Scripts (plutusV1MintingPolicyHash)
+import Ledger.Scripts (datumHash, plutusV1MintingPolicyHash, plutusV1ValidatorHash)
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
 import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert)
@@ -175,6 +175,11 @@ mintScripts = lens g s where
     g = txMintingScripts
     s tx fs = tx { txMintingScripts = fs }
 
+scriptWitnesses :: Lens' Tx (Map ScriptHash Script)
+scriptWitnesses = lens g s where
+    g = txScripts
+    s tx fs = tx { txScripts = fs }
+
 datumWitnesses :: Lens' Tx (Map DatumHash Datum)
 datumWitnesses = lens g s where
     g = txData
@@ -232,6 +237,17 @@ addMintingPolicy vl@(MintingPolicy script) rd tx@Tx{txMintingScripts, txScripts}
      txScripts = Map.insert (ScriptHash b) script txScripts}
     where
         mph@(MintingPolicyHash b) = plutusV1MintingPolicyHash vl
+
+-- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly.
+addScriptTxInput :: TxOutRef -> Validator -> Redeemer -> Datum -> Tx -> Tx
+addScriptTxInput outRef vl@(Validator script) rd dt tx@Tx{txInputs, txScripts, txData} = tx
+    {txInputs = TxInput outRef (TxConsumeScriptAddress rd vlHash dtHash) : txInputs,
+     txScripts = Map.insert (ScriptHash b) script txScripts,
+     txData = Map.insert dtHash dt txData}
+    where
+        dtHash = datumHash dt
+        vlHash@(ValidatorHash b) = plutusV1ValidatorHash vl
+
 
 -- | Check that all values in a transaction are non-negative.
 validValuesTx :: Tx -> Bool
