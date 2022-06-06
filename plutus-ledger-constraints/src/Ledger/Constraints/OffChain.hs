@@ -351,7 +351,7 @@ initialState = ConstraintProcessingState
     , cpsMintRedeemers = mempty
     , cpsValueSpentBalancesInputs = ValueSpentBalances mempty mempty
     , cpsValueSpentBalancesOutputs = ValueSpentBalances mempty mempty
-    , cpsParams = def
+    , cpsParams = def -- cpsParams is not used here, only in plutus-tx-constraints
     }
 
 provided :: Value -> ValueSpentBalances
