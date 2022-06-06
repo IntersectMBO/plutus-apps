@@ -217,7 +217,7 @@ handleWalletEffect PABServerConfig { pscNodeMode = MockNode } _ w eff = do
 handleWalletEffect nodeCfg@PABServerConfig { pscNodeMode = AlonzoNode } cidM w eff = do
     clientEnvM <- ask @(Maybe ClientEnv)
     case clientEnvM of
-        Nothing -> RemoteWalletClient.handleWalletClient nodeCfg cidM eff
+        Nothing -> RemoteWalletClient.handleWalletClient cidM eff
         Just clientEnv ->
             runReader clientEnv $ LocalWalletClient.handleWalletClient @IO nodeCfg w eff
 

@@ -21,7 +21,6 @@
 
 module Wallet.Emulator.Wallet where
 
-import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
 import Cardano.Api.Shelley (protocolParamCollateralPercent)
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
@@ -54,7 +53,7 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxTx))
+import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Tx qualified as Tx
@@ -330,7 +329,7 @@ handleBalance utx' = do
     theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
     tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
     cTx <- handleError tx' $ fromPlutusTx params cUtxoIndex requiredSigners tx'
-    pure $ Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
+    pure $ Tx.Both tx' (Tx.CardanoApiEmulatorEraTx cTx)
     where
         handleError tx (Left (Left (ph, ve))) = do
             let sves = case ve of
@@ -355,8 +354,8 @@ handleAddSignature tx = do
             pure $ addSignature' privKey tx
         Just (SigningProcess sp) -> do
             let ctx = case tx of
-                    Tx.CardanoApiTx (Tx.SomeTx ctx' AlonzoEraInCardanoMode) -> ctx'
-                    Tx.Both _ (Tx.SomeTx ctx' AlonzoEraInCardanoMode) -> ctx'
+                    Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx ctx') -> ctx'
+                    Tx.Both _ (Tx.CardanoApiEmulatorEraTx ctx') -> ctx'
                     _ -> error "handleAddSignature: Need a Cardano API Tx from the Alonzo era to get the required signers"
                 reqSigners = getRequiredSigners ctx
             sp reqSigners tx
@@ -365,9 +364,8 @@ addSignature' :: PrivateKey -> CardanoTx -> CardanoTx
 addSignature' privKey = Tx.cardanoTxMap (Ledger.addSignature' privKey) addSignatureCardano
     where
         addSignatureCardano :: SomeCardanoApiTx -> SomeCardanoApiTx
-        addSignatureCardano (Tx.SomeTx ctx AlonzoEraInCardanoMode)
-            = Tx.SomeTx (addSignature privKey ctx) AlonzoEraInCardanoMode
-        addSignatureCardano _ = error "Wallet.Emulator.Wallet.addSignature': Expected an Alonzo tx"
+        addSignatureCardano (Tx.CardanoApiEmulatorEraTx ctx)
+            = Tx.CardanoApiEmulatorEraTx (addSignature privKey ctx)
 
 ownOutputs :: forall effs.
     ( Member ChainIndexQueryEffect effs
@@ -417,9 +415,9 @@ handleBalanceTx ::
     => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
     -> UnbalancedTx
     -> Eff effs Tx
-handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
+handleBalanceTx utxo utx = do
     Params { pProtocolParams } <- WAPI.getClientParams
-    let filteredUnbalancedTxTx = removeEmptyOutputs unBalancedTxTx
+    let filteredUnbalancedTxTx = removeEmptyOutputs (view U.tx utx)
     let txInputs = Set.toList $ Tx.txInputs filteredUnbalancedTxTx
     ownPaymentPubKey <- gets ownPaymentPublicKey
     let ownStakePubKey = Nothing

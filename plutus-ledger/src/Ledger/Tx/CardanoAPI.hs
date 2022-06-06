@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE ViewPatterns       #-}
 
@@ -15,7 +17,9 @@ Interface to the transaction types from 'cardano-api'
 
 -}
 module Ledger.Tx.CardanoAPI(
-  SomeCardanoApiTx(..)
+  CardanoBuildTx(..)
+  , SomeCardanoApiTx(..)
+  , withIsCardanoEra
   , txOutRefs
   , unspentOutputsTx
   , fromCardanoTxId
@@ -45,6 +49,7 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxOut
   , toCardanoTxOutUnsafe
   , toCardanoTxOutDatumHash
+  , toCardanoTxOutValue
   , toCardanoAddress
   , toCardanoMintValue
   , toCardanoValue
@@ -52,8 +57,9 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoValidityRange
   , toCardanoScriptInEra
   , toCardanoPaymentKeyHash
-  , toCardanoScriptHash
+  , toCardanoScriptData
   , toCardanoScriptDataHash
+  , toCardanoScriptHash
   , toCardanoTxId
   , ToCardanoError(..)
   , FromCardanoError(..)
@@ -107,6 +113,21 @@ import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
+
+newtype CardanoBuildTx = CardanoBuildTx { getCardanoBuildTx :: C.TxBodyContent C.BuildTx C.AlonzoEra }
+  deriving (Eq, Show)
+
+instance ToJSON CardanoBuildTx where
+  toJSON = error "TODO: ToJSON CardanoBuildTx"
+
+instance FromJSON CardanoBuildTx where
+  parseJSON _ = parseFail "TODO: FromJSON CardanoBuildTx"
+
+instance OpenApi.ToSchema CardanoBuildTx where
+  declareNamedSchema = error "TODO: OpenApi.ToSchema CardanoBuildTx"
+
+instance Pretty CardanoBuildTx where
+  pretty (CardanoBuildTx txBodyContent) = viaShow txBodyContent
 
 instance (Typeable era, Typeable mode) => OpenApi.ToSchema (C.EraInMode era mode) where
   declareNamedSchema _ = do
@@ -176,6 +197,14 @@ instance FromJSON SomeCardanoApiTx where
             <|> parseMaryEraInCardanoModeTx v
             <|> parseAlonzoEraInCardanoModeTx v
             <|> parseEraInCardanoModeFail v
+
+-- | Run code that needs an `IsCardanoEra` constraint while you only have an `EraInMode` value.
+withIsCardanoEra :: C.EraInMode era C.CardanoMode -> (C.IsCardanoEra era => r) -> r
+withIsCardanoEra C.ByronEraInCardanoMode r   = r
+withIsCardanoEra C.ShelleyEraInCardanoMode r = r
+withIsCardanoEra C.AllegraEraInCardanoMode r = r
+withIsCardanoEra C.MaryEraInCardanoMode r    = r
+withIsCardanoEra C.AlonzoEraInCardanoMode r  = r
 
 parseByronInCardanoModeTx :: Aeson.Value -> Parser SomeCardanoApiTx
 parseByronInCardanoModeTx =
@@ -317,7 +346,7 @@ toCardanoTxBodyContent
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
     -> C.NetworkId -- ^ Network ID
     -> P.Tx
-    -> Either ToCardanoError (C.TxBodyContent C.BuildTx C.AlonzoEra)
+    -> Either ToCardanoError CardanoBuildTx
 toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
@@ -326,7 +355,7 @@ toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInAlonzoEra <$> traverse toCardanoPaymentKeyHash sigs
-    pure $ C.TxBodyContent
+    pure $ CardanoBuildTx $ C.TxBodyContent
         { txIns = txIns
         , txInsCollateral = txInsCollateral
         , txOuts = txOuts
@@ -356,9 +385,9 @@ toCardanoTxBody sigs protocolParams networkId tx = do
 
 makeTransactionBody
     :: Map Alonzo.RdmrPtr Alonzo.ExUnits
-    -> C.TxBodyContent C.BuildTx C.AlonzoEra
+    -> CardanoBuildTx
     -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-makeTransactionBody exUnits txBodyContent =
+makeTransactionBody exUnits (CardanoBuildTx txBodyContent) =
   first (TxBodyError . C.displayError) $ makeTransactionBody' exUnits txBodyContent
 
 fromCardanoTxIn :: C.TxIn -> P.TxOutRef

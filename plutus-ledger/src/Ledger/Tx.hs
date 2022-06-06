@@ -4,8 +4,10 @@
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE RankNTypes         #-}
@@ -25,6 +27,8 @@ module Ledger.Tx
     , _PublicKeyChainIndexTxOut
     , _ScriptChainIndexTxOut
     , CardanoTx(..)
+    , cardanoApiTx
+    , emulatorTx
     , onCardanoTx
     , mergeCardanoTxWith
     , cardanoTxMap
@@ -33,7 +37,7 @@ module Ledger.Tx
     , getCardanoTxOutRefs
     , getCardanoTxUnspentOutputsTx
     , getCardanoTxFee
-    , SomeCardanoApiTx(..)
+    , SomeCardanoApiTx(.., CardanoApiEmulatorEraTx)
     , ToCardanoError(..)
     -- * Transactions
     , addSignature
@@ -135,11 +139,23 @@ Wallet.Emulator.Chain.validateBlock, since that's when we know the right Slot nu
 we need both transaction types in the path from balancing to validateBlock. -}
 
 data CardanoTx
-    = EmulatorTx Tx
-    | CardanoApiTx SomeCardanoApiTx
-    | Both Tx SomeCardanoApiTx
+    = EmulatorTx { _emulatorTx :: Tx }
+    | CardanoApiTx { _cardanoApiTx :: SomeCardanoApiTx }
+    | Both { _emulatorTx :: Tx, _cardanoApiTx :: SomeCardanoApiTx }
     deriving (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+
+makeLenses ''CardanoTx
+
+getEmulatorEraTx :: SomeCardanoApiTx -> C.Tx C.AlonzoEra
+getEmulatorEraTx (SomeTx tx C.AlonzoEraInCardanoMode) = tx
+getEmulatorEraTx _                                    = error "getEmulatorEraTx: Expected an Alonzo tx"
+
+pattern CardanoApiEmulatorEraTx :: C.Tx C.AlonzoEra -> SomeCardanoApiTx
+pattern CardanoApiEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
+    CardanoApiEmulatorEraTx tx = SomeTx tx C.AlonzoEraInCardanoMode
+
+{-# COMPLETE CardanoApiEmulatorEraTx #-}
 
 instance Pretty CardanoTx where
     pretty = onCardanoTx pretty (pretty . getCardanoApiTxId)

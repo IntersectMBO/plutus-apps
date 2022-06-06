@@ -20,6 +20,7 @@ module Ledger.Validation(
   getRequiredSigners,
   addSignature,
   hasValidationErrors,
+  makeTransactionBody,
   -- * Modifying the state
   makeBlock,
   setSlot,
@@ -247,7 +248,7 @@ getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
 makeTransactionBody
   :: P.Params
   -> UTxO EmulatorEra
-  -> C.Api.TxBodyContent C.Api.BuildTx C.Api.AlonzoEra
+  -> P.CardanoBuildTx
   -> Either CardanoLedgerError (C.Api.TxBody C.Api.AlonzoEra)
 makeTransactionBody params utxo txBodyContent = do
   txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody mempty txBodyContent
@@ -262,7 +263,7 @@ evaluateTransactionFee
   -> Either CardanoLedgerError P.Value
 evaluateTransactionFee params utxo requiredSigners tx = do
   txBodyContent <- first Right $ plutusTxToTxBodyContent params requiredSigners tx
-  let nkeys = C.Api.estimateTransactionKeyWitnessCount txBodyContent
+  let nkeys = C.Api.estimateTransactionKeyWitnessCount (P.getCardanoBuildTx txBodyContent)
   txBody <- makeTransactionBody params utxo txBodyContent
   case C.Api.evaluateTransactionFee (P.pProtocolParams params) txBody nkeys 0 of
     C.Api.Lovelace fee -> pure $ P.lovelaceValueOf fee
@@ -287,7 +288,7 @@ plutusTxToTxBodyContent
   :: P.Params
   -> [P.PaymentPubKeyHash]
   -> P.Tx
-  -> Either P.ToCardanoError (C.Api.TxBodyContent C.Api.BuildTx C.Api.AlonzoEra)
+  -> Either P.ToCardanoError P.CardanoBuildTx
 plutusTxToTxBodyContent params requiredSigners =
   P.toCardanoTxBodyContent requiredSigners (Just $ P.pProtocolParams params) (P.pNetworkId params)
 

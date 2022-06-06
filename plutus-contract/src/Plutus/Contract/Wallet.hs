@@ -27,7 +27,6 @@ module Plutus.Contract.Wallet(
     ) where
 
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley qualified as C
 import Control.Applicative ((<|>))
 import Control.Lens ((&), (.~), (^.))
 import Control.Monad (join, (>=>))
@@ -54,6 +53,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequ
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (CardanoTx, TxOutRef, getCardanoTxInputs, txInRef)
+import Ledger.Validation (CardanoLedgerError, fromPlutusIndex, makeTransactionBody)
 import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
 import Plutus.Contract.Request qualified as Contract
@@ -239,22 +239,23 @@ instance ToJSON ExportTxInput where
             ]
 
 export
-    :: C.ProtocolParameters
-    -> C.NetworkId
-    -> SlotConfig
+    :: Plutus.Params
     -> UnbalancedTx
-    -> Either CardanoAPI.ToCardanoError ExportTx
-export params networkId slotConfig utx =
+    -> Either CardanoLedgerError ExportTx
+export params utx =
     let UnbalancedTx
             { unBalancedTxTx
             , unBalancedTxUtxoIndex
             , unBalancedTxRequiredSignatories
-            } = finalize slotConfig utx
+            } = finalize (Plutus.pSlotConfig params) utx
         requiredSigners = Set.toList unBalancedTxRequiredSignatories
+        fromCardanoTx ctx = do
+            utxo <- fromPlutusIndex params (Plutus.UtxoIndex unBalancedTxUtxoIndex)
+            makeTransactionBody params utxo ctx
      in ExportTx
-        <$> mkPartialTx requiredSigners params networkId unBalancedTxTx
-        <*> mkInputs networkId unBalancedTxUtxoIndex
-        <*> mkRedeemers unBalancedTxTx
+        <$> fmap (C.makeSignedTransaction []) (either fromCardanoTx (first Right . mkPartialTx requiredSigners params) unBalancedTxTx)
+        <*> first Right (mkInputs (Plutus.pNetworkId params) unBalancedTxUtxoIndex)
+        <*> either (const $ Right []) (first Right . mkRedeemers) unBalancedTxTx
 
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
 finalize slotConfig utx =
@@ -264,13 +265,11 @@ finalize slotConfig utx =
 
 mkPartialTx
     :: [Plutus.PaymentPubKeyHash]
-    -> C.ProtocolParameters
-    -> C.NetworkId
+    -> Plutus.Params
     -> Plutus.Tx
-    -> Either CardanoAPI.ToCardanoError (C.Tx C.AlonzoEra)
-mkPartialTx requiredSigners params networkId =
-      fmap (C.makeSignedTransaction [])
-    . CardanoAPI.toCardanoTxBody requiredSigners (Just params) networkId
+    -> Either CardanoAPI.ToCardanoError (C.TxBody C.AlonzoEra)
+mkPartialTx requiredSigners params =
+    CardanoAPI.toCardanoTxBody requiredSigners (Just $ Plutus.pProtocolParams params) (Plutus.pNetworkId params)
 
 mkInputs :: C.NetworkId -> Map Plutus.TxOutRef Plutus.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList

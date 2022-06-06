@@ -23,6 +23,7 @@ import Data.Text (pack)
 import Data.Text.Encoding (encodeUtf8)
 import Index.VSplit qualified as Ix
 import Ledger.TimeSlot (SlotConfig (..))
+import Ledger.Tx.CardanoAPI (withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Ix
 import Options.Applicative (Parser, execParser, fullDesc, header, help, helper, info, long, metavar, progDesc,
@@ -83,13 +84,7 @@ parseHash hash =
   deserialiseFromRawBytesHex (proxyToAsType Proxy) (encodeUtf8 $ pack hash)
 
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
-getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) =
-  case era of
-    C.ByronEraInCardanoMode   -> concatMap (go era) txs
-    C.ShelleyEraInCardanoMode -> concatMap (go era) txs
-    C.AllegraEraInCardanoMode -> concatMap (go era) txs
-    C.MaryEraInCardanoMode    -> concatMap (go era) txs
-    C.AlonzoEraInCardanoMode  -> concatMap (go era) txs
+getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) = withIsCardanoEra era $ concatMap (go era) txs
   where
     go :: C.IsCardanoEra era
        => C.EraInMode era C.CardanoMode
