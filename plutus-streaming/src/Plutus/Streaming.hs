@@ -10,13 +10,15 @@ import Cardano.Api (BlockInMode, CardanoMode, ChainPoint, ChainSyncClient (Chain
                     LocalChainSyncClient (LocalChainSyncClient),
                     LocalNodeClientProtocols (LocalNodeClientProtocols, localChainSyncClient, localStateQueryClient, localTxSubmissionClient),
                     LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
-                    NetworkId, connectToLocalNode)
+                    NetworkId, connectToLocalNode, envSecurityParam, initialLedgerState, renderInitialLedgerStateError)
 import Cardano.Api.ChainSync.Client (ClientStIdle (SendMsgFindIntersect, SendMsgRequestNext),
                                      ClientStIntersect (ClientStIntersect, recvMsgIntersectFound, recvMsgIntersectNotFound),
                                      ClientStNext (ClientStNext, recvMsgRollBackward, recvMsgRollForward))
 import Control.Concurrent.Async (link, withAsync)
 import Control.Concurrent.STM (TChan, atomically, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Exception (Exception, throw)
+import Control.Monad.Trans.Except (runExceptT)
+import Data.Text qualified as Text
 import GHC.Generics (Generic)
 import Streaming (Of, Stream)
 import Streaming.Prelude qualified as S
@@ -36,6 +38,8 @@ instance Exception ChainSyncEventException
 -- connect to a locally running node and fetch blocks from the given
 -- starting point.
 withChainSyncEventStream ::
+  -- | Path to the node config gile
+  FilePath ->
   -- | Path to the node socket
   FilePath ->
   NetworkId ->
@@ -44,7 +48,12 @@ withChainSyncEventStream ::
   -- | Stream consumer
   (Stream (Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r -> IO b) ->
   IO b
-withChainSyncEventStream socketPath networkId point consumer = do
+withChainSyncEventStream configFile socketPath networkId point consumer = do
+  (env, _) <- either (fail . Text.unpack . renderInitialLedgerStateError) pure =<<
+    -- FIXME Ideally we want to use readNetworkConfig instead of initialLedgerState,
+    -- but Cardano.Api does not expose it.
+    runExceptT (initialLedgerState configFile)
+
   -- The chain-sync client runs in a different thread and it will send us
   -- block through this channel.
 
@@ -71,8 +80,7 @@ withChainSyncEventStream socketPath networkId point consumer = do
             localNodeSocketPath = socketPath
           }
 
-      -- FIXME this comes from the config file but Cardano.Api does not expose readNetworkConfig!
-      epochSlots = EpochSlots 40
+      epochSlots = EpochSlots (10 * envSecurityParam env)
 
       clientThread = do
         connectToLocalNode connectInfo localNodeClientProtocols

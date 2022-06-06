@@ -1,8 +1,8 @@
 module Main where
 
 import Cardano.Api qualified
-import Common (Options (Options, optionsChainPoint, optionsNetworkId, optionsSocketPath), parseOptions, printJson,
-               workaround)
+import Common (Options (Options, optionsChainPoint, optionsConfigPath, optionsNetworkId, optionsSocketPath),
+               parseOptions, printJson, workaround)
 import Data.Foldable (toList)
 import Ledger qualified
 import Orphans ()
@@ -43,9 +43,9 @@ datums tx = do
 
 main :: IO ()
 main = do
-  Options {optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
+  Options {optionsConfigPath, optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
 
-  withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint $
+  withChainSyncEventStream optionsConfigPath optionsSocketPath optionsNetworkId optionsChainPoint $
     printJson
       . S.map -- Each ChainSyncEvent
         ( fmap -- Inside the payload of RollForward events

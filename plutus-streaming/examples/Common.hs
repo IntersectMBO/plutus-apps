@@ -15,7 +15,8 @@ import Streaming.Prelude qualified as S
 --
 
 data Options = Options
-  { optionsSocketPath :: String,
+  { optionsConfigPath :: String,
+    optionsSocketPath :: String,
     optionsNetworkId  :: Cardano.Api.NetworkId,
     optionsChainPoint :: Cardano.Api.ChainPoint
   }
@@ -24,7 +25,8 @@ data Options = Options
 optionsParser :: Parser Options
 optionsParser =
   Options
-    <$> strOption (long "socket-path" <> help "Node socket path")
+    <$> strOption (long "config" <> help "Node socket path")
+    <*> strOption (long "socket-path" <> help "Node socket path")
     <*> networkIdParser
     <*> chainPointParser
 
@@ -74,4 +76,3 @@ workaround k Cardano.Api.ShelleyEraInCardanoMode = k Cardano.Api.ShelleyEraInCar
 workaround k Cardano.Api.AllegraEraInCardanoMode = k Cardano.Api.AllegraEraInCardanoMode
 workaround k Cardano.Api.MaryEraInCardanoMode    = k Cardano.Api.MaryEraInCardanoMode
 workaround k Cardano.Api.AlonzoEraInCardanoMode  = k Cardano.Api.AlonzoEraInCardanoMode
-

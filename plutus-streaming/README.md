@@ -38,5 +38,5 @@ $ cabal run -- plutus-streaming-example-1 --socket-path /tmp/node.socket --mainn
 Passing a starting point
 
 ```
-$ cabal run -- plutus-streaming-example-1 --socket-path /tmp/node.socket --slot-no 53427524 --block-hash 5e2bde4e504a9888a4f218dafc79a7619083f97d48684fcdba9dc78190df8f99
+$ cabal run -- plutus-streaming-example-1 --config /tmp/mainnet-config.json --socket-path /tmp/node.socket --slot-no 53427524 --block-hash 5e2bde4e504a9888a4f218dafc79a7619083f97d48684fcdba9dc78190df8f99
 ```

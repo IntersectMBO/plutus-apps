@@ -42,6 +42,8 @@ library
         ouroboros-network,
         stm,
         streaming,
+        text,
+        transformers,
 
 executable plutus-streaming-example-1
     import: lang

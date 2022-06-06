@@ -1,7 +1,8 @@
 module Main where
 
 import Cardano.Api qualified
-import Common (Options (Options, optionsChainPoint, optionsNetworkId, optionsSocketPath), parseOptions)
+import Common (Options (Options, optionsChainPoint, optionsConfigPath, optionsNetworkId, optionsSocketPath),
+               parseOptions)
 import Plutus.ChainIndex (TxUtxoBalance)
 import Plutus.ChainIndex.Compatibility qualified as CI
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
@@ -47,7 +48,7 @@ utxoState =
 
 main :: IO ()
 main = do
-  Options {optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
+  Options {optionsConfigPath, optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
 
-  withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint $
+  withChainSyncEventStream optionsConfigPath optionsSocketPath optionsNetworkId optionsChainPoint $
     S.print . utxoState

@@ -1,7 +1,8 @@
 module Main where
 
 import Cardano.Api qualified
-import Common (Options (Options, optionsChainPoint, optionsNetworkId, optionsSocketPath), parseOptions)
+import Common (Options (Options, optionsChainPoint, optionsConfigPath, optionsNetworkId, optionsSocketPath),
+               parseOptions)
 import Data.Aeson.Text qualified as Aeson
 import Data.Text.Lazy qualified as TL
 import Orphans ()
@@ -14,9 +15,9 @@ import Streaming.Prelude qualified as S
 
 main :: IO ()
 main = do
-  Options {optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
+  Options {optionsConfigPath, optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
 
-  withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint $
+  withChainSyncEventStream optionsConfigPath optionsSocketPath optionsNetworkId optionsChainPoint $
     S.stdoutLn
       . S.map
         ( \case
