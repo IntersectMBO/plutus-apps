@@ -50,11 +50,8 @@ Can be used to run end-to-end tests using a private local testnet.
 
 2. Get config data:
 
-  Clone <https://github.com/input-output-hk/cardano-wallet/> to $DIR and set the
-  `SHELLEY_TEST_DATA` environment variable:
-
   ```
-  export SHELLEY_TEST_DATA=$DIR/lib/shelley/test/data/cardano-node-shelley
+  export SHELLEY_TEST_DATA=plutus-pab/local-cluster/cluster-data/cardano-node-shelley
   ```
 
 3. Run the local cluster:

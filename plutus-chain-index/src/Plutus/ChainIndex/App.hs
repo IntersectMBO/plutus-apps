@@ -28,7 +28,7 @@ import Plutus.ChainIndex.CommandLine (AppConfig (AppConfig, acCLIConfigOverrides
                                       applyOverrides, cmdWithHelpParser)
 import Plutus.ChainIndex.Compatibility (fromCardanoBlockNo)
 import Plutus.ChainIndex.Config qualified as Config
-import Plutus.ChainIndex.Events (measureEventByTxs, processEventsQueue)
+import Plutus.ChainIndex.Events (measureEventQueueSizeByTxs, processEventsQueue)
 import Plutus.ChainIndex.Lib (getTipSlot, storeChainSyncHandler, storeFromBlockNo, syncChainIndex, withRunRequirements)
 import Plutus.ChainIndex.Logging qualified as Logging
 import Plutus.ChainIndex.Server qualified as Server
@@ -82,7 +82,8 @@ runMainWithLog logger logConfig config = do
     logger slotNoStr
 
     -- Queue for processing events
-    eventsQueue <- newTBMQueueIO (Config.cicAppendTransactionQueueSize config) measureEventByTxs
+    let maxQueueSize = Config.cicAppendTransactionQueueSize config
+    eventsQueue <- newTBMQueueIO maxQueueSize (measureEventQueueSizeByTxs maxQueueSize)
     syncHandler
       <- storeChainSyncHandler eventsQueue
         & storeFromBlockNo (fromCardanoBlockNo $ Config.cicStoreFrom config)

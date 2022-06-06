@@ -23,7 +23,8 @@ import Cardano.CLI (LogOutput (LogToFile, LogToStdStreams), Port, ekgEnabled, ge
 import Cardano.ChainIndex.Types qualified as PAB.CI
 import Cardano.Launcher.Node (nodeSocketFile)
 import Cardano.Mnemonic (SomeMnemonic (SomeMnemonic))
-import Cardano.Node.Types (NodeMode (AlonzoNode), PABServerConfig (pscNetworkId, pscNodeMode, pscSocketPath))
+import Cardano.Node.Types (NodeMode (AlonzoNode),
+                           PABServerConfig (pscKeptBlocks, pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath))
 import Cardano.Startup (installSignalHandlers, setDefaultFilePermissions, withUtf8Encoding)
 import Cardano.Wallet.Api.Client qualified as WalletClient
 import Cardano.Wallet.Api.Server (Listen (ListenOnPort))
@@ -34,7 +35,11 @@ import Cardano.Wallet.Api.Types qualified as Wallet.Types
 import Cardano.Wallet.Logging (stdoutTextTracer, trMessageText)
 import Cardano.Wallet.Primitive.AddressDerivation (NetworkDiscriminant (Mainnet), Passphrase (Passphrase))
 import Cardano.Wallet.Primitive.SyncProgress (SyncTolerance (SyncTolerance))
-import Cardano.Wallet.Primitive.Types (WalletName (WalletName))
+import Cardano.Wallet.Primitive.Types (GenesisParameters (GenesisParameters),
+                                       NetworkParameters (NetworkParameters, slottingParameters),
+                                       SlotLength (SlotLength),
+                                       SlottingParameters (SlottingParameters, getSecurityParameter),
+                                       StartTime (StartTime), WalletName (WalletName))
 import Cardano.Wallet.Primitive.Types.Coin (Coin (Coin))
 import Cardano.Wallet.Shelley (SomeNetworkDiscriminant (SomeNetworkDiscriminant), serveWallet, setupTracers,
                                tracerSeverities)
@@ -56,10 +61,14 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import Data.OpenApi.Schema qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
+import Data.Quantity (Quantity (getQuantity))
 import Data.String (IsString (fromString))
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Class (ToText (toText))
+import Data.Time.Clock (nominalDiffTimeToSeconds)
+import Ledger.TimeSlot (SlotConfig (SlotConfig))
+import Ledger.TimeSlot qualified as TimeSlot
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import Plutus.ChainIndex.App qualified as ChainIndex
 import Plutus.ChainIndex.Config qualified as CI
@@ -244,18 +253,44 @@ launchPAB
     -> RunningNode -- ^ Socket path
     -> ChainIndexPort -- ^ Port of the chain index
     -> IO ()
-launchPAB userContractHandler passPhrase dir walletUrl (RunningNode socketPath _block0 (_gp, _vData)) (ChainIndexPort chainIndexPort) = do
+launchPAB userContractHandler
+    passPhrase
+    dir
+    walletUrl
+    (RunningNode socketPath _block0 (networkParameters, _))
+    (ChainIndexPort chainIndexPort) = do
+
     let opts = AppOpts{minLogLevel = Nothing, logConfigPath = Nothing, configPath = Nothing, rollbackHistory = Nothing, resumeFrom = PointAtGenesis, runEkgServer = False, storageBackend = BeamSqliteBackend, cmd = PABWebserver, PAB.Command.passphrase = Just passPhrase}
         networkID = NetworkIdWrapper CAPI.Mainnet
+        -- TODO: Remove when PAB queries local node for slot config
+        slotConfig = slotConfigOfNetworkParameters networkParameters
+        -- TODO: Remove when PAB queries local node for security param
+        securityParam = fromIntegral
+                      $ getQuantity
+                      $ getSecurityParameter
+                      $ slottingParameters networkParameters
         config =
             PAB.Config.defaultConfig
-                { nodeServerConfig = def{pscSocketPath=nodeSocketFile socketPath,pscNodeMode=AlonzoNode,pscNetworkId=networkID}
+                { nodeServerConfig = def
+                    { pscSocketPath = nodeSocketFile socketPath
+                    , pscNodeMode = AlonzoNode
+                    , pscNetworkId = networkID
+                    , pscSlotConfig = slotConfig
+                    , pscKeptBlocks = securityParam
+                    }
                 , dbConfig = def{dbConfigFile = T.pack (dir </> "plutus-pab.db")}
                 , chainIndexConfig = def{PAB.CI.ciBaseUrl = PAB.CI.ChainIndexUrl $ BaseUrl Http "localhost" chainIndexPort ""}
                 , walletServerConfig = set (Wallet.Config.walletSettingsL . Wallet.Config.baseUrlL) (WalletUrl walletUrl) def
                 }
     PAB.Run.runWithOpts userContractHandler (Just config) opts { cmd = Migrate }
     PAB.Run.runWithOpts userContractHandler (Just config) opts { cmd = PABWebserver }
+
+slotConfigOfNetworkParameters :: NetworkParameters -> SlotConfig
+slotConfigOfNetworkParameters
+    (NetworkParameters
+        (GenesisParameters _ (StartTime startUtcTime))
+        (SlottingParameters (SlotLength nominalDiffTime) _ _ _) _) =
+    SlotConfig (floor $ 1000 * nominalDiffTimeToSeconds nominalDiffTime) (TimeSlot.utcTimeToPOSIXTime startUtcTime)
 
 {-| Set up wallets
 -}
