@@ -10,7 +10,6 @@ import Data.Word
 import Options.Applicative
 import Options.Applicative qualified as Opt
 
-import Plutus.ApiCommon
 import PlutusExample.ScriptContextChecker
 
 main :: IO ()

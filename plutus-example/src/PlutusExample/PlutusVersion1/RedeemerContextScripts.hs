@@ -22,48 +22,18 @@ module PlutusExample.PlutusVersion1.RedeemerContextScripts
 import Prelude hiding (($))
 
 import Cardano.Api
-import Cardano.Api.Byron
 import Cardano.Api.Shelley
-import Cardano.Api.Shelley qualified as Api
 
 import Codec.Serialise
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.Except.Extra
-import Data.Aeson qualified as Aeson
-import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Short qualified as SBS
-import Data.Map.Strict qualified as Map
-import Data.Maybe as M
-import Data.Sequence.Strict qualified as Seq
-import Data.Set qualified as Set
-import GHC.Records (HasField (..))
 
-import Cardano.CLI.Environment
-import Cardano.CLI.Shelley.Run.Query
-import Cardano.CLI.Types (SocketPath (..))
-import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
-import Cardano.Ledger.Alonzo.PlutusScriptApi qualified as Alonzo
-import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
-import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo
-import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
-import Cardano.Ledger.BaseTypes (ProtVer)
-import Cardano.Ledger.TxIn qualified as Ledger
-
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
-import Cardano.Slotting.Time (SystemStart)
-import Control.Monad.Trans.Except
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras qualified as Consensus
-import Ouroboros.Consensus.HardFork.History qualified as Consensus
-import Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
 import Plutus.Script.Utils.V1.Scripts.MonetaryPolicies as Scripts
 import Plutus.Script.Utils.V1.Scripts.Validators as Scripts
 import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts as Scripts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
-import PlutusTx.IsData.Class
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 import PlutusTx.Prelude qualified as P
 

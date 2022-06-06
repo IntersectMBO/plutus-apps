@@ -8,7 +8,7 @@ module PlutusExample.PlutusVersion2.RequireRedeemer
   ) where
 
 import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
-import Prelude hiding (($))
+import Prelude hiding (($), (&&))
 
 import Codec.Serialise
 import Data.ByteString.Lazy qualified as LBS
@@ -21,13 +21,27 @@ import PlutusTx qualified
 import PlutusTx.Builtins
 import PlutusTx.Eq as PlutusTx
 import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
+import PlutusTx.Prelude qualified as PlutusPrelude
 
 -- serialiseData is a PlutusV2 builtin
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinData -> V2.ScriptContext -> Bool
-mkValidator _ redeemer _ = serialiseData redeemer PlutusTx./= emptyByteString
-
+mkValidator _ redeemer sc =
+  serialiseData redeemer PlutusTx./= emptyByteString &&
+  PlutusPrelude.isJust (PlutusPrelude.find
+    (PlutusTx.== Plutus.OutputDatum (Plutus.Datum $ PlutusTx.toBuiltinData (42 :: Integer)))
+    txinsDatums) &&
+  PlutusPrelude.isJust (PlutusPrelude.find
+    (PlutusTx.== Plutus.OutputDatum (Plutus.Datum $ PlutusTx.toBuiltinData (42 :: Integer)))
+    referenceInputDatums)
+ where
+  txInfo = V2.scriptContextTxInfo sc
+  txinsDatums = PlutusPrelude.map (txOutDatum . txInInfoResolved)
+                     $ V2.txInfoInputs txInfo
+  referenceInputDatums =
+    PlutusPrelude.map (txOutDatum . txInInfoResolved)
+      $ V2.txInfoReferenceInputs txInfo
 
 validator :: Plutus.Validator
 validator = Plutus.mkValidatorScript

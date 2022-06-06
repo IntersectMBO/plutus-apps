@@ -82,7 +82,6 @@ library
                       , containers
                       , ouroboros-consensus
                       , ouroboros-network
-                      , plutus-ledger
                       , plutus-ledger-api >= 1.0.0
                       , plutus-script-utils
                       , plutus-tx >= 1.0.0
@@ -114,7 +113,6 @@ executable create-script-context
                       , cardano-api
                       , optparse-applicative
                       , plutus-example
-                      , plutus-ledger-api
                       , transformers
 
 test-suite plutus-example-test
