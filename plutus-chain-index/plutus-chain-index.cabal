@@ -37,11 +37,6 @@ library
         Plutus.ChainIndex.Lib
         Plutus.ChainIndex.Logging
         Plutus.ChainIndex.SyncStats
-<<<<<<< HEAD
-=======
-        Marconi.Index.Datum
-        Marconi.Index.Utxo
->>>>>>> ce504b9ba (Extract inputs and output from block)
     other-modules:
         Control.Concurrent.STM.TBMQueue
     hs-source-dirs: src
@@ -90,6 +85,7 @@ executable marconi
   hs-source-dirs: app
   other-modules:
     Marconi.Index.Datum
+    Marconi.Index.Utxo
     Marconi.Logging
     Marconi.Orphans
   default-language: Haskell2010

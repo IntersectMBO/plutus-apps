@@ -14,19 +14,23 @@ import Cardano.Protocol.Socket.Client (ChainSyncEvent (Resume, RollBackward, Rol
 import Control.Concurrent (threadDelay)
 import Control.Lens.Operators ((&), (<&>), (^.))
 import Control.Monad (forever, when)
-import Data.Foldable (toList)
+import Data.Foldable (foldl')
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (findIndex)
 import Data.Map (assocs)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (catMaybes, fromJust, fromMaybe)
 import Data.Proxy (Proxy (Proxy))
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Text (pack)
 import Data.Text.Encoding (encodeUtf8)
 import Index.VSplit qualified as Ix
-import Ledger (Address, TxIn (..), TxOut (..), TxOutRef (..))
+import Ledger (TxIn (..), TxOut (..), TxOutRef (..))
 import Ledger.TimeSlot (SlotConfig (..))
-import Marconi.Index.Datum (DatumIndex)
-import Marconi.Index.Datum qualified as Ix
+-- import Marconi.Index.Datum (DatumIndex)
+-- import Marconi.Index.Datum qualified as Ix
+import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (..))
+import Marconi.Index.Utxo qualified as Ix
 import Options.Applicative (Parser, execParser, fullDesc, header, help, helper, info, long, metavar, progDesc,
                             strOption, (<**>))
 import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOutputs (..))
@@ -103,18 +107,27 @@ getDatum slotNo era tx =
       let hashes = either (const []) (assocs . _citxData) $ fromCardanoTx era tx
       in  map (slotNo,) hashes
 
+getUpdate :: BlockInMode CardanoMode -> UtxoUpdate
+getUpdate (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) =
+  case era of
+    C.ByronEraInCardanoMode   -> getUtxoUpdate slotNo era txs
+    C.ShelleyEraInCardanoMode -> getUtxoUpdate slotNo era txs
+    C.AllegraEraInCardanoMode -> getUtxoUpdate slotNo era txs
+    C.MaryEraInCardanoMode    -> getUtxoUpdate slotNo era txs
+    C.AlonzoEraInCardanoMode  -> getUtxoUpdate slotNo era txs
+
 getOutputs
   :: C.IsCardanoEra era
   => C.EraInMode era C.CardanoMode
   -> C.Tx era
-  -> Maybe [(Address, TxOutRef)]
+  -> Maybe [(TxOut, TxOutRef)]
 getOutputs era tx = do
   tx' <- either (const Nothing) Just $ fromCardanoTx era tx
   pure $ outputs (_citxOutputs tx')
     &  zip ([0..] :: [Integer])
-   <&> (\(ix, out) -> (txOutAddress out, TxOutRef { txOutRefId  = _citxTxId tx'
-                                                  , txOutRefIdx = ix
-                                                  }))
+   <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = _citxTxId tx'
+                                     , txOutRefIdx = ix
+                                     }))
   where
     outputs :: ChainIndexTxOutputs -> [TxOut]
     outputs InvalidTx      = []
@@ -124,14 +137,26 @@ getInputs
   :: C.IsCardanoEra era
   => C.EraInMode era C.CardanoMode
   -> C.Tx era
-  -> Maybe [TxOutRef]
+  -> Maybe (Set TxOutRef)
 getInputs era tx = do
   tx' <- either (const Nothing) Just $ fromCardanoTx era tx
-  pure $ _citxInputs tx'
-     &  toList
-    <&> txInRef
+  pure $ Set.map txInRef $ _citxInputs tx'
 
-processBlock :: IORef DatumIndex -> ChainSyncEvent -> IO ()
+getUtxoUpdate
+  :: C.IsCardanoEra era
+  => SlotNo
+  -> C.EraInMode era C.CardanoMode
+  -> [C.Tx era]
+  -> UtxoUpdate
+getUtxoUpdate slot era txs =
+  let ins  = foldl' Set.union Set.empty $ catMaybes $ getInputs era <$> txs
+      outs = concat . catMaybes $ getOutputs era <$> txs
+  in  UtxoUpdate { _inputs  = ins
+                 , _outputs = outs
+                 , _slotNo  = slot
+                 }
+
+processBlock :: IORef UtxoIndex -> ChainSyncEvent -> IO ()
 processBlock ixref = \case
   -- Not really supported
   Resume point         -> putStrLn ("resume " <> show point) >> pure ()
@@ -139,25 +164,53 @@ processBlock ixref = \case
     when (b `rem` 1000 == 0) $
       putStrLn $ show slotNo <> " / " <> show blockNo
     ix  <- readIORef ixref
-    ix' <- Ix.insert (getDatums blk) ix
+    ix' <- Ix.insert (getUpdate blk) ix
     writeIORef ixref ix'
   RollBackward point tip -> do
     putStrLn ("rollback to " <> show tip)
     rollbackToPoint point ixref
 
 rollbackToPoint
-  :: ChainPoint -> IORef DatumIndex -> IO ()
+  :: ChainPoint -> IORef UtxoIndex -> IO ()
 rollbackToPoint point ixref = do
   ix     <- readIORef ixref
   events <- Ix.getEvents (ix ^. Ix.storage)
   let ix' = fromMaybe ix $ rollbackOffset events ix
   writeIORef ixref ix'
   where
-    rollbackOffset :: [Ix.Event] -> DatumIndex -> Maybe DatumIndex
+    rollbackOffset :: [UtxoUpdate] -> UtxoIndex -> Maybe UtxoIndex
     rollbackOffset events ix = do
       slot   <- chainPointToSlotNo point
-      offset <- findIndex (any (\(s, _) -> s < slot)) events
+      offset <- findIndex (\u -> (u ^. Ix.slotNo) < slot) events
       Ix.rewind offset ix
+
+-- processBlock :: IORef DatumIndex -> ChainSyncEvent -> IO ()
+-- processBlock ixref = \case
+--   -- Not really supported
+--   Resume point         -> putStrLn ("resume " <> show point) >> pure ()
+--   RollForward blk@(BlockInMode (Block (BlockHeader slotNo _ blockNo@(BlockNo b)) _txs) _era) _tip -> do
+--     when (b `rem` 1000 == 0) $
+--       putStrLn $ show slotNo <> " / " <> show blockNo
+--     ix  <- readIORef ixref
+--     ix' <- Ix.insert (getDatums blk) ix
+--     writeIORef ixref ix'
+--   RollBackward point tip -> do
+--     putStrLn ("rollback to " <> show tip)
+--     rollbackToPoint point ixref
+
+-- rollbackToPoint
+--   :: ChainPoint -> IORef DatumIndex -> IO ()
+-- rollbackToPoint point ixref = do
+--   ix     <- readIORef ixref
+--   events <- Ix.getEvents (ix ^. Ix.storage)
+--   let ix' = fromMaybe ix $ rollbackOffset events ix
+--   writeIORef ixref ix'
+--   where
+--     rollbackOffset :: [Ix.Event] -> DatumIndex -> Maybe DatumIndex
+--     rollbackOffset events ix = do
+--       slot   <- chainPointToSlotNo point
+--       offset <- findIndex (any (\(s, _) -> s < slot)) events
+--       Ix.rewind offset ix
 
 main :: IO ()
 main = do
