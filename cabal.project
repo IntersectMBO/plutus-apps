@@ -15,6 +15,7 @@ packages: doc
           plutus-pab-executables
           plutus-playground-server
           plutus-script-utils
+          plutus-tx-constraints
           plutus-use-cases
           plutus-streaming
           quickcheck-dynamic

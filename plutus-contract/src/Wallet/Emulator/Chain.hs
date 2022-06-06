@@ -16,7 +16,6 @@
 
 module Wallet.Emulator.Chain where
 
-import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
 import Control.Applicative ((<|>))
 import Control.Lens hiding (index)
 import Control.Monad.Freer
@@ -32,8 +31,8 @@ import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
 import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params (..), ScriptValidationEvent, Slot (..),
-               SomeCardanoApiTx (SomeTx), Tx (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value, eitherTx,
-               getCardanoTxId, mergeCardanoTxWith, onCardanoTx)
+               SomeCardanoApiTx (CardanoApiEmulatorEraTx), Tx (..), TxId, TxIn (txInRef), TxOut (txOutValue), Value,
+               eitherTx, getCardanoTxId, mergeCardanoTxWith, onCardanoTx)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
 import Ledger.Validation qualified as Validation
@@ -212,8 +211,7 @@ validateEm params h cUtxoIndex txn = do
     pure (e, events)
 
 validateL :: Params -> Slot -> Validation.UTxO Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
-validateL params slot idx (SomeTx tx AlonzoEraInCardanoMode) = Validation.hasValidationErrors params (fromIntegral slot) idx tx
-validateL _      _    _   _                                  = Nothing
+validateL params slot idx (CardanoApiEmulatorEraTx tx) = Validation.hasValidationErrors params (fromIntegral slot) idx tx
 
 -- | Adds a block to ChainState, without validation.
 addBlock :: Block -> ChainState -> ChainState
