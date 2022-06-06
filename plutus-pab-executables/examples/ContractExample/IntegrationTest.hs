@@ -3,10 +3,12 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 
 module ContractExample.IntegrationTest(run) where
 
+import Control.Lens (makeClassyPrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map qualified as Map
 import GHC.Generics (Generic)
@@ -25,6 +27,10 @@ data IError =
     deriving stock (Eq, Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
+makeClassyPrisms ''IError
+
+instance AsContractError IError where
+    _ContractError = _CError
 
 run :: Contract () EmptySchema IError ()
 run = runError run' >>= \case
@@ -34,10 +40,9 @@ run = runError run' >>= \case
 run' :: Contract () EmptySchema IError ()
 run' = do
     logInfo @Haskell.String "Starting integration test"
-    pkh <- mapError CError ownPaymentPubKeyHash
+    pkh <- ownPaymentPubKeyHash
     (txOutRef, ciTxOut, pkInst) <- mapError PKError (PubKey.pubKeyContract pkh (Ada.adaValueOf 10))
     logInfo @Haskell.String "pubKey contract complete:"
-    logInfo txOutRef
     let lookups =
             Constraints.otherData (Datum $ getRedeemer unitRedeemer)
             <> Constraints.unspentOutputs (maybe mempty (Map.singleton txOutRef) ciTxOut)
@@ -53,5 +58,5 @@ run' = do
         Right redeemingTx -> do
             let txi = getCardanoTxId redeemingTx
             logInfo @Haskell.String $ "Waiting for tx " <> show txi <> " to complete"
-            mapError CError $ awaitTxConfirmed txi
+            awaitTxConfirmed txi
             logInfo @Haskell.String "Tx confirmed. Integration test complete."
