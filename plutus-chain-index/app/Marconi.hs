@@ -1,7 +1,3 @@
-{-# LANGUAGE DerivingVia       #-}
-{-# LANGUAGE ExplicitForAll    #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
@@ -9,10 +5,9 @@
 module Main where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
-                    ChainPoint (ChainPoint),
-                    EraInMode (AllegraEraInCardanoMode, AlonzoEraInCardanoMode, ByronEraInCardanoMode, MaryEraInCardanoMode, ShelleyEraInCardanoMode),
-                    Hash, IsCardanoEra, NetworkId (Mainnet, Testnet), NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx,
-                    chainPointToSlotNo, deserialiseFromRawBytesHex, proxyToAsType)
+                    ChainPoint (ChainPoint), EraInMode, Hash, IsCardanoEra, NetworkId (Mainnet, Testnet),
+                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx, chainPointToSlotNo, deserialiseFromRawBytesHex,
+                    proxyToAsType)
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
@@ -24,7 +19,6 @@ import Data.Map (assocs)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Proxy (Proxy (Proxy))
 import Index.VSplit qualified as Ix
-import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI (withIsCardanoEra)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Ix
