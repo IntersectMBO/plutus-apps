@@ -14,6 +14,7 @@ packages: doc
           plutus-pab
           plutus-pab-executables
           plutus-playground-server
+          plutus-script-evaluation-test
           plutus-script-utils
           plutus-tx-constraints
           plutus-use-cases
