@@ -70,6 +70,8 @@ data TxConstraint =
     | MustPayToOtherScript ValidatorHash (Maybe StakeValidatorHash) Datum Value
     -- ^ The transaction must create a transaction output with a script address.
     | MustSatisfyAnyOf [[TxConstraint]]
+    -- ^ The transaction must satisfy constraints given as an alternative of conjuctions (DNF),
+    -- that is `check (MustSatisfyAnyOf xs) = any (all check) xs`
     deriving stock (Haskell.Show, Generic, Haskell.Eq)
     deriving anyclass (ToJSON, FromJSON)
 
