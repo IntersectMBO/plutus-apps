@@ -111,7 +111,7 @@ logging tracer s = effect $ do
         logInfo tracer $
           renderStrict $
             layoutPretty defaultLayoutOptions $
-              syncMsg <+> (blocksMsg $ rollbackMsg $ "Chain tip is" <+> pretty ct <> ".")
+              syncMsg <+> (blocksMsg $ rollbackMsg $ "Last block processed" <+> pretty cp <> ".")
         modifyIORef' statsRef $ \stats ->
           stats
             { syncStatsNumBlocks = 0,
