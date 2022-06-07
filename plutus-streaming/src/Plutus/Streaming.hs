@@ -14,9 +14,9 @@ import Cardano.Api (BlockInMode, CardanoMode, ChainPoint, ChainSyncClient (Chain
 import Cardano.Api.ChainSync.Client (ClientStIdle (SendMsgFindIntersect, SendMsgRequestNext),
                                      ClientStIntersect (ClientStIntersect, recvMsgIntersectFound, recvMsgIntersectNotFound),
                                      ClientStNext (ClientStNext, recvMsgRollBackward, recvMsgRollForward))
-import Control.Concurrent.Async (link, withAsync)
+import Control.Concurrent.Async (ExceptionInLinkedThread (ExceptionInLinkedThread), link, withAsync)
 import Control.Concurrent.STM (TChan, atomically, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
-import Control.Exception (Exception, throw)
+import Control.Exception (Exception, SomeException (SomeException), catch, throw)
 import GHC.Generics (Generic)
 import Streaming (Of, Stream)
 import Streaming.Prelude qualified as S
@@ -86,6 +86,9 @@ withChainSyncEventStream socketPath networkId point consumer = do
     link a
     -- Run the consumer
     consumer $ S.repeatM $ atomically (readTChan readerChannel)
+  -- Let's rethrow exceptions from the client thread unwrapped, so that the
+  -- consumer does not have to know anything about async
+  `catch` \(ExceptionInLinkedThread _ (SomeException e)) -> throw e
 
 -- | `chainSyncStreamingClient` is the client that connects to a local node
 -- and runs the chain-sync mini-protocol. This client is fire-and-forget
