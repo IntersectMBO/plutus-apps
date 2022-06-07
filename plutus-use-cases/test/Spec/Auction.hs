@@ -278,33 +278,6 @@ instance ContractModel AuctionModel where
         "Maximum bid reached"
     monitoring _ _ = id
 
--- In order to place a bid, we need to satisfy the constraint where
--- each tx output must have at least N Ada.
---
--- When we bid, we must make sure that we don't bid too high such
--- that:
---     - we can't pay for fees anymore
---     - we have a tx output of less than N Ada.
---
--- We suppose the initial balance is 100 Ada. Needs to be changed if
--- the emulator initialises the wallets with a different value.
-validBidRange :: ModelState AuctionModel -> Wallet -> (Integer,Integer)
-validBidRange s _w =
-  let currentWalletBalance = Ada.adaOf 100  -- this is approximate
-      current = s ^. contractState . currentBid
-  in ( max (current+1) (Ada.getLovelace Ledger.minAdaTxOut),
-       Ada.getLovelace (currentWalletBalance - (Ledger.minAdaTxOut <> Ledger.maxFee))
-     )
-
--- When we choose a bid, we prefer a lower bid to a higher
--- one. Otherwise longer tests very often reach the maximum possible
--- bid, which makes little sense.
-chooseBid :: (Integer,Integer) -> Gen Integer
-chooseBid (lo,hi)
-  | lo==hi = pure lo
-  | lo <hi = oneof [choose (lo,lo+k) | k <- takeWhile (>0) (iterate (`div` 400) (hi-lo))]
-  | otherwise = error $ "chooseBid "++show (lo,hi)
-
 prop_Auction :: Actions AuctionModel -> Property
 prop_Auction script =
     propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions
