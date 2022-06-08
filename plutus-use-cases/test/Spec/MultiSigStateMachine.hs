@@ -23,6 +23,7 @@ import Plutus.Contract.Test
 import Plutus.Contracts.MultiSigStateMachine qualified as MS
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
+import PlutusTx qualified
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit qualified as HUnit
@@ -54,8 +55,8 @@ tests =
         .&&. walletFundsChange w2 (Ada.adaValueOf 10))
         (lockProposeSignPay 3 3)
 
-    -- TODO: turn this on again when reproducibility issue in core is fixed
-    -- , goldenPir "test/Spec/multisigStateMachine.pir" $$(PlutusTx.compile [|| MS.mkValidator ||])
+    , goldenPir "test/Spec/multisigStateMachine.pir" $$(PlutusTx.compile [|| MS.mkValidator ||])
+
     , HUnit.testCaseSteps "script size is reasonable" $ \step -> reasonable' step (Scripts.validatorScript $ MS.typedValidator params) 51000
     ]
 
