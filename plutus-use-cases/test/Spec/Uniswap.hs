@@ -38,23 +38,21 @@ import Ledger.Value qualified as Value
 import Data.Data
 import Data.Foldable
 import Data.List
-import Data.Maybe
-import Data.Text qualified as Text
-
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe
+import Data.Monoid (Last (..))
+import Data.Semigroup qualified as Semigroup
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String
-
+import Data.Text qualified as Text
 import Data.Void
 
+import Prettyprinter
 import Test.QuickCheck hiding ((.&&.))
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
-
-import Data.Monoid (Last (..))
-import Data.Semigroup qualified as Semigroup
 
 import Ledger.Constraints
 
@@ -165,6 +163,7 @@ tokenNames :: [String]
 tokenNames = ["A", "B", "C", "D"]
 
 instance ContractModel UniswapModel where
+  -- TODO: add negative tests!
   data Action UniswapModel = SetupTokens
                            -- ^ Give some tokens to wallets `w1..w4`
                            | Start
@@ -257,6 +256,7 @@ instance ContractModel UniswapModel where
         (tA, tB) <- elements [(t1, t2), (t2, t1)]
         return . bad $ RemoveLiquidity w tA tB a
 
+      -- TODO: make an evil version of this endpoint
       close = do
         w <- elements $ wallets \\ [w1]
         PoolIndex t1 t2 <- elements $ s ^. contractState . pools . to Map.keys
@@ -481,7 +481,7 @@ instance ContractModel UniswapModel where
 
   perform h tokenSem s act = case act of
     SetupTokens -> do
-      delay 20
+      delay 40
       Trace.observableState (h SetupKey) >>= \case
         Just (Semigroup.Last cur) -> sequence_ [ registerToken tn (Value.assetClass (Currency.currencySymbol cur) $ fromString tn) | tn <- ["A", "B", "C", "D"]]
         _                         -> Trace.throwError $ GenericError "failed to create currency"
@@ -601,12 +601,17 @@ prop_CheckNoLockedFundsProofFast :: Property
 prop_CheckNoLockedFundsProofFast = checkNoLockedFundsProofFast noLockProof
 
 check_propUniswapWithCoverage :: IO ()
-check_propUniswapWithCoverage = do
-  cr <- quickCheckWithCoverage stdArgs (set endpointCoverageReq epReqs $ set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
-    withMaxSuccess 1000 $ propRunActionsWithOptions @UniswapModel defaultCheckOptionsContractModel covopts (const (pure True))
-  writeCoverageReport "Uniswap" covIdx cr
+check_propUniswapWithCoverage = void $ do
+  cr <- quickCheckWithCoverage (stdArgs { maxSuccess = 1000 })
+                                 (set endpointCoverageReq epReqs $ set coverageIndex covIdx $ defaultCoverageOptions)
+                                 $ \covopts -> propRunActionsWithOptions @UniswapModel
+                                              defaultCheckOptionsContractModel
+                                              covopts
+                                              (const (pure True))
+  writeCoverageReport "Uniswap" cr
   where
     epReqs t ep
+      | True = 0
       | t == Trace.walletInstanceTag w1 = 0
       | ep == "create"                  = 20
       | ep == "swap"                    = 15
@@ -637,8 +642,8 @@ runTestsWithCoverage = do
   ref <- newCoverageRef
   defaultMain (coverageTests ref)
     `catch` \(e :: SomeException) -> do
-                report <- readCoverageRef ref
-                putStrLn . show $ pprCoverageReport covIdx report
+                covdata <- readCoverageRef ref
+                putStrLn . show $ pretty (CoverageReport covIdx covdata)
                 throwIO e
   where
     coverageTests ref = testGroup "game state machine tests"
