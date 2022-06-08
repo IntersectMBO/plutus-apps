@@ -48,38 +48,25 @@ import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Alonzo (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..), retractPP)
-import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits), unCostModels)
-import Cardano.Ledger.Alonzo.Genesis (prices)
-import Cardano.Ledger.Alonzo.Genesis qualified as Alonzo
-import Cardano.Ledger.Alonzo.Language qualified as Alonzo
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits), unCostModels, CostModels, Script)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
 import Cardano.Ledger.Alonzo.Rules.Utxos
-import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (ExUnits), Script, unCostModels)
-import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
 import Cardano.Ledger.Alonzo.Tx (DataHash, IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.Alonzo.TxBody qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), ScriptResult (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
-import Cardano.Ledger.BaseTypes (Globals (..), mkTxIxPartial)
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, StrictMaybe (..), epochInfo, mkTxIxPartial)
-import Cardano.Ledger.BaseTypes qualified as BT
 import Cardano.Ledger.Core (PParams, Tx)
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, TxId, TxIn (TxIn), UTxO (UTxO),
-                                   Validated, epochInfo, mkShelleyGlobals)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), smartUTxOState, UTxOState (..))
 import Cardano.Ledger.Era (Crypto, ValidateScript)
-import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, NewEpochState, TxId,
-                                   UTxO (UTxO), Validated, esPp, mkShelleyGlobals, nesEs)
-import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), lsUTxOState, smartUTxOState)
+import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, TxId,
+                                   UTxO (UTxO), Validated, mkShelleyGlobals)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval)
@@ -95,8 +82,6 @@ import Data.Bitraversable (bitraverse)
 import Data.Default (def)
 import Data.Functor.Identity (runIdentity)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
-import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Set qualified as Set

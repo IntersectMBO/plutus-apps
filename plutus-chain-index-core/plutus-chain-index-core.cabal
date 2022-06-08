@@ -94,7 +94,6 @@ library
         serialise -any,
         sqlite-simple -any,
         typed-protocols -any,
-        unordered-containers -any,
         bytestring -any,
         text -any,
         resource-pool -any,
