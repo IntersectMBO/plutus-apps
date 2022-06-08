@@ -100,5 +100,42 @@ Slot 1: TxnValidate e202285e0e87703dfaaf971f635d68d7ef62ca942aa3df109376fedc5bcf
 Slot 1: TxnValidate f209fe27814d81ccf1e8efc8a641af4b6ef92922f0ef1061d1011e27c88e928b
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
+Slot 20: W[1]: Balancing an unbalanced transaction:
+                 Tx:
+                   Tx a93c78f8638802cee3181a5158ebb190bd53a1ef86d44ac69ca3b8472fd956d8:
+                     {inputs:
+                        - 1d9a387c52bb3e6c4e21002d13a5e2303cad7752d689c791362451b2b5e96af1!0
+                          <>
+                        - e202285e0e87703dfaaf971f635d68d7ef62ca942aa3df109376fedc5bcfa6e3!0
+                          <>
+                        - f209fe27814d81ccf1e8efc8a641af4b6ef92922f0ef1061d1011e27c88e928b!0
+                          <>
+                     collateral inputs:
+                     outputs:
+                     mint: Value (Map [])
+                     fee: Value (Map [])
+                     mps:
+                     signatures:
+                     validity range: Interval {ivFrom = LowerBound NegInf True, ivTo = UpperBound PosInf True}
+                     data:}
+                 Requires signatures:
+                 Utxo index:
+                   ( 1d9a387c52bb3e6c4e21002d13a5e2303cad7752d689c791362451b2b5e96af1!0
+                   , - Value (Map [(,Map [("",2500000)])]) addressed to
+                       ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential) )
+                   ( e202285e0e87703dfaaf971f635d68d7ef62ca942aa3df109376fedc5bcfa6e3!0
+                   , - Value (Map [(,Map [("",10000000)])]) addressed to
+                       ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential) )
+                   ( f209fe27814d81ccf1e8efc8a641af4b6ef92922f0ef1061d1011e27c88e928b!0
+                   , - Value (Map [(,Map [("",10000000)])]) addressed to
+                       ScriptCredential: 6bf030518a13158b50eb7ef9f29305e30ede2434f26861e110b6ea38 (no staking credential) )
+                 Validity range:
+                   [ POSIXTime 1596059111000 , POSIXTime 1596059120999 ]
+Slot 20: W[1]: Finished balancing:
+                 45dd4953eb7cee887ec40414d205bfdf8709efd7315df9ac31712ab53e1cb00b
+Slot 20: W[1]: Signing tx: 45dd4953eb7cee887ec40414d205bfdf8709efd7315df9ac31712ab53e1cb00b
+Slot 20: W[1]: Submitting tx: 45dd4953eb7cee887ec40414d205bfdf8709efd7315df9ac31712ab53e1cb00b
+Slot 20: W[1]: TxSubmit: 45dd4953eb7cee887ec40414d205bfdf8709efd7315df9ac31712ab53e1cb00b
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
-           Contract instance stopped with error: ConstraintResolutionContractError (TypeCheckFailed (NoDatum (TxOutRef {txOutRefId = 1d9a387c52bb3e6c4e21002d13a5e2303cad7752d689c791362451b2b5e96af1, txOutRefIdx = 0}) 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969))
+           Contract instance stopped (no errors)
+Slot 20: TxnValidate 45dd4953eb7cee887ec40414d205bfdf8709efd7315df9ac31712ab53e1cb00b

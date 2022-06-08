@@ -68,6 +68,7 @@ import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
@@ -79,8 +80,8 @@ import Ledger.Orphans ()
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Plutus.Script.Utils.V1.Scripts (MintingPolicy, datumHash)
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId (TxId), Validator,
-                             ValidatorHash, Value, addressCredential, toBuiltin)
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), DatumHash, TxId (TxId),
+                             Validator, ValidatorHash, Value, addressCredential, toBuiltin)
 import Plutus.V1.Ledger.Slot (SlotRange)
 import Plutus.V1.Ledger.Tx as Export hiding (updateUtxoCollateral)
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
@@ -224,7 +225,13 @@ getCardanoTxValidityRange = onCardanoTx txValidRange
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoValidityRange txValidityRange)
 
 getCardanoTxData :: CardanoTx -> Map DatumHash Datum
-getCardanoTxData = onCardanoTx txData (const mempty) -- error "getCardanoTxData: TODO")
+getCardanoTxData = onCardanoTx txData
+    (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> Map.fromList $ mapMaybe (\(C.TxOut _ _ d) -> fromCardanoTxOutDatum d) txOuts)
+    where
+        fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> Maybe (DatumHash, Datum)
+        fromCardanoTxOutDatum (C.TxOutDatum _ d) = let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
+        fromCardanoTxOutDatum _ = Nothing
+    -- TODO: add txMetaData
 
 instance Pretty Tx where
     pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =
