@@ -5,9 +5,9 @@
 module Main where
 
 import Cardano.Api (Block (Block), BlockHeader (BlockHeader), BlockInMode (BlockInMode), CardanoMode,
-                    ChainPoint (ChainPoint), EraInMode, Hash, IsCardanoEra, NetworkId (Mainnet, Testnet),
-                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx, chainPointToSlotNo, deserialiseFromRawBytesHex,
-                    proxyToAsType)
+                    ChainPoint (ChainPoint, ChainPointAtGenesis), Hash, NetworkId (Mainnet, Testnet),
+                    NetworkMagic (NetworkMagic), SlotNo (SlotNo), Tx (Tx), chainPointToSlotNo,
+                    deserialiseFromRawBytesHex, proxyToAsType)
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
@@ -16,17 +16,15 @@ import Control.Lens.Operators ((^.))
 import Data.ByteString.Char8 qualified as C8
 import Data.List (findIndex)
 import Data.Map (assocs)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (Proxy))
 import Index.VSplit qualified as Ix
-import Ledger.Tx.CardanoAPI (withIsCardanoEra)
+import Ledger.Tx.CardanoAPI (scriptDataFromCardanoTxBody)
 import Marconi.Index.Datum (DatumIndex)
 import Marconi.Index.Datum qualified as Ix
 import Marconi.Logging (logging)
 import Options.Applicative (Parser, auto, execParser, flag', help, helper, info, long, maybeReader, metavar, option,
                             readerError, strOption, (<**>), (<|>))
-import Plutus.ChainIndex.Tx (ChainIndexTx (..))
-import Plutus.Contract.CardanoAPI (fromCardanoTx)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
@@ -83,32 +81,22 @@ networkIdParser =
 
 chainPointParser :: Parser ChainPoint
 chainPointParser =
-  pure chainPointCloseToGoguen
+  pure ChainPointAtGenesis
     <|> ( ChainPoint
             <$> option (SlotNo <$> auto) (long "slot-no" <> metavar "SLOT-NO")
             <*> option
               (maybeReader maybeParseHashBlockHeader <|> readerError "Malformed block hash")
               (long "block-hash" <> metavar "BLOCK-HASH")
         )
-  where
-    -- We don't generally need to sync blocks earlier than the Goguen era (other than
-    -- testing for memory leaks) so we may want to start synchronising from a slot that
-    -- is closer to Goguen era.
-    chainPointCloseToGoguen =
-      ChainPoint
-        (SlotNo 39795032)
-        (fromJust $ maybeParseHashBlockHeader "3e6f6450f85962d651654ee66091980b2332166f5505fd10b97b0520c9efac90")
 
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]
-getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) = withIsCardanoEra era $ concatMap (go era) txs
+getDatums (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) = concatMap extractDatumsFromTx txs
   where
-    go ::
-      IsCardanoEra era =>
-      EraInMode era CardanoMode ->
-      Tx era ->
-      [(SlotNo, (DatumHash, Datum))]
-    go era' tx =
-      let hashes = either (const []) (assocs . _citxData) $ fromCardanoTx era' tx
+    extractDatumsFromTx
+      :: Tx era
+      -> [(SlotNo, (DatumHash, Datum))]
+    extractDatumsFromTx (Tx txBody _) =
+      let hashes = assocs . fst $ scriptDataFromCardanoTxBody txBody
        in map (slotNo,) hashes
 
 main :: IO ()
