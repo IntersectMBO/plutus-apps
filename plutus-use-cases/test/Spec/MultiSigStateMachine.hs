@@ -23,7 +23,6 @@ import Plutus.Contract.Test
 import Plutus.Contracts.MultiSigStateMachine qualified as MS
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import PlutusTx qualified
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit qualified as HUnit

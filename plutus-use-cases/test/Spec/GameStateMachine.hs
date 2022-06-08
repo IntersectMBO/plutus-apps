@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 module Spec.GameStateMachine
   ( tests, successTrace, successTrace2, traceLeaveOneAdaInScript, failTrace
   , runTestsWithCoverage
@@ -58,7 +59,6 @@ import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.GameStateMachine as G hiding (Guess)
 import Plutus.Contracts.GameStateMachine.Coverage
 import Plutus.Trace.Emulator as Trace
-import PlutusTx qualified
 import PlutusTx.Coverage
 
 gameParam :: G.GameParam

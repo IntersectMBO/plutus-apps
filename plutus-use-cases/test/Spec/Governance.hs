@@ -23,7 +23,6 @@ import Plutus.Contract.Test
 import Plutus.Contracts.Governance qualified as Gov
 import Plutus.Trace.Emulator (EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
-import PlutusTx qualified
 import PlutusTx.Prelude (BuiltinByteString, fromBuiltin)
 
 import Test.Tasty (TestTree, testGroup)
