@@ -73,7 +73,6 @@ initialUtxoIndex config =
                zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
                    (repeat (Ada.adaValueOf 1000_000_000))
       initialTxs =
-        concatMap (onCardanoTx pure (const [])) $
         view (chainState . txPool) $
         emulatorStateInitialDist $
         Map.mapKeys mockWalletPaymentPubKeyHash dist

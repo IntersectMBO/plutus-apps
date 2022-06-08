@@ -107,10 +107,11 @@ handleControlChain params = \case
         let pool  = st ^. txPool
             slot  = st ^. currentSlot
             idx   = st ^. index
-            ValidatedBlock block events rest =
+            ValidatedBlock block events rest idx' =
                 validateBlock params slot idx pool
 
         let st' = st & txPool .~ rest
+                     & index .~ idx'
                      & addBlock block
 
         put st'
@@ -140,6 +141,8 @@ data ValidatedBlock = ValidatedBlock
     , vlbRest   :: TxPool
     -- ^ The transactions that haven't been validated because the current slot is
     --   not in their validation interval.
+    , vlbIndex  :: Index.UtxoIndex
+    -- ^ The updated UTxO index after processing the block
     }
 
 -- | Validate a block given the current slot and UTxO index, returning the valid
@@ -153,9 +156,9 @@ validateBlock params slot@(Slot s) idx txns =
         (eligibleTxns, rest) = partition (canValidateNow slot) txns
 
         -- Validate eligible transactions, updating the UTXO index each time
-        processed =
-            flip S.evalState (Index.ValidationCtx idx params) $ for eligibleTxns $ \tx -> do
-                (err, events_) <- validateEm params slot cUtxoIndex tx
+        (processed, Index.ValidationCtx idx' _) =
+            flip S.runState (Index.ValidationCtx idx params) $ for eligibleTxns $ \tx -> do
+                (err, events_) <- validateEm slot cUtxoIndex tx
                 pure (tx, err, events_)
 
         -- The new block contains all transaction that were validated
@@ -173,7 +176,7 @@ validateBlock params slot@(Slot s) idx txns =
 
         cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
 
-    in ValidatedBlock block events rest
+    in ValidatedBlock block events rest idx'
 
 getCollateral :: Index.UtxoIndex -> CardanoTx -> Value
 getCollateral idx tx = fromRight (getCardanoTxFee tx) $
@@ -193,28 +196,36 @@ mkValidationEvent idx t result events =
 -- | Validate a transaction in the current emulator state.
 validateEm
     :: S.MonadState Index.ValidationCtx m
-    => Params
-    -> Slot
+    => Slot
     -> Validation.UTxO Index.EmulatorEra
     -> CardanoTx
     -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
-validateEm params h cUtxoIndex txn = do
-    ctx@(Index.ValidationCtx idx _) <- S.get
-    let ((e, idx'), events) = txn & mergeCardanoTxWith
+validateEm h cUtxoIndex txn = do
+    ctx@(Index.ValidationCtx idx params) <- S.get
+    let (e, events) = txn & mergeCardanoTxWith
             (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
-            (\tx -> ((validateL params h cUtxoIndex tx, idx), []))
-            (\((e1, utxo), sve1) ((e2, _), sve2) -> ((e1 <|> e2, utxo), sve1 ++ sve2))
-    _ <- S.put ctx{Index.vctxIndex=idx'}
+            (\tx -> validateL params h cUtxoIndex tx)
+            (\(e1, sve1) (e2, sve2) -> (e1 <|> e2, sve1 ++ sve2))
+        idx' = case e of
+            Just (Index.Phase1, _) -> idx
+            Just (Index.Phase2, _) -> Index.insertCollateral txn idx
+            Nothing                -> Index.insert txn idx
+    _ <- S.put ctx{ Index.vctxIndex = idx' }
     pure (e, events)
 
-validateL :: Params -> Slot -> Validation.UTxO Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
-validateL params slot idx (CardanoApiEmulatorEraTx tx) = Validation.hasValidationErrors params (fromIntegral slot) idx tx
+-- TODO: generate ScriptValidationEvents
+validateL
+    :: Params
+    -> Slot
+    -> Validation.UTxO Index.EmulatorEra
+    -> SomeCardanoApiTx
+    -> (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
+validateL params slot idx (CardanoApiEmulatorEraTx tx) = (Validation.hasValidationErrors params (fromIntegral slot) idx tx, [])
 
 -- | Adds a block to ChainState, without validation.
 addBlock :: Block -> ChainState -> ChainState
 addBlock blk st =
   st & chainNewestFirst %~ (blk :)
-     & index %~ Index.insertBlock blk
      -- The block update may contain txs that are not in this client's
      -- `txPool` which will get ignored
      & txPool %~ (\\ map (eitherTx id id) blk)

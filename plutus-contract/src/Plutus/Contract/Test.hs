@@ -90,6 +90,7 @@ import Control.Monad.Freer.Writer (Writer (..), tell)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Default (Default (..))
 import Data.Foldable (fold, toList, traverse_)
+import Data.Map qualified as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.OpenUnion
 import Data.Proxy (Proxy (..))
@@ -385,7 +386,7 @@ getTxOutDatum ::
   Maybe d
 getTxOutDatum _ (Ledger.TxOut _ _ Nothing) = Nothing
 getTxOutDatum tx' (Ledger.TxOut _ _ (Just datumHash)) =
-    onCardanoTx (`Ledger.lookupDatum` datumHash) (error "getTxOutDatum: TODO") tx' >>= (Ledger.getDatum >>> fromBuiltinData @d)
+    Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
 dataAtAddress :: forall d . FromData d => Address -> ([d] -> Bool) -> TracePredicate
 dataAtAddress address check = TracePredicate $
