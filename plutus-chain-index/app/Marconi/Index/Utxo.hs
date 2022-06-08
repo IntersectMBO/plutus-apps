@@ -6,7 +6,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Marconi.Index.Utxo
-  ( -- * DatumIndex
+  ( -- * UtxoIndex
     UtxoIndex
   , Depth(..)
   , open
@@ -102,9 +102,9 @@ open dbPath (Depth k) = do
   let c = ix ^. Ix.handle
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS utxos (address TEXT NOT NULL, txId TEXT NOT NULL, inputIx INT NOT NULL)"
   SQL.execute_ c "CREATE TABLE IF NOT EXISTS spent (txId TEXT NOT NULL, inputIx INT NOT NULL)"
-  -- SQL.execute_ c "CREATE INDEX utxo_address ON utxos (address)"
-  -- SQL.execute_ c "CREATE INDEX utxo_refs ON utxos (txId, inputIx)"
-  -- SQL.execute_ c "CREATE INDEX spent_refs ON spent (txId, inputIx)"
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_address ON utxos (address)"
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS utxo_refs ON utxos (txId, inputIx)"
+  SQL.execute_ c "CREATE INDEX IF NOT EXISTS spent_refs ON spent (txId, inputIx)"
   pure ix
 
 query
@@ -130,11 +130,14 @@ store ix = do
       utxos = concatMap toRows all'
       spent = concatMap (toList . _inputs) all'
       c     = ix ^. Ix.handle
+
   SQL.execute_ c "BEGIN"
   forM_ utxos $
     SQL.execute c "INSERT INTO utxos (address, txId, inputIx) VALUES (?, ?, ?)"
   forM_ spent $
     SQL.execute c "INSERT INTO spent (txId, inputIx) VALUES (?, ?)"
+
+  SQL.execute_ c "DELETE FROM utxos WHERE utxos.rowid IN (SELECT utxos.rowid FROM utxos LEFT JOIN spent on utxos.txId = spent.txId AND utxos.inputIx = spent.inputIx WHERE spent.txId IS NOT NULL)"
   SQL.execute_ c "COMMIT"
 
 onInsert :: UtxoIndex -> UtxoUpdate -> IO [()]
