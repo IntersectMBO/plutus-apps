@@ -73,7 +73,7 @@ import Ledger.Index.Internal
 import Ledger.Orphans ()
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx (txId)
+import Ledger.Tx (CardanoTx (..), txId, updateUtxoCollateral)
 import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.V1.Scripts
 import Plutus.V1.Ledger.Ada (Ada)
@@ -87,7 +87,7 @@ import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Slot qualified as Slot
-import Plutus.V1.Ledger.Tx
+import Plutus.V1.Ledger.Tx hiding (updateUtxoCollateral)
 import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value qualified as V
 import PlutusTx (toBuiltinData)
@@ -104,11 +104,11 @@ initialise :: Blockchain -> UtxoIndex
 initialise = UtxoIndex . unspentOutputs
 
 -- | Update the index for the addition of a transaction.
-insert :: Tx -> UtxoIndex -> UtxoIndex
+insert :: CardanoTx -> UtxoIndex -> UtxoIndex
 insert tx = UtxoIndex . updateUtxo tx . getIndex
 
 -- | Update the index for the addition of only the collateral inputs of a failed transaction.
-insertCollateral :: Tx -> UtxoIndex -> UtxoIndex
+insertCollateral :: CardanoTx -> UtxoIndex -> UtxoIndex
 insertCollateral tx = UtxoIndex . updateUtxoCollateral tx . getIndex
 
 -- | Update the index for the addition of a block.
@@ -177,13 +177,13 @@ validateTransactionOffChain t = do
         unless emptyUtxoSet (checkMintingScripts t)
 
         idx <- vctxIndex <$> ask
-        pure (Nothing, insert t idx)
+        pure (Nothing, insert (EmulatorTx t) idx)
         )
     `catchError` payCollateral
     where
         payCollateral e = do
             idx <- vctxIndex <$> ask
-            pure (Just (Phase2, e), insertCollateral t idx)
+            pure (Just (Phase2, e), insertCollateral (EmulatorTx t) idx)
 
 -- | Check that a transaction can be validated in the given slot.
 checkSlotRange :: ValidationMonad m => Slot.Slot -> Tx -> m ()

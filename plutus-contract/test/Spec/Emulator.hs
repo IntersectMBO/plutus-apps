@@ -120,7 +120,7 @@ pubKey3 = mockWalletPaymentPubKeyHash wallet3
 utxo :: Property
 utxo = property $ do
     Mockchain txPool o _ <- forAll Gen.genMockchain
-    Hedgehog.assert (unspentOutputs [map Valid txPool] == o)
+    Hedgehog.assert (unspentOutputs [map (Valid . EmulatorTx) txPool] == o)
 
 txnValid :: Property
 txnValid = property $ do

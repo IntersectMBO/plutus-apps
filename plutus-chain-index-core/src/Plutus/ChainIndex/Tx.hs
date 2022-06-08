@@ -41,8 +41,9 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
-import Ledger (Address, OnChainTx (..), SlotRange, SomeCardanoApiTx, Tx (..), TxId, TxIn (txInType), TxInType (..),
-               TxOut (txOutAddress), TxOutRef (..), txId)
+import Ledger (Address, CardanoTx (..), OnChainTx (..), SlotRange, SomeCardanoApiTx, TxId, TxIn (txInType),
+               TxInType (..), TxOut (txOutAddress), TxOutRef (..), consumableInputs, eitherTx, getCardanoTxData,
+               getCardanoTxId, getCardanoTxMintScripts, getCardanoTxOutputs, getCardanoTxValidityRange)
 import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHash, validatorHash)
 import Plutus.V1.Ledger.Scripts (Datum, DatumHash, MintingPolicy (getMintingPolicy),
                                  MintingPolicyHash (MintingPolicyHash), Redeemer (..), RedeemerHash, Script,
@@ -129,31 +130,22 @@ txOutRefMapForAddr addr tx =
 -- produce any 'ChainIndexTx' outputs and the collateral inputs of the
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
 fromOnChainTx :: OnChainTx -> ChainIndexTx
-fromOnChainTx = \case
-    Valid tx@Tx{txInputs, txOutputs, txValidRange, txData, txMintScripts} ->
-        let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
-        ChainIndexTx
-            { _citxTxId = txId tx
-            , _citxInputs = txInputs
-            , _citxOutputs = ValidTx txOutputs
-            , _citxValidRange = txValidRange
-            , _citxData = txData <> otherDataHashes
-            , _citxRedeemers = redeemers
-            , _citxScripts = mintingPolicies txMintScripts <> validatorHashes
-            , _citxCardanoTx = Nothing
-            }
-    Invalid tx@Tx{txCollateral, txValidRange, txData, txInputs, txMintScripts} ->
-        let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
-        ChainIndexTx
-            { _citxTxId = txId tx
-            , _citxInputs = txCollateral
-            , _citxOutputs = InvalidTx
-            , _citxValidRange = txValidRange
-            , _citxData = txData <> otherDataHashes
-            , _citxRedeemers = redeemers
-            , _citxScripts = mintingPolicies txMintScripts <> validatorHashes
-            , _citxCardanoTx = Nothing
-            }
+fromOnChainTx tx =
+    let inputs = consumableInputs tx
+        (validatorHashes, otherDataHashes, redeemers) = validators inputs
+        getCardanoApiTx (CardanoApiTx ctx) = Just ctx
+        getCardanoApiTx (Both _ ctx)       = Just ctx
+        getCardanoApiTx (EmulatorTx _)     = Nothing
+    in ChainIndexTx
+        { _citxTxId = eitherTx getCardanoTxId getCardanoTxId tx
+        , _citxInputs = inputs
+        , _citxOutputs = eitherTx (const InvalidTx) (ValidTx . getCardanoTxOutputs) tx
+        , _citxValidRange = eitherTx getCardanoTxValidityRange getCardanoTxValidityRange tx
+        , _citxData = eitherTx getCardanoTxData getCardanoTxData tx <> otherDataHashes
+        , _citxRedeemers = redeemers
+        , _citxScripts = mintingPolicies (eitherTx getCardanoTxMintScripts getCardanoTxMintScripts tx) <> validatorHashes
+        , _citxCardanoTx = eitherTx getCardanoApiTx getCardanoApiTx tx
+        }
 
 mintingPolicies :: Set MintingPolicy -> Map ScriptHash Script
 mintingPolicies = Map.fromList . fmap withHash . Set.toList

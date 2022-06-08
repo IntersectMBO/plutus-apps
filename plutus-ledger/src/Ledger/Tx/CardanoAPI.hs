@@ -27,7 +27,7 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxInsCollateral
   , fromCardanoTxInWitness
   , fromCardanoTxOut
-  , fromCardanoTxOutDatumHash
+  , fromCardanoTxOutDatum
   , fromCardanoAddress
   , fromCardanoMintValue
   , fromCardanoValue
@@ -468,11 +468,11 @@ toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
         <*> pure zeroExecutionUnits
 
 fromCardanoTxOut :: C.TxOut C.CtxTx era -> Either FromCardanoError P.TxOut
-fromCardanoTxOut (C.TxOut addr value datumHash) =
+fromCardanoTxOut (C.TxOut addr value datum) =
     P.TxOut
     <$> fromCardanoAddress addr
     <*> pure (fromCardanoTxOutValue value)
-    <*> pure (fromCardanoTxOutDatumHash datumHash)
+    <*> pure (fromCardanoTxOutDatum datum)
 
 toCardanoTxOut
     :: C.NetworkId
@@ -583,10 +583,10 @@ toCardanoTxOutValue value = do
 toCardanoTxOutValueUnsafe :: P.Value -> Either ToCardanoError (C.TxOutValue C.AlonzoEra)
 toCardanoTxOutValueUnsafe value = C.TxOutValue C.MultiAssetInAlonzoEra <$> toCardanoValue value
 
-fromCardanoTxOutDatumHash :: C.TxOutDatum C.CtxTx era -> Maybe P.DatumHash
-fromCardanoTxOutDatumHash C.TxOutDatumNone       = Nothing
-fromCardanoTxOutDatumHash (C.TxOutDatumHash _ h) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
-fromCardanoTxOutDatumHash (C.TxOutDatum _ d)     = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
+fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> Maybe P.DatumHash
+fromCardanoTxOutDatum C.TxOutDatumNone       = Nothing
+fromCardanoTxOutDatum (C.TxOutDatumHash _ h) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
+fromCardanoTxOutDatum (C.TxOutDatum _ d)     = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 
 toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra)
 toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone

@@ -145,7 +145,7 @@ type InitialChainState = Either InitialDistribution [Tx]
 
 -- | The wallets' initial funds
 initialDist :: InitialChainState -> InitialDistribution
-initialDist = either id (walletFunds . map Valid) where
+initialDist = either id (walletFunds . map (Valid . EmulatorTx)) where
     walletFunds :: Block -> Map Wallet Value
     walletFunds theBlock =
         let values = AM.values $ AM.fromChain [theBlock]

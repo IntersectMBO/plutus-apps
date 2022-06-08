@@ -329,7 +329,8 @@ handleBalance utx' = do
     theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
     tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
     cTx <- handleError tx' $ fromPlutusTx params cUtxoIndex requiredSigners tx'
-    pure $ Tx.Both tx' (Tx.CardanoApiEmulatorEraTx cTx)
+    -- pure $ Tx.Both tx' (Tx.CardanoApiEmulatorEraTx cTx)
+    pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
     where
         handleError tx (Left (Left (ph, ve))) = do
             let sves = case ve of

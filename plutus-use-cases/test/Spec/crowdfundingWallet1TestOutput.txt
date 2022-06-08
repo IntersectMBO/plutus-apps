@@ -7,4 +7,4 @@ Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
-           Contract instance stopped (no errors)
+           Contract instance stopped with error: ConstraintResolutionContractError (TypeCheckFailed (NoDatum (TxOutRef {txOutRefId = 1d9a387c52bb3e6c4e21002d13a5e2303cad7752d689c791362451b2b5e96af1, txOutRefIdx = 0}) 63f4305deedb48449f218150b39eceb8d5951aa680e28a414024bc4c04758969))
