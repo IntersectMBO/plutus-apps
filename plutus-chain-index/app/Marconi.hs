@@ -31,8 +31,8 @@ import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (..))
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Logging (logging)
-import Options.Applicative (Parser, auto, execParser, flag, flag', help, helper, info, long, maybeReader, metavar,
-                            option, readerError, strOption, (<**>), (<|>))
+import Options.Applicative (Parser, auto, execParser, flag', help, helper, info, long, maybeReader, metavar, option,
+                            readerError, strOption, (<**>), (<|>))
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
