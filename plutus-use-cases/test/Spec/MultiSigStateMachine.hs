@@ -55,7 +55,8 @@ tests =
         .&&. walletFundsChange w2 (Ada.adaValueOf 10))
         (lockProposeSignPay 3 3)
 
-    , goldenPir "test/Spec/multisigStateMachine.pir" $$(PlutusTx.compile [|| MS.mkValidator ||])
+    -- TODO: turn this on again when reproducibility issue in core is fixed
+    -- , goldenPir "test/Spec/multisigStateMachine.pir" $$(PlutusTx.compile [|| MS.mkValidator ||])
     , HUnit.testCaseSteps "script size is reasonable" $ \step -> reasonable' step (Scripts.validatorScript $ MS.typedValidator params) 51000
     ]
 
