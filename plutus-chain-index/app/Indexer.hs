@@ -1,6 +1,7 @@
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE LambdaCase     #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections  #-}
 
 module Main where
@@ -33,8 +34,9 @@ import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (..))
 import Marconi.Index.Utxo qualified as Ix
 import Options.Applicative (Parser, execParser, fullDesc, header, help, helper, info, long, metavar, progDesc,
                             strOption, (<**>))
-import Plutus.ChainIndex.Tx (ChainIndexTx (..), ChainIndexTxOutputs (..))
-import Plutus.Contract.CardanoAPI (fromCardanoTx)
+import Plutus.ChainIndex.Tx (ChainIndexTx (..))
+import Plutus.Contract.CardanoAPI (fromCardanoTx, fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut,
+                                   fromTxScriptValidity)
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 
 {- | This executable is meant to exercise a set of indexers (for now datumhash -> datum)
@@ -108,49 +110,39 @@ getDatum slotNo era tx =
       in  map (slotNo,) hashes
 
 getUpdate :: BlockInMode CardanoMode -> UtxoUpdate
-getUpdate (BlockInMode (Block (BlockHeader slotNo _ _) txs) era) =
-  case era of
-    C.ByronEraInCardanoMode   -> getUtxoUpdate slotNo era txs
-    C.ShelleyEraInCardanoMode -> getUtxoUpdate slotNo era txs
-    C.AllegraEraInCardanoMode -> getUtxoUpdate slotNo era txs
-    C.MaryEraInCardanoMode    -> getUtxoUpdate slotNo era txs
-    C.AlonzoEraInCardanoMode  -> getUtxoUpdate slotNo era txs
+getUpdate (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) =
+  getUtxoUpdate slotNo txs
 
 getOutputs
-  :: C.IsCardanoEra era
-  => C.EraInMode era C.CardanoMode
-  -> C.Tx era
+  :: C.Tx era
   -> Maybe [(TxOut, TxOutRef)]
-getOutputs era tx = do
-  tx' <- either (const Nothing) Just $ fromCardanoTx era tx
-  pure $ outputs (_citxOutputs tx')
+getOutputs (C.Tx txBody@(C.TxBody C.TxBodyContent{C.txOuts}) _) = do
+  outs <- either (const Nothing) Just $ traverse fromCardanoTxOut txOuts
+  pure $ outs
     &  zip ([0..] :: [Integer])
-   <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = _citxTxId tx'
+   <&> (\(ix, out) -> (out, TxOutRef { txOutRefId  = fromCardanoTxId (C.getTxId txBody)
                                      , txOutRefIdx = ix
                                      }))
-  where
-    outputs :: ChainIndexTxOutputs -> [TxOut]
-    outputs InvalidTx      = []
-    outputs (ValidTx outs) = outs
 
 getInputs
-  :: C.IsCardanoEra era
-  => C.EraInMode era C.CardanoMode
-  -> C.Tx era
-  -> Maybe (Set TxOutRef)
-getInputs era tx = do
-  tx' <- either (const Nothing) Just $ fromCardanoTx era tx
-  pure $ Set.map txInRef $ _citxInputs tx'
+  :: C.Tx era
+  -> Set TxOutRef
+getInputs (C.Tx (C.TxBody C.TxBodyContent{C.txIns, C.txScriptValidity, C.txInsCollateral}) _) =
+  let isTxScriptValid = fromTxScriptValidity txScriptValidity
+      inputs = if isTxScriptValid
+                  then fst <$> txIns
+                  else case txInsCollateral of
+                    C.TxInsCollateralNone     -> []
+                    C.TxInsCollateral _ txins -> txins
+  in Set.fromList $ fmap (txInRef . (`TxIn` Nothing) . fromCardanoTxIn) inputs
 
 getUtxoUpdate
-  :: C.IsCardanoEra era
-  => SlotNo
-  -> C.EraInMode era C.CardanoMode
+  :: SlotNo
   -> [C.Tx era]
   -> UtxoUpdate
-getUtxoUpdate slot era txs =
-  let ins  = foldl' Set.union Set.empty $ catMaybes $ getInputs era <$> txs
-      outs = concat . catMaybes $ getOutputs era <$> txs
+getUtxoUpdate slot txs =
+  let ins  = foldl' Set.union Set.empty $ getInputs <$> txs
+      outs = concat . catMaybes $ getOutputs <$> txs
   in  UtxoUpdate { _inputs  = ins
                  , _outputs = outs
                  , _slotNo  = slot
