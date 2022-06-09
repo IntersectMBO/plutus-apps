@@ -1,79 +1,92 @@
-cabal-version: 3.0
-name: plutus-script-utils
-version: 0.1.0.0
-license: Apache-2.0
+cabal-version:   3.0
+name:            plutus-script-utils
+version:         0.1.0.0
+license:         Apache-2.0
 license-files:
   LICENSE
   NOTICE
-maintainer: konstantinos.lambrou@iohk.io
-author: Konstantinos Lambrou-Latreille
-homepage: https://github.com/input-output-hk/plutus-apps#readme
-bug-reports: https://github.com/input-output-hk/plutus-apps/issues
-synopsis: Helper/utility functions for writing Plutus scripts.
-description:
-    Helper/utility functions for writing Plutus scripts.
-category: Language
-build-type: Simple
+
+maintainer:      konstantinos.lambrou@iohk.io
+author:          Konstantinos Lambrou-Latreille
+homepage:        https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:     https://github.com/input-output-hk/plutus-apps/issues
+synopsis:        Helper/utility functions for writing Plutus scripts.
+description:     Helper/utility functions for writing Plutus scripts.
+category:        Language
+build-type:      Simple
 extra-doc-files: README.adoc
 
 source-repository head
-    type: git
-    location: https://github.com/input-output-hk/plutus-apps
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
 
 common lang
-    default-language: Haskell2010
-    default-extensions: ExplicitForAll ScopedTypeVariables
-                        DeriveGeneric StandaloneDeriving DeriveLift
-                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
-                        DeriveTraversable MultiParamTypeClasses FlexibleContexts
-                        ImportQualifiedPost
-    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities -Wmissing-import-lists
-                 -- See Plutus Tx readme
-                 -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    FlexibleContexts
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    MultiParamTypeClasses
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wunused-packages
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wredundant-constraints -Widentities -Wmissing-import-lists
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
 
 flag defer-plugin-errors
-    description:
-        Defer errors from the plugin, useful for things like Haddock that can't handle it.
-    default: False
-    manual: True
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
+
+  default:     False
+  manual:      True
 
 library
-    import: lang
-    hs-source-dirs: src
-    default-language: Haskell2010
-    exposed-modules:
-        Plutus.Script.Utils.V1.Generators
-        Plutus.Script.Utils.V1.Scripts
-        Plutus.Script.Utils.V1.Typed.Scripts
-        Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies
-        Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators
-        Plutus.Script.Utils.V1.Typed.Scripts.Validators
+  import:           lang
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  exposed-modules:
+    Plutus.Script.Utils.V1.Generators
+    Plutus.Script.Utils.V1.Scripts
+    Plutus.Script.Utils.V1.Typed.Scripts
+    Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies
+    Plutus.Script.Utils.V1.Typed.Scripts.StakeValidators
+    Plutus.Script.Utils.V1.Typed.Scripts.Validators
 
-    build-depends:
-        base >=4.9 && <5,
-        cardano-api >=1.34,
-        cardano-ledger-alonzo -any,
-        bytestring -any,
-        plutus-core -any,
-        plutus-ledger-api -any,
-        plutus-tx -any,
-        plutus-tx-plugin -any,
-        serialise -any,
+  build-depends:
+    , base                   >=4.9  && <5
+    , bytestring
+    , cardano-api            >=1.34
+    , cardano-ledger-alonzo
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
+    , serialise
 
-    ghc-options: -fprint-potential-instances
+  ghc-options:      -fprint-potential-instances
 
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 test-suite plutus-ledger-test
-    import: lang
-    type: exitcode-stdio-1.0
-    main-is: Spec.hs
-    hs-source-dirs: test
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    build-depends:
-        base >=4.9 && <5,
-        tasty -any,
+  import:             lang
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  build-depends:
+    , base   >=4.9 && <5
+    , tasty
