@@ -19,8 +19,7 @@ main = do
 
 plutusExampleTests :: TestTree
 plutusExampleTests = testGroup "plutus-example"
-  [ -- Fails to meet deadline on MacOS for an unknown reason
-    -- Also, fails intermittently for some reason. Investigation is needed.
+  [ -- Flaky test:
     -- testProperty "Plutus.Direct.CertifyingAndWithdrawingPlutus" Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus.hprop_plutus_certifying_withdrawing
     testProperty "prop_TxId_Api_Ledger_Plutus_Roundtrip" Test.PlutusExample.Plutus.prop_TxId_Api_Ledger_Plutus_Roundtrip
   , testProperty "prop_TxId_Api_Ledger_Roundtrip" Test.PlutusExample.Plutus.prop_TxId_Api_Ledger_Roundtrip

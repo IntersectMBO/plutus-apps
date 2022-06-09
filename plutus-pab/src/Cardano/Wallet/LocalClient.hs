@@ -10,9 +10,9 @@
 module Cardano.Wallet.LocalClient where
 
 import Cardano.Api qualified
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
 import Cardano.Api.Shelley qualified as Cardano.Api
-import Cardano.Node.Types (PABServerConfig (pscNetworkId, pscPassphrase))
+import Cardano.Node.Params qualified as Params
+import Cardano.Node.Types (PABServerConfig (pscPassphrase))
 import Cardano.Wallet.Api qualified as C
 import Cardano.Wallet.Api.Client qualified as C
 import Cardano.Wallet.Api.Types (ApiVerificationKeyShelley (getApiVerificationKey), ApiWallet (assets, balance))
@@ -37,7 +37,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Quantity (Quantity (Quantity))
 import Data.Text (pack)
 import Data.Text.Class (fromText)
-import Ledger (CardanoTx (..))
+import Ledger (CardanoTx (..), Params (..))
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints.OffChain (UnbalancedTx)
@@ -66,7 +66,6 @@ handleWalletClient
     , Member (Error ClientError) effs
     , Member (Error WalletAPIError) effs
     , Member (Reader ClientEnv) effs
-    , Member (Reader Cardano.Api.ProtocolParameters) effs
     , Member (LogMsg WalletClientMsg) effs
     )
     => PABServerConfig -- TODO: Rename. Not mock
@@ -74,10 +73,9 @@ handleWalletClient
     -> WalletEffect
     ~> Eff effs
 handleWalletClient config (Wallet _ (WalletId walletId)) event = do
-    let NetworkIdWrapper networkId = pscNetworkId config
+    Params{pNetworkId = networkId, pProtocolParams = protocolParams} <- liftIO $ Params.fromPABServerConfig config
     let mpassphrase = pscPassphrase config
     clientEnv <- ask @ClientEnv
-    protocolParams <- ask @Cardano.Api.ProtocolParameters
     let
         runClient :: ClientM a -> Eff effs a
         runClient a = do
@@ -111,8 +109,8 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = do
-            slotConfig <- WAPI.getClientSlotConfig
-            case export protocolParams networkId slotConfig utx of
+            Params { pSlotConfig } <- WAPI.getClientParams
+            case export protocolParams networkId pSlotConfig utx of
                 Left err -> do
                     logWarn $ BalanceTxError $ show $ pretty err
                     throwOtherError $ pretty err

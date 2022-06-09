@@ -21,9 +21,10 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import Language.PureScript.Bridge (argonaut, equal, genericShow, mkSumType, order)
 import Ledger (PaymentPubKeyHash, StakePubKeyHash, Value)
-import Ledger.Constraints (adjustUnbalancedTx, mustPayToPubKeyAddress)
+import Ledger.Constraints (mustPayToPubKeyAddress)
 import Playground.Types (FunctionSchema)
-import Plutus.Contract (ContractError, Endpoint, Promise, endpoint, logInfo, mkTxConstraints, yieldUnbalancedTx)
+import Plutus.Contract (ContractError, Endpoint, Promise, adjustUnbalancedTx, endpoint, logInfo, mkTxConstraints,
+                        yieldUnbalancedTx)
 import Plutus.PAB.Effects.Contract.Builtin (HasDefinitions, SomeBuiltin (SomeBuiltin))
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.PAB.Run.PSGenerator (HasPSTypes (..))
@@ -72,5 +73,5 @@ payToWallet :: Promise () PayToWalletSchema ContractError ()
 payToWallet = endpoint @"PayToWallet" $ \PayToWalletParams{amount, pkh, skh} -> do
     utx <- mkTxConstraints @Void mempty (mustPayToPubKeyAddress pkh skh amount)
     logInfo @String $ show utx
-    yieldUnbalancedTx $ adjustUnbalancedTx utx
+    adjustUnbalancedTx utx >>= yieldUnbalancedTx
 

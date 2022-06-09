@@ -11,6 +11,7 @@ import Spec.Rows qualified
 import Spec.Secrets qualified
 import Spec.State qualified
 import Spec.ThreadToken qualified
+import Spec.TimeValidity qualified
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
@@ -23,6 +24,7 @@ tests = testGroup "plutus-contract" [
     Spec.State.tests,
     Spec.Rows.tests,
     Spec.ThreadToken.tests,
+    Spec.TimeValidity.tests,
     Spec.Secrets.tests,
     Spec.ErrorChecking.tests,
     Spec.Plutus.Contract.Wallet.tests,

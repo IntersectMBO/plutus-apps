@@ -28,7 +28,8 @@ module Test.QuickCheck.StateModel(
   , runActionsInState
   , lookUpVar
   , lookUpVarMaybe
-) where
+  , invertLookupVarMaybe
+  ) where
 
 import Control.Monad
 
@@ -40,8 +41,7 @@ import Test.QuickCheck.Monadic
 
 class (forall a. Show (Action state a),
        Monad (ActionMonad state),
-       Show state,
-       Typeable state) =>
+       Show state) =>
         StateModel state where
   data Action state a
   type ActionMonad state :: * -> *
@@ -79,10 +79,18 @@ lookUpVarMaybe ((v' :== a) : env) v =
   case cast (v',a) of
     Just (v'',a') | v==v'' -> Just a'
     _                      -> lookUpVarMaybe env v
+
 lookUpVar :: Typeable a => Env -> Var a -> a
 lookUpVar env v = case lookUpVarMaybe env v of
   Nothing -> error $ "Variable "++show v++" is not bound!"
   Just a  -> a
+
+invertLookupVarMaybe :: (Typeable a, Eq a) => Env -> a -> Maybe (Var a)
+invertLookupVarMaybe [] _ = Nothing
+invertLookupVarMaybe ((v :== a) : env) a' =
+  case cast (v, a) of
+    Just (v', a'') | a' == a'' -> Just v'
+    _                          -> invertLookupVarMaybe env a'
 
 data Any f where
   Some :: (Show a, Typeable a, Eq (f a)) => f a -> Any f
@@ -99,7 +107,7 @@ instance Eq (Any f) where
   _ == _ = False
 
 data Step state where
-  (:=) :: (Show a, Typeable a, Eq (Action state a), Typeable (Action state a), Show (Action state a)) =>
+  (:=) :: (Show a, Typeable a, Eq (Action state a), Show (Action state a)) =>
             Var a -> Action state a -> Step state
 
 infix 5 :=
@@ -111,7 +119,7 @@ newtype Var a = Var Int
 
 instance Eq (Step state) where
   (Var i := act) == (Var j := act') =
-    (i==j) && Some act == Some act'
+    (i == j) && Some act == Some act'
 
 -- Action sequences use Smart shrinking, but this is invisible to
 -- client code because the extra Smart constructor is concealed by a
@@ -142,7 +150,7 @@ instance (forall a. Show (Action state a)) => Show (Actions state) where
                   foldr (.) (showsPrec 0 (last as) . ("]"++))
                     [showsPrec 0 a . (",\n  "++) | a <- init as]
 
-instance (Typeable state, StateModel state) => Arbitrary (Actions state) where
+instance (StateModel state) => Arbitrary (Actions state) where
   arbitrary = do (as,rejected) <- arbActions initialState 1
                  return $ Actions_ rejected (Smart 0 as)
     where
@@ -198,7 +206,7 @@ stateAfter (Actions actions) = loop initialState actions
     loop s ((var := act) : as) = loop (nextState s act var) as
 
 runActions :: StateModel state =>
-                Actions state -> PropertyM (ActionMonad state) (state,Env)
+                Actions state -> PropertyM (ActionMonad state) (state, Env)
 runActions = runActionsInState initialState
 
 runActionsInState :: StateModel state =>

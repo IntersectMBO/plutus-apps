@@ -69,8 +69,9 @@ import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, ValidatorHash)
 import Plutus.V1.Ledger.Contexts (ScriptContext (ScriptContext, scriptContextTxInfo), TxInfo (txInfoValidRange))
 
 import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint, Promise,
-                        awaitTime, currentTime, endpoint, mapError, mkTxConstraints, ownPaymentPubKeyHash, promiseMap,
-                        selectList, submitUnbalancedTx, type (.\/), utxosAt, waitNSlots)
+                        adjustUnbalancedTx, awaitTime, currentTime, endpoint, mapError, mkTxConstraints,
+                        ownPaymentPubKeyHash, promiseMap, selectList, submitUnbalancedTx, type (.\/), utxosAt,
+                        waitNSlots)
 import Plutus.Contract.Typed.Tx qualified as Typed
 import PlutusTx qualified
 {- START imports -}
@@ -80,7 +81,7 @@ import PlutusTx.Coverage qualified as PlutusTx
 import PlutusTx.Prelude (Bool (False), Either (Left, Right), all, either, foldl, id, mempty, traceIfFalse, ($), (&&),
                          (+), (-), (.), (<$>), (==), (>=))
 
-import Prelude (Semigroup ((<>)), foldMap)
+import Prelude (Semigroup ((<>)), foldMap, (>>=))
 import Prelude qualified as Haskell
 
 type EscrowSchema =
@@ -269,8 +270,8 @@ pay inst escrow vl = do
     pk <- ownPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
-    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
-    getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
+    getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RedeemSuccess = RedeemSuccess TxId
     deriving (Haskell.Eq, Haskell.Show)
@@ -312,8 +313,8 @@ redeem inst escrow = mapError (review _EscrowError) $ do
          else do
            utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                                  <> Constraints.unspentOutputs unspentOutputs
-                                  ) tx
-           RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+                                  ) tx >>= adjustUnbalancedTx
+           RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RefundSuccess = RefundSuccess TxId
     deriving newtype (Haskell.Eq, Haskell.Show, Generic)
@@ -344,8 +345,8 @@ refund inst escrow = do
     then do
         utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                               <> Constraints.unspentOutputs unspentOutputs
-                               ) tx'
-        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+                               ) tx' >>= adjustUnbalancedTx
+        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
     else throwing _RefundFailed ()
 
 -- | Pay some money into the escrow contract. Then release all funds to their

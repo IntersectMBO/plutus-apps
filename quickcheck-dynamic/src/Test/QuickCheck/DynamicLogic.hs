@@ -146,7 +146,7 @@ bracket (first:rest) = ["  ["++first++", "] ++
 -- properties at controlled times, so they are likely to fail if
 -- invoked at other times.
 
-class StateModel s => DynLogicModel s where
+class (Typeable s, StateModel s) => DynLogicModel s where
     restricted :: Action s a -> Bool
     restricted _ = False
 

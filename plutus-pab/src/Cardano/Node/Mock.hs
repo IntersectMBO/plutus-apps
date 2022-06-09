@@ -31,7 +31,7 @@ import Cardano.Chain (handleChain, handleControlChain)
 import Cardano.Node.Types
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Server qualified as Server
-import Ledger (Tx)
+import Ledger (Params (..), Tx)
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength), currentSlot)
 import Plutus.PAB.Arbitrary ()
 import Plutus.PAB.Monitoring.Monitoring qualified as LM
@@ -68,12 +68,12 @@ addTx tx = do
 -- | Run all chain effects in the IO Monad
 runChainEffects ::
  Trace IO PABServerLogMsg
- -> SlotConfig
+ -> Params
  -> Maybe Client.TxSendHandle
  -> MVar AppState
  -> Eff (NodeServerEffects IO) a
  -> IO ([LogMessage PABServerLogMsg], a)
-runChainEffects trace slotCfg clientHandler stateVar eff = do
+runChainEffects trace params clientHandler stateVar eff = do
     oldAppState <- liftIO $ takeMVar stateVar
     ((a, events), newState) <- liftIO
             $ processBlock eff
@@ -89,9 +89,9 @@ runChainEffects trace slotCfg clientHandler stateVar eff = do
             processBlock e = e >>= \r -> Chain.processBlock >> pure r
 
             runChain = interpret (mapLog ProcessingChainEvent)
-                     . reinterpret (handleChain slotCfg)
+                     . reinterpret (handleChain params)
                      . interpret (mapLog ProcessingChainEvent)
-                     . reinterpret (handleControlChain slotCfg)
+                     . reinterpret (handleControlChain params)
 
             mergeState = interpret (handleZoomedState chainState)
 
@@ -101,13 +101,13 @@ runChainEffects trace slotCfg clientHandler stateVar eff = do
 
 processChainEffects ::
     Trace IO PABServerLogMsg
-    -> SlotConfig
+    -> Params
     -> Maybe Client.TxSendHandle
     -> MVar AppState
     -> Eff (NodeServerEffects IO) a
     -> IO a
-processChainEffects trace slotCfg clientHandler stateVar eff = do
-    (events, result) <- liftIO $ runChainEffects trace slotCfg clientHandler stateVar eff
+processChainEffects trace params clientHandler stateVar eff = do
+    (events, result) <- liftIO $ runChainEffects trace params clientHandler stateVar eff
     LM.runLogEffects trace $ traverse_ (\(LogMessage _ chainEvent) -> logDebug chainEvent) events
     liftIO $
         modifyMVar_

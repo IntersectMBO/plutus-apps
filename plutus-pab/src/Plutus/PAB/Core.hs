@@ -39,7 +39,7 @@ module Plutus.PAB.Core
     , EffectHandlers(..)
     , runPAB
     , runPAB'
-    , PABEnvironment(appEnv)
+    , PABEnvironment(..)
     -- * Contracts and instances
     , reportContractState
     , activateContract
@@ -67,7 +67,6 @@ module Plutus.PAB.Core
     , activeContracts
     , finalResult
     , waitUntilFinished
-    , blockchainEnv
     , valueAt
     , askUserEnv
     , askBlockchainEnv
@@ -104,7 +103,7 @@ import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Text (Text)
-import Ledger (Address (addressCredential), TxOutRef)
+import Ledger (Address (addressCredential), Params, TxOutRef)
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Tx (CardanoTx, TxId, ciTxOutValue)
 import Ledger.Value (Value)
@@ -335,11 +334,11 @@ callEndpointOnInstance' instanceID ep value = do
         $ Instances.callEndpointOnInstance state (EndpointDescription ep) (JSON.toJSON value) instanceID
 
 -- | Make a payment to a payment public key.
-payToPaymentPublicKey :: ContractInstanceId -> Wallet -> PaymentPubKeyHash -> Value -> PABAction t env CardanoTx
-payToPaymentPublicKey cid source target amount =
+payToPaymentPublicKey :: Params -> ContractInstanceId -> Wallet -> PaymentPubKeyHash -> Value -> PABAction t env CardanoTx
+payToPaymentPublicKey params cid source target amount =
     handleAgentThread source (Just cid)
         $ Modify.wrapError WalletError
-        $ WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange amount target
+        $ WAPI.payToPaymentPublicKeyHash params WAPI.defaultSlotRange amount target
 
 -- | Effects available to contract instances with access to external services.
 type ContractInstanceEffects t env effs =

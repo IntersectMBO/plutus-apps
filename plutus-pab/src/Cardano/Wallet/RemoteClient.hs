@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TypeApplications  #-}
@@ -10,15 +11,15 @@ module Cardano.Wallet.RemoteClient
     ( handleWalletClient
     ) where
 
-import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (NetworkIdWrapper))
-import Cardano.Api.Shelley qualified as Cardano.Api
-import Cardano.Node.Types (PABServerConfig (pscNetworkId))
+import Cardano.Node.Params qualified as Params
+import Cardano.Node.Types (PABServerConfig)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad.Freer (Eff, LastMember, Member, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Text qualified as Text
+import Ledger.Params (Params (..))
 import Plutus.Contract.Wallet (export)
 import Plutus.PAB.Core.ContractInstance.STM (InstancesState)
 import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
@@ -39,7 +40,6 @@ handleWalletClient
     , MonadIO m
     , Member WAPI.NodeClientEffect effs
     , Member (Error WalletAPIError) effs
-    , Member (Reader Cardano.Api.ProtocolParameters) effs
     , Member (Reader InstancesState) effs
     )
     => PABServerConfig
@@ -47,8 +47,7 @@ handleWalletClient
     -> WalletEffect
     ~> Eff effs
 handleWalletClient config cidM event = do
-    let NetworkIdWrapper networkId = pscNetworkId config
-    protocolParams <- ask @Cardano.Api.ProtocolParameters
+    Params{pNetworkId = networkId, pProtocolParams = protocolParams} <- liftIO $ Params.fromPABServerConfig config
     case event of
         OwnPaymentPubKeyHash -> do
             throwError $ RemoteClientFunctionNotYetSupported "Cardano.Wallet.RemoteClient.OwnPaymentPubKeyHash"
@@ -66,8 +65,8 @@ handleWalletClient config cidM event = do
             throwError $ RemoteClientFunctionNotYetSupported "Cardano.Wallet.RemoteClient.BalanceTx"
 
         YieldUnbalancedTx utx -> do
-            slotConfig <- WAPI.getClientSlotConfig
-            case export protocolParams networkId slotConfig utx of
+            WAPI.Params { WAPI.pSlotConfig } <- WAPI.getClientParams
+            case export protocolParams networkId pSlotConfig utx of
                 Left err -> throwOtherError $ Text.pack $ show err
                 Right ex -> do
                   case cidM of

@@ -26,6 +26,7 @@ import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Slot (Slot)
 import Ledger.TimeSlot (SlotConversionError)
 import Ledger.Tx (CardanoTx, ChainIndexTxOut)
+import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.Tx (ChainIndexTx)
 import Plutus.ChainIndex.Types (RollbackState, Tip, TxOutState)
@@ -387,7 +388,8 @@ _GetTipResponse = prism' GetTipResponse case _ of
 --------------------------------------------------------------------------------
 
 data PABReq
-  = AwaitSlotReq Slot
+  = AdjustUnbalancedTxReq UnbalancedTx
+  | AwaitSlotReq Slot
   | AwaitTimeReq POSIXTime
   | AwaitUtxoSpentReq TxOutRef
   | AwaitUtxoProducedReq Address
@@ -411,6 +413,7 @@ instance Show PABReq where
 
 instance EncodeJson PABReq where
   encodeJson = defer \_ -> case _ of
+    AdjustUnbalancedTxReq a -> E.encodeTagged "AdjustUnbalancedTxReq" a E.value
     AwaitSlotReq a -> E.encodeTagged "AwaitSlotReq" a E.value
     AwaitTimeReq a -> E.encodeTagged "AwaitTimeReq" a E.value
     AwaitUtxoSpentReq a -> E.encodeTagged "AwaitUtxoSpentReq" a E.value
@@ -432,7 +435,8 @@ instance DecodeJson PABReq where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "PABReq"
     $ Map.fromFoldable
-        [ "AwaitSlotReq" /\ D.content (AwaitSlotReq <$> D.value)
+        [ "AdjustUnbalancedTxReq" /\ D.content (AdjustUnbalancedTxReq <$> D.value)
+        , "AwaitSlotReq" /\ D.content (AwaitSlotReq <$> D.value)
         , "AwaitTimeReq" /\ D.content (AwaitTimeReq <$> D.value)
         , "AwaitUtxoSpentReq" /\ D.content (AwaitUtxoSpentReq <$> D.value)
         , "AwaitUtxoProducedReq" /\ D.content (AwaitUtxoProducedReq <$> D.value)
@@ -453,6 +457,11 @@ instance DecodeJson PABReq where
 derive instance Generic PABReq _
 
 --------------------------------------------------------------------------------
+
+_AdjustUnbalancedTxReq :: Prism' PABReq UnbalancedTx
+_AdjustUnbalancedTxReq = prism' AdjustUnbalancedTxReq case _ of
+  (AdjustUnbalancedTxReq a) -> Just a
+  _ -> Nothing
 
 _AwaitSlotReq :: Prism' PABReq Slot
 _AwaitSlotReq = prism' AwaitSlotReq case _ of
@@ -537,7 +546,8 @@ _YieldUnbalancedTxReq = prism' YieldUnbalancedTxReq case _ of
 --------------------------------------------------------------------------------
 
 data PABResp
-  = AwaitSlotResp Slot
+  = AdjustUnbalancedTxResp (Either ToCardanoError UnbalancedTx)
+  | AwaitSlotResp Slot
   | AwaitTimeResp POSIXTime
   | AwaitUtxoSpentResp ChainIndexTx
   | AwaitUtxoProducedResp (NonEmptyList ChainIndexTx)
@@ -561,6 +571,7 @@ instance Show PABResp where
 
 instance EncodeJson PABResp where
   encodeJson = defer \_ -> case _ of
+    AdjustUnbalancedTxResp a -> E.encodeTagged "AdjustUnbalancedTxResp" a (E.either E.value E.value)
     AwaitSlotResp a -> E.encodeTagged "AwaitSlotResp" a E.value
     AwaitTimeResp a -> E.encodeTagged "AwaitTimeResp" a E.value
     AwaitUtxoSpentResp a -> E.encodeTagged "AwaitUtxoSpentResp" a E.value
@@ -582,7 +593,8 @@ instance DecodeJson PABResp where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "PABResp"
     $ Map.fromFoldable
-        [ "AwaitSlotResp" /\ D.content (AwaitSlotResp <$> D.value)
+        [ "AdjustUnbalancedTxResp" /\ D.content (AdjustUnbalancedTxResp <$> (D.either D.value D.value))
+        , "AwaitSlotResp" /\ D.content (AwaitSlotResp <$> D.value)
         , "AwaitTimeResp" /\ D.content (AwaitTimeResp <$> D.value)
         , "AwaitUtxoSpentResp" /\ D.content (AwaitUtxoSpentResp <$> D.value)
         , "AwaitUtxoProducedResp" /\ D.content (AwaitUtxoProducedResp <$> D.value)
@@ -603,6 +615,11 @@ instance DecodeJson PABResp where
 derive instance Generic PABResp _
 
 --------------------------------------------------------------------------------
+
+_AdjustUnbalancedTxResp :: Prism' PABResp (Either ToCardanoError UnbalancedTx)
+_AdjustUnbalancedTxResp = prism' AdjustUnbalancedTxResp case _ of
+  (AdjustUnbalancedTxResp a) -> Just a
+  _ -> Nothing
 
 _AwaitSlotResp :: Prism' PABResp Slot
 _AwaitSlotResp = prism' AwaitSlotResp case _ of

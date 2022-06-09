@@ -21,10 +21,11 @@ module Plutus.PAB.Run.Cli (ConfigCommandArgs(..), runConfigCommand) where
 -----------------------------------------------------------------------------------------------------------------------
 
 import Cardano.Api qualified as C
-import Cardano.Api.NetworkId.Extra (unNetworkIdWrapper)
+import Cardano.Api.NetworkId.Extra (NetworkIdWrapper (..))
 import Cardano.BM.Configuration (Configuration)
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.ChainIndex.Server qualified as ChainIndex
+import Cardano.Node.Params qualified as Params
 import Cardano.Node.Server qualified as NodeServer
 import Cardano.Node.Types (NodeMode (AlonzoNode, MockNode),
                            PABServerConfig (pscNetworkId, pscNodeMode, pscSlotConfig, pscSocketPath), _AlonzoNode)
@@ -108,12 +109,13 @@ runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig=Config{dbConfig}} Mi
     App.migrate (toPABMsg ccaTrace) dbConfig
 
 -- Run mock wallet service
-runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet =
+runConfigCommand _ ConfigCommandArgs{ccaTrace, ccaPABConfig = Config {nodeServerConfig, chainIndexConfig, walletServerConfig = LocalWalletConfig ws},ccaAvailability} MockWallet = do
+    params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
     liftIO $ WalletServer.main
         (toWalletLog ccaTrace)
         ws
         (pscSocketPath nodeServerConfig)
-        (pscSlotConfig nodeServerConfig)
+        params
         (ChainIndex.ciBaseUrl chainIndexConfig)
         ccaAvailability
 

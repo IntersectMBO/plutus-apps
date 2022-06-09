@@ -61,6 +61,7 @@ let
             plutus-pab-executables.package.buildable = false;
             plutus-playground-server.package.buildable = false; # Would also require libpq
             plutus-script-utils.package.buildable = false;
+            plutus-streaming.package.buildable = false;
             plutus-tx-plugin.package.buildable = false;
             plutus-use-cases.package.buildable = false;
             plutus-example.package.buildable = false;

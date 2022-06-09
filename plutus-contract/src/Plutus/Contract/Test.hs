@@ -71,6 +71,7 @@ module Plutus.Contract.Test(
     , minLogLevel
     , emulatorConfig
     , changeInitialWalletValue
+    , allowBigTransactions
     -- * Etc
     , goldenPir
     ) where
@@ -130,8 +131,9 @@ import Plutus.V1.Ledger.Scripts qualified as PV1
 
 import Data.IORef
 import Plutus.Contract.Test.Coverage
+import Plutus.Contract.Test.MissingLovelace (calculateDelta)
 import Plutus.Contract.Trace as X
-import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, runEmulatorStream)
+import Plutus.Trace.Emulator (EmulatorConfig (..), EmulatorTrace, params, runEmulatorStream)
 import Plutus.Trace.Emulator.Types (ContractConstraints, ContractInstanceLog, ContractInstanceState (..),
                                     ContractInstanceTag, UserThreadMsg)
 import PlutusTx.Coverage
@@ -183,6 +185,11 @@ defaultCheckOptions =
 changeInitialWalletValue :: Wallet -> (Value -> Value) -> CheckOptions -> CheckOptions
 changeInitialWalletValue wallet = over (emulatorConfig . initialChainState . _Left . ix wallet)
 
+-- | Set higher limits on transaction size and execution units.
+-- This can be used to work around @MaxTxSizeUTxO@ and @ExUnitsTooBigUTxO@ errors.
+-- Note that if you need this your Plutus script will probably not validate on Mainnet.
+allowBigTransactions :: CheckOptions -> CheckOptions
+allowBigTransactions = over (emulatorConfig . params) Ledger.allowBigTransactions
 
 -- | Check if the emulator trace meets the condition
 checkPredicate ::
@@ -565,11 +572,12 @@ walletFundsExactChange :: Wallet -> Value -> TracePredicate
 walletFundsExactChange = walletFundsChangeImpl True
 
 walletFundsChangeImpl :: Bool -> Wallet -> Value -> TracePredicate
-walletFundsChangeImpl exact w dlt = TracePredicate $
-    flip postMapM (L.generalize $ (,) <$> Folds.walletFunds w <*> Folds.walletFees w) $ \(finalValue', fees) -> do
+walletFundsChangeImpl exact w dlt' = TracePredicate $
+    flip postMapM (L.generalize $ (,,) <$> Folds.walletFunds w <*> Folds.walletFees w <*> Folds.walletsAdjustedTxEvents) $ \(finalValue', fees, allWalletsTxOutCosts) -> do
         dist <- ask @InitialDistribution
         let initialValue = fold (dist ^. at w)
             finalValue = finalValue' P.+ if exact then mempty else fees
+            dlt = calculateDelta dlt' (Ada.fromValue initialValue) (Ada.fromValue finalValue) allWalletsTxOutCosts
             result = initialValue P.+ dlt == finalValue
         unless result $ do
             tell @(Doc Void) $ vsep $

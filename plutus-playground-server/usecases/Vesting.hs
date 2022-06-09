@@ -166,7 +166,7 @@ vestFundsC
 vestFundsC vesting = do
     let txn = payIntoContract (totalAmount vesting)
     mkTxConstraints (Constraints.typedValidatorLookups $ typedValidator vesting) txn
-      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
+      >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 data Liveness = Alive | Dead
 
@@ -210,7 +210,7 @@ retrieveFundsC vesting payment = do
                 -- transaction.
     mkTxConstraints (Constraints.typedValidatorLookups inst
                   <> Constraints.unspentOutputs unspentOutputs) txn
-      >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
+      >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
     return liveness
 
 endpoints :: Contract () VestingSchema T.Text ()
