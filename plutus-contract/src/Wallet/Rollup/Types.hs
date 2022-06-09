@@ -73,7 +73,7 @@ data AnnotatedTx =
     AnnotatedTx
         { sequenceId         :: SequenceId
         , txId               :: TxId
-        , tx                 :: CardanoTx
+        , tx                 :: Tx
         , dereferencedInputs :: [DereferencedInput]
         , balances           :: Map BeneficialOwner Value
         , valid              :: Bool
