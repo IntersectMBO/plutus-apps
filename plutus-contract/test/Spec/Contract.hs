@@ -285,6 +285,44 @@ tests =
               _ <- activateContract w1 c tag
               void (Trace.waitNSlots 2)
 
+        , let submitCardanoTxConstraintsWith sl constraints = do
+                unbalancedTx <- mkTxConstraints @Void sl constraints
+                tx <- balanceTx unbalancedTx
+                submitBalancedTx $ Ledger.CardanoApiTx $ tx ^?! Ledger.cardanoApiTx
+              c :: Contract [TxOutStatus] Schema ContractError () = do
+                -- Submit a payment tx of 10 lovelace to W2.
+                let w2PubKeyHash = mockWalletPaymentPubKeyHash w2
+                let payment = Constraints.mustPayToPubKey w2PubKeyHash
+                                                          (Ada.adaValueOf 10)
+                tx <- submitCardanoTxConstraintsWith mempty payment
+                -- There should be 2 utxos. We suppose the first belongs to W2
+                -- and the second one belongs to the wallet calling the contract.
+                let utxo = (fmap snd $ Ledger.getCardanoTxOutRefs tx) !! 1
+                -- We wait for W1's utxo to change status. It should be of
+                -- status confirmed unspent.
+                s <- awaitTxOutStatusChange utxo
+                tell [s]
+
+                -- We submit another tx which spends the utxo belonging to the
+                -- contract's caller. It's status should be changed eventually
+                -- to confirmed spent.
+                pubKeyHash <- ownPaymentPubKeyHash
+                ciTxOutM <- unspentTxOutFromRef utxo
+                let lookups = Constraints.unspentOutputs (maybe mempty (Map.singleton utxo) ciTxOutM)
+                submitCardanoTxConstraintsWith lookups $ Constraints.mustSpendPubKeyOutput utxo
+                                                      <> Constraints.mustBeSignedBy pubKeyHash
+                s <- awaitTxOutStatusChange utxo
+                tell [s]
+
+              isExpectedAccumState [Committed TxValid Unspent, Committed TxValid (Spent _)] = True
+              isExpectedAccumState _                                                        = False
+
+          in run "await change in tx out status (cardano-api tx version)"
+            ( assertAccumState c tag isExpectedAccumState "should be done"
+            ) $ do
+              _ <- activateContract w1 c tag
+              void (Trace.waitNSlots 2)
+
         , run "checkpoints"
             (not (endpointAvailable @"2" checkpointContract tag) .&&. endpointAvailable @"1" checkpointContract tag)
             (void $ activateContract w1 checkpointContract tag >>= \hdl -> callEndpoint @"1" hdl 1 >> callEndpoint @"2" hdl 1)
