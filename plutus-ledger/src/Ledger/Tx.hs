@@ -41,7 +41,6 @@ module Ledger.Tx
     , getCardanoTxUnspentOutputsTx
     , getCardanoTxFee
     , getCardanoTxMint
-    , getCardanoTxMintScripts
     , getCardanoTxValidityRange
     , getCardanoTxData
     , SomeCardanoApiTx(.., CardanoApiEmulatorEraTx)
@@ -79,7 +78,7 @@ import Ledger.Crypto (Passphrase, PrivateKey, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
-import Plutus.Script.Utils.V1.Scripts (MintingPolicy, datumHash)
+import Plutus.Script.Utils.V1.Scripts (datumHash)
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), DatumHash, TxId (TxId),
                              Validator, ValidatorHash, Value, addressCredential, toBuiltin)
 import Plutus.V1.Ledger.Slot (SlotRange)
@@ -216,9 +215,6 @@ getCardanoTxFee = onCardanoTx txFee (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {.
 
 getCardanoTxMint :: CardanoTx -> Value
 getCardanoTxMint = onCardanoTx txMint (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoMintValue txMintValue)
-
-getCardanoTxMintScripts :: CardanoTx -> Set MintingPolicy
-getCardanoTxMintScripts = onCardanoTx txMintScripts (const mempty) -- (error "getCardanoTxMintScripts: TODO")
 
 getCardanoTxValidityRange :: CardanoTx -> SlotRange
 getCardanoTxValidityRange = onCardanoTx txValidRange

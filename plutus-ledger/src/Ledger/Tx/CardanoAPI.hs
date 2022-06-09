@@ -38,6 +38,7 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoPaymentKeyHash
   , fromCardanoScriptData
   , fromTxScriptValidity
+  , toTxScriptValidity
   , scriptDataFromCardanoTxBody
   , plutusScriptsFromTxBody
   , makeTransactionBody
@@ -281,6 +282,10 @@ fromTxScriptValidity :: C.TxScriptValidity era -> Bool
 fromTxScriptValidity C.TxScriptValidityNone                                                      = True
 fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptValid)   = True
 fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptInvalid) = False
+
+toTxScriptValidity :: Bool -> C.TxScriptValidity C.AlonzoEra
+toTxScriptValidity True  = C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptValid
+toTxScriptValidity False = C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptInvalid
 
 -- | Given a 'C.TxBody from a 'C.Tx era', return the datums and redeemers along
 -- with their hashes.

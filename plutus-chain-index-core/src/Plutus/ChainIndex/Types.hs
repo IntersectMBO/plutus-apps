@@ -8,7 +8,9 @@
 {-| Misc. types used in this package
 -}
 module Plutus.ChainIndex.Types(
-    BlockId(..)
+    ChainIndexTx(..)
+    , ChainIndexTxOutputs(..)
+    , BlockId(..)
     , blockId
     , Tip(..)
     , Point(..)
@@ -37,6 +39,17 @@ module Plutus.ChainIndex.Types(
     , tobSpentOutputs
     , ChainSyncBlock(..)
     , TxProcessOption(..)
+    -- ** Lenses
+    , citxTxId
+    , citxInputs
+    , citxOutputs
+    , citxValidRange
+    , citxData
+    , citxRedeemers
+    , citxScripts
+    , citxCardanoTx
+    , _InvalidTx
+    , _ValidTx
     ) where
 
 import Codec.Serialise (Serialise)
@@ -57,16 +70,70 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Ledger (TxOutRef (..))
+import Ledger (SlotRange, SomeCardanoApiTx, TxIn, TxOut, TxOutRef (..))
 import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
 import Ledger.TxId (TxId)
+import Plutus.V1.Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash)
 import PlutusTx.Lattice (MeetSemiLattice (..))
-import Prettyprinter (Pretty (..), comma, (<+>))
+import Prettyprinter
 import Prettyprinter.Extras (PrettyShow (..))
 
-import Plutus.ChainIndex.Tx (ChainIndexTx)
+-- | List of outputs of a transaction. There are no outputs if the transaction
+-- is invalid.
+data ChainIndexTxOutputs =
+    InvalidTx -- ^ The transaction is invalid so there is no outputs
+  | ValidTx [TxOut]
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
+
+makePrisms ''ChainIndexTxOutputs
+
+data ChainIndexTx = ChainIndexTx {
+    _citxTxId       :: TxId,
+    -- ^ The id of this transaction.
+    _citxInputs     :: Set TxIn,
+    -- ^ The inputs to this transaction.
+    _citxOutputs    :: ChainIndexTxOutputs,
+    -- ^ The outputs of this transaction, ordered so they can be referenced by index.
+    _citxValidRange :: !SlotRange,
+    -- ^ The 'SlotRange' during which this transaction may be validated.
+    _citxData       :: Map DatumHash Datum,
+    -- ^ Datum objects recorded on this transaction.
+    _citxRedeemers  :: Map RedeemerHash Redeemer,
+    -- ^ Redeemers of the minting scripts.
+    _citxScripts    :: Map ScriptHash Script,
+    -- ^ The scripts (validator, stake validator or minting) part of cardano tx.
+    _citxCardanoTx  :: Maybe SomeCardanoApiTx
+    -- ^ The full Cardano API tx which was used to populate the rest of the
+    -- 'ChainIndexTx' fields. Useful because 'ChainIndexTx' doesn't have all the
+    -- details of the tx, so we keep it as a safety net. Might be Nothing if we
+    -- are in the emulator.
+    } deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
+
+makeLenses ''ChainIndexTx
+
+instance Pretty ChainIndexTx where
+    pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = ValidTx outputs, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
+        let lines' =
+                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList _citxInputs)))
+                , hang 2 (vsep ("outputs:" : fmap pretty outputs))
+                , hang 2 (vsep ("scripts hashes:": fmap (pretty . fst) (Map.toList _citxScripts)))
+                , "validity range:" <+> viaShow _citxValidRange
+                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _citxData) ))
+                , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList _citxRedeemers) ))
+                ]
+        in nest 2 $ vsep ["Valid tx" <+> pretty _citxTxId <> colon, braces (vsep lines')]
+    pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = InvalidTx, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
+        let lines' =
+                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList _citxInputs)))
+                , hang 2 (vsep ["no outputs:"])
+                , hang 2 (vsep ("scripts hashes:": fmap (pretty . fst) (Map.toList _citxScripts)))
+                , "validity range:" <+> viaShow _citxValidRange
+                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _citxData) ))
+                , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList _citxRedeemers) ))
+                ]
+        in nest 2 $ vsep ["Invalid tx" <+> pretty _citxTxId <> colon, braces (vsep lines')]
 
 -- | Compute a hash of the block's contents.
 blockId :: Ledger.Block -> BlockId
