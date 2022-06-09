@@ -114,36 +114,3 @@ executable marconi
     streaming,
     text,
     time,
-
-executable indexer
-  main-is: Indexer.hs
-  hs-source-dirs: app
-  other-modules:
-    Marconi.Index.Datum
-    Marconi.Index.Utxo
-  default-language: Haskell2010
-  default-extensions: ImportQualifiedPost
-  ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-  build-depends:
-    base >=4.9 && <5,
-    bytestring,
-    cardano-api,
-    containers,
-    hysterical-screams,
-    iohk-monitoring,
-    lens,
-    optparse-applicative,
-    plutus-chain-index,
-    plutus-chain-index-core,
-    plutus-ledger,
-    plutus-script-utils,
-    plutus-streaming,
-    prettyprinter,
-    serialise,
-    sqlite-simple,
-    streaming,
-    text,
-    time,
