@@ -242,4 +242,4 @@ check_propEscrowWithCoverage = do
   cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIdx $ defaultCoverageOptions) $ \covopts ->
     withMaxSuccess 1000 $ propRunActionsWithOptions @EscrowModel defaultCheckOptionsContractModel
                                                     covopts (const (pure True))
-  writeCoverageReport "Escrow" covIdx cr
+  writeCoverageReport "Escrow" cr
