@@ -208,7 +208,10 @@ checkDLTests tests opts covIdx =
 certify :: forall m. ContractModel m => Certification m -> IO (CertificationReport m)
 certify = certifyWithOptions defaultCertificationOptions
 
-certifyWithOptions :: forall m. ContractModel m => CertificationOptions -> Certification m -> IO (CertificationReport m)
+certifyWithOptions :: forall m. ContractModel m
+                   => CertificationOptions
+                   -> Certification m
+                   -> IO (CertificationReport m)
 certifyWithOptions opts Certification{..} = runCertMonad $ do
   -- Unit tests
   unitTests    <- fromMaybe [] <$> traverse runUnitTests certUnitTests
@@ -227,13 +230,14 @@ certifyWithOptions opts Certification{..} = runCertMonad $ do
   -- DL tests
   dlRes        <- checkDLTests @m certDLTests opts certCoverageIndex
   -- Final results
-  return $ CertificationReport { _certRes_standardPropertyResult       = qcRes
-                               , _certRes_doubleSatisfactionResult     = dsRes
-                               , _certRes_standardCrashToleranceResult = ctRes
-                               , _certRes_noLockedFundsResult          = noLock
-                               , _certRes_noLockedFundsLightResult     = noLockLight
-                               , _certRes_unitTestResults              = unitTests
-                               , _certRes_coverageReport               = CoverageReport certCoverageIndex mempty
-                               , _certRes_whitelistOk                  = whitelistOk <$> certWhitelist
-                               , _certRes_whitelistResult              = wlRes
-                               , _certRes_DLTests                      = dlRes }
+  return $ CertificationReport
+            { _certRes_standardPropertyResult       = qcRes
+            , _certRes_doubleSatisfactionResult     = dsRes
+            , _certRes_standardCrashToleranceResult = ctRes
+            , _certRes_noLockedFundsResult          = noLock
+            , _certRes_noLockedFundsLightResult     = noLockLight
+            , _certRes_unitTestResults              = unitTests
+            , _certRes_coverageReport               = CoverageReport certCoverageIndex mempty
+            , _certRes_whitelistOk                  = whitelistOk <$> certWhitelist
+            , _certRes_whitelistResult              = wlRes
+            , _certRes_DLTests                      = dlRes }
