@@ -37,7 +37,6 @@ flag defer-plugin-errors
 
 library
     import: lang
-    ghc-options: -O2 +RTS -T -N -qn8 -A1G -RTS
     exposed-modules:
         Data.Row.Extras
         Data.Text.Extras
