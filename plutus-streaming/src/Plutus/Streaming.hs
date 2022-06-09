@@ -74,14 +74,7 @@ withChainSyncEventStream socketPath networkId point consumer = do
       -- FIXME this comes from the config file but Cardano.Api does not expose readNetworkConfig!
       epochSlots = EpochSlots 40
 
-      clientThread = do
-        connectToLocalNode connectInfo localNodeClientProtocols
-        -- the only reason connectToLocalNode can terminate successfully is if it
-        -- doesn't find an intersection, we report that case to the
-        -- consumer as an exception
-        throw NoIntersectionFound
-
-  withAsync clientThread $ \a -> do
+  withAsync (connectToLocalNode connectInfo localNodeClientProtocols) $ \a -> do
     -- Make sure all exceptions in the client thread are passed to the consumer thread
     link a
     -- Run the consumer
