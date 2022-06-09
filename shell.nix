@@ -116,6 +116,7 @@ let
     docs.build-and-serve-docs
     fixPngOptimization
     fix-purs-tidy
+    fixCabalFmt
     fixStylishHaskell
     haskell-language-server
     haskell-language-server-wrapper

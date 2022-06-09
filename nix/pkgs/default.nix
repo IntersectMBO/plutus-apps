@@ -36,6 +36,7 @@ let
   # dev convenience scripts
   #
   fix-purs-tidy = pkgs.callPackage ./fix-purs-tidy { inherit purs-tidy; };
+  fixCabalFmt = pkgs.callPackage ./fix-cabal-fmt { inherit cabal-fmt; };
   fixStylishHaskell = pkgs.callPackage ./fix-stylish-haskell { inherit stylish-haskell; };
   fixPngOptimization = pkgs.callPackage ./fix-png-optimization { };
   updateClientDeps = pkgs.callPackage ./update-client-deps {
@@ -111,7 +112,7 @@ in
   inherit nix-pre-commit-hooks;
   inherit haskell cabal-install cardano-repo-tool stylish-haskell hlint haskell-language-server haskell-language-server-wrapper hie-bios cabal-fmt;
   inherit purs-tidy purs spago spago2nix purescript-language-server psa;
-  inherit fix-purs-tidy fixStylishHaskell fixPngOptimization updateClientDeps;
+  inherit fix-purs-tidy fixStylishHaskell fixCabalFmt fixPngOptimization updateClientDeps;
   inherit web-ghc;
   inherit easyPS plutus-haddock-combined;
   inherit lib;
