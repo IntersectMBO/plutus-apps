@@ -14,6 +14,11 @@
 , writeShellScript
 }:
 let
+  cabalFmtProject = haskell-nix.hackage-project {
+    name = "cabal-fmt";
+    version = "0.1.5.1";
+    inherit compiler-nix-name index-state;
+  };
   cabalInstallProject = haskell-nix.hackage-project {
     name = "cabal-install";
     version = "3.6.2.0";
@@ -55,4 +60,5 @@ in
   inherit (hlsProject.hsPkgs) haskell-language-server hie-bios implicit-hie stylish-haskell hlint;
   inherit (cabalInstallProject.hsPkgs) cabal-install;
   inherit (cardanoRepoToolProject.hsPkgs) cardano-repo-tool;
+  inherit (cabalFmtProject.hsPkgs) cabal-fmt;
 }
