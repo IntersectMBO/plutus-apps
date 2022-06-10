@@ -1,4 +1,4 @@
-= Contributing to Plutus
+= Contributing to Plutus Apps
 :toc: left
 :reproducible:
 
@@ -115,7 +115,7 @@ You need to do a few things when adding a new package, in the following order:
 . Add the cabal file for the new package.
 . Add the package to link:cabal.project[`cabal.project`].
 . Add the package to link:stack.yaml[`stack.yaml`].
-. Check that you can run `nix build -f default.nix plutus.haskell.projectPackages.<package name>` successfully.
+. Check that you can run `nix build -f default.nix plutus-apps.haskell.projectPackages.<package name>` successfully.
 
 [[update-haskell-pins]]
 === How to update our pinned Haskell dependencies
@@ -127,7 +127,7 @@ These can be managed normally, but ensure that:
 * The specifications remain in sync between `cabal.project` and `stack.yaml`.
 * If it is an `source-repository-package`/`extra-dep` from Git, you update the `sha256` mapping in `nix/haskell.nix`.
 For the moment you have to do this by hand, using the following command to get the sha: `nix-prefetch-git --quiet <repo-url> <rev> | jq .sha256`, or by just getting it wrong and trying to build it, in which case Nix will give you the right value.
-* For certain dependencies like `plutus`, please run `nix flake lock --update-input <input-name>` to update `flake.lock`. A wrong-hash error on a `nix build` is a common hint.
+* For certain dependencies like `plutus-apps`, please run `nix flake lock --update-input <input-name>` to update `flake.lock`. A wrong-hash error on a `nix build` is a common hint.
 
 [[update-nix-pins]]
 === How to update our pinned Nix dependencies
@@ -165,7 +165,7 @@ Sometimes you may want to make a change that spans both `plutus-apps` *and* some
 The obvious workflow is to make changes in the `plutus` repository, update the pin in `plutus-apps` to point to the new commit, test, repeat.
 But this is very tedious and it's much nicer to work with a local checkout where cabal can incrementally rebuild the whole thing.
 
-Here's an example of doing this for some packages in `plutus`. 
+Here's an example of doing this for some packages in `plutus`.
 You may need to adapt this example depending on what exactly you're trying to do.
 
 First of all, we add some lines to `cabal.project.local` (we do this to avoid modifying `cabal.project`, which is tracked by git, as much as possible).
@@ -255,6 +255,13 @@ And of course, you should see Note [Another note].
 Notes are a great place to put substantial discussion that you need to refer to from multiple places.
 For example, if you used an encoding trick to fit more data into an output format,
 you could write a Note describing the trick (and justifying its usage!), and then refer to it from the encoder and the decoder.
+
+=== Architecture decision records (ADR)
+
+If a new feature or code refactor requires you to make an "architecturally significant" decision, then you should
+probably write an ADR.
+
+See link:https://plutus-apps.readthedocs.io/en/latest/adr/index.html[the readthedocs page] for more details.
 
 === Code formatting
 
