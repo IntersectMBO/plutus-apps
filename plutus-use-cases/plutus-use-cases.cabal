@@ -78,6 +78,7 @@ library
         mtl -any,
         plutus-core >= 1.0.0,
         plutus-tx >= 1.0.0,
+        plutus-tx-plugin >= 1.0.0,
         plutus-contract -any,
         playground-common -any,
         plutus-ledger -any,
@@ -90,6 +91,7 @@ library
         prettyprinter -any,
         hashable -any,
         freer-simple -any,
+        streaming -any,
         semigroups -any,
         openapi3 -any
 

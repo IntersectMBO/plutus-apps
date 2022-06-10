@@ -47,7 +47,7 @@ module Ledger.Constraints.OffChain(
     , missingValueSpent
     ) where
 
-import Control.Lens (At (at), iforM_, makeLensesFor, over, use, view, (%=), (.=), (<>=))
+import Control.Lens (At (at), alaf, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -55,6 +55,8 @@ import Control.Monad.State (MonadState (get, put), execStateT, gets)
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
+import Data.Functor ((<&>))
+import Data.Functor.Compose (Compose (Compose))
 import Data.List (elemIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -69,7 +71,6 @@ import PlutusTx.Numeric qualified as N
 
 import Data.Semigroup (First (First, getFirst))
 import Data.Set (Set)
-import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -82,6 +83,7 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Orphans ()
+import Ledger.Params (Params)
 import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
@@ -89,6 +91,7 @@ import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, Red
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError)
 import Ledger.Typed.Tx qualified as Typed
+import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, validatorHash)
 import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
 import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, Validator,
@@ -399,15 +402,14 @@ mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
---
--- TODO: In the future, the minimum Ada value should be configurable.
-adjustUnbalancedTx :: UnbalancedTx -> UnbalancedTx
-adjustUnbalancedTx = over (tx . Tx.outputs . traverse) adjustTxOut
+adjustUnbalancedTx :: Params -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
+adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) adjustTxOut
   where
-    adjustTxOut :: TxOut -> TxOut
-    adjustTxOut txOut =
-      let missingLovelace = max 0 (Ledger.minAdaTxOut - Ada.fromValue (txOutValue txOut))
-       in txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace }
+    adjustTxOut :: TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
+    adjustTxOut txOut = fromPlutusTxOutUnsafe params txOut <&> \txOut' ->
+        let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
+            missingLovelace = max 0 (minAdaTxOut' - Ada.fromValue (txOutValue txOut))
+        in ([missingLovelace], txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
 
 -- | Add the remaining balance of the total value that the tx must spend.
 --   See note [Balance of value spent]

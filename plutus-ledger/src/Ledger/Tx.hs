@@ -34,6 +34,7 @@ module Ledger.Tx
     , getCardanoTxUnspentOutputsTx
     , getCardanoTxFee
     , SomeCardanoApiTx(..)
+    , ToCardanoError(..)
     -- * Transactions
     , addSignature
     , addSignature'
@@ -62,7 +63,7 @@ import GHC.Generics (Generic)
 import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
-import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
+import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal as Export
 import Plutus.Script.Utils.V1.Scripts (datumHash)

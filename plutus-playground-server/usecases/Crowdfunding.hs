@@ -168,7 +168,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))
     txid <- fmap getCardanoTxId $ mkTxConstraints (Constraints.typedValidatorLookups inst) tx
-        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     utxo <- watchAddressUntilTime (Scripts.validatorAddress inst) (campaignCollectionDeadline cmp)
 
@@ -185,7 +185,7 @@ contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
         logInfo @Text "Claiming refund"
         void $ mkTxConstraints (Constraints.typedValidatorLookups inst
                              <> Constraints.unspentOutputs utxo) tx'
-            >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+            >>= adjustUnbalancedTx >>= submitUnbalancedTx
     else pure ()
 
 -- | The campaign owner's branch of the contract for a given 'Campaign'. It

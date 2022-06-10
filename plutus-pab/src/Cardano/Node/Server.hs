@@ -11,6 +11,7 @@ module Cardano.Node.Server
 import Cardano.BM.Data.Trace (Trace)
 import Cardano.Node.API (API)
 import Cardano.Node.Mock
+import Cardano.Node.Params qualified as Params
 import Cardano.Node.Types
 import Cardano.Protocol.Socket.Mock.Client qualified as Client
 import Cardano.Protocol.Socket.Mock.Server qualified as Server
@@ -26,6 +27,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Units (Millisecond, Second)
 import Ledger.Ada qualified as Ada
+import Ledger.Params (Params (..))
 import Ledger.TimeSlot (SlotConfig (SlotConfig, scSlotLength, scSlotZeroTime))
 import Network.Wai.Handler.Warp qualified as Warp
 import Plutus.PAB.Arbitrary ()
@@ -36,15 +38,15 @@ import Wallet.Emulator.Wallet (fromWalletNumber)
 
 app ::
     Trace IO PABServerLogMsg
- -> SlotConfig
+ -> Params
  -> Client.TxSendHandle
  -> MVar AppState
  -> Application
-app trace slotCfg clientHandler stateVar =
+app trace params clientHandler stateVar =
     serve (Proxy @API) $
     hoistServer
         (Proxy @API)
-        (liftIO . processChainEffects trace slotCfg (Just clientHandler) stateVar)
+        (liftIO . processChainEffects trace params (Just clientHandler) stateVar)
         (healthcheck :<|> consumeEventHistory stateVar)
 
 data Ctx = Ctx { serverHandler :: Server.ServerHandler
@@ -54,9 +56,9 @@ data Ctx = Ctx { serverHandler :: Server.ServerHandler
                }
 
 main :: Trace IO PABServerLogMsg -> PABServerConfig -> Availability -> IO ()
-main trace PABServerConfig { pscBaseUrl
-                            , pscKeptBlocks
+main trace nodeServerConfig@PABServerConfig { pscBaseUrl
                             , pscSlotConfig
+                            , pscKeptBlocks
                             , pscInitialTxWallets
                             , pscSocketPath } availability = LM.runLogEffects trace $ do
 
@@ -67,7 +69,8 @@ main trace PABServerConfig { pscBaseUrl
             { _chainState = initialState
             , _eventHistory = mempty
             }
-    serverHandler <- liftIO $ Server.runServerNode trace pscSocketPath pscKeptBlocks (_chainState appState) pscSlotConfig
+    params <- liftIO $ Params.fromPABServerConfig nodeServerConfig
+    serverHandler <- liftIO $ Server.runServerNode trace pscSocketPath pscKeptBlocks (_chainState appState) params
     serverState   <- liftIO $ newMVar appState
     handleDelayEffect $ delayThread (2 :: Second)
     clientHandler <- liftIO $ Client.runTxSender pscSocketPath
@@ -81,7 +84,7 @@ main trace PABServerConfig { pscBaseUrl
     runSlotCoordinator ctx
 
     logInfo $ StartingPABServer $ baseUrlPort pscBaseUrl
-    liftIO $ Warp.runSettings warpSettings $ app trace pscSlotConfig clientHandler serverState
+    liftIO $ Warp.runSettings warpSettings $ app trace params clientHandler serverState
 
         where
             warpSettings = Warp.defaultSettings & Warp.setPort (baseUrlPort pscBaseUrl) & Warp.setBeforeMainLoop (available availability)

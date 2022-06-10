@@ -3,7 +3,7 @@
 module Plutus.Contract.Test.ContractModel.Symbolics where
 
 import Ledger.Ada qualified as Ada
-import Ledger.Value (AssetClass, Value, assetClassValue, assetClassValueOf, isZero, leq)
+import Ledger.Value (AssetClass, Value, assetClass, assetClassValue, assetClassValueOf, flattenValue, isZero, leq)
 import PlutusTx.Monoid qualified as PlutusTx
 
 import Data.Aeson qualified as JSON
@@ -11,6 +11,7 @@ import Data.Data
 import Data.Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe
 
 import Test.QuickCheck.StateModel hiding (Action, Actions, arbitraryAction, initialState, monitoring, nextState,
                                    perform, precondition, shrinkAction, stateAfter)
@@ -59,6 +60,14 @@ symLeq (SymValue m v) (SymValue m' v') = v `leq` v' && all (<=0) (Map.unionWith 
 -- | Using a semantics function for symbolic tokens, convert a SymValue to a Value
 toValue :: (SymToken -> AssetClass) -> SymValue -> Value
 toValue symTokenMap (SymValue m v) = v <> fold [ assetClassValue (symTokenMap t) v | (t, v) <- Map.toList m ]
+
+-- | Invert a sym token mapping to turn a Value into a SymValue,
+-- useful for error reporting
+toSymVal :: (AssetClass -> Maybe SymToken) -> Value -> SymValue
+toSymVal invSymTokenMap v =
+  let acMap = [ (assetClass cs tn, i) | (cs, tn, i) <- flattenValue v ]
+  in SymValue (Map.fromList [ (tn, i) | (ac, i) <- acMap, tn <- maybeToList $ invSymTokenMap ac ])
+              (fold [ assetClassValue ac i | (ac, i) <- acMap, invSymTokenMap ac == Nothing ])
 
 -- Negate a symbolic value
 inv :: SymValue -> SymValue

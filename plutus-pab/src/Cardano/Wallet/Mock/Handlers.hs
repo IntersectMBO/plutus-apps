@@ -50,7 +50,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.CardanoWallet (MockWallet)
 import Ledger.CardanoWallet qualified as CW
-import Ledger.TimeSlot (SlotConfig)
+import Ledger.Params (Params)
 import Ledger.Tx (CardanoTx)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Client qualified as ChainIndex
@@ -64,7 +64,7 @@ import Servant.Server (err500)
 import Wallet.API (WalletAPIError (..))
 import Wallet.API qualified as WAPI
 import Wallet.Effects (NodeClientEffect)
-import Wallet.Emulator.LogMessages (TxBalanceMsg)
+import Wallet.Emulator.LogMessages (RequestHandlerLogMsg, TxBalanceMsg)
 import Wallet.Emulator.Wallet qualified as Wallet
 
 newtype Seed = Seed ScrubbedBytes
@@ -88,11 +88,13 @@ distributeNewWalletFunds :: forall effs.
     ( Member WAPI.WalletEffect effs
     , Member (Error WalletAPIError) effs
     , Member (LogMsg Text) effs
+    , Member (LogMsg RequestHandlerLogMsg) effs
     )
-    => Maybe Ada.Ada
+    => Params
+    -> Maybe Ada.Ada
     -> PaymentPubKeyHash
     -> Eff effs CardanoTx
-distributeNewWalletFunds funds = WAPI.payToPaymentPublicKeyHash WAPI.defaultSlotRange
+distributeNewWalletFunds params funds = WAPI.payToPaymentPublicKeyHash params WAPI.defaultSlotRange
     (maybe (Ada.adaValueOf 10_000) Ada.toValue funds)
 
 newWallet :: forall m effs. (LastMember m effs, MonadIO m) => Eff effs MockWallet
@@ -112,8 +114,8 @@ handleMultiWallet :: forall m effs.
     , LastMember m effs
     , MonadIO m
     )
-    => MultiWalletEffect ~> Eff effs
-handleMultiWallet = \case
+    => Params -> MultiWalletEffect ~> Eff effs
+handleMultiWallet params = \case
     MultiWallet (Wallet.Wallet _ walletId) action -> do
         wallets <- get @Wallets
         case Map.lookup walletId wallets of
@@ -139,8 +141,9 @@ handleMultiWallet = \case
         let sourceWallet = Wallet.fromMockWallet (CW.knownMockWallet 2)
         _ <- evalState sourceWallet $
             interpret (mapLog @TxBalanceMsg @WalletMsg Balancing)
+            $ interpret (mapLog @RequestHandlerLogMsg @WalletMsg RequestHandling)
             $ interpret Wallet.handleWallet
-            $ distributeNewWalletFunds funds pkh
+            $ distributeNewWalletFunds params funds pkh
         return $ WalletInfo{wiWallet = Wallet.toMockWallet mockWallet, wiPaymentPubKeyHash = pkh}
     GetWalletInfo wllt -> do
         wallets <- get @Wallets
@@ -155,17 +158,17 @@ processWalletEffects ::
     -> ChainSyncHandle -- ^ node client
     -> ClientEnv          -- ^ chain index client
     -> MVar Wallets   -- ^ wallets state
-    -> SlotConfig
+    -> Params
     -> Eff (WalletEffects IO) a -- ^ wallet effect
     -> m a
-processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState slotCfg action = do
+processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState params action = do
     oldState <- liftIO $ takeMVar mVarState
     result <- liftIO $ runWalletEffects trace
                                         txSendHandle
                                         chainSyncHandle
                                         chainIndexEnv
                                         oldState
-                                        slotCfg
+                                        params
                                         action
     case result of
         Left e -> do
@@ -182,13 +185,13 @@ runWalletEffects ::
     -> ChainSyncHandle -- ^ node client
     -> ClientEnv -- ^ chain index client
     -> Wallets -- ^ current state
-    -> SlotConfig
+    -> Params
     -> Eff (WalletEffects IO) a -- ^ wallet effect
     -> IO (Either ServerError (a, Wallets))
-runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets slotCfg action =
-    reinterpret handleMultiWallet action
+runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets params action =
+    reinterpret (handleMultiWallet params) action
     & interpret (LM.handleLogMsgTrace trace)
-    & reinterpret2 (NodeClient.handleNodeClientClient slotCfg)
+    & reinterpret2 (NodeClient.handleNodeClientClient params)
     & runReader chainSyncHandle
     & runReader (Just txSendHandle)
     & reinterpret ChainIndex.handleChainIndexClient

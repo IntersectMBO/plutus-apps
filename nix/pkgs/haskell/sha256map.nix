@@ -19,4 +19,5 @@
   "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" = "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx";
   "https://github.com/Quid2/flat"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
   "https://github.com/vshabanov/ekg-json"."00ebe7211c981686e65730b7144fbf5350462608" = "sha256-VT8Ur585TCn03P2TVi6t92v2Z6tl8vKijICjse6ocv8=";
+  "https://github.com/raduom/hysterical-screams"."f3bbd38a19f99de5c8ddc650c94330b2d09a865b" = "1sy9l3sz1vxw7si9sdhh30p3zzadxh346856kdk4qg45j0m0gf1l";
 }

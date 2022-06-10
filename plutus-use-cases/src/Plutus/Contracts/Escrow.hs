@@ -261,8 +261,10 @@ pay inst escrow vl = do
     pk <- ownPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
           <> Constraints.mustValidateIn (Ledger.interval 1 (escrowDeadline escrow))
-    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
-    getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+    mkTxConstraints (Constraints.typedValidatorLookups inst) tx
+        >>= adjustUnbalancedTx
+        >>= submitUnbalancedTx
+        >>= return . getCardanoTxId
 
 newtype RedeemSuccess = RedeemSuccess TxId
     deriving (Haskell.Eq, Haskell.Show)
@@ -305,7 +307,8 @@ redeem inst escrow = mapError (review _EscrowError) $ do
            utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                                  <> Constraints.unspentOutputs unspentOutputs
                                   ) tx
-           RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+           adjusted <- adjustUnbalancedTx utx
+           RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx adjusted
 
 newtype RefundSuccess = RefundSuccess TxId
     deriving newtype (Haskell.Eq, Haskell.Show, Generic)
@@ -337,7 +340,8 @@ refund inst escrow = do
         utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                               <> Constraints.unspentOutputs unspentOutputs
                                ) tx'
-        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+        adjusted <- adjustUnbalancedTx utx
+        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx adjusted
     else throwing _RefundFailed ()
 
 -- | Pay some money into the escrow contract. Then release all funds to their

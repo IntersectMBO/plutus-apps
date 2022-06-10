@@ -217,7 +217,7 @@ tests =
                 tx <- submitTx payment
                 let txOuts = fmap fst $ Ledger.getCardanoTxOutRefs tx
                 -- tell the tx out' datum hash that was specified by 'mustPayWithDatumToPubKey'
-                tell [txOutDatumHash (txOuts !! 1)]
+                tell [txOutDatumHash (head txOuts)]
 
               datum = Datum $ PlutusTx.toBuiltinData (23 :: Integer)
               isExpectedDatumHash [Just hash] = hash == datumHash datum
@@ -256,9 +256,9 @@ tests =
                 let payment = Constraints.mustPayToPubKey w2PubKeyHash
                                                           (Ada.adaValueOf 10)
                 tx <- submitTx payment
-                -- There should be 2 utxos. We suppose the first belongs to the
-                -- wallet calling the contract and the second one to W2.
-                let utxo = head $ fmap snd $ Ledger.getCardanoTxOutRefs tx
+                -- There should be 2 utxos. We suppose the first belongs to W2
+                -- and the second one belongs to the wallet calling the contract.
+                let utxo = (fmap snd $ Ledger.getCardanoTxOutRefs tx) !! 1
                 -- We wait for W1's utxo to change status. It should be of
                 -- status confirmed unspent.
                 s <- awaitTxOutStatusChange utxo

@@ -17,7 +17,6 @@ import Data.Data
 import Data.Default (Default (def))
 
 import Ledger (Slot (..), Value)
-import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Secrets
@@ -98,9 +97,9 @@ instance ContractModel AuctionModel where
 
     arbitraryAction s
         | p /= NotStarted =
-            frequency$[ (40, Bid  <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000))
+            frequency$[ (40, Bid  <$> elements [w2, w3, w4] <*> choose (2_000_000, 100_000_000))
                       -- Random reveal
-                      , (20, Reveal <$> elements [w2, w3, w4] <*> choose (Ada.getLovelace Ledger.minAdaTxOut, 100_000_000))
+                      , (20, Reveal <$> elements [w2, w3, w4] <*> choose (2_000_000, 100_000_000))
                       ] ++
                       -- Correct reveal
                       [ (20, uncurry Reveal <$> elements [ (w,i) | (i,w) <- s ^. contractState . currentBids ])
@@ -128,10 +127,10 @@ instance ContractModel AuctionModel where
 
             Bid w v        -> s ^. contractState . phase == Bidding
                            && w `notElem` fmap snd (s ^. contractState . currentBids)
-                           && v >= Ada.getLovelace Ledger.minAdaTxOut
+                           && v >= 2_000_000
 
             Reveal _ v     -> s ^. contractState . phase == AwaitingPayout
-                           && v >= Ada.getLovelace Ledger.minAdaTxOut
+                           && v >= 2_000_000
 
             Payout _       -> s ^. contractState . phase == PayoutTime
 
@@ -168,7 +167,7 @@ instance ContractModel AuctionModel where
             Init ebS pS -> do
                 endBidSlot .= ebS
                 payoutSlot .= pS
-                withdraw w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
+                withdraw w1 theToken
                 phase .= Bidding
                 wait 3
 
@@ -197,11 +196,10 @@ instance ContractModel AuctionModel where
                   mwinningBid <- viewContractState currentWinningBid
                   case mwinningBid of
                     Just (bid, winner) -> do
-                      deposit winner $ Ada.toValue Ledger.minAdaTxOut <> theToken
+                      deposit winner theToken
                       deposit w1 $ Ada.lovelaceValueOf bid
 
-                    Nothing -> do
-                      deposit w1 $ Ada.toValue Ledger.minAdaTxOut <> theToken
+                    Nothing -> deposit w1 theToken
                   wait 1
                   phase $= AuctionOver
 

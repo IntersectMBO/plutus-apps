@@ -24,6 +24,7 @@ module Plutus.Contract.Trace
     , AsTraceError(..)
     , toNotifyError
     -- * Handle contract requests
+    , handleAdjustUnbalancedTx
     , handleSlotNotifications
     , handleTimeNotifications
     , handleOwnPaymentPubKeyHashQueries
@@ -200,6 +201,18 @@ handleYieldedUnbalancedTx =
         (preview E._YieldUnbalancedTxReq)
         E.YieldUnbalancedTxResp
         RequestHandler.handleYieldedUnbalancedTx
+
+handleAdjustUnbalancedTx ::
+    ( Member (LogObserve (LogMessage Text)) effs
+    , Member (LogMsg RequestHandlerLogMsg) effs
+    , Member NodeClientEffect effs
+    )
+    => RequestHandler effs PABReq PABResp
+handleAdjustUnbalancedTx =
+    generalise
+        (preview E._AdjustUnbalancedTxReq)
+        E.AdjustUnbalancedTxResp
+        RequestHandler.handleAdjustUnbalancedTx
 
 defaultDist :: InitialDistribution
 defaultDist = defaultDistFor EM.knownWallets

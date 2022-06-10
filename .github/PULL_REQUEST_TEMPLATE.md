@@ -8,8 +8,7 @@ Pre-submit checklist:
     - [ ] Tests are provided (if possible)
     - [ ] Commit sequence broadly makes sense
     - [ ] Key commits have useful messages
-    - [ ] Relevant tickets are mentioned in commit messages
-    - [ ] Formatting, materialized Nix files, PNG optimization, etc. are updated
+    - [ ] Formatting, PNG optimization, etc. are updated
 - PR
     - [ ] Self-reviewed the diff
     - [ ] Useful pull request description

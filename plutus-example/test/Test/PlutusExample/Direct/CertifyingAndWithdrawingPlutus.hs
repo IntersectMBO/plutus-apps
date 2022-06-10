@@ -209,7 +209,7 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
 
   -- Things take long on non-linux machines
   if isLinux
-  then H.threadDelay 5000000
+  then H.threadDelay 8000000
   else H.threadDelay 10000000
 
   -- Check to see if pledge's stake address was registered
@@ -358,7 +358,7 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
     ]
 
   if isLinux
-  then H.threadDelay 5000000
+  then H.threadDelay 10000000
   else H.threadDelay 20000000
 
   void $ H.execCli' execConfig
@@ -530,8 +530,8 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
                , "--testnet-magic", show @Int testnetMagic
                ]
 
-  -- Wait 5 seconds
-  H.threadDelay 5000000
+  -- Wait 8 seconds
+  H.threadDelay 8000000
 
   H.note_ "Check to see if staking script was delegated"
 
@@ -693,7 +693,7 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
 
   -- Things take long on non-linux machines
   if isLinux
-  then H.threadDelay 5000000
+  then H.threadDelay 8000000
   else H.threadDelay 10000000
 
   H.note_ "Check UTxO at script staking address to see if withdrawal was successful"
