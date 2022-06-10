@@ -1,21 +1,30 @@
 Architectural Decision Records
 ==============================
 
-This section stores the architectural decision records.
+We document our architectural and design decisions for all of our components.
+In order to do that, there is practice called architectural decision records ("ADR"),
+that we can integrate into our workflow.
+An architectural decision record (ADR) is a document that captures an important architectural decision made along with its context and consequences.
 
-From  `Architecture decision record (ADR) examples for software planning, IT leadership, and template documentation <joel_>`_, by Joel Parker Henderson:
+The goals are:
 
-  - An architectural decision record (ADR) is a document that captures an important architectural decision made along with its context and consequences.
+* making decisions transparent to internal/external stakeholders and contributors.
 
-  - An architectural decision (AD) is a software design choice that addresses a significant requirement.
+* getting feeback on decisions that we're about to make or have made
 
-  - An architecturally significant requirement (ASR) is a requirement that has a measurable effect on a software system’s architecture.
+* providing external contributors a framework to propose architectural changes
 
-  - A decision log is the collection of all ADRs created and maintained for a particular project (or organization).
+* providing a big picture of all major decisions that were made
 
-  - All these are within the topic of architectural knowledge management (AKM).
+The general process for creating an ADR is:
 
-..  _joel: https://github.com/joelparkerhenderson/architecture_decision_record
+1. cloning the repository
+
+2. creating a new file with the format `<ADR_NUMBER>-<TITLE>.rst` in the directory `doc/adr`
+
+3. adding the ADR in the table of content tree of the Readthedocs
+
+4. committing and pushing to the repository
 
 .. toctree::
    :maxdepth: 1
