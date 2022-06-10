@@ -121,13 +121,15 @@ library plutus-playground-usecases
 
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
+
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wcompat -Wunused-packages -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints
     -Wno-missing-signatures -Wno-missing-import-lists -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
-  -- See Plutus Tx readme
   build-depends:
       aeson
     , base                       >=4.7 && <5
@@ -176,13 +178,15 @@ executable plutus-playground-server
 
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
+
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
     -Wincomplete-uni-patterns -Wincomplete-record-updates
     -Wno-missing-import-lists -Wredundant-constraints -O0 -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
-  -- See Plutus Tx readme
   build-depends:
       aeson
     , aeson-pretty
