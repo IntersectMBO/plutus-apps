@@ -8,13 +8,8 @@ license-files:
 
 maintainer:    sjoerd.visscher@iohk.io
 author:        Sjoerd Visscher
-<<<<<<< HEAD
 homepage:      https://github.com/ionput-output-hk/plutus-apps#readme
 bug-reports:   https://github.com/ionput-output-hk/plutus-apps/issues
-=======
-homepage:      https://github.com/iohk/plutus#readme
-bug-reports:   https://github.com/iohk/plutus/issues
->>>>>>> reformatted plutus-contract.cabal file
 description:
   Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
 
