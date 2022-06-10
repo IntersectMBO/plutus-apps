@@ -12,19 +12,6 @@ import Data.String (IsString (fromString))
 import GHC.Generics (Generic)
 import Plutus.Streaming (ChainSyncEvent)
 
--- https://github.com/input-output-hk/cardano-node/pull/3608
-instance IsString (Hash BlockHeader) where
-  fromString = either error id . deserialiseFromRawBytesBase16 . C8.pack
-    where
-      deserialiseFromRawBytesBase16 str =
-        case Base16.decode str of
-          Right raw -> case deserialiseFromRawBytes ttoken raw of
-            Just x  -> Right x
-            Nothing -> Left ("cannot deserialise " ++ show str)
-          Left msg -> Left ("invalid hex " ++ show str ++ ", " ++ msg)
-        where
-          ttoken = proxyToAsType (Proxy :: Proxy a)
-
 deriving instance Generic ChainPoint
 
 instance ToJSON ChainPoint
