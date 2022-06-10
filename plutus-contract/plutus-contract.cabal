@@ -208,13 +208,15 @@ test-suite plutus-contract-test
   default-extensions: ImportQualifiedPost
   type:               exitcode-stdio-1.0
   main-is:            Spec.hs
+
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints -Widentities
     -rtsopts -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas
 
-  -- See Plutus Tx readme
   hs-source-dirs:     test
   other-modules:
     Spec.Balancing
