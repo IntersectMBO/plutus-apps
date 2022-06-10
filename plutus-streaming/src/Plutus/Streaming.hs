@@ -49,6 +49,19 @@ withChainSyncEventStream socketPath networkId point consumer = do
   -- receives to the stream consumer through a MVar. The chain-sync client
   -- thread and the stream consumer will each block on each other and stay
   -- in lockstep.
+  --
+  -- NOTE: choosing a MVar is a tradeoff towards simplicity. In this case a
+  -- (bounded) queue could perform better. Indeed a properly-sized buffer
+  -- can reduce the time the two threads are blocked waiting for each
+  -- other. The problem here is "properly-sized". A bounded queue like
+  -- Control.Concurrent.STM.TBQueue allows us to specify a max queue length
+  -- but block size can vary a lot (TODO quantify this) depending on the
+  -- era. We have an alternative implementation with customizable
+  -- (TBMQueue) but it needs to be extracted from the
+  -- plutus-chain-index-core package. Using a simple MVar doesn't seem to
+  -- slow down marconi's indexing, likely because the difference is
+  -- negligeable compared to existing network and IO latencies.
+  -- Therefore, let's stick with a MVar now and revisit later.
   nextBlockVar <- newEmptyMVar
 
   let client = chainSyncStreamingClient point nextBlockVar
