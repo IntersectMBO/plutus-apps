@@ -2,6 +2,7 @@
 TxId:       ef0ca0fb043642529818003be5a6cac88aac499e4f8f1cbc3bdb35db2b7f6958
 Fee:        -
 Mint:       Ada:      Lovelace:  1000000000
+Signatures  -
 Inputs:
   
 
@@ -553,6 +554,8 @@ Balances Carried Forward:
 TxId:       07ca437c6855dde17b3f6aa2360a8528f6a3675e812e08974b6f0770d0ca2cd7
 Fee:        Ada:      Lovelace:  211129
 Mint:       -
+Signatures  PubKey: 98c77c40ccc536e0d433874dae97d4a0787b10b3...
+              Signature: 584034a6a9efd5bfb0a52ade5cbe175c7f412517...
 Inputs:
   ---- Input 0 ----
   Destination:  PaymentPubKeyHash: 80a4f45b56b88d1139da23bc4c3c75ec6d32943c... (Wallet 7ce812d7a4770bbf58004067665c3a48f28ddd58)
@@ -679,6 +682,8 @@ Balances Carried Forward:
 TxId:       b13ee4cbd2a420021c487bb1e4ca008ab1cba913d3255a8cc30d642ab1bfde66
 Fee:        Ada:      Lovelace:  452257
 Mint:       -
+Signatures  PubKey: 8d9de88fbf445b7f6c3875a14daba94caee2ffcb...
+              Signature: 5840c5b2032a694d389ee5a7f290e60c07ae0841...
 Inputs:
   ---- Input 0 ----
   Destination:  Script: 87287fdc5ae4aaa2072b64e0a51b409ea86061ed35d2e4eeef34c064
