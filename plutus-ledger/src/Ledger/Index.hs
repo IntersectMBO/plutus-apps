@@ -178,8 +178,7 @@ validateTransactionOffChain t = do
 
         idx <- vctxIndex <$> ask
         pure (Nothing, insert t idx)
-        )
-    `catchError` payCollateral
+        ) `catchError` payCollateral
     where
         payCollateral e = do
             idx <- vctxIndex <$> ask
