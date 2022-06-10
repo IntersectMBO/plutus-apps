@@ -2,7 +2,7 @@
 , gitignore-nix
 , fixStylishHaskell
 , fix-purs-tidy
-, cabal-fmt
+, fixCabalFmt
 , fixPngOptimization
 , src
 , play-generated
@@ -41,7 +41,7 @@ pkgs.recurseIntoAttrs {
 
   cabalFmt = pkgs.callPackage ./cabal-fmt.nix {
     src = cleanSrc;
-    inherit cabal-fmt;
+    inherit fixCabalFmt;
   };
 
   pngOptimization = pkgs.callPackage ./png-optimization.nix {
