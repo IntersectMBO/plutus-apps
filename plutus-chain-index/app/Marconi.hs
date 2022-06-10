@@ -12,13 +12,18 @@ import Cardano.Api qualified as C
 import Cardano.BM.Setup (withTrace)
 import Cardano.BM.Trace (logError)
 import Cardano.BM.Tracing (defaultConfigStdout)
+import Control.Concurrent (forkIO)
+import Control.Concurrent.QSemN (QSemN, newQSemN, signalQSemN, waitQSemN)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TChan (TChan, dupTChan, newBroadcastTChanIO, readTChan, writeTChan)
 import Control.Exception (catch)
 import Control.Lens.Operators ((&), (<&>), (^.))
+import Control.Monad (void, when)
 import Data.ByteString.Char8 qualified as C8
 import Data.Foldable (foldl')
 import Data.List (findIndex)
 import Data.Map (assocs)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -32,8 +37,8 @@ import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (..))
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Logging (logging)
-import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag, flag', help, helper, info, long,
-                            maybeReader, metavar, option, readerError, strOption, (<**>), (<|>))
+import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag', help, helper, info, long, maybeReader,
+                            metavar, option, readerError, strOption, (<**>), (<|>))
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
@@ -197,6 +202,90 @@ utxoIndexer path = S.foldM_ step initial finish
     finish :: UtxoIndex -> IO ()
     finish _index = pure ()
 
+data Coordinator = Coordinator
+  { _channel      :: TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  , _barrier      :: QSemN
+  , _indexerCount :: Int
+  }
+
+initialCoordinator :: Int -> IO Coordinator
+initialCoordinator indexerCount =
+  Coordinator <$> newBroadcastTChanIO
+              <*> newQSemN 0
+              <*> pure indexerCount
+
+datumWorker
+  :: Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO ()
+datumWorker coordinator ch path = Datum.open path (Datum.Depth 2160) >>= innerLoop
+  where
+    innerLoop :: DatumIndex -> IO ()
+    innerLoop index = do
+      event <- atomically $ readTChan ch
+      signalQSemN (_barrier coordinator) 1
+      case event of
+        RollForward blk _ct ->
+          Ix.insert (getDatums blk) index >>= innerLoop
+        RollBackward cp _ct -> do
+          events <- Ix.getEvents (index ^. Ix.storage)
+          innerLoop $
+            fromMaybe index $ do
+              slot   <- chainPointToSlotNo cp
+              offset <- findIndex (any (\(s, _) -> s < slot)) events
+              Ix.rewind offset index
+
+utxoWorker
+  :: Coordinator
+  -> TChan (ChainSyncEvent (BlockInMode CardanoMode))
+  -> FilePath
+  -> IO ()
+utxoWorker coordinator ch path = Utxo.open path (Utxo.Depth 2160) >>= innerLoop
+  where
+    innerLoop :: UtxoIndex -> IO ()
+    innerLoop index = do
+      event <- atomically $ readTChan ch
+      signalQSemN (_barrier coordinator) 1
+      case event of
+        RollForward (BlockInMode (Block (BlockHeader slotNo _ _) txs) _) _ct ->
+          Ix.insert (getUtxoUpdate slotNo txs) index >>= innerLoop
+        RollBackward cp _ct -> do
+          events <- Ix.getEvents (index ^. Ix.storage)
+          innerLoop $
+            fromMaybe index $ do
+              slot   <- chainPointToSlotNo cp
+              offset <- findIndex  (\u -> (u ^. Utxo.slotNo) < slot) events
+              Ix.rewind offset index
+
+combinedIndexer
+  :: Maybe FilePath -- utxo
+  -> Maybe FilePath -- datum
+  -> S.Stream (S.Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r
+  -> IO ()
+combinedIndexer utxoPath datumPath = S.foldM_ step initial finish
+  where
+    initial :: IO Coordinator
+    initial = do
+      let indexerCount = length . catMaybes $ [utxoPath, datumPath]
+      coordinator <- initialCoordinator indexerCount
+      when (isJust datumPath) $ do
+        ch <- atomically . dupTChan $ _channel coordinator
+        void . forkIO . datumWorker coordinator ch $ fromJust datumPath
+      when (isJust utxoPath) $ do
+        ch <- atomically . dupTChan $ _channel coordinator
+        void . forkIO . utxoWorker coordinator ch $ fromJust utxoPath
+      pure coordinator
+
+    step :: Coordinator -> ChainSyncEvent (BlockInMode CardanoMode) -> IO Coordinator
+    step c@Coordinator{_barrier, _indexerCount, _channel} event = do
+      waitQSemN _barrier _indexerCount
+      atomically $ writeTChan _channel event
+      pure c
+
+    finish :: Coordinator -> IO ()
+    finish _ = pure ()
+
 main :: IO ()
 main = do
   Options { optionsSocketPath
@@ -207,17 +296,12 @@ main = do
 
   c <- defaultConfigStdout
 
-  let processor = undefined
-        -- case optionsIndexerType of
-        --   DatumIndexer -> datumIndexer optionsDatabasePath
-        --   UtxoIndexer  -> utxoIndexer  optionsDatabasePath
-
   withTrace c "marconi" $ \trace ->
     withChainSyncEventStream
       optionsSocketPath
       optionsNetworkId
       optionsChainPoint
-      (processor . logging trace)
+      (combinedIndexer optionsUtxoPath optionsDatumPath . logging trace)
       `catch` \NoIntersectionFound ->
         logError trace $
           renderStrict $
