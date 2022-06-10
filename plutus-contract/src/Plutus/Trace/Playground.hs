@@ -38,7 +38,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 
-import Ledger.Params (pSlotConfig, pNetworkId)
+import Ledger.Params (pNetworkId, pSlotConfig)
 import Plutus.Contract (Contract (..))
 import Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
 import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI, handleEmulatedWalletAPI)
