@@ -131,3 +131,4 @@ executable marconi
     , streaming
     , text
     , time
+    , stm

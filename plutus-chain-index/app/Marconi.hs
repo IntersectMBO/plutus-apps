@@ -22,6 +22,7 @@ import Data.Maybe (catMaybes, fromMaybe)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.String (IsString)
 import Index.VSplit qualified as Ix
 import Ledger (TxIn (..), TxOut (..), TxOutRef (..))
 import Ledger.Tx.CardanoAPI (fromCardanoTxId, fromCardanoTxIn, fromCardanoTxOut, fromTxScriptValidity,
@@ -31,8 +32,8 @@ import Marconi.Index.Datum qualified as Datum
 import Marconi.Index.Utxo (UtxoIndex, UtxoUpdate (..))
 import Marconi.Index.Utxo qualified as Utxo
 import Marconi.Logging (logging)
-import Options.Applicative (Parser, auto, execParser, flag, flag', help, helper, info, long, maybeReader, metavar,
-                            option, readerError, strOption, (<**>), (<|>))
+import Options.Applicative (Mod, OptionFields, Parser, auto, execParser, flag, flag', help, helper, info, long,
+                            maybeReader, metavar, option, readerError, strOption, (<**>), (<|>))
 import Plutus.Script.Utils.V1.Scripts (Datum, DatumHash)
 import Plutus.Streaming (ChainSyncEvent (RollBackward, RollForward), ChainSyncEventException (NoIntersectionFound),
                          withChainSyncEventStream)
@@ -49,16 +50,12 @@ import Streaming.Prelude qualified as S
 --     > select slotNo, datumHash, datum from kv_datumhsh_datum where slotNo = 39920450;
 --     39920450|679a55b523ff8d61942b2583b76e5d49498468164802ef1ebe513c685d6fb5c2|X(002f9787436835852ea78d3c45fc3d436b324184
 
-data IndexerType = DatumIndexer
-                 | UtxoIndexer
-                 deriving (Show, Eq)
-
 data Options = Options
-  { optionsSocketPath   :: String,
-    optionsNetworkId    :: NetworkId,
-    optionsChainPoint   :: ChainPoint,
-    optionsDatabasePath :: FilePath,
-    optionsIndexerType  :: IndexerType
+  { optionsSocketPath :: String,
+    optionsNetworkId  :: NetworkId,
+    optionsChainPoint :: ChainPoint,
+    optionsUtxoPath   :: Maybe FilePath,
+    optionsDatumPath  :: Maybe FilePath
   }
   deriving (Show)
 
@@ -71,8 +68,11 @@ optionsParser =
     <$> strOption (long "socket-path" <> help "Path to node socket.")
     <*> networkIdParser
     <*> chainPointParser
-    <*> strOption (long "database-path" <> help "Path to database.")
-    <*> flag DatumIndexer UtxoIndexer (long "with-utxo-indexer")
+    <*> optStrParser (long "utxo-db")
+    <*> optStrParser (long "datum-db")
+
+optStrParser :: IsString a => Mod OptionFields a -> Parser (Maybe a)
+optStrParser fields = Just <$> strOption fields <|> pure Nothing
 
 networkIdParser :: Parser NetworkId
 networkIdParser =
@@ -202,15 +202,15 @@ main = do
   Options { optionsSocketPath
           , optionsNetworkId
           , optionsChainPoint
-          , optionsDatabasePath
-          , optionsIndexerType } <- parseOptions
+          , optionsUtxoPath
+          , optionsDatumPath } <- parseOptions
 
   c <- defaultConfigStdout
 
-  let processor =
-        case optionsIndexerType of
-          DatumIndexer -> datumIndexer optionsDatabasePath
-          UtxoIndexer  -> utxoIndexer  optionsDatabasePath
+  let processor = undefined
+        -- case optionsIndexerType of
+        --   DatumIndexer -> datumIndexer optionsDatabasePath
+        --   UtxoIndexer  -> utxoIndexer  optionsDatabasePath
 
   withTrace c "marconi" $ \trace ->
     withChainSyncEventStream
