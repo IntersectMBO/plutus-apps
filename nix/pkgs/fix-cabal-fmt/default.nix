@@ -6,5 +6,5 @@ writeShellScriptBin "fix-cabal-fmt" ''
     --exclude 'dist-newstyle/*' \
     --exclude 'dist/*' \
     --exclude '.stack-work/*' \
-    --exec bash -c "${cabal-fmt}/bin/cabal-fmt --inplace {} || true"
+    --exec bash -c "${cabal-fmt}/bin/cabal-fmt --inplace {}"
 ''

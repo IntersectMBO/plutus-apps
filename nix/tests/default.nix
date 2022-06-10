@@ -2,6 +2,7 @@
 , gitignore-nix
 , fixStylishHaskell
 , fix-purs-tidy
+, cabal-fmt
 , fixPngOptimization
 , src
 , play-generated
@@ -36,6 +37,11 @@ pkgs.recurseIntoAttrs {
   nixpkgsFmt = pkgs.callPackage ./nixpkgs-fmt.nix {
     src = cleanSrc;
     inherit (pkgs) nixpkgs-fmt;
+  };
+
+  cabalFmt = pkgs.callPackage ./cabal-fmt.nix {
+    src = cleanSrc;
+    inherit cabal-fmt;
   };
 
   pngOptimization = pkgs.callPackage ./png-optimization.nix {
