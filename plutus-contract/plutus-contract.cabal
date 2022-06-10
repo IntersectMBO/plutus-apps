@@ -171,10 +171,33 @@ library
         uniplate -any,
         stm -any
 
-  build-depends:
-    , tasty
-    , tasty-golden
-    , tasty-hunit
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+
+  if !((impl(ghcjs) || os(ghcjs)) || os(windows))
+    exposed-modules:
+      Plutus.Contract.Test
+      Plutus.Contract.Test.ContractModel
+      Plutus.Contract.Test.ContractModel.CrashTolerance
+      Plutus.Contract.Test.ContractModel.Internal
+      Plutus.Contract.Test.ContractModel.Symbolics
+      Plutus.Contract.Test.Coverage
+      Plutus.Contract.Test.Coverage.Analysis
+      Plutus.Contract.Test.Coverage.Analysis.Common
+      Plutus.Contract.Test.Coverage.Analysis.DeBruijn
+      Plutus.Contract.Test.Coverage.Analysis.Interpreter
+      Plutus.Contract.Test.Coverage.Analysis.Pretty
+      Plutus.Contract.Test.Coverage.Analysis.Types
+      Plutus.Contract.Test.Coverage.ReportCoverage
+      Plutus.Contract.Test.MissingLovelace
+
+    build-depends:
+      , tasty
+      , tasty-golden
+      , tasty-hunit
 
 test-suite plutus-contract-test
   -- TODO: put this back, turns out there were lots of warnings in the `plutus-emulator` tests...
