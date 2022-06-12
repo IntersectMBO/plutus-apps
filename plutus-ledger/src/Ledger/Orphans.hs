@@ -131,7 +131,9 @@ deriving newtype instance OpenApi.ToSchema Ada
 deriving instance OpenApi.ToSchema Tx
 deriving instance OpenApi.ToSchema Certificate
 deriving instance OpenApi.ToSchema DCert
+deriving instance OpenApi.ToSchema TxIn
 deriving instance OpenApi.ToSchema TxInput
+deriving instance OpenApi.ToSchema TxInType
 deriving instance OpenApi.ToSchema ScriptTag
 deriving instance OpenApi.ToSchema RedeemerPtr
 deriving instance OpenApi.ToSchema TxOutRef

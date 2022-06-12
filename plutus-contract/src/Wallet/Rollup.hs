@@ -20,7 +20,6 @@ import Control.Monad.State (StateT, evalStateT, runState)
 import Data.List (groupBy)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Set qualified as Set
 import Ledger (Block, Blockchain, OnChainTx (..), TxIn (TxIn), TxOut (TxOut), ValidationPhase (..), Value,
                consumableInputs, eitherTx, outValue, txInRef, txOutRefId, txOutRefIdx, txOutValue)
 import Ledger.Tx qualified as Tx
@@ -48,9 +47,9 @@ annotateTransaction sequenceId tx = do
                   in case Map.lookup key cPreviousOutputs of
                          Just txOut -> pure $ DereferencedInput txIn txOut
                          Nothing    -> pure $ InputNotFound key)
-            (Set.toList $ consumableInputs tx)
-    let txId = eitherTx Tx.getCardanoTxId Tx.getCardanoTxId tx
-        txOuts = eitherTx (const []) Tx.getCardanoTxOutputs tx
+            (consumableInputs tx)
+    let txId = eitherTx Tx.txId Tx.txId tx
+        txOuts = eitherTx (const []) txOutputs tx
         newOutputs =
             ifoldr
                 (\outputIndex ->

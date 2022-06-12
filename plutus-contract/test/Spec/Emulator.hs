@@ -21,7 +21,6 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.Default (Default (def))
 import Data.Foldable (fold)
-import Data.Set qualified as Set
 import Hedgehog (Property, forAll, property)
 import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
@@ -30,10 +29,19 @@ import Ledger (CardanoTx (..), OnChainTx (Valid), PaymentPubKeyHash, ScriptConte
                TxOut (txOutValue), ValidationError (ScriptFailure), Value, outputs, scriptTxIn, scriptTxOut, txOutRefs,
                unspentOutputs)
 import Ledger.Ada qualified as Ada
-import Ledger.Generators (Mockchain (Mockchain))
+import Ledger.Address (PaymentPubKeyHash)
+import Ledger.Blockchain (OnChainTx (Valid), unspentOutputs)
+import Ledger.Contexts (ScriptContext, TxOut (txOutValue))
+import Ledger.Generators (Mockchain (Mockchain), TxInputWitnessed (TxInputWitnessed))
 import Ledger.Generators qualified as Gen
+import Ledger.Index (ValidationError (ScriptFailure))
 import Ledger.Index qualified as Index
 import Ledger.Params ()
+import Ledger.Scripts (ScriptError (EvaluationError), Validator, mkValidatorScript, unitDatum, unitRedeemer)
+import Ledger.Tx (CardanoTx (EmulatorTx), Tx (txFee, txMint, txOutputs), TxInType (ConsumeScriptAddress), outputs,
+                  plutusV1ScriptTxOut, txOutRefs)
+import Ledger.Typed.Scripts (wrapValidator)
+import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
 import Plutus.Script.Utils.V1.Typed.Scripts (mkUntypedValidator)

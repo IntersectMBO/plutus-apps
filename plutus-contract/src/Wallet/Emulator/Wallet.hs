@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE ImportQualifiedPost   #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -48,7 +49,8 @@ import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
                PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PrivateKey, PubKeyHash, SomeCardanoApiTx,
-               StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxOutRef, UtxoIndex (..), Value)
+               StakePubKey, Tx (txFee, txMint), TxIn (TxIn, txInRef), TxInput (TxInput, txInputRef), TxOutRef,
+               UtxoIndex (..), ValidatorHash, Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet (MockWallet, WalletNumber)
@@ -394,10 +396,10 @@ lookupValue ::
     ( Member (Error WAPI.WalletAPIError) effs
     , Member ChainIndexQueryEffect effs
     )
-    => Tx.TxIn
+    => Tx.TxInput
     -> Eff effs Value
-lookupValue outputRef@TxIn {txInRef} = do
-    txoutMaybe <- ChainIndex.unspentTxOutFromRef txInRef
+lookupValue outputRef@TxInput {txInputRef} = do
+    txoutMaybe <- ChainIndex.unspentTxOutFromRef txInputRef
     case txoutMaybe of
         Just txout -> pure $ view Ledger.ciTxOutValue txout
         Nothing ->
@@ -415,14 +417,13 @@ handleBalanceTx ::
     => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
     -> UnbalancedTx
     -> Eff effs Tx
-handleBalanceTx utxo utx = do
-    Params { pProtocolParams } <- WAPI.getClientParams
-    let filteredUnbalancedTxTx = removeEmptyOutputs (view U.tx utx)
-    let txInputs = Set.toList $ Tx.txInputs filteredUnbalancedTxTx
+handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
+    let filteredUnbalancedTxTx = removeEmptyOutputs unBalancedTxTx
+    let txInputs = Tx.txInputs filteredUnbalancedTxTx
     ownPaymentPubKey <- gets ownPaymentPublicKey
     let ownStakePubKey = Nothing
-    inputValues <- traverse lookupValue (Set.toList $ Tx.txInputs filteredUnbalancedTxTx)
-    collateral  <- traverse lookupValue (Set.toList $ Tx.txCollateral filteredUnbalancedTxTx)
+    inputValues <- traverse lookupValue (Tx.txInputs filteredUnbalancedTxTx)
+    collateral  <- traverse lookupValue (Tx.txCollateral filteredUnbalancedTxTx)
     let fees = txFee filteredUnbalancedTxTx
         left = txMint filteredUnbalancedTxTx <> fold inputValues
         right = fees <> foldMap (view Tx.outValue) (filteredUnbalancedTxTx ^. Tx.outputs)
@@ -446,7 +447,7 @@ handleBalanceTx utxo utx = do
             else do
                 logDebug $ AddingInputsFor neg
                 -- filter out inputs from utxo that are already in unBalancedTx
-                let inputsOutRefs = map Tx.txInRef txInputs
+                let inputsOutRefs = map Tx.txInputRef txInputs
                     filteredUtxo = flip Map.filterWithKey utxo $ \txOutRef _ ->
                         txOutRef `notElem` inputsOutRefs
                 addInputs filteredUtxo ownPaymentPubKey ownStakePubKey neg tx'
@@ -500,9 +501,10 @@ addCollateral
 addCollateral mp vl tx = do
     (spend, _) <- selectCoin (filter (Value.isAdaOnlyValue . snd) (second (view Ledger.ciTxOutValue) <$> Map.toList mp)) vl
     let addTxCollateral =
-            let ins = Set.fromList (Tx.pubKeyTxIn . fst <$> spend)
-            in over Tx.collateralInputs (Set.union ins)
-    pure $ tx & addTxCollateral
+            let ins = Set.fromList (Tx.pubKeyTxInput . fst <$> spend)
+            -- Is uniqueness needed here?
+            in over Tx.collateralInputs (Set.elems . Set.union ins . Set.fromList)
+    pure $ addTxCollateral tx
 
 -- | @addInputs mp pk vl tx@ selects transaction outputs worth at least
 --   @vl@ from the UTXO map @mp@ and adds them as inputs to @tx@. A public
@@ -521,8 +523,9 @@ addInputs mp pk sk vl tx = do
     let
 
         addTxIns =
-            let ins = Set.fromList (Tx.pubKeyTxIn . fst <$> spend)
-            in over Tx.inputs (Set.union ins)
+            let ins = Set.fromList (Tx.pubKeyTxInput . fst <$> spend)
+            -- Is uniqueness needed here?
+            in over Tx.inputs (Set.elems . Set.union ins . Set.fromList)
 
         addTxOut =
             if Value.isZero change

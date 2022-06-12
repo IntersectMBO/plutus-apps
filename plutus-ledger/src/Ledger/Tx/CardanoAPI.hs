@@ -785,7 +785,6 @@ data ToCardanoError
     | MissingDatum
     | MissingMintingPolicy
     | MissingStakeValidator
-    | ScriptPurposeNotSupported P.ScriptTag
     | Tag String ToCardanoError
     deriving stock (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -802,7 +801,6 @@ instance Pretty ToCardanoError where
     pretty MissingDatum                       = "Missing required datum."
     pretty MissingMintingPolicy               = "Missing minting policy."
     pretty MissingStakeValidator              = "Missing stake validator."
-    pretty (ScriptPurposeNotSupported p)      = "Script purpose not supported:" <+> viaShow p
     pretty (Tag t err)                        = pretty t <> colon <+> pretty err
 
 zeroExecutionUnits :: C.ExecutionUnits

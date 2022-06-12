@@ -61,7 +61,7 @@ import Control.Lens.Indexed (iforM_)
 
 import Codec.Serialise (Serialise)
 import Control.DeepSeq (NFData)
-import Control.Lens (Fold, folding, toListOf, view, (^.))
+import Control.Lens (toListOf, view, (^.))
 import Control.Monad
 import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
@@ -237,16 +237,6 @@ validateTransactionOffChain t = do
 
         pure Nothing
         ) `catchError` (\e -> pure (Just (Phase2, e)))
-
--- | Filter to get only the pubkey inputs.
-pubKeyTxInputs :: Fold [TxInput] TxInput
-pubKeyTxInputs = folding (filter (\TxInput{ txInputType = t } -> t == TxConsumePublicKeyAddress))
-
--- | Filter to get only the script inputs.
-scriptTxInputs :: Fold [TxInput] TxInput
-scriptTxInputs = (\x -> folding x) . filter $ \case
-    TxInput{ txInputType = TxConsumeScriptAddress{} } -> True
-    _                                                 -> False
 
 -- | Check that a transaction can be validated in the given slot.
 checkSlotRange :: ValidationMonad m => Slot.Slot -> Tx -> m ()

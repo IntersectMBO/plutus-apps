@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
@@ -191,6 +192,16 @@ metadata = lens g s where
     g = txMetadata
     s tx i = tx { txMetadata = i }
 
+-- | Filter to get only the pubkey inputs.
+pubKeyTxInputs :: Fold [TxInput] TxInput
+pubKeyTxInputs = folding (filter (\TxInput{ txInputType = t } -> t == TxConsumePublicKeyAddress))
+
+-- | Filter to get only the script inputs.
+scriptTxInputs :: Fold [TxInput] TxInput
+scriptTxInputs = (\x -> folding x) . filter $ \case
+    TxInput{ txInputType = TxConsumeScriptAddress{} } -> True
+    _                                                 -> False
+
 lookupSignature :: PubKey -> Tx -> Maybe Signature
 lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
 
@@ -225,10 +236,13 @@ fillTxInputWitnesses :: Tx -> TxInput -> TxIn
 fillTxInputWitnesses tx (TxInput outRef inType) = case inType of
     TxConsumePublicKeyAddress -> TxIn outRef (Just ConsumePublicKeyAddress)
     TxConsumeSimpleScriptAddress -> TxIn outRef (Just ConsumeSimpleScriptAddress)
-    TxConsumeScriptAddress redeemer validatorHash datumHash -> TxIn outRef $ do
-        datum <- Map.lookup datumHash (txData tx)
-        validator <- lookupValidator (txScripts tx) validatorHash
+    TxConsumeScriptAddress redeemer vlh dh -> TxIn outRef $ do
+        datum <- Map.lookup dh (txData tx)
+        validator <- lookupValidator (txScripts tx) vlh
         Just $ ConsumeScriptAddress validator redeemer datum
+
+pubKeyTxInput :: TxOutRef -> TxInput
+pubKeyTxInput outRef = TxInput outRef TxConsumePublicKeyAddress
 
 -- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly.
 addMintingPolicy :: MintingPolicy -> Redeemer -> Tx -> Tx
@@ -291,5 +305,3 @@ spentOutputs = map txInputRef . txInputs
 --   for a failed transaction using its collateral inputs.
 updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
 updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.fromList . map txInputRef . txCollateral $ tx)
-
-

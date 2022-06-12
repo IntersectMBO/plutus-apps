@@ -4,7 +4,10 @@ module Ledger (
     CurrencySymbol,
     TokenName,
     Value,
-    Ada
+    Ada,
+    DCert,
+    Credential,
+    StakingCredential,
     ) where
 
 import Ledger.Address as Export
@@ -16,7 +19,9 @@ import Ledger.Params as Export
 import Ledger.Tx as Export
 import Ledger.Value as Export (noAdaValue)
 import Plutus.V1.Ledger.Ada (Ada)
+import Plutus.V1.Ledger.Api (Credential, DCert)
 import Plutus.V1.Ledger.Contexts as Export
+import Plutus.V1.Ledger.Credential (StakingCredential)
 import Plutus.V1.Ledger.Interval as Export
 import Plutus.V1.Ledger.Orphans ()
 import Plutus.V1.Ledger.Slot as Export
