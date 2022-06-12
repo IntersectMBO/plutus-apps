@@ -15,6 +15,7 @@ module Ledger.Generators(
     genMockchain',
     emptyChain,
     GeneratorModel(..),
+    TxInputWitnessed(..),
     generatorModel,
     -- * Transactions
     genValidTransaction,

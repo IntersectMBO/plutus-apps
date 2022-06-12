@@ -17,8 +17,8 @@
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 module Wallet.Emulator.MultiAgent where
 
-import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, to, unto,
-                     view, (&), (.~), (^.), (^..))
+import Control.Lens (AReview, Getter, Lens', Prism', anon, at, folded, makeLenses, prism', reversed, review, set, to,
+                     unto, view, (&), (.~), (^.), (^..))
 import Control.Monad (join)
 import Control.Monad.Freer (Eff, Member, Members, interpret, send, subsume, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
@@ -289,18 +289,10 @@ we create 10 Ada-only outputs per wallet here.
 --   creates the initial distribution of funds to public key addresses.
 emulatorStateInitialDist :: Map PaymentPubKeyHash Value -> EmulatorState
 emulatorStateInitialDist mp = emulatorStatePool [EmulatorTx tx] where
-    tx = Tx
-            { txInputs = mempty
-            , txCollateral = mempty
-            , txOutputs = Map.toList mp >>= mkOutputs
-            , txMint = foldMap snd $ Map.toList mp
-            , txFee = mempty
-            , txValidRange = WAPI.defaultSlotRange
-            , txMintScripts = mempty
-            , txSignatures = mempty
-            , txRedeemers = mempty
-            , txData = mempty
-            }
+    tx = mempty
+        & set outputs (Map.toList mp >>= mkOutputs)
+        & set mint (foldMap snd $ Map.toList mp)
+        & set validRange (WAPI.defaultSlotRange)
     -- See [Creating wallets with multiple outputs]
     mkOutputs (key, vl) = mkOutput key <$> splitHeadinto10 (Wallet.splitOffAdaOnlyValue vl)
     splitHeadinto10 []       = []

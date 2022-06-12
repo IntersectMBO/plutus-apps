@@ -54,7 +54,6 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras qualified as Consensus
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
 import Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
-import Plutus.V1.Ledger.DCert qualified as Plutus
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.IsData.Class

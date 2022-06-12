@@ -13,7 +13,6 @@ import Control.Monad.Primitive (PrimMonad, PrimState)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
-import Data.Set qualified as Set
 import Hedgehog.Gen qualified as Gen
 import System.Random.MWC as MWC
 
@@ -21,11 +20,11 @@ import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPrivateKey, PaymentPubKey)
 import Ledger.Address qualified as Address
 import Ledger.CardanoWallet qualified as CW
+import Ledger.Generators (TxInputWitnessed (TxInputWitnessed))
 import Ledger.Generators qualified as Generators
 import Ledger.Index (UtxoIndex (..), ValidationCtx (..), runValidation, validateTransaction)
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (Tx, TxOut (..))
-import Ledger.Tx qualified as Tx
+import Ledger.Tx (Tx, TxInType (ConsumePublicKeyAddress), TxOut (..))
 
 -- $randomTx
 -- Generate a random, valid transaction that moves some ada

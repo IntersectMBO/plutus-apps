@@ -378,7 +378,7 @@ getTxOutDatum ::
   Maybe d
 getTxOutDatum _ (Ledger.TxOutTx _ (Ledger.TxOut _ _ Nothing)) = Nothing
 getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
-    Ledger.lookupDatum tx' datumHash >>= (Ledger.getDatum >>> fromBuiltinData @d)
+    M.lookup datumHash (Ledger.txData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
 dataAtAddress :: forall d . FromData d => Address -> ([d] -> Bool) -> TracePredicate
 dataAtAddress address check = TracePredicate $

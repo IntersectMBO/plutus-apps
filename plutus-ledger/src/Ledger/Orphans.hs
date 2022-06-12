@@ -44,7 +44,7 @@ import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinDat
 import Plutus.V1.Ledger.Bytes (bytes)
 import Plutus.V1.Ledger.Scripts (ScriptError, ScriptHash (..))
 import Plutus.V1.Ledger.Time (DiffMilliSeconds (DiffMilliSeconds))
-import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag)
+import Plutus.V1.Ledger.Tx (RedeemerPtr, ScriptTag, TxIn, TxInType)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import PlutusCore (Kind, Some, Term, Type, ValueOf, Version)
 import PlutusTx.AssocMap qualified as AssocMap
@@ -132,7 +132,9 @@ deriving newtype instance OpenApi.ToSchema Ada
 deriving instance OpenApi.ToSchema Tx
 deriving instance OpenApi.ToSchema Certificate
 deriving instance OpenApi.ToSchema DCert
+deriving instance OpenApi.ToSchema TxIn
 deriving instance OpenApi.ToSchema TxInput
+deriving instance OpenApi.ToSchema TxInType
 deriving instance OpenApi.ToSchema ScriptTag
 deriving instance OpenApi.ToSchema RedeemerPtr
 deriving instance OpenApi.ToSchema TxOutRef

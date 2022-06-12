@@ -154,7 +154,7 @@ testScriptInputs lookups txc = property $ do
                  (pure . unBalancedTxTx)
                  $ mkTx lookups txc
     let valM = do
-            Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxIns)) tx
+            Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxInputs)) tx
             idx <- Ledger.vctxIndex <$> ask
             pure (Nothing, idx)
     case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex (Ledger.toTxOut <$> Constraints.slTxOutputs lookups)) def) of
