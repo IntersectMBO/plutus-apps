@@ -56,12 +56,12 @@ withChainSyncEventStream socketPath networkId point consumer = do
   -- other. The problem here is "properly-sized". A bounded queue like
   -- Control.Concurrent.STM.TBQueue allows us to specify a max queue length
   -- but block size can vary a lot (TODO quantify this) depending on the
-  -- era. We have an alternative implementation with customizable
-  -- (TBMQueue) but it needs to be extracted from the
+  -- era. We have an alternative implementation with customizable queue
+  -- size (TBMQueue) but it needs to be extracted from the
   -- plutus-chain-index-core package. Using a simple MVar doesn't seem to
   -- slow down marconi's indexing, likely because the difference is
-  -- negligeable compared to existing network and IO latencies.
-  -- Therefore, let's stick with a MVar now and revisit later.
+  -- negligeable compared to existing network and IO latencies.  Therefore,
+  -- let's stick with a MVar now and revisit later.
   nextBlockVar <- newEmptyMVar
 
   let client = chainSyncStreamingClient point nextBlockVar
@@ -102,7 +102,7 @@ chainSyncStreamingClient ::
   ChainPoint ->
   MVar (ChainSyncEvent e) ->
   ChainSyncClient e ChainPoint ChainTip IO ()
-chainSyncStreamingClient point nextBlockVar =
+chainSyncStreamingClient point nextChainEventVar =
   ChainSyncClient $ pure $ SendMsgFindIntersect [point] onIntersect
   where
     onIntersect =
@@ -121,10 +121,10 @@ chainSyncStreamingClient point nextBlockVar =
           ClientStNext
             { recvMsgRollForward = \bim ct ->
                 ChainSyncClient $ do
-                  putMVar nextBlockVar (RollForward bim ct)
+                  putMVar nextChainEventVar (RollForward bim ct)
                   sendRequestNext,
               recvMsgRollBackward = \cp ct ->
                 ChainSyncClient $ do
-                  putMVar nextBlockVar (RollBackward cp ct)
+                  putMVar nextChainEventVar (RollBackward cp ct)
                   sendRequestNext
             }
