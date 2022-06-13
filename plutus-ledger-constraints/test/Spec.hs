@@ -159,11 +159,10 @@ testScriptInputs lookups txc = property $ do
                  $ mkTx lookups txc
     let valM = do
             Ledger.checkValidInputs (toListOf (Ledger.inputs . Ledger.scriptTxIns)) tx
-            idx <- Ledger.vctxIndex <$> ask
-            pure (Nothing, idx)
+            pure Nothing
     case Ledger.runValidation valM (Ledger.ValidationCtx (Ledger.UtxoIndex (Ledger.toTxOut <$> Constraints.slTxOutputs lookups)) def) of
-        ((Nothing, _), _) -> pure ()
-        ((Just err, _), _) -> do
+        (Nothing, _) -> pure ()
+        (Just err, _) -> do
             Hedgehog.annotateShow err
             Hedgehog.failure
 

@@ -89,8 +89,8 @@ import Control.Monad.Freer.Reader
 import Control.Monad.Freer.Writer (Writer (..), tell)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Default (Default (..))
-import Data.Foldable (fold, traverse_)
-import Data.Map qualified as M
+import Data.Foldable (fold, toList, traverse_)
+import Data.Map qualified as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.OpenUnion
 import Data.Proxy (Proxy (..))
@@ -381,22 +381,22 @@ valueAtAddress address check = TracePredicate $
 getTxOutDatum ::
   forall d.
   (FromData d) =>
-  Ledger.TxOutRef ->
-  Ledger.TxOutTx ->
+  Ledger.CardanoTx ->
+  Ledger.TxOut ->
   Maybe d
-getTxOutDatum _ (Ledger.TxOutTx _ (Ledger.TxOut _ _ Nothing)) = Nothing
-getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
-    Ledger.lookupDatum tx' datumHash >>= (Ledger.getDatum >>> fromBuiltinData @d)
+getTxOutDatum _ (Ledger.TxOut _ _ Nothing) = Nothing
+getTxOutDatum tx' (Ledger.TxOut _ _ (Just datumHash)) =
+    Map.lookup datumHash (Ledger.getCardanoTxData tx') >>= (Ledger.getDatum >>> fromBuiltinData @d)
 
 dataAtAddress :: forall d . FromData d => Address -> ([d] -> Bool) -> TracePredicate
 dataAtAddress address check = TracePredicate $
     flip postMapM (L.generalize $ Folds.utxoAtAddress address) $ \utxo -> do
       let
-        datums = mapMaybe (uncurry $ getTxOutDatum @d) $ M.toList utxo
+        datums = mapMaybe (uncurry $ getTxOutDatum @d) $ toList utxo
         result = check datums
       unless result $ do
           tell @(Doc Void) ("Data at address" <+> pretty address <+> "was"
-              <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxo)
+              <+> foldMap (foldMap pretty . Ledger.getCardanoTxData . fst) utxo)
       pure result
 
 waitingForSlot

@@ -17,7 +17,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Plutus.V1.Ledger.Tx (Tx)
+import Ledger.Tx (CardanoTx)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
@@ -53,8 +53,8 @@ _BlockId = _Newtype
 --------------------------------------------------------------------------------
 
 data OnChainTx
-  = Invalid Tx
-  | Valid Tx
+  = Invalid CardanoTx
+  | Valid CardanoTx
 
 derive instance Eq OnChainTx
 
@@ -78,12 +78,12 @@ derive instance Generic OnChainTx _
 
 --------------------------------------------------------------------------------
 
-_Invalid :: Prism' OnChainTx Tx
+_Invalid :: Prism' OnChainTx CardanoTx
 _Invalid = prism' Invalid case _ of
   (Invalid a) -> Just a
   _ -> Nothing
 
-_Valid :: Prism' OnChainTx Tx
+_Valid :: Prism' OnChainTx CardanoTx
 _Valid = prism' Valid case _ of
   (Valid a) -> Just a
   _ -> Nothing

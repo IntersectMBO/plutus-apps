@@ -28,13 +28,11 @@ module Ledger.Blockchain (
     updateUtxo,
     txOutPubKey,
     pubKeyTxo,
-    validValuesTx,
-    toOutRefMap
+    validValuesTx
     ) where
 
 import Codec.Serialise (Serialise)
-import Control.DeepSeq (NFData)
-import Control.Lens (makePrisms, view)
+import Control.Lens (makePrisms)
 import Control.Monad (join)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as JSON
@@ -48,15 +46,15 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8')
 import GHC.Generics (Generic)
-import Ledger.Tx (spentOutputs, txId, unspentOutputsTx, updateUtxo)
+import Ledger.Tx (CardanoTx, getCardanoTxCollateralInputs, getCardanoTxId, getCardanoTxInputs, getCardanoTxOutputs,
+                  spentOutputs, unspentOutputsTx, updateUtxo, updateUtxoCollateral)
 import Prettyprinter (Pretty (..), (<+>))
 
 import Data.Either (fromRight)
 import Data.OpenApi qualified as OpenApi
 import Plutus.V1.Ledger.Crypto
 import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx (Tx, TxIn, TxOut, TxOutRef (..), TxOutTx (TxOutTx, txOutTxOut, txOutTxTx), collateralInputs,
-                            inputs, txOutDatum, txOutPubKey, txOutValue, txOutputs, updateUtxoCollateral, validValuesTx)
+import Plutus.V1.Ledger.Tx (TxIn, TxOut, TxOutRef (..), txOutDatum, txOutPubKey, txOutValue, validValuesTx)
 import Plutus.V1.Ledger.TxId
 import Plutus.V1.Ledger.Value (Value)
 
@@ -83,9 +81,9 @@ instance Pretty BlockId where
 
 -- | A transaction on the blockchain.
 -- Invalid transactions are still put on the chain to be able to collect fees.
-data OnChainTx = Invalid Tx | Valid Tx
+data OnChainTx = Invalid CardanoTx | Valid CardanoTx
     deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+    deriving anyclass (ToJSON, FromJSON, Serialise)
 
 instance Pretty OnChainTx where
     pretty = \case
@@ -98,38 +96,30 @@ type Block = [OnChainTx]
 -- | A blockchain, which is just a list of blocks, starting with the newest.
 type Blockchain = [Block]
 
-eitherTx :: (Tx -> r) -> (Tx -> r) -> OnChainTx -> r
+eitherTx :: (CardanoTx -> r) -> (CardanoTx -> r) -> OnChainTx -> r
 eitherTx ifInvalid _ (Invalid tx) = ifInvalid tx
 eitherTx _ ifValid (Valid tx)     = ifValid tx
 
 consumableInputs :: OnChainTx -> Set.Set TxIn
-consumableInputs = eitherTx (view collateralInputs) (view inputs)
+consumableInputs = eitherTx getCardanoTxCollateralInputs getCardanoTxInputs
 
 -- | Outputs added to the UTXO set by the 'OnChainTx'
 outputsProduced :: OnChainTx -> [TxOut]
-outputsProduced = eitherTx (const []) txOutputs
-
--- | A map of UTXO refs to 'TxOutTx' values for a single on-chain
---   transaction.
-toOutRefMap :: OnChainTx -> Map TxOutRef TxOutTx
-toOutRefMap tx =
-    let tx' = eitherTx id id tx
-        mkOutRef (idx, txOut) = (TxOutRef (txId tx') idx, TxOutTx{txOutTxTx=tx', txOutTxOut=txOut})
-    in Map.fromList . fmap mkOutRef $ zip [0..] $ outputsProduced tx
+outputsProduced = eitherTx (const []) getCardanoTxOutputs
 
 -- | Lookup a transaction in a 'Blockchain' by its id.
 transaction :: Blockchain -> TxId -> Maybe OnChainTx
 transaction bc tid = getFirst . foldMap (foldMap p) $ bc where
-    p tx = if tid == eitherTx txId txId tx then First (Just tx) else mempty
+    p tx = if tid == eitherTx getCardanoTxId getCardanoTxId tx then First (Just tx) else mempty
 
 -- | Determine the unspent output that an input refers to
 out :: Blockchain -> TxOutRef -> Maybe TxOut
 out bc o = do
     Valid t <- transaction bc (txOutRefId o)
     let i = txOutRefIdx o
-    if fromIntegral (length (txOutputs t)) <= i
+    if fromIntegral (length (getCardanoTxOutputs t)) <= i
         then Nothing
-        else Just $ txOutputs t !! fromIntegral i
+        else Just $ getCardanoTxOutputs t !! fromIntegral i
 
 -- | Determine the unspent value that a transaction output refers to.
 value :: Blockchain -> TxOutRef -> Maybe Value

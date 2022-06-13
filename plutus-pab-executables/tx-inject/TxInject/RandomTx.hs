@@ -89,7 +89,7 @@ generateTx gen slot (UtxoIndex utxo) = do
     tx <- Gen.sample $
       Generators.genValidTransactionSpending sourceTxIns sourceAda
     slotCfg <- Gen.sample Generators.genSlotConfig
-    let ((validationResult, _), _) =
+    let (validationResult, _) =
           runValidation (validateTransaction slot tx) (ValidationCtx (UtxoIndex utxo) (def { pSlotConfig = slotCfg }))
     case validationResult of
       Nothing -> pure tx
