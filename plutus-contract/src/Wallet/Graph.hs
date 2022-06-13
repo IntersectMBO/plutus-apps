@@ -109,7 +109,7 @@ txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
 
     extract :: (UtxoLocation, OnChainTx) -> [Maybe FlowLink]
     extract (loc, tx) =
-      let targetRef = mkRef $ eitherTx txId txId tx in
+      let targetRef = mkRef $ eitherTx getCardanoTxId getCardanoTxId tx in
       fmap (flow (Just loc) targetRef . txInRef) (Set.toList $ consumableInputs tx)
     -- make a flow for a TxOutRef
 
@@ -131,7 +131,7 @@ txnFlows keys bc = catMaybes (utxoLinks ++ foldMap extract bc')
 
 -- | Annotate the 'TxOutRef's produced by a transaction with the location of the transaction.
 outRefsWithLoc :: UtxoLocation -> OnChainTx -> [(TxOutRef, UtxoLocation)]
-outRefsWithLoc loc (Valid tx) = (\txo -> (snd txo, loc)) <$> txOutRefs tx
+outRefsWithLoc loc (Valid tx) = (\txo -> (snd txo, loc)) <$> getCardanoTxOutRefs tx
 outRefsWithLoc _ (Invalid _)  = []
 
 -- | Create a 'TxRef' from a 'TxOutRef'.

@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia        #-}
 {-# LANGUAGE Rank2Types         #-}
+{-# LANGUAGE TupleSections      #-}
 {-# LANGUAGE TypeFamilies       #-}
 -- | 'AddressMap's and functions for working on them.
 --
@@ -42,12 +43,12 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 
 import Ledger.Blockchain
-import Ledger.Tx (txId)
+import Ledger.Tx (CardanoTx, getCardanoTxId, getCardanoTxOutputs, getCardanoTxUnspentOutputsTx)
 import Plutus.V1.Ledger.Address (Address (..))
-import Plutus.V1.Ledger.Tx (Tx (..), TxIn (..), TxOut (..), TxOutRef (..), TxOutTx (..))
+import Plutus.V1.Ledger.Tx (TxIn (..), TxOut (..), TxOutRef (..))
 import Plutus.V1.Ledger.Value (Value)
 
-type UtxoMap = Map TxOutRef TxOutTx
+type UtxoMap = Map TxOutRef (CardanoTx, TxOut)
 
 -- | A map of 'Address'es and their unspent outputs.
 newtype AddressMap = AddressMap { getAddressMap :: Map Address UtxoMap }
@@ -56,14 +57,14 @@ newtype AddressMap = AddressMap { getAddressMap :: Map Address UtxoMap }
     deriving (ToJSON, FromJSON) via (JSON.JSONViaSerialise AddressMap)
 
 -- | An address map with a single unspent transaction output.
-singleton :: (Address, TxOutRef, Tx, TxOut) -> AddressMap
-singleton (addr, ref, tx, ot) = AddressMap $ Map.singleton addr (Map.singleton ref (TxOutTx tx ot))
+singleton :: (Address, TxOutRef, CardanoTx, TxOut) -> AddressMap
+singleton (addr, ref, tx, ot) = AddressMap $ Map.singleton addr (Map.singleton ref (tx, ot))
 
-outRefMap :: AddressMap -> Map TxOutRef TxOutTx
+outRefMap :: AddressMap -> Map TxOutRef (CardanoTx, TxOut)
 outRefMap (AddressMap am) = Map.unions (snd <$> Map.toList am)
 
 -- | Filter the transaction output references in the map
-filterRefs :: (TxOutRef -> TxOutTx -> Bool) -> AddressMap -> AddressMap
+filterRefs :: (TxOutRef -> (CardanoTx, TxOut) -> Bool) -> AddressMap -> AddressMap
 filterRefs flt =
     AddressMap . Map.map (Map.filterWithKey flt) . getAddressMap
 
@@ -83,7 +84,7 @@ instance Monoid AddressMap where
     mempty = AddressMap Map.empty
 
 type instance Index AddressMap = Address
-type instance IxValue AddressMap = Map TxOutRef TxOutTx
+type instance IxValue AddressMap = Map TxOutRef (CardanoTx, TxOut)
 
 instance Ixed AddressMap where
     ix adr f (AddressMap mp) = AddressMap <$> ix adr f mp
@@ -110,36 +111,36 @@ addAddresses = flip (foldr addAddress)
 
 -- | The total value of unspent outputs (which the map knows about) at an address.
 values :: AddressMap -> Map Address Value
-values = Map.map (fold . Map.map (txOutValue . txOutTxOut)) . getAddressMap
+values = Map.map (fold . Map.map (txOutValue . snd)) . getAddressMap
 
 -- | Walk through the address map, applying an effectful function to each entry.
 traverseWithKey ::
      Applicative f
-  => (Address -> Map TxOutRef TxOutTx -> f (Map TxOutRef TxOutTx))
+  => (Address -> Map TxOutRef (CardanoTx, TxOut) -> f (Map TxOutRef (CardanoTx, TxOut)))
   -> AddressMap
   -> f AddressMap
 traverseWithKey f (AddressMap m) = AddressMap <$> Map.traverseWithKey f m
 
-outputsMapFromTxForAddress :: Address -> OnChainTx -> Map TxOutRef TxOutTx
+outputsMapFromTxForAddress :: Address -> OnChainTx -> Map TxOutRef (CardanoTx, TxOut)
 outputsMapFromTxForAddress addr (Valid tx) =
-    fmap (\txout -> TxOutTx{txOutTxTx=tx, txOutTxOut = txout})
+    fmap (tx ,)
     $ Map.filter ((==) addr . txOutAddress)
-    $ unspentOutputsTx tx
+    $ getCardanoTxUnspentOutputsTx tx
 outputsMapFromTxForAddress _ (Invalid _) = mempty
 
 -- | Create an 'AddressMap' with the unspent outputs of a single transaction.
 fromTxOutputs :: OnChainTx -> AddressMap
 fromTxOutputs (Valid tx) =
-    AddressMap . Map.fromListWith Map.union . fmap mkUtxo . zip [0..] . txOutputs $ tx where
-    mkUtxo (i, t) = (txOutAddress t, Map.singleton (TxOutRef h i) (TxOutTx tx t))
-    h = txId tx
+    AddressMap . Map.fromListWith Map.union . fmap mkUtxo . zip [0..] . getCardanoTxOutputs $ tx where
+    mkUtxo (i, t) = (txOutAddress t, Map.singleton (TxOutRef h i) (tx, t))
+    h = getCardanoTxId tx
 fromTxOutputs (Invalid _) = mempty
 
 -- | Create a map of unspent transaction outputs to their addresses (the
 -- "inverse" of an 'AddressMap', without the values)
 knownAddresses :: AddressMap -> Map TxOutRef Address
 knownAddresses = Map.fromList . unRef . Map.toList . getAddressMap where
-    unRef :: [(Address, Map TxOutRef TxOutTx)] -> [(TxOutRef, Address)]
+    unRef :: [(Address, Map TxOutRef (CardanoTx, TxOut))] -> [(TxOutRef, Address)]
     unRef lst = do
         (a, outRefs) <- lst
         (rf, _) <- Map.toList outRefs
@@ -151,11 +152,11 @@ updateAddresses :: OnChainTx -> AddressMap -> AddressMap
 updateAddresses tx utxo = AddressMap $ Map.mapWithKey upd (getAddressMap utxo) where
     -- adds the newly produced outputs, and removes the consumed outputs, for
     -- an address `adr`
-    upd :: Address -> Map TxOutRef TxOutTx -> Map TxOutRef TxOutTx
+    upd :: Address -> Map TxOutRef (CardanoTx, TxOut) -> Map TxOutRef (CardanoTx, TxOut)
     upd adr mp = Map.union (producedAt adr) mp `Map.difference` consumedFrom adr
 
     -- The TxOutRefs produced by the transaction, for a given address
-    producedAt :: Address -> Map TxOutRef TxOutTx
+    producedAt :: Address -> Map TxOutRef (CardanoTx, TxOut)
     producedAt adr = Map.findWithDefault Map.empty adr outputs
 
     -- The TxOutRefs consumed by the transaction, for a given address

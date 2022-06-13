@@ -31,78 +31,20 @@ module Plutus.ChainIndex.Tx(
     , _ValidTx
     ) where
 
-import Codec.Serialise (Serialise)
-import Control.Lens (makeLenses, makePrisms)
-import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.OpenApi qualified as OpenApi
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Tuple (swap)
-import GHC.Generics (Generic)
-import Ledger (Address, OnChainTx (..), SlotRange, SomeCardanoApiTx, Tx (..), TxId, TxIn (txInType), TxInType (..),
-               TxOut (txOutAddress), TxOutRef (..), txId)
+import Ledger (Address, OnChainTx (..), SomeCardanoApiTx (SomeTx), Tx (..), TxIn (..), TxInType (..),
+               TxOut (txOutAddress), TxOutRef (..), onCardanoTx, txId)
+import Plutus.Contract.CardanoAPI (fromCardanoTx, setValidity)
 import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, redeemerHash, validatorHash)
 import Plutus.V1.Ledger.Scripts (Datum, DatumHash, MintingPolicy (getMintingPolicy),
                                  MintingPolicyHash (MintingPolicyHash), Redeemer (..), RedeemerHash, Script,
                                  ScriptHash (..), Validator (getValidator), ValidatorHash (ValidatorHash))
-import Prettyprinter
 
--- | List of outputs of a transaction. There are no outputs if the transaction
--- is invalid.
-data ChainIndexTxOutputs =
-    InvalidTx -- ^ The transaction is invalid so there is no outputs
-  | ValidTx [TxOut]
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
-
-makePrisms ''ChainIndexTxOutputs
-
-data ChainIndexTx = ChainIndexTx {
-    _citxTxId       :: TxId,
-    -- ^ The id of this transaction.
-    _citxInputs     :: Set TxIn,
-    -- ^ The inputs to this transaction.
-    _citxOutputs    :: ChainIndexTxOutputs,
-    -- ^ The outputs of this transaction, ordered so they can be referenced by index.
-    _citxValidRange :: !SlotRange,
-    -- ^ The 'SlotRange' during which this transaction may be validated.
-    _citxData       :: Map DatumHash Datum,
-    -- ^ Datum objects recorded on this transaction.
-    _citxRedeemers  :: Map RedeemerHash Redeemer,
-    -- ^ Redeemers of the minting scripts.
-    _citxScripts    :: Map ScriptHash Script,
-    -- ^ The scripts (validator, stake validator or minting) part of cardano tx.
-    _citxCardanoTx  :: Maybe SomeCardanoApiTx
-    -- ^ The full Cardano API tx which was used to populate the rest of the
-    -- 'ChainIndexTx' fields. Useful because 'ChainIndexTx' doesn't have all the
-    -- details of the tx, so we keep it as a safety net. Might be Nothing if we
-    -- are in the emulator.
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialise, OpenApi.ToSchema)
-
-makeLenses ''ChainIndexTx
-
-instance Pretty ChainIndexTx where
-    pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = ValidTx outputs, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
-        let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList _citxInputs)))
-                , hang 2 (vsep ("outputs:" : fmap pretty outputs))
-                , hang 2 (vsep ("scripts hashes:": fmap (pretty . fst) (Map.toList _citxScripts)))
-                , "validity range:" <+> viaShow _citxValidRange
-                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _citxData) ))
-                , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList _citxRedeemers) ))
-                ]
-        in nest 2 $ vsep ["Valid tx" <+> pretty _citxTxId <> colon, braces (vsep lines')]
-    pretty ChainIndexTx{_citxTxId, _citxInputs, _citxOutputs = InvalidTx, _citxValidRange, _citxData, _citxRedeemers, _citxScripts} =
-        let lines' =
-                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList _citxInputs)))
-                , hang 2 (vsep ["no outputs:"])
-                , hang 2 (vsep ("scripts hashes:": fmap (pretty . fst) (Map.toList _citxScripts)))
-                , "validity range:" <+> viaShow _citxValidRange
-                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList _citxData) ))
-                , hang 2 (vsep ("redeemers:": fmap (pretty . snd) (Map.toList _citxRedeemers) ))
-                ]
-        in nest 2 $ vsep ["Invalid tx" <+> pretty _citxTxId <> colon, braces (vsep lines')]
+import Plutus.ChainIndex.Types
 
 -- | Get tx output references from tx.
 txOutRefs :: ChainIndexTx -> [TxOutRef]
@@ -130,30 +72,44 @@ txOutRefMapForAddr addr tx =
 -- 'OnChainTx' will be the inputs of the 'ChainIndexTx'.
 fromOnChainTx :: OnChainTx -> ChainIndexTx
 fromOnChainTx = \case
-    Valid tx@Tx{txInputs, txOutputs, txValidRange, txData, txMintScripts} ->
-        let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
-        ChainIndexTx
-            { _citxTxId = txId tx
-            , _citxInputs = txInputs
-            , _citxOutputs = ValidTx txOutputs
-            , _citxValidRange = txValidRange
-            , _citxData = txData <> otherDataHashes
-            , _citxRedeemers = redeemers
-            , _citxScripts = mintingPolicies txMintScripts <> validatorHashes
-            , _citxCardanoTx = Nothing
-            }
-    Invalid tx@Tx{txCollateral, txValidRange, txData, txInputs, txMintScripts} ->
-        let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
-        ChainIndexTx
-            { _citxTxId = txId tx
-            , _citxInputs = txCollateral
-            , _citxOutputs = InvalidTx
-            , _citxValidRange = txValidRange
-            , _citxData = txData <> otherDataHashes
-            , _citxRedeemers = redeemers
-            , _citxScripts = mintingPolicies txMintScripts <> validatorHashes
-            , _citxCardanoTx = Nothing
-            }
+    Valid ctx ->
+        onCardanoTx
+            (\tx@Tx{txInputs, txOutputs, txValidRange, txData, txMintScripts} ->
+                let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
+                ChainIndexTx
+                    { _citxTxId = txId tx
+                    , _citxInputs = txInputs
+                    , _citxOutputs = ValidTx txOutputs
+                    , _citxValidRange = txValidRange
+                    , _citxData = txData <> otherDataHashes
+                    , _citxRedeemers = redeemers
+                    , _citxScripts = mintingPolicies txMintScripts <> validatorHashes
+                    , _citxCardanoTx = Nothing
+                    })
+            (fromOnChainCardanoTx True)
+            ctx
+    Invalid ctx ->
+        onCardanoTx
+            (\tx@Tx{txCollateral, txValidRange, txData, txInputs, txMintScripts} ->
+                let (validatorHashes, otherDataHashes, redeemers) = validators txInputs in
+                ChainIndexTx
+                    { _citxTxId = txId tx
+                    , _citxInputs = txCollateral
+                    , _citxOutputs = InvalidTx
+                    , _citxValidRange = txValidRange
+                    , _citxData = txData <> otherDataHashes
+                    , _citxRedeemers = redeemers
+                    , _citxScripts = mintingPolicies txMintScripts <> validatorHashes
+                    , _citxCardanoTx = Nothing
+                    })
+            (fromOnChainCardanoTx False)
+            ctx
+
+-- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
+-- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
+fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
+fromOnChainCardanoTx validity (SomeTx tx era) =
+    either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx
 
 mintingPolicies :: Set MintingPolicy -> Map ScriptHash Script
 mintingPolicies = Map.fromList . fmap withHash . Set.toList

@@ -31,6 +31,7 @@ import Language.Haskell.Interpreter (InterpreterError, InterpreterResult (Interp
 import Ledger.Ada (adaValueOf, lovelaceValueOf)
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Scripts (ValidatorHash (ValidatorHash))
+import Ledger.Tx (CardanoTx (EmulatorTx))
 import Ledger.Value (TokenName (TokenName), Value)
 import Playground.Interpreter qualified as PI
 import Playground.Types (CompilationResult (CompilationResult),
@@ -241,7 +242,7 @@ hasFundsDistribution requiredDistribution (Right InterpreterResult {result = Eva
         Text.putStrLn $
             either id id $ showBlockchain
                 (fmap (fmap fromWalletNumber) walletKeys)
-                (fmap (fmap (\AnnotatedTx {tx, valid} -> if valid then Valid tx else Invalid tx)) resultRollup)
+                (fmap (fmap (\AnnotatedTx {tx, valid} -> if valid then Valid (EmulatorTx tx) else Invalid (EmulatorTx tx))) resultRollup)
         traverse_ print $ reverse emulatorLog
     assertEqual "" requiredDistribution noFeesDistribution
 

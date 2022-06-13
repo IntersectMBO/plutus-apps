@@ -89,12 +89,12 @@ handleControlChain params = \case
         let pool  = st ^. txPool
             slot  = st ^. currentSlot
             idx   = st ^. index
-            EC.ValidatedBlock block events rest =
+            EC.ValidatedBlock block events rest idx' =
                 EC.validateBlock params slot idx pool
 
         let st' = st & txPool .~ rest
                      & tip    ?~ block
-                     & index  %~ Index.insertBlock block
+                     & index  .~ idx'
 
         put st'
         traverse_ logEvent events

@@ -52,7 +52,7 @@ import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Set qualified as Set
 import Data.Text qualified as T
 import Ledger.Blockchain (OnChainTx (Invalid, Valid))
-import Ledger.Tx (Address, TxIn (txInRef), TxOut (TxOut, txOutAddress), TxOutRef, txId)
+import Ledger.Tx (Address, TxIn (txInRef), TxOut (TxOut, txOutAddress), TxOutRef, getCardanoTxId)
 import Plutus.ChainIndex (ChainIndexQueryEffect, ChainIndexTx (ChainIndexTx, _citxOutputs, _citxTxId),
                           ChainIndexTxOutputs (InvalidTx, ValidTx), RollbackState (Committed),
                           TxOutState (Spent, Unspent), TxValidity (TxInvalid, TxValid), _ValidTx, citxInputs,
@@ -311,8 +311,8 @@ updateTxStatus txns = do
     -- Check whether the contract instance is waiting for a status change of any
     -- of the new transactions. If that is the case, call 'addResponse' to send the
     -- response.
-    let txWithStatus (Invalid tx) = (txId tx, TxInvalid)
-        txWithStatus (Valid tx)   = (txId tx, TxValid)
+    let txWithStatus (Invalid tx) = (getCardanoTxId tx, TxInvalid)
+        txWithStatus (Valid tx)   = (getCardanoTxId tx, TxValid)
         statusMap = Map.fromList $ fmap txWithStatus txns
     hks <- mapMaybe (traverse (preview E._AwaitTxStatusChangeReq)) <$> getHooks @w @s @e
     let mpReq Request{rqID, itID, rqRequest=txid} =

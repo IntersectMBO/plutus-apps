@@ -38,7 +38,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Blockchain (OnChainTx (..))
 import Ledger.Index (UtxoIndex (..), insertBlock)
 import Ledger.Slot (Slot (..))
-import Ledger.Tx (Tx (..), onCardanoTx)
+import Ledger.Tx (CardanoTx (EmulatorTx), Tx (..))
 import Plutus.PAB.Types (Config (..))
 import TxInject.RandomTx (generateTx)
 import Wallet.Emulator (chainState, mockWalletPaymentPubKeyHash, txPool)
@@ -73,7 +73,6 @@ initialUtxoIndex config =
                zip (config & nodeServerConfig & pscInitialTxWallets & fmap fromWalletNumber)
                    (repeat (Ada.adaValueOf 1000_000_000))
       initialTxs =
-        concatMap (onCardanoTx pure (const [])) $
         view (chainState . txPool) $
         emulatorStateInitialDist $
         Map.mapKeys mockWalletPaymentPubKeyHash dist
@@ -91,7 +90,7 @@ runProducer AppEnv{txQueue, stats, utxoIndex} = do
       -- boundaries. We don't currently use boundaries for our generated
       -- transactions, so we chose the random number.
       tx <- generateTx rng (Slot 4) utxo
-      let utxo' = insertBlock [Valid tx] utxo
+      let utxo' = insertBlock [Valid $ EmulatorTx tx] utxo
       atomically $ do
         writeTBQueue txQueue tx
         modifyTVar' stats $ \s -> s { stUtxoSize = Map.size $ getIndex utxo' }

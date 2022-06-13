@@ -34,9 +34,15 @@ module Ledger.Tx
     , cardanoTxMap
     , getCardanoTxId
     , getCardanoTxInputs
+    , getCardanoTxCollateralInputs
     , getCardanoTxOutRefs
+    , getCardanoTxOutputs
+    , getCardanoTxSpentOutputs
     , getCardanoTxUnspentOutputsTx
     , getCardanoTxFee
+    , getCardanoTxMint
+    , getCardanoTxValidityRange
+    , getCardanoTxData
     , SomeCardanoApiTx(.., CardanoApiEmulatorEraTx)
     , ToCardanoError(..)
     -- * Transactions
@@ -46,6 +52,7 @@ module Ledger.Tx
     , scriptTxOut
     , scriptTxOut'
     , updateUtxo
+    , updateUtxoCollateral
     , txOutRefs
     , unspentOutputsTx
     -- * Hashing transactions
@@ -60,6 +67,7 @@ import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
@@ -71,9 +79,10 @@ import Ledger.Orphans ()
 import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Plutus.Script.Utils.V1.Scripts (datumHash)
-import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, TxId (TxId), Validator,
-                             ValidatorHash, Value, addressCredential, toBuiltin)
-import Plutus.V1.Ledger.Tx as Export
+import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum (Datum), DatumHash, TxId (TxId),
+                             Validator, ValidatorHash, Value, addressCredential, toBuiltin)
+import Plutus.V1.Ledger.Slot (SlotRange)
+import Plutus.V1.Ledger.Tx as Export hiding (updateUtxoCollateral)
 import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 
 -- | Transaction output that comes from a chain index query.
@@ -143,7 +152,7 @@ data CardanoTx
     | CardanoApiTx { _cardanoApiTx :: SomeCardanoApiTx }
     | Both { _emulatorTx :: Tx, _cardanoApiTx :: SomeCardanoApiTx }
     deriving (Eq, Show, Generic)
-    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
+    deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema, Serialise)
 
 makeLenses ''CardanoTx
 
@@ -184,14 +193,41 @@ getCardanoTxInputs = onCardanoTx txInputs
     (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
         Set.fromList $ fmap ((`TxIn` Nothing) . CardanoAPI.fromCardanoTxIn . fst) txIns)
 
+getCardanoTxCollateralInputs :: CardanoTx -> Set TxIn
+getCardanoTxCollateralInputs = onCardanoTx txCollateral
+    (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) ->
+        CardanoAPI.fromCardanoTxInsCollateral txInsCollateral)
+
 getCardanoTxOutRefs :: CardanoTx -> [(TxOut, TxOutRef)]
 getCardanoTxOutRefs = onCardanoTx txOutRefs CardanoAPI.txOutRefs
+
+getCardanoTxOutputs :: CardanoTx -> [TxOut]
+getCardanoTxOutputs = fmap fst . getCardanoTxOutRefs
 
 getCardanoTxUnspentOutputsTx :: CardanoTx -> Map TxOutRef TxOut
 getCardanoTxUnspentOutputsTx = onCardanoTx unspentOutputsTx CardanoAPI.unspentOutputsTx
 
+getCardanoTxSpentOutputs :: CardanoTx -> Set TxOutRef
+getCardanoTxSpentOutputs = Set.map txInRef . getCardanoTxInputs
+
 getCardanoTxFee :: CardanoTx -> Value
-getCardanoTxFee = onCardanoTx txFee (\_ -> error "Ledger.Tx.getCardanoTxFee: Expecting a mock tx, not an Alonzo tx")
+getCardanoTxFee = onCardanoTx txFee (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoFee txFee)
+
+getCardanoTxMint :: CardanoTx -> Value
+getCardanoTxMint = onCardanoTx txMint (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoMintValue txMintValue)
+
+getCardanoTxValidityRange :: CardanoTx -> SlotRange
+getCardanoTxValidityRange = onCardanoTx txValidRange
+    (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> CardanoAPI.fromCardanoValidityRange txValidityRange)
+
+getCardanoTxData :: CardanoTx -> Map DatumHash Datum
+getCardanoTxData = onCardanoTx txData
+    (\(SomeTx (C.Tx (C.TxBody C.TxBodyContent {..}) _) _) -> Map.fromList $ mapMaybe (\(C.TxOut _ _ d) -> fromCardanoTxOutDatum d) txOuts)
+    where
+        fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> Maybe (DatumHash, Datum)
+        fromCardanoTxOutDatum (C.TxOutDatum _ d) = let d' = Datum $ CardanoAPI.fromCardanoScriptData d in Just (datumHash d', d')
+        fromCardanoTxOutDatum _ = Nothing
+    -- TODO: add txMetaData
 
 instance Pretty Tx where
     pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintScripts, txData} =
@@ -219,8 +255,13 @@ txId tx = TxId $ toBuiltin
 
 -- | Update a map of unspent transaction outputs and signatures based on the inputs
 --   and outputs of a transaction.
-updateUtxo :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
-updateUtxo tx unspent = (unspent `Map.withoutKeys` spentOutputs tx) `Map.union` unspentOutputsTx tx
+updateUtxo :: CardanoTx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxo tx unspent = (unspent `Map.withoutKeys` getCardanoTxSpentOutputs tx) `Map.union` getCardanoTxUnspentOutputsTx tx
+
+-- | Update a map of unspent transaction outputs and signatures based
+--   on the collateral inputs of a transaction (for when it is invalid).
+updateUtxoCollateral :: CardanoTx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.map txInRef $ getCardanoTxCollateralInputs tx)
 
 -- | A list of a transaction's outputs paired with a 'TxOutRef's referring to them.
 txOutRefs :: Tx -> [(TxOut, TxOutRef)]
