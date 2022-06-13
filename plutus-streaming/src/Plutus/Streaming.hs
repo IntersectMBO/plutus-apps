@@ -71,8 +71,11 @@ withChainSyncEventStream socketPath networkId point consumer = do
             localNodeSocketPath = socketPath
           }
 
-      -- FIXME this comes from the config file but Cardano.Api does not expose readNetworkConfig!
-      epochSlots = EpochSlots 40
+      -- This a parameter needed only for the Byron era. Since the Byron
+      -- era is over and the parameter has never changed it is ok to
+      -- hardcode this. See comment on `Cardano.Api.ConsensusModeParams` in
+      -- cardano-node.
+      epochSlots = EpochSlots 21600
 
       clientThread = do
         connectToLocalNode connectInfo localNodeClientProtocols
