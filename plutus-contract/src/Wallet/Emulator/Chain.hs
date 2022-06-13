@@ -213,7 +213,6 @@ validateEm h cUtxoIndex txn = do
     _ <- S.put ctx{ Index.vctxIndex = idx' }
     pure (e, events)
 
--- TODO: generate ScriptValidationEvents
 validateL
     :: Params
     -> Slot

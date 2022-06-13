@@ -105,6 +105,8 @@ fromOnChainTx = \case
             (fromOnChainCardanoTx False)
             ctx
 
+-- Cardano api transactions store validity internally. Our emulated blockchain stores validity outside of the transactions,
+-- so we need to make sure these match up. Once we only have cardano api txs this can be removed.
 fromOnChainCardanoTx :: Bool -> SomeCardanoApiTx -> ChainIndexTx
 fromOnChainCardanoTx validity (SomeTx tx era) =
     either (error . ("Plutus.ChainIndex.Tx.fromOnChainCardanoTx: " ++) . show) id $ fromCardanoTx era $ setValidity validity tx

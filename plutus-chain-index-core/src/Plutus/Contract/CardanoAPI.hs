@@ -61,4 +61,4 @@ fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) = do
 setValidity :: Bool -> C.Tx era -> C.Tx era
 setValidity validity (C.Tx (C.ShelleyTxBody C.ShelleyBasedEraAlonzo txBody scripts dat aux _) era) =
   C.Tx (C.ShelleyTxBody C.ShelleyBasedEraAlonzo txBody scripts dat aux (toTxScriptValidity validity)) era
-setValidity _ tx = tx -- only applies in Alonzo era
+setValidity _ tx = tx -- @setValidity@ only applies in Alonzo era (and newer)

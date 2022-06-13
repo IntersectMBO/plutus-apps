@@ -61,6 +61,7 @@ import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Either (fromRight)
 import Data.Foldable (asum, fold, foldl', for_, traverse_)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
@@ -78,7 +79,7 @@ import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
 import Plutus.Script.Utils.V1.Scripts
 import Plutus.V1.Ledger.Ada (Ada)
 import Plutus.V1.Ledger.Ada qualified as Ada
-import Plutus.V1.Ledger.Address
+import Plutus.V1.Ledger.Address (Address (Address, addressCredential))
 import Plutus.V1.Ledger.Api qualified as Api
 import Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
 import Plutus.V1.Ledger.Contexts qualified as Validation
@@ -344,7 +345,7 @@ checkMinAdaInTxOutputs t@Tx { txOutputs } = do
     params <- vctxParams <$> ask
     for_ txOutputs $ \txOut -> do
         let
-            minAdaTxOut' = either (const minAdaTxOut) id $
+            minAdaTxOut' = fromRight minAdaTxOut $
                 fromPlutusTxOutUnsafe params txOut <&> \txOut' -> evaluateMinLovelaceOutput params txOut'
         if Ada.fromValue (txOutValue txOut) >= minAdaTxOut'
             then pure ()
