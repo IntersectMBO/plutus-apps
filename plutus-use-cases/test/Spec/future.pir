@@ -1521,7 +1521,7 @@
                                                         [
                                                           [
                                                             (builtin
-                                                              verifySignature
+                                                              verifyEd25519Signature
                                                             )
                                                             w
                                                           ]
