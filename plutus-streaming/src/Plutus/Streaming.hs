@@ -73,7 +73,8 @@ withChainSyncEventStream socketPath networkId point consumer = do
 
       -- This a parameter needed only for the Byron era. Since the Byron
       -- era is over and the parameter has never changed it is ok to
-      -- hardcode this.
+      -- hardcode this. See comment on `Cardano.Api.ConsensusModeParams` in
+      -- cardano-node.
       epochSlots = EpochSlots 21600
 
       clientThread = do
