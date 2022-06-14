@@ -8,8 +8,8 @@ license-files:
 
 maintainer:    david.smith@tweag.io
 author:        David Smith
-homepage:      https://github.com/ionput-output-hk/plutus-apps#readme
-bug-reports:   https://github.com/ionput-output-hk/plutus-apps/issues
+homepage:      https://github.com/iohk/plutus#readme
+bug-reports:   https://github.com/iohk/plutus/issues
 description:
   Please see the README on GitHub at <https://github.com/input-output-hk/plutus/web-ghc#readme>
 
