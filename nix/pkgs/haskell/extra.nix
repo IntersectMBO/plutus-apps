@@ -14,9 +14,15 @@
 , writeShellScript
 }:
 let
-  cabalFmtProject = haskell-nix.hackage-project {
-    name = "cabal-fmt";
-    version = "0.1.5.1";
+  # TODO Remove this patch once the PR gets merged upstream.
+  # See https://github.com/phadej/cabal-fmt/pull/45
+  cabalFmtProject = haskell-nix.cabalProject' {
+    src = buildPackages.fetchgit {
+      url = "https://github.com/zeme-iohk/cabal-fmt.git";
+      rev = "7b5c9b4fac55aad15a0b33bcd22b40a244bf30af";
+      sha256 = "04w1dy83ml7wgm5ay1rd4kiwfmdd9sc2y8bp3l0ja7xwvh4fgkmr";
+    };
+    modules = [{ reinstallableLibGhc = true; }];
     inherit compiler-nix-name index-state;
   };
   cabalInstallProject = haskell-nix.hackage-project {

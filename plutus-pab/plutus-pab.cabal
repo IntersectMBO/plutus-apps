@@ -8,8 +8,8 @@ license-files:
 
 maintainer:    jann.mueller@iohk.io
 author:        Jann Müller
-homepage:      https://github.com/ionput-output-hk/plutus-apps#readme
-bug-reports:   https://github.com/ionput-output-hk/plutus-apps/issues
+homepage:      https://github.com/iohk/plutus#readme
+bug-reports:   https://github.com/iohk/plutus/issues
 description:
   Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
 
@@ -220,9 +220,9 @@ test-suite plutus-pab-test-light
   build-depends:
     , aeson
     , async
-    , base                       >=4.9 && <5
+    , base                            >=4.9 && <5
     , bytestring
-    , cardano-api
+    , cardano-api:{cardano-api, gen}
     , data-default
     , freer-simple
     , hedgehog

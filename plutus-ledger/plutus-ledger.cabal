@@ -98,9 +98,9 @@ library
   build-depends:
     , aeson
     , array
-    , base                         >=4.9  && <5
+    , base                            >=4.9  && <5
     , bytestring
-    , cardano-api
+    , cardano-api:{cardano-api, gen}
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
@@ -111,7 +111,7 @@ library
     , cardano-slotting
     , cborg
     , containers
-    , cryptonite                   >=0.25
+    , cryptonite                      >=0.25
     , data-default
     , deepseq
     , freer-extras
@@ -154,9 +154,9 @@ test-suite plutus-ledger-test
   other-modules:      Ledger.Tx.CardanoAPISpec
   build-depends:
     , aeson
-    , base            >=4.9 && <5
+    , base                            >=4.9 && <5
     , bytestring
-    , cardano-api
+    , cardano-api:{cardano-api, gen}
     , containers
     , hedgehog
     , plutus-ledger

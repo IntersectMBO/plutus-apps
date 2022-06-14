@@ -231,9 +231,9 @@ test-suite plutus-contract-test
 
   build-depends:
     , aeson
-    , base                       >=4.9 && <5
+    , base                            >=4.9 && <5
     , bytestring
-    , cardano-api
+    , cardano-api:{cardano-api, gen}
     , containers
     , data-default
     , deepseq
