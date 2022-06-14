@@ -156,6 +156,17 @@ getUtxoUpdate slot txs =
                  , _slotNo  = slot
                  }
 
+{- | The way we synchronise channel consumption is by waiting on a QSemN for each
+     of the spawn indexers to finish processing the current event.
+
+     The channel is used to transmit the next event to the listening indexers. Note
+     that even if the channel is unbound it will actually only ever hold one event
+     because it will be blocked until the processing of the event finishes on all
+     indexers.
+
+     The indexer count is where we save the number of running indexers so we know for
+     how many we are waiting.
+-}
 data Coordinator = Coordinator
   { _channel      :: TChan (ChainSyncEvent (BlockInMode CardanoMode))
   , _barrier      :: QSemN
