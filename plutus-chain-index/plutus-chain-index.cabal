@@ -48,8 +48,6 @@ library
     Plutus.ChainIndex.Lib
     Plutus.ChainIndex.Logging
     Plutus.ChainIndex.SyncStats
-    Marconi.Index.Datum
-    Marconi.Index.Utxo
 
   other-modules:   Control.Concurrent.STM.TBMQueue
   hs-source-dirs:  src
@@ -128,7 +126,7 @@ executable marconi
     , prettyprinter
     , serialise
     , sqlite-simple
+    , stm
     , streaming
     , text
     , time
-    , stm
