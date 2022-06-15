@@ -1,96 +1,109 @@
 cabal-version: 2.2
-name: plutus-doc
-version: 0.1.0.0
-license: Apache-2.0
+name:          plutus-doc
+version:       0.1.0.0
+license:       Apache-2.0
 license-files:
   LICENSE
   NOTICE
-maintainer: jann.mueller@iohk.io
-author: Michael Peyton Jones, Jann Mueller
-synopsis: Plutus documentation
-description: Plutus documentation
-category: Language
-build-type: Simple
+
+maintainer:    jann.mueller@iohk.io
+author:        Michael Peyton Jones, Jann Mueller
+synopsis:      Plutus documentation
+description:   Plutus documentation
+category:      Language
+build-type:    Simple
 
 source-repository head
-    type: git
-    location: https://github.com/input-output-hk/plutus-apps
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
-    description:
-        Defer errors from the plugin, useful for things like Haddock that can't handle it.
-    default: False
-    manual: True
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
+
+  default:     False
+  manual:      True
 
 common lang
-    default-language: Haskell2010
-    default-extensions: ExplicitForAll ScopedTypeVariables
-                        DeriveGeneric StandaloneDeriving DeriveLift
-                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
-                        DeriveTraversable MultiParamTypeClasses
-                        ImportQualifiedPost
-    ghc-options: -Wall -Wnoncanonical-monad-instances
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities -Wmissing-import-lists
-                 -- See Plutus Tx readme
-                 -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    MultiParamTypeClasses
+    ScopedTypeVariables
+    StandaloneDeriving
 
-    if flag(defer-plugin-errors)
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints -Widentities
+    -Wmissing-import-lists -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
+
+  if flag(defer-plugin-errors)
 
 executable doc-doctests
-    import: lang
-    if(impl(ghcjs) || os(windows))
-      buildable: False
-    hs-source-dirs:
-      plutus/tutorials
-      plutus/howtos
-    main-is: Main.hs
-    ghc-options: -Wno-unused-imports
-    build-tool-depends: doctest:doctest -any
-    other-modules:
-      BasicPlutusTx
-      BasicValidators
-      BasicPolicies
-      BasicApps
-      GameModel
-      HandlingBlockchainEvents
-      HelloWorldApp
-      WriteScriptsTo
-      Escrow
-      Escrow2
-      Escrow3
-      Escrow4
-      Escrow5
-      Escrow6
-      EscrowImpl
-    build-depends:
-      base >=4.9 && <5,
-      template-haskell >=2.13.0.0,
-      bytestring -any,
-      data-default -any,
-      flat -any,
-      plutus-core -any,
-      plutus-chain-index-core -any,
-      plutus-tx -any,
-      plutus-ledger -any,
-      plutus-ledger-api -any,
-      plutus-ledger-constraints -any,
-      plutus-script-utils -any,
-      plutus-tx-constraints -any,
-      plutus-contract -any,
-      playground-common -any,
-      plutus-use-cases -any,
-      quickcheck-dynamic -any,
-      containers -any,
-      freer-extras -any,
-      lens -any,
-      serialise -any,
-      QuickCheck -any,
-      random -any,
-      text -any,
-      aeson -any,
-      tasty -any,
-      tasty-quickcheck -any
+  import:             lang
 
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+  if (impl(ghcjs) || os(windows))
+    buildable: False
+
+  hs-source-dirs:     plutus/tutorials plutus/howtos
+  main-is:            Main.hs
+  ghc-options:        -Wno-unused-imports
+  build-tool-depends: doctest:doctest
+  other-modules:
+    BasicApps
+    BasicPlutusTx
+    BasicPolicies
+    BasicValidators
+    Escrow
+    Escrow2
+    Escrow3
+    Escrow4
+    Escrow5
+    Escrow6
+    EscrowImpl
+    GameModel
+    HandlingBlockchainEvents
+    HelloWorldApp
+    WriteScriptsTo
+
+  build-depends:
+    , aeson
+    , base                       >=4.9      && <5
+    , bytestring
+    , containers
+    , data-default
+    , flat
+    , freer-extras
+    , lens
+    , playground-common
+    , plutus-chain-index-core
+    , plutus-contract
+    , plutus-core
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-script-utils
+    , plutus-tx
+    , plutus-tx-constraints
+    , plutus-use-cases
+    , QuickCheck
+    , quickcheck-dynamic
+    , random
+    , serialise
+    , tasty
+    , tasty-quickcheck
+    , template-haskell           >=2.13.0.0
+    , text
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
