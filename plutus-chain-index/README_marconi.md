@@ -1,11 +1,11 @@
 
-This is an initial draft for the Marconi README file. Currently this is a placeholder and a place to begin organizing the documentation. 
+This is an initial draft for the Marconi README file. Going forward, we will need to discuss and refine this document and/or the implementation so that they match.
 
 # Marconi
 
 ## The Cardano blockchain indexer for dApp developers
 
-A lightweight solution for indexing and querying the Cardano blockchain
+A lightweight customizable solution for indexing and querying the Cardano blockchain.
 
 ### Built by IOG in Haskell
 
@@ -14,11 +14,82 @@ A lightweight solution for indexing and querying the Cardano blockchain
 
 ## Introduction
 
-What is the vision for what Marconi will be? What role is it intended to serve in the broader community? What is the full narrative that goes with it? It's true purpose? 
+Marconi is a blockchain query solution that you can configure for the types of information that you need to index and according to how you need to structure your database schema. 
 
-This software component will be a Haskell library used by dApp providers. The component will be designed to allow dApp providers to index in the desired structure the information read from the Cardano blockchain which will be used for the dApp. 
+Marconi consists of these three components: 
 
-### Documentation
+| Component | Description | 
+| --------- | ----------- | 
+| Streamer  | Provides event stream of configured data types | 
+| Index     | Indexes and stores the data in a database | 
+| Query     | Fetches information from the database |
+
+The streamer attaches to a node, providing an event stream of the configured data types. Your applications can use streams directly. Or streams may be passed to the index component which indexes and stores the data in a database. You can use the query component to fetch information from the database.
+
+## Design Principles
+
+### High Performance through Customized Solutions for Each Use Case
+
+The philosophy behind Marconi is to maintain high performance by customizing the solution for each use case. You can filter the streams of information to transmit only the data you need for your dApp, minimizing network traffic and database storage. You can also customize database schemas and queries so that the dApps have the most efficient and scalable application-specific API to interact with the data.
+
+### Handling Blockchain Rollback Events Properly
+
+Marconi is designed to enable dApps to handle blockchain rollback events properly. Since the head of the chain is constantly advancing and rolling back as the consensus algorithm advances the chain, this causes challenging synchronization issues for dApps that need rapid updates of the chain state. You can obtain basic notifications of chain advances and rollbacks from the streaming component which wraps the application data types with the event type that indicates the current slot index for the block. Rollback events will have lower slot numbers that can be checked by the application which can then invalidate any obsolete state it has cached.
+
+Marconi's index component handles rollbacks by distinguishing volatile and immutable blocks. A block on the top of the chain is volatile since it is subject to some probability of being rolled back. Eventually, when the block is deeper than the security parameter, the block becomes immutable. The Marconi indexer tracks this status and keeps the volatile blocks in memory until they become immutable. Once immutable, Marconi persists the blocks to the database.
+
+### Specifying Slots to Query
+
+Through the query interface, you can specify a range of slots to query or indicate that the query is for blocks deeper than a specified number of slots. As a result, you can use simple state management for applications that work only with immutable blocks. 
+
+### Querying Volatile Data
+
+If your application requires faster response times, you can query volatile data on the head of the chain; however, you must take care to invalidate cached data when rollbacks occur. 
+
+## API Layers
+
+The core Marconi APIs are defined in Haskell in order to support simple use cases where all the components run together in a single process. 
+
+If your use cases require multiple synchronized instances for load balancing or for supporting different indexers, Marconi is designed with alternative transport layers on top of the core API that support network streaming and RPC calls. 
+
+## What Differentiates Marconi
+
+* Developed by IOG
+* Built in Haskell
+
+### DB Sync
+
+Cardano DB-sync is IOG's current indexing solution, but it uses lots of memory and days/week to sync. DB-sync takes an index everything approach to put all information into a database that can support any query at the cost of requiring a large DB server to run it. 
+
+In contrast, Marconi requires the user to customize it for the specific application so that only relevant information is streamed or stored. Marconi will be a scalable solution that allows the dApp developer to index whatever is important for their unique use case. 
+
+### Ogmios
+
+Ogmios exposes the basic node interface as a web service. This is a great option for queries that can be made directly to the node for applications that want a web service interface.
+
+### Oura
+
+Oura provides very similar functionality with an implementation in Rust and has good connectivity with cloud infrastructure like Kafka. Marconi provides similar functionality implemented in Haskell to make it easy for Haskell programmers to customize it.
+
+### Scrolls 
+
+Like Scrolls, we can be selective for what is to be indexed. Scrolls can store into multiple databases. Marconi is currently focused on local DBs like SQL lite. 
+
+### Carp 
+
+## Customizing Marconi
+
+Specific applications customize Marconi by defining a custom datatype that is passed in the event stream along with functions for translating to and from the type. 
+
+Assumption: Marconi has a typeclass for the necessary functions. 
+
+The streaming component is customized with a filter function that translates blocks into user-defined types that are wrapped in the streaming event type.
+
+TODO: Decide/document the filter function and the API for customization.
+
+The indexing component is customized with a corresponding function that takes the user-defined type and translates them into database types.
+
+## Documentation
 
 When it exists, we can link to our readthedocs user documentation. 
 
@@ -35,50 +106,15 @@ Description of its primary intended use cases.
 * Index the syncing information based on the user’s predefined indexing
 * Query the indexed information based on the user’s predefined queries
 
-*NOTES*
-
-* Multiple indexers 
-* UTXO by address
-* We have an indexer that queries local DB
-* Return my UTXO by address (my Cardano address) 
-
 ### Use Case 1
 
 ### Use Case 2
 
 ### Use Case 3
 
-*NOTES*
-
-A user can specify which ones they want to use for their specific applications. 
-Cardano db sync is IOG's current indexing solution, but it uses lots of memory and days/week to sync. Marconi will be a scalable solution. Want to index whatever is important for the dApp developer. Like Scrolls, we can be selective for what is to be indexed. Scrolls can store into multiple databases. We might do that. It is currently focused on local DBs like SQL lite. 
-
 ## Example Queries 
 
 Can we provide example queries? 
-
-## Differentiators
-
-Compare to existing tools. 
-
-* How does this tool compare to: 
-   * Cardano DB Sync
-   * Scrolls
-   * Oura
-   * Cardano Chain Index?
-   * Plutus Chain Index? 
-* What makes this tool different from others? 
-* Mention of any known trade-offs that went into the design.
-* Scrolls uses Rust (developed by 3rd party). 
-* Positives, negatives. The known trade-offs. 
-
-### Developed by IOG
-
-### Built in Haskell
-
-## Functional Description
-
-How does it work? 
 
 ## Architecture
 
