@@ -28,13 +28,13 @@ The streamer attaches to a node, providing an event stream of the configured dat
 
 ## Design Principles
 
-### High Performance through Customized Solutions for Each Use Case
+### Scalability through Customized Solutions for Each Use Case
 
-The philosophy behind Marconi is to maintain high performance by customizing the solution for each use case. You can filter the streams of information to transmit only the data you need for your dApp, minimizing network traffic and database storage. You can also customize database schemas and queries so that the dApps have the most efficient and scalable application-specific API to interact with the data.
+The philosophy behind Marconi is to maintain scalability by customizing the solution for each use case. You can filter the streams of information to transmit only the data you need for your dApp, minimizing network traffic and database storage. You can also customize database schemas and queries so that the dApps have the most efficient and scalable application-specific API to interact with the data.
 
 ### Handling Blockchain Rollback Events Properly
 
-Marconi is designed to enable dApps to handle blockchain rollback events properly. Since the head of the chain is constantly advancing and rolling back as the consensus algorithm advances the chain, this causes challenging synchronization issues for dApps that need rapid updates of the chain state. You can obtain basic notifications of chain advances and rollbacks from the streaming component which wraps the application data types with the event type that indicates the current slot index for the block. Rollback events will have lower slot numbers that can be checked by the application which can then invalidate any obsolete state it has cached.
+Marconi is designed to enable dApps to handle blockchain rollback events properly. Since the head of the chain is constantly advancing and rolling back as the consensus algorithm advances the chain, this causes challenging synchronization issues for dApps that need rapid updates of the chain state. 
 
 Marconi's index component handles rollbacks by distinguishing volatile and immutable blocks. A block on the top of the chain is volatile since it is subject to some probability of being rolled back. Eventually, when the block is deeper than the security parameter, the block becomes immutable. The Marconi indexer tracks this status and keeps the volatile blocks in memory until they become immutable. Once immutable, Marconi persists the blocks to the database.
 
@@ -69,25 +69,29 @@ Ogmios exposes the basic node interface as a web service. This is a great option
 
 ### Oura
 
-Oura provides very similar functionality with an implementation in Rust and has good connectivity with cloud infrastructure like Kafka. Marconi provides similar functionality implemented in Haskell to make it easy for Haskell programmers to customize it.
+Oura, implemented in Rust, functions as a notification system that indexers provide. It has good connectivity with cloud infrastructure like Kafka. Marconi provides similar functionality implemented in Haskell to make it easy for Haskell programmers to customize it.
 
 ### Scrolls 
 
-Like Scrolls, we can be selective for what is to be indexed. Scrolls can store into multiple databases. Marconi is currently focused on local DBs like SQL lite. 
+Scrolls is the storage and query solution that our indexers provide. Like Scrolls, we can be selective for what is to be indexed. Scrolls can store into multiple databases. Marconi is currently focused on local DBs like SQL lite. 
 
 ### Carp 
 
 ## Customizing Marconi
 
-Specific applications customize Marconi by defining a custom datatype that is passed in the event stream along with functions for translating to and from the type. 
+You can customize indexing in the following ways: 
 
-Assumption: Marconi has a typeclass for the necessary functions. 
+1. *This statement is a placeholder:* A function that is given events and current state outputs notifications. 
 
-The streaming component is customized with a filter function that translates blocks into user-defined types that are wrapped in the streaming event type.
+2. Customize how a function performs queries by determining the following aspects of the function:
 
-TODO: Decide/document the filter function and the API for customization.
+   * The query type. Because Marconi uses an Abstract Data Type (ADT), you need to define the types of queries that the indexer responds to. 
+   * Query for certain slot numbers by determining the point in the in-memory history where you want to run the query.
+   * Weigh considerations for in-memory and on-disk data. The query function produces a result by merging the in-memory and on-disk data. If you are concerned only with on-disk data, then you can query the database directly.
 
-The indexing component is customized with a corresponding function that takes the user-defined type and translates them into database types.
+3. Customize a function that stores buffered data. While there is no connection to any storage mechanism, there is a nice API is available, and you are encouraged to change it to suit your needs. Changing it is very simple. 
+
+Marconi uses the `streaming` library so you can make use of its many combinators. 
 
 ## Documentation
 
