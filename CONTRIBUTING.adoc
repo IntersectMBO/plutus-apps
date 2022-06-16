@@ -30,6 +30,7 @@ NOTE: You may want to consider using https://github.com/target/lorri[lorri] as a
 The shell comes with some tools for fixing various simple problems that the CI will complain about. Specifically:
 
 - `fix-stylish-haskell` will re-format all the Haskell sources correctly.
+- `fix-cabal-fmt` will re-format all the Cabal sources correctly.
 - `fix-purs-tidy` will re-format all the Purescript sources correctly.
 - `fix-png-optimization` will optimize all PNGs in the repository.
 
