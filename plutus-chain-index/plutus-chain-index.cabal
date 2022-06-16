@@ -126,6 +126,7 @@ executable marconi
     , prettyprinter
     , serialise
     , sqlite-simple
+    , stm
     , streaming
     , text
     , time
