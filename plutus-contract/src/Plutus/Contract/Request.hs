@@ -79,6 +79,7 @@ module Plutus.Contract.Request(
     -- ** Public key hashes
     , ownPaymentPubKeyHash
     -- ** Submitting transactions
+    , adjustUnbalancedTx
     , submitUnbalancedTx
     , submitBalancedTx
     , balanceTx
@@ -115,9 +116,8 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
-import Ledger (Address, AssetClass, Datum, DatumHash, DiffMilliSeconds, MintingPolicy, MintingPolicyHash, POSIXTime,
-               PaymentPubKeyHash, Redeemer, RedeemerHash, Slot, StakeValidator, StakeValidatorHash, TxId, TxOutRef,
-               Validator, ValidatorHash, Value, addressCredential, fromMilliSeconds, txOutRefId)
+import Ledger (AssetClass, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash, Slot, TxId, TxOutRef, Value,
+               addressCredential, fromMilliSeconds, txOutRefId)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -125,10 +125,12 @@ import Ledger.Tx (CardanoTx, ChainIndexTxOut, ciTxOutValue, getCardanoTxId)
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Value qualified as V
 import Plutus.Contract.Util (loopM)
+import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy, MintingPolicyHash, Redeemer, RedeemerHash,
+                             StakeValidator, StakeValidatorHash, Validator, ValidatorHash)
 import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
-                                PABReq (AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
                                 PABResp (ExposeEndpointResp))
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Logging (logDebug)
@@ -139,7 +141,7 @@ import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescriptio
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse (page), paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
-import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _ResumableContractError, _WalletContractError))
+import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _ConstraintResolutionContractError, _EndpointDecodeContractError, _ResumableContractError, _TxToCardanoConvertContractError, _WalletContractError))
 import Plutus.Contract.Resumable (prompt)
 import Plutus.Contract.Types (Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
                               runError, throwError)
@@ -169,6 +171,17 @@ pabReq req prism = Contract $ do
             $ review _ResumableContractError
             $ WrongVariantError
             $ "unexpected answer: " <> tshow x
+
+-- | Adjust the unbalanced tx
+adjustUnbalancedTx ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => UnbalancedTx
+    -> Contract w s e UnbalancedTx
+adjustUnbalancedTx utx =
+  let req = pabReq (AdjustUnbalancedTxReq utx) E._AdjustUnbalancedTxResp in
+  req >>= either (throwError . review _TxToCardanoConvertContractError) pure
 
 -- | Wait until the slot
 awaitSlot ::

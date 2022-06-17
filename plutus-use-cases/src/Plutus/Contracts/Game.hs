@@ -45,15 +45,16 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
-import Ledger (Address, Datum (Datum), POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Validator, Value)
-import Ledger qualified
+import Ledger (Address, POSIXTime, PaymentPubKeyHash, ScriptContext, TxOutRef, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx (ChainIndexTxOut (..))
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract (ToSchema)
-import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, collectFromScript, endpoint, fundsAtAddressGeq,
-                        logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
+import Plutus.Contract (AsContractError, Contract, Endpoint, Promise, adjustUnbalancedTx, collectFromScript, endpoint,
+                        fundsAtAddressGeq, logInfo, mkTxConstraints, selectList, type (.\/), yieldUnbalancedTx)
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.V1.Ledger.Scripts (Datum (Datum), Validator)
 import PlutusTx qualified
 import PlutusTx.Code (getCovIdx)
 import PlutusTx.Coverage (CoverageIndex)
@@ -92,7 +93,7 @@ instance Scripts.ValidatorTypes Game where
 
 -- | The address of the game (the hash of its validator script)
 gameAddress :: GameParam -> Address
-gameAddress = Ledger.plutusV1ScriptAddress . gameValidator
+gameAddress = mkValidatorAddress . gameValidator
 
 -- | The validator script of the game.
 gameValidator :: GameParam -> Validator
@@ -102,7 +103,7 @@ gameInstance :: GameParam -> Scripts.TypedValidator Game
 gameInstance = Scripts.mkTypedValidatorParam @Game
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||]) where
-        wrap = Scripts.wrapValidator @HashedString @ClearString
+        wrap = Scripts.mkUntypedValidator @HashedString @ClearString
 
 -- | The validation function (Datum -> Redeemer -> ScriptContext -> Bool)
 --
@@ -160,8 +161,7 @@ lock = endpoint @"lock" $ \LockArgs { lockArgsGameParam, lockArgsSecret, lockArg
     logInfo @Haskell.String $ "Pay " <> Haskell.show lockArgsValue <> " to the script"
     let lookups = Constraints.typedValidatorLookups (gameInstance lockArgsGameParam)
         tx       = Constraints.mustPayToTheScript (hashString lockArgsSecret) lockArgsValue
-    unbalancedTx <- mkTxConstraints lookups tx
-    yieldUnbalancedTx $ Constraints.adjustUnbalancedTx unbalancedTx
+    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= yieldUnbalancedTx
 
 -- | The "guess" contract endpoint. See note [Contract endpoints]
 guess :: AsContractError e => Promise () GameSchema e ()

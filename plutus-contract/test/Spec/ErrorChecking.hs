@@ -19,17 +19,17 @@ import Data.Row
 import Test.Tasty
 
 import Ledger.Ada qualified as Ada
-import Ledger.Address
-import Ledger.Constraints
-import Ledger.Contexts (ScriptContext (..))
-import Ledger.Scripts
-import Ledger.Tx
+import Ledger.Constraints (mustPayToOtherScript)
+import Ledger.Tx (getCardanoTxId)
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Typed.Scripts.Validators hiding (validatorHash)
 import Plutus.Contract as Contract
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Scripts (validatorHash)
 import Plutus.Trace.Emulator as Trace
+import Plutus.V1.Ledger.Api (Datum (Datum), ScriptContext)
 import PlutusTx qualified
 import PlutusTx.ErrorCodes
 import PlutusTx.IsData.Class
@@ -40,6 +40,8 @@ import Prelude qualified as Haskell
 import Test.QuickCheck hiding (Success)
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck hiding (Success)
+
+{- HLINT ignore "Use camelCase" -}
 
 tests :: TestTree
 tests = testGroup "error checking"
@@ -137,8 +139,8 @@ contract :: Contract () Schema ContractError ()
 contract = selectList [failFalseC, failHeadNilC, divZeroC, divZeroTraceC, successC]
   where
     run validator = void $ do
-      let addr = plutusV1ScriptAddress (validatorScript validator)
-          hash = plutusV1ValidatorHash (validatorScript validator)
+      let addr = mkValidatorAddress (validatorScript validator)
+          hash = validatorHash (validatorScript validator)
           tx = mustPayToOtherScript hash (Datum $ toBuiltinData ()) (Ada.adaValueOf 10)
       r <- submitTx tx
       awaitTxConfirmed (getCardanoTxId r)
@@ -171,7 +173,7 @@ v_failFalse = Scripts.mkTypedValidator @Validators
     $$(PlutusTx.compile [|| failFalse ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 -- | Always fail due to a partial function
 {-# INLINEABLE failHeadNil #-}
@@ -183,7 +185,7 @@ v_failHeadNil = Scripts.mkTypedValidator @Validators
     $$(PlutusTx.compile [|| failHeadNil ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 -- | Always fail with a division by zero error
 {-# INLINEABLE divZero #-}
@@ -195,7 +197,7 @@ v_divZero = Scripts.mkTypedValidator @Validators
     $$(PlutusTx.compile [|| divZero ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 {-# INLINEABLE divZero_t #-}
 divZero_t :: () -> Integer -> ScriptContext -> Bool
@@ -208,7 +210,7 @@ v_divZero_t = Scripts.mkTypedValidator @Validators
     $$(PlutusTx.compile [|| divZero_t ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 -- | Always succeed
 {-# INLINEABLE success #-}
@@ -220,4 +222,4 @@ v_success = Scripts.mkTypedValidator @Validators
     $$(PlutusTx.compile [|| success ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator

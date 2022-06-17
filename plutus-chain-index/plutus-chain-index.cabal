@@ -37,10 +37,13 @@ library
         Plutus.ChainIndex.Lib
         Plutus.ChainIndex.Logging
         Plutus.ChainIndex.SyncStats
-    other-modules: Control.Concurrent.STM.TBMQueue
+        Marconi.Index.Datum
+    other-modules:
+        Control.Concurrent.STM.TBMQueue
     hs-source-dirs: src
     build-depends:
         plutus-ledger -any,
+        plutus-ledger-api >= 1.0.0,
         plutus-chain-index-core -any,
         freer-extras -any
     build-depends:
@@ -64,6 +67,9 @@ library
         stm -any,
         time-units -any,
         yaml -any,
+        serialise -any,
+        hysterical-screams -any,
+        bytestring -any,
 
 executable plutus-chain-index
   main-is: Main.hs
@@ -77,3 +83,26 @@ executable plutus-chain-index
   build-depends:
     base >=4.9 && <5,
     plutus-chain-index -any
+
+executable plutus-indexer
+  main-is: Indexer.hs
+  hs-source-dirs: app
+  default-language: Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+        -Wincomplete-uni-patterns -Wincomplete-record-updates
+        -Wno-missing-import-lists -Wredundant-constraints -O0
+  build-depends:
+    base >=4.9 && <5,
+    plutus-chain-index -any,
+    iohk-monitoring -any,
+    cardano-api -any,
+    plutus-ledger -any,
+    plutus-chain-index-core -any,
+    plutus-script-utils -any,
+    containers -any,
+    lens -any,
+    hysterical-screams -any,
+    text -any,
+    optparse-applicative -any,

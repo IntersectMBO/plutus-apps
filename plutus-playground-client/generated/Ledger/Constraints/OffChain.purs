@@ -16,9 +16,10 @@ import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
+import Data.Set (Set)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Ledger.Address (PaymentPubKey, PaymentPubKeyHash)
+import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Tx.Internal (Tx)
 import Ledger.Typed.Tx (ConnectionError)
 import Plutus.V1.Ledger.Interval (Interval)
@@ -150,7 +151,7 @@ _MultipleMatchingOutputsFound = prism' MultipleMatchingOutputsFound case _ of
 
 newtype UnbalancedTx = UnbalancedTx
   { unBalancedTxTx :: Tx
-  , unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey)
+  , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
   , unBalancedTxUtxoIndex :: Map TxOutRef TxOut
   , unBalancedTxValidityTimeRange :: Interval POSIXTime
   }
@@ -164,7 +165,7 @@ instance EncodeJson UnbalancedTx where
   encodeJson = defer \_ -> E.encode $ unwrap >$<
     ( E.record
         { unBalancedTxTx: E.value :: _ Tx
-        , unBalancedTxRequiredSignatories: (E.dictionary E.value (E.maybe E.value)) :: _ (Map PaymentPubKeyHash (Maybe PaymentPubKey))
+        , unBalancedTxRequiredSignatories: E.value :: _ (Set PaymentPubKeyHash)
         , unBalancedTxUtxoIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef TxOut)
         , unBalancedTxValidityTimeRange: E.value :: _ (Interval POSIXTime)
         }
@@ -174,7 +175,7 @@ instance DecodeJson UnbalancedTx where
   decodeJson = defer \_ -> D.decode $
     ( UnbalancedTx <$> D.record "UnbalancedTx"
         { unBalancedTxTx: D.value :: _ Tx
-        , unBalancedTxRequiredSignatories: (D.dictionary D.value (D.maybe D.value)) :: _ (Map PaymentPubKeyHash (Maybe PaymentPubKey))
+        , unBalancedTxRequiredSignatories: D.value :: _ (Set PaymentPubKeyHash)
         , unBalancedTxUtxoIndex: (D.dictionary D.value D.value) :: _ (Map TxOutRef TxOut)
         , unBalancedTxValidityTimeRange: D.value :: _ (Interval POSIXTime)
         }
@@ -186,5 +187,5 @@ derive instance Newtype UnbalancedTx _
 
 --------------------------------------------------------------------------------
 
-_UnbalancedTx :: Iso' UnbalancedTx { unBalancedTxTx :: Tx, unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey), unBalancedTxUtxoIndex :: Map TxOutRef TxOut, unBalancedTxValidityTimeRange :: Interval POSIXTime }
+_UnbalancedTx :: Iso' UnbalancedTx { unBalancedTxTx :: Tx, unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash, unBalancedTxUtxoIndex :: Map TxOutRef TxOut, unBalancedTxValidityTimeRange :: Interval POSIXTime }
 _UnbalancedTx = _Newtype

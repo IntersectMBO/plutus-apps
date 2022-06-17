@@ -27,12 +27,12 @@ import GHC.Generics (Generic)
 import Ledger (POSIXTime, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, txSignedBy, valuePaidTo)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts (ScriptContext (..), TxInfo (..))
 import Ledger.Interval (after, before)
 import Ledger.Interval qualified as Interval
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, geq)
+import Plutus.V1.Ledger.Api (ScriptContext (..), TxInfo (..))
 
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Typed
@@ -100,7 +100,7 @@ escrowInstance = Scripts.mkTypedValidator @Escrow
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
       where
-        wrap = Scripts.wrapValidator @EscrowParams @Action
+        wrap = Scripts.mkUntypedValidator @EscrowParams @Action
 
 {-# INLINABLE validate #-}
 validate :: EscrowParams -> Action -> ScriptContext -> Bool
@@ -130,7 +130,7 @@ lockEp = endpoint @"lock" $ \params -> do
       tx = Constraints.mustPayToTheScript params (paying params)
             <> Constraints.mustValidateIn valRange
   void $ mkTxConstraints (Constraints.typedValidatorLookups escrowInstance) tx
-         >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+         >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Attempts to redeem the 'Value' locked into this script by paying in from
 -- the callers address to the payee.
@@ -153,10 +153,9 @@ redeemEp = endpoint @"redeem" redeem
       if time >= deadline params
       then throwing _RedeemFailed DeadlinePassed
       else do
-        utx <- Constraints.adjustUnbalancedTx
-           <$> mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+        utx <- mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
                               <> Constraints.unspentOutputs unspentOutputs
-                               ) tx
+                               ) tx >>= adjustUnbalancedTx
         RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
 
 -- | Refunds the locked amount back to the 'payee'.
@@ -171,10 +170,9 @@ refundEp = endpoint @"refund" refund
 
       if Constraints.modifiesUtxoSet tx
       then do
-        utx <- Constraints.adjustUnbalancedTx
-           <$> mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
+        utx <- mkTxConstraints ( Constraints.typedValidatorLookups escrowInstance
                               <> Constraints.unspentOutputs unspentOutputs
-                               ) tx
+                               ) tx >>= adjustUnbalancedTx
         RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
       else throwing _RefundFailed ()
 

@@ -28,14 +28,14 @@ module Plutus.Contract.StateMachine.OnChain(
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger (Address, ValidatorHash)
 import Ledger.Constraints (ScriptOutputConstraint (ScriptOutputConstraint, ocDatum, ocValue),
                            TxConstraints (txOwnOutputs), checkScriptContext)
-import Ledger.Contexts (ScriptContext, TxInInfo (txInInfoResolved), findOwnInput, ownHash)
 import Ledger.Tx (TxOut (txOutValue))
 import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorType, ValidatorTypes, validatorAddress,
                              validatorHash)
 import Ledger.Value (Value, isZero)
+import Plutus.V1.Ledger.Api (Address, ValidatorHash)
+import Plutus.V1.Ledger.Contexts (ScriptContext, TxInInfo (txInInfoResolved), findOwnInput, ownHash)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (check)
 import Prelude qualified as Haskell

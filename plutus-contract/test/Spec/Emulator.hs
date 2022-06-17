@@ -28,20 +28,22 @@ import Hedgehog.Range qualified as Range
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKeyHash)
 import Ledger.Blockchain (OnChainTx (Valid), unspentOutputs)
-import Ledger.Contexts (ScriptContext, TxOut (txOutValue))
 import Ledger.Generators (Mockchain (Mockchain), TxInputWitnessed (TxInputWitnessed))
 import Ledger.Generators qualified as Gen
 import Ledger.Index (ValidationError (ScriptFailure))
 import Ledger.Index qualified as Index
+import Ledger.Params ()
 import Ledger.Scripts (ScriptError (EvaluationError), Validator, mkValidatorScript, unitDatum, unitRedeemer)
-import Ledger.Tx (CardanoTx (EmulatorTx), Tx (txFee, txMint, txOutputs), TxInType (ConsumeScriptAddress), outputs,
-                  plutusV1ScriptTxOut, txOutRefs)
-import Ledger.Typed.Scripts (wrapValidator)
+import Ledger.Tx (CardanoTx (EmulatorTx), Tx (txFee, txMint, txOutputs), TxInType (ConsumeScriptAddress),
+                  TxOut (txOutValue), outputs, txOutRefs)
 import Ledger.Value (Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Test hiding (not)
+import Plutus.Script.Utils.V1.Scripts (mkUntypedValidator)
+import Plutus.Script.Utils.V1.Tx (scriptTxOut)
 import Plutus.Trace (EmulatorTrace, PrintEffect (PrintLn))
 import Plutus.Trace qualified as Trace
+import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx qualified
 import PlutusTx.Numeric qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
@@ -142,7 +144,7 @@ txnValidFrom =
         .&&. walletFundsChange wallet2 five
         )
         $ do
-            Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ range five pubKey2
+            Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def range five pubKey2
             void $ Trace.waitUntilSlot 6
 
 selectCoinProp :: Property
@@ -214,7 +216,10 @@ invalidScript = property $ do
 
     -- modify one of the outputs to be a script output
     index <- forAll $ Gen.int (Range.linear 0 ((length $ txOutputs txn1) - 1))
-    let scriptTxn = txn1 & outputs . element index %~ \o -> plutusV1ScriptTxOut (txOutValue o) failValidator unitDatum
+    let scriptTxn =
+            txn1
+          & outputs
+          . element index %~ \o -> scriptTxOut failValidator (txOutValue o) unitDatum
     Hedgehog.annotateShow scriptTxn
     let outToSpend = txOutRefs scriptTxn !! index
     let totalVal = txOutValue (fst outToSpend)
@@ -247,7 +252,7 @@ invalidScript = property $ do
     checkPredicateInner options (assertChainEvents pred .&&. walletPaidFees wallet1 (txFee scriptTxn)) trace Hedgehog.annotate Hedgehog.assert (const $ pure ())
     where
         failValidator :: Validator
-        failValidator = mkValidatorScript $$(PlutusTx.compile [|| wrapValidator validator ||])
+        failValidator = mkValidatorScript $$(PlutusTx.compile [|| mkUntypedValidator validator ||])
         validator :: () -> () -> ScriptContext -> Bool
         validator _ _ _ = PlutusTx.traceError "I always fail everything"
 
@@ -288,24 +293,24 @@ payToPaymentPubKeyScript2 =
 pubKeyTransactions :: EmulatorTrace ()
 pubKeyTransactions = do
     let five = Ada.adaValueOf 5
-    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always five pubKey2
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def W.always five pubKey2
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ W.always five pubKey3
+    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ def W.always five pubKey3
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ W.always five pubKey1
+    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ def W.always five pubKey1
     void Trace.nextSlot
 
 pubKeyTransactions2 :: EmulatorTrace ()
 pubKeyTransactions2 = do
     let payment1 = initialBalance P.- Ada.adaValueOf 10
         payment2 = initialBalance P.+ Ada.adaValueOf 10
-    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always payment1 pubKey2
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def W.always payment1 pubKey2
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ W.always payment2 pubKey3
+    Trace.liftWallet wallet2 $ payToPaymentPublicKeyHash_ def W.always payment2 pubKey3
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ W.always payment2 pubKey1
+    Trace.liftWallet wallet3 $ payToPaymentPublicKeyHash_ def W.always payment2 pubKey1
     _ <- Trace.nextSlot
-    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ W.always (Ada.adaValueOf 20) pubKey2
+    Trace.liftWallet wallet1 $ payToPaymentPublicKeyHash_ def W.always (Ada.adaValueOf 20) pubKey2
     void Trace.nextSlot
 
 genChainTxn :: Hedgehog.MonadGen m => m (Mockchain, Tx)

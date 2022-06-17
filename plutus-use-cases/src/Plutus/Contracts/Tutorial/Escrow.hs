@@ -50,16 +50,16 @@ import Control.Monad.Error.Lens (throwing)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import Ledger (Datum (..), DatumHash, PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, txSignedBy,
-               valuePaidTo)
+import Ledger (PaymentPubKeyHash (unPaymentPubKeyHash), TxId, getCardanoTxId, txSignedBy, valuePaidTo)
 import Ledger qualified
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts (ScriptContext (..), TxInfo (..))
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value (Value, geq, lt)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash)
+import Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInfo (..))
 
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Typed
@@ -196,7 +196,7 @@ typedValidator escrow = go (Haskell.fmap Ledger.datumHash escrow) where
     go = Scripts.mkTypedValidatorParam @Escrow
         $$(PlutusTx.compile [|| validate ||])
         $$(PlutusTx.compile [|| wrap ||])
-    wrap = Scripts.wrapValidator
+    wrap = Scripts.mkUntypedValidator
 
 escrowContract
     :: EscrowParams Datum
@@ -239,8 +239,8 @@ pay ::
 pay inst _escrow vl = do
     pk <- ownPaymentPubKeyHash
     let tx = Constraints.mustPayToTheScript pk vl
-    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
-    getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+    utx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx >>= adjustUnbalancedTx
+    getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RedeemSuccess = RedeemSuccess TxId
     deriving (Haskell.Eq, Haskell.Show)
@@ -277,8 +277,8 @@ redeem inst escrow = mapError (review _EscrowError) $ do
        else do
          utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                                <> Constraints.unspentOutputs unspentOutputs
-                                ) tx
-         RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+                                ) tx >>= adjustUnbalancedTx
+         RedeemSuccess . getCardanoTxId <$> submitUnbalancedTx utx
 
 newtype RefundSuccess = RefundSuccess TxId
     deriving newtype (Haskell.Eq, Haskell.Show, Generic)
@@ -308,8 +308,8 @@ refund inst _escrow = do
     then do
         utx <- mkTxConstraints ( Constraints.typedValidatorLookups inst
                               <> Constraints.unspentOutputs unspentOutputs
-                               ) tx'
-        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx (Constraints.adjustUnbalancedTx utx)
+                               ) tx' >>= adjustUnbalancedTx
+        RefundSuccess . getCardanoTxId <$> submitUnbalancedTx utx
     else throwing _RefundFailed ()
 
 covIdx :: CoverageIndex
@@ -317,5 +317,5 @@ covIdx = getCovIdx $$(PlutusTx.compile [|| validate ||])
       <> getCovIdx $$(PlutusTx.compile [|| wrap ||])
   where
     wrap :: (PaymentPubKeyHash -> Action -> ScriptContext -> Bool) ->
-            Scripts.WrappedValidatorType
-    wrap = Scripts.wrapValidator
+            Scripts.UntypedValidator
+    wrap = Scripts.mkUntypedValidator

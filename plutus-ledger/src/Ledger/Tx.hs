@@ -34,12 +34,11 @@ module Ledger.Tx
     , getCardanoTxUnspentOutputsTx
     , getCardanoTxFee
     , SomeCardanoApiTx(..)
+    , ToCardanoError(..)
     -- * Transactions
     , addSignature
     , addSignature'
     , pubKeyTxOut
-    , plutusV1ScriptTxOut
-    , plutusV1ScriptTxOut'
     , updateUtxo
     , txOutRefs
     , unspentOutputsTx
@@ -56,17 +55,18 @@ import Control.Lens (At (at), makeLenses, makePrisms, (&), (?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (isJust)
 import Data.OpenApi qualified as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Ledger.Address (Address, PaymentPubKey, StakePubKey, plutusV1ScriptAddress, pubKeyAddress)
+import Ledger.Address (Address, PaymentPubKey, StakePubKey, pubKeyAddress)
 import Ledger.Crypto (Passphrase, signTx, signTx', toPublicKey)
 import Ledger.Orphans ()
-import Ledger.Scripts (datumHash)
-import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
+import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx), ToCardanoError (..))
 import Ledger.Tx.CardanoAPI qualified as CardanoAPI
 import Ledger.Tx.Internal as Export
+import Plutus.Script.Utils.V1.Scripts (datumHash)
 import Plutus.V1.Ledger.Api (Credential (PubKeyCredential, ScriptCredential), Datum, DatumHash, Validator,
                              ValidatorHash, Value, addressCredential, toBuiltin)
 import Plutus.V1.Ledger.Tx as Export
@@ -180,7 +180,9 @@ getCardanoTxFee :: CardanoTx -> Value
 getCardanoTxFee = onCardanoTx txFee (\_ -> error "Ledger.Tx.getCardanoTxFee: Expecting a mock tx, not an Alonzo tx")
 
 instance Pretty Tx where
-    pretty t@Tx{txInputs, txCollateral, txOutputs, txMint, txFee, txValidRange, txSignatures, txMintingScripts, txScripts, txData, txWithdrawals, txCertificates} =
+    pretty t@(Tx txInputs txCollateral txOutputs txMint txFee
+                 txValidRange txMintingScripts txWithdrawals txCertificates
+                 txSignatures txScripts txData txMetadata) =
         let lines' =
                 [ hang 2 (vsep ("inputs:" : fmap pretty txInputs))
                 , hang 2 (vsep ("collateral inputs:" : fmap pretty txCollateral))
@@ -194,6 +196,7 @@ instance Pretty Tx where
                 , hang 2 (vsep ("attached scripts:": fmap pretty (Map.keys txScripts)))
                 , hang 2 (vsep ("withdrawals:": fmap pretty txWithdrawals))
                 , hang 2 (vsep ("certificates:": fmap pretty txCertificates))
+                , "metadata:" <+> if isJust txMetadata then "present" else mempty
                 ]
             txid = txId t
         in nest 2 $ vsep ["Tx" <+> pretty txid <> colon, braces (vsep lines')]
@@ -220,15 +223,6 @@ txOutRefs t = mkOut <$> zip [0..] (txOutputs t) where
 unspentOutputsTx :: Tx -> Map TxOutRef TxOut
 unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
     f (idx, o) = (TxOutRef (txId t) idx, o)
-
--- | Create a transaction output locked by a validator script hash
---   with the given data script attached.
-plutusV1ScriptTxOut' :: Value -> Address -> Datum -> TxOut
-plutusV1ScriptTxOut' v a ds = TxOut a v (Just (datumHash ds))
-
--- | Create a transaction output locked by a validator script and with the given data script attached.
-plutusV1ScriptTxOut :: Value -> Validator -> Datum -> TxOut
-plutusV1ScriptTxOut v vs = plutusV1ScriptTxOut' v (plutusV1ScriptAddress vs)
 
 -- | Create a transaction output locked by a public payment key and optionnaly a public stake key.
 pubKeyTxOut :: Value -> PaymentPubKey -> Maybe StakePubKey -> TxOut

@@ -42,14 +42,15 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.OpenApi qualified as OpenApi
+import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Ledger qualified as Plutus
+import Ledger qualified as P
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (mustPayToPubKey)
 import Ledger.Constraints.OffChain (UnbalancedTx (UnbalancedTx, unBalancedTxRequiredSignatories, unBalancedTxTx, unBalancedTxUtxoIndex),
-                                    adjustUnbalancedTx, mkTx)
+                                    mkTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.TimeSlot (SlotConfig, posixTimeRangeToContainedSlotRange)
 import Ledger.Tx (CardanoTx, TxId (TxId), TxOutRef, getCardanoTxInputs, txInRef)
@@ -57,6 +58,7 @@ import Plutus.Contract.CardanoAPI qualified as CardanoAPI
 import Plutus.Contract.Error (AsContractError (_ConstraintResolutionContractError, _OtherContractError))
 import Plutus.Contract.Request qualified as Contract
 import Plutus.Contract.Types (Contract)
+import Plutus.V1.Ledger.Api qualified as Plutus
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
 import Wallet.API qualified as WAPI
@@ -113,7 +115,7 @@ getUnspentOutput = do
     ownPkh <- Contract.ownPaymentPubKeyHash
     let constraints = mustPayToPubKey ownPkh (Ada.lovelaceValueOf 1)
     utx <- either (throwing _ConstraintResolutionContractError) pure (mkTx @Void mempty constraints)
-    tx <- Contract.balanceTx (adjustUnbalancedTx utx)
+    tx <- Contract.adjustUnbalancedTx utx >>= Contract.balanceTx
     case getCardanoTxInputs tx of
         inp : _ -> pure $ txInRef inp
         []      -> throwing _OtherContractError "Balanced transaction has no inputs"
@@ -241,8 +243,12 @@ export
     -> UnbalancedTx
     -> Either CardanoAPI.ToCardanoError ExportTx
 export params networkId slotConfig utx =
-    let UnbalancedTx{unBalancedTxTx, unBalancedTxUtxoIndex, unBalancedTxRequiredSignatories} = finalize slotConfig utx
-        requiredSigners = Map.keys unBalancedTxRequiredSignatories
+    let UnbalancedTx
+            { unBalancedTxTx
+            , unBalancedTxUtxoIndex
+            , unBalancedTxRequiredSignatories
+            } = finalize slotConfig utx
+        requiredSigners = Set.toList unBalancedTxRequiredSignatories
      in ExportTx
         <$> mkPartialTx requiredSigners params networkId unBalancedTxTx
         <*> mkInputs networkId unBalancedTxUtxoIndex
@@ -250,13 +256,15 @@ export params networkId slotConfig utx =
 
 finalize :: SlotConfig -> UnbalancedTx -> UnbalancedTx
 finalize slotConfig utx =
-     utx & U.tx . Plutus.validRange .~ posixTimeRangeToContainedSlotRange slotConfig (utx ^. U.validityTimeRange)
+     utx & U.tx
+         . P.validRange
+         .~ posixTimeRangeToContainedSlotRange slotConfig (utx ^. U.validityTimeRange)
 
 mkPartialTx
-    :: [Plutus.PaymentPubKeyHash]
+    :: [P.PaymentPubKeyHash]
     -> C.ProtocolParameters
     -> C.NetworkId
-    -> Plutus.Tx
+    -> P.Tx
     -> Either CardanoAPI.ToCardanoError (C.Tx C.AlonzoEra)
 mkPartialTx requiredSigners params networkId =
       fmap (C.makeSignedTransaction [])
@@ -278,14 +286,14 @@ toExportTxInput networkId Plutus.TxOutRef{Plutus.txOutRefId, Plutus.txOutRefIdx}
         <*> pure otherQuantities
 
 -- TODO: export redeemers of other types
-mkRedeemers :: Plutus.Tx -> [ExportTxRedeemer]
+mkRedeemers :: P.Tx -> [ExportTxRedeemer]
 mkRedeemers tx = mkSpendingRedeemers tx <> mkMintingRedeemers tx
 
-mkSpendingRedeemers :: Plutus.Tx -> [ExportTxRedeemer]
-mkSpendingRedeemers Plutus.Tx{Plutus.txInputs} = mapMaybe extract txInputs where
-    extract Plutus.TxInput{Plutus.txInputType=Plutus.TxConsumeScriptAddress redeemer _ _, Plutus.txInputRef} =
+mkSpendingRedeemers :: P.Tx -> [ExportTxRedeemer]
+mkSpendingRedeemers P.Tx{P.txInputs} = mapMaybe extract txInputs where
+    extract P.TxInput{P.txInputType=P.TxConsumeScriptAddress redeemer _ _, P.txInputRef} =
         Just SpendingRedeemer{redeemer, redeemerOutRef=txInputRef}
     extract _ = Nothing
 
-mkMintingRedeemers :: Plutus.Tx -> [ExportTxRedeemer]
-mkMintingRedeemers Plutus.Tx{Plutus.txMintingScripts} = map (\(a,b) -> MintingRedeemer b a) $ Map.toList txMintingScripts
+mkMintingRedeemers :: P.Tx -> [ExportTxRedeemer]
+mkMintingRedeemers P.Tx{P.txMintingScripts} = map (\(a,b) -> MintingRedeemer b a) $ Map.toList txMintingScripts

@@ -25,11 +25,9 @@ import Data.Map qualified as Map
 import Data.Void (Void)
 import Test.Tasty (TestTree, testGroup)
 
-import Ledger (Address, PaymentPubKeyHash, Validator)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Scripts (datumHash)
 import Ledger.Tx (getCardanoTxId)
 import Plutus.Contract as Con
 import Plutus.Contract.State qualified as State
@@ -40,13 +38,15 @@ import Plutus.Contract.Test (Shrinking (DoShrink, DontShrink), TracePredicate, a
                              waitingForSlot, walletFundsChange, (.&&.))
 import Plutus.Contract.Types (ResumableResult (ResumableResult, _finalState), responses)
 import Plutus.Contract.Util (loopM)
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Scripts (datumHash)
 import Plutus.Trace qualified as Trace
 import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorTrace, activateContract, activeEndpoints, callEndpoint)
 import Plutus.Trace.Emulator.Types (ContractInstanceLog (_cilMessage),
                                     ContractInstanceMsg (ContractLog, CurrentRequests, HandledRequest, ReceiveEndpointCall, Started, StoppedNoError),
                                     ContractInstanceState (ContractInstanceState, instContractState),
                                     UserThreadMsg (UserLog))
-import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash)
+import Plutus.V1.Ledger.Api (Address, Datum (Datum), DatumHash, Validator)
 import Plutus.V1.Ledger.Tx (TxOut (txOutDatumHash))
 import PlutusTx qualified
 import Prelude hiding (not)
@@ -193,7 +193,7 @@ tests =
                 Trace.waitNSlots 1
             )
 
-        , let theContract :: Contract () Schema ContractError PaymentPubKeyHash = ownPaymentPubKeyHash
+        , let theContract :: Contract () Schema ContractError Ledger.PaymentPubKeyHash = ownPaymentPubKeyHash
           in run "own public key"
                 (assertDone theContract tag (== mockWalletPaymentPubKeyHash w2) "should return the wallet's public key")
                 (void $ activateContract w2 (void theContract) tag)
@@ -217,7 +217,7 @@ tests =
                 tx <- submitTx payment
                 let txOuts = fmap fst $ Ledger.getCardanoTxOutRefs tx
                 -- tell the tx out' datum hash that was specified by 'mustPayWithDatumToPubKey'
-                tell [txOutDatumHash (txOuts !! 1)]
+                tell [txOutDatumHash (head txOuts)]
 
               datum = Datum $ PlutusTx.toBuiltinData (23 :: Integer)
               isExpectedDatumHash [Just hash] = hash == datumHash datum
@@ -244,7 +244,7 @@ tests =
               datum2 = Datum $ PlutusTx.toBuiltinData (42 :: Integer)
 
           in run "mustPayWithDatumToPubKey doesn't throw 'InOutTypeMismatch' error"
-            ( assertNoFailedTransactions ) $ do
+            assertNoFailedTransactions $ do
               _ <- activateContract w1 c1 tag
               void (Trace.waitNSlots 2)
               _ <- activateContract w2 c2 tag
@@ -256,9 +256,9 @@ tests =
                 let payment = Constraints.mustPayToPubKey w2PubKeyHash
                                                           (Ada.adaValueOf 10)
                 tx <- submitTx payment
-                -- There should be 2 utxos. We suppose the first belongs to the
-                -- wallet calling the contract and the second one to W2.
-                let utxo = head $ fmap snd $ Ledger.getCardanoTxOutRefs tx
+                -- There should be 2 utxos. We suppose the first belongs to W2
+                -- and the second one belongs to the wallet calling the contract.
+                let utxo = (fmap snd $ Ledger.getCardanoTxOutRefs tx) !! 1
                 -- We wait for W1's utxo to change status. It should be of
                 -- status confirmed unspent.
                 s <- awaitTxOutStatusChange utxo
@@ -371,7 +371,7 @@ errorContract = do
         (\_ -> checkpoint $ awaitPromise $ endpoint @"2" @Int pure .> endpoint @"3" @Int pure)
 
 someAddress :: Address
-someAddress = Ledger.plutusV1ScriptAddress someValidator
+someAddress = mkValidatorAddress someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])

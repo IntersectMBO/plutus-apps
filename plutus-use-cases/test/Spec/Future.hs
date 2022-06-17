@@ -48,6 +48,7 @@ options :: CheckOptions
 options = defaultCheckOptions
     & changeInitialWalletValue w1 (const $ Ada.adaValueOf 1000)
     & changeInitialWalletValue w2 (const $ Ada.adaValueOf 1000)
+    & allowBigTransactions
 
 tests :: TestTree
 tests =
@@ -58,12 +59,10 @@ tests =
         $ void F.setupTokensTrace
 
     , checkPredicateOptions options "can initialise and obtain tokens"
-        (    walletFundsChange w1 ( Ada.toValue (-Ledger.minAdaTxOut)
-                                 <> scale (-1) (F.initialMargin $ theFuture startTime)
+        (    walletFundsChange w1 ( scale (-1) (F.initialMargin $ theFuture startTime)
                                  <> F.tokenFor Short testAccounts
                                   )
-        .&&. walletFundsChange w2 ( Ada.toValue Ledger.minAdaTxOut
-                                 <> scale (-1) (F.initialMargin $ theFuture startTime)
+        .&&. walletFundsChange w2 ( scale (-1) (F.initialMargin $ theFuture startTime)
                                  <> F.tokenFor Long testAccounts
                                   )
         )

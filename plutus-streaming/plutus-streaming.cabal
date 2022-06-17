@@ -1,0 +1,93 @@
+cabal-version:      2.4
+name:               plutus-streaming
+version:            0.1.0.0
+author:             Andrea Bedini
+maintainer:         andrea.bedini@iohk.io
+extra-source-files: CHANGELOG.md
+
+common lang
+    default-language: Haskell2010
+    default-extensions:
+        DeriveFoldable
+        DeriveFunctor
+        DeriveGeneric
+        DeriveLift
+        DeriveTraversable
+        ExplicitForAll
+        GeneralizedNewtypeDeriving
+        ImportQualifiedPost
+        LambdaCase
+        NamedFieldPuns
+        ScopedTypeVariables
+        StandaloneDeriving
+    ghc-options:
+        -Wall
+        -Widentities
+        -Wincomplete-record-updates
+        -Wincomplete-uni-patterns
+        -Wmissing-import-lists
+        -Wnoncanonical-monad-instances
+        -Wredundant-constraints
+        -Wunused-packages
+
+library
+    import: lang
+    hs-source-dirs:   src
+    exposed-modules:
+        Plutus.Streaming
+    build-depends:
+        base >=4.9 && <5,
+        async,
+        cardano-api,
+        ouroboros-network,
+        stm,
+        streaming,
+
+executable plutus-streaming-example-1
+    import: lang
+    hs-source-dirs:   examples
+    main-is:          Example1.hs
+    other-modules:    Common, Orphans
+    build-depends:
+        plutus-streaming,
+        base >=4.9 && <5,
+        aeson,
+        base16-bytestring,
+        bytestring,
+        cardano-api,
+        optparse-applicative,
+        streaming,
+        text
+
+executable plutus-streaming-example-2
+    import: lang
+    hs-source-dirs:   examples
+    main-is:          Example2.hs
+    other-modules:    Common, Orphans
+    build-depends:
+        plutus-streaming,
+        base >=4.9 && <5,
+        aeson,
+        base16-bytestring,
+        bytestring,
+        cardano-api,
+        optparse-applicative,
+        plutus-ledger,
+        plutus-script-utils,
+        streaming,
+
+executable plutus-streaming-example-3
+    import: lang
+    hs-source-dirs:   examples
+    main-is:          Example3.hs
+    other-modules:    Common, Orphans
+    build-depends:
+        plutus-streaming,
+        base >=4.9 && <5,
+        aeson,
+        base16-bytestring,
+        bytestring,
+        cardano-api,
+        optparse-applicative,
+        plutus-chain-index-core,
+        streaming,

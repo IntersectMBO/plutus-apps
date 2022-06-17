@@ -1,7 +1,7 @@
 import Cardano.Prelude
 
 import GHC.IO.Encoding
-import Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus qualified
+-- import Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus qualified
 import Test.PlutusExample.Direct.ScriptContextEquality qualified
 import Test.PlutusExample.Direct.ScriptContextEqualityMint qualified
 import Test.PlutusExample.Direct.TxInLockingPlutus qualified
@@ -19,9 +19,9 @@ main = do
 
 plutusExampleTests :: TestTree
 plutusExampleTests = testGroup "plutus-example"
-  [ -- Fails to meet deadline on MacOS for an unknown reason
-    testProperty "Plutus.Direct.CertifyingAndWithdrawingPlutus" Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus.hprop_plutus_certifying_withdrawing
-  , testProperty "prop_TxId_Api_Ledger_Plutus_Roundtrip" Test.PlutusExample.Plutus.prop_TxId_Api_Ledger_Plutus_Roundtrip
+  [ -- Flaky test:
+    -- testProperty "Plutus.Direct.CertifyingAndWithdrawingPlutus" Test.PlutusExample.Direct.CertifyingAndWithdrawingPlutus.hprop_plutus_certifying_withdrawing
+    testProperty "prop_TxId_Api_Ledger_Plutus_Roundtrip" Test.PlutusExample.Plutus.prop_TxId_Api_Ledger_Plutus_Roundtrip
   , testProperty "prop_TxId_Api_Ledger_Roundtrip" Test.PlutusExample.Plutus.prop_TxId_Api_Ledger_Roundtrip
   , testProperty "prop_script_ScriptContextEquality" Test.PlutusExample.Direct.ScriptContextEquality.hprop_plutus_script_context_equality
   , testProperty "prop_direct_ScriptContextEqualityMint" Test.PlutusExample.Direct.ScriptContextEqualityMint.hprop_plutus_script_context_mint_equality

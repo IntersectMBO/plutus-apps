@@ -1,15 +1,14 @@
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE DerivingStrategies  #-}
-{-# LANGUAGE DerivingVia         #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 module Ledger.Tx.Internal where
 
@@ -25,7 +24,7 @@ import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Ledger.Crypto
 import Ledger.DCert.Orphans ()
-import Ledger.Scripts (datumHash, plutusV1MintingPolicyHash, plutusV1ValidatorHash)
+import Ledger.Scripts (datumHash, mintingPolicyHash, validatorHash)
 import Ledger.Slot
 import Ledger.Tx.Orphans ()
 import Plutus.V1.Ledger.Api (BuiltinByteString, Credential, DCert)
@@ -33,7 +32,7 @@ import Plutus.V1.Ledger.Scripts
 import Plutus.V1.Ledger.Tx (TxIn (..), TxInType (..), TxOut (txOutValue), TxOutRef, txOutDatum)
 import Plutus.V1.Ledger.Value as V
 import PlutusTx.Lattice
-import Prettyprinter (Pretty (pretty), viaShow)
+import Prettyprinter (Pretty (pretty), hang, viaShow, vsep, (<+>))
 
 -- | The type of a transaction input. Contains redeemer if consumes a script.
 data TxInputType =
@@ -52,7 +51,13 @@ data TxInput = TxInput {
     deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
 
 instance Pretty TxInput where
-    pretty = viaShow
+    pretty TxInput{txInputRef,txInputType} =
+        let rest =
+                case txInputType of
+                    TxConsumeScriptAddress redeemer _ _ ->
+                        pretty redeemer
+                    _ -> mempty
+        in hang 2 $ vsep ["-" <+> pretty txInputRef, rest]
 
 -- | Stake withdrawal, if applicable the script should be included in txScripts.
 data Withdrawal = Withdrawal
@@ -250,7 +255,7 @@ addMintingPolicy vl@(MintingPolicy script) rd tx@Tx{txMintingScripts, txScripts}
     {txMintingScripts = Map.insert mph rd txMintingScripts,
      txScripts = Map.insert (ScriptHash b) script txScripts}
     where
-        mph@(MintingPolicyHash b) = plutusV1MintingPolicyHash vl
+        mph@(MintingPolicyHash b) = mintingPolicyHash vl
 
 -- | Add minting policy together with the redeemer into txMintingScripts and txScripts accordingly.
 addScriptTxInput :: TxOutRef -> Validator -> Redeemer -> Datum -> Tx -> Tx
@@ -260,7 +265,7 @@ addScriptTxInput outRef vl@(Validator script) rd dt tx@Tx{txInputs, txScripts, t
      txData = Map.insert dtHash dt txData}
     where
         dtHash = datumHash dt
-        vlHash@(ValidatorHash b) = plutusV1ValidatorHash vl
+        vlHash@(ValidatorHash b) = validatorHash vl
 
 
 -- | Check that all values in a transaction are non-negative.

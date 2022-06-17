@@ -31,7 +31,7 @@ common lang
                         ImportQualifiedPost
     ghc-options: -Wall -Wnoncanonical-monad-instances
                  -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities
+                 -Wredundant-constraints -Widentities -Wmissing-import-lists
                  -- See Plutus Tx readme
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
@@ -75,6 +75,7 @@ executable doc-doctests
       plutus-ledger -any,
       plutus-ledger-api >= 1.0.0,
       plutus-ledger-constraints -any,
+      plutus-script-utils -any,
       plutus-contract -any,
       playground-common -any,
       plutus-use-cases -any,

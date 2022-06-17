@@ -22,6 +22,7 @@
 module Wallet.Emulator.Wallet where
 
 import Cardano.Api (EraInMode (AlonzoEraInCardanoMode))
+import Cardano.Api.Shelley (protocolParamCollateralPercent)
 import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Wallet.Primitive.Types qualified as Cardano.Wallet
 import Control.Lens (makeLenses, makePrisms, over, view, (&), (.~), (^.))
@@ -45,9 +46,8 @@ import Data.String (IsString (fromString))
 import Data.Text qualified as T
 import Data.Text.Class (fromText, toText)
 import GHC.Generics (Generic)
-import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut,
+import Ledger (Address (addressCredential), CardanoTx, ChainIndexTxOut, Params (..),
                PaymentPrivateKey (PaymentPrivateKey, unPaymentPrivateKey),
-               PaymentPubKey (PaymentPubKey, unPaymentPubKey),
                PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash), PubKeyHash, SomeCardanoApiTx, StakePubKey,
                Tx (txFee, txMint), TxInput (TxInput, txInputRef), TxOutRef, UtxoIndex (..), ValidatorHash, Value)
 import Ledger qualified
@@ -80,7 +80,6 @@ import Wallet.Emulator.LogMessages (RequestHandlerLogMsg,
                                     TxBalanceMsg (AddingCollateralInputsFor, AddingInputsFor, AddingPublicKeyOutputFor, BalancingUnbalancedTx, FinishedBalancing, NoCollateralInputsAdded, NoInputsAdded, NoOutputsAdded, SigningTx, SubmittingTx, ValidationFailed))
 import Wallet.Emulator.NodeClient (NodeClientState, emptyNodeClientState)
 
-
 newtype SigningProcess = SigningProcess {
     unSigningProcess :: forall effs. (Member (Error WAPI.WalletAPIError) effs) => [PaymentPubKeyHash] -> CardanoTx -> Eff effs CardanoTx
 }
@@ -106,7 +105,11 @@ instance FromHttpApiData Wallet where
   parseUrlPiece = pure . Wallet Nothing <=< parseUrlPiece
 
 toMockWallet :: MockWallet -> Wallet
-toMockWallet mw = Wallet (CW.mwPrintAs mw) . WalletId . CW.mwWalletId $ mw
+toMockWallet mw =
+  Wallet (CW.mwPrintAs mw)
+  . WalletId
+  . Cardano.Wallet.WalletId
+  . CW.mwWalletId $ mw
 
 knownWallets :: [Wallet]
 knownWallets = toMockWallet <$> CW.knownMockWallets
@@ -153,10 +156,11 @@ fromBase16 s = bimap show WalletId (fromText s)
 
 -- | The 'MockWallet' whose ID is the given wallet ID (if it exists)
 walletToMockWallet :: Wallet -> Maybe MockWallet
-walletToMockWallet (Wallet _ wid) = find ((==) wid . WalletId . CW.mwWalletId) CW.knownMockWallets
+walletToMockWallet (Wallet _ wid) =
+  find ((==) wid . WalletId . Cardano.Wallet.WalletId . CW.mwWalletId) CW.knownMockWallets
 
 -- | The public key of a mock wallet.  (Fails if the wallet is not a mock wallet).
-mockWalletPaymentPubKey :: Wallet -> PaymentPubKey
+mockWalletPaymentPubKey :: Wallet -> Ledger.PaymentPubKey
 mockWalletPaymentPubKey w =
     CW.paymentPubKey
         $ fromMaybe (error $ "Wallet.Emulator.Wallet.walletPubKey: Wallet "
@@ -169,7 +173,7 @@ mockWalletPaymentPubKeyHash :: Wallet -> PaymentPubKeyHash
 mockWalletPaymentPubKeyHash =
     PaymentPubKeyHash
   . Ledger.pubKeyHash
-  . unPaymentPubKey
+  . Ledger.unPaymentPubKey
   . mockWalletPaymentPubKey
 
 -- | Get the address of a mock wallet. (Fails if the wallet is not a mock wallet).
@@ -208,13 +212,13 @@ makeLenses ''WalletState
 ownPaymentPrivateKey :: WalletState -> PaymentPrivateKey
 ownPaymentPrivateKey = CW.paymentPrivateKey . _mockWallet
 
-ownPaymentPublicKey :: WalletState -> PaymentPubKey
+ownPaymentPublicKey :: WalletState -> Ledger.PaymentPubKey
 ownPaymentPublicKey = CW.paymentPubKey . _mockWallet
 
 -- | Get the user's own payment public-key address.
 ownAddress :: WalletState -> Address
 ownAddress = flip Ledger.pubKeyAddress Nothing
-           . PaymentPubKey
+           . Ledger.PaymentPubKey
            . Ledger.toPublicKey
            . unPaymentPrivateKey
            . ownPaymentPrivateKey
@@ -307,14 +311,14 @@ handleBalance ::
     -> Eff effs CardanoTx
 handleBalance utx' = do
     utxo <- get >>= ownOutputs
-    slotConfig <- WAPI.getClientSlotConfig
-    let utx = finalize slotConfig utx'
-    let requiredSigners = Map.keys (U.unBalancedTxRequiredSignatories utx)
-    cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
+    params@Params { pSlotConfig } <- WAPI.getClientParams
+    let utx = finalize pSlotConfig utx'
+    let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
+    cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
     -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
     let calcFee n fee = do
             tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
-            newFee <- handleError tx $ evaluateTransactionFee cUtxoIndex requiredSigners tx
+            newFee <- handleError tx $ evaluateTransactionFee params cUtxoIndex requiredSigners tx
             if newFee /= fee
                 then if n == (0 :: Int)
                     -- If we don't reach a fixed point, pick the larger fee
@@ -324,7 +328,7 @@ handleBalance utx' = do
     -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
     theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
     tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-    cTx <- handleError tx' $ fromPlutusTx cUtxoIndex requiredSigners tx'
+    cTx <- handleError tx' $ fromPlutusTx params cUtxoIndex requiredSigners tx'
     pure $ Tx.Both tx' (Tx.SomeTx cTx AlonzoEraInCardanoMode)
     where
         handleError tx (Left (Left (ph, ve))) = do
@@ -403,7 +407,8 @@ lookupValue outputRef@TxInput {txInputRef} = do
 -- | Balance an unbalanced transaction by adding missing inputs and outputs
 handleBalanceTx ::
     forall effs.
-    ( Member (State WalletState) effs
+    ( Member NodeClientEffect effs
+    , Member (State WalletState) effs
     , Member ChainIndexQueryEffect effs
     , Member (Error WAPI.WalletAPIError) effs
     , Member (LogMsg TxBalanceMsg) effs
@@ -412,6 +417,7 @@ handleBalanceTx ::
     -> UnbalancedTx
     -> Eff effs Tx
 handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
+    Params { pProtocolParams } <- WAPI.getClientParams
     let filteredUnbalancedTxTx = removeEmptyOutputs unBalancedTxTx
     let txInputs = Tx.txInputs filteredUnbalancedTxTx
     ownPaymentPubKey <- gets ownPaymentPublicKey
@@ -421,7 +427,8 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
     let fees = txFee filteredUnbalancedTxTx
         left = txMint filteredUnbalancedTxTx <> fold inputValues
         right = fees <> foldMap (view Tx.outValue) (filteredUnbalancedTxTx ^. Tx.outputs)
-        remainingFees = fees PlutusTx.- fold collateral -- TODO: add collateralPercent
+        collFees = Ada.toValue $ (Ada.fromValue fees * maybe 100 fromIntegral (protocolParamCollateralPercent pProtocolParams)) `Ada.divide` 100
+        remainingCollFees = collFees PlutusTx.- fold collateral
         balance = left PlutusTx.- right
         (neg, pos) = adjustBalanceWithMissingLovelace $ Value.split balance
 
@@ -445,13 +452,13 @@ handleBalanceTx utxo UnbalancedTx{unBalancedTxTx} = do
                         txOutRef `notElem` inputsOutRefs
                 addInputs filteredUtxo ownPaymentPubKey ownStakePubKey neg tx'
 
-    if remainingFees `Value.leq` PlutusTx.zero
+    if remainingCollFees `Value.leq` PlutusTx.zero
     then do
         logDebug NoCollateralInputsAdded
         pure tx''
     else do
-        logDebug $ AddingCollateralInputsFor remainingFees
-        addCollateral utxo remainingFees tx''
+        logDebug $ AddingCollateralInputsFor remainingCollFees
+        addCollateral utxo remainingCollFees tx''
 
 -- | Adjust the left and right balance of an unbalanced 'Tx' with the missing
 -- lovelace considering the minimum lovelace per transaction output constraint
@@ -480,8 +487,8 @@ splitOffAdaOnlyValue vl = if Value.isAdaOnlyValue vl || ada < Ledger.minAdaTxOut
     where
         ada = Ada.fromValue vl - Ledger.minAdaTxOut
 
-addOutput :: PaymentPubKey -> Maybe StakePubKey -> Value -> Tx -> Tx
-addOutput pk sk vl tx = tx & over Tx.outputs (pkos ++) where
+addOutput :: Ledger.PaymentPubKey -> Maybe StakePubKey -> Value -> Tx -> Tx
+addOutput pk sk vl tx = tx & over Tx.outputs (++ pkos) where
     pkos = (\v -> Tx.pubKeyTxOut v pk sk) <$> splitOffAdaOnlyValue vl
 
 addCollateral
@@ -506,7 +513,7 @@ addInputs
     :: ( Member (Error WAPI.WalletAPIError) effs
        )
     => Map.Map TxOutRef ChainIndexTxOut -- ^ The current wallet's unspent transaction outputs.
-    -> PaymentPubKey
+    -> Ledger.PaymentPubKey
     -> Maybe StakePubKey
     -> Value
     -> Tx

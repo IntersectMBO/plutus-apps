@@ -42,8 +42,9 @@ import Data.Monoid (Last (..))
 import Data.Proxy (Proxy (..))
 import Data.Text (Text, pack)
 import Data.Void (Void, absurd)
-import Ledger hiding (singleton)
-import Ledger.Constraints as Constraints
+import Ledger (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut, _ciTxOutDatum), ciTxOutValue,
+               pubKeyHashAddress)
+import Ledger.Constraints as Constraints hiding (adjustUnbalancedTx)
 import Ledger.Typed.Scripts qualified as Scripts
 import Playground.Contract
 import Plutus.Contract as Contract
@@ -51,6 +52,11 @@ import Plutus.Contracts.Currency qualified as Currency
 import Plutus.Contracts.Uniswap.OnChain (mkUniswapValidator, validateLiquidityMinting)
 import Plutus.Contracts.Uniswap.Pool
 import Plutus.Contracts.Uniswap.Types
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
+import Plutus.V1.Ledger.Api (Address, CurrencySymbol, Datum (Datum), DatumHash, MintingPolicy, Redeemer (Redeemer),
+                             Validator, Value)
+import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import PlutusTx qualified
 import PlutusTx.Code
 import PlutusTx.Coverage
@@ -103,29 +109,29 @@ uniswapInstance us = Scripts.mkTypedValidator @Uniswapping
     c :: Coin PoolState
     c = poolStateCoin us
 
-    wrap = Scripts.wrapValidator @UniswapDatum @UniswapAction
+    wrap = Scripts.mkUntypedValidator @UniswapDatum @UniswapAction
 
 uniswapScript :: Uniswap -> Validator
 uniswapScript = Scripts.validatorScript . uniswapInstance
 
-uniswapAddress :: Uniswap -> Ledger.Address
-uniswapAddress = Ledger.plutusV1ScriptAddress . uniswapScript
+uniswapAddress :: Uniswap -> Address
+uniswapAddress = mkValidatorAddress . uniswapScript
 
 uniswap :: CurrencySymbol -> Uniswap
 uniswap cs = Uniswap $ mkCoin cs uniswapTokenName
 
 liquidityPolicy :: Uniswap -> MintingPolicy
 liquidityPolicy us = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \u t -> Scripts.wrapMintingPolicy (validateLiquidityMinting u t) ||])
+    $$(PlutusTx.compile [|| \u t -> Scripts.mkUntypedMintingPolicy (validateLiquidityMinting u t) ||])
         `PlutusTx.applyCode` PlutusTx.liftCode us
         `PlutusTx.applyCode` PlutusTx.liftCode poolStateTokenName
 
 covIdx :: CoverageIndex
-covIdx = getCovIdx $$(PlutusTx.compile [|| \u t -> Scripts.wrapMintingPolicy (validateLiquidityMinting u t) ||]) <>
+covIdx = getCovIdx $$(PlutusTx.compile [|| \u t -> Scripts.mkUntypedMintingPolicy (validateLiquidityMinting u t) ||]) <>
          getCovIdx $$(PlutusTx.compile [|| mkUniswapValidator ||])
 
 liquidityCurrency :: Uniswap -> CurrencySymbol
-liquidityCurrency = plutusV1ScriptCurrencySymbol . liquidityPolicy
+liquidityCurrency = scriptCurrencySymbol . liquidityPolicy
 
 poolStateCoin :: Uniswap -> Coin PoolState
 poolStateCoin = flip mkCoin poolStateTokenName . liquidityCurrency
@@ -194,7 +200,7 @@ start = do
         tx   = mustPayToTheScript (Factory []) $ unitValue c
 
     mkTxConstraints (Constraints.typedValidatorLookups inst) tx
-      >>= submitTxConfirmed . adjustUnbalancedTx
+      >>= adjustUnbalancedTx >>= submitTxConfirmed
     void $ waitNSlots 1
 
     logInfo @String $ printf "started Uniswap %s at address %s" (show us) (show $ uniswapAddress us)
@@ -227,7 +233,7 @@ create us CreateParams{..} = do
                    Constraints.mustMintValue (unitValue psC <> valueOf lC liquidity)              <>
                    Constraints.mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData $ Create lp)
 
-    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "created liquidity pool: " ++ show lp
 
@@ -259,7 +265,7 @@ close us CloseParams{..} = do
                    Constraints.mustSpendScriptOutput oref2 redeemer    <>
                    Constraints.mustIncludeDatum (Datum $ PlutusTx.toBuiltinData $ Pool lp liquidity)
 
-    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "closed liquidity pool: " ++ show lp
 
@@ -293,7 +299,7 @@ remove us RemoveParams{..} = do
                    Constraints.mustMintValue (negate lVal)        <>
                    Constraints.mustSpendScriptOutput oref redeemer
 
-    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "removed liquidity from pool: " ++ show lp
 
@@ -337,7 +343,7 @@ add us AddParams{..} = do
     logInfo $ show lookups
     logInfo $ show tx
 
-    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "added liquidity to pool: " ++ show lp
 
@@ -372,7 +378,7 @@ swap us SwapParams{..} = do
         tx      = mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData Swap) <>
                   Constraints.mustPayToTheScript (Pool lp liquidity) val
 
-    mkTxConstraints lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+    mkTxConstraints lookups tx >>= adjustUnbalancedTx >>= submitTxConfirmed
 
     logInfo $ "swapped with: " ++ show lp
 

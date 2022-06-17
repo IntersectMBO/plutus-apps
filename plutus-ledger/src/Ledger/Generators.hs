@@ -4,9 +4,9 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
+
 -- | Generators for constructing blockchains and transactions for use in property-based testing.
 module Ledger.Generators(
     -- * Mockchain
@@ -47,12 +47,7 @@ module Ledger.Generators(
     splitVal,
     validateMockchain,
     signAll,
-    knownPaymentPublicKeys,
-    someTokenValue,
-    alwaysSucceedPolicy,
-    alwaysSucceedValidator,
-    alwaysSucceedValidatorHash,
-    UnitTest
+    knownPaymentPublicKeys
     ) where
 
 import Cardano.Api qualified as C
@@ -64,6 +59,7 @@ import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString qualified as BS
 import Data.Default (Default (def))
 import Data.Foldable (fold, foldl')
+import Data.Function ((&))
 import Data.Functor.Identity (Identity)
 import Data.List (sort)
 import Data.List qualified as List
@@ -77,30 +73,28 @@ import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (Ada, CurrencySymbol, Datum, Interval, MintingPolicy, OnChainTx (Valid),
-               POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
-               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), ScriptContext (ScriptContext),
-               Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx), TokenName,
-               Tx (txFee, txInputs, txMint, txOutputs, txValidRange), TxInInfo (txInInfoOutRef),
-               TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
+import Ledger (Ada, CurrencySymbol, Datum, Interval, OnChainTx (Valid), POSIXTime (POSIXTime, getPOSIXTime),
+               POSIXTimeRange, Passphrase (Passphrase), PaymentPrivateKey (unPaymentPrivateKey),
+               PaymentPubKey (PaymentPubKey), ScriptContext (ScriptContext), Slot (Slot), SlotRange,
+               SomeCardanoApiTx (SomeTx), TokenName, Tx (txFee, txInputs, txMint, txOutputs, txValidRange),
+               TxInInfo (txInInfoOutRef), TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
                TxInputType (TxConsumePublicKeyAddress), TxOut (txOutValue), TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
                ValidationCtx (ValidationCtx), Validator (Validator), Value, _runValidation, addMintingPolicy,
-               addSignature', datumHash, mkMintingPolicyScript, plutusV1ScriptCurrencySymbol, plutusV1ScriptHash,
-               plutusV1ValidatorHash, pubKeyTxOut, toPublicKey, txData, txId, txScripts)
+               addSignature', datumHash, pubKeyTxOut, toPublicKey, txData, txId, txScripts)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.CardanoWallet qualified as CW
 import Ledger.Fee (FeeConfig (fcScriptsFeeFactor), calcFees)
 import Ledger.Index qualified as Index
+import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.V1.Generators as ScriptGen
+import Plutus.Script.Utils.V1.Scripts qualified as PV1
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts qualified as Script
-import PlutusPrelude ((&))
-import PlutusTx qualified
 
 -- | Attach signatures of all known private keys to a transaction.
 signAll :: Tx -> Tx
@@ -139,7 +133,7 @@ constantFee = def { fcScriptsFeeFactor = 0 }
 data Mockchain = Mockchain {
     mockchainInitialTxPool :: [Tx],
     mockchainUtxo          :: Map TxOutRef TxOut,
-    mockchainSlotConfig    :: SlotConfig
+    mockchainParams        :: Params
     } deriving Show
 
 -- | The empty mockchain.
@@ -159,7 +153,7 @@ genMockchain' gm = do
     pure Mockchain {
         mockchainInitialTxPool = [txn],
         mockchainUtxo = Map.fromList $ first (TxOutRef tid) <$> zip [0..] ot,
-        mockchainSlotConfig = slotCfg
+        mockchainParams = def { pSlotConfig = slotCfg }
         }
 
 -- | Generate a mockchain using the default 'GeneratorModel'.
@@ -228,7 +222,7 @@ genValidTransactionSpending' g feeCfg ins totalVal = do
     mintTokenName <- genTokenName
     let mintValue = if mintAmount == 0
                        then Nothing
-                       else Just $ someTokenValue mintTokenName mintAmount
+                       else Just $ ScriptGen.someTokenValue mintTokenName mintAmount
         fee' = calcFees feeCfg 0
         numOut = Set.size (gmPubKeys g) - 1
         totalValAda = Ada.fromValue totalVal
@@ -255,9 +249,9 @@ genValidTransactionSpending' g feeCfg ins totalVal = do
                         , txMint = maybe mempty id mintValue
                         , txFee = Ada.toValue fee'
                         , txData = Map.fromList (map (\d -> (datumHash d, d)) datums)
-                        , txScripts = Map.fromList (map (\(Validator s) -> (plutusV1ScriptHash s, s)) scripts)
+                        , txScripts = Map.fromList (map (\(Validator s) -> (PV1.scriptHash s, s)) scripts)
                         }
-                    & addMintingPolicy alwaysSucceedPolicy Script.unitRedeemer
+                    & addMintingPolicy ScriptGen.alwaysSucceedPolicy Script.unitRedeemer
 
                 -- sign the transaction with all known wallets
                 -- this is somewhat crude (but technically valid)
@@ -270,27 +264,7 @@ genValidTransactionSpending' g feeCfg ins totalVal = do
         txInToTxInput (TxInputWitnessed outref txInType) = case txInType of
             Ledger.ConsumePublicKeyAddress -> (TxInput outref TxConsumePublicKeyAddress, Nothing)
             Ledger.ConsumeSimpleScriptAddress -> (TxInput outref Ledger.TxConsumeSimpleScriptAddress, Nothing)
-            Ledger.ConsumeScriptAddress vl rd dt -> (TxInput outref (Ledger.TxConsumeScriptAddress rd (plutusV1ValidatorHash vl) (datumHash dt)), Just (vl, dt))
-
-
-data UnitTest
-instance Scripts.ValidatorTypes UnitTest
-
-alwaysSucceedValidator :: Scripts.TypedValidator UnitTest
-alwaysSucceedValidator = Scripts.mkTypedValidator
-    $$(PlutusTx.compile [|| \_ _ _ -> True ||])
-    $$(PlutusTx.compile [|| wrap ||])
-    where
-        wrap = Scripts.wrapValidator
-
-alwaysSucceedValidatorHash :: Ledger.ValidatorHash
-alwaysSucceedValidatorHash = Scripts.validatorHash alwaysSucceedValidator
-
-alwaysSucceedPolicy :: MintingPolicy
-alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [|| \_ _ -> () ||])
-
-someTokenValue :: TokenName -> Integer -> Value
-someTokenValue = Value.singleton (plutusV1ScriptCurrencySymbol alwaysSucceedPolicy)
+            Ledger.ConsumeScriptAddress vl rd dt -> (TxInput outref (Ledger.TxConsumeScriptAddress rd (PV1.validatorHash vl) (datumHash dt)), Just (vl, dt))
 
 -- | Generate an 'Interval where the lower bound if less or equal than the
 -- upper bound.
@@ -423,10 +397,10 @@ assertValid tx mc = Hedgehog.assert $ isNothing $ validateMockchain mc tx
 
 -- | Validate a transaction in a mockchain.
 validateMockchain :: Mockchain -> Tx -> Maybe Index.ValidationError
-validateMockchain (Mockchain txPool _ slotCfg) tx = result where
+validateMockchain (Mockchain txPool _ params) tx = result where
     h      = 1
     idx    = Index.initialise [map Valid txPool]
-    result = fmap snd $ fst $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx slotCfg)
+    result = fmap snd $ fst $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx params)
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
      parts equals the original value. Each part should contain the required
@@ -454,8 +428,8 @@ genTxInfo :: MonadGen m => Mockchain -> m TxInfo
 genTxInfo chain = do
     tx <- genValidTransaction chain
     let idx = UtxoIndex $ mockchainUtxo chain
-    let slotCfg = mockchainSlotConfig chain
-    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx slotCfg)
+    let params = mockchainParams chain
+    let (res, _) = runWriter $ runExceptT $ runReaderT (_runValidation (Index.mkTxInfo tx)) (ValidationCtx idx params)
     either (const Gen.discard) pure res
 
 genScriptPurposeSpending :: MonadGen m => TxInfo -> m Contexts.ScriptPurpose

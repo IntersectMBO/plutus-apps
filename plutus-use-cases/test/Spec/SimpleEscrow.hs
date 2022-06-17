@@ -12,11 +12,11 @@ import Control.Monad (void)
 import Ledger (Value)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Generators (someTokenValue)
 import Ledger.Time (POSIXTime)
 import Ledger.TimeSlot qualified as TimeSlot
 import Plutus.Contract.Test
 import Plutus.Contracts.SimpleEscrow
+import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Trace.Emulator qualified as Trace
 
 import Test.Tasty

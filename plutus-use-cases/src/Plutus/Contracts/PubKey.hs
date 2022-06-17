@@ -23,9 +23,9 @@ import Data.Map qualified as Map
 import GHC.Generics (Generic)
 
 import Ledger hiding (initialise, to)
-import Ledger.Contexts as V
 import Ledger.Typed.Scripts (TypedValidator)
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Contexts as V
 import PlutusTx qualified
 
 import Ledger.Constraints qualified as Constraints
@@ -45,7 +45,7 @@ typedValidator = Scripts.mkTypedValidatorParam @PubKeyContract
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 data PubKeyError =
     ScriptOutputMissing PaymentPubKeyHash
@@ -74,7 +74,7 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
         tx = Constraints.mustPayToTheScript () vl
 
     ledgerTx <- mkTxConstraints (Constraints.typedValidatorLookups inst) tx
-        >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
     _ <- awaitTxConfirmed (getCardanoTxId ledgerTx)
     let refs = Map.keys

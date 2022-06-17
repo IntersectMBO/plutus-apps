@@ -15,14 +15,16 @@ import Ledger (Address, Validator)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Generators (someTokenValue)
-import Ledger.Scripts (plutusV1MintingPolicyHash, plutusV1ValidatorHash, unitDatum, unitRedeemer)
-import Ledger.Typed.Scripts.MonetaryPolicies qualified as MPS
+import Ledger.Scripts (unitDatum, unitRedeemer)
 import Ledger.Value qualified as Value
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertAccumState, assertValidatedTransactionCount, changeInitialWalletValue,
                              checkPredicate, checkPredicateOptions, defaultCheckOptions, w1, w2)
+import Plutus.Script.Utils.V1.Address (mkValidatorAddress)
+import Plutus.Script.Utils.V1.Generators (someTokenValue)
+import Plutus.Script.Utils.V1.Scripts qualified as Scripts
 import Plutus.Trace qualified as Trace
+import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
 import Prelude hiding (not)
@@ -42,7 +44,7 @@ balanceTxnMinAda =
         ff = someTokenValue "ff" 1
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (Value.scale 1000 (ee <> ff) <>)
-        vHash = plutusV1ValidatorHash someValidator
+        vHash = Scripts.validatorHash someValidator
 
         contract :: Contract () EmptySchema ContractError ()
         contract = do
@@ -54,7 +56,7 @@ balanceTxnMinAda =
                 constraints2 = Constraints.mustSpendScriptOutput txOutRef unitRedeemer
                     <> Constraints.mustPayToOtherScript vHash unitDatum (Value.scale 200 ee)
                 lookups2 = Constraints.unspentOutputs utxo <> Constraints.otherScript someValidator
-                utx2 = Constraints.adjustUnbalancedTx $ either (error . show) id $ Constraints.mkTx @Void lookups2 constraints2
+            utx2 <- Con.adjustUnbalancedTx $ either (error . show) id $ Constraints.mkTx @Void lookups2 constraints2
             submitTxConfirmed utx2
 
         trace = do
@@ -67,20 +69,20 @@ balanceTxnMinAda2 :: TestTree
 balanceTxnMinAda2 =
     let vA n = someTokenValue "A" n
         vB n = someTokenValue "B" n
-        mps  = MPS.mkForwardingMintingPolicy vHash
-        vL n = Value.singleton (Value.mpsSymbol $ plutusV1MintingPolicyHash mps) "L" n
+        mps  = Scripts.mkForwardingMintingPolicy vHash
+        vL n = Value.singleton (Value.mpsSymbol $ Scripts.mintingPolicyHash mps) "L" n
         options = defaultCheckOptions
             & changeInitialWalletValue w1 (<> vA 1 <> vB 2)
-        vHash = plutusV1ValidatorHash someValidator
+        vHash = Scripts.validatorHash someValidator
         payToWallet w = Constraints.mustPayToPubKey (EM.mockWalletPaymentPubKeyHash w)
-        mkTx lookups constraints = Constraints.adjustUnbalancedTx . either (error . show) id $ Constraints.mkTx @Void lookups constraints
+        mkTx lookups constraints = Con.adjustUnbalancedTx . either (error . show) id $ Constraints.mkTx @Void lookups constraints
 
         setupContract :: Contract () EmptySchema ContractError ()
         setupContract = do
             -- Make sure there is a utxo with 1 A, 1 B, and 4 ada at w2
-            submitTxConfirmed $ mkTx mempty (payToWallet w2 (vA 1 <> vB 1 <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)))
+            submitTxConfirmed =<< mkTx mempty (payToWallet w2 (vA 1 <> vB 1 <> Value.scale 2 (Ada.toValue Ledger.minAdaTxOut)))
             -- Make sure there is a UTxO with 1 B and datum () at the script
-            submitTxConfirmed $ mkTx mempty (Constraints.mustPayToOtherScript vHash unitDatum (vB 1))
+            submitTxConfirmed =<< mkTx mempty (Constraints.mustPayToOtherScript vHash unitDatum (vB 1))
             -- utxo0 @ wallet2 = 1 A, 1 B, 4 Ada
             -- utxo1 @ script  = 1 B, 2 Ada
 
@@ -95,7 +97,7 @@ balanceTxnMinAda2 =
                             <> Constraints.mustPayToOtherScript vHash unitDatum (vB 1)                                       -- 2 ada and 1 B to script
                             <> Constraints.mustPayToOtherScript vHash (Datum $ PlutusTx.toBuiltinData (0 :: Integer)) (vB 1) -- 2 ada and 1 B to script (different datum)
                             <> Constraints.mustMintValue (vL 1) -- 1 L and 2 ada to wallet2
-            submitTxConfirmed $ mkTx lookups constraints
+            submitTxConfirmed =<< mkTx lookups constraints
 
         trace = do
             void $ Trace.activateContractWallet w1 setupContract
@@ -107,7 +109,7 @@ balanceTxnMinAda2 =
 
 balanceTxnNoExtraOutput :: TestTree
 balanceTxnNoExtraOutput =
-    let vL n = Value.singleton (Ledger.plutusV1ScriptCurrencySymbol coinMintingPolicy) "coinToken" n
+    let vL n = Value.singleton (Scripts.scriptCurrencySymbol coinMintingPolicy) "coinToken" n
         mkTx lookups constraints = either (error . show) id $ Constraints.mkTx @Void lookups constraints
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
@@ -130,15 +132,15 @@ balanceTxnNoExtraOutput =
     in checkPredicate "balancing doesn't create extra output" tracePred (void trace)
 
 someAddress :: Address
-someAddress = Ledger.plutusV1ScriptAddress someValidator
+someAddress = mkValidatorAddress someValidator
 
 someValidator :: Validator
 someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
 
 {-# INLINABLE mkPolicy #-}
-mkPolicy :: () -> Ledger.ScriptContext -> Bool
+mkPolicy :: () -> P.ScriptContext -> Bool
 mkPolicy _ _ = True
 
 coinMintingPolicy :: Ledger.MintingPolicy
 coinMintingPolicy = Ledger.mkMintingPolicyScript
-    $$(PlutusTx.compile [|| MPS.wrapMintingPolicy mkPolicy ||])
+    $$(PlutusTx.compile [|| Scripts.mkUntypedMintingPolicy mkPolicy ||])

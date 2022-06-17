@@ -66,7 +66,7 @@ splitValidator :: Scripts.TypedValidator Split
 splitValidator = Scripts.mkTypedValidator @Split
     $$(PlutusTx.compile [|| validateSplit ||])
     $$(PlutusTx.compile [|| wrap ||]) where
-        wrap = Scripts.wrapValidator @SplitData @()
+        wrap = Scripts.mkUntypedValidator @SplitData @()
 
 -- BLOCK4
 

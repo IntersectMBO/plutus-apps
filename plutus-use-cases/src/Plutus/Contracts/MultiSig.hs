@@ -28,10 +28,10 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts as V
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract
 import Plutus.Contract.Typed.Tx qualified as Tx
+import Plutus.V1.Ledger.Contexts as V
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup (..), foldMap)
 
@@ -71,7 +71,7 @@ typedValidator = Scripts.mkTypedValidatorParam @MultiSig
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 
 -- | Lock some funds in a 'MultiSig' contract.
@@ -81,7 +81,7 @@ lock = endpoint @"lock" $ \(ms, vl) -> do
     let tx = Constraints.mustPayToTheScript () vl
         lookups = Constraints.typedValidatorLookups inst
     mkTxConstraints lookups tx
-        >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= void . submitUnbalancedTx
 
 -- | The @"unlock"@ endpoint, unlocking some funds with a list
 --   of signatures.
@@ -94,4 +94,4 @@ unlock = endpoint @"unlock" $ \(ms, pks) -> do
         lookups = Constraints.typedValidatorLookups inst
                 <> Constraints.unspentOutputs utx
     mkTxConstraints lookups tx
-        >>= void . submitUnbalancedTx . Constraints.adjustUnbalancedTx
+        >>= adjustUnbalancedTx >>= void . submitUnbalancedTx

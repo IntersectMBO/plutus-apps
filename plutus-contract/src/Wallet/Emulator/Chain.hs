@@ -31,12 +31,11 @@ import Data.Maybe (mapMaybe)
 import Data.Monoid (Ap (Ap))
 import Data.Traversable (for)
 import GHC.Generics (Generic)
-import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), ScriptValidationEvent, Slot (..),
+import Ledger (Block, Blockchain, CardanoTx (..), OnChainTx (..), Params, ScriptValidationEvent, Slot (..),
                SomeCardanoApiTx (SomeTx), Tx (..), TxId, TxOut (txOutValue), Value, eitherTx, getCardanoTxId,
                mergeCardanoTxWith, onCardanoTx, txInputRef)
 import Ledger.Index qualified as Index
 import Ledger.Interval qualified as Interval
-import Ledger.TimeSlot (SlotConfig)
 import Ledger.Validation qualified as Validation
 import Plutus.Contract.Util (uncurry3)
 import Prettyprinter
@@ -79,7 +78,7 @@ data ChainControlEffect r where
 data ChainEffect r where
     QueueTx :: CardanoTx -> ChainEffect ()
     GetCurrentSlot :: ChainEffect Slot
-    GetSlotConfig :: ChainEffect SlotConfig
+    GetParams :: ChainEffect Params
 
 -- | Make a new block
 processBlock :: Member ChainControlEffect effs => Eff effs Block
@@ -92,23 +91,23 @@ modifySlot = send . ModifySlot
 queueTx :: Member ChainEffect effs => CardanoTx -> Eff effs ()
 queueTx tx = send (QueueTx tx)
 
-getSlotConfig :: Member ChainEffect effs => Eff effs SlotConfig
-getSlotConfig = send GetSlotConfig
+getParams :: Member ChainEffect effs => Eff effs Params
+getParams = send GetParams
 
 getCurrentSlot :: Member ChainEffect effs => Eff effs Slot
 getCurrentSlot = send GetCurrentSlot
 
 type ChainEffs = '[State ChainState, LogMsg ChainEvent]
 
-handleControlChain :: Members ChainEffs effs => SlotConfig -> ChainControlEffect ~> Eff effs
-handleControlChain slotCfg = \case
+handleControlChain :: Members ChainEffs effs => Params -> ChainControlEffect ~> Eff effs
+handleControlChain params = \case
     ProcessBlock -> do
         st <- get
         let pool  = st ^. txPool
             slot  = st ^. currentSlot
             idx   = st ^. index
             ValidatedBlock block events rest =
-                validateBlock slotCfg slot idx pool
+                validateBlock params slot idx pool
 
         let st' = st & txPool .~ rest
                      & addBlock block
@@ -125,11 +124,11 @@ logEvent e = case e of
     TxnValidationFail{} -> logWarn e
     TxnValidate{}       -> logInfo e
 
-handleChain :: (Members ChainEffs effs) => SlotConfig -> ChainEffect ~> Eff effs
-handleChain slotConfig = \case
+handleChain :: (Members ChainEffs effs) => Params -> ChainEffect ~> Eff effs
+handleChain params = \case
     QueueTx tx     -> modify $ over txPool (addTxToPool tx)
     GetCurrentSlot -> gets _currentSlot
-    GetSlotConfig  -> pure slotConfig
+    GetParams      -> pure params
 
 -- | The result of validating a block.
 data ValidatedBlock = ValidatedBlock
@@ -145,8 +144,8 @@ data ValidatedBlock = ValidatedBlock
 -- | Validate a block given the current slot and UTxO index, returning the valid
 --   transactions, success/failure events, remaining transactions and the
 --   updated UTxO set.
-validateBlock :: SlotConfig -> Slot -> Index.UtxoIndex -> TxPool -> ValidatedBlock
-validateBlock slotCfg slot@(Slot s) idx txns =
+validateBlock :: Params -> Slot -> Index.UtxoIndex -> TxPool -> ValidatedBlock
+validateBlock params slot@(Slot s) idx txns =
     let
         -- Select those transactions that can be validated in the
         -- current slot
@@ -154,8 +153,8 @@ validateBlock slotCfg slot@(Slot s) idx txns =
 
         -- Validate eligible transactions, updating the UTXO index each time
         processed =
-            flip S.evalState (Index.ValidationCtx idx slotCfg) $ for eligibleTxns $ \tx -> do
-                (err, events_) <- validateEm slot cUtxoIndex tx
+            flip S.evalState (Index.ValidationCtx idx params) $ for eligibleTxns $ \tx -> do
+                (err, events_) <- validateEm params slot cUtxoIndex tx
                 pure (tx, err, events_)
 
         -- The new block contains all transaction that were validated
@@ -174,7 +173,7 @@ validateBlock slotCfg slot@(Slot s) idx txns =
         nextSlot = Slot (s + 1)
         events   = (uncurry3 (mkValidationEvent idx) <$> processed) ++ [SlotAdd nextSlot]
 
-        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex idx
+        cUtxoIndex = either (error . show) id $ Validation.fromPlutusIndex params idx
 
     in ValidatedBlock block events rest
 
@@ -198,22 +197,23 @@ mkValidationEvent idx t result events =
 -- | Validate a transaction in the current emulator state.
 validateEm
     :: S.MonadState Index.ValidationCtx m
-    => Slot
+    => Params
+    -> Slot
     -> Validation.UTxO Index.EmulatorEra
     -> CardanoTx
     -> m (Maybe Index.ValidationErrorInPhase, [ScriptValidationEvent])
-validateEm h cUtxoIndex txn = do
+validateEm params h cUtxoIndex txn = do
     ctx@(Index.ValidationCtx idx _) <- S.get
     let ((e, idx'), events) = txn & mergeCardanoTxWith
             (\tx -> Index.runValidation (Index.validateTransaction h tx) ctx)
-            (\tx -> ((validateL h cUtxoIndex tx, idx), []))
+            (\tx -> ((validateL params h cUtxoIndex tx, idx), []))
             (\((e1, utxo), sve1) ((e2, _), sve2) -> ((e1 <|> e2, utxo), sve1 ++ sve2))
     _ <- S.put ctx{Index.vctxIndex=idx'}
     pure (e, events)
 
-validateL :: Slot -> Validation.UTxO Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
-validateL slot idx (SomeTx tx AlonzoEraInCardanoMode) = Validation.hasValidationErrors (fromIntegral slot) idx tx
-validateL _    _   _                                  = Nothing
+validateL :: Params -> Slot -> Validation.UTxO Index.EmulatorEra -> SomeCardanoApiTx -> Maybe Index.ValidationErrorInPhase
+validateL params slot idx (SomeTx tx AlonzoEraInCardanoMode) = Validation.hasValidationErrors params (fromIntegral slot) idx tx
+validateL _      _    _   _                                  = Nothing
 
 -- | Adds a block to ChainState, without validation.
 addBlock :: Block -> ChainState -> ChainState

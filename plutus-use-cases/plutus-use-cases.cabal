@@ -70,6 +70,7 @@ library
                  -Wredundant-constraints -Widentities
                  -- See Plutus Tx readme
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+
     build-depends:
         base -any,
         aeson -any,
@@ -78,11 +79,13 @@ library
         mtl -any,
         plutus-core >= 1.0.0,
         plutus-tx >= 1.0.0,
+        plutus-tx-plugin >= 1.0.0,
         plutus-contract -any,
         playground-common -any,
         plutus-ledger -any,
         plutus-ledger-api >= 1.0.0,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         template-haskell -any,
         lens -any,
         text -any,
@@ -148,12 +151,12 @@ test-suite plutus-use-cases-test
         plutus-ledger -any,
         plutus-ledger-api >= 1.0.0,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         plutus-use-cases -any,
         playground-common -any
     build-depends:
         base >=4.9 && <5,
         bytestring -any,
-        cardano-crypto-class -any,
         containers -any,
         data-default -any,
         freer-extras -any,
@@ -212,7 +215,6 @@ executable plutus-use-cases-scripts
     build-depends:
         base >= 4.9 && <5,
         bytestring -any,
-        cardano-crypto-class -any,
         containers -any,
         data-default -any,
         freer-extras -any,
@@ -235,6 +237,7 @@ executable plutus-use-cases-scripts
         plutus-ledger-constraints -any,
         plutus-use-cases -any,
         plutus-contract-certification -any,
+        plutus-script-utils -any,
         optparse-applicative -any,
         cardano-api -any
 

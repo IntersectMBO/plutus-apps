@@ -44,23 +44,25 @@ import Data.Map qualified as Map
 import GHC.Generics (Generic)
 import Prettyprinter (Pretty)
 
-import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint, endpoint,
-                        logInfo, mapError, mkTxConstraints, selectList, submitUnbalancedTx, type (.\/), utxosAt)
+import Plutus.Contract (AsContractError (_ContractError), Contract, ContractError, Endpoint, HasEndpoint,
+                        adjustUnbalancedTx, endpoint, logInfo, mapError, mkTxConstraints, selectList,
+                        submitUnbalancedTx, type (.\/), utxosAt)
 import Plutus.Contract.Constraints (ScriptLookups, TxConstraints)
 import PlutusTx qualified
 
-import Ledger (Address, PaymentPubKeyHash, ValidatorHash)
+import Ledger (PaymentPubKeyHash)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraints
-import Ledger.Contexts qualified as V
-import Ledger.Scripts qualified
 import Ledger.Tx (CardanoTx)
-import Ledger.Typed.Scripts (ValidatorTypes)
-import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Typed.Scripts (DatumType, RedeemerType, ValidatorTypes)
+import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
 import Ledger.Value (TokenName, Value)
 import Ledger.Value qualified as Value
 import Plutus.Contract.Typed.Tx qualified as TypedTx
 import Plutus.Contracts.Currency qualified as Currency
+import Plutus.Script.Utils.V1.Scripts qualified as PV1
+import Plutus.V1.Ledger.Api (Address, ValidatorHash)
+import Plutus.V1.Ledger.Contexts qualified as PV1
 
 import Prettyprinter.Extras (PrettyShow (PrettyShow))
 
@@ -123,21 +125,21 @@ accountToken :: Account -> Value
 accountToken (Account currency) = Value.assetClassValue currency 1
 
 {-# INLINEABLE validate #-}
-validate :: Account -> () -> () -> V.ScriptContext -> Bool
-validate account _ _ ptx = V.valueSpent (V.scriptContextTxInfo ptx) `Value.geq` accountToken account
+validate :: Account -> () -> () -> PV1.ScriptContext -> Bool
+validate account _ _ ptx = PV1.valueSpent (PV1.scriptContextTxInfo ptx) `Value.geq` accountToken account
 
 typedValidator :: Account -> Scripts.TypedValidator TokenAccount
 typedValidator = Scripts.mkTypedValidatorParam @TokenAccount
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 address :: Account -> Address
 address = Scripts.validatorAddress . typedValidator
 
 validatorHash :: Account -> ValidatorHash
-validatorHash = Ledger.Scripts.plutusV1ValidatorHash . Scripts.validatorScript . typedValidator
+validatorHash = PV1.validatorHash . Scripts.validatorScript . typedValidator
 
 -- | A transaction that pays the given value to the account
 payTx
@@ -162,7 +164,7 @@ pay account vl = do
         <> show account
     mapError (review _TAContractError) $
           mkTxConstraints (Constraints.typedValidatorLookups inst) (payTx vl)
-      >>= submitUnbalancedTx . Constraints.adjustUnbalancedTx
+      >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | Create a transaction that spends all outputs belonging to the 'Account'.
 redeemTx :: forall w s e.
@@ -201,8 +203,7 @@ redeem
   -> Contract w s e CardanoTx
 redeem pk account = mapError (review _TokenAccountError) $ do
     (constraints, lookups) <- redeemTx account pk
-    utx <- mkTxConstraints lookups constraints
-    submitUnbalancedTx $ Constraints.adjustUnbalancedTx utx
+    mkTxConstraints lookups constraints >>= adjustUnbalancedTx >>= submitUnbalancedTx
 
 -- | @balance account@ returns the value of all unspent outputs that can be
 --   unlocked with @accountToken account@

@@ -22,7 +22,6 @@ import Control.Monad
 import Data.Data
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Ledger (minAdaTxOut)
 import Ledger.Ada qualified as Ada
 import Ledger.Value (TokenName)
 import Plutus.Contract.Test hiding (not)
@@ -164,12 +163,9 @@ instance ContractModel PrismModel where
         wait waitSlots
         case cmd of
             Revoke w  -> do
-              issued <- use (isIssued w)
-              when (issued == Issued) $ deposit mirror minAdaTxOut
               isIssued w %= doRevoke
             Issue w   -> do
               wait 1
-              withdraw mirror minAdaTxOut
               isIssued w .= Issued
             Call w    -> do
               iss  <- (== Issued)   <$> viewContractState (isIssued w)

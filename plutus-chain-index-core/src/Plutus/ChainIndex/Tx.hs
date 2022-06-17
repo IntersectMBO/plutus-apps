@@ -43,15 +43,14 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
+import Ledger (Tx (..))
 import Ledger.Address (Address)
 import Ledger.Blockchain (OnChainTx (..))
-import Ledger.Contexts (TxId, TxOut (txOutAddress), TxOutRef (TxOutRef))
 import Ledger.Scripts (Datum, DatumHash, Redeemer, RedeemerHash, Script, ScriptHash, redeemerHash)
 import Ledger.Slot (SlotRange)
-import Ledger.Tx (Certificate (certificateRedeemer), SomeCardanoApiTx,
-                  Tx (Tx, txCertificates, txCollateral, txData, txInputs, txMintingScripts, txOutputs, txScripts, txValidRange, txWithdrawals),
-                  TxIn, TxInput (txInputType), TxInputType (TxConsumeScriptAddress), Withdrawal (withdrawalRedeemer),
-                  fillTxInputWitnesses, txId)
+import Ledger.Tx (Certificate (certificateRedeemer), SomeCardanoApiTx, TxId, TxIn, TxInput (txInputType),
+                  TxInputType (TxConsumeScriptAddress), TxOut (txOutAddress), TxOutRef (TxOutRef),
+                  Withdrawal (withdrawalRedeemer), fillTxInputWitnesses, txId)
 import Prettyprinter
 
 -- | List of outputs of a transaction. There are no outputs if the transaction

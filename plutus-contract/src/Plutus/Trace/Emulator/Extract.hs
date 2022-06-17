@@ -23,10 +23,11 @@ import Data.Monoid (Sum (..))
 import Flat (flat)
 import Ledger.Constraints.OffChain (UnbalancedTx (..))
 import Ledger.Index (ScriptValidationEvent (..), ValidatorMode (..), getScript)
+import Ledger.Params (Params (..))
 import Ledger.TimeSlot (SlotConfig)
 import Plutus.Contract.Request (MkTxLog)
 import Plutus.Contract.Wallet (export)
-import Plutus.Trace.Emulator (EmulatorConfig (_slotConfig), EmulatorTrace)
+import Plutus.Trace.Emulator (EmulatorConfig (_params), EmulatorTrace)
 import Plutus.Trace.Emulator qualified as Trace
 import Plutus.V1.Ledger.Api (ExBudget (..))
 import Plutus.V1.Ledger.Scripts (Script (..))
@@ -68,7 +69,7 @@ writeScriptsTo
     -> IO (Sum Int64, ExBudget) -- Total size and 'ExBudget' of extracted scripts
 writeScriptsTo ScriptsConfig{scPath, scCommand} prefix trace emulatorCfg = do
     let stream = Trace.runEmulatorStream emulatorCfg trace
-        slotCfg = _slotConfig emulatorCfg
+        slotCfg = pSlotConfig $ _params emulatorCfg
         getEvents :: Folds.EmulatorEventFold a -> a
         getEvents theFold = S.fst' $ run $ foldEmulatorStreamM (L.generalize theFold) stream
     createDirectoryIfMissing True scPath

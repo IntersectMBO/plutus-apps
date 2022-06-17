@@ -23,9 +23,8 @@ import Data.Foldable (traverse_)
 import Data.Functor (void)
 import Data.Maybe (listToMaybe)
 import GHC.Generics (Generic)
-import Ledger (Block, CardanoTx, Slot (..))
+import Ledger (Block, CardanoTx, Params, Slot (..))
 import Ledger.Index qualified as Index
-import Ledger.TimeSlot (SlotConfig)
 import Wallet.Emulator.Chain qualified as EC
 
 type TxPool = [CardanoTx]
@@ -83,15 +82,15 @@ handleControlChain ::
      , Member (LogMsg EC.ChainEvent) effs
      , LastMember m effs
      , MonadIO m )
-  => SlotConfig -> EC.ChainControlEffect ~> Eff effs
-handleControlChain slotCfg = \case
+  => Params -> EC.ChainControlEffect ~> Eff effs
+handleControlChain params = \case
     EC.ProcessBlock -> do
         st <- get
         let pool  = st ^. txPool
             slot  = st ^. currentSlot
             idx   = st ^. index
             EC.ValidatedBlock block events rest =
-                EC.validateBlock slotCfg slot idx pool
+                EC.validateBlock params slot idx pool
 
         let st' = st & txPool .~ rest
                      & tip    ?~ block
@@ -106,12 +105,12 @@ handleControlChain slotCfg = \case
 
 handleChain ::
      ( Member (State MockNodeServerChainState) effs )
-  => SlotConfig
+  => Params
   -> EC.ChainEffect ~> Eff effs
-handleChain slotCfg = \case
+handleChain params = \case
     EC.QueueTx tx     -> modify $ over txPool (addTxToPool tx)
     EC.GetCurrentSlot -> gets _currentSlot
-    EC.GetSlotConfig  -> pure slotCfg
+    EC.GetParams      -> pure params
 
 logEvent :: Member (LogMsg EC.ChainEvent) effs => EC.ChainEvent -> Eff effs ()
 logEvent e = case e of

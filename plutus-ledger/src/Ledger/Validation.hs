@@ -30,26 +30,27 @@ module Ledger.Validation(
   -- * Conversion from Plutus types
   fromPlutusTx,
   fromPlutusIndex,
+  fromPlutusTxOut,
+  fromPlutusTxOutUnsafe,
+  fromPlutusTxOutRef,
   -- * Lenses
   ledgerEnv,
   memPoolState,
   currentBlock,
   previousBlocks,
   -- * Etc.
-  emulatorGlobals
+  emulatorGlobals,
+  alonzoGenesisDefaults,
   ) where
 
-import Cardano.Api.Shelley (ExecutionUnitPrices (ExecutionUnitPrices, priceExecutionMemory, priceExecutionSteps),
-                            ExecutionUnits (ExecutionUnits, executionMemory, executionSteps),
-                            ShelleyBasedEra (ShelleyBasedEraAlonzo), makeSignedTransaction, shelleyGenesisDefaults,
+import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), makeSignedTransaction, shelleyGenesisDefaults,
                             toShelleyTxId, toShelleyTxOut)
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Alonzo (TxBody, TxOut)
-import Cardano.Ledger.Alonzo.Genesis (prices)
 import Cardano.Ledger.Alonzo.Genesis qualified as Alonzo
-import Cardano.Ledger.Alonzo.Language qualified as Alonzo
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
+import Cardano.Ledger.Alonzo.PParams (PParams' (..), retractPP)
 import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits), unCostModels)
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
@@ -58,13 +59,12 @@ import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
 import Cardano.Ledger.BaseTypes (Globals (..), mkTxIxPartial)
-import Cardano.Ledger.BaseTypes qualified as BT
 import Cardano.Ledger.Core (PParams, Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, NewEpochState, TxId,
-                                   TxIn (TxIn), UTxO (UTxO), Validated, epochInfo, esPp, mkShelleyGlobals, nesEs)
+import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, TxId, TxIn (TxIn), UTxO (UTxO),
+                                   Validated, epochInfo, mkShelleyGlobals)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Cardano.Ledger.Shelley.LedgerState (lsUTxOState, smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), smartUTxOState)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (mkSlotLength)
@@ -75,21 +75,22 @@ import Data.Bitraversable (bitraverse)
 import Data.Default (def)
 import Data.Functor.Identity (runIdentity)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.Set qualified as Set
 import GHC.Records (HasField (..))
 import Ledger.Ada qualified as P
 import Ledger.Address qualified as P
-import Ledger.Index (EmulatorEra)
-import Ledger.Index qualified as P
+import Ledger.Index.Internal (EmulatorEra)
+import Ledger.Index.Internal qualified as P
+import Ledger.Params qualified as P
+import Ledger.TimeSlot qualified as P
 import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Value qualified as P
-import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Scripts qualified as P
 import PlutusCore qualified as Plutus
+import PlutusPrelude (Natural)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.ErrorCodes (checkHasFailedError)
 
@@ -176,140 +177,132 @@ makeBlock state =
 
 {-| Initial ledger state for a distribution
 -}
-initialState :: EmulatedLedgerState
-initialState = EmulatedLedgerState
-  { _ledgerEnv = C.Ledger.mkMempoolEnv emulatorNes 0
-  , _memPoolState = C.Ledger.mkMempoolState emulatorNes
+initialState :: P.Params -> EmulatedLedgerState
+initialState params = EmulatedLedgerState
+  { _ledgerEnv = C.Ledger.LedgerEnv
+      { C.Ledger.ledgerSlotNo = 0
+      , C.Ledger.ledgerIx = minBound
+      , C.Ledger.ledgerPp = C.Api.toLedgerPParams ShelleyBasedEraAlonzo $ P.pProtocolParams params
+      , C.Ledger.ledgerAccount = C.Ledger.AccountState (Coin 0) (Coin 0)
+      }
+  , _memPoolState = LedgerState
+    { lsUTxOState = smartUTxOState (UTxO mempty) (Coin 0) (Coin 0) def
+    , lsDPState = C.Ledger.DPState def def
+    }
   , _currentBlock = []
   , _previousBlocks = []
   }
 
-utxoEnv :: SlotNo -> C.Ledger.UtxoEnv EmulatorEra
-utxoEnv slotNo = C.Ledger.UtxoEnv slotNo emulatorPParams mempty (C.Ledger.GenDelegs mempty)
+
+utxoEnv :: P.Params -> SlotNo -> C.Ledger.UtxoEnv EmulatorEra
+utxoEnv params slotNo = C.Ledger.UtxoEnv slotNo (emulatorPParams params) mempty (C.Ledger.GenDelegs mempty)
 
 applyTx ::
+  P.Params ->
   EmulatedLedgerState ->
   Tx EmulatorEra ->
   Either P.ValidationError (EmulatedLedgerState, Validated (Tx EmulatorEra))
-applyTx oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
-  (newMempool, vtx) <- first (P.CardanoLedgerValidationError . show) (C.Ledger.applyTx emulatorGlobals _ledgerEnv _memPoolState tx)
+applyTx params oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
+  (newMempool, vtx) <- first (P.CardanoLedgerValidationError . show) (C.Ledger.applyTx (emulatorGlobals params) _ledgerEnv _memPoolState tx)
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
 
-emulatorNetworkId :: C.Api.NetworkId
-emulatorNetworkId = C.Api.Testnet $ C.Api.NetworkMagic 1
-
--- TODO: the larger maxTxSize should only be used when needed.
-genesisDefaultsWithBigMaxTxSize :: C.Ledger.ShelleyGenesis EmulatorEra
-genesisDefaultsWithBigMaxTxSize = shelleyGenesisDefaults {
-  C.Ledger.sgProtocolParams = (C.Ledger.sgProtocolParams shelleyGenesisDefaults)
-      { -- Is is mandatory to specify the protocol version in order to use
-        -- builtin functions in a Plutus script. Protocol major version 5 is
-        -- for Alonzo. If omitted, the validation of a transaction will fail
-        -- with something like: "Forbidden builtin function".
-        C.Ledger._protocolVersion = BT.ProtVer 5 0
-      , C.Ledger._maxTxSize = 256 * 1024
-      }
-}
+genesisDefaultsFromParams :: P.Params -> C.Ledger.ShelleyGenesis EmulatorEra
+genesisDefaultsFromParams P.Params { P.pSlotConfig, P.pProtocolParams, P.pNetworkId } = shelleyGenesisDefaults
+  { C.Ledger.sgSystemStart = P.posixTimeToUTCTime $ P.scSlotZeroTime pSlotConfig
+  , C.Ledger.sgNetworkMagic = case pNetworkId of C.Api.Testnet (C.Api.NetworkMagic nm) -> nm; _ -> 0
+  , C.Ledger.sgNetworkId = case pNetworkId of C.Api.Testnet _ -> C.Ledger.Testnet; C.Api.Mainnet -> C.Ledger.Mainnet
+  , C.Ledger.sgProtocolParams = retractPP (Coin 0) $ C.Api.toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
+  }
 
 {-| A sensible default 'Globals' value for the emulator
 -}
-emulatorGlobals :: Globals
-emulatorGlobals = mkShelleyGlobals
-  genesisDefaultsWithBigMaxTxSize
-  (fixedEpochInfo (EpochSize 432000) (mkSlotLength 8)) -- Not sure about these values, probably not relevant for the emulator.
-  2 -- maxMajorPV (maximum major protocol version)
+emulatorGlobals :: P.Params -> Globals
+emulatorGlobals params@P.Params { P.pSlotConfig, P.pProtocolParams } = mkShelleyGlobals
+  (genesisDefaultsFromParams params)
+  (fixedEpochInfo (EpochSize 432000) (mkSlotLength $ P.posixTimeToNominalDiffTime $ P.POSIXTime $ P.scSlotLength pSlotConfig))
+  (fst $ C.Api.protocolParamProtocolVersion pProtocolParams)
 
-emulatorNes :: NewEpochState EmulatorEra
-emulatorNes = C.Ledger.initialState genesisDefaultsWithBigMaxTxSize alonzoGenesisDefaults {
-  prices = fromMaybe (error "emulatorNes: invalid ExecutionUnitPrices") (C.Api.toAlonzoPrices alonzoGenesisDefaultExecutionPrices)
-}
-  where
-    alonzoGenesisDefaultExecutionPrices :: C.Api.ExecutionUnitPrices
-    alonzoGenesisDefaultExecutionPrices =
-      C.Api.ExecutionUnitPrices {
-         C.Api.priceExecutionSteps  = 721 % 10000000,
-         C.Api.priceExecutionMemory = 577 % 10000
-      }
+emulatorPParams :: P.Params -> PParams EmulatorEra
+emulatorPParams P.Params { P.pProtocolParams } = C.Api.toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
 
-emulatorPParams :: PParams EmulatorEra
-emulatorPParams = esPp $ nesEs emulatorNes
-
-emulatorProtocolParameters :: C.Api.ProtocolParameters
-emulatorProtocolParameters = C.Api.fromLedgerPParams ShelleyBasedEraAlonzo emulatorPParams
-
-hasValidationErrors :: SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
-hasValidationErrors slotNo utxo (C.Api.ShelleyTx _ tx) =
+hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
+hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
   case res of
     Left e  -> Just (P.Phase1, e)
     Right _ -> Nothing
   where
-    state = setSlot slotNo $ setUtxo utxo initialState
+    state = setSlot slotNo $ setUtxo utxo $ initialState params
     res = do
-      vtx <- first (P.CardanoLedgerValidationError . show) (constructValidated emulatorGlobals (utxoEnv slotNo) (lsUTxOState $ _memPoolState state) tx)
-      applyTx state vtx
+      vtx <- first (P.CardanoLedgerValidationError . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (lsUTxOState (_memPoolState state)) tx)
+      applyTx params state vtx
 
 
-getTxExUnits :: UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
-getTxExUnits utxo (C.Api.ShelleyTx _ tx) =
-  case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits emulatorPParams tx utxo ei ss costmdls of
+getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
+getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
+  case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
     Left e      -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . show $ e
     Right rdmrs -> traverse (either toCardanoLedgerError Right) rdmrs
   where
-    ss = systemStart emulatorGlobals
-    ei = epochInfo emulatorGlobals
-    costmdls = array (minBound, maxBound) . Map.toList $ unCostModels $ getField @"_costmdls" emulatorPParams
+    eg = emulatorGlobals params
+    ss = systemStart eg
+    ei = epochInfo eg
+    costmdls = array (minBound, maxBound) . Map.toList $ unCostModels $ getField @"_costmdls" $ emulatorPParams params
     -- Failing transactions throw a checkHasFailedError error, but we don't want to deal with those yet.
     -- We might be able to do that in the future.
-    -- But for now just return a huge execution budget so it will run later where we do handle failing transactions.
+    -- But for now just return a zero execution cost so it will run later where we do handle failing transactions.
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs@(_:_)) | last logs == Builtins.fromBuiltin checkHasFailedError =
-      Right $ ExUnits 10000000 10000000000
+      Right $ ExUnits 0 0
     toCardanoLedgerError (C.Ledger.ValidationFailedV1 (P.CekError _) logs) =
       Left $ Left (P.Phase2, P.ScriptFailure (P.EvaluationError logs "CekEvaluationFailure"))
     toCardanoLedgerError e = Left $ Left (P.Phase2, P.CardanoLedgerValidationError (show e))
 
 makeTransactionBody
-  :: UTxO EmulatorEra
+  :: P.Params
+  -> UTxO EmulatorEra
   -> C.Api.TxBodyContent C.Api.BuildTx C.Api.AlonzoEra
   -> Either CardanoLedgerError (C.Api.TxBody C.Api.AlonzoEra)
-makeTransactionBody utxo txBodyContent = do
+makeTransactionBody params utxo txBodyContent = do
   txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody mempty txBodyContent
-  exUnits <- getTxExUnits utxo txTmp
+  exUnits <- getTxExUnits params utxo txTmp
   first Right $ P.makeTransactionBody exUnits txBodyContent
 
 evaluateTransactionFee
-  :: UTxO EmulatorEra
+  :: P.Params
+  -> UTxO EmulatorEra
   -> [P.PaymentPubKeyHash]
   -> P.Tx
   -> Either CardanoLedgerError P.Value
-evaluateTransactionFee utxo requiredSigners tx = do
-  txBodyContent <- first Right $ plutusTxToTxBodyContent requiredSigners tx
+evaluateTransactionFee params utxo requiredSigners tx = do
+  txBodyContent <- first Right $ plutusTxToTxBodyContent params requiredSigners tx
   let nkeys = C.Api.estimateTransactionKeyWitnessCount txBodyContent
-  txBody <- makeTransactionBody utxo txBodyContent
-  case C.Api.evaluateTransactionFee emulatorProtocolParameters txBody nkeys 0 of
+  txBody <- makeTransactionBody params utxo txBodyContent
+  case C.Api.evaluateTransactionFee (P.pProtocolParams params) txBody nkeys 0 of
     C.Api.Lovelace fee -> pure $ P.lovelaceValueOf fee
 
-evaluateMinLovelaceOutput :: TxOut EmulatorEra -> P.Value
-evaluateMinLovelaceOutput = toPlutusValue . C.Ledger.evaluateMinLovelaceOutput emulatorPParams
-
-toPlutusValue :: Coin -> P.Value
-toPlutusValue (Coin c) = P.lovelaceValueOf c
+evaluateMinLovelaceOutput :: P.Params -> TxOut EmulatorEra -> P.Ada
+evaluateMinLovelaceOutput params = toPlutusValue . C.Ledger.evaluateMinLovelaceOutput (emulatorPParams params)
+  where
+    toPlutusValue :: Coin -> P.Ada
+    toPlutusValue (Coin c) = P.lovelaceOf c
 
 fromPlutusTx
-  :: UTxO EmulatorEra
+  :: P.Params
+  -> UTxO EmulatorEra
   -> [P.PaymentPubKeyHash]
   -> P.Tx
   -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
-fromPlutusTx utxo requiredSigners tx = do
-  txBodyContent <- first Right $ plutusTxToTxBodyContent requiredSigners tx
-  makeSignedTransaction [] <$> makeTransactionBody utxo txBodyContent
+fromPlutusTx params utxo requiredSigners tx = do
+  txBodyContent <- first Right $ plutusTxToTxBodyContent params requiredSigners tx
+  makeSignedTransaction [] <$> makeTransactionBody params utxo txBodyContent
 
 plutusTxToTxBodyContent
-  :: [P.PaymentPubKeyHash]
+  :: P.Params
+  -> [P.PaymentPubKeyHash]
   -> P.Tx
   -> Either P.ToCardanoError (C.Api.TxBodyContent C.Api.BuildTx C.Api.AlonzoEra)
-plutusTxToTxBodyContent requiredSigners =
-  P.toCardanoTxBodyContent requiredSigners (Just emulatorProtocolParameters) emulatorNetworkId
+plutusTxToTxBodyContent params requiredSigners =
+  P.toCardanoTxBodyContent requiredSigners (Just $ P.pProtocolParams params) (P.pNetworkId params)
 
 getRequiredSigners :: C.Api.Tx C.Api.AlonzoEra -> [P.PaymentPubKeyHash]
 getRequiredSigners (C.Api.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =
@@ -327,9 +320,9 @@ addSignature privKey (C.Api.ShelleyTx shelleyBasedEra (ValidatedTx body wits isV
       C.Api.ShelleyKeyWitness _ wit -> Set.singleton wit
       _                             -> Set.empty
 
-fromPlutusIndex :: P.UtxoIndex -> Either CardanoLedgerError (UTxO EmulatorEra)
-fromPlutusIndex (P.UtxoIndex m) = first Right $
-  UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef fromPlutusTxOut) (Map.toList m)
+fromPlutusIndex :: P.Params -> P.UtxoIndex -> Either CardanoLedgerError (UTxO EmulatorEra)
+fromPlutusIndex params (P.UtxoIndex m) = first Right $
+  UTxO . Map.fromList <$> traverse (bitraverse fromPlutusTxOutRef (fromPlutusTxOutUnsafe params)) (Map.toList m)
 
 fromPlutusTxOutRef :: P.TxOutRef -> Either P.ToCardanoError (TxIn StandardCrypto)
 fromPlutusTxOutRef (P.TxOutRef txId i) = TxIn <$> fromPlutusTxId txId <*> pure (mkTxIxPartial i)
@@ -337,8 +330,13 @@ fromPlutusTxOutRef (P.TxOutRef txId i) = TxIn <$> fromPlutusTxId txId <*> pure (
 fromPlutusTxId :: P.TxId -> Either P.ToCardanoError (TxId StandardCrypto)
 fromPlutusTxId = fmap toShelleyTxId . P.toCardanoTxId
 
-fromPlutusTxOut :: P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
-fromPlutusTxOut = fmap (toShelleyTxOut ShelleyBasedEraAlonzo) . P.toCardanoTxOut emulatorNetworkId P.toCardanoTxOutDatumHash
+fromPlutusTxOut :: P.Params -> P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
+fromPlutusTxOut params = fmap (toShelleyTxOut ShelleyBasedEraAlonzo) . P.toCardanoTxOut (P.pNetworkId params) P.toCardanoTxOutDatumHash
+
+
+-- | Like 'fromPlutusTxOut', but ignores the check for zeros in txOuts.
+fromPlutusTxOutUnsafe :: P.Params -> P.TxOut -> Either P.ToCardanoError (TxOut EmulatorEra)
+fromPlutusTxOutUnsafe params = fmap (toShelleyTxOut ShelleyBasedEraAlonzo) . P.toCardanoTxOutUnsafe (P.pNetworkId params) P.toCardanoTxOutDatumHash
 
 fromPaymentPrivateKey :: Crypto.XPrv -> TxBody EmulatorEra -> C.Api.KeyWitness C.Api.AlonzoEra
 fromPaymentPrivateKey xprv txBody
@@ -360,9 +358,9 @@ alonzoGenesisDefaults =
                  Just costModelParams ->
                    if Alonzo.isCostModelParamsWellFormed costModelParams
                    then
-                     case Alonzo.mkCostModel Alonzo.PlutusV1 costModelParams of
+                     case Alonzo.mkCostModel PlutusV1 costModelParams of
                        Left err -> error $ "alonzoGenesisDefaults: " ++ err
-                       Right m  -> Alonzo.CostModels $ Map.singleton Alonzo.PlutusV1 m
+                       Right m  -> Alonzo.CostModels $ Map.singleton PlutusV1 m
                    else error "alonzoGenesisDefaults: defaultCostModel is invalid"
                  Nothing ->
                    error "alonzoGenesisDefaults: Could not extract cost model \
@@ -383,25 +381,25 @@ alonzoGenesisDefaults =
        , Alonzo.maxCollateralInputs  = alonzoGenesisDefaultMaxCollateralInputs
        }
  where
-  alonzoGenesisDefaultExecutionPrices :: ExecutionUnitPrices
+  alonzoGenesisDefaultExecutionPrices :: C.Api.ExecutionUnitPrices
   alonzoGenesisDefaultExecutionPrices =
-      ExecutionUnitPrices {
-         priceExecutionSteps  = 1 % 10,
-         priceExecutionMemory = 1 % 10
+      C.Api.ExecutionUnitPrices {
+         C.Api.priceExecutionSteps  = 1 % 10,
+         C.Api.priceExecutionMemory = 1 % 10
       }
 
-  alonzoGenesisDefaultMaxTxExecutionUnits :: ExecutionUnits
+  alonzoGenesisDefaultMaxTxExecutionUnits :: C.Api.ExecutionUnits
   alonzoGenesisDefaultMaxTxExecutionUnits =
-      ExecutionUnits {
-        executionSteps  = 500_000_000_000,
-        executionMemory = 500_000_000_000
+      C.Api.ExecutionUnits {
+        C.Api.executionSteps  = 500_000_000_000,
+        C.Api.executionMemory = 500_000_000_000
       }
 
-  alonzoGenesisDefaultMaxBlockExecutionUnits :: ExecutionUnits
+  alonzoGenesisDefaultMaxBlockExecutionUnits :: C.Api.ExecutionUnits
   alonzoGenesisDefaultMaxBlockExecutionUnits =
-      ExecutionUnits {
-        executionSteps  = 500_000_000_000,
-        executionMemory = 500_000_000_000
+      C.Api.ExecutionUnits {
+        C.Api.executionSteps  = 500_000_000_000,
+        C.Api.executionMemory = 500_000_000_000
       }
 
   alonzoGenesisDefaultMaxValueSize :: Natural

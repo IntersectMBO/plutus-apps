@@ -48,7 +48,7 @@ module Ledger.Constraints.OffChain(
     , missingValueSpent
     ) where
 
-import Control.Lens (At (at), makeLensesFor, over, view, (%=), (.=), (<>=))
+import Control.Lens (At (at), alaf, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
@@ -56,6 +56,9 @@ import Control.Monad.State (MonadState (get, put), execStateT, gets)
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (traverse_)
+import Data.Functor ((<&>))
+import Data.Functor.Compose (Compose (Compose))
+import Data.List (elemIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.OpenApi.Schema qualified as OpenApi
@@ -68,7 +71,7 @@ import PlutusTx.Lattice (BoundedMeetSemiLattice (top), JoinSemiLattice ((\/)), M
 import PlutusTx.Numeric qualified as N
 
 import Data.Semigroup (First (First, getFirst))
-import Ledger qualified
+import Data.Set (Set)
 import Ledger.Ada qualified as Ada
 import Ledger.Address (PaymentPubKey (PaymentPubKey), PaymentPubKeyHash (PaymentPubKeyHash), StakePubKeyHash,
                        pubKeyHashAddress)
@@ -81,17 +84,21 @@ import Ledger.Constraints.TxConstraints (ScriptInputConstraint (ScriptInputConst
                                          TxConstraints (TxConstraints, txConstraintFuns, txConstraints, txOwnInputs, txOwnOutputs))
 import Ledger.Crypto (pubKeyHash)
 import Ledger.Orphans ()
-import Ledger.Scripts (Datum (Datum), DatumHash, MintingPolicy (MintingPolicy), MintingPolicyHash (MintingPolicyHash),
-                       ScriptHash (ScriptHash), Validator, ValidatorHash, datumHash, plutusV1MintingPolicyHash,
-                       plutusV1ValidatorHash)
-import Ledger.Tx (ChainIndexTxOut, Tx, TxIn (TxIn), TxInType (ConsumeScriptAddress), TxInput (TxInput),
-                  TxInputType (TxConsumePublicKeyAddress), TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef,
-                  addScriptTxInput, txInRef)
+import Ledger.Params (Params)
+import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
+                  TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef, addScriptTxInput)
 import Ledger.Tx qualified as Tx
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError, tyTxInTxIn)
 import Ledger.Typed.Tx qualified as Typed
+import Ledger.Validation (evaluateMinLovelaceOutput, fromPlutusTxOutUnsafe)
+import Plutus.Script.Utils.V1.Scripts (datumHash, mintingPolicyHash, validatorHash)
+import Plutus.Script.Utils.V1.Tx (scriptAddressTxOut)
+import Plutus.V1.Ledger.Api (Datum (Datum), DatumHash, MintingPolicy, MintingPolicyHash (MintingPolicyHash), Redeemer,
+                             Validator, ValidatorHash)
+import Plutus.V1.Ledger.Scripts (MintingPolicy (MintingPolicy))
+import Plutus.V1.Ledger.Scripts qualified as PV1
 import Plutus.V1.Ledger.Time (POSIXTimeRange)
 import Plutus.V1.Ledger.Value (Value)
 import Plutus.V1.Ledger.Value qualified as Value
@@ -106,7 +113,7 @@ data ScriptLookups a =
         -- ^ Validators of scripts other than "our script"
         , slOtherData            :: Map DatumHash Datum
         -- ^ Datums that we might need
-        , slPaymentPubKeyHashes  :: Map PaymentPubKeyHash PaymentPubKey
+        , slPaymentPubKeyHashes  :: Set PaymentPubKeyHash
         -- ^ Public keys that we might need
         , slTypedValidator       :: Maybe (TypedValidator a)
         -- ^ The script instance with the typed validator hash & actual compiled program
@@ -169,13 +176,13 @@ unspentOutputs mp = mempty { slTxOutputs = mp }
 -- | A script lookups value with a minting policy script.
 mintingPolicy :: MintingPolicy -> ScriptLookups a
 mintingPolicy pl =
-    let hsh = plutusV1MintingPolicyHash pl in
+    let hsh = mintingPolicyHash pl in
     mempty { slMPS = Map.singleton hsh pl }
 
 -- | A script lookups value with a validator script.
 otherScript :: Validator -> ScriptLookups a
 otherScript vl =
-    let vh = plutusV1ValidatorHash vl in
+    let vh = validatorHash vl in
     mempty { slOtherScripts = Map.singleton vh vl }
 
 -- | A script lookups value with a datum.
@@ -186,8 +193,8 @@ otherData dt =
 
 -- | A script lookups value with a payment public key
 paymentPubKey :: PaymentPubKey -> ScriptLookups a
-paymentPubKey ppk@(PaymentPubKey pk) =
-    mempty { slPaymentPubKeyHashes = Map.singleton (PaymentPubKeyHash $ pubKeyHash pk) ppk }
+paymentPubKey (PaymentPubKey pk) =
+    mempty { slPaymentPubKeyHashes = Set.singleton (PaymentPubKeyHash $ pubKeyHash pk) }
 
 -- | A script lookups value with a payment public key hash.
 --
@@ -217,7 +224,7 @@ ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
 data UnbalancedTx =
     UnbalancedTx
         { unBalancedTxTx                  :: Tx
-        , unBalancedTxRequiredSignatories :: Map PaymentPubKeyHash (Maybe PaymentPubKey)
+        , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
         -- ^ These are all the payment public keys that should be used to request the
         -- signatories from the user's wallet. The signatories are what is required to
         -- sign the transaction before submitting it to the blockchain. Transaction
@@ -251,7 +258,7 @@ instance Pretty UnbalancedTx where
     pretty (UnbalancedTx utx rs utxo vr) =
         vsep
         [ hang 2 $ vsep ["Tx:", pretty utx]
-        , hang 2 $ vsep $ "Requires signatures:" : (pretty . fst <$> Map.toList rs)
+        , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         , hang 2 $ vsep ["Validity range:", pretty vr]
         ]
@@ -394,15 +401,14 @@ mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
---
--- TODO: In the future, the minimum Ada value should be configurable.
-adjustUnbalancedTx :: UnbalancedTx -> UnbalancedTx
-adjustUnbalancedTx = over (tx . Tx.outputs . traverse) adjustTxOut
+adjustUnbalancedTx :: Params -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
+adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) adjustTxOut
   where
-    adjustTxOut :: TxOut -> TxOut
-    adjustTxOut txOut =
-      let missingLovelace = max 0 (Ledger.minAdaTxOut - Ada.fromValue (txOutValue txOut))
-       in txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace }
+    adjustTxOut :: TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
+    adjustTxOut txOut = fromPlutusTxOutUnsafe params txOut <&> \txOut' ->
+        let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
+            missingLovelace = max 0 (minAdaTxOut' - Ada.fromValue (txOutValue txOut))
+        in ([missingLovelace], txOut { txOutValue = txOutValue txOut <> Ada.toValue missingLovelace })
 
 -- | Add the remaining balance of the total value that the tx must spend.
 --   See note [Balance of value spent]
@@ -462,7 +468,7 @@ addOwnInput ScriptInputConstraint{icRedeemer, icTxOutRef} = do
     valueSpentInputs <>= provided vl
     case Typed.tyTxInTxIn txIn of
         -- this is what makeTypedScriptTxIn makes
-        TxIn outRef (Just (ConsumeScriptAddress validator rs dt)) -> do
+        Tx.TxIn outRef (Just (Tx.ConsumeScriptAddress validator rs dt)) -> do
             unbalancedTx . tx %= addScriptTxInput outRef validator rs dt
         _ -> error "Impossible txIn in addOwnInput."
 
@@ -558,25 +564,14 @@ lookupValidator vh =
     let err = throwError (ValidatorHashNotFound vh) in
     asks slOtherScripts >>= maybe err pure . view (at vh)
 
--- | Get the 'Map.Map PaymentPubKeyHash (Maybe PaymentPubKey)' for a payment pub
---   key hash, associating the pub key hash with the public key (if known).
---   This value that can be added to the 'unBalancedTxRequiredSignatories' field.
-getSignatories
-    :: ( MonadReader (ScriptLookups a) m
-       )
-    => PaymentPubKeyHash
-    -> m (Map.Map PaymentPubKeyHash (Maybe PaymentPubKey))
-getSignatories pkh =
-    asks (Map.singleton pkh . Map.lookup pkh . slPaymentPubKeyHashes)
-
 -- | Modify the 'UnbalancedTx' so that it satisfies the constraints, if
 --   possible. Fails if a hash is missing from the lookups, or if an output
 --   of the wrong type is spent.
 processConstraint
     :: ( MonadReader (ScriptLookups a) m
-        , MonadError MkTxError m
-        , MonadState ConstraintProcessingState m
-        )
+       , MonadError MkTxError m
+       , MonadState ConstraintProcessingState m
+       )
     => TxConstraint
     -> m ()
 processConstraint = \case
@@ -585,9 +580,8 @@ processConstraint = \case
         unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
     MustValidateIn timeRange ->
         unbalancedTx . validityTimeRange %= (timeRange /\)
-    MustBeSignedBy pk -> do
-        sigs <- getSignatories pk
-        unbalancedTx . requiredSignatories <>= sigs
+    MustBeSignedBy pk ->
+        unbalancedTx . requiredSignatories <>= Set.singleton pk
     MustSpendAtLeast vl -> valueSpentInputs <>= required vl
     MustProduceAtLeast vl -> valueSpentOutputs <>= required vl
     MustSpendPubKeyOutput txo -> do
@@ -595,7 +589,7 @@ processConstraint = \case
         case txout of
           Tx.PublicKeyChainIndexTxOut { Tx._ciTxOutValue } -> do
               -- TODO: Add the optional datum in the witness set for the pub key output
-              unbalancedTx . tx . Tx.inputs %= (TxInput txo TxConsumePublicKeyAddress :)
+              unbalancedTx . tx . Tx.inputs %= (Tx.TxInput txo Tx.TxConsumePublicKeyAddress :)
               valueSpentInputs <>= provided _ciTxOutValue
           _ -> throwError (TxOutRefWrongType txo)
     MustSpendScriptOutput txo red -> do
@@ -619,7 +613,7 @@ processConstraint = \case
             else valueSpentOutputs <>= provided (value i)
 
         unbalancedTx . tx . Tx.mintScripts %= Map.insert mpsHash red
-        unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (ScriptHash mpsHashBytes) mintingPolicyScript
+        unbalancedTx . tx . Tx.scriptWitnesses %= Map.insert (PV1.ScriptHash mpsHashBytes) mintingPolicyScript
         unbalancedTx . tx . Tx.mint <>= value i
     MustPayToPubKeyAddress pk skhM mdv vl -> do
         -- if datum is presented, add it to 'datumWitnesses'
@@ -635,7 +629,7 @@ processConstraint = \case
         let addr = Address.scriptValidatorHashAddress vlh svhM
             theHash = datumHash dv
         unbalancedTx . tx . Tx.datumWitnesses . at theHash .= Just dv
-        unbalancedTx . tx . Tx.outputs %= (Tx.plutusV1ScriptTxOut' vl addr dv :)
+        unbalancedTx . tx . Tx.outputs %= (scriptAddressTxOut addr vl dv :)
         valueSpentOutputs <>= provided vl
     MustHashDatum dvh dv -> do
         unless (datumHash dv == dvh)
@@ -659,7 +653,7 @@ processConstraintFun
 processConstraintFun = \case
     MustSpendScriptOutputWithMatchingDatumAndValue vh datumPred valuePred red -> do
         ScriptLookups{slTxOutputs} <- ask
-        let matches (Just (validator, datum, value)) = plutusV1ValidatorHash validator == vh && datumPred datum && valuePred value
+        let matches (Just (validator, datum, value)) = validatorHash validator == vh && datumPred datum && valuePred value
             matches Nothing = False
         opts <- filter (matches . snd) <$> traverse (\(ref, txo) -> (ref,) <$> resolveScriptTxOut txo) (Map.toList slTxOutputs)
         case opts of

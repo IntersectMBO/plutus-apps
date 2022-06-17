@@ -7,10 +7,10 @@ license-files:
   NOTICE
 maintainer: jann.mueller@iohk.io
 author: Jann Müller
-homepage: https://github.com/iohk/plutus#readme
-bug-reports: https://github.com/iohk/plutus/issues
+homepage: https://github.com/input-output-hk/plutus-apps#readme
+bug-reports: https://github.com/input-output-hk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+    Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 build-type: Simple
 
 source-repository head
@@ -106,11 +106,13 @@ library
         plutus-ledger -any,
         plutus-ledger-api >= 1.0.0,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         plutus-tx >= 1.0.0,
         freer-extras -any
     build-depends:
         cardano-api -any,
         cardano-crypto -any,
+        cardano-ledger-core -any,
     build-depends:
         aeson >= 1.5.2,
         aeson-pretty -any,
@@ -167,6 +169,7 @@ library
             Plutus.Contract.Test.ContractModel.Internal
             Plutus.Contract.Test.ContractModel.Symbolics
             Plutus.Contract.Test.ContractModel.CrashTolerance
+            Plutus.Contract.Test.MissingLovelace
         build-depends:
             tasty -any,
             tasty-hunit -any,
@@ -193,6 +196,7 @@ test-suite plutus-contract-test
         Spec.Rows
         Spec.State
         Spec.ThreadToken
+        Spec.TimeValidity
         Spec.Secrets
         Spec.Plutus.Contract.Wallet
         Spec.Plutus.Contract.Oracle
@@ -215,6 +219,7 @@ test-suite plutus-contract-test
         plutus-ledger -any,
         plutus-ledger-api >= 1.0.0,
         plutus-ledger-constraints -any,
+        plutus-script-utils -any,
         plutus-tx >= 1.0.0,
         QuickCheck -any,
         row-types -any,
