@@ -45,7 +45,7 @@ main :: IO ()
 main = do
   Options {optionsSocketPath, optionsNetworkId, optionsChainPoint} <- parseOptions
 
-  withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint $
+  withChainSyncEventStream optionsSocketPath optionsNetworkId optionsChainPoint . const $
     printJson
       . S.map -- Each ChainSyncEvent
         ( fmap -- Inside the payload of RollForward events

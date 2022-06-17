@@ -266,7 +266,7 @@ main = do
       optionsSocketPath
       optionsNetworkId
       optionsChainPoint
-      (combinedIndexer optionsUtxoPath optionsDatumPath . logging trace)
+      (\_connInfo -> combinedIndexer optionsUtxoPath optionsDatumPath . logging trace)
       `catch` \NoIntersectionFound ->
         logError trace $
           renderStrict $

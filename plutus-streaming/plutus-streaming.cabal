@@ -36,7 +36,6 @@ library
     , base               >=4.9 && <5
     , cardano-api
     , ouroboros-network
-    , stm
     , streaming
 
 executable plutus-streaming-example-1
@@ -96,3 +95,23 @@ executable plutus-streaming-example-3
     , plutus-chain-index-core
     , plutus-streaming
     , streaming
+
+executable plutus-streaming-example-4
+  import:         lang
+  hs-source-dirs: examples
+  main-is:        Example4.hs
+  other-modules:
+    Common
+    Orphans
+
+  build-depends:
+    , aeson
+    , base                  >=4.9 && <5
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , optparse-applicative
+    , plutus-streaming
+    , streaming
+    , text
+    , transformers

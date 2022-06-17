@@ -24,6 +24,11 @@ id, ins and outs) and datums. Then it prints them to stdout in JSON format.
 This application uses folds the stream into a UTxoState as defined in
 plutus-chain-index-core.
 
+## Example 4
+
+This application prints (block hash, block slot, block epoch) to stdout. Obtaining the
+epoch number of a slot requires executing a local state query using `LocalNodeConnectInfo`.
+
 # Running the example applications
 
 You can run the example applications with cabal. Remember you need to have

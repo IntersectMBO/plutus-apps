@@ -42,7 +42,10 @@ withChainSyncEventStream ::
   -- | The point on the chain to start streaming from
   ChainPoint ->
   -- | The stream consumer
-  (Stream (Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r -> IO b) ->
+  ( LocalNodeConnectInfo CardanoMode ->
+    Stream (Of (ChainSyncEvent (BlockInMode CardanoMode))) IO r ->
+    IO b
+  ) ->
   IO b
 withChainSyncEventStream socketPath networkId point consumer = do
   -- The chain-sync client runs in a different thread passing the blocks it
@@ -90,7 +93,7 @@ withChainSyncEventStream socketPath networkId point consumer = do
     -- Make sure all exceptions in the client thread are passed to the consumer thread
     link a
     -- Run the consumer
-    consumer $ S.repeatM $ takeMVar nextBlockVar
+    consumer connectInfo $ S.repeatM $ takeMVar nextBlockVar
   -- Let's rethrow exceptions from the client thread unwrapped, so that the
   -- consumer does not have to know anything about async
   `catch` \(ExceptionInLinkedThread _ (SomeException e)) -> throw e
