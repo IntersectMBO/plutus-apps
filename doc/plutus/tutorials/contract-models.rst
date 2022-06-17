@@ -2215,6 +2215,13 @@ just add (and export) a definition of a ``CoverageIndex`` that covers
    :start-after: START covIdx
    :end-before: END covIdx
 
+.. note::
+
+   It is important that the coverage index is computed in the same module as
+   the calls to ``PlutusTx.compile``, or else the Haskell compiler--and thus by
+   extension, the Plutus compiler--may produce different code for the coverage
+   index and for the code under test, resulting in misleading coverage reports.
+
 It just remains to *import* the necessary types and functions
 
  .. literalinclude:: EscrowImpl.hs
@@ -2346,9 +2353,7 @@ Looking at the last section of code in the report,
 
 we see that it is the construction of the coverage index, and
 parts of this code are labelled on-chain and uncovered. We can ignore
-this, it's simply an artefact of the way the code labelling is done
-(and could be avoided by putting the construction of the ``covIdx`` in a
-different module, without coverage enabled).
+this, it's simply an artefact of the way the code labelling is done.
 
 More interesting is the second section of the report:
 
