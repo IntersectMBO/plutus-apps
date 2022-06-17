@@ -51,7 +51,7 @@ import Ledger.Slot (SlotRange)
 import Ledger.Tx (Certificate (certificateRedeemer), SomeCardanoApiTx, TxId, TxIn, TxInput (txInputType),
                   TxInputType (TxConsumeScriptAddress), TxOut (txOutAddress), TxOutRef (TxOutRef),
                   Withdrawal (withdrawalRedeemer), fillTxInputWitnesses, txId)
-import Prettyprinter
+import Prettyprinter (Pretty (pretty), braces, colon, hang, nest, viaShow, vsep, (<+>))
 
 -- | List of outputs of a transaction. There are no outputs if the transaction
 -- is invalid.

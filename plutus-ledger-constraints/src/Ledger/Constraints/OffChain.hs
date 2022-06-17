@@ -88,6 +88,7 @@ import Ledger.Params (Params)
 import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef, addScriptTxInput)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError, tyTxInTxIn)
@@ -401,10 +402,10 @@ mkTx lookups txc = mkSomeTx [SomeLookupsAndConstraints lookups txc]
 
 -- | Each transaction output should contain a minimum amount of Ada (this is a
 -- restriction on the real Cardano network).
-adjustUnbalancedTx :: Params -> UnbalancedTx -> Either Tx.ToCardanoError ([Ada.Ada], UnbalancedTx)
+adjustUnbalancedTx :: Params -> UnbalancedTx -> Either ToCardanoError ([Ada.Ada], UnbalancedTx)
 adjustUnbalancedTx params = alaf Compose (tx . Tx.outputs . traverse) adjustTxOut
   where
-    adjustTxOut :: TxOut -> Either Tx.ToCardanoError ([Ada.Ada], TxOut)
+    adjustTxOut :: TxOut -> Either ToCardanoError ([Ada.Ada], TxOut)
     adjustTxOut txOut = fromPlutusTxOutUnsafe params txOut <&> \txOut' ->
         let minAdaTxOut' = evaluateMinLovelaceOutput params txOut'
             missingLovelace = max 0 (minAdaTxOut' - Ada.fromValue (txOutValue txOut))

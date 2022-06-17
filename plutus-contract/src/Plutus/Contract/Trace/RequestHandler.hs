@@ -51,7 +51,8 @@ import Control.Monad.Freer.Extras.Log (LogMessage, LogMsg, LogObserve, logDebug,
 import Ledger (POSIXTime, POSIXTimeRange, Params (..), PaymentPubKeyHash, Slot, SlotRange)
 import Ledger.Constraints.OffChain (UnbalancedTx, adjustUnbalancedTx)
 import Ledger.TimeSlot qualified as TimeSlot
-import Ledger.Tx (CardanoTx, ToCardanoError)
+import Ledger.Tx (CardanoTx)
+import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Plutus.ChainIndex (ChainIndexQueryEffect)
 import Plutus.ChainIndex.Effects qualified as ChainIndexEff
 import Plutus.Contract.Effects (ChainIndexQuery (..), ChainIndexResponse (..))

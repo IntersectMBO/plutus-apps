@@ -102,6 +102,7 @@ import Ledger.Scripts qualified as L
 import Ledger.Slot qualified as L
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Ledger.Tx.Internal qualified as L
+import Ledger.Tx.Types qualified as L
 import Plutus.Script.Utils.V2.Scripts qualified as PV2
 import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Credential qualified as Credential

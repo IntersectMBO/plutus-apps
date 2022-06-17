@@ -70,8 +70,13 @@ library
         Ledger.TimeSlot
         Ledger.Tokens
         Ledger.Tx
-        Ledger.Tx.CardanoAPI
         Ledger.Tx.Internal
+        Ledger.Tx.CardanoAPI
+        Ledger.Tx.Types
+        Ledger.Tx.Types.Tx
+        Ledger.Tx.Types.TxInput
+        Ledger.Tx.Types.Withdrawal
+        Ledger.Tx.Types.Certificate
         Ledger.Tx.Orphans
         Ledger.Typed.Scripts
         Ledger.Typed.Scripts.Validators

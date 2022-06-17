@@ -32,7 +32,7 @@ import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
-import Ledger.Tx.Internal (Certificate, Tx, TxInput, TxInputType, Withdrawal)
+import Ledger.Tx.Types (Certificate, Tx, TxInput, TxInputType, Withdrawal)
 import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinData), Credential,
                              CurrencySymbol (CurrencySymbol), DCert, Data, Datum (Datum), DatumHash (DatumHash),
                              Extended, Interval, LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),

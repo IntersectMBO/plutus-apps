@@ -75,9 +75,9 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Ledger (Ada, CurrencySymbol, Datum, Interval, OnChainTx (Valid), POSIXTime (POSIXTime, getPOSIXTime),
                POSIXTimeRange, Passphrase (Passphrase), PaymentPrivateKey (unPaymentPrivateKey),
-               PaymentPubKey (PaymentPubKey), ScriptContext (ScriptContext), Slot (Slot), SlotRange,
-               SomeCardanoApiTx (SomeTx), TokenName, Tx (txFee, txInputs, txMint, txOutputs, txValidRange),
-               TxInInfo (txInInfoOutRef), TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
+               PaymentPubKey (PaymentPubKey), ScriptContext (ScriptContext), Slot (Slot), SlotRange, TokenName,
+               Tx (txFee, txInputs, txMint, txOutputs, txValidRange), TxInInfo (txInInfoOutRef),
+               TxInType (ConsumePublicKeyAddress), TxInfo (TxInfo), TxInput (TxInput),
                TxInputType (TxConsumePublicKeyAddress), TxOut (txOutValue), TxOutRef (TxOutRef), UtxoIndex (UtxoIndex),
                ValidationCtx (ValidationCtx), Validator (Validator), Value, _runValidation, addMintingPolicy,
                addSignature', datumHash, pubKeyTxOut, toPublicKey, txData, txId, txScripts)
@@ -89,6 +89,7 @@ import Ledger.Index qualified as Index
 import Ledger.Params (Params (pSlotConfig))
 import Ledger.TimeSlot (SlotConfig)
 import Ledger.TimeSlot qualified as TimeSlot
+import Ledger.Tx.CardanoAPI (SomeCardanoApiTx (SomeTx))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V1.Generators as ScriptGen
 import Plutus.Script.Utils.V1.Scripts qualified as PV1
