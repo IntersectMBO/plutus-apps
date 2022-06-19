@@ -98,6 +98,8 @@ let
     cabal-fmt
     nodejs
     plantuml
+    # See https://github.com/cachix/pre-commit-hooks.nix/issues/148 for why we need this
+    pre-commit
     shellcheck
     sqlite-interactive
     stack
