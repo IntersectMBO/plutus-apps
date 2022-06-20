@@ -42,6 +42,7 @@ library
   import:          lang
   exposed-modules:
     Marconi.Index.Datum
+    Marconi.Index.TxConfirmationStatus
     Marconi.Index.Utxo
     Plutus.ChainIndex.App
     Plutus.ChainIndex.CommandLine
