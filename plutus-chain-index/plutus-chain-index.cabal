@@ -41,6 +41,8 @@ common lang
 library
   import:          lang
   exposed-modules:
+    Marconi.Index.Datum
+    Marconi.Index.Utxo
     Plutus.ChainIndex.App
     Plutus.ChainIndex.CommandLine
     Plutus.ChainIndex.Config
@@ -68,6 +70,7 @@ library
     , iohk-monitoring
     , ouroboros-network
     , plutus-ledger-api
+    , plutus-script-utils
 
   ------------------------
   -- Non-IOG dependencies
@@ -79,6 +82,7 @@ library
     , beam-migrate
     , beam-sqlite
     , clock
+    , containers
     , contra-tracer
     , data-default
     , freer-simple
@@ -86,6 +90,7 @@ library
     , optparse-applicative
     , prettyprinter         >=1.1.0.1
     , resource-pool
+    , serialise
     , sqlite-simple
     , stm
     , time-units
@@ -109,8 +114,6 @@ executable marconi
   main-is:            Marconi.hs
   hs-source-dirs:     app
   other-modules:
-    Marconi.Index.Datum
-    Marconi.Index.Utxo
     Marconi.Logging
     Marconi.Orphans
 
