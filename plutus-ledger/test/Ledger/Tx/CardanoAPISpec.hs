@@ -18,11 +18,11 @@ import Hedgehog qualified
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 tests :: TestTree
 tests = testGroup "Ledger.CardanoAPI"
-    [ testProperty "Cardano Address -> Plutus Address roundtrip" addressRoundTripSpec
+    [ testPropertyNamed "Cardano Address -> Plutus Address roundtrip" "addressRoundTripSpec" addressRoundTripSpec
     ]
 
 -- | From a cardano address, we should be able to convert it to a plutus address,
