@@ -16,7 +16,7 @@ for all of our components.
 In order to do that, there is practice called architectural decision records ("ADR"),
 that we can integrate into our workflow.
 
-This does not replace actual architecture documentation, but provides contributors:
+This does not replace actual architecture documentation, but provides people who are contributing:
 
 * the means to understand architectural and design decisions that were made
 * a framework for proposing changes to the current architecture
