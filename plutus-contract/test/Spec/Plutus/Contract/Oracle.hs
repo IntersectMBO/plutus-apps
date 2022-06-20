@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Spec.Plutus.Contract.Oracle where
 
 import Hedgehog (Property, forAll, property)
@@ -8,14 +9,14 @@ import Ledger.Generators qualified as Gen
 import Plutus.Contract.Oracle
 import PlutusTx.Prelude (isRight, toBuiltin)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 tests :: TestTree
 tests =
     testGroup
         "Plutus.Contract.Oracle"
-        [ testProperty "Oracle signed payloads verify with oracle public key offchain" oracleSignOffChainProp,
-          testProperty "Oracle signed payloads verify with on-chain constraint" oracleSignContrastraintProp
+        [ testPropertyNamed "Oracle signed payloads verify with oracle public key offchain" "oracleSignOffChainProp" oracleSignOffChainProp,
+          testPropertyNamed "Oracle signed payloads verify with on-chain constraint" "oracleSignContrastraintProp" oracleSignContrastraintProp
         ]
 
 oracleSignOffChainProp :: Property
