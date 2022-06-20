@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
@@ -429,7 +430,7 @@ fromCardanoTxInWitness
             redeemer
             _))
     = pure $ PV1.ConsumeScriptAddress
-        (P.Validator $ fromCardanoPlutusScript script)
+        (P.Validator $ fromCardanoPlutusScriptOrReferenceInput script)
         (P.Redeemer $ fromCardanoScriptData redeemer)
         (P.Datum $ fromCardanoScriptData datum)
 fromCardanoTxInWitness
@@ -440,7 +441,7 @@ fromCardanoTxInWitness
             redeemer
             _))
     = pure $ PV1.ConsumeScriptAddress
-        (P.Validator $ fromCardanoPlutusScript script)
+        (P.Validator $ fromCardanoPlutusScriptOrReferenceInput script)
         (P.Redeemer $ fromCardanoScriptData redeemer)
         (P.Datum $ fromCardanoScriptData datum)
 fromCardanoTxInWitness (C.ScriptWitness _ C.SimpleScriptWitness{}) = pure PV2.ConsumeSimpleScriptAddress
@@ -452,7 +453,7 @@ fromCardanoTxInWitness
             redeemer
             _))
     = pure $ PV2.ConsumeScriptAddress
-        (PV2.Validator $ fromCardanoPlutusScript script)
+        (PV2.Validator $ fromCardanoPlutusScriptOrReferenceInput script)
         (PV2.Redeemer $ fromCardanoScriptData redeemer)
         (PV2.Datum $ fromCardanoScriptData datum)
 
@@ -466,7 +467,7 @@ toCardanoTxInWitness
         (P.Datum datum))
     = C.ScriptWitness C.ScriptWitnessForSpending <$>
         (C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
-        <$> toCardanoPlutusScript validator
+        <$> fmap C.PScript (toCardanoPlutusScript validator)
         <*> pure (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
         <*> pure (toCardanoScriptData redeemer)
         <*> pure zeroExecutionUnits
@@ -477,7 +478,7 @@ toCardanoMintWitness redeemers idx (P.MintingPolicy script) = do
     let redeemerPtr = PV1.RedeemerPtr PV1.Mint (fromIntegral idx)
     P.Redeemer redeemer <- maybe (Left MissingMintingPolicyRedeemer) Right (Map.lookup redeemerPtr redeemers)
     C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
-        <$> toCardanoPlutusScript script
+        <$> fmap C.PScript (toCardanoPlutusScript script)
         <*> pure C.NoScriptDatumForMint
         <*> pure (C.fromPlutusData $ PV1.toData redeemer)
         <*> pure zeroExecutionUnits
@@ -752,6 +753,11 @@ toCardanoScriptInEra script = C.ScriptInEra C.PlutusScriptV1InAlonzo . C.PlutusS
 
 fromCardanoPlutusScript :: C.HasTypeProxy lang => C.PlutusScript lang -> P.Script
 fromCardanoPlutusScript = Codec.deserialise . BSL.fromStrict . C.serialiseToRawBytes
+
+fromCardanoPlutusScriptOrReferenceInput :: C.HasTypeProxy lang => C.PlutusScriptOrReferenceInput lang -> P.Script
+fromCardanoPlutusScriptOrReferenceInput = \case
+  C.PScript plutusScript -> fromCardanoPlutusScript plutusScript
+  C.PReferenceScript _   -> error ("TODO: implement PReferenceScript")
 
 toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScript C.PlutusScriptV1)
 toCardanoPlutusScript =
