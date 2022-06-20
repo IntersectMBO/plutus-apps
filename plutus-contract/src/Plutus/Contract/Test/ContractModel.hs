@@ -150,6 +150,7 @@ module Plutus.Contract.Test.ContractModel
     , checkDoubleSatisfactionWithOptions
     ) where
 
+import Plutus.Contract.Test.ContractModel.DoubleSatisfaction
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Contract.Test.Coverage
 import Test.QuickCheck.DynamicLogic.Monad qualified as DL

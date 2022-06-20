@@ -21,6 +21,7 @@ module Spec.Auction
     , prop_SanityCheckAssertions
     , prop_Whitelist
     , prop_CrashTolerance
+    , prop_doubleSatisfaction
     , check_propAuctionWithCoverage
     ) where
 
