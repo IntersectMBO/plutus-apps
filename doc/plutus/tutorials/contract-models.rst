@@ -2490,7 +2490,8 @@ contract model, so that it can test crash-tolerance too. If ``m`` is a
 :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` instance, then so is ``WithCrashTolerance m``--and
 testing the latter model will insert actions to crash and restart
 contract instances at random. To define a property that runs these
-tests, all we have to do is include :hsobj:`Plutus.Contract.Test.ContractModel.CrashTolerance.WithCrashTolerance` in the type
+tests, all we have to do is import :hsmod:`Plutus.Contract.Test.ContractModel.CrashTolerance` and include
+:hsobj:`Plutus.Contract.Test.ContractModel.CrashTolerance.WithCrashTolerance` in the type
 signature:
 
  .. literalinclude:: Escrow6.hs
