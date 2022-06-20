@@ -32,7 +32,7 @@ import Index.VSqlite (SqliteIndex)
 import Index.VSqlite qualified as Ix
 
 type Result = Maybe TxConfirmedState
-type Event  = (TxId, (Int, BlockNumber))
+type Event  = [(TxId, BlockNumber)]
 
 type TCSIndex = SqliteIndex Event () TxId Result
 
@@ -69,8 +69,9 @@ query ix txId events = (<|>) <$> searchInMemory
     searchInMemory :: IO Result
     searchInMemory = do
       buffered <- Ix.getBuffer $ ix ^. Ix.storage
-      let event = find ((== txId) . fst) $ events ++ buffered
-      pure $ event <&> \ (_, (cs, bn)) ->
+      let event = find ((== txId) . fst . snd)
+                $ zip [1..] (concat $ events ++ buffered)
+      pure $ event <&> \ (cs, (_, bn)) ->
         TxConfirmedState { timesConfirmed = Sum    cs
                          , blockAdded     = Last $ Just bn
                          , validity       = Last $ Just TxValid
@@ -93,11 +94,11 @@ store :: TCSIndex -> IO ()
 store ix = do
   events <- Ix.getEvents $ ix ^. Ix.storage
   buffer <- Ix.getBuffer $ ix ^. Ix.storage
-  let all'  = buffer ++ events
-      c     = ix ^. Ix.handle
+  let all' = concat $ buffer ++ events
+      c    = ix ^. Ix.handle
   SQL.execute_ c "BEGIN"
-  forM_ all' $ \(txId, (block, _)) ->
-    SQL.execute c "INSERT INTO tx_status (txId, blockNumber) VALUES (?, ?)" (txId, block)
+  forM_ all' $
+    SQL.execute c "INSERT INTO tx_status (txId, blockNumber) VALUES (?, ?)"
   SQL.execute_ c "COMMIT"
 
 onInsert :: TCSIndex -> Event -> IO [()]
