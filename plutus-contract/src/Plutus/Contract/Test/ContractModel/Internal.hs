@@ -1930,13 +1930,16 @@ checkErrorWhitelistWithOptions opts copts whitelist acts = property $ go check a
 
 -- Double satisfaction magic
 
-data DoubleSatisfactionCandidate = DoubleSatisfactionCandidate
+-- | A transaction packed up with enough of the chain state to be able to run validation. This is
+--   used both for legitimate transactions and for the transactions manufactured by the double
+--   satisfaction test.
+data WrappedTx = WrappedTx
   { _dsTxId      :: TxId
   , _dsTx        :: Tx
   , _dsUtxoIndex :: UtxoIndex
   , _dsSlot      :: Slot
   } deriving Show
-makeLenses ''DoubleSatisfactionCandidate
+makeLenses ''WrappedTx
 
 -- | Perform a light-weight check to find egregious double satisfaction
 -- vulnerabilities in contracts.
@@ -1996,24 +1999,24 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
    QC.monitor $ tabulate "ChainEvent type" (map chainEventType chainEvents)
    case getDSCounterexamples chainEvents of
     (cands, potentialCEs, []) -> do
-      QC.monitor $ tabulate "Validating candidate counterexamples?" [ show $ validateDoubleSatisfactionCandidate c
+      QC.monitor $ tabulate "Validating candidate counterexamples?" [ show $ validateWrappedTx c
                                                                     | c <- cands ]
       QC.monitor $ tabulate "Number of candidates to build counterexamples" (bucket 10 $ length cands)
       QC.monitor $ tabulate "Number of candidate counterexamples" (bucket 10 $ length potentialCEs)
       QC.monitor $ tabulate "Validate counterexample result"
-        [ show (validateDoubleSatisfactionCandidate c0) ++ ", " ++
-          show (validateDoubleSatisfactionCandidate c1)
+        [ show (validateWrappedTx c0) ++ ", " ++
+          show (validateWrappedTx c1)
         | DoubleSatisfactionCounterexample _ c0 c1 _ _ _ <- potentialCEs ]
       QC.monitor $ tabulate "Reasons the steal candidate (that shouldn't work) is rejected"
         [ head . words . show $ r
         | DoubleSatisfactionCounterexample _ c0 c1 _ _ _ <- potentialCEs
-        , Prelude.not $ validateDoubleSatisfactionCandidate c0
-        , Just r <- [validateDoubleSatisfactionCandidate' c1] ]
+        , Prelude.not $ validateWrappedTx c0
+        , Just r <- [validateWrappedTx' c1] ]
       QC.monitor $ tabulate "Reasons it doesn't work"
         [ head . words . show $ r
         | DoubleSatisfactionCounterexample _ c0 c1 _ _ _ <- potentialCEs
-        , Prelude.not $ validateDoubleSatisfactionCandidate c0
-        , Just r <- [validateDoubleSatisfactionCandidate' c1] ]
+        , Prelude.not $ validateWrappedTx c0
+        , Just r <- [validateWrappedTx' c1] ]
     (_, _, counterexamples)  -> do
       sequence_ [ do QC.monitor $ counterexample (showPretty c)
                 | c <- counterexamples ]
@@ -2027,7 +2030,13 @@ checkDoubleSatisfactionWithOptions opts covopts acts =
 
       finalState = StateModel.stateAfter (toStateModelActions acts)
 
-getDSCounterexamples :: [ChainEvent] -> ( [DoubleSatisfactionCandidate]
+-- | Given a list of chain events, computes a triple of
+--    * the list of transactions that were considered for double satisfaction vulnerabilities
+--    * the list of candidate counterexamples, i.e. transactions where there were funds that could
+--      potentially be stolen
+--    * the list of actual counterexamples, i.e. if this is non-empty a vulnerability has been
+--      discovered.
+getDSCounterexamples :: [ChainEvent] -> ( [WrappedTx]
                                         , [DoubleSatisfactionCounterexample]
                                         , [DoubleSatisfactionCounterexample]
                                         )
@@ -2058,37 +2067,41 @@ getDSCounterexamples cs = go 0 mempty cs
     view (EmulatorTx tx) = Just tx
     view _               = Nothing
 
--- TODO: maybe documentation?
-doubleSatisfactionCandidates :: Slot -> UtxoIndex -> ChainEvent -> [DoubleSatisfactionCandidate]
+-- | Take a chain event and wrap it up as a `WrappedTx` if it was a transaction
+--   validation event.
+doubleSatisfactionCandidates :: Slot -> UtxoIndex -> ChainEvent -> [WrappedTx]
 doubleSatisfactionCandidates slot idx event = case event of
-  TxnValidate txid (EmulatorTx tx) _ -> [DoubleSatisfactionCandidate txid tx idx slot]
-  TxnValidate txid (Both tx _) _     -> [DoubleSatisfactionCandidate txid tx idx slot]
+  TxnValidate txid (EmulatorTx tx) _ -> [WrappedTx txid tx idx slot]
+  TxnValidate txid (Both tx _) _     -> [WrappedTx txid tx idx slot]
   _                                  -> []
 
--- TODO: maybe documentation?
-validateDoubleSatisfactionCandidate' :: DoubleSatisfactionCandidate -> Maybe ValidationErrorInPhase
-validateDoubleSatisfactionCandidate' cand =
+-- | Run validation for a `WrappedTx`. Returns @Nothing@ if successful and @Just err@ if validation
+--   failed with error @err@.
+validateWrappedTx' :: WrappedTx -> Maybe ValidationErrorInPhase
+validateWrappedTx' cand =
   let ((mWrong, _), _) = runValidation (validateTransaction (cand ^. dsSlot) (cand ^. dsTx))
                                        (ValidationCtx (cand ^. dsUtxoIndex) def)
   in mWrong
 
--- TODO: maybe documentation?
-validateDoubleSatisfactionCandidate :: DoubleSatisfactionCandidate -> Bool
-validateDoubleSatisfactionCandidate = isNothing . validateDoubleSatisfactionCandidate'
+-- | Run validation for a `WrappedTx`. Returns @True@ if successful.
+validateWrappedTx :: WrappedTx -> Bool
+validateWrappedTx = isNothing . validateWrappedTx'
 
+-- | Actual counterexamples showing a double satisfaction vulnerability for the given chain event.
 checkForDoubleSatisfactionVulnerability :: Slot -> UtxoIndex -> ChainEvent -> [DoubleSatisfactionCounterexample]
 checkForDoubleSatisfactionVulnerability slot idx = filter isVulnerable
                                                  . doubleSatisfactionCounterexamples
                                                  <=< doubleSatisfactionCandidates slot idx
 
--- | This is an actual counterexample if the first candidate fails validation and the second passes.
+-- | This is an actual counterexample if the first transaction passes validation, the second fails,
+--   and the third passes.
 data DoubleSatisfactionCounterexample = DoubleSatisfactionCounterexample
-  { dsceOriginalTransaction :: DoubleSatisfactionCandidate
-      -- ^ The original transaction goes through
-  , dsceTargetMattersProof  :: DoubleSatisfactionCandidate
+  { dsceOriginalTransaction :: WrappedTx
+      -- ^ The original transaction goes through.
+  , dsceTargetMattersProof  :: WrappedTx
       -- ^ If this fails to validate, it's worth checking for a double satisfaction vulnerability.
       --   Generated by redirecting a non-datum pubkey output from a non-signer to a signer.
-  , dsceValueStolenProof    :: DoubleSatisfactionCandidate
+  , dsceValueStolenProof    :: WrappedTx
       -- ^ If this candidate validates there is a double satisfaction vulnerability. Generated by adding
       --   another script input (with the same value as the non-signer non-stealable pubkey output)
       --   and adding a datum to the non-signer non-stealable pubkey output, and giving the
@@ -2146,9 +2159,9 @@ showPretty cand = show . vcat $
 
 isVulnerable :: DoubleSatisfactionCounterexample -> Bool
 isVulnerable (DoubleSatisfactionCounterexample orig pre post _ _ _) =
-  validateDoubleSatisfactionCandidate orig &&
-  Prelude.not (validateDoubleSatisfactionCandidate pre) &&
-  validateDoubleSatisfactionCandidate post
+  validateWrappedTx orig &&
+  Prelude.not (validateWrappedTx pre) &&
+  validateWrappedTx post
 
 -- TODO: change this to be the actual validator that only accepts wallet payments with
 -- a specific datum attached. Even though this doesn't technically matter.
@@ -2157,7 +2170,7 @@ isVulnerable (DoubleSatisfactionCounterexample orig pre post _ _ _) =
 alwaysOkValidator :: Validator
 alwaysOkValidator = mkValidatorScript $$(PlutusTx.compile [|| (\_ _ _ -> ()) ||])
 
-doubleSatisfactionCounterexamples :: DoubleSatisfactionCandidate -> [DoubleSatisfactionCounterexample]
+doubleSatisfactionCounterexamples :: WrappedTx -> [DoubleSatisfactionCounterexample]
 doubleSatisfactionCounterexamples dsc =
   [ DoubleSatisfactionCounterexample
       { dsceOriginalTransaction = dsc
