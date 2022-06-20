@@ -15,14 +15,14 @@ import Generators qualified as Gen
 import Hedgehog (Property, forAll, property, (===))
 import Ledger.Ada qualified as Ada
 import Test.Tasty
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 tests :: TestTree
 tests = do
   testGroup "emulator"
     [ testGroup "disk state"
-        [ testProperty "same txOuts between AddressMap and ChainIndexTx" addressMapAndTxShouldShareTxOuts
-        , testProperty "same txOuts between AssetClassMap and ChainIndexTx" assetClassMapAndTxShouldShareTxOuts
+        [ testPropertyNamed "same txOuts between AddressMap and ChainIndexTx" "addressMapAndTxShouldShareTxOuts" addressMapAndTxShouldShareTxOuts
+        , testPropertyNamed "same txOuts between AssetClassMap and ChainIndexTx" "assetClassMapAndTxShouldShareTxOuts" assetClassMapAndTxShouldShareTxOuts
         ]
     ]
 

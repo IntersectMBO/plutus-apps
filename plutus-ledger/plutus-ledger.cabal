@@ -169,5 +169,5 @@ test-suite plutus-ledger-test
         plutus-ledger -any,
         plutus-tx >= 1.0.0,
         tasty -any,
-        tasty-hedgehog -any,
+        tasty-hedgehog >= 1.2.0.0,
         tasty-hunit -any,

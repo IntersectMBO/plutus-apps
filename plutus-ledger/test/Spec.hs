@@ -35,7 +35,7 @@ import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Test.Tasty.HUnit qualified as HUnit
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 main :: IO ()
 main = defaultMain tests
@@ -43,34 +43,34 @@ main = defaultMain tests
 tests :: TestTree
 tests = testGroup "all tests" [
     testGroup "UTXO model" [
-        testProperty "initial transaction is valid" initialTxnValid
+        testPropertyNamed "initial transaction is valid" "initialTxnValid" initialTxnValid
         ],
     testGroup "intervals" [
-        testProperty "member" intvlMember,
-        testProperty "contains" intvlContains
+        testPropertyNamed "member" "intvlMember," intvlMember,
+        testPropertyNamed "contains" "intvlContains" intvlContains
         ],
     testGroup "values" [
-        testProperty "additive identity" valueAddIdentity,
-        testProperty "additive inverse" valueAddInverse,
-        testProperty "scalar identity" valueScalarIdentity,
-        testProperty "scalar distributivity" valueScalarDistrib
+        testPropertyNamed "additive identity" "valueAddIdentity," valueAddIdentity,
+        testPropertyNamed "additive inverse" "valueAddInverse," valueAddInverse,
+        testPropertyNamed "scalar identity" "valueScalarIdentity," valueScalarIdentity,
+        testPropertyNamed "scalar distributivity" "valueScalarDistrib" valueScalarDistrib
         ],
     testGroup "Etc." [
-        testProperty "splitVal" splitVal,
-        testProperty "splitVal should respect min Ada per tx output" splitValMinAda,
-        testProperty "encodeByteString" encodeByteStringTest,
-        testProperty "encodeSerialise" encodeSerialiseTest
+        testPropertyNamed "splitVal" "splitVal," splitVal,
+        testPropertyNamed "splitVal should respect min Ada per tx output" "splitValMinAda," splitValMinAda,
+        testPropertyNamed "encodeByteString" "encodeByteStringTest," encodeByteStringTest,
+        testPropertyNamed "encodeSerialise" "encodeSerialiseTest" encodeSerialiseTest
         ],
     testGroup "LedgerBytes" [
-        testProperty "show-fromHex" ledgerBytesShowFromHexProp,
-        testProperty "toJSON-fromJSON" ledgerBytesToJSONProp
+        testPropertyNamed "show-fromHex" "ledgerBytesShowFromHexProp," ledgerBytesShowFromHexProp,
+        testPropertyNamed "toJSON-fromJSON" "ledgerBytesToJSONProp" ledgerBytesToJSONProp
         ],
     testGroup "Value" ([
-        testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genValue),
-        testProperty "CurrencySymbol ToJSON/FromJSON" (jsonRoundTrip $ Value.currencySymbol <$> Gen.genSizedByteStringExact 32),
-        testProperty "TokenName ToJSON/FromJSON" (jsonRoundTrip Gen.genTokenName),
-        testProperty "TokenName looks like escaped bytestring ToJSON/FromJSON" (jsonRoundTrip . pure $ ("\NUL0xc0ffee" :: Value.TokenName)),
-        testProperty "CurrencySymbol IsString/Show" currencySymbolIsStringShow
+        testPropertyNamed "Value ToJSON/FromJSON" "value_json_roundtrip" (jsonRoundTrip Gen.genValue),
+        testPropertyNamed "CurrencySymbol ToJSON/FromJSON" "currency_symbol_json_roundtrip" (jsonRoundTrip $ Value.currencySymbol <$> Gen.genSizedByteStringExact 32),
+        testPropertyNamed "TokenName ToJSON/FromJSON" "tokenname_json_roundtrip" (jsonRoundTrip Gen.genTokenName),
+        testPropertyNamed "TokenName looks like escaped bytestring ToJSON/FromJSON" "tokenname_escaped_roundtrip" (jsonRoundTrip . pure $ ("\NUL0xc0ffee" :: Value.TokenName)),
+        testPropertyNamed "CurrencySymbol IsString/Show" "currencySymbolIsStringShow" currencySymbolIsStringShow
         ] ++ (let   vlJson :: BSL.ByteString
                     vlJson = "{\"getValue\":[[{\"unCurrencySymbol\":\"ab01ff\"},[[{\"unTokenName\":\"myToken\"},50]]]]}"
                     vlValue = Value.singleton "ab01ff" "myToken" 50
@@ -80,31 +80,31 @@ tests = testGroup "all tests" [
                     vlValue = Ada.lovelaceValueOf 50
                 in byteStringJson vlJson vlValue)),
     testGroup "Tx" [
-        testProperty "TxOut fromTxOut/toTxOut" ciTxOutRoundTrip
+        testPropertyNamed "TxOut fromTxOut/toTxOut" "ciTxOutRoundTrip" ciTxOutRoundTrip
         ],
     testGroup "Fee" [
-        testProperty "calcFees" calcFeesTest
+        testPropertyNamed "calcFees" "calcFeesTest" calcFeesTest
         ],
     testGroup "TimeSlot" [
-        testProperty "time range of starting slot" initialSlotToTimeProp,
-        testProperty "slot of starting time range" initialTimeToSlotProp,
-        testProperty "slot number >=0 when converting from time" slotIsPositiveProp,
-        testProperty "slotRange to timeRange inverse property" slotToTimeInverseProp,
-        testProperty "timeRange to slotRange inverse property" timeToSlotInverseProp,
-        testProperty "slot to time range inverse to slot range"
+        testPropertyNamed "time range of starting slot" "initialSlotToTimeProp," initialSlotToTimeProp,
+        testPropertyNamed "slot of starting time range" "initialTimeToSlotProp," initialTimeToSlotProp,
+        testPropertyNamed "slot number >=0 when converting from time" "slotIsPositiveProp," slotIsPositiveProp,
+        testPropertyNamed "slotRange to timeRange inverse property" "slotToTimeInverseProp," slotToTimeInverseProp,
+        testPropertyNamed "timeRange to slotRange inverse property" "timeToSlotInverseProp," timeToSlotInverseProp,
+        testPropertyNamed "slot to time range inverse to slot range" "slotToTimeRangeBoundsInverseProp"
             slotToTimeRangeBoundsInverseProp,
-        testProperty "slot to time range has lower bound <= upper bound"
+        testPropertyNamed "slot to time range has lower bound <= upper bound" "slotToTimeRangeHasLowerAndUpperBoundsProp"
             slotToTimeRangeHasLowerAndUpperBoundsProp,
-        testProperty "POSIX time to UTC time inverse property" posixTimeToUTCTimeInverseProp
+        testPropertyNamed "POSIX time to UTC time inverse property" "posixTimeToUTCTimeInverseProp" posixTimeToUTCTimeInverseProp
         ],
     -- TODO: Reenable once we update `cardano-node` with the following PR merged:
     -- https://github.com/input-output-hk/cardano-node/pull/3837
     -- testGroup "SomeCardanoApiTx" [
-    --     testProperty "Value ToJSON/FromJSON" (jsonRoundTrip Gen.genSomeCardanoApiTx)
+    --     testPropertyNamed "Value ToJSON/FromJSON" "genSomeCardanoApiTx" (jsonRoundTrip Gen.genSomeCardanoApiTx)
     --     ],
     Ledger.Tx.CardanoAPISpec.tests,
     testGroup "Signing" [
-        testProperty "signed payload verifies with public key" signAndVerifyTest
+        testPropertyNamed "signed payload verifies with public key" "signAndVerifyTest" signAndVerifyTest
         ]
     ]
 

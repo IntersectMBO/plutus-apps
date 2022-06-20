@@ -26,7 +26,6 @@ import Cardano.ChainIndex.ChainIndex (processChainIndexEffects, syncState)
 import Control.Monad.IO.Class (MonadIO (..))
 import Ledger.Blockchain (Block)
 import Ledger.Params (Params (..))
-import Ledger.TimeSlot (SlotConfig)
 
 import Cardano.ChainIndex.Types
 import Cardano.Protocol.Socket.Mock.Client (runChainSync)

@@ -32,27 +32,27 @@ import Plutus.V1.Ledger.Value (AssetClass (AssetClass), flattenValue)
 
 import Hedgehog (Property, assert, forAll, property, (===))
 import Test.Tasty
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 import Util (utxoSetFromBlockAddrs)
 
 tests :: TestTree
 tests = do
   testGroup "chain index emulator handlers"
     [ testGroup "txFromTxId"
-      [ testProperty "get tx from tx id" txFromTxIdSpec
+      [ testPropertyNamed "get tx from tx id" "txFromTxIdSpec" txFromTxIdSpec
       ]
     , testGroup "utxoSetAtAddress"
-      [ testProperty "each txOutRef should be unspent" eachTxOutRefAtAddressShouldBeUnspentSpec
+      [ testPropertyNamed "each txOutRef should be unspent" "eachTxOutRefAtAddressShouldBeUnspentSpec" eachTxOutRefAtAddressShouldBeUnspentSpec
       ]
     , testGroup "unspentTxOutFromRef"
-      [ testProperty "get unspent tx out from ref" eachTxOutRefAtAddressShouldHaveTxOutSpec
+      [ testPropertyNamed "get unspent tx out from ref" "eachTxOutRefAtAddressShouldHaveTxOutSpec" eachTxOutRefAtAddressShouldHaveTxOutSpec
       ]
     , testGroup "utxoSetWithCurrency"
-      [ testProperty "each txOutRef should be unspent" eachTxOutRefWithCurrencyShouldBeUnspentSpec
-      , testProperty "should restrict to non-ADA currencies" cantRequestForTxOutRefsWithAdaSpec
+      [ testPropertyNamed "each txOutRef should be unspent" "eachTxOutRefWithCurrencyShouldBeUnspentSpec" eachTxOutRefWithCurrencyShouldBeUnspentSpec
+      , testPropertyNamed "should restrict to non-ADA currencies" "cantRequestForTxOutRefsWithAdaSpec" cantRequestForTxOutRefsWithAdaSpec
       ]
     , testGroup "BlockProcessOption"
-      [ testProperty "do not store txs" doNotStoreTxs
+      [ testPropertyNamed "do not store txs" "doNotStoreTxs" doNotStoreTxs
       ]
 
     ]
