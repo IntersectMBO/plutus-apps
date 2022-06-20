@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds   #-}
-{-# LANGUAGE NamedFieldPuns   #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE MonoLocalBinds    #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Main(main) where
@@ -36,7 +37,7 @@ import Plutus.ChainIndex.Types (BlockNumber (..), Depth (..), RollbackState (..)
 import Plutus.ChainIndex.UtxoState (InsertUtxoSuccess (..), RollbackResult (..))
 import Plutus.ChainIndex.UtxoState qualified as UtxoState
 import Test.Tasty
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 main :: IO ()
 main = defaultMain tests
@@ -47,8 +48,8 @@ tests =
     [ testGroup "tx out balance" txOutBalanceTests
     , testGroup "utxo balance" utxoBalanceTests
     , testGroup "txidstate" txIdStateTests
-    , testProperty "lift tx output status to tx status" txOutStatusTxStatusProp
-    , testProperty "tx output status" txOutStatusSpentUnspentProp
+    , testPropertyNamed "lift tx output status to tx status" "txOutStatusTxStatusProp" txOutStatusTxStatusProp
+    , testPropertyNamed "tx output status" "txOutStatusSpentUnspentProp" txOutStatusSpentUnspentProp
     , DiskStateSpec.tests
     , EmulatorHandlersSpec.tests
     , HandlersSpec.tests
@@ -57,47 +58,47 @@ tests =
 utxoBalanceTests :: [TestTree]
 utxoBalanceTests =
   [ testGroup "monoid"
-      [ testProperty "associative" semigroupUtxobalanceAssociative
-      , testProperty "unit" monoidUtxobalanceUnit
+      [ testPropertyNamed "associative" "semigroupUtxobalanceAssociative" semigroupUtxobalanceAssociative
+      , testPropertyNamed "unit" "monoidUtxobalanceUnit" monoidUtxobalanceUnit
       ]
   , testGroup "generator"
-      [ testProperty "match all unspent outputs" matchUnspentOutputs
-      , testProperty "generate block with non-empty utxo set"
+      [ testPropertyNamed "match all unspent outputs" "matchUnspentOutputs" matchUnspentOutputs
+      , testPropertyNamed "generate block with non-empty utxo set" "generateBlockWithNonEmptyTxUtxoBalance"
                      generateBlockWithNonEmptyTxUtxoBalance
       ]
   , testGroup "operations"
-      [ testProperty "insert new blocks at end" insertAtEnd
-      , testProperty "rollback" rollback
-      , testProperty "block number ascending order" blockNumberAscending
-      , testProperty "reduce block count" reduceBlockCount
+      [ testPropertyNamed "insert new blocks at end" "insertAtEnd" insertAtEnd
+      , testPropertyNamed "rollback" "rollback" rollback
+      , testPropertyNamed "block number ascending order" "blockNumberAscending" blockNumberAscending
+      , testPropertyNamed "reduce block count" "reduceBlockCount" reduceBlockCount
       ]
   ]
 
 txOutBalanceTests :: [TestTree]
 txOutBalanceTests =
   [ testGroup "monoid"
-      [ testProperty "associative" semigroupTxOutbalanceAssociative
-      , testProperty "unit" monoidTxOutbalanceUnit
+      [ testPropertyNamed "associative" "semigroupTxOutbalanceAssociative" semigroupTxOutbalanceAssociative
+      , testPropertyNamed "unit" "monoidTxOutbalanceUnit" monoidTxOutbalanceUnit
       ]
   , testGroup "generator"
-      [ testProperty "generate non-empty blocks" generateBlocksWithNonEmptyTxOutBalance
+      [ testPropertyNamed "generate non-empty blocks" "generateBlocksWithNonEmptyTxOutBalance" generateBlocksWithNonEmptyTxOutBalance
       ]
   ]
 
 txIdStateTests :: [TestTree]
 txIdStateTests =
   [ testGroup "monoid"
-      [ testProperty "associative" semigroupTxIdStateAssociative
-      , testProperty "unit" monoidTxIdStateUnit
+      [ testPropertyNamed "associative" "semigroupTxIdStateAssociative" semigroupTxIdStateAssociative
+      , testPropertyNamed "unit" "monoidTxIdStateUnit" monoidTxIdStateUnit
       ]
   , testGroup "generator"
-      [ testProperty "unique transaction ids" uniqueTransactionIds
-      , testProperty "number of transactions = number of blocks" numOfTransactionsIsNumberOfBlocks
+      [ testPropertyNamed "unique transaction ids" "uniqueTransactionIds" uniqueTransactionIds
+      , testPropertyNamed "number of transactions = number of blocks" "numOfTransactionsIsNumberOfBlocks" numOfTransactionsIsNumberOfBlocks
       ]
   , testGroup "operations"
-      [ testProperty "transaction depth increases" transactionDepthIncreases
-      , testProperty "rollback changes tx state" rollbackTxIdState
-      , testProperty "dropOlder drops only older things." dropOlderDropsCorrectly
+      [ testPropertyNamed "transaction depth increases" "transactionDepthIncreases" transactionDepthIncreases
+      , testPropertyNamed "rollback changes tx state" "rollbackTxIdState" rollbackTxIdState
+      , testPropertyNamed "dropOlder drops only older things." "dropOlderDropsCorrectly" dropOlderDropsCorrectly
       ]
   ]
 
