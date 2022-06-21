@@ -16,7 +16,6 @@ module PlutusExample.PlutusVersion1.RedeemerContextScripts
   , pv1CustomRedeemerFromScriptData
   , scriptContextTestMintingScript
   , scriptContextTextPayingScript
-  , testScriptContextToScriptData
   ) where
 
 import Prelude hiding (($))
@@ -195,9 +194,6 @@ scriptContextTestMintingScript :: PlutusScript PlutusScriptV1
 scriptContextTestMintingScript = PlutusScriptSerialised . SBS.toShort $ LB.toStrict scriptContextTextMintingScript
 
 -- Helpers
-
-testScriptContextToScriptData :: PV1CustomRedeemer -> ScriptData
-testScriptContextToScriptData = fromPlutusData . PlutusTx.builtinDataToData . PlutusTx.toBuiltinData
 
 pv1CustomRedeemerFromScriptData :: ScriptData -> Either String PV1CustomRedeemer
 pv1CustomRedeemerFromScriptData sDat =
