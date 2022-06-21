@@ -15,7 +15,9 @@ import PlutusExample.PlutusVersion1.MintingScript (apiExamplePlutusMintingScript
 import PlutusExample.PlutusVersion1.RedeemerContextScripts
 import PlutusExample.PlutusVersion1.Sum (sumScript)
 
+import PlutusExample.PlutusVersion2.MintingScript (v2mintingScript)
 import PlutusExample.PlutusVersion2.RequireRedeemer (requireRedeemerScript)
+import PlutusExample.PlutusVersion2.StakeScript (v2StakeScript)
 
 main :: IO ()
 main = do
@@ -37,5 +39,7 @@ main = do
 
 
   _ <- writeFileTextEnvelope (v2dir </> "required-redeemer.plutus") Nothing requireRedeemerScript
+  _ <- writeFileTextEnvelope (v2dir </> "minting-script.plutus") Nothing v2mintingScript
+  _ <- writeFileTextEnvelope (v2dir </> "stake-script.plutus") Nothing v2StakeScript
 
   return ()
