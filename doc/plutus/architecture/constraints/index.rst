@@ -127,7 +127,7 @@ We will then declare the ``SplitData`` datatype which describes the two recipien
 
 Based on this datatype, we will start by creating a function which will generate constraints for:
 
-1- the validator script which will validate the spending of it's script output based on ``SplitData``
+1- the validator script which will validate the spending of the script output based on ``SplitData``
 
 2- the transaction we will create to spend these script outputs
 
