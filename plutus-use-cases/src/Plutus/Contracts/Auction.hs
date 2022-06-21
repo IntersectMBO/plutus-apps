@@ -11,6 +11,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE ViewPatterns       #-}
 {-# OPTIONS_GHC -g -fplugin-opt PlutusTx.Plugin:coverage-all #-}
 module Plutus.Contracts.Auction(
     AuctionState(..),
@@ -39,7 +40,6 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Constraints.TxConstraints (TxConstraints)
 import Ledger.Interval qualified as Interval
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Typed.Tx (TypedScriptTxOut (..))
 import Ledger.Value qualified as Value
 import Plutus.Contract
 import Plutus.Contract.StateMachine (State (..), StateMachine (..), StateMachineClient, ThreadToken, Void,
@@ -243,8 +243,10 @@ auctionSeller value time = do
 currentState
     :: StateMachineClient AuctionState AuctionInput
     -> Contract AuctionOutput BuyerSchema AuctionError (Maybe HighestBid)
-currentState client = mapError StateMachineContractError (SM.getOnChainState client) >>= \case
-    Just (SM.OnChainState{SM.ocsTxOut=TypedScriptTxOut{tyTxOutData=Ongoing s}}, _) -> do
+currentState client = do
+  mOcs <- mapError StateMachineContractError (SM.getOnChainState client)
+  case mOcs of
+    Just (SM.getStateData -> Ongoing s, _) -> do
         tell $ auctionStateOut $ Ongoing s
         pure (Just s)
     _ -> do

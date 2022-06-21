@@ -24,11 +24,11 @@ import Ledger.Constraints
 import Ledger.Scripts
 import Ledger.Tx
 import Ledger.Typed.Scripts qualified as Scripts hiding (validatorHash)
-import Ledger.Typed.Scripts.Validators hiding (validatorHash)
 import Plutus.Contract as Contract
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel
 import Plutus.Script.Utils.V1.Scripts (validatorHash)
+import Plutus.Script.Utils.V1.Typed.Scripts.Validators hiding (validatorHash)
 import Plutus.Trace.Emulator as Trace
 import Plutus.V1.Ledger.Contexts (ScriptContext (..))
 import PlutusTx qualified
