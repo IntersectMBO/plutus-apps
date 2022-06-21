@@ -110,6 +110,7 @@ library
         plutus-ledger-api -any,
         memory -any,
         mtl -any,
+        ouroboros-consensus -any,
         ouroboros-consensus-shelley -any,
         prettyprinter -any,
         plutus-tx -any,

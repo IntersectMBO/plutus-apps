@@ -21,6 +21,7 @@ module Ledger.Validation(
   addSignature,
   hasValidationErrors,
   makeTransactionBody,
+  makeTransactionBodyAutoBalance,
   -- * Modifying the state
   makeBlock,
   setSlot,
@@ -62,7 +63,7 @@ import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
-import Cardano.Slotting.Time (mkSlotLength)
+import Cardano.Slotting.Time (SlotLength, mkSlotLength)
 import Control.Lens (_1, makeLenses, over, (&), (.~), (^.))
 import Data.Array (array)
 import Data.Bifunctor (Bifunctor (..))
@@ -70,6 +71,7 @@ import Data.Bitraversable (bitraverse)
 import Data.Default (def)
 import Data.Functor.Identity (runIdentity)
 import Data.Map qualified as Map
+import Data.SOP.Strict (K (K), NP (..))
 import Data.Set qualified as Set
 import GHC.Records (HasField (..))
 import Ledger.Address qualified as P
@@ -81,6 +83,8 @@ import Ledger.TimeSlot qualified as P
 import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Value qualified as P
+import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
+import Ouroboros.Consensus.Util.Counting qualified as Ouroboros
 import Plutus.V1.Ledger.Ada qualified as P
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Scripts qualified as P
@@ -203,12 +207,18 @@ genesisDefaultsFromParams P.Params { P.pSlotConfig, P.pProtocolParams, P.pNetwor
   , C.Ledger.sgProtocolParams = retractPP (Coin 0) $ C.Api.toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
   }
 
+emulatorEpochSize :: EpochSize
+emulatorEpochSize = EpochSize 432000
+
+slotLength :: P.Params -> SlotLength
+slotLength P.Params { P.pSlotConfig } = mkSlotLength $ P.posixTimeToNominalDiffTime $ P.POSIXTime $ P.scSlotLength pSlotConfig
+
 {-| A sensible default 'Globals' value for the emulator
 -}
 emulatorGlobals :: P.Params -> Globals
-emulatorGlobals params@P.Params { P.pSlotConfig, P.pProtocolParams } = mkShelleyGlobals
+emulatorGlobals params@P.Params { P.pProtocolParams } = mkShelleyGlobals
   (genesisDefaultsFromParams params)
-  (fixedEpochInfo (EpochSize 432000) (mkSlotLength $ P.posixTimeToNominalDiffTime $ P.POSIXTime $ P.scSlotLength pSlotConfig))
+  (fixedEpochInfo emulatorEpochSize (slotLength params))
   (fst $ C.Api.protocolParamProtocolVersion pProtocolParams)
 
 emulatorPParams :: P.Params -> PParams EmulatorEra
@@ -225,6 +235,11 @@ hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
       vtx <- first (P.CardanoLedgerValidationError . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (fst (_memPoolState state)) tx)
       applyTx params state vtx
 
+eraHistory :: P.Params -> C.Api.EraHistory C.Api.CardanoMode
+eraHistory params = C.Api.EraHistory C.Api.CardanoMode (Ouroboros.mkInterpreter $ Ouroboros.summaryWithExactly list)
+  where
+    one = Ouroboros.nonEmptyHead $ Ouroboros.getSummary $ Ouroboros.neverForksSummary emulatorEpochSize (slotLength params)
+    list = Ouroboros.Exactly $ K one :* K one :* K one :* K one :* K one :* Nil
 
 getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
@@ -254,6 +269,30 @@ makeTransactionBody params utxo txBodyContent = do
   txTmp <- first Right $ makeSignedTransaction [] <$> P.makeTransactionBody mempty txBodyContent
   exUnits <- getTxExUnits params utxo txTmp
   first Right $ P.makeTransactionBody exUnits txBodyContent
+
+makeTransactionBodyAutoBalance
+  :: P.Params
+  -> UTxO EmulatorEra
+  -> [P.PaymentPubKeyHash]
+  -> P.Tx
+  -> P.Address
+  -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
+makeTransactionBodyAutoBalance params utxo requiredSigners tx pChangeAddr = first Right $ do
+  P.CardanoBuildTx txBodyContent <- plutusTxToTxBodyContent params requiredSigners tx
+  cChangeAddr <- P.toCardanoAddress (P.pNetworkId params) pChangeAddr
+  C.Api.BalancedTxBody txBody _ _ <- first (P.TxBodyError . C.Api.displayError) $ C.Api.makeTransactionBodyAutoBalance
+    C.Api.AlonzoEraInCardanoMode
+    (systemStart $ emulatorGlobals params)
+    (eraHistory params)
+    (P.pProtocolParams params)
+    mempty
+    (fromLedgerUTxO utxo)
+    txBodyContent
+    cChangeAddr
+    Nothing
+  pure $ makeSignedTransaction [] txBody
+
+
 
 evaluateTransactionFee
   :: P.Params
@@ -333,3 +372,12 @@ fromPaymentPrivateKey xprv txBody
       (C.Api.WitnessPaymentExtendedKey (C.Api.PaymentExtendedSigningKey xprv))
   where
     notUsed = undefined -- hack so we can reuse code from cardano-api
+
+fromLedgerUTxO :: UTxO EmulatorEra
+               -> C.Api.UTxO C.Api.AlonzoEra
+fromLedgerUTxO (UTxO utxo) =
+    C.Api.UTxO
+  . Map.fromList
+  . map (bimap C.Api.fromShelleyTxIn (C.Api.fromShelleyTxOut C.Api.ShelleyBasedEraAlonzo))
+  . Map.toList
+  $ utxo

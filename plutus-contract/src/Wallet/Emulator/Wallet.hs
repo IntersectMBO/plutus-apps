@@ -57,7 +57,8 @@ import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as U
 import Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
 import Ledger.Tx qualified as Tx
-import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusIndex, fromPlutusTx, getRequiredSigners)
+import Ledger.Validation (addSignature, evaluateTransactionFee, fromPlutusIndex, fromPlutusTx, getRequiredSigners,
+                          makeTransactionBodyAutoBalance)
 import Ledger.Value qualified as Value
 import Plutus.ChainIndex (PageQuery)
 import Plutus.ChainIndex qualified as ChainIndex
@@ -315,21 +316,28 @@ handleBalance utx' = do
     let utx = finalize pSlotConfig utx'
     let requiredSigners = Set.toList (U.unBalancedTxRequiredSignatories utx)
     cUtxoIndex <- handleError (view U.tx utx) $ fromPlutusIndex params $ UtxoIndex $ U.unBalancedTxUtxoIndex utx <> fmap Tx.toTxOut utxo
-    -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
-    let calcFee n fee = do
-            tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
-            newFee <- handleError tx $ evaluateTransactionFee params cUtxoIndex requiredSigners tx
-            if newFee /= fee
-                then if n == (0 :: Int)
-                    -- If we don't reach a fixed point, pick the larger fee
-                    then pure (newFee PlutusTx.\/ fee)
-                    else calcFee (n - 1) newFee
-                else pure newFee
-    -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
-    theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
-    tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
-    cTx <- handleError tx' $ fromPlutusTx params cUtxoIndex requiredSigners tx'
-    pure $ Tx.Both tx' (Tx.CardanoApiEmulatorEraTx cTx)
+    cTx <-
+        if (Set.null $ view (U.tx . Tx.inputs) utx) then do
+            -- Find the fixed point of fee calculation, trying maximally n times to prevent an infinite loop
+            let calcFee n fee = do
+                    tx <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ fee)
+                    newFee <- handleError tx $ evaluateTransactionFee params cUtxoIndex requiredSigners tx
+                    if newFee /= fee
+                        then if n == (0 :: Int)
+                            -- If we don't reach a fixed point, pick the larger fee
+                            then pure (newFee PlutusTx.\/ fee)
+                            else calcFee (n - 1) newFee
+                        else pure newFee
+            -- Start with a relatively high fee, bigger chance that we get the number of inputs right the first time.
+            theFee <- calcFee 5 $ Ada.lovelaceValueOf 300000
+            tx' <- handleBalanceTx utxo (utx & U.tx . Ledger.fee .~ theFee)
+            handleError tx' $ fromPlutusTx params cUtxoIndex requiredSigners tx'
+        else do
+            let tx' = view U.tx utx
+            ownPaymentPubKey <- gets ownPaymentPublicKey
+            handleError tx' $ makeTransactionBodyAutoBalance params cUtxoIndex requiredSigners tx' (Ledger.pubKeyAddress ownPaymentPubKey Nothing)
+    -- pure $ Tx.Both tx' (Tx.CardanoApiEmulatorEraTx cTx)
+    pure $ Tx.CardanoApiTx (Tx.CardanoApiEmulatorEraTx cTx)
     where
         handleError tx (Left (Left (ph, ve))) = do
             let sves = case ve of
