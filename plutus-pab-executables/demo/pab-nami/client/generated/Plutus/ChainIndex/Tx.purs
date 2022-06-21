@@ -23,7 +23,7 @@ import Data.Tuple.Nested ((/\))
 import Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash)
-import Plutus.V1.Ledger.Tx (TxId, TxIn, TxOut)
+import Plutus.V1.Ledger.Tx (TxId, TxIn)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
@@ -110,7 +110,7 @@ citxCardanoTx = _Newtype <<< prop (Proxy :: _ "_citxCardanoTx")
 
 data ChainIndexTxOutputs
   = InvalidTx
-  | ValidTx (Array TxOut)
+  | ValidTx (Array ChainIndexTxOut)
 
 derive instance Eq ChainIndexTxOutputs
 
@@ -139,7 +139,7 @@ _InvalidTx = prism' (const InvalidTx) case _ of
   InvalidTx -> Just unit
   _ -> Nothing
 
-_ValidTx :: Prism' ChainIndexTxOutputs (Array TxOut)
+_ValidTx :: Prism' ChainIndexTxOutputs (Array ChainIndexTxOut)
 _ValidTx = prism' ValidTx case _ of
   (ValidTx a) -> Just a
   _ -> Nothing
