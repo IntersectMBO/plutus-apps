@@ -67,7 +67,9 @@ library
                         PlutusExample.PlutusVersion1.RedeemerContextScripts
                         PlutusExample.PlutusVersion1.Sum
 
+                        PlutusExample.PlutusVersion2.MintingScript
                         PlutusExample.PlutusVersion2.RequireRedeemer
+                        PlutusExample.PlutusVersion2.StakeScript
 
                         PlutusExample.ScriptContextChecker
 

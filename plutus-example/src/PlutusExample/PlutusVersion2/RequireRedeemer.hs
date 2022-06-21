@@ -38,7 +38,7 @@ mkValidator _ redeemer sc =
  where
   txInfo = V2.scriptContextTxInfo sc
   txinsDatums = PlutusPrelude.map (txOutDatum . txInInfoResolved)
-                     $ V2.txInfoInputs txInfo
+                  $ V2.txInfoInputs txInfo
   referenceInputDatums =
     PlutusPrelude.map (txOutDatum . txInInfoResolved)
       $ V2.txInfoReferenceInputs txInfo
