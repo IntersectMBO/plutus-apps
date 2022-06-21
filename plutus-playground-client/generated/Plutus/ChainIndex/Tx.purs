@@ -3,6 +3,7 @@ module Plutus.ChainIndex.Tx where
 
 import Prelude
 
+import Cardano.Api.Script (ScriptInAnyLang)
 import Control.Lazy (defer)
 import Data.Argonaut (encodeJson, jsonNull)
 import Data.Argonaut.Decode (class DecodeJson)
@@ -21,9 +22,12 @@ import Data.Set (Set)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Slot (Slot)
+import Plutus.V1.Ledger.Address (Address)
 import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Scripts (DatumHash)
 import Plutus.V1.Ledger.Tx (TxId, TxIn)
+import Plutus.V1.Ledger.Value (Value)
+import Plutus.V2.Ledger.Tx (OutputDatum)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
@@ -108,6 +112,49 @@ citxCardanoTx = _Newtype <<< prop (Proxy :: _ "_citxCardanoTx")
 
 --------------------------------------------------------------------------------
 
+newtype ChainIndexTxOut = ChainIndexTxOut
+  { citoAddress :: Address
+  , citoValue :: Value
+  , citoDatum :: OutputDatum
+  , citoRefScript :: ReferenceScript
+  }
+
+derive instance Eq ChainIndexTxOut
+
+instance Show ChainIndexTxOut where
+  show a = genericShow a
+
+instance EncodeJson ChainIndexTxOut where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { citoAddress: E.value :: _ Address
+        , citoValue: E.value :: _ Value
+        , citoDatum: E.value :: _ OutputDatum
+        , citoRefScript: E.value :: _ ReferenceScript
+        }
+    )
+
+instance DecodeJson ChainIndexTxOut where
+  decodeJson = defer \_ -> D.decode $
+    ( ChainIndexTxOut <$> D.record "ChainIndexTxOut"
+        { citoAddress: D.value :: _ Address
+        , citoValue: D.value :: _ Value
+        , citoDatum: D.value :: _ OutputDatum
+        , citoRefScript: D.value :: _ ReferenceScript
+        }
+    )
+
+derive instance Generic ChainIndexTxOut _
+
+derive instance Newtype ChainIndexTxOut _
+
+--------------------------------------------------------------------------------
+
+_ChainIndexTxOut :: Iso' ChainIndexTxOut { citoAddress :: Address, citoValue :: Value, citoDatum :: OutputDatum, citoRefScript :: ReferenceScript }
+_ChainIndexTxOut = _Newtype
+
+--------------------------------------------------------------------------------
+
 data ChainIndexTxOutputs
   = InvalidTx
   | ValidTx (Array ChainIndexTxOut)
@@ -142,4 +189,42 @@ _InvalidTx = prism' (const InvalidTx) case _ of
 _ValidTx :: Prism' ChainIndexTxOutputs (Array ChainIndexTxOut)
 _ValidTx = prism' ValidTx case _ of
   (ValidTx a) -> Just a
+  _ -> Nothing
+
+--------------------------------------------------------------------------------
+
+data ReferenceScript
+  = ReferenceScriptNone
+  | ReferenceScriptInAnyLang ScriptInAnyLang
+
+derive instance Eq ReferenceScript
+
+instance Show ReferenceScript where
+  show a = genericShow a
+
+instance EncodeJson ReferenceScript where
+  encodeJson = defer \_ -> case _ of
+    ReferenceScriptNone -> encodeJson { tag: "ReferenceScriptNone", contents: jsonNull }
+    ReferenceScriptInAnyLang a -> E.encodeTagged "ReferenceScriptInAnyLang" a E.value
+
+instance DecodeJson ReferenceScript where
+  decodeJson = defer \_ -> D.decode
+    $ D.sumType "ReferenceScript"
+    $ Map.fromFoldable
+        [ "ReferenceScriptNone" /\ pure ReferenceScriptNone
+        , "ReferenceScriptInAnyLang" /\ D.content (ReferenceScriptInAnyLang <$> D.value)
+        ]
+
+derive instance Generic ReferenceScript _
+
+--------------------------------------------------------------------------------
+
+_ReferenceScriptNone :: Prism' ReferenceScript Unit
+_ReferenceScriptNone = prism' (const ReferenceScriptNone) case _ of
+  ReferenceScriptNone -> Just unit
+  _ -> Nothing
+
+_ReferenceScriptInAnyLang :: Prism' ReferenceScript ScriptInAnyLang
+_ReferenceScriptInAnyLang = prism' ReferenceScriptInAnyLang case _ of
+  (ReferenceScriptInAnyLang a) -> Just a
   _ -> Nothing

@@ -105,8 +105,11 @@ instance Serialise C.ScriptInAnyLang where
                 pure $ C.ScriptInAnyLang (C.PlutusScriptLanguage C.PlutusScriptV2) decoded
             _ -> fail "Invalid ScriptInAnyLang encoding"
 
+instance OpenApi.ToSchema C.ScriptInAnyLang where
+    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "ScriptInAnyLang") mempty
+
 data ReferenceScript = ReferenceScriptNone | ReferenceScriptInAnyLang C.ScriptInAnyLang
-  deriving (Eq, Show, Generic, Serialise)
+  deriving (Eq, Show, Generic, Serialise, OpenApi.ToSchema)
 
 instance ToJSON ReferenceScript where
   toJSON (ReferenceScriptInAnyLang s) = object ["referenceScript" .= s]
@@ -128,7 +131,7 @@ data ChainIndexTxOut = ChainIndexTxOut
   , citoValue     :: Value
   , citoDatum     :: OutputDatum
   , citoRefScript :: ReferenceScript
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Serialise, OpenApi.ToSchema)
 
 instance ToJSON ChainIndexTxOut where
     toJSON ChainIndexTxOut{..} = object
@@ -146,18 +149,6 @@ instance FromJSON ChainIndexTxOut where
                 <*> obj .: "value"
                 <*> obj .: "datum"
                 <*> obj .:? "refScript" .!= ReferenceScriptNone
-
-instance Serialise ChainIndexTxOut where
-    encode ChainIndexTxOut{..} =
-        encodeListLen 4 <> encode citoAddress <> encode citoValue <> encode citoDatum <> encode citoRefScript
-    decode = do
-        len <- decodeListLen
-        case len of
-            4 -> ChainIndexTxOut <$> decode <*> decode <*> decode <*> decode
-            _ -> fail "Invalid ChainIndexTxOut encoding"
-
-instance OpenApi.ToSchema ChainIndexTxOut where
-    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "ChainIndexTxOut") mempty
 
 -- | List of outputs of a transaction. There are no outputs if the transaction
 -- is invalid.

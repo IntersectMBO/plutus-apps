@@ -12,7 +12,10 @@ import Control.Monad.Freer.Extras.Beam (BeamError, BeamLog)
 import Control.Monad.Freer.Extras.Pagination (Page, PageQuery, PageSize)
 import Control.Monad.Reader (MonadReader)
 import Gist (Gist, GistFile, GistId, NewGist, NewGistFile, Owner)
-import Language.PureScript.Bridge (BridgePart, Language (Haskell), PSType, SumType, TypeInfo (TypeInfo), argonaut,
+import Language.PureScript.Bridge (BridgePart, DataConstructor (DataConstructor, _sigConstructor, _sigValues),
+                                   DataConstructorArgs (Nullary), Instance (Eq, Generic, GenericShow, Json, Ord),
+                                   Language (Haskell), PSType, SumType (SumType),
+                                   TypeInfo (TypeInfo, _typeModule, _typeName, _typePackage, _typeParameters), argonaut,
                                    equal, equal1, functor, genericShow, mkSumType, order, psTypeParameters, typeModule,
                                    typeName, (^==))
 import Language.PureScript.Bridge.Builder (BridgeData)
@@ -37,7 +40,8 @@ import Playground.Types (ContractCall, FunctionSchema, KnownCurrency)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
 import Plutus.ChainIndex.ChainIndexLog (ChainIndexLog)
-import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOutputs)
+import Plutus.ChainIndex.Tx (ChainIndexTx, ChainIndexTxOutputs, ReferenceScript)
+import Plutus.ChainIndex.Tx qualified as ChainIndex
 import Plutus.ChainIndex.Types (BlockNumber, Depth, Point, RollbackState, Tip, TxOutState, TxValidity)
 import Plutus.ChainIndex.UtxoState (InsertUtxoFailed, InsertUtxoPosition, RollbackFailed)
 import Plutus.Contract.Checkpoint (CheckpointError)
@@ -50,6 +54,7 @@ import Plutus.Trace.Emulator.Types (ContractInstanceLog, ContractInstanceMsg, Co
 import Plutus.Trace.Scheduler (Priority, SchedulerLog, StopReason, ThreadEvent, ThreadId)
 import Plutus.Trace.Tag (Tag)
 import Plutus.V1.Ledger.Api (DatumHash, MintingPolicy, StakeValidator, Validator)
+import Plutus.V2.Ledger.Tx qualified as PV2
 import Schema (FormArgumentF, FormSchema)
 import Wallet.API (WalletAPIError)
 import Wallet.Emulator.Types qualified as EM
@@ -303,6 +308,22 @@ headerBridge = do
 servantBridge :: BridgePart
 servantBridge = headersBridge <|> headerBridge
 
+-- TODO: implement a proper SumType, this is a stub to make purescript compile
+scriptAnyLangType :: SumType 'Haskell
+scriptAnyLangType = SumType (
+      TypeInfo {
+        _typePackage = "crdn-p-1.33.0-c62ffc00"
+      , _typeModule = "Cardano.Api.Script"
+      , _typeName = "ScriptInAnyLang"
+      , _typeParameters = []
+    }
+  ) [
+      DataConstructor {_sigConstructor = "SimpleScriptLanguageV1", _sigValues = Nullary}
+    , DataConstructor {_sigConstructor = "SimpleScriptLanguageV2", _sigValues = Nullary}
+    , DataConstructor {_sigConstructor = "PlutusScriptLanguageV1", _sigValues = Nullary}
+    , DataConstructor {_sigConstructor = "PlutusScriptLanguageV2", _sigValues = Nullary}
+  ] [Eq,GenericShow,Json,Ord,Generic]
+
 ------------------------------------------------------------
 ledgerTypes :: [SumType 'Haskell]
 ledgerTypes =
@@ -320,6 +341,11 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @OnChainTx
     , equal . genericShow . argonaut $ mkSumType @UtxoIndex
     , equal . genericShow . argonaut $ mkSumType @Value
+    -- v2
+    , equal . genericShow . argonaut $ mkSumType @PV2.OutputDatum
+    , equal . genericShow . argonaut $ mkSumType @ReferenceScript
+    , scriptAnyLangType
+    -- v2-end
     , functor . equal . genericShow . argonaut $ mkSumType @(Extended A)
     , functor . equal . genericShow . argonaut $ mkSumType @(Interval A)
     , functor . equal . genericShow . argonaut $ mkSumType @(LowerBound A)
@@ -387,6 +413,7 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @TxosResponse
     , equal . genericShow . argonaut $ mkSumType @UtxosResponse
     , equal . genericShow . argonaut $ mkSumType @ChainIndexTx
+    , equal . genericShow . argonaut $ mkSumType @ChainIndex.ChainIndexTxOut
     , equal . genericShow . argonaut $ mkSumType @ChainIndexTxOutputs
     , equal . genericShow . argonaut $ mkSumType @ChainIndexTxOut
     , equal . genericShow . argonaut $ mkSumType @ChainIndexLog
