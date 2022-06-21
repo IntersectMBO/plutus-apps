@@ -419,7 +419,7 @@ stepDL (Alt _ d d') s step = stepDL d s step ++ stepDL d' s step
 stepDL (Stopping d) s step = stepDL d s step
 stepDL (Weight _ d) s step = stepDL d s step
 stepDL (ForAll (q :: Quantification a) f) _ (Witness (a :: a')) =
-  case eqT @ a @ a' of
+  case eqT @a @a' of
     Just Refl -> [f a | isaQ q a]
     Nothing   -> []
 stepDL (Monitor f d) s step = stepDL d s step
@@ -540,7 +540,7 @@ findMonitoring (Alt b d d') s as =
 findMonitoring (Stopping d) s as = findMonitoring d s as
 findMonitoring (Weight _ d) s as = findMonitoring d s as
 findMonitoring (ForAll (q :: Quantification a) k) s (Witness (a :: a'):as) =
-  case eqT @ a @ a' of
+  case eqT @a @a' of
     Just Refl -> findMonitoring (k a) s as
     Nothing   -> Nothing
 findMonitoring (Monitor m d) s as =
