@@ -105,6 +105,7 @@ let
     shellcheck
     sqlite-interactive
     stack
+    wget
     yq
     z3
     zlib
