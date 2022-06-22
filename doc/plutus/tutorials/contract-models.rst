@@ -2661,7 +2661,7 @@ The most interesting part of the model covers what happens when the
 auction deadline is reached: in contrast to the ``Escrow`` contract,
 the highest bid is paid to the seller automatically, and the buyer
 receives the token. We model this using the ``nextReactiveState``
-method introduced in section :ref:`Timing`
+method introduced in section :ref:`Timing`.
 
  .. literalinclude:: Auction.hs
    :start-after: START nextReactiveState

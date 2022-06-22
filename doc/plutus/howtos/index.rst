@@ -4,7 +4,7 @@ How-to guides
 =============
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :titlesonly:
 
    getting-started

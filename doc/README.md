@@ -1,4 +1,4 @@
-# Plutus and Marlowe documentation site
+# Plutus documentation site
 
 This is a sphinx site. You can build it with sphinx directly (assuming you're in a `nix-shell`):
 

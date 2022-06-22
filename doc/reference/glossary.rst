@@ -59,7 +59,7 @@ Glossary
 
       This is implemented in the Alonzo hard fork of the Cardano blockchain.
 
-      See :ref:`what_is_a_ledger`.
+      See :ref:`what_is_a_ledger`
 
     minting
       A transaction which mints tokens creates new tokens, providing that
@@ -80,7 +80,7 @@ Glossary
 
     distributed ledger
     ledger
-      See :ref:`what_is_a_ledger`.
+      See :ref:`what_is_a_ledger`
 
     Marlowe
       A domain-specific language for writing financial contract
@@ -136,7 +136,7 @@ Glossary
       Plutus Core is not read or written by humans, it is a compilation
       target for other languages.
 
-      See :ref:`what_is_plutus_foundation`.
+      See :ref:`what_is_plutus_foundation`
 
     Plutus IR
       An intermediate language that compiles to Plutus Core. Plutus IR is
@@ -153,7 +153,7 @@ Glossary
 
       2. The Plutus Application Framework
 
-      See :ref:`what_is_the_plutus_platform`.
+      See :ref:`what_is_the_plutus_platform`
 
     Plutus SDK
       The libraries and development tooling for writing contract

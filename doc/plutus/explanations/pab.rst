@@ -55,7 +55,7 @@ Wallet
 A Cardano wallet is required for balancing and signing transactions (and optionnaly submitting transactions).
 Balancing means taking a partial transaction and adding inputs and outputs to make the transaction valid.
 
-Take :ref:`Marlowe<introducing-marlowe>` as an example.
+Take `Marlowe <https://play.marlowe-finance.io/doc/marlowe/tutorials/introducing-marlowe.html>`_ as an example.
 When the user first starts a Marlowe contract, funds need to be transferred from one of the user's addresses to the contract address.
 This is achieved by sending a partial transaction that has zero inputs and a script output for the Marlowe contract instance to the wallet for balancing.
 The wallet adds some of its own inputs to cover the amount that is to be paid into the contract, plus a change output for any excess funds.
