@@ -20,8 +20,8 @@ main = do
     S.stdoutLn
       . S.map
         ( \case
-            RollForward (Cardano.Api.BlockInMode (Cardano.Api.Block header _txs) _era) _ct ->
-              "RollForward, header: " <> TL.unpack (Aeson.encodeToLazyText header)
+            RollForward (Cardano.Api.BlockInMode (Cardano.Api.Block (Cardano.Api.BlockHeader slot _ _) _txs) _era) _ct ->
+              "RollForward, header: " <> show slot
             RollBackward cp _ct ->
               "RollBackward, point: " <> TL.unpack (Aeson.encodeToLazyText cp)
         )

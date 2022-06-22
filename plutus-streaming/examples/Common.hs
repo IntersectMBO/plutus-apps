@@ -14,6 +14,23 @@ import Streaming.Prelude qualified as S
 -- Options parsing
 --
 
+{-
+cabal v2-run plutus-streaming:plutus-streaming-example-1 -- \
+  --socket-path $HOME/cardano/db/node.socket \
+  --mainnet \
+  --slot-no 672322 \
+  --block-hash 7da97f50c78204bf38dcd6cc80f05c4c751bf24bc7e4f1d00fb43b20851783fa
+
+cardano-node run \
+--config $HOME/cardano/mainnet-config.json \
+--database-path $HOME/cardano/db/ \
+--socket-path $HOME/cardano/db/node.socket \
+--host-addr 127.0.0.1 \
+--port 1337 \
+--topology $HOME/cardano/mainnet-topology.json
+
+-}
+
 data Options = Options
   { optionsSocketPath :: String,
     optionsNetworkId  :: Cardano.Api.NetworkId,
@@ -74,4 +91,3 @@ workaround k Cardano.Api.ShelleyEraInCardanoMode = k Cardano.Api.ShelleyEraInCar
 workaround k Cardano.Api.AllegraEraInCardanoMode = k Cardano.Api.AllegraEraInCardanoMode
 workaround k Cardano.Api.MaryEraInCardanoMode    = k Cardano.Api.MaryEraInCardanoMode
 workaround k Cardano.Api.AlonzoEraInCardanoMode  = k Cardano.Api.AlonzoEraInCardanoMode
-

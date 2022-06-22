@@ -39,9 +39,11 @@ library
         base >=4.9 && <5,
         async,
         cardano-api,
+        containers,
         ouroboros-network,
         stm,
         streaming,
+        text
 
 executable plutus-streaming-example-1
     import: lang
