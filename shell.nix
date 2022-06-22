@@ -87,6 +87,8 @@ let
 
   # build inputs from nixpkgs ( -> ./nix/default.nix )
   nixpkgsInputs = with pkgs; [
+    awscli2
+    bzip2
     cacert
     editorconfig-core-c
     ghcid
