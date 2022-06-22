@@ -46,7 +46,9 @@ module Ledger.Generators(
     splitVal,
     validateMockchain,
     signAll,
-    knownPaymentPublicKeys
+    knownPaymentPublicKeys,
+    knownPaymentPrivateKeys,
+    someTokenValue
     ) where
 
 import Cardano.Api qualified as C

@@ -35,7 +35,7 @@ common lang
     ScopedTypeVariables
     StandaloneDeriving
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wunused-packages
@@ -185,6 +185,7 @@ library
       Plutus.Contract.Test
       Plutus.Contract.Test.ContractModel
       Plutus.Contract.Test.ContractModel.CrashTolerance
+      Plutus.Contract.Test.ContractModel.DoubleSatisfaction
       Plutus.Contract.Test.ContractModel.Internal
       Plutus.Contract.Test.ContractModel.Symbolics
       Plutus.Contract.Test.Coverage
@@ -210,7 +211,7 @@ test-suite plutus-contract-test
   type:               exitcode-stdio-1.0
   main-is:            Spec.hs
 
-  -- See Plutus Tx readme for why we need the following flags: 
+  -- See Plutus Tx readme for why we need the following flags:
   -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
