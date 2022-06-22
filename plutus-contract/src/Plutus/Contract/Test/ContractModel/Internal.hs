@@ -215,7 +215,7 @@ import Plutus.V1.Ledger.Ada qualified as Ada
 import Ledger.Index as Index
 import Ledger.Scripts
 import Ledger.Slot
-import Ledger.Value (AssetClass, adaOnlyValue)
+import Ledger.Value (AssetClass)
 import Plutus.Contract (Contract, ContractError, ContractInstanceId, Endpoint, endpoint)
 import Plutus.Contract.Schema (Input)
 import Plutus.Contract.Test hiding (not)

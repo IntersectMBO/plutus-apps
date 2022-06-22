@@ -58,8 +58,7 @@ import Ledger.Value (adaOnlyValue)
 import Plutus.Contract.Test hiding (not)
 import Plutus.Contract.Test.ContractModel.Internal
 import Plutus.Script.Utils.V1.Scripts (datumHash, validatorHash)
-import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream,
-                                       walletInstanceTag)
+import Plutus.Trace.Emulator as Trace (EmulatorTrace, activateContract, callEndpoint, runEmulatorStream)
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.TxId
 import Streaming qualified as S
