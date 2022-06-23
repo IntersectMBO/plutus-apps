@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 module Spec.Balancing(tests) where
 
@@ -14,6 +13,7 @@ import Test.Tasty (TestTree, testGroup)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
+import Ledger.Test
 import Ledger.Value qualified as Value
 import Plutus.Contract as Con
 import Plutus.Contract.Test (assertAccumState, assertValidatedTransactionCount, changeInitialWalletValue,
@@ -22,9 +22,7 @@ import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, scriptCurrencySymbol, validatorHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Address, Validator)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), unitDatum, unitRedeemer)
-import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
@@ -129,17 +127,3 @@ balanceTxnNoExtraOutput =
         tracePred = assertAccumState mintingOperation "instance 1" (== [2]) "has 2 outputs"
 
     in checkPredicate "balancing doesn't create extra output" tracePred (void trace)
-
-someAddress :: Address
-someAddress = Ledger.scriptAddress someValidator
-
-someValidator :: Validator
-someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
-
-{-# INLINABLE mkPolicy #-}
-mkPolicy :: () -> Ledger.ScriptContext -> Bool
-mkPolicy _ _ = True
-
-coinMintingPolicy :: Ledger.MintingPolicy
-coinMintingPolicy = Ledger.mkMintingPolicyScript
-    $$(PlutusTx.compile [|| MPS.mkUntypedMintingPolicy mkPolicy ||])
