@@ -22,7 +22,7 @@ application, generic properties such as that no funds remain locked in
 contracts for ever, and indeed both positive and negative
 tests---where positive tests check that the contracts allow the
 intended usages, and negative tests check that they do *not* allow
-unintended ones.
+the unintended ones.
 
 The `ContractModel` framework is quite rich in features, but we will
 introduce them gradually and explain how they can best be used.
@@ -37,25 +37,25 @@ We begin by showing how to construct a model for a simplified escrow
 contract, which can be found in
 :hsmod:`Plutus.Contracts.Tutorial.Escrow`. This contract enables a
 group of wallets to make a predetermined exchange of tokens, for
-example selling an NFT for Ada. There are two endpoints, a ``pay``
-endpoint, and a ``redeem`` endpoint. Each wallet pays in its
-contribution to the contract using the ``pay`` endpoint, and once all
+example selling an NFT for Ada. There are two endpoints, a :hsobj:`Plutus.Contracts.Tutorial.Escrow.pay`
+endpoint, and a :hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` endpoint. Each wallet pays in its
+contribution to the contract using the :hsobj:`Plutus.Contracts.Tutorial.Escrow.pay` endpoint, and once all
 the wallets have done so, then any wallet can trigger the
-predetermined payout using the ``redeem`` endpoint.
+predetermined payout using the :hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` endpoint.
 
 For simplicity, we will begin by testing the contract for a fixed set
-of predetermined payouts. These are defined by the ``EscrowParams``, a
+of predetermined payouts. These are defined by the :hsobj:`Plutus.Contracts.Tutorial.Escrow.EscrowParams`, a
 type exported by the escrow contract, and which is actually passed to
 the on-chain validators. :hsmod:`Plutus.Contract.Test` provides ten
-emulated wallets for use in tests, ``w1`` to ``w10``; in this case we
+emulated wallets for use in tests, :hsobj:`Plutus.Contract.Test.w1` to :hsobj:`Plutus.Contract.Test.w10`; in this case we
 will use five of them:
 
 .. literalinclude:: Escrow.hs
    :start-after: START testWallets
    :end-before: END testWallets
 
-Let us decide arbitrarily that ``w1`` will receive a payout of 10 Ada,
-and ``w2`` will receive a payout of 20, and define an ``EscrowParams``
+Let us decide arbitrarily that :hsobj:`Plutus.Contract.Test.w1` will receive a payout of 10 Ada,
+and :hsobj:`Plutus.Contract.Test.w2` will receive a payout of 20, and define an :hsobj:`Plutus.Contracts.Tutorial.Escrow.EscrowParams`
 value to represent that:
 
 .. literalinclude:: Escrow.hs
@@ -88,7 +88,7 @@ with an underscore; the ``makeLenses`` call creates lenses called just
 to access and modify the fields below.
 
 We turn this type into a contract model by making it an instance of
-the ``ContractModel`` class:
+the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` class:
 
 .. literalinclude:: Escrow.hs
    :start-after: START ContractModelInstance
@@ -105,15 +105,15 @@ contracts, of differing types, running in any of the emulated
 wallets. But we need to tell the framework *which* contracts we are
 going to test, and we need a way for the model to refer to each
 *contract instance*, so that we can invoke the right endpoints. We do
-so using a ``ContractInstanceKey``, but since different models will be
+so using a :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey`, but since different models will be
 testing different collections of contracts, then this type is not
 *fixed*, it is defined as part of each model, as an associated type of
-the ``ContractModel`` class.
+the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` class.
 
 In this case only one kind of contract is involved in the tests, the
 escrow contract, but there will be many instances of it, one running
 in each wallet. To identify a contract instance, a
-``ContractInstanceKey`` just has to record the wallet it is running
+:hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey` just has to record the wallet it is running
 in, we only need one constructor in the type. In general there will be
 one constructor for each type of contract instance in the test.
 
@@ -121,23 +121,23 @@ one constructor for each type of contract instance in the test.
    :start-after: START ContractInstanceKeyType
    :end-before: END ContractInstanceKeyType
 
-Note that the ``ContractInstanceKey`` type is a GADT, so it tracks not only the
+Note that the :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey` type is a GADT, so it tracks not only the
 model type it belongs to, but also the type of the contract instance
 it refers to.
 
 The framework also needs to be able to show and compare
-``ContractInstanceKey``, so you might expect that we would add a
+:hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey`, so you might expect that we would add a
 deriving clause to this type definition. But a deriving clause is
 actually not supported here, because the type is a GADT, so instead we
 have to give separate 'standalone deriving' declarations outside the
-``ContractModel`` instance:
+:hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` instance:
 
 .. literalinclude:: Escrow.hs
    :start-after: START ContractInstanceKeyDeriving
    :end-before: END ContractInstanceKeyDeriving
 
 
-Defining ``ContractInstanceKey`` is only part of the story: we also
+Defining :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey` is only part of the story: we also
 have to tell the framework how to *interpret* the contract instance
 keys, in particular
 
@@ -147,7 +147,7 @@ keys, in particular
 #.  which actual contract each contract instance should run.
 
 
-We do so by defining three methods in the ``ContractModel`` class:
+We do so by defining three methods in the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` class:
 
 
 .. literalinclude:: Escrow.hs
@@ -161,7 +161,8 @@ should run in, and the third line tells the framework which contract
 to run for each key--in this case, the same ``testContract`` in each
 wallet. ``Spec.Tutorial.Escrow`` does not actually export a complete
 concrete, only contract endpoints, so for the purposes of the test we
-just define a contract that invokes those endpoints repeatedly:
+just define a contract that allows us to invoke those endpoints
+repeatedly:
 
 .. literalinclude:: Escrow.hs
    :start-after: START testContract
@@ -176,7 +177,7 @@ The type of Actions
 
 The final *type* we need to define as part of a contract model tells
 the framework what *actions* to include in generated tests. This is
-defined as another associated datatype of the ``ContractModel`` class,
+defined as another associated datatype of the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` class,
 and in this case, we will just need actions to invoke the two contract
 endpoints:
 
@@ -185,33 +186,33 @@ endpoints:
    :end-before: END ActionType
 
 The framework needs to be able to show and compare
-``Action`` too, but in this case we *can* just add a ``deriving``
+:hsobj:`Plutus.Contract.Test.ContractModel.Action` too, but in this case we *can* just add a ``deriving``
 clause to the definition.
 
 Performing Actions
 ''''''''''''''''''
 
-QuickCheck will generate sequences of ``Action`` as tests, but in
+QuickCheck will generate sequences of :hsobj:`Plutus.Contract.Test.ContractModel.Action` as tests, but in
 order to *run* the tests, we need to specify how each action should be
-performed. This is done by defining the ``perform`` method of the
-``ContractModel`` class, which maps ``Action`` to a computation in the
-emulator. ``perform`` takes several parameters besides the ``Action`` to
+performed. This is done by defining the :hsobj:`Plutus.Contract.Test.ContractModel.perform` method of the
+:hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` class, which maps :hsobj:`Plutus.Contract.Test.ContractModel.Action` to a computation in the
+emulator. :hsobj:`Plutus.Contract.Test.ContractModel.perform` takes several parameters besides the :hsobj:`Plutus.Contract.Test.ContractModel.Action` to
 perform, but for now we ignore all but the first, whose purpose is to
-translate a ``ContractInstanceKey``, used in the model, into a
-``ContractHandle``, used to refer to a contract instance in the
-emulator. The ``perform`` method is free to use any ``EmulatorTrace``
+translate a :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey`, used in the model, into a
+:hsobj:`Plutus.Trace.Emulator.Types.ContractHandle`, used to refer to a contract instance in the
+emulator. The :hsobj:`Plutus.Contract.Test.ContractModel.perform` method is free to use any :hsobj:`Plutus.Trace.Emulator.EmulatorTrace`
 operations, but in practice we usually keep it simple, interpreting
-each ``Action`` as a single call to a contract endpoint. This gives
+each :hsobj:`Plutus.Contract.Test.ContractModel.Action` as a single call to a contract endpoint. This gives
 QuickCheck maximal control over the interaction between the tests and
-the contracts. In this case, we just call either the ``pay`` or the
-``redeem`` endpoint.
+the contracts. In this case, we just call either the :hsobj:`Plutus.Contracts.Tutorial.Escrow.pay` or the
+:hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` endpoint.
 
 .. literalinclude:: Escrow.hs
    :start-after: START perform
    :end-before: END perform
 
-Notice that we *do* need to allow each ``Action`` time to complete, so
-we include a ``delay`` to tell the emulator to move on to the next
+Notice that we *do* need to allow each :hsobj:`Plutus.Contract.Test.ContractModel.Action` time to complete, so
+we include a :hsobj:`Plutus.Contract.Test.ContractModel.delay` to tell the emulator to move on to the next
 slot after each endpoint call. Of course we are free *not* to do this,
 but then tests will submit many endpoint calls per slot, and fail
 because the endpoints are not ready to perform them. This is not the
@@ -231,28 +232,31 @@ contract model state? We defined a type for this purpose:
    :start-after: START EscrowModel
    :end-before: END EscrowModel
 
-We need to tell the framework what the *effect* of each ``Action`` is
+We need to tell the framework what the *effect* of each :hsobj:`Plutus.Contract.Test.ContractModel.Action` is
 expected to be, both on wallet contents, and in terms of the model state. We do
-this by defining the ``nextState`` method of the ``ContractModel``
-class, which just takes an ``Action`` as a parameter, and interprets
-it in the ``Spec`` monad, provided by the ``ContractModel`` framework.
+this by defining the :hsobj:`Plutus.Contract.Test.ContractModel.nextState` method of the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel`
+class, which just takes an :hsobj:`Plutus.Contract.Test.ContractModel.Action` as a parameter, and interprets
+it in the :hsobj:`Plutus.Contract.Test.ContractModel.Spec` monad, provided by the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` framework.
 
 .. literalinclude:: Escrow.hs
    :start-after: START 0nextState
    :end-before: END 0nextState
 
-You can see that the ``Spec`` monad allows us to withdraw and deposit
+You can see that the :hsobj:`Plutus.Contract.Test.ContractModel.Spec` monad allows us to withdraw and deposit
 values in wallets, so that the framework can predict their expected
 contents, and also to read and update the model state using the lenses
 generated from its type definition. For a ``Pay`` action, we withdraw
 the payment from the wallet, and record the contribution in the model
-state, using ``(%=)`` to update the ``contributions`` field. For a
+state, using |%=|_ to update the ``contributions`` field. For a
 ``Redeem`` action, we read the targets from the model state (using
-``viewContractState`` and the lens generated from the type
+:hsobj:`Plutus.Contract.Test.ContractModel.viewContractState` and the lens generated from the type
 definition), and then make the corresponding payments to the wallets
-concerned. In both cases we tell the model to ``wait`` one slot,
-corresponding to the ``delay`` call in ``perform``; this is necessary
+concerned. In both cases we tell the model to :hsobj:`Plutus.Contract.Test.ContractModel.wait` one slot,
+corresponding to the :hsobj:`Plutus.Contract.Test.ContractModel.delay` call in :hsobj:`Plutus.Contract.Test.ContractModel.perform`; this is necessary
 to avoid the model and the emulator getting out of sync.
+
+.. |%=| replace:: ``(%=)``
+.. _%=: https://hackage.haskell.org/package/lens-5.1.1/docs/Control-Lens-Setter.html#v:-37--61-
 
 We also have to specify the *initial* model state at the beginning of
 each test: we just record that no contributions have been made yet,
@@ -263,18 +267,18 @@ along with the targets we chose for testing with.
    :end-before: END initialState
 
 Given these definitions, the framework can predict the expected model
-state after any sequence of ``Action``.
+state after any sequence of :hsobj:`Plutus.Contract.Test.ContractModel.Action`.
 
 Generating Actions
 ^^^^^^^^^^^^^^^^^^
 
 The last step, before we can actually run tests, is to tell the
 framework how to *generate* random actions. We do this by defining the
-``arbitraryAction`` method, which is just a QuickCheck generator for
-the ``Action`` type. It gets the current model state as a parameter,
+:hsobj:`Plutus.Contract.Test.ContractModel.arbitraryAction` method, which is just a QuickCheck generator for
+the :hsobj:`Plutus.Contract.Test.ContractModel.Action` type. It gets the current model state as a parameter,
 so we can if need be adapt the generator depending on the state, but
 for now that is not important: we just choose between making a payment
-from a random wallet, and invoking ``redeem`` from a random
+from a random wallet, and invoking :hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` from a random
 wallet. Since we expect to need several payments to fund a redemption,
 we generate ``Pay`` actions a bit more often than ``Redeem`` ones.
 
@@ -286,14 +290,17 @@ Strictly speaking the framework now has enough information to generate
 and run tests, but it is good practice to define *shrinking* every
 time we define *generation*; we just defined a generator for actions,
 so we should define a shrinker too. We do so by defining the
-``shrinkAction`` method, which, like the QuickCheck ``shrink``
-function, just returns a list of smaller ``Action`` to try replacing
+:hsobj:`Plutus.Contract.Test.ContractModel.shrinkAction` method, which, like the QuickCheck |shrink|_
+function, just returns a list of smaller :hsobj:`Plutus.Contract.Test.ContractModel.Action` to try replacing
 an action by when a test fails. It is always worth defining a
 shrinker: the small amount of effort required is repaid *very*
 quickly, since failed tests become much easier to understand.
 
+.. |shrink| replace:: ``shrink``
+.. _shrink: https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:shrink
+
 In this case, as in most others, we can just reuse the existing
-shrinking for those parts of an ``Action`` that make sense to
+shrinking for those parts of an :hsobj:`Plutus.Contract.Test.ContractModel.Action` that make sense to
 shrink. There is no sensible way to shrink a wallet, really, so we
 just shrink the amount in a payment.
 
@@ -309,7 +316,7 @@ Running tests and debugging the model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We are finally ready to run some tests! We do still need to define a
-*property* that we can call QuickCheck with, but the ``ContractModel``
+*property* that we can call QuickCheck with, but the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel`
 framework provides a standard one that we can just reuse. So we define
 
 .. literalinclude:: Escrow.hs
@@ -342,8 +349,8 @@ failed test case:
     [Redeem (Wallet 5)]
 
 Here we see what generated tests looks like: they are essentially
-lists of ``Action``, performed in sequence. In this case there is only
-one ``Action``: wallet 5 just attempted to redeem the funds in the
+lists of :hsobj:`Plutus.Contract.Test.ContractModel.Action`, performed in sequence. In this case there is only
+one :hsobj:`Plutus.Contract.Test.ContractModel.Action`: wallet 5 just attempted to redeem the funds in the
 contract.
 
 The next lines of output tell us why the test failed:
@@ -357,8 +364,8 @@ The next lines of output tell us why the test failed:
      Value (Map [(,Map [("",10000000)])])
    but they did not change
 
-Remember we defined the expected payout to be 10 Ada to ``w1``, and 20
-Ada to ``w2``. Our model says (in ``nextState``) that when we perform
+Remember we defined the expected payout to be 10 Ada to :hsobj:`Plutus.Contract.Test.w1`, and 20
+Ada to :hsobj:`Plutus.Contract.Test.w2`. Our model says (in :hsobj:`Plutus.Contract.Test.ContractModel.nextState`) that when we perform
 a ``Redeem`` then the payout should be made (in Lovelace, not Ada,
 which is why the numbers are a million times larger than those in the
 model). But the wallets did not get the money--which is hardly
@@ -372,7 +379,7 @@ instance, and the emulator log, both containing the line
 
     Contract instance stopped with error: RedeemFailed NotEnoughFundsAtAddress
 
-This is an error thrown by the off-chain ``redeem`` endpoint code,
+This is an error thrown by the off-chain :hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` endpoint code,
 which (quite correctly) checks the funds available, and fails since there
 are not enough.
 
@@ -382,7 +389,7 @@ Positive testing with preconditions
 We now have a failing test, that highlights a discrepancy between the
 model and the implementation--and it is the model that is wrong. The
 question is how to fix it, and there is a choice to be made. Either we
-could decide that the ``nextState`` function in the model should
+could decide that the :hsobj:`Plutus.Contract.Test.ContractModel.nextState` function in the model should
 *check* whether sufficient funds are available, and if they are not,
 predict that no payments are made. Or perhaps, we should *restrict our
 tests so they do not attempt to use ``Redeem`` when it should not
@@ -405,11 +412,11 @@ making positive testing work well.
 
 To do so, we have to *restrict* test cases, so that they do not
 include ``Redeem`` actions, when there are insufficient funds in the
-escrow. We restrict actions by defining the ``precondition`` method of
-the ``ContractModel`` class: any ``Action`` for which ``precondition``
+escrow. We restrict actions by defining the :hsobj:`Plutus.Contract.Test.ContractModel.precondition` method of
+the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` class: any :hsobj:`Plutus.Contract.Test.ContractModel.Action` for which :hsobj:`Plutus.Contract.Test.ContractModel.precondition`
 returns ``False`` will *not* be included in any generated test. The
-``precondition`` method is also given the current ``ModelState`` as a
-parameter, so that it can decide to accept or reject an ``Action``
+:hsobj:`Plutus.Contract.Test.ContractModel.precondition` method is also given the current :hsobj:`Plutus.Contract.Test.ContractModel.ModelState` as a
+parameter, so that it can decide to accept or reject an :hsobj:`Plutus.Contract.Test.ContractModel.Action`
 based on where it appears in a test.
 
 In this case, we want to *allow* a ``Redeem`` action only if there are
@@ -425,24 +432,33 @@ framework (including wallet contents, slot number etc), but it
 contains the "contract state", which is the state we have defined
 ourselves, the ``EscrowModel``. The *lens* ``contractState
 . contributions . to fold`` extracts the ``EscrowModel``, extracts the
-``contributions`` field from it, and then combines all the ``Value``
-using ``fold``. When we apply it to ``s`` using ``(^.)``, then we get
+``contributions`` field from it, and then combines all the :hsobj:`Ledger.Value`
+using |fold|_. When we apply it to ``s`` using |^.|_, we get
 the total value of all contributions. Likewise, the second lens
 application computes the combined value of all the targets. If the
 contributions exceed the targets, then the ``Redeem`` is allowed;
 otherwise, it will not be included in the test. Once
-we define ``precondition``, then it has to be defined for every form
-of ``Action``, so we just add a default branch that returns ``True``.
+we define :hsobj:`Plutus.Contract.Test.ContractModel.precondition`, then it has to be defined for every form
+of :hsobj:`Plutus.Contract.Test.ContractModel.Action`, so we just add a default branch that returns ``True``.
+
+.. |^.| replace:: ``(^.)``
+.. _^.: https://hackage.haskell.org/package/lens-5.1.1/docs/Control-Lens-Getter.html#v:-94-.
+
+.. |fold| replace:: ``fold``
+.. _fold: https://hackage.haskell.org/package/base-4.16.1.0/docs/Data-Foldable.html#v:fold
 
 .. note::
 
-   We can't use ``(>=)`` to compare ``Value``; there is no
-   ``Ord`` instance. That is because some ``Value`` are incomparable,
+   We can't use ``(>=)`` to compare :hsobj:`Ledger.Value`; there is no
+   ``Ord`` instance. That is because some :hsobj:`Ledger.Value` are incomparable,
    such as one Ada and one NFT, which would break our expectations about
-   ``Ord``. That is why we have to compare them using ``geq`` instead.
+   ``Ord``. That is why we have to compare them using :hsobj:`Plutus.V1.Ledger.Value.geq` instead.
 
 With this precondition, the failing test we have seen can no longer be
-generated, and will not appear again in our ``quickCheck`` runs.
+generated, and will not appear again in our |quickCheck|_ runs.
+
+.. |quickCheck| replace:: ``quickCheck``
+.. _quickCheck: https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:quickCheck
 
 A second infelicity in the model
 ''''''''''''''''''''''''''''''''
@@ -534,7 +550,7 @@ This is not really a bug in the escrow contract: it's a fundamental
 limitation enforced by the blockchain itself. Therefore we must adapt
 our model to allow for it. Once again we have a choice: we *could*
 specify that every ``Pay`` action costs at least the minimum Ada, even
-if the ``Action`` contains a lower payment, *or* we can restrict
+if the :hsobj:`Plutus.Contract.Test.ContractModel.Action` contains a lower payment, *or* we can restrict
 ``Pay`` actions to amounts greater than or equal to the minimum. We
 choose the latter, because it is simpler to express--we just tighten
 the precondition for ``Pay``:
@@ -562,7 +578,7 @@ Now this failure can no longer appear.
 A third infelicity in the model, and a design issue
 '''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Now that we have reasonable preconditions for each ``Action`` in a
+Now that we have reasonable preconditions for each :hsobj:`Plutus.Contract.Test.ContractModel.Action` in a
 test, we can expect to see more interesting failures. And indeed, the
 tests still fail, but now with a test case that combines payment and
 redemption:
@@ -584,7 +600,7 @@ redemption:
 
 Here we made two payments, totalling 31 Ada, *which is exactly one Ada
 more than the combined targets* (recall our targets are 10 Ada to
-``w1`` and 20 Ada to ``w2``). Then ``w5`` redeemed the escrow, *and
+:hsobj:`Plutus.Contract.Test.w1` and 20 Ada to :hsobj:`Plutus.Contract.Test.w2`). Then :hsobj:`Plutus.Contract.Test.w5` redeemed the escrow, *and
 ended up with 1 Ada too much* (last line). That extra Ada is, of
 course, the extra unnecessary Ada that was paid to the script in the
 previous action.
@@ -592,9 +608,9 @@ previous action.
 This raises the question: what *should* happen if an escrow holds more
 funds than are needed to make the target payments? The designers of
 this contract decided that any surplus should be paid to the wallet
-submitting the ``redeem`` transaction. Since this is part of the
+submitting the :hsobj:`Plutus.Contracts.Tutorial.Escrow.redeem` transaction. Since this is part of the
 intended behaviour of the contract, then our model has to reflect
-it. We can do so with a small extension to the ``nextState`` function
+it. We can do so with a small extension to the :hsobj:`Plutus.Contract.Test.ContractModel.nextState` function
 in the model:
 
 .. literalinclude:: Escrow.hs
@@ -654,14 +670,14 @@ around 25 actions.
 
 Of those actions, three quarters were ``Pay`` actions, and 10-15% were
 ``Redeem``. This is not unreasonable--we decided when we wrote the
-``Action`` generator to generate more payments than redemptions. The
+:hsobj:`Plutus.Contract.Test.ContractModel.Action` generator to generate more payments than redemptions. The
 remaining actions are ``WaitUntil`` actions, inserted by the
 framework, which simply wait a number of slots to test for timing
 dependence; we shall return to them later, but can ignore them for
 now. Thus this distribution looks quite reasonable.
 
 The second table that appears tells us how often a *generated*
-``Action`` could not be included in a test, because its *precondition*
+:hsobj:`Plutus.Contract.Test.ContractModel.Action` could not be included in a test, because its *precondition*
 failed.
 
 .. code-block:: text
@@ -749,7 +765,7 @@ section in ``Spec.Tutorial.Escrow1``, in the ``plutus-apps`` repo.
    distribution of tested actions, and so on.
 
 #. Try removing the preconditions for ``Pay`` and ``Redeem``, and
-   reinserting them one by one. Run ``quickCheck`` after each change,
+   reinserting them one by one. Run |quickCheck|_ after each change,
    and inspect the failing tests that are generated.
 
 #. Try removing the line
@@ -758,7 +774,7 @@ section in ``Spec.Tutorial.Escrow1``, in the ``plutus-apps`` repo.
 
       deposit w leftoverValue
 
-   from the ``nextState`` function, and verify that tests fail as
+   from the :hsobj:`Plutus.Contract.Test.ContractModel.nextState` function, and verify that tests fail as
    expected.
 
 #. Try removing one of the lines
@@ -767,12 +783,12 @@ section in ``Spec.Tutorial.Escrow1``, in the ``plutus-apps`` repo.
 
       wait 1
 
-   from the ``nextState`` function (so that the model and the
+   from the :hsobj:`Plutus.Contract.Test.ContractModel.nextState` function (so that the model and the
    implementation get out of sync). What happens when you run tests?
 
 #. This model does generate ``Pay`` actions that are discarded by the
    precondition. Adjust the generator so that invalid ``Pay`` actions
-   are no longer generated, and run ``quickCheck`` to verify that this
+   are no longer generated, and run |quickCheck|_ to verify that this
    is no longer the case.
 
 
@@ -801,7 +817,7 @@ There are two problems to overcome:
 
 #. The running contracts need to know what the targets are--but our
    model just contains a static list of contract instances in the test
-   (``initialInstances``). How can we pass the generated targets to
+   (:hsobj:`Plutus.Contract.Test.ContractModel.initialInstances`). How can we pass the generated targets to
    each running contract instance?
 
 
@@ -817,7 +833,7 @@ must be included in one or more of the actions. Quite simply, *any
 generated data in a contract model test must be part of an action*. In
 this case, we just decide that every test should begin with an
 ``Init`` action, that specifies the targets to be used in this test
-case. So we must extend the ``Action`` type to include ``Init``:
+case. So we must extend the :hsobj:`Plutus.Contract.Test.ContractModel.Action` type to include ``Init``:
 
 .. literalinclude:: Escrow2.hs
    :start-after: START Action
@@ -826,12 +842,12 @@ case. So we must extend the ``Action`` type to include ``Init``:
 We must also ensure that ``Init`` actions *only* appear as the first
 action of a test case, and that every test case starts with an
 ``Init`` action. We restrict the form of test cases using
-preconditions, so this means that we must refine the ``precondition``
+preconditions, so this means that we must refine the :hsobj:`Plutus.Contract.Test.ContractModel.precondition`
 function so that the ``Init`` precondition only holds at the beginning
 of a test case, and the other operations' preconditions only hold
 *after* an ``Init`` has taken place.
 
-However, the ``precondition`` method is only given the action and the
+However, the :hsobj:`Plutus.Contract.Test.ContractModel.precondition` method is only given the action and the
 contract state as parameters, which means in turn that we must be able
 to tell whether or not we are at the beginning of the test case, just
 from the model state. So we have to add a field to the model, to keep
@@ -894,16 +910,23 @@ case, and other actions only in the ``Running`` phase.
    *preconditions* to require it to be there. This is why we focussed
    on writing the preconditions first: they are more important.
 
-As a matter of principle, when we write a generator, we also write a shrinker, which just requires a one-line addition to the ``shrinkAction`` function:
+As a matter of principle, when we write a generator, we also write a shrinker,
+which just requires a one-line addition to the :hsobj:`Plutus.Contract.Test.ContractModel.shrinkAction` function:
 
 .. literalinclude:: Escrow2.hs
    :start-after: START shrinkAction
    :end-before: END shrinkAction
 
 We cannot shrink wallets, which is why we can't simply apply
-``shrink`` to the list of targets, but using the ``shrinkList``
-function from ``Test.QuickCheck`` we can easily write a shrinker that
+|shrink|_ to the list of targets, but using the |shrinkList|_
+function from |Test.QuickCheck|_ we can easily write a shrinker that
 will discard list elements and shrink the target values.
+
+.. |Test.QuickCheck| replace:: ``Test.QuickCheck``
+.. _Test.QuickCheck: https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html
+
+.. |shrinkList| replace:: ``shrinkList``
+.. _shrinkList: https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:shrinkList
 
 Dynamic contract instances
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -936,9 +959,9 @@ Recall the contract we are testing:
    :end-before: END testContract
 
 
-It invokes the contract endpoints with the fixed set of ``EscrowParams``
+It invokes the contract endpoints with the fixed set of :hsobj:`Plutus.Contracts.Tutorial.Escrow.EscrowParams`
 we defined earlier. Clearly we need to parameterise the contract on
-these ``EscrowParams`` instead:
+these :hsobj:`Plutus.Contracts.Tutorial.Escrow.EscrowParams` instead:
 
 .. literalinclude:: Escrow2.hs
    :start-after: START testContract
@@ -948,7 +971,7 @@ Now the question is: how do we pass this parameter to each ``testContract`` as w
 
 Recall the way we started contracts in the previous section. We
 defined the contracts to start at the beginning of a test in the
-``initialInstances`` method:
+:hsobj:`Plutus.Contract.Test.ContractModel.initialInstances` method:
 
 .. literalinclude:: Escrow.hs
    :start-after: START initialInstances
@@ -956,7 +979,7 @@ defined the contracts to start at the beginning of a test in the
 
 
 
-Each contract is specified by a ``StartContract``, containing not only
+Each contract is specified by a :hsobj:`Plutus.Contract.Test.ContractModel.StartContract`, containing not only
 a contract instance key, but also a *parameter*--in this case ``()``,
 since we did not need to pass any generated values to
 ``testContract``. Now we do need to, so we must replace that ``()``
@@ -969,7 +992,7 @@ targets are. To do so, we redefine
    :start-after: START initialInstances
    :end-before: END initialInstances
 
-and instead add a definition of the ``startInstances`` method:
+and instead add a definition of the :hsobj:`Plutus.Contract.Test.ContractModel.startInstances` method:
 
 .. literalinclude:: Escrow2.hs
    :start-after: START startInstances
@@ -992,14 +1015,14 @@ dynamically at any point in a test case.
    results.
 
    You may wonder why we don't simply start new contract instances in the
-   ``perform`` method instead. The answer is the framework needs to track
-   the running contract instances, and using ``startInstances`` makes
+   :hsobj:`Plutus.Contract.Test.ContractModel.perform` method instead. The answer is the framework needs to track
+   the running contract instances, and using :hsobj:`Plutus.Contract.Test.ContractModel.startInstances` makes
    this explicit.
 
-The ``StartContract`` just specifies the ``ContractInstanceKey`` to be
+The :hsobj:`Plutus.Contract.Test.ContractModel.StartContract` just specifies the :hsobj:`Plutus.Contract.Test.ContractModel.ContractInstanceKey` to be
 started; we define the actual contract to start in the
-``instanceContract`` method, *which receives the contract parameter*
-from ``StartContract`` as its last argument. So we can just define
+:hsobj:`Plutus.Contract.Test.ContractModel.instanceContract` method, *which receives the contract parameter*
+from :hsobj:`Plutus.Contract.Test.ContractModel.StartContract` as its last argument. So we can just define
 
 .. literalinclude:: Escrow2.hs
    :start-after: START instanceContract
@@ -1007,7 +1030,7 @@ from ``StartContract`` as its last argument. So we can just define
 
 and our work is (almost) done. The last step is just to update the
 *type* of ``WalletKey``, since it includes the type of the parameter
-that ``StartContract`` accepts.
+that :hsobj:`Plutus.Contract.Test.ContractModel.StartContract` accepts.
 
 .. literalinclude:: Escrow2.hs
    :start-after: START ContractInstanceKey
@@ -1057,7 +1080,7 @@ Ada to make the transaction valid. Then when the transaction is
 balanced, the 2 Ada is taken from the submitting wallet.
 
 Is this a bug in the contract? It is certainly an inconsistency with
-the ``nextState`` function in the model, and we could modify that
+the :hsobj:`Plutus.Contract.Test.ContractModel.nextState` function in the model, and we could modify that
 function to reflect the *actual* transfers of Ada that the contract
 performs. But these transfers were surely not intentional: a more
 reasonable approach is to say that target payments that are too small
@@ -1103,9 +1126,9 @@ unlikely in practice.
 Exercises
 ^^^^^^^^^
 
-#. You will find the code presented here in ``Spec.Tutorial.Escrow2``\,
+#. You will find the code presented here in ``Spec.Tutorial.Escrow2``,
    with the exception of the last precondition we discussed for
-   ``Init``\. Run the tests using
+   ``Init``. Run the tests using
 
    .. code-block:: text
 
@@ -1114,7 +1137,7 @@ Exercises
    and make sure you understand how they fail.
 
 #. Make your own copy of the code, and add the tighter precondition
-   for ``Init``\. Verify that the tests then pass.
+   for ``Init``. Verify that the tests then pass.
 
 #. An alternative explanation for the problem might have been that a
    target of *zero* should not be allowed (and perhaps the contract
@@ -1126,7 +1149,7 @@ Exercises
 
 #. There are quite a few steps involved in introducing these
    dynamically chosen targets. You can practice these steps by taking
-   the code from ``Spec.Tutorial.Escrow1``\, which uses fixed targets,
+   the code from ``Spec.Tutorial.Escrow1``, which uses fixed targets,
    and following the steps outlined in this tutorial to turn it into a
    copy of ``Spec.Tutorial.Escrow2``.
 
@@ -1144,7 +1167,7 @@ certain that we can eventually reach some kind of *goal* state--an
 example of a *liveness property*. In particular, it would be bad if
 tokens were to be trapped in a contract for ever, with no possibility
 of recovering them. The Cardano model certainly allows this... imagine
-a UTXO whose verifier always returns ``False``\... and so it is our
+a UTXO whose verifier always returns ``False``... and so it is our
 responsibility to ensure that contracts do not fall into this
 trap. Not only does nothing go wrong, but *something good is always
 possible*. Not only does no-one steal your money, but you can always
@@ -1167,7 +1190,7 @@ by `dynamic logic for reasoning about programs
 <http://en.wikipedia.org/wiki/Dynamic_logic_(modal_logic)>`_, but it
 can be thought of just as a way of writing *test scenarios*, in
 which we mix random generation, explicit actions, and assertions. We
-write such scenarios in the ``DL`` monad; for example, here is a scenario
+write such scenarios in the :hsobj:`Plutus.Contract.Test.ContractModel.DL` monad; for example, here is a scenario
 that first performs a random sequence of actions, then invokes a
 finishing strategy, and finally asserts that no tokens remain locked
 in contracts.
@@ -1176,13 +1199,12 @@ in contracts.
    :start-after: START finishEscrow
    :end-before: END finishEscrow
 
-Here ``assertModel`` lets us include an assertion about the contract
-model state, ``lockedValue`` is a function provided by the framework
-that computes the total value held by contracts, and ``symIsZero``
+Here :hsobj:`Plutus.Contract.Test.ContractModel.assertModel` lets us include an assertion about the contract
+model state, :hsobj:`Plutus.Contract.Test.ContractModel.lockedValue` is a function provided by the framework
+that computes the total value held by contracts, and :hsobj:`Plutus.Contract.Test.ContractModel.symIsZero`
 checks that this is zero. The value is returned here as a
-``SymValue`` (and we will return to the need for this in a later
-section), but for now it can be thought of just as a normal Plutus ``Value``
-with an extra type wrapper.
+:hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, but for now it can be thought of just as a normal
+Plutus :hsobj:`Ledger.Value` with an extra type wrapper.
 
 This scenario just tests that the given finishing strategy always
 succeeds in recovering all tokens from contracts, no matter what
@@ -1209,11 +1231,11 @@ initialised before we attempt to ``Redeem``.
       :end-before: END fixedTargets
 
    Note that generated actions are always *appropriate for the current
-   state*, so here ``anyActions_`` will pick up generating the test case
+   state*, so here :hsobj:`Plutus.Contract.Test.ContractModel.anyActions_` will pick up generating the test case
    from the point after the escrow targets are initialised.
 
    We can use dynamic logic to express everything from unit tests to full
-   random generation (by just specifying ``anyActions_`` as the
+   random generation (by just specifying :hsobj:`Plutus.Contract.Test.ContractModel.anyActions_` as the
    scenario). But for now, we focus on testing "no locked funds" properties.
 
 Now, dynamic logic just specifies a *generator* for tests to
@@ -1227,7 +1249,7 @@ usual checks. In this case, we can define
    :end-before: END prop_FinishEscrow
 
 
-Then we can run the tests by passing the property to ``quickCheck``, as usual:
+Then we can run the tests by passing the property to |quickCheck|_, as usual:
 
    .. code-block:: text
 
@@ -1406,7 +1428,7 @@ The idea is to provide *two* strategies, one that recovers all the
 tokens from contracts, and is also interpreted to define each wallet's
 "fair share", and a second strategy *that can be followed by any
 single wallet*, and recovers that wallet's tokens. We call this kind
-of strategy a *unilateral* strategy; it is defined in the ``DL`` monad
+of strategy a *unilateral* strategy; it is defined in the :hsobj:`Plutus.Contract.Test.ContractModel.DL` monad
 in just the same way as the strategies we saw earlier, but only a
 single wallet is allowed to perform actions. Indeed, this is why we
 gave ``finishingStrategy`` a wallet as a parameter: it defines the
@@ -1424,12 +1446,12 @@ together, into a "no locked funds proof":
 
 .. note::
 
-   There are other components in a ``NoLockedFundsProof``, which we
+   There are other components in a :hsobj:`Plutus.Contract.Test.ContractModel.NoLockedFundsProof`, which we
    will see later; we can ignore them for now, but we do need to take
-   suitable default values from ``defaultNLFP`` in the definition
+   suitable default values from :hsobj:`Plutus.Contract.Test.ContractModel.defaultNLFP` in the definition
    above.
 
-and we can test them together using ``checkNoLockedFundsProof``
+and we can test them together using :hsobj:`Plutus.Contract.Test.ContractModel.checkNoLockedFundsProof`
 
 .. literalinclude:: Escrow3.hs
    :start-after: START prop_NoLockedFunds
@@ -1463,7 +1485,7 @@ does reveal a fairness problem, even if the victim is really wallet 1
 rather than wallet 4.
 
 We will see how to fix this problem in the next section. In the
-meantime, to summarize, defining a ``NoLockedFundsProof`` requires us
+meantime, to summarize, defining a :hsobj:`Plutus.Contract.Test.ContractModel.NoLockedFundsProof` requires us
 
 #. to define a general strategy that can recover *all* the tokens from
    the contracts under test, and moreover implies a *fair share* of
@@ -1484,7 +1506,7 @@ contract, we may need to pay in even more tokens! This seems a poor
 design. It would make far more sense, in the event that the contract
 is not followed to completion, to *refund* contributions to the
 wallets that made them. And indeed, the actual implementation of the
-contract supports a ``refund`` endpoint as well.
+contract supports a :hsobj:`Plutus.Contracts.Tutorial.Escrow.refund` endpoint as well.
 
 To add refunds to our model, we need to add a new action
 
@@ -1492,15 +1514,15 @@ To add refunds to our model, we need to add a new action
    :start-after: START EscrowModel
    :end-before: END EscrowModel
 
-and add it to ``nextState``, ``precondition``, ``perform``, and ``arbitraryAction``:
+and add it to :hsobj:`Plutus.Contract.Test.ContractModel.nextState`, :hsobj:`Plutus.Contract.Test.ContractModel.precondition`, :hsobj:`Plutus.Contract.Test.ContractModel.perform`, and :hsobj:`Plutus.Contract.Test.ContractModel.arbitraryAction`:
 
 .. literalinclude:: Escrow3.hs
    :start-after: START RefundModel
    :end-before: END RefundModel
 
-(In the ``nextState`` clause, the first line uses a more complex lens
+(In the :hsobj:`Plutus.Contract.Test.ContractModel.nextState` clause, the first line uses a more complex lens
 to extract the contributions, select the value for wallet ``w``, if
-present, and then pass the resulting ``Maybe Value`` to ``fold``, thus
+present, and then pass the resulting ``Maybe Value`` to |fold|_, thus
 returning zero if there was no contribution, and the value itself if
 there was). We also have to extend the ``testContract`` to include the
 refund endpoint:
@@ -1547,7 +1569,7 @@ wallet concerned.
 
 .. note::
 
-   Here we use ``monitor`` to gather statistics on the number of
+   Here we use :hsobj:`Plutus.Contract.Test.ContractModel.monitor` to gather statistics on the number of
    wallets receiving refunds during the finishing strategy, just to
    make sure, for example, that it is not always zero. We place such
    monitoring in the *general* strategy, not the wallet-specific ones,
@@ -1556,7 +1578,7 @@ wallet concerned.
    unpredictable--number of times. This makes statistics gathered in
    the wallet-specific strategies harder to interpret.
 
-We put these strategies together into a ``NoLockedFundsProof``:
+We put these strategies together into a :hsobj:`Plutus.Contract.Test.ContractModel.NoLockedFundsProof`:
 
 .. literalinclude:: Escrow3.hs
    :start-after: START BetterNoLockProof
@@ -1619,7 +1641,7 @@ You will find the code presented in this section in ``Spec.Tutorial.Escrow3``\.
    better to complete the contributions and redeem the escrow, rather
    than refund its own contribution. Implement this idea as a
    per-wallet strategy, and see whether ``prop_NoLockedFunds`` still
-   passes. Add a call of ``monitor`` to your strategy to gather
+   passes. Add a call of :hsobj:`Plutus.Contract.Test.ContractModel.monitor` to your strategy to gather
    statistics on how often ``Redeem`` is used instead of ``Refund``.
 
 
@@ -1632,9 +1654,9 @@ freely--but this doesn't really correspond to the intention of an
 escrow contract. In reality, an escrow contract should have a deadline
 for payments and redemption, with refunds permitted only after the
 deadline has passed. In fact, the *real* escrow contract, in
-``Plutus.Contracts.Escrow``, provides such a deadline: the main
+:hsmod:`Plutus.Contracts.Escrow`, provides such a deadline: the main
 difference between this and the simplified contract we have tested so
-far, ``Plutus.Contracts.Tutorial.Escrow``, is that the latter omits
+far, :hsmod:`Plutus.Contracts.Tutorial.Escrow`, is that the latter omits
 the deadline and associated checks.
 
 In this section, we'll switch to testing the real contract, which we
@@ -1646,23 +1668,29 @@ Slots and POSIXTime
 ^^^^^^^^^^^^^^^^^^^
 
 Just changing the import leads to a compiler warning: the
-``EscrowParams`` type, which is passed to the contract under test, has
-a new field ``escrowDeadline``, and so far, our code does not
+:hsobj:`Plutus.Contracts.Escrow.EscrowParams` type, which is passed to the contract under test, has
+a new field :hsobj:`Plutus.Contracts.Escrow.escrowDeadline`, and so far, our code does not
 initialise it. We will generate the deadlines, so that they vary from
 test to test, but there is a slight mismatch to overcome first. In a
-contract model we measure time in *slots*, but the ``escrowDeadline``
-field is not a slot number, it is a ``POSIXTime``. So while we shall
+contract model we measure time in *slots*, but the :hsobj:`Plutus.Contracts.Escrow.escrowDeadline`
+field is not a slot number, it is a :hsobj:`Plutus.V1.Ledger.Time.POSIXTime`. So while we shall
 generate the deadline as a slot number (for convenience in the model),
-we must convert it to a ``POSIXTime`` before we can pass it to the
+we must convert it to a :hsobj:`Plutus.V1.Ledger.Time.POSIXTime` before we can pass it to the
 contract under test.
 
 To do so, we need to know when slot 0 happens in POSIX time, and how
 long the duration of each slot is. These are defined in a
-``SlotConfig``, a type defined in ``Ledger.TimeSlot``. In principle
+:hsobj:`Ledger.TimeSlot.SlotConfig`, a type defined in :hsmod:`Ledger.TimeSlot`. In principle
 the slot configuration might vary, but we will use the default values
-for testing (by using ``def`` from ``Data.Default`` as our
+for testing (by using |def|_ from |Data.Default|_ as our
 configuration. Putting all this together, we can add a deadline to our
-``EscrowParams`` as follows:
+:hsobj:`Plutus.Contracts.Escrow.EscrowParams` as follows:
+
+.. |Data.Default| replace:: ``Data.Default``
+.. _Data.Default: https://hackage.haskell.org/package/data-default-0.7.1.1/docs/Data-Default.html
+
+.. |def| replace:: ``def``
+.. _def: https://hackage.haskell.org/package/data-default-0.7.1.1/docs/Data-Default.html#v:def
 
 .. literalinclude:: Escrow4.hs
    :start-after: START escrowParams
@@ -1671,10 +1699,16 @@ configuration. Putting all this together, we can add a deadline to our
 
 .. note::
 
-   If you are familiar with the ``POSIXTime`` type from
-   ``Data.Time.Clock.POSIX``, then beware that *this is not the same
+   If you are familiar with the |Clock.POSIXTime|_ type from
+   |Data.Time.Clock.POSIX|_, then beware that *this is not the same
    type*. That type has a resolution of picoseconds, while Plutus uses
-   its own ``POSIXTime`` type with a resolution of milliseconds.
+   its own :hsobj:`Plutus.V1.Ledger.Time.POSIXTime` type with a resolution of milliseconds.
+
+.. |Clock.POSIXTime| replace:: ``POSIXTime``
+.. _Clock.POSIXTime: https://hackage.haskell.org/package/time-1.13/docs/Data-Time-Clock-POSIX.html#t:POSIXTime
+
+.. |Data.Time.Clock.POSIX| replace:: ``Data.Time.Clock.POSIX``
+.. _Data.Time.Clock.POSIX: https://hackage.haskell.org/package/time-1.13/docs/Data-Time-Clock-POSIX.html
 
 Initialising the deadline
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1683,13 +1717,13 @@ The deadline, like the escrow targets, is fixed for each test, so it
 makes sense to add the deadline as a new field to the ``Init``
 action--recall that it is the ``Init`` action that starts the contract
 instances under test, and so must supply the deadline as part of the
-``EscrowParams``. So we add the deadline slot to this action
+:hsobj:`Plutus.Contracts.Escrow.EscrowParams`. So we add the deadline slot to this action
 
 .. literalinclude:: Escrow4.hs
    :start-after: START Action
    :end-before: END Action
 
-and pass it to the contracts in the ``startInstances`` method:
+and pass it to the contracts in the :hsobj:`Plutus.Contract.Test.ContractModel.startInstances` method:
 
 .. literalinclude:: Escrow4.hs
    :start-after: START startInstances
@@ -1825,13 +1859,13 @@ restricted to *after* the deadline:
    :end-before: END precondition
 
 One question remains: *where do we change the phase?* Changing the
-phase changes the model state, but not in response to an ``Action``:
+phase changes the model state, but not in response to an :hsobj:`Plutus.Contract.Test.ContractModel.Action`:
 it doesn't matter whether or not an action is performed on the
 deadline, the phase must change anyway. This means that *we cannot
-change the phase in the* ``nextState`` *function*, because this is
+change the phase in the* :hsobj:`Plutus.Contract.Test.ContractModel.nextState` *function*, because this is
 invoked only when actions are performed. We need to be able to *change
 the contract state in response to the passage of time*. We can do this
-by defining the ``nextReactiveState`` method of the ``ContractModel``
+by defining the :hsobj:`Plutus.Contract.Test.ContractModel.nextReactiveState` method of the :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel`
 class.
 
 This method is called every time the slot number advances in the model
@@ -1957,9 +1991,9 @@ wait until the deadline before refunding the contributions.
    :start-after: START finishingStrategy
    :end-before: END finishingStrategy
 
-To wait until the deadline, we use ``waitUntilDL``; since this fails
+To wait until the deadline, we use :hsobj:`Plutus.Contract.Test.ContractModel.waitUntilDL`; since this fails
 if we try to wait until a slot in the past, then we have to check the
-``currentSlot`` (maintained by the model) before we decide whether or
+:hsobj:`Plutus.Contract.Test.ContractModel.currentSlot` (maintained by the model) before we decide whether or
 not to wait.
 
 .. literalinclude:: Escrow4.hs
@@ -1997,7 +2031,7 @@ works.
 
 This leads us to wonder: *which phase of the test did we reach* before
 testing our finishing strategy? To find out, we can just add a couple
-of lines to the ``finishingStrategy`` code, to ``monitor`` the phase:
+of lines to the ``finishingStrategy`` code, to :hsobj:`Plutus.Contract.Test.ContractModel.monitor` the phase:
 
 .. literalinclude:: Escrow4.hs
    :start-after: START monitoredFinishingStrategy
@@ -2023,7 +2057,10 @@ many. How can we ensure that more tests invoke the strategy in the
 deadlines*. There is no particular reason why QuickCheck's default
 positive integer distribution should be the right one for
 deadlines. The simplest way to increase the values chosen is just to
-apply QuickCheck's ``scale`` combinator to the generator concerned:
+apply QuickCheck's |scale|_ combinator to the generator concerned:
+
+.. |scale| replace:: ``scale``
+.. _scale: https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:scale
 
 .. literalinclude:: Escrow4.hs
    :start-after: START weightedArbitraryAction
@@ -2191,7 +2228,7 @@ In order to generate a coverage report, the framework needs to know
 
 Indeed, the most important part of a coverage report is often the
 parts that were *not* covered by tests. This latter information--what
-should be covered--is represented by a ``CoverageIndex`` that the
+should be covered--is represented by a :hsobj:`PlutusTx.Coverage.CoverageIndex` that the
 Plutus compiler constructs. Since the Plutus compiler is invoked using
 Template Haskell in the code of the contract itself, then this is
 where we have to save, and export, the coverage index. That is, we
@@ -2200,7 +2237,7 @@ coverage measurement.
 
 To do so, we first inspect the code, and find all the
 occurrences of ``PlutusTx.compile``. In the case of the escrow
-contract, they are in the definition of ``typedValidator``:
+contract, they are in the definition of :hsobj:`Plutus.Contracts.Escrow.typedValidator`:
 
  .. literalinclude:: EscrowImpl.hs
    :start-after: START typedValidator
@@ -2208,12 +2245,19 @@ contract, they are in the definition of ``typedValidator``:
 
 The on-chain code consists of ``validate`` and ``wrap``. The latter is
 a library function, whose coverage we do not need to measure, so we
-just add (and export) a definition of a ``CoverageIndex`` that covers
+just add (and export) a definition of a :hsobj:`PlutusTx.Coverage.CoverageIndex` that covers
 ``validate``:
 
   .. literalinclude:: EscrowImpl.hs
    :start-after: START covIdx
    :end-before: END covIdx
+
+.. note::
+
+   It is important that the coverage index is computed in the same module as
+   the calls to ``PlutusTx.compile``, or else the Haskell compiler--and thus by
+   extension, the Plutus compiler--may produce different code for the coverage
+   index and for the code under test, resulting in misleading coverage reports.
 
 It just remains to *import* the necessary types and functions
 
@@ -2234,31 +2278,31 @@ coverage measurement.
 Measuring coverage
 ^^^^^^^^^^^^^^^^^^
 
-Once we have created a suitable ``CoverageIndex``, we must create a
+Once we have created a suitable :hsobj:`PlutusTx.Coverage.CoverageIndex`, we must create a
 test that uses it. To do so, we need to
 
-#. Run the test using ``quickCheckWithCoverage``, and give it coverage options specifying the coverage index,
+#. Run the test using :hsobj:`Plutus.Contract.Test.ContractModel.quickCheckWithCoverage`, and give it coverage options specifying the coverage index,
 
-#. Pass the (modified) coverage options that ``quickCheckWithCoverage`` constructs in to ``propRunActionsWithOptions`` (instead of ``propRunActions_``) when we run the action sequence, and
+#. Pass the (modified) coverage options that :hsobj:`Plutus.Contract.Test.ContractModel.quickCheckWithCoverage` constructs in to :hsobj:`Plutus.Contract.Test.ContractModel.propRunActionsWithOptions` (instead of :hsobj:`Plutus.Contract.Test.ContractModel.propRunActions_`) when we run the action sequence, and
 
-#. (Ideally) visualize the resulting ``CoverageReport`` as annotated source code.
+#. (Ideally) visualize the resulting :hsobj:`PlutusTx.Coverage.CoverageReport` as annotated source code.
 
-Here is the code to do all this (we also need to import ``Plutus.Contract.Test.Coverage``):
+Here is the code to do all this (we also need to import :hsmod:`Plutus.Contract.Test.Coverage`):
 
  .. literalinclude:: Escrow5.hs
    :start-after: START check_propEscrowWithCoverage
    :end-before: END check_propEscrowWithCoverage
 
-First we call ``quickCheckWithCoverage`` with options containing
+First we call :hsobj:`Plutus.Contract.Test.ContractModel.quickCheckWithCoverage` with options containing
 ``covIdx``; it passes modified options to the rest of the property. We
 test the property 1000 times, so that we are very likely to cover all
 the reachable code in the tests. We cannot just reuse ``prop_Escrow``,
 because we must pass in the modified coverage options ``covopts`` when
 we run the actions, but otherwise this is just the same as
-``prop_Escrow``. The result returned by ``quickCheckWithCoverage`` is
-a ``CoverageReport``, which is difficult to interpret by itself, so we
+``prop_Escrow``. The result returned by :hsobj:`Plutus.Contract.Test.ContractModel.quickCheckWithCoverage` is
+a :hsobj:`PlutusTx.Coverage.CoverageReport`, which is difficult to interpret by itself, so we
 bind it to ``cr`` and then generate an HTML file ``Escrow.html`` using
-``writeCoverageReport``.
+:hsobj:`Plutus.Contract.Test.Coverage.writeCoverageReport`.
 
 Running this does take a little while, because we run a large number of
 tests; on the other hand, diagnosing *why* a part of the code has not
@@ -2326,7 +2370,7 @@ Interpreting the coverage annotations
 Running the test above writes annotated source code to
 ``Escrow.html``. The entire contents of the file are reproduced
 :ref:`here<CoverageReport>`. The report contains all of the
-on-chain code provided in the ``CoverageIndex``, together with a few
+on-chain code provided in the :hsobj:`PlutusTx.Coverage.CoverageIndex`, together with a few
 lines of code around it for context. Off-chain code appears in grey,
 so it can be distinguished. On-chain code on a white background was
 covered by tests, and we know no more about it. Code on a red or green
@@ -2346,9 +2390,7 @@ Looking at the last section of code in the report,
 
 we see that it is the construction of the coverage index, and
 parts of this code are labelled on-chain and uncovered. We can ignore
-this, it's simply an artefact of the way the code labelling is done
-(and could be avoided by putting the construction of the ``covIdx`` in a
-different module, without coverage enabled).
+this, it's simply an artefact of the way the code labelling is done.
 
 More interesting is the second section of the report:
 
@@ -2385,7 +2427,7 @@ expect this code to be coloured green--at least, when we test through
 well-designed off-chain endpoints, as we have been doing.
 
 This code fragment also contains some entirely uncovered code--the
-strings passed to ``traceIfFalse`` to be used as error messages if a
+strings passed to :hsobj:`PlutusTx.Trace.traceIfFalse` to be used as error messages if a
 check fails. Since correct off-chain code never submits failing
 transactions, then these error messages are never used--and hence the
 code is labelled as 'uncovered'. Again, this is not really a problem.
@@ -2443,12 +2485,13 @@ continue. Yet how should we test this? We need to deliberately crash
 and restart contracts in tests, and check that they still behave as
 the model says they should.
 
-The ``ContractModel`` framework provides a simple way to *extend* a
+The :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` framework provides a simple way to *extend* a
 contract model, so that it can test crash-tolerance too. If ``m`` is a
-``ContractModel`` instance, then so is ``WithCrashTolerance m``--and
+:hsobj:`Plutus.Contract.Test.ContractModel.ContractModel` instance, then so is ``WithCrashTolerance m``--and
 testing the latter model will insert actions to crash and restart
 contract instances at random. To define a property that runs these
-tests, all we have to do is include ``WithCrashTolerance`` in the type
+tests, all we have to do is import :hsmod:`Plutus.Contract.Test.ContractModel.CrashTolerance` and include
+:hsobj:`Plutus.Contract.Test.ContractModel.CrashTolerance.WithCrashTolerance` in the type
 signature:
 
  .. literalinclude:: Escrow6.hs
@@ -2472,25 +2515,25 @@ tests, though.
    restarted. These parameters may depend on the model state.
 
 We provide this information by defining an instance of the
-``CrashTolerance`` class:
+:hsobj:`Plutus.Contract.Test.ContractModel.CrashTolerance.CrashTolerance` class:
 
  .. literalinclude:: Escrow6.hs
    :start-after: START CrashTolerance
    :end-before: END CrashTolerance
 
-The ``available`` method returns ``True`` if an action is available,
+The :hsobj:`Plutus.Contract.Test.ContractModel.CrashTolerance.available` method returns ``True`` if an action is available,
 given a list of active contract keys ``alive``; since contract
 instance keys have varying types, then the list actually contains keys
 wrapped in an existential type, which is why the ``Key`` constructor
 appears there.
 
-The ``restartArguments`` method provides the parameter for restarting
+The :hsobj:`Plutus.Contract.Test.ContractModel.CrashTolerance.restartArguments` method provides the parameter for restarting
 an escrow contract, which in this case can be just the same as when
 the contract was first started. We need to recover the targets from
 the model state, in which they are represented as a ``Map Wallet
 Value``, so we convert them back to a list and refactor the
 ``escrowParams`` function so we can give ``escrowParams'`` a list of
-``(Wallet,Value)`` pairs, rather than a list of ``(Wallet,Int)``:
+``(Wallet, Value)`` pairs, rather than a list of ``(Wallet, Int)``:
 
  .. literalinclude:: Escrow6.hs
    :start-after: START escrowParams
@@ -2592,7 +2635,7 @@ You will find the code discussed here in ``Spec.Tutorial.Escrow6``, *without* th
    the same underlying cause. Make sure you understand how each
    failure arises.
 
-   Why does ``quickCheck`` always report a test case with *two* target
+   Why does |quickCheck|_ always report a test case with *two* target
    payments--why isn't one target enough to reveal the problem?
 
 #. Add sorting to the model, and verify that the tests now pass.
@@ -2614,9 +2657,9 @@ Debugging the Auction contract with model assertions
 In this section, we'll apply the techniques we have seen so far to
 test another contract, and we'll see how they reveal some surprising
 behaviour.  The contract we take this time is the auction contract in
-``Plutus.Contracts.Auction``. This module actually defines *two*
+:hsmod:`Plutus.Contracts.Auction`. This module actually defines *two*
 contracts, a seller contract and a buyer contract. The seller puts up
-a ``Value`` for sale, creating an auction UTXO containing the value,
+a :hsobj:`Ledger.Value` for sale, creating an auction UTXO containing the value,
 and buyers can then bid Ada for it. When the auction deadline is
 reached, the highest bidder receives the auctioned value, and the
 seller receives the bid.
@@ -2641,7 +2684,7 @@ phase the auction is in:
    :start-after: START model
    :end-before: END model
 
-It is updated by the ``nextState`` method on each bid:
+It is updated by the :hsobj:`Plutus.Contract.Test.ContractModel.nextState` method on each bid:
 
  .. literalinclude:: Auction.hs
    :start-after: START nextState
@@ -2651,7 +2694,7 @@ Note that when a higher bid is received, the previous bid is returned
 to the bidder.
 
 We only allow bids that are larger than the previous one (which is why
-``nextState`` doesn't need to check this):
+:hsobj:`Plutus.Contract.Test.ContractModel.nextState` doesn't need to check this):
 
  .. literalinclude:: Auction.hs
    :start-after: START precondition
@@ -2660,7 +2703,7 @@ We only allow bids that are larger than the previous one (which is why
 The most interesting part of the model covers what happens when the
 auction deadline is reached: in contrast to the ``Escrow`` contract,
 the highest bid is paid to the seller automatically, and the buyer
-receives the token. We model this using the ``nextReactiveState``
+receives the token. We model this using the :hsobj:`Plutus.Contract.Test.ContractModel.nextReactiveState`
 method introduced in section :ref:`Timing`
 
  .. literalinclude:: Auction.hs
@@ -2718,7 +2761,7 @@ This property passes too:
    12.25% WaitUntil
     2.98% Init
 
-Now, to supply a ``NoLockedFundsProof`` we need a general strategy for
+Now, to supply a :hsobj:`Plutus.Contract.Test.ContractModel.NoLockedFundsProof` we need a general strategy for
 fund recovery, and a wallet-specific one. Since all we have to do is
 wait, we can use the *same* strategy as both.
 
@@ -2824,13 +2867,13 @@ We can address this kind of problem by *adding assertions to the
 model*. The model tracks the change in each wallet's balance since the
 beginning of the test, so we can add an assertion, at the point where
 the auction ends, that checks that the seller loses the token and
-gains the winning bid. We just a little code to ``nextReactiveState``:
+gains the winning bid. We just a little code to :hsobj:`Plutus.Contract.Test.ContractModel.nextReactiveState`:
 
  .. literalinclude:: Auction.hs
    :start-after: START extendedNextReactiveState
    :end-before: END extendedNextReactiveState
 
-If the boolean passed to ``assertSpec`` is ``False``, then the test
+If the boolean passed to :hsobj:`Plutus.Contract.Test.ContractModel.assertSpec` is ``False``, then the test
 fails with the first argument in the error message.
 
  .. note::
@@ -2855,10 +2898,9 @@ Now ``prop_Auction`` fails!
 
  .. note::
 
-    The balance change is actually a ``SymValue``, not a ``Value``,
-    but as you can see it *contains* a ``Value``, which is all we care
-    about right now. We will return to the purpose of the
-    ``symValMap`` in a later section.
+    The balance change is actually a :hsobj:`Plutus.Contract.Test.ContractModel.Symbolics.SymValue`, not a :hsobj:`Ledger.Value`,
+    but as you can see it *contains* a :hsobj:`Ledger.Value`, which is all we care
+    about right now.
 
 Even in this simple case, the seller does not receive the right
 amount: wallet 1 lost the token, but received no payment!
@@ -2879,8 +2921,8 @@ the stated bid is equal to the seller's net receipts.
   .. note::
 
      Model assertions can be tested without running the emulator, by
-     using ``propSanityCheckAssertions`` instead of
-     ``propRunActions_``. This is very much faster, and enables very
+     using :hsobj:`Plutus.Contract.Test.ContractModel.propSanityCheckAssertions` instead of
+     :hsobj:`Plutus.Contract.Test.ContractModel.propRunActions_`. This is very much faster, and enables very
      thorough testing of the model. Since other tests check that the
      implementation correponds to the model, then this still gives us
      valuable information about the implementation.
@@ -2943,7 +2985,7 @@ In other words, after a crash, *the seller contract fails to
 restart*. This is simply because the seller tries to put the token up
 for auction when it starts, and *wallet 1 no longer holds the
 token*--it is already in an auction UTXO on the blockchain. So the
-seller contract fails with an ``InsufficientFunds`` error. To continue
+seller contract fails with an :hsobj:`Wallet.Emulator.Error.InsufficientFunds` error. To continue
 the auction, we would really need another endpoint to resume the
 seller, which the contract does not provide, or a parameter to the
 seller contract which specifies whether to start or continue an
@@ -2990,23 +3032,26 @@ Level 1 certification of plutus smart contracts relies on the machinery
 we have discussed in this tutorial. First things first we are going to
 have a look at the :hsmod:`Plutus.Contract.Test.Certification` module.
 
-This module defines a type ``Certification`` paramtereized over a type
-``m`` that should be a ``ContractModel``. This is a record type that has
+This module defines a type :hsobj:`Plutus.Contract.Test.Certification.Certification` paramtereized over a type
+``m`` that should be a :hsobj:`Plutus.Contract.Test.ContractModel.ContractModel`. This is a record type that has
 fields for:
 
-#. a ``CoverageIndex``,
-#. two different types of ``NoLockedFundsProof``
+#. a :hsobj:`PlutusTx.Coverage.CoverageIndex`,
+#. two different types of :hsobj:`Plutus.Contract.Test.ContractModel.NoLockedFundsProof`
    (a standard full proof and a light proof that does not require you to provide
    a per-wallet unilateral strategy),
 #. the ability to provide a specialized error whitelist,
-#. a way to specify that we have an instance of ``CrashTolerance`` for ``m``,
-#. unit tests in the form of a function from a ``CoverageRef`` to a ``TestTree``
+#. a way to specify that we have an instance of :hsobj:`Plutus.Contract.Test.ContractModel.CrashTolerance.CrashTolerance` for ``m``,
+#. unit tests in the form of a function from a :hsobj:`Plutus.Contract.Test.ContractModel.CoverageRef` to a |TestTree|_
    (see :hsobj:`Plutus.Contract.Test.checkPredicateCoverage`
    for how to construct one of these), and
 #. named dynamic logic unit tests.
 
+.. |TestTree| replace:: ``TestTree``
+.. _TestTree: https://hackage.haskell.org/package/tasty-1.4.2.3/docs/Test-Tasty.html#t:TestTree
+
 Fortunately, understanding what we need to do to get certification-ready
-at this stage is simple. We just need to build a ``Certification`` object.
+at this stage is simple. We just need to build a :hsobj:`Plutus.Contract.Test.Certification.Certification` object.
 For example of how to do this, check out ``Spec.GameStateMachine.certification``
 and ``Spec.Uniswap.certification``.
 
