@@ -62,6 +62,7 @@ import Ledger.Blockchain (BlockId (..))
 import Ledger.Blockchain qualified as Ledger
 import Ledger.Slot (Slot)
 import Ledger.Tx (TxId)
+import Plutus.ChainIndex.Tx (ChainIndexTxOut)
 import PlutusTx.Lattice (MeetSemiLattice (..))
 import Prettyprinter (Pretty (..), comma, (<+>))
 import Prettyprinter.Extras (PrettyShow (..))
@@ -271,8 +272,9 @@ data Diagnostics =
         , numUnspentOutputs  :: Int
         , numUnmatchedInputs :: Int
         , someTransactions   :: [TxId]
+        , unspentTxOuts      :: [ChainIndexTxOut]
         }
-        deriving stock (Eq, Ord, Show, Generic)
+        deriving stock (Eq, Show, Generic)
         deriving anyclass (ToJSON, FromJSON, OpenApi.ToSchema)
 
 -- | Datatype returned when we couldn't get the state of a tx or a tx output.

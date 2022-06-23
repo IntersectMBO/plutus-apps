@@ -42,17 +42,17 @@ import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Builtins.Internal (BuiltinByteString (..))
 import PlutusTx.Prelude qualified as Pl
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "all tests"
-    [ testProperty "missing value spent" missingValueSpentProp
-    , testProperty "mustPayToPubKeyAddress should create output addresses with stake pub key hash" mustPayToPubKeyAddressStakePubKeyNotNothingProp
-    , testProperty "mustSpendScriptOutputWithMatchingDatumAndValue" testMustSpendScriptOutputWithMatchingDatumAndValue
-    , testProperty "mustPayToOtherScriptAddress should create output addresses with stake validator hash" mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
+    [ testPropertyNamed "missing value spent" "missingValueSpentProp" missingValueSpentProp
+    , testPropertyNamed "mustPayToPubKeyAddress should create output addresses with stake pub key hash" "mustPayToPubKeyAddressStakePubKeyNotNothingProp" mustPayToPubKeyAddressStakePubKeyNotNothingProp
+    , testPropertyNamed "mustSpendScriptOutputWithMatchingDatumAndValue" "testMustSpendScriptOutputWithMatchingDatumAndValue" testMustSpendScriptOutputWithMatchingDatumAndValue
+    , testPropertyNamed "mustPayToOtherScriptAddress should create output addresses with stake validator hash" "mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp" mustPayToOtherScriptAddressStakeValidatorHashNotNothingProp
     ]
 
 -- | Reduce one of the elements in a 'Value' by one.

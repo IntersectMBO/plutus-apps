@@ -226,7 +226,7 @@ test-suite plutus-contract-test
         semigroupoids -any,
         tasty -any,
         tasty-golden -any,
-        tasty-hedgehog -any,
+        tasty-hedgehog >= 1.2.0.0,
         tasty-hunit -any,
         tasty-quickcheck -any,
         text -any,

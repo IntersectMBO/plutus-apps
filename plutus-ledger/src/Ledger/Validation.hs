@@ -48,29 +48,40 @@ import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Crypto.Wallet qualified as Crypto
 import Cardano.Ledger.Alonzo (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..), retractPP)
-import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits), unCostModels)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
+import Cardano.Ledger.Alonzo.Rules.Utxos
+import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (ExUnits), Script, unCostModels)
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), ScriptResult (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
-import Cardano.Ledger.BaseTypes (Globals (..), mkTxIxPartial)
+import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
+import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, epochInfo, mkTxIxPartial)
 import Cardano.Ledger.Core (PParams, Tx)
+import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, TxId, TxIn (TxIn), UTxO (UTxO),
-                                   Validated, epochInfo, mkShelleyGlobals)
+import Cardano.Ledger.Era (Crypto, ValidateScript)
+import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, TxId, UTxO (UTxO), Validated,
+                                   mkShelleyGlobals)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.Lens (makeLenses, over, (&), (.~), (^.))
+import Control.Monad.Except (MonadError (throwError))
 import Data.Array (array)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bitraverse)
 import Data.Default (def)
-import Data.Functor.Identity (runIdentity)
 import Data.Map qualified as Map
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Records (HasField (..))
 import Ledger.Ada qualified as P
@@ -230,10 +241,56 @@ hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
       vtx <- first (P.CardanoLedgerValidationError . show) (constructValidated (emulatorGlobals params) (utxoEnv params slotNo) (lsUTxOState (_memPoolState state)) tx)
       applyTx params state vtx
 
+-- | Construct a 'ValidatedTx' from a 'Core.Tx' by setting the `IsValid`
+-- flag.
+--
+-- Note that this simply constructs the transaction; it does not validate
+-- anything other than the scripts. Thus the resulting transaction may be
+-- completely invalid.
+--
+-- Copied from cardano-ledger as it was removed there
+-- in https://github.com/input-output-hk/cardano-ledger/commit/721adb55b39885847562437a6fe7e998f8e48c03
+constructValidated ::
+  forall era m.
+  ( MonadError [UtxosPredicateFailure era] m,
+    Core.Script era ~ Script era,
+    Core.Witnesses era ~ Alonzo.TxWitness era,
+    ValidateScript era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "_costmdls" (Core.PParams era) CostModels,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    ExtendedUTxO era
+  ) =>
+  Globals ->
+  UtxoEnv era ->
+  UTxOState era ->
+  Core.Tx era ->
+  m (ValidatedTx era)
+constructValidated globals (UtxoEnv _ pp _ _) st tx =
+  case collectTwoPhaseScriptInputs ei sysS pp tx utxo of
+    Left errs -> throwError [CollectErrors errs]
+    Right sLst ->
+      let scriptEvalResult = evalScripts @era (getField @"_protocolVersion" pp) tx sLst
+          vTx =
+            ValidatedTx
+              (getField @"body" tx)
+              (getField @"wits" tx)
+              (IsValid (lift scriptEvalResult))
+              (getField @"auxiliaryData" tx)
+       in pure vTx
+  where
+    utxo = _utxo st
+    sysS = systemStart globals
+    ei = epochInfo globals
+    lift (Passes _)  = True
+    lift (Fails _ _) = False
 
 getTxExUnits :: P.Params -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Either CardanoLedgerError (Map.Map RdmrPtr ExUnits)
 getTxExUnits params utxo (C.Api.ShelleyTx _ tx) =
-  case runIdentity $ C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
+  case C.Ledger.evaluateTransactionExecutionUnits (emulatorPParams params) tx utxo ei ss costmdls of
     Left e      -> Left . Left . (P.Phase1,) . P.CardanoLedgerValidationError . show $ e
     Right rdmrs -> traverse (either toCardanoLedgerError Right) rdmrs
   where

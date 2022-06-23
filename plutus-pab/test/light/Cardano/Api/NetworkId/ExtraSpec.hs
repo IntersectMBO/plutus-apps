@@ -20,7 +20,7 @@ import Hedgehog.Range qualified as Range
 import Test.SmallCheck.Series qualified as SC
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (HasCallStack, assertFailure, testCase)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 import Test.Tasty.QuickCheck ((===))
 import Test.Tasty.QuickCheck qualified as QC
 import Test.Tasty.SmallCheck qualified as SC
@@ -29,7 +29,7 @@ tests :: TestTree
 tests =
     testGroup
         "Cardano.Api.NetworkId.Extra"
-        [ testProperty "NetworkIdWrapper FromJSON->ToJSON inverse property" jsonInvProp
+        [ testPropertyNamed "NetworkIdWrapper FromJSON->ToJSON inverse property" "jsonInvProp" jsonInvProp
         ]
 
 jsonInvProp :: Property

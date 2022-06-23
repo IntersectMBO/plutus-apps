@@ -144,7 +144,7 @@ test-suite plutus-example-test
                       , plutus-ledger
                       , plutus-ledger-api >= 1.0.0
                       , tasty
-                      , tasty-hedgehog
+                      , tasty-hedgehog >= 1.2.0.0
                       , text
                       , unordered-containers
 

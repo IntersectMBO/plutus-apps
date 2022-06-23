@@ -93,11 +93,10 @@ makeTransactionBody'
              TxMintValue _ v _ -> toMaryValue v)
           (case txProtocolParams of
              BuildTxWith Nothing        -> SNothing
-             BuildTxWith (Just pparams) -> do
-               let x = toLedgerPParams ShelleyBasedEraAlonzo pparams
+             BuildTxWith (Just pparams) ->
                Alonzo.hashScriptIntegrity
-                 x
-                 languages
+                (Set.fromList $ Alonzo.getLanguageView
+                    (toLedgerPParams ShelleyBasedEraAlonzo pparams) <$> languages)
                  redeemers
                  datums)
           SNothing -- ignoring txMetadata and txAuxScripts in CardanoAPITemp
@@ -112,8 +111,8 @@ makeTransactionBody'
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardAlonzo]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = Maybe.catMaybes
+      [ toShelleyScript <$> (scriptWitnessScript scriptwitness)
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
@@ -143,12 +142,11 @@ makeTransactionBody'
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]
 
-    languages :: Set.Set Alonzo.Language
+    languages :: [Alonzo.Language]
     languages =
-      Set.fromList
-        [ toAlonzoLanguage (AnyPlutusScriptVersion v)
-        | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
-        ]
+      [ toAlonzoLanguage (AnyPlutusScriptVersion v)
+      | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
+      ]
 
 toShelleyWithdrawal :: [(StakeAddress, Lovelace, a)] -> Shelley.Wdrl StandardCrypto
 toShelleyWithdrawal withdrawals =

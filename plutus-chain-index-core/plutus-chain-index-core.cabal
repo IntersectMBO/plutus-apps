@@ -94,7 +94,6 @@ library
         serialise -any,
         sqlite-simple -any,
         typed-protocols -any,
-        unordered-containers -any,
         bytestring -any,
         text -any,
         resource-pool -any,
@@ -144,4 +143,4 @@ test-suite plutus-chain-index-test
         stm -any,
         sqlite-simple -any,
         tasty -any,
-        tasty-hedgehog -any,
+        tasty-hedgehog >= 1.2.0.0,
