@@ -4,7 +4,7 @@
 Extending the basic Plutus app with the constraints API
 =======================================================
 
-The previous tutorial (see :ref:`basic_apps_tutorial`) showed how you to write a Plutus app that locks some Ada in a script output and splits them evenly between two recipients.
+The previous tutorial (see :ref:`basic_apps_tutorial`) showed you how to write a Plutus app that locks some Ada in a script output and splits them evenly between two recipients.
 In this tutorial, we will reuse the same example, but we will use instead the constraints API which will be used to generate the on-chain and off-chain part of the Plutus app.
 This will allow your application to create a transaction which is *mostly* consistent with the validator function.
 
