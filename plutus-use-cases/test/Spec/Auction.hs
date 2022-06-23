@@ -21,6 +21,7 @@ module Spec.Auction
     , prop_SanityCheckAssertions
     , prop_Whitelist
     , prop_CrashTolerance
+    , prop_doubleSatisfaction
     , check_propAuctionWithCoverage
     ) where
 
@@ -34,6 +35,7 @@ import Data.Default (Default (def))
 import Data.Monoid (Last (..))
 
 import Ledger (Ada, Slot (..), Value)
+import Ledger qualified as Ledger
 import Ledger.Ada qualified as Ada
 import Plutus.Contract hiding (currentSlot)
 import Plutus.Contract.Test hiding (not)
@@ -272,6 +274,11 @@ instance ContractModel AuctionModel where
     shrinkAction _ Init      = []
     shrinkAction _ (Bid w v) = [ Bid w v' | v' <- shrink v ]
 
+    monitoring _ (Bid _ bid) =
+      classify (Ada.lovelaceOf bid == Ada.adaOf 100 - (Ledger.minAdaTxOut <> Ledger.maxFee))
+        "Maximum bid reached"
+    monitoring _ _ = id
+
 prop_Auction :: Actions AuctionModel -> Property
 prop_Auction script =
     propRunActionsWithOptions (set minLogLevel Info options) defaultCoverageOptions
@@ -333,6 +340,9 @@ check_propAuctionWithCoverage = do
         (set minLogLevel Critical options) covopts (const (pure True))
   writeCoverageReport "Auction" cr
 
+prop_doubleSatisfaction :: Actions AuctionModel -> Property
+prop_doubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
+
 tests :: TestTree
 tests =
     testGroup "auction"
@@ -359,4 +369,6 @@ tests =
             expectFailure $ noShrinking prop_NoLockedFunds
         , testProperty "prop_Reactive" $
             withMaxSuccess 1000 (propSanityCheckReactive @AuctionModel)
+        , testProperty "prop_doubleSatisfaction fails" $
+            expectFailure $ noShrinking prop_doubleSatisfaction
         ]
