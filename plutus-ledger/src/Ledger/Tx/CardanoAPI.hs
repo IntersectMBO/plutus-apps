@@ -23,7 +23,6 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxId
   , fromCardanoTxIn
   , fromCardanoTxInsCollateral
-  , fromCardanoTxInWitness
   , fromCardanoTxOut
   , fromCardanoTxOutDatum
   , fromCardanoTxOutDatumHash
@@ -113,7 +112,6 @@ import Plutus.V1.Ledger.Credential qualified as Credential
 import Plutus.V1.Ledger.Tx qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api qualified as PV2
-import Plutus.V2.Ledger.Tx qualified as PV2
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
 
@@ -420,43 +418,6 @@ fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = Set.fromList $ fmap (PV
 toCardanoTxInsCollateral :: Set.Set PV1.TxIn -> Either ToCardanoError (C.TxInsCollateral C.AlonzoEra)
 toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInAlonzoEra) . traverse (toCardanoTxIn . PV1.txInRef) . Set.toList
 
-fromCardanoTxInWitness :: C.Witness C.WitCtxTxIn era -> Either FromCardanoError PV1.TxInType
-fromCardanoTxInWitness (C.KeyWitness C.KeyWitnessForSpending) = pure PV1.ConsumePublicKeyAddress
-fromCardanoTxInWitness
-    (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
-            script
-            (C.ScriptDatumForTxIn datum)
-            redeemer
-            _))
-    = pure $ PV1.ConsumeScriptAddress
-        (P.Validator $ fromCardanoPlutusScriptOrReferenceInput script)
-        (P.Redeemer $ fromCardanoScriptData redeemer)
-        (P.Datum $ fromCardanoScriptData datum)
-fromCardanoTxInWitness
-    (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-            script
-            (C.ScriptDatumForTxIn datum)
-            redeemer
-            _))
-    = pure $ PV1.ConsumeScriptAddress
-        (P.Validator $ fromCardanoPlutusScriptOrReferenceInput script)
-        (P.Redeemer $ fromCardanoScriptData redeemer)
-        (P.Datum $ fromCardanoScriptData datum)
-fromCardanoTxInWitness (C.ScriptWitness _ C.SimpleScriptWitness{}) = pure PV2.ConsumeSimpleScriptAddress
-fromCardanoTxInWitness
-    (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-            script
-            (C.ScriptDatumForTxIn datum)
-            redeemer
-            _))
-    = pure $ PV2.ConsumeScriptAddress
-        (PV2.Validator $ fromCardanoPlutusScriptOrReferenceInput script)
-        (PV2.Redeemer $ fromCardanoScriptData redeemer)
-        (PV2.Datum $ fromCardanoScriptData datum)
-
 toCardanoTxInWitness :: PV1.TxInType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.AlonzoEra)
 toCardanoTxInWitness PV1.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
 toCardanoTxInWitness PV1.ConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
@@ -753,11 +714,6 @@ toCardanoScriptInEra script = C.ScriptInEra C.PlutusScriptV1InAlonzo . C.PlutusS
 
 fromCardanoPlutusScript :: C.HasTypeProxy lang => C.PlutusScript lang -> P.Script
 fromCardanoPlutusScript = Codec.deserialise . BSL.fromStrict . C.serialiseToRawBytes
-
-fromCardanoPlutusScriptOrReferenceInput :: C.HasTypeProxy lang => C.PlutusScriptOrReferenceInput lang -> P.Script
-fromCardanoPlutusScriptOrReferenceInput = \case
-  C.PScript plutusScript -> fromCardanoPlutusScript plutusScript
-  C.PReferenceScript _   -> error ("TODO: implement PReferenceScript")
 
 toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScript C.PlutusScriptV1)
 toCardanoPlutusScript =
