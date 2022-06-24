@@ -16,6 +16,12 @@ To get started using the Platform see :ref:`plutus_getting_started`.
    plutus/troubleshooting
 
 .. toctree::
+   :caption: Architecture design records
+   :maxdepth: 1
+
+   adr/index
+
+.. toctree::
    :caption: Reference
    :maxdepth: 2
 
