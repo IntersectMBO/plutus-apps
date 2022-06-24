@@ -43,6 +43,9 @@ library
   exposed-modules:
     Cardano.Protocol.Socket.Client
     Cardano.Protocol.Socket.Type
+    Marconi.Index.Datum
+    Marconi.Index.TxConfirmationStatus
+    Marconi.Index.Utxo
     Plutus.ChainIndex
     Plutus.ChainIndex.Api
     Plutus.ChainIndex.ChainIndexError
@@ -112,6 +115,9 @@ library
     , fingertree
     , freer-simple
     , http-types
+    , hysterical-screams
+    , io-classes
+    , iohk-monitoring
     , lens
     , memory
     , mtl
