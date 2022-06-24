@@ -3,237 +3,241 @@ name:          plutus-pab
 version:       0.1.0.0
 license:       Apache-2.0
 license-files:
-    LICENSE
-    NOTICE
+  LICENSE
+  NOTICE
 
 maintainer:    jann.mueller@iohk.io
 author:        Jann Müller
-homepage:      https://github.com/iohk/plutus#readme
-bug-reports:   https://github.com/iohk/plutus/issues
+homepage:      https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+  Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 
 build-type:    Simple
 
 source-repository head
-    type:     git
-    location: https://github.com/input-output-hk/plutus-apps
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
-    description:
-        Defer errors from the plugin, useful for things like Haddock that can't handle it.
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
 
-    default:     False
-    manual:      True
+  default:     False
+  manual:      True
 
 common lang
-    default-language:   Haskell2010
-    default-extensions:
-        DeriveFoldable
-        DeriveFunctor
-        DeriveGeneric
-        DeriveLift
-        DeriveTraversable
-        ExplicitForAll
-        GeneralizedNewtypeDeriving
-        ImportQualifiedPost
-        ScopedTypeVariables
-        StandaloneDeriving
-    ghc-options:
-        -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
-        -Wincomplete-record-updates -Wredundant-constraints -Widentities
-        -fobject-code -fno-ignore-interface-pragmas
-        -fno-omit-interface-pragmas
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    ScopedTypeVariables
+    StandaloneDeriving
 
-    -- See Plutus Tx readme
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints -Widentities
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
+
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 library
-    import: lang
-    ghc-options: -Wunused-packages
-    exposed-modules:
-        Cardano.Api.NetworkId.Extra
-        Cardano.BM.Data.Tracer.Extras
-        Cardano.Chain
-        Cardano.ChainIndex.ChainIndex
-        Cardano.ChainIndex.Server
-        Cardano.ChainIndex.Types
-        Cardano.Node.API
-        Cardano.Node.Client
-        Cardano.Node.Mock
-        Cardano.Node.Params
-        Cardano.Node.Server
-        Cardano.Node.Types
-        Cardano.Protocol.Socket.Mock.Client
-        Cardano.Protocol.Socket.Mock.Server
-        Cardano.Wallet.LocalClient
-        Cardano.Wallet.RemoteClient
-        Cardano.Wallet.Types
-        Cardano.Wallet.Mock.API
-        Cardano.Wallet.Mock.Client
-        Cardano.Wallet.Mock.Handlers
-        Cardano.Wallet.Mock.Server
-        Cardano.Wallet.Mock.Types
-        Control.Concurrent.Availability
-        Control.Concurrent.STM.Extras
-        Control.Concurrent.STM.Extras.Stream
-        Control.Monad.Freer.Delay
-        Plutus.PAB.App
-        Plutus.PAB.Arbitrary
-        Plutus.PAB.Core
-        Plutus.PAB.Core.ContractInstance
-        Plutus.PAB.Core.ContractInstance.BlockchainEnv
-        Plutus.PAB.Core.ContractInstance.RequestHandlers
-        Plutus.PAB.Core.ContractInstance.STM
-        Plutus.PAB.Db.Beam
-        Plutus.PAB.Db.Schema
-        Plutus.PAB.Db.Beam.ContractStore
-        Plutus.PAB.Db.Memory.ContractStore
-        Plutus.PAB.Effects.Contract
-        Plutus.PAB.Effects.Contract.Builtin
-        Plutus.PAB.Effects.TimeEffect
-        Plutus.PAB.Effects.UUID
-        Plutus.PAB.Events
-        Plutus.PAB.Events.Contract
-        Plutus.PAB.Events.ContractInstanceState
-        Plutus.PAB.Instances
-        Plutus.PAB.LocalCluster.Run
-        Plutus.PAB.Monitoring.Config
-        Plutus.PAB.Monitoring.Monitoring
-        Plutus.PAB.Monitoring.PABLogMsg
-        Plutus.PAB.Run
-        Plutus.PAB.Run.Cli
-        Plutus.PAB.Run.Command
-        Plutus.PAB.Run.CommandParser
-        Plutus.PAB.Simulator
-        Plutus.PAB.Timeout
-        Plutus.PAB.Types
-        Plutus.PAB.Webserver.API
-        Plutus.PAB.Webserver.Client
-        Plutus.PAB.Webserver.Handler
-        Plutus.PAB.Webserver.Server
-        Plutus.PAB.Webserver.Types
-        Plutus.PAB.Webserver.WebSocket
-    other-modules:      Servant.Extra
-    hs-source-dirs:     src
-    build-depends:
-        , freer-extras
-        , playground-common
-        , plutus-chain-index
-        , plutus-chain-index-core
-        , plutus-contract
-        , plutus-ledger
-        , plutus-ledger-api
-        , plutus-ledger-constraints
-        , plutus-tx
-        , plutus-tx-plugin
-    build-depends:
-        QuickCheck -any,
-        aeson -any,
-        aeson-pretty -any,
-        async -any,
-        base >=4.7 && <5,
-        beam-core -any,
-        beam-migrate -any,
-        beam-sqlite -any,
-        bytestring -any,
-        cardano-addresses -any,
-        cardano-api -any,
-        cardano-slotting -any,
-        cardano-wallet -any,
-        cardano-wallet-cli -any,
-        cardano-wallet-core -any,
-        cardano-wallet-core-integration -any,
-        cardano-wallet-launcher -any,
-        cardano-ledger-core -any,
-        containers -any,
-        contra-tracer -any,
-        cryptonite -any,
-        data-default -any,
-        either -any,
-        directory -any,
-        exceptions -any,
-        filepath -any,
-        freer-simple -any,
-        generic-arbitrary -any,
-        http-client -any,
-        http-client-tls -any,
-        iohk-monitoring -any,
-        lens -any,
-        lobemo-backend-ekg -any,
-        memory -any,
-        monad-logger -any,
-        mtl -any,
-        network-mux -any,
-        openapi3 -any,
-        optparse-applicative -any,
-        ouroboros-network -any,
-        ouroboros-network-framework -any,
-        prettyprinter >=1.1.0.1,
-        quickcheck-instances -any,
-        random -any,
-        resource-pool -any,
-        row-types -any,
-        servant -any,
-        servant-client -any,
-        servant-openapi3,
-        servant-options -any,
-        servant-server -any,
-        servant-swagger-ui,
-        servant-websockets -any,
-        sqlite-simple -any,
-        stm -any,
-        tagged -any,
-        text -any,
-        text-class -any,
-        time -any,
-        time-units -any,
-        transformers -any,
-        unordered-containers -any,
-        uuid -any,
-        wai -any,
-        wai-cors -any,
-        warp -any,
-        websockets -any,
-        Win32-network -any,
-        yaml -any,
+  import:          lang
+  ghc-options:     -Wunused-packages
+  exposed-modules:
+    Cardano.Api.NetworkId.Extra
+    Cardano.BM.Data.Tracer.Extras
+    Cardano.Chain
+    Cardano.ChainIndex.ChainIndex
+    Cardano.ChainIndex.Server
+    Cardano.ChainIndex.Types
+    Cardano.Node.API
+    Cardano.Node.Client
+    Cardano.Node.Mock
+    Cardano.Node.Params
+    Cardano.Node.Server
+    Cardano.Node.Types
+    Cardano.Protocol.Socket.Mock.Client
+    Cardano.Protocol.Socket.Mock.Server
+    Cardano.Wallet.LocalClient
+    Cardano.Wallet.Mock.API
+    Cardano.Wallet.Mock.Client
+    Cardano.Wallet.Mock.Handlers
+    Cardano.Wallet.Mock.Server
+    Cardano.Wallet.Mock.Types
+    Cardano.Wallet.RemoteClient
+    Cardano.Wallet.Types
+    Control.Concurrent.Availability
+    Control.Concurrent.STM.Extras
+    Control.Concurrent.STM.Extras.Stream
+    Control.Monad.Freer.Delay
+    Plutus.PAB.App
+    Plutus.PAB.Arbitrary
+    Plutus.PAB.Core
+    Plutus.PAB.Core.ContractInstance
+    Plutus.PAB.Core.ContractInstance.BlockchainEnv
+    Plutus.PAB.Core.ContractInstance.RequestHandlers
+    Plutus.PAB.Core.ContractInstance.STM
+    Plutus.PAB.Db.Beam
+    Plutus.PAB.Db.Beam.ContractStore
+    Plutus.PAB.Db.Memory.ContractStore
+    Plutus.PAB.Db.Schema
+    Plutus.PAB.Effects.Contract
+    Plutus.PAB.Effects.Contract.Builtin
+    Plutus.PAB.Effects.TimeEffect
+    Plutus.PAB.Effects.UUID
+    Plutus.PAB.Events
+    Plutus.PAB.Events.Contract
+    Plutus.PAB.Events.ContractInstanceState
+    Plutus.PAB.Instances
+    Plutus.PAB.LocalCluster.Run
+    Plutus.PAB.Monitoring.Config
+    Plutus.PAB.Monitoring.Monitoring
+    Plutus.PAB.Monitoring.PABLogMsg
+    Plutus.PAB.Run
+    Plutus.PAB.Run.Cli
+    Plutus.PAB.Run.Command
+    Plutus.PAB.Run.CommandParser
+    Plutus.PAB.Simulator
+    Plutus.PAB.Timeout
+    Plutus.PAB.Types
+    Plutus.PAB.Webserver.API
+    Plutus.PAB.Webserver.Client
+    Plutus.PAB.Webserver.Handler
+    Plutus.PAB.Webserver.Server
+    Plutus.PAB.Webserver.Types
+    Plutus.PAB.Webserver.WebSocket
+
+  other-modules:   Servant.Extra
+  hs-source-dirs:  src
+  build-depends:
+    , freer-extras
+    , playground-common
+    , plutus-chain-index
+    , plutus-chain-index-core
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-tx
+    , plutus-tx-plugin
+
+  build-depends:
+    , aeson
+    , aeson-pretty
+    , async
+    , base                             >=4.7     && <5
+    , beam-core
+    , beam-migrate
+    , beam-sqlite
+    , bytestring
+    , cardano-addresses
+    , cardano-api
+    , cardano-ledger-core
+    , cardano-slotting
+    , cardano-wallet
+    , cardano-wallet-cli
+    , cardano-wallet-core
+    , cardano-wallet-core-integration
+    , cardano-wallet-launcher
+    , containers
+    , contra-tracer
+    , cryptonite
+    , data-default
+    , directory
+    , either
+    , exceptions
+    , filepath
+    , freer-simple
+    , generic-arbitrary
+    , http-client
+    , http-client-tls
+    , iohk-monitoring
+    , lens
+    , lobemo-backend-ekg
+    , memory
+    , monad-logger
+    , mtl
+    , network-mux
+    , openapi3
+    , optparse-applicative
+    , ouroboros-network
+    , ouroboros-network-framework
+    , prettyprinter                    >=1.1.0.1
+    , QuickCheck
+    , quickcheck-instances
+    , random
+    , resource-pool
+    , row-types
+    , servant
+    , servant-client
+    , servant-openapi3
+    , servant-options
+    , servant-server
+    , servant-swagger-ui
+    , servant-websockets
+    , sqlite-simple
+    , stm
+    , tagged
+    , text
+    , text-class
+    , time
+    , time-units
+    , transformers
+    , unordered-containers
+    , uuid
+    , wai
+    , wai-cors
+    , warp
+    , websockets
+    , Win32-network
+    , yaml
 
 test-suite plutus-pab-test-light
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options: -Wunused-packages
-    hs-source-dirs:   test/light
-    type:             exitcode-stdio-1.0
-    main-is:          Spec.hs
-    other-modules:
-        Cardano.Api.NetworkId.ExtraSpec
-        Cardano.Wallet.RemoteClientSpec
-        Cardano.Wallet.ServerSpec
-        Control.Concurrent.STM.ExtrasSpec
-        Plutus.PAB.ArbitrarySpec
-    build-depends:
-        QuickCheck -any,
-        aeson -any,
-        base >=4.9 && <5,
-        bytestring -any,
-        cardano-api -any,
-        cardano-api:gen -any,
-        data-default -any,
-        freer-simple -any,
-        hedgehog -any,
-        plutus-contract -any,
-        plutus-pab,
-        plutus-ledger -any,
-        plutus-ledger-constraints -any,
-        plutus-tx -any,
-        quickcheck-instances -any,
-        tasty -any,
-        tasty-hunit -any,
-        smallcheck -any,
-        hedgehog-quickcheck -any,
-        tasty-hedgehog -any,
-        tasty-smallcheck -any,
-        tasty-quickcheck -any,
-        stm -any,
-        async -any,
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:        -Wunused-packages
+  hs-source-dirs:     test/light
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  other-modules:
+    Cardano.Api.NetworkId.ExtraSpec
+    Cardano.Wallet.RemoteClientSpec
+    Cardano.Wallet.ServerSpec
+    Control.Concurrent.STM.ExtrasSpec
+    Plutus.PAB.ArbitrarySpec
+
+  build-depends:
+    , aeson
+    , async
+    , base                            >=4.9 && <5
+    , bytestring
+    , cardano-api:{cardano-api, gen}
+    , data-default
+    , freer-simple
+    , hedgehog
+    , hedgehog-quickcheck
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-tx
+    , QuickCheck
+    , quickcheck-instances
+    , smallcheck
+    , stm
+    , tasty
+    , tasty-hedgehog
+    , tasty-hunit
+    , tasty-quickcheck
+    , tasty-smallcheck

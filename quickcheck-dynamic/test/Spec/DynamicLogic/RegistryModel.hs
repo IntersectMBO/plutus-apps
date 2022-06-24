@@ -247,5 +247,8 @@ canReregister' s
 
 tests :: TestTree
 tests = testGroup "registry model example"
-          [ testProperty "prop_Registry" prop_Registry ]
+          [ -- This test helps to warm up the runtime to run prop_Registry properly,
+            -- see https://github.com/input-output-hk/plutus-apps/issues/516 for details.
+            testProperty "Wait for run-time system to warm up" $ withMaxSuccess 1 $ ioProperty $ True <$ threadDelay 100000
+          , testProperty "prop_Registry" prop_Registry ]
 

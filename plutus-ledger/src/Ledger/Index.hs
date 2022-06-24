@@ -178,8 +178,7 @@ validateTransactionOffChain t = do
         unless emptyUtxoSet (checkMintingScripts t)
 
         pure Nothing
-        )
-    `catchError` (\e -> pure (Just (Phase2, e)))
+        ) `catchError` (\e -> pure (Just (Phase2, e)))
 
 -- | Check that a transaction can be validated in the given slot.
 checkSlotRange :: ValidationMonad m => Slot.Slot -> Tx -> m ()

@@ -1,81 +1,93 @@
-cabal-version: 3.0
-name: plutus-ledger-constraints
-version: 0.1.0.0
-license: Apache-2.0
+cabal-version:   3.0
+name:            plutus-ledger-constraints
+version:         0.1.0.0
+license:         Apache-2.0
 license-files:
   LICENSE
   NOTICE
-maintainer: sjoerd.visscher@iohk.io
-author: Michael Peyton Jones, Jann Mueller
-synopsis: Ledger Constraints
-description:
-    Plutus transaction constraints library
-category: Language
-build-type: Simple
+
+maintainer:      sjoerd.visscher@iohk.io
+author:          Michael Peyton Jones, Jann Mueller
+synopsis:        Ledger Constraints
+description:     Plutus transaction constraints library
+category:        Language
+build-type:      Simple
 extra-doc-files: README.md
 
 source-repository head
-    type: git
-    location: https://github.com/input-output-hk/plutus-apps
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
 
 common lang
-    default-language: Haskell2010
-    default-extensions: ExplicitForAll ScopedTypeVariables
-                        DeriveGeneric StandaloneDeriving DeriveLift
-                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
-                        DeriveTraversable MultiParamTypeClasses FlexibleContexts
-                        ImportQualifiedPost
-    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities -Wmissing-import-lists
-                 -- See Plutus Tx readme
-                 -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    FlexibleContexts
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    MultiParamTypeClasses
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wunused-packages
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wredundant-constraints -Widentities -Wmissing-import-lists
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
 
 library
-    import: lang
-    hs-source-dirs: src
-    default-language: Haskell2010
-    exposed-modules:
-        Ledger.Constraints
-        Ledger.Constraints.OffChain
-        Ledger.Constraints.OnChain
-        Ledger.Constraints.TxConstraints
+  import:           lang
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  exposed-modules:
+    Ledger.Constraints
+    Ledger.Constraints.OffChain
+    Ledger.Constraints.OnChain
+    Ledger.Constraints.TxConstraints
 
-    build-depends:
-        base >=4.9 && <5,
-        aeson -any,
-        containers -any,
-        data-default -any,
-        lens -any,
-        mtl -any,
-        openapi3 -any,
-        prettyprinter -any,
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-script-utils -any,
-        plutus-tx -any,
-        transformers -any,
+  build-depends:
+    , aeson
+    , base                 >=4.9 && <5
+    , containers
+    , data-default
+    , lens
+    , mtl
+    , openapi3
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-script-utils
+    , plutus-tx
+    , prettyprinter
+    , transformers
 
 test-suite plutus-ledger-constraints-test
-    type: exitcode-stdio-1.0
-    main-is: Spec.hs
-    hs-source-dirs: test
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    build-depends:
-        base >=4.9 && <5,
-        bytestring -any,
-        containers -any,
-        data-default -any,
-        hedgehog -any,
-        lens -any,
-        mtl -any,
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-ledger-constraints -any,
-        plutus-script-utils -any,
-        plutus-tx -any,
-        plutus-tx-plugin -any,
-        tasty -any,
-        tasty-hedgehog -any,
-        template-haskell -any,
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  build-depends:
+    , base                       >=4.9 && <5
+    , bytestring
+    , containers
+    , data-default
+    , hedgehog
+    , lens
+    , mtl
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-script-utils
+    , plutus-tx
+    , plutus-tx-plugin
+    , tasty
+    , tasty-hedgehog
+    , template-haskell

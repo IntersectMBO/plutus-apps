@@ -67,7 +67,7 @@ rec {
   tests = import ./nix/tests/default.nix {
     inherit pkgs docs;
     inherit (plutus-apps.lib) gitignore-nix;
-    inherit (plutus-apps) fixStylishHaskell fix-purs-tidy fixPngOptimization;
+    inherit (plutus-apps) fixStylishHaskell fix-purs-tidy fixPngOptimization fixCabalFmt;
     inherit plutus-playground web-ghc;
     src = ./.;
     play-generated = plutus-playground.generated-purescript;

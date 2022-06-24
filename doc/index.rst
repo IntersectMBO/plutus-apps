@@ -18,6 +18,12 @@ To read more about Marlowe, see the :ref:`Marlowe tutorials<marlowe_tutorials>`.
    plutus/troubleshooting
 
 .. toctree::
+   :caption: Architecture design records
+   :maxdepth: 1
+
+   adr/index
+
+.. toctree::
    :caption: Explore Marlowe
    :maxdepth: 2
 

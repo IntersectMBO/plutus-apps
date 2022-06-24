@@ -3,489 +3,466 @@ name:          plutus-pab-executables
 version:       0.1.0.0
 license:       Apache-2.0
 license-files:
-    LICENSE
-    NOTICE
+  LICENSE
+  NOTICE
 
 maintainer:    jann.mueller@iohk.io
 author:        Jann Müller
-homepage:      https://github.com/iohk/plutus#readme
-bug-reports:   https://github.com/iohk/plutus/issues
+homepage:      https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
+  Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
 
 build-type:    Simple
 
 source-repository head
-    type:     git
-    location: https://github.com/input-output-hk/plutus-apps
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
-    description:
-        Defer errors from the plugin, useful for things like Haddock that can't handle it.
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
 
-    default:     False
-    manual:      True
+  default:     False
+  manual:      True
 
 common lang
-    default-language:   Haskell2010
-    default-extensions:
-        DeriveFoldable
-        DeriveFunctor
-        DeriveGeneric
-        DeriveLift
-        DeriveTraversable
-        ExplicitForAll
-        GeneralizedNewtypeDeriving
-        ImportQualifiedPost
-        ScopedTypeVariables
-        StandaloneDeriving
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    ExplicitForAll
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    ScopedTypeVariables
+    StandaloneDeriving
 
-    ghc-options:
-        -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
-        -Wincomplete-record-updates -Wredundant-constraints -Widentities
-        -fobject-code -fno-ignore-interface-pragmas
-        -fno-omit-interface-pragmas
-        -Wunused-packages
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints -Widentities
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas -Wunused-packages
 
-    -- See Plutus Tx readme
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 library
-    import:             lang
-    exposed-modules:
-        Plutus.PAB.Run.PSGenerator
-    hs-source-dirs:     src
-    build-depends:
-        , freer-extras
-        , playground-common
-        , plutus-contract
-        , plutus-pab
+  import:          lang
+  exposed-modules: Plutus.PAB.Run.PSGenerator
+  hs-source-dirs:  src
+  build-depends:
+    , freer-extras
+    , playground-common
+    , plutus-contract
+    , plutus-pab
 
-    build-depends:
-        base >=4.7 && <5,
-        lens -any,
-        playground-common -any,
-        purescript-bridge -any,
-        servant-purescript -any,
-        text -any,
+  build-depends:
+    , base                >=4.7 && <5
+    , lens
+    , playground-common
+    , purescript-bridge
+    , servant-purescript
+    , text
 
 executable plutus-pab-setup
-    main-is:          Main.hs
-    hs-source-dirs:   app
-    other-modules:
-        CommandParser
+  main-is:            Main.hs
+  hs-source-dirs:     app
+  other-modules:      CommandParser
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wno-missing-import-lists -Wredundant-constraints -O0
+    -Wunused-packages
 
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-        -Wunused-packages
-
-    build-depends:
-        aeson -any,
-        base                  >=4.9     && <5,
-        iohk-monitoring -any,
-        monad-logger -any,
-        optparse-applicative -any,
-        plutus-contract -any,
-        plutus-pab -any,
+  build-depends:
+    , aeson
+    , base                  >=4.9 && <5
+    , iohk-monitoring
+    , monad-logger
+    , optparse-applicative
+    , plutus-contract
+    , plutus-pab
 
 -- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
 -- depend on plutus-use-cases anymore.
 executable plutus-pab-examples
-    main-is:          Main.hs
-    hs-source-dirs:   examples
-    other-modules:
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        ContractExample.WaitForTx
-        ContractExample
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-        -Wunused-packages
+  main-is:            Main.hs
+  hs-source-dirs:     examples
+  other-modules:
+    ContractExample
+    ContractExample.AtomicSwap
+    ContractExample.IntegrationTest
+    ContractExample.PayToWallet
+    ContractExample.WaitForTx
 
-    build-depends:
-        , aeson
-        , base              >=4.9 && <5
-        , containers
-        , data-default
-        , freer-simple
-        , lens
-        , playground-common
-        , plutus-contract
-        , plutus-ledger
-        , plutus-ledger-constraints
-        , plutus-pab
-        , plutus-pab-executables
-        , plutus-use-cases
-        , prettyprinter
-        , purescript-bridge
-        , row-types
-        , text
-        , openapi3
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wno-missing-import-lists -Wredundant-constraints -O0
+    -Wunused-packages
+
+  build-depends:
+    , aeson
+    , base                       >=4.9 && <5
+    , containers
+    , data-default
+    , freer-simple
+    , lens
+    , openapi3
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-pab-executables
+    , plutus-use-cases
+    , prettyprinter
+    , purescript-bridge
+    , row-types
+    , text
 
 -- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
 -- depend on plutus-use-cases anymore.
 executable plutus-uniswap
-    main-is:          Main.hs
-    hs-source-dirs:   examples/uniswap
-    other-modules:
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-        -Wunused-packages
+  main-is:            Main.hs
+  hs-source-dirs:     examples/uniswap
+  other-modules:
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wno-missing-import-lists -Wredundant-constraints -O0
+    -Wunused-packages
 
-    build-depends:
-        , aeson
-        , base              >=4.9 && <5
-        , containers
-        , data-default -any
-        , freer-simple
-        , plutus-contract
-        , plutus-ledger-api
-        , plutus-pab
-        , plutus-use-cases
-        , prettyprinter
-        , text
-        , openapi3
+  build-depends:
+    , aeson
+    , base               >=4.9 && <5
+    , containers
+    , data-default
+    , freer-simple
+    , openapi3
+    , plutus-contract
+    , plutus-ledger-api
+    , plutus-pab
+    , plutus-use-cases
+    , prettyprinter
+    , text
 
 -- TODO: This needs to be moved to plutus-use-cases once plutus-pab doesn't
 -- depend on plutus-use-cases anymore.
 executable plutus-pab-local-cluster
-    main-is:          Main.hs
-    hs-source-dirs:
-        local-cluster
-        examples
-    other-modules:
-        ContractExample
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        ContractExample.WaitForTx
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-        -Wincomplete-uni-patterns -Wincomplete-record-updates
-        -Wno-missing-import-lists -Wredundant-constraints -O0
-        -Wunused-packages
+  main-is:            Main.hs
+  hs-source-dirs:     local-cluster examples
+  other-modules:
+    ContractExample
+    ContractExample.AtomicSwap
+    ContractExample.IntegrationTest
+    ContractExample.PayToWallet
+    ContractExample.WaitForTx
 
-    build-depends:
-        , playground-common
-        , plutus-contract
-        , plutus-ledger
-        , plutus-ledger-api
-        , plutus-ledger-constraints
-        , plutus-pab
-        , plutus-pab-executables
-        , plutus-use-cases
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wno-missing-import-lists -Wredundant-constraints -O0
+    -Wunused-packages
 
-    build-depends:
-        , aeson
-        , base              >=4.9 && <5
-        , containers
-        , text
-        , lens
-        , prettyprinter
-        , freer-simple
-        , data-default
-        , row-types
-        , purescript-bridge
-        , openapi3
+  build-depends:
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-pab-executables
+    , plutus-use-cases
+
+  build-depends:
+    , aeson
+    , base               >=4.9 && <5
+    , containers
+    , data-default
+    , freer-simple
+    , lens
+    , openapi3
+    , prettyprinter
+    , purescript-bridge
+    , row-types
+    , text
 
 executable plutus-pab-test-psgenerator
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -Wunused-packages
-    hs-source-dirs:
-        test-psgenerator
-        test/full
-        examples
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:        -Wunused-packages
+  hs-source-dirs:     test-psgenerator test/full examples
+  main-is:            TestPSGenerator.hs
+  other-modules:
+    ContractExample.AtomicSwap
+    ContractExample.IntegrationTest
+    ContractExample.PayToWallet
+    Plutus.PAB.Effects.Contract.ContractTest
+    Plutus.PAB.Simulator.Test
 
-    main-is:          TestPSGenerator.hs
-    other-modules:
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        Plutus.PAB.Effects.Contract.ContractTest
-        Plutus.PAB.Simulator.Test
-
-    -- TODO plutus-use-cases dep needs to be removed
-    build-depends:
-        aeson -any,
-        aeson-pretty -any,
-        base >=4.9 && <5,
-        bytestring -any,
-        containers -any,
-        data-default -any,
-        freer-extras -any,
-        freer-simple -any,
-        lens -any,
-        mtl -any,
-        plutus-contract -any,
-        plutus-pab,
-        plutus-use-cases -any,
-        plutus-ledger -any,
-        plutus-ledger-constraints -any,
-        text -any,
-        prettyprinter -any,
-        row-types -any,
-        playground-common -any,
-        servant-purescript -any,
-        purescript-bridge -any,
-        filepath -any
+  -- TODO plutus-use-cases dep needs to be removed
+  build-depends:
+    , aeson
+    , aeson-pretty
+    , base                       >=4.9 && <5
+    , bytestring
+    , containers
+    , data-default
+    , filepath
+    , freer-extras
+    , freer-simple
+    , lens
+    , mtl
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-use-cases
+    , prettyprinter
+    , purescript-bridge
+    , row-types
+    , servant-purescript
+    , text
 
 test-suite plutus-pab-test-full
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -Wunused-packages
-    hs-source-dirs:
-        test/full
-        examples
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:        -Wunused-packages
+  hs-source-dirs:     test/full examples
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  other-modules:
+    ContractExample
+    ContractExample.AtomicSwap
+    ContractExample.IntegrationTest
+    ContractExample.PayToWallet
+    ContractExample.WaitForTx
+    Plutus.PAB.CliSpec
+    Plutus.PAB.CoreSpec
+    Plutus.PAB.Effects.Contract.BuiltinSpec
+    Plutus.PAB.Effects.Contract.ContractTest
+    Plutus.PAB.Simulator.Test
 
-    type:             exitcode-stdio-1.0
-    main-is:          Spec.hs
-    other-modules:
-        ContractExample
-        ContractExample.WaitForTx
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        Plutus.PAB.CoreSpec
-        Plutus.PAB.CliSpec
-        Plutus.PAB.Effects.Contract.BuiltinSpec
-        Plutus.PAB.Effects.Contract.ContractTest
-        Plutus.PAB.Simulator.Test
-
-    -- TODO plutus-use-cases dep needs to be removed
-    build-depends:
-        aeson -any,
-        base >=4.9 && <5,
-        containers -any,
-        data-default -any,
-        freer-extras -any,
-        freer-simple -any,
-        http-client -any,
-        lens -any,
-        mtl -any,
-        plutus-chain-index-core -any,
-        plutus-contract -any,
-        plutus-pab,
-        plutus-pab-executables,
-        plutus-use-cases -any,
-        plutus-ledger -any,
-        plutus-ledger-constraints -any,
-        quickcheck-instances -any,
-        servant-client -any,
-        tasty -any,
-        tasty-hunit -any,
-        stm -any,
-        text -any,
-        prettyprinter -any,
-        row-types -any,
-        plutus-tx -any,
-        playground-common -any,
-        yaml -any,
-        iohk-monitoring -any,
-        sqlite-simple -any,
-        servant-server -any,
-        purescript-bridge -any,
-        async -any,
-        servant-client -any,
-        uuid -any,
-        openapi3,
+  -- TODO plutus-use-cases dep needs to be removed
+  build-depends:
+    , aeson
+    , async
+    , base                       >=4.9 && <5
+    , containers
+    , data-default
+    , freer-extras
+    , freer-simple
+    , http-client
+    , iohk-monitoring
+    , lens
+    , mtl
+    , openapi3
+    , playground-common
+    , plutus-chain-index-core
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-pab-executables
+    , plutus-tx
+    , plutus-use-cases
+    , prettyprinter
+    , purescript-bridge
+    , quickcheck-instances
+    , row-types
+    , servant-client
+    , servant-server
+    , sqlite-simple
+    , stm
+    , tasty
+    , tasty-hunit
+    , text
+    , uuid
+    , yaml
 
 test-suite plutus-pab-test-full-long-running
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options:
-        -Wunused-packages
-    hs-source-dirs:
-        test/full
-        examples
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:        -Wunused-packages
+  hs-source-dirs:     test/full examples
+  type:               exitcode-stdio-1.0
+  main-is:            SpecLongRunning.hs
+  other-modules:
+    ContractExample
+    ContractExample.AtomicSwap
+    ContractExample.IntegrationTest
+    ContractExample.PayToWallet
+    ContractExample.WaitForTx
+    Plutus.PAB.CliSpec
+    Plutus.PAB.Effects.Contract.ContractTest
+    Plutus.PAB.Simulator.Test
 
-    type:             exitcode-stdio-1.0
-    main-is:          SpecLongRunning.hs
-    other-modules:
-        ContractExample
-        ContractExample.WaitForTx
-        ContractExample.AtomicSwap
-        ContractExample.IntegrationTest
-        ContractExample.PayToWallet
-        Plutus.PAB.CliSpec
-        Plutus.PAB.Effects.Contract.ContractTest
-        Plutus.PAB.Simulator.Test
-
-    -- TODO plutus-use-cases dep needs to be removed
-    build-depends:
-        aeson -any,
-        base >=4.9 && <5,
-        containers -any,
-        data-default -any,
-        freer-extras -any,
-        freer-simple -any,
-        http-client -any,
-        lens -any,
-        mtl -any,
-        plutus-contract -any,
-        plutus-chain-index-core -any,
-        plutus-pab,
-        plutus-pab-executables -any,
-        plutus-use-cases -any,
-        plutus-ledger -any,
-        plutus-ledger-constraints -any,
-        servant-client -any,
-        sqlite-simple -any,
-        tasty -any,
-        tasty-hunit -any,
-        text -any,
-        prettyprinter -any,
-        row-types -any,
-        playground-common -any,
-        yaml -any,
-        iohk-monitoring -any,
-        servant-server -any,
-        purescript-bridge -any,
-        async -any,
-        servant-client -any,
-        openapi3 -any,
+  -- TODO plutus-use-cases dep needs to be removed
+  build-depends:
+    , aeson
+    , async
+    , base                       >=4.9 && <5
+    , containers
+    , data-default
+    , freer-extras
+    , freer-simple
+    , http-client
+    , iohk-monitoring
+    , lens
+    , mtl
+    , openapi3
+    , playground-common
+    , plutus-chain-index-core
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-pab-executables
+    , plutus-use-cases
+    , prettyprinter
+    , purescript-bridge
+    , row-types
+    , servant-client
+    , servant-server
+    , sqlite-simple
+    , tasty
+    , tasty-hunit
+    , text
+    , yaml
 
 executable tx-inject
-    import:           lang
-    main-is:          Main.hs
-    hs-source-dirs:   tx-inject
-    other-modules:
-        TxInject.RandomTx
-    default-language: Haskell2010
-    build-depends:
-        base >=4.9 && <5,
-        data-default -any,
-        plutus-pab,
-        containers -any,
-        clock -any,
-        lens -any,
-        mwc-random -any,
-        optparse-applicative -any,
-        plutus-contract -any,
-        plutus-ledger -any,
-        pretty-simple -any,
-        rate-limit -any,
-        signal -any,
-        stm -any,
-        text -any,
-        time-units -any,
-        yaml -any,
-        hedgehog -any,
-        primitive -any
+  import:           lang
+  main-is:          Main.hs
+  hs-source-dirs:   tx-inject
+  other-modules:    TxInject.RandomTx
+  default-language: Haskell2010
+  build-depends:
+    , base                  >=4.9 && <5
+    , clock
+    , containers
+    , data-default
+    , hedgehog
+    , lens
+    , mwc-random
+    , optparse-applicative
+    , plutus-contract
+    , plutus-ledger
+    , plutus-pab
+    , pretty-simple
+    , primitive
+    , rate-limit
+    , signal
+    , stm
+    , text
+    , time-units
+    , yaml
 
 executable sync-client
-    import: lang
-    main-is: Main.hs
-    hs-source-dirs: sync-client
-    default-language: Haskell2010
-    build-depends:
-        base >=4.9 && <5,
-        cardano-api -any,
-        cardano-slotting -any,
-        contra-tracer -any,
-        either -any,
-        optparse-applicative -any,
-        plutus-chain-index-core,
-        plutus-ledger,
-        text
+  import:           lang
+  main-is:          Main.hs
+  hs-source-dirs:   sync-client
+  default-language: Haskell2010
+  build-depends:
+    , base                     >=4.9 && <5
+    , cardano-api
+    , cardano-slotting
+    , contra-tracer
+    , either
+    , optparse-applicative
+    , plutus-chain-index-core
+    , plutus-ledger
+    , text
 
 executable plutus-pab-nami-demo
-  import: lang
-  main-is: Main.hs
+  import:         lang
+  main-is:        Main.hs
   hs-source-dirs: demo/pab-nami/pab/app
-  other-modules:
-    DemoContract
-  ghc-options:
-    -threaded
+  other-modules:  DemoContract
+  ghc-options:    -threaded
   build-depends:
-    aeson -any,
-    base >= 4.9 && < 5,
-    openapi3 -any,
-    plutus-contract -any,
-    plutus-pab -any,
-    plutus-pab-executables -any,
-    playground-common -any,
-    prettyprinter -any,
-    purescript-bridge -any,
-    plutus-ledger -any,
-    plutus-ledger-constraints -any,
+    , aeson
+    , base                       >=4.9 && <5
+    , openapi3
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-pab-executables
+    , prettyprinter
+    , purescript-bridge
 
 executable plutus-pab-nami-demo-generator
-  import: lang
-  main-is: Generator.hs
+  import:         lang
+  main-is:        Generator.hs
   hs-source-dirs: demo/pab-nami/pab/app
-  other-modules:
-    DemoContract
-  ghc-options:
-    -threaded
+  other-modules:  DemoContract
+  ghc-options:    -threaded
   build-depends:
-    aeson -any,
-    base >= 4.9 && < 5,
-    openapi3 -any,
-    optparse-applicative -any,
-    plutus-contract -any,
-    plutus-pab -any,
-    plutus-pab-executables -any,
-    playground-common -any,
-    prettyprinter -any,
-    purescript-bridge -any,
-    plutus-ledger -any,
-    plutus-ledger-constraints -any,
+    , aeson
+    , base                       >=4.9 && <5
+    , openapi3
+    , optparse-applicative
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-pab-executables
+    , prettyprinter
+    , purescript-bridge
 
 executable pab-cli
-  import: lang
-  main-is: Main.hs
+  import:         lang
+  main-is:        Main.hs
   hs-source-dirs: pab-cli
   other-modules:
-      App
-      CommandParser
-      Types
-  ghc-options:
-    -threaded
-    -Wmissing-import-lists
-    -Wunused-packages
+    App
+    CommandParser
+    Types
+
+  ghc-options:    -threaded -Wmissing-import-lists -Wunused-packages
   build-depends:
-    plutus-chain-index-core -any,
-    plutus-ledger -any,
-    plutus-pab -any,
+    , plutus-chain-index-core
+    , plutus-ledger
+    , plutus-pab
+
   build-depends:
-    cardano-api -any,
-    cardano-ledger-shelley -any,
-    ouroboros-consensus-shelley -any,
+    , cardano-api
+    , cardano-ledger-shelley
+    , ouroboros-consensus-shelley
+
   build-depends:
-    aeson -any,
-    async -any,
-    base >= 4.9 && < 5,
-    bytestring -any,
-    cardano-api -any,
-    data-default -any,
-    directory -any,
-    docopt -any,
-    exceptions -any,
-    filepath -any,
-    freer-simple -any,
-    process -any,
-    req -any,
-    servant-client -any,
-    text -any,
-    time -any,
-    yaml -any,
-    MissingH -any,
+    , aeson
+    , async
+    , base            >=4.9 && <5
+    , bytestring
+    , cardano-api
+    , data-default
+    , directory
+    , docopt
+    , exceptions
+    , filepath
+    , freer-simple
+    , MissingH
+    , process
+    , req
+    , servant-client
+    , text
+    , time
+    , yaml

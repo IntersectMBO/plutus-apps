@@ -1,123 +1,128 @@
 cabal-version: 2.0
-name: playground-common
-version: 0.1.0.0
-license: Apache-2.0
+name:          playground-common
+version:       0.1.0.0
+license:       Apache-2.0
 license-files:
   LICENSE
   NOTICE
-author: David Smith
-category: Web
-build-type: Simple
-data-files:
-    test/oAuthToken1.json
+
+author:        David Smith
+category:      Web
+build-type:    Simple
+data-files:    test/oAuthToken1.json
 
 library
-    exposed-modules:
-        Auth
-        Auth.Types
-        Control.Monad.Except.Extras
-        Control.Monad.Now
-        Control.Monad.Trace
-        Control.Monad.Web
-        Gist
-        Language.Haskell.Interpreter
-        PSGenerator.Common
-        Playground.API
-        Playground.Contract
-        Playground.Interpreter.Util
-        Playground.Schema
-        Playground.TH
-        Playground.Types
-        Schema
-        Servant.Extra
-        Servant.Prometheus
-        System.IO.Extras
-    hs-source-dirs: src
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options: -Wall -Wcompat -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wmissing-import-lists -Wredundant-constraints
-    build-depends:
-        aeson -any,
-        aeson-casing -any,
-        base >=4.7 && <5,
-        bytestring -any,
-        bytestring -any,
-        cookie -any,
-        cryptonite -any,
-        containers -any,
-        data-default -any,
-        deriving-compat -any,
-        exceptions -any,
-        hashable -any,
-        http-client -any,
-        http-client-tls -any,
-        http-types -any,
-        http-conduit -any,
-        jwt -any,
-        lens -any,
-        monad-logger -any,
-        mtl -any,
-        newtype-generics -any,
-        process -any,
-        prometheus >=2,
-        plutus-chain-index-core -any,
-        plutus-contract -any,
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-ledger-constraints -any,
-        row-types -any,
-        prettyprinter -any,
-        plutus-tx -any,
-        purescript-bridge -any,
-        recursion-schemes < 5.2,
-        servant >= 0.16,
-        servant-client -any,
-        servant-purescript -any,
-        servant-server -any,
-        servant-websockets -any,
-        template-haskell -any,
-        text -any,
-        time -any,
-        time-out -any,
-        time-units -any,
-        transformers -any,
-        unordered-containers -any,
-        wai -any,
-        freer-simple -any,
-        freer-extras,
-        uuid -any,
-        streaming -any,
-        foldl -any,
-        openapi3 -any
+  exposed-modules:
+    Auth
+    Auth.Types
+    Control.Monad.Except.Extras
+    Control.Monad.Now
+    Control.Monad.Trace
+    Control.Monad.Web
+    Gist
+    Language.Haskell.Interpreter
+    Playground.API
+    Playground.Contract
+    Playground.Interpreter.Util
+    Playground.Schema
+    Playground.TH
+    Playground.Types
+    PSGenerator.Common
+    Schema
+    Servant.Extra
+    Servant.Prometheus
+    System.IO.Extras
+
+  hs-source-dirs:     src
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+    -Wall -Wcompat -Wunused-packages -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wmissing-import-lists
+    -Wredundant-constraints
+
+  build-depends:
+      aeson
+    , aeson-casing
+    , base                       >=4.7  && <5
+    , bytestring
+    , containers
+    , cookie
+    , cryptonite
+    , data-default
+    , deriving-compat
+    , exceptions
+    , foldl
+    , freer-extras
+    , freer-simple
+    , hashable
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , jwt
+    , lens
+    , monad-logger
+    , mtl
+    , newtype-generics
+    , openapi3
+    , plutus-chain-index-core
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-tx
+    , prettyprinter
+    , process
+    , prometheus                 >=2
+    , purescript-bridge
+    , recursion-schemes          <5.2
+    , row-types
+    , servant                    >=0.16
+    , servant-client
+    , servant-purescript
+    , servant-server
+    , servant-websockets
+    , streaming
+    , template-haskell
+    , text
+    , time
+    , time-out
+    , time-units
+    , transformers
+    , unordered-containers
+    , uuid
+    , wai
 
 test-suite playground-common-test
-    type: exitcode-stdio-1.0
-    main-is: Spec.hs
-    hs-source-dirs: test
-    other-modules:
-        Paths_playground_common
-        Auth.TypesSpec
-        Language.Haskell.InterpreterSpec
-        Playground.THSpec
-        Playground.TypesSpec
-        SchemaSpec
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wmissing-import-lists -Wredundant-constraints
-                 -fprint-potential-instances -Wunused-packages
-    build-depends:
-        aeson -any,
-        base >=4.7 && <5,
-        bytestring -any,
-        tasty -any,
-        tasty-hunit -any,
-        freer-simple -any,
-        playground-common -any,
-        plutus-ledger -any,
-        plutus-contract -any,
-        recursion-schemes < 5.2,
-        text -any
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  other-modules:
+    Auth.TypesSpec
+    Language.Haskell.InterpreterSpec
+    Paths_playground_common
+    Playground.THSpec
+    Playground.TypesSpec
+    SchemaSpec
+
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+  ghc-options:
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wmissing-import-lists -Wredundant-constraints
+    -fprint-potential-instances -Wunused-packages
+
+  build-depends:
+      aeson
+    , base               >=4.7 && <5
+    , bytestring
+    , freer-simple
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , recursion-schemes  <5.2
+    , tasty
+    , tasty-hunit
+    , text

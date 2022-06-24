@@ -7,7 +7,7 @@
 let
   inherit (packages) pkgs plutus-apps plutus-playground pab-nami-demo docs webCommon;
   inherit (pkgs) stdenv lib utillinux python3 nixpkgs-fmt;
-  inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks;
+  inherit (plutus-apps) haskell stylish-haskell sphinxcontrib-haddock sphinx-markdown-tables sphinxemoji nix-pre-commit-hooks cabal-fmt;
 
   # Feed cardano-wallet, cardano-cli & cardano-node to our shell.
   # This is stable as it doesn't mix dependencies with this code-base;
@@ -52,6 +52,7 @@ let
       stylish-haskell = stylish-haskell;
       nixpkgs-fmt = nixpkgs-fmt;
       shellcheck = pkgs.shellcheck;
+      cabal-fmt = cabal-fmt;
     };
     hooks = {
       purs-tidy-hook = {
@@ -69,6 +70,7 @@ let
         # maintain excludes here *and* in `./.ignore` and *keep them in sync*.
         excludes = [ ".*nix/pkgs/haskell/materialized.*/.*" ".*/spago-packages.nix$" ];
       };
+      cabal-fmt.enable = true;
       shellcheck.enable = true;
       png-optimization = {
         enable = true;
@@ -87,17 +89,23 @@ let
 
   # build inputs from nixpkgs ( -> ./nix/default.nix )
   nixpkgsInputs = with pkgs; [
+    awscli2
+    bzip2
     cacert
     editorconfig-core-c
     ghcid
     jq
     nixFlakesAlias
     nixpkgs-fmt
+    cabal-fmt
     nodejs
     plantuml
+    # See https://github.com/cachix/pre-commit-hooks.nix/issues/148 for why we need this
+    pre-commit
     shellcheck
     sqlite-interactive
     stack
+    wget
     yq
     z3
     zlib
@@ -113,6 +121,7 @@ let
     docs.build-and-serve-docs
     fixPngOptimization
     fix-purs-tidy
+    fixCabalFmt
     fixStylishHaskell
     haskell-language-server
     haskell-language-server-wrapper

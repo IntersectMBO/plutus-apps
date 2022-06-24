@@ -1,251 +1,265 @@
 cabal-version: 2.0
-name: plutus-playground-server
-version: 0.1.0.0
-license: Apache-2.0
+name:          plutus-playground-server
+version:       0.1.0.0
+license:       Apache-2.0
 license-files:
   LICENSE
   NOTICE
-maintainer: kris.jenkins@tweag.io
-author: Kris Jenkins
-homepage: https://github.com/input-output-hk/plutus-apps#readme
-bug-reports: https://github.com/input-output-hk/plutus-apps/issues
+
+maintainer:    kris.jenkins@tweag.io
+author:        Kris Jenkins
+homepage:      https://github.com/input-output-hk/plutus-apps#readme
+bug-reports:   https://github.com/input-output-hk/plutus-apps/issues
 description:
-    Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
-build-type: Simple
+  Please see the README on GitHub at <https://github.com/input-output-hk/plutus-apps#readme>
+
+build-type:    Simple
 data-files:
-    usecases/Crowdfunding.hs
-    usecases/ErrorHandling.hs
-    usecases/Game.hs
-    usecases/Vesting.hs
-    usecases/Starter.hs
-    test/gists1.json
+  test/gists1.json
+  usecases/Crowdfunding.hs
+  usecases/ErrorHandling.hs
+  usecases/Game.hs
+  usecases/Starter.hs
+  usecases/Vesting.hs
 
 source-repository head
-    type: git
-    location: https://github.com/input-output-hk/plutus-apps
+  type:     git
+  location: https://github.com/input-output-hk/plutus-apps
 
 flag defer-plugin-errors
-    description:
-        Defer errors from the plugin, useful for things like Haddock that can't handle it.
-    default: False
-    manual: True
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
+
+  default:     False
+  manual:      True
 
 library
-    exposed-modules:
-        Playground.Server
-        Playground.Interpreter
-        Playground.Usecases
-        Crowdfunding
-        CrowdfundingSimulations
-        ErrorHandling
-        ErrorHandlingSimulations
-        Game
-        GameSimulations
-        HelloWorld
-        HelloWorldSimulations
-        SimulationUtils
-        Starter
-        StarterSimulations
-        Vesting
-        VestingSimulations
-    hs-source-dirs:   src
-                    , usecases
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options: -Wall -Wcompat -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wno-missing-import-lists -Wredundant-constraints
-                 -- See Plutus Tx readme
-                 -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    build-depends:
-        aeson -any,
-        base >=4.7 && <5,
-        bytestring -any,
-        data-default -any,
-        containers -any,
-        exceptions -any,
-        file-embed -any,
-        http-client -any,
-        http-conduit -any,
-        jwt -any,
-        lens -any,
-        monad-logger -any,
-        mtl -any,
-        newtype-generics -any,
-        playground-common -any,
-        plutus-contract -any,
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-ledger-constraints -any,
-        plutus-script-utils -any,
-        plutus-tx -any,
-        regex-compat -any,
-        plutus-contract -any,
-        row-types -any,
-        servant >= 0.16,
-        servant-client -any,
-        servant-client-core -any,
-        servant-server -any,
-        template-haskell -any,
-        text -any,
-        time-units -any,
-        transformers -any,
-        wai-cors -any,
-        web-ghc -any
+  exposed-modules:
+    Crowdfunding
+    CrowdfundingSimulations
+    ErrorHandling
+    ErrorHandlingSimulations
+    Game
+    GameSimulations
+    HelloWorld
+    HelloWorldSimulations
+    Playground.Interpreter
+    Playground.Server
+    Playground.Usecases
+    SimulationUtils
+    Starter
+    StarterSimulations
+    Vesting
+    VestingSimulations
 
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+  hs-source-dirs:     src usecases
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wcompat -Wunused-packages -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wno-missing-import-lists
+    -Wredundant-constraints -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
+
+  build-depends:
+      aeson
+    , base                       >=4.7  && <5
+    , bytestring
+    , containers
+    , data-default
+    , exceptions
+    , file-embed
+    , http-client
+    , http-conduit
+    , jwt
+    , lens
+    , monad-logger
+    , mtl
+    , newtype-generics
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-script-utils
+    , plutus-tx
+    , regex-compat
+    , row-types
+    , servant                    >=0.16
+    , servant-client
+    , servant-client-core
+    , servant-server
+    , template-haskell
+    , text
+    , time-units
+    , transformers
+    , wai-cors
+    , web-ghc
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
 
 library plutus-playground-usecases
-    hs-source-dirs: usecases
-    other-modules:
-        Crowdfunding
-        CrowdfundingSimulations
-        ErrorHandling
-        ErrorHandlingSimulations
-        Game
-        GameSimulations
-        HelloWorld
-        HelloWorldSimulations
-        SimulationUtils
-        Starter
-        StarterSimulations
-        Vesting
-        VestingSimulations
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options: -Wall -Wcompat -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints
-                 -Wno-missing-signatures -Wno-missing-import-lists
-                 -- See Plutus Tx readme
-                 -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+  hs-source-dirs:     usecases
+  other-modules:
+    Crowdfunding
+    CrowdfundingSimulations
+    ErrorHandling
+    ErrorHandlingSimulations
+    Game
+    GameSimulations
+    HelloWorld
+    HelloWorldSimulations
+    SimulationUtils
+    Starter
+    StarterSimulations
+    Vesting
+    VestingSimulations
 
-    build-depends:
-        aeson -any,
-        base >=4.7 && <5,
-        data-default -any,
-        lens -any,
-        bytestring -any,
-        containers -any,
-        mtl -any,
-        playground-common -any,
-        plutus-contract -any,
-        plutus-tx -any,
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-ledger-constraints -any,
-        plutus-script-utils -any,
-        row-types -any,
-        text -any,
-        transformers -any
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
 
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wcompat -Wunused-packages -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wno-missing-signatures -Wno-missing-import-lists -fobject-code
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+  build-depends:
+      aeson
+    , base                       >=4.7 && <5
+    , bytestring
+    , containers
+    , data-default
+    , lens
+    , mtl
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-script-utils
+    , plutus-tx
+    , row-types
+    , text
+    , transformers
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 executable plutus-playground-server
-    main-is: Main.hs
-    hs-source-dirs: app
-                  , usecases
-    other-modules:
-        Webserver
-        Types
-        PSGenerator
-        Crowdfunding
-        CrowdfundingSimulations
-        ErrorHandling
-        ErrorHandlingSimulations
-        Game
-        GameSimulations
-        HelloWorld
-        HelloWorldSimulations
-        SimulationUtils
-        Starter
-        StarterSimulations
-        Vesting
-        VestingSimulations
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wno-missing-import-lists -Wredundant-constraints -O0
-                 -- See Plutus Tx readme
-                 -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    build-depends:
-        aeson -any,
-        aeson-pretty -any,
-        base >=4.7 && <5,
-        bytestring -any,
-        containers -any,
-        data-default -any,
-        exceptions -any,
-        data-default-class -any,
-        filepath -any,
-        freer-extras -any,
-        playground-common -any,
-        lens -any,
-        monad-logger -any,
-        mtl -any,
-        optparse-applicative -any,
-        plutus-tx -any,
-        plutus-playground-server -any,
-        plutus-playground-usecases -any,
-        purescript-bridge -any,
-        servant -any,
-        servant-purescript -any,
-        servant-server -any,
-        text -any,
-        time-units -any,
-        transformers -any,
-        plutus-contract -any,
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-ledger-constraints -any,
-        plutus-script-utils -any,
-        row-types -any,
-        warp -any,
-        web-ghc -any
+  main-is:            Main.hs
+  hs-source-dirs:     app usecases
+  other-modules:
+    Crowdfunding
+    CrowdfundingSimulations
+    ErrorHandling
+    ErrorHandlingSimulations
+    Game
+    GameSimulations
+    HelloWorld
+    HelloWorldSimulations
+    PSGenerator
+    SimulationUtils
+    Starter
+    StarterSimulations
+    Types
+    Vesting
+    VestingSimulations
+    Webserver
 
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+
+  -- See Plutus Tx readme for why we need the following flags: 
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
+    -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wno-missing-import-lists -Wredundant-constraints -O0 -fobject-code
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+
+  build-depends:
+      aeson
+    , aeson-pretty
+    , base                        >=4.7 && <5
+    , bytestring
+    , containers
+    , data-default
+    , data-default-class
+    , exceptions
+    , filepath
+    , freer-extras
+    , lens
+    , monad-logger
+    , mtl
+    , optparse-applicative
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-playground-server
+    , plutus-playground-usecases
+    , plutus-script-utils
+    , plutus-tx
+    , purescript-bridge
+    , row-types
+    , servant
+    , servant-purescript
+    , servant-server
+    , text
+    , time-units
+    , transformers
+    , warp
+    , web-ghc
+
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
 
 test-suite plutus-playground-server-test
-    type: exitcode-stdio-1.0
-    main-is: Spec.hs
-    hs-source-dirs: test
-    other-modules:
-        GistSpec
-        Paths_plutus_playground_server
-        Playground.InterpreterSpec
-        Playground.UsecasesSpec
-    default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
-    -- We don't want "-threaded" and friends here as there are many tests with heavy GHC compilation.
-    -- This is a hack as one can fine-tune test cases better (like sequential tests) with in-code tasty dependencies.
-    -- See #4085.
-    ghc-options: -Wall -Wcompat
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wno-missing-import-lists -Wredundant-constraints
-                 -fprint-potential-instances
-    build-depends:
-        aeson -any,
-        base >=4.7 && <5,
-        bytestring -any,
-        tasty -any,
-        tasty-hunit -any,
-        newtype-generics -any,
-        playground-common -any,
-        mtl -any,
-        plutus-playground-server -any,
-        plutus-ledger -any,
-        plutus-playground-usecases -any,
-        plutus-contract -any,
-        tasty -any,
-        tasty-hunit -any,
-        text -any,
-        time-units -any,
-        transformers -any,
-        web-ghc -any
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  other-modules:
+    GistSpec
+    Paths_plutus_playground_server
+    Playground.InterpreterSpec
+    Playground.UsecasesSpec
+
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+
+  -- We don't want "-threaded" and friends here as there are many tests with heavy GHC compilation.
+  -- This is a hack as one can fine-tune test cases better (like sequential tests) with in-code tasty dependencies.
+  -- See #4085.
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wno-missing-import-lists
+    -Wredundant-constraints -fprint-potential-instances
+
+  build-depends:
+      aeson
+    , base                        >=4.7 && <5
+    , bytestring
+    , mtl
+    , newtype-generics
+    , playground-common
+    , plutus-contract
+    , plutus-ledger
+    , plutus-playground-server
+    , plutus-playground-usecases
+    , tasty
+    , tasty-hunit
+    , text
+    , time-units
+    , transformers
+    , web-ghc

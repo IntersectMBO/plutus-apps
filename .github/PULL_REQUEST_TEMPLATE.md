@@ -12,4 +12,5 @@ Pre-submit checklist:
 - PR
     - [ ] Self-reviewed the diff
     - [ ] Useful pull request description
+    - [ ] Reference the ADR in the PR and reference the PR in the ADR (if revelant)
     - [ ] Reviewer requested
