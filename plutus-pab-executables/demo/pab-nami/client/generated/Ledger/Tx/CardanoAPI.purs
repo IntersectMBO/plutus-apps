@@ -20,7 +20,6 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Plutus.V1.Ledger.Tx (ScriptTag)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
@@ -66,10 +65,10 @@ data ToCardanoError
   | OutputHasZeroAda
   | StakingPointersNotSupported
   | SimpleScriptsNotSupportedToCardano
-  | MissingTxInType
-  | MissingMintingPolicyRedeemer
+  | MissingInputValidator
+  | MissingDatum
   | MissingMintingPolicy
-  | ScriptPurposeNotSupported ScriptTag
+  | MissingStakeValidator
   | Tag String ToCardanoError
 
 derive instance Eq ToCardanoError
@@ -86,10 +85,10 @@ instance EncodeJson ToCardanoError where
     OutputHasZeroAda -> encodeJson { tag: "OutputHasZeroAda", contents: jsonNull }
     StakingPointersNotSupported -> encodeJson { tag: "StakingPointersNotSupported", contents: jsonNull }
     SimpleScriptsNotSupportedToCardano -> encodeJson { tag: "SimpleScriptsNotSupportedToCardano", contents: jsonNull }
-    MissingTxInType -> encodeJson { tag: "MissingTxInType", contents: jsonNull }
-    MissingMintingPolicyRedeemer -> encodeJson { tag: "MissingMintingPolicyRedeemer", contents: jsonNull }
+    MissingInputValidator -> encodeJson { tag: "MissingInputValidator", contents: jsonNull }
+    MissingDatum -> encodeJson { tag: "MissingDatum", contents: jsonNull }
     MissingMintingPolicy -> encodeJson { tag: "MissingMintingPolicy", contents: jsonNull }
-    ScriptPurposeNotSupported a -> E.encodeTagged "ScriptPurposeNotSupported" a E.value
+    MissingStakeValidator -> encodeJson { tag: "MissingStakeValidator", contents: jsonNull }
     Tag a b -> E.encodeTagged "Tag" (a /\ b) (E.tuple (E.value >/\< E.value))
 
 instance DecodeJson ToCardanoError where
@@ -103,10 +102,10 @@ instance DecodeJson ToCardanoError where
         , "OutputHasZeroAda" /\ pure OutputHasZeroAda
         , "StakingPointersNotSupported" /\ pure StakingPointersNotSupported
         , "SimpleScriptsNotSupportedToCardano" /\ pure SimpleScriptsNotSupportedToCardano
-        , "MissingTxInType" /\ pure MissingTxInType
-        , "MissingMintingPolicyRedeemer" /\ pure MissingMintingPolicyRedeemer
+        , "MissingInputValidator" /\ pure MissingInputValidator
+        , "MissingDatum" /\ pure MissingDatum
         , "MissingMintingPolicy" /\ pure MissingMintingPolicy
-        , "ScriptPurposeNotSupported" /\ D.content (ScriptPurposeNotSupported <$> D.value)
+        , "MissingStakeValidator" /\ pure MissingStakeValidator
         , "Tag" /\ D.content (D.tuple $ Tag </$\> D.value </*\> D.value)
         ]
 
@@ -149,14 +148,14 @@ _SimpleScriptsNotSupportedToCardano = prism' (const SimpleScriptsNotSupportedToC
   SimpleScriptsNotSupportedToCardano -> Just unit
   _ -> Nothing
 
-_MissingTxInType :: Prism' ToCardanoError Unit
-_MissingTxInType = prism' (const MissingTxInType) case _ of
-  MissingTxInType -> Just unit
+_MissingInputValidator :: Prism' ToCardanoError Unit
+_MissingInputValidator = prism' (const MissingInputValidator) case _ of
+  MissingInputValidator -> Just unit
   _ -> Nothing
 
-_MissingMintingPolicyRedeemer :: Prism' ToCardanoError Unit
-_MissingMintingPolicyRedeemer = prism' (const MissingMintingPolicyRedeemer) case _ of
-  MissingMintingPolicyRedeemer -> Just unit
+_MissingDatum :: Prism' ToCardanoError Unit
+_MissingDatum = prism' (const MissingDatum) case _ of
+  MissingDatum -> Just unit
   _ -> Nothing
 
 _MissingMintingPolicy :: Prism' ToCardanoError Unit
@@ -164,9 +163,9 @@ _MissingMintingPolicy = prism' (const MissingMintingPolicy) case _ of
   MissingMintingPolicy -> Just unit
   _ -> Nothing
 
-_ScriptPurposeNotSupported :: Prism' ToCardanoError ScriptTag
-_ScriptPurposeNotSupported = prism' ScriptPurposeNotSupported case _ of
-  (ScriptPurposeNotSupported a) -> Just a
+_MissingStakeValidator :: Prism' ToCardanoError Unit
+_MissingStakeValidator = prism' (const MissingStakeValidator) case _ of
+  MissingStakeValidator -> Just unit
   _ -> Nothing
 
 _Tag :: Prism' ToCardanoError { a :: String, b :: ToCardanoError }
