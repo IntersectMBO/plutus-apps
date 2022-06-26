@@ -13,12 +13,14 @@
                             },
                             {
                                 "contents": {
+                                    "txCertificates": [],
                                     "txCollateral": [],
                                     "txData": [],
                                     "txFee": {
                                         "getValue": []
                                     },
                                     "txInputs": [],
+                                    "txMetadata": null,
                                     "txMint": {
                                         "getValue": [
                                             [
@@ -36,7 +38,7 @@
                                             ]
                                         ]
                                     },
-                                    "txMintScripts": [],
+                                    "txMintingScripts": [],
                                     "txOutputs": [
                                         {
                                             "txOutAddress": {
@@ -619,7 +621,7 @@
                                             }
                                         }
                                     ],
-                                    "txRedeemers": [],
+                                    "txScripts": [],
                                     "txSignatures": [],
                                     "txValidRange": {
                                         "ivFrom": [
@@ -634,7 +636,8 @@
                                             },
                                             true
                                         ]
-                                    }
+                                    },
+                                    "txWithdrawals": []
                                 },
                                 "tag": "EmulatorTx"
                             },
@@ -846,12 +849,14 @@
                         "txIndex": 0
                     },
                     "tx": {
+                        "txCertificates": [],
                         "txCollateral": [],
                         "txData": [],
                         "txFee": {
                             "getValue": []
                         },
                         "txInputs": [],
+                        "txMetadata": null,
                         "txMint": {
                             "getValue": [
                                 [
@@ -869,7 +874,7 @@
                                 ]
                             ]
                         },
-                        "txMintScripts": [],
+                        "txMintingScripts": [],
                         "txOutputs": [
                             {
                                 "txOutAddress": {
@@ -1452,7 +1457,7 @@
                                 }
                             }
                         ],
-                        "txRedeemers": [],
+                        "txScripts": [],
                         "txSignatures": [],
                         "txValidRange": {
                             "ivFrom": [
@@ -1467,7 +1472,8 @@
                                 },
                                 true
                             ]
-                        }
+                        },
+                        "txWithdrawals": []
                     },
                     "txId": {
                         "getTxId": "0312c21da481701ccdc534cdc3d080111f688e5ba147eb5d74865fb180be287a"

@@ -17,7 +17,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Ledger.Tx.Internal (Tx)
+import Ledger.Tx.Types.Tx (Tx)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
