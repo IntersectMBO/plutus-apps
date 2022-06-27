@@ -15,7 +15,7 @@
 
 set -eEuo pipefail
 
-trap '(kill $pid_node || true); (kill $pid_dump || true); exit' INT TERM QUIT ERR EXIT
+# trap '(kill $pid_node || true); (kill $pid_dump || true); exit' INT TERM QUIT ERR EXIT
 
 mkdir -p "$NODE_DIR"
 mkdir -p "$NODE_BIN_DIR"
@@ -23,24 +23,28 @@ mkdir -p "$LOCAL_DUMP_DIR"
 
 set -x
 
-# Start running local node
-./scripts/cardano-node.sh > /dev/null 2>&1 &
+ls "$NODE_DIR"
+ls "$NODE_BIN_DIR"
+ls "$LOCAL_DUMP_DIR"
 
-pid_node=$!
+# # Start running local node
+# ./scripts/cardano-node.sh > /dev/null 2>&1 &
 
-# If the local node is run for the first time, the config file needs to be downloaded,
-# so here we wait until the config file is available.
-while ! [ -f "$NODE_DIR"/mainnet-config.json ]
-do
-  sleep 30
-done
+# pid_node=$!
 
-cabal update
-# Start the dump job
-cabal v2-run plutus-script-evaluation-test:dump-script-events -- --socket-path "$NODE_DIR"/db/node.socket --config "$NODE_DIR"/mainnet-config.json --mainnet --blocks-per-file 10000 --events-per-file 50000 --dir "$LOCAL_DUMP_DIR" &
-pid_dump=$!
+# # If the local node is run for the first time, the config file needs to be downloaded,
+# # so here we wait until the config file is available.
+# while ! [ -f "$NODE_DIR"/mainnet-config.json ]
+# do
+#   sleep 30
+# done
 
-echo $pid_node
-echo $pid_dump
-wait $pid_dump
-wait $pid_node
+# cabal update
+# # Start the dump job
+# cabal v2-run plutus-script-evaluation-test:dump-script-events -- --socket-path "$NODE_DIR"/db/node.socket --config "$NODE_DIR"/mainnet-config.json --mainnet --blocks-per-file 10000 --events-per-file 50000 --dir "$LOCAL_DUMP_DIR" &
+# pid_dump=$!
+
+# echo $pid_node
+# echo $pid_dump
+# wait $pid_dump
+# wait $pid_node
