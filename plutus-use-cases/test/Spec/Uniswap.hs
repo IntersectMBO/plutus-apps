@@ -141,7 +141,7 @@ getBToken = max
 --   the emulated wallets
 setupTokens :: Contract (Maybe (Semigroup.Last Currency.OneShotCurrency)) Currency.CurrencySchema Currency.CurrencyError ()
 setupTokens = do
-    ownPK <- Contract.ownPaymentPubKeyHash
+    ownPK <- Contract.ownFirstPaymentPubKeyHash
     cur   <- Currency.mintContract ownPK [(fromString tn, fromIntegral (length wallets) * amount) | tn <- tokenNames]
     let cs = Currency.currencySymbol cur
         v  = mconcat [Value.singleton cs (fromString tn) amount | tn <- tokenNames]

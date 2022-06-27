@@ -30,6 +30,7 @@ import Plutus.V1.Ledger.Contexts as V
 import PlutusTx qualified
 
 import Ledger.Constraints qualified as Constraints
+import Plutus.ChainIndex.Types (Tip (Tip, TipAtGenesis))
 import Plutus.Contract as Contract
 
 mkValidator :: PaymentPubKeyHash -> () -> () -> ScriptContext -> Bool
@@ -92,11 +93,37 @@ pubKeyContract pk vl = mapError (review _PubKeyError   ) $ do
             -- to update it's database with the new confirmed transaction.
             -- Ultimately, the solution is to move indexed information by the
             -- PAB to the chain-index, so that we get a single source of truth.
-            -- The `waitNSlots 1` only works if you have a chain-index closely
-            -- synced to the local node. If the chain-index is not synced with
-            -- the local node, `unspentTxOutFromRef outRef` will always return
-            -- `Nothing`.
-            void $ waitNSlots 1
+            --
+            -- The temporary solution is to use the 'awaitChainIndexSlot' call
+            -- which waits until the chain-index is up to date. Meaning, the
+            -- chain-index's synced slot should be at least as high as the
+            -- current slot.
+            --
+            -- See https://plutus-apps.readthedocs.io/en/latest/adr/0002-pab-indexing-solution-integration.html"
+            -- for the full explanation.
+            --
+            -- The 'awaitChainIndexSlot' blocks the contract until the chain-index
+            -- is synced until the current slot. This is not a good solution,
+            -- as the chain-index is always some time behind the current slot.
+            slot <- currentSlot
+            awaitChainIndexSlot slot
+
             ciTxOut <- unspentTxOutFromRef outRef
             pure (outRef, ciTxOut, inst)
         _                    -> throwing _MultipleScriptOutputs pk
+
+-- | Temporary. Read TODO in 'pubKeyContract'.
+awaitChainIndexSlot :: (AsContractError e) => Slot -> Contract w s e ()
+awaitChainIndexSlot targetSlot = do
+    chainIndexTip <- getTip
+    let chainIndexSlot = getChainIndexSlot chainIndexTip
+    if chainIndexSlot < targetSlot
+       then do
+           void $ waitNSlots 1
+           awaitChainIndexSlot targetSlot
+       else
+           pure ()
+ where
+    getChainIndexSlot :: Tip -> Slot
+    getChainIndexSlot TipAtGenesis   = Slot 0
+    getChainIndexSlot (Tip slot _ _) = slot

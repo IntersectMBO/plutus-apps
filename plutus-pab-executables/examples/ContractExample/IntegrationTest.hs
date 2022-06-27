@@ -40,7 +40,7 @@ run = runError run' >>= \case
 run' :: Contract () EmptySchema IError ()
 run' = do
     logInfo @Haskell.String "Starting integration test"
-    pkh <- ownPaymentPubKeyHash
+    pkh <- ownFirstPaymentPubKeyHash
     (txOutRef, ciTxOut, pkInst) <- mapError PKError (PubKey.pubKeyContract pkh (Ada.adaValueOf 10))
     logInfo @Haskell.String "pubKey contract complete:"
     let lookups =

@@ -97,7 +97,7 @@ mustPayToPubKeyAddressStakePubKeyNotNothingProp = property $ do
     where
         stakePaymentPubKeyHash :: C.TxOut C.CtxTx C.AlonzoEra -> Maybe StakePubKeyHash
         stakePaymentPubKeyHash (C.TxOut addr _ _) = do
-            txOutAddress <- either (const Nothing) Just $ C.fromCardanoAddress addr
+            txOutAddress <- either (const Nothing) Just $ C.fromCardanoAddressInEra addr
             stakeCred <- addressStakingCredential txOutAddress
             case stakeCred of
                 StakingHash (PubKeyCredential pkh) -> Just $ StakePubKeyHash pkh

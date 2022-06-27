@@ -202,7 +202,7 @@ theCampaign startTime = Campaign
 contribute :: Campaign -> Promise () CrowdfundingSchema ContractError ()
 contribute cmp = endpoint @"contribute" $ \Contribution{contribValue} -> do
     logInfo @Text $ "Contributing " <> Text.pack (Haskell.show contribValue)
-    contributor <- ownPaymentPubKeyHash
+    contributor <- ownFirstPaymentPubKeyHash
     let inst = typedValidator cmp
         tx = Constraints.mustPayToTheScript contributor contribValue
                 <> Constraints.mustValidateIn (Interval.to (campaignDeadline cmp))

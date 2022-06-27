@@ -220,7 +220,7 @@ auctionSeller :: Value -> POSIXTime -> Contract AuctionOutput SellerSchema Aucti
 auctionSeller value time = do
     threadToken <- SM.getThreadToken
     tell $ threadTokenOut threadToken
-    self <- ownPaymentPubKeyHash
+    self <- ownFirstPaymentPubKeyHash
     let params       = AuctionParams{apOwner = self, apAsset = value, apEndTime = time }
         inst         = typedValidator (threadToken, params)
         client       = machineClient inst threadToken params
@@ -333,7 +333,7 @@ handleEvent client lastHighestBid change =
         AuctionIsOver s -> tell (auctionStateOut $ Finished s) >> stop
         SubmitOwnBid ada -> do
             logInfo @Haskell.String "Submitting bid"
-            self <- ownPaymentPubKeyHash
+            self <- ownFirstPaymentPubKeyHash
             logInfo @Haskell.String "Received pubkey"
             r <- SM.runStep client Bid{newBid = ada, newBidder = self}
             logInfo @Haskell.String "SM: runStep done"

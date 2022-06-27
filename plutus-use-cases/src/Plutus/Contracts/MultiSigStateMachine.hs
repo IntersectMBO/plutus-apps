@@ -268,7 +268,7 @@ contract params = forever endpoints where
     endpoints = selectList [lock, propose, cancel, addSignature, pay]
     propose = endpoint @"propose-payment" $ void . SM.runStep theClient . ProposePayment
     cancel  = endpoint @"cancel-payment" $ \() -> void $ SM.runStep theClient Cancel
-    addSignature = endpoint @"add-signature" $ \() -> ownPaymentPubKeyHash >>= void . SM.runStep theClient . AddSignature
+    addSignature = endpoint @"add-signature" $ \() -> ownFirstPaymentPubKeyHash >>= void . SM.runStep theClient . AddSignature
     lock = endpoint @"lock" $ void . SM.runInitialise theClient Holding
     pay = endpoint @"pay" $ \() -> void $ SM.runStep theClient Pay
 

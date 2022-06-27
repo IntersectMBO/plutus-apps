@@ -8,39 +8,46 @@
 module Cardano.Wallet.Mock.Client where
 
 import Cardano.Wallet.Mock.API (API)
-import Cardano.Wallet.Mock.Types (WalletInfo (wiPaymentPubKeyHash))
+import Cardano.Wallet.Mock.Types (WalletInfo)
 import Control.Monad (void)
 import Control.Monad.Freer (Eff, LastMember, Member, sendM, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
 import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.List.NonEmpty (NonEmpty)
 import Data.Proxy (Proxy (Proxy))
-import Ledger (PaymentPubKeyHash, Value)
+import Ledger (PaymentPubKeyHash)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Ledger.Tx (CardanoTx)
+import Plutus.V1.Ledger.Api (Address, Value)
 import Servant ((:<|>) ((:<|>)))
 import Servant.Client (ClientEnv, ClientError, ClientM, client, runClientM)
-import Wallet.Effects (WalletEffect (BalanceTx, OwnPaymentPubKeyHash, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
+import Wallet.Effects (WalletEffect (BalanceTx, OwnAddresses, SubmitTxn, TotalFunds, WalletAddSignature, YieldUnbalancedTx))
 import Wallet.Emulator.Error (WalletAPIError)
 import Wallet.Emulator.Wallet (Wallet (Wallet, getWalletId), WalletId)
 
+{-# DEPRECATED ownPaymentPubKeyHash "Use ownAddresses instead" #-}
+
 createWallet :: Maybe Integer -> ClientM WalletInfo
 submitTxn :: Wallet -> CardanoTx -> ClientM ()
-ownPaymentPublicKey :: Wallet -> ClientM WalletInfo
+ownPaymentPubKeyHash :: Wallet -> ClientM PaymentPubKeyHash
+ownAddresses :: Wallet -> ClientM (NonEmpty Address)
 balanceTx :: Wallet -> UnbalancedTx -> ClientM (Either WalletAPIError CardanoTx)
 totalFunds :: Wallet -> ClientM Value
 sign :: Wallet -> CardanoTx -> ClientM CardanoTx
-(createWallet, submitTxn, ownPaymentPublicKey, balanceTx, totalFunds, sign) =
+(createWallet, submitTxn, ownPaymentPubKeyHash, ownAddresses, balanceTx, totalFunds, sign) =
   ( createWallet_
   , \(Wallet _ wid) tx -> void (submitTxn_ wid tx)
-  , ownPaymentPublicKey_ . getWalletId
+  , ownPaymentPubKeyHash_ . getWalletId
+  , ownAddresses_ . getWalletId
   , balanceTx_ . getWalletId
   , totalFunds_ . getWalletId
   , sign_ . getWalletId)
   where
     ( createWallet_
       :<|> (submitTxn_
-      :<|> ownPaymentPublicKey_
+      :<|> ownPaymentPubKeyHash_
+      :<|> ownAddresses_
       :<|> balanceTx_
       :<|> totalFunds_
       :<|> sign_)) = client (Proxy @(API WalletId))
@@ -65,8 +72,8 @@ handleWalletClient wallet event = do
         submitTxnH :: CardanoTx -> Eff effs ()
         submitTxnH tx = runClient (submitTxn wallet tx)
 
-        ownPaymentPubKeyHashH :: Eff effs PaymentPubKeyHash
-        ownPaymentPubKeyHashH = wiPaymentPubKeyHash <$> runClient (ownPaymentPublicKey wallet)
+        ownAddressesH :: Eff effs (NonEmpty Address)
+        ownAddressesH = runClient (ownAddresses wallet)
 
         balanceTxH :: UnbalancedTx -> Eff effs (Either WalletAPIError CardanoTx)
         balanceTxH utx = runClient (balanceTx wallet utx)
@@ -86,7 +93,7 @@ handleWalletClient wallet event = do
 
     case event of
         SubmitTxn tx          -> submitTxnH tx
-        OwnPaymentPubKeyHash  -> ownPaymentPubKeyHashH
+        OwnAddresses          -> ownAddressesH
         BalanceTx utx         -> balanceTxH utx
         WalletAddSignature tx -> walletAddSignatureH tx
         TotalFunds            -> totalFundsH

@@ -194,7 +194,7 @@ tests =
                 Trace.waitNSlots 1
             )
 
-        , let theContract :: Contract () Schema ContractError PaymentPubKeyHash = ownPaymentPubKeyHash
+        , let theContract :: Contract () Schema ContractError PaymentPubKeyHash = ownFirstPaymentPubKeyHash
           in run "own public key"
                 (assertDone theContract tag (== mockWalletPaymentPubKeyHash w2) "should return the wallet's public key")
                 (void $ activateContract w2 (void theContract) tag)
@@ -268,7 +268,7 @@ tests =
                 -- We submit another tx which spends the utxo belonging to the
                 -- contract's caller. It's status should be changed eventually
                 -- to confirmed spent.
-                pubKeyHash <- ownPaymentPubKeyHash
+                pubKeyHash <- ownFirstPaymentPubKeyHash
                 ciTxOutM <- unspentTxOutFromRef utxo
                 let lookups = Constraints.unspentOutputs (maybe mempty (Map.singleton utxo) ciTxOutM)
                 submitTxConstraintsWith @Void lookups $ Constraints.mustSpendPubKeyOutput utxo
@@ -306,7 +306,7 @@ tests =
                 -- We submit another tx which spends the utxo belonging to the
                 -- contract's caller. It's status should be changed eventually
                 -- to confirmed spent.
-                pubKeyHash <- ownPaymentPubKeyHash
+                pubKeyHash <- ownFirstPaymentPubKeyHash
                 ciTxOutM <- unspentTxOutFromRef utxo
                 let lookups = Constraints.unspentOutputs (maybe mempty (Map.singleton utxo) ciTxOutM)
                 submitCardanoTxConstraintsWith lookups $ Constraints.mustSpendPubKeyOutput utxo

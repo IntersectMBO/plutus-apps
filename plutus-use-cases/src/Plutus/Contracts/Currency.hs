@@ -181,7 +181,7 @@ type CurrencySchema =
 mintCurrency
     :: Promise (Maybe (Last OneShotCurrency)) CurrencySchema CurrencyError OneShotCurrency
 mintCurrency = endpoint @"Create native token" $ \SimpleMPS{tokenName, amount} -> do
-    ownPK <- ownPaymentPubKeyHash
+    ownPK <- ownFirstPaymentPubKeyHash
     cur <- mintContract ownPK [(tokenName, amount)]
     tell (Just (Last cur))
     pure cur

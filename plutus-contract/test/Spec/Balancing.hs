@@ -111,7 +111,7 @@ balanceTxnNoExtraOutput =
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
         mintingOperation = do
-            pkh <- Con.ownPaymentPubKeyHash
+            pkh <- Con.ownFirstPaymentPubKeyHash
 
             let val = vL 200
                 lookups = Constraints.mintingPolicy coinMintingPolicy
