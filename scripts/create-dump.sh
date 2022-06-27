@@ -15,7 +15,7 @@
 
 set -eEuo pipefail
 
-# trap '(kill $pid_node || true); (kill $pid_dump || true); exit' INT TERM QUIT ERR EXIT
+# trap '(kill $pid_dump || true); exit' INT TERM QUIT ERR EXIT
 
 mkdir -p "$NODE_DIR"
 mkdir -p "$NODE_BIN_DIR"
@@ -39,12 +39,12 @@ ls "$LOCAL_DUMP_DIR"
 #   sleep 30
 # done
 
-# cabal update
-# # Start the dump job
+nix-shell --run "cabal update"
+# Start the dump job
 # cabal v2-run plutus-script-evaluation-test:dump-script-events -- --socket-path "$NODE_DIR"/db/node.socket --config "$NODE_DIR"/mainnet-config.json --mainnet --blocks-per-file 10000 --events-per-file 50000 --dir "$LOCAL_DUMP_DIR" &
 # pid_dump=$!
 
-# echo $pid_node
+# # echo $pid_node
 # echo $pid_dump
 # wait $pid_dump
 # wait $pid_node
