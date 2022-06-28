@@ -211,11 +211,11 @@ instance ContractModel UniswapModel where
                 [ (3, createPool) | not . null $ s ^. contractState . exchangeableTokens ] ++
                 [ (10, gen) | gen <- [add True, swap True, remove True, close]
                            , not . null $ s ^. contractState . exchangeableTokens
-                           , not . null $ s ^. contractState . pools ] {-++
+                           , not . null $ s ^. contractState . pools ] ++
                 [ (1, bad) | bad <- [add False, swap False, remove False]
                            , not . null $ s ^. contractState . exchangeableTokens ] ++
                 [ (1, generalRemove) | not . null $ s ^. contractState . exchangeableTokens
-                                     , not . null $ s ^. contractState . pools ]-}
+                                     , not . null $ s ^. contractState . pools ]
     where
       createPool = do
         w <- elements $ wallets \\ [w1]
@@ -338,7 +338,7 @@ instance ContractModel UniswapModel where
         deposit w (Ada.adaValueOf 4)
         deposit w $ mconcat [ symAssetClassValue t 1000000 | t <- ts ]
       exchangeableTokens %= (Set.fromList ts <>)
-      wait 21
+      wait 41
 
     Start -> do
       -- Create the uniswap token
