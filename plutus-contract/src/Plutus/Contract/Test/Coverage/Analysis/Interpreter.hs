@@ -568,13 +568,13 @@ domTyInst _ d t = go 0 d
       DWeaken{}                         -> error "domTyInst: DWeaken"
 
 tyApps :: HasCallStack => DTyp -> [DTyp] -> DTyp
-tyApps t []                          = t
-tyApps t@DTWk{} args                 = tyApps (pushWeakenTy t) args
-tyApps (DTVar x args0) args          = DTVar x (args0 <> args)
-tyApps (DTLam _ _ body) (arg : args) = tyApps (tyInst 0 body arg) args
+tyApps t []                              = t
+tyApps t@DTWk{} args                     = tyApps (pushWeakenTy t) args
+tyApps (DTVar x args0) args              = DTVar x (args0 <> args)
+tyApps (DTLam _ _ body) (arg : args)     = tyApps (tyInst 0 body arg) args
 tyApps (DTyBuiltin (_ :-> k)) (_ : args) = tyApps (DTyBuiltin k) args
-tyApps t args                        = errorDoc $ "tyApps:" <?> vcat [ "t =" <+> pretty t
-                                                                     , "args =" <+> pretty args ]
+tyApps t args                            = errorDoc $ "tyApps:" <?> vcat [ "t =" <+> pretty t
+                                                                         , "args =" <+> pretty args ]
 
 domApps :: HasCallStack
         => TyCtx
@@ -818,11 +818,14 @@ interp ctx substD substT trm args =
                   | otherwise              -> error "interp: TyAbs"
 
                 (LamAbs _ x a t)
-                  | DArg d : args' <- args -> (Nil, addLocations (topLevelLocations d) $ interp_ ctx (substD :> d) substT t args')
+                  | DArg (DUnion ds) : args' <- args -> (Nil, dUnions [ app d args' | d <- ds ])
+
+                  | DArg d : args' <- args -> (Nil, app d args')
 
                   | [] <- args -> (Nil, DLam x (interpTy ctx substT a []) substD substT t mempty)
 
                   | otherwise -> error "interp: LamAbs"
+                  where app d args' = addLocations (topLevelLocations d) $ interp_ ctx (substD :> d) substT t args'
 
                 Apply _ t t' -> case interp_ ctx substD substT t' [] of
                   DError -> (Nil, DError)
