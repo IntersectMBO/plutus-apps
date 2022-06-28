@@ -167,7 +167,21 @@ pattern CardanoApiEmulatorEraTx tx <- (getEmulatorEraTx -> tx) where
 {-# COMPLETE CardanoApiEmulatorEraTx #-}
 
 instance Pretty CardanoTx where
-    pretty = onCardanoTx pretty (pretty . getCardanoApiTxId)
+    pretty tx =
+        let lines' =
+                [ hang 2 (vsep ("inputs:" : fmap pretty (Set.toList (getCardanoTxInputs tx))))
+                , hang 2 (vsep ("collateral inputs:" : fmap pretty (Set.toList (getCardanoTxCollateralInputs tx))))
+                , hang 2 (vsep ("outputs:" : fmap pretty (getCardanoTxOutputs tx)))
+                , "mint:" <+> pretty (getCardanoTxMint tx)
+                , "fee:" <+> pretty (getCardanoTxFee tx)
+                ] ++ onCardanoTx (\tx' ->
+                    [ hang 2 (vsep ("mps:": fmap pretty (Set.toList (txMintScripts tx'))))
+                    , hang 2 (vsep ("signatures:": fmap (pretty . fst) (Map.toList (txSignatures tx'))))
+                    ]) (const []) tx ++
+                [ "validity range:" <+> viaShow (getCardanoTxValidityRange tx)
+                , hang 2 (vsep ("data:": fmap (pretty . snd) (Map.toList (getCardanoTxData tx))))
+                ]
+        in nest 2 $ vsep ["Tx" <+> pretty (getCardanoTxId tx) <> colon, braces (vsep lines')]
 
 onCardanoTx :: (Tx -> r) -> (SomeCardanoApiTx -> r) -> CardanoTx -> r
 onCardanoTx l r = mergeCardanoTxWith l r const

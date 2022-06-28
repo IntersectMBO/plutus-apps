@@ -33,6 +33,7 @@ module Ledger.Validation(
   fromPlutusTxOut,
   fromPlutusTxOutUnsafe,
   fromPlutusTxOutRef,
+  fromPlutusTxToTxBodyContent,
   -- * Lenses
   ledgerEnv,
   memPoolState,
@@ -262,7 +263,7 @@ evaluateTransactionFee
   -> P.Tx
   -> Either CardanoLedgerError P.Value
 evaluateTransactionFee params utxo requiredSigners tx = do
-  txBodyContent <- first Right $ plutusTxToTxBodyContent params requiredSigners tx
+  txBodyContent <- first Right $ fromPlutusTxToTxBodyContent params requiredSigners tx
   let nkeys = C.Api.estimateTransactionKeyWitnessCount (P.getCardanoBuildTx txBodyContent)
   txBody <- makeTransactionBody params utxo txBodyContent
   case C.Api.evaluateTransactionFee (P.pProtocolParams params) txBody nkeys 0 of
@@ -281,15 +282,15 @@ fromPlutusTx
   -> P.Tx
   -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
 fromPlutusTx params utxo requiredSigners tx = do
-  txBodyContent <- first Right $ plutusTxToTxBodyContent params requiredSigners tx
+  txBodyContent <- first Right $ fromPlutusTxToTxBodyContent params requiredSigners tx
   makeSignedTransaction [] <$> makeTransactionBody params utxo txBodyContent
 
-plutusTxToTxBodyContent
+fromPlutusTxToTxBodyContent
   :: P.Params
   -> [P.PaymentPubKeyHash]
   -> P.Tx
   -> Either P.ToCardanoError P.CardanoBuildTx
-plutusTxToTxBodyContent params requiredSigners =
+fromPlutusTxToTxBodyContent params requiredSigners =
   P.toCardanoTxBodyContent requiredSigners (Just $ P.pProtocolParams params) (P.pNetworkId params)
 
 getRequiredSigners :: C.Api.Tx C.Api.AlonzoEra -> [P.PaymentPubKeyHash]
