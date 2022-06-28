@@ -1035,6 +1035,341 @@
                     )
                   )
                 )
+                (datatypebind
+                  (datatype
+                    (tyvardecl Either (fun (type) (fun (type) (type))))
+                    (tyvardecl a (type)) (tyvardecl b (type))
+                    Either_match
+                    (vardecl Left (fun a [ [ Either a ] b ]))
+                    (vardecl Right (fun b [ [ Either a ] b ]))
+                  )
+                )
+                (datatypebind
+                  (datatype
+                    (tyvardecl SignedMessageCheckError (type))
+
+                    SignedMessageCheckError_match
+                    (vardecl
+                      DatumMissing
+                      (fun (con bytestring) SignedMessageCheckError)
+                    )
+                    (vardecl DatumNotEqualToExpected SignedMessageCheckError)
+                    (vardecl DecodingError SignedMessageCheckError)
+                    (vardecl
+                      SignatureMismatch
+                      (fun
+                        (con bytestring)
+                        (fun
+                          (con bytestring)
+                          (fun (con bytestring) SignedMessageCheckError)
+                        )
+                      )
+                    )
+                  )
+                )
+                (termbind
+                  (strict)
+                  (vardecl
+                    wverifySignedMessageConstraints
+                    (all
+                      a
+                      (type)
+                      (all
+                        i
+                        (type)
+                        (all
+                          o
+                          (type)
+                          (fun
+                            [ (lam a (type) (fun (con data) [ Maybe a ])) a ]
+                            (fun
+                              (con bytestring)
+                              (fun
+                                (con bytestring)
+                                (fun
+                                  (con bytestring)
+                                  (fun
+                                    (con data)
+                                    [
+                                      [ Either SignedMessageCheckError ]
+                                      [ [ Tuple2 a ] [ [ TxConstraints i ] o ] ]
+                                    ]
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                  (abs
+                    a
+                    (type)
+                    (abs
+                      i
+                      (type)
+                      (abs
+                        o
+                        (type)
+                        (lam
+                          w
+                          [ (lam a (type) (fun (con data) [ Maybe a ])) a ]
+                          (lam
+                            w
+                            (con bytestring)
+                            (lam
+                              ww
+                              (con bytestring)
+                              (lam
+                                ww
+                                (con bytestring)
+                                (lam
+                                  ww
+                                  (con data)
+                                  {
+                                    [
+                                      [
+                                        {
+                                          [
+                                            Bool_match
+                                            [
+                                              [
+                                                [
+                                                  { (builtin ifThenElse) Bool }
+                                                  [
+                                                    [
+                                                      [
+                                                        (builtin
+                                                          verifyEd25519Signature
+                                                        )
+                                                        w
+                                                      ]
+                                                      ww
+                                                    ]
+                                                    ww
+                                                  ]
+                                                ]
+                                                True
+                                              ]
+                                              False
+                                            ]
+                                          ]
+                                          (all
+                                            dead
+                                            (type)
+                                            [
+                                              [ Either SignedMessageCheckError ]
+                                              [
+                                                [ Tuple2 a ]
+                                                [ [ TxConstraints i ] o ]
+                                              ]
+                                            ]
+                                          )
+                                        }
+                                        (abs
+                                          dead
+                                          (type)
+                                          {
+                                            [
+                                              [
+                                                {
+                                                  [ { Maybe_match a } [ w ww ] ]
+                                                  (all
+                                                    dead
+                                                    (type)
+                                                    [
+                                                      [
+                                                        Either
+                                                        SignedMessageCheckError
+                                                      ]
+                                                      [
+                                                        [ Tuple2 a ]
+                                                        [
+                                                          [ TxConstraints i ] o
+                                                        ]
+                                                      ]
+                                                    ]
+                                                  )
+                                                }
+                                                (lam
+                                                  a
+                                                  a
+                                                  (abs
+                                                    dead
+                                                    (type)
+                                                    [
+                                                      {
+                                                        {
+                                                          Right
+                                                          SignedMessageCheckError
+                                                        }
+                                                        [
+                                                          [ Tuple2 a ]
+                                                          [
+                                                            [ TxConstraints i ]
+                                                            o
+                                                          ]
+                                                        ]
+                                                      }
+                                                      [
+                                                        [
+                                                          {
+                                                            { Tuple2 a }
+                                                            [
+                                                              [
+                                                                TxConstraints i
+                                                              ]
+                                                              o
+                                                            ]
+                                                          }
+                                                          a
+                                                        ]
+                                                        [
+                                                          [
+                                                            [
+                                                              [
+                                                                {
+                                                                  {
+                                                                    TxConstraints
+                                                                    i
+                                                                  }
+                                                                  o
+                                                                }
+                                                                [
+                                                                  {
+                                                                    build
+                                                                    TxConstraint
+                                                                  }
+                                                                  (abs
+                                                                    a
+                                                                    (type)
+                                                                    (lam
+                                                                      c
+                                                                      (fun
+                                                                        TxConstraint
+                                                                        (fun
+                                                                          a a
+                                                                        )
+                                                                      )
+                                                                      (lam
+                                                                        n
+                                                                        a
+                                                                        [
+                                                                          [
+                                                                            c
+                                                                            [
+                                                                              [
+                                                                                MustHashDatum
+                                                                                ww
+                                                                              ]
+                                                                              ww
+                                                                            ]
+                                                                          ]
+                                                                          n
+                                                                        ]
+                                                                      )
+                                                                    )
+                                                                  )
+                                                                ]
+                                                              ]
+                                                              {
+                                                                Nil
+                                                                TxConstraintFun
+                                                              }
+                                                            ]
+                                                            {
+                                                              Nil
+                                                              [
+                                                                ScriptInputConstraint
+                                                                i
+                                                              ]
+                                                            }
+                                                          ]
+                                                          {
+                                                            Nil
+                                                            [
+                                                              ScriptOutputConstraint
+                                                              o
+                                                            ]
+                                                          }
+                                                        ]
+                                                      ]
+                                                    ]
+                                                  )
+                                                )
+                                              ]
+                                              (abs
+                                                dead
+                                                (type)
+                                                [
+                                                  [
+                                                    {
+                                                      (builtin trace)
+                                                      [
+                                                        [
+                                                          Either
+                                                          SignedMessageCheckError
+                                                        ]
+                                                        [
+                                                          [ Tuple2 a ]
+                                                          [
+                                                            [ TxConstraints i ]
+                                                            o
+                                                          ]
+                                                        ]
+                                                      ]
+                                                    }
+                                                    (con string "Li")
+                                                  ]
+                                                  [
+                                                    {
+                                                      {
+                                                        Left
+                                                        SignedMessageCheckError
+                                                      }
+                                                      [
+                                                        [ Tuple2 a ]
+                                                        [
+                                                          [ TxConstraints i ] o
+                                                        ]
+                                                      ]
+                                                    }
+                                                    DecodingError
+                                                  ]
+                                                ]
+                                              )
+                                            ]
+                                            (all dead (type) dead)
+                                          }
+                                        )
+                                      ]
+                                      (abs
+                                        dead
+                                        (type)
+                                        [
+                                          {
+                                            { Left SignedMessageCheckError }
+                                            [
+                                              [ Tuple2 a ]
+                                              [ [ TxConstraints i ] o ]
+                                            ]
+                                          }
+                                          [ [ [ SignatureMismatch ww ] w ] ww ]
+                                        ]
+                                      )
+                                    ]
+                                    (all dead (type) dead)
+                                  }
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
                 (termbind
                   (strict)
                   (vardecl fAdditiveGroupValue (con integer))
@@ -1404,1646 +1739,6 @@
                           ]
                         )
                       )
-                    )
-                    (datatypebind
-                      (datatype
-                        (tyvardecl Either (fun (type) (fun (type) (type))))
-                        (tyvardecl a (type)) (tyvardecl b (type))
-                        Either_match
-                        (vardecl Left (fun a [ [ Either a ] b ]))
-                        (vardecl Right (fun b [ [ Either a ] b ]))
-                      )
-                    )
-                    (datatypebind
-                      (datatype
-                        (tyvardecl SignedMessageCheckError (type))
-
-                        SignedMessageCheckError_match
-                        (vardecl
-                          DatumMissing
-                          (fun (con bytestring) SignedMessageCheckError)
-                        )
-                        (vardecl
-                          DatumNotEqualToExpected SignedMessageCheckError
-                        )
-                        (vardecl DecodingError SignedMessageCheckError)
-                        (vardecl
-                          SignatureMismatch
-                          (fun
-                            (con bytestring)
-                            (fun
-                              (con bytestring)
-                              (fun (con bytestring) SignedMessageCheckError)
-                            )
-                          )
-                        )
-                      )
-                    )
-                    (termbind
-                      (strict)
-                      (vardecl
-                        wverifySignedMessageConstraints
-                        (all
-                          a
-                          (type)
-                          (all
-                            i
-                            (type)
-                            (all
-                              o
-                              (type)
-                              (fun
-                                [
-                                  (lam a (type) (fun (con data) [ Maybe a ])) a
-                                ]
-                                (fun
-                                  (con bytestring)
-                                  (fun
-                                    (con bytestring)
-                                    (fun
-                                      (con bytestring)
-                                      (fun
-                                        (con data)
-                                        [
-                                          [ Either SignedMessageCheckError ]
-                                          [
-                                            [ Tuple2 a ]
-                                            [ [ TxConstraints i ] o ]
-                                          ]
-                                        ]
-                                      )
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                      (abs
-                        a
-                        (type)
-                        (abs
-                          i
-                          (type)
-                          (abs
-                            o
-                            (type)
-                            (lam
-                              w
-                              [ (lam a (type) (fun (con data) [ Maybe a ])) a ]
-                              (lam
-                                w
-                                (con bytestring)
-                                (lam
-                                  ww
-                                  (con bytestring)
-                                  (lam
-                                    ww
-                                    (con bytestring)
-                                    (lam
-                                      ww
-                                      (con data)
-                                      {
-                                        [
-                                          [
-                                            {
-                                              [
-                                                Bool_match
-                                                [
-                                                  [
-                                                    [
-                                                      {
-                                                        (builtin ifThenElse)
-                                                        Bool
-                                                      }
-                                                      [
-                                                        [
-                                                          [
-                                                            (builtin
-                                                              verifyEd25519Signature
-                                                            )
-                                                            w
-                                                          ]
-                                                          ww
-                                                        ]
-                                                        ww
-                                                      ]
-                                                    ]
-                                                    True
-                                                  ]
-                                                  False
-                                                ]
-                                              ]
-                                              (all
-                                                dead
-                                                (type)
-                                                [
-                                                  [
-                                                    Either
-                                                    SignedMessageCheckError
-                                                  ]
-                                                  [
-                                                    [ Tuple2 a ]
-                                                    [ [ TxConstraints i ] o ]
-                                                  ]
-                                                ]
-                                              )
-                                            }
-                                            (abs
-                                              dead
-                                              (type)
-                                              {
-                                                [
-                                                  [
-                                                    {
-                                                      [
-                                                        { Maybe_match a }
-                                                        [ w ww ]
-                                                      ]
-                                                      (all
-                                                        dead
-                                                        (type)
-                                                        [
-                                                          [
-                                                            Either
-                                                            SignedMessageCheckError
-                                                          ]
-                                                          [
-                                                            [ Tuple2 a ]
-                                                            [
-                                                              [
-                                                                TxConstraints i
-                                                              ]
-                                                              o
-                                                            ]
-                                                          ]
-                                                        ]
-                                                      )
-                                                    }
-                                                    (lam
-                                                      a
-                                                      a
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        [
-                                                          {
-                                                            {
-                                                              Right
-                                                              SignedMessageCheckError
-                                                            }
-                                                            [
-                                                              [ Tuple2 a ]
-                                                              [
-                                                                [
-                                                                  TxConstraints
-                                                                  i
-                                                                ]
-                                                                o
-                                                              ]
-                                                            ]
-                                                          }
-                                                          [
-                                                            [
-                                                              {
-                                                                { Tuple2 a }
-                                                                [
-                                                                  [
-                                                                    TxConstraints
-                                                                    i
-                                                                  ]
-                                                                  o
-                                                                ]
-                                                              }
-                                                              a
-                                                            ]
-                                                            [
-                                                              [
-                                                                [
-                                                                  [
-                                                                    {
-                                                                      {
-                                                                        TxConstraints
-                                                                        i
-                                                                      }
-                                                                      o
-                                                                    }
-                                                                    [
-                                                                      {
-                                                                        build
-                                                                        TxConstraint
-                                                                      }
-                                                                      (abs
-                                                                        a
-                                                                        (type)
-                                                                        (lam
-                                                                          c
-                                                                          (fun
-                                                                            TxConstraint
-                                                                            (fun
-                                                                              a
-                                                                              a
-                                                                            )
-                                                                          )
-                                                                          (lam
-                                                                            n
-                                                                            a
-                                                                            [
-                                                                              [
-                                                                                c
-                                                                                [
-                                                                                  [
-                                                                                    MustHashDatum
-                                                                                    ww
-                                                                                  ]
-                                                                                  ww
-                                                                                ]
-                                                                              ]
-                                                                              n
-                                                                            ]
-                                                                          )
-                                                                        )
-                                                                      )
-                                                                    ]
-                                                                  ]
-                                                                  {
-                                                                    Nil
-                                                                    TxConstraintFun
-                                                                  }
-                                                                ]
-                                                                {
-                                                                  Nil
-                                                                  [
-                                                                    ScriptInputConstraint
-                                                                    i
-                                                                  ]
-                                                                }
-                                                              ]
-                                                              {
-                                                                Nil
-                                                                [
-                                                                  ScriptOutputConstraint
-                                                                  o
-                                                                ]
-                                                              }
-                                                            ]
-                                                          ]
-                                                        ]
-                                                      )
-                                                    )
-                                                  ]
-                                                  (abs
-                                                    dead
-                                                    (type)
-                                                    [
-                                                      [
-                                                        {
-                                                          (builtin trace)
-                                                          [
-                                                            [
-                                                              Either
-                                                              SignedMessageCheckError
-                                                            ]
-                                                            [
-                                                              [ Tuple2 a ]
-                                                              [
-                                                                [
-                                                                  TxConstraints
-                                                                  i
-                                                                ]
-                                                                o
-                                                              ]
-                                                            ]
-                                                          ]
-                                                        }
-                                                        (con string "Li")
-                                                      ]
-                                                      [
-                                                        {
-                                                          {
-                                                            Left
-                                                            SignedMessageCheckError
-                                                          }
-                                                          [
-                                                            [ Tuple2 a ]
-                                                            [
-                                                              [
-                                                                TxConstraints i
-                                                              ]
-                                                              o
-                                                            ]
-                                                          ]
-                                                        }
-                                                        DecodingError
-                                                      ]
-                                                    ]
-                                                  )
-                                                ]
-                                                (all dead (type) dead)
-                                              }
-                                            )
-                                          ]
-                                          (abs
-                                            dead
-                                            (type)
-                                            [
-                                              {
-                                                { Left SignedMessageCheckError }
-                                                [
-                                                  [ Tuple2 a ]
-                                                  [ [ TxConstraints i ] o ]
-                                                ]
-                                              }
-                                              [
-                                                [ [ SignatureMismatch ww ] w ]
-                                                ww
-                                              ]
-                                            ]
-                                          )
-                                        ]
-                                        (all dead (type) dead)
-                                      }
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                    (datatypebind
-                      (datatype
-                        (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit)
-                      )
-                    )
-                    (termbind
-                      (strict)
-                      (vardecl
-                        fFromDataBuiltinByteString_cfromBuiltinData
-                        (fun (con data) [ Maybe (con bytestring) ])
-                      )
-                      (lam
-                        d
-                        (con data)
-                        [
-                          [
-                            [
-                              [
-                                [
-                                  [
-                                    [
-                                      {
-                                        (builtin chooseData)
-                                        (fun Unit [ Maybe (con bytestring) ])
-                                      }
-                                      d
-                                    ]
-                                    (lam ds Unit { Nothing (con bytestring) })
-                                  ]
-                                  (lam ds Unit { Nothing (con bytestring) })
-                                ]
-                                (lam ds Unit { Nothing (con bytestring) })
-                              ]
-                              (lam ds Unit { Nothing (con bytestring) })
-                            ]
-                            (lam
-                              ds
-                              Unit
-                              [
-                                { Just (con bytestring) }
-                                [ (builtin unBData) d ]
-                              ]
-                            )
-                          ]
-                          Unit
-                        ]
-                      )
-                    )
-                    (termbind
-                      (strict)
-                      (vardecl
-                        fFromDataInteger_cfromBuiltinData
-                        (fun (con data) [ Maybe (con integer) ])
-                      )
-                      (lam
-                        d
-                        (con data)
-                        [
-                          [
-                            [
-                              [
-                                [
-                                  [
-                                    [
-                                      {
-                                        (builtin chooseData)
-                                        (fun Unit [ Maybe (con integer) ])
-                                      }
-                                      d
-                                    ]
-                                    (lam ds Unit { Nothing (con integer) })
-                                  ]
-                                  (lam ds Unit { Nothing (con integer) })
-                                ]
-                                (lam ds Unit { Nothing (con integer) })
-                              ]
-                              (lam
-                                ds
-                                Unit
-                                [
-                                  { Just (con integer) } [ (builtin unIData) d ]
-                                ]
-                              )
-                            ]
-                            (lam ds Unit { Nothing (con integer) })
-                          ]
-                          Unit
-                        ]
-                      )
-                    )
-                    (termbind
-                      (strict)
-                      (vardecl
-                        fFromDataMap
-                        (all
-                          v
-                          (type)
-                          (all
-                            k
-                            (type)
-                            (fun
-                              Unit
-                              [
-                                Maybe
-                                [
-                                  [
-                                    (lam
-                                      k
-                                      (type)
-                                      (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                    )
-                                    k
-                                  ]
-                                  v
-                                ]
-                              ]
-                            )
-                          )
-                        )
-                      )
-                      (abs
-                        v
-                        (type)
-                        (abs
-                          k
-                          (type)
-                          (lam
-                            ds
-                            Unit
-                            {
-                              Nothing
-                              [
-                                [
-                                  (lam
-                                    k
-                                    (type)
-                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                  )
-                                  k
-                                ]
-                                v
-                              ]
-                            }
-                          )
-                        )
-                      )
-                    )
-                    (termbind
-                      (strict)
-                      (vardecl
-                        fFromDataMap_cfromBuiltinData
-                        (all
-                          k
-                          (type)
-                          (all
-                            v
-                            (type)
-                            (fun
-                              [ (lam a (type) (fun (con data) [ Maybe a ])) k ]
-                              (fun
-                                [
-                                  (lam a (type) (fun (con data) [ Maybe a ])) v
-                                ]
-                                (fun
-                                  (con data)
-                                  [
-                                    Maybe
-                                    [
-                                      [
-                                        (lam
-                                          k
-                                          (type)
-                                          (lam
-                                            v (type) [ List [ [ Tuple2 k ] v ] ]
-                                          )
-                                        )
-                                        k
-                                      ]
-                                      v
-                                    ]
-                                  ]
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                      (abs
-                        k
-                        (type)
-                        (abs
-                          v
-                          (type)
-                          (lam
-                            dFromData
-                            [ (lam a (type) (fun (con data) [ Maybe a ])) k ]
-                            (lam
-                              dFromData
-                              [ (lam a (type) (fun (con data) [ Maybe a ])) v ]
-                              (let
-                                (rec)
-                                (termbind
-                                  (strict)
-                                  (vardecl
-                                    go
-                                    (fun
-                                      [
-                                        (con list)
-                                        [ [ (con pair) (con data) ] (con data) ]
-                                      ]
-                                      [ Maybe [ List [ [ Tuple2 k ] v ] ] ]
-                                    )
-                                  )
-                                  (lam
-                                    l
-                                    [
-                                      (con list)
-                                      [ [ (con pair) (con data) ] (con data) ]
-                                    ]
-                                    (let
-                                      (nonrec)
-                                      (termbind
-                                        (nonstrict)
-                                        (vardecl
-                                          tup
-                                          [
-                                            [ (con pair) (con data) ] (con data)
-                                          ]
-                                        )
-                                        [
-                                          {
-                                            (builtin headList)
-                                            [
-                                              [ (con pair) (con data) ]
-                                              (con data)
-                                            ]
-                                          }
-                                          l
-                                        ]
-                                      )
-                                      [
-                                        [
-                                          [
-                                            [
-                                              {
-                                                {
-                                                  (builtin chooseList)
-                                                  [
-                                                    [ (con pair) (con data) ]
-                                                    (con data)
-                                                  ]
-                                                }
-                                                (fun
-                                                  Unit
-                                                  [
-                                                    Maybe
-                                                    [ List [ [ Tuple2 k ] v ] ]
-                                                  ]
-                                                )
-                                              }
-                                              l
-                                            ]
-                                            (lam
-                                              ds
-                                              Unit
-                                              [
-                                                {
-                                                  Just
-                                                  [ List [ [ Tuple2 k ] v ] ]
-                                                }
-                                                { Nil [ [ Tuple2 k ] v ] }
-                                              ]
-                                            )
-                                          ]
-                                          (lam
-                                            ds
-                                            Unit
-                                            {
-                                              [
-                                                [
-                                                  {
-                                                    [
-                                                      { Maybe_match k }
-                                                      [
-                                                        dFromData
-                                                        [
-                                                          {
-                                                            {
-                                                              (builtin fstPair)
-                                                              (con data)
-                                                            }
-                                                            (con data)
-                                                          }
-                                                          tup
-                                                        ]
-                                                      ]
-                                                    ]
-                                                    (all
-                                                      dead
-                                                      (type)
-                                                      [
-                                                        Maybe
-                                                        [
-                                                          List
-                                                          [ [ Tuple2 k ] v ]
-                                                        ]
-                                                      ]
-                                                    )
-                                                  }
-                                                  (lam
-                                                    a
-                                                    k
-                                                    (abs
-                                                      dead
-                                                      (type)
-                                                      {
-                                                        [
-                                                          [
-                                                            {
-                                                              [
-                                                                {
-                                                                  Maybe_match v
-                                                                }
-                                                                [
-                                                                  dFromData
-                                                                  [
-                                                                    {
-                                                                      {
-                                                                        (builtin
-                                                                          sndPair
-                                                                        )
-                                                                        (con
-                                                                          data
-                                                                        )
-                                                                      }
-                                                                      (con data)
-                                                                    }
-                                                                    tup
-                                                                  ]
-                                                                ]
-                                                              ]
-                                                              (all
-                                                                dead
-                                                                (type)
-                                                                [
-                                                                  Maybe
-                                                                  [
-                                                                    List
-                                                                    [
-                                                                      [
-                                                                        Tuple2 k
-                                                                      ]
-                                                                      v
-                                                                    ]
-                                                                  ]
-                                                                ]
-                                                              )
-                                                            }
-                                                            (lam
-                                                              ipv
-                                                              v
-                                                              (abs
-                                                                dead
-                                                                (type)
-                                                                {
-                                                                  [
-                                                                    [
-                                                                      {
-                                                                        [
-                                                                          {
-                                                                            Maybe_match
-                                                                            [
-                                                                              List
-                                                                              [
-                                                                                [
-                                                                                  Tuple2
-                                                                                  k
-                                                                                ]
-                                                                                v
-                                                                              ]
-                                                                            ]
-                                                                          }
-                                                                          [
-                                                                            go
-                                                                            [
-                                                                              {
-                                                                                (builtin
-                                                                                  tailList
-                                                                                )
-                                                                                [
-                                                                                  [
-                                                                                    (con
-                                                                                      pair
-                                                                                    )
-                                                                                    (con
-                                                                                      data
-                                                                                    )
-                                                                                  ]
-                                                                                  (con
-                                                                                    data
-                                                                                  )
-                                                                                ]
-                                                                              }
-                                                                              l
-                                                                            ]
-                                                                          ]
-                                                                        ]
-                                                                        (all
-                                                                          dead
-                                                                          (type)
-                                                                          [
-                                                                            Maybe
-                                                                            [
-                                                                              List
-                                                                              [
-                                                                                [
-                                                                                  Tuple2
-                                                                                  k
-                                                                                ]
-                                                                                v
-                                                                              ]
-                                                                            ]
-                                                                          ]
-                                                                        )
-                                                                      }
-                                                                      (lam
-                                                                        ipv
-                                                                        [
-                                                                          List
-                                                                          [
-                                                                            [
-                                                                              Tuple2
-                                                                              k
-                                                                            ]
-                                                                            v
-                                                                          ]
-                                                                        ]
-                                                                        (abs
-                                                                          dead
-                                                                          (type)
-                                                                          [
-                                                                            {
-                                                                              Just
-                                                                              [
-                                                                                List
-                                                                                [
-                                                                                  [
-                                                                                    Tuple2
-                                                                                    k
-                                                                                  ]
-                                                                                  v
-                                                                                ]
-                                                                              ]
-                                                                            }
-                                                                            [
-                                                                              [
-                                                                                {
-                                                                                  Cons
-                                                                                  [
-                                                                                    [
-                                                                                      Tuple2
-                                                                                      k
-                                                                                    ]
-                                                                                    v
-                                                                                  ]
-                                                                                }
-                                                                                [
-                                                                                  [
-                                                                                    {
-                                                                                      {
-                                                                                        Tuple2
-                                                                                        k
-                                                                                      }
-                                                                                      v
-                                                                                    }
-                                                                                    a
-                                                                                  ]
-                                                                                  ipv
-                                                                                ]
-                                                                              ]
-                                                                              ipv
-                                                                            ]
-                                                                          ]
-                                                                        )
-                                                                      )
-                                                                    ]
-                                                                    (abs
-                                                                      dead
-                                                                      (type)
-                                                                      {
-                                                                        Nothing
-                                                                        [
-                                                                          List
-                                                                          [
-                                                                            [
-                                                                              Tuple2
-                                                                              k
-                                                                            ]
-                                                                            v
-                                                                          ]
-                                                                        ]
-                                                                      }
-                                                                    )
-                                                                  ]
-                                                                  (all
-                                                                    dead
-                                                                    (type)
-                                                                    dead
-                                                                  )
-                                                                }
-                                                              )
-                                                            )
-                                                          ]
-                                                          (abs
-                                                            dead
-                                                            (type)
-                                                            {
-                                                              Nothing
-                                                              [
-                                                                List
-                                                                [
-                                                                  [ Tuple2 k ] v
-                                                                ]
-                                                              ]
-                                                            }
-                                                          )
-                                                        ]
-                                                        (all dead (type) dead)
-                                                      }
-                                                    )
-                                                  )
-                                                ]
-                                                (abs
-                                                  dead
-                                                  (type)
-                                                  {
-                                                    Nothing
-                                                    [ List [ [ Tuple2 k ] v ] ]
-                                                  }
-                                                )
-                                              ]
-                                              (all dead (type) dead)
-                                            }
-                                          )
-                                        ]
-                                        Unit
-                                      ]
-                                    )
-                                  )
-                                )
-                                (lam
-                                  d
-                                  (con data)
-                                  [
-                                    [
-                                      [
-                                        [
-                                          [
-                                            [
-                                              [
-                                                {
-                                                  (builtin chooseData)
-                                                  (fun
-                                                    Unit
-                                                    [
-                                                      Maybe
-                                                      [
-                                                        [
-                                                          (lam
-                                                            k
-                                                            (type)
-                                                            (lam
-                                                              v
-                                                              (type)
-                                                              [
-                                                                List
-                                                                [
-                                                                  [ Tuple2 k ] v
-                                                                ]
-                                                              ]
-                                                            )
-                                                          )
-                                                          k
-                                                        ]
-                                                        v
-                                                      ]
-                                                    ]
-                                                  )
-                                                }
-                                                d
-                                              ]
-                                              { { fFromDataMap v } k }
-                                            ]
-                                            (lam
-                                              ds
-                                              Unit
-                                              {
-                                                [
-                                                  [
-                                                    {
-                                                      [
-                                                        {
-                                                          Maybe_match
-                                                          [
-                                                            List
-                                                            [ [ Tuple2 k ] v ]
-                                                          ]
-                                                        }
-                                                        [
-                                                          go
-                                                          [
-                                                            (builtin unMapData)
-                                                            d
-                                                          ]
-                                                        ]
-                                                      ]
-                                                      (all
-                                                        dead
-                                                        (type)
-                                                        [
-                                                          Maybe
-                                                          [
-                                                            [
-                                                              (lam
-                                                                k
-                                                                (type)
-                                                                (lam
-                                                                  v
-                                                                  (type)
-                                                                  [
-                                                                    List
-                                                                    [
-                                                                      [
-                                                                        Tuple2 k
-                                                                      ]
-                                                                      v
-                                                                    ]
-                                                                  ]
-                                                                )
-                                                              )
-                                                              k
-                                                            ]
-                                                            v
-                                                          ]
-                                                        ]
-                                                      )
-                                                    }
-                                                    (lam
-                                                      a
-                                                      [
-                                                        List [ [ Tuple2 k ] v ]
-                                                      ]
-                                                      (abs
-                                                        dead
-                                                        (type)
-                                                        [
-                                                          {
-                                                            Just
-                                                            [
-                                                              [
-                                                                (lam
-                                                                  k
-                                                                  (type)
-                                                                  (lam
-                                                                    v
-                                                                    (type)
-                                                                    [
-                                                                      List
-                                                                      [
-                                                                        [
-                                                                          Tuple2
-                                                                          k
-                                                                        ]
-                                                                        v
-                                                                      ]
-                                                                    ]
-                                                                  )
-                                                                )
-                                                                k
-                                                              ]
-                                                              v
-                                                            ]
-                                                          }
-                                                          a
-                                                        ]
-                                                      )
-                                                    )
-                                                  ]
-                                                  (abs
-                                                    dead
-                                                    (type)
-                                                    {
-                                                      Nothing
-                                                      [
-                                                        [
-                                                          (lam
-                                                            k
-                                                            (type)
-                                                            (lam
-                                                              v
-                                                              (type)
-                                                              [
-                                                                List
-                                                                [
-                                                                  [ Tuple2 k ] v
-                                                                ]
-                                                              ]
-                                                            )
-                                                          )
-                                                          k
-                                                        ]
-                                                        v
-                                                      ]
-                                                    }
-                                                  )
-                                                ]
-                                                (all dead (type) dead)
-                                              }
-                                            )
-                                          ]
-                                          { { fFromDataMap v } k }
-                                        ]
-                                        { { fFromDataMap v } k }
-                                      ]
-                                      { { fFromDataMap v } k }
-                                    ]
-                                    Unit
-                                  ]
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                    (datatypebind
-                      (datatype
-                        (tyvardecl Observation (fun (type) (type)))
-                        (tyvardecl a (type))
-                        Observation_match
-                        (vardecl
-                          Observation
-                          (fun a (fun (con integer) [ Observation a ]))
-                        )
-                      )
-                    )
-                    (termbind
-                      (strict) (vardecl unitval (con unit)) (con unit ())
-                    )
-                    (termbind
-                      (nonstrict)
-                      (vardecl
-                        futureStateMachine
-                        (fun
-                          (con data)
-                          [
-                            Maybe
-                            [
-                              Observation
-                              [
-                                [
-                                  (lam
-                                    k
-                                    (type)
-                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                  )
-                                  (con bytestring)
-                                ]
-                                [
-                                  [
-                                    (lam
-                                      k
-                                      (type)
-                                      (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                    )
-                                    (con bytestring)
-                                  ]
-                                  (con integer)
-                                ]
-                              ]
-                            ]
-                          ]
-                        )
-                      )
-                      [
-                        {
-                          (abs
-                            a
-                            (type)
-                            (lam
-                              dFromData
-                              [ (lam a (type) (fun (con data) [ Maybe a ])) a ]
-                              (lam
-                                d
-                                (con data)
-                                (let
-                                  (nonrec)
-                                  (termbind
-                                    (nonstrict)
-                                    (vardecl
-                                      tup
-                                      [
-                                        [ (con pair) (con integer) ]
-                                        [ (con list) (con data) ]
-                                      ]
-                                    )
-                                    [ (builtin unConstrData) d ]
-                                  )
-                                  (termbind
-                                    (nonstrict)
-                                    (vardecl l [ (con list) (con data) ])
-                                    [
-                                      {
-                                        { (builtin sndPair) (con integer) }
-                                        [ (con list) (con data) ]
-                                      }
-                                      tup
-                                    ]
-                                  )
-                                  (termbind
-                                    (nonstrict)
-                                    (vardecl l [ (con list) (con data) ])
-                                    [ { (builtin tailList) (con data) } l ]
-                                  )
-                                  [
-                                    [
-                                      [
-                                        [
-                                          [
-                                            [
-                                              [
-                                                {
-                                                  (builtin chooseData)
-                                                  (fun
-                                                    Unit
-                                                    [ Maybe [ Observation a ] ]
-                                                  )
-                                                }
-                                                d
-                                              ]
-                                              (lam
-                                                ds
-                                                Unit
-                                                [
-                                                  [
-                                                    [
-                                                      [
-                                                        {
-                                                          (builtin ifThenElse)
-                                                          (fun
-                                                            (con unit)
-                                                            [
-                                                              Maybe
-                                                              [ Observation a ]
-                                                            ]
-                                                          )
-                                                        }
-                                                        [
-                                                          [
-                                                            (builtin
-                                                              equalsInteger
-                                                            )
-                                                            [
-                                                              {
-                                                                {
-                                                                  (builtin
-                                                                    fstPair
-                                                                  )
-                                                                  (con integer)
-                                                                }
-                                                                [
-                                                                  (con list)
-                                                                  (con data)
-                                                                ]
-                                                              }
-                                                              tup
-                                                            ]
-                                                          ]
-                                                          (con integer 0)
-                                                        ]
-                                                      ]
-                                                      (lam
-                                                        ds
-                                                        (con unit)
-                                                        [
-                                                          [
-                                                            [
-                                                              [
-                                                                {
-                                                                  {
-                                                                    (builtin
-                                                                      chooseList
-                                                                    )
-                                                                    (con data)
-                                                                  }
-                                                                  (fun
-                                                                    Unit
-                                                                    [
-                                                                      Maybe
-                                                                      [
-                                                                        Observation
-                                                                        a
-                                                                      ]
-                                                                    ]
-                                                                  )
-                                                                }
-                                                                l
-                                                              ]
-                                                              (lam
-                                                                ds
-                                                                Unit
-                                                                {
-                                                                  Nothing
-                                                                  [
-                                                                    Observation
-                                                                    a
-                                                                  ]
-                                                                }
-                                                              )
-                                                            ]
-                                                            (lam
-                                                              ds
-                                                              Unit
-                                                              [
-                                                                [
-                                                                  [
-                                                                    [
-                                                                      {
-                                                                        {
-                                                                          (builtin
-                                                                            chooseList
-                                                                          )
-                                                                          (con
-                                                                            data
-                                                                          )
-                                                                        }
-                                                                        (fun
-                                                                          Unit
-                                                                          [
-                                                                            Maybe
-                                                                            [
-                                                                              Observation
-                                                                              a
-                                                                            ]
-                                                                          ]
-                                                                        )
-                                                                      }
-                                                                      l
-                                                                    ]
-                                                                    (lam
-                                                                      ds
-                                                                      Unit
-                                                                      {
-                                                                        Nothing
-                                                                        [
-                                                                          Observation
-                                                                          a
-                                                                        ]
-                                                                      }
-                                                                    )
-                                                                  ]
-                                                                  (lam
-                                                                    ds
-                                                                    Unit
-                                                                    [
-                                                                      [
-                                                                        [
-                                                                          [
-                                                                            {
-                                                                              {
-                                                                                (builtin
-                                                                                  chooseList
-                                                                                )
-                                                                                (con
-                                                                                  data
-                                                                                )
-                                                                              }
-                                                                              (fun
-                                                                                Unit
-                                                                                [
-                                                                                  Maybe
-                                                                                  [
-                                                                                    Observation
-                                                                                    a
-                                                                                  ]
-                                                                                ]
-                                                                              )
-                                                                            }
-                                                                            [
-                                                                              {
-                                                                                (builtin
-                                                                                  tailList
-                                                                                )
-                                                                                (con
-                                                                                  data
-                                                                                )
-                                                                              }
-                                                                              l
-                                                                            ]
-                                                                          ]
-                                                                          (lam
-                                                                            ds
-                                                                            Unit
-                                                                            {
-                                                                              [
-                                                                                [
-                                                                                  {
-                                                                                    [
-                                                                                      {
-                                                                                        Maybe_match
-                                                                                        a
-                                                                                      }
-                                                                                      [
-                                                                                        dFromData
-                                                                                        [
-                                                                                          {
-                                                                                            (builtin
-                                                                                              headList
-                                                                                            )
-                                                                                            (con
-                                                                                              data
-                                                                                            )
-                                                                                          }
-                                                                                          l
-                                                                                        ]
-                                                                                      ]
-                                                                                    ]
-                                                                                    (all
-                                                                                      dead
-                                                                                      (type)
-                                                                                      [
-                                                                                        Maybe
-                                                                                        [
-                                                                                          Observation
-                                                                                          a
-                                                                                        ]
-                                                                                      ]
-                                                                                    )
-                                                                                  }
-                                                                                  (lam
-                                                                                    ipv
-                                                                                    a
-                                                                                    (abs
-                                                                                      dead
-                                                                                      (type)
-                                                                                      {
-                                                                                        [
-                                                                                          [
-                                                                                            {
-                                                                                              [
-                                                                                                {
-                                                                                                  Maybe_match
-                                                                                                  (con
-                                                                                                    integer
-                                                                                                  )
-                                                                                                }
-                                                                                                [
-                                                                                                  fFromDataInteger_cfromBuiltinData
-                                                                                                  [
-                                                                                                    {
-                                                                                                      (builtin
-                                                                                                        headList
-                                                                                                      )
-                                                                                                      (con
-                                                                                                        data
-                                                                                                      )
-                                                                                                    }
-                                                                                                    l
-                                                                                                  ]
-                                                                                                ]
-                                                                                              ]
-                                                                                              (all
-                                                                                                dead
-                                                                                                (type)
-                                                                                                [
-                                                                                                  Maybe
-                                                                                                  [
-                                                                                                    Observation
-                                                                                                    a
-                                                                                                  ]
-                                                                                                ]
-                                                                                              )
-                                                                                            }
-                                                                                            (lam
-                                                                                              ipv
-                                                                                              (con
-                                                                                                integer
-                                                                                              )
-                                                                                              (abs
-                                                                                                dead
-                                                                                                (type)
-                                                                                                [
-                                                                                                  {
-                                                                                                    Just
-                                                                                                    [
-                                                                                                      Observation
-                                                                                                      a
-                                                                                                    ]
-                                                                                                  }
-                                                                                                  [
-                                                                                                    [
-                                                                                                      {
-                                                                                                        Observation
-                                                                                                        a
-                                                                                                      }
-                                                                                                      ipv
-                                                                                                    ]
-                                                                                                    ipv
-                                                                                                  ]
-                                                                                                ]
-                                                                                              )
-                                                                                            )
-                                                                                          ]
-                                                                                          (abs
-                                                                                            dead
-                                                                                            (type)
-                                                                                            {
-                                                                                              Nothing
-                                                                                              [
-                                                                                                Observation
-                                                                                                a
-                                                                                              ]
-                                                                                            }
-                                                                                          )
-                                                                                        ]
-                                                                                        (all
-                                                                                          dead
-                                                                                          (type)
-                                                                                          dead
-                                                                                        )
-                                                                                      }
-                                                                                    )
-                                                                                  )
-                                                                                ]
-                                                                                (abs
-                                                                                  dead
-                                                                                  (type)
-                                                                                  {
-                                                                                    Nothing
-                                                                                    [
-                                                                                      Observation
-                                                                                      a
-                                                                                    ]
-                                                                                  }
-                                                                                )
-                                                                              ]
-                                                                              (all
-                                                                                dead
-                                                                                (type)
-                                                                                dead
-                                                                              )
-                                                                            }
-                                                                          )
-                                                                        ]
-                                                                        (lam
-                                                                          ds
-                                                                          Unit
-                                                                          {
-                                                                            Nothing
-                                                                            [
-                                                                              Observation
-                                                                              a
-                                                                            ]
-                                                                          }
-                                                                        )
-                                                                      ]
-                                                                      Unit
-                                                                    ]
-                                                                  )
-                                                                ]
-                                                                Unit
-                                                              ]
-                                                            )
-                                                          ]
-                                                          Unit
-                                                        ]
-                                                      )
-                                                    ]
-                                                    (lam
-                                                      ds
-                                                      (con unit)
-                                                      {
-                                                        Nothing
-                                                        [ Observation a ]
-                                                      }
-                                                    )
-                                                  ]
-                                                  unitval
-                                                ]
-                                              )
-                                            ]
-                                            (lam
-                                              ds
-                                              Unit
-                                              { Nothing [ Observation a ] }
-                                            )
-                                          ]
-                                          (lam
-                                            ds
-                                            Unit
-                                            { Nothing [ Observation a ] }
-                                          )
-                                        ]
-                                        (lam
-                                          ds Unit { Nothing [ Observation a ] }
-                                        )
-                                      ]
-                                      (lam
-                                        ds Unit { Nothing [ Observation a ] }
-                                      )
-                                    ]
-                                    Unit
-                                  ]
-                                )
-                              )
-                            )
-                          )
-                          [
-                            [
-                              (lam
-                                k
-                                (type)
-                                (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                              )
-                              (con bytestring)
-                            ]
-                            [
-                              [
-                                (lam
-                                  k
-                                  (type)
-                                  (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                )
-                                (con bytestring)
-                              ]
-                              (con integer)
-                            ]
-                          ]
-                        }
-                        [
-                          [
-                            {
-                              { fFromDataMap_cfromBuiltinData (con bytestring) }
-                              [
-                                [
-                                  (lam
-                                    k
-                                    (type)
-                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                  )
-                                  (con bytestring)
-                                ]
-                                (con integer)
-                              ]
-                            }
-                            fFromDataBuiltinByteString_cfromBuiltinData
-                          ]
-                          [
-                            [
-                              {
-                                {
-                                  fFromDataMap_cfromBuiltinData (con bytestring)
-                                }
-                                (con integer)
-                              }
-                              fFromDataBuiltinByteString_cfromBuiltinData
-                            ]
-                            fFromDataInteger_cfromBuiltinData
-                          ]
-                        ]
-                      ]
                     )
                     (datatypebind
                       (datatype
@@ -5297,91 +3992,887 @@
                         (termbind
                           (strict)
                           (vardecl
-                            isZero
-                            (fun
-                              [
-                                [
-                                  (lam
-                                    k
-                                    (type)
-                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                  )
-                                  (con bytestring)
-                                ]
-                                [
-                                  [
-                                    (lam
-                                      k
-                                      (type)
-                                      (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                    )
-                                    (con bytestring)
-                                  ]
-                                  (con integer)
-                                ]
-                              ]
-                              Bool
-                            )
+                            equalsInteger
+                            (fun (con integer) (fun (con integer) Bool))
                           )
                           (lam
-                            ds
-                            [
-                              [
-                                (lam
-                                  k
-                                  (type)
-                                  (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                )
-                                (con bytestring)
-                              ]
+                            x
+                            (con integer)
+                            (lam
+                              y
+                              (con integer)
                               [
                                 [
-                                  (lam
-                                    k
-                                    (type)
-                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                  )
-                                  (con bytestring)
+                                  [
+                                    { (builtin ifThenElse) Bool }
+                                    [ [ (builtin equalsInteger) x ] y ]
+                                  ]
+                                  True
                                 ]
-                                (con integer)
+                                False
                               ]
-                            ]
+                            )
+                          )
+                        )
+                        (termbind
+                          (strict)
+                          (vardecl
+                            lessThanEqualsInteger
+                            (fun (con integer) (fun (con integer) Bool))
+                          )
+                          (lam
+                            x
+                            (con integer)
+                            (lam
+                              y
+                              (con integer)
+                              [
+                                [
+                                  [
+                                    { (builtin ifThenElse) Bool }
+                                    [ [ (builtin lessThanEqualsInteger) x ] y ]
+                                  ]
+                                  True
+                                ]
+                                False
+                              ]
+                            )
+                          )
+                        )
+                        (datatypebind
+                          (datatype
+                            (tyvardecl Unit (type))
+
+                            Unit_match
+                            (vardecl Unit Unit)
+                          )
+                        )
+                        (termbind
+                          (strict)
+                          (vardecl
+                            fFromDataBuiltinByteString_cfromBuiltinData
+                            (fun (con data) [ Maybe (con bytestring) ])
+                          )
+                          (lam
+                            d
+                            (con data)
                             [
                               [
                                 [
-                                  {
-                                    {
-                                      fFoldableNil_cfoldMap
-                                      [ (lam a (type) a) Bool ]
-                                    }
+                                  [
                                     [
-                                      [ Tuple2 (con bytestring) ]
                                       [
                                         [
-                                          (lam
-                                            k
-                                            (type)
-                                            (lam
-                                              v
-                                              (type)
-                                              [ List [ [ Tuple2 k ] v ] ]
+                                          {
+                                            (builtin chooseData)
+                                            (fun
+                                              Unit [ Maybe (con bytestring) ]
                                             )
-                                          )
-                                          (con bytestring)
+                                          }
+                                          d
                                         ]
-                                        (con integer)
+                                        (lam
+                                          ds Unit { Nothing (con bytestring) }
+                                        )
                                       ]
+                                      (lam ds Unit { Nothing (con bytestring) })
                                     ]
-                                  }
-                                  [
-                                    { fMonoidProduct Bool }
-                                    fMultiplicativeMonoidBool
+                                    (lam ds Unit { Nothing (con bytestring) })
                                   ]
+                                  (lam ds Unit { Nothing (con bytestring) })
                                 ]
                                 (lam
                                   ds
+                                  Unit
                                   [
-                                    [ Tuple2 (con bytestring) ]
+                                    { Just (con bytestring) }
+                                    [ (builtin unBData) d ]
+                                  ]
+                                )
+                              ]
+                              Unit
+                            ]
+                          )
+                        )
+                        (termbind
+                          (strict)
+                          (vardecl
+                            fFromDataInteger_cfromBuiltinData
+                            (fun (con data) [ Maybe (con integer) ])
+                          )
+                          (lam
+                            d
+                            (con data)
+                            [
+                              [
+                                [
+                                  [
+                                    [
+                                      [
+                                        [
+                                          {
+                                            (builtin chooseData)
+                                            (fun Unit [ Maybe (con integer) ])
+                                          }
+                                          d
+                                        ]
+                                        (lam ds Unit { Nothing (con integer) })
+                                      ]
+                                      (lam ds Unit { Nothing (con integer) })
+                                    ]
+                                    (lam ds Unit { Nothing (con integer) })
+                                  ]
+                                  (lam
+                                    ds
+                                    Unit
+                                    [
+                                      { Just (con integer) }
+                                      [ (builtin unIData) d ]
+                                    ]
+                                  )
+                                ]
+                                (lam ds Unit { Nothing (con integer) })
+                              ]
+                              Unit
+                            ]
+                          )
+                        )
+                        (termbind
+                          (strict)
+                          (vardecl
+                            fFromDataMap
+                            (all
+                              v
+                              (type)
+                              (all
+                                k
+                                (type)
+                                (fun
+                                  Unit
+                                  [
+                                    Maybe
+                                    [
+                                      [
+                                        (lam
+                                          k
+                                          (type)
+                                          (lam
+                                            v (type) [ List [ [ Tuple2 k ] v ] ]
+                                          )
+                                        )
+                                        k
+                                      ]
+                                      v
+                                    ]
+                                  ]
+                                )
+                              )
+                            )
+                          )
+                          (abs
+                            v
+                            (type)
+                            (abs
+                              k
+                              (type)
+                              (lam
+                                ds
+                                Unit
+                                {
+                                  Nothing
+                                  [
+                                    [
+                                      (lam
+                                        k
+                                        (type)
+                                        (lam
+                                          v (type) [ List [ [ Tuple2 k ] v ] ]
+                                        )
+                                      )
+                                      k
+                                    ]
+                                    v
+                                  ]
+                                }
+                              )
+                            )
+                          )
+                        )
+                        (termbind
+                          (strict)
+                          (vardecl
+                            fFromDataMap_cfromBuiltinData
+                            (all
+                              k
+                              (type)
+                              (all
+                                v
+                                (type)
+                                (fun
+                                  [
+                                    (lam a (type) (fun (con data) [ Maybe a ]))
+                                    k
+                                  ]
+                                  (fun
+                                    [
+                                      (lam
+                                        a (type) (fun (con data) [ Maybe a ])
+                                      )
+                                      v
+                                    ]
+                                    (fun
+                                      (con data)
+                                      [
+                                        Maybe
+                                        [
+                                          [
+                                            (lam
+                                              k
+                                              (type)
+                                              (lam
+                                                v
+                                                (type)
+                                                [ List [ [ Tuple2 k ] v ] ]
+                                              )
+                                            )
+                                            k
+                                          ]
+                                          v
+                                        ]
+                                      ]
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                          (abs
+                            k
+                            (type)
+                            (abs
+                              v
+                              (type)
+                              (lam
+                                dFromData
+                                [
+                                  (lam a (type) (fun (con data) [ Maybe a ])) k
+                                ]
+                                (lam
+                                  dFromData
+                                  [
+                                    (lam a (type) (fun (con data) [ Maybe a ]))
+                                    v
+                                  ]
+                                  (let
+                                    (rec)
+                                    (termbind
+                                      (strict)
+                                      (vardecl
+                                        go
+                                        (fun
+                                          [
+                                            (con list)
+                                            [
+                                              [ (con pair) (con data) ]
+                                              (con data)
+                                            ]
+                                          ]
+                                          [ Maybe [ List [ [ Tuple2 k ] v ] ] ]
+                                        )
+                                      )
+                                      (lam
+                                        l
+                                        [
+                                          (con list)
+                                          [
+                                            [ (con pair) (con data) ] (con data)
+                                          ]
+                                        ]
+                                        (let
+                                          (nonrec)
+                                          (termbind
+                                            (nonstrict)
+                                            (vardecl
+                                              tup
+                                              [
+                                                [ (con pair) (con data) ]
+                                                (con data)
+                                              ]
+                                            )
+                                            [
+                                              {
+                                                (builtin headList)
+                                                [
+                                                  [ (con pair) (con data) ]
+                                                  (con data)
+                                                ]
+                                              }
+                                              l
+                                            ]
+                                          )
+                                          [
+                                            [
+                                              [
+                                                [
+                                                  {
+                                                    {
+                                                      (builtin chooseList)
+                                                      [
+                                                        [
+                                                          (con pair) (con data)
+                                                        ]
+                                                        (con data)
+                                                      ]
+                                                    }
+                                                    (fun
+                                                      Unit
+                                                      [
+                                                        Maybe
+                                                        [
+                                                          List
+                                                          [ [ Tuple2 k ] v ]
+                                                        ]
+                                                      ]
+                                                    )
+                                                  }
+                                                  l
+                                                ]
+                                                (lam
+                                                  ds
+                                                  Unit
+                                                  [
+                                                    {
+                                                      Just
+                                                      [
+                                                        List [ [ Tuple2 k ] v ]
+                                                      ]
+                                                    }
+                                                    { Nil [ [ Tuple2 k ] v ] }
+                                                  ]
+                                                )
+                                              ]
+                                              (lam
+                                                ds
+                                                Unit
+                                                {
+                                                  [
+                                                    [
+                                                      {
+                                                        [
+                                                          { Maybe_match k }
+                                                          [
+                                                            dFromData
+                                                            [
+                                                              {
+                                                                {
+                                                                  (builtin
+                                                                    fstPair
+                                                                  )
+                                                                  (con data)
+                                                                }
+                                                                (con data)
+                                                              }
+                                                              tup
+                                                            ]
+                                                          ]
+                                                        ]
+                                                        (all
+                                                          dead
+                                                          (type)
+                                                          [
+                                                            Maybe
+                                                            [
+                                                              List
+                                                              [ [ Tuple2 k ] v ]
+                                                            ]
+                                                          ]
+                                                        )
+                                                      }
+                                                      (lam
+                                                        a
+                                                        k
+                                                        (abs
+                                                          dead
+                                                          (type)
+                                                          {
+                                                            [
+                                                              [
+                                                                {
+                                                                  [
+                                                                    {
+                                                                      Maybe_match
+                                                                      v
+                                                                    }
+                                                                    [
+                                                                      dFromData
+                                                                      [
+                                                                        {
+                                                                          {
+                                                                            (builtin
+                                                                              sndPair
+                                                                            )
+                                                                            (con
+                                                                              data
+                                                                            )
+                                                                          }
+                                                                          (con
+                                                                            data
+                                                                          )
+                                                                        }
+                                                                        tup
+                                                                      ]
+                                                                    ]
+                                                                  ]
+                                                                  (all
+                                                                    dead
+                                                                    (type)
+                                                                    [
+                                                                      Maybe
+                                                                      [
+                                                                        List
+                                                                        [
+                                                                          [
+                                                                            Tuple2
+                                                                            k
+                                                                          ]
+                                                                          v
+                                                                        ]
+                                                                      ]
+                                                                    ]
+                                                                  )
+                                                                }
+                                                                (lam
+                                                                  ipv
+                                                                  v
+                                                                  (abs
+                                                                    dead
+                                                                    (type)
+                                                                    {
+                                                                      [
+                                                                        [
+                                                                          {
+                                                                            [
+                                                                              {
+                                                                                Maybe_match
+                                                                                [
+                                                                                  List
+                                                                                  [
+                                                                                    [
+                                                                                      Tuple2
+                                                                                      k
+                                                                                    ]
+                                                                                    v
+                                                                                  ]
+                                                                                ]
+                                                                              }
+                                                                              [
+                                                                                go
+                                                                                [
+                                                                                  {
+                                                                                    (builtin
+                                                                                      tailList
+                                                                                    )
+                                                                                    [
+                                                                                      [
+                                                                                        (con
+                                                                                          pair
+                                                                                        )
+                                                                                        (con
+                                                                                          data
+                                                                                        )
+                                                                                      ]
+                                                                                      (con
+                                                                                        data
+                                                                                      )
+                                                                                    ]
+                                                                                  }
+                                                                                  l
+                                                                                ]
+                                                                              ]
+                                                                            ]
+                                                                            (all
+                                                                              dead
+                                                                              (type)
+                                                                              [
+                                                                                Maybe
+                                                                                [
+                                                                                  List
+                                                                                  [
+                                                                                    [
+                                                                                      Tuple2
+                                                                                      k
+                                                                                    ]
+                                                                                    v
+                                                                                  ]
+                                                                                ]
+                                                                              ]
+                                                                            )
+                                                                          }
+                                                                          (lam
+                                                                            ipv
+                                                                            [
+                                                                              List
+                                                                              [
+                                                                                [
+                                                                                  Tuple2
+                                                                                  k
+                                                                                ]
+                                                                                v
+                                                                              ]
+                                                                            ]
+                                                                            (abs
+                                                                              dead
+                                                                              (type)
+                                                                              [
+                                                                                {
+                                                                                  Just
+                                                                                  [
+                                                                                    List
+                                                                                    [
+                                                                                      [
+                                                                                        Tuple2
+                                                                                        k
+                                                                                      ]
+                                                                                      v
+                                                                                    ]
+                                                                                  ]
+                                                                                }
+                                                                                [
+                                                                                  [
+                                                                                    {
+                                                                                      Cons
+                                                                                      [
+                                                                                        [
+                                                                                          Tuple2
+                                                                                          k
+                                                                                        ]
+                                                                                        v
+                                                                                      ]
+                                                                                    }
+                                                                                    [
+                                                                                      [
+                                                                                        {
+                                                                                          {
+                                                                                            Tuple2
+                                                                                            k
+                                                                                          }
+                                                                                          v
+                                                                                        }
+                                                                                        a
+                                                                                      ]
+                                                                                      ipv
+                                                                                    ]
+                                                                                  ]
+                                                                                  ipv
+                                                                                ]
+                                                                              ]
+                                                                            )
+                                                                          )
+                                                                        ]
+                                                                        (abs
+                                                                          dead
+                                                                          (type)
+                                                                          {
+                                                                            Nothing
+                                                                            [
+                                                                              List
+                                                                              [
+                                                                                [
+                                                                                  Tuple2
+                                                                                  k
+                                                                                ]
+                                                                                v
+                                                                              ]
+                                                                            ]
+                                                                          }
+                                                                        )
+                                                                      ]
+                                                                      (all
+                                                                        dead
+                                                                        (type)
+                                                                        dead
+                                                                      )
+                                                                    }
+                                                                  )
+                                                                )
+                                                              ]
+                                                              (abs
+                                                                dead
+                                                                (type)
+                                                                {
+                                                                  Nothing
+                                                                  [
+                                                                    List
+                                                                    [
+                                                                      [
+                                                                        Tuple2 k
+                                                                      ]
+                                                                      v
+                                                                    ]
+                                                                  ]
+                                                                }
+                                                              )
+                                                            ]
+                                                            (all
+                                                              dead (type) dead
+                                                            )
+                                                          }
+                                                        )
+                                                      )
+                                                    ]
+                                                    (abs
+                                                      dead
+                                                      (type)
+                                                      {
+                                                        Nothing
+                                                        [
+                                                          List
+                                                          [ [ Tuple2 k ] v ]
+                                                        ]
+                                                      }
+                                                    )
+                                                  ]
+                                                  (all dead (type) dead)
+                                                }
+                                              )
+                                            ]
+                                            Unit
+                                          ]
+                                        )
+                                      )
+                                    )
+                                    (lam
+                                      d
+                                      (con data)
+                                      [
+                                        [
+                                          [
+                                            [
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      (builtin chooseData)
+                                                      (fun
+                                                        Unit
+                                                        [
+                                                          Maybe
+                                                          [
+                                                            [
+                                                              (lam
+                                                                k
+                                                                (type)
+                                                                (lam
+                                                                  v
+                                                                  (type)
+                                                                  [
+                                                                    List
+                                                                    [
+                                                                      [
+                                                                        Tuple2 k
+                                                                      ]
+                                                                      v
+                                                                    ]
+                                                                  ]
+                                                                )
+                                                              )
+                                                              k
+                                                            ]
+                                                            v
+                                                          ]
+                                                        ]
+                                                      )
+                                                    }
+                                                    d
+                                                  ]
+                                                  { { fFromDataMap v } k }
+                                                ]
+                                                (lam
+                                                  ds
+                                                  Unit
+                                                  {
+                                                    [
+                                                      [
+                                                        {
+                                                          [
+                                                            {
+                                                              Maybe_match
+                                                              [
+                                                                List
+                                                                [
+                                                                  [ Tuple2 k ] v
+                                                                ]
+                                                              ]
+                                                            }
+                                                            [
+                                                              go
+                                                              [
+                                                                (builtin
+                                                                  unMapData
+                                                                )
+                                                                d
+                                                              ]
+                                                            ]
+                                                          ]
+                                                          (all
+                                                            dead
+                                                            (type)
+                                                            [
+                                                              Maybe
+                                                              [
+                                                                [
+                                                                  (lam
+                                                                    k
+                                                                    (type)
+                                                                    (lam
+                                                                      v
+                                                                      (type)
+                                                                      [
+                                                                        List
+                                                                        [
+                                                                          [
+                                                                            Tuple2
+                                                                            k
+                                                                          ]
+                                                                          v
+                                                                        ]
+                                                                      ]
+                                                                    )
+                                                                  )
+                                                                  k
+                                                                ]
+                                                                v
+                                                              ]
+                                                            ]
+                                                          )
+                                                        }
+                                                        (lam
+                                                          a
+                                                          [
+                                                            List
+                                                            [ [ Tuple2 k ] v ]
+                                                          ]
+                                                          (abs
+                                                            dead
+                                                            (type)
+                                                            [
+                                                              {
+                                                                Just
+                                                                [
+                                                                  [
+                                                                    (lam
+                                                                      k
+                                                                      (type)
+                                                                      (lam
+                                                                        v
+                                                                        (type)
+                                                                        [
+                                                                          List
+                                                                          [
+                                                                            [
+                                                                              Tuple2
+                                                                              k
+                                                                            ]
+                                                                            v
+                                                                          ]
+                                                                        ]
+                                                                      )
+                                                                    )
+                                                                    k
+                                                                  ]
+                                                                  v
+                                                                ]
+                                                              }
+                                                              a
+                                                            ]
+                                                          )
+                                                        )
+                                                      ]
+                                                      (abs
+                                                        dead
+                                                        (type)
+                                                        {
+                                                          Nothing
+                                                          [
+                                                            [
+                                                              (lam
+                                                                k
+                                                                (type)
+                                                                (lam
+                                                                  v
+                                                                  (type)
+                                                                  [
+                                                                    List
+                                                                    [
+                                                                      [
+                                                                        Tuple2 k
+                                                                      ]
+                                                                      v
+                                                                    ]
+                                                                  ]
+                                                                )
+                                                              )
+                                                              k
+                                                            ]
+                                                            v
+                                                          ]
+                                                        }
+                                                      )
+                                                    ]
+                                                    (all dead (type) dead)
+                                                  }
+                                                )
+                                              ]
+                                              { { fFromDataMap v } k }
+                                            ]
+                                            { { fFromDataMap v } k }
+                                          ]
+                                          { { fFromDataMap v } k }
+                                        ]
+                                        Unit
+                                      ]
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                        (datatypebind
+                          (datatype
+                            (tyvardecl Observation (fun (type) (type)))
+                            (tyvardecl a (type))
+                            Observation_match
+                            (vardecl
+                              Observation
+                              (fun a (fun (con integer) [ Observation a ]))
+                            )
+                          )
+                        )
+                        (termbind
+                          (strict) (vardecl unitval (con unit)) (con unit ())
+                        )
+                        (termbind
+                          (nonstrict)
+                          (vardecl
+                            futureStateMachine
+                            (fun
+                              (con data)
+                              [
+                                Maybe
+                                [
+                                  Observation
+                                  [
+                                    [
+                                      (lam
+                                        k
+                                        (type)
+                                        (lam
+                                          v (type) [ List [ [ Tuple2 k ] v ] ]
+                                        )
+                                      )
+                                      (con bytestring)
+                                    ]
                                     [
                                       [
                                         (lam
@@ -5396,162 +4887,462 @@
                                       (con integer)
                                     ]
                                   ]
-                                  [
-                                    {
-                                      [
-                                        {
-                                          { Tuple2_match (con bytestring) }
-                                          [
-                                            [
-                                              (lam
-                                                k
-                                                (type)
-                                                (lam
-                                                  v
-                                                  (type)
-                                                  [ List [ [ Tuple2 k ] v ] ]
-                                                )
-                                              )
-                                              (con bytestring)
-                                            ]
-                                            (con integer)
-                                          ]
-                                        }
-                                        ds
-                                      ]
-                                      [ (lam a (type) a) Bool ]
-                                    }
-                                    (lam
-                                      ds
-                                      (con bytestring)
-                                      (lam
-                                        a
-                                        [
-                                          [
-                                            (lam
-                                              k
-                                              (type)
-                                              (lam
-                                                v
-                                                (type)
-                                                [ List [ [ Tuple2 k ] v ] ]
-                                              )
-                                            )
-                                            (con bytestring)
-                                          ]
-                                          (con integer)
-                                        ]
-                                        [
-                                          [
-                                            [
-                                              {
-                                                {
-                                                  fFoldableNil_cfoldMap
-                                                  [ (lam a (type) a) Bool ]
-                                                }
-                                                [
-                                                  [ Tuple2 (con bytestring) ]
-                                                  (con integer)
-                                                ]
-                                              }
-                                              [
-                                                { fMonoidProduct Bool }
-                                                fMultiplicativeMonoidBool
-                                              ]
-                                            ]
-                                            (lam
-                                              ds
-                                              [
-                                                [ Tuple2 (con bytestring) ]
-                                                (con integer)
-                                              ]
-                                              [
-                                                {
-                                                  [
-                                                    {
-                                                      {
-                                                        Tuple2_match
-                                                        (con bytestring)
-                                                      }
-                                                      (con integer)
-                                                    }
-                                                    ds
-                                                  ]
-                                                  [ (lam a (type) a) Bool ]
-                                                }
-                                                (lam
-                                                  ds
-                                                  (con bytestring)
-                                                  (lam
-                                                    a
-                                                    (con integer)
-                                                    [
-                                                      [
-                                                        [
-                                                          {
-                                                            (builtin ifThenElse)
-                                                            Bool
-                                                          }
-                                                          [
-                                                            [
-                                                              (builtin
-                                                                equalsInteger
-                                                              )
-                                                              (con integer 0)
-                                                            ]
-                                                            a
-                                                          ]
-                                                        ]
-                                                        True
-                                                      ]
-                                                      False
-                                                    ]
-                                                  )
-                                                )
-                                              ]
-                                            )
-                                          ]
-                                          a
-                                        ]
-                                      )
-                                    )
-                                  ]
-                                )
-                              ]
-                              ds
-                            ]
-                          )
-                        )
-                        (termbind
-                          (strict)
-                          (vardecl
-                            lessThanInteger
-                            (fun (con integer) (fun (con integer) Bool))
-                          )
-                          (lam
-                            x
-                            (con integer)
-                            (lam
-                              y
-                              (con integer)
-                              [
-                                [
-                                  [
-                                    { (builtin ifThenElse) Bool }
-                                    [ [ (builtin lessThanInteger) x ] y ]
-                                  ]
-                                  True
                                 ]
-                                False
                               ]
                             )
                           )
-                        )
-                        (termbind
-                          (strict)
-                          (vardecl
-                            lt
-                            (fun
+                          [
+                            {
+                              (abs
+                                a
+                                (type)
+                                (lam
+                                  dFromData
+                                  [
+                                    (lam a (type) (fun (con data) [ Maybe a ]))
+                                    a
+                                  ]
+                                  (lam
+                                    d
+                                    (con data)
+                                    (let
+                                      (nonrec)
+                                      (termbind
+                                        (nonstrict)
+                                        (vardecl
+                                          tup
+                                          [
+                                            [ (con pair) (con integer) ]
+                                            [ (con list) (con data) ]
+                                          ]
+                                        )
+                                        [ (builtin unConstrData) d ]
+                                      )
+                                      (termbind
+                                        (nonstrict)
+                                        (vardecl l [ (con list) (con data) ])
+                                        [
+                                          {
+                                            { (builtin sndPair) (con integer) }
+                                            [ (con list) (con data) ]
+                                          }
+                                          tup
+                                        ]
+                                      )
+                                      (termbind
+                                        (nonstrict)
+                                        (vardecl l [ (con list) (con data) ])
+                                        [ { (builtin tailList) (con data) } l ]
+                                      )
+                                      [
+                                        [
+                                          [
+                                            [
+                                              [
+                                                [
+                                                  [
+                                                    {
+                                                      (builtin chooseData)
+                                                      (fun
+                                                        Unit
+                                                        [
+                                                          Maybe
+                                                          [ Observation a ]
+                                                        ]
+                                                      )
+                                                    }
+                                                    d
+                                                  ]
+                                                  (lam
+                                                    ds
+                                                    Unit
+                                                    [
+                                                      [
+                                                        [
+                                                          [
+                                                            {
+                                                              (builtin
+                                                                ifThenElse
+                                                              )
+                                                              (fun
+                                                                (con unit)
+                                                                [
+                                                                  Maybe
+                                                                  [
+                                                                    Observation
+                                                                    a
+                                                                  ]
+                                                                ]
+                                                              )
+                                                            }
+                                                            [
+                                                              [
+                                                                (builtin
+                                                                  equalsInteger
+                                                                )
+                                                                [
+                                                                  {
+                                                                    {
+                                                                      (builtin
+                                                                        fstPair
+                                                                      )
+                                                                      (con
+                                                                        integer
+                                                                      )
+                                                                    }
+                                                                    [
+                                                                      (con list)
+                                                                      (con data)
+                                                                    ]
+                                                                  }
+                                                                  tup
+                                                                ]
+                                                              ]
+                                                              (con integer 0)
+                                                            ]
+                                                          ]
+                                                          (lam
+                                                            ds
+                                                            (con unit)
+                                                            [
+                                                              [
+                                                                [
+                                                                  [
+                                                                    {
+                                                                      {
+                                                                        (builtin
+                                                                          chooseList
+                                                                        )
+                                                                        (con
+                                                                          data
+                                                                        )
+                                                                      }
+                                                                      (fun
+                                                                        Unit
+                                                                        [
+                                                                          Maybe
+                                                                          [
+                                                                            Observation
+                                                                            a
+                                                                          ]
+                                                                        ]
+                                                                      )
+                                                                    }
+                                                                    l
+                                                                  ]
+                                                                  (lam
+                                                                    ds
+                                                                    Unit
+                                                                    {
+                                                                      Nothing
+                                                                      [
+                                                                        Observation
+                                                                        a
+                                                                      ]
+                                                                    }
+                                                                  )
+                                                                ]
+                                                                (lam
+                                                                  ds
+                                                                  Unit
+                                                                  [
+                                                                    [
+                                                                      [
+                                                                        [
+                                                                          {
+                                                                            {
+                                                                              (builtin
+                                                                                chooseList
+                                                                              )
+                                                                              (con
+                                                                                data
+                                                                              )
+                                                                            }
+                                                                            (fun
+                                                                              Unit
+                                                                              [
+                                                                                Maybe
+                                                                                [
+                                                                                  Observation
+                                                                                  a
+                                                                                ]
+                                                                              ]
+                                                                            )
+                                                                          }
+                                                                          l
+                                                                        ]
+                                                                        (lam
+                                                                          ds
+                                                                          Unit
+                                                                          {
+                                                                            Nothing
+                                                                            [
+                                                                              Observation
+                                                                              a
+                                                                            ]
+                                                                          }
+                                                                        )
+                                                                      ]
+                                                                      (lam
+                                                                        ds
+                                                                        Unit
+                                                                        [
+                                                                          [
+                                                                            [
+                                                                              [
+                                                                                {
+                                                                                  {
+                                                                                    (builtin
+                                                                                      chooseList
+                                                                                    )
+                                                                                    (con
+                                                                                      data
+                                                                                    )
+                                                                                  }
+                                                                                  (fun
+                                                                                    Unit
+                                                                                    [
+                                                                                      Maybe
+                                                                                      [
+                                                                                        Observation
+                                                                                        a
+                                                                                      ]
+                                                                                    ]
+                                                                                  )
+                                                                                }
+                                                                                [
+                                                                                  {
+                                                                                    (builtin
+                                                                                      tailList
+                                                                                    )
+                                                                                    (con
+                                                                                      data
+                                                                                    )
+                                                                                  }
+                                                                                  l
+                                                                                ]
+                                                                              ]
+                                                                              (lam
+                                                                                ds
+                                                                                Unit
+                                                                                {
+                                                                                  [
+                                                                                    [
+                                                                                      {
+                                                                                        [
+                                                                                          {
+                                                                                            Maybe_match
+                                                                                            a
+                                                                                          }
+                                                                                          [
+                                                                                            dFromData
+                                                                                            [
+                                                                                              {
+                                                                                                (builtin
+                                                                                                  headList
+                                                                                                )
+                                                                                                (con
+                                                                                                  data
+                                                                                                )
+                                                                                              }
+                                                                                              l
+                                                                                            ]
+                                                                                          ]
+                                                                                        ]
+                                                                                        (all
+                                                                                          dead
+                                                                                          (type)
+                                                                                          [
+                                                                                            Maybe
+                                                                                            [
+                                                                                              Observation
+                                                                                              a
+                                                                                            ]
+                                                                                          ]
+                                                                                        )
+                                                                                      }
+                                                                                      (lam
+                                                                                        ipv
+                                                                                        a
+                                                                                        (abs
+                                                                                          dead
+                                                                                          (type)
+                                                                                          {
+                                                                                            [
+                                                                                              [
+                                                                                                {
+                                                                                                  [
+                                                                                                    {
+                                                                                                      Maybe_match
+                                                                                                      (con
+                                                                                                        integer
+                                                                                                      )
+                                                                                                    }
+                                                                                                    [
+                                                                                                      fFromDataInteger_cfromBuiltinData
+                                                                                                      [
+                                                                                                        {
+                                                                                                          (builtin
+                                                                                                            headList
+                                                                                                          )
+                                                                                                          (con
+                                                                                                            data
+                                                                                                          )
+                                                                                                        }
+                                                                                                        l
+                                                                                                      ]
+                                                                                                    ]
+                                                                                                  ]
+                                                                                                  (all
+                                                                                                    dead
+                                                                                                    (type)
+                                                                                                    [
+                                                                                                      Maybe
+                                                                                                      [
+                                                                                                        Observation
+                                                                                                        a
+                                                                                                      ]
+                                                                                                    ]
+                                                                                                  )
+                                                                                                }
+                                                                                                (lam
+                                                                                                  ipv
+                                                                                                  (con
+                                                                                                    integer
+                                                                                                  )
+                                                                                                  (abs
+                                                                                                    dead
+                                                                                                    (type)
+                                                                                                    [
+                                                                                                      {
+                                                                                                        Just
+                                                                                                        [
+                                                                                                          Observation
+                                                                                                          a
+                                                                                                        ]
+                                                                                                      }
+                                                                                                      [
+                                                                                                        [
+                                                                                                          {
+                                                                                                            Observation
+                                                                                                            a
+                                                                                                          }
+                                                                                                          ipv
+                                                                                                        ]
+                                                                                                        ipv
+                                                                                                      ]
+                                                                                                    ]
+                                                                                                  )
+                                                                                                )
+                                                                                              ]
+                                                                                              (abs
+                                                                                                dead
+                                                                                                (type)
+                                                                                                {
+                                                                                                  Nothing
+                                                                                                  [
+                                                                                                    Observation
+                                                                                                    a
+                                                                                                  ]
+                                                                                                }
+                                                                                              )
+                                                                                            ]
+                                                                                            (all
+                                                                                              dead
+                                                                                              (type)
+                                                                                              dead
+                                                                                            )
+                                                                                          }
+                                                                                        )
+                                                                                      )
+                                                                                    ]
+                                                                                    (abs
+                                                                                      dead
+                                                                                      (type)
+                                                                                      {
+                                                                                        Nothing
+                                                                                        [
+                                                                                          Observation
+                                                                                          a
+                                                                                        ]
+                                                                                      }
+                                                                                    )
+                                                                                  ]
+                                                                                  (all
+                                                                                    dead
+                                                                                    (type)
+                                                                                    dead
+                                                                                  )
+                                                                                }
+                                                                              )
+                                                                            ]
+                                                                            (lam
+                                                                              ds
+                                                                              Unit
+                                                                              {
+                                                                                Nothing
+                                                                                [
+                                                                                  Observation
+                                                                                  a
+                                                                                ]
+                                                                              }
+                                                                            )
+                                                                          ]
+                                                                          Unit
+                                                                        ]
+                                                                      )
+                                                                    ]
+                                                                    Unit
+                                                                  ]
+                                                                )
+                                                              ]
+                                                              Unit
+                                                            ]
+                                                          )
+                                                        ]
+                                                        (lam
+                                                          ds
+                                                          (con unit)
+                                                          {
+                                                            Nothing
+                                                            [ Observation a ]
+                                                          }
+                                                        )
+                                                      ]
+                                                      unitval
+                                                    ]
+                                                  )
+                                                ]
+                                                (lam
+                                                  ds
+                                                  Unit
+                                                  { Nothing [ Observation a ] }
+                                                )
+                                              ]
+                                              (lam
+                                                ds
+                                                Unit
+                                                { Nothing [ Observation a ] }
+                                              )
+                                            ]
+                                            (lam
+                                              ds
+                                              Unit
+                                              { Nothing [ Observation a ] }
+                                            )
+                                          ]
+                                          (lam
+                                            ds
+                                            Unit
+                                            { Nothing [ Observation a ] }
+                                          )
+                                        ]
+                                        Unit
+                                      ]
+                                    )
+                                  )
+                                )
+                              )
                               [
                                 [
                                   (lam
@@ -5573,16 +5364,14 @@
                                   (con integer)
                                 ]
                               ]
-                              (fun
-                                [
-                                  [
-                                    (lam
-                                      k
-                                      (type)
-                                      (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                    )
+                            }
+                            [
+                              [
+                                {
+                                  {
+                                    fFromDataMap_cfromBuiltinData
                                     (con bytestring)
-                                  ]
+                                  }
                                   [
                                     [
                                       (lam
@@ -5596,102 +5385,24 @@
                                     ]
                                     (con integer)
                                   ]
-                                ]
-                                Bool
-                              )
-                            )
-                          )
-                          (lam
-                            l
-                            [
-                              [
-                                (lam
-                                  k
-                                  (type)
-                                  (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                )
-                                (con bytestring)
+                                }
+                                fFromDataBuiltinByteString_cfromBuiltinData
                               ]
                               [
                                 [
-                                  (lam
-                                    k
-                                    (type)
-                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                  )
-                                  (con bytestring)
+                                  {
+                                    {
+                                      fFromDataMap_cfromBuiltinData
+                                      (con bytestring)
+                                    }
+                                    (con integer)
+                                  }
+                                  fFromDataBuiltinByteString_cfromBuiltinData
                                 ]
-                                (con integer)
+                                fFromDataInteger_cfromBuiltinData
                               ]
                             ]
-                            (lam
-                              r
-                              [
-                                [
-                                  (lam
-                                    k
-                                    (type)
-                                    (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                  )
-                                  (con bytestring)
-                                ]
-                                [
-                                  [
-                                    (lam
-                                      k
-                                      (type)
-                                      (lam v (type) [ List [ [ Tuple2 k ] v ] ])
-                                    )
-                                    (con bytestring)
-                                  ]
-                                  (con integer)
-                                ]
-                              ]
-                              {
-                                [
-                                  [
-                                    {
-                                      [ Bool_match [ isZero l ] ]
-                                      (all dead (type) Bool)
-                                    }
-                                    (abs
-                                      dead
-                                      (type)
-                                      {
-                                        [
-                                          [
-                                            {
-                                              [ Bool_match [ isZero r ] ]
-                                              (all dead (type) Bool)
-                                            }
-                                            (abs dead (type) False)
-                                          ]
-                                          (abs
-                                            dead
-                                            (type)
-                                            [
-                                              [
-                                                [ checkBinRel lessThanInteger ]
-                                                l
-                                              ]
-                                              r
-                                            ]
-                                          )
-                                        ]
-                                        (all dead (type) dead)
-                                      }
-                                    )
-                                  ]
-                                  (abs
-                                    dead
-                                    (type)
-                                    [ [ [ checkBinRel lessThanInteger ] l ] r ]
-                                  )
-                                ]
-                                (all dead (type) dead)
-                              }
-                            )
-                          )
+                          ]
                         )
                         (termbind
                           (strict)
@@ -10561,12 +10272,39 @@
                                                                                                   )
                                                                                                 ]
                                                                                               ]
-                                                                                              (let
-                                                                                                (nonrec)
-                                                                                                (termbind
-                                                                                                  (nonstrict)
-                                                                                                  (vardecl
-                                                                                                    minMargin
+                                                                                              (lam
+                                                                                                ds
+                                                                                                (con
+                                                                                                  integer
+                                                                                                )
+                                                                                                [
+                                                                                                  {
+                                                                                                    [
+                                                                                                      Margins_match
+                                                                                                      accounts
+                                                                                                    ]
+                                                                                                    [
+                                                                                                      Maybe
+                                                                                                      [
+                                                                                                        [
+                                                                                                          Tuple2
+                                                                                                          [
+                                                                                                            [
+                                                                                                              TxConstraints
+                                                                                                              Void
+                                                                                                            ]
+                                                                                                            Void
+                                                                                                          ]
+                                                                                                        ]
+                                                                                                        [
+                                                                                                          State
+                                                                                                          FutureState
+                                                                                                        ]
+                                                                                                      ]
+                                                                                                    ]
+                                                                                                  }
+                                                                                                  (lam
+                                                                                                    ww
                                                                                                     [
                                                                                                       [
                                                                                                         (lam
@@ -10620,72 +10358,8 @@
                                                                                                         )
                                                                                                       ]
                                                                                                     ]
-                                                                                                  )
-                                                                                                  [
-                                                                                                    [
-                                                                                                      [
-                                                                                                        unionWith
-                                                                                                        addInteger
-                                                                                                      ]
-                                                                                                      ww
-                                                                                                    ]
-                                                                                                    [
-                                                                                                      [
-                                                                                                        fAdditiveGroupValue_cscale
-                                                                                                        ww
-                                                                                                      ]
-                                                                                                      [
-                                                                                                        [
-                                                                                                          [
-                                                                                                            unionWith
-                                                                                                            addInteger
-                                                                                                          ]
-                                                                                                          ds
-                                                                                                        ]
-                                                                                                        [
-                                                                                                          [
-                                                                                                            fAdditiveGroupValue_cscale
-                                                                                                            fAdditiveGroupValue
-                                                                                                          ]
-                                                                                                          ww
-                                                                                                        ]
-                                                                                                      ]
-                                                                                                    ]
-                                                                                                  ]
-                                                                                                )
-                                                                                                (lam
-                                                                                                  ds
-                                                                                                  (con
-                                                                                                    integer
-                                                                                                  )
-                                                                                                  [
-                                                                                                    {
-                                                                                                      [
-                                                                                                        Margins_match
-                                                                                                        accounts
-                                                                                                      ]
-                                                                                                      [
-                                                                                                        Maybe
-                                                                                                        [
-                                                                                                          [
-                                                                                                            Tuple2
-                                                                                                            [
-                                                                                                              [
-                                                                                                                TxConstraints
-                                                                                                                Void
-                                                                                                              ]
-                                                                                                              Void
-                                                                                                            ]
-                                                                                                          ]
-                                                                                                          [
-                                                                                                            State
-                                                                                                            FutureState
-                                                                                                          ]
-                                                                                                        ]
-                                                                                                      ]
-                                                                                                    }
                                                                                                     (lam
-                                                                                                      ds
+                                                                                                      ww
                                                                                                       [
                                                                                                         [
                                                                                                           (lam
@@ -10739,69 +10413,641 @@
                                                                                                           )
                                                                                                         ]
                                                                                                       ]
-                                                                                                      (lam
-                                                                                                        ds
+                                                                                                      {
                                                                                                         [
                                                                                                           [
-                                                                                                            (lam
-                                                                                                              k
-                                                                                                              (type)
-                                                                                                              (lam
-                                                                                                                v
-                                                                                                                (type)
-                                                                                                                [
-                                                                                                                  List
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      Tuple2
-                                                                                                                      k
-                                                                                                                    ]
-                                                                                                                    v
-                                                                                                                  ]
-                                                                                                                ]
-                                                                                                              )
-                                                                                                            )
-                                                                                                            (con
-                                                                                                              bytestring
-                                                                                                            )
-                                                                                                          ]
-                                                                                                          [
-                                                                                                            [
-                                                                                                              (lam
-                                                                                                                k
-                                                                                                                (type)
-                                                                                                                (lam
-                                                                                                                  v
-                                                                                                                  (type)
-                                                                                                                  [
-                                                                                                                    List
+                                                                                                            {
+                                                                                                              [
+                                                                                                                {
+                                                                                                                  Maybe_match
+                                                                                                                  Role
+                                                                                                                }
+                                                                                                                (let
+                                                                                                                  (nonrec)
+                                                                                                                  (termbind
+                                                                                                                    (strict)
+                                                                                                                    (vardecl
+                                                                                                                      w
+                                                                                                                      Future
+                                                                                                                    )
                                                                                                                     [
                                                                                                                       [
-                                                                                                                        Tuple2
-                                                                                                                        k
+                                                                                                                        [
+                                                                                                                          [
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                Future
+                                                                                                                                ww
+                                                                                                                              ]
+                                                                                                                              ww
+                                                                                                                            ]
+                                                                                                                            ww
+                                                                                                                          ]
+                                                                                                                          (error
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                (lam
+                                                                                                                                  k
+                                                                                                                                  (type)
+                                                                                                                                  (lam
+                                                                                                                                    v
+                                                                                                                                    (type)
+                                                                                                                                    [
+                                                                                                                                      List
+                                                                                                                                      [
+                                                                                                                                        [
+                                                                                                                                          Tuple2
+                                                                                                                                          k
+                                                                                                                                        ]
+                                                                                                                                        v
+                                                                                                                                      ]
+                                                                                                                                    ]
+                                                                                                                                  )
+                                                                                                                                )
+                                                                                                                                (con
+                                                                                                                                  bytestring
+                                                                                                                                )
+                                                                                                                              ]
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  (lam
+                                                                                                                                    k
+                                                                                                                                    (type)
+                                                                                                                                    (lam
+                                                                                                                                      v
+                                                                                                                                      (type)
+                                                                                                                                      [
+                                                                                                                                        List
+                                                                                                                                        [
+                                                                                                                                          [
+                                                                                                                                            Tuple2
+                                                                                                                                            k
+                                                                                                                                          ]
+                                                                                                                                          v
+                                                                                                                                        ]
+                                                                                                                                      ]
+                                                                                                                                    )
+                                                                                                                                  )
+                                                                                                                                  (con
+                                                                                                                                    bytestring
+                                                                                                                                  )
+                                                                                                                                ]
+                                                                                                                                (con
+                                                                                                                                  integer
+                                                                                                                                )
+                                                                                                                              ]
+                                                                                                                            ]
+                                                                                                                          )
+                                                                                                                        ]
+                                                                                                                        ww
                                                                                                                       ]
-                                                                                                                      v
+                                                                                                                      ww
                                                                                                                     ]
-                                                                                                                  ]
+                                                                                                                  )
+                                                                                                                  (termbind
+                                                                                                                    (nonstrict)
+                                                                                                                    (vardecl
+                                                                                                                      minMargin
+                                                                                                                      [
+                                                                                                                        [
+                                                                                                                          (lam
+                                                                                                                            k
+                                                                                                                            (type)
+                                                                                                                            (lam
+                                                                                                                              v
+                                                                                                                              (type)
+                                                                                                                              [
+                                                                                                                                List
+                                                                                                                                [
+                                                                                                                                  [
+                                                                                                                                    Tuple2
+                                                                                                                                    k
+                                                                                                                                  ]
+                                                                                                                                  v
+                                                                                                                                ]
+                                                                                                                              ]
+                                                                                                                            )
+                                                                                                                          )
+                                                                                                                          (con
+                                                                                                                            bytestring
+                                                                                                                          )
+                                                                                                                        ]
+                                                                                                                        [
+                                                                                                                          [
+                                                                                                                            (lam
+                                                                                                                              k
+                                                                                                                              (type)
+                                                                                                                              (lam
+                                                                                                                                v
+                                                                                                                                (type)
+                                                                                                                                [
+                                                                                                                                  List
+                                                                                                                                  [
+                                                                                                                                    [
+                                                                                                                                      Tuple2
+                                                                                                                                      k
+                                                                                                                                    ]
+                                                                                                                                    v
+                                                                                                                                  ]
+                                                                                                                                ]
+                                                                                                                              )
+                                                                                                                            )
+                                                                                                                            (con
+                                                                                                                              bytestring
+                                                                                                                            )
+                                                                                                                          ]
+                                                                                                                          (con
+                                                                                                                            integer
+                                                                                                                          )
+                                                                                                                        ]
+                                                                                                                      ]
+                                                                                                                    )
+                                                                                                                    [
+                                                                                                                      {
+                                                                                                                        [
+                                                                                                                          Future_match
+                                                                                                                          w
+                                                                                                                        ]
+                                                                                                                        [
+                                                                                                                          [
+                                                                                                                            (lam
+                                                                                                                              k
+                                                                                                                              (type)
+                                                                                                                              (lam
+                                                                                                                                v
+                                                                                                                                (type)
+                                                                                                                                [
+                                                                                                                                  List
+                                                                                                                                  [
+                                                                                                                                    [
+                                                                                                                                      Tuple2
+                                                                                                                                      k
+                                                                                                                                    ]
+                                                                                                                                    v
+                                                                                                                                  ]
+                                                                                                                                ]
+                                                                                                                              )
+                                                                                                                            )
+                                                                                                                            (con
+                                                                                                                              bytestring
+                                                                                                                            )
+                                                                                                                          ]
+                                                                                                                          [
+                                                                                                                            [
+                                                                                                                              (lam
+                                                                                                                                k
+                                                                                                                                (type)
+                                                                                                                                (lam
+                                                                                                                                  v
+                                                                                                                                  (type)
+                                                                                                                                  [
+                                                                                                                                    List
+                                                                                                                                    [
+                                                                                                                                      [
+                                                                                                                                        Tuple2
+                                                                                                                                        k
+                                                                                                                                      ]
+                                                                                                                                      v
+                                                                                                                                    ]
+                                                                                                                                  ]
+                                                                                                                                )
+                                                                                                                              )
+                                                                                                                              (con
+                                                                                                                                bytestring
+                                                                                                                              )
+                                                                                                                            ]
+                                                                                                                            (con
+                                                                                                                              integer
+                                                                                                                            )
+                                                                                                                          ]
+                                                                                                                        ]
+                                                                                                                      }
+                                                                                                                      (lam
+                                                                                                                        ww
+                                                                                                                        (con
+                                                                                                                          integer
+                                                                                                                        )
+                                                                                                                        (lam
+                                                                                                                          ww
+                                                                                                                          (con
+                                                                                                                            integer
+                                                                                                                          )
+                                                                                                                          (lam
+                                                                                                                            ww
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                (lam
+                                                                                                                                  k
+                                                                                                                                  (type)
+                                                                                                                                  (lam
+                                                                                                                                    v
+                                                                                                                                    (type)
+                                                                                                                                    [
+                                                                                                                                      List
+                                                                                                                                      [
+                                                                                                                                        [
+                                                                                                                                          Tuple2
+                                                                                                                                          k
+                                                                                                                                        ]
+                                                                                                                                        v
+                                                                                                                                      ]
+                                                                                                                                    ]
+                                                                                                                                  )
+                                                                                                                                )
+                                                                                                                                (con
+                                                                                                                                  bytestring
+                                                                                                                                )
+                                                                                                                              ]
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  (lam
+                                                                                                                                    k
+                                                                                                                                    (type)
+                                                                                                                                    (lam
+                                                                                                                                      v
+                                                                                                                                      (type)
+                                                                                                                                      [
+                                                                                                                                        List
+                                                                                                                                        [
+                                                                                                                                          [
+                                                                                                                                            Tuple2
+                                                                                                                                            k
+                                                                                                                                          ]
+                                                                                                                                          v
+                                                                                                                                        ]
+                                                                                                                                      ]
+                                                                                                                                    )
+                                                                                                                                  )
+                                                                                                                                  (con
+                                                                                                                                    bytestring
+                                                                                                                                  )
+                                                                                                                                ]
+                                                                                                                                (con
+                                                                                                                                  integer
+                                                                                                                                )
+                                                                                                                              ]
+                                                                                                                            ]
+                                                                                                                            (lam
+                                                                                                                              ww
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  (lam
+                                                                                                                                    k
+                                                                                                                                    (type)
+                                                                                                                                    (lam
+                                                                                                                                      v
+                                                                                                                                      (type)
+                                                                                                                                      [
+                                                                                                                                        List
+                                                                                                                                        [
+                                                                                                                                          [
+                                                                                                                                            Tuple2
+                                                                                                                                            k
+                                                                                                                                          ]
+                                                                                                                                          v
+                                                                                                                                        ]
+                                                                                                                                      ]
+                                                                                                                                    )
+                                                                                                                                  )
+                                                                                                                                  (con
+                                                                                                                                    bytestring
+                                                                                                                                  )
+                                                                                                                                ]
+                                                                                                                                [
+                                                                                                                                  [
+                                                                                                                                    (lam
+                                                                                                                                      k
+                                                                                                                                      (type)
+                                                                                                                                      (lam
+                                                                                                                                        v
+                                                                                                                                        (type)
+                                                                                                                                        [
+                                                                                                                                          List
+                                                                                                                                          [
+                                                                                                                                            [
+                                                                                                                                              Tuple2
+                                                                                                                                              k
+                                                                                                                                            ]
+                                                                                                                                            v
+                                                                                                                                          ]
+                                                                                                                                        ]
+                                                                                                                                      )
+                                                                                                                                    )
+                                                                                                                                    (con
+                                                                                                                                      bytestring
+                                                                                                                                    )
+                                                                                                                                  ]
+                                                                                                                                  (con
+                                                                                                                                    integer
+                                                                                                                                  )
+                                                                                                                                ]
+                                                                                                                              ]
+                                                                                                                              (lam
+                                                                                                                                ww
+                                                                                                                                (con
+                                                                                                                                  bytestring
+                                                                                                                                )
+                                                                                                                                (lam
+                                                                                                                                  ww
+                                                                                                                                  [
+                                                                                                                                    [
+                                                                                                                                      (lam
+                                                                                                                                        k
+                                                                                                                                        (type)
+                                                                                                                                        (lam
+                                                                                                                                          v
+                                                                                                                                          (type)
+                                                                                                                                          [
+                                                                                                                                            List
+                                                                                                                                            [
+                                                                                                                                              [
+                                                                                                                                                Tuple2
+                                                                                                                                                k
+                                                                                                                                              ]
+                                                                                                                                              v
+                                                                                                                                            ]
+                                                                                                                                          ]
+                                                                                                                                        )
+                                                                                                                                      )
+                                                                                                                                      (con
+                                                                                                                                        bytestring
+                                                                                                                                      )
+                                                                                                                                    ]
+                                                                                                                                    [
+                                                                                                                                      [
+                                                                                                                                        (lam
+                                                                                                                                          k
+                                                                                                                                          (type)
+                                                                                                                                          (lam
+                                                                                                                                            v
+                                                                                                                                            (type)
+                                                                                                                                            [
+                                                                                                                                              List
+                                                                                                                                              [
+                                                                                                                                                [
+                                                                                                                                                  Tuple2
+                                                                                                                                                  k
+                                                                                                                                                ]
+                                                                                                                                                v
+                                                                                                                                              ]
+                                                                                                                                            ]
+                                                                                                                                          )
+                                                                                                                                        )
+                                                                                                                                        (con
+                                                                                                                                          bytestring
+                                                                                                                                        )
+                                                                                                                                      ]
+                                                                                                                                      (con
+                                                                                                                                        integer
+                                                                                                                                      )
+                                                                                                                                    ]
+                                                                                                                                  ]
+                                                                                                                                  [
+                                                                                                                                    [
+                                                                                                                                      [
+                                                                                                                                        unionWith
+                                                                                                                                        addInteger
+                                                                                                                                      ]
+                                                                                                                                      ww
+                                                                                                                                    ]
+                                                                                                                                    [
+                                                                                                                                      [
+                                                                                                                                        fAdditiveGroupValue_cscale
+                                                                                                                                        ww
+                                                                                                                                      ]
+                                                                                                                                      [
+                                                                                                                                        [
+                                                                                                                                          [
+                                                                                                                                            unionWith
+                                                                                                                                            addInteger
+                                                                                                                                          ]
+                                                                                                                                          ds
+                                                                                                                                        ]
+                                                                                                                                        [
+                                                                                                                                          [
+                                                                                                                                            fAdditiveGroupValue_cscale
+                                                                                                                                            fAdditiveGroupValue
+                                                                                                                                          ]
+                                                                                                                                          ww
+                                                                                                                                        ]
+                                                                                                                                      ]
+                                                                                                                                    ]
+                                                                                                                                  ]
+                                                                                                                                )
+                                                                                                                              )
+                                                                                                                            )
+                                                                                                                          )
+                                                                                                                        )
+                                                                                                                      )
+                                                                                                                    ]
+                                                                                                                  )
+                                                                                                                  (termbind
+                                                                                                                    (nonstrict)
+                                                                                                                    (vardecl
+                                                                                                                      j
+                                                                                                                      [
+                                                                                                                        Maybe
+                                                                                                                        Role
+                                                                                                                      ]
+                                                                                                                    )
+                                                                                                                    {
+                                                                                                                      [
+                                                                                                                        [
+                                                                                                                          {
+                                                                                                                            [
+                                                                                                                              Bool_match
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  [
+                                                                                                                                    checkBinRel
+                                                                                                                                    lessThanEqualsInteger
+                                                                                                                                  ]
+                                                                                                                                  ww
+                                                                                                                                ]
+                                                                                                                                minMargin
+                                                                                                                              ]
+                                                                                                                            ]
+                                                                                                                            (all
+                                                                                                                              dead
+                                                                                                                              (type)
+                                                                                                                              [
+                                                                                                                                Maybe
+                                                                                                                                Role
+                                                                                                                              ]
+                                                                                                                            )
+                                                                                                                          }
+                                                                                                                          (abs
+                                                                                                                            dead
+                                                                                                                            (type)
+                                                                                                                            {
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  {
+                                                                                                                                    [
+                                                                                                                                      Bool_match
+                                                                                                                                      [
+                                                                                                                                        [
+                                                                                                                                          [
+                                                                                                                                            checkBinRel
+                                                                                                                                            equalsInteger
+                                                                                                                                          ]
+                                                                                                                                          ww
+                                                                                                                                        ]
+                                                                                                                                        minMargin
+                                                                                                                                      ]
+                                                                                                                                    ]
+                                                                                                                                    (all
+                                                                                                                                      dead
+                                                                                                                                      (type)
+                                                                                                                                      [
+                                                                                                                                        Maybe
+                                                                                                                                        Role
+                                                                                                                                      ]
+                                                                                                                                    )
+                                                                                                                                  }
+                                                                                                                                  (abs
+                                                                                                                                    dead
+                                                                                                                                    (type)
+                                                                                                                                    {
+                                                                                                                                      Nothing
+                                                                                                                                      Role
+                                                                                                                                    }
+                                                                                                                                  )
+                                                                                                                                ]
+                                                                                                                                (abs
+                                                                                                                                  dead
+                                                                                                                                  (type)
+                                                                                                                                  [
+                                                                                                                                    {
+                                                                                                                                      Just
+                                                                                                                                      Role
+                                                                                                                                    }
+                                                                                                                                    Long
+                                                                                                                                  ]
+                                                                                                                                )
+                                                                                                                              ]
+                                                                                                                              (all
+                                                                                                                                dead
+                                                                                                                                (type)
+                                                                                                                                dead
+                                                                                                                              )
+                                                                                                                            }
+                                                                                                                          )
+                                                                                                                        ]
+                                                                                                                        (abs
+                                                                                                                          dead
+                                                                                                                          (type)
+                                                                                                                          {
+                                                                                                                            Nothing
+                                                                                                                            Role
+                                                                                                                          }
+                                                                                                                        )
+                                                                                                                      ]
+                                                                                                                      (all
+                                                                                                                        dead
+                                                                                                                        (type)
+                                                                                                                        dead
+                                                                                                                      )
+                                                                                                                    }
+                                                                                                                  )
+                                                                                                                  {
+                                                                                                                    [
+                                                                                                                      [
+                                                                                                                        {
+                                                                                                                          [
+                                                                                                                            Bool_match
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  checkBinRel
+                                                                                                                                  lessThanEqualsInteger
+                                                                                                                                ]
+                                                                                                                                ww
+                                                                                                                              ]
+                                                                                                                              minMargin
+                                                                                                                            ]
+                                                                                                                          ]
+                                                                                                                          (all
+                                                                                                                            dead
+                                                                                                                            (type)
+                                                                                                                            [
+                                                                                                                              Maybe
+                                                                                                                              Role
+                                                                                                                            ]
+                                                                                                                          )
+                                                                                                                        }
+                                                                                                                        (abs
+                                                                                                                          dead
+                                                                                                                          (type)
+                                                                                                                          {
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                {
+                                                                                                                                  [
+                                                                                                                                    Bool_match
+                                                                                                                                    [
+                                                                                                                                      [
+                                                                                                                                        [
+                                                                                                                                          checkBinRel
+                                                                                                                                          equalsInteger
+                                                                                                                                        ]
+                                                                                                                                        ww
+                                                                                                                                      ]
+                                                                                                                                      minMargin
+                                                                                                                                    ]
+                                                                                                                                  ]
+                                                                                                                                  (all
+                                                                                                                                    dead
+                                                                                                                                    (type)
+                                                                                                                                    [
+                                                                                                                                      Maybe
+                                                                                                                                      Role
+                                                                                                                                    ]
+                                                                                                                                  )
+                                                                                                                                }
+                                                                                                                                (abs
+                                                                                                                                  dead
+                                                                                                                                  (type)
+                                                                                                                                  j
+                                                                                                                                )
+                                                                                                                              ]
+                                                                                                                              (abs
+                                                                                                                                dead
+                                                                                                                                (type)
+                                                                                                                                [
+                                                                                                                                  {
+                                                                                                                                    Just
+                                                                                                                                    Role
+                                                                                                                                  }
+                                                                                                                                  Short
+                                                                                                                                ]
+                                                                                                                              )
+                                                                                                                            ]
+                                                                                                                            (all
+                                                                                                                              dead
+                                                                                                                              (type)
+                                                                                                                              dead
+                                                                                                                            )
+                                                                                                                          }
+                                                                                                                        )
+                                                                                                                      ]
+                                                                                                                      (abs
+                                                                                                                        dead
+                                                                                                                        (type)
+                                                                                                                        j
+                                                                                                                      )
+                                                                                                                    ]
+                                                                                                                    (all
+                                                                                                                      dead
+                                                                                                                      (type)
+                                                                                                                      dead
+                                                                                                                    )
+                                                                                                                  }
                                                                                                                 )
-                                                                                                              )
-                                                                                                              (con
-                                                                                                                bytestring
-                                                                                                              )
-                                                                                                            ]
-                                                                                                            (con
-                                                                                                              integer
-                                                                                                            )
-                                                                                                          ]
-                                                                                                        ]
-                                                                                                        (let
-                                                                                                          (nonrec)
-                                                                                                          (termbind
-                                                                                                            (strict)
-                                                                                                            (vardecl
-                                                                                                              j
-                                                                                                              (fun
-                                                                                                                Role
+                                                                                                              ]
+                                                                                                              (all
+                                                                                                                dead
+                                                                                                                (type)
                                                                                                                 [
                                                                                                                   Maybe
                                                                                                                   [
@@ -10822,91 +11068,50 @@
                                                                                                                   ]
                                                                                                                 ]
                                                                                                               )
-                                                                                                            )
+                                                                                                            }
                                                                                                             (lam
                                                                                                               vRole
                                                                                                               Role
-                                                                                                              {
-                                                                                                                [
+                                                                                                              (abs
+                                                                                                                dead
+                                                                                                                (type)
+                                                                                                                {
                                                                                                                   [
-                                                                                                                    {
-                                                                                                                      [
-                                                                                                                        Bool_match
+                                                                                                                    [
+                                                                                                                      {
                                                                                                                         [
+                                                                                                                          Bool_match
                                                                                                                           [
                                                                                                                             [
-                                                                                                                              {
-                                                                                                                                (builtin
-                                                                                                                                  ifThenElse
-                                                                                                                                )
-                                                                                                                                Bool
-                                                                                                                              }
                                                                                                                               [
-                                                                                                                                [
+                                                                                                                                {
                                                                                                                                   (builtin
-                                                                                                                                    lessThanEqualsInteger
+                                                                                                                                    ifThenElse
                                                                                                                                   )
-                                                                                                                                  ww
-                                                                                                                                ]
-                                                                                                                                ds
-                                                                                                                              ]
-                                                                                                                            ]
-                                                                                                                            False
-                                                                                                                          ]
-                                                                                                                          True
-                                                                                                                        ]
-                                                                                                                      ]
-                                                                                                                      (all
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        [
-                                                                                                                          Maybe
-                                                                                                                          [
-                                                                                                                            [
-                                                                                                                              Tuple2
-                                                                                                                              [
+                                                                                                                                  Bool
+                                                                                                                                }
                                                                                                                                 [
-                                                                                                                                  TxConstraints
-                                                                                                                                  Void
+                                                                                                                                  [
+                                                                                                                                    (builtin
+                                                                                                                                      lessThanEqualsInteger
+                                                                                                                                    )
+                                                                                                                                    ww
+                                                                                                                                  ]
+                                                                                                                                  ds
                                                                                                                                 ]
-                                                                                                                                Void
                                                                                                                               ]
+                                                                                                                              False
                                                                                                                             ]
-                                                                                                                            [
-                                                                                                                              State
-                                                                                                                              FutureState
-                                                                                                                            ]
+                                                                                                                            True
                                                                                                                           ]
                                                                                                                         ]
-                                                                                                                      )
-                                                                                                                    }
-                                                                                                                    (abs
-                                                                                                                      dead
-                                                                                                                      (type)
-                                                                                                                      [
-                                                                                                                        {
-                                                                                                                          Just
+                                                                                                                        (all
+                                                                                                                          dead
+                                                                                                                          (type)
                                                                                                                           [
+                                                                                                                            Maybe
                                                                                                                             [
-                                                                                                                              Tuple2
                                                                                                                               [
-                                                                                                                                [
-                                                                                                                                  TxConstraints
-                                                                                                                                  Void
-                                                                                                                                ]
-                                                                                                                                Void
-                                                                                                                              ]
-                                                                                                                            ]
-                                                                                                                            [
-                                                                                                                              State
-                                                                                                                              FutureState
-                                                                                                                            ]
-                                                                                                                          ]
-                                                                                                                        }
-                                                                                                                        [
-                                                                                                                          [
-                                                                                                                            {
-                                                                                                                              {
                                                                                                                                 Tuple2
                                                                                                                                 [
                                                                                                                                   [
@@ -10915,75 +11120,294 @@
                                                                                                                                   ]
                                                                                                                                   Void
                                                                                                                                 ]
-                                                                                                                              }
+                                                                                                                              ]
                                                                                                                               [
                                                                                                                                 State
                                                                                                                                 FutureState
                                                                                                                               ]
-                                                                                                                            }
+                                                                                                                            ]
+                                                                                                                          ]
+                                                                                                                        )
+                                                                                                                      }
+                                                                                                                      (abs
+                                                                                                                        dead
+                                                                                                                        (type)
+                                                                                                                        [
+                                                                                                                          {
+                                                                                                                            Just
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                Tuple2
+                                                                                                                                [
+                                                                                                                                  [
+                                                                                                                                    TxConstraints
+                                                                                                                                    Void
+                                                                                                                                  ]
+                                                                                                                                  Void
+                                                                                                                                ]
+                                                                                                                              ]
+                                                                                                                              [
+                                                                                                                                State
+                                                                                                                                FutureState
+                                                                                                                              ]
+                                                                                                                            ]
+                                                                                                                          }
+                                                                                                                          [
                                                                                                                             [
                                                                                                                               {
+                                                                                                                                {
+                                                                                                                                  Tuple2
+                                                                                                                                  [
+                                                                                                                                    [
+                                                                                                                                      TxConstraints
+                                                                                                                                      Void
+                                                                                                                                    ]
+                                                                                                                                    Void
+                                                                                                                                  ]
+                                                                                                                                }
                                                                                                                                 [
-                                                                                                                                  {
+                                                                                                                                  State
+                                                                                                                                  FutureState
+                                                                                                                                ]
+                                                                                                                              }
+                                                                                                                              [
+                                                                                                                                {
+                                                                                                                                  [
                                                                                                                                     {
                                                                                                                                       {
                                                                                                                                         {
-                                                                                                                                          UTuple4_match
+                                                                                                                                          {
+                                                                                                                                            UTuple4_match
+                                                                                                                                            [
+                                                                                                                                              List
+                                                                                                                                              TxConstraint
+                                                                                                                                            ]
+                                                                                                                                          }
                                                                                                                                           [
                                                                                                                                             List
-                                                                                                                                            TxConstraint
+                                                                                                                                            TxConstraintFun
                                                                                                                                           ]
                                                                                                                                         }
                                                                                                                                         [
                                                                                                                                           List
-                                                                                                                                          TxConstraintFun
+                                                                                                                                          [
+                                                                                                                                            ScriptInputConstraint
+                                                                                                                                            Void
+                                                                                                                                          ]
                                                                                                                                         ]
                                                                                                                                       }
                                                                                                                                       [
                                                                                                                                         List
                                                                                                                                         [
-                                                                                                                                          ScriptInputConstraint
+                                                                                                                                          ScriptOutputConstraint
                                                                                                                                           Void
                                                                                                                                         ]
                                                                                                                                       ]
                                                                                                                                     }
                                                                                                                                     [
-                                                                                                                                      List
                                                                                                                                       [
-                                                                                                                                        ScriptOutputConstraint
-                                                                                                                                        Void
-                                                                                                                                      ]
-                                                                                                                                    ]
-                                                                                                                                  }
-                                                                                                                                  [
-                                                                                                                                    [
-                                                                                                                                      {
                                                                                                                                         {
-                                                                                                                                          wc
+                                                                                                                                          {
+                                                                                                                                            wc
+                                                                                                                                            Void
+                                                                                                                                          }
                                                                                                                                           Void
                                                                                                                                         }
-                                                                                                                                        Void
-                                                                                                                                      }
-                                                                                                                                      {
-                                                                                                                                        [
+                                                                                                                                        {
                                                                                                                                           [
-                                                                                                                                            {
-                                                                                                                                              [
-                                                                                                                                                Role_match
-                                                                                                                                                vRole
-                                                                                                                                              ]
-                                                                                                                                              (all
+                                                                                                                                            [
+                                                                                                                                              {
+                                                                                                                                                [
+                                                                                                                                                  Role_match
+                                                                                                                                                  vRole
+                                                                                                                                                ]
+                                                                                                                                                (all
+                                                                                                                                                  dead
+                                                                                                                                                  (type)
+                                                                                                                                                  [
+                                                                                                                                                    [
+                                                                                                                                                      TxConstraints
+                                                                                                                                                      Void
+                                                                                                                                                    ]
+                                                                                                                                                    Void
+                                                                                                                                                  ]
+                                                                                                                                                )
+                                                                                                                                              }
+                                                                                                                                              (abs
                                                                                                                                                 dead
                                                                                                                                                 (type)
                                                                                                                                                 [
-                                                                                                                                                  [
-                                                                                                                                                    TxConstraints
-                                                                                                                                                    Void
-                                                                                                                                                  ]
-                                                                                                                                                  Void
+                                                                                                                                                  {
+                                                                                                                                                    [
+                                                                                                                                                      {
+                                                                                                                                                        {
+                                                                                                                                                          {
+                                                                                                                                                            {
+                                                                                                                                                              UTuple4_match
+                                                                                                                                                              [
+                                                                                                                                                                List
+                                                                                                                                                                TxConstraint
+                                                                                                                                                              ]
+                                                                                                                                                            }
+                                                                                                                                                            [
+                                                                                                                                                              List
+                                                                                                                                                              TxConstraintFun
+                                                                                                                                                            ]
+                                                                                                                                                          }
+                                                                                                                                                          [
+                                                                                                                                                            List
+                                                                                                                                                            [
+                                                                                                                                                              ScriptInputConstraint
+                                                                                                                                                              Void
+                                                                                                                                                            ]
+                                                                                                                                                          ]
+                                                                                                                                                        }
+                                                                                                                                                        [
+                                                                                                                                                          List
+                                                                                                                                                          [
+                                                                                                                                                            ScriptOutputConstraint
+                                                                                                                                                            Void
+                                                                                                                                                          ]
+                                                                                                                                                        ]
+                                                                                                                                                      }
+                                                                                                                                                      [
+                                                                                                                                                        [
+                                                                                                                                                          [
+                                                                                                                                                            {
+                                                                                                                                                              {
+                                                                                                                                                                wmustPayToOtherScript
+                                                                                                                                                                Void
+                                                                                                                                                              }
+                                                                                                                                                              Void
+                                                                                                                                                            }
+                                                                                                                                                            [
+                                                                                                                                                              {
+                                                                                                                                                                [
+                                                                                                                                                                  FutureAccounts_match
+                                                                                                                                                                  fos
+                                                                                                                                                                ]
+                                                                                                                                                                (con
+                                                                                                                                                                  bytestring
+                                                                                                                                                                )
+                                                                                                                                                              }
+                                                                                                                                                              (lam
+                                                                                                                                                                ds
+                                                                                                                                                                [
+                                                                                                                                                                  [
+                                                                                                                                                                    Tuple2
+                                                                                                                                                                    (con
+                                                                                                                                                                      bytestring
+                                                                                                                                                                    )
+                                                                                                                                                                  ]
+                                                                                                                                                                  (con
+                                                                                                                                                                    bytestring
+                                                                                                                                                                  )
+                                                                                                                                                                ]
+                                                                                                                                                                (lam
+                                                                                                                                                                  ds
+                                                                                                                                                                  (con
+                                                                                                                                                                    bytestring
+                                                                                                                                                                  )
+                                                                                                                                                                  (lam
+                                                                                                                                                                    ds
+                                                                                                                                                                    [
+                                                                                                                                                                      [
+                                                                                                                                                                        Tuple2
+                                                                                                                                                                        (con
+                                                                                                                                                                          bytestring
+                                                                                                                                                                        )
+                                                                                                                                                                      ]
+                                                                                                                                                                      (con
+                                                                                                                                                                        bytestring
+                                                                                                                                                                      )
+                                                                                                                                                                    ]
+                                                                                                                                                                    (lam
+                                                                                                                                                                      ds
+                                                                                                                                                                      (con
+                                                                                                                                                                        bytestring
+                                                                                                                                                                      )
+                                                                                                                                                                      ds
+                                                                                                                                                                    )
+                                                                                                                                                                  )
+                                                                                                                                                                )
+                                                                                                                                                              )
+                                                                                                                                                            ]
+                                                                                                                                                          ]
+                                                                                                                                                          unitDatum
+                                                                                                                                                        ]
+                                                                                                                                                        [
+                                                                                                                                                          [
+                                                                                                                                                            fAdditiveMonoidValue
+                                                                                                                                                            ww
+                                                                                                                                                          ]
+                                                                                                                                                          ww
+                                                                                                                                                        ]
+                                                                                                                                                      ]
+                                                                                                                                                    ]
+                                                                                                                                                    [
+                                                                                                                                                      [
+                                                                                                                                                        TxConstraints
+                                                                                                                                                        Void
+                                                                                                                                                      ]
+                                                                                                                                                      Void
+                                                                                                                                                    ]
+                                                                                                                                                  }
+                                                                                                                                                  (lam
+                                                                                                                                                    ww
+                                                                                                                                                    [
+                                                                                                                                                      List
+                                                                                                                                                      TxConstraint
+                                                                                                                                                    ]
+                                                                                                                                                    (lam
+                                                                                                                                                      ww
+                                                                                                                                                      [
+                                                                                                                                                        List
+                                                                                                                                                        TxConstraintFun
+                                                                                                                                                      ]
+                                                                                                                                                      (lam
+                                                                                                                                                        ww
+                                                                                                                                                        [
+                                                                                                                                                          List
+                                                                                                                                                          [
+                                                                                                                                                            ScriptInputConstraint
+                                                                                                                                                            Void
+                                                                                                                                                          ]
+                                                                                                                                                        ]
+                                                                                                                                                        (lam
+                                                                                                                                                          ww
+                                                                                                                                                          [
+                                                                                                                                                            List
+                                                                                                                                                            [
+                                                                                                                                                              ScriptOutputConstraint
+                                                                                                                                                              Void
+                                                                                                                                                            ]
+                                                                                                                                                          ]
+                                                                                                                                                          [
+                                                                                                                                                            [
+                                                                                                                                                              [
+                                                                                                                                                                [
+                                                                                                                                                                  {
+                                                                                                                                                                    {
+                                                                                                                                                                      TxConstraints
+                                                                                                                                                                      Void
+                                                                                                                                                                    }
+                                                                                                                                                                    Void
+                                                                                                                                                                  }
+                                                                                                                                                                  ww
+                                                                                                                                                                ]
+                                                                                                                                                                ww
+                                                                                                                                                              ]
+                                                                                                                                                              ww
+                                                                                                                                                            ]
+                                                                                                                                                            ww
+                                                                                                                                                          ]
+                                                                                                                                                        )
+                                                                                                                                                      )
+                                                                                                                                                    )
+                                                                                                                                                  )
                                                                                                                                                 ]
                                                                                                                                               )
-                                                                                                                                            }
+                                                                                                                                            ]
                                                                                                                                             (abs
                                                                                                                                               dead
                                                                                                                                               (type)
@@ -11089,9 +11513,9 @@
                                                                                                                                                       [
                                                                                                                                                         [
                                                                                                                                                           fAdditiveMonoidValue
-                                                                                                                                                          ds
+                                                                                                                                                          ww
                                                                                                                                                         ]
-                                                                                                                                                        ds
+                                                                                                                                                        ww
                                                                                                                                                       ]
                                                                                                                                                     ]
                                                                                                                                                   ]
@@ -11159,432 +11583,128 @@
                                                                                                                                               ]
                                                                                                                                             )
                                                                                                                                           ]
-                                                                                                                                          (abs
+                                                                                                                                          (all
                                                                                                                                             dead
                                                                                                                                             (type)
-                                                                                                                                            [
-                                                                                                                                              {
-                                                                                                                                                [
-                                                                                                                                                  {
-                                                                                                                                                    {
-                                                                                                                                                      {
-                                                                                                                                                        {
-                                                                                                                                                          UTuple4_match
-                                                                                                                                                          [
-                                                                                                                                                            List
-                                                                                                                                                            TxConstraint
-                                                                                                                                                          ]
-                                                                                                                                                        }
-                                                                                                                                                        [
-                                                                                                                                                          List
-                                                                                                                                                          TxConstraintFun
-                                                                                                                                                        ]
-                                                                                                                                                      }
-                                                                                                                                                      [
-                                                                                                                                                        List
-                                                                                                                                                        [
-                                                                                                                                                          ScriptInputConstraint
-                                                                                                                                                          Void
-                                                                                                                                                        ]
-                                                                                                                                                      ]
-                                                                                                                                                    }
-                                                                                                                                                    [
-                                                                                                                                                      List
-                                                                                                                                                      [
-                                                                                                                                                        ScriptOutputConstraint
-                                                                                                                                                        Void
-                                                                                                                                                      ]
-                                                                                                                                                    ]
-                                                                                                                                                  }
-                                                                                                                                                  [
-                                                                                                                                                    [
-                                                                                                                                                      [
-                                                                                                                                                        {
-                                                                                                                                                          {
-                                                                                                                                                            wmustPayToOtherScript
-                                                                                                                                                            Void
-                                                                                                                                                          }
-                                                                                                                                                          Void
-                                                                                                                                                        }
-                                                                                                                                                        [
-                                                                                                                                                          {
-                                                                                                                                                            [
-                                                                                                                                                              FutureAccounts_match
-                                                                                                                                                              fos
-                                                                                                                                                            ]
-                                                                                                                                                            (con
-                                                                                                                                                              bytestring
-                                                                                                                                                            )
-                                                                                                                                                          }
-                                                                                                                                                          (lam
-                                                                                                                                                            ds
-                                                                                                                                                            [
-                                                                                                                                                              [
-                                                                                                                                                                Tuple2
-                                                                                                                                                                (con
-                                                                                                                                                                  bytestring
-                                                                                                                                                                )
-                                                                                                                                                              ]
-                                                                                                                                                              (con
-                                                                                                                                                                bytestring
-                                                                                                                                                              )
-                                                                                                                                                            ]
-                                                                                                                                                            (lam
-                                                                                                                                                              ds
-                                                                                                                                                              (con
-                                                                                                                                                                bytestring
-                                                                                                                                                              )
-                                                                                                                                                              (lam
-                                                                                                                                                                ds
-                                                                                                                                                                [
-                                                                                                                                                                  [
-                                                                                                                                                                    Tuple2
-                                                                                                                                                                    (con
-                                                                                                                                                                      bytestring
-                                                                                                                                                                    )
-                                                                                                                                                                  ]
-                                                                                                                                                                  (con
-                                                                                                                                                                    bytestring
-                                                                                                                                                                  )
-                                                                                                                                                                ]
-                                                                                                                                                                (lam
-                                                                                                                                                                  ds
-                                                                                                                                                                  (con
-                                                                                                                                                                    bytestring
-                                                                                                                                                                  )
-                                                                                                                                                                  ds
-                                                                                                                                                                )
-                                                                                                                                                              )
-                                                                                                                                                            )
-                                                                                                                                                          )
-                                                                                                                                                        ]
-                                                                                                                                                      ]
-                                                                                                                                                      unitDatum
-                                                                                                                                                    ]
-                                                                                                                                                    [
-                                                                                                                                                      [
-                                                                                                                                                        fAdditiveMonoidValue
-                                                                                                                                                        ds
-                                                                                                                                                      ]
-                                                                                                                                                      ds
-                                                                                                                                                    ]
-                                                                                                                                                  ]
-                                                                                                                                                ]
-                                                                                                                                                [
-                                                                                                                                                  [
-                                                                                                                                                    TxConstraints
-                                                                                                                                                    Void
-                                                                                                                                                  ]
-                                                                                                                                                  Void
-                                                                                                                                                ]
-                                                                                                                                              }
-                                                                                                                                              (lam
-                                                                                                                                                ww
-                                                                                                                                                [
-                                                                                                                                                  List
-                                                                                                                                                  TxConstraint
-                                                                                                                                                ]
-                                                                                                                                                (lam
-                                                                                                                                                  ww
-                                                                                                                                                  [
-                                                                                                                                                    List
-                                                                                                                                                    TxConstraintFun
-                                                                                                                                                  ]
-                                                                                                                                                  (lam
-                                                                                                                                                    ww
-                                                                                                                                                    [
-                                                                                                                                                      List
-                                                                                                                                                      [
-                                                                                                                                                        ScriptInputConstraint
-                                                                                                                                                        Void
-                                                                                                                                                      ]
-                                                                                                                                                    ]
-                                                                                                                                                    (lam
-                                                                                                                                                      ww
-                                                                                                                                                      [
-                                                                                                                                                        List
-                                                                                                                                                        [
-                                                                                                                                                          ScriptOutputConstraint
-                                                                                                                                                          Void
-                                                                                                                                                        ]
-                                                                                                                                                      ]
-                                                                                                                                                      [
-                                                                                                                                                        [
-                                                                                                                                                          [
-                                                                                                                                                            [
-                                                                                                                                                              {
-                                                                                                                                                                {
-                                                                                                                                                                  TxConstraints
-                                                                                                                                                                  Void
-                                                                                                                                                                }
-                                                                                                                                                                Void
-                                                                                                                                                              }
-                                                                                                                                                              ww
-                                                                                                                                                            ]
-                                                                                                                                                            ww
-                                                                                                                                                          ]
-                                                                                                                                                          ww
-                                                                                                                                                        ]
-                                                                                                                                                        ww
-                                                                                                                                                      ]
-                                                                                                                                                    )
-                                                                                                                                                  )
-                                                                                                                                                )
-                                                                                                                                              )
-                                                                                                                                            ]
+                                                                                                                                            dead
                                                                                                                                           )
-                                                                                                                                        ]
-                                                                                                                                        (all
-                                                                                                                                          dead
-                                                                                                                                          (type)
-                                                                                                                                          dead
-                                                                                                                                        )
-                                                                                                                                      }
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                      oracleConstraints
                                                                                                                                     ]
-                                                                                                                                    oracleConstraints
                                                                                                                                   ]
-                                                                                                                                ]
-                                                                                                                                [
                                                                                                                                   [
-                                                                                                                                    TxConstraints
+                                                                                                                                    [
+                                                                                                                                      TxConstraints
+                                                                                                                                      Void
+                                                                                                                                    ]
                                                                                                                                     Void
                                                                                                                                   ]
-                                                                                                                                  Void
-                                                                                                                                ]
-                                                                                                                              }
-                                                                                                                              (lam
-                                                                                                                                ww
-                                                                                                                                [
-                                                                                                                                  List
-                                                                                                                                  TxConstraint
-                                                                                                                                ]
+                                                                                                                                }
                                                                                                                                 (lam
                                                                                                                                   ww
                                                                                                                                   [
                                                                                                                                     List
-                                                                                                                                    TxConstraintFun
+                                                                                                                                    TxConstraint
                                                                                                                                   ]
                                                                                                                                   (lam
                                                                                                                                     ww
                                                                                                                                     [
                                                                                                                                       List
-                                                                                                                                      [
-                                                                                                                                        ScriptInputConstraint
-                                                                                                                                        Void
-                                                                                                                                      ]
+                                                                                                                                      TxConstraintFun
                                                                                                                                     ]
                                                                                                                                     (lam
                                                                                                                                       ww
                                                                                                                                       [
                                                                                                                                         List
                                                                                                                                         [
-                                                                                                                                          ScriptOutputConstraint
+                                                                                                                                          ScriptInputConstraint
                                                                                                                                           Void
                                                                                                                                         ]
                                                                                                                                       ]
-                                                                                                                                      [
+                                                                                                                                      (lam
+                                                                                                                                        ww
+                                                                                                                                        [
+                                                                                                                                          List
+                                                                                                                                          [
+                                                                                                                                            ScriptOutputConstraint
+                                                                                                                                            Void
+                                                                                                                                          ]
+                                                                                                                                        ]
                                                                                                                                         [
                                                                                                                                           [
                                                                                                                                             [
-                                                                                                                                              {
+                                                                                                                                              [
                                                                                                                                                 {
-                                                                                                                                                  TxConstraints
+                                                                                                                                                  {
+                                                                                                                                                    TxConstraints
+                                                                                                                                                    Void
+                                                                                                                                                  }
                                                                                                                                                   Void
                                                                                                                                                 }
-                                                                                                                                                Void
-                                                                                                                                              }
+                                                                                                                                                ww
+                                                                                                                                              ]
                                                                                                                                               ww
                                                                                                                                             ]
                                                                                                                                             ww
                                                                                                                                           ]
                                                                                                                                           ww
                                                                                                                                         ]
-                                                                                                                                        ww
-                                                                                                                                      ]
+                                                                                                                                      )
                                                                                                                                     )
                                                                                                                                   )
                                                                                                                                 )
-                                                                                                                              )
+                                                                                                                              ]
                                                                                                                             ]
-                                                                                                                          ]
-                                                                                                                          [
                                                                                                                             [
-                                                                                                                              {
-                                                                                                                                State
-                                                                                                                                FutureState
-                                                                                                                              }
-                                                                                                                              Finished
-                                                                                                                            ]
-                                                                                                                            {
-                                                                                                                              Nil
                                                                                                                               [
-                                                                                                                                [
-                                                                                                                                  Tuple2
-                                                                                                                                  (con
-                                                                                                                                    bytestring
-                                                                                                                                  )
-                                                                                                                                ]
+                                                                                                                                {
+                                                                                                                                  State
+                                                                                                                                  FutureState
+                                                                                                                                }
+                                                                                                                                Finished
+                                                                                                                              ]
+                                                                                                                              {
+                                                                                                                                Nil
                                                                                                                                 [
                                                                                                                                   [
-                                                                                                                                    (lam
-                                                                                                                                      k
-                                                                                                                                      (type)
-                                                                                                                                      (lam
-                                                                                                                                        v
-                                                                                                                                        (type)
-                                                                                                                                        [
-                                                                                                                                          List
-                                                                                                                                          [
-                                                                                                                                            [
-                                                                                                                                              Tuple2
-                                                                                                                                              k
-                                                                                                                                            ]
-                                                                                                                                            v
-                                                                                                                                          ]
-                                                                                                                                        ]
-                                                                                                                                      )
-                                                                                                                                    )
+                                                                                                                                    Tuple2
                                                                                                                                     (con
                                                                                                                                       bytestring
                                                                                                                                     )
                                                                                                                                   ]
-                                                                                                                                  (con
-                                                                                                                                    integer
-                                                                                                                                  )
-                                                                                                                                ]
-                                                                                                                              ]
-                                                                                                                            }
-                                                                                                                          ]
-                                                                                                                        ]
-                                                                                                                      ]
-                                                                                                                    )
-                                                                                                                  ]
-                                                                                                                  (abs
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    {
-                                                                                                                      Nothing
-                                                                                                                      [
-                                                                                                                        [
-                                                                                                                          Tuple2
-                                                                                                                          [
-                                                                                                                            [
-                                                                                                                              TxConstraints
-                                                                                                                              Void
-                                                                                                                            ]
-                                                                                                                            Void
-                                                                                                                          ]
-                                                                                                                        ]
-                                                                                                                        [
-                                                                                                                          State
-                                                                                                                          FutureState
-                                                                                                                        ]
-                                                                                                                      ]
-                                                                                                                    }
-                                                                                                                  )
-                                                                                                                ]
-                                                                                                                (all
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  dead
-                                                                                                                )
-                                                                                                              }
-                                                                                                            )
-                                                                                                          )
-                                                                                                          {
-                                                                                                            [
-                                                                                                              [
-                                                                                                                {
-                                                                                                                  [
-                                                                                                                    Bool_match
-                                                                                                                    [
-                                                                                                                      [
-                                                                                                                        lt
-                                                                                                                        ds
-                                                                                                                      ]
-                                                                                                                      minMargin
-                                                                                                                    ]
-                                                                                                                  ]
-                                                                                                                  (all
-                                                                                                                    dead
-                                                                                                                    (type)
-                                                                                                                    [
-                                                                                                                      Maybe
-                                                                                                                      [
-                                                                                                                        [
-                                                                                                                          Tuple2
-                                                                                                                          [
-                                                                                                                            [
-                                                                                                                              TxConstraints
-                                                                                                                              Void
-                                                                                                                            ]
-                                                                                                                            Void
-                                                                                                                          ]
-                                                                                                                        ]
-                                                                                                                        [
-                                                                                                                          State
-                                                                                                                          FutureState
-                                                                                                                        ]
-                                                                                                                      ]
-                                                                                                                    ]
-                                                                                                                  )
-                                                                                                                }
-                                                                                                                (abs
-                                                                                                                  dead
-                                                                                                                  (type)
-                                                                                                                  [
-                                                                                                                    j
-                                                                                                                    Short
-                                                                                                                  ]
-                                                                                                                )
-                                                                                                              ]
-                                                                                                              (abs
-                                                                                                                dead
-                                                                                                                (type)
-                                                                                                                {
-                                                                                                                  [
-                                                                                                                    [
-                                                                                                                      {
-                                                                                                                        [
-                                                                                                                          Bool_match
-                                                                                                                          [
-                                                                                                                            [
-                                                                                                                              lt
-                                                                                                                              ds
-                                                                                                                            ]
-                                                                                                                            minMargin
-                                                                                                                          ]
-                                                                                                                        ]
-                                                                                                                        (all
-                                                                                                                          dead
-                                                                                                                          (type)
-                                                                                                                          [
-                                                                                                                            Maybe
-                                                                                                                            [
-                                                                                                                              [
-                                                                                                                                Tuple2
-                                                                                                                                [
                                                                                                                                   [
-                                                                                                                                    TxConstraints
-                                                                                                                                    Void
+                                                                                                                                    [
+                                                                                                                                      (lam
+                                                                                                                                        k
+                                                                                                                                        (type)
+                                                                                                                                        (lam
+                                                                                                                                          v
+                                                                                                                                          (type)
+                                                                                                                                          [
+                                                                                                                                            List
+                                                                                                                                            [
+                                                                                                                                              [
+                                                                                                                                                Tuple2
+                                                                                                                                                k
+                                                                                                                                              ]
+                                                                                                                                              v
+                                                                                                                                            ]
+                                                                                                                                          ]
+                                                                                                                                        )
+                                                                                                                                      )
+                                                                                                                                      (con
+                                                                                                                                        bytestring
+                                                                                                                                      )
+                                                                                                                                    ]
+                                                                                                                                    (con
+                                                                                                                                      integer
+                                                                                                                                    )
                                                                                                                                   ]
-                                                                                                                                  Void
                                                                                                                                 ]
-                                                                                                                              ]
-                                                                                                                              [
-                                                                                                                                State
-                                                                                                                                FutureState
-                                                                                                                              ]
+                                                                                                                              }
                                                                                                                             ]
                                                                                                                           ]
-                                                                                                                        )
-                                                                                                                      }
-                                                                                                                      (abs
-                                                                                                                        dead
-                                                                                                                        (type)
-                                                                                                                        [
-                                                                                                                          j
-                                                                                                                          Long
                                                                                                                         ]
                                                                                                                       )
                                                                                                                     ]
@@ -11619,18 +11739,41 @@
                                                                                                                   )
                                                                                                                 }
                                                                                                               )
-                                                                                                            ]
-                                                                                                            (all
-                                                                                                              dead
-                                                                                                              (type)
-                                                                                                              dead
                                                                                                             )
-                                                                                                          }
+                                                                                                          ]
+                                                                                                          (abs
+                                                                                                            dead
+                                                                                                            (type)
+                                                                                                            {
+                                                                                                              Nothing
+                                                                                                              [
+                                                                                                                [
+                                                                                                                  Tuple2
+                                                                                                                  [
+                                                                                                                    [
+                                                                                                                      TxConstraints
+                                                                                                                      Void
+                                                                                                                    ]
+                                                                                                                    Void
+                                                                                                                  ]
+                                                                                                                ]
+                                                                                                                [
+                                                                                                                  State
+                                                                                                                  FutureState
+                                                                                                                ]
+                                                                                                              ]
+                                                                                                            }
+                                                                                                          )
+                                                                                                        ]
+                                                                                                        (all
+                                                                                                          dead
+                                                                                                          (type)
+                                                                                                          dead
                                                                                                         )
-                                                                                                      )
+                                                                                                      }
                                                                                                     )
-                                                                                                  ]
-                                                                                                )
+                                                                                                  )
+                                                                                                ]
                                                                                               )
                                                                                             )
                                                                                           ]

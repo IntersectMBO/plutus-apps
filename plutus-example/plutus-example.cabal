@@ -78,6 +78,7 @@ library
                       , bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-ledger-shelley
                       , cardano-ledger-alonzo
                       , cardano-ledger-core
                       , cardano-slotting
@@ -92,6 +93,7 @@ library
                       , strict-containers
                       , transformers
                       , transformers-except
+                      , text
 
 
 executable plutus-example

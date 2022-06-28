@@ -10,16 +10,16 @@ module Test.PlutusExample.Direct.ScriptContextEqualityMint
 
 import Prelude
 
-import Cardano.Api
+import Cardano.Api qualified as C
 
-import Control.Monad
+import Control.Monad (void)
 import Data.Aeson qualified as J
 import Data.Aeson.Types qualified as Aeson
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as BSC
 import Data.Map.Strict qualified as Map
-import Data.Monoid (Last (..))
-import Data.String
+import Data.Monoid (Last (Last))
+import Data.String (fromString)
 import Data.Text qualified as T
 import Hedgehog (Property, (===))
 import Hedgehog qualified as H
@@ -104,10 +104,10 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
   H.cat $ work </> "utxo-1.json"
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  UTxO utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxo1Json
+  C.UTxO utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(C.UTxO C.AlonzoEra) utxo1Json
   txin <- H.noteShow $ head $ Map.keys utxo1
-  TxOut _ txoutVal _ _ <- H.nothingFailM . H.noteShow $ Map.lookup txin utxo1
-  let Lovelace lovelaceAtTxin = txOutValueToLovelace txoutVal
+  C.TxOut _ txoutVal _ _ <- H.nothingFailM . H.noteShow $ Map.lookup txin utxo1
+  let C.Lovelace lovelaceAtTxin = C.txOutValueToLovelace txoutVal
   lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
 
   void $ H.execCli' execConfig
@@ -126,7 +126,7 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
     , "--cardano-mode"
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address", utxoAddr
-    , "--tx-in", T.unpack $ renderTxIn txin
+    , "--tx-in", T.unpack $ C.renderTxIn txin
     , "--tx-out", utxoAddr <> "+" <> show @Integer lovelaceAtTxinDiv3
     , "--protocol-params-file", work </> "pparams.json"
     , "--out-file", work </> "create-collateral-output.body"
@@ -163,7 +163,7 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
   H.cat $ work </> "utxo-2.json"
 
   utxo2Json :: Aeson.Value <- H.leftFailM $ H.readJsonFile $ work </> "utxo-2.json"
-  UTxO utxo2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxo2Json
+  C.UTxO utxo2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(C.UTxO C.AlonzoEra) utxo2Json
   txinFunding <- H.noteShow . head $ Map.keys utxo2
   txinCollateral <- H.noteShow $ Map.keys utxo2 !! 1
 
@@ -181,8 +181,8 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
     , "--invalid-before", "1"
     , "--invalid-hereafter", "3000"
     , "--required-signer", requiredSignerSKey
-    , "--tx-in", T.unpack $ renderTxIn txinFunding
-    , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
+    , "--tx-in", T.unpack $ C.renderTxIn txinFunding
+    , "--tx-in-collateral", T.unpack $ C.renderTxIn txinCollateral
     , "--mint-script-file", plutusContextEqualityMintScript
     , "--mint-redeemer-file", scriptDummyRedeemer
     , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000 <> "+ 5 " <> (policyId <> "." <> millarCoin)
@@ -221,8 +221,8 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
     , "--invalid-before", "1"
     , "--invalid-hereafter", "3000"
     , "--required-signer", requiredSignerSKey
-    , "--tx-in", T.unpack $ renderTxIn txinFunding
-    , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
+    , "--tx-in", T.unpack $ C.renderTxIn txinFunding
+    , "--tx-in-collateral", T.unpack $ C.renderTxIn txinCollateral
     , "--mint-script-file", plutusContextEqualityMintScript
     , "--mint-redeemer-file", scriptContextRedeemer
     , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000 <> "+ 5 " <> (policyId <> "." <> millarCoin)
@@ -261,10 +261,10 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
   H.cat $ work </> "dummyaddress.json"
 
   dummyUtxoJson <- H.leftFailM . H.readJsonFile $ work </> "dummyaddress.json"
-  UTxO dummyUtxo <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) dummyUtxoJson
+  C.UTxO dummyUtxo <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(C.UTxO C.AlonzoEra) dummyUtxoJson
 
-  let allValues = mconcat . map (\(TxOut _ val _ _) -> txOutValueToValue val) $ Map.elems dummyUtxo
-      millarAssetId = AssetId (fromString policyId) $ fromString "MillarCoin"
+  let allValues = mconcat . map (\(C.TxOut _ val _ _) -> C.txOutValueToValue val) $ Map.elems dummyUtxo
+      millarAssetId = C.AssetId (fromString policyId) $ fromString "MillarCoin"
 
   -- There should be a multi asset value at the dummy address
-  1 === length (valueToList $ filterValue (== millarAssetId) allValues)
+  1 === length (C.valueToList $ C.filterValue (== millarAssetId) allValues)

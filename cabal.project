@@ -106,7 +106,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: d24a7540e4659b57ce2ab25dadb968991e232191
+  tag: f680ac6979e069fcc013e4389ee607ff5fa6672f
   subdir:
     plutus-core
     plutus-ledger-api
@@ -146,10 +146,12 @@ source-repository-package
 -- As, for example, bumping the node first highly risks breaking API with the wallet.
 -- Unless early bug fixes are required, this is fine as the wallet tracks stable releases of the node.
 -- And it is indeed nice for plutus-apps to track stable releases of the node too.
+--
+-- The current version is dated 2022/06/28.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-wallet
-  tag: 0cdd1b72a16b2f287b5f1bf137b5eba15bc7f300
+  tag: a73d8c9717dc4e174745f8568d6f3fe84f0f9d76
   subdir:
     lib/cli
     lib/core
@@ -165,11 +167,12 @@ source-repository-package
 -- Should follow cardano-wallet.
 -- More precisally, this should be a version compatible with the current
 -- Cardano mainnet (>=1.35).
--- Current version is dated to 2022/05/24.
+-- Current version is dated to 2022/06/25.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node
-  tag: 95c3692cfbd4cdb82071495d771b23e51840fb0e
+  tag: 1.35.0
+  --sha256: 06arx9hv7dn3qxfy83f0b6018rxbsvh841nvfyg5w6qclm1hddj7
   subdir:
     cardano-api
     cardano-cli
@@ -201,7 +204,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: e290bf8d0ea272a51e9acd10adc96b4e12e00d37
+  tag: ce3057e0863304ccb3f79d78c77136219dc786c6
+  --sha256: 19ijcy1sl1iqa7diy5nsydnjsn3281kp75i2i42qv0fpn58238s9
   subdir:
     eras/alonzo/impl
     eras/babbage/impl
@@ -228,7 +232,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 04245dbd69387da98d3a37de9f400965e922bb0e
+  tag: a65c29b6a85e90d430c7f58d362b7eb097fd4949
+  --sha256: 1fmab5hmi1y8lss97xh6hhikmyhsx9x31yhvg6zpr2kcq7kc6qkf
   subdir:
     monoidal-synchronisation
     network-mux
@@ -266,7 +271,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 631cb6cf1fa01ab346233b610a38b3b4cba6e6ab
+  tag: 0f3a867493059e650cda69e20a5cbf1ace289a57
   subdir:
     base-deriving-via
     binary
@@ -298,7 +303,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-addresses
-  tag: b9f424cc64459a95a2f190a1839ec9bc94cc778c
+  tag: b6f2f3cef01a399376064194fd96711a5bdba4a7
   subdir:
     command-line
     core
