@@ -11,7 +11,6 @@ import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Newtype (class Newtype)
 import Type.Proxy (Proxy(..))
-import Data.Set (Set)
 import Ledger.Address (PaymentPubKeyHash(..))
 import Plutus.V1.Ledger.Address (Address(..))
 import Plutus.V1.Ledger.Credential (Credential(..))
@@ -20,7 +19,9 @@ import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Slot (Slot)
 import Plutus.V1.Ledger.Tx (TxIn, TxOut(..), TxOutRef(..))
 import Plutus.V1.Ledger.TxId (TxId)
-import Ledger.Tx (Tx)
+import Ledger.Tx.Types.Tx (Tx)
+import Ledger.Tx.Types.TxInput (TxInput)
+import Plutus.V1.Ledger.Tx (TxIn, TxOut(..), TxOutRef(..), TxId)
 import Plutus.V1.Ledger.Value (Value)
 import Wallet.Rollup.Types (AnnotatedTx(..), BeneficialOwner(..), DereferencedInput, SequenceId, TxKey, _TxKey)
 
@@ -104,7 +105,7 @@ _txValidRange = _Newtype <<< prop (Proxy :: _ "txValidRange")
 _txSignatures :: Lens' Tx (Map PubKey Signature)
 _txSignatures = _Newtype <<< prop (Proxy :: _ "txSignatures")
 
-_txInputs :: Lens' Tx (Set TxIn)
+_txInputs :: Lens' Tx (Array TxInput)
 _txInputs = _Newtype <<< prop (Proxy :: _ "txInputs")
 
 _txOutputs :: Lens' Tx (Array TxOut)
@@ -112,6 +113,9 @@ _txOutputs = _Newtype <<< prop (Proxy :: _ "txOutputs")
 
 _txInRef :: Lens' TxIn TxOutRef
 _txInRef = _Newtype <<< prop (Proxy :: _ "txInRef")
+
+_txInputRef :: Lens' TxInput TxOutRef
+_txInputRef = _Newtype <<< prop (Proxy :: _ "txInputRef")
 
 _txOutRefId :: Lens' TxOutRef TxId
 _txOutRefId = _Newtype <<< prop (Proxy :: _ "txOutRefId")
@@ -142,7 +146,7 @@ findConsumptionPoint :: BigInt -> TxId -> AnnotatedBlockchain -> Maybe Annotated
 findConsumptionPoint outputIndex txId = preview (_AnnotatedBlocks <<< filtered isMatchingTx)
   where
   isMatchingTx :: AnnotatedTx -> Boolean
-  isMatchingTx tx = anyOf (_tx <<< _txInputs <<< folded <<< _txInRef) ((==) txOutRef) tx
+  isMatchingTx tx = anyOf (_tx <<< _txInputs <<< folded <<< _txInputRef) ((==) txOutRef) tx
 
   txOutRef :: TxOutRef
   txOutRef =

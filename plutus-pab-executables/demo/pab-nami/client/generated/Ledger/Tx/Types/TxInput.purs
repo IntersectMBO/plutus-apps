@@ -14,14 +14,54 @@ import Data.Lens (Iso', Lens', Prism', iso, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
+import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Plutus.V1.Ledger.Scripts (DatumHash)
+import Plutus.V1.Ledger.Tx (TxOutRef)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
+
+newtype TxInput = TxInput
+  { txInputRef :: TxOutRef
+  , txInputType :: TxInputType
+  }
+
+derive instance Eq TxInput
+
+derive instance Ord TxInput
+
+instance Show TxInput where
+  show a = genericShow a
+
+instance EncodeJson TxInput where
+  encodeJson = defer \_ -> E.encode $ unwrap >$<
+    ( E.record
+        { txInputRef: E.value :: _ TxOutRef
+        , txInputType: E.value :: _ TxInputType
+        }
+    )
+
+instance DecodeJson TxInput where
+  decodeJson = defer \_ -> D.decode $
+    ( TxInput <$> D.record "TxInput"
+        { txInputRef: D.value :: _ TxOutRef
+        , txInputType: D.value :: _ TxInputType
+        }
+    )
+
+derive instance Generic TxInput _
+
+derive instance Newtype TxInput _
+
+--------------------------------------------------------------------------------
+
+_TxInput :: Iso' TxInput { txInputRef :: TxOutRef, txInputType :: TxInputType }
+_TxInput = _Newtype
+
+--------------------------------------------------------------------------------
 
 data TxInputType
   = TxConsumeScriptAddress String String DatumHash
