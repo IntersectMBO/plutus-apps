@@ -1,6 +1,21 @@
 ADR 4: Making a case for Marconi
 ================================
 
+Date: 2022-07-26
+
+Author(s)
+---------
+
+Radu Ometita <radu.ometita@iohk.io>
+
+Status
+------
+
+Proposed
+
+Context
+-------
+
 Plutus off-chain code oftentimes needs access to indexed portions of the blockchain. The plutus-chain-index project is the initial solution meant to deliver access to this kind of data. However, after release, a couple of shortcomings were identified which prompted the development of an indexing solution that is based on a different set of architectural and functional constraints.
 
 A lot of the shortcomings are connected to the exploratory type of development that we used to deliver the plutus-chain-index which was prompted by the lack of a clear specification and a lack of concern for non-functional and quality assurance requirements. The top-down design resulted in a monolithic and fairly complex architecture which made the code difficult to reuse, compose and understand.
@@ -53,15 +68,15 @@ We opted for a design where we keep K blocks in memory as the list of events tha
 This architectural decision has some desirable effects:
 
   1. Managing rollbacks is very simple and fast. We drop the events that were rolled back. (No need to undo the application of blocks on the state stored on disk, which would be necessary if we were to store everything on disk as fast as possible).
-  
+
   2. Making 'K' configurable makes the design already quite scalable. Developers do not usually need to guard themselves against rollbacks by K blocks so they can choose to store 10 events in memory allowing for chain desynchronisation in the unlikely event that a rollback occurs beyond the 10 blocks limit.
-  
+
   3. In case of a restart recovery is very simple. If the selected K parameter is properly set, we store only fully confirmed transactions so there is nothing to do other than resume operation.
 
 And some less desirable effects:
 
   1. We must keep K events in memory, which (depending on how large events are) can waste some memory. Our educated guess is that this is a reasonable compromise, but depending on how large events can get that may not be the case for your use case.
-  
+
   2. Queries are more involved as we need to scan events in memory and the state persisted on disk.
 
 Query and storage
