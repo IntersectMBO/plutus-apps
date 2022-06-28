@@ -18,9 +18,9 @@ import Language.PureScript.Bridge (BridgePart, Language (Haskell), PSType, SumTy
 import Language.PureScript.Bridge.Builder (BridgeData)
 import Language.PureScript.Bridge.PSTypes (psInt, psNumber, psString)
 import Language.PureScript.Bridge.TypeParameters (A)
-import Ledger (Address, BlockId, CardanoTx, ChainIndexTxOut, OnChainTx, PaymentPubKey, PaymentPubKeyHash, PubKey,
-               PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash, Tx, TxId, TxIn, TxInType,
-               TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase)
+import Ledger (Address, BlockId, CardanoTx, Certificate, ChainIndexTxOut, OnChainTx, PaymentPubKey, PaymentPubKeyHash,
+               PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash, Tx, TxId, TxIn,
+               TxInType, TxInputType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Withdrawal)
 import Ledger.Ada (Ada)
 import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
@@ -310,6 +310,7 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @Ada
     , equal . genericShow . argonaut $ mkSumType @SlotConfig
     , equal . genericShow . argonaut $ mkSumType @SlotConversionError
+    , equal . genericShow . argonaut $ mkSumType @Certificate
     , equal . genericShow . argonaut $ mkSumType @Tx
     , equal . genericShow . argonaut $ mkSumType @CardanoTx
     , order . genericShow . argonaut $ mkSumType @TxId
@@ -320,6 +321,7 @@ ledgerTypes =
     , equal . genericShow . argonaut $ mkSumType @OnChainTx
     , equal . genericShow . argonaut $ mkSumType @UtxoIndex
     , equal . genericShow . argonaut $ mkSumType @Value
+    , equal . genericShow . argonaut $ mkSumType @Withdrawal
     , functor . equal . genericShow . argonaut $ mkSumType @(Extended A)
     , functor . equal . genericShow . argonaut $ mkSumType @(Interval A)
     , functor . equal . genericShow . argonaut $ mkSumType @(LowerBound A)
@@ -333,6 +335,7 @@ ledgerTypes =
     , genericShow . order . argonaut $ mkSumType @Signature
     , genericShow . order . argonaut $ mkSumType @TokenName
     , genericShow . order . argonaut $ mkSumType @TxInType
+    , order . equal . genericShow . argonaut $ mkSumType @TxInputType
     , genericShow . order . argonaut $ mkSumType @Validator
     , equal . genericShow . argonaut $ mkSumType @ScriptError
     , equal . genericShow . argonaut $ mkSumType @ValidationError
