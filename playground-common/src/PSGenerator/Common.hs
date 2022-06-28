@@ -20,7 +20,7 @@ import Language.PureScript.Bridge.PSTypes (psInt, psNumber, psString)
 import Language.PureScript.Bridge.TypeParameters (A)
 import Ledger (Address, BlockId, CardanoTx, Certificate, ChainIndexTxOut, OnChainTx, PaymentPubKey, PaymentPubKeyHash,
                PubKey, PubKeyHash, RedeemerPtr, ScriptTag, Signature, StakePubKey, StakePubKeyHash, Tx, TxId, TxIn,
-               TxInType, TxInputType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Withdrawal)
+               TxInType, TxInput, TxInputType, TxOut, TxOutRef, TxOutTx, UtxoIndex, ValidationPhase, Withdrawal)
 import Ledger.Ada (Ada)
 import Ledger.Constraints.OffChain (MkTxError, UnbalancedTx)
 import Ledger.Credential (Credential, StakingCredential)
@@ -336,6 +336,7 @@ ledgerTypes =
     , genericShow . order . argonaut $ mkSumType @TokenName
     , genericShow . order . argonaut $ mkSumType @TxInType
     , order . equal . genericShow . argonaut $ mkSumType @TxInputType
+    , order . equal . genericShow . argonaut $ mkSumType @TxInput
     , genericShow . order . argonaut $ mkSumType @Validator
     , equal . genericShow . argonaut $ mkSumType @ScriptError
     , equal . genericShow . argonaut $ mkSumType @ValidationError
