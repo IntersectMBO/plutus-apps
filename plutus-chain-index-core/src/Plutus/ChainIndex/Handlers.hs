@@ -37,10 +37,10 @@ import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Word (Word64)
 import Database.Beam (Columnar, Identity, SqlSelect, TableEntity, aggregate_, all_, countAll_, delete, filter_, in_,
-                      limit_, not_, nub_, select, val_)
+                      limit_, nub_, select, val_)
 import Database.Beam.Backend.SQL (BeamSqlBackendCanSerialize)
-import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_, update, (&&.), (<-.), (<.), (==.),
-                            (>.))
+import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, guard_, isJust_, isNothing_, leftJoin_, orderBy_,
+                            update, (&&.), (<-.), (<.), (==.), (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
 import Ledger (Address (..), ChainIndexTxOut (..), TxId, TxOut (..), TxOutRef (..))
@@ -224,14 +224,15 @@ getUtxoSetAtAddress pageQuery (toDbValue -> cred) = do
           logWarn TipIsGenesis
           pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
       tp           -> do
-          let query =
-                fmap _addressRowOutRef
-                  $ filter_ (\row ->
-                      (_addressRowCred row ==. val_ cred)
-                      &&. exists_ (filter_ (\utxo -> _addressRowOutRef row ==. _unspentOutputRowOutRef utxo) (all_ (unspentOutputRows db)))
-                      &&. not_ (exists_ (filter_ (\utxi -> _addressRowOutRef row ==. _unmatchedInputRowOutRef utxi) (all_ (unmatchedInputRows db))))
-                      )
-                  $ all_ (addressRows db)
+          let query = do
+                rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
+                rowCred <- leftJoin_
+                           (fmap _addressRowOutRef (filter_ (\row -> _addressRowCred row ==. val_ cred) (all_ (addressRows db))))
+                           (\row -> row ==. rowRef)
+                utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
+                guard_ (isNothing_ utxi)
+                guard_ (isJust_ rowCred)
+                pure rowRef
 
           outRefs <- selectPage (fmap toDbValue pageQuery) query
           let page = fmap fromDbValue outRefs
@@ -255,13 +256,15 @@ getUtxoSetWithCurrency pageQuery (toDbValue -> assetClass) = do
           logWarn TipIsGenesis
           pure (UtxosResponse TipAtGenesis (Page pageQuery Nothing []))
       tp           -> do
-          let query =
-                fmap _assetClassRowOutRef
-                  $ filter_ (\row -> (_assetClassRowAssetClass row ==. val_ assetClass)
-                      &&. exists_ (filter_ (\utxo -> _assetClassRowOutRef row ==. _unspentOutputRowOutRef utxo) (all_ (unspentOutputRows db)))
-                      &&. not_ (exists_ (filter_ (\utxi -> _assetClassRowOutRef row ==. _unmatchedInputRowOutRef utxi) (all_ (unmatchedInputRows db))))
-                      )
-                  $ all_ (assetClassRows db)
+          let query = do
+                rowRef <- fmap _unspentOutputRowOutRef (all_ (unspentOutputRows db))
+                rowClass <- leftJoin_
+                            (fmap _assetClassRowOutRef (filter_ (\row -> _assetClassRowAssetClass row ==. val_ assetClass) (all_ (assetClassRows db))))
+                            (\row -> row ==. rowRef)
+                utxi <- leftJoin_ (fmap _unmatchedInputRowOutRef $ all_ (unmatchedInputRows db)) (\utxi -> rowRef ==. utxi)
+                guard_ (isNothing_ utxi)
+                guard_ (isJust_ rowClass)
+                pure rowRef
 
           outRefs <- selectPage (fmap toDbValue pageQuery) query
           let page = fmap fromDbValue outRefs
