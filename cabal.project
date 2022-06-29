@@ -201,8 +201,8 @@ source-repository-package
 -- Should follow cardano-wallet.
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-ledger
-  tag: e290bf8d0ea272a51e9acd10adc96b4e12e00d37
+  location: https://github.com/zliu41/cardano-ledger
+  tag: 1fd09b26efbf1a61a041ba72d8421190c1f67269
   subdir:
     eras/alonzo/impl
     eras/babbage/impl
