@@ -124,7 +124,15 @@ executable marconi
   -- Local components
   --------------------
   build-depends:
-    , plutus-hysterical-screams
+    , base                     >=4.9 && <5
+    , bytestring
+    , cardano-api
+    , containers
+    , hysterical-screams
+    , iohk-monitoring
+    , lens
+    , optparse-applicative
+    , plutus-chain-index-core
     , plutus-ledger
     , plutus-streaming
 
