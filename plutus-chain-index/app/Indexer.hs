@@ -79,7 +79,7 @@ closeToGoguen =
     (fromJust $ parseHash "3e6f6450f85962d651654ee66091980b2332166f5505fd10b97b0520c9efac90")
 
 parseHash :: String -> Maybe (Hash BlockHeader)
-parseHash hash =
+parseHash hash = either (error "Failed to parse Hash BlockHeader") Just $
   deserialiseFromRawBytesHex (proxyToAsType Proxy) (encodeUtf8 $ pack hash)
 
 getDatums :: BlockInMode CardanoMode -> [(SlotNo, (DatumHash, Datum))]

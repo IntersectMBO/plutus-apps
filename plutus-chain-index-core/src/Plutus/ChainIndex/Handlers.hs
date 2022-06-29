@@ -5,10 +5,12 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE ViewPatterns          #-}
+
 {-| Handlers for the 'ChainIndexQueryEffect' and the 'ChainIndexControlEffect' -}
 module Plutus.ChainIndex.Handlers
     ( handleQuery
@@ -43,7 +45,8 @@ import Database.Beam.Query (HasSqlEqualityCheck, asc_, desc_, exists_, orderBy_,
                             (>.))
 import Database.Beam.Schema.Tables (zipTables)
 import Database.Beam.Sqlite (Sqlite)
-import Ledger (Address (..), ChainIndexTxOut (..), Datum, DatumHash (..), TxId, TxOut (..), TxOutRef (..))
+import Ledger (Datum, DatumHash (..), TxId, TxOutRef (..))
+import Ledger qualified as L
 import Ledger.Ada qualified as Ada
 import Ledger.Value (AssetClass (AssetClass), flattenValue)
 import Plutus.ChainIndex.Api (IsUtxoResponse (IsUtxoResponse), TxosResponse (TxosResponse),
@@ -54,6 +57,7 @@ import Plutus.ChainIndex.Compatibility (toCardanoPoint)
 import Plutus.ChainIndex.DbSchema
 import Plutus.ChainIndex.Effects (ChainIndexControlEffect (..), ChainIndexQueryEffect (..))
 import Plutus.ChainIndex.Tx
+import Plutus.ChainIndex.Tx qualified as Chain
 import Plutus.ChainIndex.TxUtxoBalance qualified as TxUtxoBalance
 import Plutus.ChainIndex.Types (ChainSyncBlock (..), Depth (..), Diagnostics (..), Point (..), Tip (..),
                                 TxProcessOption (..), TxUtxoBalance (..), tipAsPoint)
@@ -158,28 +162,13 @@ getTxOutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe ChainIndexTxOut)
+  -> Eff effs (Maybe L.ChainIndexTxOut)
 getTxOutFromRef ref@TxOutRef{txOutRefId, txOutRefIdx} = do
   mTx <- getTxFromTxId txOutRefId
   -- Find the output in the tx matching the output ref
   case mTx ^? _Just . citxOutputs . _ValidTx . ix (fromIntegral txOutRefIdx) of
-    Nothing -> logWarn (TxOutNotFound ref) >> pure Nothing
-    Just txout -> do
-      -- The output might come from a public key address or a script address.
-      -- We need to handle them differently.
-      case addressCredential $ txOutAddress txout of
-        PubKeyCredential _ ->
-          pure $ Just $ PublicKeyChainIndexTxOut (txOutAddress txout) (txOutValue txout)
-        ScriptCredential vh -> do
-          case txOutDatumHash txout of
-            Nothing -> do
-              -- If the txout comes from a script address, the Datum should not be Nothing
-              logWarn $ NoDatumScriptAddr txout
-              pure Nothing
-            Just dh -> do
-                v <- maybe (Left vh) Right <$> getScriptFromHash vh
-                d <- maybe (Left dh) Right <$> getDatumFromHash dh
-                pure $ Just $ ScriptChainIndexTxOut (txOutAddress txout) v d (txOutValue txout)
+    Nothing    -> logWarn (TxOutNotFound ref) >> pure Nothing
+    Just txout -> makeChainIndexTxOut txout
 
 -- | Get the 'ChainIndexTxOut' for a 'TxOutRef'.
 getUtxoutFromRef ::
@@ -188,24 +177,36 @@ getUtxoutFromRef ::
   , Member (LogMsg ChainIndexLog) effs
   )
   => TxOutRef
-  -> Eff effs (Maybe ChainIndexTxOut)
+  -> Eff effs (Maybe L.ChainIndexTxOut)
 getUtxoutFromRef txOutRef = do
     mTxOut <- queryOne $ queryKeyValue utxoOutRefRows _utxoRowOutRef _utxoRowTxOut txOutRef
     case mTxOut of
-      Nothing -> logWarn (TxOutNotFound txOutRef) >> pure Nothing
-      Just txout@TxOut { txOutAddress, txOutValue, txOutDatumHash } ->
-        case addressCredential txOutAddress of
-          PubKeyCredential _ -> pure $ Just $ PublicKeyChainIndexTxOut txOutAddress txOutValue
-          ScriptCredential vh ->
-            case txOutDatumHash of
-              Nothing -> do
-                -- If the txout comes from a script address, the Datum should not be Nothing
-                logWarn $ NoDatumScriptAddr txout
-                pure Nothing
-              Just dh -> do
-                v <- maybe (Left vh) Right <$> getScriptFromHash vh
-                d <- maybe (Left dh) Right <$> getDatumFromHash dh
-                pure $ Just $ ScriptChainIndexTxOut txOutAddress v d txOutValue
+      Nothing    -> logWarn (TxOutNotFound txOutRef) >> pure Nothing
+      Just txout -> makeChainIndexTxOut txout
+
+makeChainIndexTxOut ::
+  forall effs.
+  ( Member BeamEffect effs
+  , Member (LogMsg ChainIndexLog) effs
+  )
+  => Chain.ChainIndexTxOut
+  -> Eff effs (Maybe L.ChainIndexTxOut)
+makeChainIndexTxOut txout@(ChainIndexTxOut{..}) =
+  case addressCredential citoAddress of
+    PubKeyCredential _ -> pure $ Just $ L.PublicKeyChainIndexTxOut citoAddress citoValue
+    ScriptCredential vh ->
+      case citoDatum of
+        OutputDatumHash dh -> do
+          v <- maybe (Left vh) Right <$> getScriptFromHash vh
+          d <- maybe (Left dh) Right <$> getDatumFromHash dh
+          pure $ Just $ L.ScriptChainIndexTxOut citoAddress v d citoValue
+        OutputDatum d -> do
+          v <- maybe (Left vh) Right <$> getScriptFromHash vh
+          pure $ Just $ L.ScriptChainIndexTxOut citoAddress v (Right d) citoValue
+        _ -> do
+          -- If the txout comes from a script address, the Datum should not be Nothing
+          logWarn $ NoDatumScriptAddr txout
+          pure Nothing
 
 getUtxoSetAtAddress
   :: forall effs.
@@ -424,7 +425,7 @@ insertUtxoDb txs utxoStates =
         { tipRows = InsertRows tr
         , unspentOutputRows = InsertRows ur
         , unmatchedInputRows = InsertRows umr
-        , utxoOutRefRows = InsertRows $ (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) <$> txOuts
+        , utxoOutRefRows = InsertRows $ map (\(txOut, txOutRef) -> UtxoRow (toDbValue txOutRef) (toDbValue txOut)) txOuts
         }
 
 reduceOldUtxoDb :: Tip -> BeamEffect ()
@@ -517,15 +518,15 @@ fromTx tx = mempty
     , assetClassRows = fromPairs (concatMap assetClasses . txOutsWithRef)
     }
     where
-        credential :: (TxOut, TxOutRef) -> (Credential, TxOutRef)
-        credential (TxOut{txOutAddress=Address{addressCredential}}, ref) =
+        credential :: (Chain.ChainIndexTxOut, TxOutRef) -> (Credential, TxOutRef)
+        credential (ChainIndexTxOut{citoAddress=Address{addressCredential}}, ref) =
           (addressCredential, ref)
-        assetClasses :: (TxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
-        assetClasses (TxOut{txOutValue}, ref) =
+        assetClasses :: (Chain.ChainIndexTxOut, TxOutRef) -> [(AssetClass, TxOutRef)]
+        assetClasses (ChainIndexTxOut{citoValue}, ref) =
           fmap (\(c, t, _) -> (AssetClass (c, t), ref))
                -- We don't store the 'AssetClass' when it is the Ada currency.
                $ filter (\(c, t, _) -> not $ Ada.adaSymbol == c && Ada.adaToken == t)
-               $ flattenValue txOutValue
+               $ flattenValue citoValue
         fromMap
             :: (BeamableSqlite t, HasDbType (k, v), DbType (k, v) ~ t Identity)
             => Lens' ChainIndexTx (Map.Map k v)
@@ -545,6 +546,7 @@ diagnostics ::
 diagnostics = do
     numTransactions <- selectOne . select $ aggregate_ (const countAll_) (all_ (txRows db))
     txIds <- queryList . select $ _txRowTxId <$> limit_ 10 (all_ (txRows db))
+    unspentTxOuts <- queryList . select $ _utxoRowTxOut <$> limit_ 10 (all_ (utxoOutRefRows db))
     numScripts <- selectOne . select $ aggregate_ (const countAll_) (all_ (scriptRows db))
     numAddresses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _addressRowCred <$> all_ (addressRows db)
     numAssetClasses <- selectOne . select $ aggregate_ (const countAll_) $ nub_ $ _assetClassRowAssetClass <$> all_ (assetClassRows db)
@@ -558,4 +560,5 @@ diagnostics = do
         , numUnspentOutputs  = length outputs
         , numUnmatchedInputs = length inputs
         , someTransactions   = txIds
+        , unspentTxOuts = unspentTxOuts
         }

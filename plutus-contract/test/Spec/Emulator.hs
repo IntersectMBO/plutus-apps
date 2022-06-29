@@ -49,7 +49,7 @@ import PlutusTx.Numeric qualified as P
 import PlutusTx.Prelude qualified as PlutusTx
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 import Wallet (WalletAPIError, payToPaymentPublicKeyHash_, submitTxn)
 import Wallet.API qualified as W
 import Wallet.Emulator.Chain qualified as Chain
@@ -59,19 +59,19 @@ import Wallet.Graph qualified
 tests :: TestTree
 tests = testGroup "all tests" [
     testGroup "UTXO model" [
-        testProperty "compute UTxO of trivial blockchain" utxo,
-        testProperty "validate transaction" txnValid,
-        testProperty "validate transaction when it can be validated" txnValidFrom,
-        testProperty "update UTXO set after each transaction" txnUpdateUtxo
+        testPropertyNamed "compute UTxO of trivial blockchain" "utxo" utxo,
+        testPropertyNamed "validate transaction" "txnValid" txnValid,
+        testPropertyNamed "validate transaction when it can be validated" "txnValidFrom" txnValidFrom,
+        testPropertyNamed "update UTXO set after each transaction" "txnUpdateUtxo" txnUpdateUtxo
         ],
     testGroup "traces" [
-        testProperty "accept valid txn" validTrace,
-        testProperty "accept valid txn 2" validTrace2,
-        testProperty "reject invalid txn" invalidTrace,
-        testProperty "notify wallet" notifyWallet,
-        testProperty "log script validation failures" invalidScript,
-        testProperty "payToPaymentPubkey" payToPaymentPubKeyScript,
-        testProperty "payToPaymentPubkey-2" payToPaymentPubKeyScript2
+        testPropertyNamed "accept valid txn" "validTrace" validTrace,
+        testPropertyNamed "accept valid txn 2" "validTrace2" validTrace2,
+        testPropertyNamed "reject invalid txn" "invalidTrace" invalidTrace,
+        testPropertyNamed "notify wallet" "notifyWallet" notifyWallet,
+        testPropertyNamed "log script validation failures" "invalidScript" invalidScript,
+        testPropertyNamed "payToPaymentPubkey" "payToPaymentPubKeyScript" payToPaymentPubKeyScript,
+        testPropertyNamed "payToPaymentPubkey-2" "payToPaymentPubKeyScript2" payToPaymentPubKeyScript2
         ],
     testGroup "trace output" [
         goldenVsString
@@ -88,8 +88,8 @@ tests = testGroup "all tests" [
           (pure $ captureTrace pubKeyTransactions2)
     ],
     testGroup "Etc." [
-        testProperty "selectCoin" selectCoinProp,
-        testProperty "txnFlows" txnFlowsTest
+        testPropertyNamed "selectCoin" "selectCoinProp" selectCoinProp,
+        testPropertyNamed "txnFlows" "txnFlowsTest" txnFlowsTest
         ]
     ]
 

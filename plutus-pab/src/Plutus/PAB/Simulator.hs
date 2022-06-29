@@ -461,7 +461,7 @@ handleChainControl eff = do
             -- Adds a new tip on the chain index given the block and slot number
             runChainIndexEffects @t $ do
               currentTip <- getTip
-              appendNewTipBlock currentTip txns slot
+              appendNewTipBlock (pNetworkId params) currentTip txns slot
 
             void $ liftIO $ STM.atomically $ BlockchainEnv.processMockBlock instancesState blockchainEnv txns slot
 

@@ -14,7 +14,6 @@ import Cardano.Ledger.Crypto qualified as C
 import Cardano.Ledger.Hashes qualified as Hashes
 import Cardano.Ledger.SafeHash qualified as C
 import Codec.Serialise.Class (Serialise)
-import Control.Lens ((&), (.~), (?~))
 import Control.Monad.Freer.Extras.Log (LogLevel, LogMessage)
 import Crypto.Hash qualified as Crypto
 import Data.Aeson qualified as JSON
@@ -27,15 +26,13 @@ import Data.OpenApi qualified as OpenApi
 import Data.Scientific (floatingOrInteger, scientific)
 import Data.Text qualified as Text
 import Data.Typeable (Proxy (Proxy), Typeable)
-import GHC.Exts (IsList (fromList))
 import GHC.Generics (Generic)
 import Ledger.Ada (Ada (Lovelace))
 import Ledger.Crypto (PrivateKey (PrivateKey, getPrivateKey), PubKey (PubKey), Signature (Signature))
 import Ledger.Slot (Slot (Slot))
 import Ledger.Tx.Types (Certificate, Tx, TxInput, TxInputType, Withdrawal)
-import Plutus.V1.Ledger.Api (Address, BuiltinByteString, BuiltinData (BuiltinData), Credential,
-                             CurrencySymbol (CurrencySymbol), DCert, Data, Datum (Datum), DatumHash (DatumHash),
-                             Extended, Interval, LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
+import Plutus.V1.Ledger.Api (Address, Credential, CurrencySymbol (CurrencySymbol), DCert, Extended, Interval,
+                             LedgerBytes (LedgerBytes), LowerBound, MintingPolicy (MintingPolicy),
                              MintingPolicyHash (MintingPolicyHash), POSIXTime (POSIXTime), PubKeyHash (PubKeyHash),
                              Redeemer (Redeemer), RedeemerHash (RedeemerHash), Script, StakeValidator (StakeValidator),
                              StakeValidatorHash (StakeValidatorHash), StakingCredential, TokenName (TokenName),
@@ -94,8 +91,6 @@ deriving instance Generic C.Quantity
 deriving anyclass instance OpenApi.ToSchema C.Quantity
 
 deriving anyclass instance (OpenApi.ToSchema k, OpenApi.ToSchema v) => OpenApi.ToSchema (AssocMap.Map k v)
-instance OpenApi.ToSchema BuiltinByteString where
-    declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "Bytes") mempty
 instance OpenApi.ToSchema Crypto.XPub where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "PubKey") mempty
 instance OpenApi.ToSchema Crypto.XPrv where
@@ -110,23 +105,6 @@ deriving instance OpenApi.ToSchema (LogMessage JSON.Value)
 deriving instance OpenApi.ToSchema LogLevel
 instance OpenApi.ToSchema JSON.Value where
     declareNamedSchema _ = pure $ OpenApi.NamedSchema (Just "JSON") mempty
-instance OpenApi.ToSchema Data where
-  declareNamedSchema _ = do
-    integerSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy Integer)
-    constrArgsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy (Integer, [Data]))
-    mapArgsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy [(Data, Data)])
-    listArgsSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy [Data])
-    bytestringSchema <- OpenApi.declareSchemaRef (Proxy :: Proxy String)
-    return $ OpenApi.NamedSchema (Just "Data") $ mempty
-      & OpenApi.type_ ?~ OpenApi.OpenApiObject
-      & OpenApi.properties .~
-          fromList
-          [ ("Constr", constrArgsSchema)
-          , ("Map", mapArgsSchema)
-          , ("List", listArgsSchema)
-          , ("I", integerSchema)
-          , ("B", bytestringSchema)
-          ]
 deriving instance OpenApi.ToSchema ann => OpenApi.ToSchema (Kind ann)
 deriving newtype instance OpenApi.ToSchema Ada
 deriving instance OpenApi.ToSchema Tx
@@ -149,12 +127,10 @@ deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (LowerBound a)
 deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (UpperBound a)
 deriving newtype instance OpenApi.ToSchema Redeemer
 deriving newtype instance OpenApi.ToSchema RedeemerHash
-deriving newtype instance OpenApi.ToSchema Datum
 deriving newtype instance OpenApi.ToSchema Value
 deriving instance OpenApi.ToSchema Address
 deriving newtype instance OpenApi.ToSchema MintingPolicy
 deriving newtype instance OpenApi.ToSchema MintingPolicyHash
-deriving newtype instance OpenApi.ToSchema DatumHash
 deriving newtype instance OpenApi.ToSchema CurrencySymbol
 deriving instance OpenApi.ToSchema Credential
 deriving newtype instance OpenApi.ToSchema PubKey
@@ -168,8 +144,6 @@ deriving newtype instance OpenApi.ToSchema ValidatorHash
 deriving newtype instance OpenApi.ToSchema Signature
 deriving newtype instance OpenApi.ToSchema POSIXTime
 deriving newtype instance OpenApi.ToSchema DiffMilliSeconds
-deriving stock instance Generic BuiltinData
-deriving instance OpenApi.ToSchema BuiltinData
 deriving newtype instance OpenApi.ToSchema AssetClass
 deriving instance OpenApi.ToSchema a => OpenApi.ToSchema (Extended a)
 deriving instance

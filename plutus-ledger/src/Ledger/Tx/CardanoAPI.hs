@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -Wno-orphans    #-}
@@ -22,8 +23,8 @@ module Ledger.Tx.CardanoAPI(
   , fromCardanoTxId
   , fromCardanoTxIn
   , fromCardanoTxInsCollateral
-  , fromCardanoTxInWitness
   , fromCardanoTxOut
+  , fromCardanoTxOutDatum
   , fromCardanoTxOutDatumHash
   , fromCardanoAddress
   , fromCardanoMintValue
@@ -45,7 +46,9 @@ module Ledger.Tx.CardanoAPI(
   , toCardanoTxInWitness
   , toCardanoTxOut
   , toCardanoTxOutUnsafe
+  , toCardanoTxOutBabbage
   , toCardanoTxOutDatumHash
+  , toCardanoTxOutDatumHashBabbage
   , toCardanoAddress
   , toCardanoMintValue
   , toCardanoValue
@@ -108,7 +111,7 @@ import Plutus.V1.Ledger.Api qualified as PV1
 import Plutus.V1.Ledger.Credential qualified as Credential
 import Plutus.V1.Ledger.Tx qualified as PV1
 import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Tx qualified as PV2
+import Plutus.V2.Ledger.Api qualified as PV2
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty (pretty), colon, viaShow, (<+>))
 
@@ -446,43 +449,6 @@ fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = Set.fromList $ fmap (PV
 toCardanoTxInsCollateral :: [L.TxInput] -> Either ToCardanoError (C.TxInsCollateral C.AlonzoEra)
 toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInAlonzoEra) . traverse (toCardanoTxIn . L.txInputRef)
 
-fromCardanoTxInWitness :: C.Witness C.WitCtxTxIn era -> Either FromCardanoError PV1.TxInType
-fromCardanoTxInWitness (C.KeyWitness C.KeyWitnessForSpending) = pure PV1.ConsumePublicKeyAddress
-fromCardanoTxInWitness
-    (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
-            script
-            (C.ScriptDatumForTxIn datum)
-            redeemer
-            _))
-    = pure $ PV1.ConsumeScriptAddress
-        (PV1.Validator $ fromCardanoPlutusScript script)
-        (PV1.Redeemer $ fromCardanoScriptData redeemer)
-        (PV1.Datum $ fromCardanoScriptData datum)
-fromCardanoTxInWitness
-    (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV1InBabbage C.PlutusScriptV1
-            script
-            (C.ScriptDatumForTxIn datum)
-            redeemer
-            _))
-    = pure $ PV1.ConsumeScriptAddress
-        (PV1.Validator $ fromCardanoPlutusScript script)
-        (PV1.Redeemer $ fromCardanoScriptData redeemer)
-        (PV1.Datum $ fromCardanoScriptData datum)
-fromCardanoTxInWitness (C.ScriptWitness _ C.SimpleScriptWitness{}) = pure PV2.ConsumeSimpleScriptAddress
-fromCardanoTxInWitness
-    (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV2InBabbage C.PlutusScriptV2
-            script
-            (C.ScriptDatumForTxIn datum)
-            redeemer
-            _))
-    = pure $ PV1.ConsumeScriptAddress
-        (PV1.Validator $ fromCardanoPlutusScript script)
-        (PV1.Redeemer $ fromCardanoScriptData redeemer)
-        (PV1.Datum $ fromCardanoScriptData datum)
-
 toCardanoTxInWitness :: L.Tx -> L.TxInputType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.AlonzoEra)
 toCardanoTxInWitness _ L.TxConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
 toCardanoTxInWitness _ L.TxConsumeSimpleScriptAddress = Left SimpleScriptsNotSupportedToCardano -- TODO: Better support for simple scripts
@@ -496,7 +462,7 @@ toCardanoTxInWitness tx
       (PV1.Validator validator) <- maybe (Left MissingInputValidator) pure $ L.lookupValidator (L.txScripts tx) validatorHash
       C.ScriptWitness C.ScriptWitnessForSpending <$>
         (C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
-        <$> toCardanoPlutusScript validator
+        <$> fmap C.PScript (toCardanoPlutusScript validator)
         <*> pure (C.ScriptDatumForTxIn $ toCardanoScriptData datum)
         <*> pure (toCardanoScriptData redeemer)
         <*> pure zeroExecutionUnits
@@ -516,7 +482,7 @@ toCardanoScriptWitness :: PV1.ToData a =>
   -> Either ToCardanoError (C.ScriptWitness witctx C.AlonzoEra)
 toCardanoScriptWitness datum redeemer script = do
     C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
-        <$> toCardanoPlutusScript script
+        <$> fmap C.PScript (toCardanoPlutusScript script)
         <*> pure datum
         <*> pure (C.fromPlutusData $ PV1.toData redeemer)
         <*> pure zeroExecutionUnits
@@ -529,6 +495,17 @@ fromCardanoTxOut (C.TxOut addr value datumHash _) =
     <$> fromCardanoAddress addr
     <*> pure (fromCardanoTxOutValue value)
     <*> pure (fromCardanoTxOutDatumHash datumHash)
+
+toCardanoTxOutBabbage
+    :: C.NetworkId
+    -> (Maybe L.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra))
+    -> PV1.TxOut
+    -> Either ToCardanoError (C.TxOut ctx C.BabbageEra)
+toCardanoTxOutBabbage networkId fromHash (PV1.TxOut addr value datumHash) =
+    C.TxOut <$> toCardanoAddressBabbage networkId addr
+            <*> toCardanoTxOutValueBabbage value
+            <*> fromHash datumHash
+            <*> pure C.ReferenceScriptNone
 
 toCardanoTxOut
     :: C.NetworkId
@@ -576,6 +553,13 @@ fromCardanoAddress (C.AddressInEra _ (C.ShelleyAddress _ paymentCredential stake
 toCardanoAddress :: C.NetworkId -> PV1.Address -> Either ToCardanoError (C.AddressInEra C.AlonzoEra)
 toCardanoAddress networkId (PV1.Address addressCredential addressStakingCredential) =
     C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) <$>
+        (C.makeShelleyAddress networkId
+            <$> toCardanoPaymentCredential addressCredential
+            <*> toCardanoStakeAddressReference addressStakingCredential)
+
+toCardanoAddressBabbage :: C.NetworkId -> L.Address -> Either ToCardanoError (C.AddressInEra C.BabbageEra)
+toCardanoAddressBabbage networkId (L.Address addressCredential addressStakingCredential) =
+    C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraBabbage) <$>
         (C.makeShelleyAddress networkId
             <$> toCardanoPaymentCredential addressCredential
             <*> toCardanoStakeAddressReference addressStakingCredential)
@@ -641,13 +625,26 @@ toCardanoTxOutValue value = do
 toCardanoTxOutValueUnsafe :: PV1.Value -> Either ToCardanoError (C.TxOutValue C.AlonzoEra)
 toCardanoTxOutValueUnsafe value = C.TxOutValue C.MultiAssetInAlonzoEra <$> toCardanoValue value
 
-fromCardanoTxOutDatumHash :: C.TxOutDatum C.CtxTx era -> Maybe PV1.DatumHash
+toCardanoTxOutValueBabbage :: PV1.Value -> Either ToCardanoError (C.TxOutValue C.BabbageEra)
+toCardanoTxOutValueBabbage value = C.TxOutValue C.MultiAssetInBabbageEra <$> toCardanoValue value
+
+fromCardanoTxOutDatumHash :: C.TxOutDatum C.CtxTx era -> Maybe L.DatumHash
 fromCardanoTxOutDatumHash C.TxOutDatumNone       = Nothing
 fromCardanoTxOutDatumHash (C.TxOutDatumHash _ h) = Just $ PV1.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
 fromCardanoTxOutDatumHash (C.TxOutDatumInTx _ d) = Just $ PV1.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 fromCardanoTxOutDatumHash (C.TxOutDatumInline _ d) = Just $ PV1.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
 
-toCardanoTxOutDatumHash :: Maybe PV1.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra)
+fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> PV2.OutputDatum
+fromCardanoTxOutDatum C.TxOutDatumNone       = PV2.NoOutputDatum
+fromCardanoTxOutDatum (C.TxOutDatumHash _ h) = PV2.OutputDatumHash $ PV2.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
+fromCardanoTxOutDatum (C.TxOutDatumInTx _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
+fromCardanoTxOutDatum (C.TxOutDatumInline _ d) = PV2.OutputDatum $ PV2.Datum $ fromCardanoScriptData d
+
+toCardanoTxOutDatumHashBabbage :: Maybe L.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.BabbageEra)
+toCardanoTxOutDatumHashBabbage Nothing          = pure C.TxOutDatumNone
+toCardanoTxOutDatumHashBabbage (Just datumHash) = C.TxOutDatumHash C.ScriptDataInBabbageEra <$> toCardanoScriptDataHash datumHash
+
+toCardanoTxOutDatumHash :: Maybe L.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra)
 toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone
 toCardanoTxOutDatumHash (Just datumHash) = C.TxOutDatumHash C.ScriptDataInAlonzoEra <$> toCardanoScriptDataHash datumHash
 

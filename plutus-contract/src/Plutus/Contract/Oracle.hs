@@ -37,8 +37,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
 import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData), makeIsDataIndexed, makeLift)
-import PlutusTx.Prelude (Applicative (pure), Either (Left, Right), Eq ((==)), maybe, trace, unless, verifySignature,
-                         ($), (&&), (>>))
+import PlutusTx.Prelude (Applicative (pure), Either (Left, Right), Eq ((==)), maybe, trace, unless,
+                         verifyEd25519Signature, ($), (&&), (>>))
 
 import Ledger.Address (PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey))
 import Ledger.Constraints (TxConstraints)
@@ -128,7 +128,7 @@ checkSignature datumHash pubKey signature_ =
     let PaymentPubKey (PubKey (LedgerBytes pk)) = pubKey
         Signature sig = signature_
         DatumHash h = datumHash
-    in if verifySignature pk h sig
+    in if verifyEd25519Signature pk h sig
         then Right ()
         else Left $ SignatureMismatch signature_ pubKey datumHash
 

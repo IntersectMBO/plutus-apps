@@ -58,14 +58,21 @@ library
 
   hs-source-dirs:       src
 
-  exposed-modules:      PlutusExample.AlwaysFails
-                        PlutusExample.AlwaysSucceeds
-                        PlutusExample.CustomDatumRedeemerGuess
-                        PlutusExample.DatumRedeemerGuess
-                        PlutusExample.MintingScript
+  exposed-modules:      PlutusExample.PlutusVersion1.AlwaysFails
+                        PlutusExample.PlutusVersion1.AlwaysSucceeds
+                        PlutusExample.PlutusVersion1.CustomDatumRedeemerGuess
+                        PlutusExample.PlutusVersion1.DatumRedeemerGuess
+                        PlutusExample.PlutusVersion1.Loop
+                        PlutusExample.PlutusVersion1.MintingScript
+                        PlutusExample.PlutusVersion1.RedeemerContextScripts
+                        PlutusExample.PlutusVersion1.Sum
+
+                        PlutusExample.PlutusVersion2.MintingScript
+                        PlutusExample.PlutusVersion2.RequireRedeemer
+                        PlutusExample.PlutusVersion2.StakeScript
+
                         PlutusExample.ScriptContextChecker
-                        PlutusExample.Sum
-                        PlutusExample.Loop
+
 
   build-depends:        aeson
                       , bytestring
@@ -134,9 +141,10 @@ test-suite plutus-example-test
                       , hedgehog
                       , hedgehog-extras
                       , plutus-example
+                      , plutus-ledger
                       , plutus-ledger-api >= 1.0.0
                       , tasty
-                      , tasty-hedgehog
+                      , tasty-hedgehog >= 1.2.0.0
                       , text
                       , unordered-containers
 
@@ -159,4 +167,3 @@ test-suite plutus-example-test
                       , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
                       , plutus-example:create-script-context
-

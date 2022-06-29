@@ -53,8 +53,11 @@ parseScriptContextCmd = parseGenerateDummy <|> parseGenerateTxBody
 
 data ScriptContextCmd
   = GenerateDummyScriptContextRedeemer
+      --LedgerPlutusVersion TODO: Babbage era. We should
+      -- parameterize on LedgerPlutusVersion.
       FilePath
   | GenerateScriptContextRedeemerTxBody
+     -- LedgerPlutusVersion
       FilePath
       AnyConsensusModeParams
       NetworkId
@@ -62,9 +65,9 @@ data ScriptContextCmd
 
 runScriptContextCmd :: ScriptContextCmd -> IO ()
 runScriptContextCmd (GenerateDummyScriptContextRedeemer outFp) =
-  LB.writeFile outFp sampleTestScriptContextDataJSON
+  LB.writeFile outFp sampleTestV1ScriptContextDataJSON
 runScriptContextCmd (GenerateScriptContextRedeemerTxBody txbodyfile cModeParams nid outFp) = do
-      eTxBodyRedeemer <- runExceptT $ txToRedeemer txbodyfile cModeParams nid
+      eTxBodyRedeemer <- runExceptT $ createAnyCustomRedeemerBsFromTxFp txbodyfile cModeParams nid
       case eTxBodyRedeemer of
         Left err -> error $ "Error creating redeemer from: " <> txbodyfile <>
                             " Error: " <> show err

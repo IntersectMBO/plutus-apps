@@ -21,6 +21,7 @@ import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Data.Map qualified as Map
 import Data.Monoid (Last (..), Sum (..))
 import Ledger (Block, Slot (..), TxId (..))
+import Ledger.Params (Params (pNetworkId))
 import Plutus.PAB.Core.ContractInstance.STM (BlockchainEnv (..), InstanceClientEnv (..), InstancesState,
                                              OpenTxOutProducedRequest (..), OpenTxOutSpentRequest (..),
                                              emptyBlockchainEnv)
@@ -232,11 +233,12 @@ insertNewTx blockNumber TxIdState{txnsConfirmed, txnsDeleted} (txi, _, txValidit
 -- | Go through the transactions in a block, updating the 'BlockchainEnv'
 --   when any interesting addresses or transactions have changed.
 processMockBlock :: InstancesState -> BlockchainEnv -> Block -> Slot -> STM (Either SyncActionFailure (Slot, BlockNumber))
-processMockBlock instancesState env@BlockchainEnv{beCurrentSlot, beCurrentBlock} transactions slot = do
+processMockBlock instancesState env@BlockchainEnv{beCurrentSlot, beCurrentBlock, beParams} transactions slot = do
   lastSlot <- STM.readTVar beCurrentSlot
   when (slot > lastSlot) $ do
     STM.writeTVar beCurrentSlot slot
 
+  let networkId = pNetworkId beParams
   if null transactions
      then do
        result <- (,) <$> STM.readTVar beCurrentSlot <*> STM.readTVar beCurrentBlock
@@ -245,11 +247,11 @@ processMockBlock instancesState env@BlockchainEnv{beCurrentSlot, beCurrentBlock}
       blockNumber <- STM.readTVar beCurrentBlock
 
       instEnv <- S.instancesClientEnv instancesState
-      updateInstances (indexBlock $ fmap fromOnChainTx transactions) instEnv
+      updateInstances (indexBlock $ fmap (fromOnChainTx networkId) transactions) instEnv
 
       let tip = Tip { tipSlot = slot
                     , tipBlockId = blockId transactions
                     , tipBlockNo = blockNumber
                     }
 
-      updateTransactionState tip env (txEvent <$> fmap fromOnChainTx transactions)
+      updateTransactionState tip env (txEvent <$> fmap (fromOnChainTx networkId) transactions)

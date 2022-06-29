@@ -23,8 +23,9 @@ import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Tx.CardanoAPI (FromCardanoError)
 import Plutus.ChainIndex.ChainIndexError (ChainIndexError)
+import Plutus.ChainIndex.Tx (ChainIndexTxOut)
 import Plutus.ChainIndex.Types (Tip)
-import Plutus.V1.Ledger.Tx (TxId, TxOut, TxOutRef)
+import Plutus.V1.Ledger.Tx (TxId, TxOutRef)
 import Type.Proxy (Proxy(Proxy))
 import Data.Argonaut.Decode.Aeson as D
 import Data.Argonaut.Encode.Aeson as E
@@ -38,7 +39,7 @@ data ChainIndexLog
   | TxNotFound TxId
   | TxOutNotFound TxOutRef
   | TipIsGenesis
-  | NoDatumScriptAddr TxOut
+  | NoDatumScriptAddr ChainIndexTxOut
   | BeamLogItem BeamLog
 
 derive instance Eq ChainIndexLog
@@ -112,7 +113,7 @@ _TipIsGenesis = prism' (const TipIsGenesis) case _ of
   TipIsGenesis -> Just unit
   _ -> Nothing
 
-_NoDatumScriptAddr :: Prism' ChainIndexLog TxOut
+_NoDatumScriptAddr :: Prism' ChainIndexLog ChainIndexTxOut
 _NoDatumScriptAddr = prism' NoDatumScriptAddr case _ of
   (NoDatumScriptAddr a) -> Just a
   _ -> Nothing

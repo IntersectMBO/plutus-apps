@@ -1,5 +1,5 @@
 -- Bump this if you need newer packages.
-index-state: 2022-02-22T20:47:03Z
+index-state: 2022-05-18T00:00:00Z
 
 packages: doc
           freer-extras
@@ -90,7 +90,7 @@ package cardano-wallet-core-integration
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb7854d1337637b8672af1227b276aa33a658f47
+  tag: 066f7002aac5a0efc20e49643fea45454f226caa
   subdir:
     contra-tracer
     iohk-monitoring
@@ -101,13 +101,12 @@ source-repository-package
     plugins/backend-trace-forwarder
 
 -- Should follow cardano-node.
--- Normally, it should follow "ccf5bcb99ffe054dc8cd5626723f64e02708dbae", but
--- there were bug fixes that we actually need in order to make everything work.
--- This actually follows the release/1.0.0 branch.
+-- But in case there are failures with the plutus version, update to the latest
+-- commit hash of the release/1.0.0 plutus branch.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 5cc518f1202930ad52b8ba838af32af084c0e754
+  tag: d24a7540e4659b57ce2ab25dadb968991e232191
   subdir:
     plutus-core
     plutus-ledger-api
@@ -149,8 +148,8 @@ source-repository-package
 -- And it is indeed nice for plutus-apps to track stable releases of the node too.
 source-repository-package
   type: git
-  location: https://github.com/ak3n/cw
-  tag: 538375cb3efa0c66604ff0b13b6ecc0c4a694d64
+  location: https://github.com/input-output-hk/cardano-wallet
+  tag: 0cdd1b72a16b2f287b5f1bf137b5eba15bc7f300
   subdir:
     lib/cli
     lib/core
@@ -165,11 +164,12 @@ source-repository-package
 
 -- Should follow cardano-wallet.
 -- More precisally, this should be a version compatible with the current
--- Cardano mainnet (>=1.35)
+-- Cardano mainnet (>=1.35).
+-- Current version is dated to 2022/05/24.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-node
-  tag: 65422ff373f2f88a563afa746a9a16d211ffdc7c
+  tag: 95c3692cfbd4cdb82071495d771b23e51840fb0e
   subdir:
     cardano-api
     cardano-cli
@@ -184,7 +184,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-config
-  tag: e9de7a2cf70796f6ff26eac9f9540184ded0e4e6
+  tag: 1646e9167fab36c0bff82317743b96efa2d3adaa
 
 -- Using a fork until our patches can be merged upstream
 source-repository-package
@@ -201,7 +201,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1db68a3ec0a2dcb5751004beb22b906162474f23
+  tag: e290bf8d0ea272a51e9acd10adc96b4e12e00d37
   subdir:
     eras/alonzo/impl
     eras/babbage/impl
@@ -218,7 +218,7 @@ source-repository-package
     libs/cardano-ledger-core
     libs/cardano-ledger-pretty
     libs/cardano-protocol-tpraos
-    libs/compact-map
+    libs/vector-map
     libs/non-integral
     libs/set-algebra
     libs/small-steps
@@ -228,10 +228,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ad47441e9e399495579d7dd05ccaf96b46a487b2
+  tag: 04245dbd69387da98d3a37de9f400965e922bb0e
   subdir:
-    io-classes
-    io-sim
     monoidal-synchronisation
     network-mux
     ntp-client
@@ -243,7 +241,23 @@ source-repository-package
     ouroboros-network
     ouroboros-network-framework
     ouroboros-network-testing
+
+-- Should follow cardano-node.
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/io-sim
+  tag: 57e888b1894829056cb00b7b5785fdf6a74c3271
+  subdir:
+    io-classes
+    io-sim
     strict-stm
+
+-- Should follow cardano-node.
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/typed-protocols
+  tag: 181601bc3d9e9d21a671ce01e0b481348b3ca104
+  subdir:
     typed-protocols
     typed-protocols-cborg
     typed-protocols-examples
@@ -252,13 +266,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 394c4637c24d82325bd04ceb99c8e8df5617e663
+  tag: 631cb6cf1fa01ab346233b610a38b3b4cba6e6ab
   subdir:
     base-deriving-via
     binary
     binary/test
     cardano-crypto-class
     cardano-crypto-praos
+    cardano-crypto-tests
     measures
     orphans-deriving-via
     slotting
@@ -283,7 +298,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-addresses
-  tag: 56746f558d57a6b1d66d20eaac8a83dc4455cb4f
+  tag: b9f424cc64459a95a2f190a1839ec9bc94cc778c
   subdir:
     command-line
     core

@@ -62,6 +62,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Class (ToText (toText))
 import Network.HTTP.Client (defaultManagerSettings, newManager)
+import Ouroboros.Network.Client.Wallet (tunedForMainnetPipeliningStrategy)
 import Plutus.ChainIndex.App qualified as ChainIndex
 import Plutus.ChainIndex.Config qualified as CI
 import Plutus.ChainIndex.Logging qualified as ChainIndex.Logging
@@ -179,6 +180,7 @@ runWith userContractHandler = withLocalClusterSetup $ \dir lo@LogOutputs{loClust
             void $ serveWallet
                 (NodeSource socketPath vData)
                 gp
+                tunedForMainnetPipeliningStrategy
                 (SomeNetworkDiscriminant $ Proxy @'Mainnet)
                 tracers
                 (SyncTolerance 10)

@@ -163,7 +163,7 @@ test-suite plutus-use-cases-test
         prettyprinter -any,
         tasty -any,
         tasty-hunit -any,
-        tasty-hedgehog >=0.2.0.0,
+        tasty-hedgehog >= 1.2.0.0,
         tasty-golden -any,
         tasty-quickcheck -any,
         text -any,

@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeFamilies      #-}
 
-module PlutusExample.DatumRedeemerGuess
+module PlutusExample.PlutusVersion1.DatumRedeemerGuess
   ( guessScript
   , guessScriptStake
   , datumRedeemerGuessScriptShortBs

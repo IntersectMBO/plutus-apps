@@ -18,7 +18,7 @@ import Cardano.Api qualified as C
 import Data.Set qualified as Set
 import Ledger qualified as P
 import Ledger.Tx.CardanoAPI as Export
-import Plutus.ChainIndex.Tx (ChainIndexTx (..))
+import Plutus.ChainIndex.Tx (ChainIndexTx (..), fromTxOut)
 import Plutus.ChainIndex.Tx qualified as ChainIndex.Tx
 
 fromCardanoBlock :: C.BlockInMode C.CardanoMode -> Either FromCardanoError [ChainIndexTx]
@@ -41,7 +41,7 @@ fromCardanoTx
   -> C.Tx era
   -> Either FromCardanoError ChainIndexTx
 fromCardanoTx eraInMode tx@(C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) = do
-    txOutputs <- traverse fromCardanoTxOut txOuts
+    txOutputs <- traverse fromTxOut txOuts
     let scriptMap = plutusScriptsFromTxBody txBody
         isTxScriptValid = fromTxScriptValidity txScriptValidity
         (datums, redeemers) = scriptDataFromCardanoTxBody txBody

@@ -17,6 +17,7 @@ module Plutus.Trace.Emulator.System
   , appendNewTipBlock
   ) where
 
+import Cardano.Api (NetworkId)
 import Control.Monad (forM_, void)
 import Control.Monad.Freer
 import Control.Monad.Freer.Coroutine
@@ -72,12 +73,13 @@ launchSystemThreads :: forall effs.
     , Member MultiAgentEffect effs
     , Member MultiAgentControlEffect effs
     )
-    => [Wallet]
+    => NetworkId
+    -> [Wallet]
     -> Eff (Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
-launchSystemThreads wallets = do
+launchSystemThreads networkId wallets = do
     _ <- sleep @effs @EmulatorMessage Sleeping
     -- 1. Threads for updating the agents' states. See note [Simulated Agents]
-    traverse_ (\w -> fork @effs @EmulatorMessage (agentTag w) Normal $ agentThread @effs w) wallets
+    traverse_ (\w -> fork @effs @EmulatorMessage (agentTag w) Normal $ agentThread @effs networkId w) wallets
     -- 2. Block maker thread. See note [Simulator Time]
     void $ fork @effs @EmulatorMessage blockMakerTag Normal (blockMaker @effs)
 
@@ -109,9 +111,10 @@ agentThread :: forall effs effs2.
     , Member MultiAgentControlEffect effs2
     , Member (Yield (EmSystemCall effs EmulatorMessage) (Maybe EmulatorMessage)) effs2
     )
-    => Wallet
+    => NetworkId
+    -> Wallet
     -> Eff effs2 ()
-agentThread wllt = go where
+agentThread networkId wllt = go where
     go = do
         e <- sleep @effs @EmulatorMessage Sleeping
         let clientNotis = maybeToList e >>= \case
@@ -123,7 +126,7 @@ agentThread wllt = go where
         walletControlAction wllt $ do
           case e of
             Just (NewSlot blocks slot) -> do
-              appendNewTipBlock currentTip (concat blocks) slot
+              appendNewTipBlock networkId currentTip (concat blocks) slot
             _ -> return ()
 
         go
@@ -132,12 +135,13 @@ agentThread wllt = go where
 appendNewTipBlock ::
     ( Member ChainIndexControlEffect effs
     )
-    => Tip -- ^ Most recent tip
+    => NetworkId
+    -> Tip -- ^ Most recent tip
     -> Block -- ^ List of transactions
     -> Slot -- ^ Next slot to append the block
     -> Eff effs ()
-appendNewTipBlock lastTip block newSlot = do
+appendNewTipBlock networkId lastTip block newSlot = do
   let nextBlockNo = case lastTip of TipAtGenesis -> 0
                                     Tip _ _ n    -> n + 1
       newTip = Tip newSlot (blockId block) nextBlockNo
-  appendBlocks [(Block newTip (fmap (\tx -> (fromOnChainTx tx, def)) block))]
+  appendBlocks [(Block newTip (fmap (\tx -> (fromOnChainTx networkId tx, def)) block))]
