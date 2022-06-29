@@ -1,5 +1,4 @@
-{-# LANGUAGE GADTs      #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GADTs #-}
 
 module Test.PlutusExample.Gen where
 
@@ -32,7 +31,7 @@ genPlutusTxOut = do
           <*> genTxOutValue AlonzoEra
           <*> genTxOutDatumHashTxContext AlonzoEra
           <*> genReferenceScript AlonzoEra
-  Gen.just . return . \case { Right v -> Just v; _ -> Nothing } . Alonzo.txInfoOut
+  Gen.just . return . Alonzo.txInfoOut
     $ toShelleyTxOut ShelleyBasedEraAlonzo (toCtxUTxOTxOut alonzoTxOut)
 
 genMyCustomRedeemer :: Gen AnyCustomRedeemer
@@ -55,10 +54,15 @@ genTxInfoIn = do
   txinput <- genTxIn
   txout <- genTxOutTxContext AlonzoEra
   lUTxO <- genLedgerUTxO ShelleyBasedEraAlonzo (txinput, txout)
-  let eTxInfoIn = Alonzo.txInfoIn lUTxO (toShelleyTxIn txinput)
+  let eTxInfoIn = getTxInInfoFromTxIn lUTxO (toShelleyTxIn txinput)
   case eTxInfoIn of
-    Right txin -> return txin
-    Left e     -> error $ "Error: " ++ show e ++ "\n" ++ "Utxo: " ++ show lUTxO ++ "\n" ++ "Txin: " ++ show txinput
+    Nothing   -> error $ "Error: Cannot find the TxIn in the UTxO\n"
+                      ++ "Utxo: "
+                      ++ show lUTxO
+                      ++ "\n"
+                      ++ "Txin: "
+                      ++ show txinput
+    Just txin -> return txin
 
 genReqSigners :: Gen Plutus.PubKeyHash
 genReqSigners = do

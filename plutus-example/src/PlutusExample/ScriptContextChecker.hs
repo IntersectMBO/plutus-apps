@@ -1,16 +1,10 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE TypeOperators       #-}
-
 
 module PlutusExample.ScriptContextChecker where
 
@@ -26,19 +20,22 @@ import Control.Monad.Trans.Except.Extra
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as LB
-import Data.Either as E
 import Data.Map.Strict qualified as Map
+import Data.Maybe qualified as M
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
+import Data.Text qualified as T
 
 import Cardano.CLI.Environment
 import Cardano.CLI.Shelley.Run.Query
 import Cardano.CLI.Types (SocketPath (..))
+import Cardano.Ledger.Alonzo qualified as Alonzo
 import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.PlutusScriptApi qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxInfo qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
+import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.TxIn qualified as Ledger
 
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -53,10 +50,10 @@ import PlutusTx qualified
 import PlutusTx.IsData.Class
 import PlutusTx.Prelude hiding (Eq, Semigroup (..), unless, (.))
 
+import Data.Text (Text)
 import PlutusExample.PlutusVersion1.RedeemerContextScripts
 
-
-data AnyCustomRedeemer
+newtype AnyCustomRedeemer
   = AnyPV1CustomRedeemer PV1CustomRedeemer
   deriving (Show, Eq)
 
@@ -69,7 +66,7 @@ customRedeemerToScriptData (AnyPV1CustomRedeemer cRedeem) =
 data ScriptContextError = NoScriptsInByronEra
                         | NoScriptsInEra
                         | ReadTxBodyError (FileError TextEnvelopeError)
-                        | IntervalConvError TransactionValidityError
+                        | IntervalConvError Text
                         | AcquireFail AcquireFailure
                         | NoTipLocalStateError
                         | NoSystemStartTimeError
@@ -84,7 +81,7 @@ createAnyCustomRedeemer
   :: ShelleyBasedEra era
   -> ProtocolParameters
   -> UTxO era
-  -> EpochInfo (Either TransactionValidityError)
+  -> EpochInfo (Either Text)
   -> SystemStart
   -> Api.Tx era
   -> Either ScriptContextError AnyCustomRedeemer
@@ -99,7 +96,7 @@ createAnyCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEra
       sPurpose = case scriptsNeeded of
                    [(p ,_)] -> Alonzo.transScriptPurpose p
                    needed   -> Prelude.error $ "More than one redeemer ptr: " <> show needed
-      eTxIns = Prelude.map (Alonzo.txInfoIn ledgerUTxO) . Set.toList $ Alonzo.inputs txBody
+      eTxIns = Prelude.map (getTxInInfoFromTxIn ledgerUTxO) . Set.toList $ Alonzo.inputs txBody
       eTouts = Prelude.map Alonzo.txInfoOut $ seqToList $ Alonzo.outputs txBody
       minted = Alonzo.transValue $ Alonzo.mint txBody
       txfee = Alonzo.transValue . toMaryValue . lovelaceToValue . fromShelleyLovelace $ Alonzo.txfee txBody
@@ -111,13 +108,23 @@ createAnyCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEra
     first IntervalConvError
       $ Alonzo.transVITime (toLedgerPParams sbe pparams) eInfo sStart $ Alonzo.txvldt txBody
 
-  tOuts <- if Prelude.all E.isRight eTouts
-           then return $ E.rights eTouts
-           else Prelude.error "Tx Outs not all Right"
-  txins <- if Prelude.all E.isRight eTxIns
-           then return $ E.rights eTxIns
-           else Prelude.error "Tx Ins not all Right"
-  Right . AnyPV1CustomRedeemer $ PV1CustomRedeemer tOuts txins minted valRange txfee datumHashes txcerts txsignatories (Just sPurpose)
+  tOuts <- if Prelude.all M.isJust eTouts
+           then return $ M.catMaybes eTouts
+           else Prelude.error "Tx Outs not all Just"
+  txins <- if Prelude.all M.isJust eTxIns
+           then return $ M.catMaybes eTxIns
+           else Prelude.error "Tx Ins not all Just"
+  Right . AnyPV1CustomRedeemer
+      $ PV1CustomRedeemer
+            tOuts
+            txins
+            minted
+            valRange
+            txfee
+            datumHashes
+            txcerts
+            txsignatories
+            (Just sPurpose)
  where
   seqToList (x Seq.:<| rest) = x : seqToList rest
   seqToList Seq.Empty        = []
@@ -156,7 +163,7 @@ createAnyCustomRedeemerFromTxFp fp (AnyConsensusModeParams cModeParams) network 
                 if ntcVersion Prelude.>= NodeToClientV_9
                 then Just Prelude.<$> queryExpr QuerySystemStart
                 else return Nothing
-              let eInfo = hoistEpochInfo (first TransactionValidityIntervalError . runExcept)
+              let eInfo = hoistEpochInfo (first (T.pack . displayError . TransactionValidityIntervalError) . runExcept)
                             $ Consensus.interpreterToEpochInfo interpreter
               ppResult <- queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
               return (eInfo, mSystemStart, ppResult)
@@ -246,4 +253,12 @@ dummyPOSIXTimeRange = Plutus.from $ Plutus.POSIXTime 42
 
 dummyScriptPurpose :: Maybe Plutus.ScriptPurpose
 dummyScriptPurpose = Nothing
+
+getTxInInfoFromTxIn
+  :: Shelley.UTxO (Alonzo.AlonzoEra StandardCrypto)
+  -> Ledger.TxIn StandardCrypto
+  -> Maybe Plutus.TxInInfo
+getTxInInfoFromTxIn (Shelley.UTxO utxoMap) txIn = do
+  txOut <- Map.lookup txIn utxoMap
+  Alonzo.txInfoIn txIn txOut
 
