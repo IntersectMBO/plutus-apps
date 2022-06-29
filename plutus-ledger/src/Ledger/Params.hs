@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -7,17 +8,35 @@ module Ledger.Params(
   slotConfigL,
   protocolParamsL,
   networkIdL,
-  allowBigTransactions
+  allowBigTransactions,
+  -- * cardano-ledger specific types and conversion functions
+  EmulatorEra,
+  slotLength,
+  emulatorEpochSize,
+  emulatorGlobals,
+  emulatorPParams
 ) where
 
-import Cardano.Api.Shelley
+import Cardano.Api (ShelleyBasedEra (..), toLedgerPParams)
+import Cardano.Api.Shelley (AnyPlutusScriptVersion (..), CostModel (..), EpochNo (..), ExecutionUnitPrices (..),
+                            ExecutionUnits (..), Lovelace (..), NetworkId (..), NetworkMagic (..),
+                            PlutusScriptVersion (..), ProtocolParameters (..), shelleyGenesisDefaults)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.PParams (retractPP)
+import Cardano.Ledger.Core (PParams)
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.API (Coin (..), Globals, ShelleyGenesis (..), mkShelleyGlobals)
+import Cardano.Ledger.Shelley.API qualified as C.Ledger
+import Cardano.Ledger.Slot (EpochSize (..))
+import Cardano.Slotting.EpochInfo (fixedEpochInfo)
+import Cardano.Slotting.Time (SlotLength, mkSlotLength)
 import Control.Lens (makeLensesFor, over)
 import Data.Default (Default (def))
 import Data.Map (fromList)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
-import Ledger.TimeSlot (SlotConfig)
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
+import Ledger.TimeSlot (SlotConfig (..), posixTimeToNominalDiffTime, posixTimeToUTCTime)
+import Plutus.V1.Ledger.Api (POSIXTime (..), defaultCostModelParams)
 
 data Params = Params
   { pSlotConfig     :: SlotConfig
@@ -76,3 +95,35 @@ instance Default ProtocolParameters where
     , protocolParamCollateralPercent = Just 150
     , protocolParamMaxCollateralInputs = Just 3
     }
+
+
+-- | The default era for the emulator
+type EmulatorEra = AlonzoEra StandardCrypto
+
+-- | Calculate the cardano-ledger `SlotLength`
+slotLength :: Params -> SlotLength
+slotLength Params { pSlotConfig } = mkSlotLength $ posixTimeToNominalDiffTime $ POSIXTime $ scSlotLength pSlotConfig
+
+
+-- | A sensible default 'EpochSize' value for the emulator
+emulatorEpochSize :: EpochSize
+emulatorEpochSize = EpochSize 432000
+
+-- | A sensible default 'Globals' value for the emulator
+emulatorGlobals :: Params -> Globals
+emulatorGlobals params@Params { pProtocolParams } = mkShelleyGlobals
+  (genesisDefaultsFromParams params)
+  (fixedEpochInfo emulatorEpochSize (slotLength params))
+  (fst $ protocolParamProtocolVersion pProtocolParams)
+
+genesisDefaultsFromParams :: Params -> ShelleyGenesis EmulatorEra
+genesisDefaultsFromParams params@Params { pSlotConfig, pNetworkId } = shelleyGenesisDefaults
+  { sgSystemStart = posixTimeToUTCTime $ scSlotZeroTime pSlotConfig
+  , sgNetworkMagic = case pNetworkId of Testnet (NetworkMagic nm) -> nm; _ -> 0
+  , sgNetworkId = case pNetworkId of Testnet _ -> C.Ledger.Testnet; Mainnet -> C.Ledger.Mainnet
+  , sgProtocolParams = retractPP (Coin 0) $ emulatorPParams params
+  }
+
+-- | Convert `Params` to cardano-ledger `PParams`
+emulatorPParams :: Params -> PParams EmulatorEra
+emulatorPParams Params { pProtocolParams } = toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams

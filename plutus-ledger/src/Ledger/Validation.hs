@@ -43,11 +43,11 @@ module Ledger.Validation(
   emulatorGlobals
   ) where
 
-import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), makeSignedTransaction, shelleyGenesisDefaults,
-                            toShelleyTxId, toShelleyTxOut)
+import Cardano.Api.Shelley (ShelleyBasedEra (ShelleyBasedEraAlonzo), makeSignedTransaction, toShelleyTxId,
+                            toShelleyTxOut)
 import Cardano.Api.Shelley qualified as C.Api
 import Cardano.Ledger.Alonzo (TxBody, TxOut)
-import Cardano.Ledger.Alonzo.PParams (PParams' (..), retractPP)
+import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (constructValidated)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tools qualified as C.Ledger
@@ -55,15 +55,13 @@ import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (TxBody, reqSignerHashes))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, txwitsVKey)
 import Cardano.Ledger.BaseTypes (Globals (..))
-import Cardano.Ledger.Core (PParams, Tx)
+import Cardano.Ledger.Core (Tx)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API (Coin (..), LedgerEnv (..), MempoolEnv, MempoolState, TxId, TxIn (TxIn), UTxO (UTxO),
-                                   Validated, epochInfo, mkShelleyGlobals)
+                                   Validated, epochInfo)
 import Cardano.Ledger.Shelley.API qualified as C.Ledger
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
-import Cardano.Slotting.EpochInfo (fixedEpochInfo)
-import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
-import Cardano.Slotting.Time (SlotLength, mkSlotLength)
+import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Lens (_1, makeLenses, over, (&), (.~), (^.))
 import Data.Array (array)
 import Data.Bifunctor (Bifunctor (..))
@@ -76,10 +74,9 @@ import Data.Set qualified as Set
 import GHC.Records (HasField (..))
 import Ledger.Address qualified as P
 import Ledger.Crypto qualified as P
-import Ledger.Index.Internal (EmulatorEra)
 import Ledger.Index.Internal qualified as P
+import Ledger.Params (EmulatorEra, emulatorEpochSize, emulatorGlobals, emulatorPParams, slotLength)
 import Ledger.Params qualified as P
-import Ledger.TimeSlot qualified as P
 import Ledger.Tx qualified as P
 import Ledger.Tx.CardanoAPI qualified as P
 import Ledger.Value qualified as P
@@ -198,31 +195,6 @@ applyTx params oldState@EmulatedLedgerState{_ledgerEnv, _memPoolState} tx = do
   (newMempool, vtx) <- first (P.CardanoLedgerValidationError . show) (C.Ledger.applyTx (emulatorGlobals params) _ledgerEnv _memPoolState tx)
   return (oldState & memPoolState .~ newMempool & over currentBlock ((:) vtx), vtx)
 
-
-genesisDefaultsFromParams :: P.Params -> C.Ledger.ShelleyGenesis EmulatorEra
-genesisDefaultsFromParams P.Params { P.pSlotConfig, P.pProtocolParams, P.pNetworkId } = shelleyGenesisDefaults
-  { C.Ledger.sgSystemStart = P.posixTimeToUTCTime $ P.scSlotZeroTime pSlotConfig
-  , C.Ledger.sgNetworkMagic = case pNetworkId of C.Api.Testnet (C.Api.NetworkMagic nm) -> nm; _ -> 0
-  , C.Ledger.sgNetworkId = case pNetworkId of C.Api.Testnet _ -> C.Ledger.Testnet; C.Api.Mainnet -> C.Ledger.Mainnet
-  , C.Ledger.sgProtocolParams = retractPP (Coin 0) $ C.Api.toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
-  }
-
-emulatorEpochSize :: EpochSize
-emulatorEpochSize = EpochSize 432000
-
-slotLength :: P.Params -> SlotLength
-slotLength P.Params { P.pSlotConfig } = mkSlotLength $ P.posixTimeToNominalDiffTime $ P.POSIXTime $ P.scSlotLength pSlotConfig
-
-{-| A sensible default 'Globals' value for the emulator
--}
-emulatorGlobals :: P.Params -> Globals
-emulatorGlobals params@P.Params { P.pProtocolParams } = mkShelleyGlobals
-  (genesisDefaultsFromParams params)
-  (fixedEpochInfo emulatorEpochSize (slotLength params))
-  (fst $ C.Api.protocolParamProtocolVersion pProtocolParams)
-
-emulatorPParams :: P.Params -> PParams EmulatorEra
-emulatorPParams P.Params { P.pProtocolParams } = C.Api.toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
 
 hasValidationErrors :: P.Params -> SlotNo -> UTxO EmulatorEra -> C.Api.Tx C.Api.AlonzoEra -> Maybe P.ValidationErrorInPhase
 hasValidationErrors params slotNo utxo (C.Api.ShelleyTx _ tx) =
