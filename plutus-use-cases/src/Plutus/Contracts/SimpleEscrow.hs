@@ -139,7 +139,7 @@ redeemEp = endpoint @"redeem" redeem
   where
     redeem params = do
       time <- currentTime
-      pk <- ownPaymentPubKeyHash
+      pk <- ownFirstPaymentPubKeyHash
       unspentOutputs <- utxosAt escrowAddress
 
       let value = foldMap (view Tx.ciTxOutValue) unspentOutputs

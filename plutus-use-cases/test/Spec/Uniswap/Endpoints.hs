@@ -49,7 +49,7 @@ data BadRemoveParams = BadRemoveParams
 badRemove :: forall w s. Uniswap -> BadRemoveParams -> Contract w s Text ()
 badRemove us BadRemoveParams{..} = do
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us brpCoinA brpCoinB
-    pkh                           <- Contract.ownPaymentPubKeyHash
+    pkh                           <- Contract.ownFirstPaymentPubKeyHash
     --when (brpDiff < 1 || brpDiff >= liquidity) $ throwError "removed liquidity must be positive and less than total liquidity"
     let usInst       = uniswapInstance us
         usScript     = uniswapScript us

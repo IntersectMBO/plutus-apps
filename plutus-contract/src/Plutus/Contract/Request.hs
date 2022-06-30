@@ -76,8 +76,12 @@ module Plutus.Contract.Request(
     , endpointDescription
     , endpointReq
     , endpointResp
-    -- ** Public key hashes
+    -- ** Wallet information
     , ownPaymentPubKeyHash
+    , ownPaymentPubKeyHashes
+    , ownFirstPaymentPubKeyHash
+    , ownAddresses
+    , ownUtxos
     -- ** Submitting transactions
     , adjustUnbalancedTx
     , submitUnbalancedTx
@@ -116,8 +120,8 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.TypeLits (Symbol, symbolVal)
-import Ledger (AssetClass, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash, Slot, TxId, TxOutRef, Value,
-               addressCredential, fromMilliSeconds, txOutRefId)
+import Ledger (AssetClass, DiffMilliSeconds, POSIXTime, PaymentPubKeyHash (PaymentPubKeyHash), Slot, TxId, TxOutRef,
+               Value, addressCredential, fromMilliSeconds, txOutRefId)
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
 import Ledger.Constraints.OffChain qualified as Constraints
@@ -130,7 +134,7 @@ import Plutus.V1.Ledger.Api (Address, Datum, DatumHash, MintingPolicy, MintingPo
 import PlutusTx qualified
 
 import Plutus.Contract.Effects (ActiveEndpoint (ActiveEndpoint, aeDescription, aeMetadata),
-                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnContractInstanceIdReq, OwnPaymentPublicKeyHashReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
+                                PABReq (AdjustUnbalancedTxReq, AwaitSlotReq, AwaitTimeReq, AwaitTxOutStatusChangeReq, AwaitTxStatusChangeReq, AwaitUtxoProducedReq, AwaitUtxoSpentReq, BalanceTxReq, ChainIndexQueryReq, CurrentSlotReq, CurrentTimeReq, ExposeEndpointReq, OwnAddressesReq, OwnContractInstanceIdReq, WriteBalancedTxReq, YieldUnbalancedTxReq),
                                 PABResp (ExposeEndpointResp))
 import Plutus.Contract.Effects qualified as E
 import Plutus.Contract.Logging (logDebug)
@@ -138,6 +142,8 @@ import Plutus.Contract.Schema (Input, Output)
 import Wallet.Types (ContractInstanceId, EndpointDescription (EndpointDescription),
                      EndpointValue (EndpointValue, unEndpointValue))
 
+import Data.Foldable (fold)
+import Data.List.NonEmpty qualified as NonEmpty
 import Plutus.ChainIndex (ChainIndexTx, Page (nextPageQuery, pageItems), PageQuery, txOutRefs)
 import Plutus.ChainIndex.Api (IsUtxoResponse, TxosResponse, UtxosResponse (page), paget)
 import Plutus.ChainIndex.Types (RollbackState (Unknown), Tip, TxOutStatus, TxStatus)
@@ -145,6 +151,8 @@ import Plutus.Contract.Error (AsContractError (_ChainIndexContractError, _Constr
 import Plutus.Contract.Resumable (prompt)
 import Plutus.Contract.Types (Contract (Contract), MatchingError (WrongVariantError), Promise (Promise), mapError,
                               runError, throwError)
+import Plutus.V1.Ledger.Address (toPubKeyHash)
+import Wallet.Emulator.Error (WalletAPIError (NoPaymentPubKeyHashError))
 
 -- | Constraints on the contract schema, ensuring that the labels of the schema
 --   are unique.
@@ -423,6 +431,12 @@ foldUtxoRefsAt f ini addr = go ini (Just def)
       page <- page <$> utxoRefsAt pq addr
       newAcc <- f acc page
       go newAcc (nextPageQuery page)
+
+-- | Get all utxos belonging to the wallet that runs this contract.
+ownUtxos :: forall w s e. (AsContractError e) => Contract w s e (Map TxOutRef ChainIndexTxOut)
+ownUtxos = do
+    addrs <- ownAddresses
+    fold <$> mapM utxosAt (NonEmpty.toList addrs)
 
 -- | Get the unspent transaction outputs at an address.
 utxosAt ::
@@ -785,6 +799,7 @@ endpointWithMeta meta f = Promise $ do
 endpointDescription :: forall l. KnownSymbol l => Proxy l -> EndpointDescription
 endpointDescription = EndpointDescription . symbolVal
 
+{-# DEPRECATED ownPaymentPubKeyHash "Use ownFirstPaymentPubKeyHash, ownPaymentPubKeyHashes or ownAddresses instead" #-}
 -- | Get the hash of a public key belonging to the wallet that runs this contract.
 --   * Any funds paid to this public key hash will be treated as the wallet's own
 --     funds
@@ -794,7 +809,30 @@ endpointDescription = EndpointDescription . symbolVal
 --   * There is a 1-n relationship between wallets and public keys (although in
 --     the mockchain n=1)
 ownPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
-ownPaymentPubKeyHash = pabReq OwnPaymentPublicKeyHashReq E._OwnPaymentPublicKeyHashResp
+ownPaymentPubKeyHash = ownFirstPaymentPubKeyHash
+
+-- | Get the addresses belonging to the wallet that runs this contract.
+--   * Any funds paid to one of these addresses will be treated as the wallet's own
+--     funds
+--   * The wallet is able to sign transactions with the private key of one of its
+--     public key, for example, if the public key is added to the
+--     'requiredSignatures' field of 'Tx'.
+--   * There is a 1-n relationship between wallets and addresses (although in
+--     the mockchain n=1)
+ownAddresses :: forall w s e. (AsContractError e) => Contract w s e (NonEmpty Address)
+ownAddresses = pabReq OwnAddressesReq E._OwnAddressesResp
+
+ownPaymentPubKeyHashes :: forall w s e. (AsContractError e) => Contract w s e [PaymentPubKeyHash]
+ownPaymentPubKeyHashes = do
+    addrs <- ownAddresses
+    pure $ fmap PaymentPubKeyHash $ mapMaybe toPubKeyHash $ NonEmpty.toList addrs
+
+ownFirstPaymentPubKeyHash :: forall w s e. (AsContractError e) => Contract w s e PaymentPubKeyHash
+ownFirstPaymentPubKeyHash = do
+    pkhs <- ownPaymentPubKeyHashes
+    case pkhs of
+      []      -> throwError $ review _WalletContractError NoPaymentPubKeyHashError
+      (pkh:_) -> pure pkh
 
 -- | Send an unbalanced transaction to be balanced and signed. Returns the ID
 --    of the final transaction when the transaction was submitted. Throws an

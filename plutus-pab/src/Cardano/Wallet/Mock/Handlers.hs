@@ -43,6 +43,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Lazy.Char8 qualified as BSL8
 import Data.ByteString.Lazy.Char8 qualified as Char8
 import Data.Function ((&))
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map qualified as Map
 import Data.Text (Text, pack)
 import Data.Text.Encoding (encodeUtf8)
@@ -134,6 +135,7 @@ handleMultiWallet params = \case
         let walletId = Wallet.WalletId . CWP.WalletId $ CW.mwWalletId mockWallet
             wallets' = Map.insert walletId (Wallet.fromMockWallet mockWallet) wallets
             pkh = CW.paymentPubKeyHash mockWallet
+            addr = CW.mockWalletAddress mockWallet
         put wallets'
         -- For some reason this doesn't work with (Wallet 1)/privateKey1,
         -- works just fine with (Wallet 2)/privateKey2
@@ -144,7 +146,11 @@ handleMultiWallet params = \case
             $ interpret (mapLog @RequestHandlerLogMsg @WalletMsg RequestHandling)
             $ interpret Wallet.handleWallet
             $ distributeNewWalletFunds params funds pkh
-        return $ WalletInfo{wiWallet = Wallet.toMockWallet mockWallet, wiPaymentPubKeyHash = pkh}
+        return $ WalletInfo
+            { wiWallet = Wallet.toMockWallet mockWallet
+            , wiPaymentPubKeyHash = pkh
+            , wiAddresses = NonEmpty.fromList [addr]
+            }
     GetWalletInfo wllt -> do
         wallets <- get @Wallets
         return $ fmap fromWalletState $ Map.lookup wllt wallets
@@ -217,6 +223,8 @@ runWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv wallets params
 fromWalletAPIError :: WalletAPIError -> ServerError
 fromWalletAPIError (InsufficientFunds text) =
     err401 {errBody = BSL.fromStrict $ encodeUtf8 text}
+fromWalletAPIError e@NoPaymentPubKeyHashError =
+    err404 {errBody = BSL8.pack $ show e}
 fromWalletAPIError e@(PaymentPrivateKeyNotFound _) =
     err404 {errBody = BSL8.pack $ show e}
 fromWalletAPIError e@(ValidationError _) =

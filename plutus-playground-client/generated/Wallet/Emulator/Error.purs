@@ -31,6 +31,7 @@ import Data.Map as Map
 data WalletAPIError
   = InsufficientFunds String
   | ChangeHasLessThanNAda Value Ada
+  | NoPaymentPubKeyHashError
   | PaymentPrivateKeyNotFound PaymentPubKeyHash
   | ValidationError ValidationError
   | ToCardanoError ToCardanoError
@@ -47,6 +48,7 @@ instance EncodeJson WalletAPIError where
   encodeJson = defer \_ -> case _ of
     InsufficientFunds a -> E.encodeTagged "InsufficientFunds" a E.value
     ChangeHasLessThanNAda a b -> E.encodeTagged "ChangeHasLessThanNAda" (a /\ b) (E.tuple (E.value >/\< E.value))
+    NoPaymentPubKeyHashError -> encodeJson { tag: "NoPaymentPubKeyHashError", contents: jsonNull }
     PaymentPrivateKeyNotFound a -> E.encodeTagged "PaymentPrivateKeyNotFound" a E.value
     ValidationError a -> E.encodeTagged "ValidationError" a E.value
     ToCardanoError a -> E.encodeTagged "ToCardanoError" a E.value
@@ -60,6 +62,7 @@ instance DecodeJson WalletAPIError where
     $ Map.fromFoldable
         [ "InsufficientFunds" /\ D.content (InsufficientFunds <$> D.value)
         , "ChangeHasLessThanNAda" /\ D.content (D.tuple $ ChangeHasLessThanNAda </$\> D.value </*\> D.value)
+        , "NoPaymentPubKeyHashError" /\ pure NoPaymentPubKeyHashError
         , "PaymentPrivateKeyNotFound" /\ D.content (PaymentPrivateKeyNotFound <$> D.value)
         , "ValidationError" /\ D.content (ValidationError <$> D.value)
         , "ToCardanoError" /\ D.content (ToCardanoError <$> D.value)
@@ -80,6 +83,11 @@ _InsufficientFunds = prism' InsufficientFunds case _ of
 _ChangeHasLessThanNAda :: Prism' WalletAPIError { a :: Value, b :: Ada }
 _ChangeHasLessThanNAda = prism' (\{ a, b } -> (ChangeHasLessThanNAda a b)) case _ of
   (ChangeHasLessThanNAda a b) -> Just { a, b }
+  _ -> Nothing
+
+_NoPaymentPubKeyHashError :: Prism' WalletAPIError Unit
+_NoPaymentPubKeyHashError = prism' (const NoPaymentPubKeyHashError) case _ of
+  NoPaymentPubKeyHashError -> Just unit
   _ -> Nothing
 
 _PaymentPrivateKeyNotFound :: Prism' WalletAPIError PaymentPubKeyHash

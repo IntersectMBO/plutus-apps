@@ -570,7 +570,7 @@ setupTokens
     )
     => Contract w s e FutureAccounts
 setupTokens = mapError (review _FutureError) $ do
-    pk <- ownPaymentPubKeyHash
+    pk <- ownFirstPaymentPubKeyHash
 
     -- Create the tokens using the currency contract, wrapping any errors in
     -- 'TokenSetupFailed'
