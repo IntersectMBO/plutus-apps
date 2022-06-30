@@ -23,9 +23,9 @@ import Ledger.Slot (Slot)
 import Ledger.Tx (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType, TxOut, TxOutRef)
 import Ledger.Tx.CardanoAPI (ToCardanoError)
 import Ledger.TxId (TxId)
-import Ledger.Typed.Tx (ConnectionError, WrongOutTypeError)
 import Plutus.Contract.Effects (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import Plutus.Contract.StateMachine (ThreadToken)
+import Plutus.Script.Utils.V1.Typed.Scripts (ConnectionError, WrongOutTypeError)
 import Plutus.V1.Ledger.Api (ValidatorHash (ValidatorHash))
 import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
