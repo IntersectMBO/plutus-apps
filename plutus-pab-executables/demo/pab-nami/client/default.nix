@@ -20,7 +20,7 @@ let
   generate-purescript = pkgs.writeShellScriptBin "pab-nami-demo-generate-purs" ''
     generatedDir=./generated
     rm -rf $generatedDir
-    $(nix-build ../../../../default.nix -A pab-nami-demo.pab-nami-demo-generator)/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
+    ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
     cd ../../../..
     echo Formatting files...
     ${purs-tidy}/bin/purs-tidy format-in-place ./plutus-pab-executables/demo/pab-nami/client/generated
@@ -29,8 +29,8 @@ let
 
   start-backend = pkgs.writeShellScriptBin "pab-nami-demo-server" ''
     echo "pab-nami-demo-server: for development use only"
-    $(nix-build ../../../../default.nix --quiet --no-build-output -A pab-nami-demo.pab-nami-demo-invoker)/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml migrate
-    $(nix-build ../../../../default.nix --quiet --no-build-output -A pab-nami-demo.pab-nami-demo-invoker)/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml webserver
+    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml migrate
+    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml webserver
   '';
 
   cleanSrc = gitignore-nix.gitignoreSource ./.;
