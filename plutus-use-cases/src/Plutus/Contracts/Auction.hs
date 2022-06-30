@@ -90,9 +90,7 @@ data AuctionOutput =
         }
         deriving stock (Generic, Haskell.Show, Haskell.Eq)
         deriving anyclass (ToJSON, FromJSON)
-
-deriving via (GenericSemigroupMonoid AuctionOutput) instance (Haskell.Semigroup AuctionOutput)
-deriving via (GenericSemigroupMonoid AuctionOutput) instance (Haskell.Monoid AuctionOutput)
+        deriving (Haskell.Semigroup, Haskell.Monoid) via (GenericSemigroupMonoid AuctionOutput)
 
 auctionStateOut :: AuctionState -> AuctionOutput
 auctionStateOut s = Haskell.mempty { auctionState = Last (Just s) }
