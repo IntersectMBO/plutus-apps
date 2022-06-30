@@ -19,12 +19,12 @@ module Plutus.Contract.Test.Certification.Run
   , certResJSON
   -- * There are a tonne of lenses
   , certRes_standardPropertyResult
+  , certRes_doubleSatisfactionResult
   , certRes_noLockedFundsResult
   , certRes_noLockedFundsLightResult
   , certRes_standardCrashToleranceResult
   , certRes_unitTestResults
   , certRes_coverageReport
-  , certRes_coverageIndexReport
   , certRes_whitelistOk
   , certRes_whitelistResult
   , certRes_DLTests
@@ -88,12 +88,12 @@ deriving via (JSONShowRead Tasty.Result) instance ToJSON Tasty.Result
 
 data CertificationReport m = CertificationReport {
     _certRes_standardPropertyResult       :: QC.Result,
+    _certRes_doubleSatisfactionResult     :: QC.Result,
     _certRes_noLockedFundsResult          :: Maybe QC.Result,
     _certRes_noLockedFundsLightResult     :: Maybe QC.Result,
     _certRes_standardCrashToleranceResult :: Maybe QC.Result,
     _certRes_unitTestResults              :: [Tasty.Result],
     _certRes_coverageReport               :: CoverageReport,
-    _certRes_coverageIndexReport          :: CoverageIndex,
     _certRes_whitelistOk                  :: Maybe Bool,
     _certRes_whitelistResult              :: Maybe QC.Result,
     _certRes_DLTests                      :: [(String, QC.Result)]
@@ -120,7 +120,7 @@ liftIORep io = do
 runCertMonad :: CertMonad (CertificationReport m) -> IO (CertificationReport m)
 runCertMonad m = do
   (rep, cov) <- runWriterT m
-  return $ rep { _certRes_coverageReport = cov }
+  return $ rep & certRes_coverageReport %~ (<> cov)
 
 runStandardProperty :: forall m. ContractModel m => CertificationOptions -> CoverageIndex -> CertMonad QC.Result
 runStandardProperty opts covIdx = liftIORep $ quickCheckWithCoverageAndResult
@@ -131,6 +131,15 @@ runStandardProperty opts covIdx = liftIORep $ quickCheckWithCoverageAndResult
                                                  defaultCheckOptionsContractModel
                                                  covopts
                                                  (\ _ -> pure True)
+
+checkDS :: forall m. ContractModel m => CertificationOptions -> CoverageIndex -> CertMonad QC.Result
+checkDS opts covIdx = liftIORep $ quickCheckWithCoverageAndResult
+                                  (mkQCArgs opts)
+                                  (set coverageIndex covIdx defaultCoverageOptions)
+                                $ \ covopts -> checkDoubleSatisfactionWithOptions
+                                                 @m
+                                                 defaultCheckOptionsContractModel
+                                                 covopts
 
 checkNoLockedFunds :: ContractModel m => CertificationOptions -> NoLockedFundsProof m -> CertMonad QC.Result
 checkNoLockedFunds opts prf = lift $ quickCheckWithResult
@@ -153,7 +162,7 @@ runUnitTests t = liftIORep $ do
       rs <- atomically $ mapM waitForDone (IntMap.elems status)
       return $ \ _ -> return rs
     cov <- readCoverageRef ref
-    return (cov, res)
+    return (CoverageReport mempty cov, res)
   where
     waitForDone tv = do
       s <- readTVar tv
@@ -199,12 +208,17 @@ checkDLTests tests opts covIdx =
 certify :: forall m. ContractModel m => Certification m -> IO (CertificationReport m)
 certify = certifyWithOptions defaultCertificationOptions
 
-certifyWithOptions :: forall m. ContractModel m => CertificationOptions -> Certification m -> IO (CertificationReport m)
+certifyWithOptions :: forall m. ContractModel m
+                   => CertificationOptions
+                   -> Certification m
+                   -> IO (CertificationReport m)
 certifyWithOptions opts Certification{..} = runCertMonad $ do
   -- Unit tests
   unitTests    <- fromMaybe [] <$> traverse runUnitTests certUnitTests
   -- Standard property
   qcRes        <- runStandardProperty @m opts certCoverageIndex
+  -- Double satisfaction
+  dsRes        <- checkDS @m opts certCoverageIndex
   -- No locked funds
   noLock       <- traverse (checkNoLockedFunds opts) certNoLockedFunds
   -- No locked funds light
@@ -216,13 +230,14 @@ certifyWithOptions opts Certification{..} = runCertMonad $ do
   -- DL tests
   dlRes        <- checkDLTests @m certDLTests opts certCoverageIndex
   -- Final results
-  return $ CertificationReport { _certRes_standardPropertyResult       = qcRes,
-                                 _certRes_standardCrashToleranceResult = ctRes,
-                                 _certRes_noLockedFundsResult          = noLock,
-                                 _certRes_noLockedFundsLightResult     = noLockLight,
-                                 _certRes_unitTestResults              = unitTests,
-                                 _certRes_coverageReport               = mempty,
-                                 _certRes_coverageIndexReport          = certCoverageIndex,
-                                 _certRes_whitelistOk                  = whitelistOk <$> certWhitelist,
-                                 _certRes_whitelistResult              = wlRes,
-                                 _certRes_DLTests                      = dlRes }
+  return $ CertificationReport
+            { _certRes_standardPropertyResult       = qcRes
+            , _certRes_doubleSatisfactionResult     = dsRes
+            , _certRes_standardCrashToleranceResult = ctRes
+            , _certRes_noLockedFundsResult          = noLock
+            , _certRes_noLockedFundsLightResult     = noLockLight
+            , _certRes_unitTestResults              = unitTests
+            , _certRes_coverageReport               = CoverageReport certCoverageIndex mempty
+            , _certRes_whitelistOk                  = whitelistOk <$> certWhitelist
+            , _certRes_whitelistResult              = wlRes
+            , _certRes_DLTests                      = dlRes }

@@ -46,7 +46,9 @@ module Ledger.Generators(
     splitVal,
     validateMockchain,
     signAll,
-    knownPaymentPublicKeys
+    knownPaymentPublicKeys,
+    knownPaymentPrivateKeys,
+    someTokenValue
     ) where
 
 import Cardano.Api qualified as C
@@ -71,11 +73,11 @@ import Gen.Cardano.Api.Typed qualified as Gen
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Ledger (Ada, CurrencySymbol, Interval, OnChainTx (Valid), POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange,
-               Passphrase (Passphrase), PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey),
-               RedeemerPtr (RedeemerPtr), ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange,
-               SomeCardanoApiTx (SomeTx), TokenName,
-               Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
+import Ledger (Ada, CardanoTx (EmulatorTx), CurrencySymbol, Interval, OnChainTx (Valid),
+               POSIXTime (POSIXTime, getPOSIXTime), POSIXTimeRange, Passphrase (Passphrase),
+               PaymentPrivateKey (unPaymentPrivateKey), PaymentPubKey (PaymentPubKey), RedeemerPtr (RedeemerPtr),
+               ScriptContext (ScriptContext), ScriptTag (Mint), Slot (Slot), SlotRange, SomeCardanoApiTx (SomeTx),
+               TokenName, Tx (txFee, txInputs, txMint, txMintScripts, txOutputs, txRedeemers, txValidRange), TxIn,
                TxInInfo (txInInfoOutRef), TxInfo (TxInfo), TxOut (txOutValue), TxOutRef (TxOutRef),
                UtxoIndex (UtxoIndex), ValidationCtx (ValidationCtx), Value, _runValidation, addSignature', pubKeyTxIn,
                pubKeyTxOut, toPublicKey, txId)
@@ -382,8 +384,8 @@ assertValid tx mc = Hedgehog.assert $ isNothing $ validateMockchain mc tx
 validateMockchain :: Mockchain -> Tx -> Maybe Index.ValidationError
 validateMockchain (Mockchain txPool _ params) tx = result where
     h      = 1
-    idx    = Index.initialise [map Valid txPool]
-    result = fmap snd $ fst $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx params)
+    idx    = Index.initialise [map (Valid . EmulatorTx) txPool]
+    result = fmap snd $ fst $ Index.runValidation (Index.validateTransaction h tx) (ValidationCtx idx params)
 
 {- | Split a value into max. n positive-valued parts such that the sum of the
      parts equals the original value. Each part should contain the required

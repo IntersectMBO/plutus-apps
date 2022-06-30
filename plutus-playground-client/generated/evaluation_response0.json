@@ -12,7 +12,7 @@
                                 "getTxId": "0312c21da481701ccdc534cdc3d080111f688e5ba147eb5d74865fb180be287a"
                             },
                             {
-                                "contents": {
+                                "_emulatorTx": {
                                     "txCollateral": [],
                                     "txData": [],
                                     "txFee": {

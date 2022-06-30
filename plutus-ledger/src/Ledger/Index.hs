@@ -61,6 +61,7 @@ import Control.Monad.Except (ExceptT, MonadError (..), runExcept, runExceptT)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), ask)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Either (fromRight)
 import Data.Foldable (asum, fold, foldl', for_, traverse_)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
@@ -103,11 +104,11 @@ initialise :: Blockchain -> UtxoIndex
 initialise = UtxoIndex . unspentOutputs
 
 -- | Update the index for the addition of a transaction.
-insert :: Tx -> UtxoIndex -> UtxoIndex
+insert :: CardanoTx -> UtxoIndex -> UtxoIndex
 insert tx = UtxoIndex . updateUtxo tx . getIndex
 
 -- | Update the index for the addition of only the collateral inputs of a failed transaction.
-insertCollateral :: Tx -> UtxoIndex -> UtxoIndex
+insertCollateral :: CardanoTx -> UtxoIndex -> UtxoIndex
 insertCollateral tx = UtxoIndex . updateUtxoCollateral tx . getIndex
 
 -- | Update the index for the addition of a block.
@@ -125,8 +126,8 @@ newtype Validation a = Validation { _runValidation :: (ReaderT ValidationCtx (Ex
     deriving newtype (Functor, Applicative, Monad, MonadReader ValidationCtx, MonadError ValidationError, MonadWriter [ScriptValidationEvent])
 
 -- | Run a 'Validation' on a 'UtxoIndex'.
-runValidation :: Validation (Maybe ValidationErrorInPhase, UtxoIndex) -> ValidationCtx -> ((Maybe ValidationErrorInPhase, UtxoIndex), [ScriptValidationEvent])
-runValidation l ctx = runWriter $ fmap (either (\e -> (Just (Phase1, e), vctxIndex ctx)) id) $ runExceptT $ runReaderT (_runValidation l) ctx
+runValidation :: Validation (Maybe ValidationErrorInPhase) -> ValidationCtx -> (Maybe ValidationErrorInPhase, [ScriptValidationEvent])
+runValidation l ctx = runWriter $ fmap (either (\e -> Just (Phase1, e)) id) $ runExceptT $ runReaderT (_runValidation l) ctx
 
 -- | Determine the unspent value that a ''TxOutRef' refers to.
 lkpValue :: ValidationMonad m => TxOutRef -> m V.Value
@@ -142,7 +143,7 @@ lkpTxOut t = lookup t . vctxIndex =<< ask
 validateTransaction :: ValidationMonad m
     => Slot.Slot
     -> Tx
-    -> m (Maybe ValidationErrorInPhase, UtxoIndex)
+    -> m (Maybe ValidationErrorInPhase)
 validateTransaction h t = do
     -- Phase 1 validation
     checkSlotRange h t
@@ -156,7 +157,7 @@ validateTransaction h t = do
 
 validateTransactionOffChain :: ValidationMonad m
     => Tx
-    -> m (Maybe ValidationErrorInPhase, UtxoIndex)
+    -> m (Maybe ValidationErrorInPhase)
 validateTransactionOffChain t = do
     checkValuePreserved t
     checkPositiveValues t
@@ -175,14 +176,8 @@ validateTransactionOffChain t = do
         checkValidInputs (toListOf (inputs . scriptTxIns)) t
         unless emptyUtxoSet (checkMintingScripts t)
 
-        idx <- vctxIndex <$> ask
-        pure (Nothing, insert t idx)
-        )
-    `catchError` payCollateral
-    where
-        payCollateral e = do
-            idx <- vctxIndex <$> ask
-            pure (Just (Phase2, e), insertCollateral t idx)
+        pure Nothing
+        ) `catchError` (\e -> pure (Just (Phase2, e)))
 
 -- | Check that a transaction can be validated in the given slot.
 checkSlotRange :: ValidationMonad m => Slot.Slot -> Tx -> m ()
@@ -348,7 +343,7 @@ checkMinAdaInTxOutputs t@Tx { txOutputs } = do
     params <- vctxParams <$> ask
     for_ txOutputs $ \txOut -> do
         let
-            minAdaTxOut' = either (const minAdaTxOut) id $
+            minAdaTxOut' = fromRight minAdaTxOut $
                 fromPlutusTxOutUnsafe params txOut <&> \txOut' -> evaluateMinLovelaceOutput params txOut'
         if Ada.fromValue (txOutValue txOut) >= minAdaTxOut'
             then pure ()

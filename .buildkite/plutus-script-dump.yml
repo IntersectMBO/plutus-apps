@@ -1,0 +1,11 @@
+# A nightly job that runs a cardano node and dumps Plutus script evaluation events
+steps:
+  - label: "run node and dump scripts"
+    command: |
+      nix-shell --run "./scripts/create-dump.sh"
+    concurrency: 1
+    concurrency_group: "plutus-script-evaluation"
+    soft_fail: true
+    timeout_in_minutes: 180
+    agents:
+      queue: "plutus"

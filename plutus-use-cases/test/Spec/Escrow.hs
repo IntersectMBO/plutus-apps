@@ -1,13 +1,22 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE GADTs              #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-module Spec.Escrow(tests, redeemTrace, redeem2Trace, refundTrace, prop_Escrow, prop_FinishEscrow, prop_NoLockedFunds, EscrowModel) where
+module Spec.Escrow( tests
+                  , redeemTrace
+                  , redeem2Trace
+                  , refundTrace
+                  , prop_Escrow
+                  , prop_Escrow_DoubleSatisfaction
+                  , prop_FinishEscrow
+                  , prop_NoLockedFunds
+                  , EscrowModel) where
 
 import Control.Lens hiding (both)
 import Control.Monad (void, when)
@@ -157,6 +166,9 @@ testWallets = [w1, w2, w3, w4, w5] -- removed five to increase collisions (, w6,
 prop_Escrow :: Actions EscrowModel -> Property
 prop_Escrow = propRunActionsWithOptions options defaultCoverageOptions (\ _ -> pure True)
 
+prop_Escrow_DoubleSatisfaction :: Actions EscrowModel -> Property
+prop_Escrow_DoubleSatisfaction = checkDoubleSatisfactionWithOptions options defaultCoverageOptions
+
 finishEscrow :: DL EscrowModel ()
 finishEscrow = do
     anyActions_
@@ -250,8 +262,8 @@ tests = testGroup "escrow"
 
     , testProperty "QuickCheck ContractModel" $ withMaxSuccess 10 prop_Escrow
     , testProperty "QuickCheck NoLockedFunds" $ withMaxSuccess 10 prop_NoLockedFunds
+    , testProperty "QuickCheck double satisfaction fails" $ expectFailure (noShrinking prop_Escrow_DoubleSatisfaction)
     ]
-
     where
         startTime = TimeSlot.scSlotZeroTime def
 

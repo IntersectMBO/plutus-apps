@@ -9,6 +9,7 @@ import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Aeson ((</$\>), (</*\>), (</\>))
 import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Aeson ((>$<), (>/\<))
+import Data.Either (Either)
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
@@ -16,6 +17,7 @@ import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
+import Data.RawJson (RawJson)
 import Data.Set (Set)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
@@ -150,7 +152,7 @@ _MultipleMatchingOutputsFound = prism' MultipleMatchingOutputsFound case _ of
 --------------------------------------------------------------------------------
 
 newtype UnbalancedTx = UnbalancedTx
-  { unBalancedTxTx :: Tx
+  { unBalancedTxTx :: Either RawJson Tx
   , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
   , unBalancedTxUtxoIndex :: Map TxOutRef TxOut
   , unBalancedTxValidityTimeRange :: Interval POSIXTime
@@ -164,7 +166,7 @@ instance Show UnbalancedTx where
 instance EncodeJson UnbalancedTx where
   encodeJson = defer \_ -> E.encode $ unwrap >$<
     ( E.record
-        { unBalancedTxTx: E.value :: _ Tx
+        { unBalancedTxTx: (E.either E.value E.value) :: _ (Either RawJson Tx)
         , unBalancedTxRequiredSignatories: E.value :: _ (Set PaymentPubKeyHash)
         , unBalancedTxUtxoIndex: (E.dictionary E.value E.value) :: _ (Map TxOutRef TxOut)
         , unBalancedTxValidityTimeRange: E.value :: _ (Interval POSIXTime)
@@ -174,7 +176,7 @@ instance EncodeJson UnbalancedTx where
 instance DecodeJson UnbalancedTx where
   decodeJson = defer \_ -> D.decode $
     ( UnbalancedTx <$> D.record "UnbalancedTx"
-        { unBalancedTxTx: D.value :: _ Tx
+        { unBalancedTxTx: (D.either D.value D.value) :: _ (Either RawJson Tx)
         , unBalancedTxRequiredSignatories: D.value :: _ (Set PaymentPubKeyHash)
         , unBalancedTxUtxoIndex: (D.dictionary D.value D.value) :: _ (Map TxOutRef TxOut)
         , unBalancedTxValidityTimeRange: D.value :: _ (Interval POSIXTime)
@@ -187,5 +189,5 @@ derive instance Newtype UnbalancedTx _
 
 --------------------------------------------------------------------------------
 
-_UnbalancedTx :: Iso' UnbalancedTx { unBalancedTxTx :: Tx, unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash, unBalancedTxUtxoIndex :: Map TxOutRef TxOut, unBalancedTxValidityTimeRange :: Interval POSIXTime }
+_UnbalancedTx :: Iso' UnbalancedTx { unBalancedTxTx :: Either RawJson Tx, unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash, unBalancedTxUtxoIndex :: Map TxOutRef TxOut, unBalancedTxValidityTimeRange :: Interval POSIXTime }
 _UnbalancedTx = _Newtype

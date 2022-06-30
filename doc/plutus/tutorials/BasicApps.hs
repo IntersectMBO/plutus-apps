@@ -106,8 +106,8 @@ mkSplitData LockArgs{recipient1Wallet, recipient2Wallet, totalAda} =
 lockFunds :: SplitData -> Contract () SplitSchema T.Text ()
 lockFunds s@SplitData{amount} = do
     logInfo $ "Locking " <> Haskell.show amount
-    let tx = Constraints.mustPayToTheScript s (Ada.toValue amount)
-    void $ submitTxConstraints splitValidator tx
+    let constraints = Constraints.mustPayToTheScript s (Ada.toValue amount)
+    void $ submitTxConstraints splitValidator constraints
 
 -- BLOCK8
 

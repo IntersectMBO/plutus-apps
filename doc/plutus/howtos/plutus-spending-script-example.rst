@@ -29,7 +29,7 @@ must supply as collateral.
 it*\ **cannot**\ *reside at a script address; it must reside at a
 ‘normal’ payment address and it cannot contain any multi-assets.*
 
-NB: All variable assignments can be looked up in `cardano-node/scripts/plutus/example-txin-locking-plutus-script.sh <(https://github.com/input-output-hk/cardano-node/blob/master/scripts/plutus/example-txin-locking-plutus-script.sh>`_
+NB: All variable assignments can be looked up in `cardano-node/scripts/plutus/example-txin-locking-plutus-script.sh <https://github.com/input-output-hk/cardano-node/blob/master/scripts/plutus/example-txin-locking-plutus-script.sh>`_
 
 An example of using a Plutus spending script
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

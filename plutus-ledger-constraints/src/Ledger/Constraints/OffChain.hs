@@ -31,6 +31,7 @@ module Ledger.Constraints.OffChain(
     -- * Constraints resolution
     , SomeLookupsAndConstraints(..)
     , UnbalancedTx(..)
+    , cardanoTx
     , tx
     , requiredSignatories
     , utxoIndex
@@ -45,15 +46,26 @@ module Ledger.Constraints.OffChain(
     , provided
     , required
     , missingValueSpent
+    , ConstraintProcessingState(..)
+    , unbalancedTx
+    , valueSpentOutputs
+    , paramsL
+    , processConstraintFun
+    , addOwnInput
+    , addOwnOutput
+    , addMintingRedeemers
+    , addMissingValueSpent
+    , updateUtxoIndex
     ) where
 
-import Control.Lens (At (at), alaf, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=))
+import Control.Lens (At (at), Traversal', _Right, alaf, iforM_, makeLensesFor, use, view, (%=), (.=), (<>=))
 import Control.Monad (forM_)
 import Control.Monad.Except (MonadError (catchError, throwError), runExcept, unless)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT), asks)
 import Control.Monad.State (MonadState (get, put), execStateT, gets)
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (def)
 import Data.Foldable (traverse_)
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (Compose))
@@ -87,6 +99,7 @@ import Ledger.Params (Params)
 import Ledger.Tx (ChainIndexTxOut, RedeemerPtr (RedeemerPtr), ScriptTag (Mint), Tx,
                   TxOut (txOutAddress, txOutDatumHash, txOutValue), TxOutRef)
 import Ledger.Tx qualified as Tx
+import Ledger.Tx.CardanoAPI qualified as C
 import Ledger.Typed.Scripts (Any, TypedValidator, ValidatorTypes (DatumType, RedeemerType))
 import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Typed.Tx (ConnectionError)
@@ -220,7 +233,7 @@ ownStakePubKeyHash skh = mempty { slOwnStakePubKeyHash = Just skh }
 --   Plutus contracts] in 'Plutus.Contract.Wallet'.
 data UnbalancedTx =
     UnbalancedTx
-        { unBalancedTxTx                  :: Tx
+        { unBalancedTxTx                  :: Either C.CardanoBuildTx Tx.Tx
         , unBalancedTxRequiredSignatories :: Set PaymentPubKeyHash
         -- ^ These are all the payment public keys that should be used to request the
         -- signatories from the user's wallet. The signatories are what is required to
@@ -242,19 +255,22 @@ data UnbalancedTx =
     deriving anyclass (FromJSON, ToJSON, OpenApi.ToSchema)
 
 makeLensesFor
-    [ ("unBalancedTxTx", "tx")
+    [ ("unBalancedTxTx", "cardanoTx")
     , ("unBalancedTxRequiredSignatories", "requiredSignatories")
     , ("unBalancedTxUtxoIndex", "utxoIndex")
     , ("unBalancedTxValidityTimeRange", "validityTimeRange")
     ] ''UnbalancedTx
 
+tx :: Traversal' UnbalancedTx Tx
+tx = cardanoTx . _Right
+
 emptyUnbalancedTx :: UnbalancedTx
-emptyUnbalancedTx = UnbalancedTx mempty mempty mempty top
+emptyUnbalancedTx = UnbalancedTx (Right mempty) mempty mempty top
 
 instance Pretty UnbalancedTx where
     pretty (UnbalancedTx utx rs utxo vr) =
         vsep
-        [ hang 2 $ vsep ["Tx:", pretty utx]
+        [ hang 2 $ vsep ["Tx:", either pretty pretty utx]
         , hang 2 $ vsep $ "Requires signatures:" : (pretty <$> Set.toList rs)
         , hang 2 $ vsep $ "Utxo index:" : (pretty <$> Map.toList utxo)
         , hang 2 $ vsep ["Validity range:", pretty vr]
@@ -307,6 +323,7 @@ data ConstraintProcessingState =
         , cpsValueSpentBalancesOutputs :: ValueSpentBalances
         -- ^ Balance of the values produced and required for the transaction's
         --   outputs
+        , cpsParams                    :: Params
         }
 
 missingValueSpent :: ValueSpentBalances -> Value
@@ -326,6 +343,7 @@ makeLensesFor
     , ("cpsMintRedeemers", "mintRedeemers")
     , ("cpsValueSpentBalancesInputs", "valueSpentInputs")
     , ("cpsValueSpentBalancesOutputs", "valueSpentOutputs")
+    , ("cpsParams", "paramsL")
     ] ''ConstraintProcessingState
 
 initialState :: ConstraintProcessingState
@@ -334,6 +352,7 @@ initialState = ConstraintProcessingState
     , cpsMintRedeemers = mempty
     , cpsValueSpentBalancesInputs = ValueSpentBalances mempty mempty
     , cpsValueSpentBalancesOutputs = ValueSpentBalances mempty mempty
+    , cpsParams = def -- cpsParams is not used here, only in plutus-tx-constraints
     }
 
 provided :: Value -> ValueSpentBalances

@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 module Spec.GameStateMachine
   ( tests, successTrace, successTrace2, traceLeaveTwoAdaInScript, failTrace
   , runTestsWithCoverage
@@ -27,7 +28,7 @@ module Spec.GameStateMachine
   , prop_SanityCheckAssertions
   , prop_GameCrashTolerance
   , certification
-  , covIndex
+  , gameParam
   ) where
 
 import Control.Exception hiding (handle)
@@ -35,7 +36,10 @@ import Control.Lens
 import Control.Monad
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.Data
+import Data.Map qualified as Map
 import Data.Maybe
+import Data.Set qualified as Set
+import Prettyprinter
 import Test.QuickCheck as QC hiding (checkCoverage, (.&&.))
 import Test.Tasty hiding (after)
 import Test.Tasty.HUnit qualified as HUnit
@@ -53,9 +57,8 @@ import Plutus.Contract.Test.Certification
 import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.Coverage
-import Plutus.Contracts.GameStateMachine as G
+import Plutus.Contracts.GameStateMachine as G hiding (Guess)
 import Plutus.Trace.Emulator as Trace
-import PlutusTx qualified
 import PlutusTx.Coverage
 
 gameParam :: G.GameParam
@@ -215,14 +218,11 @@ prop_SanityCheckAssertions = propSanityCheckAssertions
 
 check_prop_Game_with_coverage :: IO ()
 check_prop_Game_with_coverage = do
-  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIndex defaultCoverageOptions) $ \covopts ->
+  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIdx defaultCoverageOptions) $ \covopts ->
     propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))
-  writeCoverageReport "GameStateMachine" covIndex cr
-
-covIndex :: CoverageIndex
-covIndex = covIdx gameParam
+  writeCoverageReport "GameStateMachine" cr
 
 propGame' :: LogLevel -> Actions GameModel -> Property
 propGame' l = propRunActionsWithOptions
@@ -339,7 +339,8 @@ tests =
         .&&. walletFundsChange w1 (Ada.toValue (-2_000_000) <> Ada.adaValueOf (-8)))
         failTrace
 
-    , goldenPir "test/Spec/gameStateMachine.pir" $$(PlutusTx.compile [|| mkValidator ||])
+    -- TODO: turn this on again when reproducibility issue in core is fixed
+    -- , goldenPir "test/Spec/gameStateMachine.pir" $$(PlutusTx.compile [|| mkValidator ||])
 
     , HUnit.testCaseSteps "script size is reasonable" $ \step ->
         reasonable' step (Scripts.validatorScript $ G.typedValidator gameParam) 49000
@@ -350,7 +351,16 @@ tests =
     , testProperty "sanity check the contract model" prop_SanityCheckModel
 
     , testProperty "game state machine crash tolerance" $ withMaxSuccess 20 prop_GameCrashTolerance
+
+    , HUnit.testCase "we ignore at least two program locations"
+        $ HUnit.assertBool "its less than 2"
+          $ length ignoredProgramPoints > 1
     ]
+
+ignoredProgramPoints :: [CoverageAnnotation]
+ignoredProgramPoints =
+  let metadataMap = covIdx ^. coverageMetadata in
+  Map.keys . Map.filter (Set.member IgnoredAnnotation . _metadataSet) $ metadataMap
 
 initialVal :: Value
 initialVal = Ada.adaValueOf 10
@@ -361,7 +371,7 @@ runTestsWithCoverage = do
   defaultMain (coverageTests ref)
     `catch` \(e :: SomeException) -> do
                 report <- readCoverageRef ref
-                putStrLn . show $ pprCoverageReport (covIdx gameParam) report
+                putStrLn . show $ pretty (CoverageReport covIdx report)
                 throwIO e
   where
     coverageTests ref = testGroup "game state machine tests"
@@ -466,7 +476,7 @@ certification :: Certification GameModel
 certification = defaultCertification {
     certNoLockedFunds      = Just noLockProof,
     certUnitTests          = Just unitTest,
-    certCoverageIndex      = covIdx gameParam,
+    certCoverageIndex      = covIdx,
     certCrashTolerance     = Just Instance
   }
   where

@@ -29,9 +29,12 @@ import Data.Argonaut.Encode.Aeson as E
 import Data.Map as Map
 
 data CardanoTx
-  = EmulatorTx Tx
-  | CardanoApiTx RawJson
-  | Both Tx RawJson
+  = EmulatorTx { _emulatorTx :: Tx }
+  | CardanoApiTx { _cardanoApiTx :: RawJson }
+  | Both
+      { _emulatorTx :: Tx
+      , _cardanoApiTx :: RawJson
+      }
 
 derive instance Eq CardanoTx
 
@@ -40,36 +43,51 @@ instance Show CardanoTx where
 
 instance EncodeJson CardanoTx where
   encodeJson = defer \_ -> case _ of
-    EmulatorTx a -> E.encodeTagged "EmulatorTx" a E.value
-    CardanoApiTx a -> E.encodeTagged "CardanoApiTx" a E.value
-    Both a b -> E.encodeTagged "Both" (a /\ b) (E.tuple (E.value >/\< E.value))
+    EmulatorTx { _emulatorTx } -> encodeJson
+      { tag: "EmulatorTx"
+      , _emulatorTx: flip E.encode _emulatorTx E.value
+      }
+    CardanoApiTx { _cardanoApiTx } -> encodeJson
+      { tag: "CardanoApiTx"
+      , _cardanoApiTx: flip E.encode _cardanoApiTx E.value
+      }
+    Both { _emulatorTx, _cardanoApiTx } -> encodeJson
+      { tag: "Both"
+      , _emulatorTx: flip E.encode _emulatorTx E.value
+      , _cardanoApiTx: flip E.encode _cardanoApiTx E.value
+      }
 
 instance DecodeJson CardanoTx where
   decodeJson = defer \_ -> D.decode
     $ D.sumType "CardanoTx"
     $ Map.fromFoldable
-        [ "EmulatorTx" /\ D.content (EmulatorTx <$> D.value)
-        , "CardanoApiTx" /\ D.content (CardanoApiTx <$> D.value)
-        , "Both" /\ D.content (D.tuple $ Both </$\> D.value </*\> D.value)
+        [ "EmulatorTx" /\ (EmulatorTx <$> D.object "EmulatorTx" { _emulatorTx: D.value :: _ Tx })
+        , "CardanoApiTx" /\ (CardanoApiTx <$> D.object "CardanoApiTx" { _cardanoApiTx: D.value :: _ RawJson })
+        , "Both" /\
+            ( Both <$> D.object "Both"
+                { _emulatorTx: D.value :: _ Tx
+                , _cardanoApiTx: D.value :: _ RawJson
+                }
+            )
         ]
 
 derive instance Generic CardanoTx _
 
 --------------------------------------------------------------------------------
 
-_EmulatorTx :: Prism' CardanoTx Tx
+_EmulatorTx :: Prism' CardanoTx { _emulatorTx :: Tx }
 _EmulatorTx = prism' EmulatorTx case _ of
   (EmulatorTx a) -> Just a
   _ -> Nothing
 
-_CardanoApiTx :: Prism' CardanoTx RawJson
+_CardanoApiTx :: Prism' CardanoTx { _cardanoApiTx :: RawJson }
 _CardanoApiTx = prism' CardanoApiTx case _ of
   (CardanoApiTx a) -> Just a
   _ -> Nothing
 
-_Both :: Prism' CardanoTx { a :: Tx, b :: RawJson }
-_Both = prism' (\{ a, b } -> (Both a b)) case _ of
-  (Both a b) -> Just { a, b }
+_Both :: Prism' CardanoTx { _emulatorTx :: Tx, _cardanoApiTx :: RawJson }
+_Both = prism' Both case _ of
+  (Both a) -> Just a
   _ -> Nothing
 
 --------------------------------------------------------------------------------

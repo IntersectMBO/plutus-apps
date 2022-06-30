@@ -27,7 +27,7 @@ import Test.QuickCheck
 import Test.QuickCheck.DynamicLogic.CanGenerate
 
 -- | A `Quantification` over a type @a@ is a generator that can be used with
---   `Plutus.Contract.Test.ContractModel.forAllQ` to generate random values in
+--   `Test.QuickCheck.DynamicLogic.forAllQ` to generate random values in
 --   DL scenarios. In addition to a QuickCheck generator a `Quantification` contains a shrinking
 --   strategy that ensures that shrunk values stay in the range of the generator.
 data Quantification a = Quantification
@@ -67,7 +67,7 @@ chooseQ r@(a, b) = Quantification
 -- | Pick a random value from a list. Treated as an empty choice if the list is empty:
 --
 -- @
--- `Plutus.Contract.Test.ContractModel.forAllQ` (`elementsQ` []) == `Control.Applicative.empty`
+-- `Test.QuickCheck.DynamicLogic.forAllQ` (`elementsQ` []) == `Control.Applicative.empty`
 -- @
 elementsQ :: Eq a => [a] -> Quantification a
 elementsQ as = Quantification g (`elem` as) (\a -> takeWhile (/=a) as)
@@ -129,7 +129,7 @@ pairQ q q' = Quantification
 --
 -- @
 --   ...
---   (die1, die2) <- `Plutus.Contract.Test.ContractModel.forAllQ` (`chooseQ` (1, 6), `chooseQ` (1, 6))
+--   (die1, die2) <- `Test.QuickCheck.DynamicLogic.forAllQ` (`chooseQ` (1, 6), `chooseQ` (1, 6))
 --   ...
 -- @
 class (Eq (Quantifies q), Show (Quantifies q), Typeable (Quantifies q))
