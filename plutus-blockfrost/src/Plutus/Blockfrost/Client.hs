@@ -41,7 +41,7 @@ handleBlockfrostClient event = liftIO $ do
 
     case event of
         DatumFromHash d          -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
-        RedeemerFromHash d       -> ioError (userError "TODO")
+        RedeemerFromHash d       -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
         ValidatorFromHash d      -> ioError (userError "TODO")
         MintingPolicyFromHash d  -> ioError (userError "TODO")
         StakeValidatorFromHash d -> ioError (userError "TODO")
