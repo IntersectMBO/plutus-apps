@@ -9,8 +9,10 @@ module Plutus.Blockfrost.Utils where
 
 import Data.Aeson
 import Data.Aeson.QQ
+import Data.Maybe (fromJust)
 import Data.String
 import Data.Text (Text, drop, pack, take, unpack)
+import Text.Hex (decodeHex)
 import Text.Read (readMaybe)
 
 import Blockfrost.Client as Blockfrost
@@ -98,7 +100,7 @@ discreteCurrencyToValue sd = singleton pid tn quant
     pid = fromString $ unpack $ Data.Text.take 56 $ someDiscreteCurrency sd
 
     tn :: TokenName
-    tn = fromString $ unpack $ Data.Text.drop 56 $ someDiscreteCurrency sd
+    tn =  TokenName $ toBuiltin $ fromJust $ decodeHex $ Data.Text.drop 56 $ someDiscreteCurrency sd
 
     quant :: Integer
     quant = someDiscreteAmount sd
