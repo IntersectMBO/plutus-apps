@@ -8,6 +8,7 @@ module Plutus.Blockfrost.Queries (
     getTipBlockfrost
     , getDatumBlockfrost
     , getValidatorBlockfrost
+    , getUnspentTxOutBlockfrost
     ) where
 
 import Data.Aeson (Value)
@@ -25,3 +26,8 @@ getDatumBlockfrost dHash = getScriptDatum dHash <&> _scriptDatumJsonValue
 
 getValidatorBlockfrost :: MonadBlockfrost m => ScriptHash -> m ScriptCBOR
 getValidatorBlockfrost = getScriptCBOR
+
+getUnspentTxOutBlockfrost :: MonadBlockfrost m => (TxHash, Integer) -> m UtxoOutput
+getUnspentTxOutBlockfrost (txHash, idx) = do
+    utxos <- getTxUtxos txHash
+    return $ _transactionUtxosOutputs utxos !! fromIntegral idx

@@ -8,11 +8,26 @@
 module Plutus.Blockfrost.Utils where
 
 import Data.Aeson
+import Data.Aeson.QQ
 import Data.String
+import Data.Text (Text, drop, pack, take, unpack)
+import Text.Read (readMaybe)
 
 import Blockfrost.Client as Blockfrost
+import Cardano.Api hiding (AssetId, Block, Value)
+import Cardano.Api.Shelley qualified as Api
+import Ledger.Tx (TxOutRef (..))
+import Ledger.Tx.CardanoAPI
+import Money (Approximation (Round), DecimalConf (..), SomeDiscrete, defaultDecimalConf, discreteToDecimal,
+              someDiscreteAmount, someDiscreteCurrency)
+import Plutus.V1.Ledger.Address qualified as LA
+import Plutus.V1.Ledger.Api (Credential (..), PubKeyHash, adaSymbol, adaToken, fromBuiltin, toBuiltin)
 import Plutus.V1.Ledger.Api qualified (DatumHash, RedeemerHash)
 import Plutus.V1.Ledger.Scripts qualified as PS
+import Plutus.V1.Ledger.Value hiding (Value)
+import Plutus.V1.Ledger.Value qualified as Ledger (Value)
+
+
 
 class Show a => ToBlockfrostScriptHash a where
   toBlockfrostScriptHash :: a -> Blockfrost.ScriptHash
@@ -33,3 +48,55 @@ fromSucceed :: Result a -> a
 fromSucceed (Error a)   = error $ show a
 fromSucceed (Success a) = a
 
+toBlockfrostTxHash :: TxOutRef -> TxHash
+toBlockfrostTxHash = TxHash . pack . show . txOutRefId
+
+toBlockfrostRef :: TxOutRef -> (TxHash, Integer)
+toBlockfrostRef ref = (toBlockfrostTxHash ref, txOutRefIdx ref)
+
+textToDatumHash :: Text -> PS.DatumHash
+textToDatumHash dHash = fromSucceed $ fromJSON dHashJson
+  where
+    dHashJson :: Value
+    dHashJson = [aesonQQ| #{dHash} |]
+
+toPlutusAddress :: Blockfrost.Address -> Either String LA.Address
+toPlutusAddress addr = case deserialized of
+    Nothing -> Left "Error deserializing the Address"
+    Just des -> case fromCardanoAddress (Api.shelleyAddressInEra @ShelleyEra des) of
+        Left err   -> Left ("Error parsing address " ++ show err)
+        Right addr -> Right addr
+  where
+    deserialized :: Maybe (Api.Address ShelleyAddr)
+    deserialized = deserialiseAddress AsShelleyAddress (unAddress addr)
+
+amountsToValue :: [Blockfrost.Amount] -> Ledger.Value
+amountsToValue = foldr ((<>). blfAmountToValue) (singleton "" "" 0)
+
+blfAmountToValue :: Blockfrost.Amount -> Ledger.Value
+blfAmountToValue amt = case amt of
+                          AdaAmount lov  -> lovelacesToValue lov
+                          AssetAmount ds -> discreteCurrencyToValue ds
+
+discreteCurrencyToValue :: Money.SomeDiscrete -> Ledger.Value
+discreteCurrencyToValue sd = singleton pid tn quant
+  where
+    pid :: CurrencySymbol
+    pid = fromString $ unpack $ Data.Text.take 56 $ someDiscreteCurrency sd
+
+    tn :: TokenName
+    tn = fromString $ unpack $ Data.Text.drop 56 $ someDiscreteCurrency sd
+
+    quant :: Integer
+    quant = someDiscreteAmount sd
+
+lovelaceDecimalConfig :: Money.DecimalConf
+lovelaceDecimalConfig = Money.defaultDecimalConf { Money.decimalConf_digits = 0}
+
+lovelacesToMInt :: Lovelaces -> Maybe Integer
+lovelacesToMInt = readMaybe . unpack . Money.discreteToDecimal lovelaceDecimalConfig Money.Round
+
+lovelacesToValue :: Lovelaces -> Ledger.Value
+lovelacesToValue lov = case lovelacesToMInt lov of
+  Nothing  -> singleton adaSymbol adaToken 0
+  Just int -> singleton adaSymbol adaToken int
