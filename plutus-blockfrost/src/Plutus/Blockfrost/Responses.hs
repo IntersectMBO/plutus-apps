@@ -9,6 +9,7 @@ module Plutus.Blockfrost.Responses (
     , processGetDatum
     , processGetValidator
     , processUnspentTxOut
+    , processIsUtxo
     ) where
 
 import Data.Aeson qualified as JSON
@@ -22,6 +23,7 @@ import Blockfrost.Client
 import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
 import Ledger.Tx (ChainIndexTxOut (..))
+import Plutus.ChainIndex.Api (IsUtxoResponse)
 import Plutus.ChainIndex.Types (Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
@@ -105,3 +107,15 @@ processUnspentTxOut = maybe (pure Nothing) buildResponse
 
     utxoDatumHash :: UtxoOutput -> Either Ledger.DatumHash Datum
     utxoDatumHash = maybe (Right unitDatum) (Left . textToDatumHash . unDatumHash) . _utxoOutputDataHash
+
+processIsUtxo :: (Block, Bool) -> IO IsUtxoResponse
+processIsUtxo (block, isUtxo) = do
+    tip <- processTip block
+    return ((fromSucceed $ JSON.fromJSON $ hcJSON tip) :: IsUtxoResponse)
+  where
+    hcJSON :: Tip -> JSON.Value
+    hcJSON tip = [aesonQQ|{
+                "currentTip": #{tip},
+                "isUtxo": #{isUtxo}
+                }
+                |]
