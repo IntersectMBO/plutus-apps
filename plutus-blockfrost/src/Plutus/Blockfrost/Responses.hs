@@ -7,6 +7,7 @@
 module Plutus.Blockfrost.Responses (
     processTip
     , processGetDatum
+    , processGetValidator
     ) where
 
 import Data.Aeson qualified as JSON
@@ -14,11 +15,13 @@ import Data.Aeson.QQ
 import Data.Maybe (fromJust)
 import Data.String
 import Data.Text (Text, unpack)
+import Data.Text qualified as Text (drop)
 
 import Blockfrost.Client
 import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
 import Plutus.ChainIndex.Types (Tip (..))
+import Plutus.V1.Ledger.Scripts (Validator (..))
 import PlutusTx qualified
 
 import Plutus.Blockfrost.Utils
@@ -56,3 +59,12 @@ processTip Block{..} = return ((fromSucceed $ JSON.fromJSON hcJSON) :: Tip)
                 }
                 }
                 |]
+
+processGetValidator :: Maybe ScriptCBOR -> IO (Maybe Validator)
+processGetValidator = maybe (pure Nothing) buildResponse
+  where
+    buildResponse :: ScriptCBOR -> IO (Maybe Validator)
+    buildResponse = maybe (pure Nothing) (return . Just . fromSucceed . JSON.fromJSON . hcJSON . Text.drop 6) . _scriptCborCbor
+
+    hcJSON :: Text -> JSON.Value
+    hcJSON t = [aesonQQ|{"getValidator": #{t}}|]

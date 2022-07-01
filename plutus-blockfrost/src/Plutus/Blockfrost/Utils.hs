@@ -24,3 +24,6 @@ instance ToBlockfrostDatumHash Plutus.V1.Ledger.Api.RedeemerHash
 fromSucceed :: Result a -> a
 fromSucceed (Error a)   = error $ show a
 fromSucceed (Success a) = a
+
+toBlockfrostScriptHash :: PS.ValidatorHash -> Blockfrost.ScriptHash
+toBlockfrostScriptHash = fromString . show

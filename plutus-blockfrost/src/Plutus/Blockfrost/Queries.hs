@@ -7,6 +7,7 @@
 module Plutus.Blockfrost.Queries (
     getTipBlockfrost
     , getDatumBlockfrost
+    , getValidatorBlockfrost
     ) where
 
 import Data.Aeson (Value)
@@ -21,3 +22,6 @@ getTipBlockfrost = getLatestBlock
 
 getDatumBlockfrost :: MonadBlockfrost m => DatumHash -> m Value
 getDatumBlockfrost dHash = getScriptDatum dHash <&> _scriptDatumJsonValue
+
+getValidatorBlockfrost :: MonadBlockfrost m => ScriptHash -> m ScriptCBOR
+getValidatorBlockfrost = getScriptCBOR
