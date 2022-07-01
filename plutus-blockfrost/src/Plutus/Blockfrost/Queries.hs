@@ -1,8 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE RecordWildCards  #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators    #-}
 
 module Plutus.Blockfrost.Queries (
     getTipBlockfrost
@@ -10,8 +8,10 @@ module Plutus.Blockfrost.Queries (
     , getValidatorBlockfrost
     , getUnspentTxOutBlockfrost
     , getIsUtxoBlockfrost
+    , getUtxoAtAddressBlockfrost
     ) where
 
+import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
 import Data.Aeson (Value)
 import Data.Functor ((<&>))
 
@@ -39,6 +39,11 @@ getIsUtxoBlockfrost ref = do
     isUtxo <- checkIsUtxo ref
     return (tip, isUtxo)
 
+getUtxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m (Block, [AddressUtxo])
+getUtxoAtAddressBlockfrost pq addr =  do
+    tip <- getTipBlockfrost
+    utxos <- getAddressUtxos' addr (paged 50 1) def
+    return(tip, utxos)
 
 -- UTIL FUNCTIONS
 

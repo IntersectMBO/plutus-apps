@@ -70,6 +70,19 @@ toPlutusAddress addr = case deserialized of
     deserialized :: Maybe (Api.Address ShelleyAddr)
     deserialized = deserialiseAddress AsShelleyAddress (unAddress addr)
 
+credentialToAddress :: Credential -> Blockfrost.Address
+credentialToAddress c = case toCardanoAddress netId pAddress of
+    Left err   -> error $ show err
+    Right addr -> mkAddress $ serialiseAddress addr
+  where
+    pAddress :: LA.Address
+    pAddress = case c of
+      PubKeyCredential pkh     -> LA.pubKeyHashAddress pkh
+      ScriptCredential valHash -> LA.scriptHashAddress valHash
+
+    netId :: NetworkId
+    netId = fromNetworkMagic $ NetworkMagic {unNetworkMagic = 1097911063}
+
 amountsToValue :: [Blockfrost.Amount] -> Ledger.Value
 amountsToValue = foldr ((<>). blfAmountToValue) (singleton "" "" 0)
 

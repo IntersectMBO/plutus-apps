@@ -10,8 +10,10 @@ module Plutus.Blockfrost.Responses (
     , processGetValidator
     , processUnspentTxOut
     , processIsUtxo
+    , processGetUtxoAtAddress
     ) where
 
+import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
 import Data.Aeson qualified as JSON
 import Data.Aeson.QQ
 import Data.Maybe (fromJust)
@@ -22,8 +24,8 @@ import Data.Text qualified as Text (drop)
 import Blockfrost.Client
 import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
-import Ledger.Tx (ChainIndexTxOut (..))
-import Plutus.ChainIndex.Api (IsUtxoResponse)
+import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..))
+import Plutus.ChainIndex.Api (IsUtxoResponse, UtxosResponse)
 import Plutus.ChainIndex.Types (Tip (..))
 import Plutus.V1.Ledger.Address qualified as Ledger
 import Plutus.V1.Ledger.Credential (Credential (PubKeyCredential, ScriptCredential))
@@ -119,3 +121,35 @@ processIsUtxo (block, isUtxo) = do
                 "isUtxo": #{isUtxo}
                 }
                 |]
+
+processGetUtxoAtAddress :: PageQuery TxOutRef -> (Block, [AddressUtxo]) ->  IO UtxosResponse
+processGetUtxoAtAddress pq (block, xs) = do
+    tip <- processTip block
+    return ((fromSucceed $ JSON.fromJSON $ hcJSON tip) :: UtxosResponse)
+  where
+      hcJSON :: Tip -> JSON.Value
+      hcJSON tip = [aesonQQ|{
+                  "currentTip": #{tip},
+                  "page": {
+                    "currentPageQuery" : #{pq},
+                    "nextPageQuery": #{not},
+                    "pageItems": #{items}
+                  }
+                }
+                |]
+
+      nextItem :: Maybe TxOutRef
+      nextItem = Nothing
+
+      items :: [TxOutRef]
+      items = map transform xs
+
+      transform :: AddressUtxo -> TxOutRef
+      transform utxo = fromSucceed $ JSON.fromJSON $ txRefJSON utxo
+
+      txRefJSON :: AddressUtxo -> JSON.Value
+      txRefJSON utxo = [aesonQQ| {
+                          "txOutRefId":{ "getTxId" : #{_addressUtxoTxHash utxo}},
+                          "txOutRefIdx": #{_addressUtxoOutputIndex utxo}
+                          }
+                        |]

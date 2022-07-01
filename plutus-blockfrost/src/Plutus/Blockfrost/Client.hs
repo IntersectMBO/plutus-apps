@@ -1,15 +1,18 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
 
 module Plutus.Blockfrost.Client(handleBlockfrostClient) where
 
-import Blockfrost.Client (BlockfrostClientT, BlockfrostError (BlockfrostNotFound), projectFromFile, runBlockfrost)
+import Blockfrost.Client (Address, BlockfrostClientT, BlockfrostError (BlockfrostNotFound), projectFromFile,
+                          runBlockfrost)
 import Control.Monad.Freer (Eff, LastMember, Member, sendM, type (~>))
 import Control.Monad.Freer.Error (Error, throwError)
+import Control.Monad.Freer.Extras.Pagination (Page (..), PageQuery (..), PageSize (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Plutus.ChainIndex.Effects (ChainIndexQueryEffect (..))
+
+import Plutus.V1.Ledger.Api (Credential (..), TxOutRef)
 
 import Plutus.Blockfrost.Queries
 import Plutus.Blockfrost.Responses
@@ -26,7 +29,7 @@ handleBlockfrostClient ::
     ~> Eff effs
 handleBlockfrostClient event = liftIO $ do
     print "------- HANDLE BLOCKFROST CLIENT -------"
-    prj <- projectFromFile "/home/valentino/Documents/Plank/plutus-apps/plutus-chain-index-core/testnet-token"
+    prj <- projectFromFile "./testnet-token"
     let
         runClient :: forall a. BlockfrostClientT IO a -> IO a
         runClient a = runBlockfrost prj a >>= either (ioError . userError . show) return
@@ -47,8 +50,7 @@ handleBlockfrostClient event = liftIO $ do
         StakeValidatorFromHash d -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
         UnspentTxOutFromRef r    -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostRef) r     >>= processUnspentTxOut
         UtxoSetMembership r      -> (runClient . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
-        UtxoSetAtAddress pq a    -> ioError (userError "TODO")
+        UtxoSetAtAddress pq a    -> (runClient . getUtxoAtAddressBlockfrost pq . credentialToAddress) a  >>= processGetUtxoAtAddress pq
         UtxoSetWithCurrency pq a -> ioError (userError "TODO")
         TxoSetAtAddress pq a     -> ioError (userError "TODO")
         GetTip                   -> runClient getTipBlockfrost >>= processTip
-
