@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE QuasiQuotes        #-}
 {-# LANGUAGE TypeApplications   #-}
@@ -114,4 +115,4 @@ lovelacesToMInt = readMaybe . unpack . Money.discreteToDecimal lovelaceDecimalCo
 lovelacesToValue :: Lovelaces -> Ledger.Value
 lovelacesToValue lov = case lovelacesToMInt lov of
   Nothing  -> singleton adaSymbol adaToken 0
-  Just int -> singleton adaSymbol adaToken int
+  Just int -> singleton adaSymbol adaToken (1_000_000 * int)

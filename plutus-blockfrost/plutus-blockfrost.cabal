@@ -49,3 +49,4 @@ library
         text-class, 
         text -any,
         utf8-string,
+        hex-text,
