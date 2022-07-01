@@ -1,0 +1,51 @@
+cabal-version: 2.2
+name: plutus-blockfrost
+version: 0.1.0.0
+license: Apache-2.0
+build-type: Simple
+
+source-repository head
+    type: git
+    location: https://github.com/input-output-hk/plutus-apps
+
+common lang
+    default-language: Haskell2010
+    default-extensions: ExplicitForAll ScopedTypeVariables
+                        DeriveGeneric StandaloneDeriving DeriveLift
+                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
+                        DeriveTraversable ImportQualifiedPost
+    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
+                 -Wincomplete-uni-patterns -Wincomplete-record-updates
+                 -Wredundant-constraints -Widentities
+
+library
+    import: lang
+    exposed-modules:
+        Plutus.Blockfrost.Client
+        Plutus.Blockfrost.Queries
+        Plutus.Blockfrost.Responses
+        Plutus.Blockfrost.Utils
+    hs-source-dirs: src
+    build-depends:
+        plutus-tx -any,
+        freer-extras -any,
+        plutus-chain-index-core -any,
+        plutus-ledger -any,
+        plutus-ledger-api -any,
+    build-depends:
+        aeson -any,
+        aeson-qq, 
+        base >=4.7 && <5,
+        bech32,
+        blockfrost-client,
+        blockfrost-api,
+        bytestring -any,
+        cardano-api -any,
+        exceptions -any,
+        freer-simple -any,
+        safe-money, 
+        serialise,
+        stm -any,
+        text-class, 
+        text -any,
+        utf8-string,
