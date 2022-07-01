@@ -88,6 +88,7 @@ import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Error (WalletAPIError)
 import Wallet.Types (ContractInstanceId)
 
+import Plutus.Blockfrost.Client as BlockfrostClient
 ------------------------------------------------------------
 
 -- | Application environment with a contract type `a`.
@@ -175,7 +176,8 @@ appEffectHandlers storageBackend config trace BuiltinHandler{contractHandler} =
             . flip handleError (throwError . ChainIndexError)
             . interpret (Core.handleUserEnvReader @(Builtin a) @(AppEnv a))
             . reinterpret (Core.handleMappedReader @(AppEnv a) @ClientEnv chainIndexEnv)
-            . reinterpret2 (ChainIndex.handleChainIndexClient @IO)
+            -- . reinterpret2 (ChainIndex.handleChainIndexClient @IO)
+            . reinterpret2 (BlockfrostClient.handleBlockfrostClient @IO)
 
             -- handle 'WalletEffect'
             . flip handleError (throwError . WalletClientError)
