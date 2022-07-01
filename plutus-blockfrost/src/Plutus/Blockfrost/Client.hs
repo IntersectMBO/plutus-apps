@@ -40,7 +40,7 @@ handleBlockfrostClient event = liftIO $ do
                 Left e                  -> ioError (userError $ show e)
 
     case event of
-        DatumFromHash d          -> ioError (userError "TODO")
+        DatumFromHash d          -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
         RedeemerFromHash d       -> ioError (userError "TODO")
         ValidatorFromHash d      -> ioError (userError "TODO")
         MintingPolicyFromHash d  -> ioError (userError "TODO")
