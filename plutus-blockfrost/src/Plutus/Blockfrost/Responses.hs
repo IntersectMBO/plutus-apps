@@ -128,15 +128,15 @@ processGetUtxoAtAddress pq (block, xs) = do
     return ((fromSucceed $ JSON.fromJSON $ hcJSON tip) :: UtxosResponse)
   where
       hcJSON :: Tip -> JSON.Value
-      hcJSON tip = [aesonQQ|{
+      hcJSON tip = [aesonQQ| {
                   "currentTip": #{tip},
                   "page": {
                     "currentPageQuery" : #{pq},
-                    "nextPageQuery": #{not},
+                    "nextPageQuery": #{nextItem},
                     "pageItems": #{items}
                   }
                 }
-                |]
+                 |]
 
       nextItem :: Maybe TxOutRef
       nextItem = Nothing
