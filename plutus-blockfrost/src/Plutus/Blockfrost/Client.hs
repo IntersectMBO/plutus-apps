@@ -43,8 +43,8 @@ handleBlockfrostClient event = liftIO $ do
         DatumFromHash d          -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
         RedeemerFromHash d       -> (runClientMaybe . getDatumBlockfrost . toBlockfrostDatumHash) d      >>= processGetDatum
         ValidatorFromHash d      -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
-        MintingPolicyFromHash d  -> ioError (userError "TODO")
-        StakeValidatorFromHash d -> ioError (userError "TODO")
+        MintingPolicyFromHash d  -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
+        StakeValidatorFromHash d -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
         UnspentTxOutFromRef r    -> ioError (userError "TODO")
         UtxoSetMembership r      -> ioError (userError "TODO")
         UtxoSetAtAddress pq a    -> ioError (userError "TODO")

@@ -21,10 +21,22 @@ import Blockfrost.Client
 import Cardano.Api hiding (Block)
 import Cardano.Api.Shelley qualified as Shelley
 import Plutus.ChainIndex.Types (Tip (..))
-import Plutus.V1.Ledger.Scripts (Validator (..))
+import Plutus.V1.Ledger.Scripts (MintingPolicy, StakeValidator, Validator)
 import PlutusTx qualified
 
 import Plutus.Blockfrost.Utils
+
+class FromJSON a => PlutusValidator a where
+  fromCBOR :: Text -> JSON.Result a
+
+instance PlutusValidator Validator where
+  fromCBOR t = JSON.fromJSON [aesonQQ|{"getValidator": #{t}}|]
+
+instance PlutusValidator MintingPolicy where
+  fromCBOR t = JSON.fromJSON [aesonQQ|{"getMintingPolicy": #{t}}|]
+
+instance PlutusValidator StakeValidator where
+  fromCBOR t = JSON.fromJSON [aesonQQ|{"getStakeValidator": #{t}}|]
 
 processGetDatum ::  PlutusTx.FromData a => Maybe JSON.Value -> IO (Maybe a)
 processGetDatum sdt = case sdt of
@@ -60,11 +72,8 @@ processTip Block{..} = return ((fromSucceed $ JSON.fromJSON hcJSON) :: Tip)
                 }
                 |]
 
-processGetValidator :: Maybe ScriptCBOR -> IO (Maybe Validator)
+processGetValidator :: PlutusValidator a => Maybe ScriptCBOR -> IO (Maybe a)
 processGetValidator = maybe (pure Nothing) buildResponse
   where
-    buildResponse :: ScriptCBOR -> IO (Maybe Validator)
-    buildResponse = maybe (pure Nothing) (return . Just . fromSucceed . JSON.fromJSON . hcJSON . Text.drop 6) . _scriptCborCbor
-
-    hcJSON :: Text -> JSON.Value
-    hcJSON t = [aesonQQ|{"getValidator": #{t}}|]
+    buildResponse :: PlutusValidator a => ScriptCBOR -> IO (Maybe a)
+    buildResponse = maybe (pure Nothing) (return . Just . fromSucceed . fromCBOR . Text.drop 6) . _scriptCborCbor
