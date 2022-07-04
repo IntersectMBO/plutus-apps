@@ -108,9 +108,10 @@ executable marconi
     -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat
     -Wincomplete-uni-patterns -Wincomplete-record-updates
     -Wno-missing-import-lists -Wredundant-constraints -O0
+    -Wunused-packages
 
   build-depends:
-    , base                     >=4.9 && <5
+    , base                  >=4.9 && <5
     , bytestring
     , cardano-api
     , containers
@@ -118,8 +119,6 @@ executable marconi
     , iohk-monitoring
     , lens
     , optparse-applicative
-    , plutus-chain-index
-    , plutus-chain-index-core
     , plutus-ledger
     , plutus-script-utils
     , plutus-streaming

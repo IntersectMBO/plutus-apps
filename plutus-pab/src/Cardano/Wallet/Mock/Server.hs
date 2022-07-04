@@ -18,8 +18,8 @@ import Cardano.Node.Types (ChainSyncHandle)
 import Cardano.Protocol.Socket.Mock.Client qualified as MockClient
 import Cardano.Wallet.Mock.API (API)
 import Cardano.Wallet.Mock.Handlers (processWalletEffects)
-import Cardano.Wallet.Mock.Types (Port (Port), WalletMsg (StartingWallet), Wallets, createWallet, getWalletInfo,
-                                  multiWallet)
+import Cardano.Wallet.Mock.Types (Port (Port), WalletInfo (wiAddresses, wiPaymentPubKeyHash),
+                                  WalletMsg (StartingWallet), Wallets, createWallet, getWalletInfo, multiWallet)
 import Cardano.Wallet.Types (LocalWalletSettings (LocalWalletSettings, baseUrl), WalletUrl (WalletUrl))
 import Control.Concurrent.Availability (Availability, available)
 import Control.Concurrent.MVar (MVar, newMVar)
@@ -58,7 +58,8 @@ app trace txSendHandle chainSyncHandle chainIndexEnv mVarState params =
         (processWalletEffects trace txSendHandle chainSyncHandle chainIndexEnv mVarState params) $
             (\funds -> createWallet (Ada.lovelaceOf <$> funds)) :<|>
             (\w tx -> multiWallet (Wallet Nothing w) (submitTxn tx) >>= const (pure NoContent)) :<|>
-            (getWalletInfo >=> maybe (throwError err404) pure ) :<|>
+            (getWalletInfo >=> maybe (throwError err404) (pure . wiPaymentPubKeyHash) ) :<|>
+            (getWalletInfo >=> maybe (throwError err404) (pure . wiAddresses) ) :<|>
             (\w -> multiWallet (Wallet Nothing w) . balanceTx) :<|>
             (\w -> multiWallet (Wallet Nothing w) totalFunds) :<|>
             (\w tx -> multiWallet (Wallet Nothing w) (walletAddSignature tx))

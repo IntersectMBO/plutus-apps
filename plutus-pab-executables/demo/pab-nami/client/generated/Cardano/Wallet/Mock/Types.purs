@@ -13,11 +13,13 @@ import Data.Generic.Rep (class Generic)
 import Data.Lens (Iso', Lens', Prism', iso, prism')
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
+import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 import Ledger.Address (PaymentPubKeyHash)
+import Plutus.V1.Ledger.Address (Address)
 import Type.Proxy (Proxy(Proxy))
 import Wallet.Emulator.Wallet (Wallet)
 import Data.Argonaut.Decode.Aeson as D
@@ -27,6 +29,7 @@ import Data.Map as Map
 newtype WalletInfo = WalletInfo
   { wiWallet :: Wallet
   , wiPaymentPubKeyHash :: PaymentPubKeyHash
+  , wiAddresses :: NonEmptyList Address
   }
 
 instance Show WalletInfo where
@@ -37,6 +40,7 @@ instance EncodeJson WalletInfo where
     ( E.record
         { wiWallet: E.value :: _ Wallet
         , wiPaymentPubKeyHash: E.value :: _ PaymentPubKeyHash
+        , wiAddresses: E.value :: _ (NonEmptyList Address)
         }
     )
 
@@ -45,6 +49,7 @@ instance DecodeJson WalletInfo where
     ( WalletInfo <$> D.record "WalletInfo"
         { wiWallet: D.value :: _ Wallet
         , wiPaymentPubKeyHash: D.value :: _ PaymentPubKeyHash
+        , wiAddresses: D.value :: _ (NonEmptyList Address)
         }
     )
 
@@ -54,5 +59,5 @@ derive instance Newtype WalletInfo _
 
 --------------------------------------------------------------------------------
 
-_WalletInfo :: Iso' WalletInfo { wiWallet :: Wallet, wiPaymentPubKeyHash :: PaymentPubKeyHash }
+_WalletInfo :: Iso' WalletInfo { wiWallet :: Wallet, wiPaymentPubKeyHash :: PaymentPubKeyHash, wiAddresses :: NonEmptyList Address }
 _WalletInfo = _Newtype

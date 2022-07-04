@@ -196,7 +196,7 @@ data AddParams = AddParams
 -- for any pair of tokens at any given time.
 start :: forall w s. Contract w s Text Uniswap
 start = do
-    pkh <- Contract.ownPaymentPubKeyHash
+    pkh <- Contract.ownFirstPaymentPubKeyHash
     cs  <- fmap Currency.currencySymbol $
            mapError (pack . show @Currency.CurrencyError) $
            Currency.mintContract pkh [(uniswapTokenName, 1)]
@@ -247,7 +247,7 @@ create us CreateParams{..} = do
 close :: forall w s. Uniswap -> CloseParams -> Contract w s Text ()
 close us CloseParams{..} = do
     ((oref1, o1, lps), (oref2, o2, lp, liquidity)) <- findUniswapFactoryAndPool us clpCoinA clpCoinB
-    pkh                                            <- Contract.ownPaymentPubKeyHash
+    pkh                                            <- Contract.ownFirstPaymentPubKeyHash
     let usInst   = uniswapInstance us
         usScript = uniswapScript us
         usDat    = Factory $ filter (/= lp) lps
@@ -279,7 +279,7 @@ close us CloseParams{..} = do
 remove :: forall w s. Uniswap -> RemoveParams -> Contract w s Text ()
 remove us RemoveParams{..} = do
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us rpCoinA rpCoinB
-    pkh                           <- Contract.ownPaymentPubKeyHash
+    pkh                           <- Contract.ownFirstPaymentPubKeyHash
     when (rpDiff < 1 || rpDiff >= liquidity) $ throwError "removed liquidity must be positive and less than total liquidity"
     let usInst       = uniswapInstance us
         usScript     = uniswapScript us
@@ -312,7 +312,7 @@ remove us RemoveParams{..} = do
 -- | Adds some liquidity to an existing liquidity pool in exchange for newly minted liquidity tokens.
 add :: forall w s. Uniswap -> AddParams -> Contract w s Text ()
 add us AddParams{..} = do
-    pkh                           <- Contract.ownPaymentPubKeyHash
+    pkh                           <- Contract.ownFirstPaymentPubKeyHash
     (_, (oref, o, lp, liquidity)) <- findUniswapFactoryAndPool us apCoinA apCoinB
     when (apAmountA < 0 || apAmountB < 0) $ throwError "amounts must not be negative"
     let outVal = view ciTxOutValue o
@@ -369,7 +369,7 @@ swap us SwapParams{..} = do
         let outA = Amount $ findSwapB oldA oldB spAmountB
         when (outA == 0) $ throwError "no payout"
         return (oldA - outA, oldB + spAmountB)
-    pkh <- Contract.ownPaymentPubKeyHash
+    pkh <- Contract.ownFirstPaymentPubKeyHash
 
     logInfo @String $ printf "oldA = %d, oldB = %d, old product = %d, newA = %d, newB = %d, new product = %d" oldA oldB (unAmount oldA * unAmount oldB) newA newB (unAmount newA * unAmount newB)
 
@@ -421,7 +421,7 @@ pools us = do
 -- | Gets the caller's funds.
 funds :: forall w s. Contract w s Text Value
 funds = do
-    pkh <- Contract.ownPaymentPubKeyHash
+    pkh <- Contract.ownFirstPaymentPubKeyHash
     os  <- map snd . Map.toList <$> utxosAt (pubKeyHashAddress pkh Nothing)
     return $ mconcat [view ciTxOutValue o | o <- os]
 

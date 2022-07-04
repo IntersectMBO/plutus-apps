@@ -67,6 +67,7 @@ library
     Ledger.Index.Internal
     Ledger.Orphans
     Ledger.Params
+    Ledger.Test
     Ledger.TimeSlot
     Ledger.Tokens
     Ledger.Tx
@@ -142,6 +143,9 @@ library
 
   ghc-options:        -fprint-potential-instances
 
+  if !(impl(ghcjs) || os(ghcjs))
+    build-depends: plutus-tx-plugin
+
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
@@ -159,8 +163,11 @@ test-suite plutus-ledger-test
     , bytestring
     , cardano-api:{cardano-api, gen}
     , containers
+    , data-default
     , hedgehog
     , plutus-ledger
+    , plutus-ledger-api
+    , plutus-script-utils
     , plutus-tx
     , tasty
     , tasty-hedgehog

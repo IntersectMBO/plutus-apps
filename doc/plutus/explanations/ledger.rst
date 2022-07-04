@@ -94,4 +94,4 @@ Further reading
 The Extended UTXO Model is described in :cite:t:`functional-smart-contracts-summit`.
 More formal detail can be found in in :cite:t:`eutxo,utxoma,eutxoma`.
 
-For more help on how to actually implement interesting logic using the EUTXO model and scripts, read some of our :ref:`tutorials<plutus_tutorials>`
+For more help on how to actually implement interesting logic using the EUTXO model and scripts, read some of our :ref:`tutorials<plutus_tutorials>`.

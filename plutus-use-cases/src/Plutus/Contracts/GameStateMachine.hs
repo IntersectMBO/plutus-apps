@@ -36,6 +36,7 @@ module Plutus.Contracts.GameStateMachine(
     , GameStateMachineSchema
     , GameError
     , token
+    , covIdx
     ) where
 
 import Control.Lens (makeClassyPrisms)
@@ -43,7 +44,7 @@ import Control.Monad (void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 qualified as C
 import GHC.Generics (Generic)
-import Ledger (POSIXTime, PaymentPubKeyHash, TokenName, Value)
+import Ledger (POSIXTime, PaymentPubKeyHash, ScriptContext, TokenName, Value)
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints (TxConstraints)
 import Ledger.Constraints qualified as Constraints
@@ -56,10 +57,12 @@ import Plutus.Contract.StateMachine (State (State, stateData, stateValue), Void)
 import Plutus.Contract.StateMachine qualified as SM
 import Plutus.V1.Ledger.Scripts (MintingPolicyHash)
 import PlutusTx qualified
-import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), sha2_256, toBuiltin,
+import PlutusTx.Prelude (Bool (False, True), BuiltinByteString, Eq, Maybe (Just, Nothing), check, sha2_256, toBuiltin,
                          traceIfFalse, ($), (&&), (-), (.), (<$>), (<>), (==), (>>))
 import Schema (ToSchema)
 
+import Plutus.Contract.Test.Coverage.Analysis
+import PlutusTx.Coverage
 import Prelude qualified as Haskell
 
 
@@ -254,6 +257,12 @@ guess = endpoint @"guess" $ \GuessArgs{guessArgsGameParam, guessArgsOldSecret, g
     void
         $ SM.runStep (client guessArgsGameParam)
             (Guess guessedSecret newSecret guessArgsValueTakenOut)
+
+cc :: PlutusTx.CompiledCode (GameParam -> GameState -> GameInput -> ScriptContext -> ())
+cc = $$(PlutusTx.compile [|| \a b c d -> check (mkValidator a b c d) ||])
+
+covIdx :: CoverageIndex
+covIdx = computeRefinedCoverageIndex cc
 
 PlutusTx.unstableMakeIsData ''GameState
 PlutusTx.makeLift ''GameState

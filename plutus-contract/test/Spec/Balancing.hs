@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 module Spec.Balancing(tests) where
 
@@ -15,6 +14,7 @@ import Test.Tasty (TestTree, testGroup)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as L.Constraints
+import Ledger.Test
 import Ledger.Tx.Constraints qualified as Tx.Constraints
 import Ledger.Value qualified as Value
 import Plutus.Contract as Con
@@ -24,9 +24,7 @@ import Plutus.Script.Utils.V1.Generators (someTokenValue)
 import Plutus.Script.Utils.V1.Scripts (mintingPolicyHash, scriptCurrencySymbol, validatorHash)
 import Plutus.Script.Utils.V1.Typed.Scripts.MonetaryPolicies qualified as MPS
 import Plutus.Trace qualified as Trace
-import Plutus.V1.Ledger.Api (Address, Validator)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), unitDatum, unitRedeemer)
-import Plutus.V1.Ledger.Scripts qualified as Ledger
 import PlutusTx qualified
 import Prelude hiding (not)
 import Wallet.Emulator qualified as EM
@@ -116,7 +114,7 @@ balanceTxnNoExtraOutput =
 
         mintingOperation :: Contract [Int] EmptySchema ContractError ()
         mintingOperation = do
-            pkh <- Con.ownPaymentPubKeyHash
+            pkh <- Con.ownFirstPaymentPubKeyHash
 
             let val = vL 200
                 lookups = L.Constraints.mintingPolicy coinMintingPolicy

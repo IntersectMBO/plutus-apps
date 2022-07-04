@@ -93,6 +93,12 @@ withRunRequirements logConfig config cont = do
         \                                 AND input_row_out_ref = old.output_row_out_ref; \
         \END"
 
+    -- creating extra index to optimize utxoSetAtAddress and utxoSetWithCurrency queries
+    Sqlite.execute_ conn "DROP INDEX IF EXISTS unspent_index"
+    Sqlite.execute_ conn "DROP INDEX IF EXISTS unmatched_index"
+    Sqlite.execute_ conn "CREATE INDEX IF NOT EXISTS unspent_index on unspent_outputs (output_row_out_ref, output_row_tip__row_slot)"
+    Sqlite.execute_ conn "CREATE INDEX IF NOT EXISTS unmatched_index on unmatched_inputs (input_row_out_ref, input_row_tip__row_slot)"
+
   stateTVar <- newTVarIO mempty
   cont $ RunRequirements trace stateTVar pool (Config.cicSecurityParam config)
 

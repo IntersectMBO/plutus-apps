@@ -28,7 +28,6 @@ module Spec.GameStateMachine
   , prop_SanityCheckAssertions
   , prop_GameCrashTolerance
   , certification
-  , covIndex
   , gameParam
   ) where
 
@@ -37,7 +36,9 @@ import Control.Lens
 import Control.Monad
 import Control.Monad.Freer.Extras.Log (LogLevel (..))
 import Data.Data
+import Data.Map qualified as Map
 import Data.Maybe
+import Data.Set qualified as Set
 import Prettyprinter
 import Test.QuickCheck as QC hiding (checkCoverage, (.&&.))
 import Test.Tasty hiding (after)
@@ -57,7 +58,6 @@ import Plutus.Contract.Test.ContractModel
 import Plutus.Contract.Test.ContractModel.CrashTolerance
 import Plutus.Contract.Test.Coverage
 import Plutus.Contracts.GameStateMachine as G hiding (Guess)
-import Plutus.Contracts.GameStateMachine.Coverage
 import Plutus.Trace.Emulator as Trace
 import PlutusTx.Coverage
 
@@ -218,7 +218,7 @@ prop_SanityCheckAssertions = propSanityCheckAssertions
 
 check_prop_Game_with_coverage :: IO ()
 check_prop_Game_with_coverage = do
-  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIndex defaultCoverageOptions) $ \covopts ->
+  cr <- quickCheckWithCoverage stdArgs (set coverageIndex covIdx defaultCoverageOptions) $ \covopts ->
     propRunActionsWithOptions @GameModel defaultCheckOptionsContractModel
                                          covopts
                                          (const (pure True))
@@ -351,7 +351,16 @@ tests =
     , testProperty "sanity check the contract model" prop_SanityCheckModel
 
     , testProperty "game state machine crash tolerance" $ withMaxSuccess 20 prop_GameCrashTolerance
+
+    , HUnit.testCase "we ignore at least two program locations"
+        $ HUnit.assertBool "its less than 2"
+          $ length ignoredProgramPoints > 1
     ]
+
+ignoredProgramPoints :: [CoverageAnnotation]
+ignoredProgramPoints =
+  let metadataMap = covIdx ^. coverageMetadata in
+  Map.keys . Map.filter (Set.member IgnoredAnnotation . _metadataSet) $ metadataMap
 
 initialVal :: Value
 initialVal = Ada.adaValueOf 10
@@ -362,7 +371,7 @@ runTestsWithCoverage = do
   defaultMain (coverageTests ref)
     `catch` \(e :: SomeException) -> do
                 report <- readCoverageRef ref
-                putStrLn . show $ pretty (CoverageReport covIndex report)
+                putStrLn . show $ pretty (CoverageReport covIdx report)
                 throwIO e
   where
     coverageTests ref = testGroup "game state machine tests"
@@ -467,7 +476,7 @@ certification :: Certification GameModel
 certification = defaultCertification {
     certNoLockedFunds      = Just noLockProof,
     certUnitTests          = Just unitTest,
-    certCoverageIndex      = covIndex,
+    certCoverageIndex      = covIdx,
     certCrashTolerance     = Just Instance
   }
   where

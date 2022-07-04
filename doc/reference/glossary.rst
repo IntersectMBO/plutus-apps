@@ -169,7 +169,7 @@ Glossary
 
     rollback
       The result of the local node switching to the consensus chain.
-      See :ref:`what_is_a_rollback`
+      See :ref:`what_is_a_rollback`.
 
     schema
       The set of all endpoints of a contract application.
@@ -196,7 +196,7 @@ Glossary
 
     utxo congestion
       The effect of multiple transactions attempting to spend the same
-      :term:`transaction output`. See :ref:`utxo_congestion`
+      :term:`transaction output`. See :ref:`utxo_congestion`.
 
     validator script
       The script attached to a script output in the Extended UTXO model.
