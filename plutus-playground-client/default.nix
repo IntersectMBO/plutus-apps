@@ -4,44 +4,54 @@ let
 
   ghcWithPlutus = haskell.project.ghcWithPackages (ps: [ ps.plutus-core ps.plutus-tx ps.plutus-contract ps.plutus-ledger ps.playground-common ]);
 
-  # Output containing the purescript bridge code
-  # We need to add ghc with dependecies because `psgenerator` needs to invoke ghc to
-  # create test data.
-  generated-purescript =
-    # For some reason on darwin GHC will complain bout missing otool, I really don't know why
-    pkgs.runCommand "plutus-playground-purescript" { buildInputs = lib.optional pkgs.stdenv.isDarwin [ pkgs.darwin.cctools ]; } ''
-      PATH=${ghcWithPlutus}/bin:$PATH
-      mkdir $out
-      ${playground-exe}/bin/plutus-playground-server psgenerator $out
-      cp ${builtins.path { name = "tidyrc.json"; path = ../.tidyrc.json; } } $out/.tidyrc.json
-      cp ${builtins.path { name = "tidyoperators"; path = ../.tidyoperators; } } $out/.tidyoperators
-      cd $out
-      ${purs-tidy}/bin/purs-tidy format-in-place $out
-      rm $out/.tidyrc.json
-      rm $out/.tidyoperators
-    '';
-
   # generate-purescript: script to create purescript bridge code
   #
-  # * Note-1: We need to add ghc to the path because the purescript generator
+  # Note: We need to add ghc to the path because the purescript generator
   # actually invokes ghc to generate test data so we need ghc with the necessary deps
   generate-purescript = pkgs.writeShellScriptBin "plutus-playground-generate-purs" ''
+    if [ ! -d plutus-playground-client ]; then 
+      echo Please run plutus-playground-generate-purs from the root of the repository
+      exit 1
+    fi
+
     GHC_WITH_PKGS=${ghcWithPlutus}
     export PATH=$GHC_WITH_PKGS/bin:$PATH
 
-    rm -rf ./generated
-    ${playground-exe}/bin/plutus-playground-server psgenerator generated
-    cd ..
-    echo Formatting files...
-    ${purs-tidy}/bin/purs-tidy format-in-place ./plutus-playground-client/generated
-    echo Done: formatted
+    generatedDir=./plutus-playground-client/generated
+    rm -rf $generatedDir
+
+    echo Generating purescript files in $generatedDir
+    ${playground-exe}/bin/plutus-playground-server psgenerator $generatedDir
+    echo -e Done generating purescript files
+
+    echo Formatting purescript files in $generatedDir
+    ${purs-tidy}/bin/purs-tidy format-in-place $generatedDir
+    echo Done formatting purescript files
   '';
 
   # start-backend: script to start the plutus-playground-server
   #
-  # Note-1: We need to add ghc to the path because the server provides /runghc
+  # Note: We need to add ghc to the path because the server provides /runghc
   # which needs ghc and dependencies.
   start-backend = pkgs.writeShellScriptBin "plutus-playground-server" ''
+    if [ ! -d plutus-playground-client ]; then 
+      echo Please run plutus-playground-server from the root of the repository
+      exit 1
+    fi
+
+    generatedDir=./plutus-playground-client/generated
+    if [ ! -d $generatedDir ]; then 
+      echo $generatedDir not found
+      plutus-playground-generate-purs
+    elif [ $# == 0 ]; then 
+      dirAge=$(datediff now $(date -r $generatedDir +%F))
+      echo Using Purescript files in $generatedDir which are $dirAge days old. 
+      echo Run plutus-playground-generate-purs -g to regenerate
+    elif [ "$1" == "-g" ]; then 
+       plutus-playground-generate-purs
+    fi 
+
+    echo
     echo "plutus-playground-server: for development use only"
     GHC_WITH_PKGS=${ghcWithPlutus}
     export PATH=$GHC_WITH_PKGS/bin:$PATH
@@ -79,6 +89,6 @@ let
     });
 in
 {
-  inherit client generate-purescript generated-purescript start-backend;
+  inherit client generate-purescript start-backend;
   server = playground-exe;
 }
