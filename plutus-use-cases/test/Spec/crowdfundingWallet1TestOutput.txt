@@ -7,4 +7,4 @@ Slot 1: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
            Contract log: String "Collecting funds"
 Slot 20: 00000000-0000-4000-8000-000000000000 {Wallet W[1]}:
-           Contract instance stopped with error: WalletContractError (ToCardanoError (TxBodyError "The following scripts have execution failures:\nthe script for transaction input 0 (in the order of the TxIds) failed with: \nThe Plutus script evaluation failed: An error has occurred:  User error:\nThe provided Plutus code called 'error'.\nScript debugging logs: PT5\n\nthe script for transaction input 1 (in the order of the TxIds) failed with: \nThe Plutus script evaluation failed: An error has occurred:  User error:\nThe provided Plutus code called 'error'.\nScript debugging logs: PT5\n\nthe script for transaction input 2 (in the order of the TxIds) failed with: \nThe Plutus script evaluation failed: An error has occurred:  User error:\nThe provided Plutus code called 'error'.\nScript debugging logs: PT5\n\n"))
+           Contract instance stopped (no errors)
