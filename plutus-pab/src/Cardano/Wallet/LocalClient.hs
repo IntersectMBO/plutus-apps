@@ -96,7 +96,7 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
 
         submitTxnH :: CardanoTx -> Eff effs ()
         submitTxnH tx = do
-            sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
+            sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx params tx
             void . runClient $ C.postExternalTransaction C.transactionClient (C.ApiBytesT (C.SerialisedTx $ C.serialisedTx sealedTx))
 
         ownPaymentPubKeyHashH :: Eff effs Ledger.PaymentPubKeyHash
@@ -162,14 +162,14 @@ fromApiSerialisedTransaction (C.ApiSerialisedTransaction (C.ApiT sealedTx)) = Ca
     Cardano.Api.InAnyCardanoEra Cardano.Api.MaryEra tx    -> SomeTx tx Cardano.Api.MaryEraInCardanoMode
     Cardano.Api.InAnyCardanoEra Cardano.Api.AlonzoEra tx  -> SomeTx tx Cardano.Api.AlonzoEraInCardanoMode
 
-toSealedTx :: Cardano.Api.ProtocolParameters -> Cardano.Api.NetworkId -> CardanoTx -> Either ToCardanoError C.SealedTx
-toSealedTx _ _ (CardanoApiTx (SomeTx tx Cardano.Api.ByronEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.ByronEra tx
-toSealedTx _ _ (CardanoApiTx (SomeTx tx Cardano.Api.ShelleyEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.ShelleyEra tx
-toSealedTx _ _ (CardanoApiTx (SomeTx tx Cardano.Api.AllegraEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.AllegraEra tx
-toSealedTx _ _ (CardanoApiTx (SomeTx tx Cardano.Api.MaryEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.MaryEra tx
-toSealedTx _ _ (CardanoApiTx (SomeTx tx Cardano.Api.AlonzoEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.AlonzoEra tx
-toSealedTx pp nid (EmulatorTx tx) = C.sealedTxFromCardanoBody <$> toCardanoTxBody [] (Just pp) nid tx
-toSealedTx pp nid (Both tx _) = C.sealedTxFromCardanoBody <$> toCardanoTxBody [] (Just pp) nid tx
+toSealedTx :: Params -> CardanoTx -> Either ToCardanoError C.SealedTx
+toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.ByronEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.ByronEra tx
+toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.ShelleyEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.ShelleyEra tx
+toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.AllegraEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.AllegraEra tx
+toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.MaryEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.MaryEra tx
+toSealedTx _ (CardanoApiTx (SomeTx tx Cardano.Api.AlonzoEraInCardanoMode)) = Right $ C.sealedTxFromCardano $ Cardano.Api.InAnyCardanoEra Cardano.Api.AlonzoEra tx
+toSealedTx params (EmulatorTx tx) = C.sealedTxFromCardanoBody <$> toCardanoTxBody params [] tx
+toSealedTx params (Both tx _) = C.sealedTxFromCardanoBody <$> toCardanoTxBody params [] tx
 
 throwOtherError :: (Member (Error WalletAPIError) effs, Show err) => err -> Eff effs a
 throwOtherError = throwError . OtherError . pack . show

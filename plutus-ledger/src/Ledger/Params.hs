@@ -14,10 +14,11 @@ module Ledger.Params(
   slotLength,
   emulatorEpochSize,
   emulatorGlobals,
-  emulatorPParams
+  emulatorPParams,
+  emulatorEraHistory
 ) where
 
-import Cardano.Api (ShelleyBasedEra (..), toLedgerPParams)
+import Cardano.Api (CardanoMode, ConsensusMode (..), EraHistory (EraHistory), ShelleyBasedEra (..), toLedgerPParams)
 import Cardano.Api.Shelley (AnyPlutusScriptVersion (..), CostModel (..), EpochNo (..), ExecutionUnitPrices (..),
                             ExecutionUnits (..), Lovelace (..), NetworkId (..), NetworkMagic (..),
                             PlutusScriptVersion (..), ProtocolParameters (..), shelleyGenesisDefaults)
@@ -35,7 +36,10 @@ import Data.Default (Default (def))
 import Data.Map (fromList)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
+import Data.SOP.Strict (K (K), NP (..))
 import Ledger.TimeSlot (SlotConfig (..), posixTimeToNominalDiffTime, posixTimeToUTCTime)
+import Ouroboros.Consensus.HardFork.History qualified as Ouroboros
+import Ouroboros.Consensus.Util.Counting qualified as Ouroboros
 import Plutus.V1.Ledger.Api (POSIXTime (..), defaultCostModelParams)
 
 data Params = Params
@@ -127,3 +131,10 @@ genesisDefaultsFromParams params@Params { pSlotConfig, pNetworkId } = shelleyGen
 -- | Convert `Params` to cardano-ledger `PParams`
 emulatorPParams :: Params -> PParams EmulatorEra
 emulatorPParams Params { pProtocolParams } = toLedgerPParams ShelleyBasedEraAlonzo pProtocolParams
+
+-- | A sensible default 'EraHistory' value for the emulator
+emulatorEraHistory :: Params -> EraHistory CardanoMode
+emulatorEraHistory params = EraHistory CardanoMode (Ouroboros.mkInterpreter $ Ouroboros.summaryWithExactly list)
+  where
+    one = Ouroboros.nonEmptyHead $ Ouroboros.getSummary $ Ouroboros.neverForksSummary emulatorEpochSize (slotLength params)
+    list = Ouroboros.Exactly $ K one :* K one :* K one :* K one :* K one :* Nil

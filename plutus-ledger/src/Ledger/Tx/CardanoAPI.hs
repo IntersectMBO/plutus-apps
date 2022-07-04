@@ -102,6 +102,7 @@ import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Ledger.Address qualified as P
+import Ledger.Params qualified as P
 import Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Plutus.Script.Utils.V1.Scripts qualified as P
 import Plutus.V1.Ledger.Ada qualified as Ada
@@ -347,15 +348,14 @@ fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
 
 
 toCardanoTxBodyContent
-    :: [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
-    -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
-    -> C.NetworkId -- ^ Network ID
+    :: P.Params -- ^ Parameters to use.
+    -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> P.Tx
     -> Either ToCardanoError CardanoBuildTx
-toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
+toCardanoTxBodyContent P.Params{P.pProtocolParams, P.pNetworkId} sigs P.Tx{..} = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
+    txOuts <- traverse (toCardanoTxOut pNetworkId (lookupDatum txData)) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
@@ -367,7 +367,7 @@ toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
         , txFee = txFee'
         , txValidityRange = txValidityRange
         , txMintValue = txMintValue
-        , txProtocolParams = C.BuildTxWith protocolParams
+        , txProtocolParams = C.BuildTxWith $ Just pProtocolParams
         , txScriptValidity = C.TxScriptValidityNone
         , txExtraKeyWits
         -- unused:
@@ -379,13 +379,12 @@ toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
         }
 
 toCardanoTxBody ::
-    [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
-    -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
-    -> C.NetworkId -- ^ Network ID
+    P.Params -- ^ Parameters to use.
+    -> [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> P.Tx
     -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-toCardanoTxBody sigs protocolParams networkId tx = do
-    txBodyContent <- toCardanoTxBodyContent sigs protocolParams networkId tx
+toCardanoTxBody params sigs tx = do
+    txBodyContent <- toCardanoTxBodyContent params sigs tx
     makeTransactionBody mempty txBodyContent
 
 makeTransactionBody

@@ -253,7 +253,7 @@ export params utx =
             utxo <- fromPlutusIndex params (Plutus.UtxoIndex unBalancedTxUtxoIndex)
             makeTransactionBody params utxo ctx
      in ExportTx
-        <$> fmap (C.makeSignedTransaction []) (either fromCardanoTx (first Right . mkPartialTx requiredSigners params) unBalancedTxTx)
+        <$> fmap (C.makeSignedTransaction []) (either fromCardanoTx (first Right . CardanoAPI.toCardanoTxBody params requiredSigners) unBalancedTxTx)
         <*> first Right (mkInputs (Plutus.pNetworkId params) unBalancedTxUtxoIndex)
         <*> either (const $ Right []) (first Right . mkRedeemers) unBalancedTxTx
 
@@ -262,14 +262,6 @@ finalize slotConfig utx =
      utx & U.tx
          . Plutus.validRange
          .~ posixTimeRangeToContainedSlotRange slotConfig (utx ^. U.validityTimeRange)
-
-mkPartialTx
-    :: [Plutus.PaymentPubKeyHash]
-    -> Plutus.Params
-    -> Plutus.Tx
-    -> Either CardanoAPI.ToCardanoError (C.TxBody C.AlonzoEra)
-mkPartialTx requiredSigners params =
-    CardanoAPI.toCardanoTxBody requiredSigners (Just $ Plutus.pProtocolParams params) (Plutus.pNetworkId params)
 
 mkInputs :: C.NetworkId -> Map Plutus.TxOutRef Plutus.TxOut -> Either CardanoAPI.ToCardanoError [ExportTxInput]
 mkInputs networkId = traverse (uncurry (toExportTxInput networkId)) . Map.toList
