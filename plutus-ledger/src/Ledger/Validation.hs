@@ -32,7 +32,6 @@ module Ledger.Validation(
   fromPlutusTxOut,
   fromPlutusTxOutUnsafe,
   fromPlutusTxOutRef,
-  fromPlutusTxToTxBodyContent,
   -- * Lenses
   ledgerEnv,
   memPoolState,
@@ -245,16 +244,8 @@ fromPlutusTx
   -> P.Tx
   -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
 fromPlutusTx params utxo requiredSigners tx = do
-  txBodyContent <- first Right $ fromPlutusTxToTxBodyContent params requiredSigners tx
+  txBodyContent <- first Right $ P.toCardanoTxBodyContent params requiredSigners tx
   makeSignedTransaction [] <$> makeTransactionBody params utxo txBodyContent
-
-fromPlutusTxToTxBodyContent
-  :: P.Params
-  -> [P.PaymentPubKeyHash]
-  -> P.Tx
-  -> Either P.ToCardanoError P.CardanoBuildTx
-fromPlutusTxToTxBodyContent params requiredSigners =
-  P.toCardanoTxBodyContent requiredSigners (Just $ P.pProtocolParams params) (P.pNetworkId params)
 
 getRequiredSigners :: C.Api.Tx C.Api.AlonzoEra -> [P.PaymentPubKeyHash]
 getRequiredSigners (C.Api.ShelleyTx _ (ValidatedTx TxBody { reqSignerHashes = rsq } _ _ _)) =

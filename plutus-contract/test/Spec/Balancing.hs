@@ -133,33 +133,21 @@ balanceTxnNoExtraOutput =
 
 balanceCardanoTx :: TestTree
 balanceCardanoTx =
-    let skh = Ledger.StakePubKeyHash $ Ledger.pubKeyHash $ Ledger.PubKey "00000000000000000000000000000000000000000000000000000000"
-        mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @Void def lookups constraints
+    let mkTx lookups constraints = either (error . show) id $ Tx.Constraints.mkTx @Void def lookups constraints
 
-        contract :: Contract String EmptySchema ContractError ()
+        contract :: Contract () EmptySchema ContractError ()
         contract = do
-            pkh <- Con.ownPaymentPubKeyHash
-            tx <- submitUnbalancedTx $ mkTx mempty (Tx.Constraints.mustPayToPubKeyAddress pkh skh (Ada.toValue Ledger.minAdaTxOut))
-            tell $ show tx
+            pkh <- Con.ownFirstPaymentPubKeyHash
+            utxos <- Con.ownUtxos
+
+            let constraints = Tx.Constraints.mustPayToPubKey pkh (Ada.toValue Ledger.minAdaTxOut)
+                    <> Tx.Constraints.mustSpendPubKeyOutput (fst . head . Map.toList $ utxos)
+                lookups = Tx.Constraints.unspentOutputs utxos
+
+            void $ submitUnbalancedTx $ mkTx lookups constraints
 
         trace = do
             void $ Trace.activateContract w1 contract "instance 1"
             void $ Trace.waitNSlots 2
-        tracePred = assertAccumState contract "instance 1" (== "hello") "hello"
 
-    in checkPredicate "can balance a cardano tx" tracePred (void trace)
-
-
-someAddress :: Address
-someAddress = Ledger.scriptAddress someValidator
-
-someValidator :: Validator
-someValidator = Ledger.mkValidatorScript $$(PlutusTx.compile [|| \(_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) (_ :: PlutusTx.BuiltinData) -> () ||])
-
-{-# INLINABLE mkPolicy #-}
-mkPolicy :: () -> Ledger.ScriptContext -> Bool
-mkPolicy _ _ = True
-
-coinMintingPolicy :: Ledger.MintingPolicy
-coinMintingPolicy = Ledger.mkMintingPolicyScript
-    $$(PlutusTx.compile [|| MPS.mkUntypedMintingPolicy mkPolicy ||])
+    in checkPredicate "can balance a cardano tx" (assertValidatedTransactionCount 1) (void trace)

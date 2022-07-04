@@ -11,7 +11,7 @@ import Data.Map qualified as Map
 import Ledger.Address (Address, PaymentPubKeyHash)
 import Ledger.Params (EmulatorEra, Params (pNetworkId, pProtocolParams), emulatorEraHistory, emulatorGlobals)
 import Ledger.Tx (ToCardanoError (TxBodyError), Tx)
-import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddress, toCardanoTxBodyContent)
+import Ledger.Tx.CardanoAPI (CardanoBuildTx (..), getCardanoBuildTx, toCardanoAddressInEra, toCardanoTxBodyContent)
 import Ledger.Validation (CardanoLedgerError, UTxO (..), makeTransactionBody)
 import Ledger.Value (Value)
 import Plutus.V1.Ledger.Ada (lovelaceValueOf)
@@ -37,7 +37,7 @@ makeTransactionBodyAutoBalance
   -> Address
   -> Either CardanoLedgerError (C.Api.Tx C.Api.AlonzoEra)
 makeTransactionBodyAutoBalance params utxo (CardanoBuildTx txBodyContent) pChangeAddr = first Right $ do
-  cChangeAddr <- toCardanoAddress (pNetworkId params) pChangeAddr
+  cChangeAddr <- toCardanoAddressInEra (pNetworkId params) pChangeAddr
   C.Api.BalancedTxBody txBody _ _ <- first (TxBodyError . C.Api.displayError) $ C.Api.makeTransactionBodyAutoBalance
     C.Api.AlonzoEraInCardanoMode
     (systemStart $ emulatorGlobals params)
