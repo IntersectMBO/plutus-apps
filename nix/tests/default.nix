@@ -5,8 +5,6 @@
 , fixCabalFmt
 , fixPngOptimization
 , src
-, play-generated
-, nami-generated
 , plutus-playground
 , web-ghc
 , docs
@@ -22,11 +20,6 @@ pkgs.recurseIntoAttrs {
   stylishHaskell = pkgs.callPackage ./stylish-haskell.nix {
     src = cleanSrc;
     inherit fixStylishHaskell;
-  };
-
-  generated = pkgs.callPackage ./generated.nix {
-    src = cleanSrc;
-    inherit play-generated nami-generated;
   };
 
   purs-tidy = pkgs.callPackage ./purs-tidy.nix {
@@ -49,7 +42,7 @@ pkgs.recurseIntoAttrs {
     inherit fixPngOptimization;
   };
 
-  vmTests = pkgs.callPackage ./vm.nix {
-    inherit vmCompileTests plutus-playground web-ghc docs;
-  };
+  # vmTests = pkgs.callPackage ./vm.nix {
+  #   inherit vmCompileTests plutus-playground web-ghc docs;
+  # };
 }

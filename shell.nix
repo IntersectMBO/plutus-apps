@@ -93,6 +93,7 @@ let
     bzip2
     cacert
     editorconfig-core-c
+    dateutils
     ghcid
     jq
     nixFlakesAlias

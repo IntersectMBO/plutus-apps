@@ -5,32 +5,49 @@ let
 
   pab-setup-invoker = haskell.packages.plutus-pab-executables.components.exes.plutus-pab-setup;
 
-  # TODO: Use the PS generator in the demo app
-  generated-purescript = pkgs.runCommand "pab-nami-demo-purescript" { } ''
-    mkdir $out
-    ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $out
-    cp ${builtins.path { name = "tidyrc.json"; path = ../../../../.tidyrc.json; } } $out/.tidyrc.json
-    cp ${builtins.path { name = "tidyoperators"; path = ../../../../.tidyoperators; } } $out/.tidyoperators
-    cd $out
-    ${purs-tidy}/bin/purs-tidy format-in-place $out
-    rm $out/.tidyrc.json
-    rm $out/.tidyoperators
-  '';
-
   generate-purescript = pkgs.writeShellScriptBin "pab-nami-demo-generate-purs" ''
-    generatedDir=./generated
+    if [ ! -d plutus-pab-executables ]; then 
+      echo Please run pab-nami-demo-generate-purs from the root of the repository
+      exit 1
+    fi
+
+    generatedDir=./plutus-pab-executables/demo/pab-nami/client/generated
     rm -rf $generatedDir
+
+    echo Generating purescript files in $generatedDir
     ${pab-nami-demo-generator}/bin/plutus-pab-nami-demo-generator --output-dir $generatedDir
-    cd ../../../..
-    echo Formatting files...
-    ${purs-tidy}/bin/purs-tidy format-in-place ./plutus-pab-executables/demo/pab-nami/client/generated
-    echo Done: formatted
+    echo -e Done generating purescript files
+
+    echo Formatting purescript files in $generatedDir
+    ${purs-tidy}/bin/purs-tidy format-in-place $generatedDir
+    echo Done formatting purescript files
   '';
 
   start-backend = pkgs.writeShellScriptBin "pab-nami-demo-server" ''
+    if [ ! -d plutus-pab-executables ]; then 
+      echo Please run pab-nami-demo-server from the root of the repository
+      exit 1
+    fi
+
+    generatedDir=./plutus-pab-executables/demo/pab-nami/client/generated
+    if [ ! -d $generatedDir ]; then 
+      echo $generatedDir not found
+      pab-nami-demo-generate-purs
+    elif [ $# == 0 ]; then 
+      dirAge=$(datediff now $(date -r $generatedDir +%F))
+      echo Using Purescript files in $generatedDir which are $dirAge days old. 
+      echo Run pab-nami-demo-server -g to regenerate
+    elif [ "$1" == "-g" ]; then 
+      pab-nami-demo-generate-purs
+    fi 
+
+    echo
     echo "pab-nami-demo-server: for development use only"
-    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml migrate
-    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config ../pab/plutus-pab.yaml webserver
+
+    configFile=./plutus-pab-executables/demo/pab-nami/pab/plutus-pab.yaml
+
+    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config $configFile migrate
+    ${pab-nami-demo-invoker}/bin/plutus-pab-nami-demo --config $configFile webserver
   '';
 
   cleanSrc = gitignore-nix.gitignoreSource ./.;
@@ -57,5 +74,5 @@ let
     });
 in
 {
-  inherit client pab-nami-demo-invoker pab-nami-demo-generator pab-setup-invoker generate-purescript generated-purescript start-backend;
+  inherit client pab-nami-demo-invoker pab-nami-demo-generator pab-setup-invoker generate-purescript start-backend;
 }
