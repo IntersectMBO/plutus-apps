@@ -301,19 +301,14 @@ loop s = do
     case dequeue s of
         AThread EmThread{_continuation, _threadId, _tag} event schedulerState prio -> do
             let mkLog e = SchedulerLog{slEvent=e, slThread=_threadId, slPrio=prio, slTag = _tag}
-            logDebug (mkLog Resumed)
             result <- _continuation event
             case result of
-                Done () -> do
-                    logDebug (mkLog $ Stopped ThreadDone)
-                    loop $ schedulerState & removeActiveThread _threadId
+                Done () -> loop $ schedulerState & removeActiveThread _threadId
                 Continue WithPriority{_priority, _thread=sysCall} k -> do
-                    logDebug SchedulerLog{slEvent=Suspended, slThread=_threadId, slPrio=_priority, slTag = _tag}
                     let thisThread = suspendThread _priority EmThread{_threadId=_threadId, _continuation=k, _tag = _tag}
                     newState <- schedulerState & enqueue thisThread & handleSysCall sysCall
                     case newState of
-                        Left r -> do
-                            logDebug (mkLog $ Stopped r)
+                        Left r          -> logDebug (mkLog $ Stopped r)
                         Right newState' -> loop newState'
         _ -> pure ()
 
