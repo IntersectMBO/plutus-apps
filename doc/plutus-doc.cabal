@@ -83,19 +83,19 @@ executable doc-doctests
     , containers
     , data-default
     , flat
-    , freer-extras
+    , freer-extras               >=1.0.0
     , lens
-    , playground-common
-    , plutus-chain-index-core
-    , plutus-contract
+    , playground-common          >=1.0.0
+    , plutus-chain-index-core    >=1.0.0
+    , plutus-contract            >=1.0.0
     , plutus-core                >=1.0.0
-    , plutus-ledger
+    , plutus-ledger              >=1.0.0
     , plutus-ledger-api          >=1.0.0
-    , plutus-ledger-constraints
-    , plutus-script-utils
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
     , plutus-tx                  >=1.0.0
-    , plutus-tx-constraints
-    , plutus-use-cases
+    , plutus-tx-constraints      >=1.0.0
+    , plutus-use-cases           >=1.0.0
     , QuickCheck
     , quickcheck-dynamic
     , random
@@ -106,4 +106,4 @@ executable doc-doctests
     , text
 
   if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin
+    build-depends: plutus-tx-plugin >=1.0.0

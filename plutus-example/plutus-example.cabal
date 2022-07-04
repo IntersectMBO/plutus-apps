@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-example
-version:            1.33.0
+version:            1.0.0
 description:
   End to end examples of creating and executing Plutus scripts.
 
@@ -69,8 +69,8 @@ library
   build-depends:
     , aeson
     , bytestring
-    , cardano-api
-    , cardano-cli
+    , cardano-api             >=1.35
+    , cardano-cli             >=1.35
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-ledger-shelley
@@ -79,7 +79,7 @@ library
     , ouroboros-consensus
     , ouroboros-network
     , plutus-ledger-api       >=1.0.0
-    , plutus-script-utils
+    , plutus-script-utils     >=1.0.0
     , plutus-tx               >=1.0.0
     , plutus-tx-plugin        >=1.0.0
     , serialise
@@ -94,7 +94,7 @@ executable plutus-example
   main-is:        plutus-example.hs
   ghc-options:    -threaded -rtsopts -with-rtsopts=-T
   build-depends:
-    , cardano-api
+    , cardano-api     >=1.35
     , directory
     , filepath
     , plutus-example
@@ -106,7 +106,7 @@ executable create-script-context
   ghc-options:    -threaded -rtsopts -with-rtsopts=-T
   build-depends:
     , bytestring
-    , cardano-api
+    , cardano-api           >=1.35
     , optparse-applicative
     , plutus-example
     , transformers
@@ -120,20 +120,20 @@ test-suite plutus-example-test
     , aeson
     , base16-bytestring
     , bytestring
-    , cardano-api:{cardano-api, gen}
-    , cardano-cli
+    , cardano-api:{cardano-api, gen}  >=1.35
+    , cardano-cli                     >=1.35
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-prelude
-    , cardano-testnet
+    , cardano-testnet                 >=1.35
     , containers
     , directory
     , filepath
     , hedgehog
     , hedgehog-extras
     , plutus-example
-    , plutus-ledger
+    , plutus-ledger                   >=1.0.0
     , plutus-ledger-api               >=1.0.0
     , tasty
     , tasty-hedgehog                  >=1.2.0.0
@@ -153,7 +153,7 @@ test-suite plutus-example-test
 
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
   build-tool-depends:
-    , cardano-cli:cardano-cli
-    , cardano-node:cardano-node
-    , cardano-submit-api:cardano-submit-api
+    , cardano-cli:cardano-cli                >=1.35
+    , cardano-node:cardano-node              >=1.35
+    , cardano-submit-api:cardano-submit-api  >=1.35
     , plutus-example:create-script-context

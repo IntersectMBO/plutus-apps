@@ -1,6 +1,6 @@
 cabal-version:   2.0
 name:            plutus-use-cases
-version:         0.1.0.0
+version:         1.0.0.0
 license:         Apache-2.0
 license-file:    LICENSE NOTICE
 maintainer:      jann.mueller@iohk.io
@@ -96,15 +96,15 @@ library
     , hashable
     , lens
     , openapi3
-    , playground-common
-    , plutus-contract
-    , plutus-core
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-script-utils
-    , plutus-tx
-    , plutus-tx-plugin
+    , playground-common          >=1.0.0
+    , plutus-contract            >=1.0.0
+    , plutus-core                >=1.0.0
+    , plutus-ledger              >=1.0.0
+    , plutus-ledger-api          >=1.0.0
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
+    , plutus-tx                  >=1.0.0
+    , plutus-tx-plugin           >=1.0.0
     , prettyprinter
     , semigroups
     , streaming
@@ -162,15 +162,15 @@ test-suite plutus-use-cases-test
     -fno-omit-interface-pragmas
 
   build-depends:
-      playground-common
-    , plutus-contract
-    , plutus-contract-certification
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-script-utils
-    , plutus-tx
-    , plutus-use-cases
+      playground-common              >=1.0.0
+    , plutus-contract                >=1.0.0
+    , plutus-contract-certification  >=1.0.0
+    , plutus-ledger                  >=1.0.0
+    , plutus-ledger-api              >=1.0.0
+    , plutus-ledger-constraints      >=1.0.0
+    , plutus-script-utils            >=1.0.0
+    , plutus-tx                      >=1.0.0
+    , plutus-use-cases               >=1.0.0
 
   build-depends:
       base              >=4.9     && <5
@@ -178,7 +178,7 @@ test-suite plutus-use-cases-test
     , containers
     , data-default
     , foldl
-    , freer-extras
+    , freer-extras      >=1.0.0
     , freer-simple
     , lens
     , mtl
@@ -193,7 +193,7 @@ test-suite plutus-use-cases-test
     , text
 
   if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin
+    build-depends: plutus-tx-plugin >=1.0.0
 
 -- runs emulator traces from plutus-use-cases-tests and
 -- writes all applied validator scripts to a folder
@@ -233,25 +233,25 @@ executable plutus-use-cases-scripts
     -fno-omit-interface-pragmas
 
   build-depends:
-      base                           >=4.9 && <5
+      base                           >=4.9   && <5
     , bytestring
-    , cardano-api
+    , cardano-api                    >=1.35
     , containers
     , data-default
     , foldl
-    , freer-extras
+    , freer-extras                   >=1.0.0
     , freer-simple
     , lens
     , mtl
     , optparse-applicative
-    , plutus-contract
-    , plutus-contract-certification
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-script-utils
-    , plutus-tx
-    , plutus-use-cases
+    , plutus-contract                >=1.0.0
+    , plutus-contract-certification  >=1.0.0
+    , plutus-ledger                  >=1.0.0
+    , plutus-ledger-api              >=1.0.0
+    , plutus-ledger-constraints      >=1.0.0
+    , plutus-script-utils            >=1.0.0
+    , plutus-tx                      >=1.0.0
+    , plutus-use-cases               >=1.0.0
     , prettyprinter
     , QuickCheck
     , streaming
@@ -262,4 +262,4 @@ executable plutus-use-cases-scripts
     , text
 
   if !(impl(ghcjs) || os(ghcjs))
-    build-depends: plutus-tx-plugin
+    build-depends: plutus-tx-plugin >=1.0.0

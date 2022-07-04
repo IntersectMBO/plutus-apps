@@ -1,6 +1,6 @@
 cabal-version:   3.0
 name:            plutus-ledger-constraints
-version:         0.1.0.0
+version:         1.0.0.0
 license:         Apache-2.0
 license-files:
   LICENSE
@@ -61,9 +61,9 @@ library
     , lens
     , mtl
     , openapi3
-    , plutus-ledger
+    , plutus-ledger        >=1.0.0
     , plutus-ledger-api    >=1.0.0
-    , plutus-script-utils
+    , plutus-script-utils  >=1.0.0
     , plutus-tx            >=1.0.0
     , prettyprinter
     , transformers
@@ -82,10 +82,10 @@ test-suite plutus-ledger-constraints-test
     , hedgehog
     , lens
     , mtl
-    , plutus-ledger
+    , plutus-ledger              >=1.0.0
     , plutus-ledger-api          >=1.0.0
-    , plutus-ledger-constraints
-    , plutus-script-utils
+    , plutus-ledger-constraints  >=1.0.0
+    , plutus-script-utils        >=1.0.0
     , plutus-tx                  >=1.0.0
     , plutus-tx-plugin           >=1.0.0
     , tasty
