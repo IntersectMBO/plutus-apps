@@ -255,6 +255,7 @@ test-suite plutus-contract-test
     , plutus-ledger-constraints
     , plutus-script-utils
     , plutus-tx
+    , plutus-tx-constraints
     , pretty
     , prettyprinter
     , QuickCheck
