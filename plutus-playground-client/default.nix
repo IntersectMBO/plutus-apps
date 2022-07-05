@@ -78,7 +78,7 @@ let
   ];
 
   nodeModules = buildNodeModules {
-    projectDir = filterNpm ./.;
+    projectDir = filterNpm cleanSrc;
     packageJson = ./package.json;
     packageLockJson = ./package-lock.json;
   };
@@ -86,7 +86,7 @@ let
   client = pkgs.lib.overrideDerivation
     (buildPursPackage {
       inherit pkgs nodeModules;
-      src = ./.;
+      src = cleanSrc;
       name = "plutus-playground-client";
       # ideally we would just use `npm run test` but
       # this executes `spago` which *always* attempts to download
