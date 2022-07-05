@@ -10,7 +10,6 @@
 module Cardano.Wallet.LocalClient where
 
 import Cardano.Api qualified
-import Cardano.Api.Shelley qualified as Cardano.Api
 import Cardano.Node.Types (PABServerConfig (pscPassphrase))
 import Cardano.Wallet.Api qualified as C
 import Cardano.Wallet.Api.Client qualified as C
@@ -80,7 +79,7 @@ handleWalletClient
     -> WalletEffect
     ~> Eff effs
 handleWalletClient config (Wallet _ (WalletId walletId)) event = do
-    params@Params{pNetworkId = networkId, pProtocolParams = protocolParams} <- WAPI.getClientParams
+    params <- WAPI.getClientParams
     let mpassphrase = pscPassphrase config
     clientEnv <- ask @ClientEnv
     let
@@ -139,7 +138,7 @@ handleWalletClient config (Wallet _ (WalletId walletId)) event = do
 
         walletAddSignatureH :: CardanoTx -> Eff effs CardanoTx
         walletAddSignatureH tx = do
-            sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx protocolParams networkId tx
+            sealedTx <- either (throwError . ToCardanoError) pure $ toSealedTx params tx
             passphrase <- maybe (throwError $ OtherError "Wallet passphrase required") pure mpassphrase
             lenientPP <- either throwOtherError pure $ fromText passphrase
             let postData = C.ApiSignTransactionPostData (C.ApiT sealedTx) (C.ApiT lenientPP)
