@@ -10,6 +10,7 @@ module Plutus.Blockfrost.Queries (
     , getIsUtxoBlockfrost
     , getUtxoAtAddressBlockfrost
     , getUtxoSetWithCurrency
+    , defaultGetUtxo
     ) where
 
 import Control.Concurrent.Async (mapConcurrently)
@@ -44,7 +45,7 @@ getIsUtxoBlockfrost ref = do
 
 -- TODO: Pagination Support
 getUtxoAtAddressBlockfrost :: MonadBlockfrost m => PageQuery a -> Address -> m (Block, [AddressUtxo])
-getUtxoAtAddressBlockfrost pq addr =  do
+getUtxoAtAddressBlockfrost pq addr = do
     tip <- getTipBlockfrost
     utxos <- getAddressUtxos' addr (paged 50 1) def
     return (tip, utxos)
@@ -72,3 +73,10 @@ checkIsUtxo ref@(txHash, idx) = getAddressFromReference ref >>= getAddressUtxos 
   where
     matchUtxo :: AddressUtxo -> Bool
     matchUtxo AddressUtxo{..} = (txHash == _addressUtxoTxHash) && (idx == _addressUtxoOutputIndex)
+
+-- DEFAULT RESPONSES
+
+defaultGetUtxo :: MonadBlockfrost m => m (Block, [AddressUtxo])
+defaultGetUtxo = do
+    tip <- getTipBlockfrost
+    return (tip, [])

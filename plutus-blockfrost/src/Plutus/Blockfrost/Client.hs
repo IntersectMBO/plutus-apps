@@ -34,6 +34,14 @@ handleBlockfrostClient event = liftIO $ do
         runClient :: forall a. BlockfrostClientT IO a -> IO a
         runClient a = runBlockfrost prj a >>= either (ioError . userError . show) return
 
+        runClientWithDef :: forall a. BlockfrostClientT IO a -> BlockfrostClientT IO a -> IO a
+        runClientWithDef defIO a = do
+            response <- runBlockfrost prj a
+            case response of
+                Right a'                -> return a'
+                Left BlockfrostNotFound -> runClient defIO
+                Left e                  -> ioError (userError $ show e)
+
         runClientMaybe :: forall a. BlockfrostClientT IO a -> IO (Maybe a)
         runClientMaybe a = do
             response <- runBlockfrost prj a
@@ -50,7 +58,7 @@ handleBlockfrostClient event = liftIO $ do
         StakeValidatorFromHash d -> (runClientMaybe . getValidatorBlockfrost . toBlockfrostScriptHash) d >>= processGetValidator
         UnspentTxOutFromRef r    -> (runClientMaybe . getUnspentTxOutBlockfrost . toBlockfrostRef) r     >>= processUnspentTxOut
         UtxoSetMembership r      -> (runClient . getIsUtxoBlockfrost . toBlockfrostRef) r                >>= processIsUtxo
-        UtxoSetAtAddress pq a    -> (runClient . getUtxoAtAddressBlockfrost pq . credentialToAddress) a  >>= processGetUtxos pq
-        UtxoSetWithCurrency pq a -> (runClient . getUtxoSetWithCurrency pq . toBlockfrostAssetId) a      >>= processGetUtxos pq
+        UtxoSetAtAddress pq a    -> (runClientWithDef defaultGetUtxo . getUtxoAtAddressBlockfrost pq . credentialToAddress) a  >>= processGetUtxos pq
+        UtxoSetWithCurrency pq a -> (runClientWithDef defaultGetUtxo . getUtxoSetWithCurrency pq . toBlockfrostAssetId) a      >>= processGetUtxos pq
         TxoSetAtAddress pq a     -> ioError (userError "TODO")
         GetTip                   -> runClient getTipBlockfrost >>= processTip
